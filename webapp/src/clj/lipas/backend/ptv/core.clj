@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.core
   (:require [clojure.java.jdbc :as jdbc]
+            [clojure.set :as set]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.gis :as gis]
@@ -94,6 +95,10 @@
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
+(defn fetch-ptv-service-channel
+  [ptv org-id service-channel-id]
+  (ptv/get-org-service-channel ptv org-id service-channel-id))
+
 (def persisted-ptv-keys [:languages
                          :summary
                          :description
@@ -116,9 +121,32 @@
         data     (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
         data     (cond-> data
                    archive? (assoc :publishingStatus "Deleted"))
+        ;; Note: Update request doesn't update Service connections!
+
+        ;; TODO: Would be nice to avoid this, by getting the previous
+        ;; :ptv :service-ids value here.
+        old-service-location (when id
+                               (ptv/get-org-service-channel ptv-component org-id id))
+
         ptv-resp (if id
                    (ptv/update-service-location ptv-component id data)
                    (ptv/create-service-location ptv-component data))
+        _ (when id
+            ;; Update service connection changes
+            (let [old-services (->> old-service-location
+                                    :services
+                                    (map (comp :id :service))
+                                    set)
+                  new-services (set (:service-ids (:ptv site)))
+                  removed-services (set/difference old-services new-services)
+                  new-services (set/difference new-services old-services)
+                  service-channel-id (first (:service-channel-ids (:ptv site)))]
+              (log/infof "Update PTV service-location, add services %s, remove services %s"
+                        new-services removed-services)
+              (doseq [service-id removed-services]
+                (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
+              (doseq [service-id new-services]
+                (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
         ;; Store the new PTV info to Lipas DB
         new-ptv-data (-> ptv
                          (select-keys persisted-ptv-keys)
@@ -139,7 +167,10 @@
                                 :service-channel-ids [(:id ptv-resp)])
                          (cond->
                            archive? (dissoc :source-id
-                                            :service-channel-ids)))]
+                                            :service-channel-ids
+                                            :delete-existing)))]
+
+    (log/infof "Resp %s" ptv-resp)
 
     (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
 
@@ -205,7 +236,8 @@
           ;; a candidate, mark for it archival.
           ;; The other function will mark the document Deleted when archive flag is true
           to-archive? (and previous-sent?
-                           (not candidate-now?))
+                           (or (not candidate-now?)
+                               (:delete-existing ptv)))
 
           type-code-changed? (not= type-code (:previous-type-code ptv))
           ptv  (if type-code-changed?

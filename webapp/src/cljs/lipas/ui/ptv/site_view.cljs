@@ -5,6 +5,7 @@
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
             ["@mui/material/FormLabel$default" :as FormLabel]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Switch$default" :as Switch]
@@ -17,6 +18,7 @@
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
+            [lipas.ui.utils :refer [prod?]]
             [lipas.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -126,7 +128,7 @@
 
         ;; _ (js/console.log edit-data sports-site)
 
-        {:keys [org-id sync-enabled last-sync publishing-status]} (:ptv site)
+        {:keys [org-id sync-enabled delete-existing last-sync publishing-status]} (:ptv site)
         org-languages (ptv-data/org-id->languages org-id)
 
         ;; _ (js/console.log org-id)
@@ -150,6 +152,7 @@
         loading-ptv? (use-subscribe [::subs/loading-from-ptv?])
 
         services (use-subscribe [::subs/services-by-id org-id])
+        services* (use-subscribe [::subs/services org-id])
         missing-services-input [{:service-ids #{}
                                  :sub-category-id (-> site :type :type-code types :sub-category)
                                  :sub-category    (-> site :search-meta :type :sub-category :name :fi)}]
@@ -167,8 +170,9 @@
     (js/console.log missing-services new-service new-service-sub-cat)
 
     (uix/use-effect (fn []
-                      (rf/dispatch [::events/fetch-org {:id org-id}])
-                      (rf/dispatch [::events/fetch-services {:id org-id}]))
+                      (when org-id
+                        (rf/dispatch [::events/fetch-org {:id org-id}])
+                        (rf/dispatch [::events/fetch-services {:id org-id}])))
                     [org-id])
 
     ($ Stack
@@ -232,32 +236,49 @@
             (and previous-sent? candidate-now? ready?)
             (if sync-enabled
               ($ Alert {:severity "success"} "PTV-integraatio on käytössä")
-              ($ Alert {:severity "success"} "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä."))
+              (if delete-existing
+                 ($ Alert {:severity "success"} "Liikuntapaikka poistetaan PTV:stä tallennuksen yhteydessä")
+                 ($ Alert {:severity "success"} "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä.")))
 
             (and previous-sent? (not candidate-now?))
             ($ Alert {:severity "warning"} "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä.")
 
-            (and candidate-now? ready?)
+            (and candidate-now? ready? sync-enabled)
             ($ Alert {:severity "info"} "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä.")
 
             (and candidate-now? (not ready?))
             ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä.")
 
             :else
-            "-"
-
-            ; ($ Typography
-            ;    publishing-status)
-            ; ($ Typography
-            ;    last-sync)
-            ))
+            "-")
+          (when-let [x (first (:service-channel-ids (:ptv site)))]
+             ($ :<>
+                ($ Link
+                   {:target "new"
+                    :href (str (if (prod?)
+                                  "https://palvelutietovaranto.suomi.fi/channels/serviceLocation/"
+                                  "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/")
+                               x)}
+                   "Avaa PTV")
+                (when (prod?)
+                   ($ Link
+                      {:target "new"
+                       :href (str "https://www.suomi.fi/palvelut/palvelupiste/x/" x)}
+                      "Avaa suomi.fi")
+                ))))
 
        (when candidate-now?
          ($ FormControl
-            ($ FormLabel
-               "PTV-palvelu")
-            ($ Typography
-               (get-in new-service-sub-cat [:name locale]))
+            ($ controls/services-selector
+               {:disabled   (or loading?
+                                read-only?)
+                :value      (:service-ids (:ptv site))
+                :options    services*
+                :on-change  (fn [ids]
+                              (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :service-ids] ids]))
+                :value-fn   :service-id
+                :label      (tr :ptv.actions/select-service)})
+
             (cond
               (seq missing-services)
               ($ Alert {:severity "warning"} "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä.")
@@ -273,15 +294,24 @@
              :org-id org-id
              :service (first missing-services)}))
 
-       ($ FormControlLabel
-          {:label "Synkronoi PTV:hen"
-           :control ($ Switch
-                       {:disabled read-only?
-                        :value sync-enabled
-                        :checked sync-enabled
-                        :on-change (fn [_e v]
-                                     (js/console.log _e v)
-                                     (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :sync-enabled] v]))})})
+       ($ Stack
+          {:direction "row"}
+          ($ FormControlLabel
+             {:label "Synkronoi PTV:hen"
+              :control ($ Switch
+                          {:disabled read-only?
+                           :checked sync-enabled
+                           :on-change (fn [_e v]
+                                         (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :sync-enabled] v]))})})
+          (when (and (not sync-enabled)
+                     previous-sent?)
+             ($ FormControlLabel
+                {:label "Poista jo luotu paikka PTV:stä"
+                 :control ($ Switch
+                             {:disabled read-only?
+                              :checked (or delete-existing false)
+                              :on-change (fn [_e v]
+                                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))})})))
 
        ($ Stack
           {:sx #js {:position "relative"}}

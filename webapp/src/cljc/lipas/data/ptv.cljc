@@ -196,6 +196,41 @@
      :mainResponsibleOrganization org-id
      }))
 
+(def RE-PREFIX #"^\+[0-9]{1,4}")
+
+(defn parse-phone-number [n]
+  (when n
+    (let [;; match 0600 etc. service prefixes
+          ;; https://www.traficom.fi/fi/viestinta/laajakaista-ja-puhelin/mita-ovat-palvelunumerot
+          finnish-service (re-find #"^(0[6789]00|116)" n)]
+      (if finnish-service
+        {:is-finnish-service-number true
+         :number (str/replace n #" " "")}
+        (let [prefix (or (re-find RE-PREFIX n)
+                         "+358")
+              n (-> n
+                    ;; strip prefix
+                    (str/replace RE-PREFIX "")
+                    (str/replace #" " "")
+                    ;; strip leading zero
+                    (str/replace #"^0" ""))]
+          {:prefix prefix
+           :number n})))))
+
+(defn parse-www [v]
+  (when v
+    (let [has-scheme (re-find #"^http[s]?:" v)]
+      (if has-scheme
+        v
+        (str "http://" v)))))
+
+;; Should allow nearly all valid email addresses according to RFC 5322?
+(def RE-EMAIL #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+
+(defn parse-email [v]
+  (when (and v (re-matches RE-EMAIL v))
+    v))
+
 (defn ->ptv-service-location
   [org-id
    coord-transform-fn
@@ -284,7 +319,19 @@
 
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)
-     }))
+
+     :emails (when-let [e (parse-email (:email sports-site))]
+               [{:value e
+                 :language "fi"}])
+     :webPages (when-let [v (parse-www (:www sports-site))]
+                 [{:url v
+                   :language "fi"}])
+
+     :phoneNumbers (when-let [{:keys [number prefix is-finnish-service-number]} (parse-phone-number (:phone-number sports-site))]
+                     [{:number number
+                       :prefixNumber prefix
+                       :isFinnishServiceNumber (boolean is-finnish-service-number)
+                       :language "fi"}])}))
 
 (comment
 
@@ -379,9 +426,11 @@
   )
 
 (defn parse-service-source-id [source-id]
-  (-> (re-find #"lipas-.*-(\d*)" source-id)
-      second
-      parse-long))
+  ;; No source-id for example for non-Lipas services
+  (when source-id
+    (-> (re-find #"lipas-.*-(\d*)" source-id)
+        second
+        parse-long)))
 
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
@@ -503,7 +552,9 @@
         type-code (-> site :type :type-code)]
     (boolean (and (not (contains? #{"incorrect-data" "out-of-service-permanently"} status))
                   (#{"city" "city-main-owner"} owner)
-                  (not (#{7000} type-code))))))
+                  ;; Huoltorakennus
+                  ;; Opastuspiste
+                  (not (#{7000 207} type-code))))))
 
 (defn ptv-ready?
   [site]
@@ -511,3 +562,16 @@
         {:keys [summary description]} ptv]
     (boolean (and (some-> description :fi count (> 5))
                   (some-> summary :fi count (> 5))))))
+
+(defn ptv-service-channel->texts
+  "Take PTV ServiceChannel response and build Lipas :summary and :description"
+  [data]
+  (reduce (fn [acc {:keys [language value type]}]
+            (if-let [k (case type
+                         "Summary" :summary
+                         "Description" :description
+                         nil)]
+              (update acc k assoc (lang->locale language) value)
+              acc))
+          {}
+          (:serviceChannelDescriptions data)))

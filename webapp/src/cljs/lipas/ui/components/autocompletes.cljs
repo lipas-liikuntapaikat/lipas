@@ -15,7 +15,7 @@
 ;;    which magically effect multiple things
 ;; 4. items-by-vals ???
 (defn autocomplete
-  [{:keys [label items value value-fn label-fn on-change sort-fn spec multi?
+  [{:keys [label items value value-fn label-fn key-fn on-change sort-fn spec multi?
            required helper-text deselect? sort-cmp render-option-fn disabled variant]
     :or   {label-fn :label
            disabled false
@@ -64,7 +64,10 @@
                                 (sort-by sort-fn sort-cmp)
                                 (map (comp pr-str value-fn)))}
           (when render-option-fn
-            {:renderOption render-option-fn}))]
+            {:renderOption render-option-fn})
+          (when key-fn
+            {:getOptionKey (fn [opt]
+                             (-> opt items-by-vals key-fn))}))]
        (when helper-text
          [mui/form-helper-text helper-text])])))
 

@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.handler
-  (:require [lipas.backend.ptv.core :as ptv-core]
+  (:require [clojure.spec.alpha :as s]
+            [lipas.backend.ptv.core :as ptv-core]
             [reitit.coercion.malli]
             [reitit.coercion.spec]))
 
@@ -18,6 +19,7 @@
    {:closed true}
    [:org-id :string]
    [:sync-enabled :boolean]
+   [:delete-existing {:optional true} :boolean]
 
    ;; These options aren't used now:
    ;; TODO: Remove
@@ -173,6 +175,19 @@
         {:status 200
          :body   (ptv-core/fetch-ptv-service-channels ptv (-> req :parameters :body :org-id))})}}]
 
+   ["/actions/fetch-ptv-service-channel"
+    {:post
+     {:require-privilege :ptv/manage
+      :parameters {:body [:map
+                          [:org-id :string]
+                          [:service-channel-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/fetch-ptv-service-channel ptv
+                                                     (-> req :parameters :body :org-id)
+                                                     (-> req :parameters :body :service-channel-id))})}}]
+
    ["/actions/save-ptv-service-location"
     {:post
      {:require-privilege :ptv/manage
@@ -186,7 +201,7 @@
     {:post
      {:require-privilege :ptv/manage
       :coercion reitit.coercion.spec/coercion
-      :parameters {:body :lipas.sports-site/ptv}
+      :parameters {:body (s/map-of int? :lipas.sports-site/ptv)}
       :handler
       (fn [req]
         {:status 200

@@ -88,6 +88,11 @@
      ;; Service
      [mui/grid {:item true :xs 12 :lg 4}
       [mui/stack {:spacing 2}
+       [lui/switch
+        {:label     (tr :ptv.actions/export-disclaimer)
+         :value     (:sync-enabled site)
+         :on-change #(==> [::events/toggle-sync-enabled site %])}]
+
        [mui/typography {:variant "h6"}
         (tr :ptv/services)]
 
@@ -150,9 +155,13 @@
              :label      "Kuvaus"
              :value      (get-in site [:description @selected-tab])}]
 
-           [mui/button {:disabled loading?
-                        :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-            "Vie PTV"]
+           (if (:sync-enabled site)
+             [mui/button {:disabled loading?
+                          :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+              "Vie PTV"]
+             [mui/button {:disabled loading?
+                          :on-click #(==> [::events/save-ptv-meta [site]])}
+              "Tallenna"])
 
            ]]))]))
 
@@ -439,7 +448,8 @@
              {:options   services
               :value     service-ids
               :value-fn  :service-id
-              :on-change #(==> [::events/select-services site %])
+              :on-change (fn [v]
+                           (rf/dispatch [::events/select-services site v]))
               :label     (tr :ptv/services)})
 
           ;; Service channel selector
@@ -477,7 +487,13 @@
                :value     service-channel-ids
                :value-fn  :service-channel-id
                :on-change #(==> [::events/select-service-channels site %])
-               :label     (tr :ptv/service-channel)})]
+               :label     (tr :ptv/service-channel)})
+
+           (when-let [id (first (seq service-channel-ids))]
+             ($ Button
+                {:type "button"
+                 :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
+                "Lataa tekstit PTV:stä"))]
 
           [mui/tabs
            {:value     selected-tab
@@ -542,6 +558,8 @@
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
 
+        ;; TODO: Rename this so service-location-generation progress can also be
+        ;; added to this level
         {:keys [in-progress?
                 processed-lipas-ids
                 processed-count
@@ -561,47 +579,9 @@
 
        ;; Settings
        [mui/stack {:spacing 4}
-
-        #_[mui/button
-           {:on-click #(==> [::events/assign-services-to-sports-sites])
-            :variant  "outlined"
-            :color    "secondary"}
-           (tr :ptv.wizard/assign-services-to-sports-sites)]
-
         [mui/typography {:variant "h6"} (tr :ptv.wizard/generate-descriptions)]
         [mui/typography (tr :ptv.wizard/generate-descriptions-helper2)]
         [mui/typography (tr :ptv.tools.ai/start-helper)]
-
-        #_[mui/form-control
-           [mui/form-label (tr :ptv.tools.ai.sports-sites-filter/label)]
-
-           #_[mui/radio-group
-              {:on-change #(==> [::events/select-sports-sites-filter %2])
-               :value     sports-sites-filter}
-              [mui/form-control-label
-               {:value   "all"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/all)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "no-existing-description"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/no-existing-description)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "sync-enabled"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled)
-                :control (r/as-element [mui/radio])}]
-
-              [mui/form-control-label
-               {:value   "sync-enabled-no-existing-description"
-                :label   (tr :ptv.tools.ai.sports-sites-filter/sync-enabled-no-existing-description)
-                :control (r/as-element [mui/radio])}]
-
-              #_[mui/form-control-label
-                 {:value   "manual"
-                  :label   (tr :ptv.tools.ai.sports-sites-filter/manual)
-                  :control (r/as-element [mui/radio])}]]]
 
         ;; Start button
         [mui/button
@@ -651,13 +631,14 @@
                       halt?] :as m}
               (<== [::subs/service-location-creation-progress])]
 
-          (when in-progress?
-            [mui/stack {:direction "row" :spacing 2 :align-items "center"}
-             [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
-             [mui/typography (str processed-count "/" total-count)]])
+          [:<>
+           (when in-progress?
+             [mui/stack {:direction "row" :spacing 2 :align-items "center"}
+              [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
+              [mui/typography (str processed-count "/" total-count)]])
 
-          (when halt?
-            "Something went wrong, ask engineer."))]]
+           (when halt?
+             "Something went wrong, ask engineer.")])]]
 
       ;; Results
 

@@ -161,6 +161,13 @@
     (-> (http ptv org-id params)
         :body)))
 
+(defn get-org-service-channel
+  [ptv auth-org-id service-channel-id]
+  (let [params {:url (make-url ptv "/v11/ServiceChannel/" service-channel-id)
+                :method       :get}]
+    (-> (http ptv auth-org-id params)
+        :body)))
+
 (defn create-service
   [ptv
    service]
@@ -222,8 +229,10 @@
                                                 "search-meta.location.simple-geoms.*"]}
                   :query
                   {:bool
-                   {;; Remove huoltorakennukset - they aren't PTV candidates
-                    :must_not [{:term {:type.type-code 7000}}]
+                   {;; Remove these, they aren't PTV candidates
+                    ;; Huoltorakennus
+                    ;; Opastuspiste
+                    :must_not [{:terms {:type.type-code [207 7000]}}]
                     :must
                     (remove nil?
                             [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
@@ -233,12 +242,35 @@
                                {:terms {:owner owners}})
                              (when type-codes
                                {:terms {:type.type-code type-codes}})])}}}]
-    ;; TODO: Remove 7000 - huoltorakennukset
     (-> (search/search client idx-name params)
         :body
         :hits
         :hits
         (->> (map :_source)))))
+
+(defn update-service-connections [ptv org-id service-id f]
+  (let [service-resp (:body (http ptv org-id {:url (make-url ptv "/v11/Service/" service-id)
+                                              :method :get}))
+        ;; Map Service data to just set of current service-channel-ids
+        current-services (->> service-resp
+                              :serviceChannels
+                              (map (comp :id :serviceChannel))
+                              set)
+        updated-services (->> (f current-services)
+                              (map (fn [id]
+                                     {:serviceChannelId id}))
+                              vec)]
+    (log/infof "Update service %s connections, %s => %s" service-id current-services updated-services)
+    ;; NOTE: Hopefully there weren't connection changes to this service between the API calls.
+    (http ptv org-id {:url (make-url ptv "/v11/Connection/serviceId/" service-id)
+                      :method :put
+                      ;; NOTE: Even if the relations have some metadata set in PTV, this doesn't
+                      ;; remove the metadata for existing relations.
+                      :form-params (cond-> {:channelRelations updated-services}
+                                     ;; If channelRelations is empty, the empty list alone isn't enough to
+                                     ;; remove rest of the relations, instead we need this property:
+                                     (empty? updated-services)
+                                     (assoc :deleteAllChannelRelations true))})))
 
 (comment
   (require '[clojure.java.jdbc :as sql]

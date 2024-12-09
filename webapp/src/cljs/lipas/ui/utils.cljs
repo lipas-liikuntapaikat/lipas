@@ -14,7 +14,8 @@
 (def ==> rf/dispatch)
 
 (defn set-field [db path value]
-  (if value
+  ;; False should be assoced, but nil should remove the property
+  (if (some? value)
     (assoc-in db path value)
     (if-let [base-path (butlast path)]
       (update-in db (into [] base-path) dissoc (last path))
@@ -256,7 +257,10 @@
                               (into (empty activities)
                                     (map (fn [[k v]]
                                            [k (merge {:status "active"} v)])
-                                         activities)))))
+                                         activities))))
+
+        (:ptv sports-site)
+        (update :ptv dissoc :error))
 
       clean))
 
