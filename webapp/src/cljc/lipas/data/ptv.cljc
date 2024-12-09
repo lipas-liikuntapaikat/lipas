@@ -196,6 +196,42 @@
      :mainResponsibleOrganization org-id
      }))
 
+(def RE-PREFIX #"^\+[0-9]{1,4}")
+
+(defn parse-phone-number [n]
+  (when n
+    (let [;; Remove spaces
+          n (str/replace n #" " "")
+          ;; match 0600 etc. service prefixes
+          ;; https://www.traficom.fi/fi/viestinta/laajakaista-ja-puhelin/mita-ovat-palvelunumerot
+          finnish-service (re-find #"^(0[6789]00|116)" n)]
+      (if finnish-service
+        {:is-finnish-service-number true
+         :number n}
+        (let [prefix (or (re-find RE-PREFIX n)
+                         "+358")
+              n (-> n
+                    ;; strip prefix
+                    (str/replace RE-PREFIX "")
+                    ;; strip leading zero
+                    (str/replace #"^0" ""))]
+          {:prefix prefix
+           :number n})))))
+
+(defn parse-www [v]
+  (when v
+    (let [has-scheme (re-find #"^http[s]?:" v)]
+      (if has-scheme
+        v
+        (str "http://" v)))))
+
+;; Should allow nearly all valid email addresses according to RFC 5322?
+(def RE-EMAIL #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+
+(defn parse-email [v]
+  (when (and v (re-matches RE-EMAIL v))
+    v))
+
 (defn ->ptv-service-location
   [org-id
    coord-transform-fn
@@ -285,24 +321,18 @@
      ;; Link services by serviceId
      :services (-> sports-site :ptv :service-ids)
 
-     ;; TODO: Yhteystiedot
-     :emails (when-let [e (:email sports-site)]
+     :emails (when-let [e (parse-email (:email sports-site))]
                [{:value e
                  :language "fi"}])
-     :webPages (when-let [v (:www sports-site)]
-                 ;; TODO: Validation / coercion, must start with http[s]
-                 [{:url (str "https://" v)
+     :webPages (when-let [v (parse-www (:www sports-site))]
+                 [{:url v
                    :language "fi"}])
 
-     :phoneNumbers (when-let [v (:phone-number sports-site)]
-                     ;; TODO: Validation / coercion
-                     [{:number v
-                       ;; PrefixNumber must match the regular expression '^\\+[0-9]{1,4}$'
-                       ;; required if "isFinnishServiceNumber" is not true.
-                       ;; Maybe use +358 always if our value doesn't include +prefix start?
-                       :prefixNumber "+9"
-                       :language "fi"}])
-     }))
+     :phoneNumbers (when-let [{:keys [number prefix is-finnish-service-number]} (parse-phone-number (:phone-number sports-site))]
+                     [{:number number
+                       :prefixNumber prefix
+                       :isFinnishServiceNumber (boolean is-finnish-service-number)
+                       :language "fi"}])}))
 
 (comment
 
