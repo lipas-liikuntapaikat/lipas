@@ -325,3 +325,22 @@
                                 0
                                 (* 100 (- 1 (/ (- size processed-count) size))))
                               100)})))
+
+(rf/reg-sub ::services-creation
+  :<- [::ptv]
+  (fn [m _]
+    (:services-creation m)))
+
+(rf/reg-sub ::services-creation-progress
+  :<- [::services-creation]
+  (fn [{:keys [processed-ids size halt? in-progress?]} _]
+    (let [processed-count (count processed-ids)]
+      {:in-progress?        in-progress?
+       :halt?               halt?
+       :total-count         size
+       :processed-count     processed-count
+       :processed-percent   (if (pos? size)
+                              (if (zero? processed-count)
+                                0
+                                (* 100 (- 1 (/ (- size processed-count) size))))
+                              100)})))

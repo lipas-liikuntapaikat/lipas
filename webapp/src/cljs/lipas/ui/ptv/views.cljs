@@ -360,13 +360,28 @@
           [mui/typography (tr :ptv.wizard/generate-descriptions-helper1)]
 
           ;; Sync to PTV button
-          [mui/button
-           {:variant   "outlined"
-            :disabled  (some false? (map :valid service-candidates))
-            :color     "primary"
-            :startIcon (r/as-element [mui/icon "ios_share"])
-            :on-click  #(==> [::events/create-all-ptv-services service-candidates])}
-           (tr :ptv.wizard/export-services-to-ptv)]]]
+          (let [{:keys [in-progress?
+                        processed-count
+                        total-count
+                        processed-percent
+                        halt?]}
+                (<== [::subs/services-creation-progress])]
+            [:<>
+             [mui/button
+              {:variant   "outlined"
+               :disabled  (some false? (map :valid service-candidates))
+               :color     "primary"
+               :startIcon (r/as-element [mui/icon "ios_share"])
+               :on-click  #(==> [::events/create-all-ptv-services service-candidates])}
+              (tr :ptv.wizard/export-services-to-ptv)]
+
+             (when in-progress?
+               [mui/stack {:direction "row" :spacing 2 :align-items "center"}
+                [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
+                [mui/typography (str processed-count "/" total-count)]])
+
+             (when halt?
+               "Something went wrong, ask engineer.")])]]
 
         ;; Results panel
         [mui/grid {:item true :xs 12 :lg 8}
@@ -629,11 +644,10 @@
          (tr :ptv.wizard/export-service-locations-to-ptv)]
 
         (let [{:keys [in-progress?
-                      processed-lipas-ids
                       processed-count
                       total-count
                       processed-percent
-                      halt?] :as m}
+                      halt?]}
               (<== [::subs/service-location-creation-progress])]
 
           [:<>
