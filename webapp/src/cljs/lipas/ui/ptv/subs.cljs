@@ -68,7 +68,9 @@
       (let [{:keys [services _service-channels]} (get-in ptv [:org org-id :data])]
         (for [s  services
               sc (:serviceChannels s)]
-          (let [service-name (->> s :serviceNames first :value)
+          (let [service-name (->> s
+                                  :serviceNames
+                                  (ptv-data/select-service-name))
                 channel-name (-> sc :serviceChannel :name)]
             {:label                       (str service-name " > " channel-name)
              :service-id                  (:id s)
@@ -96,8 +98,7 @@
     (rf/subscribe [::services-by-id org-id]))
   (fn [services _]
     (for [[id service] services]
-      (let [service-name (->> service :serviceNames (some #(when (= "fi" (:language %))
-                                                             (:value %))))
+      (let [service-name (->> service :serviceNames (ptv-data/select-service-name))
             descriptions (->> service :serviceDescriptions (filter #(= (:type %) "Description")))
             summaries    (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
         {:label               service-name

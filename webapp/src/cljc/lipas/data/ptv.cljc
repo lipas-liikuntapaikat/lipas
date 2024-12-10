@@ -495,6 +495,13 @@
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
+(defn select-service-name [service-names]
+  (some (fn [service-name]
+          (when (and (= "fi" (:language service-name))
+                     (= "Name" (:type service-name)))
+            (:value service-name)))
+        service-names))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id               (-> site :ptv :service-ids first)
         service-channel-id       (-> site :ptv :service-channel-ids first)
@@ -531,8 +538,10 @@
                     :else :out-of-date)
 
      :service-ids                 (-> site :ptv :service-ids)
-     :service-name                (-> services (get service-id) :serviceNames
-                                      (->> (some #(when (= "fi" (:language %)) (:value %)))))
+     :service-name                (-> services
+                                      (get service-id)
+                                      :serviceNames
+                                      (select-service-name))
      :service-channel-id          service-channel-id
      :service-channel-ids         (-> site :ptv :service-channel-ids)
      :service-channel-name        (-> (get service-channels service-channel-id)
