@@ -1,6 +1,7 @@
 (ns lipas.backend.ptv.handler
   (:require [clojure.spec.alpha :as s]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.roles :as roles]
             [reitit.coercion.malli]
             [reitit.coercion.spec]))
 
@@ -52,7 +53,7 @@
 
    ["/actions/get-ptv-integration-candidates"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
                           [:type-codes {:optional true} [:vector :int]]
@@ -64,7 +65,7 @@
 
    ["/actions/generate-ptv-descriptions"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:lipas-id :int]]}
       :handler
@@ -76,7 +77,7 @@
 
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :coercion reitit.coercion.spec/coercion
       :parameters {:body :lipas/new-or-existing-sports-site}
       :handler
@@ -87,7 +88,7 @@
 
    ["/actions/translate-to-other-langs"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:from :string]
                           [:to [:set :string]]
@@ -101,7 +102,7 @@
 
    ["/actions/generate-ptv-service-descriptions"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
                           [:sub-category-id :int]
@@ -121,7 +122,7 @@
 
    ["/actions/fetch-ptv-org"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -131,7 +132,7 @@
 
    ["/actions/fetch-ptv-service-collections"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -141,7 +142,7 @@
 
    ["/actions/save-ptv-service"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]
                           [:city-codes [:vector :int]]
@@ -157,7 +158,7 @@
 
    ["/actions/fetch-ptv-services"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -167,7 +168,7 @@
 
    ["/actions/fetch-ptv-service-channels"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -177,7 +178,7 @@
 
    ["/actions/fetch-ptv-service-channel"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
                           [:org-id :string]
                           [:service-channel-id :string]]}
@@ -190,7 +191,7 @@
 
    ["/actions/save-ptv-service-location"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body create-ptv-service-location}
       :handler
       (fn [req]
@@ -199,7 +200,7 @@
 
    ["/actions/save-ptv-meta"
     {:post
-     {:require-privilege :ptv/manage
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :coercion reitit.coercion.spec/coercion
       :parameters {:body (s/map-of int? :lipas.sports-site/ptv)}
       :handler

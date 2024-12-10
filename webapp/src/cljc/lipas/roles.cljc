@@ -108,11 +108,11 @@
     :required-context-keys []
     :optional-context-keys []}
 
-   :ptv-user
+   :ptv-manager
    {:sort 50
     :assignable true
     :privileges #{:ptv/manage}
-    :required-context-keys []
+    :required-context-keys [:city-code]
     :optional-context-keys []}})
 
 (defn role-sort-fn

@@ -811,7 +811,7 @@
         edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
         ;; TODO: Maybe always show the ptv tab if the ptv integration is enabled for the site?
-        view-ptv?            (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :ptv/manage])
+        view-ptv?            (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])
 
         hide-actions?        (<== [::subs/hide-actions?])
 
@@ -1788,7 +1788,7 @@
         mode-name           (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
         ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])
-        ptv-privilege       (<== [:lipas.ui.user.subs/check-privilege {} :ptv/manage])]
+        ptv-privilege       (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])]
     [:<>
      ;; PTV dialog
      ;; TODO Disabled until ready for release
