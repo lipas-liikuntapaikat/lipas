@@ -250,96 +250,105 @@
                       set)
         type     (get types/all (get-in sports-site [:type :type-code]))
         _sub-cat  (get types/sub-categories (:sub-category type))
-        _main-cat (get types/main-categories (:main-category type))]
+        _main-cat (get types/main-categories (:main-category type))
+
+        email (parse-email (:email sports-site))
+        www (parse-www (:www sports-site))
+        phone-number (parse-phone-number (:phone-number sports-site))]
 
     (println "PTV data")
     (prn ptv)
     ; (println "Languages resolved" languages)
     ; (prn location)
 
-    {:organizationId      (or (:org-id ptv) org-id)
-     ;; Keep using existing sourceId for sites that were already initialized in PTV,
-     ;; generate a new unique ID (with timestamp) for new sites.
-     :sourceId            (or (:source-id ptv)
-                              (let [ts (str/replace now #":" "-")
-                                    x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
-                                (log/infof "Creating new PTV ServiceLocation source-id %s" x)
-                                x))
-     :serviceChannelNames (keep identity
-                                (let [fallback (get-in sports-site [:name])]
-                                  [(when (contains? languages "fi")
-                                     {:type     "Name"
-                                     :value    fallback
-                                     :language "fi"})
+    (cond-> {:organizationId      (or (:org-id ptv) org-id)
+             ;; Keep using existing sourceId for sites that were already initialized in PTV,
+             ;; generate a new unique ID (with timestamp) for new sites.
+             :sourceId            (or (:source-id ptv)
+                                      (let [ts (str/replace now #":" "-")
+                                            x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
+                                        (log/infof "Creating new PTV ServiceLocation source-id %s" x)
+                                        x))
+             :serviceChannelNames (keep identity
+                                        (let [fallback (get-in sports-site [:name])]
+                                          [(when (contains? languages "fi")
+                                             {:type     "Name"
+                                              :value    fallback
+                                              :language "fi"})
 
-                                   (when (contains? languages "sv")
-                                     {:type     "Name"
-                                      :value    (get-in sports-site [:name-localized :se] fallback)
-                                      :language "sv"})
+                                           (when (contains? languages "sv")
+                                             {:type     "Name"
+                                              :value    (get-in sports-site [:name-localized :se] fallback)
+                                              :language "sv"})
 
-                                   (when (contains? languages "en")
-                                       {:type     "Name"
-                                        :value    (get-in sports-site [:name-localized :en] fallback)
-                                        :language "en"})
+                                           (when (contains? languages "en")
+                                             {:type     "Name"
+                                              :value    (get-in sports-site [:name-localized :en] fallback)
+                                              :language "en"})
 
-                                   (when (contains? languages "fi")
-                                     (when-let [s (:marketing-name sports-site)]
-                                       {:type     "AlternativeName"
-                                        :value    s
-                                        :language "fi"}))]))
+                                           (when (contains? languages "fi")
+                                             (when-let [s (:marketing-name sports-site)]
+                                               {:type     "AlternativeName"
+                                                :value    s
+                                                :language "fi"}))]))
 
-     :displayNameType (keep identity
-                            [(when (contains? languages "fi") {:type "Name" :language "fi"})
-                             (when (contains? languages "sv") {:type "Name" :language "sv"})
-                             (when (contains? languages "en") {:type "Name" :language "en"})])
+             :displayNameType (keep identity
+                                    [(when (contains? languages "fi") {:type "Name" :language "fi"})
+                                     (when (contains? languages "sv") {:type "Name" :language "sv"})
+                                     (when (contains? languages "en") {:type "Name" :language "en"})])
 
-     :serviceChannelDescriptions (keep identity
-                                       (let [fallback "TODO text missing"]
-                                         (for [[type-k type-v] {:summary     "Summary"
-                                                                :description "Description"}
-                                               [lang locale] (select-keys lang->locale languages)]
-                                           {:type     type-v
-                                            :value    (get-in ptv [type-k locale] fallback)
-                                            :language lang})))
+             :serviceChannelDescriptions (keep identity
+                                               (let [fallback "TODO text missing"]
+                                                 (for [[type-k type-v] {:summary     "Summary"
+                                                                        :description "Description"}
+                                                       [lang locale] (select-keys lang->locale languages)]
+                                                   {:type     type-v
+                                                    :value    (get-in ptv [type-k locale] fallback)
+                                                    :language lang})))
 
-     ;; TODO should this be controlled in org or sports-site level?
-     :languages languages
+             ;; TODO should this be controlled in org or sports-site level?
+             :languages languages
 
-     :addresses [{:type    "Location" ; Location | Postal
-                  :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
-                  :country "FI"
-                  :streetAddress
-                  (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)]
-                    {:municipality (-> location
-                                       :city
-                                       :city-code
-                                       (utils/zero-left-pad 3))
-                     :street       (for [lang languages]
-                                     {:value (:address location) :language lang})
-                     :postalCode   (-> location :postal-code)
-                     :latitude     lat
-                     :longitude    lon})}]
+             :addresses [{:type    "Location" ; Location | Postal
+                          :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
+                          :country "FI"
+                          :streetAddress
+                          (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)]
+                            {:municipality (-> location
+                                               :city
+                                               :city-code
+                                               (utils/zero-left-pad 3))
+                             :street       (for [lang languages]
+                                             {:value (:address location) :language lang})
+                             :postalCode   (-> location :postal-code)
+                             :latitude     lat
+                             :longitude    lon})}]
 
-     :publishingStatus (case status
-                         ("incorrect-data" "out-of-service-permanently") "Deleted"
-                         "Published")
-     ; Draft | Published
+             :publishingStatus (case status
+                                 ("incorrect-data" "out-of-service-permanently") "Deleted"
+                                 "Published")
+             ; Draft | Published
 
-     ;; Link services by serviceId
-     :services (-> sports-site :ptv :service-ids)
+             ;; Link services by serviceId
+             :services (-> sports-site :ptv :service-ids)}
 
-     :emails (when-let [e (parse-email (:email sports-site))]
-               [{:value e
-                 :language "fi"}])
-     :webPages (when-let [v (parse-www (:www sports-site))]
-                 [{:url v
-                   :language "fi"}])
+      ;; Sending both empty array and deleteAll* flag worked for email and phoneNumbers,
+      ;; but not webPages! deleteAllWebPages only works if :webPages field isn't present at all.
 
-     :phoneNumbers (when-let [{:keys [number prefix is-finnish-service-number]} (parse-phone-number (:phone-number sports-site))]
-                     [{:number number
-                       :prefixNumber prefix
-                       :isFinnishServiceNumber (boolean is-finnish-service-number)
-                       :language "fi"}])}))
+      email (assoc :emails [{:value email
+                             :language "fi"}])
+      (not email) (assoc :deleteAllEmails true)
+
+      www (assoc :webPages [{:url www
+                             :language "fi"}])
+      (not www) (assoc :deleteAllWebPages true)
+
+      phone-number (assoc :phoneNumbers (let [{:keys [number prefix is-finnish-service-number]} phone-number]
+                                          [{:number number
+                                            :prefixNumber prefix
+                                            :isFinnishServiceNumber (boolean is-finnish-service-number)
+                                            :language "fi"}]))
+      (not phone-number) (assoc :deleteAllPhoneNumbers true))))
 
 (comment
 
