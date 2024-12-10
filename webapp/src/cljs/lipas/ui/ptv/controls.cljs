@@ -20,10 +20,11 @@
     :or   {value-fn identity
            label    ""}}]
   (let [options* (uix/use-memo (fn []
-                                 (map (fn [x]
-                                        {:value (value-fn x)
-                                         :label (:label x)})
-                                      options))
+                                 (->> options
+                                      (map (fn [x]
+                                             {:value (value-fn x)
+                                              :label (:label x)}))
+                                      (sort-by :label)))
                                [options value-fn])]
     ($ autocomplete2
        {:disabled  disabled
