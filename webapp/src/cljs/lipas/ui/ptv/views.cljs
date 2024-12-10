@@ -375,6 +375,8 @@
                :on-click  #(==> [::events/create-all-ptv-services service-candidates])}
               (tr :ptv.wizard/export-services-to-ptv)]
 
+             ;; TODO: Cancel?
+
              (when in-progress?
                [mui/stack {:direction "row" :spacing 2 :align-items "center"}
                 [mui/circular-progress {:variant "indeterminate" :value processed-percent}]
@@ -651,6 +653,8 @@
               (<== [::subs/service-location-creation-progress])]
 
           [:<>
+           ;; TODO: Cancel?
+
            (when in-progress?
              [mui/stack {:direction "row" :spacing 2 :align-items "center"}
               [mui/circular-progress {:variant "indeterminate" :value processed-percent}]

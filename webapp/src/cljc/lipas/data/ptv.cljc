@@ -208,7 +208,11 @@
       (if finnish-service
         {:is-finnish-service-number true
          :number (str/replace n #" " "")}
-        (let [prefix (or (re-find RE-PREFIX n)
+        (let [prefix (or ;; Special case for +358 prefix, doesn't allow fourth number
+                         (re-find #"^\+358" n)
+                         ;; Generic 1-4 number + prefix, if there are no spaces, will include
+                         ;; too many numbers...?
+                         (re-find RE-PREFIX n)
                          "+358")
               n (-> n
                     ;; strip prefix

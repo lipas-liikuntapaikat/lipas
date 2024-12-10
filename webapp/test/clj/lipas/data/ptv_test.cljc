@@ -19,6 +19,10 @@
           :number "441234567"}
          (sut/parse-phone-number "+1111 044 1234567")))
 
+  (is (= {:prefix "+358"
+          :number "81234567"}
+         (sut/parse-phone-number "+35881234567")))
+
   (testing "finnish service numbers"
     (is (= {:is-finnish-service-number true
             :number "060012345"}
