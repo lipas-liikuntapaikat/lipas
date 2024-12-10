@@ -214,9 +214,11 @@
                          ;; too many numbers...?
                          (re-find RE-PREFIX n)
                          "+358")
-              n (-> n
-                    ;; strip prefix
-                    (str/replace RE-PREFIX "")
+              ;; strip the prefix
+              n (-> (if (str/starts-with? n prefix)
+                      (subs n (count prefix))
+                      n)
+                    ;; strip spaces
                     (str/replace #" " "")
                     ;; strip leading zero
                     (str/replace #"^0" ""))]
