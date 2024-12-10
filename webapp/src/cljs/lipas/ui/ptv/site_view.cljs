@@ -311,7 +311,7 @@
           (when (and (not sync-enabled)
                      previous-sent?)
              ($ FormControlLabel
-                {:label "Poista jo luotu paikka PTV:stä"
+                {:label "Arkistoi paikka PTV:ssä"
                  :control ($ Switch
                              {:disabled read-only?
                               :checked (or delete-existing false)
