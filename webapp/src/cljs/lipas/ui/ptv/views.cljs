@@ -314,7 +314,9 @@
                   total-count
                   processed-count]} (<== [::subs/service-descriptions-generation-progress])
 
-          services @(rf/subscribe [::subs/services org-id])]
+          services @(rf/subscribe [::subs/services org-id])
+
+          missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])]
 
       [lui/expansion-panel
        {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
@@ -391,6 +393,18 @@
 
           [mui/typography {:variant "h6"}
            (tr :ptv.wizard/services-to-add)]
+
+          ($ :<>
+             ($ Typography
+                "Oletuksena Lipas luo palvelut liikuntapaikkojen tyypin mukaan, mutta tarvittaessa voit myös luoda muita Palveluita ja liittää tämän Palvelupaikalle manuaalisesti.")
+             ;; TODO: Allow removing manual-service either from the list, or here in the autocomplete?
+             ;; also removed after ptv save.
+             ($ controls/services-selector
+                {:label "Luo Palvelu manuaalisesti"
+                 :options missing-subcategories
+                 :value nil
+                 :on-change (fn [services]
+                              (rf/dispatch [::events/add-manual-service org-id (first services)]))}))
 
           (when (empty? service-candidates)
             [mui/typography (tr :ptv.wizard/all-services-exist)])

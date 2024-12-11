@@ -526,7 +526,9 @@
              (assoc-in [:ptv :loading-from-lipas :services] false)
              (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
              (update-in [:ptv :org org-id :data :service-candidates id]
-                        assoc :created-in-ptv true))
+                        assoc :created-in-ptv true)
+             (update-in [:ptv :org org-id :data :manual-services]
+                        dissoc (:sourceId resp)))
      :fx extra-fx}))
 
 (rf/reg-event-fx ::create-ptv-service-failure
@@ -784,6 +786,10 @@
     {:db (-> db
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
              )}))
+
+(rf/reg-event-fx ::add-manual-service
+  (fn [{:keys [db]} [_ org-id service]]
+    {:db (update-in db [:ptv :org org-id :data :manual-services] assoc (:source-id service) service)}))
 
 (comment
 
