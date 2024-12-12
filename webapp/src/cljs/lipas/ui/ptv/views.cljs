@@ -397,9 +397,9 @@
 
           ($ :<>
              ($ Typography
-                "Oletuksena Lipas luo PTV Palvelut liikuntapaikkojen tyyppien mukaan, mutta tarvittaessa voit myös luoda muita palveluita ja liittää nämä palvelupaikoille manuaalisesti.")
-             ;; TODO: Allow removing manual-service either from the list, or here in the autocomplete?
-             ;; also removed after ptv save.
+                "Oletuksena Lipas luo PTV Palvelut liikuntapaikkojen tyyppien
+                mukaan, mutta tarvittaessa voit myös luoda muita palveluita ja
+                liittää nämä palvelupaikoille manuaalisesti.")
              ($ controls/services-selector
                 {:label "Luo palvelut manuaalisesti"
                  :options missing-subcategories
@@ -422,17 +422,10 @@
                                [mui/icon {:color "success"} "done"]
                                [mui/icon {:color "disabled"} "done"])}
                 [mui/stack {:spacing 2}
-                 [lui/autocomplete
-                  {:label     (tr :ptv.actions/select-languages)
-                   :multi?    true
-                   :items     [{:label "FI" :value "fi"}
-                               {:label "SE" :value "se"}
-                               {:label "EN" :value "en"}]
-                   :value     languages
-                   :value-fn  :value
-                   :label-fn  :label
-                   :on-change #(==> [::events/set-service-candidate-languages source-id %])}]
-
+                 ;; TODO: Allow linking service to existing PTV Service
+                 ;; NOTE: This currently also lists other Services created from Lipas, not only Services created in PTV,
+                 ;;       this doesn't really make sense as overriding the Lipas linking would disconnect this from the other Lipas type.
+                 #_
                  ($ controls/services-selector
                     {:options   services
                      :value     (get m :service-ids)
@@ -470,7 +463,8 @@
 
 (defui service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
-  (let [services (use-subscribe [::subs/services org-id])]
+  (let [services (use-subscribe [::subs/services org-id])
+        org-languages (ptv-data/org-id->languages org-id)]
     ($ AccordionDetails
        {}
        (r/as-element
@@ -533,12 +527,10 @@
                  :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
                 "Lataa tekstit PTV:stä"))]
 
-          [mui/tabs
-           {:value     selected-tab
-            :on-change #(set-selected-tab (keyword %2))}
-           [mui/tab {:value "fi" :label "FI"}]
-           [mui/tab {:value "se" :label "SE"}]
-           [mui/tab {:value "en" :label "EN"}]]
+          [lang-selector
+           {:value selected-tab
+            :on-change set-selected-tab
+            :enabled-languages org-languages}]
 
           ;; Summary
           [lui/text-field
