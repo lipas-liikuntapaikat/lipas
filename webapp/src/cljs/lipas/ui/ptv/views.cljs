@@ -332,8 +332,9 @@
 
        ($ Typography
           "Jos haluat viedä vain tietyn tyyppiset Lipas liikuntapaikat PTV, voit valita tästä Lipas tyyppiryhmiä. Jos et valitse mitään, haetaan kaikki organisaation
-          liikuntapaikat (omistaja ja muiden oletusrajausten mukaisesti.)")
+          liikuntapaikat (omistaja ja muiden oletusrajausten mukaisesti.) Viimeisessä vaiheessa voit vielä valita ettei tiettyjä liikuntapaikkoja viedä PTV.")
 
+       ;; NOTE: Huoltotilat antaa aina 0 tulosta koska filteröity pois
        ($ autocomplete2
           {:options   options*
            :multiple  true
