@@ -878,9 +878,9 @@
        :activeStep ptv-step
        :sx #js {:mt 2
                 :mb 4
-                ".Mui-completed" #js {:fontWeight 500}
-                ".Mui-completed.Mui-active" #js {:fontWeight 700}
-                ".Mui-active" #js {:fontWeight 700}}}
+                ".Mui-completed" #js {:fontWeight "500 !important"}
+                ".Mui-completed.Mui-active" #js {:fontWeight "700 !important"}
+                ".Mui-active" #js {:fontWeight "700 !important"}}}
       [:> Step
        {:key "1"
         :completed true}
