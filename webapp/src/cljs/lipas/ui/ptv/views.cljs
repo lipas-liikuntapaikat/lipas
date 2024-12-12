@@ -10,16 +10,19 @@
             ["@mui/material/Avatar$default" :as Avatar]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Dialog$default" :as Dialog]
-            ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Step$default" :as Step]
+            ["@mui/material/StepButton$default" :as StepButton]
+            ["@mui/material/Stepper$default" :as Stepper]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Typography$default" :as Typography]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.mui :as mui]
@@ -30,6 +33,7 @@
             [lipas.ui.utils :refer [<== ==> prod?]]
             [re-frame.core :as rf]
             [reagent.core :as r]
+            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 ;; Memo
@@ -309,6 +313,45 @@
                           :org-id org-id
                           :site site}]]]]]))]]]))))
 
+(defui set-types []
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        options* (uix/use-memo (fn []
+                                 (->> types/sub-categories
+                                      vals
+                                      (map (fn [x]
+                                             {:value (:type-code x)
+                                              :label (get-in x [:name locale])}))
+                                      (sort-by :label)))
+                               [locale])
+        value (:sub-cats (use-subscribe [::subs/candidates-search]))
+        on-change (fn [v]
+                    (rf/dispatch [::events/set-candidates-search {:sub-cats v}]))]
+    ($ Stack
+       {:sx #js {:gap 2}}
+
+       ($ Typography
+          "Jos haluat viedä vain tietyn tyyppiset Lipas liikuntapaikat PTV, voit valita tästä Lipas tyyppiryhmiä. Jos et valitse mitään, haetaan kaikki organisaation
+          liikuntapaikat (omistaja ja muiden oletusrajausten mukaisesti.)")
+
+       ($ autocomplete2
+          {:options   options*
+           :multiple  true
+           :label     "Valitse ryhmät"
+           :value     (to-array value)
+           :on-change (fn [_e v]
+                        (on-change (vec (map (fn [x]
+                                               (if (map? x)
+                                                 (:value x)
+                                                 x))
+                                             v))))})
+
+       ($ Button
+          {:onClick (fn [_e]
+                      (rf/dispatch [::events/set-step 1]))}
+          "Seuraava"
+          ($ Icon "arrow_forward")))))
+
 (defn create-services
   []
   (r/with-let [selected-tab (r/atom :fi)]
@@ -326,14 +369,14 @@
           manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
           missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])]
 
-      [lui/expansion-panel
-       {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
+      #_
+      {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
         :label-icon (if (empty? service-candidates)
                       [mui/icon {:color "success"} "done"]
                       [mui/icon {:color "disabled"} "done"])}
 
+      [:> Stack
        [mui/grid {:container true :spacing 4}
-
         [mui/grid {:item true :xs 12 :lg 4}
          [mui/stack {:spacing 4}
           [mui/typography {:variant "h6"} (tr :ptv.wizard/generate-descriptions)]
@@ -416,7 +459,13 @@
                               (rf/dispatch [::events/set-manual-services org-id services missing-subcategories]))}))
 
           (when (empty? service-candidates)
-            [mui/typography (tr :ptv.wizard/all-services-exist)])
+            [:<>
+             [mui/typography (tr :ptv.wizard/all-services-exist)]
+             ($ Button
+                {:onClick (fn [_e]
+                            (rf/dispatch [::events/set-step 2]))}
+                "Seuraava"
+                ($ Icon "arrow_forward"))])
 
           [:div
            (doall
@@ -451,7 +500,7 @@
                     (when (contains? languages "en")
                       [mui/tab {:value "en" :label "EN"}])])
 
-                ;; Summary
+                 ;; Summary
                  [lui/text-field
                   {:multiline true
                    :variant   "outlined"
@@ -459,7 +508,7 @@
                    :label     (tr :ptv/summary)
                    :value     (get-in m [:summary @selected-tab])}]
 
-                ;; Description
+                 ;; Description
                  [lui/text-field
                   {:variant   "outlined"
                    :rows      5
@@ -605,11 +654,11 @@
                 halt?] :as m}
         (<== [::subs/batch-descriptions-generation-progress])]
 
-    [lui/expansion-panel
-     {:label      (str "2. " (tr :ptv.wizard/integrate-service-locations))
-      :label-icon (if setup-done?
-                    [mui/icon {:color "success"} "done"]
-                    [mui/icon {:color "disabled"}  "done"])}
+    [:> Stack
+     #_
+     [:> Typography
+      {:variant "h4"}
+      (str (tr :ptv.wizard/integrate-service-locations))]
 
      [mui/grid {:container true :spacing 4}
       [mui/grid {:item true :xs 12 :lg 4}
@@ -813,9 +862,45 @@
 
 (defn wizard
   []
-  [mui/paper
-   [create-services]
-   [:f> integrate-service-locations]])
+  (let [tr (<== [:lipas.ui.subs/translator])
+        ptv-step @(rf/subscribe [::subs/selected-step])
+        set-step (fn [i _e]
+                   (rf/dispatch [::events/set-step i]))
+
+        org-id           (<== [::subs/selected-org-id])
+        services-done? (empty? (<== [::subs/service-candidates org-id]))
+        site-setup-done? (<== [::subs/sports-site-setup-done org-id])]
+    [:> Stack
+     [:> Stepper
+      {:nonLinear true
+       :activeStep ptv-step
+       :sx #js {:mt 2
+                :mb 4}}
+      [:> Step
+       {:key "1"
+        :completed true}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 0)}
+        (str "1. Valitse liikuntapaikat")]]
+      [:> Step
+       {:key "2"
+        :completed services-done?}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 1)}
+        (str "2. " (tr :ptv.tools.generate-services/headline))]]
+      [:> Step
+       {:key "3"
+        :completed site-setup-done?}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 2)}
+        (str "3. " (tr :ptv.wizard/integrate-service-locations))]]]
+     (case ptv-step
+       0 ($ set-types)
+       1 [create-services]
+       2 [:f> integrate-service-locations])]))
 
 (defn dialog
   [{:keys [tr]}]

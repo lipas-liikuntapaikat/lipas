@@ -19,6 +19,17 @@
   (fn [ptv _]
     (:selected-tab ptv)))
 
+(rf/reg-sub ::selected-step
+  :<- [::ptv]
+  (fn [ptv _]
+    (or (:selected-step ptv)
+        0)))
+
+(rf/reg-sub ::candidates-search
+  :<- [::ptv]
+  (fn [ptv _]
+    (:candidates-search ptv)))
+
 (rf/reg-sub ::loading-from-ptv?
   :<- [::ptv]
   (fn [ptv _]
