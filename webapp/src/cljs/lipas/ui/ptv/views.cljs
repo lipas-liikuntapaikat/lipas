@@ -316,6 +316,7 @@
 
           services @(rf/subscribe [::subs/services org-id])
 
+          manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
           missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])]
 
       [lui/expansion-panel
@@ -396,15 +397,16 @@
 
           ($ :<>
              ($ Typography
-                "Oletuksena Lipas luo palvelut liikuntapaikkojen tyypin mukaan, mutta tarvittaessa voit myös luoda muita Palveluita ja liittää tämän Palvelupaikalle manuaalisesti.")
+                "Oletuksena Lipas luo PTV Palvelut liikuntapaikkojen tyyppien mukaan, mutta tarvittaessa voit myös luoda muita palveluita ja liittää nämä palvelupaikoille manuaalisesti.")
              ;; TODO: Allow removing manual-service either from the list, or here in the autocomplete?
              ;; also removed after ptv save.
              ($ controls/services-selector
-                {:label "Luo Palvelu manuaalisesti"
+                {:label "Luo palvelut manuaalisesti"
                  :options missing-subcategories
-                 :value nil
+                 :value manual-services
+                 :value-fn :source-id
                  :on-change (fn [services]
-                              (rf/dispatch [::events/add-manual-service org-id (first services)]))}))
+                              (rf/dispatch [::events/set-manual-services org-id services missing-subcategories]))}))
 
           (when (empty? service-candidates)
             [mui/typography (tr :ptv.wizard/all-services-exist)])

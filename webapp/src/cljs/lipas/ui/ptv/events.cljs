@@ -787,9 +787,14 @@
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
              )}))
 
-(rf/reg-event-fx ::add-manual-service
-  (fn [{:keys [db]} [_ org-id service]]
-    {:db (update-in db [:ptv :org org-id :data :manual-services] assoc (:source-id service) service)}))
+(rf/reg-event-fx ::set-manual-services
+  (fn [{:keys [db]} [_ org-id source-ids subcategories]]
+    (let [x (into {} (map (juxt :source-id identity) subcategories))]
+      {:db (assoc-in db [:ptv :org org-id :data :manual-services]
+                     (reduce (fn [acc source-id]
+                               (assoc acc source-id (get x source-id)))
+                             {}
+                             source-ids))})))
 
 (comment
 

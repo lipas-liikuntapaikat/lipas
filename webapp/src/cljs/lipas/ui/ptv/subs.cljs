@@ -156,6 +156,11 @@
   (fn [ptv [_ org-id]]
     (vals (get-in ptv [:org org-id :data :manual-services]))))
 
+(rf/reg-sub ::manual-services-keys
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (keys (get-in ptv [:org org-id :data :manual-services]))))
+
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]
   (fn [ptv [_ org-id]]
