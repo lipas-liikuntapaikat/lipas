@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.subs
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -17,6 +18,17 @@
   :<- [::ptv]
   (fn [ptv _]
     (:selected-tab ptv)))
+
+(rf/reg-sub ::selected-step
+  :<- [::ptv]
+  (fn [ptv _]
+    (or (:selected-step ptv)
+        0)))
+
+(rf/reg-sub ::candidates-search
+  :<- [::ptv]
+  (fn [ptv _]
+    (:candidates-search ptv)))
 
 (rf/reg-sub ::loading-from-ptv?
   :<- [::ptv]
@@ -150,6 +162,16 @@
   (fn [[services sports-sites] [_ org-id]]
     (ptv-data/resolve-missing-services org-id services sports-sites)))
 
+(rf/reg-sub ::manual-services
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (vals (get-in ptv [:org org-id :data :manual-services]))))
+
+(rf/reg-sub ::manual-services-keys
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (keys (get-in ptv [:org org-id :data :manual-services]))))
+
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]
   (fn [ptv [_ org-id]]
@@ -158,9 +180,11 @@
 (rf/reg-sub ::service-candidates
   (fn [[_ org-id]]
     [(rf/subscribe [::missing-services org-id])
+     (rf/subscribe [::manual-services org-id])
      (rf/subscribe [::service-candidate-descriptions org-id])])
-  (fn [[missing-services descriptions] [_ org-id]]
-    (->> missing-services
+  (fn [[missing-services manual-services descriptions] [_ org-id]]
+    (->> (concat missing-services
+                 manual-services)
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
                       summary     (get-in descriptions [source-id :summary])
@@ -345,3 +369,20 @@
                                 0
                                 (* 100 (- 1 (/ (- size processed-count) size))))
                               100)})))
+
+(rf/reg-sub ::missing-subcategories
+  (fn [[_ org-id]]
+    (rf/subscribe [::services org-id]))
+  (fn [created-services [_ org-id]]
+    (let [sub-cats types/sub-categories
+          source-id->service (into {} (map (juxt :source-id identity) created-services))]
+      (reduce (fn [acc [sub-cat-id sub-cat]]
+                (let [source-id (ptv-data/->service-source-id org-id sub-cat-id)]
+                  (if (get source-id->service source-id)
+                    acc
+                    (conj acc {:source-id source-id
+                               :sub-category-id sub-cat-id
+                               :sub-category (get-in sub-cat [:name :fi])
+                               :label (get-in sub-cat [:name :fi])}))))
+              []
+              sub-cats))))

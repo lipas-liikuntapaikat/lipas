@@ -137,29 +137,32 @@
 ;; return :sourceId (wtf)
 (defn get-org-services
   [ptv org-id]
-  (let [params {:url (make-url ptv "/v11/Service/list/organization")
-                :method :get
-                :query-params {:organizationId org-id}}]
-    (-> (http ptv org-id params)
-        :body)))
+  (ptv-data/get-all-pages (fn [page]
+                            (let [params {:url (make-url ptv "/v11/Service/list/organization")
+                                          :method :get
+                                          :query-params {:organizationId org-id
+                                                         :page page}}]
+                              (-> (http ptv org-id params)
+                                  :body)))))
 
 (defn get-org-service-collections
   [ptv org-id]
-  (let [params {:url (make-url ptv "/v11/ServiceCollection/organization")
-                :method :get
-                :query-params {:organizationId org-id}}]
-    (-> (http ptv org-id params)
-        :body)))
+  (ptv-data/get-all-pages (fn [page]
+                            (let [params {:url (make-url ptv "/v11/ServiceCollection/organization")
+                                          :method :get
+                                          :query-params {:organizationId org-id
+                                                         :page page}}]
+                              (-> (http ptv org-id params)
+                                  :body)))))
 
 (defn get-org-service-channels
   [ptv org-id]
-  ;; TODO: Solve paginations, if multiple pages, lazy seq and make multiple requests?
-  ;; Or should we handle pagination from FE?
-  ;; 500 should be fine in one response, what if we have 2000-5000 for some city/org?
-  (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
-                :method       :get}]
-    (-> (http ptv org-id params)
-        :body)))
+  (ptv-data/get-all-pages (fn [page]
+                            (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
+                                          :method       :get
+                                          :query-params {:page page}}]
+                              (-> (http ptv org-id params)
+                                  :body)))))
 
 (defn get-org-service-channel
   [ptv auth-org-id service-channel-id]
@@ -283,6 +286,34 @@
   (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
 
   (get-org-services ptv* org-id*)
+
+  ;; Create extra services for testing pagination
+  (dotimes [i 20]
+    (let [i (+ 80 i)]
+      (create-service ptv* {:sourceId (str "lipas-random-0-" i)
+                            :ontologyTerms ["http://www.yso.fi/onto/koko/p37350" "http://www.yso.fi/onto/koko/p33303"]
+                            :serviceClasses ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]
+                            :type "Service"
+                            :fundingType "PubliclyFunded"
+                            :serviceNames [{:type "Name"
+                                            :language "fi"
+                                            :value (str "Lipas " i)}]
+                            :targetGroups ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] ;; Kansalaiset
+                            :areaType "LimitedType"
+                            :areas [{:type "Municipality"
+                                     :areaCodes [837]}]
+                            :languages ["fi"]
+                            :serviceDescriptions [{:type "Description"
+                                                   :language "fi"
+                                                   :value "Kuvaus"}
+                                                  {:type "Summary"
+                                                   :language "fi"
+                                                   :value "Kuvaus 2"}]
+                            :publishingStatus "Published"
+                            :serviceProducers [{;; SelfProducedServices | ProcuredServices | Other
+                                                :provisionType "SelfProducedServices"
+                                                :organizations [org-id*]}]
+                            :mainResponsibleOrganization org-id*})))
 
   ;; Delete all org services
   (doseq [x (:itemList (get-org-services ptv* org-id*))]

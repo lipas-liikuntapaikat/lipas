@@ -50,7 +50,7 @@
      :service-channel-name-conflict         "PTV:ssa on jo olemassa palvelupaikka nimellä {1}."
      :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan" }
     :ptv.tools.generate-services
-    {:headline "Luo palvelut PTV:oon"}
+    {:headline "Luo PTV palvelut"}
     :ptv.tools.ai
     {:headline     "Laadi palvelupaikkojen kuvaukset tekoälyn avulla"
      :start        "Aloita"

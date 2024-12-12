@@ -1,18 +1,28 @@
 (ns lipas.ui.ptv.views
-  (:require ["@mui/icons-material/Sync$default" :as Sync]
+  (:require ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
             ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Step$default" :as Step]
+            ["@mui/material/StepButton$default" :as StepButton]
+            ["@mui/material/Stepper$default" :as Stepper]
+            ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Typography$default" :as Typography]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.mui :as mui]
@@ -23,6 +33,7 @@
             [lipas.ui.utils :refer [<== ==> prod?]]
             [re-frame.core :as rf]
             [reagent.core :as r]
+            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 ;; Memo
@@ -302,6 +313,48 @@
                           :org-id org-id
                           :site site}]]]]]))]]]))))
 
+(defui set-types []
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        options* (uix/use-memo (fn []
+                                 (->> types/sub-categories
+                                      vals
+                                      (map (fn [{:keys [type-code] :as x}]
+                                             {:value type-code
+                                              :sort-value (case type-code
+                                                            (1 2) (* 100 type-code)
+                                                            type-code)
+                                              :label (str type-code " " (get-in x [:name locale]))}))
+                                      (sort-by :sort-value)))
+                               [locale])
+        value (:sub-cats (use-subscribe [::subs/candidates-search]))
+        on-change (fn [v]
+                    (rf/dispatch [::events/set-candidates-search {:sub-cats v}]))]
+    ($ Stack
+       {:sx #js {:gap 2}}
+
+       ($ Typography
+          "Voit valita haluamasi Lipas-tyyppiluokat vietäväksi PTV:hen. Jos et tee valintaa, kaikki kunnan omistamat liikuntapaikat viedään. Viimeisessä vaiheessa voit jättää tietyt liikuntapaikat pois viennistä.")
+
+       ;; NOTE: Huoltotilat antaa aina 0 tulosta koska filteröity pois
+       ($ autocomplete2
+          {:options   options*
+           :multiple  true
+           :label     "Valitse ryhmät"
+           :value     (to-array value)
+           :on-change (fn [_e v]
+                        (on-change (vec (map (fn [x]
+                                               (if (map? x)
+                                                 (:value x)
+                                                 x))
+                                             v))))})
+
+       ($ Button
+          {:onClick (fn [_e]
+                      (rf/dispatch [::events/set-step 1]))}
+          "Seuraava"
+          ($ Icon "arrow_forward")))))
+
 (defn create-services
   []
   (r/with-let [selected-tab (r/atom :fi)]
@@ -314,16 +367,19 @@
                   total-count
                   processed-count]} (<== [::subs/service-descriptions-generation-progress])
 
-          services @(rf/subscribe [::subs/services org-id])]
+          services @(rf/subscribe [::subs/services org-id])
 
-      [lui/expansion-panel
-       {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
+          manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
+          missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])]
+
+      #_
+      {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
         :label-icon (if (empty? service-candidates)
                       [mui/icon {:color "success"} "done"]
                       [mui/icon {:color "disabled"} "done"])}
 
+      [:> Stack
        [mui/grid {:container true :spacing 4}
-
         [mui/grid {:item true :xs 12 :lg 4}
          [mui/stack {:spacing 4}
           [mui/typography {:variant "h6"} (tr :ptv.wizard/generate-descriptions)]
@@ -392,8 +448,27 @@
           [mui/typography {:variant "h6"}
            (tr :ptv.wizard/services-to-add)]
 
+          ($ :<>
+             ($ Typography
+                "Oletuksena Lipas luo PTV Palvelut liikuntapaikkojen tyyppien
+                mukaan, mutta tarvittaessa voit myös luoda muita palveluita ja
+                liittää nämä palvelupaikoille manuaalisesti.")
+             ($ controls/services-selector
+                {:label "Luo palvelut manuaalisesti"
+                 :options missing-subcategories
+                 :value manual-services
+                 :value-fn :source-id
+                 :on-change (fn [services]
+                              (rf/dispatch [::events/set-manual-services org-id services missing-subcategories]))}))
+
           (when (empty? service-candidates)
-            [mui/typography (tr :ptv.wizard/all-services-exist)])
+            [:<>
+             [mui/typography (tr :ptv.wizard/all-services-exist)]
+             ($ Button
+                {:onClick (fn [_e]
+                            (rf/dispatch [::events/set-step 2]))}
+                "Seuraava"
+                ($ Icon "arrow_forward"))])
 
           [:div
            (doall
@@ -406,17 +481,10 @@
                                [mui/icon {:color "success"} "done"]
                                [mui/icon {:color "disabled"} "done"])}
                 [mui/stack {:spacing 2}
-                 [lui/autocomplete
-                  {:label     (tr :ptv.actions/select-languages)
-                   :multi?    true
-                   :items     [{:label "FI" :value "fi"}
-                               {:label "SE" :value "se"}
-                               {:label "EN" :value "en"}]
-                   :value     languages
-                   :value-fn  :value
-                   :label-fn  :label
-                   :on-change #(==> [::events/set-service-candidate-languages source-id %])}]
-
+                 ;; TODO: Allow linking service to existing PTV Service
+                 ;; NOTE: This currently also lists other Services created from Lipas, not only Services created in PTV,
+                 ;;       this doesn't really make sense as overriding the Lipas linking would disconnect this from the other Lipas type.
+                 #_
                  ($ controls/services-selector
                     {:options   services
                      :value     (get m :service-ids)
@@ -435,7 +503,7 @@
                     (when (contains? languages "en")
                       [mui/tab {:value "en" :label "EN"}])])
 
-                ;; Summary
+                 ;; Summary
                  [lui/text-field
                   {:multiline true
                    :variant   "outlined"
@@ -443,7 +511,7 @@
                    :label     (tr :ptv/summary)
                    :value     (get-in m [:summary @selected-tab])}]
 
-                ;; Description
+                 ;; Description
                  [lui/text-field
                   {:variant   "outlined"
                    :rows      5
@@ -454,7 +522,8 @@
 
 (defui service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
-  (let [services (use-subscribe [::subs/services org-id])]
+  (let [services (use-subscribe [::subs/services org-id])
+        org-languages (ptv-data/org-id->languages org-id)]
     ($ AccordionDetails
        {}
        (r/as-element
@@ -517,12 +586,10 @@
                  :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
                 "Lataa tekstit PTV:stä"))]
 
-          [mui/tabs
-           {:value     selected-tab
-            :on-change #(set-selected-tab (keyword %2))}
-           [mui/tab {:value "fi" :label "FI"}]
-           [mui/tab {:value "se" :label "SE"}]
-           [mui/tab {:value "en" :label "EN"}]]
+          [lang-selector
+           {:value selected-tab
+            :on-change set-selected-tab
+            :enabled-languages org-languages}]
 
           ;; Summary
           [lui/text-field
@@ -590,11 +657,11 @@
                 halt?] :as m}
         (<== [::subs/batch-descriptions-generation-progress])]
 
-    [lui/expansion-panel
-     {:label      (str "2. " (tr :ptv.wizard/integrate-service-locations))
-      :label-icon (if setup-done?
-                    [mui/icon {:color "success"} "done"]
-                    [mui/icon {:color "disabled"}  "done"])}
+    [:> Stack
+     #_
+     [:> Typography
+      {:variant "h4"}
+      (str (tr :ptv.wizard/integrate-service-locations))]
 
      [mui/grid {:container true :spacing 4}
       [mui/grid {:item true :xs 12 :lg 4}
@@ -798,9 +865,45 @@
 
 (defn wizard
   []
-  [mui/paper
-   [create-services]
-   [:f> integrate-service-locations]])
+  (let [tr (<== [:lipas.ui.subs/translator])
+        ptv-step @(rf/subscribe [::subs/selected-step])
+        set-step (fn [i _e]
+                   (rf/dispatch [::events/set-step i]))
+
+        org-id           (<== [::subs/selected-org-id])
+        services-done? (empty? (<== [::subs/service-candidates org-id]))
+        site-setup-done? (<== [::subs/sports-site-setup-done org-id])]
+    [:> Stack
+     [:> Stepper
+      {:nonLinear true
+       :activeStep ptv-step
+       :sx #js {:mt 2
+                :mb 4}}
+      [:> Step
+       {:key "1"
+        :completed true}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 0)}
+        (str "1. Valitse liikuntapaikat")]]
+      [:> Step
+       {:key "2"
+        :completed services-done?}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 1)}
+        (str "2. " (tr :ptv.tools.generate-services/headline))]]
+      [:> Step
+       {:key "3"
+        :completed site-setup-done?}
+       [:> StepButton
+        {:color "inherit"
+         :onClick (partial set-step 2)}
+        (str "3. " (tr :ptv.wizard/integrate-service-locations))]]]
+     (case ptv-step
+       0 ($ set-types)
+       1 [create-services]
+       2 [:f> integrate-service-locations])]))
 
 (defn dialog
   [{:keys [tr]}]
@@ -809,25 +912,46 @@
         loading?     (<== [::subs/loading-from-ptv?])
         org-id       (<== [::subs/selected-org-id])
         org-data     (<== [::subs/selected-org-data org-id])
-        sites        (<== [::subs/sports-sites org-id])]
+        sites        (<== [::subs/sports-sites org-id])
 
-    [lui/dialog
-     {:open?         open?
+        on-close #(==> [::events/close-dialog])]
+
+    [:> Dialog
+     {:open         open?
       ;; FIXME: This isn't implemented, what should this do?
       ; :on-save       #(==> [::events/save sites])
       ; :save-enabled? true
       ; :save-label    (tr :actions/save)
-      :title         (tr :ptv/tooltip)
-      :max-width     "xl"
-      :cancel-label  "Sulje" ;; (tr :actions/cancel)
-      :on-close      #(==> [::events/close-dialog])}
+      :fullScreen true
+      :max-width     "xl"}
 
-     [mui/stack {:spacing 2}
+     [:> AppBar
+      {:sx #js {:position "relative"}}
+      [:> Toolbar
+       [:> IconButton
+        {:edge "start"
+         :onClick on-close
+         :color "inherit"}
+        [:> CloseIcon]]
+       [:> Typography
+        {:variant "h6"
+         :component "div"
+         :sx #js {:ml 2 :flex 1}}
+        (tr :ptv/tooltip)]]]
+
+     [:> DialogContent
+      {:sx #js {:display "flex"
+                :flexDirection "column"
+                :gap 2}}
 
       [org-selector {:label (tr :ptv.actions/select-org)}]
 
       (when loading?
-        [mui/stack {:direction "row" :spacing 2 :alignItems "center"}
+        [mui/stack
+         {:direction "row"
+          :spacing 2
+          :alignItems "center"
+          :justifyContent "center"}
          [mui/circular-progress]
          [mui/typography (tr :ptv/loading-from-ptv)]])
 

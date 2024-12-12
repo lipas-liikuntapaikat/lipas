@@ -601,3 +601,17 @@
               acc))
           {}
           (:serviceChannelDescriptions data)))
+
+(defn get-all-pages [f]
+  (loop [page 1
+         results []]
+    (let [resp (f page)
+          results-pages (:pageCount resp)]
+      (if (>= page results-pages)
+        {:pageCount (:pageCount resp)
+         :itemList (reduce (fn [acc x]
+                             (into acc (:itemList x)))
+                           []
+                           (conj results resp))}
+        (recur (inc page)
+               (conj results resp))))))

@@ -3,6 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.types :as types]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -14,13 +15,28 @@
 
 (rf/reg-event-db ::close-dialog
   (fn [db [_ _]]
-    (assoc-in db [:ptv :dialog :open?] false)))
+    (-> db
+        (assoc-in [:ptv :dialog :open?] false)
+        (assoc-in [:ptv :selected-tag] "wizard")
+        (update :ptv dissoc :candidates-search :selected-step))))
 
 (rf/reg-event-fx ::select-org
   (fn [{:keys [db]} [_ org]]
     {:db (assoc-in db [:ptv :selected-org] org)
      :fx [[:dispatch [::fetch-org-data org]]
+          #_
           [:dispatch [::fetch-integration-candidates org]]]}))
+
+(rf/reg-event-fx ::set-candidates-search
+  (fn [{:keys [db]} [_ search]]
+    {:db (assoc-in db [:ptv :candidates-search] search)}))
+
+(rf/reg-event-fx ::set-step
+  (fn [{:keys [db]} [_ v]]
+    (let [prev-step (:selected-step (:ptv db))]
+      {:db (assoc-in db [:ptv :selected-step] v)
+       :fx [(when (= 0 prev-step)
+                     [:dispatch [::fetch-integration-candidates (:selected-org (:ptv db))]])]})))
 
 (rf/reg-event-db ::select-tab
   (fn [db [_ v]]
@@ -29,14 +45,25 @@
 (rf/reg-event-fx ::fetch-integration-candidates
   (fn [{:keys [db]} [_ org]]
     (when org
-      (let [token (-> db :user :login :token)]
+      (let [token (-> db :user :login :token)
+            sub-cats (-> db :ptv :candidates-search :sub-cats)
+
+            by-sub-category types/by-sub-category
+
+            ;; map sub-cats codes to type-codes for search API
+            search (when (seq sub-cats)
+                     {:type-codes (->> (select-keys by-sub-category sub-cats)
+                                       (mapcat second)
+                                       (map :type-code)
+                                       vec)})]
         {:db (assoc-in db [:ptv :loading-from-lipas :candidates] true)
          :fx [[:http-xhrio
                {:method          :post
                 :headers         {:Authorization (str "Token " token)}
                 :uri             (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-                :params          (-> (get ptv-data/org-id->params (:id org))
-                                     (select-keys [:city-codes :type-codes :owners]))
+                :params          (merge (-> (get ptv-data/org-id->params (:id org))
+                                            (select-keys [:city-codes :owners]))
+                                        search)
                 :format          (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success      [::fetch-integration-candidates-success (:id org)]
@@ -526,7 +553,9 @@
              (assoc-in [:ptv :loading-from-lipas :services] false)
              (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
              (update-in [:ptv :org org-id :data :service-candidates id]
-                        assoc :created-in-ptv true))
+                        assoc :created-in-ptv true)
+             (update-in [:ptv :org org-id :data :manual-services]
+                        dissoc (:sourceId resp)))
      :fx extra-fx}))
 
 (rf/reg-event-fx ::create-ptv-service-failure
@@ -784,6 +813,15 @@
     {:db (-> db
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
              )}))
+
+(rf/reg-event-fx ::set-manual-services
+  (fn [{:keys [db]} [_ org-id source-ids subcategories]]
+    (let [x (into {} (map (juxt :source-id identity) subcategories))]
+      {:db (assoc-in db [:ptv :org org-id :data :manual-services]
+                     (reduce (fn [acc source-id]
+                               (assoc acc source-id (get x source-id)))
+                             {}
+                             source-ids))})))
 
 (comment
 

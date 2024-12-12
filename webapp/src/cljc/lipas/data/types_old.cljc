@@ -105,8 +105,8 @@
     {:fi "Urheiluilmailualueet",
      :se "Områden för flygsport",
      :en "Sport aviation areas"},
-    :main-category "5000"},
-   :ptv {:ontology-urls ["http://www.yso.fi/onto/koko/p18298"]}
+    :main-category "5000",
+    :ptv {:ontology-urls ["http://www.yso.fi/onto/koko/p18298"]}}
    4200
    {:type-code     4200,
     :name
