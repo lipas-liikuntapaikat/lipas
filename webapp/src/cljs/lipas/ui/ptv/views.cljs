@@ -33,7 +33,6 @@
             [lipas.ui.utils :refer [<== ==> prod?]]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 ;; Memo
@@ -878,7 +877,8 @@
       {:nonLinear true
        :activeStep ptv-step
        :sx #js {:mt 2
-                :mb 4}}
+                :mb 4
+                ".Mui-active" #js {:fontWeight 700}}}
       [:> Step
        {:key "1"
         :completed true}
