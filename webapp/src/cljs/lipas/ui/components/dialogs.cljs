@@ -7,7 +7,10 @@
            cancel-label open? max-width]
     :or   {open? true max-width "sm"}} content]
   [mui/dialog
-   {:open open? :full-width true :on-close on-close :max-width max-width}
+   {:open open?
+    :full-width true
+    :on-close on-close
+    :max-width max-width}
    [mui/dialog-title title]
    [mui/dialog-content content]
    [mui/dialog-actions

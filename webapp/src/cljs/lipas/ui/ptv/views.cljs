@@ -1,15 +1,22 @@
 (ns lipas.ui.ptv.views
-  (:require ["@mui/icons-material/Sync$default" :as Sync]
+  (:require ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
             ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Typography$default" :as Typography]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
@@ -817,25 +824,46 @@
         loading?     (<== [::subs/loading-from-ptv?])
         org-id       (<== [::subs/selected-org-id])
         org-data     (<== [::subs/selected-org-data org-id])
-        sites        (<== [::subs/sports-sites org-id])]
+        sites        (<== [::subs/sports-sites org-id])
 
-    [lui/dialog
-     {:open?         open?
+        on-close #(==> [::events/close-dialog])]
+
+    [:> Dialog
+     {:open         open?
       ;; FIXME: This isn't implemented, what should this do?
       ; :on-save       #(==> [::events/save sites])
       ; :save-enabled? true
       ; :save-label    (tr :actions/save)
-      :title         (tr :ptv/tooltip)
-      :max-width     "xl"
-      :cancel-label  "Sulje" ;; (tr :actions/cancel)
-      :on-close      #(==> [::events/close-dialog])}
+      :fullScreen true
+      :max-width     "xl"}
 
-     [mui/stack {:spacing 2}
+     [:> AppBar
+      {:sx #js {:position "relative"}}
+      [:> Toolbar
+       [:> IconButton
+        {:edge "start"
+         :onClick on-close
+         :color "inherit"}
+        [:> CloseIcon]]
+       [:> Typography
+        {:variant "h6"
+         :component "div"
+         :sx #js {:ml 2 :flex 1}}
+        (tr :ptv/tooltip)]]]
+
+     [:> DialogContent
+      {:sx #js {:display "flex"
+                :flexDirection "column"
+                :gap 2}}
 
       [org-selector {:label (tr :ptv.actions/select-org)}]
 
       (when loading?
-        [mui/stack {:direction "row" :spacing 2 :alignItems "center"}
+        [mui/stack
+         {:direction "row"
+          :spacing 2
+          :alignItems "center"
+          :justifyContent "center"}
          [mui/circular-progress]
          [mui/typography (tr :ptv/loading-from-ptv)]])
 
