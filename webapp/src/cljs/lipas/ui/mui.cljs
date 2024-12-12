@@ -164,7 +164,8 @@
     :MuiAppBar {:styleOverrides {:root {;; Disable gradient
                                         :backgroundImage "none"}}}
     :MuiLink {:defaultProps {:underline "hover"}}
-    :MuiIconButton {:defaultProps {:size "large"}}}})
+    :MuiIconButton {:defaultProps {:size "large"}}
+    :MuiStepLabel {:styleOverrides {:label {:fontWeight 500}}}}})
 
 (def jyu-styles-light
   (utils/deep-merge
