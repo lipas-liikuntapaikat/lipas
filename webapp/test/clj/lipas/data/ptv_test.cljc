@@ -47,3 +47,15 @@
 
   (is (= "juho@example.com"
          (sut/parse-email "juho@example.com"))))
+
+(deftest get-all-pages-test
+  (is (= {:pageCount 2
+          :itemList ["a" "b" "h" "i"]}
+         (sut/get-all-pages (fn [i]
+                              (case i
+                                1 {:pageNumber 1
+                                   :pageCount 2
+                                   :itemList ["a" "b"]}
+                                2 {:pageNumber 2
+                                   :pageCount 2
+                                   :itemList ["h" "i"]}))))))
