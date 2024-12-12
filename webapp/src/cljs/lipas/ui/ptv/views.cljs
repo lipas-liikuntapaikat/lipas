@@ -319,10 +319,13 @@
         options* (uix/use-memo (fn []
                                  (->> types/sub-categories
                                       vals
-                                      (map (fn [x]
-                                             {:value (:type-code x)
-                                              :label (get-in x [:name locale])}))
-                                      (sort-by :label)))
+                                      (map (fn [{:keys [type-code] :as x}]
+                                             {:value type-code
+                                              :sort-value (case type-code
+                                                            (1 2) (* 100 type-code)
+                                                            type-code)
+                                              :label (str type-code " " (get-in x [:name locale]))}))
+                                      (sort-by :sort-value)))
                                [locale])
         value (:sub-cats (use-subscribe [::subs/candidates-search]))
         on-change (fn [v]
@@ -331,8 +334,7 @@
        {:sx #js {:gap 2}}
 
        ($ Typography
-          "Jos haluat viedä vain tietyn tyyppiset Lipas liikuntapaikat PTV, voit valita tästä Lipas tyyppiryhmiä. Jos et valitse mitään, haetaan kaikki organisaation
-          liikuntapaikat (omistaja ja muiden oletusrajausten mukaisesti.) Viimeisessä vaiheessa voit vielä valita ettei tiettyjä liikuntapaikkoja viedä PTV.")
+          "Voit valita haluamasi Lipas-tyyppiluokat vietäväksi PTV:hen. Jos et tee valintaa, kaikki kunnan omistamat liikuntapaikat viedään. Viimeisessä vaiheessa voit jättää tietyt liikuntapaikat pois viennistä.")
 
        ;; NOTE: Huoltotilat antaa aina 0 tulosta koska filteröity pois
        ($ autocomplete2
