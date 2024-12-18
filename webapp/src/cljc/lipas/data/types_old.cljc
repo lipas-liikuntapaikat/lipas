@@ -4391,3 +4391,6 @@
 
 (def sub-category-by-fi-name
   (utils/index-by (comp :fi :name) (vals sub-categories)))
+
+(def active
+  (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))

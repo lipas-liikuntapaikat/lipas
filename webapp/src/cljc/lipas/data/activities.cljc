@@ -261,10 +261,10 @@
    {:schema [:sequential
              [:map
               [:organization {:optional true} localized-string-schema]
-              [:role {:optional true} (into [:enum] (keys contact-roles))]
-              [:email {:optional true} [:string]]
-              [:www {:optional true} [:string]]
-              [:phone-number {:optional true} [:string]]]]
+              [:role {:optional true} [:sequential (into [:enum] (keys contact-roles))]]
+              [:email {:optional true} localized-string-schema]
+              [:www {:optional true} localized-string-schema]
+              [:phone-number {:optional true} localized-string-schema]]]
     :field
     {:type        "contacts"
      :description {:fi "Syötä kohteesta vastaavien tahojen yhteystiedot"
@@ -401,7 +401,7 @@
                       :en "Copyright information"}}}}}}
 
    :additional-info-link
-   {:schema [:string]
+   {:schema localized-string-schema
     :field
     {:type        "text-field"
      :description {:fi "Linkki ulkoisella sivustolla sijaitsevaan laajempaan kohde-esittelyyn"
@@ -647,14 +647,14 @@
                   [:developmentally-disabled {:optional true} localized-string-schema]]]
                 [:route-name {:optional true} localized-string-schema]
                 [:outdoor-recreation-activities {:optional true}
-                 [:sequential [:enum (keys outdoor-recreation-routes-activities)]]]
+                 [:sequential (into [:enum] (keys outdoor-recreation-routes-activities))]]
                 [:duration {:optional true} duration-schema]
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                 [:route-marking {:optional true} localized-string-schema]
                 [:rules-structured {:optional true} rules-structured-schema]
                 [:route-length-km {:optional true} number-schema]
                 [:surface-material {:optional true} surface-material-schema]
-                [:accessibility-classification
+                [:accessibility-classification {:optional true}
                  (into [:enum] (keys accessibility-classification))]
                 [:independent-entity {:optional true} [:boolean]]
                 pilgrimage-key-schema])]

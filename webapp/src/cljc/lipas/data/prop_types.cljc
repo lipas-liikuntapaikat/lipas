@@ -2,7 +2,8 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.types :as types]))
+   [lipas.data.types :as types]
+   [lipas.data.materials :as materials]))
 
 (def all
   {:height-m
@@ -34,6 +35,7 @@
    {:name
     {:fi "Pintamateriaali", :se "Ytmaterial", :en "Surface material"},
     :data-type "enum-coll",
+    :opts materials/surface-materials
     :description
     {:fi
      "Liikunta-alueiden pääasiallinen pintamateriaali - tarkempi kuvaus liikuntapaikan eri tilojen pintamateriaalista voidaan antaa pintamateriaalin lisätietokentässä",
@@ -817,7 +819,7 @@
      :se "Ange antalet delar som utrymmet kan delas in i",
      :en
      "Enter the number of sections into which the space can be divided"},
-    :data-type "number",
+    :data-type "numeric",
     :description
     {:fi
      "Onko tila jaettavissa osiin esim. jakoseinien tai -verhojen avulla",
@@ -1818,3 +1820,12 @@
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
     (select-keys all used)))
+
+(def schemas
+  (into {} (for [[k m] all]
+             [k (case (:data-type m)
+                  "string"    [:string]
+                  "numeric"   [:or [:int] [:double]]
+                  "boolean"   [:boolean]
+                  "enum"      (into [:enum] (keys (:opts m)))
+                  "enum-coll" [:sequential (into [:enum] (keys (:opts m)))])])))
