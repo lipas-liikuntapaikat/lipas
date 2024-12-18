@@ -1,6 +1,7 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
+            [lipas.backend.api.v2 :as v2]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
@@ -717,7 +718,8 @@
            {:status 200
             :body   (core/search-lois-with-params search body-params)})}}]
 
-      (ptv-handler/routes ctx)]]
+      (ptv-handler/routes ctx)]
+     (v2/routes ctx)]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
