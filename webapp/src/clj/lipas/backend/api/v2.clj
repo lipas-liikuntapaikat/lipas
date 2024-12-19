@@ -1,9 +1,9 @@
 (ns lipas.backend.api.v2
-  (:require [reitit.coercion.malli]
+  (:require [lipas.schema.sports-sites :as sports-sites-schema]
+            [reitit.coercion.malli]
             [reitit.openapi :as openapi]
             [reitit.swagger-ui :as swagger-ui]
-            [ring.util.http-response :as resp]
-            [lipas.schema.sports-sites :as sports-sites-schema]))
+            [ring.util.http-response :as resp]))
 
 (defn routes [{:keys [db search] :as ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
@@ -15,7 +15,9 @@
      ["/sports-sites"
       {:get {:handler (fn [_]
                         (resp/ok))
-             :responses {200 {:body [:vector sports-sites-schema/base-schema]}}}}]
+             :responses {200 {:body [:vector
+                                     {:title "SportSites"}
+                                     sports-sites-schema/sports-site]}}}}]
      ["/lois"
       {:get {:handler (fn [_]
                         (resp/ok))}}]

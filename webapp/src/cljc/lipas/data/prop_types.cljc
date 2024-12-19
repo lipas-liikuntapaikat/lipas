@@ -1825,7 +1825,7 @@
   (into {} (for [[k m] all]
              [k (case (:data-type m)
                   "string"    [:string]
-                  "numeric"   [:or [:int] [:double]]
+                  "numeric"   number?
                   "boolean"   [:boolean]
                   "enum"      (into [:enum] (keys (:opts m)))
                   "enum-coll" [:sequential (into [:enum] (keys (:opts m)))])])))

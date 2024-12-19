@@ -5,9 +5,11 @@
             [lipas.data.owners :as owners]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites :as sports-sites]
+            [lipas.data.types :as types]
             [lipas.schema.core :as specs]
             [lipas.utils :as utils]
-            [malli.json-schema :as json-schema]))
+            [malli.json-schema :as json-schema]
+            [malli.util :as mu]))
 
 (def circumstances-schema
   [:map
@@ -73,49 +75,60 @@
 ;; https://github.com/metosin/malli/issues/670
 (def number-schema number?)
 
-;; FIXME: multi schema -> json-schema :oneOf, swagger-ui still displays just the
-;; first alternative.
-(def geometries-feature
-  [:multi {:dispatch (fn [x]
-                       (-> x :geometry :type))}
-   ["Point"
-    [:map
-     [:type [:enum "Feature"]]
-     [:id {:optional true} :string]
-     [:geometry
-      [:map
-       [:type [:enum "Point"]]
-       [:coordinates [:vector {:min 2 :max 3} number-schema]]]]]]
-
-   ["LineString"
-    [:map
-     [:type [:enum "Feature"]]
-     [:id {:optional true} :string]
-     [:geometry
-      [:map
-       [:type [:enum "LineString"]]
-       [:coordinates [:vector [:vector {:min 2 :max 3} number-schema]]]
-       [:properties {:optional true}
-        [:map
-         [:name {:optional true} :string]
-         [:lipas-id {:optional true} :int]
-         [:type-code {:optional true} :int]
-         [:route-part-difficulty {:optional true} :string]
-         [:travel-direction {:optional true} :string]]]]]]]
-
-   ["Polygon"
-    [:map
-     [:type [:enum "Feature"]]
-     [:geometry
-      [:map
-       [:type [:enum "Polygon"]]
-       [:coordinates [:vector [:vector [:vector {:min 2 :max 3} number-schema]]]]]]]] ])
-
-(def base-schema
-  ;; TODO audit
+(defn make-location-schema [geometry-schema]
   [:map
-   {:title "Sports site"
-    :description ""}
+   [:city
+    [:map
+     [:city-code (into [:enum] (keys cities/by-city-code))]
+     [:neighborhood {:optional true}
+      [:string {:min 1 :max 100}]]]]
+   [:address [:string {:min 1 :max 200}]]
+   [:postal-code [:re specs/postal-code-regex]]
+   [:postal-office {:optional true}
+    [:string {:min 1 :max 100}]]
+   [:geometries
+    [:map
+     [:type [:enum "FeatureCollection"]]
+     [:features
+      [:vector
+       [:map
+        [:type [:enum "Feature"]]
+        [:id {:optional true} :string]
+        [:geometry geometry-schema]]]]]]])
+
+(def point-geometry
+  [:map
+   {:title "Point"}
+   [:type [:enum "Point"]]
+   [:coordinates [:vector {:min 2 :max 3} number-schema]]])
+
+(def line-string-geometry
+  [:map
+   {:title "LineString"}
+   [:type [:enum "LineString"]]
+   [:coordinates [:vector [:vector {:min 2 :max 3} number-schema]]]
+   [:properties {:optional true}
+    [:map
+     [:name {:optional true} :string]
+     [:lipas-id {:optional true} :int]
+     [:type-code {:optional true} :int]
+     [:route-part-difficulty {:optional true} :string]
+     [:travel-direction {:optional true} :string]]]])
+
+
+(def polygon-geometry
+  [:map
+   {:title "Polygon"}
+   [:type [:enum "Polygon"]]
+   [:coordinates [:vector [:vector [:vector {:min 2 :max 3} number-schema]]]]])
+
+(def point-location (make-location-schema point-geometry))
+(def line-string-location (make-location-schema line-string-geometry))
+(def polygon-location (make-location-schema polygon-geometry))
+
+(def sports-site-base
+  [:map
+   {:title "Shared Properties"}
    [:lipas-id [:int]]
    [:status (into [:enum] (keys sports-sites/statuses))]
    [:name [:string {:min 2 :max 100}]]
@@ -142,32 +155,68 @@
    [:construction-year {:optional true}
     [:int {:min 1800 :max (+ 10 utils/this-year)}]]
    [:renovation-years {:optional true}
-    [:sequential [:int {:min 1800 :max (+ 10 utils/this-year)}]]]
-   [:location
-    [:map
-     [:city
-      [:map
-       [:city-code (into [:enum] (keys cities/by-city-code))]
-       [:neighborhood {:optional true}
-        [:string {:min 1 :max 100}]]]]
-     [:address [:string {:min 1 :max 200}]]
-     [:postal-code [:re specs/postal-code-regex]]
-     [:postal-office {:optional true}
-      [:string {:min 1 :max 100}]]
-     [:geometries
-      [:map
-       [:type [:enum "FeatureCollection"]]
-       [:features
-        [:vector
-         geometries-feature]]]]]]
-   [:circumstances
-    {:optional true
-     :description "Floorball information"}
-    circumstances-schema]
-   [:activities {:optional true} activities/activities-schema]
-   [:properties {:optional true}
-    (into [:map] (for [[k schema] prop-types/schemas]
-                   [k {:optional true} schema]))]])
+    [:sequential [:int {:min 1800 :max (+ 10 utils/this-year)}]]]])
 
-(comment
-  (json-schema/transform geometries-feature))
+(defn make-sports-site-schema [{:keys [title
+                                       type-codes
+                                       description
+                                       extras-schema
+                                       location-schema]}]
+  ;; TODO audit
+  [:and
+   #'sports-site-base
+   (mu/merge
+     [:map
+      {:title title
+       :description description}
+      [:type
+       [:map
+        [:type-code (into [:enum] type-codes)]]]
+      [:location location-schema]]
+     extras-schema)])
+
+(def sports-site
+  (into [:multi {:title "SportsSite"
+                 :dispatch (fn [x]
+                             (-> x :type :type-code))}]
+        (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
+              :let [activity (get activities/by-type-code type-code)
+                    activity-key (some-> activity :value keyword)
+                    floorball? (= 2240 type-code)]]
+          [type-code (make-sports-site-schema
+                       {:title (str type-code " - " (:fi (:name x)))
+                        :type-codes #{type-code}
+                        :location-schema (case geometry-type
+                                           "Point" #'point-location
+                                           "LineString" #'line-string-location
+                                           "Polygon" #'polygon-location)
+                        :extras-schema (cond-> [:map]
+                                         (seq props)
+                                         (mu/assoc :properties
+                                                   (into [:map]
+                                                         (for [[k schema] (select-keys prop-types/schemas (keys props))]
+                                                           [k {:optional true} schema]))
+                                                   {:optional true})
+
+                                         floorball?
+                                         (mu/assoc :circumstances
+                                                   circumstances-schema
+                                                   {:optional true
+                                                    :description "Floorball information"})
+
+                                         activity
+                                         (mu/assoc :activities
+                                                   [:map
+                                                    [activity-key
+                                                     {:optional true}
+                                                     (case activity-key
+                                                       :outdoor-recreation-areas #'activities/outdoor-recreation-areas-schema
+                                                       :outdoor-recreation-facilities #'activities/outdoor-recreation-facilities-schema
+                                                       :outdoor-recreation-routes #'activities/outdoor-recreation-routes-schema
+                                                       :cycling #'activities/cycling-schema
+                                                       :paddling #'activities/paddling-schema
+                                                       :birdwatching #'activities/birdwatching-schema
+                                                       :fishing #'activities/fishing-schema)]]
+                                                   {:optional true}))})])))
+
+
