@@ -8,7 +8,7 @@
             [lipas.data.types :as types]
             [lipas.schema.core :as specs]
             [lipas.utils :as utils]
-            [malli.json-schema :as json-schema]
+            [malli.core :as m]
             [malli.util :as mu]))
 
 (def circumstances-schema
@@ -72,6 +72,11 @@
    [:available-goals-count {:optional true} :int]
    [:player-entrance {:optional true} :string]])
 
+(def city-code  (into [:enum] (sort (keys cities/by-city-code))))
+(def city-codes [:set city-code])
+
+(def type-codes [:set (into [:enum] (sort (keys types/all)))])
+
 ;; https://github.com/metosin/malli/issues/670
 (def number-schema number?)
 
@@ -79,7 +84,7 @@
   [:map
    [:city
     [:map
-     [:city-code (into [:enum] (keys cities/by-city-code))]
+     [:city-code city-code]
      [:neighborhood {:optional true}
       [:string {:min 1 :max 100}]]]]
    [:address [:string {:min 1 :max 200}]]
@@ -178,6 +183,7 @@
 (def sports-site
   (into [:multi {:title "SportsSite"
                  :dispatch (fn [x]
+                             (println x (-> x :type :type-code))
                              (-> x :type :type-code))}]
         (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
               :let [activity (get activities/by-type-code type-code)
@@ -192,31 +198,46 @@
                                            "Polygon" #'polygon-location)
                         :extras-schema (cond-> [:map]
                                          (seq props)
-                                         (mu/assoc :properties
-                                                   (into [:map]
-                                                         (for [[k schema] (select-keys prop-types/schemas (keys props))]
-                                                           [k {:optional true} schema]))
-                                                   {:optional true})
+                                         (conj [:properties
+                                                {:optional true}
+                                                (into [:map]
+                                                      (for [[k schema] (select-keys prop-types/schemas (keys props))]
+                                                        [k {:optional true} schema]))])
 
                                          floorball?
-                                         (mu/assoc :circumstances
-                                                   circumstances-schema
-                                                   {:optional true
-                                                    :description "Floorball information"})
+                                         (conj [:circumstances
+                                                {:optional true
+                                                 :description "Floorball information"}
+                                                circumstances-schema])
 
                                          activity
-                                         (mu/assoc :activities
-                                                   [:map
-                                                    [activity-key
-                                                     {:optional true}
-                                                     (case activity-key
-                                                       :outdoor-recreation-areas #'activities/outdoor-recreation-areas-schema
-                                                       :outdoor-recreation-facilities #'activities/outdoor-recreation-facilities-schema
-                                                       :outdoor-recreation-routes #'activities/outdoor-recreation-routes-schema
-                                                       :cycling #'activities/cycling-schema
-                                                       :paddling #'activities/paddling-schema
-                                                       :birdwatching #'activities/birdwatching-schema
-                                                       :fishing #'activities/fishing-schema)]]
-                                                   {:optional true}))})])))
+                                         (conj [:activities
+                                                {:optional true}
+                                                [:map
+                                                 [activity-key
+                                                  {:optional true}
+                                                  (case activity-key
+                                                    :outdoor-recreation-areas #'activities/outdoor-recreation-areas-schema
+                                                    :outdoor-recreation-facilities #'activities/outdoor-recreation-facilities-schema
+                                                    :outdoor-recreation-routes #'activities/outdoor-recreation-routes-schema
+                                                    :cycling #'activities/cycling-schema
+                                                    :paddling #'activities/paddling-schema
+                                                    :birdwatching #'activities/birdwatching-schema
+                                                    :fishing #'activities/fishing-schema)]]]))})])))
 
-
+(comment
+  (m/explain [:vector sports-site]
+             [{:lipas-id 1
+               :status "active"
+               :name "foo"
+               :owner "city"
+               :admin "city-sports"
+               :location {:city {:city-code 5}
+                          :address "foo"
+                          :postal-code "00100"
+                          :postal-office "foo"
+                          :geometries {:type "FeatureCollection"
+                                       :features [{:type "Feature"
+                                                   :geometry {:type "Point"
+                                                              :coordinates [0.0 0.0]}}]}}
+               :type {:type-code 1530}}]))
