@@ -6,7 +6,8 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites :as sports-sites]
             [lipas.schema.core :as specs]
-            [lipas.utils :as utils]))
+            [lipas.utils :as utils]
+            [malli.json-schema :as json-schema]))
 
 (def circumstances-schema
   [:map
@@ -69,37 +70,46 @@
    [:available-goals-count {:optional true} :int]
    [:player-entrance {:optional true} :string]])
 
-;; FIXME: :or doesn't work nicely with OpenAPI
-(def number-schema [:or :double :int])
+;; https://github.com/metosin/malli/issues/670
+(def number-schema number?)
 
-(def geom-type->schema
-  {"Point"      [:map
-                 [:type [:enum "Feature"]]
-                 [:id {:optional true} :string]
-                 [:geometry
-                  [:map
-                   [:type [:enum "Point"]]
-                   [:coordinates [:vector {:min 2 :max 3} number-schema]]]]]
-   "LineString" [:map
-                 [:type [:enum "Feature"]]
-                 [:id {:optional true} :string]
-                 [:geometry
-                  [:map
-                   [:type [:enum "LineString"]]
-                   [:coordinates [:vector [:vector {:min 2 :max 3} number-schema]]]
-                   [:properties {:optional true}
-                    [:map
-                     [:name {:optional true} :string]
-                     [:lipas-id {:optional true} :int]
-                     [:type-code {:optional true} :int]
-                     [:route-part-difficulty {:optional true} :string]
-                     [:travel-direction {:optional true} :string]]]]]]
-   "Polygon"    [:map
-                 [:type [:enum "Feature"]]
-                 [:geometry
-                  [:map
-                   [:type [:enum "Polygon"]]
-                   [:coordinates [:vector [:vector [:vector {:min 2 :max 3} number-schema]]]]]]]})
+;; FIXME: multi schema -> json-schema :oneOf, swagger-ui still displays just the
+;; first alternative.
+(def geometries-feature
+  [:multi {:dispatch (fn [x]
+                       (-> x :geometry :type))}
+   ["Point"
+    [:map
+     [:type [:enum "Feature"]]
+     [:id {:optional true} :string]
+     [:geometry
+      [:map
+       [:type [:enum "Point"]]
+       [:coordinates [:vector {:min 2 :max 3} number-schema]]]]]]
+
+   ["LineString"
+    [:map
+     [:type [:enum "Feature"]]
+     [:id {:optional true} :string]
+     [:geometry
+      [:map
+       [:type [:enum "LineString"]]
+       [:coordinates [:vector [:vector {:min 2 :max 3} number-schema]]]
+       [:properties {:optional true}
+        [:map
+         [:name {:optional true} :string]
+         [:lipas-id {:optional true} :int]
+         [:type-code {:optional true} :int]
+         [:route-part-difficulty {:optional true} :string]
+         [:travel-direction {:optional true} :string]]]]]]]
+
+   ["Polygon"
+    [:map
+     [:type [:enum "Feature"]]
+     [:geometry
+      [:map
+       [:type [:enum "Polygon"]]
+       [:coordinates [:vector [:vector [:vector {:min 2 :max 3} number-schema]]]]]]]] ])
 
 (def base-schema
   ;; TODO audit
@@ -149,9 +159,7 @@
        [:type [:enum "FeatureCollection"]]
        [:features
         [:vector
-         ;; FIXME: :or only the first entry is included in OpenAPI
-         ;; Should be an multi schema? (do those work nice with OpenAPI)
-         (into [:or] (vals geom-type->schema))]]]]]]
+         geometries-feature]]]]]]
    [:circumstances
     {:optional true
      :description "Floorball information"}
@@ -160,3 +168,6 @@
    [:properties {:optional true}
     (into [:map] (for [[k schema] prop-types/schemas]
                    [k {:optional true} schema]))]])
+
+(comment
+  (json-schema/transform geometries-feature))
