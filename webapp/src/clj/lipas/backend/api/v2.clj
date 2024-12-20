@@ -20,32 +20,19 @@
                               query {:from 0
                                      :size 100
                                      :track_total_hits 50000
-                                     :_source {:excludes ["search-meta.*"]
-                                               :includes ["lipas-id"
-                                                          "status"
-                                                          "name"
-                                                          "name-localized"
-                                                          "type.type-code"
-                                                          "location.city.city-code"]}
+                                     :_source {:excludes ["search-meta.*"]}
                                      :query {:bool {:must (cond-> []
                                                             type-codes (conj {:terms {:type.type-code type-codes}})
                                                             city-codes (conj {:terms {:location.city.city-code city-codes}}))}}}
                               x  (core/search search query)]
-                          (println (-> x
-                                       :body
-                                       :hits
-                                       :hits
-                                       ;; Why is there results with empty _source?
-                                       (->> (keep :_source))
-                                       ))
-                          (resp/ok
-                            (-> x
-                                :body
-                                :hits
-                                :hits
-                                ;; Why is there results with empty _source?
-                                (->> (keep :_source))
-                                ))))
+                          {:status 200
+                           :body {:items (-> x
+                                             :body
+                                             :hits
+                                             :hits
+                                             ;; Why is there results with empty _source?
+                                             (->> (keep :_source))
+                                             )}}))
              :parameters {:query [:map
                                   [:city-codes
                                    {:optional true
@@ -69,9 +56,10 @@
                                                       (str/join "\n")
                                                       (str "Type-codes:\n"))}
                                    #'sports-sites-schema/type-codes]]}
-             :responses {200 {:body [:vector
-                                     {:title "SportSites"}
-                                     sports-sites-schema/sports-site]}}}}]
+             :responses {200 {:body [:map
+                                     [:items [:vector
+                                              {:title "SportSites"}
+                                              sports-sites-schema/sports-site]]]}}}}]
      ["/lois"
       {:get {:handler (fn [_]
                         (resp/ok))}}]

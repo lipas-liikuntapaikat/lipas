@@ -133,7 +133,9 @@
 
 (def sports-site-base
   [:map
-   {:title "Shared Properties"}
+   {:title "Shared Properties"
+    ;; Because this is used from :and, both branches need to be open for Malli to work.
+    :closed false}
    [:lipas-id [:int]]
    [:status (into [:enum] (keys sports-sites/statuses))]
    [:name [:string {:min 2 :max 100}]]
@@ -173,7 +175,8 @@
    (mu/merge
      [:map
       {:title title
-       :description description}
+       :description description
+       :closed false}
       [:type
        [:map
         [:type-code (into [:enum] type-codes)]]]
@@ -183,8 +186,8 @@
 (def sports-site
   (into [:multi {:title "SportsSite"
                  :dispatch (fn [x]
-                             (println x (-> x :type :type-code))
-                             (-> x :type :type-code))}]
+                             (-> x :type :type-code))}
+         [:malli.core/default :any]]
         (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
               :let [activity (get activities/by-type-code type-code)
                     activity-key (some-> activity :value keyword)
@@ -226,18 +229,18 @@
                                                     :fishing #'activities/fishing-schema)]]]))})])))
 
 (comment
-  (m/explain [:vector sports-site]
-             [{:lipas-id 1
-               :status "active"
-               :name "foo"
-               :owner "city"
-               :admin "city-sports"
-               :location {:city {:city-code 5}
-                          :address "foo"
-                          :postal-code "00100"
-                          :postal-office "foo"
-                          :geometries {:type "FeatureCollection"
-                                       :features [{:type "Feature"
-                                                   :geometry {:type "Point"
-                                                              :coordinates [0.0 0.0]}}]}}
-               :type {:type-code 1530}}]))
+  (m/validate [:vector sports-site]
+              [{:lipas-id 1
+                :status "active"
+                :name "foo"
+                :owner "city"
+                :admin "city-sports"
+                :location {:city {:city-code 5}
+                           :address "foo"
+                           :postal-code "00100"
+                           :postal-office "foo"
+                           :geometries {:type "FeatureCollection"
+                                        :features [{:type "Feature"
+                                                    :geometry {:type "Point"
+                                                               :coordinates [0.0 0.0]}}]}}
+                :type {:type-code 1530}}]))
