@@ -12,6 +12,9 @@
                      {:url "/api-v2/openapi.json"})]
     ["/api-v2"
      {:openapi {:id :api-v2}
+      ;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
+      ;; these routes from that.
+      :swagger {:id :hide-from-default}
       :coercion reitit.coercion.malli/coercion}
 
      ["/sports-sites"
