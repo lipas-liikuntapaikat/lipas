@@ -875,14 +875,18 @@
       query
       default-query)))
 
-(defn search-lois
+(defn search-lois*
   [{:keys [indices client]} es-query]
   (let [idx-name (get-in indices [:lois :search])]
-    (-> (search/search client idx-name es-query)
-        :body
-        :hits
-        :hits
-        (->> (map :_source)))))
+    (search/search client idx-name es-query)))
+
+(defn search-lois
+  [search es-query]
+  (-> (search-lois* search es-query)
+      :body
+      :hits
+      :hits
+      (->> (map :_source))))
 
 (defn get-loi
   [{:keys [indices client]} loi-id]

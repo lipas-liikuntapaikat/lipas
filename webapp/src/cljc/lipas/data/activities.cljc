@@ -4,6 +4,7 @@
    #?(:clj [clojure.data.csv :as csv])
    #?(:clj [clojure.string :as str])
    [lipas.data.materials :as materials]
+   [lipas.schema.common :as common-schema]
    [lipas.utils :as utils]
    [malli.core :as m]
    [malli.json-schema :as json-schema]
@@ -12,46 +13,14 @@
 (defn collect-schema
   [m]
   (into [:map] (map (juxt first (constantly {:optional true}) (comp :schema second)) m)))
-
-(def localized-string-schema
-  [:map
-   [:fi {:optional true} [:string]]
-   [:se {:optional true} [:string]]
-   [:en {:optional true} [:string]]])
-
-(def number-schema
-  [:or [:int] [:double]])
-
-(def percentage-schema
-  (let [props {:min 0 :max 100}]
-    [:or [:int props] [:double props]]))
-
 (def duration-schema
   [:map
-   [:min {:optional true} number-schema]
-   [:max {:optional true} number-schema]
+   [:min {:optional true} common-schema/number]
+   [:max {:optional true} common-schema/number]
    [:unit {:optional true} [:enum "days" "hours" "minutes"]]])
 
 (def surface-material-schema
   [:sequential (into [:enum] (keys materials/surface-materials))])
-
-(def route-fcoll-schema
-  [:map
-   [:type [:enum "FeatureCollection"]]
-   [:features
-    [:sequential
-     [:map
-      [:id {:optional true} [:string]]
-      [:type [:enum "Feature"]]
-      [:properties {:optional true} [:map]]
-      [:geometry
-       [:map
-        [:type [:enum "LineString"]]
-        [:coordinates
-         [:sequential
-          [:or
-           [:tuple :double :double]
-           [:tuple :double :double :double]]]]]]]]]])
 
 (def contact-roles
   {"admin"            {:fi "Ylläpitäjä"
@@ -207,8 +176,8 @@
    [:custom-rules {:optional true}
     [:sequential
      [:map
-      [:label {:optional true} localized-string-schema]
-      [:description {:optional true} localized-string-schema]
+      [:label {:optional true} common-schema/localized-string]
+      [:description {:optional true} common-schema/localized-string]
       [:value {:optional true} [:string {:min 2}]]]]]])
 
 (def status-opts
@@ -236,7 +205,7 @@
      :opts status-opts}}
 
    :description-short
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "textarea"
      :description {:fi "1-3 lauseen esittely kohteesta ja sen erityispiirteistä."
@@ -247,7 +216,7 @@
                    :en "Overview"}}}
 
    :description-long
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "textarea"
      :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista"
@@ -260,11 +229,11 @@
    :contacts
    {:schema [:sequential
              [:map
-              [:organization {:optional true} localized-string-schema]
+              [:organization {:optional true} common-schema/localized-string]
               [:role {:optional true} [:sequential (into [:enum] (keys contact-roles))]]
-              [:email {:optional true} localized-string-schema]
-              [:www {:optional true} localized-string-schema]
-              [:phone-number {:optional true} localized-string-schema]]]
+              [:email {:optional true} common-schema/localized-string]
+              [:www {:optional true} common-schema/localized-string]
+              [:phone-number {:optional true} common-schema/localized-string]]]
     :field
     {:type        "contacts"
      :description {:fi "Syötä kohteesta vastaavien tahojen yhteystiedot"
@@ -342,7 +311,7 @@
    {:schema [:sequential
              [:map
               [:url [:string]]
-              [:description {:optional true} localized-string-schema]]]
+              [:description {:optional true} common-schema/localized-string]]]
     :field
     {:type        "videos"
      :description {:fi "Lisää URL-linkki web-palvelussa olevaan kohteen maisemia, luontoa tai harrastamisen olosuhteita esittelevään videoon. Varmista, että sinulla on oikeus lisätä video."
@@ -356,9 +325,9 @@
    {:schema [:sequential
              [:map
               [:url [:string]]
-              [:description {:optional true} localized-string-schema]
-              [:alt-text {:optional true} localized-string-schema]
-              [:copyright {:optional true} localized-string-schema]]]
+              [:description {:optional true} common-schema/localized-string]
+              [:alt-text {:optional true} common-schema/localized-string]
+              [:copyright {:optional true} common-schema/localized-string]]]
     :field
     {:type        "images"
      :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."
@@ -401,7 +370,7 @@
                       :en "Copyright information"}}}}}}
 
    :additional-info-link
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "text-field"
      :description {:fi "Linkki ulkoisella sivustolla sijaitsevaan laajempaan kohde-esittelyyn"
@@ -412,7 +381,7 @@
                    :en "More information"}}}
 
    :rules
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "textarea"
      :description {:fi "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista."
@@ -423,7 +392,7 @@
                    :en "Permits, regulations, instructions"}}}
 
    :arrival
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "textarea"
      :description {:fi "Eri kulkumuodoilla kohteeseen pääsyyn liittyvää tietoa. Esim. pysäköintialueet ja joukkoliikenneyhteydet."
@@ -434,7 +403,7 @@
                    :en "Arrival to destination"}}}
 
    :accessibility
-   {:schema localized-string-schema
+   {:schema common-schema/localized-string
     :field
     {:type        "textarea"
      :description {:fi "Yleistä tietoa kohteen esteettömyydestä tai kuljettavuudesta"
@@ -445,7 +414,7 @@
                    :en "Accessibility"}}}
 
    :highlights
-   {:schema [:sequential localized-string-schema]
+   {:schema [:sequential common-schema/localized-string]
     :field
     {:type        "textlist"
      :description {:fi "Syötä 2-6 konkreettista kohteen erityispiirrettä, jotka täydentävät yleiskuvausta. Syötä yksi kohokohta kerrallaan. Käytä isoa Alkukirjainta."
@@ -638,21 +607,21 @@
                    (mu/dissoc :rules))
                [:map
                 [:id [:string]]
-                [:geometries route-fcoll-schema]
+                [:geometries common-schema/line-string-fcoll]
                 [:accessibility-categorized {:optional true}
                  [:map
-                  [:mobility-impaired {:optional true} localized-string-schema]
-                  [:hearing-impaired {:optional true} localized-string-schema]
-                  [:visually-impaired {:optional true} localized-string-schema]
-                  [:developmentally-disabled {:optional true} localized-string-schema]]]
-                [:route-name {:optional true} localized-string-schema]
+                  [:mobility-impaired {:optional true} common-schema/localized-string]
+                  [:hearing-impaired {:optional true} common-schema/localized-string]
+                  [:visually-impaired {:optional true} common-schema/localized-string]
+                  [:developmentally-disabled {:optional true} common-schema/localized-string]]]
+                [:route-name {:optional true} common-schema/localized-string]
                 [:outdoor-recreation-activities {:optional true}
                  [:sequential (into [:enum] (keys outdoor-recreation-routes-activities))]]
                 [:duration {:optional true} duration-schema]
                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
-                [:route-marking {:optional true} localized-string-schema]
+                [:route-marking {:optional true} common-schema/localized-string]
                 [:rules-structured {:optional true} rules-structured-schema]
-                [:route-length-km {:optional true} number-schema]
+                [:route-length-km {:optional true} common-schema/number]
                 [:surface-material {:optional true} surface-material-schema]
                 [:accessibility-classification {:optional true}
                  (into [:enum] (keys accessibility-classification))]
@@ -826,7 +795,7 @@
                            :en "Select all the surface materials on the route"}}}
 
         #_#_:latest-updates
-        {:schema localized-string-schema
+        {:schema common-schema/localized-string
          :field
          {:type        "textarea"
           :description {:fi "Tähän joku seliteteksti"
@@ -969,23 +938,23 @@
                common-route-props-schema
                [:map
                 [:id [:string]]
-                [:geometries route-fcoll-schema]
-                [:route-name {:optional true} localized-string-schema]
+                [:geometries common-schema/line-string-fcoll]
+                [:route-name {:optional true} common-schema/localized-string]
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
                 [:cycling-difficulty {:optional true}
                  (into [:enum] (keys cycling-difficulty))]
-                [:cycling-route-difficulty {:optional true} localized-string-schema]
+                [:cycling-route-difficulty {:optional true} common-schema/localized-string]
                 [:duration {:optional true} duration-schema]
-                [:food-and-water {:optional true} localized-string-schema]
-                [:accommodation {:optional true} localized-string-schema]
-                [:good-to-know {:optional true} localized-string-schema]
-                [:route-notes {:optional true} localized-string-schema]
-                [:route-length-km {:optional true} number-schema]
+                [:food-and-water {:optional true} common-schema/localized-string]
+                [:accommodation {:optional true} common-schema/localized-string]
+                [:good-to-know {:optional true} common-schema/localized-string]
+                [:route-notes {:optional true} common-schema/localized-string]
+                [:route-length-km {:optional true} common-schema/number]
                 [:surface-material {:optional true} surface-material-schema]
-                [:unpaved-percentage {:optional true} percentage-schema]
-                [:trail-percentage {:optional true} percentage-schema]
-                [:cyclable-percentage {:optional true} percentage-schema]
+                [:unpaved-percentage {:optional true} common-schema/percentage]
+                [:trail-percentage {:optional true} common-schema/percentage]
+                [:cyclable-percentage {:optional true} common-schema/percentage]
                 pilgrimage-key-schema])]
      :field
      {:type        "routes"
@@ -1305,8 +1274,8 @@
                       common-route-props-schema
                       [:map
                        [:id [:string]]
-                       [:geometries route-fcoll-schema]
-                       [:route-name {:optional true} localized-string-schema]
+                       [:geometries common-schema/line-string-fcoll]
+                       [:route-name {:optional true} common-schema/localized-string]
                        [:paddling-activities {:optional true}
                         [:sequential (into [:enum] (keys paddling-activities))]]
                        [:paddling-route-type {:optional true}
@@ -1315,8 +1284,8 @@
                         [:sequential (into [:enum] (keys paddling-properties))]]
                        [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
-                       [:safety {:optional true} localized-string-schema]
-                       [:good-to-know {:optional true} localized-string-schema]
+                       [:safety {:optional true} common-schema/localized-string]
+                       [:good-to-know {:optional true} common-schema/localized-string]
                        [:duration {:optional true} duration-schema]
                        pilgrimage-key-schema])]
             :field
@@ -1491,7 +1460,7 @@
        :opts        birdwatching-types}}
 
      :birdwatching-habitat
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Suokohde, …"
@@ -1502,7 +1471,7 @@
                      :en "Habitat"}}}
 
      :birdwatching-character
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Muutonseurantakohde, …"
@@ -1525,7 +1494,7 @@
        :opts        birdwatching-seasons}}
 
      :birdwatching-species
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"
@@ -1651,7 +1620,7 @@
        :opts        fishing-species}}
 
      :fish-population
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Kirjoita tähän kuvaus kohteen vesistössä esiintyvästä kalastosta."
@@ -1663,7 +1632,7 @@
 
 
      :fishing-methods
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Tietoa mm. kohteessa kalastukseen vaikuttavista erityispiirteistä, toimivista välinevalinnoista yms."
@@ -1686,7 +1655,7 @@
        :opts        fishing-permit-opts}}
 
      :fishing-permit-additional-info
-     {:schema localized-string-schema
+     {:schema common-schema/localized-string
       :field
       {:type        "textarea"
        :description {:fi "Syötä tähän tarvittaessa lisätietoa kalastuslupia koskevista muista asioista"
@@ -1710,10 +1679,10 @@
 
      :accessibility-categorized
      {:schema [:map
-               [:mobility-impaired {:optional true} localized-string-schema]
-               [:hearing-impaired {:optional true} localized-string-schema]
-               [:visually-impaired {:optional true} localized-string-schema]
-               [:developmentally-disabled {:optional true} localized-string-schema]]
+               [:mobility-impaired {:optional true} common-schema/localized-string]
+               [:hearing-impaired {:optional true} common-schema/localized-string]
+               [:visually-impaired {:optional true} common-schema/localized-string]
+               [:developmentally-disabled {:optional true} common-schema/localized-string]]
 
       :field
       {:type        "accessibility"

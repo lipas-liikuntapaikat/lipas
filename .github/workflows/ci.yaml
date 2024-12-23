@@ -173,16 +173,16 @@ jobs:
         uses: tj-actions/changed-files@v41
         with:
           files: |
-            webapp/src/cljc/lipas/data/loi.cljc
+            webapp/src/cljc/lipas/schema/lois.cljc
 
       - name: Generate JSON schema
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.data.loi > loi-schema.json
+        run: lein run -m lipas.schema.lois > loi-schema.json
         working-directory: ./webapp
 
       - name: Generate CSV
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.data.loi csv > loi-schema.csv
+        run: lein run -m lipas.schema.lois csv > loi-schema.csv
         working-directory: ./webapp
 
       - name: Deploy JSON schema to Gist
