@@ -12,7 +12,13 @@
 
 (defn collect-schema
   [m]
-  (into [:map] (map (juxt first (constantly {:optional true}) (comp :schema second)) m)))
+  (into [:map] (map (juxt first
+                          (fn [m]
+                            {:optional true
+                             :description (get-in (second m) [:field :description :en])})
+                          (comp :schema second))
+                    m)))
+
 (def duration-schema
   [:map
    [:min {:optional true} common-schema/number]
