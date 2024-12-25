@@ -18,14 +18,20 @@
                 :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
         (sort (keys cities/by-city-code))))
 
-(def city-codes [:set city-code])
+(def city-codes
+  [:set {:title "CityCodes"
+         :description (-> city-code second :description)}
+   city-code])
 
 (def type-code
   (into [:enum {:title "TypeCode"
                 :description "Sports facility type according to LIPAS classification https://www.jyu.fi/fi/liikunta/yhteistyo/lipas-liikunnan-paikkatietojarjestelma"}]
         (sort (keys types/all))))
 
-(def type-codes [:set type-code])
+(def type-codes
+  [:set {:title "TypeCodes"
+         :description (-> type-code second :description)}
+   type-code])
 
 (defn make-location-schema [feature-schema]
   [:map
@@ -64,14 +70,20 @@
                 :description "Owner entity of the sports facility."}]
         (keys owners/all)))
 
-(def owners [:set #'owner])
+(def owners
+  [:set {:title "Admins"
+         :description (-> owner second :description)}
+   #'owner])
 
 (def admin
   (into [:enum {:title "Admin"
                 :description "Administrative entity of the sports facility."}]
         (keys admins/all)))
 
-(def admins [:set #'admin])
+(def admins
+  [:set {:title "Admins"
+         :description (-> admin second :description)}
+   #'admin])
 
 (def sports-site-base
   [:map
@@ -156,7 +168,7 @@
                                         (conj [:circumstances
                                                {:optional true
                                                 :description "Floorball information"}
-                                               #'circumstances-schema/circumstances])
+                                               #'circumstances-schema/floorball])
 
                                         activity
                                         (conj [:activities

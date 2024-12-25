@@ -2,7 +2,10 @@
   (:require [lipas.data.activities :as activities-data]))
 
 (def activity (into [:enum] (keys activities-data/activities)))
-(def activities [:set activity])
+(def activities
+  [:set {:title "Activities"
+         :description "Enriched activity related content for Luontoon.fi service. Certain sports facility types may contain data about activities that can be practiced at the facility."}
+   activity])
 
 (def fishing activities-data/fishing-schema)
 (def outdoor-recreation-areas activities-data/outdoor-recreation-areas-schema)

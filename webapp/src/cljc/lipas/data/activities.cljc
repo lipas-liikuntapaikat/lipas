@@ -613,7 +613,7 @@
                    (mu/dissoc :rules))
                [:map
                 [:id [:string]]
-                [:geometries common-schema/line-string-fcoll]
+                [:geometries common-schema/line-string-feature-collection]
                 [:accessibility-categorized {:optional true}
                  [:map
                   [:mobility-impaired {:optional true} common-schema/localized-string]
@@ -944,7 +944,7 @@
                common-route-props-schema
                [:map
                 [:id [:string]]
-                [:geometries common-schema/line-string-fcoll]
+                [:geometries common-schema/line-string-feature-collection]
                 [:route-name {:optional true} common-schema/localized-string]
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
@@ -1280,7 +1280,7 @@
                       common-route-props-schema
                       [:map
                        [:id [:string]]
-                       [:geometries common-schema/line-string-fcoll]
+                       [:geometries common-schema/line-string-feature-collection]
                        [:route-name {:optional true} common-schema/localized-string]
                        [:paddling-activities {:optional true}
                         [:sequential (into [:enum] (keys paddling-activities))]]

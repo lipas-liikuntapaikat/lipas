@@ -129,30 +129,25 @@
                       [:city-codes
                        {:optional true
                         :decode/string decode-heisenparam
-                        #_#_
-                        :description (->> cities/by-city-code
-                                          (sort-by key)
-                                          (map (fn [[code x]]
-                                                 (str "* " code " - " (:fi (:name x)) "")))
-                                          (str/join "\n")
-                                          (str "City-codes:\n"))}
+                        :description (-> sports-sites-schema/city-codes
+                                         second
+                                         :description)}
                        #'sports-sites-schema/city-codes]
 
                       [:type-codes
                        {:optional true
                         :decode/string decode-heisenparam
-                        #_#_
-                        :description (->> types/all
-                                          (sort-by key)
-                                          (map (fn [[code x]]
-                                                 (str "* " code " - " (:fi (:name x)) "")))
-                                          (str/join "\n")
-                                          (str "Type-codes:\n"))}
+                        :description (-> sports-sites-schema/type-codes
+                                         second
+                                         :description)}
                        #'sports-sites-schema/type-codes]
 
                       [:admins
                        {:optional true
-                        :decode/string decode-heisenparam}
+                        :decode/string decode-heisenparam
+                        :description (-> sports-sites-schema/admins
+                                         second
+                                         :description)}
                        #'sports-sites-schema/admins]
 
                       [:owners
@@ -162,6 +157,9 @@
 
                       [:activities
                        {:optional true
+                        :description (-> activities-schema/activities
+                                         second
+                                         :description)
                         :decode/string decode-heisenparam}
                        #'activities-schema/activities]]}
 

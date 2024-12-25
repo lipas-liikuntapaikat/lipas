@@ -56,20 +56,20 @@
    [:geometry #'polygon-geometry]
    [:properties {:optional true} [:map]]])
 
-(def point-fcoll
+(def point-feature-collection
   [:map
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential point-feature]]])
 
-(def line-string-fcoll
+(def line-string-feature-collection
   [:map
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential
      #'line-string-feature]]])
 
-(def polygon-fcoll
+(def polygon-feature-collection
   [:map
    [:type [:enum "FeatureCollection"]]
    [:features

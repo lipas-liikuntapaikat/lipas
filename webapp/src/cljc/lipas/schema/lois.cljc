@@ -20,14 +20,14 @@
           [(:value type-v)
            (into
             [:map {:description (str cat-k " > " (:value type-v))
-                   :title (-> type-v :label :fi)}
+                   :title (-> type-v :label :en)}
              [:id [:string]]
              [:event-date [:string]]
              #_[:created-at [:string]]
              [:geometries (case (:geom-type type-v)
-                            ("Polygon") #'common/polygon-fcoll
-                            ("LineString") #'common/line-string-fcoll
-                            #'common/point-fcoll)]
+                            ("Polygon") #'common/polygon-feature-collection
+                            ("LineString") #'common/line-string-feature-collection
+                            #'common/point-feature-collection)]
              [:status common/status]
              [:loi-category [:enum cat-k]]
              [:loi-type [:enum (:value type-v)]]]

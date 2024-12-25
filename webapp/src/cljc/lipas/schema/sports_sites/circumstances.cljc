@@ -1,8 +1,9 @@
 (ns lipas.schema.sports-sites.circumstances)
 
-(def circumstances
-  [:map {:title "Circumstances"
-         :description "Floorball related circumstances"}
+;; TODO check fields that are exposed via public API before release
+(def floorball
+  [:map {:title "FloorballCircumstances"
+         :description "Enriched floorball facility information"}
    [:storage-capacity {:optional true} :string]
    [:roof-trusses-operation-model {:optional true} :string]
    [:general-information {:optional true} :string]
