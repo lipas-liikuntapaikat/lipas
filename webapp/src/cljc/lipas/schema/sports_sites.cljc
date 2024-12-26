@@ -6,12 +6,16 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
+            [lipas.schema.sports-sites.types :as types-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
             [lipas.schema.core :as specs]
             [lipas.utils :as utils]
             [malli.core :as m]
             [malli.util :as mu]))
+
+(def lipas-id
+  [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}])
 
 (def city-code
   (into [:enum {:title "CityCode"
@@ -22,16 +26,6 @@
   [:set {:title "CityCodes"
          :description (-> city-code second :description)}
    city-code])
-
-(def type-code
-  (into [:enum {:title "TypeCode"
-                :description "Sports facility type according to LIPAS classification https://www.jyu.fi/fi/liikunta/yhteistyo/lipas-liikunnan-paikkatietojarjestelma"}]
-        (sort (keys types/all))))
-
-(def type-codes
-  [:set {:title "TypeCodes"
-         :description (-> type-code second :description)}
-   type-code])
 
 (defn make-location-schema [feature-schema]
   [:map
@@ -53,7 +47,7 @@
 (def line-string-feature-props
   [:map
    [:name {:optional true} :string]
-   [:lipas-id {:optional true} :int]
+   [:lipas-id {:optional true} #'lipas-id]
    [:type-code {:optional true} :int]
    [:route-part-difficulty {:optional true} :string]
    [:travel-direction {:optional true} :string]])
@@ -90,7 +84,7 @@
    {:title "Shared Properties"
     ;; Because this is used from :and, both branches need to be open for Malli to work.
     :closed false}
-   [:lipas-id [:int]]
+   [:lipas-id #'lipas-id]
    [:status #'common/status]
    [:name {:description "The official name of the sports facility"}
     [:string {:min 2 :max 100}]]

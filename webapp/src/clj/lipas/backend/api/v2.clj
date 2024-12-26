@@ -5,6 +5,7 @@
             [lipas.schema.lois :as lois-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.activities :as activities-schema]
+            [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli]
             [reitit.openapi :as openapi]
             [reitit.swagger-ui :as swagger-ui]
@@ -32,9 +33,20 @@
    "circumstances"])
 
 (defn decode-heisenparam
-  "Coerces singular and repeating params into a collection. Singular
-  query param comes in as scalar, while multiple params come in as
-  vector. Handles also possibly comma-separated vals."
+  "Normalizes query parameters into a collection by handling different input formats:
+
+  - Single value: Converts a scalar string into a vector by splitting on commas
+  - Multiple values: Preserves existing vector format
+  - Empty/nil: Returns the input unchanged
+
+  Examples:
+    (decode-heisenparam \"a,b,c\")     ;=> [\"a\" \"b\" \"c\"]
+    (decode-heisenparam [\"a\" \"b\"]) ;=> [\"a\" \"b\"]
+    (decode-heisenparam \"single\")    ;=> [\"single\"]
+    (decode-heisenparam nil)           ;=> nil
+
+  Used for normalizing HTTP query parameters where the same parameter name
+  can appear multiple times or contain comma-separated values."
   [x]
   (cond-> x
     (string? x) (str/split #",")))
@@ -77,145 +89,248 @@
   {:from (* (dec page) page-size)
    :size page-size
    :track_total_hits 50000
-   #_#_:_source {:includes sports-site-keys}
    :query {:bool
            {:must (cond-> []
                     statuses (conj {:terms {:status.keyword statuses}})
                     types (conj {:terms {:loi-type.keyword types}})
                     categories (conj {:terms {:loi-category.keyword categories}}))}}})
 
-(defn routes [{:keys [db search] :as ctx}]
+(defn routes [{:keys [db search] :as _ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                     {:url "/api-v2/openapi.json"})]
+                    {:url "/api-v2/openapi.json"})]
     ["/api-v2"
-     {:openapi {:id :api-v2}
+     {:openapi
+      {:id :api-v2
+
+       :info {:title "LIPAS API V2"
+              :summary "API for Finnish sports and recreational facility database LIPAS"
+              :description "The LIPAS system provides comprehensive data about sports and recreational facilities in Finland. The API is organized into three main sections:
+
+**Sports Sites**
+The core entities of LIPAS. Each sports facility is classified using a hierarchical type system, where specific facility types belong to subcategories within seven main categories. Each facility type has its own specific set of properties.
+
+**Sports Site Categories**
+Access to the hierarchical type classification system used for categorizing sports facilities. This helps in understanding the structure and relationships between different facility types.
+
+**Locations of Interest**
+Additional non-facility entities in LIPAS, that complement the sports facility data."
+
+              :contact
+              {:name "Support, feature requests and bug reports"
+               :url  "https://github.com/lipas-liikuntapaikat/lipas/issues"
+               :email "lipasinfo@jyu.fi"}
+
+              :license
+              {:name "Creative Commons Attribution 4.0 International"
+               :identifier "CC-BY-SA-4.0"
+               :url "https://creativecommons.org/licenses/by-sa/4.0/"}}
+
+       ;; These get merged in a wild way
+       #_#_:tags [{:name        "Sports Sites"
+               :description "The core entities of LIPAS."}
+              {:name        "Sports Site Categories"
+               :description "Hierarchical categorization of sports facilities"}
+              {:name        "Locations of Interest"
+               :description "Additional non-facility entities in LIPAS"}]
+
+       }
       ;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
       ;; these routes from that.
-      :swagger {:id :hide-from-default}
+      :swagger  {:id :hide-from-default}
       :coercion reitit.coercion.malli/coercion}
 
+     ["/sports-site-categories"
+      {:tags ["Sports Site Categories"]}
+
+      [""
+       {:get
+        {:summary "Get all sports site categories"
+         :handler
+         (fn [_req]
+           {:status 200
+            :body   (core/get-categories)})
+
+         :responses {200 {:body [:sequential #'types-schema/type]}}}}]
+
+      ["/{type-code}"
+       {:get
+        {:summary "Get single sports site category by type-code"
+         :handler
+         (fn [req]
+           (let [type-code (-> req :parameters :path :type-code)]
+             {:status 200
+              :body   (core/get-category type-code)}))
+
+         :parameters
+         {:path [:map [:type-code {:description (-> types-schema/type-code
+                                                    second
+                                                    :description)}
+                       #'types-schema/type-code]]}
+
+         :responses {200 {:body #'types-schema/type}}}}]]
+
      ["/sports-sites"
-      {:tags ["sports-sites"]
-       :get
-       {:handler
-        (fn [req]
-          (tap> (:parameters req))
-          (let [params (:query (:parameters req))
-                query (->sports-sites-query params)
-                _ (tap> query)
-                results (core/search search query)]
-            (tap> results)
-            {:status 200
-             :body
-             {:items (-> results :body :hits :hits (->> (keep :_source)))
-              :pagination (let [total-items (-> results :body :hits :total :value)]
-                            (->pagination (assoc params :total-items total-items)))}}))
+      {:tags ["Sports Sites"]}
 
-        :parameters {:query
-                     [:map
+      [""
+       {:get
+        {:summary "Get a paginated list of sports sites"
+         :handler (fn [req]
+                    (tap> (:parameters req))
+                    (let [params  (:query (:parameters req))
+                          query   (->sports-sites-query params)
+                          _       (tap> query)
+                          results (core/search search query)]
+                      (tap> results)
+                      {:status 200
+                       :body
+                       {:items      (-> results :body :hits :hits (->> (keep :_source)))
+                        :pagination (let [total-items (-> results :body :hits :total :value)]
+                                      (->pagination (assoc params :total-items total-items)))}}))
 
-                      [:page {:optional true}
-                       [:int {:min 1 :json-schema/default 1}]]
+         :parameters {:query
+                      [:map
 
-                      [:page-size {:optional true}
-                       [:int {:min 1 :max 100 :json-schema/default 10}]]
+                       [:page {:optional true}
+                        [:int {:min 1 :json-schema/default 1}]]
 
-                      [:statuses
-                       {:optional true
-                        :decode/string decode-heisenparam
-                        :json-schema/default #{"active" "out-of-service-temporarily"}}
-                       #'common-schema/statuses]
+                       [:page-size {:optional true}
+                        [:int {:min 1 :max 100 :json-schema/default 10}]]
 
-                      [:city-codes
-                       {:optional true
-                        :decode/string decode-heisenparam
-                        :description (-> sports-sites-schema/city-codes
-                                         second
-                                         :description)}
-                       #'sports-sites-schema/city-codes]
+                       [:statuses
+                        {:optional            true
+                         :decode/string       decode-heisenparam
+                         :json-schema/default #{"active" "out-of-service-temporarily"}}
+                        #'common-schema/statuses]
 
-                      [:type-codes
-                       {:optional true
-                        :decode/string decode-heisenparam
-                        :description (-> sports-sites-schema/type-codes
-                                         second
-                                         :description)}
-                       #'sports-sites-schema/type-codes]
+                       [:city-codes
+                        {:optional      true
+                         :decode/string decode-heisenparam
+                         :description   (-> sports-sites-schema/city-codes
+                                          second
+                                          :description)}
+                        #'sports-sites-schema/city-codes]
 
-                      [:admins
-                       {:optional true
-                        :decode/string decode-heisenparam
-                        :description (-> sports-sites-schema/admins
-                                         second
-                                         :description)}
-                       #'sports-sites-schema/admins]
+                       [:type-codes
+                        {:optional      true
+                         :decode/string decode-heisenparam
+                         :description   (-> types-schema/type-codes
+                                          second
+                                          :description)}
+                        #'types-schema/type-codes]
 
-                      [:owners
-                       {:optional true
-                        :decode/string decode-heisenparam}
-                       #'sports-sites-schema/owners]
+                       [:admins
+                        {:optional      true
+                         :decode/string decode-heisenparam
+                         :description   (-> sports-sites-schema/admins
+                                          second
+                                          :description)}
+                        #'sports-sites-schema/admins]
 
-                      [:activities
-                       {:optional true
-                        :description (-> activities-schema/activities
-                                         second
-                                         :description)
-                        :decode/string decode-heisenparam}
-                       #'activities-schema/activities]]}
+                       [:owners
+                        {:optional      true
+                         :decode/string decode-heisenparam}
+                        #'sports-sites-schema/owners]
 
-        :responses {200 {:body [:map
-                                [:items
-                                 [:vector {:title "SportSites"}
-                                  #'sports-sites-schema/sports-site]]
-                                [:pagination {:title "Pagination"}
-                                 pagination-schema]]}}}}]
+                       [:activities
+                        {:optional      true
+                         :description   (-> activities-schema/activities
+                                          second
+                                          :description)
+                         :decode/string decode-heisenparam}
+                        #'activities-schema/activities]]}
+
+         :responses {200 {:body [:map
+                                 [:items
+                                  [:vector {:title "SportSites"}
+                                   #'sports-sites-schema/sports-site]]
+                                 [:pagination {:title "Pagination"}
+                                  pagination-schema]]}}}}]
+
+      ["/{lipas-id}"
+       {:get
+        {:summary "Get single sports facility by lipas-id"
+
+         :handler (fn [req]
+                    (tap> (:parameters req))
+                    (let [lipas-id (-> req :parameters :path :lipas-id)]
+                      {:status 200
+                       :body   (doto (core/get-sports-site db lipas-id) tap>)}))
+
+         :parameters {:path [:map
+                             [:lipas-id
+                              {:description "Lipas-id of the sports facility"}
+                              #'sports-sites-schema/lipas-id]]}
+
+         :responses {200 {:body #'sports-sites-schema/sports-site}}}}]]
 
      ["/lois"
-      {:tags ["locations-of-interest"]
-       :get {:handler (fn [req]
-                        (tap> (:parameters req))
-                        (let [params (:query (:parameters req))
-                              query (->lois-query params)
-                              _ (tap> query)
-                              results (core/search-lois* search query)]
-            (tap> results)
-            {:status 200
-             :body
-             {:items (-> results :body :hits :hits (->> (keep :_source)))
-              :pagination (let [total-items (-> results :body :hits :total :value)]
-                            (->pagination (assoc params :total-items total-items)))}}))
+      {:tags ["Locations of Interest"]
+       }
 
-             :parameters {:query
-                          [:map
+      [""
+       {:get {:summary "Get a paginated list of locations of interest"
+              :handler (fn [req]
+                         (tap> (:parameters req))
+                         (let [params  (:query (:parameters req))
+                               query   (->lois-query params)
+                               _       (tap> query)
+                               results (core/search-lois* search query)]
+                           (tap> results)
+                           {:status 200
+                            :body
+                            {:items      (-> results :body :hits :hits (->> (keep :_source)))
+                             :pagination (let [total-items (-> results :body :hits :total :value)]
+                                           (->pagination (assoc params :total-items total-items)))}}))
 
-                           [:page {:optional true}
-                            [:int {:min 1 :json-schema/default 1}]]
+              :parameters {:query
+                           [:map
 
-                           [:page-size {:optional true}
-                            [:int {:min 1 :max 100 :json-schema/default 10}]]
+                            [:page {:optional true}
+                             [:int {:min 1 :json-schema/default 1}]]
 
-                           [:statuses
-                            {:optional true
-                             :decode/string decode-heisenparam
-                             :json-schema/default #{"active" "out-of-service-temporarily"}}
-                            #'common-schema/statuses]
+                            [:page-size {:optional true}
+                             [:int {:min 1 :max 100 :json-schema/default 10}]]
 
-                           [:categories
-                            {:optional true
-                             :decode/string decode-heisenparam}
-                            #'lois-schema/loi-categories]
+                            [:statuses
+                             {:optional            true
+                              :decode/string       decode-heisenparam
+                              :json-schema/default #{"active" "out-of-service-temporarily"}}
+                             #'common-schema/statuses]
 
-                           [:types
-                            {:optional true
-                             :decode/string decode-heisenparam}
-                            #'lois-schema/loi-types]]}
+                            [:categories
+                             {:optional      true
+                              :decode/string decode-heisenparam}
+                             #'lois-schema/loi-categories]
 
-             :responses {200 {:body [:map
-                                [:items
-                                 [:vector {:title "LocationsOfInterest"}
-                                  #'lois-schema/loi]]
-                                [:pagination {:title "Pagination"}
-                                 pagination-schema]]}}}}]
+                            [:types
+                             {:optional      true
+                              :decode/string decode-heisenparam}
+                             #'lois-schema/loi-types]]}
+
+              :responses {200 {:body [:map
+                                      [:items
+                                       [:vector {:title "LocationsOfInterest"}
+                                        #'lois-schema/loi]]
+                                      [:pagination {:title "Pagination"}
+                                       pagination-schema]]}}}}]
+
+      ["/{loi-id}"
+       {:get
+        {:summary "Get single Location of Interest by id"
+
+         :handler (fn [req]
+                    (tap> (:parameters req))
+                    (let [loi-id (-> req :parameters :path :loi-id)]
+                      {:status 200
+                       :body   (doto (core/get-loi search loi-id) tap>)}))
+
+         :parameters {:path [:map
+                             [:loi-id
+                              {:description "UUID v4 of the Location if Interest"}
+                              #'lois-schema/loi-id]]}
+
+         :responses {200 {:body #'lois-schema/loi}}}}]]
 
      ["/openapi.json"
       {:get
@@ -224,8 +339,8 @@
         :handler (openapi/create-openapi-handler)}}]
 
      ["/swagger-ui"
-      {:get {:no-doc true
+      {:get {:no-doc  true
              :handler ui-handler}}]
      ["/swagger-ui/*"
-      {:get {:no-doc true
+      {:get {:no-doc  true
              :handler ui-handler}}]]))

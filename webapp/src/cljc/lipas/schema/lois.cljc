@@ -5,11 +5,14 @@
             [lipas.schema.common :as common]
             [malli.json-schema :as json-schema]))
 
+(def loi-id common/uuid)
 (def loi-category (into [:enum] (keys loi/categories)))
 (def loi-categories [:set loi-category])
+
 (def loi-type (into [:enum] (for [[_ category] loi/categories
                                   [_ type] (:types category)]
                               (:value type))))
+
 (def loi-types [:set loi-type])
 
 (def loi
@@ -21,7 +24,7 @@
            (into
             [:map {:description (str cat-k " > " (:value type-v))
                    :title (-> type-v :label :en)}
-             [:id [:string]]
+             [:id [:string ]]
              [:event-date [:string]]
              #_[:created-at [:string]]
              [:geometries (case (:geom-type type-v)

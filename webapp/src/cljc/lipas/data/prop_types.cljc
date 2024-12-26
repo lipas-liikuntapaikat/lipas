@@ -2,7 +2,6 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.types :as types]
    [lipas.data.materials :as materials]))
 
 (def all
@@ -1816,10 +1815,6 @@
     {:fi "Juoksuradan, pyöräilyradan tms. pituus metreinä",
      :se "Löpbanans, rundbanans el.dyl. längd i meter",
      :en "The length of the running track, cycling track, etc., in meters"}}})
-
-(def used
-  (let [used (set (mapcat (comp keys :props second) types/all))]
-    (select-keys all used)))
 
 (def schemas
   (into {} (for [[k m] all]

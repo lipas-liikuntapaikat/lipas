@@ -799,6 +799,8 @@
           (log/error ex)
           (db/update-elevation-status! db lipas-id "failed"))))))
 
+;;; Newsletter ;;;
+
 (defn get-newsletter [config]
   (newsletter/retrieve config))
 
@@ -842,6 +844,8 @@
                                             :user-id  (:id user)}
                      :credentials-provider credentials-provider})))
 
+
+;;; LOI ;;;
 
 (defn ->lois-es-query
   [{:keys [location loi-statuses]}]
@@ -932,7 +936,18 @@
   [{:keys [_filename _data _user] :as params}]
   (utp-cms/upload-image! params))
 
+;;; Types ;;;
+
+(defn get-categories
+  []
+  (map types/->type (vals types/active)))
+
+(defn get-category
+  [type-code]
+  (types/->type (types/active type-code)))
+
 (comment
+  (get-categories)
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))

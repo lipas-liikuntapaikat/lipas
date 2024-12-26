@@ -6,6 +6,8 @@
 ;; https://github.com/metosin/malli/issues/670
 (def number number?)
 (def percentage [number? {:min 0 :max 100}])
+(def -uuid-pattern #"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+(def uuid [:re {:description "UUID v4 string"} -uuid-pattern])
 
 (def localized-string
   [:map
