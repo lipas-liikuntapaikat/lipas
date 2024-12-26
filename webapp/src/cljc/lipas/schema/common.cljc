@@ -11,68 +11,64 @@
 
 (def localized-string
   [:map
-   [:fi {:optional true} [:string]]
-   [:se {:optional true} [:string]]
-   [:en {:optional true} [:string]]])
+   [:fi {:optional true :description "Finnish translation"} [:string]]
+   [:se {:optional true :description "Swedish translation"} [:string]]
+   [:en {:optional true :description "English translation"} [:string]]])
 
 (def coordinates
   [:vector {:min 2
             :max 3
-            :title "Coordinates"
             :description "WGS84 Lon, Lat and optional altitude in meters"}
    number?])
 
 (def point-geometry
-  [:map
-   {:title "Point"}
+  [:map {:description "GeoJSON Point geometry"}
    [:type [:enum "Point"]]
    [:coordinates #'coordinates]])
 
 (def line-string-geometry
-  [:map
-   {:title "LineString"}
+  [:map {:description "GeoJSON LineString geometry"}
    [:type [:enum "LineString"]]
    [:coordinates [:vector #'coordinates]]])
 
 (def polygon-geometry
-  [:map
-   {:title "Polygon"}
+  [:map {:description "GeoJSON Polygon geometry"}
    [:type [:enum "Polygon"]]
    [:coordinates [:vector [:vector #'coordinates]]]])
 
 (def point-feature
-  [:map {:title "PointFeature"}
+  [:map {:description "GeoJSON Feature with required Point geometry."}
    [:type [:enum "Feature"]]
    [:geometry #'point-geometry]
    [:properties {:optional true} [:map]]])
 
 (def line-string-feature
-  [:map {:title "LineStringFeature"}
+  [:map {:description "GeoJSON Feature with required LineString geometry."}
    [:type [:enum "Feature"]]
    [:geometry #'line-string-geometry]
    [:properties {:optional true} [:map]]])
 
 (def polygon-feature
-  [:map {:title "PolygonFeature"}
+  [:map {:description "GeoJSON Feature with required Polygon geometry."}
    [:type [:enum "Feature"]]
    [:geometry #'polygon-geometry]
    [:properties {:optional true} [:map]]])
 
 (def point-feature-collection
-  [:map
+  [:map {:description "GeoJSON FeatureCollection with required Point geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential point-feature]]])
 
 (def line-string-feature-collection
-  [:map
+  [:map {:description "GeoJSON FeatureCollection with required LineString geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential
      #'line-string-feature]]])
 
 (def polygon-feature-collection
-  [:map
+  [:map {:description "GeoJSON FeatureCollection with required Polygon geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential

@@ -6,7 +6,7 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
-            [lipas.schema.sports-sites.types :as types-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
             [lipas.schema.core :as specs]
@@ -28,16 +28,14 @@
    city-code])
 
 (defn make-location-schema [feature-schema]
-  [:map
+  [:map {:description "Location of the sports facility."}
    [:city
     [:map
      [:city-code #'city-code]
-     [:neighborhood {:optional true}
-      [:string {:min 1 :max 100}]]]]
-   [:address [:string {:min 1 :max 200}]]
-   [:postal-code [:re specs/postal-code-regex]]
-   [:postal-office {:optional true}
-    [:string {:min 1 :max 100}]]
+     [:neighborhood {:optional true} #'location-schema/neighborhood]]]
+   [:address #'location-schema/address]
+   [:postal-code #'location-schema/postal-code]
+   [:postal-office {:optional true} #'location-schema/postal-code]
    [:geometries
     [:map
      [:type [:enum "FeatureCollection"]]
@@ -79,39 +77,46 @@
          :description (-> admin second :description)}
    #'admin])
 
-(def sports-site-base
-  [:map
-   {:title "Shared Properties"
-    ;; Because this is used from :and, both branches need to be open for Malli to work.
-    :closed false}
-   [:lipas-id #'lipas-id]
-   [:status #'common/status]
-   [:name {:description "The official name of the sports facility"}
-    [:string {:min 2 :max 100}]]
-   [:marketing-name {:optional true :description "Marketing name or common name of the sports facility."}
-    [:string {:min 2 :max 100}]]
-   [:name-localized {:optional true :description "The official name of the sports facility localized."}
-    [:map
+(def name [:string {:description "The official name of the sports facility"
+                    :min 2
+                    :max 100}])
+
+(def marketing-name [:string {:min 2
+                              :max 100
+                              :description "Marketing name or common name of the sports facility."}])
+
+(def name-localized
+  [:map {:description "The official name of the sports facility localized."}
      [:se {:optional true :description "Swedish translation of the official name of the sports facility."}
       [:string {:min 2 :max 100}]]
      [:en {:optional true :description "English translation of the official name of the sports facility."}
-      [:string {:min 2 :max 100}]]]]
-   [:owner #'owner]
-   [:admin #'admin]
-   [:email {:optional true :description "Email address of the sports facility."}
-    [:re specs/email-regex]]
-   [:www {:optional true :description "Website of the sports facility."}
-    [:string {:min 1 :max 500}]]
-   [:reservations-link {:optional true :description "Link to external booking system."}
-    [:string {:min 1 :max 500}]]
-   [:phone-number {:optional true :description "Phone number of the sports facility"}
-    [:string {:min 1 :max 50}]]
-   [:comment {:optional true :description "Additional information."}
-    [:string {:min 1 :max 2048}]]
-   [:construction-year {:optional true :description "Year of construction of the sports facility"}
-    [:int {:min 1800 :max (+ 10 utils/this-year)}]]
-   [:renovation-years {:optional true :description "Years of major renovation of the sports facility"}
-    [:sequential [:int {:min 1800 :max (+ 10 utils/this-year)}]]]])
+      [:string {:min 2 :max 100}]]])
+
+(def email [:re {:description "Email address of the sports facility."}
+            specs/email-regex])
+
+(def www [:string {:description "Website of the sports facility."
+                   :min 1
+                   :max 500}])
+
+(def reservation-link [:string {:description "Link to external booking system."
+                                :min 1
+                                :max 500}])
+
+(def phone-number [:string {:description "Phone number of the sports facility"
+                            :min 1
+                            :max 50}])
+
+(def comment [:string {:description "Additional information."
+                       :min 1
+                       :max 2048}])
+
+(def construction-year [:int {:description "Year of construction of the sports facility"
+                              :min 1800
+                              :max (+ 10 utils/this-year)}])
+
+(def renovation-years [:sequential {:description "Years of major renovation of the sports facility"}
+                       [:int {:min 1800 :max (+ 10 utils/this-year)}]])
 
 (defn make-sports-site-schema [{:keys [title
                                        type-codes
@@ -119,21 +124,33 @@
                                        extras-schema
                                        location-schema]}]
   ;; TODO audit
-  [:and
-   #'sports-site-base
-   (mu/merge
+  (mu/merge
+   [:map
+    {:title title
+     :description description
+     :closed false}
+    [:lipas-id #'lipas-id]
+    [:status #'common/status]
+    [:name #'name]
+    [:marketing-name {:optional true} #'marketing-name]
+    [:name-localized {:optional true} #'name-localized]
+    [:owner #'owner]
+    [:admin #'admin]
+    [:email {:optional true} #'email]
+    [:www {:optional true} #'www]
+    [:reservations-link {:optional true} #'reservation-link]
+    [:phone-number {:optional true} #'phone-number]
+    [:comment {:optional true} #'comment]
+    [:construction-year {:optional true} #'construction-year]
+    [:renovation-years {:optional true} #'renovation-years]
+    [:type
      [:map
-      {:title title
-       :description description
-       :closed false}
-      [:type
-       [:map
-        [:type-code (into [:enum] type-codes)]]]
-      [:location location-schema]]
-     extras-schema)])
+      [:type-code (into [:enum] type-codes)]]]
+    [:location location-schema]]
+   extras-schema))
 
 (def sports-site
-  (into [:multi {:title "SportsSite"
+  (into [:multi {:description "The core entity of LIPAS. Properties, geometry type and additional attributes vary based on the type of the sports facility."
                  :dispatch (fn [x]
                              (-> x :type :type-code))}]
         (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
@@ -180,7 +197,7 @@
                                                    :birdwatching #'activities-schema/birdwatching
                                                    :fishing #'activities-schema/fishing)]]]))})])))
 
-(comment
+#_(comment
   (mu/get sports-site 101)
 
   (m/validate [:vector sports-site]

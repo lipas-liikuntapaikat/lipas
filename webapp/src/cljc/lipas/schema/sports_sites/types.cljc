@@ -20,7 +20,7 @@
 (def prop-type-key (into [:enum] (keys prop-types/all)))
 
 (def type
-  [:map
+  [:map {:description "Metadata definition for a specific sports facility type in LIPAS"}
    [:name #'common/localized-string]
    [:description #'common/localized-string]
    [:tags {:optional true}
