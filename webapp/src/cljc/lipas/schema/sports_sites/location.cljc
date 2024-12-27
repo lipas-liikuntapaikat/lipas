@@ -44,7 +44,7 @@
      [:neighborhood {:optional true} #'neighborhood]]]
    [:address #'address]
    [:postal-code #'postal-code]
-   [:postal-office {:optional true} #'postal-code]
+   [:postal-office {:optional true} #'postal-office]
    [:geometries
     [:map
      [:type [:enum "FeatureCollection"]]
