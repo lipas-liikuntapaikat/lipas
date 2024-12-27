@@ -18,3 +18,4 @@
    {:fi "Salibandykenttä"
     :en "Floorball field"
     :se "Innebandyplan"}})
+

@@ -16,6 +16,7 @@
    [lipas.data.prop-types :as prop-types]
    [lipas.data.reminders :as reminders]
    [lipas.data.sports-sites :as sports-sites]
+   [lipas.data.status :as status]
    [lipas.data.swimming-pools :as swimming-pools]
    [lipas.data.types :as sports-site-types]
    [lipas.reports :as reports]
@@ -2245,9 +2246,9 @@
 (s/def :lipas.loi/event-date :lipas/timestamp)
 
 (s/def :lipas.loi/status
-  (st/spec {:spec         (into #{} (keys loi/statuses))
+  (st/spec {:spec         (into #{} (keys status/statuses))
             :swagger/type "string"
-            :swagger/enum (keys loi/statuses)}))
+            :swagger/enum (keys status/statuses)}))
 
 (s/def :lipas.loi/loi-category
   (st/spec {:spec         (into #{} (keys loi/categories))

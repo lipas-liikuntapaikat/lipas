@@ -23,7 +23,7 @@
    :types        types/all
    :active-types types/active
 
-   :prop-types prop-types/used
+   :prop-types types/used-prop-types
 
    :materials             materials/all
    :building-materials    materials/building-materials

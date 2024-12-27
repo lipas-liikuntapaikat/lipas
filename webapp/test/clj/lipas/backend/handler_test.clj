@@ -6,6 +6,7 @@
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.data.loi :as loi]
+            [lipas.data.status :as status]
             [lipas.schema.core]
             [lipas.seed :as seed]
             [lipas.test-utils :refer [->transit <-transit <-json ->json app search db] :as tu]
@@ -119,7 +120,7 @@
         _         (doseq [loi lois-with-every-status] (core/index-loi! search loi :sync))
         responses (mapv #(app (-> (mock/request :get (str "/api/lois/status/" %))
                                   (mock/content-type "application/json")))
-                        (keys loi/statuses))
+                        (keys status/statuses))
         bodies (mapv (comp first <-json :body) responses)]
     (is (= "planning" (:status (nth bodies 0))))
     (is (= "planned"  (:status (nth bodies 1))))

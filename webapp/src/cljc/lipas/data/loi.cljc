@@ -1,9 +1,5 @@
 (ns lipas.data.loi
-  (:require
-   #?(:clj [cheshire.core :as json])
-   #?(:clj [clojure.data.csv :as csv])
-   [lipas.data.status :as status]
-   [malli.json-schema :as json-schema]))
+  (:require [lipas.data.status :as status]))
 
 (def statuses status/statuses)
 
@@ -443,119 +439,7 @@
       :geom-type "Polygon"
       :props     (merge common-props protected-area-fields)}}}})
 
-(def point-fcoll-schema
-  [:map
-   [:type [:enum "FeatureCollection"]]
-   [:features
-    [:sequential
-     [:map
-      [:id {:optional true} [:string]]
-      [:type [:enum "Feature"]]
-      [:properties {:optional true} [:map]]
-      [:geometry
-       [:map
-        [:type [:enum "Point"]]
-        [:coordinates
-         [:or
-          [:tuple :double :double]
-          [:tuple :double :double :double]]]]]]]]])
-
-(def schema
-  (into [:or]
-        (for [[cat-k cat-v] categories
-              [_type-k type-v] (:types cat-v)]
-          (into
-           [:map {:description (str cat-k " > " (:value type-v))
-                  :title (-> type-v :label :fi)}
-            [:id [:string]]
-            [:event-date [:string]]
-            [:created-at [:string]]
-            [:geometries point-fcoll-schema]
-            [:status (into [:enum] (keys statuses))]
-            [:loi-category [:enum cat-k]]
-            [:loi-type [:enum (:value type-v)]]]
-           (for [[prop-k prop-v] (:props type-v)]
-             [prop-k {:optional true} (:schema prop-v)])))))
-
-(defn gen-json-schema
-  []
-  (-> schema
-      json-schema/transform
-      #?(:clj(json/encode {:pretty true})
-         :cljs clj->js)
-      println))
-
-(declare gen-csv)
-
-#?(:clj
-   (defn gen-csv
-     []
-     (->>
-      (for [[category-code category] categories
-            [_ type] (:types category)
-            [prop-k prop] (:props type)]
-        [category-code
-         (get-in category [:label :fi])
-         (get-in category [:label :se])
-         (get-in category [:label :en])
-         (get-in category [:description :fi])
-         (get-in category [:description :se])
-         (get-in category [:description :en])
-         (:value type)
-         (get-in type [:label :fi])
-         (get-in type [:label :se])
-         (get-in type [:label :en])
-         (get-in type [:description :fi])
-         (get-in type [:description :se])
-         (get-in type [:description :en])
-         (name prop-k)
-         (get-in prop [:field :label :fi])
-         (get-in prop [:field :label :se])
-         (get-in prop [:field :label :en])
-         (get-in prop [:field :description :fi])
-         (get-in prop [:field :description :se])
-         (get-in prop [:field :description :en])])
-      (into [["kategoria"
-              "kategoria nimi fi"
-              "kategoria nimi se"
-              "kategoria nimi en"
-              "kategoria kuvaus fi"
-              "kategoria kuvaus se"
-              "kategoria kuvaus en"
-              "tyyppi"
-              "tyyppi nimi fi"
-              "tyyppi nimi se"
-              "tyyppi nimi en"
-              "tyyppi kuvaus fi"
-              "tyyppi kuvaus se"
-              "tyyppi kuvaus en"
-              "ominaisuus"
-              "ominaisuus nimi fi"
-              "ominaisuus nimi se"
-              "ominaisuus nimi en"
-              "ominaisuus kuvaus fi"
-              "ominaisuus kuvaus se"
-              "ominaisuus kuvaus en"]])
-      (csv/write-csv *out*))))
-
-(comment
-  (gen-json-schema)
-
-  (json-schema/transform [:tuple :double :double])
-  ;; => {:type "array",
-  ;;     :items [{:type "number"} {:type "number"}],
-  ;;     :additionalItems false}
-
-
-  (gen-csv)
-  )
-
 (def types (->> categories
                 vals
                 (mapcat :types)
                 (into {})))
-
-(defn -main [& args]
-  (if (= "csv" (first args))
-    (gen-csv)
-    (gen-json-schema)))

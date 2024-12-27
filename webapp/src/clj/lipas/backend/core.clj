@@ -799,6 +799,8 @@
           (log/error ex)
           (db/update-elevation-status! db lipas-id "failed"))))))
 
+;;; Newsletter ;;;
+
 (defn get-newsletter [config]
   (newsletter/retrieve config))
 
@@ -843,6 +845,8 @@
                      :credentials-provider credentials-provider})))
 
 
+;;; LOI ;;;
+
 (defn ->lois-es-query
   [{:keys [location loi-statuses]}]
   (let [lon           (:lon location)
@@ -875,14 +879,18 @@
       query
       default-query)))
 
-(defn search-lois
+(defn search-lois*
   [{:keys [indices client]} es-query]
   (let [idx-name (get-in indices [:lois :search])]
-    (-> (search/search client idx-name es-query)
-        :body
-        :hits
-        :hits
-        (->> (map :_source)))))
+    (search/search client idx-name es-query)))
+
+(defn search-lois
+  [search es-query]
+  (-> (search-lois* search es-query)
+      :body
+      :hits
+      :hits
+      (->> (map :_source))))
 
 (defn get-loi
   [{:keys [indices client]} loi-id]
@@ -928,7 +936,18 @@
   [{:keys [_filename _data _user] :as params}]
   (utp-cms/upload-image! params))
 
+;;; Types ;;;
+
+(defn get-categories
+  []
+  (map types/->type (vals types/active)))
+
+(defn get-category
+  [type-code]
+  (types/->type (types/active type-code)))
+
 (comment
+  (get-categories)
   (require '[lipas.backend.config :as config])
   (def db-spec (:db config/default-config))
   (def admin (get-user db-spec "admin@lipas.fi"))

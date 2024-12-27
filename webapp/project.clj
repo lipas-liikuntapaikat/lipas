@@ -7,8 +7,9 @@
    [com.taoensso/timbre "4.10.0"]
    [com.cemerick/url "0.1.1"]
    [metosin/reitit "0.7.1"]
+   [metosin/ring-swagger-ui "5.18.2"]
    [metosin/spec-tools "0.10.7"]
-   [metosin/malli "0.16.2"]
+   [metosin/malli "0.17.0"]
 
    ;;; Frontend ;;;
    [thheller/shadow-cljs "2.28.16"]
