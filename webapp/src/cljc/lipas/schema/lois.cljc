@@ -1,5 +1,6 @@
 (ns lipas.schema.lois
   (:require #?(:clj [cheshire.core :as json])
+            #?(:clj [cheshire.generate])
             #?(:clj [clojure.data.csv :as csv])
             [lipas.data.loi :as loi]
             [lipas.schema.common :as common]
@@ -44,6 +45,11 @@
   (require '[malli.core :as m])
   (m/schema loi)
   )
+
+#?(:clj
+   (cheshire.generate/add-encoder java.util.regex.Pattern
+                                  (fn [re jsonGenerator]
+                                    (.writeString jsonGenerator (str re)))))
 
 (defn gen-json-schema
   []
@@ -108,7 +114,6 @@
 
 (comment
   (gen-json-schema)
-
   (json-schema/transform [:tuple :double :double])
   ;; => {:type "array",
   ;;     :items [{:type "number"} {:type "number"}],
