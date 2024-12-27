@@ -17,23 +17,19 @@
   [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}])
 
 (def owner
-  (into [:enum {:title "Onwer"
-                :description "Owner entity of the sports facility."}]
+  (into [:enum {:description "Owner entity of the sports facility."}]
         (keys owners/all)))
 
 (def owners
-  [:set {:title "Admins"
-         :description (-> owner second :description)}
+  [:set {:description (-> owner second :description)}
    #'owner])
 
 (def admin
-  (into [:enum {:title "Admin"
-                :description "Administrative entity of the sports facility."}]
+  (into [:enum {:description "Administrative entity of the sports facility."}]
         (keys admins/all)))
 
 (def admins
-  [:set {:title "Admins"
-         :description (-> admin second :description)}
+  [:set {:description (-> admin second :description)}
    #'admin])
 
 (def name [:string {:description "The official name of the sports facility"

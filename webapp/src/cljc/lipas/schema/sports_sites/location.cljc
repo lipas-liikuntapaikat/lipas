@@ -25,13 +25,11 @@
 
 
 (def city-code
-  (into [:enum {:title "CityCode"
-                :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
+  (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
         (sort (keys cities/by-city-code))))
 
 (def city-codes
-  [:set {:title "CityCodes"
-         :description (-> city-code second :description)}
+  [:set {:description (-> city-code second :description)}
    city-code])
 
 (defn make-location-schema [feature-schema geom-type]

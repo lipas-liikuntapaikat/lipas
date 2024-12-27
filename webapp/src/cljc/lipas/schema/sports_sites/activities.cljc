@@ -6,8 +6,7 @@
 
 (def activity (into [:enum] (keys activities-data/activities)))
 (def activities
-  [:set {:title "Activities"
-         :description "Enriched activity related content for Luontoon.fi service. Certain sports facility types may contain data about activities that can be practiced at the facility."}
+  [:set {:description "Enriched activity related content for Luontoon.fi service. Certain sports facility types may contain data about activities that can be practiced at the facility."}
    activity])
 
 (defn -append-description

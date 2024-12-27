@@ -6,13 +6,11 @@
 (def tags [:sequential [:string {:min 2 :max 100}]])
 
 (def type-code
-  (into [:enum {:title "TypeCode"
-                :description "Sports facility type according to LIPAS classification https://www.jyu.fi/fi/file/lipas-tyyppikoodit-2024"}]
+  (into [:enum {:description "Sports facility type according to LIPAS classification https://www.jyu.fi/fi/file/lipas-tyyppikoodit-2024"}]
         (keys types/active)))
 
 (def type-codes
-  [:set {:title "TypeCodes"
-         :description (-> type-code second :description)}
+  [:set {:description (-> type-code second :description)}
    #'type-code])
 
 (def main-category (into [:enum] (keys types/main-categories)))

@@ -2,8 +2,7 @@
 
 ;; TODO check fields that are exposed via public API before release
 (def floorball
-  [:map {:title "FloorballCircumstances"
-         :description "Enriched floorball facility information"}
+  [:map {:description "Enriched floorball facility information"}
    [:storage-capacity {:optional true} :string]
    [:roof-trusses-operation-model {:optional true} :string]
    [:general-information {:optional true} :string]

@@ -16,7 +16,7 @@
 (def loi-types [:set loi-type])
 
 (def loi
-  (into [:multi {:title "LocationOfInterest"
+  (into [:multi {:description "Location of Interest; a non-facility entity in LIPAS, that complements the sports facility data."
                  :dispatch :loi-type}]
         (for [[cat-k cat-v] loi/categories
               [_type-k type-v] (:types cat-v)]
