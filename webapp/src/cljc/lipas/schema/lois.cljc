@@ -24,16 +24,19 @@
            (into
             [:map {:description (str cat-k " > " (:value type-v))
                    :title (-> type-v :label :en)}
-             [:id [:string ]]
-             [:event-date [:string]]
+             [:id loi-id]
+             [:event-date {:description "Timestamp when this information became valid (ISO 8601, UTC time zone)"}
+              #'common/iso8601-timestamp]
              #_[:created-at [:string]]
              [:geometries (case (:geom-type type-v)
                             ("Polygon") #'common/polygon-feature-collection
                             ("LineString") #'common/line-string-feature-collection
                             #'common/point-feature-collection)]
              [:status common/status]
-             [:loi-category [:enum cat-k]]
-             [:loi-type [:enum (:value type-v)]]]
+             [:loi-category {:description "The category of the type of the Location of Interest"}
+              [:enum cat-k]]
+             [:loi-type {:description "The type of the Location of Interest"}
+              [:enum (:value type-v)]]]
             (for [[prop-k prop-v] (:props type-v)]
               [prop-k {:optional true} (:schema prop-v)]))])))
 

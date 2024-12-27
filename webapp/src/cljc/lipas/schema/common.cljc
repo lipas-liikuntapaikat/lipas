@@ -1,6 +1,11 @@
 (ns lipas.schema.common
   (:require [lipas.data.status :as status]))
 
+(def -iso8601-pattern #"^(?:[1-9]\d{3}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?Z$")
+
+(def iso8601-timestamp [:re {:description "ISO 8601 timestamp in UTC timezone"}
+                        -iso8601-pattern])
+
 (def status (into [:enum] (keys status/statuses)))
 (def statuses [:set status])
 ;; https://github.com/metosin/malli/issues/670

@@ -6,6 +6,7 @@
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.types :as types-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
             [reitit.coercion.malli]
             [reitit.openapi :as openapi]
             [reitit.swagger-ui :as swagger-ui]
@@ -107,10 +108,10 @@
               :description "The LIPAS system provides comprehensive data about sports and recreational facilities in Finland. The API is organized into three main sections:
 
 **Sports Sites**
-The core entities of LIPAS. Each sports facility is classified using a hierarchical type system, where specific facility types belong to subcategories within seven main categories. Each facility type has its own specific set of properties.
+The core entities of LIPAS. Each sports facility is classified using a hierarchical type system, where specific facility types belong to subcategories within seven main categories. Each facility type has its own specific set of properties and a defined geometry type (Point, LineString, or Polygon) that describes its spatial representation.
 
 **Sports Site Categories**
-Access to the hierarchical type classification system used for categorizing sports facilities. This helps in understanding the structure and relationships between different facility types.
+Access to the hierarchical type classification system used for categorizing sports facilities.
 
 **Locations of Interest**
 Additional non-facility entities in LIPAS, that complement the sports facility data."
@@ -154,7 +155,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
       ["/{type-code}"
        {:get
-        {:summary "Get single sports site category by type-code"
+        {:summary "Get sports site category by type code"
          :handler
          (fn [req]
            (let [type-code (-> req :parameters :path :type-code)]
@@ -206,10 +207,10 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                        [:city-codes
                         {:optional      true
                          :decode/string decode-heisenparam
-                         :description   (-> sports-sites-schema/city-codes
+                         :description   (-> location-schema/city-codes
                                           second
                                           :description)}
-                        #'sports-sites-schema/city-codes]
+                        #'location-schema/city-codes]
 
                        [:type-codes
                         {:optional      true
@@ -249,7 +250,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
       ["/{lipas-id}"
        {:get
-        {:summary "Get single sports facility by lipas-id"
+        {:summary "Get sports facility by lipas-id"
 
          :handler (fn [req]
                     (tap> (:parameters req))
@@ -269,7 +270,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
        }
 
       [""
-       {:get {:summary "Get a paginated list of locations of interest"
+       {:get {:summary "Get a paginated list of Locations of Interest"
               :handler (fn [req]
                          (tap> (:parameters req))
                          (let [params  (:query (:parameters req))
@@ -317,7 +318,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
       ["/{loi-id}"
        {:get
-        {:summary "Get single Location of Interest by id"
+        {:summary "Get Location of Interest by id"
 
          :handler (fn [req]
                     (tap> (:parameters req))

@@ -1,5 +1,8 @@
 (ns lipas.schema.sports-sites.activities
-  (:require [lipas.data.activities :as activities-data]))
+  (:require [clojure.string :as str]
+            [lipas.data.activities :as activities-data]
+            [lipas.data.types :as types]
+            [malli.util :as mu]))
 
 (def activity (into [:enum] (keys activities-data/activities)))
 (def activities
@@ -7,10 +10,39 @@
          :description "Enriched activity related content for Luontoon.fi service. Certain sports facility types may contain data about activities that can be practiced at the facility."}
    activity])
 
-(def fishing activities-data/fishing-schema)
-(def outdoor-recreation-areas activities-data/outdoor-recreation-areas-schema)
-(def outdoor-recreation-routes activities-data/outdoor-recreation-routes-schema)
-(def outdoor-recreation-facilities activities-data/outdoor-recreation-facilities-schema)
-(def cycling activities-data/cycling-schema)
-(def paddling activities-data/paddling-schema)
-(def birdwatching activities-data/birdwatching-schema)
+(defn -append-description
+  [schema {:keys [type-codes label]}]
+  (let [s (str (:en label)
+               " is an activity associated with facility types "
+               (str/join ", " (for [[k m] (select-keys types/all type-codes)]
+                                (str k " " (get-in m [:name :en]))))
+               ". Enriched activity information is collected for Luontoon.fi service.")]
+    (mu/update-properties schema assoc :description s)))
+
+(def fishing (-append-description
+              activities-data/fishing-schema
+              activities-data/fishing))
+
+(def outdoor-recreation-areas (-append-description
+                               activities-data/outdoor-recreation-areas-schema
+                               activities-data/outdoor-recreation-areas))
+
+(def outdoor-recreation-routes (-append-description
+                                activities-data/outdoor-recreation-routes-schema
+                                activities-data/outdoor-recreation-routes))
+
+(def outdoor-recreation-facilities (-append-description
+                                    activities-data/outdoor-recreation-facilities-schema
+                                    activities-data/outdoor-recreation-facilities))
+
+(def cycling (-append-description
+              activities-data/cycling-schema
+              activities-data/cycling))
+
+(def paddling (-append-description
+               activities-data/paddling-schema
+               activities-data/paddling))
+
+(def birdwatching (-append-description
+                   activities-data/birdwatching-schema
+                   activities-data/birdwatching))

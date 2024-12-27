@@ -1,6 +1,5 @@
 (ns lipas.schema.sports-sites
   (:require [lipas.data.admins :as admins]
-            [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
             [lipas.data.activities :as activities]
             [lipas.data.prop-types :as prop-types]
@@ -16,46 +15,6 @@
 
 (def lipas-id
   [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}])
-
-(def city-code
-  (into [:enum {:title "CityCode"
-                :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
-        (sort (keys cities/by-city-code))))
-
-(def city-codes
-  [:set {:title "CityCodes"
-         :description (-> city-code second :description)}
-   city-code])
-
-(defn make-location-schema [feature-schema]
-  [:map {:description "Location of the sports facility."}
-   [:city
-    [:map
-     [:city-code #'city-code]
-     [:neighborhood {:optional true} #'location-schema/neighborhood]]]
-   [:address #'location-schema/address]
-   [:postal-code #'location-schema/postal-code]
-   [:postal-office {:optional true} #'location-schema/postal-code]
-   [:geometries
-    [:map
-     [:type [:enum "FeatureCollection"]]
-     [:features
-      [:vector feature-schema]]]]])
-
-(def line-string-feature-props
-  [:map
-   [:name {:optional true} :string]
-   [:lipas-id {:optional true} #'lipas-id]
-   [:type-code {:optional true} :int]
-   [:route-part-difficulty {:optional true} :string]
-   [:travel-direction {:optional true} :string]])
-
-(def line-string-feature
-  (mu/assoc common/line-string-feature :properties line-string-feature-props))
-
-(def point-location (make-location-schema common/point-feature))
-(def line-string-location (make-location-schema line-string-feature))
-(def polygon-location (make-location-schema common/polygon-feature))
 
 (def owner
   (into [:enum {:title "Onwer"
@@ -130,6 +89,8 @@
      :description description
      :closed false}
     [:lipas-id #'lipas-id]
+    [:event-date {:description "Timestamp when this information became valid (ISO 8601, UTC time zone)"}
+     #'common/iso8601-timestamp]
     [:status #'common/status]
     [:name #'name]
     [:marketing-name {:optional true} #'marketing-name]
@@ -162,9 +123,9 @@
                        :description (get-in x [:description :en])
                        :type-codes #{type-code}
                        :location-schema (case geometry-type
-                                          "Point" #'point-location
-                                          "LineString" #'line-string-location
-                                          "Polygon" #'polygon-location)
+                                          "Point" #'location-schema/point-location
+                                          "LineString" #'location-schema/line-string-location
+                                          "Polygon" #'location-schema/polygon-location)
                        :extras-schema (cond-> [:map]
                                         (seq props)
                                         (conj [:properties
