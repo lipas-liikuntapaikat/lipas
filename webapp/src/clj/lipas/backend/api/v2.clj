@@ -5,12 +5,11 @@
             [lipas.schema.lois :as lois-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.activities :as activities-schema]
-            [lipas.schema.sports-sites.types :as types-schema]
             [lipas.schema.sports-sites.location :as location-schema]
+            [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli]
             [reitit.openapi :as openapi]
-            [reitit.swagger-ui :as swagger-ui]
-            [ring.util.http-response :as resp]))
+            [reitit.swagger-ui :as swagger-ui]))
 
 (def sports-site-keys
   "Publicly exposed top level keys."
@@ -98,8 +97,8 @@
 
 (defn routes [{:keys [db search] :as _ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                    {:url "/api-v2/openapi.json"})]
-    ["/api-v2"
+                    {:url "/v2/openapi.json"})]
+    ["/v2"
      {:openapi
       {:id :api-v2
 
