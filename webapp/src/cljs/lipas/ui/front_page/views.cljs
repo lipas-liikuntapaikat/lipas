@@ -10,7 +10,7 @@
 
 (def links
   {:github    "https://github.com/lipas-liikuntapaikat"
-   :lipas-api "http://lipas.cc.jyu.fi/api/index.html"
+   :lipas-api "https://api.lipas.fi"
    :geoserver "http://lipas.cc.jyu.fi/geoserver"
    :lipasinfo "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
    :open-data "https://www.jyu.fi/fi/avoimet-rajapinnat-ja-ladattavat-lipas-aineistot"
