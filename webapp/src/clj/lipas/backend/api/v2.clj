@@ -139,8 +139,10 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
       :swagger  {:id :hide-from-default}
       :coercion reitit.coercion.malli/coercion}
 
-     ["" {:get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
-     ["/" {:get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
+     [""
+      {:no-doc true :get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
+     ["/"
+      {:no-doc true :get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
 
      ["/sports-site-categories"
       {:tags ["Sports Site Categories"]}
