@@ -291,6 +291,10 @@
                         max-y
                         cur-max-y)})))))
 
+(defn ->centroid-point
+  [fcoll]
+  (-> fcoll centroid ->feature vector ->fcoll))
+
 (comment
   (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 100} 10)
   (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 102} 10)
@@ -429,7 +433,8 @@
        {:type "Polygon",
         :coordinates
         [[[26.2436753445903, 63.9531598143881],
-          [26.4505514903968, 63.9127506671744]
+          [26.4505514903968, 63.9127506671744],
+          [26.4505514903968, 63.9531598143881],
           [26.2436753445903, 63.9531598143881]]]}},
       {:type "Feature",
        :properties {}
@@ -437,8 +442,13 @@
        {:type "Polygon",
         :coordinates
         [[[26.2436550567509, 63.9531552213109],
-          [25.7583312263512, 63.9746827436437]
+          [25.7583312263512, 63.9746827436437],
+          [25.7583312263512, 63.9531552213109],
           [26.2436550567509, 63.9531552213109]]]}}]})
+
+  (centroid test-polygon)
+
+  (->centroid-point test-polygon)
 
   (-> test-polygon ->flat-coords)
 

@@ -5,7 +5,8 @@
    [lipas.data.types :as types]
    [lipas.integration.old-lipas.sports-site :as old]
    [lipas.utils :as utils :refer [sreplace trim]]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   [lipas.backend.gis :as gis]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
@@ -135,6 +136,16 @@
                (update :properties select-keys (-> 3130 types/all :props keys))
                (update :properties dissoc :area-m2)
                old/add-swimming-pool-props)]
+    (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
+
+;; Swap Golfkenttä (alue) -> Golfkenttä (piste) for backwards
+;; compatibility with legacy api and geoserver.
+(defmethod ->old-lipas-sports-site 1650
+  [m]
+  (let [m1 (-> m
+               (update :properties select-keys (-> 1620 types/all :props keys))
+               (assoc-in [:type :type-code] 1620)
+               (update-in [:location :geometries] gis/->centroid-point))]
     (->old-lipas-sports-site* m1 (-> m1 :properties keys))))
 
 (defn ->sports-site
