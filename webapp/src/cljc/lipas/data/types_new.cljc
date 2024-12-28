@@ -3373,7 +3373,7 @@
   {:fi "Golfkenttä (piste)", :se "Golfbana", :en "Golf course"},
   :type-code 1620,
   :main-category 1000,
-  :status "active",
+  :status "deprecated", ; Replaced with Area variant 1650 since 1/2025
   :sub-category 1600,
   :geometry-type "Point",
   :props
@@ -4697,5 +4697,5 @@
   #?(:clj (spit "/tmp/types.edn" (with-out-str (pprint/pprint all))))
   #?(:clj (spit "/tmp/sub-cats.edn" (with-out-str (pprint/pprint sub-categories))))
   #?(:clj (spit "/tmp/main-cats.edn" (with-out-str (pprint/pprint main-categories))))
-
+  (->> all vals (map :status) distinct)
   )
