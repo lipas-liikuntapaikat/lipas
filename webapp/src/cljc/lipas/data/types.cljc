@@ -2,19 +2,18 @@
   "Categorization of sports sites."
   (:require
    [lipas.utils :as utils]
-   [lipas.data.types-old :as old]
+   #_[lipas.data.types-old :as old]
    [lipas.data.prop-types :as prop-types]
-   #_[lipas.data.types-new :as new]
-   ))
+   [lipas.data.types-new :as new]))
 
 (def main-categories
-  old/main-categories)
+  new/main-categories)
 
 (def sub-categories
-  old/sub-categories)
+  new/sub-categories)
 
 (def all
-  old/all)
+  new/all)
 
 (def active
   (reduce-kv (fn [m k v] (if (not= "active" (:status v)) (dissoc m k) m)) all all))
