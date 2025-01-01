@@ -86,7 +86,8 @@
 
 (defn ->lois-query
   [{:keys [page page-size statuses types categories]
-    :or {page-size 10}}]
+    :or {page 1
+         page-size 10}}]
   {:from (* (dec page) page-size)
    :size page-size
    :track_total_hits 50000
