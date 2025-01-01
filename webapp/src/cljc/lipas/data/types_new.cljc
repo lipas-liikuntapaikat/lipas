@@ -2191,7 +2191,7 @@
   :props
   {:area-km2 {:priority 90},
    :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
- 1650
+   1650
  {:description
   {:fi
    "Ensisijaisesti golfin pelaamiseen tarkoitettu alue kesäkaudella. Reikien määrä merkitään lisätietoihin.",
@@ -2199,7 +2199,7 @@
    :en
    "Official golf course. Number of holes included in properties."},
   :tags {:fi ["greeni" "puttialue" "range"]},
-  :name {:fi "Golfkenttä (alue)", :se "Golfbana", :en "Golf course"},
+  :name {:fi "Golfkenttä", :se "Golfbana", :en "Golf course"},
   :type-code 1650,
   :main-category 1000,
   :status "active",

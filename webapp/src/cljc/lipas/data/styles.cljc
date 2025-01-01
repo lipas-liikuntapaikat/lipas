@@ -784,7 +784,7 @@
    ;; Golfkenttä (alue)
    1650
    {:shape "polygon",
-    :fill {:color "#876d50"},
+    :fill {:color #_"#876d50" "#62d53c"},
     :stroke {:color "#000000" :width 1.5}}
    ;; Sisäleikki-/aktiviteettipuisto:
    2225

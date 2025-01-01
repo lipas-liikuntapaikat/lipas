@@ -34,7 +34,7 @@
   [fcoll]
   (let [coords (-> fcoll :features first :geometry :coordinates)
         [y x]  coords
-        delta  0.001] ; ~111m in WGS84
+        delta  0.0001] ; ~11m in WGS84
     {:type     "FeatureCollection"
      :features [{:type       "Feature"
                  :geometry {:type        "Polygon"
