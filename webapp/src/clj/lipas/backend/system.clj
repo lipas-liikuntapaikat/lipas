@@ -104,8 +104,10 @@
                  (update-in [:lipas/aws :secret-access-key] mask)))
      system)))
 
+(def current-system (atom nil))
+
 (defn stop-system! [system]
   (ig/halt! system))
 
 (defn -main [& _args]
-  (start-system! config/system-config))
+  (reset! current-system (start-system! config/system-config)))
