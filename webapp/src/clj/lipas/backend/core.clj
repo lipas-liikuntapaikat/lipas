@@ -231,10 +231,13 @@
 (defn- deref-fids
   [sports-site route]
   (let [fids  (-> route :fids set)
-        geoms {:type "FeatureCollection"
-               :features (->> (get-in sports-site [:location :geometries :features])
-                              (filterv #(contains? fids (:id %))))}]
-    (assoc route :geometries geoms)))
+        geoms (when (seq fids)
+                {:type "FeatureCollection"
+                 :features (->> (get-in sports-site [:location :geometries :features])
+                                (filterv #(contains? fids (:id %))))})]
+    (if geoms
+      (assoc route :geometries geoms)
+      route)))
 
 (defn enrich-activities
   [sports-site]
