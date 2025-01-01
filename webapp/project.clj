@@ -1,7 +1,7 @@
 (defproject lipas "0.1.0-SNAPSHOT"
   :dependencies
   [;;; Common ;;;
-   [org.clojure/clojure "1.12.0-rc1"]
+   [org.clojure/clojure "1.12.0"]
    [camel-snake-kebab "0.4.0"]
    [hiposfer/geojson.specs "0.2.0"]
    [com.taoensso/timbre "4.10.0"]
