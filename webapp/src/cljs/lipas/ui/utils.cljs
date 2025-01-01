@@ -224,6 +224,11 @@
                                    (assoc f :id (or (:id f) (str (random-uuid)))))
                                  fs))))
 
+(defn- cleanup-geoms [activity]
+  (cond-> activity
+    (seq (:routes activity))
+    (update :routes (fn [routes] (map #(dissoc % :geometries) routes)))))
+
 (defn make-saveable [sports-site]
   (-> sports-site
 
@@ -251,12 +256,16 @@
       ;; Add status=active to each activity key the site has
       ;; The form doesn't currently validate this required key is set, so
       ;; add the default value before save.
+      ;;
+      ;; Also, cleanup geometries under routes, since they're
+      ;; duplicates from :location :geometries and can be dereferenced
+      ;; using :fids
       (cond->
-        (:activities sports-site)
+          (:activities sports-site)
         (update :activities (fn [activities]
                               (into (empty activities)
                                     (map (fn [[k v]]
-                                           [k (merge {:status "active"} v)])
+                                           [k (merge {:status "active"} (cleanup-geoms v))])
                                          activities))))
 
         (:ptv sports-site)
