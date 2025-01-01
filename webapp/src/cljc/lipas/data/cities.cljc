@@ -1785,7 +1785,7 @@
     :avi-id 2}
    {:name {:fi "Pertunmaa", :se "Pertunmaa", :en "Pertunmaa"},
     :city-code 588,
-    :status "active",
+    :status "abolished",
     :valid-until nil,
     :province-id 10,
     :avi-id 3}
