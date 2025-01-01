@@ -29,6 +29,9 @@
 (def surface-material-schema
   [:sequential (into [:enum] (keys materials/surface-materials))])
 
+(def fids-schema
+  [:sequential [:string]])
+
 (def contact-roles
   {"admin"            {:fi "Ylläpitäjä"
                        :se "Administratör"
@@ -606,6 +609,7 @@
    {:status (:status common-props)
 
     :routes
+
     {:schema [:sequential
               (mu/merge
                (-> common-route-props-schema
@@ -613,8 +617,9 @@
                    (mu/dissoc :latest-updates)
                    (mu/dissoc :rules))
                [:map
-                [:id [:string]]
-                [:geometries common-schema/line-string-feature-collection]
+                [:id {:optional true} [:string]]
+                [:fids {:optional true} fids-schema]
+                [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:accessibility-categorized {:optional true}
                  [:map
                   [:mobility-impaired {:optional true} common-schema/localized-string]
@@ -944,8 +949,9 @@
               (mu/merge
                common-route-props-schema
                [:map
-                [:id [:string]]
-                [:geometries common-schema/line-string-feature-collection]
+                [:id {:optional true} [:string]]
+                [:fids {:optional true} fids-schema]
+                [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:route-name {:optional true} common-schema/localized-string]
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
@@ -1280,8 +1286,9 @@
                      (mu/merge
                       common-route-props-schema
                       [:map
-                       [:id [:string]]
-                       [:geometries common-schema/line-string-feature-collection]
+                       [:id {:optional true} [:string]]
+                       [:fids {:optional true} fids-schema]
+                       [:geometries {:optional true} common-schema/line-string-feature-collection]
                        [:route-name {:optional true} common-schema/localized-string]
                        [:paddling-activities {:optional true}
                         [:sequential (into [:enum] (keys paddling-activities))]]
