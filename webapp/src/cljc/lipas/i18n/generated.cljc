@@ -18,7 +18,7 @@
      :description      "Kuvaus"
      :descriptions     "Kuvaukset"
      :summary          "Tiivistelmä"
-     :loading-from-ptv "Haetaan tietoja PTV:sta..."
+     :loading-from-ptv "Haetaan tietoja PTV:stä..."
      :sports-sites     "Liikuntapaikat"
      :tools            "Massatyökalut"
      :settings         "Asetukset"
@@ -28,33 +28,33 @@
     {:classes                 "Palveluluokat"
      :show-only-lipas-managed "Näytä vain Lipakseen liitetyt palvelut"}
     :ptv.name-conflict
-    {:opt1            "Liitä liikuntapaikka olemassa olevaan palvelupaikkaan painamalla \"Liitä tähän palvelupaikkaan\" painiketta (suositus)"
+    {:opt1            "Liitä liikuntapaikka olemassa olevaan palvelupaikkaan painamalla \"Liitä tähän palvelupaikkaan\" -painiketta (suositus)"
      :opt2            "Valitse haluamasi palvelupaikka alla olevasta valitsimesta"
      :opt3            "Laita liukukytkin pois päältä, jolloin tätä kohdetta ei integroida PTV:oon."
-     :opt4            "Arkistoi kyseinen palvelupaikka PTV:sta."
+     :opt4            "Arkistoi kyseinen palvelupaikka PTV:stä."
      :do-one-of-these "Tee yksi näistä"}
     :ptv.wizard
     {:generate-descriptions         "Laadi kuvaukset"
-     :generate-descriptions-helper1 "Palvelut voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
+     :generate-descriptions-helper1 "Palvelut voidaan perustaa PTV:hen, kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
 
-     :generate-descriptions-helper2         "Paina \"Laadi kuvaukset\" painiketta luodaksesi kuvaukset automaattisesti tekoälyn avulla. Kuvaukset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta."
+     :generate-descriptions-helper2         "Paina \"Laadi kuvaukset\" -painiketta luodaksesi kuvaukset automaattisesti tekoälyn avulla. Kuvaukset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta."
      :services-to-add                       "Perustettavat palvelut"
      :export-services-to-ptv                "Vie palvelutietovarantoon"
      :export-service-locations-to-ptv       "Vie palvelutietovarantoon"
-     :all-services-exist                    "Kaikki tarvittavat palvelut on PTV:ssa. Hieno juttu!"
+     :all-services-exist                    "Kaikki tarvittavat palvelut on PTV:ssä. Hieno juttu!"
      :integrate-service-locations           "Luo liikuntapaikoista palvelupaikat"
      :assign-services-to-sports-sites       "Liitä liikuntapaikat palveluihin"
-     :generate-descriptions-helper3         "Palvelupaikat voidaan perustaa PTV:oon kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
+     :generate-descriptions-helper3         "Palvelupaikat voidaan perustaa PTV:hen kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti."
      :unselect-helper                       "Jos et halua viedä tiettyä kohdetta, voit avata
      kohteen oikealta ja laittaa liukukytkimen pois päältä."
-     :service-channel-name-conflict         "PTV:ssa on jo olemassa palvelupaikka nimellä {1}."
+     :service-channel-name-conflict         "PTV:ssä on jo olemassa palvelupaikka nimellä {1}."
      :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan" }
     :ptv.tools.generate-services
-    {:headline "Luo PTV palvelut"}
+    {:headline "Luo PTV-palvelut"}
     :ptv.tools.ai
     {:headline     "Laadi palvelupaikkojen kuvaukset tekoälyn avulla"
      :start        "Aloita"
-     :start-helper "Voit muokata tekoälyn ehdotuksia sitä mukaa kun ne valmistuvat."
+     :start-helper "Voit muokata tekoälyn ehdotuksia sitä mukaa kuin ne valmistuvat."
      :canceling    "Peruutetaan... Odota hetki"}
     :ptv.tools.ai.sports-sites-filter
     {:label                                "Valitse liikuntapaikat"
@@ -64,7 +64,7 @@
      :sync-enabled-no-existing-description "Vietäväksi valitut joista kuvaus puuttuu"}
     :ptv.actions
     {:export                 "Vie"
-     :export-disclaimer      "Olen lukenut kuvaukset ja haluan että tämä kohde viedään PTV:oon."
+     :export-disclaimer      "Olen lukenut kuvaukset ja haluan, että tämä kohde viedään PTV:hen."
      :select-org             "Valitse organisaatio"
      :select-integration     "Valitse liittämistapa"
      :generate-with-ai       "Generoi tekoälyllä"
@@ -75,12 +75,12 @@
     {:manual "Liitä manuaalisesti"}
     :ptv.integration.service
     {:lipas-managed        "LIPAS määrittää palvelut (suositeltu)"
-     :lipas-managed-helper "LIPAS perustaa tarvittavat palvelut PTV:oon DVV:n suositusten mukaisesti ja liittää palvelupaikat (liikuntapaikat) niihin automaattisesti."
-     :manual-helper        "Liikuntapaikat liitetään olemassa oleviin Palvelutietovarannon palveluihin manuaalisesti tässä työkalussa. Liitos tarvitsee tehdä jokaiselle liikuntapaikalle kerran."}
+     :lipas-managed-helper "LIPAS perustaa tarvittavat palvelut PTV:hen DVV:n suositusten mukaisesti ja liittää palvelupaikat (liikuntapaikat) niihin automaattisesti."
+     :manual-helper        "Liikuntapaikat liitetään olemassa oleviin Palvelutietovarannon palveluihin manuaalisesti tässä työkalussa. Liitos täytyy tehdä jokaiselle liikuntapaikalle kerran."}
     :ptv.integration.service-channel
     {:lipas-managed        "LIPAS määrittää palvelupaikat (suositeltu)"
-     :lipas-managed-helper "LIPAS perustaa jokaiselle liikuntapaikalle palvelupaikan PTV:oon ja liittää liikuntapaikkojen tiedot niihin automaattisesti."
-     :manual-helper        "Liikuntapaikka liitetään olemassa olevaan palvelupaikkaan manuaalisesti tässä työkalussa. Liitos tarvitsee tehdä jokaiselle liikuntapaikalle kerran"}
+     :lipas-managed-helper "LIPAS perustaa jokaiselle liikuntapaikalle palvelupaikan PTV:hen ja liittää liikuntapaikkojen tiedot niihin automaattisesti."
+     :manual-helper        "Liikuntapaikka liitetään olemassa olevaan palvelupaikkaan manuaalisesti tässä työkalussa. Liitos täytyy tehdä jokaiselle liikuntapaikalle kerran"}
     :ptv.integration.default-settings
     {:headline "Oletusasetukset"
      :helper   "Oletusasetukset voi ylikirjoittaa määrittämällä Liikuntapaikat-välilehdellä kohdekohtaiset asetukset."}
@@ -96,7 +96,7 @@
      :lipas-managed-ptv-fields           "Käytä erillistä kuvausta"
      :lipas-managed-ptv-fields-helper    "Kuvaus ja tiivistelmä ylläpidetään liikuntapaikasta erillään tässä työkalussa. Kuvausehdotukset voidaan laatia automaattisesti tekoälyn avulla."
      :ptv-managed                        "Älä päivitä kuvauksia"
-     :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssa. Lipas ei muuta tai päivitä kuvauksia."}
+     :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssä. Lipas ei muuta tai päivitä kuvauksia."}
     :utp
     {:headline             "Ulkoilutietopalvelu"
      :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."

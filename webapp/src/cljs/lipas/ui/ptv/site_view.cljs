@@ -212,7 +212,7 @@
                "Valitse organisaatio:")))
 
        (when (not candidate-now?)
-          ($ Alert {:severity "warning"} "Paikkaa ei viedä PTV (Lipas tila, tyyppi, omistaja)"))
+         ($ Alert {:severity "warning"} "Liikuntapaikka ei sovellu PTV:hen vietäväksi."))
 
        (let [options (uix/use-memo (fn []
                                      (->> orgs

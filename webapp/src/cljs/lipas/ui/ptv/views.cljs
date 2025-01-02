@@ -449,7 +449,7 @@
 
           ($ :<>
              ($ Typography
-                "Oletuksena Lipas luo PTV Palvelut liikuntapaikkojen tyyppien
+                "Oletuksena Lipas luo PTV-palvelut liikuntapaikkojen tyyppien
                 mukaan, mutta tarvittaessa voit myös luoda muita palveluita ja
                 liittää nämä palvelupaikoille manuaalisesti.")
              ($ controls/services-selector
