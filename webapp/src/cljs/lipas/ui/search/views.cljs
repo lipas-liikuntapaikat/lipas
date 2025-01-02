@@ -356,6 +356,7 @@
         ($ lists/virtualized-list
            {:items         results
             :key-fn        :lipas-id
+            :landing-bay?  true
             :label-fn      :name
             :label2-fn     (fn [search-doc]
                              (when search-doc

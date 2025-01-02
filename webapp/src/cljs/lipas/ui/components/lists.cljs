@@ -22,7 +22,7 @@
               :primary-typography-props   #js {:no-wrap true}
               :secondary-typography-props #js {:no-wrap true}})))))
 
-(defui virtualized-list [{:keys [items key-fn] :as list-props}]
+(defui virtualized-list [{:keys [items key-fn landing-bay?] :as list-props}]
   (let [;; Measure just the available content height for the list.
         ;; We don't need to care about the width.
         [measure-ref measure] (useMeasure)
@@ -53,7 +53,8 @@
           ($ FixedSizeList
              {:height       (.-height measure)
               :itemSize     height
-              :itemCount    (count items)}
+              :itemCount    (cond-> (count items)
+                              landing-bay? inc)}
              (fn [^js props]
                (let [item (get items (.-index props))]
                  ($ row-item
