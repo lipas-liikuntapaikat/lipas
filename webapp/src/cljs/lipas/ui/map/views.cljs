@@ -13,6 +13,7 @@
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [lipas.data.activities :as activities-data]
+            [lipas.data.ptv :as ptv-data]
             [lipas.data.sports-sites :as ss]
             [lipas.roles :as roles]
             [lipas.ui.accessibility.views :as accessibility]
@@ -810,9 +811,6 @@
         view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
         edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
-        ;; TODO: Maybe always show the ptv tab if the ptv integration is enabled for the site?
-        view-ptv?            (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])
-
         hide-actions?        (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
@@ -822,6 +820,13 @@
                 geom-type portal save-in-progress? undo redo
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
+
+        ;; Show PTV tab in read-only mode only when sync is enabled.
+        ;; In edit mode show only when it's possible to sync.
+        view-ptv?            (and (if editing?
+                                    (ptv-data/ptv-candidate? edit-data)
+                                    (:sync-enabled (:ptv display-data)))
+                                  (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
 
         ;; Allow map tools to be used with either regular or activity privileges
         can-use-map-tools? (or can-publish?
