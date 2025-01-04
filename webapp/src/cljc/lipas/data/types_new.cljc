@@ -916,10 +916,11 @@
    :school-use? {:priority 50}}},
  3250
  {:description
-  {:fi
-   "Vesiurheilukeskuksessa on vesistössä sijaitsevia liikuntapalveluita tai palvelukokonaisuus, joka voi muodostua erilaisista veden päällä tai vedessä olevista suorituspaikoista tai -radoista."},
+  {:fi "Vesiurheilukeskuksessa on vesistössä sijaitsevia liikuntapalveluita tai palvelukokonaisuus, joka voi muodostua erilaisista veden päällä tai vedessä olevista suorituspaikoista tai -radoista."
+   :se "En anläggning med idrottstjänster i vattenmiljö eller en servicehelhet som kan bestå av olika aktivitetsplatser eller banor på eller i vattnet."
+   :en "Water sports center offers water-based sports services or a service complex that can consist of various performance venues or tracks on or in the water."},
   :tags {:fi []},
-  :name {:fi "Vesiurheilukeskus"},
+  :name {:fi "Vesiurheilukeskus" :se "Vattensportscentrum" :en "Water sports center"},
   :type-code 3250,
   :main-category 3000,
   :status "active",
@@ -1230,10 +1231,11 @@
    :may-be-shown-in-harrastuspassi-fi? {:priority 0}}},
  2620
  {:description
-  {:fi
-   "Biljardisali on biljardin pelaamiseen tarkoitettu tila. Biljardipöytien määrä ja tyyppi kuvataan lisätiedoissa."},
+  {:fi "Biljardisali on biljardin pelaamiseen tarkoitettu tila. Biljardipöytien määrä ja tyyppi kuvataan lisätiedoissa."
+   :se "Biljardhall är ett utrymme avsett för biljardspel. Antalet och typen av biljardbord beskrivs i tilläggsinformationen."
+   :en "Billiard hall is a facility designed for playing billiards. The number and type of billiard tables are specified in the additional information."},
   :tags {:fi []},
-  :name {:fi "Biljardisali"},
+  :name {:fi "Biljardisali" :se "Biljardhall" :en "Billiard hall"},
   :type-code 2620,
   :main-category 2000,
   :status "active",
@@ -1737,10 +1739,11 @@
    :track-length-m {:priority 90}}},
  2225
  {:description
-  {:fi
-   "Sisäleikkipuistot ovat yleensä pienille lapsille tarkoitettuja liikunnallisia leikkipaikkoja. Sisäaktiviteettipuistot ovat tyypillisesti lapsille ja nuorille tarkoitettuja liikuntakeskuksia, jotka sisältävät erilaisia liikunnallisia kohteita."},
+  {:fi "Sisäleikkipuistot ovat yleensä pienille lapsille tarkoitettuja liikunnallisia leikkipaikkoja. Sisäaktiviteettipuistot ovat tyypillisesti lapsille ja nuorille tarkoitettuja liikuntakeskuksia, jotka sisältävät erilaisia liikunnallisia kohteita."
+   :se "Inomhuslek-/aktivitetspark är en fysiskt aktiverande anläggning som är avsedd för både små barn och ungdomar, med olika typer av lek- och aktivitetsmöjligheter."
+   :en "Indoor playground/activity park is a physically activating facility designed for both young children and youth, featuring various play and activity opportunities."},
   :tags {:fi []},
-  :name {:fi "Sisäleikki-/sisäaktiviteettipuisto"},
+  :name {:fi "Sisäleikki-/sisäaktiviteettipuisto" :se "Inomhuslek-/aktivitetspark" :en "Indoor playground/activity park"},
   :type-code 2225,
   :main-category 2000,
   :status "active",
