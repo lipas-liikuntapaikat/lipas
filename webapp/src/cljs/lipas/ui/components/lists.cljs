@@ -34,7 +34,14 @@
         [measure-item-ref measure-item] (useMeasure)
         height (if (pos? (.-height measure))
                  (.-height measure-item)
-                 70)]
+                 70)
+        ;; When changing search filters, (.-height measure)
+        ;; goes to 0 which makes the list height 0 and search
+        ;; results become inaccessible. This is a quick fix
+        ;; to make search results always accessible.
+        ;; TODO: Juho to check if there's a better fix.
+        min-height (* 5 height)]
+
     ($ :<>
        ($ :div
           {:style {:position "absolute"
@@ -51,7 +58,7 @@
           {:ref measure-ref
            :style {:flex "1 1 auto"}}
           ($ FixedSizeList
-             {:height       (.-height measure)
+             {:height       (max (.-height measure) min-height)
               :itemSize     height
               :itemCount    (cond-> (count items)
                               landing-bay? inc)}
