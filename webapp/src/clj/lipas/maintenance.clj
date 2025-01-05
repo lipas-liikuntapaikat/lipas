@@ -19,7 +19,11 @@
    [lipas.data.types :as types]
    [lipas.data.types-old :as old-types]
    [lipas.schema.core]
+   [lipas.schema.sports-sites :as sports-site-schema]
+   [lipas.schema.sports-sites.types :as types-schema]
+   [lipas.schema.sports-sites.location :as location-schema]
    [lipas.utils :as utils]
+   [malli.core :as m]
    [taoensso.timbre :as log]))
 
 (defn merge-types
@@ -167,7 +171,7 @@
 (defn ->subsidy-db-entry [m]
     (-> m
         (assoc :city-code (-> m :city-name city-lookup))
-        (update :type-codes #(-> % (str/split #";") (->> (mapv utils/->int))))
+        (update :type-codes #(-> % (str/split #";") (->> (mapv utils/->int)) set))
         (update :year utils/->int)
         (update :lipas-ids #(-> % (str/split #";") (->> (mapv utils/->int) (remove nil?))))
         (update :owner owner-lookup)
@@ -177,8 +181,19 @@
                            %))
         (update :amount utils/->number)))
 
-(def valid-subsidy-keys #{:description :amount :lipas-ids :city-name :receiver-name
-  :type-codes :city-code :year :issuer :target :owner})
+(def subsidy-db-entry-schema
+  [:map
+   [:year [:int {:min 1990 :max 2666}]]
+   [:amount [number?]]
+   [:city-code location-schema/city-code]
+   [:type-codes types-schema/type-codes-with-legacy]
+   [:owner sports-site-schema/owner]
+   [:issuer [:enum "AVI" "OKM"]]
+   [:receiver-name {:optional true} [:string]]
+   [:description {:optional true} [:string]]
+   [:lipas-ids {:optional true} [:sequential sports-site-schema/lipas-id]]])
+
+(def subsidy-db-entries-schema [:sequential subsidy-db-entry-schema])
 
 (defn add-subsidies-from-csv!
   [{:keys [db] :as system} csv-path]
@@ -197,9 +212,10 @@
     ;; Validate that all columns names were matched
     ;; Note: :target (sports-site name) is not available in all sheets
 
-    #_(println (set/difference (into #{} (mapcat keys) ms) valid-keys))
-
-    (assert (= valid-subsidy-keys (into #{} (mapcat keys) ms)))
+    (when-not (m/validate subsidy-db-entries-schema ms)
+      (tap> (m/explain subsidy-db-entries-schema ms))
+      (throw (ex-info "Invalid subsidy entries"
+                      {:malli/explain (m/explain subsidy-db-entries-schema ms)})))
 
     (log/info "Writing subsidies to database")
     (jdbc/with-db-transaction [tx db]

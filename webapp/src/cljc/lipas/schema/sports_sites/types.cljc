@@ -1,17 +1,25 @@
 (ns lipas.schema.sports-sites.types
   (:require [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
-            [lipas.schema.common :as common]))
+            [lipas.schema.common :as common]
+            [malli.util :as mu]))
 
 (def tags [:sequential [:string {:min 2 :max 100}]])
 
-(def type-code
+(def active-type-code
   (into [:enum {:description "Sports facility type according to LIPAS classification https://www.jyu.fi/fi/file/lipas-tyyppikoodit-2024"}]
         (keys types/active)))
 
-(def type-codes
-  [:set {:description (-> type-code second :description)}
-   #'type-code])
+(def active-type-codes
+  [:set {:description (-> active-type-code second :description)}
+   #'active-type-code])
+
+(def type-code-with-legacy
+  (into (subvec active-type-code 0 2) (keys types/all)))
+
+(def type-codes-with-legacy
+  [:set {:description (-> active-type-code second :description)}
+   #'type-code-with-legacy])
 
 (def main-category (into [:enum] (keys types/main-categories)))
 (def sub-category (into [:enum] (keys types/sub-categories)))
@@ -26,7 +34,7 @@
      [:fi {:optional true} #'tags]
      [:se {:optional true} #'tags]
      [:en {:optional true} #'tags]]]
-   [:type-code #'type-code]
+   [:type-code #'active-type-code]
    [:main-category
     [:map
      [:type-code #'main-category]

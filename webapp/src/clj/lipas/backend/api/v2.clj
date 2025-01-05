@@ -169,10 +169,10 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
               :body   (core/get-category type-code)}))
 
          :parameters
-         {:path [:map [:type-code {:description (-> types-schema/type-code
+         {:path [:map [:type-code {:description (-> types-schema/active-type-code
                                                     second
                                                     :description)}
-                       #'types-schema/type-code]]}
+                       #'types-schema/active-type-code]]}
 
          :responses {200 {:body #'types-schema/type}}}}]]
 
@@ -221,10 +221,10 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                        [:type-codes
                         {:optional      true
                          :decode/string decode-heisenparam
-                         :description   (-> types-schema/type-codes
+                         :description   (-> types-schema/active-type-codes
                                           second
                                           :description)}
-                        #'types-schema/type-codes]
+                        #'types-schema/active-type-codes]
 
                        [:admins
                         {:optional      true
