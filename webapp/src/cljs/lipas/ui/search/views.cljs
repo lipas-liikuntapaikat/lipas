@@ -345,27 +345,41 @@
        :change-page-size? true
        :style             {:padding-right 0 :padding-left 0}}]
 
-     (if in-progress?
-       ;; Spinner
-       [mui/circular-progress {:style {:margin-top "1em"}}]
-
-       ;; Results
-       [mui/stack
-        {:flexGrow 1
-         :direction "column"}
-        ($ lists/virtualized-list
-           {:items         results
-            :key-fn        :lipas-id
-            :landing-bay?  true
-            :label-fn      :name
-            :label2-fn     (fn [search-doc]
-                             (when search-doc
-                               (str (-> search-doc :type.name) ", "
-                                    (-> search-doc :location.city.name)
-                                    ;; uncomment for search tuning
-                                    ;;" " (-> % :score)
-                                    )))
-            :on-item-click on-result-click})])]))
+     ;; Results
+     [mui/stack
+      {:flexGrow 1
+       :direction "column"
+       :sx {:position "relative"}}
+      ;; Keep the results list in React tree even when loading new results.
+      ;; Unmounting and mounting the virtualized-list would force e.g.
+      ;; new measurement, which causes extra rendering flashing.
+      ;; When loading new results, show a overlay and a spinner over the results
+      ;; list.
+      (when in-progress?
+        [mui/stack
+         {:sx {:position "absolute"
+               :top 0
+               :bottom 0
+               :left 0
+               :right 0
+               :backgroundColor "rgba(255, 255, 255, 0.6)"
+               :zIndex 1000
+               :alignItems "center"}}
+         ;; Spinner
+         [mui/circular-progress {:style {:margin-top "1em"}}]])
+      ($ lists/virtualized-list
+         {:items         results
+          :key-fn        :lipas-id
+          :landing-bay?  true
+          :label-fn      :name
+          :label2-fn     (fn [search-doc]
+                           (when search-doc
+                             (str (-> search-doc :type.name) ", "
+                                  (-> search-doc :location.city.name)
+                                  ;; uncomment for search tuning
+                                  ;;" " (-> % :score)
+                                  )))
+          :on-item-click on-result-click})]]))
 
 (defn search-input
   [{:keys [max-width]}]
