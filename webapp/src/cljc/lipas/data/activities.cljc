@@ -1729,7 +1729,7 @@
                  :en "Outdoor Recreation Facilities"}
    :value       "outdoor-recreation-facilities"
    :description {:fi ""}
-   :type-codes  #{207 205 206 202 301 302 304 #_204}
+   :type-codes  #{207 #_205 203 206 202 301 302 304 #_204}
    :sort-order [:status
                 :description-short
                 :rules
