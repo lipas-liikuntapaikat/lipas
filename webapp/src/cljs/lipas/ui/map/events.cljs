@@ -42,6 +42,9 @@
                (assoc-in [:map :bottom-right-wgs84] (bottom-right extent))
                (assoc-in [:map :width] width)
                (assoc-in [:map :height] height))
+       ;; NOTE: This is also dispatched after new search results (from filter change)
+       ;; are shown on the map and the map is focused on the items. This
+       ;; causes an extra unncesssary search call.
        :dispatch-n
        [(when (and extent width) [:lipas.ui.search.events/submit-search])
         (when (and extent width) [:lipas.ui.loi.events/search])]})))

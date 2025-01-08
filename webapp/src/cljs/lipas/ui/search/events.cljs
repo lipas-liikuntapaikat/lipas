@@ -363,10 +363,9 @@
        :tracker/search! [(or kw "")]})))
 
 (rf/reg-event-fx ::filters-updated
-  (fn [_ [_ fit-view?]]
-    {:dispatch-n
-     [[::submit-search fit-view?]
-      [::change-result-page 0]]}))
+  (fn [{:keys [db]} [_ fit-view?]]
+    {:db (assoc-in db [:search :pagination :page] 0)
+     :fx [[:dispatch [::submit-search fit-view?]]]}))
 
 (rf/reg-event-fx ::set-status-filter
   (fn [{:keys [db]} [_ statuses append?]]
