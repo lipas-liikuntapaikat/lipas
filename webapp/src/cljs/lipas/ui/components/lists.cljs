@@ -32,16 +32,21 @@
         ;; if user is changing browser default font size,
         ;; it could be something else.
         [measure-item-ref measure-item] (useMeasure)
-        height (if (pos? (.-height measure))
-                 (.-height measure-item)
-                 70)
-        ;; When changing search filters, (.-height measure)
-        ;; goes to 0 which makes the list height 0 and search
-        ;; results become inaccessible. This is a quick fix
-        ;; to make search results always accessible.
-        ;; TODO: Juho to check if there's a better fix.
-        min-height (* 5 height)]
-
+        item-height (if (pos? (.-height measure))
+                       (.-height measure-item)
+                       70)
+        ;; When opening the "Rajaa hakua" box, there often will be
+        ;; no space left for the search results flex item.
+        ;; Best solution would be to rework the whole sidebar contents
+        ;; to create a new solution for the filters (maybe dropdown
+        ;; instead of the expanding box?).
+        ;; Maybe hiding the results completely when the filter box is
+        ;; open is confusing for the users? Adding an 5 item min-height
+        ;; keeps some items always visible. HOWEVER, now there
+        ;; will be a scrollbar for the sidebar & scrollbar for the
+        ;; search results which is also confusing.
+        min-height (* 5 item-height)
+        container-height (max (.-height measure) min-height)]
     ($ :<>
        ($ :div
           {:style {:position "absolute"
@@ -58,8 +63,8 @@
           {:ref measure-ref
            :style {:flex "1 1 auto"}}
           ($ FixedSizeList
-             {:height       (max (.-height measure) min-height)
-              :itemSize     height
+             {:height       container-height
+              :itemSize     item-height
               :itemCount    (cond-> (count items)
                               landing-bay? inc)}
              (fn [^js props]
