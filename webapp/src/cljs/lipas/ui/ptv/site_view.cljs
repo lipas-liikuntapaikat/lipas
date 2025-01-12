@@ -367,10 +367,11 @@
            :value      (or (get-in edit-data [:ptv :description selected-tab])
                            (get-in sports-site [:ptv :description selected-tab]))}])
 
-       ($ Button
-          {:disabled (or loading?
-                         read-only?)
-           :on-click (fn [_e]
-                       (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
-                                                                                 :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}
-          "Käännä muille kielille"))))
+       (when (> (count org-languages) 1)
+         ($ Button
+            {:disabled (or loading?
+                           read-only?)
+             :on-click (fn [_e]
+                         (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
+                                                                                   :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}
+            "Käännä muille kielille")))))
