@@ -19,6 +19,7 @@
             ["@mui/material/StepButton$default" :as StepButton]
             ["@mui/material/Stepper$default" :as Stepper]
             ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
@@ -195,7 +196,7 @@
                       :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
                    {:key :event-data :label "Tila"}
-                   {:key :last-sync :label "Viety viimeksi"}
+                   #_{:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
                    {:key :type :label (tr :general/type)}
                    ;;{:key :admin :label (tr :lipas.sports-site/admin)}
@@ -251,25 +252,32 @@
                  ($ Stack
                     {:direction "row"
                      :alignItems "center"}
-                    ($ Avatar
-                       {:sx #js {:bgcolor (if (:sync-enabled site)
-                                            (case sync-status
-                                              :ok "success.main"
-                                              :not-synced "error.main"
-                                              :out-of-date "warning.main")
-                                            mui/gray3)
-                                 :mr 2}}
-                       (if (:sync-enabled site)
-                         (if (= :ok sync-status)
-                           ($ Sync {:color "white"})
-                           ($ SyncProblem
-                              {:color "white"}))
-                         ($ SyncDisabled {:background "white"})))
+                    ($ Tooltip {:placement "right-end"
+                                :title (if (:sync-enabled site)
+                                               (case sync-status
+                                                 :ok "PTV:ssä on ajantasaiset tiedot tästä liikuntapaikasta"
+                                                 :not-synced "Liikuntapaikkaa ei ole vielä koskaan viety Palvelutietovarantoon"
+                                                 :out-of-date "Liikuntapaikkaan on tehty muutoksia, joita ei ole viety Palvelutietovarantoon")
+                                               "Integraatio ei ole päällä tälle liikuntapaikalle")}
+                       ($ Avatar
+                          {:sx #js {:bgcolor (if (:sync-enabled site)
+                                               (case sync-status
+                                                 :ok "success.main"
+                                                 :not-synced "error.main"
+                                                 :out-of-date "warning.main")
+                                               mui/gray3)
+                                    :mr 2}}
+                          (if (:sync-enabled site)
+                            (if (= :ok sync-status)
+                              ($ Sync {:color "white"})
+                              ($ SyncProblem
+                                 {:color "white"}))
+                            ($ SyncDisabled {:background "white"}))))
                     #_
                     (:event-date-human site))]
 
                 ;; Last-sync
-                [mui/table-cell
+                #_[mui/table-cell
                  (or (some-> site :last-sync utils/->human-date-time-at-user-tz)
                      "Ei koskaan")]
 
