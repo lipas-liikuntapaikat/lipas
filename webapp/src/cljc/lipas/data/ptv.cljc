@@ -62,10 +62,11 @@
 
 ;; For UI org dropdown
 (def orgs
-  (mapv (fn [x]
-          {:name (:name x)
-           :prod (:prod x)
-           :id (:org-id (:props x))})
+  (mapv (fn [org]
+          {:name (:name org)
+           :prod (:prod org)
+           :id (:org-id (:props org))
+           :city-codes (:city-codes (:props org))})
         organizations))
 
 (def lang->locale

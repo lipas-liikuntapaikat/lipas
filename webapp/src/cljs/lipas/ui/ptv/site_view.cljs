@@ -112,11 +112,6 @@
              "Luo palvelu"))
        )))
 
-(def orgs
-  (if (prod?)
-    (filterv :prod ptv-data/orgs)
-    (filterv #(not (:prod %)) ptv-data/orgs)))
-
 (defui site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (uix/use-state :fi)
         locale (tr)
@@ -134,6 +129,8 @@
         ;; _ (js/console.log edit-data sports-site)
 
         {:keys [org-id sync-enabled delete-existing last-sync publishing-status]} (:ptv site)
+
+        orgs (use-subscribe [::subs/users-orgs])
         org-languages (ptv-data/org-id->languages org-id)
 
         ;; _ (js/console.log org-id)
@@ -219,7 +216,7 @@
                                           (map (fn [{:keys [name id]}]
                                                  {:label name
                                                   :value id}))))
-                                   [])]
+                                   [orgs])]
          ($ autocomplete2
             {:options   options
              :disabled  (or loading?

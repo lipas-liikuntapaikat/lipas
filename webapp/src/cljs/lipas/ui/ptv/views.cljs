@@ -30,7 +30,7 @@
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
-            [lipas.ui.utils :refer [<== ==> prod?]]
+            [lipas.ui.utils :refer [<== ==>]]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [uix.core :as uix :refer [$ defui]]))
@@ -55,14 +55,10 @@
      (when (contains? opts "en")
        [mui/tab {:value "en" :label "EN" :disabled (not (contains? opts "en"))}])]))
 
-(def orgs
-  (if (prod?)
-    (filterv :prod ptv-data/orgs)
-    (filterv #(not (:prod %)) ptv-data/orgs)))
-
 (defn org-selector
   [{:keys [label]}]
-  (let [selected-org (<== [::subs/selected-org])]
+  (let [orgs (<== [::subs/users-orgs])
+        selected-org (<== [::subs/selected-org])]
     [lui/select
      {:items     orgs
       :label     label

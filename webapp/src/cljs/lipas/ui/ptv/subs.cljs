@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.ui.utils :as utils]
+            [lipas.ui.utils :as utils :refer [prod?]]
+            [lipas.roles :as roles]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::ptv
@@ -50,6 +51,21 @@
   :<- [::loading-from-lipas?]
   (fn [[loading-from-ptv? loading-from-lipas?] _]
     (or loading-from-ptv? loading-from-lipas?)))
+
+(def orgs
+  (if (prod?)
+    (filterv :prod ptv-data/orgs)
+    (filterv #(not (:prod %)) ptv-data/orgs)))
+
+(rf/reg-sub ::users-orgs
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user-data _]
+    (filterv (fn [{:keys [city-codes :as _org]}]
+               (some
+                (fn [city-code]
+                  (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
+                city-codes))
+             orgs)))
 
 (rf/reg-sub ::selected-org
   :<- [::ptv]
