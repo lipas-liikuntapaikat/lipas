@@ -41,14 +41,14 @@
                   :service-name (:name (get types/sub-categories sub-category-id))
                   :sports-facilties [{:type (-> type-data :name :fi)}]}]
     ($ Paper
-       {:sx #js {:p 2}}
+       {:sx #js {:p 2} :elevation 6}
 
        ($ Stack
           {:direction "column"
            :sx #js {:gap 2}}
           ($ Typography
-             {:variant "h5"}
-             "Luo "
+             {:variant "h6"}
+             "Luo palvelu: "
              (:fi (:name (get types/sub-categories sub-category-id))))
 
           ($ Stack

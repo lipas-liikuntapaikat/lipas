@@ -30,7 +30,7 @@
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
-            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.ui.utils :as utils :refer [<== ==>]]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [uix.core :as uix :refer [$ defui]]))
@@ -96,17 +96,19 @@
       :spacing   2
       :style     {:padding-top "1em" :padding-bottom "1em"}}
 
-     ;; Service
-     [mui/grid {:item true :xs 12 :lg 4}
-      [mui/stack {:spacing 2}
-       [lui/switch
+     [mui/grid {:item true :xs 12}
+      [lui/switch
         {:label     (tr :ptv.actions/export-disclaimer)
          :value     (:sync-enabled site)
-         :on-change #(==> [::events/toggle-sync-enabled site %])}]
+         :on-change #(==> [::events/toggle-sync-enabled site %])}]]
+
+     [mui/grid {:item true :xs 12 :lg 4}
+      [mui/stack {:spacing 2}
 
        [mui/typography {:variant "h6"}
         (tr :ptv/services)]
 
+       ;; Service
        ($ controls/services-selector
           {:options   services
            :value     (:service-ids site)
@@ -169,7 +171,7 @@
            (if (:sync-enabled site)
              [mui/button {:disabled loading?
                           :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-              "Vie PTV"]
+              "Vie PTV:hen"]
              [mui/button {:disabled loading?
                           :on-click #(==> [::events/save-ptv-meta [site]])}
               "Tallenna"])
@@ -268,7 +270,8 @@
 
                 ;; Last-sync
                 [mui/table-cell
-                 (:last-sync-human site)]
+                 (or (some-> site :last-sync utils/->human-date-time-at-user-tz)
+                     "Ei koskaan")]
 
                 ;; Name
                 [mui/table-cell

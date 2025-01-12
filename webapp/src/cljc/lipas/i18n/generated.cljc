@@ -67,7 +67,7 @@
      :export-disclaimer      "Olen lukenut kuvaukset ja haluan, että tämä kohde viedään PTV:hen."
      :select-org             "Valitse organisaatio"
      :select-integration     "Valitse liittämistapa"
-     :generate-with-ai       "Generoi tekoälyllä"
+     :generate-with-ai       "Generoi kuvaukset tekoälyllä"
      :select-service         "Valitse palvelu"
      :select-service-channel "Valitse palvelupaikka"
      :select-languages       "Valitse kielet"}
