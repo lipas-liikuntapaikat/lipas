@@ -167,9 +167,17 @@
         new-service-sub-cat (get types/sub-categories (-> site :type :type-code types :sub-category))
 
         to-archive? (and previous-sent?
-                         (not candidate-now?))]
+                         (not candidate-now?))
+
+        org-options (uix/use-memo (fn []
+                                    (->> orgs
+                                         (map (fn [{:keys [name id]}]
+                                                {:label name
+                                                 :value id}))))
+                                  [orgs])]
 
     (js/console.log missing-services new-service new-service-sub-cat)
+    (js/console.log "sync enabled" sync-enabled)
 
     (uix/use-effect (fn []
                       (when org-id
@@ -203,99 +211,6 @@
                ($ CircularProgress)
                "Ladataan PTV tietoja...")))
 
-       (when (and candidate-now? (not (:org-id (:ptv site))))
-         ($ :<>
-            ($ Alert {:severity "warning"}
-               "Valitse organisaatio:")))
-
-       (when (not candidate-now?)
-         ($ Alert {:severity "warning"} "Liikuntapaikka ei sovellu PTV:hen vietäväksi."))
-
-       (let [options (uix/use-memo (fn []
-                                     (->> orgs
-                                          (map (fn [{:keys [name id]}]
-                                                 {:label name
-                                                  :value id}))))
-                                   [orgs])]
-         ($ autocomplete2
-            {:options   options
-             :disabled  (or loading?
-                            read-only?)
-             :label     "Organisaatio"
-             :value     (:org-id (:ptv site))
-             :on-change (fn [_e v]
-                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}))
-
-       ($ FormControl
-          ($ FormLabel
-             "PTV-tila")
-          (cond
-            (:error (:ptv site))
-            (let [e (:error (:ptv site))]
-              ($ Alert {:severity "error"}
-                 "Virhe PTV-integraatiossa, uusimpia tietoja ei ole viety PTV:hen. " (:message e)))
-
-            (and previous-sent? candidate-now? ready?)
-            (if sync-enabled
-              ($ Alert {:severity "success"} "PTV-integraatio on käytössä")
-              (if delete-existing
-                 ($ Alert {:severity "success"} "Liikuntapaikka poistetaan PTV:stä tallennuksen yhteydessä")
-                 ($ Alert {:severity "success"} "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä.")))
-
-            (and previous-sent? (not candidate-now?))
-            ($ Alert {:severity "warning"} "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä.")
-
-            (and candidate-now? ready? sync-enabled)
-            ($ Alert {:severity "info"} "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä.")
-
-            (and candidate-now? (not ready?))
-            ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä.")
-
-            :else
-            "-")
-          (when-let [x (first (:service-channel-ids (:ptv site)))]
-             ($ :<>
-                ($ Link
-                   {:target "new"
-                    :href (str (if (prod?)
-                                  "https://palvelutietovaranto.suomi.fi/channels/serviceLocation/"
-                                  "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/")
-                               x)}
-                   "Avaa PTV")
-                (when (prod?)
-                   ($ Link
-                      {:target "new"
-                       :href (str "https://www.suomi.fi/palvelut/palvelupiste/x/" x)}
-                      "Avaa suomi.fi")
-                ))))
-
-       (when candidate-now?
-         ($ FormControl
-            ($ controls/services-selector
-               {:disabled   (or loading?
-                                read-only?)
-                :value      (:service-ids (:ptv site))
-                :options    services*
-                :on-change  (fn [ids]
-                              (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :service-ids] ids]))
-                :value-fn   :service-id
-                :label      (tr :ptv.actions/select-service)})
-
-            (cond
-              (seq missing-services)
-              ($ Alert {:severity "warning"} "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä.")
-
-              (and previous-sent? type-code-changed?)
-              ($ Alert {:severity "info"} "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."))
-            ))
-
-       (when (seq missing-services)
-         ($ new-service-form
-            {:data site
-             :tr tr
-             :org-id org-id
-             :service (first missing-services)}))
-
        ($ Stack
           {:direction "row"}
           ($ FormControlLabel
@@ -313,65 +228,157 @@
                              {:disabled read-only?
                               :checked (or delete-existing false)
                               :on-change (fn [_e v]
-                                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))})})))
+                                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))})})))
 
-       ($ Stack
-          {:sx #js {:position "relative"}}
-          ($ Button
-             {:disabled (or loading?
-                            read-only?)
-              :variant "outlined"
-              ;; NOTE: Could use the lipas-id version when not editing? But then we don't have
-              ;; place to store the results.
-              :on-click (fn [_e]
-                          (rf/dispatch [::events/generate-descriptions-from-data lipas-id]))}
-             (tr :ptv.actions/generate-with-ai))
-          (when loading?
-            ($ CircularProgress
-               {:size 24
-                :sx #js {:position "absolute"
-                         :top "50%"
-                         :left "50%"
-                         :mt "-12px"}})))
+       (when sync-enabled
+         ($ :<> {}
+           ($ FormControl
+              #_($ FormLabel
+                 "PTV-tila")
+              (cond
+                (:error (:ptv site))
+                (let [e (:error (:ptv site))]
+                  ($ Alert {:severity "error"}
+                     "Virhe PTV-integraatiossa, uusimpia tietoja ei ole viety PTV:hen. " (:message e)))
 
-       ($ controls/lang-selector
-          {:value selected-tab
-           :on-change set-selected-tab
-           :enabled-languages (set (or (:languages (:ptv site))
-                                       org-languages))})
+                (and previous-sent? candidate-now? ready?)
+                (if sync-enabled
+                  ($ Alert {:severity "success"} "PTV-integraatio on käytössä")
+                  (if delete-existing
+                    ($ Alert {:severity "success"} "Liikuntapaikka poistetaan PTV:stä tallennuksen yhteydessä")
+                    ($ Alert {:severity "success"} "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä.")))
 
-       ;; Summary
-       (r/as-element
-         [lui/text-field
-          {:disabled   (or loading?
-                           read-only?)
-           :multiline  true
-           :variant    "outlined"
-           :on-change  (fn [v]
-                         (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
-           :label      "Tiivistelmä"
-           :value      (or (get-in edit-data [:ptv :summary selected-tab])
-                           (get-in sports-site [:ptv :summary selected-tab]))}])
+                (and previous-sent? (not candidate-now?))
+                ($ Alert {:severity "warning"} "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä.")
 
-       ;; Description
-       (r/as-element
-         [lui/text-field
-          {:disabled   (or loading?
-                           read-only?)
-           :variant    "outlined"
-           :rows       5
-           :multiline  true
-           :on-change  (fn [v]
-                         (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
-           :label      "Kuvaus"
-           :value      (or (get-in edit-data [:ptv :description selected-tab])
-                           (get-in sports-site [:ptv :description selected-tab]))}])
+                (and candidate-now? ready? sync-enabled)
+                ($ Alert {:severity "info"} "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä.")
 
-       (when (> (count org-languages) 1)
-         ($ Button
-            {:disabled (or loading?
-                           read-only?)
-             :on-click (fn [_e]
-                         (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
-                                                                                   :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}
-            "Käännä muille kielille")))))
+                (and candidate-now? (not ready?))
+                ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä.")
+
+                :else
+                "-")
+              (when-let [x (first (:service-channel-ids (:ptv site)))]
+                ($ :<>
+                   ($ Link
+                      {:target "new"
+                       :href (str (if (prod?)
+                                    "https://palvelutietovaranto.suomi.fi/channels/serviceLocation/"
+                                    "https://palvelutietovaranto.trn.suomi.fi/channels/serviceLocation/")
+                                  x)}
+                      "Avaa PTV:ssä")
+                   (when (prod?)
+                     ($ Link
+                        {:target "new"
+                         :href (str "https://www.suomi.fi/palvelut/palvelupiste/x/" x)}
+                        "Avaa suomi.fi:ssä")
+                     ))))
+
+           (when (and candidate-now? (not (:org-id (:ptv site))))
+             ($ :<>
+                ($ Alert {:severity "warning"}
+                   "Valitse organisaatio")))
+
+           (when (not candidate-now?)
+             ($ Alert {:severity "warning"} "Liikuntapaikka ei sovellu PTV:hen vietäväksi."))
+
+
+           ($ autocomplete2
+              {:options   org-options
+               :disabled  (or loading?
+                              read-only?)
+               :label     "Organisaatio"
+               :value     (:org-id (:ptv site))
+               :on-change (fn [_e v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))})
+
+           (when candidate-now?
+             ($ FormControl
+                ($ controls/services-selector
+                   {:disabled   (or loading?
+                                    read-only?)
+                    :value      (:service-ids (:ptv site))
+                    :options    services*
+                    :on-change  (fn [ids]
+                                  (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :service-ids] ids]))
+                    :value-fn   :service-id
+                    :label      (tr :ptv.actions/select-service)})
+
+                (cond
+                  (seq missing-services)
+                  ($ Alert {:severity "warning"} "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä.")
+
+                  (and previous-sent? type-code-changed?)
+                  ($ Alert {:severity "info"} "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."))
+                ))
+
+           (when (seq missing-services)
+             ($ new-service-form
+                {:data site
+                 :tr tr
+                 :org-id org-id
+                 :service (first missing-services)}))
+
+           ($ Typography {:variant "h6"} "Palvelupaikan kuvaukset")
+
+           ($ Stack
+              {:sx #js {:position "relative"}}
+              ($ Button
+                 {:disabled (or loading?
+                                read-only?)
+                  :variant "outlined"
+                  ;; NOTE: Could use the lipas-id version when not editing? But then we don't have
+                  ;; place to store the results.
+                  :on-click (fn [_e]
+                              (rf/dispatch [::events/generate-descriptions-from-data lipas-id]))}
+                 (tr :ptv.actions/generate-with-ai))
+              (when loading?
+                ($ CircularProgress
+                   {:size 24
+                    :sx #js {:position "absolute"
+                             :top "50%"
+                             :left "50%"
+                             :mt "-12px"}})))
+
+           ($ controls/lang-selector
+              {:value selected-tab
+               :on-change set-selected-tab
+               :enabled-languages (set (or (:languages (:ptv site))
+                                           org-languages))})
+
+           ;; Summary
+           (r/as-element
+            [lui/text-field
+             {:disabled   (or loading?
+                              read-only?)
+              :multiline  true
+              :variant    "outlined"
+              :on-change  (fn [v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
+              :label      "Tiivistelmä"
+              :value      (or (get-in edit-data [:ptv :summary selected-tab])
+                              (get-in sports-site [:ptv :summary selected-tab]))}])
+
+           ;; Description
+           (r/as-element
+            [lui/text-field
+             {:disabled   (or loading?
+                              read-only?)
+              :variant    "outlined"
+              :rows       5
+              :multiline  true
+              :on-change  (fn [v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
+              :label      "Kuvaus"
+              :value      (or (get-in edit-data [:ptv :description selected-tab])
+                              (get-in sports-site [:ptv :description selected-tab]))}])
+
+           (when (> (count org-languages) 1)
+             ($ Button
+                {:disabled (or loading?
+                               read-only?)
+                 :on-click (fn [_e]
+                             (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
+                                                                                       :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}
+                "Käännä muille kielille")))))))
