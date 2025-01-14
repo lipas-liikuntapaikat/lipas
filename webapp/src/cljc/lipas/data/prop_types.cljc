@@ -53,13 +53,14 @@
      :en "The number of basketball courts"}},
    :surface-material-info
    {:name
-    {:fi "Pintamateriaali lisätieto",
+    {:fi "Pintamateriaalin lisätieto",
      :se "Ytterligare information om ytmaterialen",
      :en "Surface material information"},
     :data-type "string",
     :description
     {:fi
-     "Syötä pintamateriaalin tarkempi kuvaus-  esim. tekonurmen yleisnimitys ”esim. Kumirouhetekonurmi”, tuotenimi ja tieto täytemateriaalin laadusta (esim. biohajoava/perinteinen kumirouhe).",
+     "Syötä pintamateriaalin tarkempi kuvaus, kuten tekonurmen yleisnimitys, tuotenimi ja tieto täytemateriaalin laadusta."
+     #_"Syötä pintamateriaalin tarkempi kuvaus - esim. tekonurmen yleisnimitys ”esim. Kumirouhetekonurmi”, tuotenimi ja tieto täytemateriaalin laadusta (esim. biohajoava/perinteinen kumirouhe).",
      :se "Ange en mer detaljerad beskrivning av ytskiktet - till exempel den allmänna beteckningen för konstgräs t.ex. gummigranulatkonstgräs, produktnamn och information om fyllnadsmaterialets kvalitet (t.ex. biologiskt nedbrytbart/traditionellt gummigranulat).",
      :en "Enter a more detailed description of the surface material - for example, the general name for artificial turf “e.g., rubber granulate artificial turf,” product name, and information about the quality of the infill material (e.g., biodegradable/traditional rubber granulate)."}},
    :height-of-basket-or-net-adjustable?
@@ -868,7 +869,7 @@
    {:name      {:fi "Yleisö-wc", :se "Allmän toalett", :en "Toilet"},
     :data-type "boolean",
     :description
-    {:fi "Onko kohteessa yleiseen käyttöön tarkoitettuja wc-tiloja?",
+    {:fi "Onko kohteessa yleiseen käyttöön tarkoitettuja wc-tiloja",
      :se "Är allmänna toaletten i användning",
      :en "Are there public restroom facilities available at the location"}},
    :gymnastics-space?
@@ -1506,8 +1507,8 @@
      :en "Sales or customer service point",
      :se "Försäljnings- eller kundservicepunkt"},
     :description
-    {:fi
-     "Liikuntapaikalla on pysyvä myynti- tai asiakaspalvelupiste, josta on saatavissa asiakaspalvelua. Myynti- tai asiakaspalvelupiste voi olla rajoitetusti auki liikuntapaikan käyttöaikojen puitteissa.",
+    {:fi "Liikuntapaikalla on pysyvä asiakaspalvelupiste tai myyntipiste, josta on saatavilla asiakaspalvelua. Myynti- tai asiakaspalvelupiste voi olla rajoitetusti auki liikuntapaikan käyttöaikojen puitteissa."
+     #_"Liikuntapaikalla on pysyvä myynti- tai asiakaspalvelupiste, josta on saatavissa asiakaspalvelua. Myynti- tai asiakaspalvelupiste voi olla rajoitetusti auki liikuntapaikan käyttöaikojen puitteissa.",
      :se
      "Det finns en permanent försäljnings- eller kundservicestation på idrottsanläggningen där kundservice är tillgänglig. Försäljnings- eller kundservicestationen kan ha begränsade öppettider inom idrottsanläggningens användningstider.",
      :en

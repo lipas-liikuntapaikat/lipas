@@ -1064,7 +1064,7 @@
     "ruoka"
     "taukopaikka"]},
   :name
-  {:fi "Ruoanlaitto- / tulentekopaikka",
+  {:fi "Ruoanlaitto-/tulentekopaikka",
    :se "Matlagningsplats",
    :en "Cooking facilities"},
   :type-code 206,
@@ -1894,7 +1894,7 @@
  4412
  {:description
   {:fi
-   "Pyöräilyreitti, joka kulkee enimmäkseen päällystetyillä teillä tai sorateillä. Reitti voi olla merkitty maastoon tai se on digitaalisesti opastettu.",
+   "Pyöräilyreitti, joka kulkee enimmäkseen päällystetyillä teillä tai sorateillä. Reitti voi olla maastoon merkitty tai digitaalisesti opastettu.",
    :se "Cykelled, ej för mountainbikar.",
    :en "Biking route, not intended for cross-country biking."},
   :tags {:fi []},
@@ -2859,7 +2859,7 @@
  103
  {:description
   {:fi
-   "Voivat sijaita taajaman reunoilla, vyöhykkeittäin taajaman sisällä tai taajaman ulkopuolella. Kohteissa voi olla myös taajamasta lähteviä tai taajamaan palaavia reittejä tai polku- ja reittiverkosto. Kohteet sisältävät vaihtelevaa maastoa ja luonnonmukaisia tai puistomaisia alueita. Kohteet voivat myös sijaita vesialuiden lähellä kuten rannoilla tai saarissa. Kohteiden pääasiallinen käyttö on retkeilyä ja luonnossa virkistäytymistä, mutta niitä voidaan käyttää monipuolisesti erilaisen liikunnan kuten hiihdon, lenkkeilyn tai uinnin harrastamiseen.  Kaavamerkintä esim. VR. HUOM! Uusien liikunta- ja ulkoilupaikkojen lisäksi Ulkoilu-/virkistysalueluokka sisältää ennen vuotta 2024 Ulkoilualueet ja Retkeilyalueet tyyppiluokkiin lisätyt olosuhteet",
+   "Voivat sijaita taajaman reunoilla, vyöhykkeittäin taajaman sisällä tai taajaman ulkopuolella. Kohteissa voi olla myös taajamasta lähteviä tai taajamaan palaavia reittejä tai polku- ja reittiverkosto. Kohteet sisältävät vaihtelevaa maastoa ja luonnonmukaisia tai puistomaisia alueita. Kohteet voivat myös sijaita vesialuiden lähellä kuten rannoilla tai saarissa. Kohteiden pääasiallinen käyttö on retkeilyä ja luonnossa virkistäytymistä, mutta niitä voidaan käyttää monipuolisesti erilaisen liikunnan kuten hiihdon, lenkkeilyn tai uinnin harrastamiseen. Kaavamerkintä esim. VR. HUOM! Uusien liikunta- ja ulkoilupaikkojen lisäksi Ulkoilu-/virkistysalueluokka sisältää ennen vuotta 2025 Ulkoilualue- ja Retkeilyalue-tyyppiluokkiin lisätyt olosuhteet",
    :se
    "Området befinner sig i utkanten av tätorter eller i zoner inom tätorten. På 1-10 kilometers avstånd från bebyggelse. Friluftsområdet används för t.ex. promenader, skidning, joggning, simning. Serverar oftast friluftsaktiviteter för en kommun. Området erbjuder en stor variation av motions möjligheter. Området kan bestå av skog, kärr, åkrar, naturenliga områden och parkliknande delar. Planbeteckning VR.",
    :en
