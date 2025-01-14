@@ -535,11 +535,6 @@
        (r/as-element
          [mui/stack {:spacing 2}
 
-          [lui/switch
-           {:label     (tr :ptv.actions/export-disclaimer)
-            :value     sync-enabled
-            :on-change #(==> [::events/toggle-sync-enabled site %])}]
-
           ;; Services selector
           ($ controls/services-selector
              {:options   services
@@ -612,7 +607,13 @@
             :multiline  true
             :on-change  #(==> [::events/set-description site selected-tab %])
             :label      (tr :ptv/description)
-            :value      (get-in site [:description selected-tab])}]]))))
+            :value      (get-in site [:description selected-tab])}]
+
+          ;; Disclaimer and enable switch
+          [lui/switch
+           {:label     (tr :ptv.actions/export-disclaimer)
+            :value     sync-enabled
+            :on-change #(==> [::events/toggle-sync-enabled site %])}]]))))
 
 (defui service-location
   [{:keys [site sync-enabled name-conflict valid]
@@ -883,11 +884,15 @@
      [:> Stepper
       {:nonLinear true
        :activeStep ptv-step
-       :sx #js {:mt 2
-                :mb 4
-                ".Mui-completed" #js {:fontWeight "500 !important"}
-                ".Mui-completed.Mui-active" #js {:fontWeight "700 !important"}
-                ".Mui-active" #js {:fontWeight "700 !important"}}}
+       :sx (fn [theme]
+             #js {:mt 2
+                 :mb 4
+                 ".Mui-completed" #js {:fontWeight "500 !important"}
+                 ".Mui-completed.Mui-active" #js {:fontWeight "700 !important"}
+                 ".Mui-active" #js {:fontWeight "700 !important"
+                                    :color "primary.main"}
+                  ".MuiStepIcon-root.Mui-active" #js {
+                                                      :fill (.. theme -palette -secondary -main)}})}
       [:> Step
        {:key "1"
         :completed true}
