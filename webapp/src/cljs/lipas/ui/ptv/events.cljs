@@ -33,7 +33,7 @@
 
 (rf/reg-event-fx ::set-step
   (fn [{:keys [db]} [_ v]]
-    (let [prev-step (:selected-step (:ptv db))]
+    (let [prev-step (or (:selected-step (:ptv db)) 0)]
       {:db (assoc-in db [:ptv :selected-step] v)
        :fx [(when (= 0 prev-step)
                      [:dispatch [::fetch-integration-candidates (:selected-org (:ptv db))]])]})))
