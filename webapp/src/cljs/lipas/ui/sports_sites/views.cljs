@@ -330,6 +330,7 @@
     [lui/autocomplete
      {:value       value
       :multi?      multi?
+      :deselect?   true
       :disabled    disabled
       :helper-text tooltip
       :label       label
