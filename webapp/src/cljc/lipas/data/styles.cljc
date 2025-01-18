@@ -334,7 +334,7 @@
     :stroke {:color "#000000"}},
    4510
    {:shape "polygon",
-    :fill {:color "#ff502d"},
+    :fill {:color "#d4715d"},
     :stroke {:color "#000000", :width 1.5}},
    4240
    {:shape "square",
