@@ -848,7 +848,8 @@
          :handler (swagger/create-swagger-handler)}}]
       ["/sports-places"
        {:swagger {:id ::legacy}
-        :parameters {:query :lipas.legacy.api/search-params} 
+        :parameters {:query :lipas.legacy.api/search-params
+                     :collection-format "multi"} 
         :get
         {:tags ["sport-places"]
          :handler
