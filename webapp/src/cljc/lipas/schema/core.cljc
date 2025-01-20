@@ -2148,10 +2148,11 @@
     :swagger/enum type-codes}))
 
 (s/def :lipas.legacy.api/typeCodes
-  (s/coll-of :lipas.legacy.api/typeCode
-             :min-count 0
-             :distinct true
-             :into []))
+  (st/spec {:spec (s/coll-of :lipas.legacy.api/typeCode
+                             :min-count 0
+                             :distinct true
+                             :into [])
+            :collectionFormat "multi"}))
 
 
 (s/def :lipas.legacy.api/search-params
