@@ -3,8 +3,7 @@
   (:require
    [clojure.tools.namespace.repl]
    [integrant.repl :refer [reset reset-all halt go]]
-   [integrant.repl.state]
-   [lipas.data.prop-types :as prop-types]))
+   [integrant.repl.state]))
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
@@ -43,11 +42,11 @@
 
 (defn reindex-search!
   []
-  ((requiring-resolve 'lipas.backend.search-indexer/main) (db) (search) "search"))
+  ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "search"))
 
 (defn reindex-analytics!
   []
-  ((requiring-resolve 'lipas.backend.search-indexer/main) (db) (search) "analytics"))
+  ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "analytics"))
 
 (defn reset-password!
   [email password]
