@@ -283,6 +283,7 @@
 
   (def ptv* (:lipas/ptv state/system))
 
+  ;; "Liminka" test / org 9
   (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
 
   (get-org-services ptv* org-id*)
@@ -331,6 +332,7 @@
 
   (require 'user)
 
+  ;; Remove :ptv key
   (doseq [search-site (get-eligible-sites (user/search)
                                           {:city-codes [425]
                                            :owners ["city" "city-main-owner"]})
@@ -357,6 +359,8 @@
   (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
     (update-service-location ptv* (:id x) {:organizationId org-id*
                                            :publishingStatus "Deleted"}))
+
+  ptv*
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
