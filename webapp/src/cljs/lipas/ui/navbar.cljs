@@ -1,11 +1,14 @@
 (ns lipas.ui.navbar
   (:require [clojure.string :as string]
             [lipas.ui.feedback.views :as feedback]
+            [lipas.ui.help.views :as help]
             [lipas.ui.mui :as mui]
             [lipas.ui.subs :as subs]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
             [re-frame.core :as rf]
+            [reagent.core :as r]
+            [uix.core :as uix :refer [$ defui]]
             [reitit.frontend.easy :as rfe]))
 
 (def links
@@ -347,6 +350,7 @@
 
 (defn mini-nav [{:keys [tr logged-in?]}]
   [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
+   ($ help/view)
    [feedback/feedback-btn]
    [account-menu-button {:tr tr :logged-in? logged-in?}]
    [menu-button {:tr tr}]])
