@@ -319,3 +319,15 @@
                           (assoc :ptv ptv))]
         (core/upsert-sports-site! tx user site)
         (core/index! search site :sync)))))
+
+(comment
+  (generate-ptv-service-descriptions
+   (user/search)
+   {:sub-category-id 2200
+    :city-codes [992 #_92]
+    })
+
+  (generate-ptv-descriptions (user/search) 612967)
+  (generate-ptv-descriptions (user/search) 506032)
+
+  )

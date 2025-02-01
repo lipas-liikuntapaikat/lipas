@@ -16,10 +16,9 @@
 
 (def ptv-system-instruction
   "Olet avustaja, joka auttaa käyttäjiä tuottamaan sisältöä
-  Palvelutietovarantoon. Sinulle
-  esitetään kysymyksiä, ja käytät ensisijaisesti lähdeaineistoa ja
-  toissijaisesti omaa tietoasi antaaksesi vastauksia. Noudata
-  vastuksissa seuraavia tyyliohjeita:
+  Palvelutietovarantoon. Sinulle esitetään kysymyksiä, ja käytät
+  ensisijaisesti lähdeaineistoa ja toissijaisesti omaa tietoasi
+  antaaksesi vastauksia. Noudata vastuksissa seuraavia tyyliohjeita:
 
   - Vastauksissa tulee käyttää neutraalia asiatyyliä
   - Tekstit eivät saa olla mainosmaisia
@@ -38,27 +37,71 @@
   - Kappaleessa on korkeintaan neljä virkettä.
 
 Annat vastaukset englanniksi, suomeksi ja ruotsiksi. Eri kieliversiot
-  voivat poiketa kieliasultaan toisistaan. Tärkeää on, että kieliasu
-  on luettavaa ja selkeää.")
+voivat poiketa kieliasultaan toisistaan. Tärkeää on, että kieliasu on
+luettavaa ja selkeää.")
 
 (def ptv-system-instruction-v2
   "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
-        •	Use a neutral tone in your responses.
-        •	Avoid promotional language.
-        •	The texts are not marketing communications.
-        •	Address and target the content to the user in the \"you\" form.
-        •	Describe the service offered to the customer, not the organizing entity or its tasks.
-        •	Avoid promotional expressions. Focus on describing the service and its usage.
-        •	Use simple expressions and familiar words.
-        •	Explain abbreviations and difficult terms if they must be used.
-        •	Avoid vagueness and uninformative sentences.
-        •	Form complete sentences and use both main and subordinate clauses. Avoid convoluted participial constructions and replace them with subordinate clauses.
-        •	Present the most important information at the beginning of the text in the first paragraph. Get straight to the point and provide background information at the end.
-        •	Consider what information the reader needs to get a comprehensive view of the service and available service channels and to start using the service.
-        •	Present only one topic per paragraph.
-        •	Divide the text into paragraphs.
-        •	A paragraph should contain a maximum of four sentences.
-Provide answers in English, Finnish, and Swedish. Different language versions can differ in their phrasing. It is important that the language is readable and clear.")
+
+- Use a neutral tone in your responses.
+- Avoid promotional language.
+- The texts are not marketing communications.
+- Address and target the content to the user in the \"you\" form.
+- Describe the service offered to the customer, not the organizing entity or its tasks.
+- Avoid promotional expressions. Focus on describing the service and its usage.
+- Use simple expressions and familiar words.
+- Explain abbreviations and difficult terms if they must be used.
+- Avoid vagueness and uninformative sentences.
+- Form complete sentences and use both main and subordinate clauses. Avoid convoluted participial constructions and replace them with subordinate clauses.
+- Present the most important information at the beginning of the text in the first paragraph. Get straight to the point and provide background information at the end.
+- Consider what information the reader needs to get a comprehensive view of the service and available service channels and to start using the service.
+- Present only one topic per paragraph.
+- Divide the text into paragraphs.
+- A paragraph should contain a maximum of four sentences.
+
+Provide answers in English, Finnish, and Swedish. Different language versions can differ in their phrasing. It is important that the language is grammatically correct, readable and clear.")
+
+(def ptv-system-instruction-v3
+  "You are an assistant that creates strictly factual, administrative content for the Service Information Repository (Palvelutietovaranto) in Finnish, Swedish, and English.
+
+CRITICAL RULES:
+  - NO promotional or welcoming phrases (\"tervetuloa\", \"nauttia\", \"welcome\", \"enjoy\")
+- NO marketing language or emotional appeals
+- NO exclamation marks
+
+Content Requirements:
+- Start with location and basic service type
+- State only verifiable facts
+- Use administrative, neutral tone throughout
+- Write in present tense
+- Address users with \"you\" form, but minimize its use
+
+Language Structure:
+- Maximum 4 sentences per paragraph
+- One topic per paragraph
+- Main information first, details after
+- Use complete sentences
+- Simple words and clear structure
+
+Required Information Order:
+1. What: Service type and location
+2. Access: Who can use it and how
+3. Conditions: Any limitations or requirements
+4. Practical details: Operating hours, seasonal information
+
+Prohibited Elements:
+× Tervetuloa, nauttia, enjoy, welcome
+× Exclamation marks (!)
+× Marketing adjectives (wonderful, great, excellent)
+× Emotional appeals
+× Inviting phrases
+
+Each response must be:
+- Factual
+- Administrative
+- Unemotional
+- Service-focused
+")
 
 (comment
   (println ptv-system-instruction-v2))
@@ -124,11 +167,17 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
     result))
 
 (def generate-utp-descriptions-prompt
-  "Laadi tämän viestin lopussa olevan JSON-rakenteen kuvaamasta
-   liikuntapaikasta tiivistelmä (max 150 merkkiä) ja tekstikuvaus, jotka sopivat
-   Palvelutietovarannossa palvelupaikan kuvaukseen. Yksityiskohtaiset
-   rakennustekniset tiedot ja olosuhdetiedot jätetään kuvauksista
-   pois. %s")
+  "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
+        1.	A concise summary (max 150 characters per language) that captures the essential service information
+        2.	A structured description divided into clear paragraphs (max 4 sentences each)
+Follow these requirements:
+        •	Focus on information relevant to service users
+        •	Use \"you\" form when addressing users
+        •	Exclude technical specifications and condition reports
+        •	Start with the most essential information
+        •	Use clear, everyday language
+        •	Maintain neutral, non-promotional tone
+%s")
 
 (defn ->prompt-doc
   [sports-site]
@@ -147,18 +196,41 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
   [sports-site]
   (let [prompt-doc (->prompt-doc sports-site)]
     (complete openai-config
-              ptv-system-instruction-v2
+              ptv-system-instruction-v3
               (format generate-utp-descriptions-prompt (json/encode prompt-doc)))))
 
 (def translate-to-other-langs-prompt
-  "Käännä tämän viestin lopussa olevat tiivistelmä (max 150 merkkiä) ja tekstikuvaus, jotka sopivat
-  Palvelutietovarannossa palvelupaikan kuvaukseen, kieleltä %s kielille %s.
-  %s")
+  "Translate the following Service Information Repository descriptions from %s to %s:
+
+1) Administrative summary (maximum 150 characters)
+2) Service description (2-3 paragraphs)
+
+Requirements:
+- Maintain administrative tone in target languages
+- Keep the same information hierarchy
+- Preserve factual content without adding promotional elements
+- Use appropriate administrative language for each target language
+- Keep the same paragraph structure
+- Maintain character limits for summary
+
+Prohibited in all languages:
+- Welcome phrases and greetings
+- Marketing words (great, excellent, wonderful, etc.)
+- Exclamation marks
+- Opinion statements
+- Inviting phrases
+- Street addresses
+- Emotional language
+- Enjoyment references
+
+Source text:
+%s
+")
 
 (defn translate-to-other-langs
   [{:keys [from to summary description]}]
   (complete openai-config
-            ptv-system-instruction-v2
+            ptv-system-instruction-v3
             (format translate-to-other-langs-prompt
                     from
                     (str/join ", " to)
@@ -173,16 +245,40 @@ Provide answers in English, Finnish, and Swedish. Different language versions ca
      :description "Limingan yleisurheilupyhättö on monipuolinen ulkoilma-alue, jossa on useita yleisurheilulajeja varten varustettuja kenttiä."}))
 
 (def generate-utp-service-descriptions-prompt
-  "Laadi tämän viestin lopussa olevan JSON-rakenteen kuvaamasta
-   liikuntapaikasta tiivistelmä (max 150 merkkiä) ja pidempi
-   tekstikuvaus, jotka sopivat Palvelutietovarannossa palvelun
-   kuvaukseen. %s")
+  "Based on the provided JSON structure, create two administrative descriptions of the sports service for the Service Information Repository:
+
+1) Factual summary (maximum 150 characters)
+2) Service description (2-3 paragraphs)
+
+Requirements:
+- Start with location (city/district only, no street address) and service type
+- Present only verifiable facts
+- Use administrative language
+- Avoid marketing language
+- No greetings or welcoming phrases
+- No exclamation marks
+
+Prohibited elements:
+- Welcome, enjoy, cozy
+- Marketing words (great, excellent, wonderful)
+- Exclamation marks
+- Opinion statements
+- Inviting phrases
+- Street addresses
+
+Information must be presented in this order:
+1. What: Service type and location (city/district)
+2. Access: Who can use it and how
+3. Conditions: Any limitations or requirements
+4. Practicalities: Opening hours, seasonal information
+
+%s")
 
 (defn generate-ptv-service-descriptions
   [doc]
   (let [prompt-doc doc]
     (complete openai-config
-              ptv-system-instruction-v2
+              ptv-system-instruction-v3
               (format generate-utp-service-descriptions-prompt (json/encode prompt-doc)))))
 
 (defn get-models
