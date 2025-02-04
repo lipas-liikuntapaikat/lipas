@@ -1,6 +1,7 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
+            [lipas.backend.api.v1 :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
@@ -11,28 +12,7 @@
             [lipas.schema.help :as help-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
-            [reitit.coercion.spec]
             [reitit.coercion.malli]
-            [reitit.ring :as ring]
-            [reitit.ring.coercion :as coercion]
-            [reitit.ring.middleware.exception :as exception]
-            [reitit.ring.middleware.multipart :as multipart]
-            [reitit.ring.middleware.muuntaja :as muuntaja]
-            [reitit.swagger :as swagger]
-            [reitit.swagger-ui :as swagger-ui]
-            [ring.middleware.params :as params]
-            [ring.util.io :as ring-io]
-            [taoensso.timbre :as log]))
-  (:require [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
-            [lipas.backend.core :as core]
-            [lipas.backend.jwt :as jwt]
-            [lipas.backend.legacy.api :as legacy-api]
-            [lipas.backend.middleware :as mw]
-            [lipas.roles :as roles]
-            [lipas.schema.core]
-            [lipas.utils :as utils]
-            [muuntaja.core :as m]
             [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
@@ -64,6 +44,7 @@
    :user-not-found     (exception-handler 404 :user-not-found)
    :email-not-found    (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
+
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
    ;; Return 500 and print stack trace for exceptions that are not
@@ -92,6 +73,7 @@
   [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
   (ring/ring-handler
    (ring/router
+
     [["/favicon.ico"
       {:get
        {:no-doc true
@@ -762,168 +744,13 @@
 
       (ptv-handler/routes ctx)]
 
+     (v1/routes ctx)
      (v2/routes ctx)]
-      ;; PTV
-      ["/actions/get-ptv-integration-candidates"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/get-ptv-integration-candidates search body-params)})}}]
-
-      ["/actions/generate-ptv-descriptions"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/generate-ptv-descriptions search body-params)})}}]
-
-      ["/actions/generate-ptv-service-descriptions"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/generate-ptv-service-descriptions search body-params)})}}]
-
-      ["/actions/save-ptv-service"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/upsert-ptv-service! body-params)})}}]
-
-      ["/actions/fetch-ptv-services"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body   (core/fetch-ptv-services body-params)})}}]
-
-      ["/actions/save-ptv-service-location"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body   (core/upsert-ptv-service-location! db search identity body-params)})}}]
-
-      ["/actions/save-ptv-meta"
-       {:post
-        {:no-doc     false
-         :require-role :ptv/manage
-         :parameters {:body map?}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body   (core/save-ptv-integration-definitions db search identity body-params)})}}]]
-
-     ;; legacy routes
-     ["/v1/api"
-      ["/swagger.json"
-       {:get
-        {:no-doc  true
-         :swagger {:id ::legacy
-                   :info {:title "Lipas-API (legacy) v1"}}
-         :tags [{:name "sport-places"
-                 :description "Sport places"}
-                {:name "sport-place-types"
-                 :description "Sport place types"}]
-         :handler (swagger/create-swagger-handler)}}]
-      ["/sports-places"
-       {:swagger {:id ::legacy}
-        :parameters {:query :lipas.legacy.api/search-params
-                     :collection-format "multi"} 
-        :get
-        {:tags ["sport-places"]
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [spec :lipas.legacy.api/search-params
-                 search-params (-> parameters :query)
-                 valid? (s/valid? spec search-params)]
-             (if valid?
-               {:status 200
-                :body   (legacy-api/get-sports-places search search-params)} 
-               {:status 400
-                :body   (s/explain-data spec search-params)})))}}]
-      ["/sports-places/:sports-place-id"
-       {:swagger {:id ::legacy}
-        :parameters {:query (s/keys :opt-un [:lipas.api/lang])
-                     :path {:sports-place-id int?}}
-        :get
-        {:tags ["sport-places"]
-         :handler
-         (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
-                 sports-place-id (-> req :parameters :path :sports-place-id)]
-             {:status     200
-              :body       (str "hello world" sports-place-id)}))}}]
-      ["/deleted-sports-places"
-       {:swagger {:id ::legacy}
-        :parameters {:query (s/keys :opt-un [:lipas.legacy.api/since])}
-        :get
-        {:tags ["sport-places"]
-         :handler
-         (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
-                 since (or (-> req :parameters :query :since) "1984-01-01T00:00:00")]
-             {:status     200
-              :body       (str "hello world" since locale)}))}}]
-      
-      ["/sports-place-types"
-       {:swagger {:id ::legacy}
-        :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
-        :get
-        {:tags ["sport-place-types"]
-         :handler
-         (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
-             {:status     200
-              :body       (legacy-api/sports-place-types locale)}))}}]
-      ["/sports-place-types/:type-code"
-       {:swagger {:id ::legacy}
-        :parameters {:query (s/keys :opt-un [:lipas.api/lang])
-                     :path {:type-code int?}}
-        :get
-        {:tags ["sport-place-types"]
-         :handler
-         (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
-                 type-code (-> req :parameters :path :type-code)]
-             {:status     200
-              :body       (legacy-api/sports-place-by-type-code locale type-code)}))}}]
-      ["/categories"
-       {:tags ["sport-place-types"]
-        :swagger {:id ::legacy}
-        :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
-        :get
-        {:handler
-         (fn [req]
-           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
-             {:status     200
-              :body       (legacy-api/categories locale)}))}}]]]
 
     {:data
      {:coercion   reitit.coercion.spec/coercion
       :muuntaja   m/instance
-      :middleware [
-                   ;; query-params & form-params
+      :middleware [;; query-params & form-params
                    params/wrap-params
                    ;; content-negotiation
                    muuntaja/format-negotiate-middleware
@@ -943,5 +770,4 @@
                    mw/privilege-middleware]}})
    (ring/routes
     (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
-    (swagger-ui/create-swagger-ui-handler {:path "/v1/api/swagger-ui" :url "/v1/api/swagger.json"})
     (ring/create-default-handler))))
