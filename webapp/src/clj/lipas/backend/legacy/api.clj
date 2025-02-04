@@ -1,10 +1,9 @@
 (ns lipas.backend.legacy.api
-  (:require
-   [lipas.backend.core :as core]
-   [lipas.data.prop-types :as prop-types]
-   [lipas.data.types :as types]
-   [lipas.schema.core :as schema]
-   [lipas.utils :as utils]))
+  (:require [lipas.backend.core :as core]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.types :as types]
+            [lipas.schema.core-legacy :refer [legacy-fields]]
+            [lipas.utils :as utils]))
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
 
@@ -49,16 +48,16 @@
   (-> (types/all type-code)
       (->legacy-api-with-properties locale)))
 
-(defn collect-sport-place-types [sub-category-type-code] 
+(defn collect-sport-place-types [sub-category-type-code]
   (->> (vals types/all)
        (filter #(= (% :sub-category) sub-category-type-code))
        (map :type-code)))
 
-(defn- collect-subcategories [type-code locale] 
+(defn- collect-subcategories [type-code locale]
   (->>
    (vals types/sub-categories)
    (filter #(= (% :main-category) (str type-code)))
-   (map (fn [x] 
+   (map (fn [x]
           {:typeCode (x :type-code)
            :name (-> x :name locale)
            :sportsPlaceTypes (collect-sport-place-types (x :type-code))}))))
@@ -66,7 +65,7 @@
 (defn categories [locale]
   (mapv (fn [cat] {:name (-> cat :name locale)
                    :typeCode (cat :type-code)
-                   :subCategories (collect-subcategories (cat :type-code) locale)}) 
+                   :subCategories (collect-subcategories (cat :type-code) locale)})
         (vals types/main-categories)))
 
 
@@ -74,12 +73,12 @@
                      {:simple_query_string
                       {:query "*"
                        :analyze_wildcard true,
-                       :fields (vec schema/legacy-fields),
+                       :fields legacy-fields,
                        :default_operator "and"}}})
 
 (defn ->es-query [params]
   ;; TODO: use params
   query-template)
 
-(defn get-sports-places [search params] 
+(defn get-sports-places [search params]
   (core/search search (->es-query params)))

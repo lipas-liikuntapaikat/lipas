@@ -2078,7 +2078,7 @@
 (s/def :lipas.legacy.api/closeToDistanceKm (number-in {:min 0 :max 99999}))
 (s/def :lipas.legacy.api/harrastuspassi boolean?)
 (s/def :lipas.legacy.api/pageSize (int-in 0 1000))
-(s/def :lipas.legacy.api/searchString (str-in 3 100)) 
+(s/def :lipas.legacy.api/searchString (str-in 3 100))
 (s/def :lipas.legacy.api/since :lipas/timestamp)
 
 
@@ -2097,45 +2097,7 @@
              :max-count (count city-codes)
              :into []))
 
-(def legacy-fields #{"properties"
-                     "schoolUse"
-                     "email"
-                     "type.name"
-                     "reservationsLink"
-                     "location.sportsPlaces"
-                     "renovationYears"
-                     "admin"
-                     "location.coordinates.tm35fin"
-                     "www"
-                     "location.geometries"
-                     "name"
-                     "type.typeCode"
-                     "location.locationId"
-                     "constructionYear"
-                     "freeUse"
-                     "location.city.name"
-                     "lastModified"
-                     "marketingName"
-                     "location.postalCode"
-                     "location.postalOffice"
-                     "location.city.cityCode"
-                     "phoneNumber"
-                     "location.neighborhood"
-                     "owner"
-                     "location.coordinates.wgs84"
-                     "location.address"})
 
-(s/def :lipas.legacy.api/field
-  (st/spec {:spec legacy-fields
-            :swagger/type "enum"
-            :swagger/enum legacy-fields}))
-
-  (s/def :lipas.legacy.api/fields
-    (s/coll-of :lipas.legacy.api/field
-               :distinct true
-               :min-count 1
-               :max-count (count legacy-fields)
-               :into []))
 
 (s/def :lipas.legacy.api/typeCode*
   (into #{} type-codes))
@@ -2155,21 +2117,7 @@
             :collectionFormat "multi"}))
 
 
-(s/def :lipas.legacy.api/search-params
-  (s/keys :opt-un [:lipas.legacy.api/typeCodes
-                   :lipas.legacy.api/closeToLon
-                   :lipas.legacy.api/closeToLat
-                   :lipas.api/lang
-                   :lipas.legacy.api/modifiedAfter
-                   :lipas.legacy.api/fields
-                   :lipas.legacy.api/retkikartta
-                   :lipas.legacy.api/closeToMatch
-                   :lipas.legacy.api/page
-                   :lipas.legacy.api/closeToDistanceKm
-                   :lipas.legacy.api/harrastuspassi
-                   :lipas.legacy.api/pageSize
-                   :lipas.legacy.api/cityCodes
-                   :lipas.legacy.api/searchString]))
+
 
 ;;; HTTP-API ;;;
 
