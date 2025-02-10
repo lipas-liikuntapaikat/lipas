@@ -248,10 +248,9 @@ Source text:
   "Based on the provided JSON structure, create two administrative descriptions of the sports service for the Service Information Repository:
 
 1) Factual summary (maximum 150 characters)
-2) Service description (2-3 paragraphs)
+2) Service description (2-4 paragraphs)
 
 Requirements:
-- Start with location (city/district only, no street address) and service type
 - Present only verifiable facts
 - Use administrative language
 - Avoid marketing language
@@ -265,12 +264,6 @@ Prohibited elements:
 - Opinion statements
 - Inviting phrases
 - Street addresses
-
-Information must be presented in this order:
-1. What: Service type and location (city/district)
-2. Access: Who can use it and how
-3. Conditions: Any limitations or requirements
-4. Practicalities: Opening hours, seasonal information
 
 %s")
 
