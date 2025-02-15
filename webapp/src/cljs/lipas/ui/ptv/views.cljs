@@ -18,9 +18,16 @@
             ["@mui/material/Step$default" :as Step]
             ["@mui/material/StepButton$default" :as StepButton]
             ["@mui/material/Stepper$default" :as Stepper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
@@ -85,7 +92,6 @@
        :label     label
        :value     (first value)
        :on-change (fn [_e v]
-                    (println v)
                     (on-change [(:value v)]))})))
 
 (defn form
@@ -361,6 +367,214 @@
           "Seuraava"
           ($ Icon "arrow_forward")))))
 
+(defui service-preview
+  [{:keys [source-id sub-category-id valid]}]
+  (let [preview  (use-subscribe [::subs/service-preview source-id sub-category-id])
+        row     (uix/fn [{:keys [label value tooltip]}]
+                        ($ Tooltip {:title tooltip}
+                           ($ TableRow
+                              ($ TableCell ($ Typography {:variant "caption"} label))
+                              ($ TableCell ($ Typography value)))))
+        join     (fn [coll] (when (seq coll) (str/join ", " coll)))
+        get-desc (fn [type lang] (or (->> preview
+                                              :serviceDescriptions
+                                              (filter (fn [m] (and (= (:type m) type)
+                                                                   (= (:language m) lang))))
+                                              (map :value)
+                                              join)
+                                     "-"))
+        get-name (fn [lang] (or (->> preview :serviceNames
+                                         (filter #(= (:language %) lang))
+                                         (map :value)
+                                         join)
+                                "-"))
+
+        tt-name "Lipaksen luokittelu (pääryhmä → alaryhmä → liikuntapaikkatyyppi) määrittää palvelun nimen. PTV-palvelu luodaan alaryhmätason mukaan ja se saa nimekseen alaryhmän nimen."
+        tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
+        tt-description "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."]
+
+    ($ Stack {:spacing 2}
+       ($ Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
+          ($ Typography "Esikatselu näyttää palvelun perustiedot ennen PTV-julkaisua. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän."))
+
+       ($ Table {:variant "dense"}
+          ($ TableHead
+             ($ TableRow
+                ($ TableCell "PTV-tietue")
+                ($ TableCell "Arvo")))
+          ($ row {:label "Tila"
+                  :value (:publishingStatus preview)
+                  :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+          ($ row {:label "Nimi suomeksi" :value (get-name "fi") :tooltip tt-name})
+          ($ row {:label "Nimi ruotsiksi" :value (get-name "sv") :tooltip tt-name})
+          ($ row {:label "Nimi englanniksi" :value (get-name "en") :tooltip tt-name})
+          ($ row {:label "Tyyppi"
+                  :value (:type preview)
+                  :tooltip "Palvelun tyyppi on aina \"Service\"."})
+          ($ row {:label "Palveluluokat"
+                  :value (join (:serviceClasses preview))
+                  :tooltip "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti."})
+          ($ row {:label "Kohderyhmät"
+                  :value (join (:targetGroups preview))
+                  :tooltip "Palvelun kohderyhmä on aina \"Kansalaiset\""})
+          ($ row {:label "Ontologiatermit"
+                  :value (join (:ontologyTerms preview))
+                  :tooltip "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkatyypille ja ne lisätään palvelun tietoihin automaattisesti."})
+          ($ row {:label "Rahoitus"
+                  :value (:fundingType preview)
+                  :tooltip "Rahoitustyyppi on aina \"Julkisesti rahoitettu\"."})
+          ($ row {:label "Palveluntuottajat"
+                  :value (join (:organizations (first (:serviceProducers preview))))
+                  :tooltip "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön."})
+          ($ row {:label "Tuotantotapa"
+                  :value (:provisionType (first (:serviceProducers preview)))
+                  :tooltip "Palvelun tuotantotapa on aina \"Itse tuotettu\"."})
+          ($ row {:label "Vastuuorganisaatio"
+                  :value (:mainResponsibleOrganization preview)
+                  :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+          ($ row {:label "Alueen tyyppi"
+                  :value (-> preview :areas first :type)
+                  :tooltip "Alueen tyyppi on aina \"Kunta\"."})
+          ($ row {:label "Alueen koodit"
+                  :value (-> preview :areas first :areaCodes)
+                  :tooltip "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."})
+          ($ row {:label "Tiivistelmä suomeksi"
+                  :value (get-desc "Summary" "fi")
+                  :tooltip tt-summary})
+          ($ row {:label "Tiivistelmä ruotsiksi"
+                  :value (get-desc "Summary" "sv")
+                  :tooltip tt-summary})
+          ($ row {:label "Tiivistelmä englanniksi"
+                  :value (get-desc "Summary" "en")
+                  :tooltip tt-summary})
+          ($ row {:label "Kuvaus suomeksi"
+                  :value (get-desc "Description" "fi")
+                  :tooltip tt-description})
+          ($ row {:label "Kuvaus ruotsiksi"
+                  :value (get-desc "Description" "sv")
+                  :tooltip tt-description})
+          ($ row {:label "Kuvaus ruotsiksi"
+                  :value (get-desc "Description" "en")
+                  :tooltip tt-description})))))
+
+(defui service-location-preview
+  [{:keys [org-id lipas-id]}]
+  (let [preview  (use-subscribe [::subs/service-location-preview org-id lipas-id])
+        row     (uix/fn [{:keys [label value tooltip]}]
+                        ($ Tooltip {:title (or tooltip "Selite puuttuu")}
+                           ($ TableRow
+                              ($ TableCell ($ Typography {:variant "caption"} label))
+                              ($ TableCell ($ Typography value)))))
+        join     (fn [coll] (when (seq coll) (str/join ", " coll)))
+        get-desc (fn [type lang] (or (->> preview
+                                              :serviceChannelDescriptions
+                                              (filter (fn [m] (and (= (:type m) type)
+                                                                   (= (:language m) lang))))
+                                              (map :value)
+                                              join)
+                                     "-"))
+        get-name (fn [type lang] (or (->> preview :serviceChannelNames
+                                     (filter (fn [m] (and
+                                                      (= (:language m) lang)
+                                                      (= (:type m) type))))
+                                         (map :value)
+                                         join)
+                                     "-"))
+
+        tt-name "Liikuntapaikan nimi Lipaksessa."
+        tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
+        tt-description "Palvelupaikan kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."]
+
+    ($ Stack {:spacing 2}
+       ($ Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
+          ($ Typography "Esikatselu näyttää palvelupaikan perustiedot ennen PTV-julkaisua. Vie hiiren osoitin rivin päälle nähdäksesi tiedon alkuperän."))
+
+       ($ Table {:variant "dense"}
+          ($ TableHead
+             ($ TableRow
+                ($ TableCell "PTV-tietue")
+                ($ TableCell "Arvo")))
+
+          ($ row {:label "Tila"
+                  :value (:publishingStatus preview)
+                  :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+
+          ($ row {:label "Kielet"
+                  :value (join (:languages preview))
+                  :tooltip "Kielet, joilla kunta on ilmoittanut haluavansa kuvata palvelut ja palvelupaikat kun integraatio on otettu käyttöön ensimmäisen kerran. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."})
+
+          ($ row {:label "Nimi suomeksi" :value (get-name "Name" "fi") :tooltip tt-name})
+          ($ row {:label "Nimi ruotsiksi" :value (get-name "Name" "sv") :tooltip tt-name})
+          ($ row {:label "Nimi englanniksi" :value (get-name "Name" "en") :tooltip tt-name})
+
+          ($ row {:label "Vaihtoehtoinen nimi"
+                  :value (get-name "AlternativeName" "fi")
+                  :tooltip "Liikuntapaikan markkinointinimi Lipaksessa."})
+
+          ($ row {:label "Ensisijainen nimitieto"
+                  :value (->> preview :displayNameType first :type)
+                  :tooltip "Tämä arvo on aina \"Name\"."})
+
+          ;; ($ row {:label "Maa"
+          ;;         :value (->> preview :addresses first :country)
+          ;;         :tooltip "Tämä arvo on aina \"FI\""})
+
+          ($ row {:label "Katuosoite"
+                  :value (-> preview :addresses first :streetAddress :street first :value)
+                  :tooltip "Liikuntapaikan katuosoite Lipaksessa."})
+
+          ($ row {:label "Postinumero"
+                  :value (-> preview :addresses first :streetAddress :postalCode)
+                  :tooltip "Liikuntapaikan postinumero Lipaksessa."})
+
+          ($ row {:label "Koordinaatit"
+                  :value (str "(E) "
+                              (-> preview :addresses first :streetAddress :longitude)
+                              " (N) "
+                              (-> preview :addresses first :streetAddress :latitude))
+                  :tooltip "Liikuntapaikan geometrian koordinaatit Lipaksessa muutettuna PTV:n käyttämään ETRS-TM35FIN koordinaatistoon. Aluemaisissa liikuntapaikoissa valitaan keskipiste, reiteissä aloituspiste."})
+
+          ($ row {:label "Sähköpostiosoitteet"
+                  :value (->> preview :emails (map :value) join)
+                  :tooltip "Liikuntapaikan sähköpostiosoite Lipaksessa."})
+
+          ($ row {:label "Web-sivut"
+                  :value (->> preview :webPages (map :url) join)
+                  :tooltip "Liikuntapaikan www-osoite Lipaksessa."})
+
+          ($ row {:label "Puhelinnumerot"
+                  :value (->> preview
+                              :phoneNumbers
+                              (map (fn [{:keys [number prefixNumber isFinnishServiceNumber]}]
+                                     (str prefixNumber " " number (when isFinnishServiceNumber " (suomalainen palvelunumero)"))))
+                              join)
+                  :tooltip "Liikuntapaikan puhelinnumero Lipaksessa."})
+
+          ($ row {:label "Tiivistelmä suomeksi"
+                  :value (get-desc "Summary" "fi")
+                  :tooltip tt-summary})
+          ($ row {:label "Tiivistelmä ruotsiksi"
+                  :value (get-desc "Summary" "sv")
+                  :tooltip tt-summary})
+          ($ row {:label "Tiivistelmä englanniksi"
+                  :value (get-desc "Summary" "en")
+                  :tooltip tt-summary})
+          ($ row {:label "Kuvaus suomeksi"
+                  :value (get-desc "Description" "fi")
+                  :tooltip tt-description})
+          ($ row {:label "Kuvaus ruotsiksi"
+                  :value (get-desc "Description" "sv")
+                  :tooltip tt-description})
+          ($ row {:label "Kuvaus ruotsiksi"
+                  :value (get-desc "Description" "en")
+                  :tooltip tt-description})
+          ($ row {:label "Organisaatio"
+                  :value (:organizationId preview)
+                  :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+          ($ row {:label "Palvelut"
+                  :value (join (:services preview))
+                  :tooltip "Palvelut joihin palvelupaikka liitetään PTV:ssä."})))))
+
 (defn create-services
   []
   (r/with-let [selected-tab (r/atom :fi)]
@@ -376,7 +590,8 @@
           services @(rf/subscribe [::subs/services org-id])
 
           manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
-          missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])]
+          missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])
+          service-details-tab (<== [::subs/service-details-tab])]
 
       #_
       {:label      (str "1. " (tr :ptv.tools.generate-services/headline))
@@ -486,134 +701,170 @@
                  :label-icon (if valid
                                [mui/icon {:color "success"} "done"]
                                [mui/icon {:color "disabled"} "done"])}
-                [mui/stack {:spacing 2}
-                 ;; TODO: Allow linking service to existing PTV Service
-                 ;; NOTE: This currently also lists other Services created from Lipas, not only Services created in PTV,
-                 ;;       this doesn't really make sense as overriding the Lipas linking would disconnect this from the other Lipas type.
-                 #_
-                 ($ controls/services-selector
-                    {:options   services
-                     :value     (get m :service-ids)
-                     :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
-                     :value-fn  :service-id
-                     :label     (tr :ptv/service)})
 
-                 (let [languages (set languages)]
-                   [mui/tabs
-                    {:value     @selected-tab
-                     :on-change #(reset! selected-tab (keyword %2))}
-                    (when (contains? languages "fi")
-                      [mui/tab {:value "fi" :label "FI"}])
-                    (when (contains? languages "se")
-                      [mui/tab {:value "se" :label "SE"}])
-                    (when (contains? languages "en")
-                      [mui/tab {:value "en" :label "EN"}])])
+                ($ Stack {:spacing 2}
+                   ($ Tabs {:value service-details-tab
+                            :indicatorColor "secondary"
+                            :on-change #(==> [::events/select-service-details-tab %2])}
+                      ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
+                      ($ Tab {:value "preview" :label "Esikatselu"}))
 
-                 ;; Summary
-                 [lui/text-field
-                  {:multiline true
-                   :variant   "outlined"
-                   :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
-                   :label     (tr :ptv/summary)
-                   :value     (get-in m [:summary @selected-tab])}]
+                   ;; Enter descriptions form
+                   (when (= "descriptions" service-details-tab)
+                     (r/as-element
+                      [mui/stack {:spacing 2}
+                       ;; TODO: Allow linking service to existing PTV Service
+                       ;; NOTE: This currently also lists other Services created from Lipas, not only Services created in PTV,
+                       ;;       this doesn't really make sense as overriding the Lipas linking would disconnect this from the other Lipas type.
+                       #_
+                       ($ controls/services-selector
+                          {:options   services
+                           :value     (get m :service-ids)
+                           :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
+                           :value-fn  :service-id
+                           :label     (tr :ptv/service)})
 
-                 ;; Description
-                 [lui/text-field
-                  {:variant   "outlined"
-                   :rows      5
-                   :multiline true
-                   :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
-                   :label     (tr :ptv/description)
-                   :value     (get-in m [:description @selected-tab])}]]]))]]]]])))
+                       (let [languages (set languages)]
+                         [mui/tabs
+                          {:value     @selected-tab
+                           :on-change #(reset! selected-tab (keyword %2))}
+                          (when (contains? languages "fi")
+                            [mui/tab {:value "fi" :label "FI"}])
+                          (when (contains? languages "se")
+                            [mui/tab {:value "se" :label "SE"}])
+                          (when (contains? languages "en")
+                            [mui/tab {:value "en" :label "EN"}])])
+
+                       ;; Summary
+                       [lui/text-field
+                        {:multiline true
+                         :variant   "outlined"
+                         :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+                         :label     (tr :ptv/summary)
+                         :value     (get-in m [:summary @selected-tab])}]
+
+                       ;; Description
+                       [lui/text-field
+                        {:variant   "outlined"
+                         :rows      5
+                         :multiline true
+                         :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+                         :label     (tr :ptv/description)
+                         :value     (get-in m [:description @selected-tab])}]]))
+
+                   (when (= "preview" service-details-tab)
+                     ($ service-preview
+                        {:source-id source-id
+                         :sub-category-id sub-category-id}))
+
+                   )]))]]]]])))
 
 (defui service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
   (let [services (use-subscribe [::subs/services org-id])
-        org-languages (ptv-data/org-id->languages org-id)]
+        org-languages (ptv-data/org-id->languages org-id)
+        [selected-tab2 set-selected-tab2] (uix/use-state "descriptions")]
     ($ AccordionDetails
        {}
        (r/as-element
-         [mui/stack {:spacing 2}
+        [mui/stack {:spacing 2}
 
-          ;; Services selector
-          ($ controls/services-selector
-             {:options   services
-              :value     service-ids
-              :value-fn  :service-id
-              :on-change (fn [v]
-                           (rf/dispatch [::events/select-services site v]))
-              :label     (tr :ptv/services)})
+         ($ Tabs {:value selected-tab2
+                  :indicatorColor "secondary"
+                  :on-change #(set-selected-tab2 %2)}
+            ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
+            ($ Tab {:value "preview" :label "Esikatselu"}))
 
-          ;; Service channel selector
-
-          [:span (when name-conflict {:style
-                                      {:border  "1px solid rgb(237, 108, 2)"
-                                       :padding "1em"}})
-
-           (when name-conflict
-             [mui/stack
-              [lui/icon-text
-               {:icon       "warning"
-                :icon-color "warning"
-                :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
-
-              [mui/typography
-               {:style   {:padding-left "1em" :margin-bottom "0"}
-                :variant "body2"}
-               (tr :ptv.name-conflict/do-one-of-these)]
-
-              [:ul
-               [:li (tr :ptv.name-conflict/opt1)]
-               [:li (tr :ptv.name-conflict/opt2)]
-               [:li (tr :ptv.name-conflict/opt3)]
-               #_[:li (tr :ptv.name-conflict/opt4)]]])
-
-           (when name-conflict
-             [mui/button
-              {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
-                                [(:service-channel-id name-conflict)]])}
-              (tr :ptv.wizard/attach-to-conflicting-service-channel)])
-
-           ($ service-channel-selector
+         (when (= selected-tab2 "preview")
+           ($ service-location-preview
               {:org-id org-id
-               :value     service-channel-ids
-               :value-fn  :service-channel-id
-               :on-change #(==> [::events/select-service-channels site %])
-               :label     (tr :ptv/service-channel)})
+               :lipas-id lipas-id
+               :site site
+               :service-ids service-ids
+               :service-channel-ids service-channel-ids}))
 
-           (when-let [id (first (seq service-channel-ids))]
-             ($ Button
-                {:type "button"
-                 :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
-                "Lataa tekstit PTV:stä"))]
+         (when (= selected-tab2 "descriptions")
+           [mui/stack {:spacing 2}
 
-          [lang-selector
-           {:value selected-tab
-            :on-change set-selected-tab
-            :enabled-languages org-languages}]
+            ;; Services selector
+            ($ controls/services-selector
+               {:options   services
+                :value     service-ids
+                :value-fn  :service-id
+                :on-change (fn [v]
+                             (rf/dispatch [::events/select-services site v]))
+                :label     (tr :ptv/services)})
 
-          ;; Summary
-          [lui/text-field
-           {:multiline  true
-            :variant    "outlined"
-            :on-change  #(==> [::events/set-summary site selected-tab %])
-            :label      (tr :ptv/summary)
-            :value      (get-in site [:summary selected-tab])}]
+            ;; Service channel selector
 
-          ;; Description
-          [lui/text-field
-           {:variant    "outlined"
-            :rows       5
-            :multiline  true
-            :on-change  #(==> [::events/set-description site selected-tab %])
-            :label      (tr :ptv/description)
-            :value      (get-in site [:description selected-tab])}]
+            [:span (when name-conflict {:style
+                                        {:border  "1px solid rgb(237, 108, 2)"
+                                         :padding "1em"}})
 
-          ;; Disclaimer and enable switch
-          [lui/switch
-           {:label     (tr :ptv.actions/export-disclaimer)
-            :value     sync-enabled
-            :on-change #(==> [::events/toggle-sync-enabled site %])}]]))))
+             (when name-conflict
+               [mui/stack
+                [lui/icon-text
+                 {:icon       "warning"
+                  :icon-color "warning"
+                  :text       (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
+
+                [mui/typography
+                 {:style   {:padding-left "1em" :margin-bottom "0"}
+                  :variant "body2"}
+                 (tr :ptv.name-conflict/do-one-of-these)]
+
+                [:ul
+                 [:li (tr :ptv.name-conflict/opt1)]
+                 [:li (tr :ptv.name-conflict/opt2)]
+                 [:li (tr :ptv.name-conflict/opt3)]
+                 #_[:li (tr :ptv.name-conflict/opt4)]]])
+
+             (when name-conflict
+               [mui/button
+                {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
+                                  [(:service-channel-id name-conflict)]])}
+                (tr :ptv.wizard/attach-to-conflicting-service-channel)])
+
+             ($ service-channel-selector
+                {:org-id org-id
+                 :value     service-channel-ids
+                 :value-fn  :service-channel-id
+                 :on-change #(==> [::events/select-service-channels site %])
+                 :label     (tr :ptv/service-channel)})
+
+             (when-let [id (first (seq service-channel-ids))]
+               ($ Button
+                  {:type "button"
+                   :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
+                  "Lataa tekstit PTV:stä"))]
+
+            [lang-selector
+             {:value selected-tab
+              :on-change set-selected-tab
+              :enabled-languages org-languages}]
+
+            ;; Summary
+            [lui/text-field
+             {:multiline  true
+              :variant    "outlined"
+              :on-change  #(==> [::events/set-summary site selected-tab %])
+              :label      (tr :ptv/summary)
+              :value      (get-in site [:summary selected-tab])}]
+
+            ;; Description
+            [lui/text-field
+             {:variant    "outlined"
+              :rows       5
+              :multiline  true
+              :on-change  #(==> [::events/set-description site selected-tab %])
+              :label      (tr :ptv/description)
+              :value      (get-in site [:description selected-tab])}]
+
+            ;; Disclaimer and enable switch
+            [lui/switch
+             {:label     (tr :ptv.actions/export-disclaimer)
+              :value     sync-enabled
+              :on-change #(==> [::events/toggle-sync-enabled site %])}]])]))))
 
 (defui service-location
   [{:keys [site sync-enabled name-conflict valid]

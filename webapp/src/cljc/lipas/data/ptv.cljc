@@ -257,8 +257,9 @@
         www (parse-www (:www sports-site))
         phone-number (parse-phone-number (:phone-number sports-site))]
 
-    (println "PTV data")
-    (prn ptv)
+    #?(:clj (println "PTV data"))
+    #?(:clj (prn ptv))
+
     ; (println "Languages resolved" languages)
     ; (prn location)
 

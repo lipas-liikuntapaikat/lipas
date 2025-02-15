@@ -12,6 +12,7 @@
                                    :descriptions-integration    "lipas-managed-ptv-fields"
                                    :integration-interval        "manual"}
    :selected-org                  nil
+   :service-details-tab           "descriptions" ; descriptions|preview
    :org                           {}
    :selected-tab                  "wizard"
    :batch-descriptions-generation {:sports-sites-filter "sync-enabled"

@@ -230,6 +230,10 @@
           new-val     (if (= current-val "lipas-managed") "lol" "lipas-managed")]
       (assoc-in db [:ptv :services-filter] new-val))))
 
+(rf/reg-event-db ::select-service-details-tab
+  (fn [db [_ v]]
+    (assoc-in db [:ptv :service-details-tab] v)))
+
 ;;; Service locations views and manipulation ;;;
 
 (rf/reg-event-db ::toggle-sync-enabled

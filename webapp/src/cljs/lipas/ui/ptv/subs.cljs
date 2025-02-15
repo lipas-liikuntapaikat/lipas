@@ -2,8 +2,10 @@
   (:require [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.ui.utils :as utils :refer [prod?]]
             [lipas.roles :as roles]
+            [lipas.ui.utils :as utils]
+            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.utils :as utils :refer [prod?]]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::ptv
@@ -187,6 +189,36 @@
   :<- [::ptv]
   (fn [ptv [_ org-id]]
     (keys (get-in ptv [:org org-id :data :manual-services]))))
+
+(rf/reg-sub ::service-details-tab
+  :<- [::ptv]
+  (fn [ptv [_ ]]
+    (:service-details-tab ptv)))
+
+(rf/reg-sub ::service-preview
+  :<- [::ptv]
+  (fn [ptv [_ source-id sub-category-id]]
+    (let [org-id (get-in ptv [:selected-org :id])
+          descriptions (get-in ptv [:org org-id :data :service-candidates source-id])
+          org-params (ptv-data/org-id->params org-id)]
+      (ptv-data/->ptv-service
+       {:org-id org-id
+        :city-codes (:city-codes org-params)
+        :source-id source-id
+        :sub-category-id sub-category-id
+        :languages (ptv-data/org-id->languages org-id)
+        :description (:description descriptions)
+        :summary (:summary descriptions)}))))
+
+(rf/reg-sub ::service-location-preview
+  :<- [::ptv]
+  (fn [ptv [_ org-id lipas-id]]
+    (let [site (get-in ptv [:org org-id :data :sports-sites lipas-id])]
+      (println site)
+      (ptv-data/->ptv-service-location org-id
+                                       (comp map-utils/wgs84->epsg3067 clj->js)
+                                       (utils/timestamp)
+                                       site))))
 
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]
