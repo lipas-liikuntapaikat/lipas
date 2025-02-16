@@ -391,7 +391,8 @@
 
         tt-name "Lipaksen luokittelu (pääryhmä → alaryhmä → liikuntapaikkatyyppi) määrittää palvelun nimen. PTV-palvelu luodaan alaryhmätason mukaan ja se saa nimekseen alaryhmän nimen."
         tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        tt-description "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."]
+        tt-description "Palvelun kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
+        lang-disclaimer "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."]
 
     ($ Stack {:spacing 2}
        ($ Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
@@ -402,60 +403,84 @@
              ($ TableRow
                 ($ TableCell "PTV-tietue")
                 ($ TableCell "Arvo")))
+
           ($ row {:label "Tila"
                   :value (:publishingStatus preview)
                   :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
+
           ($ row {:label "Nimi suomeksi" :value (get-name "fi") :tooltip tt-name})
-          ($ row {:label "Nimi ruotsiksi" :value (get-name "sv") :tooltip tt-name})
-          ($ row {:label "Nimi englanniksi" :value (get-name "en") :tooltip tt-name})
+
+          ($ row {:label "Nimi ruotsiksi"
+                  :value (get-name "sv")
+                  :tooltip (str tt-name " " lang-disclaimer)})
+
+          ($ row {:label "Nimi englanniksi"
+                  :value (get-name "en")
+                  :tooltip (str tt-name " " lang-disclaimer)})
+
           ($ row {:label "Tyyppi"
                   :value (:type preview)
                   :tooltip "Palvelun tyyppi on aina \"Service\"."})
+
           ($ row {:label "Palveluluokat"
                   :value (join (:serviceClasses preview))
                   :tooltip "PTV:n ohjeistuksen mukaiset palveluluokat on määritelty jokaiselle Lipaksen liikuntapaikkatyypin alaryhmälle ja ne tulevat palvelun tietoihin automaattisesti."})
+
           ($ row {:label "Kohderyhmät"
                   :value (join (:targetGroups preview))
                   :tooltip "Palvelun kohderyhmä on aina \"Kansalaiset\""})
+
           ($ row {:label "Ontologiatermit"
                   :value (join (:ontologyTerms preview))
-                  :tooltip "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkatyypille ja ne lisätään palvelun tietoihin automaattisesti."})
+                  :tooltip "Ontologiatermit, eli PTV:n ohjeistuksen mukaiset avainsanat, on määritetty jokaiselle Lipaksen liikuntapaikkaluokittelun pää- ja alaryhmälle, ja ne lisätään palvelun tietoihin automaattisesti."})
+
           ($ row {:label "Rahoitus"
                   :value (:fundingType preview)
                   :tooltip "Rahoitustyyppi on aina \"Julkisesti rahoitettu\"."})
+
           ($ row {:label "Palveluntuottajat"
                   :value (join (:organizations (first (:serviceProducers preview))))
                   :tooltip "Palveluntuottaja on se organisaatio (kunta), joka on ottanut integraation käyttöön."})
+
           ($ row {:label "Tuotantotapa"
                   :value (:provisionType (first (:serviceProducers preview)))
                   :tooltip "Palvelun tuotantotapa on aina \"Itse tuotettu\"."})
+
           ($ row {:label "Vastuuorganisaatio"
                   :value (:mainResponsibleOrganization preview)
                   :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
+
           ($ row {:label "Alueen tyyppi"
                   :value (-> preview :areas first :type)
                   :tooltip "Alueen tyyppi on aina \"Kunta\"."})
+
           ($ row {:label "Alueen koodit"
                   :value (-> preview :areas first :areaCodes)
                   :tooltip "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."})
+
           ($ row {:label "Tiivistelmä suomeksi"
                   :value (get-desc "Summary" "fi")
                   :tooltip tt-summary})
+
           ($ row {:label "Tiivistelmä ruotsiksi"
                   :value (get-desc "Summary" "sv")
-                  :tooltip tt-summary})
+                  :tooltip (str tt-summary " " lang-disclaimer)})
+
           ($ row {:label "Tiivistelmä englanniksi"
                   :value (get-desc "Summary" "en")
-                  :tooltip tt-summary})
+                  :tooltip (str tt-summary " " lang-disclaimer)})
+
           ($ row {:label "Kuvaus suomeksi"
                   :value (get-desc "Description" "fi")
                   :tooltip tt-description})
+
           ($ row {:label "Kuvaus ruotsiksi"
                   :value (get-desc "Description" "sv")
-                  :tooltip tt-description})
+                  :tooltip (str tt-description " " lang-disclaimer)})
+
           ($ row {:label "Kuvaus ruotsiksi"
                   :value (get-desc "Description" "en")
-                  :tooltip tt-description})))))
+                  :tooltip (str tt-description " " lang-disclaimer)})))))
 
 (defui service-location-preview
   [{:keys [org-id lipas-id]}]
@@ -481,9 +506,10 @@
                                          join)
                                      "-"))
 
-        tt-name "Liikuntapaikan nimi Lipaksessa."
         tt-summary "Tiivistelmä on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
-        tt-description "Palvelupaikan kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."]
+        tt-description "Palvelupaikan kuvaus on integraation käyttäjän syöttämä tieto. Mahdollisesti tekoälyn avulla tuotettu."
+
+        lang-disclaimer "Tieto täytetään vain mikäli integraation käyttöönoton yhteydessä on ilmoitettu että palvelupaikat halutaan kuvata tällä kielellä. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."]
 
     ($ Stack {:spacing 2}
        ($ Paper {:sx #js{:p 2 :bgcolor mui/gray3}}
@@ -503,9 +529,21 @@
                   :value (join (:languages preview))
                   :tooltip "Kielet, joilla kunta on ilmoittanut haluavansa kuvata palvelut ja palvelupaikat kun integraatio on otettu käyttöön ensimmäisen kerran. Ota yhteyttä lipasinfo@jyu.fi mikäli haluat muuttaa kielivalintoja."})
 
-          ($ row {:label "Nimi suomeksi" :value (get-name "Name" "fi") :tooltip tt-name})
-          ($ row {:label "Nimi ruotsiksi" :value (get-name "Name" "sv") :tooltip tt-name})
-          ($ row {:label "Nimi englanniksi" :value (get-name "Name" "en") :tooltip tt-name})
+          ($ row {:label "Nimi suomeksi"
+                  :value (get-name "Name" "fi")
+                  :tooltip "Liikuntapaikan nimi Lipaksessa."})
+
+          ($ row {:label "Nimi ruotsiksi"
+                  :value (get-name "Name" "sv")
+                  :tooltip (str "Liikuntapaikan nimi ruotsiksi Lipaksessa."
+                                " "
+                                lang-disclaimer)})
+
+          ($ row {:label "Nimi englanniksi"
+                  :value (get-name "Name" "en")
+                  :tooltip (str "Liikuntapaikan nimi englanniksi Lipaksessa."
+                                " "
+                                lang-disclaimer)})
 
           ($ row {:label "Vaihtoehtoinen nimi"
                   :value (get-name "AlternativeName" "fi")
@@ -515,9 +553,9 @@
                   :value (->> preview :displayNameType first :type)
                   :tooltip "Tämä arvo on aina \"Name\"."})
 
-          ;; ($ row {:label "Maa"
-          ;;         :value (->> preview :addresses first :country)
-          ;;         :tooltip "Tämä arvo on aina \"FI\""})
+          ($ row {:label "Maa"
+                  :value (->> preview :addresses first :country)
+                  :tooltip "Tämä arvo on aina \"FI\""})
 
           ($ row {:label "Katuosoite"
                   :value (-> preview :addresses first :streetAddress :street first :value)
@@ -553,25 +591,32 @@
           ($ row {:label "Tiivistelmä suomeksi"
                   :value (get-desc "Summary" "fi")
                   :tooltip tt-summary})
+
           ($ row {:label "Tiivistelmä ruotsiksi"
                   :value (get-desc "Summary" "sv")
-                  :tooltip tt-summary})
+                  :tooltip (str tt-summary " " lang-disclaimer)})
+
           ($ row {:label "Tiivistelmä englanniksi"
                   :value (get-desc "Summary" "en")
-                  :tooltip tt-summary})
+                  :tooltip (str tt-summary " " lang-disclaimer)})
+
           ($ row {:label "Kuvaus suomeksi"
                   :value (get-desc "Description" "fi")
                   :tooltip tt-description})
+
           ($ row {:label "Kuvaus ruotsiksi"
                   :value (get-desc "Description" "sv")
-                  :tooltip tt-description})
+                  :tooltip (str tt-description " " lang-disclaimer)})
+
           ($ row {:label "Kuvaus ruotsiksi"
                   :value (get-desc "Description" "en")
-                  :tooltip tt-description})
-          ($ row {:label "Organisaatio"
+                  :tooltip (str tt-description " " lang-disclaimer)})
+
+          ($ row {:label "Organisaation ID"
                   :value (:organizationId preview)
                   :tooltip "Organisaatio (kunta) joka käyttää integraatiota."})
-          ($ row {:label "Palvelut"
+
+          ($ row {:label "Palveluiden ID:t"
                   :value (join (:services preview))
                   :tooltip "Palvelut joihin palvelupaikka liitetään PTV:ssä."})))))
 
