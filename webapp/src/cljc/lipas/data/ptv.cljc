@@ -539,7 +539,7 @@
      :description     description
      :languages       (or (-> site :ptv :languages) org-langs)
 
-     :sync-enabled                (get-in site [:ptv :sync-enabled] true)
+     :sync-enabled                (get-in site [:ptv :sync-enabled] false)
      :last-sync                   last-sync
      ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
 
