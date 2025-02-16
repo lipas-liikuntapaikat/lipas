@@ -4027,7 +4027,7 @@
   :name {:fi "Opastuspiste", :se "Informationspunkt", :en "Info"},
   :type-code 207,
   :main-category 0,
-  :status "deprecated",
+  :status "active",
   :sub-category 2,
   :geometry-type "Point",
   :props
