@@ -290,6 +290,12 @@
   (fn [sports-sites _]
     (count sports-sites)))
 
+(rf/reg-sub ::sports-sites-count-sync
+  (fn [[_ org-id]]
+    (rf/subscribe [::sports-sites org-id]))
+  (fn [sports-sites _]
+    (count (filter :sync-enabled sports-sites))))
+
 (rf/reg-sub ::sync-all-enabled?
   (fn [[_ org-id]]
     (rf/subscribe [::sports-sites org-id]))

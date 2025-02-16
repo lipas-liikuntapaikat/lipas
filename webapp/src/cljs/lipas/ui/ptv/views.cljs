@@ -941,18 +941,19 @@
 
 (defn integrate-service-locations
   []
-  (let [tr                  (<== [:lipas.ui.subs/translator])
-        org-id              (<== [::subs/selected-org-id])
-        sports-sites        (<== [::subs/sports-sites org-id])
-        setup-done?         (<== [::subs/sports-site-setup-done org-id])
-        sports-sites-count  (<== [::subs/sports-sites-count org-id])
-        sports-sites-filter (<== [::subs/sports-sites-filter])
+  (let [tr                      (<== [:lipas.ui.subs/translator])
+        org-id                  (<== [::subs/selected-org-id])
+        sports-sites            (<== [::subs/sports-sites org-id])
+        setup-done?             (<== [::subs/sports-site-setup-done org-id])
+        sports-sites-count      (<== [::subs/sports-sites-count org-id])
+        sports-sites-count-sync (<== [::subs/sports-sites-count-sync org-id])
+        sports-sites-filter     (<== [::subs/sports-sites-filter])
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
 
         ;; TODO: Rename this so service-location-generation progress can also be
         ;; added to this level
-        {:keys [in-progress?
+        {:keys         [in-progress?
                 processed-lipas-ids
                 processed-count
                 total-count
@@ -1006,6 +1007,9 @@
 
         [mui/typography (tr :ptv.wizard/unselect-helper)]
 
+        [mui/typography {:variant "body2" :sx #js{:mb 0 :mt 0}}
+         (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]
+
         ;; Export to PTV button
         [mui/button
          {:variant   "outlined"
@@ -1038,26 +1042,31 @@
       [mui/grid {:item true :xs 12 :lg 8}
        [mui/stack {:spacing 4}
 
-        [mui/typography {:variant "h6"}
-         (tr :ptv/sports-sites)]
+        [mui/stack {:spacing 1 :sx #js{:pb 2}}
 
-        [mui/typography {:variant "subtitle1" :style {:margin-top "0px"}}
-         (str sports-sites-count " kpl")]]
+         [mui/typography {:variant "h6"}
+          (tr :ptv/sports-sites)]
+
+         [mui/typography {:variant "body2"}
+          "Kytke integraatio päälle valitsemalla liikuntapaikka listasta ja siirtämällä liukukytkin ON-asentoon – harmaa väri osoittaa, että integraatio on pois päältä."]
+
+         [mui/typography {:variant "body2"}
+          (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]]]
 
        [mui/stack
         (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
           ($ service-location
-             {:key lipas-id
-              :tr tr
-              :site site
-              :org-id org-id
-              :lipas-id lipas-id
-              :name-conflict name-conflict
-              :sync-enabled sync-enabled
-              :valid valid
-              :service-ids service-ids
-              :selected-tab selected-tab
-              :set-selected-tab set-selected-tab
+             {:key                 lipas-id
+              :tr                  tr
+              :site                site
+              :org-id              org-id
+              :lipas-id            lipas-id
+              :name-conflict       name-conflict
+              :sync-enabled        sync-enabled
+              :valid               valid
+              :service-ids         service-ids
+              :selected-tab        selected-tab
+              :set-selected-tab    set-selected-tab
               :service-channel-ids service-channel-ids}))]]]]))
 
 (defn service-panel
