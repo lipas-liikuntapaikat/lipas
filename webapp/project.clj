@@ -28,6 +28,7 @@
    [com.github.seancorfield/next.jdbc "1.3.939"]
    [com.layerware/hugsql "0.4.8"]
    [org.postgresql/postgresql  "42.2.2"]
+   [com.github.seancorfield/honeysql "2.6.1270"]
    [nrepl "1.2.0"]
    [hikari-cp "2.7.0"]
    [cc.qbits/spandex "0.8.2"]
