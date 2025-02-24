@@ -726,8 +726,8 @@
 
           ids (map :lipas-id to-sync)]
 
-      (println "To sync: " (count to-sync))
-      (println "to save: " (count to-save))
+      #_(println "To sync: " (count to-sync))
+      #_(println "to save: " (count to-save))
 
       {:db (update-in db [:ptv :service-locations-creation]
                       merge

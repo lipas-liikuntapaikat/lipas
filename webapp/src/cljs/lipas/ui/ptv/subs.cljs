@@ -214,7 +214,7 @@
   :<- [::ptv]
   (fn [ptv [_ org-id lipas-id]]
     (let [site (get-in ptv [:org org-id :data :sports-sites lipas-id])]
-      (println site)
+      #_(println site)
       (ptv-data/->ptv-service-location org-id
                                        (comp map-utils/wgs84->epsg3067 clj->js)
                                        (utils/timestamp)
