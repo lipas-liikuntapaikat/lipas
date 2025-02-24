@@ -3,15 +3,15 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [honey.sql :as sql]
-            [honey.sql.helpers :as h]
-            [honey.sql.pg-ops :as pg]
+            [honey.sql.pg-ops]
             [lipas.backend.core :as core]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
             [lipas.data.types :as types]
             [lipas.integration.old-lipas.sports-site :as legacy-utils]
-            [next.jdbc :as jdbc]))
+            [next.jdbc :as jdbc]
+            [taoensso.timbre :as log]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
@@ -272,8 +272,12 @@
     :kuntaosa              (comp :neighborhood :city :location)
     :tyyppikoodi           (comp :type-code :type)
     :tyyppi_nimi_fi        (comp :fi :name types/all :type-code :type)
+    :tyyppi_nimi_se        (comp :se :name types/all :type-code :type)
+    :tyyppi_nimi_en        (comp :en :name types/all :type-code :type)
     :muokattu_viimeksi     (comp ->helsinki-time :event-date)
     :lisatieto_fi          :comment
+    :sijainti_id           :lipas-id
+
     ;; Following keys are "special ones" that don't take sports-site as
     ;; argument, but either a feature or idx. This is because for WFS
     ;; LineString and Polygon layers we need to explode the feature
@@ -282,7 +286,8 @@
     ;; compatibility reasons.
     :the_geom              (fn [feature] (:geometry feature))
     :reitti_id             (fn [idx] (inc idx))
-    :alue_id               (fn [idx] (inc idx))}
+    :alue_id               (fn [idx] (inc idx))
+    :kulkusuunta           (fn [feature] (-> feature :properties :travel-direction))}
 
    ;; Create lookup functions for all possible type-specific props.
    (update-vals legacy-prop->legacy-handle
@@ -1760,7 +1765,8 @@
      :kuntoilutelineet_boolean
      :latu_vapaa
      :pintamateriaali
-     :latu_perinteinen}})
+     :latu_perinteinen
+     :kulkusuunta}})
 
 (defn ->wfs-row [sports-site idx feature]
   (let [type-code (-> sports-site :type :type-code)
@@ -1931,7 +1937,8 @@
 
 (defn resolve-geom-field-type [type-code]
   (let [geom-type (-> type-code types/all :geometry-type)]
-    (case geom-type
+    :geometry
+    #_(case geom-type
       "Point"      (keyword "geometry(Point,3067)")
       "LineString" (keyword "geometry(LineString,3067)")
       "Polygon"    (keyword "geometry(Polygon,3067)"))))
@@ -1945,7 +1952,8 @@
     (contains? bool-fields field) :boolean
     :else :text))
 
-(def legacy-type-view-create-statements
+;; Tables may be a bad idea..
+#_(def legacy-type-view-create-statements
   (for [type-code (keys types/all)
         :let [view-name (get type-code->view-name type-code)]
         :when view-name]
@@ -1955,16 +1963,98 @@
                                 (type-code->legacy-fields type-code))]
                      [field (resolve-field-type type-code field)])}))
 
+;; Materialized views instead...
+(def mat-views
+  (->>
+   (for [type-code (keys types/all)
+         :let [view-name (get type-code->view-name type-code)]
+         :when view-name]
+     [type-code
+      {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
+       :select (into
+                [[[:cast :the_geom (resolve-field-type type-code :the_geom)] :the_geom]]
+                (for [field (set/union
+                             common-fields
+                             (type-code->legacy-fields type-code))
+                      :when (not= :the_geom field)]
+                  (let [field-type (resolve-field-type type-code field)]
+                    [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
+       :from [:wfs.kaikki]
+       :where [:and
+               [:= :type_code [:inline type-code]]
+               [:= :status [:inline "active"]]]}])
+   (into {})))
+
 #_(def legacy-point-collection-view-create-statement
   {:create-view [(keyword "lipas_kaikki_pisteet") :if-not-exists]
    :union (for [])})
 
-(defn create-legacy-tables!
+#_(defn create-legacy-tables!
   [db]
   (doseq [ddl legacy-type-view-create-statements]
     (jdbc/execute! db (sql/format ddl))))
 
+(defn create-legacy-mat-views!
+  [db]
+  (doseq [[type-code ddl] mat-views]
+    (log/info "Creating mat-view for" type-code)
+    (jdbc/execute! db (sql/format ddl))))
+
+(defn refresh-legacy-mat-views!
+  [db]
+  (doseq [view-name (vals type-code->view-name)]
+    (log/info "refreshing mat-view" view-name)
+    (jdbc/execute! db (sql/format {:refresh-materialized-view (str "wfs." view-name)}))))
+
+(defn refresh-wfs-master-table!
+  [db]
+
+  ;; Truncate
+  (log/info "Truncating table :wfs.kaikki")
+  (jdbc/execute! db (sql/format {:truncate :wfs.kaikki}))
+
+  ;; Populate master table
+  (log/info "Populating table :wfs.kaikki")
+  (doseq [type-code (keys types/all)]
+    (log/info "Populating table :wfs.kaikki with sites" type-code)
+    (let [sites (core/get-sports-sites-by-type-code db type-code)]
+      (doseq [part (->> sites
+                        (mapcat ->wfs-rows)
+                        (partition-all 100))]
+        (jdbc/execute!
+         db
+         (sql/format
+          {:insert-into [:wfs.kaikki]
+           :values (for [row part]
+                     {:lipas-id (:id row)
+                      :type_code (:tyyppikoodi row)
+                      :geom_type (:type (:the_geom row))
+                      :doc [:lift row]
+                      ;; Geometries are in 3067 coordinate system in Legacy WFS
+                      :the_geom [:st_transform
+                                 [:st_setsrid
+                                  [:st_geomfromgeojson [:lift (:the_geom row)]]
+                                  [:cast 4326 :int]]
+                                 [:cast 3067 :int]]
+                      :status "active"})}))))))
+
+(defn refresh-all!
+  [db]
+  (log/info "Starting full legacy wfs refresh")
+  (refresh-wfs-master-table! db)
+  (refresh-legacy-mat-views! db)
+  (log/info "Full legacy wfs refresh DONE!"))
+
 (comment
+
+  (refresh-all! (user/db))
+
+  (jdbc/execute! (user/db) (sql/format (mat-views 4402)))
+  (refresh-legacy-mat-views! (user/db))
+
+  (doseq [[type-code ddl] mat-views]
+    (println "Creating mat-view for" type-code)
+    (jdbc/execute! (user/db) (sql/format ddl)))
 
   (create-legacy-tables! (user/db))
 
@@ -2020,5 +2110,38 @@
   (set/map-invert legacy-handle->legacy-prop)
 
   #_(update-)
+
+  (def all-sites (atom []))
+  (doseq [type-code (keys types/all)
+          site (core/get-sports-sites-by-type-code (user/db) type-code)]
+    (swap! all-sites conj site))
+
+  (count @all-sites)
+
+  (def as-rows
+    (mapcat ->wfs-rows @all-sites))
+
+  (take 3 as-rows)
+
+  (doseq [part (partition-all 100 as-rows)]
+    (println "Tsirp")
+    (jdbc/execute!
+     (user/db)
+     (sql/format
+      {:insert-into [:wfs.kaikki]
+       :values (for [row part]
+                 {:lipas-id (:id row)
+                  :type_code (:tyyppikoodi row)
+                  :geom_type (:type (:the_geom row))
+                  :doc [:lift row]
+                  :the_geom [:st_transform
+                             [:st_setsrid
+                              [:st_geomfromgeojson [:lift (:the_geom row)]]
+                              [:cast 4326 :int]]
+                             [:cast 3067 :int]]
+                  :status "active"})})))
+
+  (doseq [[_type-code view-name] type-code->view-name]
+    (jdbc/execute! (user/db) [(str "DROP TABLE wfs." view-name)]))
 
   )
