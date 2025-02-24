@@ -947,3 +947,24 @@
 (rf/reg-event-db ::close-address-locator-dialog
   (fn [db _]
     (assoc-in db [:map :address-locator :dialog-open?] false)))
+
+(rf/reg-event-fx ::download-site-backup
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [fname (str "lipas_" lipas-id "_edit_data.json")
+          data (-> db
+                   (get-in [:sports-sites lipas-id :editing])
+                   utils/clean
+                   clj->js
+                   js/JSON.stringify)]
+      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js [data])
+                                   :filename fname}})))
+
+(rf/reg-event-fx ::download-new-site-backup
+  (fn [{:keys [db]} _]
+    (let [data (-> db
+                   (get-in [:new-sports-site :data])
+                   utils/clean
+                   clj->js
+                   js/JSON.stringify)]
+      {:lipas.ui.effects/save-as! {:blob (js/Blob. #js [data])
+                                   :filename "new_sports_site_data.json"}})))

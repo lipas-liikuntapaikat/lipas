@@ -759,6 +759,7 @@
              "turn_slight_right"]]
            [mui/list-item-text (tr :map/travel-direction)]])
 
+        ;; Route part difficulty
         (when (and editing?
                    edit-activities?
                    (#{"LineString"} geom-type)
@@ -773,6 +774,17 @@
              {:color (if (= sub-mode :route-part-difficulty) "secondary" "inherit")}
              "warning"]]
            [mui/list-item-text (tr :map/route-part-difficulty)]])
+
+        ;; Download backup
+        (when editing?
+          [mui/menu-item
+           {:on-click
+            #(do
+               (==> [::events/download-site-backup lipas-id])
+               (==> [::events/close-more-tools-menu]))}
+           [mui/list-item-icon
+            [mui/icon {:color "inherit"} "cloud_download"]]
+           [mui/list-item-text (tr :map.tools/download-backup-tooltip)]])
 
         ;; Edit tool
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
@@ -1097,7 +1109,7 @@
                     :on-click #(==> [::events/redo lipas-id])}
                    [mui/icon "redo"]]]])
 
-           ;; Active editing tool
+            ;; Active editing tool
               (when (and editing? (seq map-tool-items))
                 [mui/tooltip
                  {:title

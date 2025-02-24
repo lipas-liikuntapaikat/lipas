@@ -438,7 +438,8 @@
      :school-use-filter     "Koulujen liikuntapaikat",
      :clear-filters         "Poista rajaukset"},
     :map.tools
-    {:drawing-tooltip          "Piirtotyökalu valittu",
+    {:download-backup-tooltip  "Lataa varmuuskopio"
+     :drawing-tooltip          "Piirtotyökalu valittu",
      :drawing-hole-tooltip     "Reikäpiirtotyökalu valittu",
      :edit-tool                "Muokkaustyökalu",
      :importing-tooltip        "Tuontityökalu valittu",
@@ -2334,7 +2335,8 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :school-use-filter     "Used by schools",
      :clear-filters         "Clear filters"},
     :map.tools
-    {:drawing-tooltip          "Drawing tool selected",
+    {:download-backup-tooltip  "Download backup"
+     :drawing-tooltip          "Drawing tool selected",
      :drawing-hole-tooltip     "Hole drawing tool selected",
      :edit-tool                "Edit tool",
      :importing-tooltip        "Import tool selected",
