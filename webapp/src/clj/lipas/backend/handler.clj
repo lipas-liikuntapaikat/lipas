@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [lipas.backend.api.v2 :as v2]
+            [lipas.backend.api.v1 :as v1]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
@@ -719,6 +720,7 @@
             :body   (core/search-lois-with-params search body-params)})}}]
 
       (ptv-handler/routes ctx)]
+     (v1/routes ctx)
      (v2/routes ctx)]
 
     {:data
