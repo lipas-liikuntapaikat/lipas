@@ -8,7 +8,8 @@
             ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Typography$default" :as Typography]
-            [clojure.spec.alpha :as s]
+            [malli.core :as m]
+            [lipas.schema.users :as users]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.register.events :as events]
@@ -35,7 +36,7 @@
          {:required    true
           :label       (tr :lipas.user/email)
           :type        "email"
-          :spec        :lipas.user/email
+          :spec        users/email-schema
           :value       (:email form-data)
           :on-change   #(==> [::events/set-registration-form-email %])
           :placeholder (tr :lipas.user/email-example)}])
@@ -48,7 +49,7 @@
                                {:shrink true})
           :label             (tr :lipas.user/username)
           :type              "text"
-          :spec              :lipas.user/username
+          :spec              users/username-schema
           :value             (:username form-data)
           :on-change         #(set-field :username %)
           :placeholder       (tr :lipas.user/username-example)}])
@@ -59,7 +60,7 @@
          {:required  true
           :label     (tr :lipas.user/password)
           :type      "password"
-          :spec      :lipas.user/password
+          :spec      users/password-schema
           :value     (:password form-data)
           :on-change #(set-field :password %)}])
 
@@ -68,7 +69,7 @@
         [lui/text-field
          {:required  true
           :label     (tr :lipas.user/firstname)
-          :spec      :lipas.user/firstname
+          :spec      users/firstname-schema
           :value     (-> form-data :user-data :firstname)
           :on-change #(set-field :user-data :firstname %)}])
 
@@ -77,7 +78,7 @@
         [lui/text-field
          {:required  true
           :label     (tr :lipas.user/lastname)
-          :spec      :lipas.user/lastname
+          :spec      users/lastname-schema
           :value     (-> form-data :user-data :lastname)
           :on-change #(set-field :user-data :lastname %)}])
 
@@ -86,7 +87,7 @@
         [lui/text-field
          {:label       (tr :lipas.user/permissions)
           :multiline   true
-          :spec        :lipas.user/permissions-request
+          :spec        users/permissions-request-schema
           :value       (-> form-data :user-data :permissions-request)
           :on-change   #(set-field :user-data :permissions-request %)
           :min-rows    3
@@ -98,7 +99,7 @@
           {:style    {:margin-top "1em"}
            :color    "secondary"
            :variant  "contained"
-           :disabled (not (s/valid? :lipas/new-user form-data))
+           :disabled (not (m/validate users/new-user-schema form-data))
            :size     "large"
            :on-click #(==> [::events/submit-registration-form form-data])}
           (tr :register/headline))
