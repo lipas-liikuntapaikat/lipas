@@ -7,8 +7,8 @@
             ["@mui/material/Grid$default" :as Grid]
             ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
-            [malli.core :as m]
             [lipas.schema.users :as users]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
@@ -16,6 +16,7 @@
             [lipas.ui.register.subs :as subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.utils :refer [==> navigate!]]
+            [malli.core :as m]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [uix.core :as uix :refer [$ defui]]))
@@ -104,19 +105,21 @@
            :on-click #(==> [::events/submit-registration-form form-data])}
           (tr :register/headline))
 
-       ;; Privacy policy
-       ($ Link
-          {:style  {:margin-top "0.5em"}
-           :href   "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
-           :target "_blank"}
-          (tr :help/privacy-policy))
+       ($ Stack {:spacing 1}
 
-       ;; Terms
-       ($ Typography {:variant "body1" :sx {:mt 1 :mb 1}}
-          (tr :user/data-ownership))
+          ;; Privacy policy
+          ($ Link
+             {:style  {:margin-top "0.5em"}
+              :href   "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
+              :target "_blank"}
+             (tr :help/privacy-policy))
 
-       ($ Typography {:variant "body1" :style {:font-size "0.9em"}}
-          (tr :disclaimer/data-ownership))
+          ;; Terms
+          ($ Typography {:variant "body1" :sx {:mt 1 :mb 1}}
+             (tr :user/data-ownership))
+
+          ($ Typography {:variant "body1" :style {:font-size "0.9em"}}
+             (tr :disclaimer/data-ownership)))
 
        ;; Error messages
        (when error
