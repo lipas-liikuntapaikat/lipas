@@ -5,6 +5,11 @@
   (fn [db _]
     (:help db)))
 
+(rf/reg-sub ::help-data
+  :<- [::help]
+  (fn [help _]
+    (:data help)))
+
 (rf/reg-sub ::dialog-open?
   :<- [::help]
   (fn [help _]

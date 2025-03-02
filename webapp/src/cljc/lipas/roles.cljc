@@ -28,6 +28,8 @@
                             Antaa myös oikeuden luoda paikkoja vedos-tilassa"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
+   
+   :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}})
 
