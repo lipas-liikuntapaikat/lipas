@@ -1,9 +1,11 @@
 (ns lipas.wfs.core
-  (:require [clojure.data.csv :as csv]
+  (:require [cheshire.core :as json]
+            [clj-http.client :as http]
             [clojure.set :as set]
             [clojure.string :as str]
             [honey.sql :as sql]
             [honey.sql.pg-ops]
+            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
@@ -1791,154 +1793,166 @@
 
 ;;; Creating the tables ;;;
 
-(def type-code->view-name
-  {1530 "lipas_1530_kaukalo",
-   1520 "lipas_1520_luistelukentta",
-   2320 "lipas_2320_telinevoimistelutila",
-   6130 "lipas_6130_esteratsastuskentta",
-   1395 "lipas_1395_poytatennisalue",
-   6210 "lipas_6210_koiraurheilualue",
-   1370 "lipas_1370_tenniskentta_alue",
-   1360 "lipas_1360_pesapallostadion",
-   110 "lipas_110_eramaa_alue",
-   2360 "lipas_2360_sisa_ampumarata",
-   5310 "lipas_5310_moottoriurheilukeskus",
-   1560 "lipas_1560_alamakiluistelurata",
-   205 "lipas_205_rantautumispaikka",
-   2150 "lipas_2150_liikuntasali",
-   2210 "lipas_2210_liikuntahalli",
-   101 "lipas_101_lahipuisto",
-   102 "lipas_102_ulkoilupuisto",
-   7000 "lipas_7000_huoltorakennukset",
-   1110 "lipas_1110_liikuntapuisto",
-   6220 "lipas_6220_koiraurheiluhalli",
-   4530 "lipas_4530_pyorasuunnistusalue",
-   4720 "lipas_4720_kiipeilykallio",
-   1330 "lipas_1330_beachvolleykentta",
-   206 "lipas_206_ruoanlaittopaikka",
-   4830 "lipas_4830_jousiammuntarata",
-   1180 "lipas_1180_frisbeegolf_rata",
-   4422 "lipas_4422_moottorikelkkaura",
-   4430 "lipas_4430_hevosreitti",
-   204 "lipas_204_luontotorni",
-   106 "lipas_106_monikayttoalue",
-   4610 "lipas_4610_ampumahiihdon_harjoittelualue",
-   2610 "lipas_2610_keilahalli",
-   2110 "lipas_2110_kuntokeskus",
-   3120 "lipas_3120_uima_allas",
-   104 "lipas_104_retkeilyalue",
-   2330 "lipas_2330_poytatennistila",
-   2280 "lipas_2280_tennishalli",
-   6140 "lipas_6140_ravirata",
-   2140 "lipas_2140_kamppailulajien_sali",
-   4220 "lipas_4220_hiihtotunneli",
-   2230 "lipas_2230_jalkapallohalli",
-   1350 "lipas_1350_jalkapallostadion",
-   4840 "lipas_4840_jousiammuntamaastorata",
-   1510 "lipas_1510_tekojaakentta",
-   5350 "lipas_5350_kiihdytysrata",
-   4440 "lipas_4440_koirahiihtolatu",
-   2520 "lipas_2520_kilpajaahalli",
-   4710 "lipas_4710_ulkokiipeilyseina",
-   304 "lipas_304_ulkoilumaja_hiihtomaja",
-   4412 "lipas_4412_pyorailyreitti",
-   4820 "lipas_4820_ampumaurheilukeskus",
-   1170 "lipas_1170_pyorailurata",
-   4404 "lipas_4404_luontopolku",
-   108 "lipas_108_virkistysmetsa",
-   4401 "lipas_4401_kuntorata",
-   2350 "lipas_2350_tanssitila",
-   2340 "lipas_2340_miekkailutila",
-   2120 "lipas_2120_kuntosali",
-   109 "lipas_109_valtion_retkeilyalue",
-   5160 "lipas_5160_soudun_ja_melonnan_sisaharjoittelutila",
-   1550 "lipas_1550_luistelureitti",
-   3230 "lipas_3230_uimapaikka",
-   5130 "lipas_5130_moottirveneurheilualue",
-   5110 "lipas_5110_soutustadion",
-   3240 "lipas_3240_talviuintipaikka",
-   4510 "lipas_4510_suunnistusalue",
-   4240 "lipas_4240_lasketteluhalli",
-   2270 "lipas_2270_squash_halli",
-   4210 "lipas_4210_curlingrata",
-   301 "lipas_301_laavu_kota_kammi",
-   111 "lipas_111_kansallispuisto",
-   4630 "lipas_4630_kilpahiihtokeskus",
-   4810 "lipas_4810_ampumarata",
-   1540 "lipas_1540_pikaluistelurata",
-   5320 "lipas_5320_moottoripyorailualue",
-   3210 "lipas_3210_maauimala",
-   4640 "lipas_4640_hiihtomaa",
-   1150 "lipas_1150_skeitti_rullaluistelupaikka",
-   2310 "lipas_2310_yksittainen_yleisurheilun_suorituspaikka",
-   5210 "lipas_5210_urheiluilmailualue",
-   2380 "lipas_2380_parkour_sali",
-   103 "lipas_103_ulkoilualue",
-   201 "lipas_201_kalastusalue",
-   1220 "lipas_1220_yleisurheilukentta",
-   4411 "lipas_4411_maastopyorailyreitti",
-   1140 "lipas_1140_parkouralue",
-   4520 "lipas_4520_hiihtosuunnistusalue",
-   107 "lipas_107_matkailupalveluiden_alue",
-   6110 "lipas_6110_ratsastuskentta",
-   1120 "lipas_1120_lahiliikuntapaikka",
-   1390 "lipas_1390_padelkenttaalue",
-   5340 "lipas_5340_karting_rata",
-   302 "lipas_302_tupa",
-   4405 "lipas_4405_retkeilyreitti",
-   6120 "lipas_6120_ratsastusmaneesi",
-   1310 "lipas_1310_koripallokentta",
-   202 "lipas_202_telttailu_ja_leiriytyminen",
-   1620 "lipas_1620_golfkentta",
-   2250 "lipas_2250_skeittihalli",
-   2530 "lipas_2530_pikaluisteluhalli",
-   112 "lipas_112_muu_luonnonsuojelualue",
-   2130 "lipas_2130_voimailusali",
-   3220 "lipas_3220_uimaranta",
-   5330 "lipas_5330_moottorirata",
-   4230 "lipas_4230_lumilautatunneli",
-   4320 "lipas_4320_hyppyrimaki",
-   3130 "lipas_3130_kylpyla",
-   3110 "lipas_3110_uimahalli",
-   203 "lipas_203_veneilyn_palvelupaikka",
-   4620 "lipas_4620_ampumahiihtokeskus",
-   5360 "lipas_5360_jokamies_ja_rallicross_rata",
-   2290 "lipas_2290_petanque_halli",
-   2260 "lipas_2260_sulkapallohalli",
-   1160 "lipas_1160_pyorailualue",
-   1210 "lipas_1210_yleisurheilun_harjoitusalue",
-   5140 "lipas_5140_vesihiihtoalue",
-   4310 "lipas_4310_harjoitushyppyrimaki",
-   207 "lipas_207_opastuspiste",
-   1130 "lipas_1130_ulkokuntoilupaikka",
-   5120 "lipas_5120_purjehdusalue",
-   4110 "lipas_4110_laskettelun_suorituspaikat",
-   4452 "lipas_4452_vesiretkeilyreitti",
-   5370 "lipas_5370_jaaspeedway_rata",
-   2240 "lipas_2240_saliandyhalli",
-   2510 "lipas_2510_harjoitusjaahalli",
-   1640 "lipas_1640_ratagolf",
-   1380 "lipas_1380_rullakiekkokentta",
-   4451 "lipas_4451_melontareitti",
-   4403 "lipas_4403_kavelyreitti",
-   5150 "lipas_5150_koskimelontakeskus",
-   1630 "lipas_1630_golfin_harjoitushalli",
-   2295 "lipas_2295_padelhalli",
-   2370 "lipas_2370_sisakiipeilyseina",
-   1340 "lipas_1340_pallokentta",
-   1610 "lipas_1610_golfin_harjoitusalue",
-   4421 "lipas_4421_moottorikelkkareitti",
-   2220 "lipas_2220_monitoimihalli",
-   1320 "lipas_1320_lentopallokentta",
-   4402 "lipas_4402_latu"})
+(def type-code->view-names
+  {1530 ["lipas_1530_kaukalo"],
+   1520 ["lipas_1520_luistelukentta"],
+   2320 ["lipas_2320_telinevoimistelutila"],
+   6130 ["lipas_6130_esteratsastuskentta"],
+   1395 ["lipas_1395_poytatennisalue"],
+   6210 ["lipas_6210_koiraurheilualue"],
+   1370 ["lipas_1370_tenniskentta_alue"],
+   1360 ["lipas_1360_pesapallostadion"],
+   110  ["lipas_110_eramaa_alue"],
+   2360 ["lipas_2360_sisa_ampumarata"],
+   5310 ["lipas_5310_moottoriurheilukeskus"],
+   1560 ["lipas_1560_alamakiluistelurata"],
+   205  ["lipas_205_rantautumispaikka"],
+   2150 ["lipas_2150_liikuntasali"],
+   2210 ["lipas_2210_liikuntahalli"],
+   101  ["lipas_101_lahipuisto"],
+   102  ["lipas_102_ulkoilupuisto"],
+   7000 ["lipas_7000_huoltorakennukset"],
+   1110 ["lipas_1110_liikuntapuisto"],
+   6220 ["lipas_6220_koiraurheiluhalli"],
+   4530 ["lipas_4530_pyorasuunnistusalue"],
+   4720 ["lipas_4720_kiipeilykallio"],
+   1330 ["lipas_1330_beachvolleykentta"],
+   206  ["lipas_206_ruoanlaittopaikka"],
+   4830 ["lipas_4830_jousiammuntarata"],
+   1180 ["lipas_1180_frisbeegolf_rata"],
+   4422 ["lipas_4422_moottorikelkkaura"
+         "lipas_4422_moottorikelkkaura_3d"],
+   4430 ["lipas_4430_hevosreitti"
+         "lipas_4430_hevosreitti_3d"],
+   204  ["lipas_204_luontotorni"],
+   106  ["lipas_106_monikayttoalue"],
+   4610 ["lipas_4610_ampumahiihdon_harjoittelualue"],
+   2610 ["lipas_2610_keilahalli"],
+   2110 ["lipas_2110_kuntokeskus"],
+   3120 ["lipas_3120_uima_allas"],
+   104  ["lipas_104_retkeilyalue"],
+   2330 ["lipas_2330_poytatennistila"],
+   2280 ["lipas_2280_tennishalli"],
+   6140 ["lipas_6140_ravirata"],
+   2140 ["lipas_2140_kamppailulajien_sali"],
+   4220 ["lipas_4220_hiihtotunneli"],
+   2230 ["lipas_2230_jalkapallohalli"],
+   1350 ["lipas_1350_jalkapallostadion"],
+   4840 ["lipas_4840_jousiammuntamaastorata"],
+   1510 ["lipas_1510_tekojaakentta"],
+   5350 ["lipas_5350_kiihdytysrata"],
+   4440 ["lipas_4440_koirahiihtolatu"
+         "lipas_4440_koirahiihtolatu_3d"],
+   2520 ["lipas_2520_kilpajaahalli"],
+   4710 ["lipas_4710_ulkokiipeilyseina"],
+   304  ["lipas_304_ulkoilumaja_hiihtomaja"],
+   4412 ["lipas_4412_pyorailyreitti"
+         "lipas_4412_pyorailyreitti_3d"],
+   4820 ["lipas_4820_ampumaurheilukeskus"],
+   1170 ["lipas_1170_pyorailurata"],
+   4404 ["lipas_4404_luontopolku"
+         "lipas_4404_luontopolku_3d"],
+   108  ["lipas_108_virkistysmetsa"],
+   4401 ["lipas_4401_kuntorata"
+         "lipas_4401_kuntorata_3d"],
+   2350 ["lipas_2350_tanssitila"],
+   2340 ["lipas_2340_miekkailutila"],
+   2120 ["lipas_2120_kuntosali"],
+   109  ["lipas_109_valtion_retkeilyalue"],
+   5160 ["lipas_5160_soudun_ja_melonnan_sisaharjoittelutila"],
+   1550 ["lipas_1550_luistelureitti"],
+   3230 ["lipas_3230_uimapaikka"],
+   5130 ["lipas_5130_moottirveneurheilualue"],
+   5110 ["lipas_5110_soutustadion"],
+   3240 ["lipas_3240_talviuintipaikka"],
+   4510 ["lipas_4510_suunnistusalue"],
+   4240 ["lipas_4240_lasketteluhalli"],
+   2270 ["lipas_2270_squash_halli"],
+   4210 ["lipas_4210_curlingrata"],
+   301  ["lipas_301_laavu_kota_kammi"],
+   111  ["lipas_111_kansallispuisto"],
+   4630 ["lipas_4630_kilpahiihtokeskus"],
+   4810 ["lipas_4810_ampumarata"],
+   1540 ["lipas_1540_pikaluistelurata"],
+   5320 ["lipas_5320_moottoripyorailualue"],
+   3210 ["lipas_3210_maauimala"],
+   4640 ["lipas_4640_hiihtomaa"],
+   1150 ["lipas_1150_skeitti_rullaluistelupaikka"],
+   2310 ["lipas_2310_yksittainen_yleisurheilun_suorituspaikka"],
+   5210 ["lipas_5210_urheiluilmailualue"],
+   2380 ["lipas_2380_parkour_sali"],
+   103  ["lipas_103_ulkoilualue"],
+   201  ["lipas_201_kalastusalue"],
+   1220 ["lipas_1220_yleisurheilukentta"],
+   4411 ["lipas_4411_maastopyorailyreitti"
+         "lipas_4411_maastopyorailyreitti_3d"],
+   1140 ["lipas_1140_parkouralue"],
+   4520 ["lipas_4520_hiihtosuunnistusalue"],
+   107  ["lipas_107_matkailupalveluiden_alue"],
+   6110 ["lipas_6110_ratsastuskentta"],
+   1120 ["lipas_1120_lahiliikuntapaikka"],
+   1390 ["lipas_1390_padelkenttaalue"],
+   5340 ["lipas_5340_karting_rata"],
+   302  ["lipas_302_tupa"],
+   4405 ["lipas_4405_retkeilyreitti"
+         "lipas_4405_retkeilyreitti_3d"],
+   6120 ["lipas_6120_ratsastusmaneesi"],
+   1310 ["lipas_1310_koripallokentta"],
+   202  ["lipas_202_telttailu_ja_leiriytyminen"],
+   1620 ["lipas_1620_golfkentta"],
+   2250 ["lipas_2250_skeittihalli"],
+   2530 ["lipas_2530_pikaluisteluhalli"],
+   112  ["lipas_112_muu_luonnonsuojelualue"],
+   2130 ["lipas_2130_voimailusali"],
+   3220 ["lipas_3220_uimaranta"],
+   5330 ["lipas_5330_moottorirata"],
+   4230 ["lipas_4230_lumilautatunneli"],
+   4320 ["lipas_4320_hyppyrimaki"],
+   3130 ["lipas_3130_kylpyla"],
+   3110 ["lipas_3110_uimahalli"],
+   203  ["lipas_203_veneilyn_palvelupaikka"],
+   4620 ["lipas_4620_ampumahiihtokeskus"],
+   5360 ["lipas_5360_jokamies_ja_rallicross_rata"],
+   2290 ["lipas_2290_petanque_halli"],
+   2260 ["lipas_2260_sulkapallohalli"],
+   1160 ["lipas_1160_pyorailualue"],
+   1210 ["lipas_1210_yleisurheilun_harjoitusalue"],
+   5140 ["lipas_5140_vesihiihtoalue"],
+   4310 ["lipas_4310_harjoitushyppyrimaki"],
+   207  ["lipas_207_opastuspiste"],
+   1130 ["lipas_1130_ulkokuntoilupaikka"],
+   5120 ["lipas_5120_purjehdusalue"],
+   4110 ["lipas_4110_laskettelun_suorituspaikat"],
+   4452 ["lipas_4452_vesiretkeilyreitti"
+         "lipas_4452_vesiretkeilyreitti_3d"],
+   5370 ["lipas_5370_jaaspeedway_rata"],
+   2240 ["lipas_2240_saliandyhalli"],
+   2510 ["lipas_2510_harjoitusjaahalli"],
+   1640 ["lipas_1640_ratagolf"],
+   1380 ["lipas_1380_rullakiekkokentta"],
+   4451 ["lipas_4451_melontareitti"
+         "lipas_4451_melontareitti_3d"],
+   4403 ["lipas_4403_kavelyreitti"
+         "lipas_4403_kavelyreitti_3d"],
+   5150 ["lipas_5150_koskimelontakeskus"],
+   1630 ["lipas_1630_golfin_harjoitushalli"],
+   2295 ["lipas_2295_padelhalli"],
+   2370 ["lipas_2370_sisakiipeilyseina"],
+   1340 ["lipas_1340_pallokentta"],
+   1610 ["lipas_1610_golfin_harjoitusalue"],
+   4421 ["lipas_4421_moottorikelkkareitti"
+         "lipas_4421_moottorikelkkareitti_3d"],
+   2220 ["lipas_2220_monitoimihalli"],
+   1320 ["lipas_1320_lentopallokentta"],
+   4402 ["lipas_4402_latu"
+         "lipas_4402_latu_3d"]})
 
 (def int-fields #{:id :rakennusvuosi :kuntanumero :tyyppikoodi :alue_id :reitti_id})
 (def bool-fields #{:vapaa_kaytto :koulun_liikuntapaikka})
 
-(defn resolve-geom-field-type [type-code]
+#_(defn resolve-geom-field-type [type-code]
   (let [geom-type (-> type-code types/all :geometry-type)]
-    :geometry
-    #_(case geom-type
+    (case geom-type
       "Point"      (keyword "geometry(Point,3067)")
       "LineString" (keyword "geometry(LineString,3067)")
       "Polygon"    (keyword "geometry(Polygon,3067)"))))
@@ -1946,40 +1960,30 @@
 (defn resolve-field-type
   [type-code field]
   (cond
-    (= field :the_geom) (resolve-geom-field-type type-code)
+    (= field :the_geom) :geometry
     (= field :muokattu_viimeksi) :timestamp
     (contains? int-fields field) :integer
     (contains? bool-fields field) :boolean
     :else :text))
 
-;; Tables may be a bad idea..
-#_(def legacy-type-view-create-statements
-  (for [type-code (keys types/all)
-        :let [view-name (get type-code->view-name type-code)]
-        :when view-name]
-    {:create-table [(keyword (str "wfs." view-name)) :if-not-exists]
-     :with-columns (for [field (set/union
-                                common-fields
-                                (type-code->legacy-fields type-code))]
-                     [field (resolve-field-type type-code field)])}))
-
-;; Materialized views instead...
 (def mat-views
   (->>
-   (for [type-code (keys types/all)
-         :let [view-name (get type-code->view-name type-code)]
-         :when view-name]
-     [type-code
+   (for [[type-code view-names] type-code->view-names
+         view-name view-names]
+     [view-name
       {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
        :select (into
-                [[[:cast :the_geom (resolve-field-type type-code :the_geom)] :the_geom]]
+                [[(if (str/ends-with? view-name "_3d")
+                    [:cast :the_geom (resolve-field-type type-code :the_geom)]
+                    [:st_force2d
+                     [:cast :the_geom (resolve-field-type type-code :the_geom)]]) :the_geom]]
                 (for [field (set/union
                              common-fields
                              (type-code->legacy-fields type-code))
                       :when (not= :the_geom field)]
                   (let [field-type (resolve-field-type type-code field)]
                     [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
-       :from [:wfs.kaikki]
+       :from [:wfs.master]
        :where [:and
                [:= :type_code [:inline type-code]]
                [:= :status [:inline "active"]]]}])
@@ -1994,29 +1998,43 @@
   (doseq [ddl legacy-type-view-create-statements]
     (jdbc/execute! db (sql/format ddl))))
 
+(defn drop-legacy-mat-views!
+  [db]
+  (doseq [[_type-code view-names] type-code->view-names
+          view-name               view-names]
+    (log/info "Dropping mat-view" view-name)
+    (jdbc/execute! db [(str "DROP MATERIALIZED VIEW IF EXISTS wfs." view-name)])))
+
 (defn create-legacy-mat-views!
   [db]
-  (doseq [[type-code ddl] mat-views]
-    (log/info "Creating mat-view for" type-code)
-    (jdbc/execute! db (sql/format ddl))))
+  (doseq [[view-name ddl] mat-views]
+    (log/info "Creating mat-view" view-name)
+    (jdbc/execute! db (sql/format ddl))
+    (let [idx-name (str "idx_" view-name "_the_geom")
+          query (str "CREATE INDEX "
+                     idx-name
+                     " ON wfs." view-name
+                     " USING GIST(the_geom)")]
+      (jdbc/execute! db [query]))))
 
 (defn refresh-legacy-mat-views!
   [db]
-  (doseq [view-name (vals type-code->view-name)]
-    (log/info "refreshing mat-view" view-name)
+  (doseq [view-names (vals type-code->view-names)
+          view-name view-names]
+    (log/info "Refreshing mat-view" view-name)
     (jdbc/execute! db (sql/format {:refresh-materialized-view (str "wfs." view-name)}))))
 
 (defn refresh-wfs-master-table!
   [db]
 
   ;; Truncate
-  (log/info "Truncating table :wfs.kaikki")
-  (jdbc/execute! db (sql/format {:truncate :wfs.kaikki}))
+  (log/info "Truncating table :wfs.master")
+  (jdbc/execute! db (sql/format {:truncate :wfs.master}))
 
   ;; Populate master table
-  (log/info "Populating table :wfs.kaikki")
+  (log/info "Populating table :wfs.master")
   (doseq [type-code (keys types/all)]
-    (log/info "Populating table :wfs.kaikki with sites" type-code)
+    (log/info "Populating table :wfs.master with sites" type-code)
     (let [sites (core/get-sports-sites-by-type-code db type-code)]
       (doseq [part (->> sites
                         (mapcat ->wfs-rows)
@@ -2024,7 +2042,7 @@
         (jdbc/execute!
          db
          (sql/format
-          {:insert-into [:wfs.kaikki]
+          {:insert-into [:wfs.master]
            :values (for [row part]
                      {:lipas-id (:id row)
                       :type_code (:tyyppikoodi row)
@@ -2045,18 +2063,42 @@
   (refresh-legacy-mat-views! db)
   (log/info "Full legacy wfs refresh DONE!"))
 
+;;; Geoserver Layer management ;;;
+
+(def geoserver-config
+  {:root-url "https://lipas.fi/geoserver/rest"
+   :default-http-opts
+   {:basic-auth [(get (System/getenv) "GEOSERVER_ADMIN_USER")
+                 (get (System/getenv) "GEOSERVER_ADMIN_PASSWORD")]
+    :accept :json
+    :as :json}})
+
+(defn get-all-layers
+  []
+  (->
+   (http/get (str (get geoserver-config :root-url) "/layers")
+             (get geoserver-config :default-http-opts))
+   (get-in [:body :layers :layer])))
+
+(defn get-layer
+  [layer-name]
+  (->
+   (http/get (str (get geoserver-config :root-url) "/layers/" layer-name)
+             (get geoserver-config :default-http-opts))
+   (get-in [:body])))
+
 (comment
+  (require '[lipas.backend.config :as config])
+  (require '[cheshire.core :as json])
+  (require '[clj-http.client :as http])
+  (drop-legacy-mat-views! (user/db))
+  (create-legacy-mat-views! (user/db))
 
   (refresh-all! (user/db))
 
-  (jdbc/execute! (user/db) (sql/format (mat-views 4402)))
+  (get-layer "lipas:lipas_4401_kuntorata_3d")
+
   (refresh-legacy-mat-views! (user/db))
-
-  (doseq [[type-code ddl] mat-views]
-    (println "Creating mat-view for" type-code)
-    (jdbc/execute! (user/db) (sql/format ddl)))
-
-  (create-legacy-tables! (user/db))
 
   (require '[lipas.backend.core :as core])
 
@@ -2113,7 +2155,7 @@
 
   (def all-sites (atom []))
   (doseq [type-code (keys types/all)
-          site (core/get-sports-sites-by-type-code (user/db) type-code)]
+          site      (core/get-sports-sites-by-type-code (user/db) type-code)]
     (swap! all-sites conj site))
 
   (count @all-sites)
@@ -2122,26 +2164,5 @@
     (mapcat ->wfs-rows @all-sites))
 
   (take 3 as-rows)
-
-  (doseq [part (partition-all 100 as-rows)]
-    (println "Tsirp")
-    (jdbc/execute!
-     (user/db)
-     (sql/format
-      {:insert-into [:wfs.kaikki]
-       :values (for [row part]
-                 {:lipas-id (:id row)
-                  :type_code (:tyyppikoodi row)
-                  :geom_type (:type (:the_geom row))
-                  :doc [:lift row]
-                  :the_geom [:st_transform
-                             [:st_setsrid
-                              [:st_geomfromgeojson [:lift (:the_geom row)]]
-                              [:cast 4326 :int]]
-                             [:cast 3067 :int]]
-                  :status "active"})})))
-
-  (doseq [[_type-code view-name] type-code->view-name]
-    (jdbc/execute! (user/db) [(str "DROP TABLE wfs." view-name)]))
 
   )

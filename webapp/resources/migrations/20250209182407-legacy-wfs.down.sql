@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS wfs.master;
+--;;
+DROP SCHEMA IF EXISTS wfs;
