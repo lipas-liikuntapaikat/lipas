@@ -24,3 +24,8 @@
   :<- [::help]
   (fn [help _]
     (get-in help [:dialog :selected-page])))
+
+(rf/reg-sub ::mode
+  :<- [::help]
+  (fn [help _]
+    (get-in help [:dialog :mode])))

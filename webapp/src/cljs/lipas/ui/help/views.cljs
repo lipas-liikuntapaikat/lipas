@@ -27,7 +27,7 @@
     ["@mui/material/Card$default" :as Card]
     ["@mui/material/CardContent$default" :as CardContent]
     [lipas.ui.help.events :as events]
-    [lipas.ui.help.manage.views :as manage-views]
+    [lipas.ui.help.manage :as manage]
     [lipas.ui.help.subs :as subs]
     [lipas.ui.uix.hooks :refer [use-subscribe]]
     [lipas.ui.user.subs :as user-subs]
@@ -144,15 +144,15 @@
          {:variant  "contained"
           :color    "secondary"
           :size     "small"
-          :sx       #js{:ml 2}
+          :sx       #js{:ml 2 :mr 2}
           :startIcon ($ EditIcon)
-          :on-click  #(==> [::events/close-dialog])
-          :href      "#/admin/help"}
+          :on-click  #(==> [::events/open-edit-mode])}
          (tr :help/manage-content)))))
 
 (defui view
   [{:keys []}]
   (let [sections         (use-subscribe [::subs/help-data])
+        mode             (use-subscribe [::subs/mode])
         dialog-open?     (use-subscribe [::subs/dialog-open?])
         selected-section (use-subscribe [::subs/selected-section])
         selected-page    (use-subscribe [::subs/selected-page])
@@ -177,7 +177,7 @@
              ($ Toolbar {}
                 ($ Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}}
                    (tr :help/headline))
-                
+
                 ;; Manage content button (only visible with permission)
                 ($ HelpManageButton)
 
@@ -188,19 +188,25 @@
                    ($ CloseIcon))))
 
           ($ DialogContent {:sx #js {:display "flex" :flexDirection "column" :gap 2}}
-             ($ Tabs {:value    selected-section
-                      :onChange #(==> [::events/select-section (keyword %2)])}
-                (for [[k {:keys [title]}] sections]
-                  ($ Tab {:key k :value k :label (locale-kw title)})))
 
-             ($ Breadcrumbs {:sx #js{:mt 1}}
-                ($ Typography (tr :help/headline))
+             (when (= :edit mode)
+               ($ manage/view))
 
-                ($ Link {:underline "hover" :color "inherit" :on-click #(==> [::events/select-page nil])}
-                   (get-in sections [selected-section :title locale-kw]))
+             (when (= :read mode)
+               ($ :<>
+                  ($ Tabs {:value    selected-section
+                           :onChange #(==> [::events/select-section (keyword %2)])}
+                     (for [[k {:keys [title]}] sections]
+                       ($ Tab {:key k :value k :label (locale-kw title)})))
 
-                (when selected-page
-                  ($ Link {:underline "hover" :color "inherit" :href "/"}
-                     (get-in sections [selected-section :pages selected-page :title locale-kw]))))
+                  ($ Breadcrumbs {:sx #js{:mt 1}}
+                     ($ Typography (tr :help/headline))
 
-             ($ HelpSection (get sections selected-section))))))))
+                     ($ Link {:underline "hover" :color "inherit" :on-click #(==> [::events/select-page nil])}
+                        (get-in sections [selected-section :title locale-kw]))
+
+                     (when selected-page
+                       ($ Link {:underline "hover" :color "inherit" :href "/"}
+                          (get-in sections [selected-section :pages selected-page :title locale-kw]))))
+
+                  ($ HelpSection (get sections selected-section)))))))))

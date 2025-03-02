@@ -18,3 +18,11 @@
 (rf/reg-event-db ::select-page
   (fn [db [_ v]]
     (assoc-in db [:help :dialog :selected-page] v)))
+
+(rf/reg-event-db ::open-edit-mode
+  (fn [db _]
+    (assoc-in db [:help :dialog :mode] :edit)))
+
+(rf/reg-event-db ::close-edit-mode
+  (fn [db _]
+    (assoc-in db [:help :dialog :mode] :read)))
