@@ -3,6 +3,7 @@
     ["@mui/icons-material/Close$default" :as CloseIcon]
     ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
     ["@mui/icons-material/Help$default" :as Help]
+    ["@mui/icons-material/Edit$default" :as EditIcon]
     ["@mui/material/AppBar$default" :as AppBar]
     ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
     ["@mui/material/Button$default" :as Button]
@@ -25,14 +26,13 @@
     ["@mui/material/Grid$default" :as Grid]
     ["@mui/material/Card$default" :as Card]
     ["@mui/material/CardContent$default" :as CardContent]
-    [lipas.data.help :as help-data]
     [lipas.ui.help.events :as events]
+    [lipas.ui.help.manage.views :as manage-views]
     [lipas.ui.help.subs :as subs]
     [lipas.ui.uix.hooks :refer [use-subscribe]]
-    [lipas.ui.utils :as utils :refer [<== ==>]]
+    [lipas.ui.user.subs :as user-subs]
+    [lipas.ui.utils :as utils :refer [==>]]
     [uix.core :as uix :refer [$ defui]]))
-
-(def sections help-data/sections)
 
 (defui YoutubeIframe
   [{:keys [url]}]
@@ -136,23 +136,37 @@
          ($ SummaryGrid {:pages pages
                          :on-page-select #(==> [::events/select-page %])})))))
 
+(defui HelpManageButton []
+  (let [has-permission? (use-subscribe [::user-subs/check-privilege nil :help/manage])
+        tr              (use-subscribe [:lipas.ui.subs/translator])]
+    (when has-permission?
+      ($ Button
+         {:variant  "contained"
+          :color    "secondary"
+          :size     "small"
+          :sx       #js{:ml 2}
+          :startIcon ($ EditIcon)
+          :on-click  #(==> [::events/close-dialog])
+          :href      "#/admin/help"}
+         (tr :help/manage-content)))))
+
 (defui view
   [{:keys []}]
-  (let [dialog-open?     (use-subscribe [::subs/dialog-open?])
+  (let [sections         (use-subscribe [::subs/help-data])
+        dialog-open?     (use-subscribe [::subs/dialog-open?])
         selected-section (use-subscribe [::subs/selected-section])
         selected-page    (use-subscribe [::subs/selected-page])
         tr               (use-subscribe [:lipas.ui.subs/translator])
         locale-kw        (tr)]
 
-    (tap> {:selected-tab  selected-section
-           :selected-page selected-page})
     ($ :<>
-
+       ;; Help button in main UI
        ($ Tooltip {:title (tr :help/headline)}
-          ($ IconButton {:size "large"
+          ($ IconButton {:size     "large"
                          :on-click #(==> [::events/open-dialog])}
              ($ Help)))
 
+       ;; Help dialog
        ($ Dialog
           {:fullScreen  true
            :keepMounted true
@@ -160,11 +174,12 @@
            :onClose     #(==> [::events/close-dialog])}
 
           ($ AppBar {:sx #js {:position "relative"}}
-
              ($ Toolbar {}
-
                 ($ Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}}
                    (tr :help/headline))
+                
+                ;; Manage content button (only visible with permission)
+                ($ HelpManageButton)
 
                 ($ IconButton
                    {:edge    "start"
@@ -173,7 +188,6 @@
                    ($ CloseIcon))))
 
           ($ DialogContent {:sx #js {:display "flex" :flexDirection "column" :gap 2}}
-
              ($ Tabs {:value    selected-section
                       :onChange #(==> [::events/select-section (keyword %2)])}
                 (for [[k {:keys [title]}] sections]
@@ -189,6 +203,4 @@
                   ($ Link {:underline "hover" :color "inherit" :href "/"}
                      (get-in sections [selected-section :pages selected-page :title locale-kw]))))
 
-             #_($ Typography {:variant "h6"} selected-section)
-
-             ($ HelpSection (get sections selected-section)))))))
+             ($ HelpSection (get sections selected-section))))))))

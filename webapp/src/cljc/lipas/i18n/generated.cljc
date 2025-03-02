@@ -438,17 +438,17 @@
      :school-use-filter     "Koulujen liikuntapaikat",
      :clear-filters         "Poista rajaukset"},
     :map.tools
-    {:download-backup-tooltip  "Lataa varmuuskopio"
-     :drawing-tooltip          "Piirtotyökalu valittu",
-     :drawing-hole-tooltip     "Reikäpiirtotyökalu valittu",
-     :edit-tool                "Muokkaustyökalu",
-     :importing-tooltip        "Tuontityökalu valittu",
-     :deleting-tooltip         "Poistotyökalu valittu",
-     :splitting-tooltip        "Katkaisutyökalu valittu"
-     :simplifying              "Yksinkertaistutyökalu valittu"
-     :selecting                "Valintatyökalu valittu"
-     :simplify                 "Yksinkertaista"
-     :travel-direction-tooltip "Kulkusuuntatyökalu valittu"
+    {:download-backup-tooltip       "Lataa varmuuskopio"
+     :drawing-tooltip               "Piirtotyökalu valittu",
+     :drawing-hole-tooltip          "Reikäpiirtotyökalu valittu",
+     :edit-tool                     "Muokkaustyökalu",
+     :importing-tooltip             "Tuontityökalu valittu",
+     :deleting-tooltip              "Poistotyökalu valittu",
+     :splitting-tooltip             "Katkaisutyökalu valittu"
+     :simplifying                   "Yksinkertaistutyökalu valittu"
+     :selecting                     "Valintatyökalu valittu"
+     :simplify                      "Yksinkertaista"
+     :travel-direction-tooltip      "Kulkusuuntatyökalu valittu"
      :route-part-difficulty-tooltip "Reittiosan vaativuus työkalu valittu"},
     :map.tools.simplify
     {:headline "Yksinkertaista geometrioita"}
@@ -874,7 +874,8 @@
      :permissions-help-body
      "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
      :permissions-help-subject "Haluan lisää käyttöoikeuksia"
-     :privacy-policy           "Tietosuojailmoitus"},
+     :privacy-policy           "Tietosuojailmoitus"
+     :manage-content           "Hallitse ohjesisältöä"},
     :ceiling-structures
     {:concrete         "Betoni",
      :double-t-beam    "TT-laatta",
@@ -1765,12 +1766,14 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :permissions-old   "(gamla, endast läs)"}
     :help
     {:headline                 "Hjälp",
+     :available-pages          "Sidor i detta avsnitt"
      :permissions-help
      "Om du behöver ytterligare användarrättigheter, kontakt ",
      :permissions-help-body
      "Jag behöver användarrättigheter till följande platser:",
      :permissions-help-subject "Jag behöver mera användarrättigheter"
-     :privacy-policy           "Privacy policy"},
+     :privacy-policy           "Privacy policy"
+     :manage-content           "Redigera hjälpinnehåll"},
     :ceiling-structures
     {:concrete         "Betong",
      :double-t-beam    "TT-bricka",
@@ -2336,17 +2339,17 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :school-use-filter     "Used by schools",
      :clear-filters         "Clear filters"},
     :map.tools
-    {:download-backup-tooltip  "Download backup"
-     :drawing-tooltip          "Drawing tool selected",
-     :drawing-hole-tooltip     "Hole drawing tool selected",
-     :edit-tool                "Edit tool",
-     :importing-tooltip        "Import tool selected",
-     :deleting-tooltip         "Delete tool selected",
-     :splitting-tooltip        "Split tool selected",
-     :simplifying              "Simplify tool selected",
-     :selecting                "Select tool selected",
-     :simplify                 "Simplify",
-     :travel-direction-tooltip "Travel direction tool selected"
+    {:download-backup-tooltip       "Download backup"
+     :drawing-tooltip               "Drawing tool selected",
+     :drawing-hole-tooltip          "Hole drawing tool selected",
+     :edit-tool                     "Edit tool",
+     :importing-tooltip             "Import tool selected",
+     :deleting-tooltip              "Delete tool selected",
+     :splitting-tooltip             "Split tool selected",
+     :simplifying                   "Simplify tool selected",
+     :selecting                     "Select tool selected",
+     :simplify                      "Simplify",
+     :travel-direction-tooltip      "Travel direction tool selected"
      :route-part-difficulty-tooltip "Route section difficulty tool selected"},
     :map.tools.simplify
     {:headline "Simplify geometries"}
@@ -2742,7 +2745,9 @@ The site administrator is responsible for the accuracy of information, safety of
      "Please contact us in case you need more permissions",
      :permissions-help-body
      "I need permissions to following sports facilities:",
-     :permissions-help-subject "I need more permissions"},
+     :permissions-help-subject "I need more permissions"
+     :privacy-policy           "Privacy policy"
+     :manage-content           "Manage help content"},
     :ceiling-structures
     {:concrete         "Concrete",
      :double-t-beam    "Double-T",

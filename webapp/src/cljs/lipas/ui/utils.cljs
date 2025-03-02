@@ -463,3 +463,8 @@
   ([x precision]
    (if (number? x)
      (.toFixed x precision))))
+
+(defn vec-remove
+  "Remove item at index idx from vector v."
+  [v idx]
+  (into (subvec v 0 idx) (subvec v (inc idx))))
