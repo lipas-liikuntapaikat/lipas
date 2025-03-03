@@ -155,6 +155,7 @@ services:
       PTV_API_PASSWORD:
       PTV_ENV:
       OPEN_AI_API_KEY:
+      ENVIRONMENT:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
