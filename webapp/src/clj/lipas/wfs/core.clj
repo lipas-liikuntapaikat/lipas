@@ -1778,7 +1778,7 @@
      (for [field fields]
        (let [resolver-fn (legacy-field->resolve-fn field)]
          [field (case field
-                  (:the_geom) (resolver-fn feature)
+                  (:the_geom :kulkusuunta) (resolver-fn feature)
                   (:reitti_id :alue_id) (resolver-fn idx)
                   (resolver-fn sports-site))]))
      (into {}))))
