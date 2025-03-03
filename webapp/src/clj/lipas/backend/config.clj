@@ -34,6 +34,8 @@
      :sports-site
      {:search    "sports_sites_current"
       :analytics "analytics"}
+     :legacy-sports-site
+     {:search    "legacy_sports_sites_current"}
      :report
      {:subsidies  "subsidies"
       :city-stats "city_stats"}

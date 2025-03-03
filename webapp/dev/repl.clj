@@ -46,6 +46,10 @@
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "search"))
 
+(defn reindex-legacy-search!
+  []
+  ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "legacy"))
+
 (defn reindex-analytics!
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "analytics"))
@@ -74,7 +78,9 @@
 (comment
   (go)
   (reset)
+
   (reindex-search!)
+  (reindex-legacy-search!)
   (reindex-analytics!)
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
