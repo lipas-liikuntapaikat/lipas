@@ -79,6 +79,3 @@
 (defn ->es-query [params]
   ;; TODO: use params
   query-template)
-
-(defn get-sports-places [search params]
-  (core/search search (->es-query params)))

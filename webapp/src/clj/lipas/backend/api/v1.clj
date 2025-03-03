@@ -1,11 +1,12 @@
 (ns lipas.backend.api.v1
-  (:require [lipas.backend.legacy.api :as legacy-api]
-            [lipas.schema.sports-sites.types :as types-schema]
-            [lipas.schema.core-legacy :as legacy-schema]
-            [malli.core :as m]
-            [reitit.coercion.malli :as malli]
-            [reitit.openapi :as openapi]
-            [reitit.swagger-ui :as swagger-ui]))
+  (:require
+   [lipas.backend.legacy.api :as legacy-api]
+   [lipas.backend.legacy.legacy-codebase :as legacy-codebase]
+   [lipas.schema.core-legacy :as legacy-schema]
+   [lipas.schema.sports-sites.types :as types-schema]
+   [reitit.coercion.malli :as malli]
+   [reitit.openapi :as openapi]
+   [reitit.swagger-ui :as swagger-ui]))
 
 (defn routes [{:keys [search]}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
@@ -43,9 +44,48 @@ Access to the hierarchical type classification system used for categorizing spor
        {:tags ["sport-places"]
         :handler
         (fn [{:keys [parameters]}]
-          (let [search-params (-> parameters :query)]
-            {:status 400
-             :body   (m/explain legacy-schema/search-params search-params)}))
+          (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
+                        closeToMatch closeToLon closeToLat modifiedAfter
+                        searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
+
+                pageSize (or pageSize 10)
+                ;; Ensure typeCodes and cityCodes are always collections
+                type-codes (cond (nil? typeCodes) nil
+                                 (coll? typeCodes) typeCodes
+                                 :else [typeCodes])
+                city-codes (cond (nil? cityCodes) nil
+                                 (coll? cityCodes) cityCodes
+                                 :else [cityCodes])
+
+                params {:limit      (or pageSize 10)
+                        :offset     (dec (or page 1))
+                        :type-codes type-codes
+                        :city-codes city-codes
+                        :close-to   (when closeToDistanceKm
+                                      {:distance (* closeToDistanceKm 1000)
+                                       (if (= closeToMatch :start-point)
+                                         :location.coordinates.wgs84
+                                         :location.geom-coll)
+                                       {:lon closeToLon
+                                        :lat closeToLat}})
+                        :modified-after modifiedAfter
+                        :search-string searchString
+                        :excursion-map? retkikartta
+                        :harrastuspassi? harrastuspassi}
+                fields (let [fields-value (:fields qp)]
+                         (cond
+                           (nil? fields-value) []
+                           (string? fields-value) [fields-value]
+                           :else fields-value))
+                locale (or (:lang qp) :fi)
+                resp   (legacy-codebase/fetch-sports-places (:client search) locale params fields)
+                {:keys [partial? total results]} resp]
+            (if partial?
+              (let [path  "/v1/sports-places"
+                    links (legacy-codebase/create-page-links path params (:offset params) (:limit params) total)]
+                (legacy-codebase/linked-partial-content results links))
+              {:status 200
+               :body (doall results)})))
         :responses {200 {:body :any}}}}]
      ["/categories"
       {:tags ["sport-place-types"]
@@ -57,16 +97,15 @@ Access to the hierarchical type classification system used for categorizing spor
             {:status     200
              :body       (legacy-api/categories locale)}))
         :responses {200 {:body :any}}}}]
-     ["/sports-place-types" {
-       :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
-       :get
-       {:tags ["sport-place-types"]
-        :handler
-        (fn [req]
-          (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
-            {:status     200
-             :body       (legacy-api/sports-place-types locale)}))
-        :responses {200 {:body :any}}}}]
+     ["/sports-place-types" {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
+                             :get
+                             {:tags ["sport-place-types"]
+                              :handler
+                              (fn [req]
+                                (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
+                                  {:status     200
+                                   :body       (legacy-api/sports-place-types locale)}))
+                              :responses {200 {:body :any}}}}]
      ["/sports-place-types/:type-code"
       {:swagger {:id ::legacy}
        :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]
@@ -115,10 +154,7 @@ Access to the hierarchical type classification system used for categorizing spor
           (fn [req]
             (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
               {:status     200
-               :body       (legacy-api/sports-place-types locale)}))}}]
-
-
-       )
+               :body       (legacy-api/sports-place-types locale)}))}}])
      ["/openapi.json"
       {:get
        {:no-doc  true

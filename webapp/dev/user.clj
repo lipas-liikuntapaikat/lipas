@@ -65,6 +65,7 @@
 (comment
   (go)
   (reset)
+
   (reindex-search!)
   (reindex-analytics!)
   (reset-admin-password! "kissa13")
