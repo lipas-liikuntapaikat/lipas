@@ -1,0 +1,238 @@
+(ns lipas.backend.legacy.legacy-codebase
+  (:require [clojure.set :as set]
+            [clojure.string :as string]
+            [qbits.spandex :as es]
+            [qbits.spandex.utils :as es-utils]
+            [ring.util.codec :as codec]))
+
+;; This file contains mostly copy & pasted code from old API codebase, beware!
+
+(defn maybe-truncate [s]
+  (if (> (count s) 23)
+    (subs s 0 23)
+    s))
+
+(defn create-modified-after-filter
+  [timestamp]
+  (when timestamp {:range {:lastModified {:gt (maybe-truncate timestamp)}}}))
+
+(defn create-harrastuspassi-filter [harrastuspassi?]
+  (when harrastuspassi?
+    {:terms {:properties.mayBeShownInHarrastuspassiFi [true]}}))
+
+(defn create-excursion-map-filter [excursion-map?]
+  (when excursion-map?
+    {:terms {:properties.mayBeShownInExcursionMapFi [true]}}))
+
+(defn create-geo-filter
+  "Creates geo_distance filter:
+  :geo_distance {:distance ... }
+                 :point {:lon ... :lat ... }}"
+  [geo-params]
+  (when geo-params {:geo_distance geo-params}))
+
+(defn create-filter
+  [k coll]
+  (when (seq coll) {:terms {k coll}}))
+
+(defn create-filters
+  [{:keys [city-codes type-codes close-to modified-after excursion-map? harrastuspassi?]}]
+  (not-empty (remove nil? [(create-filter :location.city.cityCode city-codes)
+                           (create-filter :type.type-code type-codes)
+                           (create-excursion-map-filter excursion-map?)
+                           (create-harrastuspassi-filter harrastuspassi?)
+                           (create-geo-filter close-to)
+                           (create-modified-after-filter modified-after)])))
+
+(defn append-filters
+  [params query-map]
+  (if-let [filters (create-filters params)]
+    (assoc-in query-map [:bool] {:filter filters})
+    query-map))
+
+(defn append-search-string
+  [params query-map]
+  (if-let [qs (:search-string params)]
+    (assoc-in query-map [:bool :must] [{:query_string {:query qs}}])
+    query-map))
+
+(defn resolve-query
+  [params]
+  (if-let [query (->> {}
+                      (append-filters params)
+                      (append-search-string params)
+                      not-empty)]
+    query
+    {:match_all        {}}))
+
+(defn fetch-sports-places*
+  [client params]
+  (let [query {:method :get
+               :url    (es-utils/url [:sports_sites_current :_search])
+               :body
+               {:query            (resolve-query params)
+                :track_total_hits true
+                :size             (:limit params)
+                :from             (* (:offset params) (:limit params))}}]
+    (es/request client query)))
+
+(defn not-blank
+  [map-val]
+  (cond (string? map-val) (if (string/blank? map-val) nil map-val)
+        (coll? map-val) (not-empty map-val)
+        :else map-val))
+
+(defn only-non-nil-recur
+  "Traverses through map recursively and removes all nil values."
+  [a-map]
+  (reduce-kv #(if (map? %3)
+                (let [fixed (only-non-nil-recur %3)]
+                  (if ((complement empty?) fixed)
+                    (assoc %1 %2 fixed)
+                    %1))
+                (if (some? (not-blank %3))
+                  (assoc %1 %2 %3)
+                  %1))
+             {} a-map))
+
+(defn parse-path
+  "Parses keyword path from dot (.) delimited input and returns a vector
+   representing the path. It doesn't like nil.
+
+  :kissa.koira.kana => [:kissa :koira :kana]
+  :kissa => [:kissa]
+
+  Works with strings or anything that works with `keyword`.
+
+  \"kissa.koira.kana\" => [:kissa :koira :kana]
+  'kissa.koira.kana => [:kissa :koira :kana]
+  "
+  [k]
+  {:pre [(keyword k)]}
+  (into [] (map keyword (clojure.string/split (name k) #"\."))))
+
+(defn update-with-locale
+  [sp locale fallback-locale path]
+  (let [value (or (get-in sp (conj path locale))
+                  (get-in sp (conj path fallback-locale)))]
+    (assoc-in sp path value)))
+
+(defn format-sports-place-es
+  [sports-place locale]
+  (-> sports-place
+      (update :location dissoc :geom-coll)
+      (update-with-locale locale :fi [:name])
+      (update-with-locale locale :fi [:type :name])
+      (update-with-locale locale :fi [:location :city :name])
+      (update-with-locale locale :fi [:location :neighborhood])
+      (update-with-locale locale :fi [:owner])
+      (update-with-locale locale :fi [:admin])))
+
+(defn select-paths
+  "Similar to select-keys, just the 'key' here is a path in the nested map"
+  [m & paths]
+  (reduce
+   (fn [result path]
+     (assoc-in result path (get-in m path)))
+   {}
+   paths))
+
+(comment
+
+
+{:admin nil,
+   :construction-year 1999,
+   :event-date "2021-09-17T08:44:52.977Z",
+   :name nil,
+   :owner nil,
+   :phone-number "0500820054",
+   :properties {:free-use? true, :route-length-km 39.55},
+   :search-meta
+   {:admin {:name {:en "Unkonwn", :fi "Ei tietoa", :se "Okänt"}},
+    :audits {:latest-audit-date nil},
+    :fields {:field-types []}
+    :name "mynäjoen melontareitti",
+    :owner {:name {:en "Unknown", :fi "Ei tietoa", :se "Okänt"}},
+    :type {:main-category {:name {:en "Cross-country sports facilities",
+                                  :fi "Maastoliikuntapaikat",
+                                  :se "Anläggningar för terrängidrott"}},
+           :name {:en "Canoe route", :fi "Melontareitti", :se "Paddlingsled"},
+           :sub-category {:name {:en "Sports and outdoor recreation routes ",
+                                 :fi "Liikunta- ja ulkoilureitit",
+                                 :se "Idrotts- och friluftsleder"}},
+           :tags {:fi ["kanootti" "kajakki"]}}},
+   :sportsPlaceId 97077,
+   :status "active",
+   :type {:name nil, :type-code 4451}}
+  )
+
+(defn filter-and-format
+  [locale fields sp]
+  (let [paths (map parse-path fields)
+        formatted (format-sports-place-es sp locale)]
+    #dbg(apply select-paths (cons formatted paths))))
+
+(defn more?
+  "Returns true if result set was limited considering
+  page-size and requested page, otherwise false."
+  [results page-size page]
+  (let [total (-> results :hits :total :value)
+        n     (count (-> results :hits :hits))]
+    (< (+ (* page page-size) n) total)))
+
+(defn resolve-params
+  [input]
+  (merge {:lang       (or (:lang input) :fi)
+          :page       (or (:page input) 1)
+          :limit      (or (:pageSize input) 10)
+          :offset     (dec (or (:page input) 1))
+          :type-codes (:typeCodes input)
+          :city-codes (:cityCodes input)
+          :since      {:since input}
+          :fields     (:fields input)}
+         (when (:closeTo input)
+           {:close-to {:distance (* (-> input :closeTo :distanceKm) 1000)
+                       :location.coordinates.wgs84
+                       {:lon (-> input :closeTo :lon)
+                        :lat (-> input :closeTo :lat)}}})))
+
+(defn fetch-sports-places
+  "Fetches list of sports-places from ElasticSearch backend."
+  [client locale params fields]
+  (let [data (:body (fetch-sports-places* client params))
+        places (->> (map :_source (-> data :hits :hits))
+                    (map #(set/rename-keys % {:lipas-id :sportsPlaceId})))
+        fields (conj fields :sportsPlaceId)]
+    {:partial? (more? data (:limit params) (:offset params))
+     :total (-> data :hits :total :value)
+     :results (map (comp only-non-nil-recur
+                         (partial filter-and-format locale fields)) places)}))
+
+
+(defn last-page
+  [total page-size]
+  (int (Math/ceil (/ total page-size))))
+
+#dbg(defn create-page-links
+      [path query-params page page-size total]
+      {:first (str path "/?" (codec/form-encode (assoc query-params "page" 1)))
+       :next  (str path "/?" (codec/form-encode (assoc query-params "page" (inc page))))
+       :prev  (str path "/?" (codec/form-encode (assoc query-params "page"
+                                                       (max (dec page) 1))))
+       :last  (str path "/?" (codec/form-encode (assoc query-params "page"
+                                                       (last-page total page-size))))
+       :total total})
+
+(defn linked-partial-content
+  [body {:keys [first last next prev total]}]
+  {:status  206
+   :headers {"Link" (str "<" next ">; rel=\"next\", "
+                         "<" last ">; rel=\"last\", "
+                         "<" first ">; rel=\"first\", "
+                         "<" prev ">; rel=\"prev\"")
+             "X-total-count" (str total)}
+   :body    (vec body)})
+
+
+(comment
+  (vec '("asd" "asd" "asd")))
