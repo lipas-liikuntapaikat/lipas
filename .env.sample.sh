@@ -2,6 +2,9 @@
 
 # Environment variables
 
+# dev|test|prod
+export ENVIRONMENT=dev
+
 # Backend
 export AUTH_KEY=***FILL_THIS***
 export ADMIN_PASSWORD=***FILL_THIS***

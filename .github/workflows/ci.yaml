@@ -68,6 +68,7 @@ env:
   PTV_API_USERNAME: ${{ vars.PTV_API_USERNAME }}
   PTV_API_PASSWORD: ${{ vars.PTV_API_PASSWORD }}
   OPEN_AI_API_KEY: ${{ vars.OPEN_AI_API_KEY }}
+  ENVIRONMENT: ${{ vars.ENVIRONMENT }}
 jobs:
   utp-schema-gen:
     if: github.ref == 'refs/heads/master'

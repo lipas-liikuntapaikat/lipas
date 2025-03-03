@@ -12,16 +12,13 @@
 
 (def default-config
   {:db
-   (merge
-    {:dbtype   "postgresql"
-     :dbname   (env! :db-name)
-     :host     (env! :db-host)
-     :user     (env! :db-user)
-     :port     (env! :db-port)
-     :password (env! :db-password)}
-    ;; TODO add more explicit check
-    (when (env! :lein-version)
-      {:dev true}))
+   {:dbtype   "postgresql"
+    :dbname   (env! :db-name)
+    :host     (env! :db-host)
+    :user     (env! :db-user)
+    :port     (env! :db-port)
+    :password (env! :db-password)
+    :dev      (= "dev" (env! :environment))}
    :emailer
    {:host (env! :smtp-host)
     :user (env! :smtp-user)
@@ -59,18 +56,18 @@
     :s3-bucket-prefix  (env! :aws-s3-bucket-prefix)}
    :ptv
    (let [test-env? (= "test" (:ptv-env e/env "prod"))]
-     {:env                  (:ptv-env e/env "prod")
-      :api-url              (env! :ptv-api-url)
-      :token-url            (env! :ptv-token-url)
-      :creds                (when-not test-env?
-                              {:api {:username (env! :ptv-api-username)
-                                     :password (env! :ptv-api-password)}})})
+     {:env       (:ptv-env e/env "prod")
+      :api-url   (env! :ptv-api-url)
+      :token-url (env! :ptv-token-url)
+      :creds     (when-not test-env?
+                   {:api {:username (env! :ptv-api-username)
+                          :password (env! :ptv-api-password)}})})
    :open-ai
    {:api-key         (env! :open-ai-api-key)
     :project         "ptv"
     :completions-url "https://api.openai.com/v1/chat/completions"
     :models-url      "https://api.openai.com/v1/models"
-    :model           "gpt-4o-mini" #_ "gpt-4o" #_"gpt-4-turbo" #_ "gpt-3.5-turbo" #_ "gpt-3.5-turbo-1106"}
+    :model           "gpt-4o-mini" #_ "gpt-4o" #_ "gpt-4-turbo" #_ "gpt-3.5-turbo" #_ "gpt-3.5-turbo-1106"}
    :app
    {:db        (ig/ref :lipas/db)
     :emailer   (ig/ref :lipas/emailer)
