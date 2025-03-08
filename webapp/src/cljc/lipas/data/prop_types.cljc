@@ -34,7 +34,7 @@
    {:name
     {:fi "Pintamateriaali", :se "Ytmaterial", :en "Surface material"},
     :data-type "enum-coll",
-    :opts materials/surface-materials
+    :opts (update-vals materials/surface-materials (fn [m] {:label m}))
     :description
     {:fi
      "Liikunta-alueiden pääasiallinen pintamateriaali - tarkempi kuvaus liikuntapaikan eri tilojen pintamateriaalista voidaan antaa pintamateriaalin lisätietokentässä",

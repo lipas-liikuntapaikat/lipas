@@ -10,6 +10,7 @@
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
+            [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.integration.old-lipas.sports-site :as legacy-utils]
             [next.jdbc :as jdbc]
@@ -252,35 +253,34 @@
   (set/map-invert legacy-handle->legacy-prop))
 
 (def legacy-field->resolve-fn
+  "Resolve function receives a map with keys :site :feature :idx"
   (merge
-   {:id                    :lipas-id
-    :nimi_fi               :name
-    :nimi_se               (comp :se :name-localized)
-    :nimi_en               (comp :en :name-localized)
-    :sahkoposti            :email
-    :www                   :www
-    :puhelinnumero         :phone-number
-    :koulun_liikuntapaikka (comp :school-use? :properties)
-    :vapaa_kaytto          (comp :free-use? :properties)
-    :rakennusvuosi         :construction-year
-    :peruskorjausvuodet    (fn [m] (some->> m :renovation-years (str/join ",")))
-    :omistaja              (comp :fi owners/all :owner)
-    :yllapitaja            (comp :fi admins/all :admin)
-    :katuosoite            (comp :address :location)
-    :postinumero           (comp :postal-code :location)
-    :postitoimipaikka      (comp :postal-office :location)
-    :kunta_nimi_fi         (comp :fi :name cities/by-city-code :city-code :city :location)
-    :kuntanumero           (comp :city-code :city :location)
-    :kuntaosa              (comp :neighborhood :city :location)
-    :tyyppikoodi           (comp :type-code :type)
-    :tyyppi_nimi_fi        (comp :fi :name types/all :type-code :type)
-    :tyyppi_nimi_se        (comp :se :name types/all :type-code :type)
-    :tyyppi_nimi_en        (comp :en :name types/all :type-code :type)
-    :muokattu_viimeksi     (comp ->helsinki-time :event-date)
-    :lisatieto_fi          :comment
-    :sijainti_id           :lipas-id
-
-    ;; TODO maybe harmonize all to (fn [{:keys [site feature idx]}] ...)
+   {:id                    (comp :lipas-id :site)
+    :nimi_fi               (comp :name :site)
+    :nimi_se               (comp :se :name-localized :site)
+    :nimi_en               (comp :en :name-localized :site)
+    :sahkoposti            (comp :email :site)
+    :www                   (comp :www :site)
+    :puhelinnumero         (comp :phone-number :site)
+    :koulun_liikuntapaikka (comp :school-use? :properties :site)
+    :vapaa_kaytto          (comp :free-use? :properties :site)
+    :rakennusvuosi         (comp :construction-year :site)
+    :peruskorjausvuodet    (fn [m] (some->> m :site :renovation-years (str/join ",")))
+    :omistaja              (comp :fi owners/all :owner :site)
+    :yllapitaja            (comp :fi admins/all :admin :site)
+    :katuosoite            (comp :address :location :site)
+    :postinumero           (comp :postal-code :location :site)
+    :postitoimipaikka      (comp :postal-office :location :site)
+    :kunta_nimi_fi         (comp :fi :name cities/by-city-code :city-code :city :location :site)
+    :kuntanumero           (comp :city-code :city :location :site)
+    :kuntaosa              (comp :neighborhood :city :location :site)
+    :tyyppikoodi           (comp :type-code :type :site)
+    :tyyppi_nimi_fi        (comp :fi :name types/all :type-code :type :site)
+    :tyyppi_nimi_se        (comp :se :name types/all :type-code :type :site)
+    :tyyppi_nimi_en        (comp :en :name types/all :type-code :type :site)
+    :muokattu_viimeksi     (comp ->helsinki-time :event-date :site)
+    :lisatieto_fi          (comp :comment :site)
+    :sijainti_id           (comp :lipas-id :site)
 
     ;; Following keys are "special ones" that don't take sports-site as
     ;; argument, but either a feature or idx. This is because for WFS
@@ -288,17 +288,25 @@
     ;; collection to as many rows as there are features. LIPAS WFS
     ;; does not use MultiLineString or MultiPolygon for backwards
     ;; compatibility reasons.
-    :the_geom              (fn [feature] (:geometry feature))
-    :reitti_id             (fn [idx] (inc idx))
-    :alue_id               (fn [idx] (inc idx))
-    :kulkusuunta           (fn [feature] (-> feature :properties :travel-direction))}
+    :the_geom    (fn [{:keys [feature]}] (:geometry feature))
+    :reitti_id   (fn [{:keys [idx]}] (inc idx))
+    :alue_id     (fn [{:keys [idx]}] (inc idx))
+    :kulkusuunta (fn [{:keys [feature]}] (-> feature :properties :travel-direction))}
 
    ;; Create lookup functions for all possible type-specific props.
    (update-vals legacy-prop->legacy-handle
                 (fn [legacy-handle]
                   (fn [m]
-                    (let [prop-k (legacy-handle->prop legacy-handle)]
-                      (get-in m [:properties prop-k])))))))
+                    (let [prop-k (legacy-handle->prop legacy-handle)
+                          prop   (get prop-types/all prop-k)
+                          v      (get-in m [:site :properties prop-k])]
+                      (case (:data-type prop)
+                        "enum"      (get-in prop [:opts v :label :fi])
+                        "enum-coll" (-> (select-keys (:opts prop) v)
+                                        vals
+                                        (->> (map (comp :fi :label))
+                                             (str/join ",")))
+                        v)))))))
 
 (def common-fields
   "Fields present in all WFS views"
@@ -1774,15 +1782,12 @@
 
 (defn ->wfs-row [sports-site idx feature]
   (let [type-code (-> sports-site :type :type-code)
-        geom-type (-> type-code types/all :geometry-type)
+        #_#_geom-type (-> type-code types/all :geometry-type)
         fields    (set/union common-fields (get type-code->legacy-fields type-code))]
     (->>
      (for [field fields]
        (let [resolver-fn (legacy-field->resolve-fn field)]
-         [field (case field
-                  (:the_geom :kulkusuunta) (resolver-fn feature)
-                  (:reitti_id :alue_id) (resolver-fn idx)
-                  (resolver-fn sports-site))]))
+         [field (resolver-fn {:site sports-site :feature feature :idx idx})]))
      (into {}))))
 
 (defn ->wfs-rows [sports-site]
@@ -2128,7 +2133,6 @@
                   :enabled           true
                   :advertised        true
                   :queryable         true
-                  :defaultStyle      {:name "polygon"}
                   :nativeBoundingBox :nativeBoundingBox {:minx 50000.0
                                                          :maxx 760000.0
                                                          :miny 6600000.0
@@ -2152,7 +2156,6 @@
 
 (comment
   (list-featuretypes)
-  (create-vector-layer)
 
   (require '[lipas.backend.config :as config])
   (require '[cheshire.core :as json])
@@ -2172,6 +2175,7 @@
   (->wfs-rows (core/get-sports-site (user/db) 510812))
 
   ;; Latu (linestring)
+  (->wfs-rows (core/get-sports-site (user/db) 523760))
   (->wfs-rows (core/get-sports-site (user/db) 94714))
   (->wfs-rows (core/get-sports-site (user/db) 515522))
 
