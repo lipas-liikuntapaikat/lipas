@@ -280,6 +280,8 @@
     :lisatieto_fi          :comment
     :sijainti_id           :lipas-id
 
+    ;; TODO maybe harmonize all to (fn [{:keys [site feature idx]}] ...)
+
     ;; Following keys are "special ones" that don't take sports-site as
     ;; argument, but either a feature or idx. This is because for WFS
     ;; LineString and Polygon layers we need to explode the feature
@@ -2067,6 +2069,8 @@
 
 (def geoserver-config
   {:root-url "https://lipas.fi/geoserver/rest"
+   :workspace-name "lipas"
+   :datastore-name "lipas-wfs-v2"
    :default-http-opts
    {:basic-auth [(get (System/getenv) "GEOSERVER_ADMIN_USER")
                  (get (System/getenv) "GEOSERVER_ADMIN_PASSWORD")]
@@ -2087,7 +2091,69 @@
              (get geoserver-config :default-http-opts))
    (get-in [:body])))
 
+(defn list-featuretypes
+  "Lists all available featuretypes in lipas-wfs-v2 datastore. "
+  []
+  (let [url (str (:root-url geoserver-config) "/rest/workspaces/"
+                 (:workspace-name geoserver-config)
+                 "/datastores/" (:datastore-name geoserver-config)
+                 "/featuretypes.json")
+        response (http/get url (:default-http-opts geoserver-config))]
+    (get-in response [:body :featureTypes :featureType])))
+
+(defn list-styles
+  "Lists all styles available in GeoServer."
+  []
+  (let [url (str (:root-url geoserver-config) "/styles.json")
+        response (http/get url (:default-http-opts geoserver-config))]
+    (get-in response [:body :styles :style])))
+
+(defn publish-layer
+  "Publishes a new vector layer from an existing datastore.
+
+   Parameters:
+   - feature-name: Name of the feature in the datastore (e.g., table name)
+   - publish-name: Name to be published
+  "
+  [feature-name publish-name geom-type]
+  (let [url      (str (get geoserver-config :root-url)  "/workspaces/"
+                      (get geoserver-config :workspace-name)
+                      "/datastores/" (get geoserver-config :datastore-name)
+                      "/featuretypes")
+        settings {:name              publish-name
+                  :nativeName        feature-name
+                  :title             publish-name
+                  :srs               "EPSG:3067"
+                  :nativeCRS         "EPSG:3067"
+                  :enabled           true
+                  :advertised        true
+                  :queryable         true
+                  :defaultStyle      {:name "polygon"}
+                  :nativeBoundingBox :nativeBoundingBox {:minx 50000.0
+                                                         :maxx 760000.0
+                                                         :miny 6600000.0
+                                                         :maxy 7800000.0
+                                                         :crs  "EPSG:3067"}
+                  :latLonBoundingBox :latLonBoundingBox {:minx 19.08
+                                                         :maxx 31.59
+                                                         :miny 59.45
+                                                         :maxy 70.09
+                                                         :crs  "EPSG:4326"}
+
+                  :projectionPolicy "NONE"
+                  :defaultStyle     {:name (case geom-type
+                                             "Point" "lipas:tyyli_pisteet"
+                                             "Polygon" "lipas:tyyli_alueet_2"
+                                             "LineString" "lipas:tyyli_reitit")}}]
+    (http/post url
+               (merge (:default-http-opts geoserver-config)
+                      {:body         {:featureType settings}
+                       :content-type "application/json"}))))
+
 (comment
+  (list-featuretypes)
+  (create-vector-layer)
+
   (require '[lipas.backend.config :as config])
   (require '[cheshire.core :as json])
   (require '[clj-http.client :as http])
@@ -2164,5 +2230,37 @@
     (mapcat ->wfs-rows @all-sites))
 
   (take 3 as-rows)
+
+  (defn create-postgis-datastore
+    [base-url username password workspace-name datastore-name connection-params]
+    (let [url (str base-url "/rest/workspaces/" workspace-name "/datastores")
+          auth {:basic-auth [username password]}
+          default-params {:host "localhost"
+                          :port 5432
+                          :database "postgres"
+                          :schema "public"
+                          :user "postgres"
+                          :passwd ""
+                          :dbtype "postgis"}
+          params (merge default-params connection-params)
+          json-body (json/generate-string
+                     {:dataStore
+                      {:name datastore-name
+                       :type "PostGIS"
+                       :enabled true
+                       :connectionParameters
+                       {:entry (map (fn [[k v]] {"@key" (name k) "$" (str v)}) params)}}})]
+      (http/put url (merge auth
+                            {:body json-body
+                             :content-type "application/json"
+                             :accept "application/json"}))))
+
+
+  (publish-layer "lipas_4402_latu_3d" "lipas_4402_latu_3d_test" "LineString")
+
+  (let [url (str (:root-url geoserver-config) "/workspaces/lipas/styles.json")
+        response (http/get url (merge (:default-http-opts geoserver-config)
+                                      {:basic-auth ["GEOSERVER_ADMIN_USER" ""]}))]
+    (get-in response [:body :styles :style]))
 
   )
