@@ -38,7 +38,7 @@
 (defn create-filters
   [{:keys [city-codes type-codes close-to modified-after excursion-map? harrastuspassi?]}]
   (not-empty (remove nil? [(create-filter :location.city.cityCode city-codes)
-                           (create-filter :type.type-code type-codes)
+                           (create-filter :type.typeCode type-codes)
                            (create-excursion-map-filter excursion-map?)
                            (create-harrastuspassi-filter harrastuspassi?)
                            (create-geo-filter close-to)
@@ -68,7 +68,7 @@
 (defn fetch-sports-places*
   [client params]
   (let [query {:method :get
-               :url    (es-utils/url [:sports_sites_current :_search])
+               :url    (es-utils/url [:legacy_sports_sites_current :_search])
                :body
                {:query            (resolve-query params)
                 :track_total_hits true
@@ -117,6 +117,10 @@
                   (get-in sp (conj path fallback-locale)))]
     (assoc-in sp path value)))
 
+
+
+
+
 (defn format-sports-place-es
   [sports-place locale]
   (-> sports-place
@@ -137,40 +141,11 @@
    {}
    paths))
 
-(comment
-
-
-{:admin nil,
-   :construction-year 1999,
-   :event-date "2021-09-17T08:44:52.977Z",
-   :name nil,
-   :owner nil,
-   :phone-number "0500820054",
-   :properties {:free-use? true, :route-length-km 39.55},
-   :search-meta
-   {:admin {:name {:en "Unkonwn", :fi "Ei tietoa", :se "Okänt"}},
-    :audits {:latest-audit-date nil},
-    :fields {:field-types []}
-    :name "mynäjoen melontareitti",
-    :owner {:name {:en "Unknown", :fi "Ei tietoa", :se "Okänt"}},
-    :type {:main-category {:name {:en "Cross-country sports facilities",
-                                  :fi "Maastoliikuntapaikat",
-                                  :se "Anläggningar för terrängidrott"}},
-           :name {:en "Canoe route", :fi "Melontareitti", :se "Paddlingsled"},
-           :sub-category {:name {:en "Sports and outdoor recreation routes ",
-                                 :fi "Liikunta- ja ulkoilureitit",
-                                 :se "Idrotts- och friluftsleder"}},
-           :tags {:fi ["kanootti" "kajakki"]}}},
-   :sportsPlaceId 97077,
-   :status "active",
-   :type {:name nil, :type-code 4451}}
-  )
-
 (defn filter-and-format
   [locale fields sp]
   (let [paths (map parse-path fields)
         formatted (format-sports-place-es sp locale)]
-    #dbg(apply select-paths (cons formatted paths))))
+    (apply select-paths (cons formatted paths))))
 
 (defn more?
   "Returns true if result set was limited considering
@@ -200,13 +175,12 @@
   "Fetches list of sports-places from ElasticSearch backend."
   [client locale params fields]
   (let [data (:body (fetch-sports-places* client params))
-        places (->> (map :_source (-> data :hits :hits))
-                    (map #(set/rename-keys % {:lipas-id :sportsPlaceId})))
-        fields (conj fields :sportsPlaceId)]
-    {:partial? (more? data (:limit params) (:offset params))
-     :total (-> data :hits :total :value)
-     :results (map (comp only-non-nil-recur
-                         (partial filter-and-format locale fields)) places)}))
+         places (->> (map :_source (-> data :hits :hits)))
+         fields (conj fields :sportsPlaceId)]
+     {:partial? (more? data (:limit params) (:offset params))
+      :total (-> data :hits :total :value)
+      :results (map (comp only-non-nil-recur
+                          (partial filter-and-format locale fields)) places)}))
 
 
 (defn last-page
@@ -214,14 +188,14 @@
   (int (Math/ceil (/ total page-size))))
 
 (defn create-page-links
-      [path query-params page page-size total]
-      {:first (str path "/?" (codec/form-encode (assoc query-params "page" 1)))
-       :next  (str path "/?" (codec/form-encode (assoc query-params "page" (inc page))))
-       :prev  (str path "/?" (codec/form-encode (assoc query-params "page"
-                                                       (max (dec page) 1))))
-       :last  (str path "/?" (codec/form-encode (assoc query-params "page"
-                                                       (last-page total page-size))))
-       :total total})
+  [path query-params page page-size total]
+  {:first (str path "/?" (codec/form-encode (assoc query-params "page" 1)))
+   :next  (str path "/?" (codec/form-encode (assoc query-params "page" (inc page))))
+   :prev  (str path "/?" (codec/form-encode (assoc query-params "page"
+                                                   (max (dec page) 1))))
+   :last  (str path "/?" (codec/form-encode (assoc query-params "page"
+                                                   (last-page total page-size))))
+   :total total})
 
 (defn linked-partial-content
   [body {:keys [first last next prev total]}]
@@ -235,4 +209,31 @@
 
 
 (comment
-  (vec '("asd" "asd" "asd")))
+  ;; tällä pitäisi lokalisoida sports placet?
+  (defn format-sports-place
+    ([sports-place locale]
+     (format-sports-place sports-place locale format-location format-props-db))
+    ([sports-place locale location-format-fn props-format-fn]
+     {:sportsPlaceId    (:id sports-place)
+      :name             (or (not-blank ((locale-key :name locale) sports-place))
+                            (:name-fi sports-place))
+      :marketingName    (:marketing-name sports-place)
+      :type             {:typeCode (:type-code sports-place)
+                         :name     ((locale-key :type-name locale) sports-place)}
+      :schoolUse        (:school-sports-place sports-place)
+      :freeUse          (:free-use sports-place)
+      :constructionYear (parse-year (:construction-year sports-place))
+      :renovationYears  (not-empty (read-string (:renovation-years sports-place)))
+      :lastModified     (-> sports-place :last-modified parse-date)
+      ;;:accessible (:accessible sports-place)
+      :owner            ((locale-key :owner-name locale) sports-place)
+      :admin            ((locale-key :admin-name locale) sports-place)
+      :phoneNumber      (:phone-number sports-place)
+      :reservationsLink (:reservations-link sports-place)
+      :www              (:www sports-place)
+      :email            (:email sports-place)
+      :location         (when-let [location (:location sports-place)]
+                          (apply location-format-fn [location locale]))
+      :properties       (apply props-format-fn [(:props sports-place) locale])}))
+
+      )
