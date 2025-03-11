@@ -213,7 +213,7 @@
   [total page-size]
   (int (Math/ceil (/ total page-size))))
 
-#dbg(defn create-page-links
+(defn create-page-links
       [path query-params page page-size total]
       {:first (str path "/?" (codec/form-encode (assoc query-params "page" 1)))
        :next  (str path "/?" (codec/form-encode (assoc query-params "page" (inc page))))
