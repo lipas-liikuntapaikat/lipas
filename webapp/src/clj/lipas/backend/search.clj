@@ -36,7 +36,10 @@
      {:search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.geometries
-      {:type "geo_shape"}}}}})
+      {:type "geo_shape"}}}}
+   :legacy-sports-sites {:mappings {:properties   {:location {:type "geo_point"}}
+                                   :lastModified {:type   "date"
+                                                  :format "yyyy-MM-dd HH:mm:ss.SSS"}}}})
 
 (defn gen-idx-name
   "Returns index name generated from current timestamp that is

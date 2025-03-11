@@ -11,6 +11,7 @@
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
    [lipas.data.types :as types]
+   [lipas.integration.old-lipas.transform :as transform]
    [lipas.utils :as utils]
    [qbits.spandex :as es]
    [taoensso.timbre :as log]))
@@ -46,6 +47,28 @@
            (search/bulk-index! client)
            (wait-one))))
   (log/info "LOI indexing done!"))
+
+(defn index-legacy-search-sports-sites!
+  ([db client idx-name types]
+   (index-legacy-search-sports-sites! db client idx-name types []))
+  ([db client idx-name types results]
+   (let [type-code (first types)]
+     (log/info "Starting to re-index type" type-code)
+     (if type-code
+       (->> type-code
+            (core/get-sports-sites-by-type-code db)
+            (map #(-> (transform/->old-lipas-sports-site %)
+                      (assoc :sportsPlaceId (:lipas-id %))))
+            (search/->bulk idx-name :sportsPlaceId)
+            (search/bulk-index! client)
+            (wait-one)
+            (conj results)
+            (recur db client idx-name (rest types)))
+       (print-results results)))))
+
+(comment
+
+  )
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
@@ -163,7 +186,8 @@
          types    (keys types/all)
          alias    (case mode
                     "search"    (get-in indices [:sports-site :search])
-                    "analytics" (get-in indices [:sports-site :analytics]))]
+                    "analytics" (get-in indices [:sports-site :analytics])
+                    "legacy"    (get-in indices [:legacy-sports-site :search]))]
      (log/info "Starting to re-index types" types)
      (search/create-index! client idx-name mappings)
      (log/info "Created index" idx-name)
@@ -172,7 +196,8 @@
      (case mode
        "search"    (index-search-sports-sites! db client idx-name types)
        "analytics" (let [users (get-users db)]
-                     (index-analytics2! db client idx-name types users))          )
+                     (index-analytics2! db client idx-name types users))
+       "legacy" (index-legacy-search-sports-sites! db client idx-name types))
 
      (log/info "Indexing data done!")
      (log/info "Swapping alias" alias "to point to index" idx-name)
@@ -186,6 +211,7 @@
   (let [mode   (case (first args)
                  "--analytics" "analytics"
                  "--diversity" "diversity"
+                 "--legacy" "legacy"
                  "search")
         config (-> (select-keys config/system-config [:lipas/db :lipas/search])
                    (assoc-in [:lipas/search :create-indices] false))
@@ -208,6 +234,7 @@
         (System/exit 0)))))
 
 (comment
+  (-main "--legacy")
   (-main)
   (-main "--analytics")
   (def config (select-keys config/default-config [:db :search]))
