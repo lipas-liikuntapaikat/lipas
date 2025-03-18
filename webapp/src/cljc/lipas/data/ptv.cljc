@@ -25,20 +25,10 @@
 ;; (Lumijoki. Pyhäjärvi, Ii, Liminka ja Oulu sekä tietenkin bonuksena Utajärvi).
 ;; TODO: Kuinka valita näytetäänkö test vai prod organisaatiot?
 
-(def organizations
+(def test-organizations
   [{:name "Utajärven kunta"
     :props {;; Testiorganisaatio 6 (Kunta)
             :org-id              "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
-            :city-codes          [889]
-            :owners              ["city" "city-main-owner"]
-            :supported-languages ["fi"]}}
-   {:name "Utajärven kunta"
-    :prod true
-    :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
-            ;; Production authentication apiUserOrganisation field uses different
-            ;; "persistent org-id" value. This option is used to map the "version org-id"
-            ;; that is used elsewhere to this version for the auth.
-            :prod-org-id         "9f095753-3ca9-4d89-b7e4-3cdf83bb44b2"
             :city-codes          [889]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi"]}}
@@ -48,6 +38,56 @@
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}])
+
+(def prod-organizations
+  [{:name  "Utajärven kunta"
+    :prod  true
+    :props {:org-id              "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+            ;; Production authentication apiUserOrganisation field uses different
+            ;; "persistent org-id" value. This option is used to map the "version org-id"
+            ;; that is used elsewhere to this version for the auto.
+            :prod-org-id         "9f095753-3ca9-4d89-b7e4-3cdf83bb44b2"
+            :city-codes          [889]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi"]}}
+   {:name  "Limingan kunta"
+    :prod  true
+    :props {:org-id              "5b604898-aed9-49b0-99d1-9e42227981ef"
+            :prod-org-id         "5b604898-aed9-49b0-99d1-9e42227981ef"
+            :city-codes          [425]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" #_#_ "se" "en"]}}
+   {:name  "Pyhäjärven kaupunki"
+    :prod  true
+    :props {:org-id              "c367a987-9006-473a-b17a-a573e02735bc"
+            :prod-org-id         "c367a987-9006-473a-b17a-a573e02735bc"
+            :city-codes          [626]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" #_#_ "se" "en"]}}
+   {:name  "Lumijoen kunta"
+    :prod  true
+    :props {:org-id              "c6da9c9a-9666-48a6-ac96-9fa949d1038d"
+            :prod-org-id         "c6da9c9a-9666-48a6-ac96-9fa949d1038d"
+            :city-codes          [436]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" #_#_ "se" "en"]}}
+   {:name  "Oulun kaupunki"
+    :prod  true
+    :props {:org-id              "92374b0f-7d3c-4017-858e-666ee3ca2761"
+            :prod-org-id         "92374b0f-7d3c-4017-858e-666ee3ca2761"
+            :city-codes          [564]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" #_#_ "se" "en"]}}
+   {:name  "Iin kunta"
+    :prod  true
+    :props {:org-id              "07949937-1265-4e11-9c4e-8a6452f2bb0a"
+            :prod-org-id         "07949937-1265-4e11-9c4e-8a6452f2bb0a"
+            :city-codes          [139]
+            :owners              ["city" "city-main-owner"]
+            :supported-languages ["fi" #_#_ "se" "en"]}}])
+
+(def organizations
+  (conj prod-organizations test-organizations))
 
 ;; For adding default params to some requests from the FE
 ;; NOTE: This should eventually be replaced with Lipas organizations.

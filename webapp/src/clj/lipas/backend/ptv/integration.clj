@@ -364,5 +364,20 @@
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
-                           {:org-id org-id*
-                            :publishingStatus "Deleted"}))
+                           {:org-id           org-id*
+                            :publishingStatus "Deleted"})
+
+
+
+  ;; Get all prod orgs
+  (def ptv-prod-orgs
+    (ptv-data/get-all-pages
+     (fn [page]
+       (let [params {:url          "https://api.palvelutietovaranto.suomi.fi/api/v11/Organization"
+                     :method       :get
+                     :as           :json
+                     :query-params {:page page :status "Published"}}]
+         (:body (client/request params))))))
+
+
+  )
