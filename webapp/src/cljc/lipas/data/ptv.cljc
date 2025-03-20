@@ -53,35 +53,35 @@
    {:name  "Limingan kunta"
     :prod  true
     :props {:org-id              "5b604898-aed9-49b0-99d1-9e42227981ef"
-            :prod-org-id         "5b604898-aed9-49b0-99d1-9e42227981ef"
+            :prod-org-id         "9fbc00dd-3ab9-4e2b-991a-badfdc02c502"
             :city-codes          [425]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}
    {:name  "Pyhäjärven kaupunki"
     :prod  true
     :props {:org-id              "c367a987-9006-473a-b17a-a573e02735bc"
-            :prod-org-id         "c367a987-9006-473a-b17a-a573e02735bc"
+            :prod-org-id         "3d91d959-dcf0-42f4-9431-6ce0a372cc73"
             :city-codes          [626]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}
    {:name  "Lumijoen kunta"
     :prod  true
     :props {:org-id              "c6da9c9a-9666-48a6-ac96-9fa949d1038d"
-            :prod-org-id         "c6da9c9a-9666-48a6-ac96-9fa949d1038d"
+            :prod-org-id         "f7e82664-8e16-4773-a483-afa336287eea"
             :city-codes          [436]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}
    {:name  "Oulun kaupunki"
     :prod  true
     :props {:org-id              "92374b0f-7d3c-4017-858e-666ee3ca2761"
-            :prod-org-id         "92374b0f-7d3c-4017-858e-666ee3ca2761"
+            :prod-org-id         "d0a60c4c-89ff-4c09-a948-a2ecca780105"
             :city-codes          [564]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}
    {:name  "Iin kunta"
     :prod  true
     :props {:org-id              "07949937-1265-4e11-9c4e-8a6452f2bb0a"
-            :prod-org-id         "07949937-1265-4e11-9c4e-8a6452f2bb0a"
+            :prod-org-id         "a9dd6299-7d59-43b0-8d17-d72e2967c2e1"
             :city-codes          [139]
             :owners              ["city" "city-main-owner"]
             :supported-languages ["fi" #_#_ "se" "en"]}}])
