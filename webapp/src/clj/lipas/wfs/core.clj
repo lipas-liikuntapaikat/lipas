@@ -1,4 +1,18 @@
 (ns lipas.wfs.core
+  "Legacy WFS Compatibility Layer
+
+  This namespace maintains backward compatibility with the LIPAS WFS service
+  originally implemented in 2012. It preserves the original layer structure
+  and naming conventions to ensure continued functionality for existing
+  client applications and integrations.
+
+  The primary motivation for this implementation is to facilitate the
+  retirement of the legacy server and database infrastructure while
+  maintaining service continuity for dependent systems.
+
+  This compatibility layer is maintained for legacy support purposes.
+  New implementations should follow contemporary API and naming
+  standards."
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
             [clojure.set :as set]
@@ -7,6 +21,7 @@
             [honey.sql.pg-ops]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
+            [lipas.backend.system :as system]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
@@ -126,7 +141,7 @@
    :adpReadiness                 :tulospalv_atk_valmius,
    :weightLiftingSpotsCount      :painonnostopaikat_lkm,
    :euBeach                      :eu_ranta,
-   :infoFi                       :lisatieto_fi,
+   #_#_:infoFi                       :lisatieto_fi,
    :pool3TracksCount             :allas3_ratojen_lkm,
    :snowparkOrStreet             :temppurinne,
    :restPlacesCount              :taukopaikat_lkm,
@@ -330,6 +345,8 @@
     :sahkoposti
     :the_geom
     :tyyppi_nimi_fi
+    :tyyppi_nimi_se ;; Only present in coll-views!
+    :tyyppi_nimi_en ;; Only present in coll-views!
     :tyyppikoodi
     :vapaa_kaytto
     :www
@@ -1784,11 +1801,12 @@
   (let [type-code (-> sports-site :type :type-code)
         #_#_geom-type (-> type-code types/all :geometry-type)
         fields    (set/union common-fields (get type-code->legacy-fields type-code))]
-    (->>
-     (for [field fields]
-       (let [resolver-fn (legacy-field->resolve-fn field)]
-         [field (resolver-fn {:site sports-site :feature feature :idx idx})]))
-     (into {}))))
+    [(:status sports-site)
+     (->>
+      (for [field fields]
+        (let [resolver-fn (legacy-field->resolve-fn field)]
+          [field (resolver-fn {:site sports-site :feature feature :idx idx})]))
+      (into {}))]))
 
 (defn ->wfs-rows [sports-site]
   (->> sports-site
@@ -1957,23 +1975,22 @@
 (def int-fields #{:id :rakennusvuosi :kuntanumero :tyyppikoodi :alue_id :reitti_id})
 (def bool-fields #{:vapaa_kaytto :koulun_liikuntapaikka})
 
-#_(defn resolve-geom-field-type [type-code]
+(defn resolve-geom-field-type [type-code z]
   (let [geom-type (-> type-code types/all :geometry-type)]
     (case geom-type
-      "Point"      (keyword "geometry(Point,3067)")
-      "LineString" (keyword "geometry(LineString,3067)")
-      "Polygon"    (keyword "geometry(Polygon,3067)"))))
+      "Point"      (keyword (if z "geometry(PointZ,3067)" "geometry(Point,3067)"))
+      "LineString" (keyword (if z "geometry(LineStringZ,3067)" "geometry(LineString,3067)"))
+      "Polygon"    (keyword (if z "geometry(Polygonz,3067)" "geometry(Polygon,3067)")))))
 
 (defn resolve-field-type
-  [type-code field]
+  [field]
   (cond
-    (= field :the_geom) :geometry
     (= field :muokattu_viimeksi) :timestamp
     (contains? int-fields field) :integer
     (contains? bool-fields field) :boolean
     :else :text))
 
-(def mat-views
+(def type-layer-mat-views
   (->>
    (for [[type-code view-names] type-code->view-names
          view-name view-names]
@@ -1981,14 +1998,16 @@
       {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
        :select (into
                 [[(if (str/ends-with? view-name "_3d")
-                    [:cast :the_geom (resolve-field-type type-code :the_geom)]
-                    [:st_force2d
-                     [:cast :the_geom (resolve-field-type type-code :the_geom)]]) :the_geom]]
+                    [:cast [:st_force_3d :the_geom] (resolve-geom-field-type type-code :z)]
+                    [:cast [:st_force_2d :the_geom] (resolve-geom-field-type type-code nil)]) :the_geom]]
                 (for [field (set/union
-                             common-fields
+                             ;; Drop :tyyppi_nimi_se
+                             ;; and :tyyppi_nimi_en since they're only
+                             ;; present in coll-views (legacy inconsistency)
+                             (disj common-fields :tyyppi_nimi_se :tyyppi_nimi_en)
                              (type-code->legacy-fields type-code))
                       :when (not= :the_geom field)]
-                  (let [field-type (resolve-field-type type-code field)]
+                  (let [field-type (resolve-field-type field)]
                     [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
        :from [:wfs.master]
        :where [:and
@@ -1996,39 +2015,226 @@
                [:= :status [:inline "active"]]]}])
    (into {})))
 
-#_(def legacy-point-collection-view-create-statement
-  {:create-view [(keyword "lipas_kaikki_pisteet") :if-not-exists]
-   :union (for [])})
+(defn ->coll-layer
+  [view-name fields]
+  (let [geom-type (case view-name
+                    ("lipas_kaikki_pisteet" "retkikartta_pisteet") "Point"
+                    ("lipas_kaikki_reitit" "retkikartta_reitit") "LineString"
+                    ("lipas_kaikki_alueet" "retkikartta_alueet") "Polygon")]
+    {:create-materialized-view [ (keyword (str "wfs." view-name)) :if-not-exists]
+     :select (for [[k data-type] fields]
+               (case k
+                 :the_geom [[[:cast [:st_force_2d k]
+                                (case geom-type
+                                  "Point"      (keyword "geometry(Point,3067)")
+                                  "LineString" (keyword "geometry(LineString,3067)")
+                                  "Polygon"    (keyword "geometry(Polygon,3067)"))]] k]
+                 :x [[:st_x [:st_centroid :the_geom]] k]
+                 :y [[:st_y [:st_centroid :the_geom]] k]
 
-#_(defn create-legacy-tables!
-  [db]
-  (doseq [ddl legacy-type-view-create-statements]
-    (jdbc/execute! db (sql/format ddl))))
+                 (:osa_alue_json :reittiosa_json :piste_json) [[:st_asgeojson :the_geom] k]
+
+                 ;; Retkikartta specific
+                 :category_id [:type_code k]
+                 :name_fi [[:cast [:->> :doc [:inline "nimi_fi"]] (keyword data-type)] k]
+                 :name_se [[:cast [:->> :doc [:inline "nimi_se"]] (keyword data-type)] k]
+                 :name_en [[:cast [:->> :doc [:inline "nimi_en"]] (keyword data-type)] k]
+                 :ext_link [[:cast [:->> :doc [:inline "www"]] (keyword data-type)] k]
+                 :admin [[:cast [:->> :doc [:inline "yllapitaja"]] (keyword data-type)] k]
+                 :geometry [:the_geom k]
+                 :info_fi [[:cast [:->> :doc [:inline "lisatieto_fi"]] (keyword data-type)] k]
+                 (:alue_id :osa_alue_id) [[:cast [:->> :doc [:inline "alue_id"]] (keyword data-type)] k]
+
+                 (:reitti_id :reittiosa_id) [[:cast [:->> :doc [:inline "reitti_id"]] (keyword data-type)] k]
+
+                 :reitisto_id [:lipas_id k]
+
+                 ;; Default
+                 [[:cast [:->> :doc [:inline (name k)]] (keyword data-type)] k]))
+     :from [:wfs.master]
+     :where [:and
+             [:= :geom_type [:inline geom-type]]
+             [:and
+              [:= :status [:inline "active"]]
+              (when (str/starts-with? view-name "retkikartta_")
+                [:= true [:cast [:->> :doc [:inline "saa_julkaista_retkikartassa"]] :boolean]])
+              (when (= view-name "retkikartta_alueet")
+                [:in :type_code [:inline [102, 103, 106, 104, 112]]])
+              (when (= view-name "retkikartta_reitit")
+                [:in :type_code [:inline [4403, 4402, 4401, 4404, 4405, 4411, 4412, 4451, 4452, 4421, 4422]]])
+              (when (= view-name "retkikartta_pisteet")
+                [:in :type_code [:inline [207, 302, 202, 301, 206, 304, 204, 205, 203, 1180, 4720, 4460, 3230, 3220, 1550]]])]]}))
+
+(def coll-layer-mat-views
+  (->>
+   {:lipas_kaikki_alueet
+    {:id                   "integer"
+     :tyyppikoodi          "integer"
+     :tyyppikoodi_alaryhma "character varying(50)"
+     :tyyppikoodi_paaryhma "character varying(50)"
+     :sijainti_id          "integer"
+     :alue_id              "integer"
+     :katuosoite           "character varying(100)"
+     :postinumero          "character varying(50)"
+     :postitoimipaikka     "character varying(50)"
+     :kuntanumero          "integer"
+     :kunta_nimi_fi        "character varying(100)"
+     :tyyppi_nimi_fi       "character varying(100)"
+     :tyyppi_nimi_se       "character varying(100)"
+     :tyyppi_nimi_en       "character varying(100)"
+     :nimi_fi              "character varying(256)"
+     :nimi_se              "character varying(256)"
+     :www                  "text"
+     :sahkoposti           "character varying(100)"
+     :puhelinnumero        "character varying(50)"
+     :omistaja             "character varying(100)"
+     :yllapitaja           "character varying(100)"
+     :lisatieto_fi         "text"
+     :osa_alue_json        "text"
+     :the_geom             "geometry(Polygon,3067)"
+     :x                    "double precision"
+     :y                    "double precision"}
+
+    :lipas_kaikki_reitit
+    {:id "integer"
+     :tyyppikoodi "integer"
+     :tyyppikoodi_alaryhma "character varying(50)"
+     :tyyppikoodi_paaryhma "character varying(50)"
+     :sijainti_id "integer"
+     :reitisto_id "integer"
+     :katuosoite "character varying(100)"
+     :postinumero "character varying(50)"
+     :postitoimipaikka "character varying(50)"
+     :kuntanumero "integer"
+     :kunta_nimi_fi "character varying(100)"
+     :lisatieto_fi "text"
+     :reitti_id "integer"
+     :tyyppi_nimi_fi "character varying(100)"
+     :tyyppi_nimi_se "character varying(100)"
+     :tyyppi_nimi_en "character varying(100)"
+     :nimi_fi "character varying(256)"
+     :nimi_se "character varying(256)"
+     :www "text"
+     :sahkoposti "character varying(100)"
+     :puhelinnumero "character varying(50)"
+     :omistaja "character varying(100)"
+     :yllapitaja "character varying(100)"
+     :reitti_nimi_fi "character varying(100)"
+     :reitti_nimi_se "character varying(100)"
+     :reittiosa_json "text"
+     :the_geom "geometry(LineString,3067)"
+     :x "double precision"
+     :y "double precision"}
+
+    :lipas_kaikki_pisteet
+    {:id "integer"
+     :tyyppikoodi "integer"
+     :tyyppi_nimi_fi "character varying(100)"
+     :tyyppi_nimi_se "character varying(100)"
+     :tyyppi_nimi_en "character varying(100)"
+     :nimi_fi "character varying(256)"
+     :nimi_se "character varying(256)"
+     :sijainti_id "integer"
+     :www "text"
+     :sahkoposti "character varying(100)"
+     :puhelinnumero "character varying(50)"
+     :muokattu_viimeksi "timestamp without time zone"
+     :omistaja "character varying(100)"
+     :yllapitaja "character varying(100)"
+     :katuosoite "character varying(100)"
+     :postinumero "character varying(50)"
+     :postitoimipaikka "character varying(50)"
+     :kuntanumero "integer"
+     :kunta_nimi_fi "character varying(100)"
+     :lisatieto_fi "text"
+     :the_geom "geometry(Point,3067)"
+     :piste_json "text"
+     :x "double precision"
+     :y "double precision"}
+
+    :retkikartta_alueet
+    {:id "integer"
+     :category_id "integer"
+     :name_fi "character varying(256)"
+     :name_se "character varying(256)"
+     :name_en "character varying(256)"
+     :ext_link "text"
+     :admin "character varying(100)"
+     :alue_id "integer"
+     :osa_alue_id "integer"
+     :geometry "geometry(Polygon,3067)"
+     :info_fi "text"}
+
+    :retkikartta_reitit
+    {:id "integer"
+     :category_id "integer"
+     :name_fi "character varying(256)"
+     :name_se "character varying(256)"
+     :name_en "character varying(256)"
+     :ext_link "text"
+     :admin "character varying(100)"
+     :reitisto_id "integer"
+     :reitti_id "integer"
+     :reittiosa_id "integer"
+     :geometry "geometry(LineString,3067)"
+     :length "double precision"
+     :talvikaytto "boolean"
+     :kesakaytto "boolean"
+     :info_fi "text"}
+
+    :retkikartta_pisteet
+    {:id "integer"
+     :category_id "integer"
+     :name_fi "character varying(256)"
+     :name_se "character varying(256)"
+     :name_en "character varying(256)"
+     :ext_link "text"
+     :admin "character varying(100)"
+     :geometry "geometry(Point,3067)"
+     :info_fi "text"}}
+   (map (fn [[k m]] [(name k) (->coll-layer (name k) m)]))
+   (into {})))
 
 (defn drop-legacy-mat-views!
   [db]
+
+  (doseq [view-name (into (keys type-layer-mat-views)
+                          (keys coll-layer-mat-views))]
+    (log/info "Dropping mat-view" view-name)
+    (jdbc/execute! db [(str "DROP MATERIALIZED VIEW IF EXISTS wfs." view-name)]))
+
+  ;; Type layers
   (doseq [[_type-code view-names] type-code->view-names
           view-name               view-names]
-    (log/info "Dropping mat-view" view-name)
-    (jdbc/execute! db [(str "DROP MATERIALIZED VIEW IF EXISTS wfs." view-name)])))
+    (log/info "Dropping mat-view" (str "wfs." view-name))
+    (jdbc/execute! db [(str "DROP MATERIALIZED VIEW IF EXISTS wfs." view-name)]))
+
+  (log/info "All Legacy mat-views dropped."))
 
 (defn create-legacy-mat-views!
   [db]
-  (doseq [[view-name ddl] mat-views]
-    (log/info "Creating mat-view" view-name)
+
+  ;; Coll layers AND type layers
+  (doseq [[view-name ddl] (merge type-layer-mat-views
+                                 coll-layer-mat-views)]
+    (log/info "Creating mat-view" (str "wfs." view-name))
     (jdbc/execute! db (sql/format ddl))
     (let [idx-name (str "idx_" view-name "_the_geom")
-          query (str "CREATE INDEX "
+          query (str "CREATE INDEX IF NOT EXISTS "
                      idx-name
                      " ON wfs." view-name
-                     " USING GIST(the_geom)")]
-      (jdbc/execute! db [query]))))
+                     (if (str/starts-with? view-name "retkikartta_")
+                       " USING GIST(geometry)"
+                       " USING GIST(the_geom)"))]
+      (jdbc/execute! db [query])))
+  (log/info "All Legacy mat-views created."))
 
 (defn refresh-legacy-mat-views!
   [db]
-  (doseq [view-names (vals type-code->view-names)
+  (doseq [view-names (into (vals type-code->view-names)
+                           (map vector (keys coll-layer-mat-views)))
           view-name view-names]
-    (log/info "Refreshing mat-view" view-name)
+    (log/info "Refreshing mat-view" (str "wfs." view-name))
     (jdbc/execute! db (sql/format {:refresh-materialized-view (str "wfs." view-name)}))))
 
 (defn refresh-wfs-master-table!
@@ -2050,7 +2256,7 @@
          db
          (sql/format
           {:insert-into [:wfs.master]
-           :values (for [row part]
+           :values (for [[status row] part]
                      {:lipas-id (:id row)
                       :type_code (:tyyppikoodi row)
                       :geom_type (:type (:the_geom row))
@@ -2061,7 +2267,7 @@
                                   [:st_geomfromgeojson [:lift (:the_geom row)]]
                                   [:cast 4326 :int]]
                                  [:cast 3067 :int]]
-                      :status "active"})}))))))
+                      :status status})}))))))
 
 (defn refresh-all!
   [db]
@@ -2073,7 +2279,7 @@
 ;;; Geoserver Layer management ;;;
 
 (def geoserver-config
-  {:root-url "https://lipas.fi/geoserver/rest"
+  {:root-url #_"https://lipas.fi/geoserver/rest" "http://localhost:8888/geoserver/rest"
    :workspace-name "lipas"
    :datastore-name "lipas-wfs-v2"
    :default-http-opts
@@ -2121,10 +2327,16 @@
    - publish-name: Name to be published
   "
   [feature-name publish-name geom-type]
-  (let [url      (str (get geoserver-config :root-url)  "/workspaces/"
-                      (get geoserver-config :workspace-name)
-                      "/datastores/" (get geoserver-config :datastore-name)
-                      "/featuretypes")
+  (let [url (str (get geoserver-config :root-url)  "/workspaces/"
+                 (get geoserver-config :workspace-name)
+                 "/datastores/" (get geoserver-config :datastore-name)
+                 "/featuretypes")
+
+        style {:name (case geom-type
+                       "Point"      "lipas:tyyli_pisteet"
+                       "Polygon"    "lipas:tyyli_alueet_2"
+                       "LineString" "lipas:tyyli_reitit")}
+
         settings {:name              publish-name
                   :nativeName        feature-name
                   :title             publish-name
@@ -2133,35 +2345,261 @@
                   :enabled           true
                   :advertised        true
                   :queryable         true
-                  :nativeBoundingBox :nativeBoundingBox {:minx 50000.0
-                                                         :maxx 760000.0
-                                                         :miny 6600000.0
-                                                         :maxy 7800000.0
-                                                         :crs  "EPSG:3067"}
-                  :latLonBoundingBox :latLonBoundingBox {:minx 19.08
-                                                         :maxx 31.59
-                                                         :miny 59.45
-                                                         :maxy 70.09
-                                                         :crs  "EPSG:4326"}
+                  :nativeBoundingBox {:minx 50000.0
+                                      :maxx 760000.0
+                                      :miny 6600000.0
+                                      :maxy 7800000.0
+                                      :crs  "EPSG:3067"}
+                  :latLonBoundingBox {:minx 19.08
+                                      :maxx 31.59
+                                      :miny 59.45
+                                      :maxy 70.09
+                                      :crs  "EPSG:4326"}
 
                   :projectionPolicy "NONE"
-                  :defaultStyle     {:name (case geom-type
-                                             "Point" "lipas:tyyli_pisteet"
-                                             "Polygon" "lipas:tyyli_alueet_2"
-                                             "LineString" "lipas:tyyli_reitit")}}]
+                  :defaultStyle     style}]
+
+    (log/info "Publishing layer" publish-name)
     (http/post url
                (merge (:default-http-opts geoserver-config)
-                      {:body         {:featureType settings}
-                       :content-type "application/json"}))))
+                      {:body (json/generate-string {:featureType settings})
+                       :content-type "application/json"}))
+
+    ;; Style is not setting correctly during POST se we PUT it after publishing
+    (let [layer-url (str (get geoserver-config :root-url) "/layers/"
+                          (get geoserver-config :workspace-name) ":" publish-name)]
+
+        (http/put layer-url
+                  (merge (:default-http-opts geoserver-config)
+                         {:body         (json/generate-string
+                                         {:layer {:defaultStyle style}})
+                          :content-type "application/json"})))))
+
+(defn delete-layer
+  "Deletes a published layer from GeoServer.
+
+   Parameters:
+   - publish-name: Name of the published layer to delete
+   - recurse: (Optional, default true) If true, recursively deletes associated resources
+  "
+  ([publish-name]
+   (delete-layer publish-name true))
+  ([publish-name recurse]
+   (let [url (str (get geoserver-config :root-url) "/layers/"
+                 (get geoserver-config :workspace-name) ":" publish-name)
+
+         ;; Add recurse parameter to query string if true
+         url-with-params (if recurse
+                           (str url "?recurse=true")
+                           url)]
+
+     (log/info (str "Deleting layer: " publish-name))
+
+     (try
+       (http/delete url-with-params
+                    (merge (:default-http-opts geoserver-config)
+                           {:content-type "application/json"}))
+       (catch Exception ex (if (= 404 (:status (ex-data ex)))
+                             (log/info "Ignoring Not Found error during delete")
+                             (throw ex)))))))
+
+(defn rebuild-all-legacy-layers
+  []
+  (log/info "Rebuilding all layers")
+
+  (log/info "Rebuilding type layers")
+  (doseq [[type-code layers] type-code->view-names
+          layer-name layers]
+    (let [geom-type (get-in types/all [type-code :geometry-type])]
+      (delete-layer layer-name)
+      (publish-layer layer-name layer-name geom-type)))
+
+  (log/info "Rebuilding collection layers")
+
+  (delete-layer "lipas_kaikki_pisteet")
+  (publish-layer "lipas_kaikki_pisteet" "lipas_kaikki_pisteet" "Point")
+
+  (delete-layer "retkikartta_pisteet")
+  (publish-layer "retkikartta_pisteet" "retkikartta_pisteet" "Point")
+
+  (delete-layer "lipas_kaikki_reitit")
+  (publish-layer "lipas_kaikki_reitit" "lipas_kaikki_reitit" "LineString")
+
+  (delete-layer "retkikartta_reitit")
+  (publish-layer "retkikartta_reitit" "retkikartta_reitit" "LineString")
+
+  (delete-layer "lipas_kaikki_alueet")
+  (publish-layer "lipas_kaikki_alueet" "lipas_kaikki_alueet" "Polygon")
+
+  (delete-layer "retkikartta_alueet")
+  (publish-layer "retkikartta_alueet" "retkikartta_alueet" "Polygon")
+
+  (log/info "All rebuilt!"))
+
+;;; Layer groups ;;;
+
+(def main-category-layer-groups*
+  {"0" "lipas_0_virkistyskohteet_ja_palvelut"
+   "1000" "lipas_1000_ulkokentat_ja_liikuntapuistot"
+   "2000" "lipas_2000_sisaliikuntatilat"
+   "3000" "lipas_3000_vesiliikuntapaikat"
+   "4000" "lipas_4000_maastoliikuntapaikat"
+   "5000" "lipas_5000_veneily_ilmailu_ja_moottoriurheilu"
+   "6000" "lipas_6000_elainurheilualueet"
+   "7000" "lipas_7000_huoltorakennukset"})
+
+(def main-category-layer-grpups
+  (->> main-category-layer-groups*
+       (map (fn [[t gname]]
+              [gname (-> (parse-long t)
+                         (types/by-main-category)
+                         (->> (map :type-code)
+                              (select-keys type-code->view-names)
+                              vals
+                              (mapcat identity)))]))
+       (into {})))
+
+(def sub-category-layer-groups*
+  {"1" "lipas_1_virkistys_ja_retkeilyalueet"
+   "2" "lipas_2_retkeilyn_palvelut"
+   "1100" "lipas_1100_lahiliikunta_ja_liikuntapuistot"
+   "1200" "lipas_1200_yleisurheilukentat_ja_paikat"
+   "1300" "lipas_1300_pallokentat"
+   "1500" "lipas_1500_jaaurheilualueet_ja_luonnonjaat"
+   "1600" "lipas_1600_golfkentat"
+   "2100" "lipas_2100_kuntoilukeskukset_ja_liikuntasalit"
+   "2200" "lipas_2200_liikuntahallit"
+   "2300" "lipas_2300_yksittaiset_lajikohtaiset_sisaliikuntapaikat"
+   "2500" "lipas_2500_jaahallit"
+   "2600" "lipas_2600_keilahallit"
+   "3100" "lipas_3100_uimaaltaat_hallit_ja_kylpylat"
+   "3200" "lipas_3200_maauimalat_ja_uimarannat"
+   "4100" "lipas_4100_laskettelurinteet_ja_rinnehiihtokeskukset"
+   "4200" "lipas_4200_katetut_talviurheilupaikat"
+   "4300" "lipas_4300_hyppyrimaet"
+   "4400" "lipas_4400_liikunta_ja_ulkoilureitit"
+   "4500" "lipas_4500_suunnistusalueet"
+   "4600" "lipas_4600_maastohiihtokeskukset"
+   "4700" "lipas_4700_kiipeilypaikat"
+   "4800" "lipas_4800_ampumaurheilupaikat"
+   "5100" "lipas_5100_veneurheilupaikat"
+   "5200" "lipas_5200_urheiluilmailualueet"
+   "5300" "lipas_5300_moottoriurheilualueet"
+   "6100" "lipas_6100_hevosurheilu"
+   "6200" "lipas_6200_koiraurheilu"
+   "7000" "lipas_7000_huoltotilat"})
+
+(def sub-category-layer-grpups
+  (->> sub-category-layer-groups*
+       (map (fn [[t gname]]
+              [gname (-> (parse-long t)
+                         (types/by-sub-category)
+                         (->> (map :type-code)
+                              (select-keys type-code->view-names)
+                              vals
+                              (mapcat identity)))]))
+       (into {})))
+
+(def all-sites-layer-group
+  {"lipas_kaikki_kohteet"
+   ["lipas_kaikki_pisteet"
+    "lipas_kaikki_reitit"
+    "lipas_kaikki_alueet"]})
+
+(defn rebuild-all-legacy-layer-groups
+  []
+  (log/info "Rebuilding all layer groups...")
+
+  (log/info "Rebuilding layer groups for main- and sub-categories...")
+  (doseq [[group-name layers] (merge main-category-layer-grpups
+                                     sub-category-layer-grpups
+                                     all-sites-layer-group)]
+
+
+    (log/info "Deleting layer group" group-name)
+    (try
+      (http/delete (str (:root-url geoserver-config)
+                        "/workspaces/"
+                        (:workspace-name geoserver-config)
+                        "/layergroups/"
+                        group-name)
+                   (:default-http-opts geoserver-config))
+      ;; Geoserver doesn't return 404 if not found, but instead
+      ;; explodes with a 500 and stack trace...
+      (catch Exception _ex (log/info "Ignoring error during delete")))
+
+    (log/info "Creating layer group" group-name)
+    (http/post (str (:root-url geoserver-config)
+                    "/workspaces/"
+                    (:workspace-name geoserver-config)
+                    "/layergroups")
+               (merge (:default-http-opts geoserver-config)
+                      {:content-type "application/json"
+                       :as           :raw
+                       :body         (json/generate-string
+                                      {:layerGroup
+                                       {:name      group-name
+                                        :mode      "SINGLE"
+                                        :workspace {:name (:workspace-name geoserver-config)}
+                                        :bounds    {:minx 50000.0
+                                                    :maxx 760000.0
+                                                    :miny 6600000.0
+                                                    :maxy 7800000.0
+                                                    :crs  "EPSG:3067"}
+                                        :publishables
+                                        {:published (for [layer layers]
+                                                      {"@type" "layer"
+                                                       :name   (str "lipas:" layer)})}}})})))
+
+  (log/info "All layergroups rebuilt!"))
+
+(defn migrate-fron-legacy-db
+  [db]
+  (drop-legacy-mat-views! db)
+  (create-legacy-mat-views! db)
+  (rebuild-all-legacy-layers)
+  (rebuild-all-legacy-layer-groups))
+
+;;; Main entrypoint ;;;
+
+(defn -main [& _]
+  (let [system (system/start-system! (select-keys config/system-config [:lipas/db]))
+        db     (:lipas/db system)]
+    (refresh-all! db)
+    (system/stop-system! system)
+    (shutdown-agents)
+    (System/exit 0)))
 
 (comment
+
+  (migrate-fron-legacy-db (user/db))
+
+  (get-layer "lipas_1170_pyorailurata")
+  (delete-layer "lipas_1170_pyorailurata_v2")
+  (ex-data *e)
+  (publish-layer "lipas_1170_pyorailurata" "lipas_1170_pyorailurata_v2" "Point")
+  *1
+
+  (http/delete (str (:root-url geoserver-config)
+                 "/workspaces/"
+                 (:workspace-name geoserver-config)
+                   "/layergroups/"
+                   "lipas_4800_ampumaurheilupaikat")
+                 (:default-http-opts geoserver-config))
+
+  (rebuild-all-legacy-layer-groups)
+
+  (println (json/generate-string
+    {:layerGroup {:name "lipas_4800_ampumaurheilupaikat", :mode "SINGLE", :workspace "lipas", :bounds {:minx 50000.0, :maxx 760000.0, :miny 6600000.0, :maxy 7800000.0, :crs "EPSG:3067"}, :publishables {:published '({:type "layer", :name "lipas:lipas_4830_jousiammuntarata"} {:type "layer", :name "lipas:lipas_4840_jousiammuntamaastorata"} {:type "layer", :name "lipas:lipas_4820_ampumaurheilukeskus"} {:type "layer", :name "lipas:lipas_4810_ampumarata"})}}}))
+
   (list-featuretypes)
 
   (require '[lipas.backend.config :as config])
   (require '[cheshire.core :as json])
   (require '[clj-http.client :as http])
-  (drop-legacy-mat-views! (user/db))
-  (create-legacy-mat-views! (user/db))
+  (do
+    (drop-legacy-mat-views! (user/db))
+    (create-legacy-mat-views! (user/db)))
 
   (refresh-all! (user/db))
 
@@ -2221,8 +2659,6 @@
 
   (set/map-invert legacy-handle->legacy-prop)
 
-  #_(update-)
-
   (def all-sites (atom []))
   (doseq [type-code (keys types/all)
           site      (core/get-sports-sites-by-type-code (user/db) type-code)]
@@ -2266,5 +2702,7 @@
         response (http/get url (merge (:default-http-opts geoserver-config)
                                       {:basic-auth ["GEOSERVER_ADMIN_USER" ""]}))]
     (get-in response [:body :styles :style]))
+
+  (get-layer "lipas_1170_pyorailurata")
 
   )

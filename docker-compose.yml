@@ -251,6 +251,13 @@ services:
       - osrm-bicycle
       - osrm-car
 
+  backend-refresh-wfs:
+    extends:
+      service: backend-base
+    entrypoint: lein run -m lipas.wfs.core
+    links:
+      - postgres
+
   integrations:
     extends:
       service: backend-base
