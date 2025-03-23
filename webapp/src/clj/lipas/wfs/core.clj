@@ -2279,7 +2279,7 @@
 ;;; Geoserver Layer management ;;;
 
 (def geoserver-config
-  {:root-url #_"https://lipas.fi/geoserver/rest" "http://localhost:8888/geoserver/rest"
+  {:root-url "https://lipas.fi/geoserver/rest"
    :workspace-name "lipas"
    :datastore-name "lipas-wfs-v2"
    :default-http-opts
