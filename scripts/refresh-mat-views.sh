@@ -2,6 +2,8 @@
 
 set -e
 
+# Meant to be run from cron
+
 cd /var/lipas
 source .env.sh
-cat /var/lipas/scripts/refresh-mat-views.sql | /usr/bin/docker compose exec -T postgres psql -U postgres -d "lipas-legacy"
+docker compose run --rm backend-refresh-wfs
