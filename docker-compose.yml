@@ -155,6 +155,7 @@ services:
       PTV_API_PASSWORD:
       PTV_ENV:
       OPEN_AI_API_KEY:
+      ENVIRONMENT:
       LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
@@ -249,6 +250,13 @@ services:
       - osrm-foot
       - osrm-bicycle
       - osrm-car
+
+  backend-refresh-wfs:
+    extends:
+      service: backend-base
+    entrypoint: lein run -m lipas.wfs.core
+    links:
+      - postgres
 
   integrations:
     extends:
@@ -406,7 +414,7 @@ services:
       - "./legacy-api-worker.jar:/worker.jar:z"
 
   geoserver:
-    image: kartoza/geoserver:2.21.1
+    image: docker.osgeo.org/geoserver:2.26.2
     logging:
       driver: "gelf"
       options:
