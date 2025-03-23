@@ -407,7 +407,7 @@ services:
       - "./legacy-api-worker.jar:/worker.jar:z"
 
   geoserver:
-    image: kartoza/geoserver:2.21.1
+    image: docker.osgeo.org/geoserver:2.26.2
     logging:
       driver: "gelf"
       options:
