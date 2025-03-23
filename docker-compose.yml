@@ -155,6 +155,8 @@ services:
       PTV_API_PASSWORD:
       PTV_ENV:
       OPEN_AI_API_KEY:
+      GEOSERVER_ADMIN_PASSWORD:
+      GEOSERVER_ADMIN_USER:
       ENVIRONMENT:
       LEIN_SILENT: 'true'
     volumes:
