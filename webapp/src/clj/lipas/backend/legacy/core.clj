@@ -176,12 +176,14 @@
   "Fetches list of sports-places from ElasticSearch backend."
   [client locale params fields]
   (let [data (:body (fetch-sports-places* client params))
-         places (->> (map :_source (-> data :hits :hits)))
-         fields (conj fields :sportsPlaceId)]
-     {:partial? (more? data (:limit params) (:offset params))
-      :total (-> data :hits :total :value)
-      :results (map (comp only-non-nil-recur
-                          (partial filter-and-format locale fields)) places)}))
+        places (->> (map :_source (-> data :hits :hits)))
+        fields (conj fields :sportsPlaceId)
+        format-fn (fn [place]
+                    (let [formatted (format-sports-place place locale)]
+                      (filter-and-format locale fields formatted)))]
+    {:partial? (more? data (:limit params) (:offset params))
+     :total (-> data :hits :total :value)
+     :results (map (comp only-non-nil-recur format-fn) places)}))
 
 
 (defn last-page
