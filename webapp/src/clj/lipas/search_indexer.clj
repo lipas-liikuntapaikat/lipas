@@ -7,6 +7,7 @@
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
+   [lipas.backend.legacy.core :as legacy]
    [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
@@ -55,19 +56,19 @@
    (let [type-code (first types)]
      (log/info "Starting to re-index type" type-code)
      (if type-code
-       (->> type-code
-            (core/get-sports-sites-by-type-code db)
+       (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
             (map #(-> (transform/->old-lipas-sports-site %)
                       (assoc :sportsPlaceId (:lipas-id %))))
             (search/->bulk idx-name :sportsPlaceId)
             (search/bulk-index! client)
             (wait-one)
             (conj results)
-            (recur db client idx-name (rest types)))
+            (recur db client idx-name (rest types))
+            )
        (print-results results)))))
 
 (comment
-
+  (-main "--legacy")
   )
 
 (defn index-search-sports-sites!
@@ -237,6 +238,7 @@
   (-main "--legacy")
   (-main)
   (-main "--analytics")
+  (-main "--legacy")
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
   (def db (:db system))
@@ -263,4 +265,5 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"
-                           :search-string "kissa*"})))
+                           :search-string "kissa*"}))
+  )

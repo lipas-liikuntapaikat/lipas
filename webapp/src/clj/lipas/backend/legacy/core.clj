@@ -1,9 +1,10 @@
-(ns lipas.backend.legacy.legacy-codebase
-  (:require [clojure.set :as set]
-            [clojure.string :as string]
-            [qbits.spandex :as es]
-            [qbits.spandex.utils :as es-utils]
-            [ring.util.codec :as codec]))
+(ns lipas.backend.legacy.core
+  (:require
+   [clojure.string :as string]
+   [lipas.data.types :as types]
+   [qbits.spandex :as es]
+   [qbits.spandex.utils :as es-utils]
+   [ring.util.codec :as codec]))
 
 ;; This file contains mostly copy & pasted code from old API codebase, beware!
 
@@ -208,32 +209,112 @@
    :body    (vec body)})
 
 
-(comment
-  ;; tällä pitäisi lokalisoida sports placet?
-  (defn format-sports-place
-    ([sports-place locale]
-     (format-sports-place sports-place locale format-location format-props-db))
-    ([sports-place locale location-format-fn props-format-fn]
-     {:sportsPlaceId    (:id sports-place)
-      :name             (or (not-blank ((locale-key :name locale) sports-place))
-                            (:name-fi sports-place))
-      :marketingName    (:marketing-name sports-place)
-      :type             {:typeCode (:type-code sports-place)
-                         :name     ((locale-key :type-name locale) sports-place)}
-      :schoolUse        (:school-sports-place sports-place)
-      :freeUse          (:free-use sports-place)
-      :constructionYear (parse-year (:construction-year sports-place))
-      :renovationYears  (not-empty (read-string (:renovation-years sports-place)))
-      :lastModified     (-> sports-place :last-modified parse-date)
-      ;;:accessible (:accessible sports-place)
-      :owner            ((locale-key :owner-name locale) sports-place)
-      :admin            ((locale-key :admin-name locale) sports-place)
-      :phoneNumber      (:phone-number sports-place)
-      :reservationsLink (:reservations-link sports-place)
-      :www              (:www sports-place)
-      :email            (:email sports-place)
-      :location         (when-let [location (:location sports-place)]
-                          (apply location-format-fn [location locale]))
-      :properties       (apply props-format-fn [(:props sports-place) locale])}))
 
-      )
+
+#_(defn format-location
+  [location locale]
+  (only-non-nil-recur
+   (array-map
+    :locationId (:location-id location)
+    :address (:address location)
+    :postalCode (:postal-code location)
+    :postalOffice (:postal-office location)
+    :city {:name     ((locale-key :city-name locale) location)
+           :cityCode (:city-code location)}
+    :neighborhood ((locale-key :neighborhood locale) location)
+    :geometries (when-let [geoms (:geoms location)] (to-geojson geoms))
+    :coordinates {:wgs84   (parse-coords (:start-point-wgs84 location))
+                  :tm35fin (parse-coords (:start-point-tm35fin location))}
+    :sportsPlaces (read-string-safe (:sports-places location)))))
+
+(defn locale-key
+  [a-key locale]
+  (if (= :all locale)
+    (fn [sp] {:fi ((locale-key a-key :fi) sp)
+              :se ((locale-key a-key :se) sp)
+              :en ((locale-key a-key :en) sp)})
+    (keyword (str (name a-key) "-" (name locale)))))
+
+(defn format-sports-place
+  ([sports-place locale]
+   (format-sports-place sports-place locale #_#_format-location format-props-db))
+  ([sports-place locale location-format-fn props-format-fn]
+   {:sportsPlaceId    (:id sports-place)
+    :name             (or (not-blank ((locale-key :name locale) sports-place))
+                          (:name-fi sports-place))
+    :marketingName    (:marketing-name sports-place)
+    :type             {:typeCode (:type-code sports-place)
+                       :name     ((locale-key :type-name locale) sports-place)}
+    :schoolUse        (:school-sports-place sports-place)
+    :freeUse          (:free-use sports-place)
+    #_#_:constructionYear (parse-year (:construction-year sports-place))
+    :renovationYears  (not-empty (read-string (:renovation-years sports-place)))
+    #_#_:lastModified     (-> sports-place :last-modified parse-date)
+    ;;:accessible (:accessible sports-place)
+    :owner            ((locale-key :owner-name locale) sports-place)
+    :admin            ((locale-key :admin-name locale) sports-place)
+    :phoneNumber      (:phone-number sports-place)
+    :reservationsLink (:reservations-link sports-place)
+    :www              (:www sports-place)
+    :email            (:email sports-place)
+    :location         (when-let [location (:location sports-place)]
+                        (apply location-format-fn [location locale]))
+    :properties       (apply props-format-fn [(:props sports-place) locale])}))
+
+(comment
+  (lipas.search-indexer/-main "--legacy")
+
+  (def sp {:properties {:fieldLengthM 50 :iceRinksCount 1 :areaM2 1250 :fieldWidthM 25}
+           :schoolUse true
+           :admin "city-technical-services"
+           :www "www.ylitornio.fi"
+           :name "Kaulirannan koulun kaukalo suomeksi"
+           :type {:typeCode 1530}
+           :lastModified "2025-03-03 21:50:21.778"
+           :nameSe "Kaulirannan koulun kaukalo swedish"
+           :location
+           {:city {:cityCode 976}
+            :address "Rantakyläntie 575"
+            :geometries
+            {:type "FeatureCollection"
+             :features [{:id "f2112032-191b-426c-9d10-e69bca48588b"
+                         :type "Feature"
+                         :geometry {:type "Point"
+                                    :coordinates [23.6766294258769 66.4580931812035]}
+                         :properties {:pointId 123}}]}
+            :postalCode "95635"
+            :postalOffice "Ylitornio"}
+           :owner "city"})
+
+  (:school-sports-place sp))
+
+#_(defn format-sports-place
+  [sports-place]
+   (let
+     [formatted-sports-place
+      {:sportsPlaceId (:id sports-place)
+       :name             (or (:name-localized sports-place)
+                             (:name sports-place))}
+      #_{:sportsPlaceId    (:id sports-place)
+         :name             (or (:name-localized sports-place)
+                               (:name sports-place))
+         :marketingName    (:marketing-name sports-place)
+         :type             (let [typeCode (-> sports-place :type :type-code)]
+                             {:typeCode typeCode
+                              :name (-> types/all typeCode :name)})
+         :schoolUse        true #_(:school-sports-place sports-place)
+         :freeUse          true #_(:free-use sports-place)
+         :constructionYear 1999 ;; (parse-year (:construction-year sports-place))
+         :renovationYears  1999 ;; (not-empty (read-string (:renovation-years sports-place)))
+         :lastModified     (-> sports-place :event-date #_parse-date)
+             ;;:accessible (:accessible sports-place)
+         :owner            (:owner sports-place) ;;((locale-key :owner-name locale) sports-place)
+         :admin            (:admin sports-place) ;;((locale-key :admin-name locale) sports-place)
+         #_#_#_#_#_#_#_#_#_#_#_#_:phoneNumber      (:phone-number sports-place)
+                             :reservationsLink (:reservations-link sports-place)
+                         :www              (:www sports-place)
+                     :email            (:email sports-place)
+                 :location         (when-let [location (:location sports-place)]
+                                     (apply location-format-fn [location locale]))
+             :properties       (apply props-format-fn [(:props sports-place) locale])}]
+     formatted-sports-place))
