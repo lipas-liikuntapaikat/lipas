@@ -1,7 +1,7 @@
 (ns lipas.backend.api.v1
   (:require
    [lipas.backend.legacy.api :as legacy-api]
-   [lipas.backend.legacy.legacy-codebase :as legacy-codebase]
+   [lipas.backend.legacy.core :as legacy]
    [lipas.schema.core-legacy :as legacy-schema]
    [lipas.schema.sports-sites.types :as types-schema]
    [reitit.coercion.malli :as malli]
@@ -78,12 +78,12 @@ Access to the hierarchical type classification system used for categorizing spor
                            (string? fields-value) [fields-value]
                            :else fields-value))
                 locale (or (:lang qp) :fi)
-                resp   (legacy-codebase/fetch-sports-places (:client search) locale params fields)
+                resp   (legacy/fetch-sports-places (:client search) locale params fields)
                 {:keys [partial? total results]} resp]
             (if partial?
               (let [path  "/v1/sports-places"
-                    links (legacy-codebase/create-page-links path params (:offset params) (:limit params) total)]
-                (legacy-codebase/linked-partial-content results links))
+                    links (legacy/create-page-links path params (:offset params) (:limit params) total)]
+                (legacy/linked-partial-content results links))
               {:status 200
                :body (doall results)})))
         :responses {200 {:body :any}}}}]
