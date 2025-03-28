@@ -28,6 +28,7 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.integration.old-lipas.sports-site :as legacy-utils]
+            [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))
 
@@ -293,6 +294,14 @@
     :tyyppi_nimi_fi        (comp :fi :name types/all :type-code :type :site)
     :tyyppi_nimi_se        (comp :se :name types/all :type-code :type :site)
     :tyyppi_nimi_en        (comp :en :name types/all :type-code :type :site)
+    :tyyppikoodi_paaryhma  (fn [{:keys [site]}]
+                             (let [type-code (-> site :type :type-code)
+                                   main-cat  (get-in types/all [type-code :main-category])]
+                                    (get-in types/main-categories [main-cat :name :fi])))
+    :tyyppikoodi_alaryhma  (fn [{:keys [site]}]
+                             (let [type-code (-> site :type :type-code)
+                                   sub-cat   (get-in types/all [type-code :sub-category])]
+                                    (get-in types/sub-categories [sub-cat :name :fi])))
     :muokattu_viimeksi     (comp ->helsinki-time :event-date :site)
     :lisatieto_fi          (comp :comment :site)
     :sijainti_id           (comp :lipas-id :site)
@@ -345,12 +354,17 @@
     :sahkoposti
     :the_geom
     :tyyppi_nimi_fi
-    :tyyppi_nimi_se ;; Only present in coll-views!
-    :tyyppi_nimi_en ;; Only present in coll-views!
     :tyyppikoodi
     :vapaa_kaytto
     :www
     :yllapitaja})
+
+(def common-coll-view-fields
+  #{:sijainti_id
+    :tyyppi_nimi_se
+    :tyyppi_nimi_en
+    :tyyppikoodi_paaryhma
+    :tyyppikoodi_alaryhma})
 
 (def type-code->legacy-fields
   "Excluding common-fields"
@@ -1800,7 +1814,9 @@
 (defn ->wfs-row [sports-site idx feature]
   (let [type-code (-> sports-site :type :type-code)
         #_#_geom-type (-> type-code types/all :geometry-type)
-        fields    (set/union common-fields (get type-code->legacy-fields type-code))]
+        fields    (set/union common-fields
+                             common-coll-view-fields
+                             (get type-code->legacy-fields type-code))]
     [(:status sports-site)
      (->>
       (for [field fields]
@@ -1990,6 +2006,44 @@
     (contains? bool-fields field) :boolean
     :else :text))
 
+(def field-order
+  [:id
+   :nimi_fi
+   :nimi_se
+   :nimi_en
+   :sahkoposti
+   :www
+   :puhelinnumero
+   :koulun_liikuntapaikka
+   :vapaa_kaytto
+   :rakennusvuosi
+   :peruskorjausvuodet
+   :omistaja
+   :yllapitaja
+   :katuosoite
+   :postinumero
+   :postitoimipaikka
+   :kuntanumero
+   :kunta_nimi_fi
+   :kuntanumero
+   :kuntaosa
+   :tyyppikoodi
+   :tyyppi_nimi_fi
+   #_:tyyppi_nimi_se
+   #_:tyyppi_nimi_en
+   #_:sijainti_id
+   :muokattu_viimeksi
+   #_:lisatieto_fi
+   :the_geom
+   :alue_id
+   :reitti_id])
+
+(def field-sorter
+  "Trickery to preserve similar ordering to legacy views."
+  (let [lookup (->> field-order reverse (map-indexed (fn [idx k] [k idx])) (into {}))]
+    (fn [k]
+      (get lookup k -1))))
+
 (def type-layer-mat-views
   (->>
    (for [[type-code view-names] type-code->view-names
@@ -2000,12 +2054,10 @@
                 [[(if (str/ends-with? view-name "_3d")
                     [:cast [:st_force_3d :the_geom] (resolve-geom-field-type type-code :z)]
                     [:cast [:st_force_2d :the_geom] (resolve-geom-field-type type-code nil)]) :the_geom]]
-                (for [field (set/union
-                             ;; Drop :tyyppi_nimi_se
-                             ;; and :tyyppi_nimi_en since they're only
-                             ;; present in coll-views (legacy inconsistency)
-                             (disj common-fields :tyyppi_nimi_se :tyyppi_nimi_en)
-                             (type-code->legacy-fields type-code))
+                (for [field (sort-by field-sorter utils/reverse-cmp
+                                     (set/union
+                                      common-fields
+                                      (type-code->legacy-fields type-code)))
                       :when (not= :the_geom field)]
                   (let [field-type (resolve-field-type field)]
                     [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
@@ -2025,10 +2077,10 @@
      :select (for [[k data-type] fields]
                (case k
                  :the_geom [[[:cast [:st_force_2d k]
-                                (case geom-type
-                                  "Point"      (keyword "geometry(Point,3067)")
-                                  "LineString" (keyword "geometry(LineString,3067)")
-                                  "Polygon"    (keyword "geometry(Polygon,3067)"))]] k]
+                              (case geom-type
+                                "Point"      (keyword "geometry(Point,3067)")
+                                "LineString" (keyword "geometry(LineString,3067)")
+                                "Polygon"    (keyword "geometry(Polygon,3067)"))]] k]
                  :x [[:st_x [:st_centroid :the_geom]] k]
                  :y [[:st_y [:st_centroid :the_geom]] k]
 
@@ -2068,130 +2120,135 @@
 (def coll-layer-mat-views
   (->>
    {:lipas_kaikki_alueet
-    {:id                   "integer"
-     :tyyppikoodi          "integer"
-     :tyyppikoodi_alaryhma "character varying(50)"
-     :tyyppikoodi_paaryhma "character varying(50)"
-     :sijainti_id          "integer"
-     :alue_id              "integer"
-     :katuosoite           "character varying(100)"
-     :postinumero          "character varying(50)"
-     :postitoimipaikka     "character varying(50)"
-     :kuntanumero          "integer"
-     :kunta_nimi_fi        "character varying(100)"
-     :tyyppi_nimi_fi       "character varying(100)"
-     :tyyppi_nimi_se       "character varying(100)"
-     :tyyppi_nimi_en       "character varying(100)"
-     :nimi_fi              "character varying(256)"
-     :nimi_se              "character varying(256)"
-     :www                  "text"
-     :sahkoposti           "character varying(100)"
-     :puhelinnumero        "character varying(50)"
-     :omistaja             "character varying(100)"
-     :yllapitaja           "character varying(100)"
-     :lisatieto_fi         "text"
-     :osa_alue_json        "text"
-     :the_geom             "geometry(Polygon,3067)"
-     :x                    "double precision"
-     :y                    "double precision"}
+    [[:id "integer"]
+     [:tyyppikoodi "integer"]
+     [:tyyppikoodi_alaryhma "character varying(50)"]
+     [:tyyppikoodi_paaryhma "character varying(50)"]
+     [:sijainti_id "integer"]
+     [:alue_id "integer"]
+     [:katuosoite "character varying(100)"]
+     [:postinumero "character varying(50)"]
+     [:postitoimipaikka "character varying(50)"]
+     [:kuntanumero "integer"]
+     [:kunta_nimi_fi "character varying(100)"]
+     [:tyyppi_nimi_fi "character varying(100)"]
+     [:tyyppi_nimi_se "character varying(100)"]
+     [:tyyppi_nimi_en "character varying(100)"]
+     [:nimi_fi "character varying(256)"]
+     [:nimi_se "character varying(256)"]
+     [:www "text"]
+     [:sahkoposti "character varying(100)"]
+     [:puhelinnumero "character varying(50)"]
+     [:omistaja "character varying(100)"]
+     [:yllapitaja "character varying(100)"]
+     [:lisatieto_fi "text"]
+     [:osa_alue_json "text"]
+     [:the_geom "geometry(Polygon,3067)"]
+     [:x "double precision"]
+     [:y "double precision"]]
+
 
     :lipas_kaikki_reitit
-    {:id "integer"
-     :tyyppikoodi "integer"
-     :tyyppikoodi_alaryhma "character varying(50)"
-     :tyyppikoodi_paaryhma "character varying(50)"
-     :sijainti_id "integer"
-     :reitisto_id "integer"
-     :katuosoite "character varying(100)"
-     :postinumero "character varying(50)"
-     :postitoimipaikka "character varying(50)"
-     :kuntanumero "integer"
-     :kunta_nimi_fi "character varying(100)"
-     :lisatieto_fi "text"
-     :reitti_id "integer"
-     :tyyppi_nimi_fi "character varying(100)"
-     :tyyppi_nimi_se "character varying(100)"
-     :tyyppi_nimi_en "character varying(100)"
-     :nimi_fi "character varying(256)"
-     :nimi_se "character varying(256)"
-     :www "text"
-     :sahkoposti "character varying(100)"
-     :puhelinnumero "character varying(50)"
-     :omistaja "character varying(100)"
-     :yllapitaja "character varying(100)"
-     :reitti_nimi_fi "character varying(100)"
-     :reitti_nimi_se "character varying(100)"
-     :reittiosa_json "text"
-     :the_geom "geometry(LineString,3067)"
-     :x "double precision"
-     :y "double precision"}
+    [[:id "integer"]
+     [:tyyppikoodi "integer"]
+     [:tyyppikoodi_alaryhma "character varying(50)"]
+     [:tyyppikoodi_paaryhma "character varying(50)"]
+     [:sijainti_id "integer"]
+     [:reitisto_id "integer"]
+     [:katuosoite "character varying(100)"]
+     [:postinumero "character varying(50)"]
+     [:postitoimipaikka "character varying(50)"]
+     [:kuntanumero "integer"]
+     [:kunta_nimi_fi "character varying(100)"]
+     [:lisatieto_fi "text"]
+     [:reitti_id "integer"]
+     [:tyyppi_nimi_fi "character varying(100)"]
+     [:tyyppi_nimi_se "character varying(100)"]
+     [:tyyppi_nimi_en "character varying(100)"]
+     [:nimi_fi "character varying(256)"]
+     [:nimi_se "character varying(256)"]
+     [:www "text"]
+     [:sahkoposti "character varying(100)"]
+     [:puhelinnumero "character varying(50)"]
+     [:omistaja "character varying(100)"]
+     [:yllapitaja "character varying(100)"]
+     [:reitti_nimi_fi "character varying(100)"]
+     [:reitti_nimi_se "character varying(100)"]
+     [:reittiosa_json "text"]
+     [:the_geom "geometry(LineString,3067)"]
+     [:x "double precision"]
+     [:y "double precision"]]
+
 
     :lipas_kaikki_pisteet
-    {:id "integer"
-     :tyyppikoodi "integer"
-     :tyyppi_nimi_fi "character varying(100)"
-     :tyyppi_nimi_se "character varying(100)"
-     :tyyppi_nimi_en "character varying(100)"
-     :nimi_fi "character varying(256)"
-     :nimi_se "character varying(256)"
-     :sijainti_id "integer"
-     :www "text"
-     :sahkoposti "character varying(100)"
-     :puhelinnumero "character varying(50)"
-     :muokattu_viimeksi "timestamp without time zone"
-     :omistaja "character varying(100)"
-     :yllapitaja "character varying(100)"
-     :katuosoite "character varying(100)"
-     :postinumero "character varying(50)"
-     :postitoimipaikka "character varying(50)"
-     :kuntanumero "integer"
-     :kunta_nimi_fi "character varying(100)"
-     :lisatieto_fi "text"
-     :the_geom "geometry(Point,3067)"
-     :piste_json "text"
-     :x "double precision"
-     :y "double precision"}
+    [[:id "integer"]
+     [:tyyppikoodi "integer"]
+     [:tyyppi_nimi_fi "character varying(100)"]
+     [:tyyppi_nimi_se "character varying(100)"]
+     [:tyyppi_nimi_en "character varying(100)"]
+     [:nimi_fi "character varying(256)"]
+     [:nimi_se "character varying(256)"]
+     [:sijainti_id "integer"]
+     [:www "text"]
+     [:sahkoposti "character varying(100)"]
+     [:puhelinnumero "character varying(50)"]
+     [:muokattu_viimeksi "timestamp without time zone"]
+     [:omistaja "character varying(100)"]
+     [:yllapitaja "character varying(100)"]
+     [:katuosoite "character varying(100)"]
+     [:postinumero "character varying(50)"]
+     [:postitoimipaikka "character varying(50)"]
+     [:kuntanumero "integer"]
+     [:kunta_nimi_fi "character varying(100)"]
+     [:lisatieto_fi "text"]
+     [:the_geom "geometry(Point,3067)"]
+     [:piste_json "text"]
+     [:x "double precision"]
+     [:y "double precision"]]
+
 
     :retkikartta_alueet
-    {:id "integer"
-     :category_id "integer"
-     :name_fi "character varying(256)"
-     :name_se "character varying(256)"
-     :name_en "character varying(256)"
-     :ext_link "text"
-     :admin "character varying(100)"
-     :alue_id "integer"
-     :osa_alue_id "integer"
-     :geometry "geometry(Polygon,3067)"
-     :info_fi "text"}
+    [[:id "integer"]
+     [:category_id "integer"]
+     [:name_fi "character varying(256)"]
+     [:name_se "character varying(256)"]
+     [:name_en "character varying(256)"]
+     [:ext_link "text"]
+     [:admin "character varying(100)"]
+     [:alue_id "integer"]
+     [:osa_alue_id "integer"]
+     [:geometry "geometry(Polygon,3067)"]
+     [:info_fi "text"]]
+
 
     :retkikartta_reitit
-    {:id "integer"
-     :category_id "integer"
-     :name_fi "character varying(256)"
-     :name_se "character varying(256)"
-     :name_en "character varying(256)"
-     :ext_link "text"
-     :admin "character varying(100)"
-     :reitisto_id "integer"
-     :reitti_id "integer"
-     :reittiosa_id "integer"
-     :geometry "geometry(LineString,3067)"
-     :length "double precision"
-     :talvikaytto "boolean"
-     :kesakaytto "boolean"
-     :info_fi "text"}
+    [[:id "integer"]
+     [:category_id "integer"]
+     [:name_fi "character varying(256)"]
+     [:name_se "character varying(256)"]
+     [:name_en "character varying(256)"]
+     [:ext_link "text"]
+     [:admin "character varying(100)"]
+     [:reitisto_id "integer"]
+     [:reitti_id "integer"]
+     [:reittiosa_id "integer"]
+     [:geometry "geometry(LineString,3067)"]
+     [:length "double precision"]
+     [:talvikaytto "boolean"]
+     [:kesakaytto "boolean"]
+     [:info_fi "text"]]
+
 
     :retkikartta_pisteet
-    {:id "integer"
-     :category_id "integer"
-     :name_fi "character varying(256)"
-     :name_se "character varying(256)"
-     :name_en "character varying(256)"
-     :ext_link "text"
-     :admin "character varying(100)"
-     :geometry "geometry(Point,3067)"
-     :info_fi "text"}}
+    [[:id "integer"]
+     [:category_id "integer"]
+     [:name_fi "character varying(256)"]
+     [:name_se "character varying(256)"]
+     [:name_en "character varying(256)"]
+     [:ext_link "text"]
+     [:admin "character varying(100)"]
+     [:geometry "geometry(Point,3067)"]
+     [:info_fi "text"]]}
    (map (fn [[k m]] [(name k) (->coll-layer (name k) m)]))
    (into {})))
 
@@ -2279,7 +2336,7 @@
 ;;; Geoserver Layer management ;;;
 
 (def geoserver-config
-  {:root-url "https://lipas.fi/geoserver/rest"
+  {:root-url #_"https://lipas.fi/geoserver/rest" "http://localhost:8888/geoserver/rest"
    :workspace-name "lipas"
    :datastore-name "lipas-wfs-v2"
    :default-http-opts
