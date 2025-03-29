@@ -35,29 +35,49 @@
     [uix.core :as uix :refer [$ defui]]))
 
 (defui YoutubeIframe
-  [{:keys [url]}]
+  [{:keys [video-id title]}]
   ($ :iframe
      {:width             "560"
       :height            "315"
-      :src               url
-      :title             "YouTube video player"
+      :src               (str "https://www.youtube.com/embed/" video-id)
+      :title             (or title "YouTube video player")
       :frame-border      "0"
       :allow             "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
       :referrer-policy   "strict-origin-when-cross-origin"
       :allow-full-screen true}))
 
+(defui ContentBlock
+  [{:keys [block]}]
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)]
+    (case (:type block)
+      :text
+      ($ Typography (locale (:content block)))
+
+      :video
+      ($ YoutubeIframe {:video-id (:video-id block)
+                        :title (when (:title block) (locale (:title block)))})
+
+      :image
+      ($ :img {:src (:url block)
+               :alt (locale (:alt block))
+               :style #js{:maxWidth "100%"}})
+
+      ;; Default case - unknown block type
+      ($ Typography {:color "error"} (str "Unknown block type: " (:type block))))))
+
 (defui HelpContent
-  [{:keys [header text videos]}]
+  [{:keys [title blocks]}]
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)]
     ($ Stack {:direction "column" :spacing 2 :sx #js{:pl 4}}
-       ($ Typography {:variant :h6} (locale header))
-       ($ Typography (locale text))
+       ($ Typography {:variant :h6} (locale title))
 
-       ;; Videos container
+       ;; Content blocks container
        ($ Stack {:direction "column" :spacing 2}
-          (for [[idx url] (map-indexed vector videos)]
-            ($ YoutubeIframe {:key idx :url url}))))))
+          (for [block blocks]
+            ($ ContentBlock {:key (:block-id block)
+                             :block block}))))))
 
 (defui SummaryGrid
   [{:keys [pages on-page-select]}]
@@ -70,7 +90,10 @@
               :gutterBottom true}
              (tr :help/available-pages)))
 
-       (for [[k {:keys [title text]}] pages]
+       (for [[k {:keys [title blocks]}] pages]
+         ;; Find the first text block to display as summary
+         (let [summary-block (first (filter #(= :text (:type %)) blocks))
+               summary-text (when summary-block (:content summary-block))]
          ($ Grid {:item true :xs 12 :sm 6 :md 4 :key k}
             ($ Card {:sx #js{:height "100%"
                              :cursor "pointer"
@@ -97,7 +120,7 @@
                             :display "-webkit-box"
                             :-webkit-line-clamp 3
                             :-webkit-box-orient "vertical"}}
-                     (locale text)))))))))
+                     (locale summary-text))))))))))
 
 (defui HelpMenu
   [{:keys [pages selected-page on-page-select]}]
@@ -105,22 +128,23 @@
         locale (tr)]
     ($ Stack {:direction "column"}
        ($ List {:sx #js{:min-width "200px"}}
-          (interpose ($ Divider)
-                    (for [[k {:keys [title]}] pages]
-                      ($ ListItem
-                         {:key k
-                          :disablePadding true
-                          :component "a"
-                          :sx #js{:transition "border-color 0.2s"
-                                  :border "2px solid"
-                                  :borderColor (if (= selected-page k) "secondary.main" "transparent")
-                                  ":hover" #js{:borderColor "secondary.main"}}}
-                         ($ ListItemButton {:on-click #(on-page-select k)
-                                            :sx #js{:padding "8px 16px"}}
-                            (when (= selected-page k)
-                              ($ ListItemIcon
-                                 ($ ArrowForwadIosIcon {:color "secondary"})))
-                            ($ ListItemText {:primary (locale title)})))))))))
+          (for [[k {:keys [title]}] pages]
+            ($ :<> {:key k}
+               ($ Divider)
+               ($ ListItem
+                  {:key k
+                   :disablePadding true
+                   :component "a"
+                   :sx #js{:transition "border-color 0.2s"
+                           :border "2px solid"
+                           :borderColor (if (= selected-page k) "secondary.main" "transparent")
+                           ":hover" #js{:borderColor "secondary.main"}}}
+                  ($ ListItemButton {:on-click #(on-page-select k)
+                                     :sx #js{:padding "8px 16px"}}
+                     (when (= selected-page k)
+                       ($ ListItemIcon
+                          ($ ArrowForwadIosIcon {:color "secondary"})))
+                     ($ ListItemText {:primary (locale title)})))))))))
 
 (defui HelpSection
   [{:keys [pages] :as _section}]
