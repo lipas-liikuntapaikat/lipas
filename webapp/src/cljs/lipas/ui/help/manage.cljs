@@ -6,6 +6,7 @@
    ["@mui/icons-material/Delete$default" :as DeleteIcon]
    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
    ["@mui/icons-material/Image$default" :as ImageIcon]
+   ["@mui/icons-material/Preview$default" :as PreviewIcon]
    ["@mui/icons-material/Save$default" :as SaveIcon]
    ["@mui/icons-material/TextFields$default" :as TextIcon]
    ["@mui/icons-material/VideoLibrary$default" :as VideoIcon]
@@ -26,6 +27,7 @@
    ["@mui/material/MenuItem$default" :as MenuItem]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Select$default" :as Select]
+   ["@mui/material/Stack$default" :as Stack]
    ["@mui/material/Tab$default" :as Tab]
    ["@mui/material/Tabs$default" :as Tabs]
    ["@mui/material/TextField$default" :as TextField]
@@ -284,34 +286,56 @@
       :rows (or rows 4)}))
 
 (defui section-editor [{:keys [section-key section]}]
-  (let [[lang set-lang!] (use-state :fi)]
-    ($ Box {:sx #js{:p 2}}
-       ($ Paper {:sx #js{:p 2 :mb 2}}
-          ($ Typography {:variant "h6" :gutterBottom true}
-             "Section Settings")
+  (let [[lang set-lang!] (use-state :fi)
+        [expanded set-expanded!] (use-state false)]
+    ($ Box {:sx #js{:mt 2}}
+       ($ Paper {:sx #js{:p 2 :mb 2
+                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                        :transition "box-shadow 0.3s ease"}}
+          ($ Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
+             ($ Typography {:variant "body2" :gutterBottom false}
+                "SECTION SETTINGS")
+             ($ IconButton {:onClick #(set-expanded! (not expanded))
+                          :size "small"
+                          :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                :transition "transform 0.3s"}}
+                ($ ExpandMoreIcon {:fontSize "small"})))
 
-          ($ language-tabs {:current-lang lang :on-change set-lang!})
+          ($ Collapse {:in expanded :timeout "auto"}
+             ($ Box {:sx #js{:mt 2}}
+                ($ language-tabs {:current-lang lang :on-change set-lang!})
 
-          ($ localized-text-field
-             {:label "Section Title"
-              :value (:title section)
-              :lang lang
-              :on-change #(rf/dispatch [::update-section-title section-key %1 %2])})))))
+                ($ localized-text-field
+                   {:label "Section Title"
+                    :value (:title section)
+                    :lang lang
+                    :on-change #(rf/dispatch [::update-section-title section-key %1 %2])})))))))
 
 (defui page-editor [{:keys [section-key page-key page]}]
-  (let [[lang set-lang!] (use-state :fi)]
-    ($ Box {:sx #js{:p 2}}
-       ($ Paper {:sx #js{:p 2 :mb 2}}
-          ($ Typography {:variant "h6" :gutterBottom true}
-             "Page Settings")
+  (let [[lang set-lang!] (use-state :fi)
+        [expanded set-expanded!] (use-state false)]
+    ($ Box {:sx #js{:mt 2}}
+       ($ Paper {:sx #js{:p 2 :mb 2
+                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                        :transition "box-shadow 0.3s ease"}}
+          ($ Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
+             ($ Typography {:variant "body2" :gutterBottom false}
+                "PAGE SETTINGS")
+             ($ IconButton {:onClick #(set-expanded! (not expanded))
+                          :size "small"
+                          :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                :transition "transform 0.3s"}}
+                ($ ExpandMoreIcon {:fontSize "small"})))
 
-          ($ language-tabs {:current-lang lang :on-change set-lang!})
+          ($ Collapse {:in expanded :timeout "auto"}
+             ($ Box {:sx #js{:mt 2}}
+                ($ language-tabs {:current-lang lang :on-change set-lang!})
 
-          ($ localized-text-field
-             {:label "Page Title"
-              :value (:title page)
-              :lang lang
-              :on-change #(rf/dispatch [::update-page-title section-key page-key %1 %2])})))))
+                ($ localized-text-field
+                   {:label "Page Title"
+                    :value (:title page)
+                    :lang lang
+                    :on-change #(rf/dispatch [::update-page-title section-key page-key %1 %2])})))))))
 
 (defui text-block-editor [{:keys [section-key page-key block-idx blocks-count block]}]
   (let [[lang set-lang!] (use-state :fi)
@@ -578,7 +602,7 @@
 (defui blocks-editor [{:keys [section-key page-key blocks]}]
   ($ Box {}
      ($ Typography {:variant "h6" :gutterBottom true :mt 2}
-        "Content Blocks")
+        "Page Content Blocks")
 
      (map-indexed
       (fn [idx block]
@@ -594,9 +618,12 @@
      ($ add-block-controls {:section-key section-key :page-key page-key})))
 
 (defui section-selector [{:keys [sections selected-section on-select]}]
-  ($ Box {:sx #js{:display "flex" :alignItems "flex-start" :gap 1 :mb 2}}
+  ($ Stack {:spacing 1}
+
+     ($ Typography {:variant "h6"} "Select Section")
+
      ($ FormControl {:fullWidth true}
-        ($ InputLabel {:id "section-select-label"} "Section")
+        #_($ InputLabel {:id "section-select-label"} "Select Section")
         ($ Select {:labelId "section-select-label"
                   :value (or selected-section "")
                   :onChange #(on-select (keyword (.. % -target -value)))
@@ -606,78 +633,92 @@
                      (get-in v [:title :fi] (name k))))
                 sections)))
 
-     ;; Add Section button
-     ($ Button
-        {:variant "contained"
-         :color "primary"
-         :size "small"
-         :startIcon ($ AddIcon {})
-         :onClick #(rf/dispatch [::add-section])
-         :sx #js{:mt 1}}
-        "Add Section")
+     ($ Stack {:direction "row" :spacing 1}
+        ;; Add Section button
+        ($ Button
+           {:variant "contained"
+            :color "primary"
+            :size "small"
+            :startIcon ($ AddIcon {})
+            :onClick #(rf/dispatch [::add-section])
+            :sx #js{:mt 0}}
+           "Add Section")
 
-     ;; Delete Section button (disabled if no section is selected)
-     ($ Button
-        {:variant "outlined"
-         :color "error"
-         :size "small"
-         :disabled (nil? selected-section)
-         :startIcon ($ DeleteIcon {})
-         :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-key selected-section}])
-         :sx #js{:mt 1}}
-        "Delete")))
+        ;; Delete Section button (disabled if no section is selected)
+        ($ Button
+           {:variant "outlined"
+            :color "error"
+            :size "small"
+            :disabled (nil? selected-section)
+            :startIcon ($ DeleteIcon {})
+            :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-key selected-section}])
+            :sx #js{:mt 0}}
+           "Delete Section"))))
 
 (defui page-selector [{:keys [section-key pages selected-page on-select]}]
-  ($ Box {:sx #js{:display "flex" :alignItems "flex-start" :gap 1 :mb 2}}
+  ($ Stack {:spacing 2}
+
+     ($ Typography {:variant "h6"} "Select Page")
+
      ($ FormControl {:fullWidth true}
-        ($ InputLabel {:id "page-select-label"} "Page")
+        #_($ InputLabel {:id "page-select-label"} "Select Page")
         ($ Select {:labelId "page-select-label"
-                  :value (or (when selected-page (name selected-page)) "")
-                  :onChange #(on-select (keyword (.. % -target -value)))
-                  :displayEmpty true}
+                   :value (or (when selected-page (name selected-page)) "")
+                   :onChange #(on-select (keyword (.. % -target -value)))
+                   :displayEmpty true}
            (map (fn [[k v]]
                   ($ MenuItem {:key (name k) :value (name k)}
                      (get-in v [:title :fi] (name k))))
                 pages)))
 
-     ;; Add Page button
-     ($ Button
-        {:variant "contained"
-         :color "primary"
-         :size "small"
-         :startIcon ($ AddIcon {})
-         :onClick #(rf/dispatch [::add-page section-key])
-         :sx #js{:mt 1}}
-        "Add Page")
+     ($ Stack {:direction "row" :spacing 1}
 
-     ;; Delete Page button (disabled if no page is selected)
-     ($ Button
-        {:variant "outlined"
-         :color "error"
-         :size "small"
-         :disabled (nil? selected-page)
-         :startIcon ($ DeleteIcon {})
-         :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-key section-key
-                                                                    :page-key selected-page}])
-         :sx #js{:mt 1}}
-        "Delete")))
+        ;; Add Page button
+        ($ Button
+           {:variant "contained"
+            :color "primary"
+            :size "small"
+            :startIcon ($ AddIcon {})
+            :onClick #(rf/dispatch [::add-page section-key])
+            :sx #js{:mt 0}}
+           "Add Page")
+
+        ;; Delete Page button (disabled if no page is selected)
+        ($ Button
+           {:variant "outlined"
+            :color "error"
+            :size "small"
+            :disabled (nil? selected-page)
+            :startIcon ($ DeleteIcon {})
+            :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-key section-key
+                                                                        :page-key selected-page}])
+            :sx #js{:mt 0}}
+           "Delete Page"))))
 
 (defui editor-toolbar []
   ($ Toolbar {:disableGutters true :sx #js{:mb 2}}
      ($ Typography {:variant "h5" :component "div" :sx #js{:flexGrow 1}}
         "Help Content Editor")
-     ($ Button
-        {:variant "contained"
-         :color "primary"
-         :startIcon ($ SaveIcon {})
-         :onClick #(rf/dispatch [::apply-changes])}
-        "Save Changes")
-     ($ Button
-        {:variant "outlined"
-         :color "secondary"
-         :sx #js{:ml 1}
-         :onClick #(rf/dispatch [::events/close-edit-mode])}
-        "Cancel")))
+
+     ($ Stack {:direction "row" :spacing 1}
+        ($ Button
+           {:variant "contained"
+            :color "primary"
+            :startIcon ($ PreviewIcon {})
+            :onClick #(rf/dispatch [::apply-changes])}
+           "Preview")
+        ($ Button
+           {:variant "contained"
+            :color "secondary"
+            :startIcon ($ SaveIcon {})
+            :onClick #(rf/dispatch [::apply-changes])}
+           "Save")
+        ($ Button
+           {:variant "outlined"
+            :color "secondary"
+            :sx #js{:ml 1}
+            :onClick #(rf/dispatch [::events/close-edit-mode])}
+           "Cancel"))))
 
 (defui confirmation-dialog []
   (let [dialog (use-subscribe [::confirm-dialog])
