@@ -19,9 +19,10 @@
   (fn [db [_ v]]
     (assoc-in db [:help :dialog :selected-page] v)))
 
-(rf/reg-event-db ::open-edit-mode
-  (fn [db _]
-    (assoc-in db [:help :dialog :mode] :edit)))
+(rf/reg-event-fx ::open-edit-mode
+  (fn [{:keys [db]} _]
+    {:db (assoc-in db [:help :dialog :mode] :edit)
+     :fx [[:dispatch [:lipas.ui.help.manage/initialize-editor]]]}))
 
 (rf/reg-event-db ::close-edit-mode
   (fn [db _]
