@@ -173,6 +173,53 @@
          (assoc-in [:help :dialog :selected-page] new-selected-page)))))
 
 (rf/reg-event-db
+ ::add-section
+ (fn [db _]
+   (let [default-title "New Section"
+         ;; Create a basic slug from the title
+         base-slug (create-slug default-title)
+         ;; Add timestamp to ensure uniqueness
+         timestamp (.now js/Date)
+         new-section-key (keyword base-slug)
+         ;; Create a basic section structure with one default page
+         new-page-key (keyword "welcome")
+         new-section {:title {:fi default-title :en default-title :se "Ny sektion"}
+                      :pages {new-page-key {:title {:fi "Welcome" :en "Welcome" :se "Välkommen"}
+                                           :blocks []}}}
+         ;; Ensure key is unique
+         existing-sections (get-in db [:help :edited-data])
+         final-section-key (if (contains? existing-sections new-section-key)
+                             (keyword (str base-slug "-" timestamp))
+                             new-section-key)]
+     ;; Add the new section
+     (-> db
+         (assoc-in [:help :edited-data final-section-key] new-section)
+         ;; Select the new section and its first page
+         (assoc-in [:help :dialog :selected-section] final-section-key)
+         (assoc-in [:help :dialog :selected-page] new-page-key)))))
+
+(rf/reg-event-db
+ ::delete-section
+ (fn [db [_ section-key]]
+   (let [sections (get-in db [:help :edited-data])
+         selected-section (get-in db [:help :dialog :selected-section])
+         ;; If we're deleting the currently selected section, select the first available section
+         new-selected-section (if (= selected-section section-key)
+                                (when (> (count sections) 1)
+                                  (first (keys (dissoc sections section-key))))
+                                selected-section)]
+     (-> db
+         ;; Remove the section
+         (update-in [:help :edited-data] dissoc section-key)
+         ;; Update the selected section if needed
+         (assoc-in [:help :dialog :selected-section] new-selected-section)
+         ;; Clear page selection if we deleted the selected section
+         ((fn [updated-db]
+            (if (= selected-section section-key)
+              (assoc-in updated-db [:help :dialog :selected-page] nil)
+              updated-db)))))))
+
+(rf/reg-event-db
  ::apply-changes
  (fn [db _]
    (-> db
@@ -518,16 +565,38 @@
      ($ add-block-controls {:section-key section-key :page-key page-key})))
 
 (defui section-selector [{:keys [sections selected-section on-select]}]
-  ($ FormControl {:fullWidth true :sx #js{:mb 2}}
-     ($ InputLabel {:id "section-select-label"} "Section")
-     ($ Select {:labelId "section-select-label"
-               :value (or selected-section "")
-               :onChange #(on-select (keyword (.. % -target -value)))
-               :displayEmpty true}
-        (map (fn [[k v]]
-               ($ MenuItem {:key (name k) :value (name k)}
-                  (get-in v [:title :fi] (name k))))
-             sections))))
+  ($ Box {:sx #js{:display "flex" :alignItems "flex-start" :gap 1 :mb 2}}
+     ($ FormControl {:fullWidth true}
+        ($ InputLabel {:id "section-select-label"} "Section")
+        ($ Select {:labelId "section-select-label"
+                  :value (or selected-section "")
+                  :onChange #(on-select (keyword (.. % -target -value)))
+                  :displayEmpty true}
+           (map (fn [[k v]]
+                  ($ MenuItem {:key (name k) :value (name k)}
+                     (get-in v [:title :fi] (name k))))
+                sections)))
+     
+     ;; Add Section button
+     ($ Button
+        {:variant "contained"
+         :color "primary"
+         :size "small"
+         :startIcon ($ AddIcon {})
+         :onClick #(rf/dispatch [::add-section])
+         :sx #js{:mt 1}}
+        "Add Section")
+     
+     ;; Delete Section button (disabled if no section is selected)
+     ($ Button
+        {:variant "outlined"
+         :color "error"
+         :size "small"
+         :disabled (nil? selected-section)
+         :startIcon ($ DeleteIcon {})
+         :onClick #(rf/dispatch [::delete-section selected-section])
+         :sx #js{:mt 1}}
+        "Delete")))
 
 (defui page-selector [{:keys [section-key pages selected-page on-select]}]
   ($ Box {:sx #js{:display "flex" :alignItems "flex-start" :gap 1 :mb 2}}
