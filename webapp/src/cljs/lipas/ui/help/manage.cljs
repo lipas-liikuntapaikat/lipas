@@ -4,7 +4,6 @@
    ["@mui/icons-material/ArrowDownward$default" :as ArrowDownIcon]
    ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
    ["@mui/icons-material/Delete$default" :as DeleteIcon]
-   ["@mui/icons-material/Edit$default" :as EditIcon]
    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
    ["@mui/icons-material/Image$default" :as ImageIcon]
    ["@mui/icons-material/Save$default" :as SaveIcon]
@@ -13,7 +12,6 @@
    ["@mui/material/Box$default" :as Box]
    ["@mui/material/Button$default" :as Button]
    ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardActions$default" :as CardActions]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/CardHeader$default" :as CardHeader]
    ["@mui/material/Collapse$default" :as Collapse]
@@ -22,9 +20,7 @@
    ["@mui/material/DialogContent$default" :as DialogContent]
    ["@mui/material/DialogContentText$default" :as DialogContentText]
    ["@mui/material/DialogTitle$default" :as DialogTitle]
-   ["@mui/material/Divider$default" :as Divider]
    ["@mui/material/FormControl$default" :as FormControl]
-   ["@mui/material/FormLabel$default" :as FormLabel]
    ["@mui/material/IconButton$default" :as IconButton]
    ["@mui/material/InputLabel$default" :as InputLabel]
    ["@mui/material/MenuItem$default" :as MenuItem]
@@ -36,11 +32,9 @@
    ["@mui/material/Toolbar$default" :as Toolbar]
    ["@mui/material/Typography$default" :as Typography]
    [clojure.string :as str]
-   [lipas.ui.components :as components]
    [lipas.ui.help.events :as events]
    [lipas.ui.help.subs :as subs]
    [lipas.ui.uix.hooks :refer [use-subscribe]]
-   [lipas.ui.utils :as utils :refer [==>]]
    [re-frame.core :as rf]
    [uix.core :as uix :refer [$ defui use-state]]))
 
@@ -92,18 +86,6 @@
                                   :caption {:fi "" :en "" :se ""}))]
      (update-in db [:help :edited-data section-key :pages page-key :blocks] conj new-block))))
 
-;; Note: All delete buttons in the UI need to be updated to use confirmation dialogs
-;; by changing each delete button's onClick handler from:
-;; #(rf/dispatch [::delete-block section-key page-key block-idx])
-;; to:
-;; #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])
-;; 
-;; This needs to be applied to:
-;; 1. The delete button in text-block-editor around line 373
-;; 2. The delete button in video-block-editor (search for its delete button)
-;; 3. The delete button in image-block-editor (search for its delete button)
-;;
-;; Due to editor limitations, please apply these changes manually before using.
 
 (rf/reg-event-db
  ::delete-block
@@ -623,7 +605,7 @@
                   ($ MenuItem {:key (name k) :value (name k)}
                      (get-in v [:title :fi] (name k))))
                 sections)))
-     
+
      ;; Add Section button
      ($ Button
         {:variant "contained"
@@ -633,7 +615,7 @@
          :onClick #(rf/dispatch [::add-section])
          :sx #js{:mt 1}}
         "Add Section")
-     
+
      ;; Delete Section button (disabled if no section is selected)
      ($ Button
         {:variant "outlined"
@@ -704,36 +686,36 @@
         section-key (:section-key params)
         page-key (:page-key params)
         block-idx (:block-idx params)
-        
+
         get-title (fn []
                    (case dialog-type
                      :delete-section "Delete Section"
                      :delete-page "Delete Page"
                      :delete-block "Delete Block"
                      "Confirm Action"))
-        
+
         get-message (fn []
                      (case dialog-type
                        :delete-section "Are you sure you want to delete this section? This will also delete all pages and content within the section."
                        :delete-page "Are you sure you want to delete this page? This will also delete all content blocks on the page."
                        :delete-block "Are you sure you want to delete this content block?"
                        "Are you sure you want to proceed with this action?"))]
-    
+
     ($ Dialog
        {:open (:open? dialog)
         :onClose #(rf/dispatch [::hide-confirm-dialog])
         :aria-labelledby "confirm-dialog-title"}
-       
-       ($ DialogTitle 
+
+       ($ DialogTitle
           {:id "confirm-dialog-title"}
           (get-title))
-       
+
        ($ DialogContent {}
           ($ DialogContentText {}
              (get-message)))
-       
+
        ($ DialogActions {}
-          ($ Button 
+          ($ Button
              {:onClick #(rf/dispatch [::hide-confirm-dialog])
               :color "primary"}
              "Cancel")
