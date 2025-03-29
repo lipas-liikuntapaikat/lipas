@@ -124,6 +124,54 @@
                           (assoc block-idx next-block)
                           (assoc (inc block-idx) block)))))))))
 
+;; Helper function to create a slug from a string
+(defn- create-slug [s]
+  (-> (or s "")
+      str/lower-case
+      (str/replace #"[^\w\s-]" "") ; Remove special chars except spaces and hyphens
+      (str/replace #"\s+" "-")     ; Replace spaces with hyphens
+      (str/replace #"-+" "-")      ; Replace multiple hyphens with single
+      (str/replace #"^-|-$" "")))  ; Remove leading/trailing hyphens
+
+(rf/reg-event-db
+ ::add-page
+ (fn [db [_ section-key]]
+   (let [default-title "New Page"
+         ;; Create a basic slug from the title
+         base-slug (create-slug default-title)
+         ;; Add timestamp to ensure uniqueness
+         timestamp (.now js/Date)
+         new-page-key (keyword base-slug)
+         ;; Create a basic page structure
+         new-page {:title {:fi default-title :en default-title :se "Ny sida"}
+                   :blocks []}
+         ;; Ensure key is unique within the section
+         existing-pages (get-in db [:help :edited-data section-key :pages])
+         final-page-key (if (contains? existing-pages new-page-key)
+                          (keyword (str base-slug "-" timestamp))
+                          new-page-key)]
+     ;; Add the new page to the appropriate section
+     (-> db
+         (assoc-in [:help :edited-data section-key :pages final-page-key] new-page)
+         ;; Select the new page
+         (assoc-in [:help :dialog :selected-page] final-page-key)))))
+
+(rf/reg-event-db
+ ::delete-page
+ (fn [db [_ section-key page-key]]
+   (let [pages (get-in db [:help :edited-data section-key :pages])
+         selected-page (get-in db [:help :dialog :selected-page])
+         ;; If we're deleting the currently selected page, select the first available page
+         new-selected-page (if (= selected-page page-key)
+                             (when (> (count pages) 1)
+                               (first (keys (dissoc pages page-key))))
+                             selected-page)]
+     (-> db
+         ;; Remove the page from the section
+         (update-in [:help :edited-data section-key :pages] dissoc page-key)
+         ;; Update the selected page if needed
+         (assoc-in [:help :dialog :selected-page] new-selected-page)))))
+
 (rf/reg-event-db
  ::apply-changes
  (fn [db _]
@@ -199,7 +247,7 @@
                                (str (subs content 0 50) "...")
                                content)))
                          "Empty text block")]
-    ($ Card {:variant "elevation" 
+    ($ Card {:variant "elevation"
             :elevation 3
             :sx #js{:mb 2
                    :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
@@ -257,7 +305,7 @@
         video-id (or (:video-id block) "")
         provider (name (or (:provider block) :youtube))
         title (get-in block [:title :fi] "")]
-    ($ Card {:variant "elevation" 
+    ($ Card {:variant "elevation"
             :elevation 3
             :sx #js{:mb 2
                    :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
@@ -341,7 +389,7 @@
                        (if (seq parts)
                          (last parts)
                          url)))]
-    ($ Card {:variant "elevation" 
+    ($ Card {:variant "elevation"
             :elevation 3
             :sx #js{:mb 2
                    :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
@@ -481,17 +529,39 @@
                   (get-in v [:title :fi] (name k))))
              sections))))
 
-(defui page-selector [{:keys [pages selected-page on-select]}]
-  ($ FormControl {:fullWidth true :sx #js{:mb 2}}
-     ($ InputLabel {:id "page-select-label"} "Page")
-     ($ Select {:labelId "page-select-label"
-               :value (or (when selected-page (name selected-page)) "")
-               :onChange #(on-select (keyword (.. % -target -value)))
-               :displayEmpty true}
-        (map (fn [[k v]]
-               ($ MenuItem {:key (name k) :value (name k)}
-                  (get-in v [:title :fi] (name k))))
-             pages))))
+(defui page-selector [{:keys [section-key pages selected-page on-select]}]
+  ($ Box {:sx #js{:display "flex" :alignItems "flex-start" :gap 1 :mb 2}}
+     ($ FormControl {:fullWidth true}
+        ($ InputLabel {:id "page-select-label"} "Page")
+        ($ Select {:labelId "page-select-label"
+                  :value (or (when selected-page (name selected-page)) "")
+                  :onChange #(on-select (keyword (.. % -target -value)))
+                  :displayEmpty true}
+           (map (fn [[k v]]
+                  ($ MenuItem {:key (name k) :value (name k)}
+                     (get-in v [:title :fi] (name k))))
+                pages)))
+
+     ;; Add Page button
+     ($ Button
+        {:variant "contained"
+         :color "primary"
+         :size "small"
+         :startIcon ($ AddIcon {})
+         :onClick #(rf/dispatch [::add-page section-key])
+         :sx #js{:mt 1}}
+        "Add Page")
+
+     ;; Delete Page button (disabled if no page is selected)
+     ($ Button
+        {:variant "outlined"
+         :color "error"
+         :size "small"
+         :disabled (nil? selected-page)
+         :startIcon ($ DeleteIcon {})
+         :onClick #(rf/dispatch [::delete-page section-key selected-page])
+         :sx #js{:mt 1}}
+        "Delete")))
 
 (defui editor-toolbar []
   ($ Toolbar {:disableGutters true :sx #js{:mb 2}}
@@ -533,7 +603,8 @@
 
        (when selected-section-key
          ($ page-selector
-            {:pages (get-in edit-data [selected-section-key :pages])
+            {:section-key selected-section-key
+             :pages (get-in edit-data [selected-section-key :pages])
              :selected-page selected-page-key
              :on-select #(rf/dispatch [::events/select-page %])}))
 
