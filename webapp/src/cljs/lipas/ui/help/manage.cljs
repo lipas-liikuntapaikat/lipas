@@ -17,6 +17,11 @@
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/CardHeader$default" :as CardHeader]
    ["@mui/material/Collapse$default" :as Collapse]
+   ["@mui/material/Dialog$default" :as Dialog]
+   ["@mui/material/DialogActions$default" :as DialogActions]
+   ["@mui/material/DialogContent$default" :as DialogContent]
+   ["@mui/material/DialogContentText$default" :as DialogContentText]
+   ["@mui/material/DialogTitle$default" :as DialogTitle]
    ["@mui/material/Divider$default" :as Divider]
    ["@mui/material/FormControl$default" :as FormControl]
    ["@mui/material/FormLabel$default" :as FormLabel]
@@ -86,6 +91,19 @@
                                   :alt {:fi "" :en "" :se ""}
                                   :caption {:fi "" :en "" :se ""}))]
      (update-in db [:help :edited-data section-key :pages page-key :blocks] conj new-block))))
+
+;; Note: All delete buttons in the UI need to be updated to use confirmation dialogs
+;; by changing each delete button's onClick handler from:
+;; #(rf/dispatch [::delete-block section-key page-key block-idx])
+;; to:
+;; #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])
+;; 
+;; This needs to be applied to:
+;; 1. The delete button in text-block-editor around line 373
+;; 2. The delete button in video-block-editor (search for its delete button)
+;; 3. The delete button in image-block-editor (search for its delete button)
+;;
+;; Due to editor limitations, please apply these changes manually before using.
 
 (rf/reg-event-db
  ::delete-block
@@ -232,6 +250,35 @@
  (fn [help _]
    (:edited-data help)))
 
+;; Confirmation dialog related events and subscriptions
+(rf/reg-event-db
+ ::show-confirm-dialog
+ (fn [db [_ dialog-type params]]
+   (assoc-in db [:help :confirm-dialog] {:open? true
+                                        :type dialog-type
+                                        :params params})))
+
+(rf/reg-event-db
+ ::hide-confirm-dialog
+ (fn [db _]
+   (assoc-in db [:help :confirm-dialog :open?] false)))
+
+(rf/reg-event-fx
+ ::confirm-action
+ (fn [{:keys [db]} _]
+   (let [{:keys [type params]} (get-in db [:help :confirm-dialog])]
+     {:db (assoc-in db [:help :confirm-dialog :open?] false)
+      :fx [[:dispatch (case type
+                        :delete-section [::delete-section (:section-key params)]
+                        :delete-page [::delete-page (:section-key params) (:page-key params)]
+                        :delete-block [::delete-block (:section-key params) (:page-key params) (:block-idx params)])]]})))
+
+(rf/reg-sub
+ ::confirm-dialog
+ :<- [::subs/help]
+ (fn [help _]
+   (get help :confirm-dialog {:open? false})))
+
 ;; Helper UI Components
 (defui language-tabs [{:keys [current-lang on-change]}]
   ($ Tabs
@@ -331,7 +378,7 @@
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::delete-block section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -391,7 +438,7 @@
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::delete-block section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -477,7 +524,7 @@
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::delete-block section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -594,7 +641,7 @@
          :size "small"
          :disabled (nil? selected-section)
          :startIcon ($ DeleteIcon {})
-         :onClick #(rf/dispatch [::delete-section selected-section])
+         :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-key selected-section}])
          :sx #js{:mt 1}}
         "Delete")))
 
@@ -628,7 +675,8 @@
          :size "small"
          :disabled (nil? selected-page)
          :startIcon ($ DeleteIcon {})
-         :onClick #(rf/dispatch [::delete-page section-key selected-page])
+         :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-key section-key
+                                                                    :page-key selected-page}])
          :sx #js{:mt 1}}
         "Delete")))
 
@@ -649,6 +697,53 @@
          :onClick #(rf/dispatch [::events/close-edit-mode])}
         "Cancel")))
 
+(defui confirmation-dialog []
+  (let [dialog (use-subscribe [::confirm-dialog])
+        dialog-type (:type dialog)
+        params (:params dialog)
+        section-key (:section-key params)
+        page-key (:page-key params)
+        block-idx (:block-idx params)
+        
+        get-title (fn []
+                   (case dialog-type
+                     :delete-section "Delete Section"
+                     :delete-page "Delete Page"
+                     :delete-block "Delete Block"
+                     "Confirm Action"))
+        
+        get-message (fn []
+                     (case dialog-type
+                       :delete-section "Are you sure you want to delete this section? This will also delete all pages and content within the section."
+                       :delete-page "Are you sure you want to delete this page? This will also delete all content blocks on the page."
+                       :delete-block "Are you sure you want to delete this content block?"
+                       "Are you sure you want to proceed with this action?"))]
+    
+    ($ Dialog
+       {:open (:open? dialog)
+        :onClose #(rf/dispatch [::hide-confirm-dialog])
+        :aria-labelledby "confirm-dialog-title"}
+       
+       ($ DialogTitle 
+          {:id "confirm-dialog-title"}
+          (get-title))
+       
+       ($ DialogContent {}
+          ($ DialogContentText {}
+             (get-message)))
+       
+       ($ DialogActions {}
+          ($ Button 
+             {:onClick #(rf/dispatch [::hide-confirm-dialog])
+              :color "primary"}
+             "Cancel")
+          ($ Button
+             {:onClick #(rf/dispatch [::confirm-action])
+              :color "error"
+              :variant "contained"
+              :autoFocus true}
+             "Delete")))))
+
 (defui view
   []
   (let [edit-data (use-subscribe [::edited-help-data])
@@ -660,6 +755,8 @@
                         (get-in edit-data [selected-section-key :pages selected-page-key]))]
 
     ($ Box {:sx #js{:p 2}}
+       ;; Confirmation dialog always rendered but only shown when needed
+       ($ confirmation-dialog {})
        ($ editor-toolbar {})
 
        ($ section-selector
