@@ -411,7 +411,7 @@
                        {:wgs84-point  start-coords
                         :wgs84-center center-coords
                         :wgs84-end    end-coords
-                        :geometries   (feature-coll->geom-coll fcoll)
+                        :geometries   (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
                         :city         {:name (-> city-code cities :name)}
                         :province     {:name (:name province)}
                         :avi-area     {:name (:name avi-area)}

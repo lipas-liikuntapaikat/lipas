@@ -131,6 +131,19 @@
     (subvec coords 0 2)
     (take 2 coords)))
 
+(defn strip-z-fcoll
+  [fcoll]
+  (update fcoll :features
+          (fn [fs]
+            (mapv (fn [{:keys [geometry] :as f}]
+                    (update-in f [:geometry :coordinates]
+                               (fn [coords]
+                                 (case (:type geometry)
+                                   "Point" (strip-z coords)
+                                   "LineString" (mapv strip-z coords)
+                                   "Polygon" (mapv (fn [cs] (mapv strip-z cs)) coords)))))
+                  fs))))
+
 (defn ->flat-coords [fcoll]
   (->> fcoll
       :features
@@ -317,7 +330,10 @@
        :geometry
        {:type        "Point",
         :coordinates [25.720539797408946,
-                      62.62057217751676]}}]})
+                      62.62057217751676
+                      666]}}]})
+
+  (strip-z-fcoll test-point)
 
   (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100}  test-point))
   (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000}  test-point))
@@ -376,8 +392,10 @@
        :geometry
        {:type "LineString",
         :coordinates
-        [[26.2436550567509, 63.9531552213109],
-         [25.7583312263512, 63.9746827436437]]}}]})
+        [[26.2436550567509, 63.9531552213109 666],
+         [25.7583312263512, 63.9746827436437 666]]}}]})
+
+  (strip-z-fcoll test-route)
 
   (-> test-route ->flat-coords)
 
@@ -432,7 +450,7 @@
        :geometry
        {:type "Polygon",
         :coordinates
-        [[[26.2436753445903, 63.9531598143881],
+        [[[26.2436753445903, 63.9531598143881 666],
           [26.4505514903968, 63.9127506671744],
           [26.4505514903968, 63.9531598143881],
           [26.2436753445903, 63.9531598143881]]]}},
@@ -441,10 +459,12 @@
        :geometry
        {:type "Polygon",
         :coordinates
-        [[[26.2436550567509, 63.9531552213109],
+        [[[26.2436550567509, 63.9531552213109 666],
           [25.7583312263512, 63.9746827436437],
           [25.7583312263512, 63.9531552213109],
           [26.2436550567509, 63.9531552213109]]]}}]})
+
+  (strip-z-fcoll test-polygon)
 
   (centroid test-polygon)
 
