@@ -528,3 +528,23 @@
          (some (fn [f]
                  (when (= (:id f) fid)
                    (:properties f)))))))
+
+(rf/reg-sub ::restore-site-backup-dialog
+  :<- [::map]
+  (fn [m]
+    (:restore-site-backup-dialog m)))
+
+(rf/reg-sub ::restore-site-backup-dialog-open?
+  :<- [::restore-site-backup-dialog]
+  (fn [m]
+    (boolean (:open? m))))
+
+(rf/reg-sub ::restore-site-backup-lipas-id
+  :<- [::restore-site-backup-dialog]
+  (fn [m]
+    (:lipas-id m)))
+
+(rf/reg-sub ::restore-site-backup-error
+  :<- [::restore-site-backup-dialog]
+  (fn [m]
+    (:error m)))

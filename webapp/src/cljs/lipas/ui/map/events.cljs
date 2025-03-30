@@ -968,3 +968,32 @@
                    js/JSON.stringify)]
       {:lipas.ui.effects/save-as! {:blob (js/Blob. #js [data])
                                    :filename "new_sports_site_data.json"}})))
+
+(rf/reg-event-fx ::restore-site-backup*
+  (fn [{:keys [db]} [_ json lipas-id]]
+    (let [site (-> json
+                   (js->clj :keywordize-keys true)
+                   (assoc :lipas-id lipas-id))
+          geoms (get-in site [:location :geometries])]
+      {:db (assoc-in db [:sports-sites lipas-id "editing"] site)
+       :fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+(rf/reg-event-fx ::restore-site-backup
+  (fn [{:keys [db]} [_ files lipas-id]]
+    (let [file (aget files 0)
+          cb (fn [json]
+               (rf/dispatch [::restore-site-backup* json lipas-id]))
+          _ (map-utils/file->geoJSON {:file file :ext "json" :enc "utf-8" :cb cb})]
+      {})))
+
+(rf/reg-event-fx ::open-restore-site-backup-dialog
+  (fn [{:keys [db]} [_ lipas-id]]
+    {:db (-> db
+             (assoc-in [:map :restore-site-backup-dialog :open?] true)
+             (assoc-in [:map :restore-site-backup-dialog :lipas-id] lipas-id))}))
+
+(rf/reg-event-fx ::close-restore-site-backup-dialog
+  (fn [{:keys [db]} _]
+    {:db (-> db
+             (assoc-in [:map :restore-site-backup-dialog :open?] false)
+             (assoc-in [:map :restore-site-backup-dialog :lipas-id] nil))}))

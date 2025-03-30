@@ -32,4 +32,6 @@
 
    :add-mode "sports-site"
 
-   :address-locator-dialog {:open? false}})
+   :address-locator-dialog {:open? false}
+
+   :restore-site-backup-dialog {:open? false}})

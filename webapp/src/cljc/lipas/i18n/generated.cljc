@@ -439,6 +439,7 @@
      :clear-filters         "Poista rajaukset"},
     :map.tools
     {:download-backup-tooltip       "Lataa varmuuskopio"
+     :restore-backup-tooltip        "Palauta varmuuskopio"
      :drawing-tooltip               "Piirtotyökalu valittu",
      :drawing-hole-tooltip          "Reikäpiirtotyökalu valittu",
      :edit-tool                     "Muokkaustyökalu",

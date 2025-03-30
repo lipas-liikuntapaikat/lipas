@@ -80,11 +80,36 @@
        (into
          [mui/list]
          (for [m results]
-           [mui/list-item
-            {:button   true
+           [mui/list-item            {:button   true
              :on-click #(==> [::events/show-address m])}
             [mui/list-item-text
              (:label m)]]))]]]))
+
+(defn restore-site-backup-dialog []
+  (let [tr       (<== [:lipas.ui.subs/translator])
+        open?    (<== [::subs/restore-site-backup-dialog-open?])
+        lipas-id (<== [::subs/restore-site-backup-lipas-id])
+        error    (<== [::subs/restore-site-backup-error])]
+    (println "AM I OPEN???" open?)
+    [lui/dialog
+     {:open?         open?
+      :title         (tr :map.tools/restore-backup-tooltip)
+      :on-close      #(==> [::events/close-restore-site-backup-dialog])
+      :save-enabled? false
+      :cancel-label  (tr :actions/close)}
+     [mui/grid {:container true}
+      [mui/grid {:item true :xs 12}
+       [mui/grid {:item true}
+          [:input
+           {:type      "file"
+            :accept    ".json"
+            :on-change #(==> [::events/restore-site-backup
+                              (-> % .-target .-files)
+                              lipas-id])}]]]
+      (when error
+        [mui/grid {:item true :xs 12}
+         [mui/typography {:variant "h6"} "Error"]
+         (pr-str error)])]]))
 
 (defn simplify-tool-container
   []
@@ -786,6 +811,17 @@
             [mui/icon {:color "inherit"} "cloud_download"]]
            [mui/list-item-text (tr :map.tools/download-backup-tooltip)]])
 
+        ;; Restore backup
+        (when editing?
+          [mui/menu-item
+           {:on-click
+            #(do
+               (==> [::events/open-restore-site-backup-dialog lipas-id])
+               (==> [::events/close-more-tools-menu]))}
+           [mui/list-item-icon
+            [mui/icon {:color "inherit"} "cloud_upload"]]
+           [mui/list-item-text (tr :map.tools/restore-backup-tooltip)]])
+
         ;; Edit tool
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
           [mui/menu-item
@@ -874,6 +910,9 @@
        [import/import-geoms-view
         {:geom-type geom-type
          :on-import #(==> [::events/import-selected-geoms])}])
+
+     (when editing?
+       [restore-site-backup-dialog])
 
      [mui/grid {:item true :xs 12}
 
