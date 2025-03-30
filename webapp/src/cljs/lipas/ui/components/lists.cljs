@@ -19,8 +19,8 @@
           ($ ListItemText
              {:primary                    (label-fn item)
               :secondary                  (label2-fn item)
-              :primary-typography-props   #js {:no-wrap true}
-              :secondary-typography-props #js {:no-wrap true}})))))
+              :primary-typography-props   #js {:noWrap true}
+              :secondary-typography-props #js {:noWrap true}})))))
 
 (defui virtualized-list [{:keys [items key-fn landing-bay?] :as list-props}]
   (let [;; Measure just the available content height for the list.

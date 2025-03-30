@@ -6,6 +6,7 @@
             [lipas.ui.energy.db :as energy]
             [lipas.ui.feedback.db :as feedback]
             [lipas.ui.front-page.db :as front-page]
+            [lipas.ui.help.db :as help]
             [lipas.ui.ice-stadiums.db :as ice-stadiums]
             [lipas.ui.loi.db :as loi]
             [lipas.ui.map.db :as map]
@@ -82,4 +83,7 @@
    :loi loi/default-db
 
    ;; PTV
-   :ptv ptv/default-db})
+   :ptv ptv/default-db
+
+   ;; Help
+   :help help/default-db})

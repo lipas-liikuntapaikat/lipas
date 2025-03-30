@@ -8,9 +8,11 @@
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.roles :as roles]
             [lipas.schema.core]
+            [lipas.schema.help :as help-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
             [reitit.coercion.spec]
+            [reitit.coercion.malli]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -249,7 +251,7 @@
 
       ["/users"
        {:get
-        {:no-doc     true
+        {:no-doc            true
          :require-privilege :users/manage
          :handler
          (fn [_]
@@ -258,7 +260,7 @@
 
       ["/actions/gdpr-remove-user"
        {:post
-        {:no-doc     true
+        {:no-doc            true
          :require-privilege :users/manage
          :handler
          (fn [{:keys [body-params]}]
@@ -343,7 +345,7 @@
 
       ["/actions/update-user-permissions"
        {:post
-        {:no-doc     true
+        {:no-doc            true
          :require-privilege :users/manage
          :parameters
          {:body
@@ -359,7 +361,7 @@
 
       ["/actions/update-user-status"
        {:post
-        {:no-doc     true
+        {:no-doc            true
          :require-privilege :users/manage
          :parameters
          {:body
@@ -404,7 +406,7 @@
 
       ["/actions/send-magic-link"
        {:post
-        {:no-doc     true
+        {:no-doc            true
          :require-privilege :users/manage
          :parameters
          {:body
@@ -692,10 +694,10 @@
 
       ["/actions/save-loi"
        {:post
-        {:no-doc     false
+        {:no-doc            false
          :require-privilege [{:type-code ::roles/any
                               :city-code ::roles/any
-                              :activity ::roles/any}
+                              :activity  ::roles/any}
                              :loi/create-edit]
          :parameters
          {:body :lipas.loi/document}
@@ -706,19 +708,41 @@
 
       ["/actions/search-lois"
        {:post
-        {:no-doc         false
+        {:no-doc     false
          ;; TODO: Tests don't use auth for this endpoint now
-         ; :require-privilege [{:type-code ::roles/any
-         ;                      :city-code ::roles/any
-         ;                      :activity ::roles/any}
-         ;                     :loi/view]
-         :parameters     {:body :lipas.api.search-lois/payload}
+                                        ; :require-privilege [{:type-code ::roles/any
+                                        ;                      :city-code ::roles/any
+                                        ;                      :activity ::roles/any}
+                                        ;                     :loi/view]
+         :parameters {:body :lipas.api.search-lois/payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
             :body   (core/search-lois-with-params search body-params)})}}]
 
+      ["/actions/save-help-data"
+       {:post
+        {:no-doc            true
+         :require-privilege :help/manage
+         :coercion          reitit.coercion.malli/coercion
+         :parameters        {:body help-schema/HelpData}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body   (core/save-help-data db body-params)})}}]
+
+      ["/actions/get-help-data"
+       {:post
+        {:no-doc    true
+         :coercion  reitit.coercion.malli/coercion
+         :responses {200 {:body help-schema/HelpData}}
+         :handler
+         (fn [_]
+           {:status 200
+            :body   (core/get-help-data db)})}}]
+
       (ptv-handler/routes ctx)]
+
      (v2/routes ctx)]
 
     {:data

@@ -57,8 +57,6 @@
      ;; The button
      [mui/tooltip {:title "Anna palautetta"}
       [mui/icon-button
-       {:size     "medium"
-        :style {:margin-right "0.2em"}
-        #_#_:color    "primary"
+       {:size     "large"
         :on-click #(==> [::events/open-modal])}
        [mui/icon "feedback"]]]]))

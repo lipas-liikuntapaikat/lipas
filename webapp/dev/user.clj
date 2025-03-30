@@ -3,7 +3,8 @@
   (:require
    [clojure.tools.namespace.repl]
    [integrant.repl :refer [reset reset-all halt go]]
-   [integrant.repl.state]))
+   [integrant.repl.state]
+   [migratus.core :as migratus]))
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
@@ -57,6 +58,10 @@
   [password]
   (reset-password! "admin@lipas.fi" password))
 
+(defn run-db-migrations!
+  []
+  (migratus/migrate {:store :database :db (db)}))
+
 (comment
   (go)
   (reset)
@@ -69,6 +74,8 @@
   (migratus/create nil "activities_status" :sql)
   (migratus/create nil "roles" :edn)
   (migratus/create nil "year_round_use" :sql)
+  (migratus/create nil "versioned_data" :sql)
+  (run-db-migrations!)
 
   (require '[lipas.maintenance :as maintenance])
   (require '[lipas.backend.core :as core])
@@ -257,4 +264,15 @@
                        (set (keys prop-types-old/all))))
 
 
+  (require '[lipas.data.help :as help-data])
+  (require '[lipas.backend.core :as core])
+  (core/save-help-data (db) help-data/sections)
+  *1
+
+  (require '[malli.core :as m])
+  (require '[malli.error :as me])
+  (require '[lipas.schema.help :as help-schema])
+
+  (me/humanize (m/explain help-schema/HelpData (core/get-help-data (db))))
+  (core/get-help-data (db))
   )

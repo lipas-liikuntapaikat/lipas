@@ -25,13 +25,13 @@ ALTER TABLE IF EXISTS wfs.master
     OWNER to lipas;
 
 --;;
-CREATE INDEX idx_master_type_code ON wfs.master(type_code);
+CREATE INDEX IF NOT EXISTS idx_master_type_code ON wfs.master(type_code);
 
 --;;
-CREATE INDEX idx_master_status ON wfs.master(status);
+CREATE INDEX IF NOT EXISTS idx_master_status ON wfs.master(status);
 
 --;;
-CREATE INDEX idx_master_type_code_status ON wfs.master(type_code, status);
+CREATE INDEX IF NOT EXISTS idx_master_type_code_status ON wfs.master(type_code, status);
 
 --;;
-CREATE INDEX idx_master_doc ON wfs.master USING GIN(doc);
+CREATE INDEX IF NOT EXISTS idx_master_doc ON wfs.master USING GIN(doc);

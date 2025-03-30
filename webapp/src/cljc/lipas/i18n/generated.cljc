@@ -98,26 +98,26 @@
      :ptv-managed                        "Älä päivitä kuvauksia"
      :ptv-managed-helper                 "Kuvaus ja tiivistelmä ylläpidetään PTV:ssä. Lipas ei muuta tai päivitä kuvauksia."}
     :utp
-    {:headline             "Ulkoilutietopalvelu"
-     :read-only-disclaimer "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
-     :add-contact          "Lisää yhteystieto"
-     :unit                 "yksikkö"
-     :highlight            "Kohokohta"
-     :add-highlight        "Lisää kohokohta"
-     :photo                "Valokuva"
-     :add-photo            "Lisää valokuva"
-     :video                "Video"
-     :add-video            "Lisää video"
-     :link                 "Linkki"
-     :length-km            "Pituus km"
-     :add-subroute         "Lisää osareitti"
-     :delete-route-prompt  "Haluatko varmasti poistaa tämän reitin?"
-     :custom-rule          "Oma lupa, sääntö, ohje"
-     :custom-rules         "Omat säännöt"
-     :add-subroute-ok      "OK"
+    {:headline                   "Ulkoilutietopalvelu"
+     :read-only-disclaimer       "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan."
+     :add-contact                "Lisää yhteystieto"
+     :unit                       "yksikkö"
+     :highlight                  "Kohokohta"
+     :add-highlight              "Lisää kohokohta"
+     :photo                      "Valokuva"
+     :add-photo                  "Lisää valokuva"
+     :video                      "Video"
+     :add-video                  "Lisää video"
+     :link                       "Linkki"
+     :length-km                  "Pituus km"
+     :add-subroute               "Lisää osareitti"
+     :delete-route-prompt        "Haluatko varmasti poistaa tämän reitin?"
+     :custom-rule                "Oma lupa, sääntö, ohje"
+     :custom-rules               "Omat säännöt"
+     :add-subroute-ok            "OK"
      :route-is-made-of-subroutes "Reitti koostuu monesta erillisestä osuudesta"
-     :select-route-parts-on-map "Valitse reitin osat kartalta"
-     :finish-route-details "Reitti valmis"}
+     :select-route-parts-on-map  "Valitse reitin osat kartalta"
+     :finish-route-details       "Reitti valmis"}
     :newsletter
     {:subscribe-short      "Tilaa"
      :subscribe            "Tilaa uutiskirje"
@@ -177,13 +177,13 @@
      :updating-tools  "Päivitystyökalut tiedontuottajille"
      :analysis-tools  "Liikuntaolosuhteiden analysointityökalut"},
     :confirm
-    {:discard-changes?      "Tahdotko kumota tekemäsi muutokset?",
-     :headline              "Varmistus",
-     :no                    "Ei",
-     :delete-confirm        "Haluatko varmasti poistaa rivin?",
-     :resurrect?            "Tahdotko palauttaa liikuntapaikan aktiiviseksi?",
-     :save-basic-data?      "Haluatko tallentaa perustiedot?",
-     :yes                   "Kyllä"},
+    {:discard-changes? "Tahdotko kumota tekemäsi muutokset?",
+     :headline         "Varmistus",
+     :no               "Ei",
+     :delete-confirm   "Haluatko varmasti poistaa rivin?",
+     :resurrect?       "Tahdotko palauttaa liikuntapaikan aktiiviseksi?",
+     :save-basic-data? "Haluatko tallentaa perustiedot?",
+     :yes              "Kyllä"},
     :lipas.swimming-pool.saunas
     {:accessible? "Esteetön",
      :add-sauna   "Lisää sauna",
@@ -438,17 +438,17 @@
      :school-use-filter     "Koulujen liikuntapaikat",
      :clear-filters         "Poista rajaukset"},
     :map.tools
-    {:download-backup-tooltip  "Lataa varmuuskopio"
-     :drawing-tooltip          "Piirtotyökalu valittu",
-     :drawing-hole-tooltip     "Reikäpiirtotyökalu valittu",
-     :edit-tool                "Muokkaustyökalu",
-     :importing-tooltip        "Tuontityökalu valittu",
-     :deleting-tooltip         "Poistotyökalu valittu",
-     :splitting-tooltip        "Katkaisutyökalu valittu"
-     :simplifying              "Yksinkertaistutyökalu valittu"
-     :selecting                "Valintatyökalu valittu"
-     :simplify                 "Yksinkertaista"
-     :travel-direction-tooltip "Kulkusuuntatyökalu valittu"
+    {:download-backup-tooltip       "Lataa varmuuskopio"
+     :drawing-tooltip               "Piirtotyökalu valittu",
+     :drawing-hole-tooltip          "Reikäpiirtotyökalu valittu",
+     :edit-tool                     "Muokkaustyökalu",
+     :importing-tooltip             "Tuontityökalu valittu",
+     :deleting-tooltip              "Poistotyökalu valittu",
+     :splitting-tooltip             "Katkaisutyökalu valittu"
+     :simplifying                   "Yksinkertaistutyökalu valittu"
+     :selecting                     "Valintatyökalu valittu"
+     :simplify                      "Yksinkertaista"
+     :travel-direction-tooltip      "Kulkusuuntatyökalu valittu"
      :route-part-difficulty-tooltip "Reittiosan vaativuus työkalu valittu"},
     :map.tools.simplify
     {:headline "Yksinkertaista geometrioita"}
@@ -598,45 +598,45 @@
      :total-ascend            "Nousua yhteensä"
      :total-descend           "Laskua yhteensä"}
     :lipas.sports-site
-    {:accessibility       "Esteettömyys"
-     :properties          "Lisätiedot",
-     :delete-tooltip      "Poista liikuntapaikka...",
-     :headline            "Liikuntapaikka",
-     :new-site-of-type    "Uusi {1}",
-     :address             "Osoite",
-     :new-site            "Uusi liikuntapaikka",
-     :phone-number        "Puhelinnumero",
-     :admin               "Ylläpitäjä",
-     :admin-helper-text   "Kohteen ylläpidon toteuttava taho"
-     :surface-materials   "Pintamateriaalit",
-     :www                 "Web-sivu",
-     :name                "Nimi suomeksi",
-     :reservations-link   "Tilavaraukset",
-     :construction-year   "Rakennus​vuosi",
-     :type                "Tyyppi",
-     :delete              "Poista {1}",
-     :renovation-years    "Perus​korjaus​vuodet",
-     :name-localized-se   "Nimi ruotsiksi",
-     :name-localized-en   "Nimi englanniksi"
-     :status              "Liikuntapaikan tila",
-     :id                  "LIPAS-ID",
-     :details-in-portal   "Näytä kaikki lisätiedot",
-     :comment             "Lisätieto",
-     :ownership           "Omistus",
-     :name-short          "Nimi",
-     :basic-data          "Perustiedot",
-     :delete-reason       "Poiston syy",
-     :event-date          "Muokattu",
-     :email-public        "Sähköposti (julkinen)",
-     :add-new             "Lisää liikunta- tai ulkoilupaikka",
-     :contact             "Yhteystiedot",
-     :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
-     :owner               "Omistaja",
-     :owner-helper-text   "Kohteessa olevien rakenteiden tai palveluiden omistaja"
-     :marketing-name      "Markkinointinimi"
-     :no-permission-tab   "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"
-     :add-new-planning    "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
-     :planning-site       "Vedos"
+    {:accessibility          "Esteettömyys"
+     :properties             "Lisätiedot",
+     :delete-tooltip         "Poista liikuntapaikka...",
+     :headline               "Liikuntapaikka",
+     :new-site-of-type       "Uusi {1}",
+     :address                "Osoite",
+     :new-site               "Uusi liikuntapaikka",
+     :phone-number           "Puhelinnumero",
+     :admin                  "Ylläpitäjä",
+     :admin-helper-text      "Kohteen ylläpidon toteuttava taho"
+     :surface-materials      "Pintamateriaalit",
+     :www                    "Web-sivu",
+     :name                   "Nimi suomeksi",
+     :reservations-link      "Tilavaraukset",
+     :construction-year      "Rakennus​vuosi",
+     :type                   "Tyyppi",
+     :delete                 "Poista {1}",
+     :renovation-years       "Perus​korjaus​vuodet",
+     :name-localized-se      "Nimi ruotsiksi",
+     :name-localized-en      "Nimi englanniksi"
+     :status                 "Liikuntapaikan tila",
+     :id                     "LIPAS-ID",
+     :details-in-portal      "Näytä kaikki lisätiedot",
+     :comment                "Lisätieto",
+     :ownership              "Omistus",
+     :name-short             "Nimi",
+     :basic-data             "Perustiedot",
+     :delete-reason          "Poiston syy",
+     :event-date             "Muokattu",
+     :email-public           "Sähköposti (julkinen)",
+     :add-new                "Lisää liikunta- tai ulkoilupaikka",
+     :contact                "Yhteystiedot",
+     :contact-helper-text    "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot"
+     :owner                  "Omistaja",
+     :owner-helper-text      "Kohteessa olevien rakenteiden tai palveluiden omistaja"
+     :marketing-name         "Markkinointinimi"
+     :no-permission-tab      "Sinulla ei ole oikeutta muokata tämän välilehden tietoja"
+     :add-new-planning       "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
+     :planning-site          "Vedos"
      :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten."},
     :status
     {:active                     "Toiminnassa",
@@ -845,35 +845,37 @@
      :types        "Tyypit"
      :activities   "Aktiviteetit"},
     :lipas.user.permissions.roles
-    {:roles "Roolit"
-     :role "Rooli"
+    {:roles             "Roolit"
+     :role              "Rooli"
      :context-value-all "Kaikki"
-     :role-names {:admin "Admin"
-                  :city-manager "Kuntakäyttäjä"
-                  :type-manager "Tyyppikäyttäjä"
-                  :site-manager "Paikkakäyttäjä"
-                  :activities-manager "UTP-käyttäjä"
-                  :floorball-manager "Salibandy muokkaaja"
-                  :analysis-user "Analyysityökalukäyttäjä"
-                  :ptv-manager "PTV-käyttäjä"}
-     :context-keys {:city-code "Kunta"
-                    :type-code "Tyyppi"
-                    :activity "Aktiviteetti"
-                    :lipas-id "Paikka"}
-     :edit-role {:edit-header "Muokkaa"
-                 :new-header "Lisää rooli"
-                 :stop-editing "Lopeta muokkaus"
-                 :add "Lisää"
-                 :choose-role "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
-     :permissions-old "(vanhat, vain luku)"}
+     :role-names        {:admin              "Admin"
+                         :city-manager       "Kuntakäyttäjä"
+                         :type-manager       "Tyyppikäyttäjä"
+                         :site-manager       "Paikkakäyttäjä"
+                         :activities-manager "UTP-käyttäjä"
+                         :floorball-manager  "Salibandy muokkaaja"
+                         :analysis-user      "Analyysityökalukäyttäjä"
+                         :ptv-manager        "PTV-käyttäjä"}
+     :context-keys      {:city-code "Kunta"
+                         :type-code "Tyyppi"
+                         :activity  "Aktiviteetti"
+                         :lipas-id  "Paikka"}
+     :edit-role         {:edit-header  "Muokkaa"
+                         :new-header   "Lisää rooli"
+                         :stop-editing "Lopeta muokkaus"
+                         :add          "Lisää"
+                         :choose-role  "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
+     :permissions-old   "(vanhat, vain luku)"}
     :help
     {:headline                 "Ohjeet",
+     :available-pages          "Sivut tässä osiossa"
      :permissions-help
      "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
      :permissions-help-body
      "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
      :permissions-help-subject "Haluan lisää käyttöoikeuksia"
-     :privacy-policy           "Tietosuojailmoitus"},
+     :privacy-policy           "Tietosuojailmoitus"
+     :manage-content           "Hallitse ohjesisältöä"},
     :ceiling-structures
     {:concrete         "Betoni",
      :double-t-beam    "TT-laatta",
@@ -1128,25 +1130,25 @@
      :type                         "Objekttyp"
      :type-and-category-disclaimer "Kategori och typ måste väljas innan de läggs till på kartan"}
     :utp
-    {:read-only-disclaimer "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen."
-     :add-contact          "Lägg till kontaktuppgift"
-     :unit                 "enhet"
-     :highlight            "Höjdpunkt"
-     :add-highlight        "Lägg till höjdpunkt"
-     :photo                "Foto"
-     :add-photo            "Lägg till foto"
-     :video                "Video"
-     :add-video            "Lägg till video"
-     :link                 "Länk"
-     :length-km            "Längd km"
-     :add-subroute         "Lägg till delrutt"
-     :delete-route-prompt  "Är du säker på att du vill ta bort den här rutten?"
-     :custom-rule          "Egna tillstånd, regler, anvisningar"
-     :custom-rules         "Egen regler"
-     :add-subroute-ok      "OK"
+    {:read-only-disclaimer       "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen."
+     :add-contact                "Lägg till kontaktuppgift"
+     :unit                       "enhet"
+     :highlight                  "Höjdpunkt"
+     :add-highlight              "Lägg till höjdpunkt"
+     :photo                      "Foto"
+     :add-photo                  "Lägg till foto"
+     :video                      "Video"
+     :add-video                  "Lägg till video"
+     :link                       "Länk"
+     :length-km                  "Längd km"
+     :add-subroute               "Lägg till delrutt"
+     :delete-route-prompt        "Är du säker på att du vill ta bort den här rutten?"
+     :custom-rule                "Egna tillstånd, regler, anvisningar"
+     :custom-rules               "Egen regler"
+     :add-subroute-ok            "OK"
      :route-is-made-of-subroutes "Rutten består av flera separata sektioner"
-     :select-route-parts-on-map "Välj ruttdelar på kartan"
-     :finish-route-details "Rutt färdig"}
+     :select-route-parts-on-map  "Välj ruttdelar på kartan"
+     :finish-route-details       "Rutt färdig"}
 
     :analysis
     {:headline                   "Analysverktyg (beta)"
@@ -1213,13 +1215,13 @@
      :edit-rink     "Muokkaa kenttää",
      :headline      "Kentät"},,
     :confirm
-    {:discard-changes?      "Vill du förkasta ändringar?",
-     :headline              "Bekräftelse",
-     :no                    "Nej",
-     :delete-confirm "Vill du verkligen ta bort raden?"
-     :resurrect?            "Vill du spara grunddata?",
-     :save-basic-data?      "Vill du spara grunddata?",
-     :yes                   "Ja"},
+    {:discard-changes? "Vill du förkasta ändringar?",
+     :headline         "Bekräftelse",
+     :no               "Nej",
+     :delete-confirm   "Vill du verkligen ta bort raden?"
+     :resurrect?       "Vill du spara grunddata?",
+     :save-basic-data? "Vill du spara grunddata?",
+     :yes              "Ja"},
     :lipas.swimming-pool.saunas
     {:accessible? "Tillgängligt",
      :add-sauna   "Lägg till en bastu",
@@ -1418,16 +1420,16 @@
      :school-use-filter     "Idrottsanläggningar nära skolor",
      :clear-filters         "Avmarkera filter"},
     :map.tools
-    {:drawing-tooltip          "Ritverktyg valt",
-     :drawing-hole-tooltip     "Hålteckningsverktyg valt",
-     :edit-tool                "Redigeringsverktyg",
-     :importing-tooltip        "Importverktyg valt",
-     :deleting-tooltip         "Raderingsverktyg valt",
-     :splitting-tooltip        "Delningsverktyg valt",
-     :simplifying              "Förenklingsverktyg valt",
-     :selecting                "Valverktyg valt",
-     :simplify                 "Förenkla",
-     :travel-direction-tooltip "Reseriktningverktyg valt"
+    {:drawing-tooltip               "Ritverktyg valt",
+     :drawing-hole-tooltip          "Hålteckningsverktyg valt",
+     :edit-tool                     "Redigeringsverktyg",
+     :importing-tooltip             "Importverktyg valt",
+     :deleting-tooltip              "Raderingsverktyg valt",
+     :splitting-tooltip             "Delningsverktyg valt",
+     :simplifying                   "Förenklingsverktyg valt",
+     :selecting                     "Valverktyg valt",
+     :simplify                      "Förenkla",
+     :travel-direction-tooltip      "Reseriktningverktyg valt"
      :route-part-difficulty-tooltip "Verktyg för val av svårighetsgrad för ruttsektion valt"}
     :partners           {:headline "Tillsammans med"},
     :actions
@@ -1535,41 +1537,41 @@
      :total-ascend            "Total stigning",
      :total-descend           "Total nedstigning"}
     :lipas.sports-site
-    {:properties        "Ytterligare information",
-     :delete-tooltip    "Ta bort idrottsanläggningen...",
-     :headline          "Idrottsanläggning",
-     :new-site-of-type  "Ny {1}",
-     :address           "Adress",
-     :new-site          "Ny idrottsplats",
-     :phone-number      "Telefonnummer",
-     :admin             "Administratör",
-     :surface-materials "Ytmaterial",
-     :www               "Webbsida",
-     :name              "Namn på finska",
-     :reservations-link "Bokningar",
-     :construction-year "Byggår",
-     :type              "Typ",
-     :delete            "Ta bort {1}",
-     :renovation-years  "Renoveringsår",
-     :name-localized-se "Namn på svenska",
-     :name-localized-en "Namn på engelska"
-     :status            "Status",
-     :id                "LIPAS-ID",
-     :details-in-portal "Visa alla ytterligare information",
-     :comment           "Ytterligare information",
-     :ownership         "Ägare",
-     :name-short        "Namn",
-     :basic-data        "Grunddata",
-     :delete-reason     "Orsak",
-     :event-date        "Redigerad",
-     :email-public      "E-post (publik)",
-     :add-new           "Lägg till en idrottsanläggning",
-     :contact           "Kontaktinformation",
-     :owner             "Ägare",
-     :marketing-name    "Varumärkesnamn"
-     :no-permission-tab "Du har inte behörighet att redigera informationen på denna flik"
-     :add-new-planning "Lägg till en motions- eller friluftsplats i utkastläge"
-     :planning-site "Utkast"
+    {:properties             "Ytterligare information",
+     :delete-tooltip         "Ta bort idrottsanläggningen...",
+     :headline               "Idrottsanläggning",
+     :new-site-of-type       "Ny {1}",
+     :address                "Adress",
+     :new-site               "Ny idrottsplats",
+     :phone-number           "Telefonnummer",
+     :admin                  "Administratör",
+     :surface-materials      "Ytmaterial",
+     :www                    "Webbsida",
+     :name                   "Namn på finska",
+     :reservations-link      "Bokningar",
+     :construction-year      "Byggår",
+     :type                   "Typ",
+     :delete                 "Ta bort {1}",
+     :renovation-years       "Renoveringsår",
+     :name-localized-se      "Namn på svenska",
+     :name-localized-en      "Namn på engelska"
+     :status                 "Status",
+     :id                     "LIPAS-ID",
+     :details-in-portal      "Visa alla ytterligare information",
+     :comment                "Ytterligare information",
+     :ownership              "Ägare",
+     :name-short             "Namn",
+     :basic-data             "Grunddata",
+     :delete-reason          "Orsak",
+     :event-date             "Redigerad",
+     :email-public           "E-post (publik)",
+     :add-new                "Lägg till en idrottsanläggning",
+     :contact                "Kontaktinformation",
+     :owner                  "Ägare",
+     :marketing-name         "Varumärkesnamn"
+     :no-permission-tab      "Du har inte behörighet att redigera informationen på denna flik"
+     :add-new-planning       "Lägg till en motions- eller friluftsplats i utkastläge"
+     :planning-site          "Utkast"
      :creating-planning-site "Du håller på att lägga till en plats i utkastläge för analysverktyg."},
     :status
     {:active                     "Aktiv",
@@ -1741,35 +1743,37 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :types        "Typer"
      :activities   "Aktiviteter"},
     :lipas.user.permissions.roles
-    {:roles "Roller"
-     :role "Roll"
+    {:roles             "Roller"
+     :role              "Roll"
      :context-value-all "Alla"
-     :role-names {:admin "Admin"
-                  :city-manager "Stadsadministratör"
-                  :type-manager "Typadministratör"
-                  :site-manager "Platsadministratör"
-                  :activities-manager "UTP-administratör"
-                  :floorball-manager "Innebandyredigerare"
-                  :analysis-user "Analysverktygsanvändare"
-                  :ptv-user "PTV-administratör"}
-     :context-keys {:city-code "Kommun"
-                    :type-code "Typ"
-                    :activity "Aktivitet"
-                    :lipas-id "Plats"}
-     :edit-role {:edit-header "Redigera"
-                 :new-header "Lägg till roll"
-                 :stop-editing "Avsluta redigering"
-                 :add "Lägg till"
-                 :choose-role "Välj roll först för att välja vilka resurser rollen påverkar."}
-     :permissions-old "(gamla, endast läs)"}
+     :role-names        {:admin              "Admin"
+                         :city-manager       "Stadsadministratör"
+                         :type-manager       "Typadministratör"
+                         :site-manager       "Platsadministratör"
+                         :activities-manager "UTP-administratör"
+                         :floorball-manager  "Innebandyredigerare"
+                         :analysis-user      "Analysverktygsanvändare"
+                         :ptv-user           "PTV-administratör"}
+     :context-keys      {:city-code "Kommun"
+                         :type-code "Typ"
+                         :activity  "Aktivitet"
+                         :lipas-id  "Plats"}
+     :edit-role         {:edit-header  "Redigera"
+                         :new-header   "Lägg till roll"
+                         :stop-editing "Avsluta redigering"
+                         :add          "Lägg till"
+                         :choose-role  "Välj roll först för att välja vilka resurser rollen påverkar."}
+     :permissions-old   "(gamla, endast läs)"}
     :help
     {:headline                 "Hjälp",
+     :available-pages          "Sidor i detta avsnitt"
      :permissions-help
      "Om du behöver ytterligare användarrättigheter, kontakt ",
      :permissions-help-body
      "Jag behöver användarrättigheter till följande platser:",
      :permissions-help-subject "Jag behöver mera användarrättigheter"
-     :privacy-policy           "Privacy policy"},
+     :privacy-policy           "Privacy policy"
+     :manage-content           "Redigera hjälpinnehåll"},
     :ceiling-structures
     {:concrete         "Betong",
      :double-t-beam    "TT-bricka",
@@ -1906,12 +1910,12 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :draw-hole              "Lägg till hål",
      :split-linestring       "Klippa ruttdel",
      :travel-direction       "Bestäm riktningen"
-     :route-part-difficulty "Ange svårighetsgrad för ruttsektion"
+     :route-part-difficulty  "Ange svårighetsgrad för ruttsektion"
      :delete-vertices-hint
      "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",
      :calculate-route-length "Räkna ut längden",
      :calculate-area         "Räkna ytlan"
-     :calculate-count "Beräkna antal automatiskt"
+     :calculate-count        "Beräkna antal automatiskt"
      :remove-polygon         "Ta bort område",
      :modify-linestring      "Modifera rutten",
      :download-gpx           "Ladda ner GPX",
@@ -1992,7 +1996,7 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :permission-to-portal-sites
      "Du har rättighet att uppdatera de här platserna:",
      :permissions-help           "Skriv vad du vill uppdatera i Lipas",
-     :permission-to-activities "Du har behörighet till följande aktiviteter"
+     :permission-to-activities   "Du har behörighet till följande aktiviteter"
      :report-energy-consumption  "Begärda rättigheter",
      :firstname                  "Förnamn",
      :save-search                "Spara söket",
@@ -2010,25 +2014,25 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :type                         "Object Type"
      :type-and-category-disclaimer "Category and type must be selected before adding to the map"}
     :utp
-    {:read-only-disclaimer "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol."
-     :add-contact          "Add contact information"
-     :unit                 "unit"
-     :highlight            "Highlight"
-     :add-highlight        "Add highlight"
-     :photo                "Photograph"
-     :add-photo            "Add photograph"
-     :video                "Video"
-     :add-video            "Add video"
-     :link                 "Link"
-     :length-km            "Length km"
-     :add-subroute         "Add sub-route"
-     :delete-route-prompt  "Are you sure you want to delete this route?"
-     :custom-rule          "Custom permit, regulation, instruction"
-     :custom-rules         "Custom instructions"
-     :add-subroute-ok      "OK"
+    {:read-only-disclaimer       "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol."
+     :add-contact                "Add contact information"
+     :unit                       "unit"
+     :highlight                  "Highlight"
+     :add-highlight              "Add highlight"
+     :photo                      "Photograph"
+     :add-photo                  "Add photograph"
+     :video                      "Video"
+     :add-video                  "Add video"
+     :link                       "Link"
+     :length-km                  "Length km"
+     :add-subroute               "Add sub-route"
+     :delete-route-prompt        "Are you sure you want to delete this route?"
+     :custom-rule                "Custom permit, regulation, instruction"
+     :custom-rules               "Custom instructions"
+     :add-subroute-ok            "OK"
      :route-is-made-of-subroutes "The route consists of multiple separate sections"
-     :select-route-parts-on-map "Select route parts on the map"
-     :finish-route-details "Route completed"}
+     :select-route-parts-on-map  "Select route parts on the map"
+     :finish-route-details       "Route completed"}
     :analysis
     {:headline                   "Analysis Tool (beta)"
      :description                "The analysis tool can be used to evaluate the supply and accessibility of physical activity conditions by comparing the distance and travel times to physical activity facilities in relation to other facilities, population, and educational institutions."
@@ -2082,13 +2086,13 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :updating-tools  "Tools for data maintainers"
      :analysis-tools  "Analysis tools"},
     :confirm
-    {:discard-changes?      "Do you want to discard all changes?",
-     :headline              "Confirmation",
-     :no                    "No",
-     :delete-confirm "Are you sure you want to delete the row?"
-     :resurrect? "Are you sure you want to resurrect this sports facility?",
-     :save-basic-data?      "Do you want to save general information?",
-     :yes                   "Yes"},
+    {:discard-changes? "Do you want to discard all changes?",
+     :headline         "Confirmation",
+     :no               "No",
+     :delete-confirm   "Are you sure you want to delete the row?"
+     :resurrect?       "Are you sure you want to resurrect this sports facility?",
+     :save-basic-data? "Do you want to save general information?",
+     :yes              "Yes"},
     :lipas.swimming-pool.saunas
     {:accessible? "Accessible",
      :add-sauna   "Add sauna",
@@ -2335,17 +2339,17 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :school-use-filter     "Used by schools",
      :clear-filters         "Clear filters"},
     :map.tools
-    {:download-backup-tooltip  "Download backup"
-     :drawing-tooltip          "Drawing tool selected",
-     :drawing-hole-tooltip     "Hole drawing tool selected",
-     :edit-tool                "Edit tool",
-     :importing-tooltip        "Import tool selected",
-     :deleting-tooltip         "Delete tool selected",
-     :splitting-tooltip        "Split tool selected",
-     :simplifying              "Simplify tool selected",
-     :selecting                "Select tool selected",
-     :simplify                 "Simplify",
-     :travel-direction-tooltip "Travel direction tool selected"
+    {:download-backup-tooltip       "Download backup"
+     :drawing-tooltip               "Drawing tool selected",
+     :drawing-hole-tooltip          "Hole drawing tool selected",
+     :edit-tool                     "Edit tool",
+     :importing-tooltip             "Import tool selected",
+     :deleting-tooltip              "Delete tool selected",
+     :splitting-tooltip             "Split tool selected",
+     :simplifying                   "Simplify tool selected",
+     :selecting                     "Select tool selected",
+     :simplify                      "Simplify",
+     :travel-direction-tooltip      "Travel direction tool selected"
      :route-part-difficulty-tooltip "Route section difficulty tool selected"},
     :map.tools.simplify
     {:headline "Simplify geometries"}
@@ -2486,41 +2490,41 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
      :total-ascend            "Total Ascent",
      :total-descend           "Total Descent"}
     :lipas.sports-site
-    {:properties        "Properties",
-     :delete-tooltip    "Delete sports facility...",
-     :headline          "Sports facility",
-     :new-site-of-type  "New {1}",
-     :address           "Address",
-     :new-site          "New Sports Facility",
-     :phone-number      "Phone number",
-     :admin             "Admin",
-     :surface-materials "Surface materials",
-     :www               "Web-site",
-     :name              "Finnish name",
-     :reservations-link "Reservations",
-     :construction-year "Construction year",
-     :type              "Type",
-     :delete            "Delete {1}",
-     :renovation-years  "Renovation years",
-     :name-localized-se "Swedish name",
-     :name-localized-en "English name"
-     :status            "Status",
-     :id                "LIPAS-ID",
-     :details-in-portal "Click here to see details",
-     :comment           "More information",
-     :ownership         "Ownership",
-     :name-short        "Name",
-     :basic-data        "General",
-     :delete-reason     "Reason",
-     :event-date        "Modified",
-     :email-public      "Email (public)",
-     :add-new           "Add Sports Facility",
-     :contact           "Contact",
-     :owner             "Owner",
-     :marketing-name    "Marketing name"
-     :no-permission-tab "You do not have permission to edit the information on this tab"
-     :add-new-planning "Add a sports or outdoor site in draft mode"
-     :planning-site "Draft"
+    {:properties             "Properties",
+     :delete-tooltip         "Delete sports facility...",
+     :headline               "Sports facility",
+     :new-site-of-type       "New {1}",
+     :address                "Address",
+     :new-site               "New Sports Facility",
+     :phone-number           "Phone number",
+     :admin                  "Admin",
+     :surface-materials      "Surface materials",
+     :www                    "Web-site",
+     :name                   "Finnish name",
+     :reservations-link      "Reservations",
+     :construction-year      "Construction year",
+     :type                   "Type",
+     :delete                 "Delete {1}",
+     :renovation-years       "Renovation years",
+     :name-localized-se      "Swedish name",
+     :name-localized-en      "English name"
+     :status                 "Status",
+     :id                     "LIPAS-ID",
+     :details-in-portal      "Click here to see details",
+     :comment                "More information",
+     :ownership              "Ownership",
+     :name-short             "Name",
+     :basic-data             "General",
+     :delete-reason          "Reason",
+     :event-date             "Modified",
+     :email-public           "Email (public)",
+     :add-new                "Add Sports Facility",
+     :contact                "Contact",
+     :owner                  "Owner",
+     :marketing-name         "Marketing name"
+     :no-permission-tab      "You do not have permission to edit the information on this tab"
+     :add-new-planning       "Add a sports or outdoor site in draft mode"
+     :planning-site          "Draft"
      :creating-planning-site "You are adding a site in draft mode for analysis tools."},
     :status
     {:active                     "Active",
@@ -2714,34 +2718,36 @@ The site administrator is responsible for the accuracy of information, safety of
      :types        "Access to sports faclities of type"
      :activities   "Activities"},
     :lipas.user.permissions.roles
-    {:roles "Roles"
-     :role "Role"
+    {:roles             "Roles"
+     :role              "Role"
      :context-value-all "All"
-     :role-names {:admin "Admin"
-                  :city-manager "City Manager"
-                  :type-manager "Type Manager"
-                  :site-manager "Site Manager"
-                  :activities-manager "UTP Manager"
-                  :floorball-manager "Floorball Editor"
-                  :analysis-user "Analysis tool user"
-                  :ptv "PTV Manager"}
-     :context-keys {:city-code "Municipality"
-                    :type-code "Type"
-                    :activity "Activity"
-                    :lipas-id "Site"}
-     :edit-role {:edit-header "Edit"
-                 :new-header "Add Role"
-                 :stop-editing "Stop Editing"
-                 :add "Add"
-                 :choose-role "Choose a role first to select which resources the role affects."}
-     :permissions-old "(old, read-only)"}
+     :role-names        {:admin              "Admin"
+                         :city-manager       "City Manager"
+                         :type-manager       "Type Manager"
+                         :site-manager       "Site Manager"
+                         :activities-manager "UTP Manager"
+                         :floorball-manager  "Floorball Editor"
+                         :analysis-user      "Analysis tool user"
+                         :ptv                "PTV Manager"}
+     :context-keys      {:city-code "Municipality"
+                         :type-code "Type"
+                         :activity  "Activity"
+                         :lipas-id  "Site"}
+     :edit-role         {:edit-header  "Edit"
+                         :new-header   "Add Role"
+                         :stop-editing "Stop Editing"
+                         :add          "Add"
+                         :choose-role  "Choose a role first to select which resources the role affects."}
+     :permissions-old   "(old, read-only)"}
     :help
     {:headline                 "Help",
      :permissions-help
      "Please contact us in case you need more permissions",
      :permissions-help-body
      "I need permissions to following sports facilities:",
-     :permissions-help-subject "I need more permissions"},
+     :permissions-help-subject "I need more permissions"
+     :privacy-policy           "Privacy policy"
+     :manage-content           "Manage help content"},
     :ceiling-structures
     {:concrete         "Concrete",
      :double-t-beam    "Double-T",
@@ -2794,7 +2800,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :water-glycol    "Water-glycol"},
     :user
     {:admin-page-link     "Admin page",
-     :promo1-link "Show TEAviisari targets I can update"
+     :promo1-link         "Show TEAviisari targets I can update"
      :front-page-link     "front page",
      :greeting            "Hello {1} {2}!",
      :headline            "Profile",
@@ -2880,10 +2886,10 @@ The site administrator is responsible for the accuracy of information, safety of
      :delete-vertices-hint
      "Vertices can be deleted by pressing alt-key and clicking.",
      :travel-direction       "Define travel direction"
-     :route-part-difficulty "Set route section difficulty"
+     :route-part-difficulty  "Set route section difficulty"
      :calculate-route-length "Calculate route length",
      :calculate-area         "Calculate area",
-     :calculate-count "Calculate count automatically"
+     :calculate-count        "Calculate count automatically"
      :remove-polygon         "Remove area",
      :modify-linestring      "Modify route",
      :download-gpx           "Download GPX",
@@ -2965,7 +2971,7 @@ The site administrator is responsible for the accuracy of information, safety of
      :permission-to-portal-sites
      "You have permission to following sports facilities:",
      :permissions-help          "Describe what permissions you wish to have",
-     :permission-to-activities "You have permission to the following activities"
+     :permission-to-activities  "You have permission to the following activities"
      :report-energy-consumption "Report energy consumption",
      :firstname                 "First name",
      :save-search               "Save search",
