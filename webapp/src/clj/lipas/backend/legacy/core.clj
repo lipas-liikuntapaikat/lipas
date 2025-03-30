@@ -1,10 +1,11 @@
 (ns lipas.backend.legacy.core
   (:require
    [clojure.string :as string]
-   [lipas.data.types :as types]
+   [lipas.data.admins :as admins]
    [qbits.spandex :as es]
    [qbits.spandex.utils :as es-utils]
-   [ring.util.codec :as codec]))
+   [ring.util.codec :as codec]
+   [lipas.data.types-old :as types-old]))
 
 ;; This file contains mostly copy & pasted code from old API codebase, beware!
 
@@ -263,6 +264,12 @@
                         (apply location-format-fn [location locale]))
     :properties       (apply props-format-fn [(:props sports-place) locale])}))
 
+(defn format-admin [sp]
+  (assoc sp :admin (get admins/old (:admin sp))))
+
+(defn format-type [sp]
+  (assoc-in sp [:type :name] (-> (types-old/all (get-in sp [:type :typeCode]))
+                                 :name)))
 (comment
   (lipas.search-indexer/-main "--legacy")
 
