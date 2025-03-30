@@ -14,6 +14,7 @@
    [lipas.backend.db.subsidy :as subsidy]
    [lipas.backend.db.user :as user]
    [lipas.backend.db.utils :as db-utils]
+   [lipas.backend.db.versioned-data :as versioned-data]
    [lipas.backend.db.webhook :as webhook]
    [lipas.utils :as utils]))
 
@@ -354,6 +355,20 @@
   [db-spec]
   (->> (webhook/get-queue db-spec)
        (map webhook/unmarshall)))
+
+;; Versioned Data ;;
+
+(defn get-versioned-data
+  [db-spec type status]
+  (->> {:status status :type type}
+       (versioned-data/get-latest-by-type-and-status db-spec)
+       (versioned-data/unmarshall)))
+
+(defn add-versioned-data!
+  [db-spec type status body]
+  (->> (versioned-data/marshall type status body)
+       (versioned-data/insert! db-spec)
+       (versioned-data/unmarshall)))
 
 ;; DB connection pooling ;;
 

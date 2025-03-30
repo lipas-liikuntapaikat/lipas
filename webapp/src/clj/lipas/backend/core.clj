@@ -949,6 +949,16 @@
   [type-code]
   (types/->type (types/active type-code)))
 
+;;; Help ;;;
+
+(defn get-help-data
+  [db]
+  (db/get-versioned-data db "help" "active"))
+
+(defn save-help-data
+  [db help-data]
+  (db/add-versioned-data! db "help" "active" help-data))
+
 (comment
   (get-categories)
   (require '[lipas.backend.config :as config])

@@ -1,5 +1,4 @@
-(ns lipas.ui.help.db
-  (:require [lipas.data.help :as help-data]))
+(ns lipas.ui.help.db)
 
 (def default-db
   {:dialog
@@ -7,4 +6,5 @@
     :selected-section :general
     :selected-page nil
     :mode :read}
-   :data help-data/sections})
+   ;; Help data is loaded from the server
+   :data nil})

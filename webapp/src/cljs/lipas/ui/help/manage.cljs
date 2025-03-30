@@ -33,6 +33,7 @@
    ["@mui/material/TextField$default" :as TextField]
    ["@mui/material/Toolbar$default" :as Toolbar]
    ["@mui/material/Typography$default" :as Typography]
+   [ajax.core :as ajax]
    [clojure.string :as str]
    [lipas.ui.help.events :as events]
    [lipas.ui.help.subs :as subs]
@@ -46,10 +47,6 @@
  (fn [db _]
    (update db :help assoc :edited-data (get-in db [:help :data]))))
 
-(rf/reg-event-db
- ::update-help-data
- (fn [db [_ updated-data]]
-   (assoc-in db [:help :edited-data] updated-data)))
 
 (rf/reg-event-db
  ::update-section-title
@@ -227,6 +224,40 @@
    (-> db
        (assoc-in [:help :data] (get-in db [:help :edited-data]))
        (assoc-in [:help :dialog :mode] :read))))
+
+(rf/reg-event-fx ::save-changes
+  (fn [{:keys [db]} _]
+    (let [token  (-> db :user :login :token)]
+      {:db (assoc-in db [:help :save-in-progress] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/save-help-data")
+              :params          (get-in db [:help :edited-data])
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::save-success]
+              :on-failure      [::save-failure]}]]})))
+
+(rf/reg-event-fx ::save-success
+  (fn [{:keys [db]} _]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-success)
+                        :success? true}]
+      {:db (-> db (assoc-in [:ptv :save-in-progress] false))
+       :fx [[:dispatch [::apply-changes]]
+            [:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::save-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:help :save-in-progress] false)
+               (assoc-in [:help :errors :save] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 
 (rf/reg-sub
  ::edited-help-data
@@ -711,7 +742,7 @@
            {:variant "contained"
             :color "secondary"
             :startIcon ($ SaveIcon {})
-            :onClick #(rf/dispatch [::apply-changes])}
+            :onClick #(rf/dispatch [::save-changes])}
            "Save")
         ($ Button
            {:variant "outlined"

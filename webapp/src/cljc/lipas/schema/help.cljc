@@ -20,13 +20,13 @@
 (def TextBlock
   [:map {:closed true} ; Prevent extra keys
    [:block-id BlockId]
-   [:type [:enum :text]]
+   [:type {:decode/string keyword} [:enum :text]]
    [:content LocalizedString]])
 
 (def ImageBlock
   [:map {:closed true}
    [:block-id BlockId]
-   [:type [:enum :image]]
+   [:type {:decode/string keyword} [:enum :image]]
    [:url NonEmptyString] ; Assuming URL is a non-empty string
    [:alt LocalizedString] ; Alt text is mandatory for accessibility
    [:caption {:optional true} LocalizedString]]) ; Caption is optional
@@ -34,7 +34,7 @@
 (def VideoBlock
   [:map {:closed true}
    [:block-id BlockId]
-   [:type [:enum :video]]
+   [:type {:decode/string keyword} [:enum :video]]
    [:provider [:enum :youtube :vimeo]] ; Allow youtube or vimeo? Or just :youtube?
    [:video-id NonEmptyString] ; The unique ID from the provider
    [:title {:optional true} LocalizedString]]) ; Optional title for the video
