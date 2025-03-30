@@ -42,7 +42,6 @@
 
 (rf/reg-event-fx ::get-success
   (fn [{:keys [db]} [_ help-data]]
-    (prn help-data)
     {:db (assoc-in db [:help :data] help-data)}))
 
 (rf/reg-event-fx ::get-failure
