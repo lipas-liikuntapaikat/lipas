@@ -57,19 +57,17 @@
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
-            (map #(-> (transform/->old-lipas-sports-site %)
-                      (assoc :sportsPlaceId (:lipas-id %))))
+            (map #(-> %
+                      (transform/->old-lipas-sports-site)
+                      (assoc :sportsPlaceId (:lipas-id %))
+                      (legacy/format-admin)
+                      (legacy/format-type)))
             (search/->bulk idx-name :sportsPlaceId)
             (search/bulk-index! client)
             (wait-one)
             (conj results)
-            (recur db client idx-name (rest types))
-            )
+            (recur db client idx-name (rest types)))
        (print-results results)))))
-
-(comment
-  (-main "--legacy")
-  )
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
@@ -265,5 +263,4 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"
-                           :search-string "kissa*"}))
-  )
+                           :search-string "kissa*"})))
