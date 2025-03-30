@@ -69,10 +69,9 @@
 (comment
   (go)
   (reset)
-
   (reindex-search!)
-  (reindex-legacy-search!)
   (reindex-analytics!)
+  (reindex-legacy-search!)
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
 
