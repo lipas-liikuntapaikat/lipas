@@ -60,7 +60,10 @@
    {:label "Retkellä.fi" :href "https://retkellä.fi"}
    {:label "Trailmap" :href "https://trailmap.fi"}
    {:label "visithame.fi" :href "https://visithame.fi/"}
-   {:label "Virma" :href "https://virma.fi"}])
+   {:label "Virma" :href "https://virma.fi"}
+   {:label "Bikeland" :href "https://www.bikeland.fi/"}
+   {:label "Luontoon.fi" :href "https://www.luontoon.fi/"}
+   {:label "LIVERTTI" :href "https://activehealthylife.webnode.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
