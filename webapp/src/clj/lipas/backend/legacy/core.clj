@@ -1,11 +1,12 @@
 (ns lipas.backend.legacy.core
   (:require
    [clojure.string :as string]
+   [clojure.walk :as walk]
    [lipas.data.admins :as admins]
+   [lipas.data.types-old :as types-old]
    [qbits.spandex :as es]
    [qbits.spandex.utils :as es-utils]
-   [ring.util.codec :as codec]
-   [lipas.data.types-old :as types-old]))
+   [ring.util.codec :as codec]))
 
 ;; This file contains mostly copy & pasted code from old API codebase, beware!
 
@@ -270,7 +271,20 @@
 (defn format-type [sp]
   (assoc-in sp [:type :name] (-> (types-old/all (get-in sp [:type :typeCode]))
                                  :name)))
+(defn replace-localized-names [sp]
+  (walk/postwalk-replace {:nameLocalized :name} sp))
+
 (comment
+
+  (-> {:admin "city-education"
+       :type {:typeCode 1530}
+       :location {:city {:nameLocalized {:fi "Ylitornio"
+                                         :se "Övertorneå"
+                                         :en "Ylitornio"}}}}
+      (format-admin)
+      (format-type)
+      (replace-localized-names))
+  
   (lipas.search-indexer/-main "--legacy")
 
   (def sp {:properties {:fieldLengthM 50 :iceRinksCount 1 :areaM2 1250 :fieldWidthM 25}
