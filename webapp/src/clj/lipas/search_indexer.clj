@@ -3,11 +3,12 @@
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.walk :as walk]
+   [lipas-api.sports-places :as legacy-sports-places]
+   [lipas-api.properties :as legacy-properties]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
-   [lipas.backend.legacy.core :as legacy]
    [lipas.backend.search :as search]
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
@@ -59,16 +60,27 @@
        (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
             (map #(-> %
                       (transform/->old-lipas-sports-site)
-                      (assoc :sportsPlaceId (:lipas-id %))
-                      (legacy/format-admin)
-                      (legacy/format-type)
-                      (legacy/replace-localized-names)))
+                      (assoc :id (:lipas-id %))
+                      (lipas-api.sports-places/format-sports-place
+                       :all
+                       lipas-api.locations/format-location
+                       lipas-api.properties/format-props-db)))
             (search/->bulk idx-name :sportsPlaceId)
             (search/bulk-index! client)
             (wait-one)
             (conj results)
             (recur db client idx-name (rest types)))
        (print-results results)))))
+
+(defn index-legacy-sports-site! [db client idx lipas-id]
+  (let [legacy-sp (-> (core/get-sports-site db lipas-id)
+                      (transform/->old-lipas-sports-site)
+                      (assoc :id lipas-id)
+                      (legacy-sports-places/format-sports-place
+                       :all
+                       legacy-sports-places/format-sports-place-db
+                       legacy-properties/format-props-db))]
+    (search/index! client idx :sportsPlaceId legacy-sp)))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
