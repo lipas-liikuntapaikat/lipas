@@ -53,7 +53,11 @@
       [:description #'common/localized-string]
       [:data-type [:enum "numeric" "boolean" "enum" "enum-coll" "string"]]
       [:opts {:optional true}
-       [:map-of [:string {:min 2 :max 200}] #'common/localized-string]]]]]])
+       [:map-of
+        [:string {:min 2 :max 200}]
+        [:map
+         [:label #'common/localized-string]
+         [:description {:optional true} #'common/localized-string]]]]]]]])
 
 (comment
   (require '[malli.core :as m])
