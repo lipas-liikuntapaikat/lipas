@@ -230,7 +230,13 @@
                                         (when (not-empty value)
                                           (set-view-mode! :search))
                                         (when (empty? value)
-                                          (set-view-mode! :categories)))})))
+                                          (set-view-mode! :categories)))}))
+
+          ($ Grid {:item true :xs 12 :md 3}
+             ($ Button {:variant "contained"
+                        :color "secondary"
+                        :onClick #(==> [:lipas.ui.events/download-types-excel])}
+                "Lataa Excel")))
 
        ;; Breadcrumbs navigation
        ($ Breadcrumbs {:sx #js{:mb 2 :pl 2}}

@@ -3,6 +3,7 @@
             [lipas.roles :as roles]
             [lipas.ui.db :as db]
             [lipas.ui.search.db :as search-db]
+            [lipas.data.types :as types-data]
             [lipas.ui.utils :as utils :refer [==>]]
             [re-frame.core :as rf]
             [reitit.frontend.controllers :as rfc]))
@@ -111,3 +112,18 @@
 (rf/reg-event-db ::set-screen-size
   (fn [db [_ screen-size]]
     (assoc db :screen-size screen-size)))
+
+(rf/reg-event-fx ::download-types-excel
+  (fn [{:keys [db]} _]
+    (let [types (get-in db [:sports-sites :active-types])
+          headers types-data/excel-headers
+          data (->> types
+                    vals
+                    (map types-data/->type)
+                    (map types-data/->excel-row)
+                    (sort-by (juxt :main-category :sub-category :type-code)))
+          config {:filename "lipas_tyyppikoodit"
+                  :sheet
+                  {:data (utils/->excel-data headers data)}}]
+      {:lipas.ui.effects/download-excel! config
+       :tracker/event!                   ["stats" "download-excel" "types-excel"]})))

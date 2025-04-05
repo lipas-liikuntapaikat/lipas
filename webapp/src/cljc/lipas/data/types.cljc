@@ -50,6 +50,49 @@
                                        [])
                             (sort-by :priority utils/reverse-cmp))))))
 
+(def excel-headers
+  [[:main-category "Pääluokka"]
+   [:main-category-name-fi "Pääluokka nimi fi"]
+   [:main-category-name-se "Pääluokka nimi se"]
+   [:main-category-name-en "Pääluokka nimi en"]
+   [:sub-category "Alaluokka"]
+   [:sub-category-name-fi "Alaluokka nimi fi"]
+   [:sub-category-name-se "Alaluokka nimi se"]
+   [:sub-category-name-en "Alaluokka nimi en"]
+   [:type-code "Tyyppikoodi"]
+   [:geometry-type "Geometria"]
+   [:type-name-fi "Tyyppi nimi fi"]
+   [:type-name-se "Tyyppi nimi se"]
+   [:type-name-en "Tyyppi nimi en"]
+   [:description-fi "Tyyppi kuvaus fi"]
+   [:description-se "Tyyppi kuvaus se"]
+   [:description-en "Tyyppi kuvaus en"]])
+
+(defn ->excel-row
+  [m]
+  (into {}
+        [[:main-category (get-in m [:main-category :type-code])]
+         [:main-category-name-fi (get-in m [:main-category :name :fi])]
+         [:main-category-name-se (get-in m [:main-category :name :se])]
+         [:main-category-name-en (get-in m [:main-category :name :en])]
+         [:sub-category (get-in m [:sub-category :type-code])]
+         [:sub-category-name-fi (get-in m [:sub-category :name :fi])]
+         [:sub-category-name-se (get-in m [:sub-category :name :se])]
+         [:sub-category-name-en (get-in m [:sub-category :name :en])]
+         [:type-code (get m :type-code)]
+         [:geometry-type (get m :geometry-type)]
+         [:type-name-fi (get-in m [:name :fi])]
+         [:type-name-se (get-in m [:name :se])]
+         [:type-name-en (get-in m [:name :en])]
+         [:description-fi (get-in m [:description :fi])]
+         [:description-se (get-in m [:description :se])]
+         [:description-en (get-in m [:description :en])]]))
+
 (def used-prop-types
   (let [used (set (mapcat (comp keys :props second) all))]
     (select-keys prop-types/all used)))
+
+(comment
+  (->type (get all 1180))
+
+  )
