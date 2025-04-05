@@ -90,37 +90,39 @@
               :gutterBottom true}
              (tr :help/available-pages)))
 
-       (for [[k {:keys [title blocks]}] pages]
-         ;; Find the first text block to display as summary
-         (let [summary-block (first (filter #(= :text (:type %)) blocks))
-               summary-text (when summary-block (:content summary-block))]
-         ($ Grid {:item true :xs 12 :sm 6 :md 4 :key k}
-            ($ Card {:sx #js{:height "100%"
-                             :cursor "pointer"
-                             :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
-                             :boxShadow 3
-                             :border "1px solid"
-                             :borderColor "divider"
-                             :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
-                             ":hover" #js{:transform "scale(1.03)"
-                                          :boxShadow 6
-                                          :borderColor "secondary.main"}} ;; Use secondary color for border on hover
-                     :onClick #(on-page-select k)}
-               ($ CardContent
-                  ($ Typography
-                     {:variant "subtitle2"
-                      :gutterBottom true
-                      :fontWeight "bold"}
-                     (locale title))
-                  ($ Typography
-                     {:variant "body2"
-                      :color "text.secondary"
-                      :sx #js{:overflow "hidden"
-                            :textOverflow "ellipsis"
-                            :display "-webkit-box"
-                            :-webkit-line-clamp 3
-                            :-webkit-box-orient "vertical"}}
-                     (locale summary-text))))))))))
+       (map-indexed
+         (fn [idx {:keys [slug title blocks]}]
+           ;; Find the first text block to display as summary
+           (let [summary-block (first (filter #(= :text (:type %)) blocks))
+                 summary-text (when summary-block (:content summary-block))]
+             ($ Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
+                ($ Card {:sx #js{:height "100%"
+                                :cursor "pointer"
+                                :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
+                                :boxShadow 3
+                                :border "1px solid"
+                                :borderColor "divider"
+                                :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
+                                ":hover" #js{:transform "scale(1.03)"
+                                            :boxShadow 6
+                                            :borderColor "secondary.main"}} ;; Use secondary color for border on hover
+                        :onClick #(on-page-select idx slug)}
+                  ($ CardContent
+                    ($ Typography
+                      {:variant "subtitle2"
+                        :gutterBottom true
+                        :fontWeight "bold"}
+                      (locale title))
+                    ($ Typography
+                      {:variant "body2"
+                        :color "text.secondary"
+                        :sx #js{:overflow "hidden"
+                              :textOverflow "ellipsis"
+                              :display "-webkit-box"
+                              :-webkit-line-clamp 3
+                              :-webkit-box-orient "vertical"}}
+                      (locale summary-text)))))))
+         pages))))
 
 (defui HelpMenu
   [{:keys [pages selected-page on-page-select]}]
@@ -128,37 +130,42 @@
         locale (tr)]
     ($ Stack {:direction "column"}
        ($ List {:sx #js{:min-width "200px"}}
-          (for [[k {:keys [title]}] pages]
-            ($ :<> {:key k}
-               ($ Divider)
-               ($ ListItem
-                  {:key k
-                   :disablePadding true
-                   :component "a"
-                   :sx #js{:transition "border-color 0.2s"
-                           :border "2px solid"
-                           :borderColor (if (= selected-page k) "secondary.main" "transparent")
-                           ":hover" #js{:borderColor "secondary.main"}}}
-                  ($ ListItemButton {:on-click #(on-page-select k)
-                                     :sx #js{:padding "8px 16px"}}
-                     (when (= selected-page k)
-                       ($ ListItemIcon
-                          ($ ArrowForwadIosIcon {:color "secondary"})))
-                     ($ ListItemText {:primary (locale title)})))))))))
+          (map-indexed
+            (fn [idx {:keys [slug title]}]
+              ($ :<> {:key (name slug)}
+                 ($ Divider)
+                 ($ ListItem
+                    {:key (name slug)
+                     :disablePadding true
+                     :component "a"
+                     :sx #js{:transition "border-color 0.2s"
+                             :border "2px solid"
+                             :borderColor (if (= selected-page idx) "secondary.main" "transparent")
+                             ":hover" #js{:borderColor "secondary.main"}}}
+                    ($ ListItemButton {:on-click #(on-page-select idx slug)
+                                       :sx #js{:padding "8px 16px"}}
+                       (when (= selected-page idx)
+                         ($ ListItemIcon
+                            ($ ArrowForwadIosIcon {:color "secondary"})))
+                       ($ ListItemText {:primary (locale title)})))))
+            pages)))))
 
 (defui HelpSection
   [{:keys [pages] :as _section}]
-  (let [selected-page (use-subscribe [::subs/selected-page])]
+  (let [selected-page-idx (use-subscribe [::subs/selected-page-idx])
+        selected-page (when (and (number? selected-page-idx) 
+                                 (< selected-page-idx (count pages)))
+                        (nth pages selected-page-idx))]
     ($ Stack {:direction "row" :spacing 2}
 
        ($ HelpMenu {:pages pages
-                    :selected-page selected-page
-                    :on-page-select #(==> [::events/select-page %])})
+                    :selected-page selected-page-idx
+                    :on-page-select #(==> [::events/select-page %1 %2])})
 
        (if selected-page
-         ($ HelpContent (get pages selected-page))
+         ($ HelpContent selected-page)
          ($ SummaryGrid {:pages pages
-                         :on-page-select #(==> [::events/select-page %])})))))
+                         :on-page-select #(==> [::events/select-page %1 %2])})))))
 
 (defui HelpManageButton []
   (let [has-permission? (use-subscribe [::user-subs/check-privilege nil :help/manage])
@@ -175,14 +182,22 @@
 
 (defui view
   [{:keys []}]
-  (let [sections         (use-subscribe [::subs/help-data])
-        mode             (use-subscribe [::subs/mode])
-        dialog-open?     (use-subscribe [::subs/dialog-open?])
-        selected-section (use-subscribe [::subs/selected-section])
-        selected-page    (use-subscribe [::subs/selected-page])
-        tr               (use-subscribe [:lipas.ui.subs/translator])
-        has-permission?  (use-subscribe [::user-subs/check-privilege nil :help/manage])
-        locale-kw        (tr)]
+  (let [sections             (use-subscribe [::subs/help-data])
+        mode                 (use-subscribe [::subs/mode])
+        dialog-open?         (use-subscribe [::subs/dialog-open?])
+        selected-section-idx (use-subscribe [::subs/selected-section-idx])
+        selected-page-idx    (use-subscribe [::subs/selected-page-idx])
+        selected-section     (when (and sections (number? selected-section-idx) 
+                                       (< selected-section-idx (count sections)))
+                               (nth sections selected-section-idx))
+        selected-pages       (when selected-section 
+                               (:pages selected-section))
+        selected-page        (when (and selected-pages (number? selected-page-idx)
+                                       (< selected-page-idx (count selected-pages)))
+                               (nth selected-pages selected-page-idx))
+        tr                   (use-subscribe [:lipas.ui.subs/translator])
+        has-permission?      (use-subscribe [::user-subs/check-privilege nil :help/manage])
+        locale-kw            (tr)]
 
     ;; Remove this check to make non-admins see help button
     (when has-permission?
@@ -221,19 +236,29 @@
 
                (when (= :read mode)
                  ($ :<>
-                    ($ Tabs {:value    selected-section
-                             :onChange #(==> [::events/select-section (keyword %2)])}
-                       (for [[k {:keys [title]}] sections]
-                         ($ Tab {:key k :value k :label (locale-kw title)})))
+                    ($ Tabs {:value    selected-section-idx
+                             :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
+                       (map-indexed
+                         (fn [idx section]
+                           ($ Tab {:key idx 
+                                  :value idx 
+                                  :label (locale-kw (:title section))}))
+                         sections))
 
                     ($ Breadcrumbs {:sx #js{:mt 1}}
                        ($ Typography (tr :help/headline))
 
-                       ($ Link {:underline "hover" :color "inherit" :on-click #(==> [::events/select-page nil])}
-                          (get-in sections [selected-section :title locale-kw]))
+                       (when selected-section
+                         ($ Link {:underline "hover" 
+                                 :color "inherit" 
+                                 :on-click #(==> [::events/select-page nil nil])}
+                            (locale-kw (:title selected-section))))
 
                        (when selected-page
-                         ($ Link {:underline "hover" :color "inherit" :href "/"}
-                            (get-in sections [selected-section :pages selected-page :title locale-kw]))))
+                         ($ Link {:underline "hover" 
+                                 :color "inherit" 
+                                 :href "/"}
+                            (locale-kw (:title selected-page)))))
 
-                    ($ HelpSection (get sections selected-section))))))))))
+                    (when selected-section
+                      ($ HelpSection selected-section))))))))))

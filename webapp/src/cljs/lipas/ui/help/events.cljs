@@ -11,14 +11,18 @@
     (assoc-in db [:help :dialog :open?] false)))
 
 (rf/reg-event-db ::select-section
-  (fn [db [_ v]]
+  (fn [db [_ section-idx section-slug]]
     (-> db
-        (assoc-in [:help :dialog :selected-section] v)
-        (assoc-in [:help :dialog :selected-page] nil))))
+        (assoc-in [:help :dialog :selected-section-idx] section-idx)
+        (assoc-in [:help :dialog :selected-section-slug] section-slug)
+        (assoc-in [:help :dialog :selected-page-idx] nil)
+        (assoc-in [:help :dialog :selected-page-slug] nil))))
 
 (rf/reg-event-db ::select-page
-  (fn [db [_ v]]
-    (assoc-in db [:help :dialog :selected-page] v)))
+  (fn [db [_ page-idx page-slug]]
+    (-> db
+        (assoc-in [:help :dialog :selected-page-idx] page-idx)
+        (assoc-in [:help :dialog :selected-page-slug] page-slug))))
 
 (rf/reg-event-fx ::open-edit-mode
   (fn [{:keys [db]} _]

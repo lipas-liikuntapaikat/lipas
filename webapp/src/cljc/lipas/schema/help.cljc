@@ -54,20 +54,26 @@
 
 (def Page
   [:map {:closed true}
+   [:slug :keyword]
    [:title LocalizedString]
    [:blocks [:vector ContentBlock]]]) ; A page contains a vector of content blocks
 
 (def Section
   [:map {:closed true}
+   [:slug :keyword]
    [:title LocalizedString]
-   [:pages [:map-of :keyword Page]]]) ; Pages identified by keyword within a section
+   [:pages [:vector
+           [:map {:closed true}
+            [:slug :keyword]
+            [:title LocalizedString]
+            [:blocks [:vector ContentBlock]]]]]]) ; Now pages are a vector of maps with slug, title and blocks
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Top-Level Schema
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def HelpData
-  [:map-of :keyword Section]) ; Top level is map of section-keyword -> section data
+  [:vector Section]) ; Top level is a vector of sections
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Registry (Optional but good practice)
@@ -88,6 +94,19 @@
 
 ;; Set the default registry
 #_(mr/set-default-registry! (mr/composite-registry m/default-registry registry))
+
+;; Utility function to transform from old map-based format to new vector-based format
+(defn transform-old-to-new-format [old-data]
+  (vec
+   (for [[section-key section-data] (sort-by first old-data)]
+     (let [pages-vec (vec
+                      (for [[page-key page-data] (sort-by first (:pages section-data))]
+                        ;; Transform each page by adding a slug
+                        (assoc page-data :slug page-key)))]
+       ;; Transform each section by adding a slug and converting pages to vector
+       {:slug section-key
+        :title (:title section-data)
+        :pages pages-vec}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Example Usage (Validation)

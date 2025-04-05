@@ -47,6 +47,10 @@
   clojure.lang.IPersistentMap
   (sql-value [m] (->pgobject m)))
 
+(extend-protocol jdbc/ISQLValue
+  clojure.lang.IPersistentVector
+  (sql-value [m] (->pgobject m)))
+
 (extend-protocol jdbc/IResultSetReadColumn
   org.postgresql.util.PGobject
   (result-set-read-column [^PGobject v _metadata _idx]

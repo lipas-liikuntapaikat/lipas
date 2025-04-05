@@ -13,6 +13,26 @@
 
 (defmethod unmarshall "help" [{:keys [body]}]
   #_(m/decode help-schema/HelpData body mt/json-transformer)
+  (mapv
+   (fn [section]
+     (-> section
+         (update :slug keyword)
+         (update :pages
+                 (fn [pages]
+                   (mapv (fn [page]
+                           (-> page
+                               (update :slug keyword)
+                               (update :blocks
+                                       (fn [blocks]
+                                         (mapv (fn [{:keys [type] :as block}]
+                                                 (cond-> (update block :type keyword)
+                                                   (= "video" type) (update :provider keyword)))
+                                               blocks)))))
+                         pages)))))
+        body))
+
+#_(defmethod unmarshall "help" [{:keys [body]}]
+  #_(m/decode help-schema/HelpData body mt/json-transformer)
   (let [paths (for [section-k (keys body)
                     page-k    (-> body section-k :pages keys)]
                 [section-k :pages page-k :blocks])]

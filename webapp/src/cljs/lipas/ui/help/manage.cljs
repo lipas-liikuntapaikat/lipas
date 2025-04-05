@@ -50,27 +50,27 @@
 
 (rf/reg-event-db
  ::update-section-title
- (fn [db [_ section-key lang value]]
-   (assoc-in db [:help :edited-data section-key :title lang] value)))
+ (fn [db [_ section-idx lang value]]
+   (assoc-in db [:help :edited-data section-idx :title lang] value)))
 
 (rf/reg-event-db
  ::update-page-title
- (fn [db [_ section-key page-key lang value]]
-   (assoc-in db [:help :edited-data section-key :pages page-key :title lang] value)))
+ (fn [db [_ section-idx page-idx lang value]]
+   (assoc-in db [:help :edited-data section-idx :pages page-idx :title lang] value)))
 
 (rf/reg-event-db
  ::update-block-content
- (fn [db [_ section-key page-key block-idx field lang value]]
-   (assoc-in db [:help :edited-data section-key :pages page-key :blocks block-idx field lang] value)))
+ (fn [db [_ section-idx page-idx block-idx field lang value]]
+   (assoc-in db [:help :edited-data section-idx :pages page-idx :blocks block-idx field lang] value)))
 
 (rf/reg-event-db
  ::update-block-field
- (fn [db [_ section-key page-key block-idx field value]]
-   (assoc-in db [:help :edited-data section-key :pages page-key :blocks block-idx field] value)))
+ (fn [db [_ section-idx page-idx block-idx field value]]
+   (assoc-in db [:help :edited-data section-idx :pages page-idx :blocks block-idx field] value)))
 
 (rf/reg-event-db
  ::add-block
- (fn [db [_ section-key page-key block-type]]
+ (fn [db [_ section-idx page-idx block-type]]
    (let [block-id (str (random-uuid))
          base-block {:block-id block-id :type block-type}
          new-block (case block-type
@@ -83,13 +83,13 @@
                                   :url ""
                                   :alt {:fi "" :en "" :se ""}
                                   :caption {:fi "" :en "" :se ""}))]
-     (update-in db [:help :edited-data section-key :pages page-key :blocks] conj new-block))))
+     (update-in db [:help :edited-data section-idx :pages page-idx :blocks] conj new-block))))
 
 
 (rf/reg-event-db
  ::delete-block
- (fn [db [_ section-key page-key block-idx]]
-   (update-in db [:help :edited-data section-key :pages page-key :blocks]
+ (fn [db [_ section-idx page-idx block-idx]]
+   (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
               (fn [blocks]
                 (vec (concat
                        (subvec blocks 0 block-idx)
@@ -97,10 +97,10 @@
 
 (rf/reg-event-db
  ::move-block-up
- (fn [db [_ section-key page-key block-idx]]
+ (fn [db [_ section-idx page-idx block-idx]]
    (if (zero? block-idx)
      db ; Already at the top, no change
-     (update-in db [:help :edited-data section-key :pages page-key :blocks]
+     (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
                 (fn [blocks]
                   (let [block (get blocks block-idx)
                         prev-block (get blocks (dec block-idx))]
@@ -110,12 +110,12 @@
 
 (rf/reg-event-db
  ::move-block-down
- (fn [db [_ section-key page-key block-idx]]
-   (let [blocks (get-in db [:help :edited-data section-key :pages page-key :blocks])
+ (fn [db [_ section-idx page-idx block-idx]]
+   (let [blocks (get-in db [:help :edited-data section-idx :pages page-idx :blocks])
          last-idx (dec (count blocks))]
      (if (= block-idx last-idx)
        db ; Already at the bottom, no change
-       (update-in db [:help :edited-data section-key :pages page-key :blocks]
+       (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
                   (fn [blocks]
                     (let [block (get blocks block-idx)
                           next-block (get blocks (inc block-idx))]
@@ -134,42 +134,48 @@
 
 (rf/reg-event-db
  ::add-page
- (fn [db [_ section-key]]
+ (fn [db [_ section-idx]]
    (let [default-title "New Page"
          ;; Create a basic slug from the title
          base-slug (create-slug default-title)
          ;; Add timestamp to ensure uniqueness
          timestamp (.now js/Date)
-         new-page-key (keyword base-slug)
          ;; Create a basic page structure
-         new-page {:title {:fi default-title :en default-title :se "Ny sida"}
-                   :blocks []}
-         ;; Ensure key is unique within the section
-         existing-pages (get-in db [:help :edited-data section-key :pages])
-         final-page-key (if (contains? existing-pages new-page-key)
-                          (keyword (str base-slug "-" timestamp))
-                          new-page-key)]
+         new-page {:slug (keyword (str base-slug "-" timestamp))
+                  :title {:fi default-title :en default-title :se "Ny sida"}
+                  :blocks []}
+         ;; Get the current pages vector
+         pages (get-in db [:help :edited-data section-idx :pages])
+         new-page-idx (count pages)]
      ;; Add the new page to the appropriate section
      (-> db
-         (assoc-in [:help :edited-data section-key :pages final-page-key] new-page)
+         (update-in [:help :edited-data section-idx :pages] conj new-page)
          ;; Select the new page
-         (assoc-in [:help :dialog :selected-page] final-page-key)))))
+         (assoc-in [:help :dialog :selected-page-idx] new-page-idx)
+         (assoc-in [:help :dialog :selected-page-slug] (:slug new-page))))))
 
 (rf/reg-event-db
  ::delete-page
- (fn [db [_ section-key page-key]]
-   (let [pages (get-in db [:help :edited-data section-key :pages])
-         selected-page (get-in db [:help :dialog :selected-page])
+ (fn [db [_ section-idx page-idx]]
+   (let [pages (get-in db [:help :edited-data section-idx :pages])
+         selected-page-idx (get-in db [:help :dialog :selected-page-idx])
          ;; If we're deleting the currently selected page, select the first available page
-         new-selected-page (if (= selected-page page-key)
-                             (when (> (count pages) 1)
-                               (first (keys (dissoc pages page-key))))
-                             selected-page)]
+         new-selected-idx (if (= selected-page-idx page-idx)
+                             (if (= page-idx 0)
+                               (if (> (count pages) 1) 0 nil) ; Select first page if still pages, else nil
+                               (dec page-idx)) ; Select previous page
+                             (if (and selected-page-idx (> selected-page-idx page-idx))
+                                (dec selected-page-idx) ; Adjust selected index if it's after the deleted one
+                                selected-page-idx))
+         new-selected-slug (when (and (some? new-selected-idx) (< new-selected-idx (count (filterv #(not= % (nth pages page-idx)) pages))))
+                             (:slug (nth (filterv #(not= % (nth pages page-idx)) pages) new-selected-idx)))]
      (-> db
          ;; Remove the page from the section
-         (update-in [:help :edited-data section-key :pages] dissoc page-key)
+         (update-in [:help :edited-data section-idx :pages]
+                   (fn [pages] (vec (concat (subvec pages 0 page-idx) (subvec pages (inc page-idx))))))
          ;; Update the selected page if needed
-         (assoc-in [:help :dialog :selected-page] new-selected-page)))))
+         (assoc-in [:help :dialog :selected-page-idx] new-selected-idx)
+         (assoc-in [:help :dialog :selected-page-slug] new-selected-slug)))))
 
 (rf/reg-event-db
  ::add-section
@@ -179,43 +185,54 @@
          base-slug (create-slug default-title)
          ;; Add timestamp to ensure uniqueness
          timestamp (.now js/Date)
-         new-section-key (keyword base-slug)
          ;; Create a basic section structure with one default page
-         new-page-key (keyword "welcome")
-         new-section {:title {:fi default-title :en default-title :se "Ny sektion"}
-                      :pages {new-page-key {:title {:fi "Welcome" :en "Welcome" :se "Välkommen"}
-                                           :blocks []}}}
-         ;; Ensure key is unique
-         existing-sections (get-in db [:help :edited-data])
-         final-section-key (if (contains? existing-sections new-section-key)
-                             (keyword (str base-slug "-" timestamp))
-                             new-section-key)]
+         section-slug (keyword (str base-slug "-" timestamp))
+         welcome-page {:slug (keyword "welcome")
+                      :title {:fi "Welcome" :en "Welcome" :se "Välkommen"}
+                      :blocks []}
+         new-section {:slug section-slug
+                     :title {:fi default-title :en default-title :se "Ny sektion"}
+                     :pages [welcome-page]}
+         ;; Get the current sections
+         sections (or (get-in db [:help :edited-data]) [])
+         new-section-idx (count sections)]
      ;; Add the new section
      (-> db
-         (assoc-in [:help :edited-data final-section-key] new-section)
+         (update-in [:help :edited-data] (fn [sections] (conj (or sections []) new-section)))
          ;; Select the new section and its first page
-         (assoc-in [:help :dialog :selected-section] final-section-key)
-         (assoc-in [:help :dialog :selected-page] new-page-key)))))
+         (assoc-in [:help :dialog :selected-section-idx] new-section-idx)
+         (assoc-in [:help :dialog :selected-section-slug] section-slug)
+         (assoc-in [:help :dialog :selected-page-idx] 0)
+         (assoc-in [:help :dialog :selected-page-slug] (:slug welcome-page))))))
 
 (rf/reg-event-db
  ::delete-section
- (fn [db [_ section-key]]
+ (fn [db [_ section-idx]]
    (let [sections (get-in db [:help :edited-data])
-         selected-section (get-in db [:help :dialog :selected-section])
+         selected-section-idx (get-in db [:help :dialog :selected-section-idx])
          ;; If we're deleting the currently selected section, select the first available section
-         new-selected-section (if (= selected-section section-key)
-                                (when (> (count sections) 1)
-                                  (first (keys (dissoc sections section-key))))
-                                selected-section)]
+         new-selected-idx (if (= selected-section-idx section-idx)
+                            (if (= section-idx 0)
+                              (if (> (count sections) 1) 0 nil) ; Select first section if still sections, else nil
+                              (dec section-idx)) ; Select previous section
+                            (if (and selected-section-idx (> selected-section-idx section-idx))
+                              (dec selected-section-idx) ; Adjust selected index if it's after the deleted one
+                              selected-section-idx))
+         new-selected-slug (when (and (some? new-selected-idx) (< new-selected-idx (count (filterv #(not= % (nth sections section-idx)) sections))))
+                             (:slug (nth (filterv #(not= % (nth sections section-idx)) sections) new-selected-idx)))]
      (-> db
          ;; Remove the section
-         (update-in [:help :edited-data] dissoc section-key)
+         (update-in [:help :edited-data]
+                   (fn [sections] (vec (concat (subvec sections 0 section-idx) (subvec sections (inc section-idx))))))
          ;; Update the selected section if needed
-         (assoc-in [:help :dialog :selected-section] new-selected-section)
+         (assoc-in [:help :dialog :selected-section-idx] new-selected-idx)
+         (assoc-in [:help :dialog :selected-section-slug] new-selected-slug)
          ;; Clear page selection if we deleted the selected section
          ((fn [updated-db]
-            (if (= selected-section section-key)
-              (assoc-in updated-db [:help :dialog :selected-page] nil)
+            (if (= selected-section-idx section-idx)
+              (-> updated-db
+                 (assoc-in [:help :dialog :selected-page-idx] nil)
+                 (assoc-in [:help :dialog :selected-page-slug] nil))
               updated-db)))))))
 
 (rf/reg-event-db
@@ -284,9 +301,9 @@
    (let [{:keys [type params]} (get-in db [:help :confirm-dialog])]
      {:db (assoc-in db [:help :confirm-dialog :open?] false)
       :fx [[:dispatch (case type
-                        :delete-section [::delete-section (:section-key params)]
-                        :delete-page [::delete-page (:section-key params) (:page-key params)]
-                        :delete-block [::delete-block (:section-key params) (:page-key params) (:block-idx params)])]]})))
+                        :delete-section [::delete-section (:section-idx params)]
+                        :delete-page [::delete-page (:section-idx params) (:page-idx params)]
+                        :delete-block [::delete-block (:section-idx params) (:page-idx params) (:block-idx params)])]]})))
 
 (rf/reg-sub
  ::confirm-dialog
@@ -316,7 +333,7 @@
       :multiline (boolean multiline)
       :rows (or rows 4)}))
 
-(defui section-editor [{:keys [section-key section]}]
+(defui section-editor [{:keys [section-idx section]}]
   (let [[lang set-lang!] (use-state :fi)
         [expanded set-expanded!] (use-state false)]
     ($ Box {:sx #js{:mt 2}}
@@ -340,9 +357,9 @@
                    {:label "Section Title"
                     :value (:title section)
                     :lang lang
-                    :on-change #(rf/dispatch [::update-section-title section-key %1 %2])})))))))
+                    :on-change #(rf/dispatch [::update-section-title section-idx %1 %2])})))))))
 
-(defui page-editor [{:keys [section-key page-key page]}]
+(defui page-editor [{:keys [section-idx page-idx page]}]
   (let [[lang set-lang!] (use-state :fi)
         [expanded set-expanded!] (use-state false)]
     ($ Box {:sx #js{:mt 2}}
@@ -366,9 +383,9 @@
                    {:label "Page Title"
                     :value (:title page)
                     :lang lang
-                    :on-change #(rf/dispatch [::update-page-title section-key page-key %1 %2])})))))))
+                    :on-change #(rf/dispatch [::update-page-title section-idx page-idx %1 %2])})))))))
 
-(defui text-block-editor [{:keys [section-key page-key block-idx blocks-count block]}]
+(defui text-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (let [[lang set-lang!] (use-state :fi)
         [expanded set-expanded!] (use-state false)
         content-preview (or
@@ -402,20 +419,20 @@
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (zero? block-idx)
-                                    :onClick #(rf/dispatch [::move-block-up section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
                          ($ ArrowUpIcon {:fontSize "small"}))
 
                       ;; Move down button
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (= block-idx (dec blocks-count))
-                                    :onClick #(rf/dispatch [::move-block-down section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
                          ($ ArrowDownIcon {:fontSize "small"}))
 
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -428,9 +445,9 @@
                  :multiline true
                  :rows 6
                  :lang lang
-                 :on-change #(rf/dispatch [::update-block-content section-key page-key block-idx :content %1 %2])}))))))
+                 :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :content %1 %2])}))))))
 
-(defui video-block-editor [{:keys [section-key page-key block-idx blocks-count block]}]
+(defui video-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (let [[lang set-lang!] (use-state :fi)
         [expanded set-expanded!] (use-state false)
         video-id (or (:video-id block) "")
@@ -462,20 +479,20 @@
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (zero? block-idx)
-                                    :onClick #(rf/dispatch [::move-block-up section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
                          ($ ArrowUpIcon {:fontSize "small"}))
 
                       ;; Move down button
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (= block-idx (dec blocks-count))
-                                    :onClick #(rf/dispatch [::move-block-down section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
                          ($ ArrowDownIcon {:fontSize "small"}))
 
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -485,7 +502,7 @@
                 ($ Select {:labelId "video-provider-label"
                           :value (or (:provider block) :youtube)
                           :onChange #(rf/dispatch [::update-block-field
-                                                 section-key page-key block-idx
+                                                 section-idx page-idx block-idx
                                                  :provider
                                                  (keyword (.. % -target -value))])}
                    ($ MenuItem {:value "youtube"} "YouTube")
@@ -495,7 +512,7 @@
                           :label "Video ID"
                           :value (or (:video-id block) "")
                           :onChange #(rf/dispatch [::update-block-field
-                                                 section-key page-key block-idx
+                                                 section-idx page-idx block-idx
                                                  :video-id
                                                  (.. % -target -value)])
                           :variant "outlined"
@@ -508,9 +525,9 @@
                 {:label "Title"
                  :value (:title block)
                  :lang lang
-                 :on-change #(rf/dispatch [::update-block-content section-key page-key block-idx :title %1 %2])}))))))
+                 :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :title %1 %2])}))))))
 
-(defui image-block-editor [{:keys [section-key page-key block-idx blocks-count block]}]
+(defui image-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (let [[lang set-lang!] (use-state :fi)
         [expanded set-expanded!] (use-state false)
         url (or (:url block) "")
@@ -548,20 +565,20 @@
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (zero? block-idx)
-                                    :onClick #(rf/dispatch [::move-block-up section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
                          ($ ArrowUpIcon {:fontSize "small"}))
 
                       ;; Move down button
                       ($ IconButton {:color "primary"
                                     :size "small"
                                     :disabled (= block-idx (dec blocks-count))
-                                    :onClick #(rf/dispatch [::move-block-down section-key page-key block-idx])}
+                                    :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
                          ($ ArrowDownIcon {:fontSize "small"}))
 
                       ;; Delete button
                       ($ IconButton {:color "error"
                                     :size "small"
-                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-key section-key :page-key page-key :block-idx block-idx}])}
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
                          ($ DeleteIcon {:fontSize "small"})))})
 
        ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
@@ -570,7 +587,7 @@
                           :label "Image URL"
                           :value (or (:url block) "")
                           :onChange #(rf/dispatch [::update-block-field
-                                                 section-key page-key block-idx
+                                                 section-idx page-idx block-idx
                                                  :url
                                                  (.. % -target -value)])
                           :variant "outlined"
@@ -582,55 +599,55 @@
                 {:label "Alt Text"
                  :value (:alt block)
                  :lang lang
-                 :on-change #(rf/dispatch [::update-block-content section-key page-key block-idx :alt %1 %2])})
+                 :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :alt %1 %2])})
 
              ($ localized-text-field
                 {:label "Caption"
                  :value (:caption block)
                  :lang lang
-                 :on-change #(rf/dispatch [::update-block-content section-key page-key block-idx :caption %1 %2])}))))))
+                 :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :caption %1 %2])}))))))
 
-(defui block-editor [{:keys [section-key page-key block-idx blocks-count block]}]
+(defui block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (case (:type block)
-    :text ($ text-block-editor {:section-key section-key
-                              :page-key page-key
+    :text ($ text-block-editor {:section-idx section-idx
+                              :page-idx page-idx
                               :block-idx block-idx
                               :blocks-count blocks-count
                               :block block})
-    :video ($ video-block-editor {:section-key section-key
-                                :page-key page-key
+    :video ($ video-block-editor {:section-idx section-idx
+                                :page-idx page-idx
                                 :block-idx block-idx
                                 :blocks-count blocks-count
                                 :block block})
-    :image ($ image-block-editor {:section-key section-key
-                                :page-key page-key
+    :image ($ image-block-editor {:section-idx section-idx
+                                :page-idx page-idx
                                 :block-idx block-idx
                                 :blocks-count blocks-count
                                 :block block})
     ($ Typography {:color "error"} (str "Unknown block type: " (:type block)))))
 
-(defui add-block-controls [{:keys [section-key page-key]}]
+(defui add-block-controls [{:keys [section-idx page-idx]}]
   ($ Box {:sx #js{:display "flex" :gap 1 :mt 2}}
      ($ Button
         {:variant "outlined"
          :size "small"
          :startIcon ($ TextIcon {})
-         :onClick #(rf/dispatch [::add-block section-key page-key :text])}
+         :onClick #(rf/dispatch [::add-block section-idx page-idx :text])}
         "Add Text")
      ($ Button
         {:variant "outlined"
          :size "small"
          :startIcon ($ VideoIcon {})
-         :onClick #(rf/dispatch [::add-block section-key page-key :video])}
+         :onClick #(rf/dispatch [::add-block section-idx page-idx :video])}
         "Add Video")
      ($ Button
         {:variant "outlined"
          :size "small"
          :startIcon ($ ImageIcon {})
-         :onClick #(rf/dispatch [::add-block section-key page-key :image])}
+         :onClick #(rf/dispatch [::add-block section-idx page-idx :image])}
         "Add Image")))
 
-(defui blocks-editor [{:keys [section-key page-key blocks]}]
+(defui blocks-editor [{:keys [section-idx page-idx blocks]}]
   ($ Box {}
      ($ Typography {:variant "h6" :gutterBottom true :mt 2}
         "Page Content Blocks")
@@ -639,16 +656,16 @@
       (fn [idx block]
         ($ block-editor
            {:key (str (:block-id block))
-            :section-key section-key
-            :page-key page-key
+            :section-idx section-idx
+            :page-idx page-idx
             :block-idx idx
             :blocks-count (count blocks)
             :block block}))
       blocks)
 
-     ($ add-block-controls {:section-key section-key :page-key page-key})))
+     ($ add-block-controls {:section-idx section-idx :page-idx page-idx})))
 
-(defui section-selector [{:keys [sections selected-section on-select]}]
+(defui section-selector [{:keys [sections selected-section-idx on-select]}]
   ($ Stack {:spacing 1}
 
      ($ Typography {:variant "h6"} "Select Section")
@@ -656,13 +673,14 @@
      ($ FormControl {:fullWidth true}
         #_($ InputLabel {:id "section-select-label"} "Select Section")
         ($ Select {:labelId "section-select-label"
-                  :value (or selected-section "")
-                  :onChange #(on-select (keyword (.. % -target -value)))
+                  :value (or selected-section-idx "")
+                  :onChange #(on-select (js/parseInt (.. % -target -value)))
                   :displayEmpty true}
-           (map (fn [[k v]]
-                  ($ MenuItem {:key (name k) :value (name k)}
-                     (get-in v [:title :fi] (name k))))
-                sections)))
+           (map-indexed
+            (fn [idx section]
+              ($ MenuItem {:key idx :value idx}
+                 (get-in section [:title :fi] (str "Section " idx))))
+            sections)))
 
      ($ Stack {:direction "row" :spacing 1}
         ;; Add Section button
@@ -680,13 +698,13 @@
            {:variant "outlined"
             :color "error"
             :size "small"
-            :disabled (nil? selected-section)
+            :disabled (nil? selected-section-idx)
             :startIcon ($ DeleteIcon {})
-            :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-key selected-section}])
+            :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-idx selected-section-idx}])
             :sx #js{:mt 0}}
            "Delete Section"))))
 
-(defui page-selector [{:keys [section-key pages selected-page on-select]}]
+(defui page-selector [{:keys [section-idx pages selected-page-idx on-select]}]
   ($ Stack {:spacing 2}
 
      ($ Typography {:variant "h6"} "Select Page")
@@ -694,13 +712,14 @@
      ($ FormControl {:fullWidth true}
         #_($ InputLabel {:id "page-select-label"} "Select Page")
         ($ Select {:labelId "page-select-label"
-                   :value (or (when selected-page (name selected-page)) "")
-                   :onChange #(on-select (keyword (.. % -target -value)))
+                   :value (or selected-page-idx "")
+                   :onChange #(on-select (js/parseInt (.. % -target -value)))
                    :displayEmpty true}
-           (map (fn [[k v]]
-                  ($ MenuItem {:key (name k) :value (name k)}
-                     (get-in v [:title :fi] (name k))))
-                pages)))
+           (map-indexed
+            (fn [idx page]
+              ($ MenuItem {:key idx :value idx}
+                 (get-in page [:title :fi] (str "Page " idx))))
+            pages)))
 
      ($ Stack {:direction "row" :spacing 1}
 
@@ -710,7 +729,7 @@
             :color "primary"
             :size "small"
             :startIcon ($ AddIcon {})
-            :onClick #(rf/dispatch [::add-page section-key])
+            :onClick #(rf/dispatch [::add-page section-idx])
             :sx #js{:mt 0}}
            "Add Page")
 
@@ -719,10 +738,10 @@
            {:variant "outlined"
             :color "error"
             :size "small"
-            :disabled (nil? selected-page)
+            :disabled (nil? selected-page-idx)
             :startIcon ($ DeleteIcon {})
-            :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-key section-key
-                                                                        :page-key selected-page}])
+            :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-idx section-idx
+                                                                        :page-idx selected-page-idx}])
             :sx #js{:mt 0}}
            "Delete Page"))))
 
@@ -755,8 +774,8 @@
   (let [dialog (use-subscribe [::confirm-dialog])
         dialog-type (:type dialog)
         params (:params dialog)
-        section-key (:section-key params)
-        page-key (:page-key params)
+        section-idx (:section-idx params)
+        page-idx (:page-idx params)
         block-idx (:block-idx params)
 
         get-title (fn []
@@ -801,12 +820,17 @@
 (defui view
   []
   (let [edit-data (use-subscribe [::edited-help-data])
-        selected-section-key (use-subscribe [::subs/selected-section])
-        selected-page-key (use-subscribe [::subs/selected-page])
+        selected-section-idx (use-subscribe [::subs/selected-section-idx])
+        selected-page-idx (use-subscribe [::subs/selected-page-idx])
 
-        selected-section (get edit-data selected-section-key)
-        selected-page (when (and selected-section-key selected-page-key)
-                        (get-in edit-data [selected-section-key :pages selected-page-key]))]
+        selected-section (when (and edit-data (number? selected-section-idx)
+                                  (< selected-section-idx (count edit-data)))
+                           (nth edit-data selected-section-idx))
+        selected-pages (when selected-section
+                         (:pages selected-section))
+        selected-page (when (and selected-pages (number? selected-page-idx)
+                                (< selected-page-idx (count selected-pages)))
+                        (nth selected-pages selected-page-idx))]
 
     ($ Box {:sx #js{:p 2}}
        ;; Confirmation dialog always rendered but only shown when needed
@@ -815,27 +839,27 @@
 
        ($ section-selector
           {:sections edit-data
-           :selected-section selected-section-key
-           :on-select #(rf/dispatch [::events/select-section %])})
+           :selected-section-idx selected-section-idx
+           :on-select #(rf/dispatch [::events/select-section % (get-in (nth edit-data %) [:slug])])})
 
-       (when selected-section-key
-         ($ section-editor {:section-key selected-section-key :section selected-section}))
+       (when selected-section
+         ($ section-editor {:section-idx selected-section-idx :section selected-section}))
 
-       (when selected-section-key
+       (when selected-section
          ($ page-selector
-            {:section-key selected-section-key
-             :pages (get-in edit-data [selected-section-key :pages])
-             :selected-page selected-page-key
-             :on-select #(rf/dispatch [::events/select-page %])}))
+            {:section-idx selected-section-idx
+             :pages selected-pages
+             :selected-page-idx selected-page-idx
+             :on-select #(rf/dispatch [::events/select-page % (get-in (nth selected-pages %) [:slug])])}))
 
-       (when (and selected-section-key selected-page-key)
+       (when (and selected-section selected-page)
          ($ page-editor
-            {:section-key selected-section-key
-             :page-key selected-page-key
+            {:section-idx selected-section-idx
+             :page-idx selected-page-idx
              :page selected-page}))
 
-       (when (and selected-section-key selected-page-key)
+       (when (and selected-section selected-page)
          ($ blocks-editor
-            {:section-key selected-section-key
-             :page-key selected-page-key
+            {:section-idx selected-section-idx
+             :page-idx selected-page-idx
              :blocks (:blocks selected-page)})))))
