@@ -5,6 +5,7 @@
    ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
    ["@mui/icons-material/Delete$default" :as DeleteIcon]
    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/CategoryOutlined$default" :as CategoryIcon]
    ["@mui/icons-material/Image$default" :as ImageIcon]
    ["@mui/icons-material/Preview$default" :as PreviewIcon]
    ["@mui/icons-material/Save$default" :as SaveIcon]
@@ -82,7 +83,9 @@
                      :image (assoc base-block
                                   :url ""
                                   :alt {:fi "" :en "" :se ""}
-                                  :caption {:fi "" :en "" :se ""}))]
+                                  :caption {:fi "" :en "" :se ""})
+                     :type-code-explorer base-block ;; No additional props needed for type explorer
+                     )]
      (update-in db [:help :edited-data section-idx :pages page-idx :blocks] conj new-block))))
 
 
@@ -607,6 +610,52 @@
                  :lang lang
                  :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :caption %1 %2])}))))))
 
+(defui type-code-explorer-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
+  (let [[expanded set-expanded!] (use-state false)]
+    ($ Card {:variant "elevation"
+            :elevation 3
+            :sx #js{:mb 2
+                   :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                   :transition "box-shadow 0.3s ease"}}
+       ($ CardHeader
+          {:title ($ Typography {:variant "subtitle1" :component "div"}
+                    ($ Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
+                       ($ CategoryIcon {:fontSize "small" :color "action" :sx #js{:mr 1}})
+                       "Type Code Explorer"))
+           :action ($ Box {:sx #js{:display "flex" :gap 0.5}}
+                      ;; Expand/collapse button
+                      ($ IconButton {:onClick #(set-expanded! (not expanded))
+                                    :size "small"
+                                    :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                         :transition "transform 0.3s"}}
+                         ($ ExpandMoreIcon {:fontSize "small"}))
+
+                      ;; Move up button
+                      ($ IconButton {:color "primary"
+                                    :size "small"
+                                    :disabled (zero? block-idx)
+                                    :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
+                         ($ ArrowUpIcon {:fontSize "small"}))
+
+                      ;; Move down button
+                      ($ IconButton {:color "primary"
+                                    :size "small"
+                                    :disabled (= block-idx (dec blocks-count))
+                                    :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
+                         ($ ArrowDownIcon {:fontSize "small"}))
+
+                      ;; Delete button
+                      ($ IconButton {:color "error"
+                                    :size "small"
+                                    :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
+                         ($ DeleteIcon {:fontSize "small"})))})
+
+       ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
+          ($ CardContent {}
+             ;; Type explorer has no editable properties - it just displays the sports facility types.
+             ($ Typography {:variant "body2" :color "text.secondary"}
+                "This block will display a hierarchical browser for sports facility types. Users can explore main categories, subcategories, and individual facility types."))))))
+
 (defui block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (case (:type block)
     :text ($ text-block-editor {:section-idx section-idx
@@ -624,10 +673,15 @@
                                 :block-idx block-idx
                                 :blocks-count blocks-count
                                 :block block})
+    :type-code-explorer ($ type-code-explorer-block-editor {:section-idx section-idx
+                                                          :page-idx page-idx
+                                                          :block-idx block-idx
+                                                          :blocks-count blocks-count
+                                                          :block block})
     ($ Typography {:color "error"} (str "Unknown block type: " (:type block)))))
 
 (defui add-block-controls [{:keys [section-idx page-idx]}]
-  ($ Box {:sx #js{:display "flex" :gap 1 :mt 2}}
+  ($ Box {:sx #js{:display "flex" :gap 1 :mt 2 :flexWrap "wrap"}}
      ($ Button
         {:variant "outlined"
          :size "small"
@@ -645,7 +699,14 @@
          :size "small"
          :startIcon ($ ImageIcon {})
          :onClick #(rf/dispatch [::add-block section-idx page-idx :image])}
-        "Add Image")))
+        "Add Image")
+     ($ Button
+        {:variant "outlined"
+         :size "small"
+         :color "secondary"
+         :startIcon ($ CategoryIcon {})
+         :onClick #(rf/dispatch [::add-block section-idx page-idx :type-code-explorer])}
+        "Add Type Explorer")))
 
 (defui blocks-editor [{:keys [section-idx page-idx blocks]}]
   ($ Box {}

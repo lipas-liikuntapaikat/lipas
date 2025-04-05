@@ -38,11 +38,17 @@
    [:video-id NonEmptyString] ; The unique ID from the provider
    [:title {:optional true} LocalizedString]]) ; Optional title for the video
 
+(def TypeCodeExplorerBlock
+  [:map {:closed true}
+   [:block-id BlockId]
+   [:type {:decode/string keyword} [:enum :type-code-explorer]]])
+
 (def ContentBlock
   [:multi {:dispatch :type}
    [:text TextBlock]
    [:image ImageBlock]
    [:video VideoBlock]
+   [:type-code-explorer TypeCodeExplorerBlock]
    ;; Add other block types here in the future
    ;; [:heading HeadingBlock]
    ])

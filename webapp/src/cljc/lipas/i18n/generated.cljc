@@ -360,14 +360,17 @@
      :dec "Joulukuu",
      :aug "Elokuu"},
     :type
-    {:name          "Liikuntapaikkatyyppi",
-     :main-category "Pääryhmä",
-     :sub-category  "Alaryhmä",
-     :type-code     "Tyyppikoodi"
-     :geometry      "Geometria",
-     :Point         "Piste",
-     :LineString    "Reitti",
-     :Polygon       "Alue"},
+    {:name            "Liikuntapaikkatyyppi",
+     :main-category   "Pääryhmä",
+     :main-categories "Pääryhmät"
+     :sub-category    "Alaryhmä",
+     :sub-cateogires  "Alaryhmät"
+     :type-code       "Tyyppikoodi"
+     :geometry        "Geometria",
+     :count           "Tyyppejä yhteensä"
+     :Point           "Piste",
+     :LineString      "Reitti",
+     :Polygon         "Alue"},
     :duration
     {:hour        "tuntia",
      :month       "kuukautta",
@@ -425,6 +428,7 @@
      :headline              "Haku",
      :results-count         "{1} hakutulosta",
      :placeholder           "Etsi...",
+     :results               "Hakutulokset"
      :retkikartta-filter    "Retkikartta.fi-kohteet",
      :harrastuspassi-filter "Harrastuspassi.fi-kohteet",
      :filters               "Rajaa hakua",
@@ -455,7 +459,8 @@
     {:headline "Yksinkertaista geometrioita"}
     :partners           {:headline "Kehittä​misessä mukana"},
     :actions
-    {:duplicate                "Kopioi",
+    {:back                     "Takaisin"
+     :duplicate                "Kopioi",
      :resurrect                "Palauta",
      :select-year              "Valitse vuosi",
      :select-owners            "Valitse omistajat",
@@ -601,6 +606,8 @@
     :lipas.sports-site
     {:accessibility          "Esteettömyys"
      :properties             "Lisätiedot",
+     :properties2            "Ominaisuudet",
+     :property               "Ominaisuus"
      :delete-tooltip         "Poista liikuntapaikka...",
      :headline               "Liikuntapaikka",
      :new-site-of-type       "Uusi {1}",
@@ -639,6 +646,11 @@
      :add-new-planning       "Lisää liikunta- tai ulkoilupaikka vedos-tilassa"
      :planning-site          "Vedos"
      :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten."},
+    :lipas.properties
+    {:allowed-values "Mahdolliset arvot"
+     :value          "Arvo"
+     :label          "Nimi"
+     }
     :status
     {:active                     "Toiminnassa",
      :planned                    "Suunniteltu"

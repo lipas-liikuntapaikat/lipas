@@ -2,14 +2,24 @@
   (:require
     ["@mui/icons-material/Close$default" :as CloseIcon]
     ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
+    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
+    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
     ["@mui/icons-material/Help$default" :as Help]
     ["@mui/icons-material/Edit$default" :as EditIcon]
+    ["@mui/material/Accordion$default" :as Accordion]
+    ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+    ["@mui/material/AccordionDetails$default" :as AccordionDetails]
     ["@mui/material/AppBar$default" :as AppBar]
+    ["@mui/material/Box$default" :as Box]
     ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
     ["@mui/material/Button$default" :as Button]
+    ["@mui/material/Card$default" :as Card]
+    ["@mui/material/CardContent$default" :as CardContent]
+    ["@mui/material/Chip$default" :as Chip]
     ["@mui/material/Dialog$default" :as Dialog]
     ["@mui/material/DialogContent$default" :as DialogContent]
     ["@mui/material/Divider$default" :as Divider]
+    ["@mui/material/Grid$default" :as Grid]
     ["@mui/material/IconButton$default" :as IconButton]
     ["@mui/material/Link$default" :as Link]
     ["@mui/material/List$default" :as List]
@@ -17,15 +27,20 @@
     ["@mui/material/ListItemButton$default" :as ListItemButton]
     ["@mui/material/ListItemText$default" :as ListItemText]
     ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+    ["@mui/material/Paper$default" :as Paper]
     ["@mui/material/Stack$default" :as Stack]
     ["@mui/material/Tab$default" :as Tab]
+    ["@mui/material/Table$default" :as Table]
+    ["@mui/material/TableBody$default" :as TableBody]
+    ["@mui/material/TableCell$default" :as TableCell]
+    ["@mui/material/TableContainer$default" :as TableContainer]
+    ["@mui/material/TableHead$default" :as TableHead]
+    ["@mui/material/TableRow$default" :as TableRow]
     ["@mui/material/Tabs$default" :as Tabs]
+    ["@mui/material/TextField$default" :as TextField]
     ["@mui/material/Toolbar$default" :as Toolbar]
     ["@mui/material/Tooltip$default" :as Tooltip]
     ["@mui/material/Typography$default" :as Typography]
-    ["@mui/material/Grid$default" :as Grid]
-    ["@mui/material/Card$default" :as Card]
-    ["@mui/material/CardContent$default" :as CardContent]
     [lipas.ui.help.events :as events]
     [lipas.ui.help.manage :as manage]
     [lipas.ui.help.subs :as subs]
@@ -46,6 +61,289 @@
       :referrer-policy   "strict-origin-when-cross-origin"
       :allow-full-screen true}))
 
+;; Helper component to display a list of types
+(defui TypesList
+  [{:keys [types locale]}]
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])]
+    ($ :<>
+       (for [type (sort-by :type-code types)]
+         ($ Accordion {:key (:type-code type) :TransitionProps #js{:unmountOnExit true}}
+            ($ AccordionSummary {:expandIcon ($ ExpandMoreIcon)}
+               ($ Typography {:variant "body2"}
+                  (str (:type-code type) " - " (get-in type [:name locale]))))
+
+            ($ AccordionDetails
+
+               ;; Type metadata
+               ($ Grid {:container true :spacing 2}
+
+                  ;; Description
+                  (when-let [description (get-in type [:description locale])]
+                    ($ Grid {:item true :xs 12}
+                       ($ Paper {:variant "outlined" :sx #js{:p 2}}
+                          ($ Typography {:variant "body1"} description))))
+
+                  ;; Geometry type
+                  ($ Grid {:item true :xs 12 :sm 6 :md 4}
+                     ($ Box {:sx #js{:p 2 :border "1px solid" :borderColor "divider" :borderRadius 1}}
+                        ($ Typography {:variant "subtitle2" :gutterBottom true}
+                           (tr :type/geometry))
+                        ($ Typography {:variant "body1"}
+                           (:geometry-type type))))
+
+                  ;; Tags if available
+                  (when-let [tags (get-in type [:tags locale])]
+                    ($ Grid {:item true :xs 12 :lg 8}
+                       ($ Box {:sx #js{:p 2 :border "1px solid" :borderColor "divider" :borderRadius 1}}
+                          ($ Typography {:variant "subtitle2" :gutterBottom true}
+                             (tr :ptv/keywords))
+                          ($ Stack {:direction "row" :spacing 1 :flexWrap "wrap" :gap 1}
+                             (for [tag tags]
+                               ($ Chip {:key tag :label tag :size "small"}))))))
+
+                  ;; Properties
+                  ($ Grid {:item true :xs 12}
+                     ($ Box {:sx #js{:mt 3}}
+                        ($ Typography {:variant "subtitle1" :gutterBottom true}
+                           (or (tr :lipas.sports-site/properties2) "Properties"))
+
+                        (if (seq (:props type))
+                          ($ TableContainer {:component Paper}
+                             ($ Table {:size "small" :aria-label "properties table"}
+                                ($ TableHead
+                                   ($ TableRow
+                                      ($ TableCell (or (tr :lipas.sports-site/property) "Property"))
+                                      ($ TableCell (or (tr :lipas.sports-site/type) "Type"))
+                                      ($ TableCell (or (tr :general/description) "Description"))))
+                                ($ TableBody
+                                   (for [prop (:props type)]
+                                     ($ TableRow {:key (:key prop)}
+                                        ($ TableCell {:component "th" :scope "row"}
+                                           ($ Tooltip {:title (str (:key prop)) :arrow true}
+                                              ($ Typography {:variant "body1"}
+                                                 (get-in prop [:name locale] (name (:key prop))))))
+                                        ($ TableCell
+                                           ($ Chip {:label (:data-type prop)
+                                                    :size "small"
+                                                    :color (case (:data-type prop)
+                                                             "numeric" "primary"
+                                                             "boolean" "secondary"
+                                                             "enum" "success"
+                                                             "enum-coll" "warning"
+                                                             "string" "info"
+                                                             "default")}))
+                                        ($ TableCell
+                                           ($ Typography {:variant "body1"}
+                                              (get-in prop [:description locale] "-"))))))))
+
+                          ($ Typography {:variant "body1" :color "text.secondary"}
+                             "No specific properties defined"))
+
+                        ;; If the property has enum options, display them
+                        (for [prop (filter #(contains? #{"enum" "enum-coll"} (:data-type %)) (:props type))]
+                          (when (seq (:opts prop))
+                            ($ Box {:key (str "opts-" (:key prop)) :mt 2}
+                               ($ Typography {:variant "subtitle2" :gutterBottom true}
+                                  (str (get-in prop [:name locale]) " - "
+                                       (or (tr :lipas.properties/allowed-values) "Allowed values")))
+                               ($ TableContainer {:component Paper}
+                                  ($ Table {:size "small" :aria-label "options table"}
+                                     ($ TableHead
+                                        ($ TableRow
+                                           ($ TableCell (or (tr :lipas.properties/value) "Value"))
+                                           ($ TableCell (or (tr :lipas.properties/label) "Label"))
+                                           ($ TableCell (or (tr :general/description) "Description"))))
+                                     ($ TableBody
+                                        (for [[option-key option-data] (:opts prop)]
+                                          ($ TableRow {:key option-key}
+                                             ($ TableCell {:component "th" :scope "row"}
+                                                ($ Typography {:variant "body1" :fontFamily "monospace"}
+                                                   option-key))
+                                             ($ TableCell
+                                                (get-in option-data [:label locale] ""))
+                                             ($ TableCell
+                                                (get-in option-data [:description locale] "")))))))))))))))))))
+
+
+(defui TypeCodeExplorer
+  []
+  (let [types-data (use-subscribe [:lipas.ui.subs/sports-site-types])
+        tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        ;; State for selected items
+        [selected-main-category set-selected-main-category!] (uix/use-state nil)
+        [selected-sub-category set-selected-sub-category!] (uix/use-state nil)
+        [search-term set-search-term!] (uix/use-state "")
+        [view-mode set-view-mode!] (uix/use-state :categories) ; :categories, :search, or :details
+
+        ;; Group types by categories
+        main-categories (when types-data
+                          (->> types-data
+                               (group-by #(get-in % [:main-category :type-code]))
+                               (sort-by first)))
+
+        ;; Filter sub-categories based on selected main category
+        sub-categories (when (and types-data selected-main-category)
+                         (->> types-data
+                              (filter #(= (get-in % [:main-category :type-code]) selected-main-category))
+                              (group-by #(get-in % [:sub-category :type-code]))
+                              (sort-by first)))
+
+        ;; Filter types based on selected sub-category
+        filtered-types (when (and types-data selected-sub-category)
+                         (->> types-data
+                              (filter #(= (get-in % [:sub-category :type-code]) selected-sub-category))
+                              (sort-by :type-code)))
+
+        ;; Full text search across all types
+        searched-types (when (and types-data (not-empty search-term))
+                         (let [term (clojure.string/lower-case search-term)]
+                           (->> types-data
+                                (filter #(or
+                                          (clojure.string/includes?
+                                           (clojure.string/lower-case (get-in % [:name locale] ""))
+                                           term)
+                                          (clojure.string/includes?
+                                           (clojure.string/lower-case (str (:type-code %)))
+                                           term)
+                                          (when-let [desc (get-in % [:description locale])]
+                                            (clojure.string/includes?
+                                             (clojure.string/lower-case desc)
+                                             term))))
+                                (sort-by :type-code))))]
+
+    ;; Main component view
+    ($ Stack {:direction "column" :spacing 2 :sx #js{:flex 1}}
+
+
+       ;; Search bar
+       ($ Grid {:container true :spacing 2 :alignItems "center" :sx #js{:mb 2}}
+          ($ Grid {:item true :xs 12 :md 9}
+             ($ TextField {:fullWidth true
+                           :variant "outlined"
+                           :size "small"
+                           :label (tr :search/search)
+                           :placeholder "Pallokenttä"
+                           :value search-term
+                           :onChange #(let [value (.. % -target -value)]
+                                        (set-search-term! value)
+                                        (when (not-empty value)
+                                          (set-view-mode! :search))
+                                        (when (empty? value)
+                                          (set-view-mode! :categories)))})))
+
+       ;; Breadcrumbs navigation
+       ($ Breadcrumbs {:sx #js{:mb 2 :pl 2}}
+          ($ Link {:component "button"
+                   :underline "hover"
+                   :onClick #(do (set-selected-main-category! nil)
+                                 (set-selected-sub-category! nil)
+                                 (set-view-mode! :categories))}
+             (tr :type/main-categories))
+
+          (when selected-main-category
+            ($ Link {:component "button"
+                     :underline "hover"
+                     :onClick #(do (set-selected-sub-category! nil)
+                                   (set-view-mode! :categories))}
+               (if-let [main-cat (->> types-data
+                                      (filter #(= (get-in % [:main-category :type-code]) selected-main-category))
+                                      first)]
+                 (get-in main-cat [:main-category :name locale])
+                 (str (tr :type/main-category) " " selected-main-category))))
+
+          (when selected-sub-category
+            ($ Typography {:color "text.primary"}
+               (if-let [sub-cat (->> types-data
+                                     (filter #(= (get-in % [:sub-category :type-code]) selected-sub-category))
+                                     first)]
+                 (get-in sub-cat [:sub-category :name locale])
+                 (str (tr :ttype/sub-category) " " selected-sub-category)))))
+
+       ;; Main content area
+       ($ Box {:sx #js{:p 2 :border "1px solid" :borderColor "divider" :borderRadius 1 :flex 1}}
+          (case view-mode
+            ;; Category browsing view
+            :categories
+            (if selected-main-category
+              ;; Show sub-categories if main category is selected
+              (if (seq sub-categories)
+                ($ Grid {:container true :spacing 2}
+                   (for [[sub-cat-code sub-cat-types] sub-categories]
+                     (let [first-type (first sub-cat-types)
+                           sub-cat-name (get-in first-type [:sub-category :name locale])]
+                       ($ Grid {:item true :xs 12 :sm 6 :md 4 :key sub-cat-code}
+                          ($ Card {:sx #js{:height "100%"
+                                           :cursor "pointer"
+                                           :transition "all 0.2s"
+                                           ":hover" #js{:transform "translateY(-3px)"
+                                                        :boxShadow 3}}
+                                   :onClick #(do (set-selected-sub-category! sub-cat-code)
+                                                 (set-view-mode! :details))}
+                             ($ CardContent
+                                ($ Typography {:variant "h6" :component "div" :gutterBottom true}
+                                   sub-cat-name)
+                                ($ Typography {:variant "body1" :color "text.secondary"}
+                                   (str (tr :type/count) ": " (count sub-cat-types)))
+                                ($ Typography {:variant "caption" :display "block"}
+                                   (str (tr :type/type-code) ": " sub-cat-code))))))))
+
+                ;; No sub-categories found
+                ($ Typography {:color "text.secondary"}
+                   (tr :lipas.categories/no-sub-categories)))
+
+              ;; Show main categories if no main category selected
+              ($ Grid {:container true :spacing 2}
+                 (for [[main-cat-code main-cat-types] main-categories]
+                   (let [first-type (first main-cat-types)
+                         main-cat-name (get-in first-type [:main-category :name locale])]
+                     ($ Grid {:item true :xs 12 :sm 6 :md 4 :key main-cat-code}
+                        ($ Card {:sx #js{:height "100%"
+                                         :cursor "pointer"
+                                         :transition "all 0.2s"
+                                         ":hover" #js{:transform "translateY(-3px)"
+                                                      :boxShadow 3}}
+                                 :onClick #(do (set-selected-main-category! main-cat-code)
+                                               (set-view-mode! :categories))}
+                           ($ CardContent
+                              ($ Typography {:variant "h6" :component "div" :gutterBottom true}
+                                 main-cat-name)
+                              ($ Typography {:variant "body1" :color "text.secondary"}
+                                 (str (tr :type/count) ": " (count main-cat-types)))
+                              ($ Typography {:variant "caption" :display "block"}
+                                 (str (tr :type/type-code) ": " main-cat-code)))))))))
+
+            ;; Search results view
+            :search
+            (if (seq searched-types)
+              ($ :<>
+                 ($ Typography {:variant "subtitle1" :gutterBottom true}
+                    (str (tr :search/results) ": " (count searched-types)))
+                 ($ TypesList {:types searched-types :locale locale}))
+              ($ Typography {:color "text.secondary" :align "center" :py 4}
+                 (tr :search/results-count 0)))
+
+            ;; Details view for a specific sub-category
+            :details
+            ($ TypesList {:types filtered-types :locale locale})
+
+            ;; Default fallback
+            ($ Typography {:color "error"}
+               "Unknown view mode")))
+
+       ;; Back button when drilling down
+       (when (or selected-main-category selected-sub-category)
+         ($ Box {:mt 2}
+            ($ Button {:variant "outlined"
+                       :startIcon ($ ArrowBackIcon)
+                       :onClick #(if selected-sub-category
+                                   (do (set-selected-sub-category! nil)
+                                       (set-view-mode! :categories))
+                                   (do (set-selected-main-category! nil)
+                                       (set-view-mode! :categories)))}
+               (tr :actions/back)))))))
+
+
 (defui ContentBlock
   [{:keys [block]}]
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
@@ -63,6 +361,9 @@
                :alt (locale (:alt block))
                :style #js{:maxWidth "100%"}})
 
+      :type-code-explorer
+      ($ TypeCodeExplorer {})
+
       ;; Default case - unknown block type
       ($ Typography {:color "error"} (str "Unknown block type: " (:type block))))))
 
@@ -70,7 +371,7 @@
   [{:keys [title blocks]}]
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)]
-    ($ Stack {:direction "column" :spacing 2 :sx #js{:pl 4}}
+    ($ Stack {:direction "column" :spacing 2 :sx #js{:pl 4 :flex 1}}
        ($ Typography {:variant :h6} (locale title))
 
        ;; Content blocks container
@@ -153,7 +454,7 @@
 (defui HelpSection
   [{:keys [pages] :as _section}]
   (let [selected-page-idx (use-subscribe [::subs/selected-page-idx])
-        selected-page (when (and (number? selected-page-idx) 
+        selected-page (when (and (number? selected-page-idx)
                                  (< selected-page-idx (count pages)))
                         (nth pages selected-page-idx))]
     ($ Stack {:direction "row" :spacing 2}
@@ -187,10 +488,10 @@
         dialog-open?         (use-subscribe [::subs/dialog-open?])
         selected-section-idx (use-subscribe [::subs/selected-section-idx])
         selected-page-idx    (use-subscribe [::subs/selected-page-idx])
-        selected-section     (when (and sections (number? selected-section-idx) 
+        selected-section     (when (and sections (number? selected-section-idx)
                                        (< selected-section-idx (count sections)))
                                (nth sections selected-section-idx))
-        selected-pages       (when selected-section 
+        selected-pages       (when selected-section
                                (:pages selected-section))
         selected-page        (when (and selected-pages (number? selected-page-idx)
                                        (< selected-page-idx (count selected-pages)))
@@ -240,8 +541,8 @@
                              :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
                        (map-indexed
                          (fn [idx section]
-                           ($ Tab {:key idx 
-                                  :value idx 
+                           ($ Tab {:key idx
+                                  :value idx
                                   :label (locale-kw (:title section))}))
                          sections))
 
@@ -249,14 +550,14 @@
                        ($ Typography (tr :help/headline))
 
                        (when selected-section
-                         ($ Link {:underline "hover" 
-                                 :color "inherit" 
+                         ($ Link {:underline "hover"
+                                 :color "inherit"
                                  :on-click #(==> [::events/select-page nil nil])}
                             (locale-kw (:title selected-section))))
 
                        (when selected-page
-                         ($ Link {:underline "hover" 
-                                 :color "inherit" 
+                         ($ Link {:underline "hover"
+                                 :color "inherit"
                                  :href "/"}
                             (locale-kw (:title selected-page)))))
 

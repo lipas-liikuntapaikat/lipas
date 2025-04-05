@@ -1,5 +1,6 @@
 (ns lipas.ui.subs
   (:require [clojure.string :refer [upper-case]]
+            [lipas.data.types :as types]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::current-route
@@ -47,6 +48,13 @@
 (rf/reg-sub ::user-data
   (fn [db _]
     (-> db :user :login :user-data)))
+
+(rf/reg-sub ::sports-site-types
+  (fn [_]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])])
+  (fn [[active-types] _]
+    (for [[type-code type-data] active-types]
+      (types/->type (assoc type-data :type-code type-code)))))
 
 (comment ((comp (fnil upper-case "?") first) ""))
 (comment ((comp (fnil upper-case "?") first) "kis"))
