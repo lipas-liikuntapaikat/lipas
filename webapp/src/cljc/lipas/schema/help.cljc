@@ -1,6 +1,5 @@
 (ns lipas.schema.help
-  (:require [lipas.schema.common :as common]
-            [malli.core :as m]))
+  (:require [lipas.schema.common :as common]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Reusable Primitive Schemas
@@ -56,7 +55,7 @@
   [:map {:closed true}
    [:slug :keyword]
    [:title LocalizedString]
-   [:blocks [:vector ContentBlock]]]) ; A page contains a vector of content blocks
+   [:blocks [:vector ContentBlock]]])
 
 (def Section
   [:map {:closed true}
@@ -66,7 +65,7 @@
            [:map {:closed true}
             [:slug :keyword]
             [:title LocalizedString]
-            [:blocks [:vector ContentBlock]]]]]]) ; Now pages are a vector of maps with slug, title and blocks
+            [:blocks [:vector ContentBlock]]]]]])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Top-Level Schema
@@ -94,65 +93,3 @@
 
 ;; Set the default registry
 #_(mr/set-default-registry! (mr/composite-registry m/default-registry registry))
-
-;; Utility function to transform from old map-based format to new vector-based format
-(defn transform-old-to-new-format [old-data]
-  (vec
-   (for [[section-key section-data] (sort-by first old-data)]
-     (let [pages-vec (vec
-                      (for [[page-key page-data] (sort-by first (:pages section-data))]
-                        ;; Transform each page by adding a slug
-                        (assoc page-data :slug page-key)))]
-       ;; Transform each section by adding a slug and converting pages to vector
-       {:slug section-key
-        :title (:title section-data)
-        :pages pages-vec}))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Example Usage (Validation)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(comment
-  (require '[malli.error :as me])
-
-  ; Example data snippet (replace with your actual data map)
-  (def example-data
-    {:general
-     {:title {:fi "Yleiset" :se "Allmänt" :en "General"}
-      :pages
-      {:what-is-lipas
-       {:title {:fi "Mikä Lipas on?" :en "What is Lipas?" :se "Vad är Lipas?"}
-        :blocks [{:block-id "uuid-abc-123"
-                  :type :text
-                  :content {:fi "Lipas on suomalainen..."
-                            :en "Lipas is a Finnish..."
-                            :se "Lipas är en finsk..."}}
-
-                 {:block-id "uuid-def-456"
-                  :type :image
-                  :url "/path/to/your/image/lipas-overview.jpg"
-                  :alt {:fi "Yleiskuva Lipas-palvelusta"
-                        :en "Overview of the Lipas service"
-                        :se "Översikt över Lipas-tjänsten"}
-                  :caption {:fi "Lipaksen pääkarttanäkymä."
-                            :en "The main map view of Lipas."
-                            :se "Huvudkartvyn i Lipas."}}
-
-                 {:block-id "uuid-ghi-789"
-                  :type :video
-                  :provider :youtube
-                  :video-id "dqT-UlYlg1s"
-                  :title {:fi "Esittelyvideo"
-                          :en "Introduction Video"
-                          :se "Introduktionsvideo"}}
-                 ]}}}})
-
-
-  ; Validate the example data against the schema
-  (m/validate HelpDataSchema example-data)
-
-  ; Explain validation errors (if any)
-  (-> (m/explain HelpDataSchema example-data)
-      (me/humanize))
-
-)
