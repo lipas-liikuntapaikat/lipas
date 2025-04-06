@@ -36,10 +36,10 @@
     :neighborhood {:fi (-> location :neighborhood)
                    :en (-> location :neighborhood)
                    :se (-> location :neighborhood)}
-    :geometries (when-let [geoms (-> location :geometries)] (to-geojson geoms))
-    :coordinates {:wgs84   (parse-coords (:start-point-wgs84 location))
-                  :tm35fin (parse-coords (:start-point-tm35fin location))}
-    :sportsPlaces (read-string-safe (:sports-places location)))))
+    :geometries (-> location :geometries)
+    #_#_:coordinates {:wgs84   (parse-coords (:start-point-wgs84 location))
+                      :tm35fin (parse-coords (:start-point-tm35fin location))}
+    :sportsPlaces (:sportPlaceId ()))))
 
 
 
