@@ -61,6 +61,18 @@
       :referrer-policy   "strict-origin-when-cross-origin"
       :allow-full-screen true}))
 
+(defui PdfIframe
+  [{:keys [url title]}]
+  ($ Box {:width "100%" :height "100%"}
+     ($ Paper {:elevation 2 :sx #js {:p 2}}
+        ($ :iframe
+           {:width             "100%"
+            :height            "600px"
+            :src               url
+            :title             (or title "PDF")
+            :frame-border      "0"
+            :allow-full-screen true}))))
+
 ;; Helper component to display a list of types
 (defui TypesList
   [{:keys [types locale]}]
@@ -366,6 +378,10 @@
       ($ :img {:src (:url block)
                :alt (locale (:alt block))
                :style #js{:maxWidth "100%"}})
+
+      :pdf
+      ($ PdfIframe {:url (:url block)
+                     :title (when (:title block) (locale (:title block)))})
 
       :type-code-explorer
       ($ TypeCodeExplorer {})

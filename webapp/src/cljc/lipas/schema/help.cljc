@@ -38,6 +38,14 @@
    [:video-id NonEmptyString] ; The unique ID from the provider
    [:title {:optional true} LocalizedString]]) ; Optional title for the video
 
+(def PdfBlock
+  [:map {:closed true}
+   [:block-id BlockId]
+   [:type {:decode/string keyword} [:enum :pdf]]
+   [:url NonEmptyString] ; Assuming URL is a non-empty string
+   [:caption {:optional true} LocalizedString]
+   [:title {:optional true} LocalizedString]])
+
 (def TypeCodeExplorerBlock
   [:map {:closed true}
    [:block-id BlockId]
@@ -48,6 +56,7 @@
    [:text TextBlock]
    [:image ImageBlock]
    [:video VideoBlock]
+   [:pdf PdfBlock]
    [:type-code-explorer TypeCodeExplorerBlock]
    ;; Add other block types here in the future
    ;; [:heading HeadingBlock]
