@@ -81,6 +81,17 @@
        :all
        lipas-api.locations/format-location
        lipas-api.properties/format-props-db))
+
+  (defn index-single [lipasid]
+    (-> (lipas.backend.core/get-sports-site (db) lipasid)
+        (lipas.integration.old-lipas.transform/->old-lipas-sports-site)
+        (assoc :id lipasid)
+        (lipas-api.sports-places/format-sports-place
+         :all
+         lipas-api.locations/format-location
+         lipas-api.properties/format-props-db)))
+
+  (index-single 76201)
   ;;=> {:typeCode nil}
   (transform/->old-lipas-sports-site)
   (assoc :id lipas-id)
