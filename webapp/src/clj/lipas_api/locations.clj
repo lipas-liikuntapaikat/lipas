@@ -1,7 +1,8 @@
 (ns lipas-api.locations
   (:require
-   [lipas-api.geometries :refer [parse-coords to-geojson]]
-   [lipas-api.util :refer [locale-key only-non-nil-recur read-string-safe]]
+   [lipas-api.util :refer [only-non-nil-recur]]
+   [lipas.backend.core :refer [feature-coll->geom-coll]]
+   [lipas.backend.gis :as gis]
    [lipas.data.cities :as cities]))
 
 (defn find-geoms
@@ -22,8 +23,16 @@
   [locations geoms]
   (map #(assoc % :geoms (find-geoms % geoms)) locations))
 
+(defn start-coord [location]
+  (let [geom (-> location :geometries :features first :geometry)]
+    (case (:type geom)
+      "Point"      (-> geom :coordinates)
+      "LineString" (-> geom :coordinates first)
+      "Polygon"    (-> geom :coordinates first first))))
+
+
 (defn format-location
-  [location locale]
+  [location locale id]
   (only-non-nil-recur
    (array-map
     :address (:address location)
@@ -37,26 +46,28 @@
                    :en (-> location :neighborhood)
                    :se (-> location :neighborhood)}
     :geometries (-> location :geometries)
-    #_#_:coordinates {:wgs84   (parse-coords (:start-point-wgs84 location))
-                      :tm35fin (parse-coords (:start-point-tm35fin location))}
-    :sportsPlaces (:sportPlaceId ()))))
+    :coordinates {:wgs84 (start-coord location)
+                  :tm35fin (gis/wgs84->tm35fin-no-wrap (start-coord location))}
+    ;; added :geom-coll
+    :geom-coll        (feature-coll->geom-coll (-> location :geometries))
+    ;; what is this?
+    :sportsPlaces (:sportPlaceId [1234]))))
 
 
 
 
 
 (comment
-  l
-  (def l {:address "Rantakyläntie 575",
-          :city {:cityCode 976},
-          :geometries {:features [{:geometry {:coordinates [23.6766294258769 66.4580931812035], :type "Point"},
-                                   :id "f2112032-191b-426c-9d10-e69bca48588b",
-                                   :properties {:pointId 123},
-                                   :type "Feature"}],
-                       :type "FeatureCollection"},
-          :neighborhood "Kuntaosa",
-          :postalCode "95635",
-          :postalOffice "Ylitornio"})
-  (cities/by-city-code 20)
+
+  (def ss (lipas.backend.core/get-sports-site (user/db) 74782))
+
+  (def old-ss (-> ss
+                  (lipas.integration.old-lipas.transform/->old-lipas-sports-site)
+                  (assoc :id 74782)))
+
+  old-ss
+
+  (lipas-api.locations/format-location (:location old-ss) :all 74782)
+
 
   )

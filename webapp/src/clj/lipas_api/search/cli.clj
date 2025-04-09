@@ -77,7 +77,7 @@
   [client {:keys [index type id sync?]
            :or   {index "sports_places" type "_doc"}}]
   (es/request client {:method       :delete
-                      :url          (es-utils/url [index type id])
+                      :url          (es-utils/url [:legacy_sports_sites_current type id])
                       :query-string (when sync? {:refresh "wait_for"})}))
 
 (defn get
@@ -175,13 +175,14 @@
 
 (defn fetch-sports-places
   [client params]
-  (es/request client {:method :get
-                      :url    (es-utils/url [:sports_places :_search])
-                      :body
-                      {:query            (resolve-query params)
-                       :track_total_hits true
-                       :size             (:limit params)
-                       :from             (* (:offset params) (:limit params))}}))
+  (let [response (es/request client {:method :get
+                                     :url    (es-utils/url [:legacy_sports_sites_current :_search])
+                                     :body
+                                     {:query            (resolve-query params)
+                                      :track_total_hits true
+                                      :size             (:limit params)
+                                      :from             (* (:offset params) (:limit params))}})]
+    response))
 
 (defn more?
   "Returns true if result set was limited considering
