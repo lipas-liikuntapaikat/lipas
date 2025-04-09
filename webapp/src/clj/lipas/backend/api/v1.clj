@@ -1,7 +1,8 @@
 (ns lipas.backend.api.v1
   (:require
+   [lipas-api.core :as legacy-core]
+   [lipas-api.http :as legacy-http]
    [lipas.backend.legacy.api :as legacy-api]
-   #_[lipas.backend.legacy.core :as legacy]
    [lipas.schema.core-legacy :as legacy-schema]
    [lipas.schema.sports-sites.types :as types-schema]
    [reitit.coercion.malli :as malli]
@@ -17,7 +18,8 @@
 
        :info {:title "LIPAS API V1"
               :summary "API for Finnish sports and recreational facility database LIPAS"
-              :description "The LIPAS system provides comprehensive data about sports and recreational facilities in Finland. The API is organized into two main sections:
+              :description
+              "The LIPAS system provides comprehensive data about sports and recreational facilities in Finland. The API is organized into two main sections:
 
 **Sports Places**
 The core entities of LIPAS. Each sports facility is classified using a hierarchical type system, where specific facility types belong to subcategories within seven main categories. Each facility type has its own specific set of properties and a defined geometry type (Point, LineString, or Polygon) that describes its spatial representation.
@@ -38,6 +40,19 @@ Access to the hierarchical type classification system used for categorizing spor
            ;; these routes from that.
       :swagger  {:id :hide-from-default}
       :coercion malli/coercion}
+     #_["/sports-places/:sports-place-id"
+      {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]
+                    :path [:map [:sports-place-id :int]]}
+       :get
+       {:tags ["sport-places"]
+        :handler
+        (fn [req]
+          (let [locale (or (-> req :parameters :query :lang keyword) :fi)
+                sports-place-id (-> req :parameters :path :sports-place-id)
+                resp (legacy-core/fetch-sports-place-es (:client search) locale sports-place-id)]
+            {:status     200
+             :body       resp}))
+        :responses {200 {:body :any}}}}]
      ["/sports-places"
       {:parameters {:query legacy-schema/search-params}
        :get
@@ -77,13 +92,13 @@ Access to the hierarchical type classification system used for categorizing spor
                            (nil? fields-value) []
                            (string? fields-value) [fields-value]
                            :else fields-value))
-                locale (or (:lang qp) :fi)
-                resp   nil #_(legacy/fetch-sports-places (:client search) locale params fields)
+                locale (or (keyword lang) :se)
+                resp   (legacy-core/fetch-sports-places-es search locale params fields)
                 {:keys [partial? total results]} resp]
             (if partial?
               (let [path  "/v1/sports-places"
-                    links nil #_(legacy/create-page-links path params (:offset params) (:limit params) total)]
-                nil #_(legacy/linked-partial-content results links))
+                    links (legacy-http/create-page-links path params (:offset params) (:limit params) total)]
+                (legacy-http/linked-partial-content results links))
               {:status 200
                :body (doall results)})))
         :responses {200 {:body :any}}}}]
@@ -119,20 +134,10 @@ Access to the hierarchical type classification system used for categorizing spor
             {:status     200
              :body       (legacy-api/sports-place-by-type-code locale type-code)}))
         :responses {200 {:body :any}}}}]
+
      (comment
        ;; mallissa provider, sillä voisi tehdä mallin
-       ["/sports-places/:sports-place-id"
-        {:swagger {:id ::legacy}
-         :parameters {:query (s/keys :opt-un [:lipas.api/lang])
-                      :path {:sports-place-id int?}}
-         :get
-         {:tags ["sport-places"]
-          :handler
-          (fn [req]
-            (let [locale (or (-> req :parameters :query :lang keyword) :fi)
-                  sports-place-id (-> req :parameters :path :sports-place-id)]
-              {:status     200
-               :body       (str "hello world" sports-place-id)}))}}]
+
        ["/deleted-sports-places"
         {:swagger {:id ::legacy}
          :parameters {:query (s/keys :opt-un [:lipas.legacy.api/since])}
@@ -154,7 +159,7 @@ Access to the hierarchical type classification system used for categorizing spor
           (fn [req]
             (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
               {:status     200
-               :body       "nil"#_(legacy-api/sports-place-types locale)}))}}])
+               :body       "nil" #_(legacy-api/sports-place-types locale)}))}}])
      ["/openapi.json"
       {:get
        {:no-doc  true

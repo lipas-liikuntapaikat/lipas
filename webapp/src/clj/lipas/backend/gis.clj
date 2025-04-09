@@ -133,25 +133,25 @@
 
 (defn ->flat-coords [fcoll]
   (->> fcoll
-      :features
-      (map :geometry)
-      (reduce
-       (fn [res g]
-         (case (:type g)
+       :features
+       (map :geometry)
+       (reduce
+        (fn [res g]
+          (case (:type g)
 
-           "Point"
-           (conj res (-> g :coordinates strip-z))
+            "Point"
+            (conj res (-> g :coordinates strip-z))
 
-           "LineString"
-           (into res (map strip-z) (:coordinates g))
+            "LineString"
+            (into res (map strip-z) (:coordinates g))
 
-           ("Polygon" "MultiLineString")
-           (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
+            ("Polygon" "MultiLineString")
+            (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
 
-           ("MultiPolygon")
-           (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
-       [])
-      (into [] #_(distinct))))
+            ("MultiPolygon")
+            (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
+        [])
+       (into [] #_(distinct))))
 
 (defn contains-coords? [fcoll]
   (boolean (seq (->flat-coords fcoll))))
@@ -384,15 +384,13 @@
   (->tm35fin-envelope test-route)
 
   (-> test-route
-      ->jts-geom
-      )
+      ->jts-geom)
 
   (->single-linestring-coords test-route)
 
   (def mp (->> test-route
-        ->flat-coords
-        ->jts-multi-point
-        ))
+               ->flat-coords
+               ->jts-multi-point))
 
   (def coords (.getCoordinates mp))
 
@@ -403,7 +401,7 @@
   (.getSRID convex)
 
 
-  (.setDistanceFnForCoordinate hull-tool )
+  (.setDistanceFnForCoordinate hull-tool)
   (.getDistanceFnForCoordinate hull-tool)
 
   hull-tool
@@ -462,8 +460,7 @@
        ->jts-geom)
 
   (->> test-polygon
-       concave-hull
-       )
+       concave-hull)
 
   (centroid test-route)
 
@@ -524,6 +521,4 @@
   (contains-coords? test-point)
   (contains-coords? test-route)
   (contains-coords? test-polygon)
-  (contains-coords? test-polygon-empty)
-
-  )
+  (contains-coords? test-polygon-empty))
