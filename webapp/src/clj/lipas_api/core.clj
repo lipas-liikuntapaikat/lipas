@@ -10,16 +10,17 @@
             [clojure.set :as set]
             [lipas-api.util :refer [only-non-nil-recur] :as util]))
 
-(defn fetch-sports-places
+(defn fetch-sports-places-es
   "Fetches list of sports-places from ElasticSearch backend."
   [search locale params fields]
-  (let [data (:body (es/fetch-sports-places search params))
+  (let [data (:body (es/fetch-sports-places (:client search) params))
         places (map :_source (-> data :hits :hits))
-        fields (conj fields :sportsPlaceId)]
-    {:partial? (es/more? data (:limit params) (:offset params))
+        fields (conj fields :sportsPlaceId)
+        partial? (es/more? data (:limit params) (:offset params))]
+    {:partial? partial?
      :total (-> data :hits :total :value)
-     :results (map (comp only-non-nil-recur
-                         (partial filter-and-format locale fields)) places)}))
+     :results (mapv (comp only-non-nil-recur
+                          (partial filter-and-format locale fields)) places)}))
 
 (defn fetch-sports-place
   "Fetches single sports-place from database."
@@ -38,7 +39,7 @@
         :_source
         (format-sports-place-es locale)
         only-non-nil-recur)
-    (catch Exception ex nil)))
+    (catch Exception ex (println ex))))
 
 (defn index
   "Fetches sports-place data with all locales from the db

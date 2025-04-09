@@ -2,8 +2,10 @@
   (:require
    [lipas-api.locations :refer [format-location join-geoms]]
    [lipas-api.properties :refer [format-props-db]]
-   [lipas-api.util :refer [locale-key parse-path parse-year select-paths]]
+   [lipas-api.util :refer [parse-path parse-year select-paths]]
+   [lipas.backend.core :refer [feature-coll->geom-coll]]
    [lipas.data.owners :as owners]
+   [lipas.data.prop-types :as props]
    [lipas.data.types-old :as types-old]))
 
 (def df-in (java.time.format.DateTimeFormatter/ofPattern
@@ -28,6 +30,11 @@
 (defn format-owner [sp]
   (assoc sp :owner (-> owners/all (get "city"))))
 
+(defn fill-properties [m]
+  (reduce (fn [acc k] (assoc-in acc [:props k] (props/all k)))
+          m
+          (-> m :props keys)))
+
 (defn format-sports-place
   [sports-place locale location-format-fn props-format-fn]
   {:sportsPlaceId    (:id sports-place)
@@ -49,7 +56,8 @@
    :www              (:www sports-place)
    :email            (:email sports-place)
    :location         (when-let [location (:location sports-place)]
-                       (apply location-format-fn [location locale]))})
+                       (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
+   :properties       (:properties sports-place)})
 
 
 
