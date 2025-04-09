@@ -78,11 +78,11 @@
                 [:fields [:or
                           [:vector (into [:enum] legacy-fields)]
                           (into [:enum] legacy-fields)]]
-                [:typeCodes [:or 
+                [:typeCodes [:or
                              #'types-schema/active-type-code
                              #'types-schema/active-type-codes]]
-                [:closeToLon [:int {:min -180 :max 180}]]
-                [:closeToLat [:int {:min -90 :max 90}]]
+                [:closeToLon [:float {:min -180 :max 180}]]
+                [:closeToLat [:float {:min -90 :max 90}]]
                 [:lang #'lang]
                 [:modifiedAfter [:re #"\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]) (?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}"]]
                 [:retkikartta :boolean]
