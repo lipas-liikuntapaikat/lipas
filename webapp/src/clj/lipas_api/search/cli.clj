@@ -77,14 +77,13 @@
   [client {:keys [index type id sync?]
            :or   {index "sports_places" type "_doc"}}]
   (es/request client {:method       :delete
-                      :url          (es-utils/url [:legacy_sports_sites_current type id])
+                      :url          (es-utils/url ["legacy_sports_sites_current" "_doc" id])
                       :query-string (when sync? {:refresh "wait_for"})}))
 
-(defn get
-  [client {:keys [index type id] :or {index "sports_places"
-                                      type "_doc"}}]
+(defn es-get
+  [client id]
   (es/request client {:method :get
-                      :url    (es-utils/url [index type id])}))
+                      :url    (es-utils/url [:legacy_sports_sites_current :_doc id])}))
 
 (defn bulk-index
   ([client data]

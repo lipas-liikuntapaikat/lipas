@@ -40,7 +40,7 @@ Access to the hierarchical type classification system used for categorizing spor
            ;; these routes from that.
       :swagger  {:id :hide-from-default}
       :coercion malli/coercion}
-     #_["/sports-places/:sports-place-id"
+     ["/sports-places/:sports-place-id"
       {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]
                     :path [:map [:sports-place-id :int]]}
        :get

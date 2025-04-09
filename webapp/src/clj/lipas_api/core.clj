@@ -34,7 +34,7 @@
   "Fetches single sports-place from search engine index."
   [search locale sports-place-id]
   (try
-    (-> (es/get search {:id sports-place-id})
+    (-> (es/es-get search sports-place-id)
         :body
         :_source
         (format-sports-place-es locale)
