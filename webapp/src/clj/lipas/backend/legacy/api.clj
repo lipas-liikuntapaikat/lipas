@@ -67,15 +67,3 @@
                    :typeCode (cat :type-code)
                    :subCategories (collect-subcategories (cat :type-code) locale)})
         (vals types/main-categories)))
-
-
-(def query-template {:query
-                     {:simple_query_string
-                      {:query "*"
-                       :analyze_wildcard true,
-                       :fields legacy-fields,
-                       :default_operator "and"}}})
-
-(defn ->es-query [params]
-  ;; TODO: use params
-  query-template)
