@@ -102,6 +102,18 @@ Access to the hierarchical type classification system used for categorizing spor
               {:status 200
                :body (doall results)})))
         :responses {200 {:body :any}}}}]
+     ["/deleted-sports-places"
+      {:parameters {:query [:map [:since {:optional true
+                                          :example "1984-01-01 00:00:00.000"}
+                                  [:re legacy-schema/date-re]]]}
+       :get
+       {:tags ["sport-places"]
+        :handler
+        (fn [req]
+          (let [since  (or (-> req :parameters :query :since) "1984-01-01 00:00:00.000")]
+            {:status     200
+             :body       since}))
+        :responses {200 {:body :any}}}}]
      ["/categories"
       {:tags ["sport-place-types"]
        :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
@@ -112,15 +124,16 @@ Access to the hierarchical type classification system used for categorizing spor
             {:status     200
              :body       (legacy-api/categories locale)}))
         :responses {200 {:body :any}}}}]
-     ["/sports-place-types" {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
-                             :get
-                             {:tags ["sport-place-types"]
-                              :handler
-                              (fn [req]
-                                (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
-                                  {:status     200
-                                   :body       (legacy-api/sports-place-types locale)}))
-                              :responses {200 {:body :any}}}}]
+     ["/sports-place-types"
+      {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
+       :get
+       {:tags ["sport-place-types"]
+        :handler
+        (fn [req]
+          (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
+            {:status     200
+             :body       (legacy-api/sports-place-types locale)}))
+        :responses {200 {:body :any}}}}]
      ["/sports-place-types/:type-code"
       {:swagger {:id ::legacy}
        :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]
@@ -134,21 +147,6 @@ Access to the hierarchical type classification system used for categorizing spor
             {:status     200
              :body       (legacy-api/sports-place-by-type-code locale type-code)}))
         :responses {200 {:body :any}}}}]
-
-     (comment
-       ;; mallissa provider, sillä voisi tehdä mallin
-
-       ["/deleted-sports-places"
-        {:swagger {:id ::legacy}
-         :parameters {:query (s/keys :opt-un [:lipas.legacy.api/since])}
-         :get
-         {:tags ["sport-places"]
-          :handler
-          (fn [req]
-            (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
-                  since (or (-> req :parameters :query :since) "1984-01-01T00:00:00")]
-              {:status     200
-               :body       (str "hello world" since locale)}))}}])
      ["/openapi.json"
       {:get
        {:no-doc  true

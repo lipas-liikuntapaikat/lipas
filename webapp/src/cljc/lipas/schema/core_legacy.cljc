@@ -9,6 +9,8 @@
    [malli.util :as mu]))
 
 
+(def date-re #"\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]) (?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}")
+
 (def lang [:enum "fi" "en" "se"])
 
 ;; From legacy codebase
@@ -84,7 +86,7 @@
                 [:closeToLon [:float {:min -180 :max 180}]]
                 [:closeToLat [:float {:min -90 :max 90}]]
                 [:lang #'lang]
-                [:modifiedAfter [:re #"\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]) (?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d\.\d{3}"]]
+                [:modifiedAfter [:re date-re]]
                 [:retkikartta :boolean]
                 [:closeToMatch [:enum "start-point" "any-point"]]
                 [:closeToDistanceKm [common-schema/number]]
