@@ -148,18 +148,7 @@ Access to the hierarchical type classification system used for categorizing spor
             (let [locale  (or (-> req :parameters :query :lang keyword) :fi)
                   since (or (-> req :parameters :query :since) "1984-01-01T00:00:00")]
               {:status     200
-               :body       (str "hello world" since locale)}))}}]
-
-       ["/sports-place-types"
-        {:swagger {:id ::legacy}
-         :parameters {:query (s/keys :opt-un [:lipas.api/lang])}
-         :get
-         {:tags ["sport-place-types"]
-          :handler
-          (fn [req]
-            (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
-              {:status     200
-               :body       "nil" #_(legacy-api/sports-place-types locale)}))}}])
+               :body       (str "hello world" since locale)}))}}])
      ["/openapi.json"
       {:get
        {:no-doc  true
