@@ -320,6 +320,33 @@
         (core/upsert-sports-site! tx user site)
         (core/index! search site :sync)))))
 
+(defn save-ptv-audit
+  "Saves PTV audit information for a sports site.
+   Requires the user to have the :ptv/audit privilege."
+  [db user search {:keys [lipas-id audit]}]
+  (jdbc/with-db-transaction [tx db]
+    (when-let [site (core/get-sports-site tx lipas-id)]
+      ;; Add timestamp and auditor information to the audit data
+      (let [now (utils/timestamp)
+            user-id (get-in user [:login :user :id])
+
+            ;; Add timestamp and auditor-id to the audit data
+            audit-with-meta (assoc audit
+                                  :timestamp now
+                                  :auditor-id user-id)
+
+            ;; Update the site's PTV data with the audit info
+            updated-site (-> site
+                             (assoc :event-date now)
+                             (assoc-in [:ptv :audit] audit-with-meta))]
+
+        ;; Save and index the updated site
+        (core/upsert-sports-site! tx user updated-site)
+        (core/index! search updated-site :sync)
+
+        ;; Return the updated audit data
+        (get-in updated-site [:ptv :audit])))))
+
 (comment
   (generate-ptv-service-descriptions
    (user/search)

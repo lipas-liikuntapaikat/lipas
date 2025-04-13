@@ -233,8 +233,7 @@
                [:<> {:key lipas-id}
 
                [mui/table-row
-                {:sx [{}
-                      ]}
+                {:sx [#js{}]}
 
                 ;; Expand toggle
                 [mui/table-cell
@@ -1224,6 +1223,166 @@
        1 [create-services]
        2 [:f> integrate-service-locations])]))
 
+(defn site-list-item
+  [{:keys [site selected? on-select]}]
+  (let [audit-data (get-in site [:ptv :audit])
+        summary-status (get-in audit-data [:summary :status])
+        desc-status (get-in audit-data [:description :status])
+
+        ;; Calculate completion status
+        status-indicator (cond
+                           (and summary-status desc-status) "completed"
+                           (or summary-status desc-status) "partial"
+                           :else "todo")
+
+        ;; Style based on status
+        status-color (case status-indicator
+                       "completed" "success.main"
+                       "partial" "warning.main"
+                       "todo" "info.main")
+
+        ;; Last audit date or empty string
+        last-audit-date (when (or summary-status desc-status)
+                          (some-> audit-data :timestamp (subs 0 10)))]
+
+    [:div {:key (:lipas-id site)}
+     [mui/paper
+      {:sx #js{:p 2
+               :mb 2
+               :border (when selected? "2px solid")
+               :borderColor (when selected? "primary.main")
+               :cursor "pointer"}
+       :elevation (if selected? 3 1)
+       :onClick #(on-select site)}
+
+      [mui/stack {:direction "row" :spacing 2 :alignItems "center"}
+
+         ;; Status indicator
+         [mui/avatar
+          {:sx #js{:bgcolor status-color
+                   :color "white"
+                   :width 10
+                   :height 10}}]
+
+         ;; Site name and details
+         [mui/stack {:sx #js{:flex 1}}
+          [mui/typography
+           {:variant "subtitle1"
+            :component "div"
+            :sx #js {:fontWeight (when selected? "bold")}}
+           (:name site)]
+
+          ;; Show audit status if available
+          (when (or summary-status desc-status)
+            [mui/typography
+             {:variant "caption" :color "text.secondary"}
+             (str "Last audit: " last-audit-date)
+             (when summary-status
+               (str ", Summary: " summary-status))
+             (when desc-status
+               (str ", Description: " desc-status))])]]]]))
+
+(defn audit-view []
+  (let [tr (<== [:lipas.ui.subs/translator])
+        org-id (<== [::subs/selected-org-id])
+        selected-tab (<== [::subs/selected-audit-tab])
+        selected-site (<== [::subs/selected-audit-site])
+
+        ;; Get filtered sites based on the selected tab
+        todo-sites (<== [::subs/auditable-sites org-id :todo])
+        completed-sites (<== [::subs/auditable-sites org-id :completed])
+
+        ;; Display sites based on selected tab
+        display-sites (case selected-tab
+                        "todo" todo-sites
+                        "completed" completed-sites
+                        todo-sites)]
+
+    [mui/stack {:spacing 2}
+     ;; Header
+     [mui/typography {:variant "h5"} (tr :ptv.audit/headline)]
+     [mui/typography {:variant "body1"} (tr :ptv.audit/description)]
+
+     ;; Tabs for Todo/Completed
+     [mui/paper {:sx #js {:mb 2}}
+      [mui/tabs
+       {:value selected-tab
+        :onChange #(==> [::events/select-audit-tab %2])
+        :textColor "primary"
+        :indicatorColor "secondary"
+        :variant "fullWidth"}
+       [mui/tab
+        {:value "todo"
+         :label (str (tr :ptv.audit/todo-tab) " (" (count todo-sites) ")")}]
+       [mui/tab
+        {:value "completed"
+         :label (str (tr :ptv.audit/completed-tab) " (" (count completed-sites) ")")}]]]
+
+     ;; Split view: site list and audit panel
+     [mui/grid {:container true :spacing 2}
+
+      ;; Left side: sites list
+      [mui/grid {:item true :xs 12 :md 4}
+       [mui/paper {:sx #js{:p 2 :height "100%"}}
+        [mui/stack {:spacing 1}
+         [mui/typography {:variant "h6"}
+          (case selected-tab
+            "todo" (tr :ptv.audit/sites-to-audit)
+            "completed" (tr :ptv.audit/audited-sites)
+            (tr :ptv.audit/select-site))]
+
+         ;; Site count or empty message
+         (if (empty? display-sites)
+           [mui/typography {:color "text.secondary" :variant "body2"}
+            (case selected-tab
+              "todo" (tr :ptv.audit/no-sites-to-audit)
+              "completed" (tr :ptv.audit/no-audited-sites)
+              (tr :ptv.audit/no-sites))]
+
+           ;; List of sites
+           [mui/stack {:sx #js{:maxHeight "60vh" :overflow "auto"} :spacing 1}
+            (for [site display-sites]
+              ^{:key (:lipas-id site)}
+              [site-list-item
+               {:site site
+                :selected? (= (:lipas-id site) (:lipas-id selected-site))
+                :on-select #(==> [::events/select-audit-site %])}])])]]]
+
+      ;; Right side: audit form for selected site
+      [mui/grid {:item true :xs 12 :md 8}
+       (if selected-site
+         [mui/paper {:sx #js{:p 2}}
+          [mui/stack {:spacing 3}
+           [mui/typography {:variant "h6"} (:name selected-site)]
+
+           ;; Summary field audit
+           ($ controls/audit-panel
+              {:key (str (:lipas-id selected-site) "-summary")
+               :tr tr
+               :field :summary
+               :content (get-in selected-site [:ptv :summary :fi])
+               :lipas-id (:lipas-id selected-site)})
+
+           ;; Description field audit
+           ($ controls/audit-panel
+              {:key (str (:lipas-id selected-site) "-description")
+               :tr tr
+               :field :description
+               :content (get-in selected-site [:ptv :description :fi])
+               :lipas-id (:lipas-id selected-site)})]]
+
+         ;; Placeholder when no site is selected
+         [mui/paper
+          {:sx #js{:p 3
+                   :display "flex"
+                   :alignItems "center"
+                   :justifyContent "center"
+                   :height "100%"
+                   :bgcolor "action.hover"}}
+          [mui/typography
+           {:color "text.secondary"}
+           (tr :ptv.audit/select-site-prompt)]])]]]))
+
 (defn dialog
   [{:keys [tr]}]
   (let [open?        (<== [::subs/dialog-open?])
@@ -1284,7 +1443,9 @@
 
           [mui/tab {:value "wizard" :label (tr :ptv/wizard)}]
           [mui/tab {:value "services" :label (tr :ptv/services)}]
-          [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}]]
+          [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}]
+          (when (<== [::subs/has-audit-privilege?])
+            [mui/tab {:value "audit" :label (tr :ptv.audit/tab-label)}])]
 
          (when (= selected-tab "wizard")
            [wizard])
@@ -1294,6 +1455,9 @@
 
          (when (= selected-tab "sports-sites")
            [table])
+
+         (when (= selected-tab "audit")
+           [audit-view])
 
          ])]]))
 

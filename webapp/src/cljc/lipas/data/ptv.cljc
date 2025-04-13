@@ -87,7 +87,7 @@
             :supported-languages ["fi" #_#_ "se" "en"]}}])
 
 (def organizations
-  (conj prod-organizations test-organizations))
+  (into prod-organizations test-organizations))
 
 ;; For adding default params to some requests from the FE
 ;; NOTE: This should eventually be replaced with Lipas organizations.
