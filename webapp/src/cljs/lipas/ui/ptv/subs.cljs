@@ -3,7 +3,6 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
-            [lipas.ui.utils :as utils]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.utils :as utils :refer [prod?]]
             [re-frame.core :as rf]))
@@ -440,3 +439,97 @@
                                :label (get-in sub-cat [:name :fi])}))))
               []
               sub-cats))))
+
+;; PTV Audit subscriptions
+(rf/reg-sub ::audit
+  :<- [::ptv]
+  (fn [ptv _]
+    (:audit ptv)))
+
+(rf/reg-sub ::audit-tab
+  :<- [::audit]
+  (fn [audit _]
+    (get audit :selected-tab :summary)))
+
+(rf/reg-sub ::saving-audit?
+  :<- [::audit]
+  (fn [audit _]
+    (:saving? audit)))
+
+(rf/reg-sub ::audit-feedback
+  :<- [::audit]
+  (fn [audit [_ field]]
+    (get-in audit [:feedback field])))
+
+(rf/reg-sub ::audit-status
+  :<- [::audit]
+  (fn [audit [_ field]]
+    (get-in audit [:status field])))
+
+(rf/reg-sub ::site-audit-data
+  (fn [db [_ lipas-id]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit]))))
+
+(rf/reg-sub ::site-audit-field-feedback
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :feedback]))))
+
+(rf/reg-sub ::site-audit-field-status
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
+
+(rf/reg-sub ::has-audit-privilege?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user-data _]
+    (roles/check-privilege user-data {} :ptv/audit)))
+
+(rf/reg-sub ::selected-audit-site
+  :<- [::ptv]
+  (fn [ptv _]
+    (:selected-audit-site ptv)))
+
+(rf/reg-sub ::selected-audit-tab
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:audit :selected-tab] "todo")))
+
+(rf/reg-sub ::auditable-sites
+  (fn [[_ org-id status]]
+    [(rf/subscribe [::ptv])])
+  (fn [[ptv] [_ org-id status]]
+    (let [sites (get-in ptv [:org org-id :data :sports-sites] {})
+
+          filter-fn (case status
+                      ;; Sites with content but not audited yet
+                      :todo (fn [site]
+                              (let [ptv (:ptv site)]
+                                (and
+                                 ;; Has summary and description content
+                                 (some-> ptv :summary :fi count (> 5))
+                                 (some-> ptv :description :fi count (> 5))
+                                 ;; Not already audited
+                                 (or (nil? (get-in ptv [:audit :summary :status]))
+                                     (nil? (get-in ptv [:audit :description :status]))))))
+
+                      ;; Sites that have been fully audited
+                      :completed (fn [site]
+                                   (let [ptv (:ptv site)]
+                                     (and
+                                      ;; Has audit data for both summary and description
+                                      (some? (get-in ptv [:audit :summary :status]))
+                                      (some? (get-in ptv [:audit :description :status])))))
+
+                      ;; All sites with PTV content
+                      (fn [site]
+                        (let [ptv (:ptv site)]
+                          (and
+                           (some-> ptv :summary :fi count (> 5))
+                           (some-> ptv :description :fi count (> 5))))))]
+
+      ;; Apply filter and sort by name
+      (->> (vals sites)
+           (filter filter-fn)
+           (sort-by :name)))))
