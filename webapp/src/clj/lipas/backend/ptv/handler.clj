@@ -2,6 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
+            [lipas.schema.sports-sites :as sports-sites-schema]
             [reitit.coercion.malli]
             [reitit.coercion.spec]))
 
@@ -14,6 +15,23 @@
 
 (def integration-enum
   [:enum "lipas-managed" "manual"])
+
+(def audit-status-enum
+  [:enum "approved" "changes-requested"])
+
+(def audit-field
+  [:map
+   {:closed true}
+   [:status audit-status-enum]
+   [:feedback [:string {:min 0 :max 1000}]]])
+
+(def ptv-audit
+  [:map
+   {:closed true}
+   [:timestamp [:string {:min 24 :max 30}]] ;; ISO-8601 format timestamps
+   [:auditor-id :string]
+   [:summary {:optional true} audit-field]
+   [:description {:optional true} audit-field]])
 
 (def ptv-meta
   [:map
@@ -36,7 +54,9 @@
    ;; [:languages [:vector :string]]
 
    [:summary (localized-string-schema {:max 150})]
-   [:description (localized-string-schema {})]])
+   [:description (localized-string-schema {})]
+
+   [:audit {:optional true} ptv-audit]])
 
 (def create-ptv-service-location
   [:map
@@ -206,4 +226,15 @@
       :handler
       (fn [req]
         {:status 200
-         :body   (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))})}}]])
+         :body   (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))})}}]
+
+   ["/actions/save-ptv-audit"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map
+                          [:lipas-id #'sports-sites-schema/lipas-id]
+                          [:audit #'ptv-audit]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body   (ptv-core/save-ptv-audit db search (:identity req) (-> req :parameters :body))})}}]])
