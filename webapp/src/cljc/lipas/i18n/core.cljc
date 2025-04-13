@@ -1,5 +1,8 @@
 (ns lipas.i18n.core
   (:require
+   #?(:cljs [clojure.reader :refer [read-string]]
+      :clj [clojure.edn :refer [read-string]])
+   [clojure.string :as str]
    [lipas.data.admins :as admins]
    [lipas.data.cities :as cities]
    [lipas.data.ice-stadiums :as ice]
@@ -9,8 +12,7 @@
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as pools]
    [lipas.data.types :as types]
-   [lipas.i18n.generated :as translations]
-   ;; [lipas.reports :as reports]
+   [lipas.i18n.translations :as translations]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 
@@ -321,7 +323,75 @@
    (assoc-in sports-site [:name-localized :fi] (:name sports-site))
    localizations2))
 
+(defn handle->path [s locale]
+  (let [[k1 k2] (str/split s #"/")]
+    [locale (read-string k1) (keyword k2)]))
+
+(defn csv-data->dicts
+  [csv-data]
+  (reduce
+   (fn [m {:keys [handle fi se en]}]
+     (cond-> m
+       (not-empty fi) (assoc-in (handle->path handle :fi) fi)
+       (not-empty se) (assoc-in (handle->path handle :se) se)
+       (not-empty en) (assoc-in (handle->path handle :en) en)))
+   {}
+   csv-data))
+
+(defn ->flat [locale m]
+    (reduce-kv
+     (fn [res k v]
+       (reduce-kv
+        (fn [res2 k2 v]
+          (let [kw (keyword (name k) (name k2))]
+            (assoc-in res2 [kw locale] v)))
+        res
+        v))
+     {}
+     m))
+
+(defn remove-extra-spaces [s]
+  (if (string? s)
+    (str/replace s #" +" " ")
+    s))
+
+(defn fix [locale k v]
+    (cond
+      (string? v) (remove-extra-spaces v)
+      (ifn? v)    (condp = (-> k name keyword)
+                    :name-localized    (v locale)
+                    :details-in-portal "Uimahalliportaalissa / jäähalliportaalissa"
+                    :new-site          "Uusi liikuntapaikka"
+                    :draw              "Piirrä reittiosa / Piirrä alue / Lisää kartalle"
+                    :modify            "Muokkaa reittiä / Muokkaa aluetta / Voit raahata pistettä kartalle"
+                    :confirm-remove    "Haluatko varmasti poistaa valitun reittiosan / alueen / kohteen"
+                    :supported-formats "Tuetut tiedostomuodot ovat"
+                    "")
+
+      :else v))
+
+(defn csv-row-reducer [res k v]
+    (let [fi (-> v :fi ((partial fix :fi k)))
+          se (-> v :se ((partial fix :se k)))
+          en (-> v :en ((partial fix :en k)))]
+      (conj res [k fi se en])))
+
+(defn dicts->csv-data
+  [{:keys [fi se en] :as _dicts}]
+
+  (let [fi (->flat :fi fi)
+        se (->flat :se se)
+        en (->flat :en en)]
+
+    (->> [fi se en]
+         (reduce utils/deep-merge fi)
+         (reduce-kv csv-row-reducer [])
+         (sort-by first)
+         (into [["handle" "fi" "se" "en"]]))))
+
 (comment
+  (dicts->csv-data translations/dicts)
+
   (->> localizations2 (map :target-path))
   (localize :fi {:admin "state"
                  :building {:supporting-structures ["concrete"]}}))
