@@ -721,7 +721,9 @@ The site administrator is responsible for the accuracy of information, safety of
                         :activities-manager "UTP Manager"
                         :floorball-manager  "Floorball Editor"
                         :analysis-user      "Analysis tool user"
-                        :ptv                "PTV Manager"}
+                        :ptv-manager        "PTV Manager"
+                        :org-admin          "Organization admin"
+                        :org-user           "Organization user"}
     :context-keys      {:city-code "Municipality"
                         :type-code "Type"
                         :activity  "Activity"

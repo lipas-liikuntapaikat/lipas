@@ -630,7 +630,9 @@ Utflyktsmålets administratör ansvarar för uppgifternas riktighet och utflykts
                         :activities-manager "UTP-administratör"
                         :floorball-manager  "Innebandyredigerare"
                         :analysis-user      "Analysverktygsanvändare"
-                        :ptv-user           "PTV-administratör"}
+                        :ptv-manager        "PTV-administratör"
+                        :org-admin          "Organisationsadministratör"
+                        :org-user           "Organisationsanvändare"}
     :context-keys      {:city-code "Kommun"
                         :type-code "Typ"
                         :activity  "Aktivitet"
