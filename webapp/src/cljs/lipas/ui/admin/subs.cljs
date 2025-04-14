@@ -142,3 +142,14 @@
 (rf/reg-sub ::selected-tab
   (fn [db _]
     (-> db :admin :selected-tab)))
+
+;;; Orgs ;;;
+
+(rf/reg-sub ::orgs
+  (fn [db _]
+    (-> db :admin :orgs)))
+
+(rf/reg-sub ::orgs-list
+  :<- [::orgs]
+  (fn [orgs _]
+    (vals orgs)))

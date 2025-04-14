@@ -221,3 +221,20 @@
                          :success? true}]]
             [:dispatch [::set-user-to-edit user]]
             [:dispatch [::get-users]]]})))
+
+;;; Orgs ;;;
+
+(rf/reg-event-db ::get-orgs-success
+  (fn [db [_ orgs]]
+    (assoc-in db [:admin :orgs] (utils/index-by :id orgs))))
+
+(rf/reg-event-fx ::get-orgs
+  (fn [{:keys [db]} [_ _]]
+    (let [token (-> db :user :login :token)]
+      {:http-xhrio
+       {:method          :get
+        :headers         {:Authorization (str "Token " token)}
+        :uri             (str (:backend-url db) "/orgs")
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success      [::get-orgs-success]
+        :on-failure      [::failure]}})))

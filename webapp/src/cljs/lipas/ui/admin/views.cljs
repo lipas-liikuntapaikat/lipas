@@ -14,6 +14,7 @@
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
+            ["react" :as react]
             [clojure.spec.alpha :as s]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
@@ -614,6 +615,36 @@
         :items     users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))
 
+(defn orgs-view []
+  (let [tr           (<== [:lipas.ui.subs/translator])
+        orgs         (<== [::subs/orgs-list])]
+    (react/useEffect (fn []
+                       (rf/dispatch [::events/get-orgs])
+                       js/undefined)
+                     #js [])
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       (tr :lipas.admin/organizations)]
+
+      ;; [user-dialog tr]
+
+      [mui/grid {:container true :spacing 4}
+       [mui/grid {:item true :style {:flex-grow 1}}
+        [mui/fab
+         {:color    "secondary"
+          :size     "small"
+          :style    {:margin-top "1em"}
+          :on-click #(==> [::events/edit-org [:name] "fixme"])}
+         [mui/icon "add"]]]]
+
+      [lui/table
+       {:headers
+        [[:name (tr :lipas.org/name)]]
+        :sort-fn   :name
+        :items     orgs
+        :on-select #(==> [::events/set-org-to-edit %])}]]]))
+
 (defn admin-panel []
   (let [tr           (<== [:lipas.ui.subs/translator])
         selected-tab (or (<== [::subs/selected-tab])
@@ -645,6 +676,9 @@
 
          "types"
          [type-codes-view]
+
+         "orgs"
+         [:f> orgs-view]
 
          [:div "Missing view"])]]]))
 
