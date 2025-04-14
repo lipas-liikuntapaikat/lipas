@@ -553,12 +553,63 @@
         :items     types
         :on-select #(js/alert "Ei tee mitään vielä...")}]]]))
 
-(defn admin-panel []
+(defn users-view []
   (let [tr           (<== [:lipas.ui.subs/translator])
         status       (<== [::subs/users-status])
         users        (<== [::subs/users-list])
-        users-filter (<== [::subs/users-filter])
-        selected-tab (<== [::subs/selected-tab])]
+        users-filter (<== [::subs/users-filter])]
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       (tr :lipas.admin/users)]
+
+      ;; Full-screen user dialog
+      [user-dialog tr]
+
+      [mui/grid {:container true :spacing 4}
+
+       ;; Add user button
+       [mui/grid {:item true :style {:flex-grow 1}}
+        [mui/fab
+         {:color    "secondary"
+          :size     "small"
+          :style    {:margin-top "1em"}
+          :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
+         [mui/icon "add"]]]
+
+       ;; Status selector
+       [mui/grid {:item true}
+        [lui/select
+         {:style     {:width "150px"}
+          :label     "Status"
+          :value     status
+          :items     ["active" "archived"]
+          :value-fn  identity
+          :label-fn  identity
+          :on-change #(==> [::events/select-status %])}]]
+
+       ;; Users filter
+       [mui/grid {:item true}
+        [lui/text-field
+         {:label     (tr :search/search)
+          :on-change #(==> [::events/filter-users %])
+          :value     users-filter}]]]
+
+      ;; Users table
+      [lui/table
+       {:headers
+        [[:email (tr :lipas.user/email)]
+         [:firstname (tr :lipas.user/firstname)]
+         [:lastname (tr :lipas.user/lastname)]
+         [:roles (tr :lipas.user.permissions.roles/roles)]]
+        :sort-fn   :email
+        :items     users
+        :on-select #(==> [::events/set-user-to-edit %])}]]]))
+
+(defn admin-panel []
+  (let [tr           (<== [:lipas.ui.subs/translator])
+        selected-tab (or (<== [::subs/selected-tab])
+                         "users")]
     [mui/paper
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
@@ -568,11 +619,17 @@
           :on-change #(==> [::events/select-tab %2])
           :indicator-color "secondary"
           :text-color "inherit"}
-         [mui/tab {:label (tr :lipas.admin/users)}]
-         [mui/tab {:label "Symbolityökalu"}]
-         [mui/tab {:label "Tyyppikoodit"}]]]
+         [mui/tab {:label (tr :lipas.admin/users)
+                   :value "users"}]
+         [mui/tab {:label (tr :lipas.admin/organizations)
+                   :value "orgs"}]
+         [mui/tab {:label "Symbolityökalu"
+                   :value "symbol"}]
+         [mui/tab {:label "Tyyppikoodit"
+                   :value "types"}]]]
 
-       (when (= 1 selected-tab)
+       (case selected-tab
+         "symbol"
          [:<>
           [color-selector]
           [mui/fab
@@ -581,59 +638,15 @@
             :color    "secondary"
             :on-click #(==> [::events/download-new-colors-excel])}
            [mui/icon "save"]
-           "Lataa"]])
+           "Lataa"]]
 
-       (when (= 0 selected-tab)
-         [mui/card {:square true}
-          [mui/card-content
-           [mui/typography {:variant "h5"}
-            (tr :lipas.admin/users)]
+         "users"
+         [users-view]
 
-           ;; Full-screen user dialog
-           [user-dialog tr]
+         "types"
+         [type-codes-view]
 
-           [mui/grid {:container true :spacing 4}
-
-            ;; Add user button
-            [mui/grid {:item true :style {:flex-grow 1}}
-             [mui/fab
-              {:color    "secondary"
-               :size     "small"
-               :style    {:margin-top "1em"}
-               :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-              [mui/icon "add"]]]
-
-            ;; Status selector
-            [mui/grid {:item true}
-             [lui/select
-              {:style     {:width "150px"}
-               :label     "Status"
-               :value     status
-               :items     ["active" "archived"]
-               :value-fn  identity
-               :label-fn  identity
-               :on-change #(==> [::events/select-status %])}]]
-
-            ;; Users filter
-            [mui/grid {:item true}
-             [lui/text-field
-              {:label     (tr :search/search)
-               :on-change #(==> [::events/filter-users %])
-               :value     users-filter}]]]
-
-           ;; Users table
-           [lui/table
-            {:headers
-             [[:email (tr :lipas.user/email)]
-              [:firstname (tr :lipas.user/firstname)]
-              [:lastname (tr :lipas.user/lastname)]
-              [:roles (tr :lipas.user.permissions.roles/roles)]]
-             :sort-fn   :email
-             :items     users
-             :on-select #(==> [::events/set-user-to-edit %])}]]])
-
-       (when (= 2 selected-tab)
-         [type-codes-view])]]]))
+         [:div "Missing view"])]]]))
 
 (defn main []
   (let [admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])]
