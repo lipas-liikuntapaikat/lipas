@@ -258,6 +258,15 @@
            {:status 200
             :body   (core/get-users db)})}}]
 
+      ["/orgs"
+       {:get
+        {:no-doc true
+         :require-privilege :org/manage
+         :handler
+         (fn [_]
+           {:status 200
+            :body (core/get-orgs db)})}}]
+
       ["/actions/gdpr-remove-user"
        {:post
         {:no-doc            true

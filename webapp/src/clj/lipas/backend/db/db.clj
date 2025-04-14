@@ -9,6 +9,7 @@
    [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
    [lipas.backend.db.loi :as loi]
+   [lipas.backend.db.org :as org]
    [lipas.backend.db.reminder :as reminder]
    [lipas.backend.db.sports-site :as sports-site]
    [lipas.backend.db.subsidy :as subsidy]
@@ -25,8 +26,13 @@
        (map user/unmarshall)
        (map #(dissoc % :password))))
 
+(defn get-orgs [db-spec]
+  (->> (org/all-orgs db-spec)
+       (map org/unmarshall)))
+
 (comment
-  (get-users (:lipas/db integrant.repl.state/system)))
+  (get-users (:lipas/db integrant.repl.state/system))
+  (get-orgs (:lipas/db integrant.repl.state/system)))
 
 (defn get-user-by-id [db-spec params]
   (when (uuid? (utils/->uuid-safe (:id params)))
