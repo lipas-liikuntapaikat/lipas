@@ -5,14 +5,16 @@
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
+            [lipas.backend.org :as org]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.schema.help :as help-schema]
+            [lipas.schema.org :as org-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
-            [reitit.coercion.spec]
             [reitit.coercion.malli]
+            [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -259,13 +261,39 @@
             :body   (core/get-users db)})}}]
 
       ["/orgs"
-       {:get
-        {:no-doc true
-         :require-privilege :org/manage
-         :handler
-         (fn [_]
-           {:status 200
-            :body (core/get-orgs db)})}}]
+       {:no-doc true
+        :require-privilege :org/manage
+        :coercion reitit.coercion.malli/coercion}
+       [""
+        {:get
+         {:handler
+          (fn [_]
+            {:status 200
+             :body (org/all-orgs db)})}
+         :post
+         {:parameters {:body org-schema/new-org}
+          :handler
+          (fn [req]
+            {:status 200
+             :body (org/create-org db (-> req :parameters :body))})}}]
+       ["/:org-id"
+        {:parameters {:path [:map
+                             [:org-id org-schema/org-id]]}}
+        [""
+         {:put
+          {:handler (fn [req]
+                      (org/update-org! db
+                                       (-> req :parameters :path :org-id)
+                                       (-> req :parameters :body))
+                      {:status 200})}}]
+        ["/users"
+         {:post
+          {:parameters {:body org-schema/user-updates}
+           :handler (fn [req]
+                      (org/update-org-users! db
+                                             (-> req :parameters :org-id)
+                                             (-> req :parameters :body))
+                      {:status 200})}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post

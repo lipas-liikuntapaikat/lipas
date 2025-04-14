@@ -389,25 +389,6 @@
                             (s/keys :req-un [:lipas.user/id
                                              :lipas.user/status])))
 
-;;; Organization ;;;
-
-(s/def :lipas.org/id uuid?)
-(s/def :lipas.org/name (str-in 1 128))
-
-(s/def :lipas.org/data
-  (s/keys :req-un [:lipas.org.data/phone]))
-
-(s/def :lipas.org/ptv
-  (s/keys :req-un [:lipas.org.ptv/org-id
-                   :lipas.org.ptv/city-codes
-                   :lipas.org.ptv/owners
-                   :lipas.org.ptv/supported-languages]))
-
-(s/def :lipas/org (s/keys :req-un [:lipas.org/id
-                                   :lipas.org/name
-                                   :lipas.org/data]
-                          :opt-un [:lipas.org/ptv]))
-
 ;;; Location ;;;
 
 (s/def :lipas.location/address (str-in 1 200))
