@@ -386,7 +386,8 @@
     :magic-link                 "Taikalinkki",
     :select-magic-link-template "Valitse saatekirje",
     :send-magic-link            "Taikalinkki käyttäjälle {1}",
-    :users                      "Käyttäjät"},
+    :users                      "Käyttäjät"
+    :organizations              "Organisaatiot"},
    :lipas.ice-stadium.refrigeration
    {:headline                       "Kylmätekniikka",
     :refrigerant-solution-amount-l  "Rataliuoksen määrä (l)",
@@ -865,7 +866,9 @@
                         :activities-manager "UTP-käyttäjä"
                         :floorball-manager  "Salibandy muokkaaja"
                         :analysis-user      "Analyysityökalukäyttäjä"
-                        :ptv-manager        "PTV-käyttäjä"}
+                        :ptv-manager        "PTV-käyttäjä"
+                        :org-admin          "Organisaatio admin"
+                        :org-user           "Organisaatio käyttäjä"}
     :context-keys      {:city-code "Kunta"
                         :type-code "Tyyppi"
                         :activity  "Aktiviteetti"

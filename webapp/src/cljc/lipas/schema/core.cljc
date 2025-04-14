@@ -318,6 +318,12 @@
              :distint true
              :into #{}))
 
+(s/def :lipas.role/org-id
+  (s/coll-of uuid?
+             :min-count 1
+             :distint true
+             :into #{}))
+
 (defmulti role-type :role)
 
 (defmethod role-type :type-manager [_]
@@ -338,6 +344,14 @@
 (defmethod role-type :floorball-manager [_]
   (s/keys :req-un [:lipas.role/role]
           :opt-un [:lipas.role/type-code]))
+
+(defmethod role-type :org-admin [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/org-id]))
+
+(defmethod role-type :org-user [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/org-id]))
 
 ;; :admin and others without any role-context-keys
 (defmethod role-type :default [_]
@@ -374,6 +388,25 @@
 (s/def :lipas/user (s/merge :lipas/new-user
                             (s/keys :req-un [:lipas.user/id
                                              :lipas.user/status])))
+
+;;; Organization ;;;
+
+(s/def :lipas.org/id uuid?)
+(s/def :lipas.org/name (str-in 1 128))
+
+(s/def :lipas.org/data
+  (s/keys :req-un [:lipas.org.data/phone]))
+
+(s/def :lipas.org/ptv
+  (s/keys :req-un [:lipas.org.ptv/org-id
+                   :lipas.org.ptv/city-codes
+                   :lipas.org.ptv/owners
+                   :lipas.org.ptv/supported-languages]))
+
+(s/def :lipas/org (s/keys :req-un [:lipas.org/id
+                                   :lipas.org/name
+                                   :lipas.org/data]
+                          :opt-un [:lipas.org/ptv]))
 
 ;;; Location ;;;
 

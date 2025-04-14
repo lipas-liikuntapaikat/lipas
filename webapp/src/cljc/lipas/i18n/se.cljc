@@ -192,14 +192,6 @@
    {:helper
     "Standardinställningarna kan skrivas över genom att ange objektspecifika inställningar på fliken Idrottsanläggningar.",
     :headline "Standardinställningar"},
-   :lipas.user.permissions.roles
-   {:roles "Roller",
-    :role "Roll",
-    :context-value-all "Alla",
-    :role-names "",
-    :context-keys "",
-    :edit-role "",
-    :permissions-old "(gamla, endast läs)"},
    :swim-energy
    {:description "Information",
     :headline "Energi information",
@@ -845,8 +837,32 @@
     :all-types? "Rättighet till alla typer",
     :cities "Kommuner",
     :sports-sites "Idrottsanläggning",
-    :types "Typer",
-    :activities "Aktiviteter"},
+    :types        "Typer"
+    :activities   "Aktiviteter"},
+   :lipas.user.permissions.roles
+   {:roles             "Roller"
+    :role              "Roll"
+    :context-value-all "Alla"
+    :role-names        {:admin              "Admin"
+                        :city-manager       "Stadsadministratör"
+                        :type-manager       "Typadministratör"
+                        :site-manager       "Platsadministratör"
+                        :activities-manager "UTP-administratör"
+                        :floorball-manager  "Innebandyredigerare"
+                        :analysis-user      "Analysverktygsanvändare"
+                        :ptv-manager        "PTV-administratör"
+                        :org-admin          "Organisationsadministratör"
+                        :org-user           "Organisationsanvändare"}
+    :context-keys      {:city-code "Kommun"
+                        :type-code "Typ"
+                        :activity  "Aktivitet"
+                        :lipas-id  "Plats"}
+    :edit-role         {:edit-header  "Redigera"
+                        :new-header   "Lägg till roll"
+                        :stop-editing "Avsluta redigering"
+                        :add          "Lägg till"
+                        :choose-role  "Välj roll först för att välja vilka resurser rollen påverkar."}
+    :permissions-old   "(gamla, endast läs)"}
    :help
    {:headline "Hjälp",
     :available-pages "Sidor i detta avsnitt",

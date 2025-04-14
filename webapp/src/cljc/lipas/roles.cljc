@@ -28,7 +28,9 @@
                             Antaa myös oikeuden luoda paikkoja vedos-tilassa"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
-   
+
+   :org/manage {:doc "Organisaation tietojen ja käyttäjien hallinta"}
+
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}})
@@ -115,6 +117,20 @@
     :assignable true
     :privileges #{:ptv/manage}
     :required-context-keys [:city-code]
+    :optional-context-keys []}
+
+   :org-admin
+   {:sort 60
+    :assignable true
+    :privileges #{:org/manage}
+    :required-context-keys [:org-id]
+    :optional-context-keys []}
+
+   :org-user
+   {:sort 61
+    :assignable true
+    :privileges #{}
+    :required-context-keys [:org-id]
     :optional-context-keys []}})
 
 (defn role-sort-fn
