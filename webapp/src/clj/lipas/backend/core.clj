@@ -984,11 +984,6 @@
   [db help-data]
   (db/add-versioned-data! db "help" "active" help-data))
 
-;;; Orgs ;;;
-
-(defn get-orgs [db]
-  (db/get-orgs db))
-
 (comment
   (get-categories)
   (require '[lipas.backend.config :as config])
