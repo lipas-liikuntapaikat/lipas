@@ -29,13 +29,19 @@
       (assoc-in [:headers "Access-Control-Allow-Methods"] allow-methods)
       (assoc-in [:headers "Access-Control-Allow-Headers"] allow-headers)))
 
-(defn cors
+(def cors-middleware
   "Cross-origin Resource Sharing (CORS) middleware. Allow requests from all
    origins, all http methods and Authorization and Content-Type headers."
-  [handler]
-  (fn [request]
-    (let [response (handler request)]
-      (add-cors-headers response))))
+  {:name ::cors-middleware
+   :compile
+   (fn [route-data _opts]
+     (when (:cors route-data)
+       (fn [next-handler]
+         (fn [request]
+           (let [response (if (= :options (:request-method request))
+                            {:status 200}
+                            (next-handler request))]
+             (add-cors-headers response))))))})
 
 (defn token-auth
   "Middleware used on routes requiring token authentication"
@@ -48,11 +54,8 @@
    ;; Use:
    ;; :required-privilege :users/manage
    ;; :required-privilege [{:type-code ::roles/any} :site/create-dit]
-   ;; NOTE: Consider case where role-context values are available in the
-   ;; request? For example :body-params :lipas-id. Maybe allow role-context to
-   ;; be fn of req=>role-context. But maybe it is best to just handle these
-   ;; cases in handler fn, because often building the correct role-context
-   ;; might require loading the site from db first.
+   ;; :required-privilege [(fn [req] {:type-code ...}) :site/create-dit]
+   ;; Last case can be used to retreive the role-context values from request parameters (like path-params)
    (fn [route-data _opts]
      (if-let [required-privilege (:require-privilege route-data)]
        (let [[role-context privilege] (if (vector? required-privilege)
@@ -60,9 +63,12 @@
                                         [nil required-privilege])]
          (fn [next-handler]
            (-> (fn [req]
-                 (if (roles/check-privilege (:identity req) role-context privilege)
-                   (next-handler req)
-                   (resp/forbidden {:error "Missing privilege"})))
+                 (let [role-context (if (fn? role-context)
+                                      (role-context req)
+                                      role-context)]
+                   (if (roles/check-privilege (:identity req) role-context privilege)
+                     (next-handler req)
+                     (resp/forbidden {:error "Missing privilege"}))))
                (auth)
                (token-auth))))
        {}))})

@@ -45,7 +45,8 @@ if [ "$1" = '/run_develop_server.sh' ] || [ "$1" = '/start.sh' ]; then
     fi
     cd ${MAPPROXY_DATA_DIR}
     # Add logic to reload the app file
-    mapproxy-util create -t wsgi-app -f ${MAPPROXY_DATA_DIR}/mapproxy.yaml ${MAPPROXY_DATA_DIR}/app.py
+    # --force to always re-create the file
+    mapproxy-util create -t wsgi-app --force -f ${MAPPROXY_DATA_DIR}/mapproxy.yaml ${MAPPROXY_DATA_DIR}/app.py
     RELOAD_LOCKFILE=/settings/.app.lock
     if [[ ! -f ${RELOAD_LOCKFILE} ]];then
       sed -i 's/\(, reloader=True\)*'\)'/, reloader=True\)/g' ${MAPPROXY_DATA_DIR}/app.py

@@ -455,8 +455,9 @@
     :headline "Admin",
     :magic-link "Taikalinkki",
     :select-magic-link-template "Valitse saatekirje",
-    :send-magic-link "Taikalinkki käyttäjälle {1}",
-    :users "Käyttäjät"},
+    :send-magic-link            "Taikalinkki käyttäjälle {1}",
+    :users                      "Käyttäjät"
+    :organizations              "Organisaatiot"},
    :lipas.ice-stadium.refrigeration
    {:headline "Kylmätekniikka",
     :refrigerant-solution-amount-l "Rataliuoksen määrä (l)",
@@ -929,26 +930,29 @@
    {:roles "Roolit"
     :role "Rooli"
     :context-value-all "Kaikki"
-    :role-names {:admin "Admin"
-                 :city-manager "Kuntakäyttäjä"
-                 :type-manager "Tyyppikäyttäjä"
-                 :site-manager "Paikkakäyttäjä"
-                 :activities-manager "UTP-käyttäjä"
-                 :floorball-manager "Salibandy muokkaaja"
-                 :analysis-user "Analyysityökalukäyttäjä"
-                 :analysis-experimental-user "Analyysityökalukehittäjä"
-                 :ptv-manager "PTV-käyttäjä"
-                 :ptv-auditor "PTV-auditoija"}
-    :context-keys {:city-code "Kunta"
-                   :type-code "Tyyppi"
-                   :activity "Aktiviteetti"
-                   :lipas-id "Paikka"}
-    :edit-role {:edit-header "Muokkaa"
-                :new-header "Lisää rooli"
-                :stop-editing "Lopeta muokkaus"
-                :add "Lisää"
-                :choose-role "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
-    :permissions-old "(vanhat, vain luku)"}
+    :role-names        {:admin              "Admin"
+                        :city-manager       "Kuntakäyttäjä"
+                        :type-manager       "Tyyppikäyttäjä"
+                        :site-manager       "Paikkakäyttäjä"
+                        :activities-manager "UTP-käyttäjä"
+                        :floorball-manager  "Salibandy muokkaaja"
+                        :analysis-user      "Analyysityökalukäyttäjä"
+                        :analysis-experimental-user "Analyysityökalukehittäjä"
+                        :ptv-manager        "PTV-käyttäjä"
+                        :ptv-auditor "PTV-auditoija"
+                        :org-admin          "Organisaatio admin"
+                        :org-user           "Organisaatio käyttäjä"}
+    :context-keys      {:city-code "Kunta"
+                        :type-code "Tyyppi"
+                        :activity  "Aktiviteetti"
+                        :lipas-id  "Paikka"
+                        :org-id    "Organisaatio"}
+    :edit-role         {:edit-header  "Muokkaa"
+                        :new-header   "Lisää rooli"
+                        :stop-editing "Lopeta muokkaus"
+                        :add          "Lisää"
+                        :choose-role  "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
+    :permissions-old   "(vanhat, vain luku)"}
    :help
    {:headline "Ohjeet",
     :available-pages "Sivut tässä osiossa"
@@ -1026,6 +1030,8 @@
     :greeting "Hei {1} {2}!",
     :promo1-topic "TIEDOTE LIPAS-TYYPPILUOKKAPÄIVITYKSISTÄ (11.1.2022)"
     :data-ownership "Käyttöehdot"},
+   :org
+   {:headline "Organisaatio"}
    :building-materials
    {:brick "Tiili",
     :concrete "Betoni",
@@ -1168,6 +1174,7 @@
    :lipas.user
    {:email "Sähköposti",
     :permissions "Käyttöoikeudet",
+    :organizations "Käyttäjän organisaatiot"
     :permissions-example
     "Oikeus päivittää Jyväskylän jäähallien tietoja.",
     :saved-searches "Tallennetut haut",
@@ -1202,6 +1209,13 @@
     :username-example "tane12",
     :permission-to-types
     "Sinulla on käyttöoikeus seuraaviin  liikuntapaikkatyyppeihin:"},
+   :lipas.org
+   {:name "Nimi"
+    :phone "Puhelinnumero"
+    :org-role "Rooli"},
+   :org.form
+   {:details "Organisaation tiedot"
+    :users "Organisaation käyttäjät"}
    :heat-recovery-types
    {:liquid-circulation "Nestekierto",
     :plate-heat-exchanger "Levysiirrin",

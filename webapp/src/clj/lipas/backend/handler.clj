@@ -6,15 +6,17 @@
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
+            [lipas.backend.org :as org]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.schema.help :as help-schema]
+            [lipas.schema.org :as org-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
-            [reitit.coercion.spec]
             [reitit.coercion.malli]
+            [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -94,13 +96,8 @@
            :body (io/input-stream (io/resource "public/index.html"))})}}]
 
      ["/api"
-      {:middleware [mw/cors]
-       :no-doc true
-       :options
-       {:handler
-        (fn [_]
-          {:status 200
-           :body {:status "OK"}})}}
+      {:cors   true
+       :no-doc true}
 
       ["/swagger.json"
        {:get
@@ -259,6 +256,65 @@
          (fn [_]
            {:status 200
             :body (core/get-users db)})}}]
+
+      ;; FIXME: Where should this be?
+      ["/current-user-orgs"
+       {:get
+        {:coercion reitit.coercion.malli/coercion
+         :no-doc false
+         ;; Doesn't require privileges, no :org/member just means no orgs.
+         :require-privilege nil
+         ;; Need to mount the auth manually when no :require-privilege enabled
+         :middleware [mw/token-auth mw/auth]
+         :handler (fn [req]
+                    {:status 200
+                     :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
+
+      ["/orgs"
+       {
+        :no-doc false
+        :coercion reitit.coercion.malli/coercion}
+       [""
+        {;; Only admin users
+         :require-privilege :org/admin
+         :get
+         {          :handler
+          (fn [_]
+            {:status 200
+             :body (org/all-orgs db)})}
+         :post
+         {:parameters {:body org-schema/new-org}
+          :handler
+          (fn [req]
+            {:status 200
+             :body (org/create-org db (-> req :parameters :body))})}}]
+       ["/:org-id"
+        {;; Check privilege for this specific org-id (org-admins)
+         :require-privilege [(fn [req] {:org-id (-> req :parameters :path :org-id)}) :org/manage]
+         :parameters {:path [:map
+                             [:org-id org-schema/org-id]]}}
+        [""
+         {:put
+          {:parameters {:body org-schema/org}
+           :handler (fn [req]
+                      (org/update-org! db
+                                       (-> req :parameters :path :org-id)
+                                       (-> req :parameters :body))
+                      {:status 200
+                       :body {}})}}]
+        ["/users"
+         {:get
+          {:handler (fn [req]
+                      {:status 200
+                       :body (org/get-org-users db (-> req :parameters :path :org-id))})}
+          :post
+          {:parameters {:body org-schema/user-updates}
+           :handler (fn [req]
+                      (org/update-org-users! db
+                                             (-> req :parameters :path :org-id)
+                                             (-> req :parameters :body :changes))
+                      {:status 200
+                       :body {}})}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post
@@ -788,6 +844,10 @@
                    muuntaja/format-negotiate-middleware
                    ;; encoding response body
                    muuntaja/format-response-middleware
+                   ;; add cors headers and respond to OPTIONS requests,
+                   ;; - before privilege check, so options request is handled first.
+                   ;; - before exception handling, so error responses also get cors headers.
+                   mw/cors-middleware
                    ;; exception handling
                    exceptions-mw
                    ;; decoding request body

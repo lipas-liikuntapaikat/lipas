@@ -31,6 +31,10 @@
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
+   :org/member {:doc "Organisaation jäsen"}
+   :org/manage {:doc "Organisaation tietojen ja käyttäjien hallinta"}
+   :org/admin {:doc "Uusien organisaatioiden luonti"}
+
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
@@ -46,9 +50,11 @@
 (def roles
   {:admin
    ;; all privileges
+   ;; Except: org/member, because this is used to list users on
+   ;; org pages which belong to the organization.
    {:sort 0
     :assignable true
-    :privileges (set (keys privileges))
+    :privileges (disj (set (keys privileges)) :org/member)
     ;; This is kind of duplicated from specs, not sure if needed or
     ;; if the UI can introspect the spec.
     ;; These are also used to get the ORDER of UI fields for edit.
@@ -133,7 +139,20 @@
    {:sort 51
     :assignable true
     :privileges #{:ptv/audit}
-    :required-context-keys []
+    :required-context-keys []}
+
+   :org-admin
+   {:sort 60
+    :assignable true
+    :privileges #{:org/manage :org/member}
+    :required-context-keys [:org-id]
+    :optional-context-keys []}
+
+   :org-user
+   {:sort 61
+    :assignable true
+    :privileges #{:org/member}
+    :required-context-keys [:org-id]
     :optional-context-keys []}})
 
 (defn role-sort-fn
@@ -172,7 +191,10 @@
                  (seq (set/intersection (:activity role) (:activity role-context))))
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
-                 (contains? (:lipas-id role) (:lipas-id role-context))))
+                 (contains? (:lipas-id role) (:lipas-id role-context)))
+             (or (nil? (:org-id role))
+                 (= ::any (:org-id role-context))
+                 (contains? (:org-id role) (:org-id role-context))))
     (:role role)))
 
 (defn check-privilege

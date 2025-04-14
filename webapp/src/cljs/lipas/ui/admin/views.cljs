@@ -16,6 +16,7 @@
             ["@mui/material/Typography$default" :as Typography]
             ["@mui/material/ToggleButton$default" :as ToggleButton]
             ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
+            ["react" :as react]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [lipas.data.styles :as styles]
@@ -25,6 +26,7 @@
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.mui :as mui]
+            [lipas.ui.subs :as ui-subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -125,7 +127,7 @@
         :multiple true})))
 
 (defui activity-select [{:keys [tr required data]}]
-  (let [activities (<== [::subs/activities-list (tr)])]
+  (let [activities (use-subscribe [::subs/activities-list (tr)])]
     ($ ac/autocomplete2
        {:options activities
         :label (str (tr :lipas.user.permissions/activities)
@@ -134,6 +136,17 @@
         :value (to-array (or (:activity data) []))
         :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
         :multiple true})))
+
+(defui org-select [{:keys [tr required data]}]
+  (let [orgs (use-subscribe [::subs/orgs-options])]
+    ($ ac/autocomplete2
+       {:options   orgs
+        :label     (str (tr :lipas.user.permissions/orgs)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:org-id data) []))
+        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :org-id (mapv ac/safe-value v)]))
+        :multiple  true})))
 
 (defui context-key-edit [{:keys [k] :as props}]
   (case k
@@ -147,7 +160,10 @@
     ($ city-code-select props)
 
     :activity
-    ($ activity-select props)))
+    ($ activity-select props)
+
+    :org-id
+    ($ org-select props)))
 
 (defui role-form [{:keys [tr]}]
   (let [data (use-subscribe [::subs/edit-role])
@@ -466,77 +482,242 @@
 (defn color-selector []
   (let [new-colors (<== [::subs/selected-colors])
         pick-color (fn [k1 k2 v] (==> [::events/select-color k1 k2 v]))
-        types (<== [:lipas.ui.sports-sites.subs/active-types])]
-    [mui/table
-     [mui/table-head
-      [mui/table-row
-       [mui/table-cell "Type-code"]
-       [mui/table-cell "Type-name"]
-       [mui/table-cell "Geometry"]
-       [mui/table-cell "Old symbol"]
-       [mui/table-cell "New symbol"]
-       [mui/table-cell "Old-fill"]
-       [mui/table-cell "New-fill"]
-       [mui/table-cell "Old-stroke"]
-       [mui/table-cell "New-stroke"]]]
+        types      (<== [:lipas.ui.sports-sites.subs/active-types])]
+    [:<>
+     [mui/table
+      [mui/table-head
+       [mui/table-row
+        [mui/table-cell "Type-code"]
+        [mui/table-cell "Type-name"]
+        [mui/table-cell "Geometry"]
+        [mui/table-cell "Old symbol"]
+        [mui/table-cell "New symbol"]
+        [mui/table-cell "Old-fill"]
+        [mui/table-cell "New-fill"]
+        [mui/table-cell "Old-stroke"]
+        [mui/table-cell "New-stroke"]]]
 
-     (into
-       [mui/table-body]
-       (for [[type-code type] (sort-by first types)
-             :let [shape (-> type-code types :geometry-type)
-                   fill (-> type-code styles/symbols :fill :color)
-                   stroke (-> type-code styles/symbols :stroke :color)]]
-         [mui/table-row
-          [mui/table-cell type-code]
-          [mui/table-cell (-> type :name :fi)]
-          [mui/table-cell shape]
+      (into
+        [mui/table-body]
+        (for [[type-code type] (sort-by first types)
+              :let             [shape (-> type-code types :geometry-type)
+                                fill (-> type-code styles/symbols :fill :color)
+                                stroke (-> type-code styles/symbols :stroke :color)]]
+          [mui/table-row
+           [mui/table-cell type-code]
+           [mui/table-cell (-> type :name :fi)]
+           [mui/table-cell shape]
 
-         ;; Old symbol
-          [mui/table-cell (condp = shape
-                            "Point" "Circle"
-                            shape)]
+           ;; Old symbol
+           [mui/table-cell (condp = shape
+                             "Point" "Circle"
+                             shape)]
 
-         ;; New symbol
-          [mui/table-cell (condp = shape
-                            "Point" [lui/select
-                                     {:items [{:label "Circle" :value "circle"}
-                                              {:label "Square" :value "square"}]
-                                      :value (or (-> type-code new-colors :symbol)
-                                                 "circle")
-                                      :on-change (partial pick-color type-code :symbol)}]
-                            shape)]
+           ;; New symbol
+           [mui/table-cell (condp = shape
+                             "Point" [lui/select
+                                      {:items     [{:label "Circle" :value "circle"}
+                                                   {:label "Square" :value "square"}]
+                                       :value     (or (-> type-code new-colors :symbol)
+                                                      "circle")
+                                       :on-change (partial pick-color type-code :symbol)}]
+                             shape)]
 
-         ;; Old fill
-          [mui/table-cell
-           [color-picker {:value fill :on-change #()}]]
+           ;; Old fill
+           [mui/table-cell
+            [color-picker {:value fill :on-change #()}]]
 
-         ;; New fill
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
-             [color-picker
-              {:value (-> (new-colors type-code) :fill)
-               :on-change (partial pick-color type-code :fill)}]]
-            [mui/grid {:item true}
-             [mui/button
-              {:size :small :on-click #(pick-color type-code :fill fill)}
-              "reset"]]]]
+           ;; New fill
+           [mui/table-cell
+            [mui/grid {:container true :wrap "nowrap"}
+             [mui/grid {:item true}
+              [color-picker
+               {:value     (-> (new-colors type-code) :fill)
+                :on-change (partial pick-color type-code :fill)}]]
+             [mui/grid {:item true}
+              [mui/button
+               {:size :small :on-click #(pick-color type-code :fill fill)}
+               "reset"]]]]
 
-         ;; Old stroke
-          [mui/table-cell
-           [color-picker {:value stroke :on-change #()}]]
+           ;; Old stroke
+           [mui/table-cell
+            [color-picker {:value stroke :on-change #()}]]
 
-         ;; New stroke
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
-             [color-picker
-              {:value (-> (new-colors type-code) :stroke)
-               :on-change (partial pick-color type-code :stroke)}]]
-            [mui/grid {:item true}
-             [mui/button
-              {:size :small :on-click #(pick-color type-code :stroke stroke)}
-              "reset"]]]]]))]))
+           ;; New stroke
+           [mui/table-cell
+            [mui/grid {:container true :wrap "nowrap"}
+             [mui/grid {:item true}
+              [color-picker
+               {:value     (-> (new-colors type-code) :stroke)
+                :on-change (partial pick-color type-code :stroke)}]]
+             [mui/grid {:item true}
+              [mui/button
+               {:size :small :on-click #(pick-color type-code :stroke stroke)}
+               "reset"]]]]]))]
+     [mui/fab
+      {:style    {:position "sticky" :bottom "1em" :left "1em"}
+       :variant  "extended"
+       :color    "secondary"
+       :on-click #(==> [::events/download-new-colors-excel])}
+      [mui/icon "save"]
+      "Lataa"]]))
+
+(defn type-codes-view []
+  (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       "Tyyppikoodit"]
+      [lui/table
+       {:hide-action-btn? true
+        :headers
+        [[:type-code "Tyyppikoodi"]
+         [:name "Nimi"]
+         [:main-category "Pääluokka"]
+         [:sub-category "Alaluokka"]
+         [:description "Kuvaus"]
+         [:geometry-type "Geometria"]]
+        :sort-fn :type-code
+        :items types
+        :on-select #(js/alert "Ei tee mitään vielä...")}]]]))
+
+(defn users-view []
+  (let [tr           (<== [:lipas.ui.subs/translator])
+        status       (<== [::subs/users-status])
+        users        (<== [::subs/users-list])
+        users-filter (<== [::subs/users-filter])]
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       (tr :lipas.admin/users)]
+
+      ;; Full-screen user dialog
+      [user-dialog tr]
+
+      [mui/grid {:container true :spacing 4}
+
+       ;; Add user button
+       [mui/grid {:item true :style {:flex-grow 1}}
+        [mui/fab
+         {:color    "secondary"
+          :size     "small"
+          :style    {:margin-top "1em"}
+          :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
+         [mui/icon "add"]]]
+
+       ;; Status selector
+       [mui/grid {:item true}
+        [lui/select
+         {:style     {:width "150px"}
+          :label     "Status"
+          :value     status
+          :items     ["active" "archived"]
+          :value-fn  identity
+          :label-fn  identity
+          :on-change #(==> [::events/select-status %])}]]
+
+       ;; Users filter
+       [mui/grid {:item true}
+        [lui/text-field
+         {:label     (tr :search/search)
+          :on-change #(==> [::events/filter-users %])
+          :value     users-filter}]]]
+
+      ;; Users table
+      [lui/table
+       {:headers
+        [[:email (tr :lipas.user/email)]
+         [:firstname (tr :lipas.user/firstname)]
+         [:lastname (tr :lipas.user/lastname)]
+         [:roles (tr :lipas.user.permissions.roles/roles)]]
+        :sort-fn   :email
+        :items     users
+        :on-select #(==> [::events/set-user-to-edit %])}]]]))
+
+(defn org-dialog [tr]
+  (let [edit-id    @(rf/subscribe [::ui-subs/query-param :edit-id])
+        org        @(rf/subscribe [::subs/editing-org])
+
+        org-users  @(rf/subscribe [::subs/org-users edit-id])]
+    (react/useEffect (fn []
+                       (rf/dispatch [::events/set-org-to-edit edit-id])
+                       (fn []
+                         (rf/dispatch [::events/set-org-to-edit nil])))
+                     #js [edit-id])
+    [lui/full-screen-dialog
+     {:open?       (boolean edit-id)
+      :title       (or (:name org)
+                       "-")
+      :close-label (tr :actions/close)
+      :on-close    (fn [] (rfe/set-query #(dissoc % :edit-id)))
+      :bottom-actions
+      [[mui/button
+        {:variant  "contained"
+         :color    "secondary"
+         :on-click #(rf/dispatch [::events/save-org org])}
+        [mui/icon {:sx {:mr 1}} "save"]
+        (tr :actions/save)]]}
+
+     ;; Reuse lipas.ui.org.views
+     [mui/grid {:container true :spacing 1}
+      [lui/form-card {:title (tr :org.form/details)
+                      :xs 12
+                      :md 12
+                      :lg 12}
+       [mui/form-group
+        [lui/text-field
+         {:label     (tr :lipas.org/name)
+          :value     (:name org)
+          :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
+        [lui/text-field
+         {:label     (tr :lipas.org/phone)
+          :value (:phone (:data org))
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]
+
+       ;; TODO: Ptv data fields
+       ]
+      [lui/form-card {:title (tr :org.form/users)
+                      :xs 12
+                      :md 12
+                      :lg 12}
+       [lui/table
+        {:headers
+         [[:username (tr :lipas.user/username)]
+          [:role (tr :lipas.org/org-role)]]
+         :sort-fn   :username
+         :items     org-users
+         :on-select (fn [x] nil)}]]]]))
+
+(defn orgs-view []
+  (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
+        orgs         @(rf/subscribe [::subs/orgs-list])]
+    ;; TODO: Needed for user edit (for role select) and other cases also!
+    (react/useEffect (fn []
+                       (rf/dispatch [::events/get-orgs])
+                       js/undefined)
+                     #js [])
+    [mui/card {:square true}
+     [mui/card-content
+      [mui/typography {:variant "h5"}
+       (tr :lipas.admin/organizations)]
+
+      [:f> org-dialog tr]
+
+      [mui/grid {:container true :spacing 4}
+       [mui/grid {:item true :style {:flex-grow 1}}
+        [mui/fab
+         {:color    "secondary"
+          :size     "small"
+          :style    {:margin-top "1em"}
+          :on-click (fn [x] (rfe/set-query #(assoc % :edit-id "new")))}
+         [mui/icon "add"]]]]
+
+      [lui/table
+       {:headers
+        [[:name (tr :lipas.org/name)]]
+        :sort-fn   :name
+        :items     orgs
+        :on-select (fn [x] (rfe/set-query #(assoc % :edit-id (:id x))))}]]]))
 
 (defn job-details-dialog [tr]
   (let [open? (<== [::subs/job-details-dialog-open?])
@@ -905,110 +1086,47 @@
         1 [dead-letter-queue-tab]
         [jobs-monitoring-tab])]]))
 
-(defn type-codes-view []
-  (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
-    [mui/card {:square true}
-     [mui/card-content
-      [mui/typography {:variant "h5"}
-       "Tyyppikoodit"]
-      [lui/table
-       {:hide-action-btn? true
-        :headers
-        [[:type-code "Tyyppikoodi"]
-         [:name "Nimi"]
-         [:main-category "Pääluokka"]
-         [:sub-category "Alaluokka"]
-         [:description "Kuvaus"]
-         [:geometry-type "Geometria"]]
-        :sort-fn :type-code
-        :items types
-        :on-select #(js/alert "Ei tee mitään vielä...")}]]]))
-
 (defn admin-panel []
-  (let [tr (<== [:lipas.ui.subs/translator])
-        status (<== [::subs/users-status])
-        users (<== [::subs/users-list])
-        users-filter (<== [::subs/users-filter])
-        selected-tab (<== [::subs/selected-tab])]
+  (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
+        selected-tab @(rf/subscribe [::ui-subs/query-param :tab :users])]
     [mui/paper
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [mui/tool-bar
         [mui/tabs
-         {:value selected-tab
-          :on-change #(==> [::events/select-tab %2])
+         {:value     selected-tab
+          :on-change (fn [_e x]
+                       (rfe/set-query {:tab x}))
           :indicator-color "secondary"
           :text-color "inherit"}
-         [mui/tab {:label (tr :lipas.admin/users)}]
-         [mui/tab {:label "Symbolityökalu"}]
-         [mui/tab {:label "Tyyppikoodit"}]
-         [mui/tab {:label "Jobs Monitor"}]]]
+         [mui/tab {:label (tr :lipas.admin/users)
+                   :value "users"}]
+         [mui/tab {:label (tr :lipas.admin/organizations)
+                   :value "orgs"}]
+         [mui/tab {:label "Symbolityökalu"
+                   :value "symbol"}]
+         [mui/tab {:label "Tyyppikoodit"
+                   :value "types"}]
+         [mui/tab {:label "Jobs Monitoring"
+                   :value "jobs"}]]]
 
-       (when (= 1 selected-tab)
-         [:<>
-          [color-selector]
-          [mui/fab
-           {:style {:position "sticky" :bottom "1em" :left "1em"}
-            :variant "extended"
-            :color "secondary"
-            :on-click #(==> [::events/download-new-colors-excel])}
-           [mui/icon "save"]
-           "Lataa"]])
+       (case selected-tab
+         :symbol
+         [color-selector]
 
-       (when (= 0 selected-tab)
-         [mui/card {:square true}
-          [mui/card-content
-           [mui/typography {:variant "h5"}
-            (tr :lipas.admin/users)]
+         :users
+         [users-view]
 
-           ;; Full-screen user dialog
-           [user-dialog tr]
+         :types
+         [type-codes-view]
 
-           [mui/grid {:container true :spacing 4}
+         :jobs
+         [jobs-monitor-view]
 
-            ;; Add user button
-            [mui/grid {:item true :style {:flex-grow 1}}
-             [mui/fab
-              {:color "secondary"
-               :size "small"
-               :style {:margin-top "1em"}
-               :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-              [mui/icon "add"]]]
+         :orgs
+         [:f> orgs-view]
 
-            ;; Status selector
-            [mui/grid {:item true}
-             [lui/select
-              {:style {:width "150px"}
-               :label "Status"
-               :value status
-               :items ["active" "archived"]
-               :value-fn identity
-               :label-fn identity
-               :on-change #(==> [::events/select-status %])}]]
-
-            ;; Users filter
-            [mui/grid {:item true}
-             [lui/text-field
-              {:label (tr :search/search)
-               :on-change #(==> [::events/filter-users %])
-               :value users-filter}]]]
-
-           ;; Users table
-           [lui/table
-            {:headers
-             [[:email (tr :lipas.user/email)]
-              [:firstname (tr :lipas.user/firstname)]
-              [:lastname (tr :lipas.user/lastname)]
-              [:roles (tr :lipas.user.permissions.roles/roles)]]
-             :sort-fn :email
-             :items users
-             :on-select #(==> [::events/set-user-to-edit %])}]]])
-
-       (when (= 2 selected-tab)
-         [type-codes-view])
-
-       (when (= 3 selected-tab)
-         [jobs-monitor-view])]]]))
+         [:div "Missing view"])]]]))
 
 (defn main []
   (let [admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])]

@@ -23,7 +23,8 @@
        (map #(dissoc % :password))))
 
 (comment
-  (get-users (:lipas/db integrant.repl.state/system)))
+  (get-users (:lipas/db integrant.repl.state/system))
+  (get-orgs (:lipas/db integrant.repl.state/system)))
 
 (defn get-user-by-id [db-spec params]
   (when (uuid? (utils/->uuid-safe (:id params)))

@@ -5,7 +5,8 @@
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.ui.utils :as utils]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]))
 
 (def transit-extra-read-handlers
   {"f" #(js/parseFloat %) ; BigDecimal -> float
@@ -189,15 +190,6 @@
   (fn [db [_ type-code k v]]
     (assoc-in db [:admin :color-picker type-code k] v)))
 
-(rf/reg-event-fx ::select-tab
-  (fn [{:keys [db]} [_ v]]
-    (let [effects {:db (assoc-in db [:admin :selected-tab] v)}]
-      (if (= v 3) ; Jobs Monitor tab
-        (assoc effects :fx [[:dispatch [::fetch-jobs-health]]
-                            [:dispatch [::fetch-jobs-metrics]]
-                            [:dispatch [::fetch-dead-letter-jobs {:acknowledged false}]]])
-        effects))))
-
 (rf/reg-event-fx ::download-new-colors-excel
   (fn [{:keys [db]} _]
     (let [headers [[:type-code "type-code"]
@@ -231,7 +223,7 @@
     (let [tr (:translator db)]
       {:db (assoc-in db [:admin :users (:id user)] user)
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message (tr :notifications/save-success)
+                        {:message  (tr :notifications/save-success)
                          :success? true}]]
             [:dispatch [::set-user-to-edit user]]
             [:dispatch [::get-users]]]})))
@@ -556,3 +548,62 @@
                                 (-> response :status-text)
                                 (tr :error/unknown))
                    :success? false}]})))
+
+;;; Orgs ;;;
+
+(rf/reg-event-db ::get-orgs-success
+  (fn [db [_ orgs]]
+    (assoc-in db [:admin :orgs] (utils/index-by :id orgs))))
+
+(rf/reg-event-fx ::get-orgs
+  (fn [{:keys [db]} [_ _]]
+    (let [token (-> db :user :login :token)]
+      {:http-xhrio
+       {:method          :get
+        :headers         {:Authorization (str "Token " token)}
+        :uri             (str (:backend-url db) "/orgs")
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success      [::get-orgs-success]
+        :on-failure      [::failure]}})))
+
+(rf/reg-event-db ::set-org-to-edit
+  (fn [db [_ id]]
+    (assoc-in db
+              [:admin :editing-org]
+              (when id
+                (if (= "new" id)
+                  {:name "fixme"
+                   :data {}
+                   :ptv-data {}}
+                  (get-in db [:admin :orgs id]))))))
+
+(rf/reg-event-db ::edit-org
+  (fn [db [_ path value]]
+    (assoc-in db (into [:admin :editing-org] path) value)))
+
+(rf/reg-event-fx ::save-org-success
+  (fn [{:keys [db]} [_ _org new? resp]]
+    (let [tr (:translator db)]
+      (when new?
+        (rfe/set-query #(assoc % :edit-id (:id resp))))
+      {:fx [[:dispatch [::get-orgs]]
+            [:dispatch [:lipas.ui.events/set-active-notification
+                        {:message  (tr :notifications/save-success)
+                         :success? true}]]]})))
+
+(rf/reg-event-fx ::save-org
+  (fn [{:keys [db]} [_ org]]
+    (let [token (-> db :user :login :token)
+          body  (-> org)
+          new? (nil? (:id org))]
+      {:http-xhrio
+       {:method          (if new? :post :put)
+        :uri             (if new?
+                           (str (:backend-url db) "/orgs")
+                           (str (:backend-url db) "/orgs/" (:id org)))
+        :headers         {:Authorization (str "Token " token)}
+        :params          body
+        :format          (ajax/json-request-format)
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success      [::save-org-success org new?]
+        :on-failure      [::failure]}})))

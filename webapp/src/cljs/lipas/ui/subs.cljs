@@ -12,6 +12,22 @@
   (fn [route _]
     (-> route :data :view)))
 
+(rf/reg-sub ::parameters
+  :<- [::current-route]
+  (fn [route _]
+    (-> route :parameters)))
+
+(rf/reg-sub ::query-params
+  :<- [::parameters]
+  (fn [params _]
+    (-> params :query)))
+
+(rf/reg-sub ::query-param
+  :<- [::query-params]
+  (fn [params [_ k default-val]]
+    (or (get params k)
+        default-val)))
+
 (rf/reg-sub ::account-menu-anchor
   (fn [db _]
     (:account-menu-anchor db)))

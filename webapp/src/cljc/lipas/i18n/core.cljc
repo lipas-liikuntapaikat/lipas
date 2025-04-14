@@ -12,7 +12,11 @@
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as pools]
    [lipas.data.types :as types]
-   [lipas.i18n.translations :as translations]
+   ;; Require these directly in this ns to ensure shadow-cljs reloads
+   ;; this ns when translations change -> hot reload changes work.
+   [lipas.i18n.en :as en]
+   [lipas.i18n.fi :as fi]
+   [lipas.i18n.se :as se]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 
@@ -51,7 +55,10 @@
    (merge m)))
 
 (def dicts
-  (assoc translations/dicts :tongue/fallback :fi))
+  {:fi fi/translations
+   :se se/translations
+   :en en/translations
+   :tongue/fallback :fi})
 
 (def translate (tongue/build-translate dicts))
 

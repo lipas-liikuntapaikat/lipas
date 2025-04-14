@@ -719,24 +719,26 @@ The site administrator is responsible for the accuracy of information, safety of
    {:roles "Roles"
     :role "Role"
     :context-value-all "All"
-    :role-names {:admin "Admin"
-                 :city-manager "City Manager"
-                 :type-manager "Type Manager"
-                 :site-manager "Site Manager"
-                 :activities-manager "UTP Manager"
-                 :floorball-manager "Floorball Editor"
-                 :analysis-user "Analysis tool user"
-                 :ptv "PTV Manager"}
-    :context-keys {:city-code "Municipality"
-                   :type-code "Type"
-                   :activity "Activity"
-                   :lipas-id "Site"}
-    :edit-role {:edit-header "Edit"
-                :new-header "Add Role"
-                :stop-editing "Stop Editing"
-                :add "Add"
-                :choose-role "Choose a role first to select which resources the role affects."}
-    :permissions-old "(old, read-only)"}
+    :role-names        {:admin              "Admin"
+                        :city-manager       "City Manager"
+                        :type-manager       "Type Manager"
+                        :site-manager       "Site Manager"
+                        :activities-manager "UTP Manager"
+                        :floorball-manager  "Floorball Editor"
+                        :analysis-user      "Analysis tool user"
+                        :ptv-manager        "PTV Manager"
+                        :org-admin          "Organization admin"
+                        :org-user           "Organization user"}
+    :context-keys      {:city-code "Municipality"
+                        :type-code "Type"
+                        :activity  "Activity"
+                        :lipas-id  "Site"}
+    :edit-role         {:edit-header  "Edit"
+                        :new-header   "Add Role"
+                        :stop-editing "Stop Editing"
+                        :add          "Add"
+                        :choose-role  "Choose a role first to select which resources the role affects."}
+    :permissions-old   "(old, read-only)"}
    :help
    {:headline "Help",
     :permissions-help

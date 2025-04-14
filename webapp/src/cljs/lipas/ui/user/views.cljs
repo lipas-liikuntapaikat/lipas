@@ -1,15 +1,18 @@
 (ns lipas.ui.user.views
   (:require ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
+            [lipas.ui.org.subs :as org-subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
             [lipas.ui.utils :refer [<== ==> navigate!]]
             [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 (defn user-form [tr data]
@@ -147,6 +150,22 @@
                             :v v
                             :tr tr})))))))))))
 
+(defui explain-orgs []
+  (let [orgs (use-subscribe [::org-subs/user-orgs])]
+    ($ :<>
+       (for [{:keys [id name]} orgs]
+         ($ :<>
+            {:key id}
+            ($ Stack
+               {:direction "row"
+                :sx #js {:alignItems "center"
+                         :p 1}}
+               ($ Link
+                  {:variant "body2"
+                   :href (rfe/href :lipas.ui.routes/org
+                                   {:org-id id})}
+                  (or name "-"))))))))
+
 (defn user-panel [tr user]
   (let [card-props {:square true}
 
@@ -221,6 +240,14 @@
           ;;                :color :secondary}
           ;;    (str "> " (tr :user/swimming-pools-link))])
           ]]]
+
+       [mui/grid {:item true :xs 12}
+        [mui/card (merge card-props)
+         [mui/card-header {:title (tr :lipas.user/organizations)}]
+         [mui/card-content
+
+          ($ explain-orgs)]]]
+
 ;; Promo card
        [mui/grid {:item true :xs 12}
         [mui/card card-props

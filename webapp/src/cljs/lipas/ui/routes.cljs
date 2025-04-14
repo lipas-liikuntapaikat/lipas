@@ -9,8 +9,9 @@
             [lipas.ui.register.routes :as register]
             [lipas.ui.stats.routes :as stats]
             [lipas.ui.user.routes :as user]
+            [lipas.ui.org.routes :as org]
             [lipas.ui.utils :refer [==>] :as utils]
-            [reitit.coercion.spec :as rss]
+            [reitit.coercion.malli :as rcm]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
 
@@ -35,6 +36,7 @@
      front-page/routes
      login/routes
      user/routes
+     org/routes
      forgot-password/routes
      register/routes
      lmap/routes
@@ -42,7 +44,7 @@
      stats/routes
      ice-stadiums/routes
      #_swimming-pools/routes]
-    {:data {:coercion rss/coercion}}))
+    {:data {:coercion rcm/coercion}}))
 
 (defn match-by-path [path]
   (let [path (string/replace path #"/#" "")]
