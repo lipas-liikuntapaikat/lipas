@@ -430,6 +430,7 @@ services:
       GEOSERVER_ADMIN_PASSWORD:
       GEOSERVER_ADMIN_USER:
       EXTRA_JAVA_OPTS: "-Xms${GEOSERVER_INITIAL_MEMORY} -Xmx${GEOSERVER_MAX_MEMORY}"
+      CORS_ENABLED: true
     links:
       - postgres
     volumes:
