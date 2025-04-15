@@ -11,7 +11,7 @@
 (defonce tasks (atom {}))
 
 (def all-tasks
-  [:reminders :analysis :elevation :utp-webhook])
+  [:reminders :analysis :elevation #_:utp-webhook])
 
 (defn -main
   "Runs all tasks if no task names are given in args. Else runs tasks
