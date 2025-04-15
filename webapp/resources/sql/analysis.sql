@@ -9,9 +9,10 @@ ON CONFLICT (lipas_id) DO UPDATE SET added_at = CURRENT_TIMESTAMP;
 -- :name get-queue
 -- :command :query
 -- :result :many
--- :doc Returns all entries in analysis_queue table that are not in-progress
+-- :doc Returns 10 entries in analysis_queue table that are pending
 SELECT * FROM public.analysis_queue
 WHERE status = 'pending'
+LIMIT 10
 
 -- :name get-all
 -- :command :query
