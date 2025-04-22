@@ -1,22 +1,30 @@
 (ns lipas.ui.components.layouts
   (:require [lipas.ui.mui :as mui]
+            [reagent-dev-tools.state :as dev-state]
             [reagent.core :as r]))
 
 (defn floating-container
   [{:keys [ref top right bottom left background-color]
     :or   {background-color mui/gray2}} & children]
-  (into
-    [:div.no-print
-     {:ref ref
-      :style
-      {:position         "fixed"
-       :z-index          999
-       :background-color background-color
-       :top              top
-       :right            right
-       :bottom           bottom
-       :left             left}}]
-    children))
+  (let [{:keys [open? place width height]} @dev-state/dev-state]
+    (into
+      [:div.no-print
+       {:ref ref
+        :style
+        {:position         "fixed"
+         :z-index          999
+         :background-color background-color
+         :top              top
+         :right            right
+         :margin-right     (if (and right open? (= :right place))
+                             width
+                             0)
+         :bottom           bottom
+         :margin-bottom    (if (and bottom open? (= :bottom place))
+                             height
+                             0)
+         :left             left}}]
+      children)))
 
 (defn card
   [{:keys [title xs md lg] :or {xs 12 md 6}} & content]
