@@ -319,7 +319,7 @@
              :into #{}))
 
 (s/def :lipas.role/org-id
-  (s/coll-of uuid?
+  (s/coll-of string?
              :min-count 1
              :distint true
              :into #{}))
