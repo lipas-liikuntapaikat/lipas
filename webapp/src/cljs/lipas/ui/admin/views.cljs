@@ -617,9 +617,41 @@
         :items     users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))
 
+(defn org-dialog [tr]
+  (let [edit-id    @(rf/subscribe [::ui-subs/query-param :edit-id])
+        org        @(rf/subscribe [::subs/editing-org])
+        existing?  (some? (:id org))]
+    (js/console.log org existing?)
+    (react/useEffect (fn []
+                       (rf/dispatch [::events/set-org-to-edit edit-id])
+                       (fn []
+                         (rf/dispatch [::events/set-org-to-edit nil])))
+                     #js [edit-id])
+    [lui/full-screen-dialog
+     {:open?       (boolean edit-id)
+      :title       (or (:name org)
+                       "FIXME: Missing name")
+      :close-label (tr :actions/close)
+      :on-close    (fn [] (rfe/set-query #(dissoc % :edit-id)))
+      :bottom-actions
+      [[mui/button
+        {:variant  "contained"
+         :color    "secondary"
+         :on-click #(==> [::events/save-org org])}
+        [mui/icon {:sx {:mr 1}} "save"]
+        (tr :actions/save)]]}
+
+     [mui/grid {:container true :spacing 1}
+      [lui/form-card {:title "FIXME"}
+       [mui/form-group
+        [lui/text-field
+         {:label     (tr :lipas.org/name)
+          :value     (:name org)
+          :on-change #(==> [::events/edit-org [:name] %])}]]]]]))
+
 (defn orgs-view []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        orgs         (<== [::subs/orgs-list])]
+  (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
+        orgs         @(rf/subscribe [::subs/orgs-list])]
     (react/useEffect (fn []
                        (rf/dispatch [::events/get-orgs])
                        js/undefined)
@@ -629,7 +661,7 @@
       [mui/typography {:variant "h5"}
        (tr :lipas.admin/organizations)]
 
-      ;; [user-dialog tr]
+      [:f> org-dialog tr]
 
       [mui/grid {:container true :spacing 4}
        [mui/grid {:item true :style {:flex-grow 1}}
@@ -645,7 +677,8 @@
         [[:name (tr :lipas.org/name)]]
         :sort-fn   :name
         :items     orgs
-        :on-select #(==> [::events/set-org-to-edit %])}]]]))
+        :on-select (fn [x]
+                     (rfe/set-query #(assoc % :edit-id (:id x))))}]]]))
 
 (defn admin-panel []
   (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])

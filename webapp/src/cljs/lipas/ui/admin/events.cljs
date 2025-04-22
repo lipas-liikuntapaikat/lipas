@@ -234,3 +234,14 @@
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success      [::get-orgs-success]
         :on-failure      [::failure]}})))
+
+(rf/reg-event-db ::set-org-to-edit
+  (fn [db [_ id]]
+    (assoc-in db
+              [:admin :editing-org]
+              (when id
+                (get-in db [:admin :orgs id])))))
+
+(rf/reg-event-db ::edit-org
+  (fn [db [_ path value]]
+    (assoc-in db (into [:admin :editing-org] path) value)))

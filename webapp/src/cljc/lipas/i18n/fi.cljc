@@ -1132,6 +1132,8 @@
     :username-example          "tane12",
     :permission-to-types
     "Sinulla on käyttöoikeus seuraaviin  liikuntapaikkatyyppeihin:"},
+   :lipas.org
+   {:name "Nimi"},
    :heat-recovery-types
    {:liquid-circulation   "Nestekierto",
     :plate-heat-exchanger "Levysiirrin",
