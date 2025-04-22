@@ -23,10 +23,12 @@
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.mui :as mui]
+            [lipas.ui.subs :as ui-subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 (defn magic-link-dialog [{:keys [tr]}]
@@ -646,16 +648,16 @@
         :on-select #(==> [::events/set-org-to-edit %])}]]]))
 
 (defn admin-panel []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        selected-tab (or (<== [::subs/selected-tab])
-                         "users")]
+  (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
+        selected-tab @(rf/subscribe [::ui-subs/query-param :tab "users"])]
     [mui/paper
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [mui/tool-bar
         [mui/tabs
          {:value     selected-tab
-          :on-change #(==> [::events/select-tab %2])
+          :on-change (fn [_e x]
+                       (rfe/set-query {:tab x}))
           :indicator-color "secondary"
           :text-color "inherit"}
          [mui/tab {:label (tr :lipas.admin/users)
@@ -668,16 +670,16 @@
                    :value "types"}]]]
 
        (case selected-tab
-         "symbol"
+         :symbol
          [color-selector]
 
-         "users"
+         :users
          [users-view]
 
-         "types"
+         :types
          [type-codes-view]
 
-         "orgs"
+         :orgs
          [:f> orgs-view]
 
          [:div "Missing view"])]]]))
