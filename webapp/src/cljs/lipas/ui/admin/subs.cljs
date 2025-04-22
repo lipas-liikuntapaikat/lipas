@@ -139,10 +139,6 @@
   (fn [db _]
     (-> db :admin :color-picker)))
 
-(rf/reg-sub ::selected-tab
-  (fn [db _]
-    (-> db :admin :selected-tab)))
-
 ;;; Orgs ;;;
 
 (rf/reg-sub ::orgs

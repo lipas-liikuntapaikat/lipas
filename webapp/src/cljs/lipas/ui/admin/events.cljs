@@ -180,10 +180,6 @@
   (fn [db [_ type-code k v]]
     (assoc-in db [:admin :color-picker type-code k] v)))
 
-(rf/reg-event-db ::select-tab
-  (fn [db [_ v]]
-    (assoc-in db [:admin :selected-tab] v)))
-
 (rf/reg-event-fx ::download-new-colors-excel
   (fn [{:keys [db]} _]
     (let [headers [[:type-code "type-code"]
