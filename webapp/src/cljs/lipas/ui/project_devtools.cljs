@@ -79,6 +79,13 @@
     (dev-tools/start!
       {:state-atom re-frame.db/app-db
        :margin-element (js/document.getElementById "app")
+       :toggle-btn (fn [open-fn]
+                     [:button.reagent-dev-tools__nav-li-a.reagent-dev-tools__toggle-btn
+                      {:on-click open-fn
+                       :style {:margin-bottom "75px"
+                               :margin-right "5px"
+                               :box-shadow "1px 1px 5px rgba(0, 0, 0, 0.5)"}}
+                      "dev"])
        :panels [{:key :roles
                  :label "Roles"
                  :view [roles]}]})
