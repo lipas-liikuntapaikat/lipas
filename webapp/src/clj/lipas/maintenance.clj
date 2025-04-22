@@ -433,8 +433,8 @@
   )
 
 (comment
-  (def csv-path "/Users/tipo/lipas/taloustiedot/taloustiedot_2022.csv")
-  (add-city-stats-from-csv! system csv-path 2022)
+  (def csv-path "/Users/tipo/lipas/taloustiedot/taloustiedot_2023.csv")
+  (add-city-stats-from-csv! {:db (user/db) :search (user/search)} csv-path 2023)
   (->> csv-path
        slurp
        csv/read-csv
