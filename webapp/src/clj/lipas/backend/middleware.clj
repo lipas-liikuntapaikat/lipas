@@ -28,13 +28,19 @@
       (assoc-in [:headers "Access-Control-Allow-Methods"] allow-methods)
       (assoc-in [:headers "Access-Control-Allow-Headers"] allow-headers)))
 
-(defn cors
+(def cors-middleware
   "Cross-origin Resource Sharing (CORS) middleware. Allow requests from all
    origins, all http methods and Authorization and Content-Type headers."
-  [handler]
-  (fn [request]
-    (let [response (handler request)]
-      (add-cors-headers response))))
+  {:name ::cors-middleware
+   :compile
+   (fn [route-data _opts]
+     (when (:cors route-data)
+       (fn [next-handler]
+         (fn [request]
+           (let [response (if (= :options (:request-method request))
+                            {:status 200}
+                            (next-handler request))]
+             (add-cors-headers response))))))})
 
 (defn token-auth
   "Middleware used on routes requiring token authentication"

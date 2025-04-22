@@ -94,13 +94,8 @@
            :body    (io/input-stream (io/resource "public/index.html"))})}}]
 
      ["/api"
-      {:middleware [mw/cors]
-       :no-doc     true
-       :options
-       {:handler
-        (fn [_]
-          {:status 200
-           :body   {:status "OK"}})}}
+      {:cors   true
+       :no-doc true}
 
       ["/swagger.json"
        {:get
@@ -261,8 +256,7 @@
             :body   (core/get-users db)})}}]
 
       ["/orgs"
-       {:no-doc true
-        :require-privilege :org/manage
+       {:require-privilege :org/manage
         :coercion reitit.coercion.malli/coercion}
        [""
         {:get
@@ -800,6 +794,9 @@
                    coercion/coerce-response-middleware
                    ;; coercing request parameters
                    coercion/coerce-request-middleware
+                   ;; add cors headers and respond to OPTIONS requests,
+                   ;; before privilege check!
+                   mw/cors-middleware
                    ;; privilege check based on route-data,
                    ;; also enables token-auth and auth checks
                    ;; per route.
