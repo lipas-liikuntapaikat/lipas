@@ -19,7 +19,7 @@
 
    ["/:lipas-id"
     {:name       :lipas.ui.routes.map/details-view
-     :parameters {:path {:lipas-id int?}}
+     :parameters {:path [:map [:lipas-id :int]]}
      :controllers
      [{:identity
        (fn [match]

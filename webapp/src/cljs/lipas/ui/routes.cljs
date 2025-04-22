@@ -10,7 +10,7 @@
             [lipas.ui.stats.routes :as stats]
             [lipas.ui.user.routes :as user]
             [lipas.ui.utils :refer [==>] :as utils]
-            [reitit.coercion.spec :as rss]
+            [reitit.coercion.malli :as rcm]
             [reitit.frontend :as rf]
             [reitit.frontend.easy :as rfe]))
 
@@ -42,7 +42,7 @@
      stats/routes
      ice-stadiums/routes
      #_swimming-pools/routes]
-    {:data {:coercion rss/coercion}}))
+    {:data {:coercion rcm/coercion}}))
 
 (defn match-by-path [path]
   (let [path (string/replace path #"/#" "")]
