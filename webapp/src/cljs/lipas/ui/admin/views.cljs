@@ -619,9 +619,7 @@
 
 (defn org-dialog [tr]
   (let [edit-id    @(rf/subscribe [::ui-subs/query-param :edit-id])
-        org        @(rf/subscribe [::subs/editing-org])
-        existing?  (some? (:id org))]
-    (js/console.log org existing?)
+        org        @(rf/subscribe [::subs/editing-org])]
     (react/useEffect (fn []
                        (rf/dispatch [::events/set-org-to-edit edit-id])
                        (fn []

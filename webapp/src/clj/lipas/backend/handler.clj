@@ -275,11 +275,13 @@
                              [:org-id org-schema/org-id]]}}
         [""
          {:put
-          {:handler (fn [req]
+          {:parameters {:body org-schema/org}
+           :handler (fn [req]
                       (org/update-org! db
                                        (-> req :parameters :path :org-id)
                                        (-> req :parameters :body))
-                      {:status 200})}}]
+                      {:status 200
+                       :body {}})}}]
         ["/users"
          {:post
           {:parameters {:body org-schema/user-updates}
@@ -287,7 +289,8 @@
                       (org/update-org-users! db
                                              (-> req :parameters :org-id)
                                              (-> req :parameters :body))
-                      {:status 200})}}]]]
+                      {:status 200
+                       :body {}})}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post
@@ -786,6 +789,10 @@
                    muuntaja/format-negotiate-middleware
                    ;; encoding response body
                    muuntaja/format-response-middleware
+                   ;; add cors headers and respond to OPTIONS requests,
+                   ;; - before privilege check, so options request is handled first.
+                   ;; - before exception handling, so error responses also get cors headers.
+                   mw/cors-middleware
                    ;; exception handling
                    exceptions-mw
                    ;; decoding request body
@@ -794,9 +801,6 @@
                    coercion/coerce-response-middleware
                    ;; coercing request parameters
                    coercion/coerce-request-middleware
-                   ;; add cors headers and respond to OPTIONS requests,
-                   ;; before privilege check!
-                   mw/cors-middleware
                    ;; privilege check based on route-data,
                    ;; also enables token-auth and auth checks
                    ;; per route.

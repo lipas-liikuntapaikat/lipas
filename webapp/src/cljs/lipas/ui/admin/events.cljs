@@ -245,3 +245,25 @@
 (rf/reg-event-db ::edit-org
   (fn [db [_ path value]]
     (assoc-in db (into [:admin :editing-org] path) value)))
+
+(rf/reg-event-fx ::save-org-success
+  (fn [{:keys [db]} [_ user _]]
+    (let [tr (:translator db)]
+      {:fx [[:dispatch [::get-orgs]]
+            [:dispatch [:lipas.ui.events/set-active-notification
+                        {:message  (tr :notifications/save-success)
+                         :success? true}]]]})))
+
+(rf/reg-event-fx ::save-org
+  (fn [{:keys [db]} [_ org]]
+    (let [token (-> db :user :login :token)
+          body  (-> org)]
+      {:http-xhrio
+       {:method          :put
+        :uri             (str (:backend-url db) "/orgs/" (:id org))
+        :headers         {:Authorization (str "Token " token)}
+        :params          body
+        :format          (ajax/json-request-format)
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success      [::save-org-success org]
+        :on-failure      [::failure]}})))
