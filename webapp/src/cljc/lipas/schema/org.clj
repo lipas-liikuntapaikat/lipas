@@ -2,21 +2,22 @@
   (:require [lipas.schema.common :as common]
             [malli.util :as mu]))
 
+;; TODO: How to ensure values are set when needed?
 (def ptv-data
   [:map
-   [:ptv-org-id common/uuid]
-   [:city-codes [:vector number?]]
-   [:owners [:vector [:enum "city" "city-main-owner"]]]
-   [:supported-languages [:vector [:enum "fi" "se" "en"]]]])
+   [:ptv-org-id {:optional true} [:maybe common/uuid]]
+   [:city-codes {:optional true} [:vector number?]]
+   [:owners {:optional true} [:vector [:enum "city" "city-main-owner"]]]
+   [:supported-languages {:optional true} [:vector [:enum "fi" "se" "en"]]]])
 
-(def org-id common/uuid)
+(def org-id :uuid)
 
 (def org
   [:map
    [:id org-id]
    [:name [:string {:min 1 :max 128}]]
    [:data [:map
-           [:phone number?]]]
+           [:phone [:maybe :string]]]]
    [:ptv-data ptv-data]])
 
 (def new-org
