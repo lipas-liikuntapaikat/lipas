@@ -78,6 +78,7 @@
                  (not (utils/prod?))))
     (dev-tools/start!
       {:state-atom re-frame.db/app-db
+       :margin-element (js/document.getElementById "app")
        :panels [{:key :roles
                  :label "Roles"
                  :view [roles]}]})

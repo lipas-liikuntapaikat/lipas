@@ -642,7 +642,10 @@
         (tr :actions/save)]]}
 
      [mui/grid {:container true :spacing 1}
-      [lui/form-card {:title "FIXME"}
+      [lui/form-card {:title "FIXME"
+                      :xs 12
+                      :md 12
+                      :lg 12}
        [mui/form-group
         [lui/text-field
          {:label     (tr :lipas.org/name)
@@ -682,7 +685,7 @@
 
 (defn admin-panel []
   (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
-        selected-tab @(rf/subscribe [::ui-subs/query-param :tab "users"])]
+        selected-tab @(rf/subscribe [::ui-subs/query-param :tab :users])]
     [mui/paper
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
