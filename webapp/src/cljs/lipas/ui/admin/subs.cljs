@@ -1,5 +1,6 @@
 (ns lipas.ui.admin.subs
   (:require [clojure.string :as str]
+            [lipas.roles :as roles]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
@@ -145,11 +146,33 @@
   (fn [db _]
     (-> db :admin :orgs)))
 
+(rf/reg-sub ::org
+  :<- [::orgs]
+  (fn [orgs [_ id]]
+    (get orgs id)))
+
 (rf/reg-sub ::orgs-list
   :<- [::orgs]
   (fn [orgs _]
     (vals orgs)))
 
+(rf/reg-sub ::orgs-options
+  :< [::orgs-list]
+  (fn [orgs _]
+    (->> orgs
+         (map (fn [{:keys [id name]}]
+                {:value id
+                 :label name}))
+         (sort-by :label))))
+
 (rf/reg-sub ::editing-org
   (fn [db _]
     (get-in db [:admin :editing-org])))
+
+(rf/reg-sub ::org-users
+  :<- [::users]
+  (fn [users [_ org-id]]
+    (->> users
+         vals
+         (filter (fn [user]
+                   (roles/check-privilege user {:org-id org-id} :org/member))))))

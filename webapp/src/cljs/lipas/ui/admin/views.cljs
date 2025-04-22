@@ -15,6 +15,7 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             ["react" :as react]
+            [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
@@ -124,7 +125,7 @@
         :multiple  true})))
 
 (defui activity-select [{:keys [tr required data]}]
-  (let [activities (<== [::subs/activities-list (tr)])]
+  (let [activities (use-subscribe [::subs/activities-list (tr)])]
     ($ ac/autocomplete2
        {:options   activities
         :label     (str (tr :lipas.user.permissions/activities)
@@ -132,6 +133,17 @@
                           " *"))
         :value     (to-array (or (:activity data) []))
         :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
+        :multiple  true})))
+
+(defui org-select [{:keys [tr required data]}]
+  (let [orgs (use-subscribe [::subs/orgs-options])]
+    ($ ac/autocomplete2
+       {:options   orgs
+        :label     (str (tr :lipas.user.permissions/orgs)
+                        (when required
+                          " *"))
+        :value     (to-array (or (:org-id data) []))
+        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :org-id (mapv ac/safe-value v)]))
         :multiple  true})))
 
 (defui context-key-edit [{:keys [k] :as props}]
@@ -146,7 +158,10 @@
     ($ city-code-select props)
 
     :activity
-    ($ activity-select props)))
+    ($ activity-select props)
+
+    :org-id
+    ($ org-select props)))
 
 (defui role-form [{:keys [tr]}]
   (let [data (use-subscribe [::subs/edit-role])
@@ -619,7 +634,9 @@
 
 (defn org-dialog [tr]
   (let [edit-id    @(rf/subscribe [::ui-subs/query-param :edit-id])
-        org        @(rf/subscribe [::subs/editing-org])]
+        org        @(rf/subscribe [::subs/editing-org])
+
+        org-users  @(rf/subscribe [::subs/org-users edit-id])]
     (react/useEffect (fn []
                        (rf/dispatch [::events/set-org-to-edit edit-id])
                        (fn []
@@ -648,11 +665,29 @@
         [lui/text-field
          {:label     (tr :lipas.org/name)
           :value     (:name org)
-          :on-change #(==> [::events/edit-org [:name] %])}]]]]]))
+          :on-change #(==> [::events/edit-org [:name] %])}]
+        [lui/text-field
+         {:label     (tr :lipas.org/phone)
+          :defaultValue (:phone (:data org))
+          :on-change (fn [x] (==> [::events/edit-org [:data :phone] x]))}]]
+
+       ;; TODO: Ptv data fields
+       ]
+      [lui/form-card {:title "FIXME Users"
+                      :xs 12
+                      :md 12
+                      :lg 12}
+       [lui/table
+        {:headers
+         [[:username (tr :lipas.user/username)]]
+         :sort-fn   :username
+         :items     org-users
+         :on-select (fn [x] nil)}]]]]))
 
 (defn orgs-view []
   (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
         orgs         @(rf/subscribe [::subs/orgs-list])]
+    ;; TODO: Needed for user edit (for role select) and other cases also!
     (react/useEffect (fn []
                        (rf/dispatch [::events/get-orgs])
                        js/undefined)

@@ -29,6 +29,7 @@
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
 
+   :org/member {:doc "Organisaation jäsen"}
    :org/manage {:doc "Organisaation tietojen ja käyttäjien hallinta"}
 
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
@@ -122,14 +123,14 @@
    :org-admin
    {:sort 60
     :assignable true
-    :privileges #{:org/manage}
+    :privileges #{:org/manage :org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}
 
    :org-user
    {:sort 61
     :assignable true
-    :privileges #{}
+    :privileges #{:org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}})
 

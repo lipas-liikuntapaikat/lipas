@@ -872,7 +872,8 @@
     :context-keys      {:city-code "Kunta"
                         :type-code "Tyyppi"
                         :activity  "Aktiviteetti"
-                        :lipas-id  "Paikka"}
+                        :lipas-id  "Paikka"
+                        :org-id    "Organisaatio"}
     :edit-role         {:edit-header  "Muokkaa"
                         :new-header   "Lisää rooli"
                         :stop-editing "Lopeta muokkaus"
