@@ -8,7 +8,8 @@
     :tr-key :lipas.admin/headline
     :view   views/main
     :parameters {:query [:map
-                         [:tab {:optional true} :keyword]]}
+                         [:tab {:optional true} :keyword]
+                         [:edit-id {:optional true} :string]]}
     ;; TODO: Move to effect hook(s)?
     :controllers [{:start
                    (fn [& _params]

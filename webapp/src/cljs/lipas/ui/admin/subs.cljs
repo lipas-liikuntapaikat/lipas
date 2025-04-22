@@ -149,3 +149,7 @@
   :<- [::orgs]
   (fn [orgs _]
     (vals orgs)))
+
+(rf/reg-sub ::editing-org
+  (fn [db _]
+    (get-in db [:admin :editing-org])))
