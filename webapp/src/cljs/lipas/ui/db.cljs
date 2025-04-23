@@ -27,6 +27,8 @@
    :drawer-open?  false
    :screen-size   "lg"
    :current-route nil
+   ;; This is just a wrapper fn calling latest translate fn (var) in the i18n.core
+   ;; so if core ns is reloaded, app uses the latest translation dicts.
    :translator    (i18n/->tr-fn :fi)
 
    ;; Admin
