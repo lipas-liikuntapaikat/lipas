@@ -705,7 +705,7 @@
          {:color    "secondary"
           :size     "small"
           :style    {:margin-top "1em"}
-          :on-click #(==> [::events/edit-org [:name] "fixme"])}
+          :on-click (fn [x] (rfe/set-query #(assoc % :edit-id "new")))}
          [mui/icon "add"]]]]
 
       [lui/table
@@ -713,8 +713,7 @@
         [[:name (tr :lipas.org/name)]]
         :sort-fn   :name
         :items     orgs
-        :on-select (fn [x]
-                     (rfe/set-query #(assoc % :edit-id (:id x))))}]]]))
+        :on-select (fn [x] (rfe/set-query #(assoc % :edit-id (:id x))))}]]]))
 
 (defn admin-panel []
   (let [tr           @(rf/subscribe [:lipas.ui.subs/translator])
