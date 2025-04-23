@@ -172,7 +172,10 @@
                  (seq (set/intersection (:activity role) (:activity role-context))))
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
-                 (contains? (:lipas-id role) (:lipas-id role-context))))
+                 (contains? (:lipas-id role) (:lipas-id role-context)))
+             (or (nil? (:org-id role))
+                 (= ::any (:org-id role-context))
+                 (contains? (:org-id role) (:org-id role-context))))
     (:role role)))
 
 (defn check-privilege
