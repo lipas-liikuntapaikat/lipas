@@ -651,7 +651,7 @@
       [[mui/button
         {:variant  "contained"
          :color    "secondary"
-         :on-click #(==> [::events/save-org org])}
+         :on-click #(rf/dispatch [::events/save-org org])}
         [mui/icon {:sx {:mr 1}} "save"]
         (tr :actions/save)]]}
 
@@ -664,11 +664,11 @@
         [lui/text-field
          {:label     (tr :lipas.org/name)
           :value     (:name org)
-          :on-change #(==> [::events/edit-org [:name] %])}]
+          :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
         [lui/text-field
          {:label     (tr :lipas.org/phone)
-          :defaultValue (:phone (:data org))
-          :on-change (fn [x] (==> [::events/edit-org [:data :phone] x]))}]]
+          :value (:phone (:data org))
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]
 
        ;; TODO: Ptv data fields
        ]

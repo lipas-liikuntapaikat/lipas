@@ -16,7 +16,8 @@
                                   :builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn create-org [db org]
-  (sql/insert! db :org org))
+  (sql/insert! db :org org (assoc jdbc/unqualified-snake-kebab-opts
+                                  :return-keys true)))
 
 (defn update-org! [db org-id org]
   (sql/update! db :org org ["id = ?" org-id] jdbc/unqualified-snake-kebab-opts))

@@ -4,7 +4,8 @@
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.ui.utils :as utils]
-            [re-frame.core :as rf]))
+            [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]))
 
 (rf/reg-event-db ::filter-users
   (fn [db [_ s]]
@@ -240,15 +241,21 @@
     (assoc-in db
               [:admin :editing-org]
               (when id
-                (get-in db [:admin :orgs id])))))
+                (if (= "new" id)
+                  {:name "fixme"
+                   :data {}
+                   :ptv-data {}}
+                  (get-in db [:admin :orgs id]))))))
 
 (rf/reg-event-db ::edit-org
   (fn [db [_ path value]]
     (assoc-in db (into [:admin :editing-org] path) value)))
 
 (rf/reg-event-fx ::save-org-success
-  (fn [{:keys [db]} [_ user _]]
+  (fn [{:keys [db]} [_ _org new? resp]]
     (let [tr (:translator db)]
+      (when new?
+        (rfe/set-query #(assoc % :edit-id (:id resp))))
       {:fx [[:dispatch [::get-orgs]]
             [:dispatch [:lipas.ui.events/set-active-notification
                         {:message  (tr :notifications/save-success)
@@ -257,13 +264,16 @@
 (rf/reg-event-fx ::save-org
   (fn [{:keys [db]} [_ org]]
     (let [token (-> db :user :login :token)
-          body  (-> org)]
+          body  (-> org)
+          new? (nil? (:id org))]
       {:http-xhrio
-       {:method          :put
-        :uri             (str (:backend-url db) "/orgs/" (:id org))
+       {:method          (if new? :post :put)
+        :uri             (if new?
+                           (str (:backend-url db) "/orgs")
+                           (str (:backend-url db) "/orgs/" (:id org)))
         :headers         {:Authorization (str "Token " token)}
         :params          body
         :format          (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
-        :on-success      [::save-org-success org]
+        :on-success      [::save-org-success org new?]
         :on-failure      [::failure]}})))
