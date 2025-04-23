@@ -44,9 +44,11 @@
 (def roles
   {:admin
    ;; all privileges
+   ;; Except: org/member, because this is used to list users on
+   ;; org pages which belong to the organization.
    {:sort 0
     :assignable true
-    :privileges (set (keys privileges))
+    :privileges (disj (set (keys privileges)) :org/member)
     ;; This is kind of duplicated from specs, not sure if needed or
     ;; if the UI can introspect the spec.
     ;; These are also used to get the ORDER of UI fields for edit.

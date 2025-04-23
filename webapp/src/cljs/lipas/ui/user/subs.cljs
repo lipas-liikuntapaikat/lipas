@@ -155,10 +155,12 @@
       :type-code (rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
       :activity (rf/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
       :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])
+      ;; TODO: Should avoid admin subs here
+      ;; Need a separate get user-orgs query and stored to app-db for regular users
       :org-id (rf/subscribe [:lipas.ui.admin.subs/org v])))
   (fn [x [_ context-key _v locale]]
     (case context-key
       :lipas-id (:name x)
-      :org (:name x)
+      :org-id (:name x)
       :activity (get (:label x) locale)
       (get (:name x) locale))))
