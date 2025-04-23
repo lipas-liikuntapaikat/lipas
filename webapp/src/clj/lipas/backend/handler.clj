@@ -255,6 +255,16 @@
            {:status 200
             :body   (core/get-users db)})}}]
 
+      ;; FIXME: Where should this be?
+      ["/current-user-orgs"
+       {:get
+        {:coercion reitit.coercion.malli/coercion
+         ;; Doesn't require privileges, no :org/member
+         ;; just means no orgs.
+         :require-privilege nil
+         :handler (fn [req]
+                    {:status 200
+                     :body (org/user-orgs db (-> req :identity))})}}]
       ["/orgs"
        {:require-privilege :org/manage
         :coercion reitit.coercion.malli/coercion}

@@ -1099,6 +1099,7 @@
    :lipas.user
    {:email                     "Sähköposti",
     :permissions               "Käyttöoikeudet",
+    :organizations             "Käyttäjän organisaatiot"
     :permissions-example
     "Oikeus päivittää Jyväskylän jäähallien tietoja.",
     :saved-searches            "Tallennetut haut",

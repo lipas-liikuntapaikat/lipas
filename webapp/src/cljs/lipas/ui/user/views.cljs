@@ -149,6 +149,9 @@
                             :v v
                             :tr tr})))))))))))
 
+(defui explain-orgs [{:keys [tr]}]
+  ($ :div "todo"))
+
 (defn user-panel [tr user]
   (let [card-props {:square true}
 
@@ -223,6 +226,15 @@
           ;;                :color :secondary}
           ;;    (str "> " (tr :user/swimming-pools-link))])
           ]]]
+
+       [mui/grid {:item true :xs 12}
+        [mui/card (merge card-props)
+         [mui/card-header {:title (tr :lipas.user/organizations)}]
+         [mui/card-content
+
+          ($ explain-orgs
+             {:tr tr})]]]
+
 ;; Promo card
        [mui/grid {:item true :xs 12}
         [mui/card card-props
