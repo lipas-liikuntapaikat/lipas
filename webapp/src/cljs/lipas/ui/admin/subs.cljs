@@ -175,4 +175,5 @@
     (->> users
          vals
          (filter (fn [user]
-                   (roles/check-privilege user {:org-id org-id} :org/member))))))
+                   (let [user (update-in user [:permissions :roles] roles/conform-roles)]
+                     (roles/check-privilege user {:org-id org-id} :org/member)))))))

@@ -15,7 +15,6 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             ["react" :as react]
-            [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
