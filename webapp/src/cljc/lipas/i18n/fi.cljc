@@ -1134,7 +1134,12 @@
     :permission-to-types
     "Sinulla on käyttöoikeus seuraaviin  liikuntapaikkatyyppeihin:"},
    :lipas.org
-   {:name "Nimi"},
+   {:name "Nimi"
+    :phone "Puhelinnumero"
+    :org-role "Rooli"},
+   :org.form
+   {:details "Organisaation tiedot"
+    :users "Organisaation käyttäjät"}
    :heat-recovery-types
    {:liquid-circulation   "Nestekierto",
     :plate-heat-exchanger "Levysiirrin",

@@ -645,7 +645,7 @@
     [lui/full-screen-dialog
      {:open?       (boolean edit-id)
       :title       (or (:name org)
-                       "FIXME: Missing name")
+                       "-")
       :close-label (tr :actions/close)
       :on-close    (fn [] (rfe/set-query #(dissoc % :edit-id)))
       :bottom-actions
@@ -657,7 +657,7 @@
         (tr :actions/save)]]}
 
      [mui/grid {:container true :spacing 1}
-      [lui/form-card {:title "FIXME"
+      [lui/form-card {:title (tr :org.form/details)
                       :xs 12
                       :md 12
                       :lg 12}
@@ -673,13 +673,14 @@
 
        ;; TODO: Ptv data fields
        ]
-      [lui/form-card {:title "FIXME Users"
+      [lui/form-card {:title (tr :org.form/users)
                       :xs 12
                       :md 12
                       :lg 12}
        [lui/table
         {:headers
-         [[:username (tr :lipas.user/username)]]
+         [[:username (tr :lipas.user/username)]
+          [:role (tr :lipas.org/org-role)]]
          :sort-fn   :username
          :items     org-users
          :on-select (fn [x] nil)}]]]]))
