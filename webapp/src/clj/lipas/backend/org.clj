@@ -36,6 +36,13 @@
                                                                          roles))))]
         (user/update-user-permissions! tx user)))))
 
+(defn user-orgs [db user-id]
+  ;; TODO:
+  ;; - get all users & filter with roles fn?
+  ;; - generate sql query to check for roles?
+  ;;   - extra check with roles fn?
+  [:todo])
+
 (comment
   (create-org (:lipas/db integrant.repl.state/system)
               {:name "Tampereen Liikuntatoimi"
