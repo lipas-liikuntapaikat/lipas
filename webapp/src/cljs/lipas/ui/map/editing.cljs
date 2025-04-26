@@ -68,8 +68,17 @@
              (when (not-empty selected)
                (doseq [f selected]
                  (when-let [splitted (map-utils/split-at-coords f wgs)]
-                   (.removeFeature source f)
-                   (.addFeatures source splitted)))
+                   ;; Attempting to preserve natural order with splitted geoms
+                   (let [fs  #js[]]
+                     (doseq [f1 (.getFeatures source)]
+                       (if (= f1 f)
+                         (do
+                           (.push fs (first splitted))
+                           (.push fs (second splitted)))
+                         (.push fs f1)))
+                     (.clear source)
+                     (.addFeatures source fs))))
+
                (doto (.getFeatures split)
                  (.clear))
                (on-modify (map-utils/->geoJSON-clj (.getFeatures source)))))))
