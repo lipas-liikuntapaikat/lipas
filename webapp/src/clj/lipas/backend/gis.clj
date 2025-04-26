@@ -9,9 +9,12 @@
    [org.locationtech.geowave.analytic GeometryHullTool]
    [org.locationtech.geowave.analytic.distance CoordinateEuclideanDistanceFn]
    [org.locationtech.jts.algorithm ConvexHull]
+   [org.locationtech.jts.geom GeometryFactory Coordinate]
    [org.locationtech.jts.geom.util GeometryCombiner]
+   [org.locationtech.jts.io WKTReader WKTWriter]
    [org.locationtech.jts.operation.buffer BufferOp]
    [org.locationtech.jts.operation.distance DistanceOp]
+   [org.locationtech.jts.operation.linemerge LineSequencer]
    [org.locationtech.jts.simplify DouglasPeuckerSimplifier]))
 
 (def srid 4326) ;; WGS84
@@ -307,6 +310,112 @@
 (defn ->centroid-point
   [fcoll]
   (-> fcoll centroid ->feature vector ->fcoll))
+
+(defn geojson-coords->jts-coords
+  "Convert GeoJSON coordinates to JTS Coordinates, handling both 2D and 3D coordinates"
+  [coords]
+  (map (fn [coord]
+         (if (>= (count coord) 3)
+           (Coordinate. (double (first coord))
+                        (double (second coord))
+                        (double (nth coord 2)))
+           (Coordinate. (double (first coord))
+                        (double (second coord)))))
+       coords))
+
+(defn linestring->jts
+  "Convert a GeoJSON LineString to a JTS LineString"
+  [coords]
+  (let [factory (GeometryFactory.)
+        jts-coords (into-array Coordinate (geojson-coords->jts-coords coords))]
+    (.createLineString factory jts-coords)))
+
+(defn extract-linestring-from-feature
+  "Extract JTS LineString from a GeoJSON Feature"
+  [feature]
+  (let [geometry (:geometry feature)
+        type (:type geometry)]
+    (if (= type "LineString")
+      (linestring->jts (:coordinates geometry))
+      (throw (Exception. (str "Feature geometry is not a LineString, found: " type))))))
+
+(defn create-feature-index-map
+  "Create a map of features with their indices and JTS geometries"
+  [features]
+  (into {} (keep-indexed
+            (fn [idx feature]
+              [idx {:feature feature
+                    :jts-geom (extract-linestring-from-feature feature)}])
+             features)))
+
+(defn find-matching-feature-index
+  "Find the index of a feature that matches the given geometry"
+  [seq-geom feature-map]
+  (let [seq-coords (for [i (range (.getNumPoints seq-geom))]
+                     (.getCoordinateN seq-geom i))
+        start-coord (first seq-coords)
+        end-coord (last seq-coords)]
+
+    ;; Find a feature with matching start and end coordinates
+    (first
+      (for [[idx {:keys [jts-geom]}] feature-map
+            :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
+                                (.getCoordinateN jts-geom i))
+                  feat-start (first feat-coords)
+                  feat-end (last feat-coords)]
+            :when (or
+                    ;; Match in same direction
+                    (and (.equals2D start-coord feat-start)
+                         (.equals2D end-coord feat-end))
+                    ;; Match in reverse direction
+                    (and (.equals2D start-coord feat-end)
+                         (.equals2D end-coord feat-start)))]
+        idx))))
+
+(defn sequence-features
+  "Sequence LineString features using JTS LineSequencer"
+  [feature-collection]
+  (let [features (:features feature-collection)]
+    ;; Handle empty collections
+    (if (empty? features)
+      feature-collection
+      (try
+        ;; Create mapping of indices to features and geometries
+        (let [feature-map (create-feature-index-map features)
+
+              ;; Create LineSequencer
+              sequencer (LineSequencer.)
+
+              ;; Add all geometries to the sequencer
+              _ (doseq [[_ {:keys [jts-geom]}] feature-map]
+                  (.add sequencer jts-geom))
+
+              ;; Check if sequenceable
+              sequenceable? (.isSequenceable sequencer)
+
+              ;; Get the ordered features
+              ordered-features (if sequenceable?
+                                 (let [;; Get the sequenced linestrings
+                                       sequenced (.getSequencedLineStrings sequencer)
+
+                                       ;; Find matching features for each geometry in the sequence
+                                       ordered-indices (for [i (range (.getNumGeometries sequenced))]
+                                                        (let [seq-geom (.getGeometryN sequenced i)]
+                                                          (find-matching-feature-index seq-geom feature-map)))]
+
+                                   ;; Get features in the new order, filtering out any nil indices
+                                   (mapv #(nth features %) (filter some? ordered-indices)))
+
+                                 ;; If not sequenceable, return original features
+                                 features)]
+
+          ;; Return the feature collection with ordered features
+          (assoc feature-collection :features ordered-features))
+
+        (catch Exception e
+          (println "Error in sequence-features:" (.getMessage e))
+          ;; Return original collection on error
+          feature-collection)))))
 
 (comment
   (chunk-envelope {:min-x 0 :max-x 10 :min-y 0 :max-y 100} 10)

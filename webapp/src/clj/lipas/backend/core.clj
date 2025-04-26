@@ -441,8 +441,14 @@
       utils/clean
       enrich*))
 
+(defn enrich-cycling-route [sports-site]
+  (-> sports-site
+      (update-in [:location :geometries] gis/sequence-features)
+      enrich*))
+
 (defmulti enrich (comp :type-code :type))
 (defmethod enrich :default [sports-site] (enrich* sports-site))
+(defmethod enrich 4412 [sports-site] (enrich-cycling-route sports-site))
 #_(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
