@@ -22,7 +22,7 @@ The data is updated yearly.
 
 Operation takes ~30 minutes to execute in production.
 
-See [osrm/README.md](osrm/README.md).
+See [osrm/README.md](../osrm/README.md).
 
 ## MML Population Grid Processing / Data Update ##
 
@@ -203,3 +203,7 @@ The data is stored to the db and indexed from db to elasticsearch.
 - Enable current year in the stats -> city finance UI
   - `lipas.ui.stats.finance.views` (year selector valid range)
   - `lipas.ui.stats.finance.db` (selected year default value)
+
+## SSL Certificate Management
+
+See [certs/README.md](../certs/README.md)
