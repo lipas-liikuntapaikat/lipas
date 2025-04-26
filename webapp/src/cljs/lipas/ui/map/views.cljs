@@ -90,7 +90,6 @@
         open?    (<== [::subs/restore-site-backup-dialog-open?])
         lipas-id (<== [::subs/restore-site-backup-lipas-id])
         error    (<== [::subs/restore-site-backup-error])]
-    (println "AM I OPEN???" open?)
     [lui/dialog
      {:open?         open?
       :title         (tr :map.tools/restore-backup-tooltip)
