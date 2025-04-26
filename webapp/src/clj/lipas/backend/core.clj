@@ -264,6 +264,18 @@
        (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
        :else                   m))))
 
+(defn get-sports-site2
+  ([search lipas-id] (get-sports-site2 search lipas-id :none))
+  ([{:keys [client indices]} lipas-id locale]
+   (let [idx (get-in indices [:sports-site :search])
+         m (-> (search/fetch-document client idx lipas-id)
+               (get-in [:body :_source])
+               (enrich-activities))]
+     (cond
+       (#{:fi :en :se} locale) (i18n/localize locale m)
+       (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
+       :else                   m))))
+
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))
 

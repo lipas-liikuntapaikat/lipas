@@ -152,7 +152,7 @@
            (let [lipas-id (-> req :parameters :path :lipas-id)
                  locale   (or (-> req :parameters :query :lang keyword)
                               :none)]
-             (if-let [res (core/get-sports-site db lipas-id locale)]
+             (if-let [res (core/get-sports-site2 search lipas-id locale)]
                {:status 200 :body res}
                {:status 404 :body {:message "Not found"}})))}}]
 
