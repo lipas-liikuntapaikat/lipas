@@ -680,7 +680,19 @@
                                                  (.. % -target -value)])
                           :variant "outlined"
                           :margin "normal"
-                          :helperText "URL path to the PDF file"})
+                           :helperText "URL path to the PDF file"})
+
+             (when (and (str/starts-with? url "https://drive.google.com/file")
+                        (str/ends-with? url "/view?usp=sharing"))
+               (let [gid (second (re-find #"/file/d/([^/]+)" url))
+                     gurl (str "https://docs.google.com/viewer?srcid="
+                               gid
+                               "&pid=explorer&efh=false&a=v&chrome=false&embedded=true")]
+                 ($ Button {:onClick #(rf/dispatch [::update-block-field
+                                                    section-idx page-idx block-idx
+                                                    :url gurl])}
+
+                    "Fix Google Drive Link")))
 
              ($ language-tabs {:current-lang lang :on-change set-lang!})
 
