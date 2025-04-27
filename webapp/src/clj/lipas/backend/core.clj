@@ -268,10 +268,17 @@
   ([search lipas-id] (get-sports-site2 search lipas-id :none))
   ([{:keys [client indices]} lipas-id locale]
    (let [idx (get-in indices [:sports-site :search])
-         m (-> (search/fetch-document client idx lipas-id)
-               (get-in [:body :_source])
-               (enrich-activities))]
+         doc (try
+               (search/fetch-document client idx lipas-id)
+               (catch Exception ex
+                 (if (= 404 (-> ex ex-data :status))
+                   nil
+                   (throw ex))))
+         m   (some-> doc
+                     (get-in [:body :_source])
+                     (enrich-activities))]
      (cond
+       (nil? m)                m
        (#{:fi :en :se} locale) (i18n/localize locale m)
        (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
        :else                   m))))
