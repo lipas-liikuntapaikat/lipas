@@ -262,7 +262,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                     (tap> (:parameters req))
                     (let [lipas-id (-> req :parameters :path :lipas-id)]
                       {:status 200
-                       :body   (doto (core/get-sports-site db lipas-id) tap>)}))
+                       :body   (core/get-sports-site2 search lipas-id)}))
 
          :parameters {:path [:map
                              [:lipas-id
