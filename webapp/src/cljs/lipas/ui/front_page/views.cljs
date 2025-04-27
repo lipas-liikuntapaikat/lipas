@@ -63,7 +63,8 @@
    {:label "Virma" :href "https://virma.fi"}
    {:label "Bikeland" :href "https://www.bikeland.fi/"}
    {:label "Luontoon.fi" :href "https://www.luontoon.fi/"}
-   {:label "LIVERTTI" :href "https://activehealthylife.webnode.fi/"}])
+   {:label "LIVERTTI" :href "https://activehealthylife.webnode.fi/"}
+   {:label "Kuutoskaupunkivertailu" :href "https://kuutoskaupunkivertailu.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
