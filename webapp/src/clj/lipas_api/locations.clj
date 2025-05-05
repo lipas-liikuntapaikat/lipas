@@ -19,16 +19,23 @@
       a {:areas (filter #(= a (:area-id %)) (:areas geoms))}
       :else nil)))
 
-(defn join-geoms
-  [locations geoms]
-  (map #(assoc % :geoms (find-geoms % geoms)) locations))
-
 (defn start-coord [location]
   (let [geom (-> location :geometries :features first :geometry)]
     (case (:type geom)
       "Point"      (-> geom :coordinates)
       "LineString" (-> geom :coordinates first)
       "Polygon"    (-> geom :coordinates first first))))
+
+(defn join-geoms
+  [locations geoms]
+  (map #(assoc % :geoms (find-geoms % geoms)) locations))
+
+;; Converts a coordinate vector [lon lat] to a map with :lon and :lat keys.
+;; In legacy db coordinates were stored as {:lon :lat}.
+(defn- ->coords-map
+  [[lon lat]]
+  {:lon lon
+   :lat lat})
 
 
 (defn format-location
@@ -46,28 +53,10 @@
                    :en (-> location :neighborhood)
                    :se (-> location :neighborhood)}
     :geometries (-> location :geometries)
-    :coordinates {:wgs84 (start-coord location)
-                  :tm35fin (gis/wgs84->tm35fin-no-wrap (start-coord location))}
+    :coordinates {:wgs84 (-> (start-coord location) ->coords-map)
+                  :tm35fin (-> (gis/wgs84->tm35fin-no-wrap (start-coord location))
+                               ->coords-map)}
     ;; added :geom-coll
     :geom-coll        (feature-coll->geom-coll (-> location :geometries))
     ;; what is this?
     :sportsPlaces (:sportPlaceId [1234]))))
-
-
-
-
-
-(comment
-
-  (def ss (lipas.backend.core/get-sports-site (user/db) 74782))
-
-  (def old-ss (-> ss
-                  (lipas.integration.old-lipas.transform/->old-lipas-sports-site)
-                  (assoc :id 74782)))
-
-  old-ss
-
-  (lipas-api.locations/format-location (:location old-ss) :all 74782)
-
-
-  )

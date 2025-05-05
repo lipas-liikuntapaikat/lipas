@@ -1,10 +1,6 @@
 (ns lipas-api.util
-  (:require [camel-snake-kebab.extras :refer [transform-keys]]
-            [camel-snake-kebab.core :refer [->camelCaseKeyword
-                                            ->snake_case
-                                            ->kebab-case]]
-            [clojure.core.memoize :refer [fifo]]
-            [clojure.string :refer [blank?]]))
+  (:require
+   [clojure.string :refer [blank?]]))
 
 (defn parse-year
   [y]
@@ -16,10 +12,6 @@
   (cond (string? map-val) (if (blank? map-val) nil map-val)
         (coll? map-val) (not-empty map-val)
         :else map-val))
-
-(defn only-non-nil
-  [a-map]
-  (into {} (filter (comp some? val) a-map)))
 
 (defn only-non-nil-recur
   "Traverses through map recursively and removes all nil values."
@@ -34,31 +26,6 @@
                   %1))
              {} a-map))
 
-(defn parse-int-default
-  [input default-val]
-  (try (Integer/valueOf input)
-       (catch Exception e default-val)))
-
-(def memo-camel
-  (fifo ->camelCaseKeyword :fifo/threshold 512))
-
-(def memo-snake
-  (fifo ->snake_case :fifo/threshold 512))
-
-(def memo-kebab
-  (fifo ->kebab-case :fifo/threshold 512))
-
-(defn convert-keys->db
-  "Converts keywords in a map to snake_case
-
-  {:kissa-koira 2} => {:kissa_koira 2}"
-  [a-map]
-  (transform-keys memo-snake a-map))
-
-(defn convert-keys<-db
-  [a-map]
-  (transform-keys memo-kebab a-map))
-
 (defn locale-key
   [a-key locale]
   (if (= :all locale)
@@ -66,18 +33,6 @@
               :se ((locale-key a-key :se) sp)
               :en ((locale-key a-key :en) sp)})
     (keyword (str (name a-key) "-" (name locale)))))
-
-;; localizations are now under their own keys
-(defn localize
-  [sp]
-  {:fi (:name sp)
-   :se (:name-se sp)
-   :en (:name-en sp)})
-
-(defn read-string-safe
-  [s]
-  (when-not (empty? s)
-    (read-string s)))
 
 (defn select-paths
   "Similar to select-keys, just the 'key' here is a path in the nested map"

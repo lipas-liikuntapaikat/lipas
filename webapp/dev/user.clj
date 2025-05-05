@@ -70,43 +70,6 @@
   (reindex-analytics!)
   (reindex-legacy-search!)
 
-
-  #_:clj-kondo/ignore
-  (lipas.search-indexer/index-legacy-sports-site! (db) (search) "legacy-2025-03-31t15-49-55-720612" 74782)
-  #_:clj-kondo/ignore
-  (-> (lipas.backend.core/get-sports-site (db) 74782)
-      (lipas.integration.old-lipas.transform/->old-lipas-sports-site)
-      (assoc :id 74872)
-      (lipas-api.sports-places/format-sports-place
-       :all
-       lipas-api.locations/format-location
-       lipas-api.properties/format-props-db))
-
-  (defn index-single [lipasid]
-    (-> (lipas.backend.core/get-sports-site (db) 74782)
-        (lipas.integration.old-lipas.transform/->old-lipas-sports-site)
-        (assoc :id 74782)
-        (lipas-api.sports-places/format-sports-place
-         :all
-         lipas-api.locations/format-location
-         lipas-api.properties/format-props-db)
-        )
-    )
-
-
-
-
-
-  (index-single 76201)
-  (index-single 74782)
-  ;;=> {:typeCode nil}
-  (transform/->old-lipas-sports-site)
-  (assoc :id lipas-id)
-  (lipas-sports-places/format-sports-place
-   :all
-   legacy-sports-places/format-sports-place-db
-   legacy-properties/format-props-db)
-
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
 
