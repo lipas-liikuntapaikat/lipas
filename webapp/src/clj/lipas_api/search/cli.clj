@@ -1,118 +1,12 @@
 (ns lipas-api.search.cli
   (:require [qbits.spandex :as es]
             [qbits.spandex.utils :as es-utils]
-            [clojure.core.async :as async]
             [clojure.string]))
-
-(defn create-cli
-  [{:keys [hosts user password]}]
-  (es/client {:hosts       hosts
-              :http-client {:basic-auth {:user     user
-                                         :password password}}}))
-
-(def date-format "yyyy-MM-dd HH:mm:ss.SSS")
-
-(def search-mappings-legacy
-  {:mappings {:sportsplace {:properties {:location     {:type "geo_point"}
-                                         :lastModified {:type   "date"
-                                                        :format date-format}}}}})
-
-(def search-mappings
-  {:mappings {:properties   {:location {:type "geo_point"}}
-              :lastModified {:type   "date"
-                             :format "yyyy-MM-dd HH:mm:ss.SSS"}}})
-
-
-(def sports-places-mappings-legacy
-  {:settings
-   {:max_result_window 50000}
-   :mappings
-   {:sports_place
-    {:properties {:location.coordinates.wgs84 {:type "geo_point"}
-                  :lastModified               {:type   "date"
-                                               :format date-format}}}}})
-
-(def sports-places-mappings
-  {:settings
-   {:max_result_window 50000}
-   :mappings
-   {:properties {:location.coordinates.wgs84 {:type "geo_point"}
-                 :location.geom-coll         {:type "geo_shape"}
-                 :lastModified               {:type   "date"
-                                              :format date-format}}}})
-
-(def indices {:sportsplaces     search-mappings
-              :sports_places    sports-places-mappings
-              :test             sports-places-mappings})
-
-(defn temp-idx-name
-  "Returns temporary index name generated from current timestamp.
-  Example: \"2017-08-13T14:44:42.761\""
-  []
-  (-> (java.time.LocalDateTime/now)
-      str
-      (clojure.string/lower-case)
-      (clojure.string/replace #"[:|.]" "-")))
-
-(defn create-index
-  [client index mappings]
-  (es/request client {:method :put
-                      :url    (es-utils/url [index])
-                      :body   mappings}))
-
-(defn delete-index
-  [client index]
-  (es/request client {:method :delete
-                      :url    (es-utils/url [index])}))
-
-(defn index
-  [client {:keys [index type id data sync?]
-           :or   {index "sports_places" type "_doc"}}]
-  (es/request client {:method       :put
-                      :url          (es-utils/url [index type id])
-                      :body         data
-                      :query-string (when sync? {:refresh "wait_for"})}))
-
-(defn delete
-  [client {:keys [index type id sync?]
-           :or   {index "sports_places" type "_doc"}}]
-  (es/request client {:method       :delete
-                      :url          (es-utils/url ["legacy_sports_sites_current" "_doc" id])
-                      :query-string (when sync? {:refresh "wait_for"})}))
 
 (defn es-get
   [client id]
   (es/request client {:method :get
                       :url    (es-utils/url [:legacy_sports_sites_current :_doc id])}))
-
-(defn bulk-index
-  ([client data]
-   (let [{:keys [input-ch output-ch]}
-         (es/bulk-chan client {:flush-threshold         100
-                               :flush-interval          5000
-                               :max-concurrent-requests 3})]
-     (async/put! input-ch data)
-     (future (loop [] (async/<!! output-ch))))))
-
-
-(defn current-idxs
-  "Returns a coll containing current index(es) pointing to alias."
-  [client {:keys [alias]}]
-  (let [res (es/request client {:method :get
-                                :url (es-utils/url ["*" "_alias" alias])
-                                :exception-handler (constantly nil)})]
-    (not-empty (keys (:body res)))))
-
-(defn swap-alias
-  "Swaps alias to point to new-idx. Possible existing aliases will be removed."
-  [client {:keys [new-idx alias] :or {alias "sports_places"}}]
-  (let [old-idxs (current-idxs client {:alias alias})
-        actions  (-> (map #(hash-map :remove {:index % :alias alias}) old-idxs)
-                     (conj {:add {:index new-idx :alias alias}}))]
-    (es/request client {:method :post
-                        :url    (es-utils/url [:_aliases])
-                        :body   {:actions actions}})
-    old-idxs))
 
 (defn create-excursion-map-filter [excursion-map?]
   (when excursion-map?
