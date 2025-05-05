@@ -52,7 +52,7 @@ Access to the hierarchical type classification system used for categorizing spor
                 resp (legacy-core/fetch-sports-place-es (:client search) locale sports-place-id)]
             {:status     200
              :body       resp}))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body legacy-schema/legacy-sports-place}}}}]
      ["/sports-places"
       {:parameters {:query legacy-schema/search-params}
        :get
@@ -101,7 +101,7 @@ Access to the hierarchical type classification system used for categorizing spor
                 (legacy-http/linked-partial-content results links))
               {:status 200
                :body (doall results)})))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body [:vector legacy-schema/legacy-sports-place]}}}}]
      ["/deleted-sports-places"
       {:parameters {:query [:map [:since {:optional true
                                           :example "1984-01-01 00:00:00.000"}
@@ -113,7 +113,7 @@ Access to the hierarchical type classification system used for categorizing spor
           (let [since  (or (-> req :parameters :query :since) "1984-01-01 00:00:00.000")]
             {:status     200
              :body       since}))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body :string}}}}]
      ["/categories"
       {:tags ["sport-place-types"]
        :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
