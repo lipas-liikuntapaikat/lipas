@@ -65,7 +65,8 @@
    {:label "Luontoon.fi" :href "https://www.luontoon.fi/"}
    {:label "LIVERTTI" :href "https://activehealthylife.webnode.fi/"}
    {:label "Kuutoskaupunkivertailu" :href "https://kuutoskaupunkivertailu.fi/"}
-   {:label "Toimio" :href "https://toimio.com/"}])
+   {:label "Toimio" :href "https://toimio.com/"}
+   {:label "Olympiakomitea" :href "https://www.olympiakomitea.fi/"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
