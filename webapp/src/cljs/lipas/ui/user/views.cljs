@@ -1,10 +1,12 @@
 (ns lipas.ui.user.views
   (:require ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
+            [lipas.ui.org.subs :as org-subs]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
@@ -149,8 +151,19 @@
                             :v v
                             :tr tr})))))))))))
 
-(defui explain-orgs [{:keys [tr]}]
-  ($ :div "todo"))
+(defui explain-orgs []
+  (let [orgs (use-subscribe [::org-subs/user-orgs])]
+    ($ :<>
+       (for [{:org/keys [id name]} orgs]
+         ($ :<>
+            {:key id}
+            ($ Stack
+               {:direction "row"
+                :sx #js {:alignItems "center"
+                         :p 1}}
+               ($ Link
+                  {}
+                  name)))))))
 
 (defn user-panel [tr user]
   (let [card-props {:square true}
@@ -232,8 +245,7 @@
          [mui/card-header {:title (tr :lipas.user/organizations)}]
          [mui/card-content
 
-          ($ explain-orgs
-             {:tr tr})]]]
+          ($ explain-orgs)]]]
 
 ;; Promo card
        [mui/grid {:item true :xs 12}
