@@ -157,7 +157,7 @@
     (vals orgs)))
 
 (rf/reg-sub ::orgs-options
-  :< [::orgs-list]
+  :<- [::orgs-list]
   (fn [orgs _]
     (->> orgs
          (map (fn [{:keys [id name]}]

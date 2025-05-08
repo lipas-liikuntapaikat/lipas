@@ -259,14 +259,19 @@
       ["/current-user-orgs"
        {:get
         {:coercion reitit.coercion.malli/coercion
+         :no-doc false
          ;; Doesn't require privileges, no :org/member
          ;; just means no orgs.
          :require-privilege nil
+         ;; Need to mount the auth manually when no :require-privilege enabled
+         :middleware [mw/token-auth mw/auth]
          :handler (fn [req]
                     {:status 200
-                     :body (org/user-orgs db (-> req :identity))})}}]
+                     :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
+
       ["/orgs"
        {:require-privilege :org/manage
+        :no-doc false
         :coercion reitit.coercion.malli/coercion}
        [""
         {:get
@@ -293,7 +298,11 @@
                       {:status 200
                        :body {}})}}]
         ["/users"
-         {:post
+         {:get
+          {:handler (fn [req]
+                      {:status 200
+                       :body (org/get-org-users db (-> req :parameters :org-id))})}
+          :post
           {:parameters {:body org-schema/user-updates}
            :handler (fn [req]
                       (org/update-org-users! db
