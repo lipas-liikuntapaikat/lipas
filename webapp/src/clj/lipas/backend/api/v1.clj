@@ -3,7 +3,7 @@
    [lipas-api.core :as legacy-core]
    [lipas-api.http :as legacy-http]
    [lipas.backend.legacy.api :as legacy-api]
-   [lipas.schema.core-legacy :as legacy-schema]
+   [lipas.schema.legacy :as legacy-schema]
    [lipas.schema.sports-sites.types :as types-schema]
    [reitit.coercion.malli :as malli]
    [reitit.openapi :as openapi]
@@ -123,7 +123,7 @@ Access to the hierarchical type classification system used for categorizing spor
           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
             {:status     200
              :body       (legacy-api/categories locale)}))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body #'legacy-schema/category-response}}}}]
      ["/sports-place-types"
       {:parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]}
        :get
@@ -133,7 +133,7 @@ Access to the hierarchical type classification system used for categorizing spor
           (let [locale  (or (-> req :parameters :query :lang keyword) :fi)]
             {:status     200
              :body       (legacy-api/sports-place-types locale)}))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body #'legacy-schema/sports-place-types-response}}}}]
      ["/sports-place-types/:type-code"
       {:swagger {:id ::legacy}
        :parameters {:query [:map [:lang {:optional true} #'legacy-schema/lang]]
@@ -146,7 +146,7 @@ Access to the hierarchical type classification system used for categorizing spor
                 type-code (-> req :parameters :path :type-code)]
             {:status     200
              :body       (legacy-api/sports-place-by-type-code locale type-code)}))
-        :responses {200 {:body :any}}}}]
+        :responses {200 {:body #'legacy-schema/sports-places-by-type-response}}}}]
      ["/openapi.json"
       {:get
        {:no-doc  true

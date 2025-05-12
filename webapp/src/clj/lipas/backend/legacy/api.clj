@@ -2,7 +2,7 @@
   (:require [lipas.backend.core :as core]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
-            [lipas.schema.core-legacy :refer [legacy-fields]]
+            [lipas.schema.legacy :refer [legacy-fields]]
             [lipas.utils :as utils]))
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
