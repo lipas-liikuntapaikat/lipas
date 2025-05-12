@@ -473,10 +473,11 @@
    :field
    {:type "checkbox"
     :description {:fi "Jos kohde on pyhiinvaellusreitti, aktivoi liukukytkin. HUOM! Pyhiinvaellusreitti on ulkoilureitti, joka tarjoaa mahdollisuuden liikkumiseen, hiljentymiseen ja hengellisyyteen/henkisyyteen.  Reitin varrelle on rakennettu mobiilisti tai maastoon opasteita ja sisältöjä, jotka ohjaavat vaeltajaa."
-                  :se ""
+                  :se "Om målet är en pilgrimsled, aktivera reglaget. OBS! Pilgrimsleden är en utomhusled som erbjuder möjlighet till rörelse, stillhet och andlighet/självreflektion.
+  Längs leden finns mobila eller fysiska skyltar och innehåll som vägleder vandraren."
                   :en ""}
     :label {:fi "Pyhiinvaelluskohde"
-            :se ""
+            :se "Pilgrimsmål"
             :en "Pilgrimage destination"}}})
 
 (def pilgrimage-key-schema
@@ -982,11 +983,12 @@
        (-> (dissoc common-route-props :rules)
            (update-in [:description-long :field] assoc
                       :label {:fi "Reittikuvaus"
-                              :se ""
-                              :en ""}
+                              :se "Ruttbeskrivning"
+                              :en "Route description"}
                       :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erota vaiheet omiksi kappaleiksi."
-                                    :se ""
-                                    :en ""}))
+                                    :se "En mer detaljerad beskrivning av leden uppdelad i etapper samt anmärkningar om särskilt krävande sektioner eller farliga platser. Dela upp stegen i egna
+  stycken."
+                                    :en "A more detailed description of the route section by section, including notes on particularly demanding stretches or danger spots. Separate the stages into individual paragraphs."}))
        {:route-name
         {:field
          {:type        "text-field"
@@ -1022,8 +1024,9 @@
         {:field
          {:type        "textarea"
           :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
-                        :se ""
-                        :en ""}
+                        :se "Beskriv den totala svårighetsgraden för leden. Ta med faktorer som till exempel ledens beläggning och framkomlighet, rekommenderad utrustning,
+  trafikintensitet och kuperad terräng."
+                        :en "Describe the overall difficulty level of the route. Consider factors such as the route surface and rideability, recommended equipment, traffic volume, and hilliness."}
           :label       {:fi "Haastavuus"
                         :se "Utmaning"
                         :en "Difficulty"}}}
@@ -1072,11 +1075,11 @@
         {:field
          {:type        "textarea"
           :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista."
-                        :se ""
-                        :en ""}
+                        :se "En mer omfattande beskrivning av målet och dess egenskaper."
+                        :en "A more comprehensive description of the destination and its characteristics."}
           :label       {:fi "Laajennettu yleiskuvaus"
-                        :se ""
-                        :en ""}}}
+                        :se "Utökad översikt"
+                        :en "Extended overview"}}}
 
         :unpaved-percentage
         {:field
@@ -1360,10 +1363,10 @@
                {:field
                 {:type        "select"
                  :description {:fi "Haastavuus"
-                               :se ""
+                               :se "Svårighetsgrad"
                                :en "Difficulty"}
                  :label       {:fi "Reitin arvioitu haastavuus."
-                               :se ""
+                               :se "Uppskattad svårighetsgrad för rutten"
                                :en "Estimated difficulty of the route"}
                  :opts        paddling-difficulty}}
 
@@ -1641,7 +1644,7 @@
                      :se "Ange här en beskrivning av fiskbeståndet i vattendragen på platsen."
                      :en "Write a description of the fish population in the water system of the place here."}
        :label       {:fi "Kalasto"
-                     :se ""
+                     :se "Fiskbestånd"
                      :en "Fish population"}}}
 
 
@@ -1676,7 +1679,7 @@
                      :se "Ange vid behov mer information om andra frågor som gäller fisketillstånd här."
                      :en "If necessary, enter additional information about other matters concerning fishing permits here."}
        :label       {:fi "Kalastuslupatarpeen lisätiedot"
-                     :se ""
+                     :se "Ytterligare information om fisketillstånd"
                      :en "Additional information about fishing permits"}}}
 
      :accessibility-classification

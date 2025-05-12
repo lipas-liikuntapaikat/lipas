@@ -147,7 +147,7 @@
 
 (def categories
   {"water-conditions"
-   {:label {:fi "Vesiolosuhteet"}
+   {:label {:fi "Vesiolosuhteet" :se "Vattenförhållanden" :en "Water conditions"}
     :types
     {:hazard
      {:label {:fi "Vaaranpaikka" :se "Farlig plats" :en "Dangerous place"}
@@ -180,7 +180,7 @@
       :props common-props}}}
 
    "outdoor-recreation-facilities"
-   {:label {:fi "Retkeily ja ulkoilurakenteet"}
+   {:label {:fi "Retkeily ja ulkoilurakenteet" :se "Frilufts- och vandringsanläggningar" :en "Outdoor recreation facilities"}
     :types
     {:information-board
      {:label {:fi "Infotaulu" :se "Informationsstavla" :en "Information board"}
@@ -237,7 +237,7 @@
       :props (merge common-props accessibility-props)}
 
      :sauna
-     {:label {:fi "Sauna" :en "Sauna" :se "Sauna"}
+     {:label {:fi "Sauna" :en "Sauna" :se "Bastu"}
       :value "sauna"
       :props (merge common-props)}
 
@@ -402,7 +402,7 @@
      :fishing-pier
      {:label {:fi "Kalastuslaituri" :en "Fishing pier" :se "Fiskedäck"}
       :value "fishing-pier"
-      :props accessibility-props}
+      :props (merge common-props accessibility-props)}
 
      :bridge
      {:label {:fi "Silta" :en "Bridge" :se "Bro"}
