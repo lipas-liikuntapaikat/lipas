@@ -5,7 +5,20 @@
   (fn [db _]
     (:orgs (:user db))))
 
-(rf/reg-sub ::id->user-org
+(rf/reg-sub ::user-orgs
+  (fn [db _]
+    (:orgs (:user db))))
+
+(rf/reg-sub ::user-orgs-by-id
   :<- [::user-orgs]
-  (fn [user-orgs _]
-    (into {} (map (juxt :org/id identity) user-orgs))))
+  (fn [orgs _]
+    (into {} (map (juxt :id identity) orgs))))
+
+(rf/reg-sub ::user-org-by-id
+  :<- [::user-orgs-by-id]
+  (fn [orgs [_ id]]
+    (get orgs id)))
+
+(rf/reg-sub ::org-users
+  (fn [db _]
+    (:users (:org db))))

@@ -46,14 +46,14 @@
                                                                         [:inline "roles"]
                                                                         [:jsonb_build_array [:jsonb_build_object [:inline "org_id"] [:jsonb_build_array [:cast :o.id :text]]]]]]]
                         :where [:= :a.id id]})]
-    (sql/query db q)))
+    (sql/query db q {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (defn get-org-users [db org-id]
   (let [q (hsql/format {:select [:id :email :username :permissions]
                         :from [:account]
                         ;; Use snake-case fn to ensure property names use same format as used by user/marshall fn
                         :where [pgsql/at> :permissions [:lift (db-utils/->snake-case-keywords {:roles [{:org-id [(str org-id)]}]})]]})]
-    (sql/query db q)))
+    (sql/query db q {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))

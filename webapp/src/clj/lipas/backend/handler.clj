@@ -270,7 +270,7 @@
                      :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
 
       ["/orgs"
-       {:require-privilege :org/manage
+       {:require-privilege [{:org-id ::roles/any} :org/manage]
         :no-doc false
         :coercion reitit.coercion.malli/coercion}
        [""
@@ -301,12 +301,12 @@
          {:get
           {:handler (fn [req]
                       {:status 200
-                       :body (org/get-org-users db (-> req :parameters :org-id))})}
+                       :body (org/get-org-users db (-> req :parameters :path :org-id))})}
           :post
           {:parameters {:body org-schema/user-updates}
            :handler (fn [req]
                       (org/update-org-users! db
-                                             (-> req :parameters :org-id)
+                                             (-> req :parameters :path :org-id)
                                              (-> req :parameters :body))
                       {:status 200
                        :body {}})}}]]]

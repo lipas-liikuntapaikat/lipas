@@ -148,20 +148,6 @@
                  user)]
       (roles/check-privilege user role-context k))))
 
-(rf/reg-sub ::user-orgs
-  (fn [db _]
-    (:orgs (:user db))))
-
-(rf/reg-sub ::user-orgs-by-id
-  :<- [::user-orgs]
-  (fn [orgs _]
-    (into {} (map (juxt :org/id identity) orgs))))
-
-(rf/reg-sub ::user-org-by-id
-  :<- [::user-orgs-by-id]
-  (fn [orgs [_ id]]
-    (get orgs id)))
-
 (rf/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]
     (case context-key
@@ -170,7 +156,7 @@
       :activity (rf/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
       :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])
       :org-id [;; Session user or org admin, managing their own orgs
-               (rf/subscribe [::user-org-by-id v])
+               (rf/subscribe [:lipas.ui.org.subs/user-org-by-id v])
                ;; Admin view
                (rf/subscribe [:lipas.ui.admin.subs/org v])]))
   (fn [x [_ context-key _v locale]]

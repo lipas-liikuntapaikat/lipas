@@ -9,6 +9,7 @@
             [lipas.ui.register.routes :as register]
             [lipas.ui.stats.routes :as stats]
             [lipas.ui.user.routes :as user]
+            [lipas.ui.org.routes :as org]
             [lipas.ui.utils :refer [==>] :as utils]
             [reitit.coercion.malli :as rcm]
             [reitit.frontend :as rf]
@@ -35,6 +36,7 @@
      front-page/routes
      login/routes
      user/routes
+     org/routes
      forgot-password/routes
      register/routes
      lmap/routes

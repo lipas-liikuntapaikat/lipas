@@ -655,6 +655,7 @@
         [mui/icon {:sx {:mr 1}} "save"]
         (tr :actions/save)]]}
 
+     ;; Reuse lipas.ui.org.views
      [mui/grid {:container true :spacing 1}
       [lui/form-card {:title (tr :org.form/details)
                       :xs 12
