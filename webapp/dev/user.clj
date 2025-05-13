@@ -19,9 +19,6 @@
 (defn assert-running-system []
   (assert (current-system) "System is not running. Start the system first."))
 
-(defn current-config []
-  integrant.repl.state/config)
-
 (defn db
   "Returns the :lipas/db key of the currently running system. Useful for
   REPL sessions when a function expects `db` as an argument."
@@ -45,6 +42,10 @@
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "search"))
 
+(defn reindex-legacy-search!
+  []
+  ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "legacy"))
+
 (defn reindex-analytics!
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "analytics"))
@@ -67,6 +68,8 @@
   (reset)
   (reindex-search!)
   (reindex-analytics!)
+  (reindex-legacy-search!)
+
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
 

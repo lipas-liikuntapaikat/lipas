@@ -1,0 +1,79 @@
+(ns lipas-api.sports-places
+  (:require
+   [lipas-api.util :refer [parse-path parse-year select-paths]]
+   [lipas.data.admins :as admins]
+   [lipas.data.owners :as owners]
+   [lipas.data.types-old :as types-old]))
+
+(def df-in (java.time.format.DateTimeFormatter/ofPattern
+            "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
+
+(def df-out (java.time.format.DateTimeFormatter/ofPattern
+             "yyyy-MM-dd HH:mm:ss.SSS"))
+
+(defn parse-date [x]
+  (try
+    (-> x
+        (java.time.LocalDateTime/parse df-in)
+        (.format df-out))
+    (catch Exception e)
+    ))
+
+(comment
+  (parse-date "2014-10-02 12:50:37.123")
+  (parse-date "KEKKONEN")
+  (parse-date "2014-10-02 12:50:37.12")
+  (parse-date "2014-10-02 12:50:37.1")
+  (parse-date "2014-10-02 12:50:37")
+  )
+
+(defn format-sports-place
+  [sports-place locale location-format-fn]
+  {:sportsPlaceId    (:id sports-place)
+   :name             (:name sports-place)
+   :marketingName    (:marketingName sports-place)
+   :type             {:typeCode (-> sports-place :type :typeCode)
+                      :name     (-> (types-old/all
+                                     (-> sports-place :type :typeCode))
+                                    :name)}
+   :schoolUse        (:schoolUse sports-place)
+   :freeUse          (:freeUse sports-place)
+   :constructionYear (parse-year (:constructionYear sports-place))
+   :renovationYears  (:renovationYears sports-place)
+   :lastModified     (-> sports-place :lastModified parse-date)
+   :owner            (owners/all (-> sports-place :owner))
+   :admin            (admins/all (-> sports-place :admin))
+   :phoneNumber      (:phoneNumber sports-place)
+   :reservationsLink (:reservationsLink sports-place)
+   :www              (:www sports-place)
+   :email            (:email sports-place)
+   :location         (when-let [location (:location sports-place)]
+                       (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
+   :properties       (:properties sports-place)})
+
+;;
+;; Elastic Search Backend
+;;
+
+(defn update-with-locale
+  [sp locale fallback-locale path]
+  (let [value (or (get-in sp (conj path locale))
+                  (get-in sp (conj path fallback-locale)))]
+    (assoc-in sp path value)))
+
+(defn format-sports-place-es
+  [sports-place locale]
+  (-> sports-place
+      (update :location dissoc :geom-coll)
+      (update-with-locale locale :fi [:name])
+      (update-with-locale locale :fi [:type :name])
+      (update-with-locale locale :fi [:location :city :name])
+      (update-with-locale locale :fi [:location :neighborhood])
+      (update-with-locale locale :fi [:owner])
+      (update-with-locale locale :fi [:admin])))
+
+(defn filter-and-format
+  [locale fields sp]
+  (let [paths (map parse-path fields)
+        formatted (format-sports-place-es sp locale)]
+    (apply select-paths (cons formatted paths))))
