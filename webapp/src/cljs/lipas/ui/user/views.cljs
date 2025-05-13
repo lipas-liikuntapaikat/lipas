@@ -162,7 +162,7 @@
                 :sx #js {:alignItems "center"
                          :p 1}}
                ($ Link
-                  {}
+                  {:variant "body2"}
                   name)))))))
 
 (defn user-panel [tr user]
