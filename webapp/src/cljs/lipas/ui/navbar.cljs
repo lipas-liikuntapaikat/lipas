@@ -246,7 +246,9 @@
   (let [name   (-> route :data :name)
         tr-key (-> route :data :tr-key)]
     (when name
-      {:text (tr tr-key) :href (rfe/href name)})))
+      {:text (tr tr-key)
+       :href (when (not (-> route :data :no-navbar-link?))
+               (rfe/href name))})))
 
 (defn menu-button [{:keys [tr]}]
   [mui/icon-button

@@ -957,6 +957,8 @@
     :greeting            "Hei {1} {2}!",
     :promo1-topic        "TIEDOTE LIPAS-TYYPPILUOKKAPÄIVITYKSISTÄ (11.1.2022)"
     :data-ownership      "Käyttöehdot"},
+   :org
+   {:headline        "Organisaatio"}
    :building-materials
    {:brick      "Tiili",
     :concrete   "Betoni",

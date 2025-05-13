@@ -12,6 +12,7 @@
             [lipas.ui.user.subs :as subs]
             [lipas.ui.utils :refer [<== ==> navigate!]]
             [re-frame.core :as rf]
+            [reitit.frontend.easy :as rfe]
             [uix.core :as uix :refer [$ defui]]))
 
 (defn user-form [tr data]
@@ -162,8 +163,10 @@
                 :sx #js {:alignItems "center"
                          :p 1}}
                ($ Link
-                  {:variant "body2"}
-                  name)))))))
+                  {:variant "body2"
+                   :href (rfe/href :lipas.ui.routes/org
+                                   {:org-id id})}
+                  (or name "-"))))))))
 
 (defn user-panel [tr user]
   (let [card-props {:square true}
