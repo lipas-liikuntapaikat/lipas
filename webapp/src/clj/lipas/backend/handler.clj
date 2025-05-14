@@ -310,7 +310,7 @@
            :handler (fn [req]
                       (org/update-org-users! db
                                              (-> req :parameters :path :org-id)
-                                             (-> req :parameters :body))
+                                             (-> req :parameters :body :changes))
                       {:status 200
                        :body {}})}}]]]
 
