@@ -155,7 +155,7 @@
 (defui explain-orgs []
   (let [orgs (use-subscribe [::org-subs/user-orgs])]
     ($ :<>
-       (for [{:org/keys [id name]} orgs]
+       (for [{:keys [id name]} orgs]
          ($ :<>
             {:key id}
             ($ Stack

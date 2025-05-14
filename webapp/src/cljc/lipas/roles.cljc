@@ -31,6 +31,7 @@
 
    :org/member {:doc "Organisaation jäsen"}
    :org/manage {:doc "Organisaation tietojen ja käyttäjien hallinta"}
+   :org/admin {:doc "Uusien organisaatioiden luonti"}
 
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
