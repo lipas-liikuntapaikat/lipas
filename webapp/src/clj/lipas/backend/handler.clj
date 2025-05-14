@@ -260,8 +260,7 @@
        {:get
         {:coercion reitit.coercion.malli/coercion
          :no-doc false
-         ;; Doesn't require privileges, no :org/member
-         ;; just means no orgs.
+         ;; Doesn't require privileges, no :org/member just means no orgs.
          :require-privilege nil
          ;; Need to mount the auth manually when no :require-privilege enabled
          :middleware [mw/token-auth mw/auth]
@@ -270,12 +269,14 @@
                      :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
 
       ["/orgs"
-       {:require-privilege [{:org-id ::roles/any} :org/manage]
+       {
         :no-doc false
         :coercion reitit.coercion.malli/coercion}
        [""
-        {:get
-         {:handler
+        {;; Only admin users
+         :require-privilege :org/admin
+         :get
+         {          :handler
           (fn [_]
             {:status 200
              :body (org/all-orgs db)})}
@@ -286,7 +287,9 @@
             {:status 200
              :body (org/create-org db (-> req :parameters :body))})}}]
        ["/:org-id"
-        {:parameters {:path [:map
+        {;; Check privilege for this specific org-id (org-admins)
+         :require-privilege [(fn [req] {:org-id (-> req :parameters :path :org-id)}) :org/manage]
+         :parameters {:path [:map
                              [:org-id org-schema/org-id]]}}
         [""
          {:put
