@@ -26,7 +26,8 @@
 (def user-updates
   [:map
    [:changes
-    [:map
-     [:user-id :uuid]
-     [:change [:enum "add" "remove"]]
-     [:role [:enum "org-admin" "org-user"]]]]])
+    [:vector
+     [:map
+      [:user-id :uuid]
+      [:change [:enum "add" "remove"]]
+      [:role [:enum "org-admin" "org-user"]]]]]])

@@ -22,3 +22,15 @@
 (rf/reg-sub ::org-users
   (fn [db _]
     (:users (:org db))))
+
+(rf/reg-sub ::all-users
+  (fn [db _]
+    (:all-users (:org db))))
+
+(rf/reg-sub ::all-users-options
+  :<- [::all-users]
+  (fn [users _]
+    (map (fn [{:keys [id username]}]
+           {:value id
+            :label username})
+         users)))

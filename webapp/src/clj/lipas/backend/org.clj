@@ -1,7 +1,8 @@
 (ns lipas.backend.org
-  (:require [honey.sql :as hsql]
+  (:require [clojure.java.jdbc :as jdbc-old]
+            [honey.sql :as hsql]
             [honey.sql.pg-ops :as pgsql]
-            [lipas.backend.db.user :as user]
+            [lipas.backend.db.db :as db]
             [lipas.backend.db.utils :as db-utils]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
@@ -26,18 +27,21 @@
   (sql/update! db :org org ["id = ?" org-id] jdbc/unqualified-snake-kebab-opts))
 
 (defn update-org-users! [db org-id changes]
-  (jdbc/with-transaction [tx db]
+  (jdbc-old/with-db-transaction [tx db]
     (doseq [{:keys [user-id change role]} changes]
-      (let [user (user/get-user-by-id tx user-id)
+      (let [user (db/get-user-by-id tx {:id user-id})
+            _ (println (pr-str user))
             user (case change
-                   "add" (update user [:permissions :roles] (fnil conj []) {:role role
-                                                                            :org-id org-id})
-                   "remove" (update user [:permissions :roles] (fn [roles]
-                                                                 (remove (fn [x]
-                                                                           (and (= role (:role x))
-                                                                                (= org-id (:org-id x))))
-                                                                         roles))))]
-        (user/update-user-permissions! tx user)))))
+                   "add" (update-in user [:permissions :roles] (fnil conj []) {:role role
+                                                                               :org-id org-id})
+                   "remove" (update-in user [:permissions :roles] (fn [roles]
+                                                                    (into (empty roles)
+                                                                          (remove (fn [x]
+                                                                                    (and (= (keyword role) (:role x))
+                                                                                         ;; Should always a vector with one item...
+                                                                                         (= [(str org-id)] (:org-id x))))
+                                                                                  roles)))))]
+        (db/update-user-permissions! tx user)))))
 
 (defn user-orgs [db id]
   (let [q (hsql/format {:select [:o.*]
@@ -53,7 +57,9 @@
                         :from [:account]
                         ;; Use snake-case fn to ensure property names use same format as used by user/marshall fn
                         :where [pgsql/at> :permissions [:lift (db-utils/->snake-case-keywords {:roles [{:org-id [(str org-id)]}]})]]})]
-    (sql/query db q {:builder-fn rs/as-unqualified-kebab-maps})))
+    (->> (sql/query db q {:builder-fn rs/as-unqualified-kebab-maps})
+         (map (fn [user]
+                (db-utils/->kebab-case-keywords user))))))
 
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))
