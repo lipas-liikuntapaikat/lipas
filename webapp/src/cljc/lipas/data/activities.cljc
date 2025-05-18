@@ -582,7 +582,7 @@
                  :en "Outdoor Recreation Routes"}
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
-   :type-codes  #{4401 4402 4403 4404 4405}
+   :type-codes  #{4401 4402 4403 4404 4405 4406}
    :sort-order  [:status
                  :route-name
                  :description-short
