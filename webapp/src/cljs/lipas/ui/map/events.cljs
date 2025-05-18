@@ -149,13 +149,16 @@
 (rf/reg-event-fx ::start-editing
   (fn [{:keys [db]} [_ lipas-id sub-mode geom-type]]
     (let [site  (get-latest-rev db lipas-id)
-          geoms (utils/->feature site)]
+          geoms (-> site
+                    (utils/->feature)
+                    (map-utils/strip-z))]
       {:db         (update-in db [:map :mode] merge {:name      :editing
                                                      :lipas-id  lipas-id
                                                      :geoms     geoms
                                                      :sub-mode  sub-mode
                                                      :geom-type geom-type})
-       :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
+       :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
+                    [::show-popup nil]]})))
 
 (rf/reg-event-fx ::continue-editing
   (fn [{:keys [db]} [_ view-only?]]

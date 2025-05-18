@@ -54,8 +54,12 @@
         (assoc-in [:interactions :delete] delete))))
 
 (defn enable-splitting!
-  [{:keys [^js lmap layers] :as map-ctx} on-modify]
+  [{:keys [^js lmap layers] :as map-ctx} geoms on-modify]
   (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)
+        _         (.addFeatures source features)
         split     (Select. #js {:layers #js [layer]
                                 :style  styles/hover-style})
         source    (.getSource layer)]
@@ -73,8 +77,10 @@
                      (doseq [f1 (.getFeatures source)]
                        (if (= f1 f)
                          (do
-                           (.push fs (first splitted))
-                           (.push fs (second splitted)))
+                           (when-let [pt1 (first splitted)]
+                             (.push fs pt1))
+                           (when-let [pt2 (second splitted)]
+                             (.push fs pt2)))
                          (.push fs f1)))
                      (.clear source)
                      (.addFeatures source fs))))
@@ -255,7 +261,7 @@
                          (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                        (start-editing! geoms on-modify))
       :deleting    (enable-delete! map-ctx on-modify)
-      :splitting   (enable-splitting! map-ctx on-modify)
+      :splitting   (enable-splitting! map-ctx geoms on-modify)
       :simplifying (simplify-edits! map-ctx mode)
       :undo        (or (==> [::events/undo-done "new" undo-geoms]) map-ctx)
       :finished    (map-utils/show-feature! map-ctx geoms))))
@@ -343,7 +349,7 @@
 
 (defn set-route-part-difficulty-edit-mode
   [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms]}]
-  (let [tr (:translator @db/app-db)
+  (let [tr #_(:translator @db/app-db) (constantly :fi)
         ^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
         _         (.clear source)
@@ -407,10 +413,10 @@
                           ;;(==> [::events/continue-editing lipas-id :editing geom-type])
                           ))]
      (case sub-mode
-       :view-only    (set-view-only-edit-mode! map-ctx mode)
-       :drawing      (start-drawing! map-ctx geom-type on-modifyend)
-       :drawing-hole (start-drawing-hole! map-ctx on-modifyend) ; For polygons
-       :editing      (if continue?
+       :view-only             (set-view-only-edit-mode! map-ctx mode)
+       :drawing               (start-drawing! map-ctx geom-type on-modifyend)
+       :drawing-hole          (start-drawing-hole! map-ctx on-modifyend) ; For polygons
+       :editing               (if continue?
                        (-> map-ctx
                            (continue-editing! on-modifyend)
                            (map-utils/show-problems! problems)
@@ -419,17 +425,17 @@
                            (start-editing-site! lipas-id geoms on-modifyend)
                            (map-utils/show-problems! problems)
                            (enable-highlighting! mode)))
-       :deleting     (-> map-ctx
+       :deleting              (-> map-ctx
                          ;;(continue-editing! on-modifyend)
                          (enable-delete! on-modifyend))
-       :splitting    (-> map-ctx
-                         (enable-splitting! on-modifyend))
-       :undo         (undo-edits! map-ctx mode)
-       :importing    (refresh-edits! map-ctx mode)
-       :simplifying  (simplify-edits! map-ctx mode)
-       :selecting    (-> map-ctx
+       :splitting             (-> map-ctx
+                         (enable-splitting! geoms on-modifyend))
+       :undo                  (undo-edits! map-ctx mode)
+       :importing             (refresh-edits! map-ctx mode)
+       :simplifying           (simplify-edits! map-ctx mode)
+       :selecting             (-> map-ctx
                          (enable-highlighting! mode))
-       :travel-direction (-> map-ctx
+       :travel-direction      (-> map-ctx
                              (set-travel-direction-edit-mode! mode))
        :route-part-difficulty (-> map-ctx
                                   (set-route-part-difficulty-edit-mode mode))
@@ -464,7 +470,8 @@
       (set-editing-mode! map-ctx mode)
 
       (= :route-part-difficulty (:sub-mode mode))
-      (set-editing-mode! map-ctx mode)
+      (-> map-ctx
+          (set-editing-mode! mode))
 
       (= (:sub-mode mode) (:sub-mode old-mode))
       map-ctx
