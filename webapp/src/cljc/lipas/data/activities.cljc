@@ -1315,7 +1315,10 @@
                            :en "Route type"}
              :props
              (merge
-              common-route-props
+              ;; Otherwise same as others, but without "ohjeet"
+              (assoc-in common-route-props [:rules :field :label] {:fi "Luvat, säännöt"
+                                                                   :se "Tillstånd, regler"
+                                                                   :en "Permits, regulations"})
               {:route-name
                {:field
                 {:type        "text-field"
