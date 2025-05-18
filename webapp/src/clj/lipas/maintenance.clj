@@ -246,35 +246,41 @@
   [csv-data year]
   (reduce
      (fn [res m]
-       (let [city-code (-> m :kunta_nimi city-lookup)]
+       (let [city-code  (-> m :kunta_nimi city-lookup)
+             population (or (-> m :asukasluku utils/->number) 0)
+             youth      {:investments          (-> m :nuor_investoinnit ->number-div-by-1000)
+                         :net-costs            (-> m :nuor_nettokustannukset ->number-div-by-1000)
+                         :subsidies            (-> m :nuor_avustukset ->number-div-by-1000)
+                         :operating-expenses   (-> m :nuor_kayttokustannukset ->number-div-by-1000)
+                         :operating-incomes    (-> m :nuor_kayttotuotot ->number-div-by-1000)
+                         ;; New names since 2021 Numbers are not
+                         ;; probably comparatible with earlier ones and
+                         ;; thus new keys
+                         :operational-expenses (-> m :nuor_toimintakulut ->number-div-by-1000)
+                         :operational-income   (-> m :nuor_toimintatuotot ->number-div-by-1000)
+                         :surplus              (-> m :nuor_tilikauden_ylijaama ->number-div-by-1000)
+                         :deficit              (-> m :nuor_tilikauden_alijaama ->number-div-by-1000)}
+             sport      {:investments          (-> m :liik_investoinnit ->number-div-by-1000)
+                         :net-costs            (-> m :liik_nettokustannukset ->number-div-by-1000)
+                         :subsidies            (-> m :liik_avustukset ->number-div-by-1000)
+                         :operating-expenses   (-> m :liik_kayttokustannukset ->number-div-by-1000)
+                         :operating-incomes    (-> m :liik_kayttotuotot ->number-div-by-1000)
+                         ;; New names since 2021 Numbers are not
+                         ;; probably comparatible with earlier ones and
+                         ;; thus new keys
+                         :operational-expenses (-> m :liik_toimintakulut ->number-div-by-1000)
+                         :operational-income   (-> m :liik_toimintatuotot ->number-div-by-1000)
+                         :surplus              (-> m :liik_tilikauden_ylijaama ->number-div-by-1000)
+                         :deficit              (-> m :liik_tilikauden_alijaama ->number-div-by-1000)}]
+
          (-> res
-             (assoc-in [city-code year :population] (or (-> m :asukasluku utils/->number) 0))
-             (assoc-in [city-code year :services "youth-services"]
-                       {:investments          (-> m :nuor_investoinnit ->number-div-by-1000)
-                        :net-costs            (-> m :nuor_nettokustannukset ->number-div-by-1000)
-                        :subsidies            (-> m :nuor_avustukset ->number-div-by-1000)
-                        :operating-expenses   (-> m :nuor_kayttokustannukset ->number-div-by-1000)
-                        :operating-incomes    (-> m :nuor_kayttotuotot ->number-div-by-1000)
-                        ;; New names since 2021 Numbers are not
-                        ;; probably comparatible with earlier ones and
-                        ;; thus new keys
-                        :operational-expenses (-> m :nuor_toimintakulut ->number-div-by-1000)
-                        :operational-income   (-> m :nuor_toimintatuotot ->number-div-by-1000)
-                        :surplus              (-> m :nuor_tilikauden_ylijaama ->number-div-by-1000)
-                        :deficit              (-> m :nuor_tilikauden_alijaama ->number-div-by-1000)})
-             (assoc-in [city-code year :services "sports-services"]
-                       {:investments          (-> m :liik_investoinnit ->number-div-by-1000)
-                        :net-costs            (-> m :liik_nettokustannukset ->number-div-by-1000)
-                        :subsidies            (-> m :liik_avustukset ->number-div-by-1000)
-                        :operating-expenses   (-> m :liik_kayttokustannukset ->number-div-by-1000)
-                        :operating-incomes    (-> m :liik_kayttotuotot ->number-div-by-1000)
-                        ;; New names since 2021 Numbers are not
-                        ;; probably comparatible with earlier ones and
-                        ;; thus new keys
-                        :operational-expenses (-> m :liik_toimintakulut ->number-div-by-1000)
-                        :operational-income   (-> m :liik_toimintatuotot ->number-div-by-1000)
-                        :surplus              (-> m :liik_tilikauden_ylijaama ->number-div-by-1000)
-                        :deficit              (-> m :liik_tilikauden_alijaama ->number-div-by-1000)}))))
+             (assoc-in [city-code year :population] population)
+             (assoc-in [city-code year :services "youth-services"] youth)
+             (assoc-in [city-code year :services "youth-services-pc"]
+                       (calc-per-capita youth population))
+             (assoc-in [city-code year :services "sports-services"] sport)
+             (assoc-in [city-code year :services "sports-services-pc"]
+                       (calc-per-capita sport population)))))
      {}
      csv-data))
 
@@ -410,10 +416,10 @@
 
   (utils/->prefix-map
    (calc-per-capita
-    {:net-costs 17.0,
-     :subsidies 4.0,
-     :investments 0.0,
-     :operating-incomes 0.0,
+    {:net-costs          17.0,
+     :subsidies          4.0,
+     :investments        0.0,
+     :operating-incomes  0.0,
      :operating-expenses 17.0}
     2500)
    "kissa-komodo-")
@@ -429,12 +435,40 @@
 
   (add-subsidies-from-csv! system "/usr/src/app/avustukset_2023.csv")
 
+  (defn fix-city-stats-db-entries
+    "Adds per-capita calculations that are missing in some years and one
+  of the legacy reports is depending on them being present in the db."
+    [db years]
+    (jdbc/with-db-transaction [tx db]
+      (let [cities (db/get-cities db)]
+
+        (doseq [{:keys [city-code stats]} cities
+                [year stats*]      stats
+                :when             (contains? years year)]
+          (log/info "Updating city" city-code "year" year)
+          (let [youth       (get-in stats* [:services :youth-services])
+                sport       (get-in stats* [:services :sports-services])
+                pop         (get stats* :population)
+                fixed-stats (-> stats*
+                                (assoc-in [:services :youth-services-pc]
+                                          (calc-per-capita youth pop))
+                                (assoc-in [:services :sports-services-pc]
+                                          (calc-per-capita sport pop)))
+                sql         (->city-finance-sql-update city-code year fixed-stats)]
+            (jdbc/execute! tx [sql])))))
+    (log/info "All done!"))
+
+  (fix-city-stats-db-entries (user/db) #{2021 2022 2023})
+
+  *e
 
   )
 
 (comment
-  (def csv-path "/Users/tipo/lipas/taloustiedot/taloustiedot_2023.csv")
+  (def csv-path "/Users/tipo/lipas/aineistot/taloustiedot/taloustiedot_2023.csv")
   (add-city-stats-from-csv! {:db (user/db) :search (user/search)} csv-path 2023)
+  (def cities (db/get-cities (user/db)))
+  (get (utils/index-by :city-code cities) 179)
   (->> csv-path
        slurp
        csv/read-csv
@@ -444,4 +478,21 @@
        #_(map walk/keywordize-keys)
        #_(map :kunta_nimi)
        #_(map city-lookup)
-       (set/difference (set city-finance-csv-headers))))
+       (set/difference (set city-finance-csv-headers)))
+
+  (->city-stats-map (->> csv-path
+                         slurp
+                         csv/read-csv
+                         utils/csv-data->maps
+                         (map walk/keywordize-keys))
+                    2023)
+
+  (index-city-finance-data! {:db (user/db) :search (user/search)})
+
+  (def lol (->> (core/get-cities (user/db) :no-cache)
+        ->city-finance-entries
+        ))
+
+  (get (utils/index-by :id lol) "179-2023")
+
+  )
