@@ -30,7 +30,6 @@
   (jdbc-old/with-db-transaction [tx db]
     (doseq [{:keys [user-id change role]} changes]
       (let [user (db/get-user-by-id tx {:id user-id})
-            _ (println (pr-str user))
             user (case change
                    "add" (update-in user [:permissions :roles] (fnil conj []) {:role role
                                                                                :org-id org-id})

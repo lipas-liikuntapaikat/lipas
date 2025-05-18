@@ -27,7 +27,7 @@
 
         org @(rf/subscribe [:lipas.ui.org.subs/user-org-by-id org-id])
         org-users @(rf/subscribe [::subs/org-users])]
-    (js/console.log org-id org)
+
     [mui/grid {:container true
                :spacing 2
                :sx {:p 1}}
