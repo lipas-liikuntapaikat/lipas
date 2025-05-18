@@ -833,8 +833,8 @@
 
                 [;; Rink 1 width
                  {:label    (tr :lipas.ice-stadium.rinks/rink1-width)
-                  :sort     "1A"
-                  :priority 1
+                  #_#_:sort     "1A"
+                  :priority 89
                   :value    (get-in display-data [:rinks 0 :width-m])
                   :form-field
                   [lui/text-field
@@ -846,8 +846,8 @@
 
              ;; Rink 1 length
                  {:label    (tr :lipas.ice-stadium.rinks/rink1-length)
-                  :sort     "1B"
-                  :priority 1
+                  #_#_:sort     "1B"
+                  :priority 89
                   :value    (get-in display-data [:rinks 0 :length-m])
                   :form-field
                   [lui/text-field
@@ -859,8 +859,8 @@
 
              ;; Rink 1 area m2
                  {:label    (tr :lipas.ice-stadium.rinks/rink1-area-m2)
-                  :sort     "1C"
-                  :priority 1
+                  #_#_:sort     "1C"
+                  :priority 88
                   :value    (get-in display-data [:rinks 0 :area-m2])
                   :form-field
                   [lui/text-field
@@ -872,8 +872,8 @@
 
              ;; Rink 2 width
                  {:label    (tr :lipas.ice-stadium.rinks/rink2-width)
-                  :sort     "2A"
-                  :priority 1
+                  #_#_:sort     "2A"
+                  :priority 87
                   :value    (get-in display-data [:rinks 1 :width-m])
                   :form-field
                   [lui/text-field
@@ -885,8 +885,8 @@
 
              ;; Rink 2 length
                  {:label    (tr :lipas.ice-stadium.rinks/rink2-length)
-                  :sort     "2B"
-                  :priority 1
+                  #_#_:sort     "2B"
+                  :priority 87
                   :value    (get-in display-data [:rinks 1 :length-m])
                   :form-field
                   [lui/text-field
@@ -898,8 +898,8 @@
 
              ;; Rink 2 area m2
                  {:label    (tr :lipas.ice-stadium.rinks/rink2-area-m2)
-                  :sort     "2C"
-                  :priority 1
+                  #_#_:sort     "2C"
+                  :priority 86
                   :value    (get-in display-data [:rinks 1 :area-m2])
                   :form-field
                   [lui/text-field
@@ -911,8 +911,8 @@
 
              ;; Rink 3 width
                  {:label    (tr :lipas.ice-stadium.rinks/rink3-width)
-                  :sort     "3A"
-                  :priority 1
+                  #_#_:sort     "3A"
+                  :priority 84
                   :value    (get-in display-data [:rinks 2 :width-m])
                   :form-field
                   [lui/text-field
@@ -924,8 +924,8 @@
 
 ;; Rink 3 length
                  {:label    (tr :lipas.ice-stadium.rinks/rink3-length)
-                  :sort     "3B"
-                  :priority 1
+                  #_#_:sort     "3B"
+                  :priority 84
                   :value    (get-in display-data [:rinks 2 :length-m])
                   :form-field
                   [lui/text-field
@@ -937,8 +937,8 @@
 
              ;; Rink 3 area m2
                  {:label    (tr :lipas.ice-stadium.rinks/rink3-area-m2)
-                  :sort     "3C"
-                  :priority 1
+                  #_#_:sort     "3C"
+                  :priority 83
                   :value    (get-in display-data [:rinks 2 :area-m2])
                   :form-field
                   [lui/text-field
