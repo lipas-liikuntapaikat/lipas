@@ -131,6 +131,64 @@
                           (assoc block-idx next-block)
                           (assoc (inc block-idx) block)))))))))
 
+;; Section reordering events
+(rf/reg-event-db
+ ::move-section-up
+ (fn [db [_ section-idx]]
+   (if (zero? section-idx)
+     db ; Already at the top, no change
+     (update-in db [:help :edited-data]
+                (fn [sections]
+                  (let [section (get sections section-idx)
+                        prev-section (get sections (dec section-idx))]
+                    (-> sections
+                        (assoc (dec section-idx) section)
+                        (assoc section-idx prev-section))))))))
+
+(rf/reg-event-db
+ ::move-section-down
+ (fn [db [_ section-idx]]
+   (let [sections (get-in db [:help :edited-data])
+         last-idx (dec (count sections))]
+     (if (= section-idx last-idx)
+       db ; Already at the bottom, no change
+       (update-in db [:help :edited-data]
+                  (fn [sections]
+                    (let [section (get sections section-idx)
+                          next-section (get sections (inc section-idx))]
+                      (-> sections
+                          (assoc section-idx next-section)
+                          (assoc (inc section-idx) section)))))))))
+
+;; Page reordering events
+(rf/reg-event-db
+ ::move-page-up
+ (fn [db [_ section-idx page-idx]]
+   (if (zero? page-idx)
+     db ; Already at the top, no change
+     (update-in db [:help :edited-data section-idx :pages]
+                (fn [pages]
+                  (let [page (get pages page-idx)
+                        prev-page (get pages (dec page-idx))]
+                    (-> pages
+                        (assoc (dec page-idx) page)
+                        (assoc page-idx prev-page))))))))
+
+(rf/reg-event-db
+ ::move-page-down
+ (fn [db [_ section-idx page-idx]]
+   (let [pages (get-in db [:help :edited-data section-idx :pages])
+         last-idx (dec (count pages))]
+     (if (= page-idx last-idx)
+       db ; Already at the bottom, no change
+       (update-in db [:help :edited-data section-idx :pages]
+                  (fn [pages]
+                    (let [page (get pages page-idx)
+                          next-page (get pages (inc page-idx))]
+                      (-> pages
+                          (assoc page-idx next-page)
+                          (assoc (inc page-idx) page)))))))))
+
 ;; Helper function to create a slug from a string
 (defn- create-slug [s]
   (-> (or s "")
@@ -852,7 +910,7 @@
                  (get-in section [:title :fi] (str "Section " idx))))
             sections)))
 
-     ($ Stack {:direction "row" :spacing 1}
+     ($ Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
         ;; Add Section button
         ($ Button
            {:variant "contained"
@@ -872,7 +930,30 @@
             :startIcon ($ DeleteIcon {})
             :onClick #(rf/dispatch [::show-confirm-dialog :delete-section {:section-idx selected-section-idx}])
             :sx #js{:mt 0}}
-           "Delete Section"))))
+           "Delete Section")
+
+        ;; Move Section Up button
+        ($ Button
+           {:variant "outlined"
+            :color "primary"
+            :size "small"
+            :disabled (or (nil? selected-section-idx) (zero? selected-section-idx))
+            :startIcon ($ ArrowUpIcon {})
+            :onClick #(rf/dispatch [::move-section-up selected-section-idx])
+            :sx #js{:mt 0}}
+           "Move Up")
+
+        ;; Move Section Down button
+        ($ Button
+           {:variant "outlined"
+            :color "primary"
+            :size "small"
+            :disabled (or (nil? selected-section-idx) 
+                          (= selected-section-idx (dec (count sections))))
+            :startIcon ($ ArrowDownIcon {})
+            :onClick #(rf/dispatch [::move-section-down selected-section-idx])
+            :sx #js{:mt 0}}
+           "Move Down"))))
 
 (defui page-selector [{:keys [section-idx pages selected-page-idx on-select]}]
   ($ Stack {:spacing 2}
@@ -891,7 +972,7 @@
                  (get-in page [:title :fi] (str "Page " idx))))
             pages)))
 
-     ($ Stack {:direction "row" :spacing 1}
+     ($ Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
 
         ;; Add Page button
         ($ Button
@@ -913,7 +994,30 @@
             :onClick #(rf/dispatch [::show-confirm-dialog :delete-page {:section-idx section-idx
                                                                         :page-idx selected-page-idx}])
             :sx #js{:mt 0}}
-           "Delete Page"))))
+           "Delete Page")
+
+        ;; Move Page Up button
+        ($ Button
+           {:variant "outlined"
+            :color "primary"
+            :size "small"
+            :disabled (or (nil? selected-page-idx) (zero? selected-page-idx))
+            :startIcon ($ ArrowUpIcon {})
+            :onClick #(rf/dispatch [::move-page-up section-idx selected-page-idx])
+            :sx #js{:mt 0}}
+           "Move Up")
+
+        ;; Move Page Down button
+        ($ Button
+           {:variant "outlined"
+            :color "primary"
+            :size "small"
+            :disabled (or (nil? selected-page-idx)
+                          (= selected-page-idx (dec (count pages))))
+            :startIcon ($ ArrowDownIcon {})
+            :onClick #(rf/dispatch [::move-page-down section-idx selected-page-idx])
+            :sx #js{:mt 0}}
+           "Move Down"))))
 
 (defui editor-toolbar []
   ($ Toolbar {:disableGutters true :sx #js{:mb 2}}
