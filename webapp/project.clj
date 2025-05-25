@@ -1,4 +1,5 @@
 (defproject lipas "0.1.0-SNAPSHOT"
+  :prep-tasks [["lein2deps" "--write-file" "deps.edn" "--print" "false"]]
   :dependencies
   [;;; Common ;;;
    [org.clojure/clojure "1.12.0"]
@@ -56,13 +57,7 @@
      [org.locationtech.geowave/geowave-adapter-raster]
      [org.locationtech.geowave/geowave-adapter-vector]]]]
 
-  :plugins [[lein-ring "0.12.5"]
-            [migratus-lein "0.7.0"]]
-
-  :ring {:handler      legacy-dev/dev-handler
-         :port         8091
-         :auto-reload? true
-         :reload-paths ["src/clj" "src/cljc"]}
+  :plugins [[io.github.borkdude/lein-lein2deps "0.1.0"]]
 
   :min-lein-version "2.5.3"
 
@@ -79,15 +74,15 @@
 
   :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
 
-  :migratus
-  {:store         :database
-   :migration-dir "migrations"
-   :db            {:dbtype   "postgresql"
-                   :dbname   ~(get (System/getenv) "DB_NAME")
-                   :host     ~(get (System/getenv) "DB_HOST")
-                   :user     ~(get (System/getenv) "DB_USER")
-                   :port     ~(get (System/getenv) "DB_PORT")
-                   :password ~(get (System/getenv) "DB_PASSWORD")}}
+  ;; :migratus
+  ;; {:store         :database
+  ;;  :migration-dir "migrations"
+  ;;  :db            {:dbtype   "postgresql"
+  ;;                  :dbname   ~(get (System/getenv) "DB_NAME")
+  ;;                  :host     ~(get (System/getenv) "DB_HOST")
+  ;;                  :user     ~(get (System/getenv) "DB_USER")
+  ;;                  :port     ~(get (System/getenv) "DB_PORT")
+  ;;                  :password ~(get (System/getenv) "DB_PASSWORD")}}
 
   :profiles
   {:dev

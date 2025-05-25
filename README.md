@@ -80,12 +80,36 @@ $EDITOR .env.sh
 bb up
 cd webapp
 # Start repl
-lein repl
+clojure -M:nrepl
+# Connect with your editor to port 7888, then:
 user=> (reset)
 # Start cljs build
 npm i
 npm run watch
 ```
+
+## Available Tasks (Babashka)
+
+The project uses [Babashka](https://babashka.org/) for task automation. Run `bb tasks` to see all available tasks.
+
+### Development Tasks
+```shell
+bb test                    # Run fast tests
+bb test-integration        # Run integration tests  
+bb test-all               # Run all tests
+bb db-migrate             # Run database migrations
+bb db-status              # Check migration status
+bb uberjar                # Build production JAR
+```
+
+### Docker Tasks
+```shell
+bb docker-build          # Build in Docker
+bb docker-migrate         # Run migrations in Docker
+bb docker-test            # Run tests in Docker
+```
+
+Run `bb test-help`, `bb db-help`, or `bb docker-help` for detailed information.
 
 ### Extra
 
@@ -107,11 +131,15 @@ docker and host while developing.
 
 ### Backend
 
-```
+```bash
+# Using Babashka tasks
+bb uberjar
+
+# Using Docker
 docker compose run backend-build
 
-# or
-lein uberjar
+# Direct command
+clojure -T:build uber
 ```
 
 See [certs/README.md](certs/README.md).
@@ -119,11 +147,12 @@ See [certs/README.md](certs/README.md).
 ### Frontend
 
 ```bash
+# Using Docker
 docker compose run frontend-npm-deps
 docker compose run frontend-build
 
-# or without Docker
-lein run -m shadow.cljs.devtools.cli release app
+# Direct command
+clojure -M -m shadow.cljs.devtools.cli release app
 ```
 
 ### Apple Silicon considerations
@@ -157,3 +186,15 @@ docker exec -i lipas-postgres-1 pg_restore -Fc < lipas.backup
 # Rebuild ES index
 docker compose run --rm backend-index-search
 ```
+
+## Migration from Leiningen
+
+This project has been migrated from Leiningen to deps.edn + tools.build + Babashka:
+
+- **Build system**: `lein uberjar` → `bb uberjar` or `clojure -T:build uber`
+- **Tests**: `lein test` → `bb test` or `clojure -M:dev:test`
+- **REPL**: `lein repl` → `clojure -M:nrepl` (connect to port 7888)
+- **Migrations**: `lein migratus migrate` → `bb db-migrate`
+- **Docker**: All docker-compose services updated to use deps.edn
+
+All Babashka tasks provide help: `bb <task>-help` (e.g., `bb db-help`, `bb test-help`)

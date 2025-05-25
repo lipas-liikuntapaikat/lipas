@@ -1,4 +1,4 @@
-{:lein     true
+{:deps {:aliases [:dev]}
  :dev-http {3449 "resources/public"}
  :builds
  {:app

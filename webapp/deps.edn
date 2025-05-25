@@ -1,0 +1,89 @@
+{:paths ["src/clj" "src/cljc" "src/cljs" "resources"],
+
+ :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.12.0"},
+        camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.0"},
+        hiposfer/geojson.specs {:mvn/version "0.2.0"},
+        com.taoensso/timbre {:mvn/version "4.10.0"},
+        com.cemerick/url {:mvn/version "0.1.1"},
+        metosin/reitit {:mvn/version "0.7.1"},
+        metosin/ring-swagger-ui {:mvn/version "5.18.2"},
+        metosin/spec-tools {:mvn/version "0.10.7"},
+        metosin/malli {:mvn/version "0.17.0"},
+        thheller/shadow-cljs {:mvn/version "2.28.16"},
+        org.clojure/clojurescript {:mvn/version "1.11.132"},
+        reagent/reagent {:mvn/version "1.2.0"},
+        re-frame/re-frame {:mvn/version "1.4.3"},
+        tongue/tongue {:mvn/version "0.4.4"},
+        day8.re-frame/http-fx {:mvn/version "0.2.4"},
+        com.pitch/uix.core {:mvn/version "1.1.1"},
+        cljs-bean/cljs-bean {:mvn/version "1.9.0"},
+        metosin/ring-http-response {:mvn/version "0.9.0"},
+        cheshire/cheshire {:mvn/version "5.13.0"},
+        buddy/buddy {:mvn/version "2.0.0"},
+        com.github.seancorfield/next.jdbc {:mvn/version "1.3.939"},
+        com.layerware/hugsql {:mvn/version "0.4.8"},
+        org.postgresql/postgresql {:mvn/version "42.2.2"},
+        com.github.seancorfield/honeysql {:mvn/version "2.6.1270"},
+        nrepl/nrepl {:mvn/version "1.2.0"},
+        hikari-cp/hikari-cp {:mvn/version "2.7.0"},
+        cc.qbits/spandex {:mvn/version "0.8.2"},
+        integrant/integrant {:mvn/version "0.10.0"},
+        migratus/migratus {:mvn/version "1.0.6"},
+        environ/environ {:mvn/version "1.1.0"},
+        com.draines/postal {:mvn/version "2.0.2"},
+        ring/ring-jetty-adapter {:mvn/version "1.6.3"},
+        org.clojure/data.csv {:mvn/version "0.1.4"},
+        dk.ative/docjure {:mvn/version "1.12.0"},
+        tea-time/tea-time {:mvn/version "1.0.0"},
+        clj-http/clj-http {:mvn/version "3.13.0"},
+        factual/geo {:mvn/version "3.0.1"},
+        software.amazon.awssdk/regions {:mvn/version "2.20.135"},
+        software.amazon.awssdk/auth {:mvn/version "2.20.135"},
+        software.amazon.awssdk/s3 {:mvn/version "2.20.135"},
+        org.apache.commons/commons-math3 {:mvn/version "3.6.1"},
+        org.apache.commons/commons-lang3 {:mvn/version "3.12.0"},
+        org.apache.commons/commons-math {:mvn/version "2.2"},
+        org.locationtech.geowave/geowave-analytic-api
+        {:mvn/version "1.2.0",
+         :exclusions [org.slf4j/slf4j-log4j12
+                      log4j
+                      org.locationtech.geowave/geowave-adapter-raster
+                      org.locationtech.geowave/geowave-adapter-vector]}}
+
+ :aliases {:dev {:extra-paths ["dev"]
+                 :extra-deps {binaryage/devtools {:mvn/version "1.0.7"}
+                              day8.re-frame/re-frame-10x {:mvn/version "1.9.9"}
+                              metosin/reagent-dev-tools {:mvn/version "1.0.3"}
+                              cider/piggieback {:mvn/version "0.5.3"}
+                              cider/cider-nrepl {:mvn/version "0.28.5"}
+                              ring/ring-mock {:mvn/version "0.3.2"}
+                              ring/ring-devel {:mvn/version "1.12.2"}
+                              integrant/repl {:mvn/version "0.3.3"}
+                              org.clojure/test.check {:mvn/version "0.9.0"}
+                              etaoin/etaoin {:mvn/version "1.0.40"}}}
+
+           :test {:extra-paths ["test/clj"]
+                  :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+                  :main-opts ["-m" "cognitect.test-runner" "--exclude" "integration"]}
+
+           :test-integration {:extra-paths ["test/clj"]
+                              :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+                              :main-opts ["-m" "cognitect.test-runner" "--include" "integration"]}
+
+           :nrepl {:extra-paths ["dev" "test"]
+                   :extra-deps {nrepl/nrepl {:mvn/version "1.3.1"}}
+                   :jvm-opts ["-Djdk.attach.allowAttachSelf"]
+                   :main-opts ["-m" "nrepl.cmdline" "--port" "7888"]}
+
+           :mcp {:extra-deps {clojure-mcp/clojure-mcp {:local/root "/Users/tipo/dev/clojure-mcp"}}
+                 :exec-fn clojure-mcp.main/start-mcp-server
+                 :exec-args {:port 7888}}
+
+           :migrate {:main-opts ["-m" "lipas.migrate-db"]}
+
+           :build {:deps {io.github.clojure/tools.build {:git/tag "v0.10.9"
+                                                         :git/sha "e405aac"}
+                          slipset/deps-deploy {:mvn/version "0.2.2"}}
+                   :ns-default build}}}
