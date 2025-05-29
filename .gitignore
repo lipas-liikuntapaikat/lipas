@@ -21,13 +21,10 @@ webapp/*-init.clj
 webapp/resources/public/js/compiled
 webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
-webapp/.lein-env
-webapp/.lein-failures
 webapp/.clj-kondo/.cache
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache
 webapp/out
 webapp/.shadow-cljs
-webapp/.lein-repl-history
 webapp/.user.edn

@@ -9,7 +9,7 @@
          lint {:doc "Run clj-kondo"
                :task (shell "clj-kondo --lint src")}
          init-lint {:doc "Initialize Clj-kondo cache with library code"
-                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}
+                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(clojure -A:dev -Spath)")}
          clean-ns {:doc ""
                    :task (do
                            (let [files *command-line-args*]
@@ -20,6 +20,199 @@
                            (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}
 
          dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
-                          :task (do (shell "lein run -m shadow.cljs.devtools.cli release app")
+                          :task (do (shell "clojure -M -m shadow.cljs.devtools.cli release app")
                                     (shell "scp resources/public/js/compiled/app.js lipas-dev.cc.jyu.fi:/var/tmp/app.js")
-                                    (shell "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js /var/lipas/webapp/resources/public/js/compiled/app.js\""))}}}
+                                    (shell "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js /var/lipas/webapp/resources/public/js/compiled/app.js\""))}
+
+         ;; Database Migration Tasks
+         db-migrate {:doc "Run all pending database migrations"
+                     :task (shell "clojure -M:migrate migrate")}
+
+         db-status {:doc "Show database migration status"
+                    :task (shell "clojure -M:migrate status")}
+
+         db-rollback {:doc "Rollback the last database migration"
+                      :task (shell "clojure -M:migrate rollback")}
+
+         db-reset {:doc "Reset database - rollback all migrations then migrate up"
+                   :task (do (println "⚠️  WARNING: This will reset the entire database!")
+                             (print "Are you sure? (y/N): ")
+                             (flush)
+                             (let [response (read-line)]
+                               (if (= (str/lower-case response) "y")
+                                 (shell "clojure -M:migrate reset")
+                                 (println "Database reset cancelled."))))}
+
+         db-create {:doc "Create a new migration file with given name"
+                    :task (let [migration-name (first *command-line-args*)]
+                            (if migration-name
+                              (shell "clojure -M:migrate create" migration-name)
+                              (do (println "Usage: bb db-create <migration-name>")
+                                  (println "Example: bb db-create add-user-table"))))}
+
+         db-up {:doc "Migrate up to a specific migration ID"
+                :task (let [migration-id (first *command-line-args*)]
+                        (if migration-id
+                          (shell "clojure -M:migrate up" migration-id)
+                          (do (println "Usage: bb db-up <migration-id>")
+                              (println "Example: bb db-up 20240101123456"))))}
+
+         db-down {:doc "Migrate down a specific migration ID"
+                  :task (let [migration-id (first *command-line-args*)]
+                          (if migration-id
+                            (shell "clojure -M:migrate down" migration-id)
+                            (do (println "Usage: bb db-down <migration-id>")
+                                (println "Example: bb db-down 20240101123456"))))}
+
+         db-help {:doc "Show database migration help"
+                  :task (do (println "Database Migration Tasks:")
+                            (println "  bb db-status     - Show migration status")
+                            (println "  bb db-migrate    - Run pending migrations")
+                            (println "  bb db-rollback   - Rollback last migration")
+                            (println "  bb db-reset      - Reset entire database")
+                            (println "  bb db-create <n> - Create new migration")
+                            (println "  bb db-up <id>    - Migrate up to specific ID")
+                            (println "  bb db-down <id>  - Migrate down specific ID")
+                            (println "  bb db-help       - Show this help")
+                            (println "")
+                            (println "Examples:")
+                            (println "  bb db-status")
+                            (println "  bb db-migrate")
+                            (println "  bb db-create add-user-email-index")
+                            (println "  bb db-up 20240101123456"))}
+
+         ;; Build Tasks
+         uberjar {:doc "Build uberjar using tools.build"
+                  :override-builtin true
+                  :task (shell "clojure -T:build uber")}
+
+         build-clean {:doc "Clean build artifacts"
+                      :task (shell "clojure -T:build clean")}
+
+         jar {:doc "Build library jar"
+              :task (shell "clojure -T:build jar")}
+
+         verify-uberjar {:doc "Verify uberjar was built correctly"
+                         :task (do (let [jar-file "target/backend.jar"]
+                                     (if (.exists (java.io.File. jar-file))
+                                       (do (println "✅ Uberjar exists:" jar-file)
+                                           (let [size (-> (java.io.File. jar-file) .length (/ 1024 1024) int)]
+                                             (println (str "📊 Size: " size "MB")))
+                                           (println "📋 Testing manifest...")
+                                           (shell "jar" "-tf" jar-file "| grep -q META-INF/MANIFEST.MF")
+                                           (println "✅ Manifest found")
+                                           (println "🔍 Testing main class...")
+                                           (shell "jar" "-tf" jar-file "| grep -q lipas/aot.class")
+                                           (println "✅ Main class compiled and present")
+                                           (println "🎯 Uberjar verification complete!"))
+                                       (println "❌ Uberjar not found. Run 'bb uberjar' first."))))}
+
+         ;; Docker Compose Tasks
+         docker-build {:doc "Build backend uberjar in Docker"
+                       :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-build")}
+
+         docker-migrate {:doc "Run database migrations in Docker"
+                         :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-migrate")}
+
+         docker-test {:doc "Run tests in Docker"
+                      :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-tests")}
+
+         docker-seed {:doc "Seed database in Docker"
+                      :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-seed")}
+
+         docker-dev {:doc "Start backend in development mode"
+                     :task (shell "docker-compose -f ../docker-compose.yml up backend-dev")}
+
+         docker-help {:doc "Show Docker Compose migration help"
+                      :task (do (println "Docker Compose Migration Summary:")
+                                (println "=====================================")
+                                (println "")
+                                (println "✅ CHANGES MADE:")
+                                (println "  • Base image: clojure:lein → clojure:temurin-21-tools-deps")
+                                (println "  • Commands updated to use deps.edn aliases")
+                                (println "  • Removed LEIN_SILENT environment variable")
+                                (println "  • Added backend-migrate service (uncommented)")
+                                (println "")
+                                (println "🔧 COMMAND MAPPINGS:")
+                                (println "  lein ring server-headless     → clojure -M:dev -m lipas.backend.system")
+                                (println "  lein uberjar                  → clojure -T:build uber")
+                                (println "  lein migratus migrate         → clojure -M:migrate migrate")
+                                (println "  lein test                     → clojure -M:dev:test")
+                                (println "  lein test :integration        → clojure -M:dev:test-integration")
+                                (println "  lein run -m <ns>              → clojure -M -m <ns>")
+                                (println "  lein trampoline run -m <ns>   → clojure -M -m <ns>")
+                                (println "")
+                                (println "🚀 NEW DOCKER TASKS:")
+                                (println "  bb docker-build    - Build uberjar in Docker")
+                                (println "  bb docker-migrate  - Run migrations in Docker")
+                                (println "  bb docker-test     - Run tests in Docker")
+                                (println "  bb docker-seed     - Seed database in Docker")
+                                (println "  bb docker-dev      - Start dev backend")
+                                (println "")
+                                (println "📁 FILES:")
+                                (println "  Original: docker-compose-original.yml")
+                                (println "  Updated:  docker-compose-updated.yml")
+                                (println "")
+                                (println "To apply: cp docker-compose-updated.yml ../docker-compose.yml"))}
+
+         docker-apply {:doc "Apply the Docker Compose changes"
+                       :task (do (println "Applying Docker Compose changes...")
+                                 (shell "cp docker-compose-updated.yml ../docker-compose.yml")
+                                 (println "✅ Docker Compose file updated!")
+                                 (println "The new configuration uses deps.edn instead of Leiningen.")
+                                 (println "You can now use 'bb docker-*' tasks or docker-compose directly."))}
+
+         ;; Test Tasks
+         test {:doc "Run fast tests (excludes integration tests)"
+               :task (shell "clojure -M:dev:test")}
+
+         test-integration {:doc "Run integration tests only"
+                           :task (shell "clojure -M:dev:test-integration")}
+
+         test-all {:doc "Run all tests (fast tests + integration tests)"
+                   :task (do (println "Running fast tests...")
+                             (shell "clojure -M:dev:test")
+                             (println "\nRunning integration tests...")
+                             (shell "clojure -M:dev:test-integration")
+                             (println "\n✅ All tests completed!"))}
+
+         test-specific {:doc "Run a specific test namespace"
+                        :task (let [test-ns (first *command-line-args*)]
+                                (if test-ns
+                                  (shell "clojure" "-M:dev:test" "--namespace" test-ns)
+                                  (do (println "Usage: bb test-specific <test-namespace>")
+                                      (println "Example: bb test-specific lipas.gis-test"))))}
+
+         test-watch {:doc "Run fast tests in watch mode (requires manual restart)"
+                     :task (do (println "Note: cognitect test-runner doesn't support watch mode.")
+                               (println "Consider using: clojure -M:dev:test --namespace <specific-test>")
+                               (println "Or use: bb test (runs all fast tests once)"))}
+
+         test-help {:doc "Show testing help and options"
+                    :task (do (println "Testing Tasks:")
+                              (println "==============")
+                              (println "")
+                              (println "🚀 AVAILABLE TASKS:")
+                              (println "  bb test              - Run fast tests only")
+                              (println "  bb test-integration  - Run integration tests only")
+                              (println "  bb test-all          - Run all tests (fast + integration)")
+                              (println "  bb test-specific <n> - Run a specific test namespace")
+                              (println "  bb test-watch        - Info about watch mode")
+                              (println "  bb test-help         - Show this help")
+                              (println "")
+                              (println "🔧 DIRECT COMMANDS:")
+                              (println "  clojure -M:dev:test                - Fast tests")
+                              (println "  clojure -M:dev:test-integration     - Integration tests")
+                              (println "")
+                              (println "📋 TEST CONFIGURATION:")
+                              (println "  Fast tests: Excludes tests marked with ^:integration")
+                              (println "  Integration tests: Only tests marked with ^:integration")
+                              (println "  Test path: test/clj")
+                              (println "  Dev dependencies: Included via alias composition (:dev:test)")
+                              (println "")
+                              (println "💡 TIPS:")
+                              (println "  • Use 'bb test' for quick feedback during development")
+                              (println "  • Use 'bb test-integration' before commits/deployments")
+                              (println "  • Use 'bb test-all' for comprehensive testing")
+                              (println "  • Mark slow tests with ^:integration metadata")
+                              (println "  • Alias composition (:dev:test) avoids dependency duplication"))}}}

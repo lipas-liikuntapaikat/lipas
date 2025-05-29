@@ -95,7 +95,7 @@ services:
       #  - '8080:8080'
 
   backend-base:
-    image: clojure:lein
+    image: clojure:temurin-21-tools-deps
     working_dir: /usr/src/app
     logging:
       driver: "gelf"
@@ -158,7 +158,6 @@ services:
       GEOSERVER_ADMIN_PASSWORD:
       GEOSERVER_ADMIN_USER:
       ENVIRONMENT:
-      LEIN_SILENT: 'true'
     volumes:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
@@ -180,7 +179,7 @@ services:
   backend-dev:
     extends:
       service: backend-base
-    command: lein ring server-headless
+    command: clojure -M:dev -m lipas.backend.system
     hostname: backend
     ports:
       - '8091:8091'
@@ -195,29 +194,19 @@ services:
   backend-build:
     extends:
       service: backend-base
-    command: bash -c 'lein uberjar && cp /tmp/uberjar/backend.jar .'
+    command: clojure -T:build uber
 
   backend-migrate:
     extends:
       service: backend-base
-    command: lein migratus migrate
-    links:
-      - postgres
-
-  backend-migrate-data:
-    extends:
-      service: backend-base
-    environment:
-      ICE_STADIUMS_CSV_URL:
-      SWIMMING_POOLS_CSV_URL:
-    entrypoint: lein run -m lipas.migrate-data
+    command: clojure -M:migrate migrate
     links:
       - postgres
 
   backend-tests:
     extends:
       service: backend-base
-    command: lein test
+    command: clojure -M:dev:test
     links:
       - postgres
       - elasticsearch
@@ -225,7 +214,7 @@ services:
   backend-seed:
     extends:
       service: backend-base
-    command: lein run -m lipas.seed
+    command: clojure -M -m lipas.seed
     links:
       - postgres
 
@@ -235,7 +224,7 @@ services:
     logging:
       options:
         tag: "maintenance"
-    entrypoint: lein run -m lipas.maintenance
+    entrypoint: clojure -M -m lipas.maintenance
     links:
       - postgres
 
@@ -245,7 +234,7 @@ services:
     logging:
       options:
         tag: "search-indexer"
-    entrypoint: lein run -m lipas.search-indexer
+    entrypoint: clojure -M -m lipas.search-indexer
     links:
       - postgres
       - elasticsearch
@@ -256,7 +245,7 @@ services:
   backend-refresh-wfs:
     extends:
       service: backend-base
-    entrypoint: lein run -m lipas.wfs.core
+    entrypoint: clojure -M -m lipas.wfs.core
     links:
       - postgres
 
@@ -266,7 +255,7 @@ services:
     logging:
       options:
         tag: "integrations"
-    entrypoint: lein trampoline run -m lipas.integrator
+    entrypoint: clojure -M -m lipas.integrator
     links:
       - postgres
       - elasticsearch
@@ -278,7 +267,7 @@ services:
     logging:
       options:
         tag: "worker"
-    entrypoint: lein trampoline run -m lipas.worker
+    entrypoint: clojure -M -m lipas.worker
     links:
       - postgres
       - elasticsearch
@@ -305,7 +294,7 @@ services:
   frontend-build:
     extends:
       service: backend-base
-    command: lein run -m shadow.cljs.devtools.cli release app
+    command: clojure -M:dev -m shadow.cljs.devtools.cli release app
 
   headless-chrome:
     image: robcherry/docker-chromedriver
@@ -318,7 +307,7 @@ services:
   integration-tests:
     extends:
       service: backend-base
-    command: lein test :integration
+    command: clojure -M:dev:test-integration
     links:
       - headless-chrome
       - proxy

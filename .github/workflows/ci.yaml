@@ -50,7 +50,6 @@ env:
   AWS_REGION: 'eu-north-1'
   AWS_S3_BUCKET: lol
   AWS_S3_BUCKET_PREFIX: lol
-  LEIN_SILENT: true
   UTP_CMS_API_URL: "https://luontoon-fi-cms-test.druid.fi/fi/jsonapi"
   UTP_CMS_API_USER: lipas-developer
   UTP_CMS_API_PASS: password
@@ -69,37 +68,36 @@ env:
   PTV_API_PASSWORD: ${{ vars.PTV_API_PASSWORD }}
   OPEN_AI_API_KEY: ${{ vars.OPEN_AI_API_KEY }}
   ENVIRONMENT: ${{ vars.ENVIRONMENT }}
+
 jobs:
   utp-schema-gen:
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@11.0
+        uses: DeLaGuardo/setup-clojure@12.5
         with:
-          lein: latest
+          cli: latest
+          bb: latest
 
       - name: Cache clojure dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
             ~/.gitlibs
             ~/.deps.clj
-          # List all files containing dependencies:
-          # key: cljdeps-${{ hashFiles('deps.edn') }}
-          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
-          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
-          # key: cljdeps-${{ hashFiles('build.boot') }}
+            ~/.cpcache
+          key: cljdeps-${{ hashFiles('webapp/deps.edn', 'webapp/bb.edn') }}
           restore-keys: cljdeps-
 
       - name: Check if there are changes
@@ -111,12 +109,12 @@ jobs:
 
       - name: Generate JSON schema
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.data.activities > utp-schema.json
+        run: clojure -M -m lipas.data.activities > utp-schema.json
         working-directory: ./webapp
 
       - name: Generate CSV
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.data.activities csv > utp-schema.csv
+        run: clojure -M -m lipas.data.activities csv > utp-schema.csv
         working-directory: ./webapp
 
       - name: Deploy JSON schema to Gist
@@ -142,31 +140,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@11.0
+        uses: DeLaGuardo/setup-clojure@12.5
         with:
-          lein: latest
+          cli: latest
+          bb: latest
 
       - name: Cache clojure dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
             ~/.gitlibs
             ~/.deps.clj
-          # List all files containing dependencies:
-          # key: cljdeps-${{ hashFiles('deps.edn') }}
-          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
-          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
-          # key: cljdeps-${{ hashFiles('build.boot') }}
+          key: cljdeps-${{ hashFiles('webapp/deps.edn', 'webapp/bb.edn') }}
           restore-keys: cljdeps-
 
       - name: Check if there are changes
@@ -178,12 +173,12 @@ jobs:
 
       - name: Generate JSON schema
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.schema.lois > loi-schema.json
+        run: clojure -M -m lipas.schema.lois > loi-schema.json
         working-directory: ./webapp
 
       - name: Generate CSV
         if: steps.changed-files.outputs.any_changed == 'true'
-        run: lein run -m lipas.schema.lois csv > loi-schema.csv
+        run: clojure -M -m lipas.schema.lois csv > loi-schema.csv
         working-directory: ./webapp
 
       - name: Deploy JSON schema to Gist
@@ -205,7 +200,6 @@ jobs:
           file_type: text
 
   ci:
-
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -214,77 +208,49 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
       - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@11.0
+        uses: DeLaGuardo/setup-clojure@12.5
         with:
-          # cli: latest
-          lein: latest
+          cli: latest
+          bb: latest
 
       - name: Cache clojure dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
             ~/.gitlibs
             ~/.deps.clj
-          # List all files containing dependencies:
-          # key: cljdeps-${{ hashFiles('deps.edn') }}
-          # key: cljdeps-${{ hashFiles('deps.edn', 'bb.edn') }}
-          key: cljdeps-${{ hashFiles('webapp/project.clj') }}
-          # key: cljdeps-${{ hashFiles('build.boot') }}
+          key: cljdeps-${{ hashFiles('webapp/deps.edn', 'webapp/bb.edn') }}
           restore-keys: cljdeps-
 
       - name: Install node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
           cache-dependency-path: webapp/package-lock.json
 
-      # TODO: Drop docker compose in CI config
+      # Using Docker for backend (needs DB and other services)
       - name: Run backend tests
         run: docker compose run --rm backend-tests
 
       - name: Build backend jar
         run: docker compose run --rm backend-build
 
+      - name: Install npm dependencies
+        run: docker compose run --rm frontend-npm-deps
+
       - name: Build frontend
-        run:  |
-          npm install --quiet
-          npx shadow-cljs release app
-        working-directory: ./webapp
-
-      # - name: Install npm dependencies
-      #   run: docker compose run --rm frontend-npm-deps
-
-      # - name: Build frontend
-      #   run: docker compose run --rm frontend-build
-
-      # - name: Run backend migrations
-      #   run: docker compose run --rm backend-migrate
-
-      # - name: Seed backend data to db
-      #   run: docker compose run --rm backend-seed
-
-      # - name: Index backend data to ES
-      #   run: docker compose run --rm backend-index-search
-
-      # - name: Generate self-sigend SSL-certificate
-      #   run: |
-      #     openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
-      #       -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com" \
-      #       -keyout certs/server.key -out certs/server.crt
-
-      # - name: Run integration tests
-      #   run: docker compose run --rm integration-tests
+        run: docker compose run --rm frontend-build
 
       - name: docker logs
         if: ${{ failure() }}
