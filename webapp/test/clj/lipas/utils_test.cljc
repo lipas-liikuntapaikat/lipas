@@ -39,7 +39,27 @@
   (testing "timestamp returns ISO format string"
     (let [ts (utils/timestamp)]
       (is (string? ts))
-      (is (re-matches #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z" ts)))))
+      ;; Updated regex to handle 3-9 digits for fractional seconds (milliseconds to nanoseconds)
+      (is (re-matches #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,9}Z" ts))))
+
+  (testing "timestamp format validates various precision levels"
+    ;; Test that our regex accepts different precision levels
+    (let [test-timestamps ["2025-05-29T07:58:38.123Z" ; 3 digits (milliseconds)
+                           "2025-05-29T07:58:38.123456Z" ; 6 digits (microseconds)  
+                           "2025-05-29T07:58:38.123456789Z" ; 9 digits (nanoseconds)
+                           "2025-05-29T07:58:38.429893646Z"]] ; The failing case from CI
+      (doseq [ts test-timestamps]
+        (is (re-matches #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,9}Z" ts)
+            (str "Should match timestamp: " ts)))))
+
+  (testing "timestamp format rejects invalid precision"
+    ;; Test that our regex properly rejects invalid cases
+    (let [invalid-timestamps ["2025-05-29T07:58:38.12Z" ; 2 digits (too short)
+                              "2025-05-29T07:58:38.1234567890Z" ; 10 digits (too long)
+                              "2025-05-29T07:58:38Z"]] ; no fractional seconds
+      (doseq [ts invalid-timestamps]
+        (is (nil? (re-matches #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,9}Z" ts))
+            (str "Should NOT match timestamp: " ts))))))
 
 (deftest timestamp-conversion-test
   (testing "->ISO-timestamp converts old LIPAS format to ISO"
