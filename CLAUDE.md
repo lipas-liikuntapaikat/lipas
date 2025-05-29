@@ -1,202 +1,222 @@
-# Development Guide for Agents
+# Development Guide for Claude with Clojure-MCP
 
-## Project Structure
-- CLAUDE.md file is in the root directory
-- /webapp directory contains the web application
+## 🚀 Quick Start - You Already Have REPL Access!
 
-## Available Tools
+**IMPORTANT**: When working with this project through clojure-mcp, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
 
-### Clojure-MCP Tools
-This environment provides enhanced Clojure/ClojureScript editing capabilities via clojure-mcp:
-- **Integrated Linting**: Built-in clj-kondo analysis with real-time feedback
-- **Syntax Checking**: Automatic validation of Clojure/ClojureScript syntax
-- **Code Analysis**: Advanced static analysis and code quality checks
-- **REPL Integration**: Enhanced REPL capabilities for interactive development
+### Immediate Development Setup
 
-Use these tools when working with Clojure/ClojureScript files for immediate feedback and validation.
-
-## Build Commands
-- **Start Dev Environment**: `./setup-dev.sh` or `bb up`
-- **Backend Build**: `bb uberjar` or `docker compose run backend-build`
-- **Frontend Build**: `clojure -M -m shadow.cljs.devtools.cli release app`
-- **REPL**: `clojure -M:nrepl` followed by `user=> (reset)`
-- **ClojureScript Watch**: `npm run watch` or `bb cljs-watch`
-
-## Webapp Commands (run from /webapp directory)
-
-### Testing
-- **Fast Tests (via nrepl)**: `bb nrepl:test -p .shadow-cljs/nrepl.port -n <comma-separated-test-namespaces>`
-- **All Tests**: `bb test`
-- **Integration Tests**: `bb test :integration`
-- **Single Namespace**: `bb test :only namespace-name`
-- **From REPL**: `(t/run-tests *ns*)`
-
-### Code Quality
-- **Lint**: `bb lint` (clj-kondo) or use clojure-mcp tools for immediate feedback
-- **Format**: `bb cljfmt [files]`
-- **Clean Namespaces**: `bb clean-ns [files]`
-
-## Webapp Code Style Guidelines
-- **Namespace Aliases**: Use `str` for `clojure.string`, `rf` for `re-frame.core`, `r` for `reagent.core`
-- **Namespace Imports**: Keep required namespaces sorted case-sensitively. Don't use :refer :all - use namespace aliases instead.
-- **File Organization**: Backend in `src/clj`, frontend in `src/cljs`, shared in `src/cljc`
-- **Testing**: Use `clojure.test` with `deftest`, `testing`, and `is` assertions
-- **JS Interop**: Prefer direct JS interop over `goog.object`
-
-## Test-Driven Development Workflow
-
-### Development Process
-- **Always write tests** for new functions and functionality
-- **Use fast feedback loops** by running tests iteratively during development
-- **Add tests to existing test namespaces** when extending functionality, or create new test namespaces for new modules
-- **Run tests frequently** using the fast test command: `bb nrepl:test -p .shadow-cljs/nrepl.port -n <namespace>`
-- **Use clojure-mcp tools** for immediate linting feedback during development
-
-### Test Development Steps
-1. **Examine the target function** and understand its purpose and expected behavior
-2. **Check existing test namespace** (e.g., `lipas.utils-test` for `lipas.utils`)
-3. **Add concise but comprehensive test cases** covering:
-   - Basic functionality
-   - Edge cases (empty inputs, nil values)
-   - Different input types
-   - Error conditions
-4. **Run tests immediately** to verify implementation
-5. **Iterate** until all tests pass and code quality checks are satisfied
-
-### Test Structure
-- Use `clojure.test` with `deftest`, `testing`, and `is` assertions
-- Group related assertions under descriptive `testing` blocks
-- Test file naming: `*_test.cljc` for shared code, `*_test.clj` for backend, `*_test.cljs` for frontend
-- Keep tests focused and readable
-
-### Example
-```bash
-# After adding tests for lipas.utils/->prefix-map
-cd /webapp && bb nrepl:test -p .shadow-cljs/nrepl.port -n lipas.utils-test
-```
-
-## Webapp frontend
-
-### Status and Code Style
-
-We're gradually migrating from reagent to uix.
-
-- Write new frontend code using uix
-- Use uix reagent interop when there's a complex existing reagent component in the codebase. Rewrite simple components using uix and MUI V5
-- Prefer explicit MUI requires. Don't use the legacy lipas.ui.mui namespace.
-
-### UIX Syntax
-
-UIX is a thin React Wrapper.
-
-- Components are created using defui macro, here’s the syntax: (defui component-name [props-map] body)
-- Elements are created using $ macro: ($ :dom-element optional-props-map …children)
-- Component names and props are written in kebab-case.
-- Dom element keywords support hyper script syntax to define classes and id: :div#id.class
-- JS names should be translated into idiomatic Clojure names.
-
-Following React example:
-
-```javascript
-function Item({ name, isPacked }) {
-  return <li className="item">{name}</li>;
-}
-
-export default function PackingList() {
-  return (
-    <section>
-      <h1>Sally Ride's Packing List</h1>
-      <ul>
-        <Item isPacked={true} name="Space suit" />
-        <Item isPacked={true} name="Helmet with a golden leaf" />
-        <Item isPacked={false} name="Photo of Tam" />
-      </ul>
-    </section>
-  );
-}
-```
-
-Translates to UIX like this:
-
-```clojurescript
-(ns packing-list.core
-  (:require [uix.core :refer [$ defui]]))
-
-(defui item [{:keys [name packed?]}]
-  ($ :li.item name))
-
-(defui packing-list []
-  ($ :section
-     ($ :h1 "Sally Ride's Packing List")
-     ($ :ul
-        ($ item {:packed? true :name "Space suit"})
-        ($ item {:packed? true :name "Helmet with a golden leaf"})
-        ($ item {:packed? false :name "Photo of Tam"}))))
-```
-
-### UIX Hooks and State Management Guide
-
-#### Hook Rules ####
-
-1. **Always call hooks at the top level** of your component body, never inside conditions, loops, or nested functions
-2. **List all dependencies** in hooks that require them (like `use-effect` and `use-callback`)
-3. **Clean up side effects** by returning a cleanup function from effect hooks
-
-#### State Management ####
-
-- **Local state**: `(let [[value set-value!] (use-state initial-value)] ...)`
-- **Update state**: `(set-value! new-value)` or `(set-value! (fn [prev] (transform prev)))`
-- **Refs (non-reactive)**: `(let [ref (use-ref initial-value)] ...)` - access with `@ref`, update with `(reset! ref new-value)`
-
-#### Common Patterns ####
+**No setup needed!** Simply run:
 
 ```clojure
-;; Effect that runs on mount and cleanup
-(use-effect
-  (fn []
-    ;; Setup code
-    (fn [] ;; Cleanup function
-      ;; Cleanup code
-    ))
-  [])
-
-;; Effect that runs when dependencies change
-(use-effect
-  (fn []
-    ;; Code that uses value1 and value2
-  )
-  [value1 value2])
-
-;; Form input with controlled state
-(let [[value set-value!] (use-state "")]
-  ($ :input {:value value
-             :on-change #(set-value! (.. % -target -value))}))
+(dev-webapp!)
 ```
 
-#### Common Mistakes ####
+This single command will:
+- Load all webapp dependencies
+- Start the Jetty server  
+- Connect to PostgreSQL and Elasticsearch
+- Initialize all system components (AWS, email, PTV, etc.)
 
-- ❌ Calling hooks conditionally: `(when condition (use-state 0))`
-- ❌ Missing dependencies: `(use-effect (fn [] (use-value)) [])` when `use-value` should be a dependency
-- ❌ Infinite update loops: updating state in an effect without proper dependencies
+### Available User Namespace Functions
 
-##### Custom Hooks #####
+The `user` namespace provides these utilities immediately:
 
-- Define with `(defhook use-custom-hook [params] ...hook logic...)`
-- Must start with `use-` prefix
-- Follow the same rules as built-in hooks
+- `(dev-webapp!)` - **One-command startup**: loads dependencies and starts the complete system
+- `(load-webapp-dev-deps!)` - Loads only :dev and :test dependencies from webapp/deps.edn  
+- `(read-webapp-deps)` - Inspects webapp dependency structure
+- `(extract-dev-deps webapp-deps)` - Extracts development dependencies
 
-## Development Workflow with Clojure-MCP
+### System Access After Startup
 
-### Best Practices
-- **Use clojure-mcp tools first** for immediate syntax checking and linting feedback
-- **Run manual lint commands** (`bb lint`) only when needed for comprehensive project-wide checks
-- **Leverage integrated analysis** to catch issues early in the development process
-- **Test frequently** using the fast nrepl test commands for rapid iteration
+Once `(dev-webapp!)` has run, access system components via:
 
-### Code Quality Workflow
-1. **Edit code** using clojure-mcp tools for real-time feedback
-2. **Run targeted tests** with `bb nrepl:test` for affected namespaces
-3. **Use manual linting** (`bb lint`) for final project-wide validation before commits
-4. **Format code** with `bb cljfmt` as needed
+```clojure
+integrant.repl.state/system  ; Full system map with all components
+```
 
-This approach maximizes development speed while maintaining code quality through continuous feedback.
+Available components:
+- `:lipas/server` - Jetty web server
+- `:lipas/db` - PostgreSQL database connection  
+- `:lipas/search` - Elasticsearch client
+- `:lipas/emailer` - Email configuration
+- `:lipas/aws` - S3 integration
+- `:lipas/ptv` - Finnish public service integration
+- `:lipas/mailchimp` - Newsletter integration
+
+## 🔍 Project Exploration Tools
+
+Use the built-in REPL exploration tools:
+
+```clojure
+;; List all available namespaces
+(clj-mcp.repl-tools/list-ns)
+
+;; Explore specific namespaces  
+(clj-mcp.repl-tools/list-vars 'lipas.backend.core)
+
+;; Show documentation for functions
+(clj-mcp.repl-tools/doc-symbol 'map)
+
+;; Find symbols by pattern
+(clj-mcp.repl-tools/find-symbols "search")
+```
+
+## 🧪 Running Tests
+
+After the system is loaded with `(dev-webapp!)`:
+
+```clojure
+(require '[cognitect.test-runner.api :as tr])
+(tr/test {:dirs ["webapp/test/clj"]})
+```
+
+## 🛠️ Webapp REPL Utilities
+
+Once `(dev-webapp!)` has loaded the system, you have access to rich webapp-specific utilities via the `repl` namespace:
+
+### System Access Functions
+```clojure
+;; Access system components directly
+(repl/db)           ; Database connection
+(repl/search)       ; Elasticsearch client  
+(repl/ptv)          ; PTV integration
+(repl/current-system) ; Full system map
+(repl/current-config) ; System configuration
+```
+
+### Database & Search Operations
+```clojure
+;; Rebuild search indices
+(repl/reindex-search!)     ; Rebuild main search index
+(repl/reindex-analytics!)  ; Rebuild analytics index
+
+;; Database migrations
+(repl/run-db-migrations!)  ; Run pending database migrations
+```
+
+### User Management
+```clojure
+;; Password management
+(repl/reset-admin-password! "new-password")           ; Reset admin password
+(repl/reset-password! "user@example.com" "password") ; Reset any user's password
+(repl/get-robot-user)                                ; Get the robot admin user
+```
+
+### System Lifecycle
+```clojure
+;; System control (integrant.repl functions)
+(repl/reset)  ; Reset system with code reload
+(go)          ; Start system
+(halt)        ; Stop system  
+(reset-all)   ; Full reset clearing all state
+```
+
+### Development Examples
+```clojure
+;; Common development tasks
+(repl/reindex-search!)  ; After changing search mappings
+(repl/reset-admin-password! "dev123")  ; For local development
+(repl/run-db-migrations!)  ; After adding new migrations
+
+;; Access data for exploration
+(def db-conn (repl/db))
+(def search-client (repl/search))
+
+;; The repl namespace also includes extensive rich comment blocks
+;; with real development examples and maintenance operations
+```
+
+### Rich Comment Block Examples
+
+The `webapp/dev/repl.clj` file includes extensive comment blocks with real-world examples of:
+- Database migrations and schema updates
+- Search index management  
+- Data type management and merging
+- User management operations
+- System maintenance tasks
+
+These comment blocks serve as documentation and executable examples for common development and maintenance operations.
+
+## 📁 Project Structure
+
+```
+├── deps.edn              # Root dependencies + development tooling
+├── dev/user.clj          # Development utilities (you have access to this!)
+├── CLAUDE.md            # This file
+├── DEV-README.md        # Detailed development documentation
+└── webapp/
+    ├── deps.edn          # Clean production dependencies
+    ├── src/clj/          # Backend Clojure code
+    ├── src/cljs/         # Frontend ClojureScript code  
+    ├── src/cljc/         # Shared Clojure/ClojureScript code
+    └── test/             # Tests
+```
+
+## 💡 Development Workflow for Claude
+
+### Starting Work
+1. **Just run** `(dev-webapp!)` - everything will be ready
+2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
+3. **Make changes** using the clojure editing tools
+4. **Test changes** immediately in the REPL
+
+### No Need For:
+- ❌ Complex setup scripts
+- ❌ Build commands  
+- ❌ Manual dependency management
+- ❌ Figuring out how to start the system
+
+### Code Quality Tools Available
+
+The clojure-mcp environment provides:
+- **Integrated Linting**: Built-in clj-kondo analysis with real-time feedback
+- **Syntax Checking**: Automatic validation during editing
+- **Code Analysis**: Static analysis and quality checks
+- **REPL Integration**: Enhanced REPL capabilities
+
+## 📝 Code Style Guidelines
+
+### Backend (Clojure)
+- **Namespace Aliases**: Use `str` for `clojure.string`, standard aliases
+- **File Organization**: Backend in `src/clj`, tests in `test/clj`
+- **Testing**: Use `clojure.test` with `deftest`, `testing`, and `is`
+
+### Frontend (ClojureScript)
+- **Framework**: Migrating from Reagent to UIX (React wrapper)
+- **New Code**: Write using UIX syntax
+- **Components**: `(defui component-name [props-map] body)`
+- **Elements**: `($ :dom-element optional-props-map …children)`
+- **Styling**: Use explicit MUI requires, avoid legacy `lipas.ui.mui`
+
+### UIX Examples
+
+```clojure
+;; Simple component
+(defui greeting [{:keys [name]}]
+  ($ :div.greeting 
+     ($ :h1 (str "Hello " name "!"))))
+
+;; With state
+(defui counter []
+  (let [[count set-count!] (use-state 0)]
+    ($ :div
+       ($ :p (str "Count: " count))
+       ($ :button {:on-click #(set-count! inc)} 
+          "Increment"))))
+```
+
+### UIX Hooks Rules
+1. **Always call hooks at component top level** - never in conditions/loops
+2. **List all dependencies** in effect hooks: `[value1 value2]`
+3. **Clean up effects** by returning cleanup functions
+
+## 🎯 Key Points for Efficient Development
+
+1. **You have immediate REPL access** - no setup required
+2. **Single command startup** - just `(dev-webapp!)`
+3. **Rich exploration tools** - use `clj-mcp.repl-tools/*` functions
+4. **Real-time feedback** - integrated linting and syntax checking
+5. **Full system access** - all components available via `integrant.repl.state/system`
+
+**Remember**: Don't overthink the setup - you already have everything you need to start developing immediately!
