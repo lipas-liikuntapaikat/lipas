@@ -1,6 +1,6 @@
 (ns user
   "Top-level development utilities with dynamic dependency loading.
-  
+
   This namespace provides a unified REPL experience across both
   infrastructure (top-level) and webapp contexts by dynamically
   loading webapp development dependencies on demand."
@@ -24,18 +24,19 @@
     (merge dev-alias test-alias)))
 
 (defn load-webapp-dev-deps!
-  "Dynamically load webapp development and test dependencies.
-  
-  Reads dependencies from webapp/deps.edn :dev and :test aliases."
+  "Dynamically load webapp :dev and :test dependencies only.
+
+  Production dependencies are already available via :local/root inclusion.
+  Reads :dev and :test aliases from webapp/deps.edn."
   []
-  (print "Loading webapp dev dependencies... ")
+  (print "Loading webapp :dev and :test dependencies... ")
 
   (if-let [webapp-deps (read-webapp-deps)]
     (do
       (let [dev-deps (extract-dev-deps webapp-deps)]
         (when (seq dev-deps)
           (deps/add-libs dev-deps)
-          (print (count dev-deps) "deps loaded, ")))
+          (print (count dev-deps) "dev deps loaded, ")))
 
       ;; Import key development functions
       (require '[integrant.repl :refer [reset reset-all halt go clear init prep resume suspend set-prep!]])
@@ -54,10 +55,18 @@
 
     (println "✗ Could not read webapp/deps.edn")))
 
-(defn load-webapp-test-deps!
-  "Load additional test-specific dependencies for running tests in REPL."
+;; Test dependencies are automatically included in setup!
+;; To run tests: (require '[cognitect.test-runner.api :as tr])
+;;               (tr/test {:dirs ["webapp/test/clj"]})
+
+(declare go)
+
+(defn setup-and-go!
+  "Load webapp :dev and :test dependencies and start the system in one command."
   []
-  (println "Test environment ready. Use: (require '[cognitect.test-runner.api :as tr]) (tr/test {:dirs [\"webapp/test/clj\"]})"))
+  (load-webapp-dev-deps!)
+  (println "Starting system...")
+  (go))
 
 (defn dev-status
   "Show current development environment status."
@@ -85,4 +94,4 @@
 (def setup! load-webapp-dev-deps!)
 (def status dev-status)
 
-(println "Top-level dev environment loaded. Use (setup!) to load webapp dependencies.")
+(println "Top-level dev environment loaded. Use (setup-and-go!) for quick start or (setup!) to load :dev/:test deps.")
