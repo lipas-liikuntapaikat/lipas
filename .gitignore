@@ -10,6 +10,7 @@
 !/osrm/README.md
 !/osrm/update-data.sh
 .calva
+.cpcache
 
 random-files/
 
@@ -28,3 +29,4 @@ webapp/.lsp/.cache
 webapp/out
 webapp/.shadow-cljs
 webapp/.user.edn
+webapp/local-scrap
