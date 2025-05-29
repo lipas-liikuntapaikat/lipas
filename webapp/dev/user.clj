@@ -285,4 +285,14 @@
     (-> (core/get-help-data (db)) help-schema/transform-old-to-new-format))
 
   (core/save-help-data (db) help-dada-v2)
+
+  (lipas.backend.core/process-elevation-queue! (db) (search))
+  (reindex-search!)
+  (require '[lipas.backend.core])
+  (def wat (lipas.backend.core/get-sports-site (db) 520086))
+  (tap> wat)
+
+
+  (lipas.backend.core/get-sports-site2 (search) 666)
+
   )
