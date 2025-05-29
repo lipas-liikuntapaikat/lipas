@@ -248,10 +248,16 @@ jobs:
 
       - name: Build frontend
         run: |
+          # Clean any existing cache directories that might have permission issues
+          rm -rf .cpcache .shadow-cljs target node_modules/.cache || true
+          
+          # Ensure we have proper permissions on the working directory
+          chmod -R u+rw . || true
+          
+          # Install dependencies
           npm install --quiet
-          # Create .cpcache directory with proper permissions for shadow-cljs
-          mkdir -p .cpcache
-          chmod 755 .cpcache
+          
+          # Build with shadow-cljs
           npx shadow-cljs release app
         working-directory: ./webapp
 
