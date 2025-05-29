@@ -1,8 +1,8 @@
-(ns user
+(ns repl
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
    [clojure.tools.namespace.repl]
-   [integrant.repl :refer [reset reset-all halt go]]
+   [integrant.repl :refer [reset-all halt go]]
    [integrant.repl.state]
    [migratus.core :as migratus]))
 
@@ -58,9 +58,17 @@
   [password]
   (reset-password! "admin@lipas.fi" password))
 
+(defn get-robot-user
+  "Returns the always existing robot user who has admin permissions."
+  []
+  ((requiring-resolve 'lipas.backend.core/get-user) (db) "robot@lipas.fi"))
+
 (defn run-db-migrations!
   []
   (migratus/migrate {:store :database :db (db)}))
+
+(defn reset []
+  (integrant.repl/reset))
 
 (comment
   (go)
