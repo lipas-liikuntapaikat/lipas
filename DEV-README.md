@@ -112,27 +112,18 @@ The system requires environment variables for external services:
    source .env.sh
    clj -M:nrepl
    ```
-
-## Key Features
-
-- **Ultra-fast startup** - Single function call to get complete system running
-- **Clean separation** - Production dependencies stay in webapp, development tooling at root
-- **Rich development environment** - Full access to all system components
-- **LLM-friendly** - Simple, predictable structure that's easy to understand and navigate
-- **Minimal configuration** - Most complexity handled automatically
-
 ## Troubleshooting
 
-**Issue**: Functions not available after REPL start  
+**Issue**: Functions not available after REPL start
 **Solution**: Run `(dev-webapp!)` to load everything
 
-**Issue**: System components not accessible  
+**Issue**: System components not accessible
 **Solution**: Check `integrant.repl.state/system` to see loaded components
 
-**Issue**: Environment variables not set  
+**Issue**: Environment variables not set
 **Solution**: Ensure you've run `source .env.sh` before starting the REPL
 
-**Issue**: Tests not found  
+**Issue**: Tests not found
 **Solution**: Run `(dev-webapp!)` first to ensure all paths are loaded
 
 ## For LLM Developers
