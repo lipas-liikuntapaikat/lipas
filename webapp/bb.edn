@@ -3,13 +3,13 @@
          user-repl {:doc "Start user configured nREPL process"
                     :task (if-let [cmd (:repl-command (read-string (slurp ".user.edn")))]
                             (shell "bash -c" (apply str "source ../.env.sh && " cmd))
-y                            (do (println "Missing :repl-command in .user.edn")
+                            (do (println "Missing :repl-command in .user.edn")
                                 (System/exit 1)))}
          cljs-watch {:task (shell "npm run watch")}
          lint {:doc "Run clj-kondo"
                :task (shell "clj-kondo --lint src")}
          init-lint {:doc "Initialize Clj-kondo cache with library code"
-                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(lein classpath)")}
+                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(clojure -A:dev -Spath)")}
          clean-ns {:doc ""
                    :task (do
                            (let [files *command-line-args*]
@@ -20,7 +20,7 @@ y                            (do (println "Missing :repl-command in .user.edn")
                            (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}
 
          dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
-                          :task (do (shell "lein run -m shadow.cljs.devtools.cli release app")
+                          :task (do (shell "clojure -M -m shadow.cljs.devtools.cli release app")
                                     (shell "scp resources/public/js/compiled/app.js lipas-dev.cc.jyu.fi:/var/tmp/app.js")
                                     (shell "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js /var/lipas/webapp/resources/public/js/compiled/app.js\""))}
 
