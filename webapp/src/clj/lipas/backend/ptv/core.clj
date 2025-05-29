@@ -321,8 +321,7 @@
         (core/index! search site :sync)))))
 
 (defn save-ptv-audit
-  "Saves PTV audit information for a sports site.
-   Requires the user to have the :ptv/audit privilege."
+  "Saves PTV audit information for a sports site."
   [db user search {:keys [lipas-id audit]}]
   (jdbc/with-db-transaction [tx db]
     (when-let [site (core/get-sports-site tx lipas-id)]
