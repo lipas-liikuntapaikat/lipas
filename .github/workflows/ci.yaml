@@ -246,20 +246,11 @@ jobs:
       - name: Build backend jar
         run: docker compose run --rm backend-build
 
+      - name: Install npm dependencies
+        run: docker compose run --rm frontend-npm-deps
+
       - name: Build frontend
-        run: |
-          # Clean any existing cache directories that might have permission issues
-          rm -rf .cpcache .shadow-cljs target node_modules/.cache || true
-          
-          # Ensure we have proper permissions on the working directory
-          chmod -R u+rw . || true
-          
-          # Install dependencies
-          npm install --quiet
-          
-          # Build with shadow-cljs
-          npx shadow-cljs release app
-        working-directory: ./webapp
+        run: docker compose run --rm frontend-build
 
       - name: docker logs
         if: ${{ failure() }}

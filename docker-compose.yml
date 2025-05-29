@@ -294,7 +294,7 @@ services:
   frontend-build:
     extends:
       service: backend-base
-    command: clojure -M -m shadow.cljs.devtools.cli release app
+    command: clojure -M:dev -m shadow.cljs.devtools.cli release app
 
   headless-chrome:
     image: robcherry/docker-chromedriver
