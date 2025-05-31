@@ -47,7 +47,7 @@
   (let [user (-> (tu/gen-user {:db? false :admin? false})
                  (assoc :permissions {:roles [{:role :ptv-auditor}]}))]
     (core/add-user! db user)
-    (assoc user :id (:id (core/get-user db (:email user))))))
+    (core/get-user db (:email user))))
 
 (defn- gen-admin-user
   "Generates an admin user who can perform PTV audits"

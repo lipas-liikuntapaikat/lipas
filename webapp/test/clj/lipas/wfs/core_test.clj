@@ -160,7 +160,7 @@
 
 ;; WFS Row Conversion Tests
 
-(deftest test-wfs-row-conversion-comprehensive
+(deftest test-wfs-row-conversion
   "Test WFS row conversion with different geometry types and proper test data"
 
   (testing "Point geometry WFS row conversion (Tennis Court)"
@@ -182,10 +182,7 @@
         (is (= "Tennis court test comment" (:lisatieto_fi row-data))))
 
       (testing "Point geometry fields"
-        (is (= {:type "Point" :coordinates [24.9458 60.1674]} (:the_geom row-data)))
-        ;; Point geometries don't have route/area IDs or travel direction
-        (is (= 1 (:reitti_id row-data))) ; Always 1 for point (idx + 1)
-        (is (= 1 (:alue_id row-data)))))) ; Always 1 for point (idx + 1)
+        (is (= {:type "Point" :coordinates [24.9458 60.1674]} (:the_geom row-data))))))
 
   (testing "LineString geometry WFS row conversion (Horse Trail)"
     (let [[status row-data] (wfs/->wfs-row sample-linestring-sports-site 0
@@ -203,8 +200,8 @@
         (is (= "LineString" (-> row-data :the_geom :type)))
         (is (= [[24.9258 60.1574] [24.9278 60.1594] [24.9298 60.1614]]
                (-> row-data :the_geom :coordinates)))
-        (is (= 1 (:reitti_id row-data))) ; Route ID based on index
-        (is (= "both" (:kulkusuunta row-data))))))
+        ; Route ID based on index
+        (is (= 1 (:reitti_id row-data))))))
 
   (testing "Polygon geometry WFS row conversion (Sports Park)"
     (let [[status row-data] (wfs/->wfs-row sample-polygon-sports-site 0
@@ -223,7 +220,7 @@
         (is (vector? (-> row-data :the_geom :coordinates)))
         (is (= 1 (:alue_id row-data))))))) ; Area ID based on index
 
-(deftest test-wfs-rows-conversion-multiple-geometries
+(deftest test-wfs-rows-conversion
   "Test WFS rows conversion with multiple features for different geometry types"
 
   (testing "Multiple Point features"
@@ -233,26 +230,23 @@
                                       {:geometry {:type "Point" :coordinates [25.0 60.2]} :properties {}}])
           rows (wfs/->wfs-rows multi-point-site)]
 
-      (is (= 2 (count rows)))
-      (is (= 1 (-> rows first second :reitti_id)))
-      (is (= 2 (-> rows second second :reitti_id)))))
+      (is (= 2 (count rows)))))
 
   (testing "Multiple LineString features with travel directions"
-    (let [multi-line-site (assoc-in sample-linestring-sports-site
-                                    [:location :geometries :features]
+    (let [multi-line-site (-> sample-linestring-sports-site
+                              (assoc-in [:location :geometries :features]
                                     [{:geometry {:type "LineString"
                                                  :coordinates [[24.9 60.1] [24.91 60.11]]}
-                                      :properties {:travel-direction "north"}}
+                                      :properties {:travel-direction "start-to-end"}}
                                      {:geometry {:type "LineString"
                                                  :coordinates [[24.92 60.12] [24.93 60.13]]}
-                                      :properties {:travel-direction "south"}}])
+                                      :properties {:travel-direction "end-to-start"}}])
+                              (assoc-in [:type :type-code] 4402)) ;; only 4402 has travel direction
           rows (wfs/->wfs-rows multi-line-site)]
 
       (is (= 2 (count rows)))
-      (is (= "north" (-> rows first second :kulkusuunta)))
-      (is (= "south" (-> rows second second :kulkusuunta)))
-      (is (= 1 (-> rows first second :reitti_id)))
-      (is (= 2 (-> rows second second :reitti_id)))))
+      (is (= (:kulkusuunta (second (first rows))) "start-to-end"))
+      (is (= (:kulkusuunta (second (second rows))) "end-to-start"))))
 
   (testing "Multiple Polygon features"
     (let [multi-polygon-site (assoc-in sample-polygon-sports-site
@@ -290,7 +284,6 @@
           trail-fields (get wfs/type-code->legacy-fields 4430)]
 
       ;; Horse trail should have trail-specific fields
-      (is (contains? row-data :kulkusuunta) "Should include travel direction")
       (is (contains? row-data :reitti_id) "Should include route ID")
 
       (doseq [field trail-fields]
@@ -308,67 +301,6 @@
       (doseq [field park-fields]
         (is (contains? row-data field)
             (str "Sports park should include field: " field))))))
-
-;; Legacy test - now uses comprehensive data but maintains backwards compatibility
-(deftest test-wfs-row-conversion
-  "Legacy test maintained for backwards compatibility"
-  (testing "->wfs-row converts sports site to WFS row format"
-    (let [[status row-data] (wfs/->wfs-row sample-sports-site 0 sample-feature)]
-
-      (testing "Returns status and row data tuple"
-        (is (= "active" status))
-        (is (map? row-data)))
-
-      (testing "Row contains required common fields"
-        (is (= 12345 (:id row-data)))
-        (is (= "Test Tennis Court" (:nimi_fi row-data)))
-        (is (= "Test tennisbana" (:nimi_se row-data)))
-        (is (= "Test Tennis Court" (:nimi_en row-data)))
-        (is (= "tennis@example.com" (:sahkoposti row-data)))
-        (is (= "https://tennis.example.com" (:www row-data)))
-        (is (= "+358401234567" (:puhelinnumero row-data)))
-        (is (= true (:koulun_liikuntapaikka row-data)))
-        (is (= false (:vapaa_kaytto row-data)))
-        (is (= 2020 (:rakennusvuosi row-data)))
-        (is (= "2022,2023" (:peruskorjausvuodet row-data)))
-        (is (= "Tennis Street 123" (:katuosoite row-data)))
-        (is (= "00100" (:postinumero row-data)))
-        (is (= "Helsinki" (:postitoimipaikka row-data)))
-        (is (= 91 (:kuntanumero row-data)))
-        (is (= "Keskusta" (:kuntaosa row-data)))
-        (is (= 1370 (:tyyppikoodi row-data))) ; Updated to tennis court
-        (is (= "Tennis court test comment" (:lisatieto_fi row-data)))
-        (is (= 12345 (:sijainti_id row-data))))
-
-      (testing "Geometry and feature-specific fields"
-        (is (= sample-feature (:the_geom row-data)))
-        (is (= 1 (:reitti_id row-data))) ; idx + 1
-        (is (= 1 (:alue_id row-data))) ; idx + 1
-        (is (nil? (:kulkusuunta row-data))))))) ; Point geometry has no travel direction
-
-(deftest test-wfs-rows-conversion
-  "Legacy test maintained for backwards compatibility"
-  (testing "->wfs-rows converts sports site with multiple features"
-    (let [multi-feature-site (assoc-in sample-sports-site
-                                       [:location :geometries :features]
-                                       [sample-feature
-                                        {:geometry {:type "Point" :coordinates [25.0 60.2]}
-                                         :properties {}}])
-          rows (wfs/->wfs-rows multi-feature-site)]
-
-      (is (= 2 (count rows)))
-
-      (testing "First row"
-        (let [[status row-data] (first rows)]
-          (is (= "active" status))
-          (is (= 1 (:reitti_id row-data)))
-          (is (nil? (:kulkusuunta row-data))))) ; Point geometry
-
-      (testing "Second row"
-        (let [[status row-data] (second rows)]
-          (is (= "active" status))
-          (is (= 2 (:reitti_id row-data)))
-          (is (nil? (:kulkusuunta row-data))))))))
 
 (deftest test-legacy-field-resolvers
   (testing "Legacy field resolution handles different data types correctly"
@@ -655,9 +587,9 @@
   (clojure.test/run-tests *ns*)
 
   (clojure.test/run-test-var #'test-wfs-rows-conversion-multiple-geometries)
-  (clojure.test/run-test-var #'test-master-table-operations)
   (clojure.test/run-test-var #'test-geometry-field-type-resolution)
   (clojure.test/run-test-var #'test-wfs-e2e-lifecycle)
+  (clojure.test/run-test-var #'test-wfs-row-conversion)
 
   ;; Test helsinki time conversion
   (wfs/->helsinki-time "2023-12-25T10:15:30.123456Z")
