@@ -53,10 +53,10 @@
   "Ultra-fast startup - just load deps and start system.
   Uses webapp utilities with minimal setup validation."
   []
-  (println "⚡ Quick LIPAS setup (essentials only)...")
+  (println "⚡ LIPAS Dev setup")
   (load-webapp-dev-deps!)
   (require '[lipas.backend.system])
   ((requiring-resolve 'repl/reset))
-  (println "⚡ Ready! Use (health-check) or (setup-and-go!) for detailed status."))
+  (println "⚡ Dev System ready!"))
 
 ;;; NOTE: webapp-repl contains several handy development utilities! ***

@@ -8,7 +8,8 @@
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
-#_(clojure.tools.namespace.repl/set-refresh-dirs "/src")
+
+(clojure.tools.namespace.repl/set-refresh-dirs "/src" "/test")
 
 (defn current-config []
   integrant.repl.state/config)
