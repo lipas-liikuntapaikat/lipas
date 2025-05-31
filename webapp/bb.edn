@@ -123,45 +123,6 @@
          docker-dev {:doc "Start backend in development mode"
                      :task (shell "docker-compose -f ../docker-compose.yml up backend-dev")}
 
-         docker-help {:doc "Show Docker Compose migration help"
-                      :task (do (println "Docker Compose Migration Summary:")
-                                (println "=====================================")
-                                (println "")
-                                (println "✅ CHANGES MADE:")
-                                (println "  • Base image: clojure:lein → clojure:temurin-21-tools-deps")
-                                (println "  • Commands updated to use deps.edn aliases")
-                                (println "  • Removed LEIN_SILENT environment variable")
-                                (println "  • Added backend-migrate service (uncommented)")
-                                (println "")
-                                (println "🔧 COMMAND MAPPINGS:")
-                                (println "  lein ring server-headless     → clojure -M:dev -m lipas.backend.system")
-                                (println "  lein uberjar                  → clojure -T:build uber")
-                                (println "  lein migratus migrate         → clojure -M:migrate migrate")
-                                (println "  lein test                     → clojure -M:dev:test")
-                                (println "  lein test :integration        → clojure -M:dev:test-integration")
-                                (println "  lein run -m <ns>              → clojure -M -m <ns>")
-                                (println "  lein trampoline run -m <ns>   → clojure -M -m <ns>")
-                                (println "")
-                                (println "🚀 NEW DOCKER TASKS:")
-                                (println "  bb docker-build    - Build uberjar in Docker")
-                                (println "  bb docker-migrate  - Run migrations in Docker")
-                                (println "  bb docker-test     - Run tests in Docker")
-                                (println "  bb docker-seed     - Seed database in Docker")
-                                (println "  bb docker-dev      - Start dev backend")
-                                (println "")
-                                (println "📁 FILES:")
-                                (println "  Original: docker-compose-original.yml")
-                                (println "  Updated:  docker-compose-updated.yml")
-                                (println "")
-                                (println "To apply: cp docker-compose-updated.yml ../docker-compose.yml"))}
-
-         docker-apply {:doc "Apply the Docker Compose changes"
-                       :task (do (println "Applying Docker Compose changes...")
-                                 (shell "cp docker-compose-updated.yml ../docker-compose.yml")
-                                 (println "✅ Docker Compose file updated!")
-                                 (println "The new configuration uses deps.edn instead of Leiningen.")
-                                 (println "You can now use 'bb docker-*' tasks or docker-compose directly."))}
-
          ;; Test Tasks
          test {:doc "Run fast tests (excludes integration tests)"
                :task (shell "clojure -M:dev:test")}

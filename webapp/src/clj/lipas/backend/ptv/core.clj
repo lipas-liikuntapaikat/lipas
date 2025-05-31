@@ -45,21 +45,21 @@
 
 (defn make-overview
   [sites]
-  {:city-name         (->> sites first :search-meta :location :city :name)
-   :service-name      (->> sites first :search-meta :type :sub-category :name)
+  {:city-name (->> sites first :search-meta :location :city :name)
+   :service-name (->> sites first :search-meta :type :sub-category :name)
    :sports-facilities (for [site sites]
                         {:type (-> site :search-meta :type :name :fi)})})
 
 (defn generate-ptv-service-descriptions
   [search
    {:keys [sub-category-id city-codes overview]}]
-  (let [doc        (or overview
-                       (let [type-codes (->> (types/by-sub-category sub-category-id)
-                                             (map :type-code))
-                             sites      (ptv/get-eligible-sites search {:type-codes type-codes
-                                                                        :city-codes city-codes
-                                                                        :owners     ["city" "city-main-owner"]})]
-                         (make-overview sites)))]
+  (let [doc (or overview
+                (let [type-codes (->> (types/by-sub-category sub-category-id)
+                                      (map :type-code))
+                      sites (ptv/get-eligible-sites search {:type-codes type-codes
+                                                            :city-codes city-codes
+                                                            :owners ["city" "city-main-owner"]})]
+                  (make-overview sites)))]
     (-> (ai/generate-ptv-service-descriptions doc)
         :message
         :content)))
@@ -113,14 +113,14 @@
 
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
-  (let [id       (-> ptv :service-channel-ids first)
+  (let [id (-> ptv :service-channel-ids first)
         ;; merge or just replace?
-        site     (update site :ptv merge ptv)
+        site (update site :ptv merge ptv)
         ;; Use the same TS for sourceId, ptv last-sync and site event-date
-        now      (utils/timestamp)
-        data     (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-        data     (cond-> data
-                   archive? (assoc :publishingStatus "Deleted"))
+        now (utils/timestamp)
+        data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+        data (cond-> data
+               archive? (assoc :publishingStatus "Deleted"))
         ;; Note: Update request doesn't update Service connections!
 
         ;; TODO: Would be nice to avoid this, by getting the previous
@@ -142,7 +142,7 @@
                   new-services (set/difference new-services old-services)
                   service-channel-id (first (:service-channel-ids (:ptv site)))]
               (log/infof "Update PTV service-location, add services %s, remove services %s"
-                        new-services removed-services)
+                         new-services removed-services)
               (doseq [service-id removed-services]
                 (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
               (doseq [service-id new-services]
@@ -166,9 +166,9 @@
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
                          (cond->
-                           archive? (dissoc :source-id
-                                            :service-channel-ids
-                                            :delete-existing)))]
+                          archive? (dissoc :source-id
+                                           :service-channel-ids
+                                           :delete-existing)))]
 
     (log/infof "Resp %s" ptv-resp)
 
@@ -182,8 +182,8 @@
   ;; FIXME: Separate version from this fn for use in sync-ptv! which doesn't load the
   ;; sports site from db etc.?
   (jdbc/with-db-transaction [tx db]
-    (let [site     (db/get-sports-site db lipas-id)
-          _        (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
+    (let [site (db/get-sports-site db lipas-id)
+          _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
 
           [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                  {:org-id org-id
@@ -240,43 +240,43 @@
                                (:delete-existing ptv)))
 
           type-code-changed? (not= type-code (:previous-type-code ptv))
-          ptv  (if type-code-changed?
-                 (let [types types/all
+          ptv (if type-code-changed?
+                (let [types types/all
                        ;; Figure out what services are available in PTV for the site organization
-                       services (:itemList (ptv/get-org-services ptv-component org-id))
-                       source-id->service (->> services
-                                               (utils/index-by :sourceId))
+                      services (:itemList (ptv/get-org-services ptv-component org-id))
+                      source-id->service (->> services
+                                              (utils/index-by :sourceId))
 
                        ;; Check if services for the current/new site type-code exist
-                       missing-services-input [{:service-ids #{}
-                                                :sub-category-id (-> sports-site :type :type-code types :sub-category)
-                                                :sub-cateogry    (-> sports-site :search-meta :type :sub-category :name :fi)}]
-                       missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
+                      missing-services-input [{:service-ids #{}
+                                               :sub-category-id (-> sports-site :type :type-code types :sub-category)
+                                               :sub-cateogry (-> sports-site :search-meta :type :sub-category :name :fi)}]
+                      missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
 
                        ;; FE doesn't update the :ptv :service-ids, that is still handled here.
                        ;; This code just presumes the user has created the possibly missing Sercices
                        ;; in the FE first.
 
-                       _ (when (seq missing-services)
-                           (throw (ex-info "Site needs a PTV Service that doesn't exists"
-                                           {:missing-services missing-services})))
+                      _ (when (seq missing-services)
+                          (throw (ex-info "Site needs a PTV Service that doesn't exists"
+                                          {:missing-services missing-services})))
 
                        ;; Remove old service-ids from :ptv data and add the new.
                        ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
                        ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
                        ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
-                       old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
-                       old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
-                       new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                   (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
-                              (:previous-type-code ptv) type-code
-                              old-service-ids new-service-ids)
-                   (update ptv :service-ids (fn [ids]
-                                              (let [x (set ids)
-                                                    x (apply disj x old-service-ids)
-                                                    x (into x new-service-ids)]
-                                                (vec x)))))
-                 ptv)
+                      old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
+                      old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
+                      new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                  (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
+                             (:previous-type-code ptv) type-code
+                             old-service-ids new-service-ids)
+                  (update ptv :service-ids (fn [ids]
+                                             (let [x (set ids)
+                                                   x (apply disj x old-service-ids)
+                                                   x (into x new-service-ids)]
+                                               (vec x)))))
+                ptv)
 
           [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                   {:org-id org-id
@@ -320,14 +320,41 @@
         (core/upsert-sports-site! tx user site)
         (core/index! search site :sync)))))
 
+(defn save-ptv-audit
+  "Saves PTV audit information for a sports site."
+  [db search user {:keys [lipas-id audit]}]
+  (tap> user)
+  (jdbc/with-db-transaction [tx db]
+    (when-let [site (core/get-sports-site tx lipas-id)]
+      ;; Add timestamp and auditor information to the audit data
+      (let [now (utils/timestamp)
+            user-id (str (or (:id user) (get-in user [:login :user :id])))
+
+            ;; Add timestamp and auditor-id to the audit data
+            audit-with-meta (assoc audit
+                                   :timestamp now
+                                   :auditor-id user-id)
+
+            ;; Update the site's PTV data with the audit info
+            ;; IMPORTANT: Preserve the original author when updating
+            updated-site (-> site
+                             (assoc :event-date now)
+                             (assoc-in [:ptv :audit] audit-with-meta))
+
+            ;; Use the original author for the database update
+            original-author {:id (:author-id (meta site))}]
+
+        ;; Save and index the updated site with original author preserved
+        (core/upsert-sports-site!* tx original-author updated-site)
+        (core/index! search updated-site :sync)
+
+        ;; Return the updated audit data
+        (get-in updated-site [:ptv :audit])))))
+
 (comment
   (generate-ptv-service-descriptions
    (user/search)
    {:sub-category-id 2200
-    :city-codes [992 #_92]
-    })
-
+    :city-codes [992 #_92]})
   (generate-ptv-descriptions (user/search) 612967)
-  (generate-ptv-descriptions (user/search) 506032)
-
-  )
+  (generate-ptv-descriptions (user/search) 506032))

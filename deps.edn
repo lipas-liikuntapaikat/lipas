@@ -9,8 +9,4 @@
   :nrepl {:extra-paths ["dev" "webapp/dev" "webapp/test/clj"]
           :extra-deps {nrepl/nrepl {:mvn/version "1.3.1"}}
           :jvm-opts ["-Djdk.attach.allowAttachSelf"]
-          :main-opts ["-m" "nrepl.cmdline" "--port" "7888"]}
-
-  :mcp {:extra-deps {clojure-mcp/clojure-mcp {:local/root "/Users/tipo/dev/clojure-mcp"}}
-        :exec-fn clojure-mcp.main/start-mcp-server
-        :exec-args {:port 7888}}}}
+          :main-opts ["-m" "nrepl.cmdline" "--port" "7888"]}}}

@@ -1,6 +1,7 @@
 (ns lipas.test-utils
   (:require [cheshire.core :as j]
             [clojure.java.jdbc :as jdbc]
+            [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
             [clojure.string :as str]
@@ -105,12 +106,22 @@
    "integration_out_queue"
    "reminder"
    "sports_site"
-   "subsidy"])
+   "subsidy"
+   "loi"])
 
+;; For all other tests except the legacy WFS compatibility layer
 (defn prune-db! []
   (jdbc/execute! (:db config) [(str "TRUNCATE "
                                     (str/join "," tables)
                                     " RESTART IDENTITY CASCADE")]))
+
+(def wfs-up-ddl
+  (slurp (io/resource "migrations/20250209182407-legacy-wfs.up.sql")))
+
+;; For the legacy WFS compatibility layer tests
+(defn prune-wfs-schema! []
+  (jdbc/execute! (:db config) [(str "DROP SCHEMA IF EXISTS wfs CASCADE;"
+                                    wfs-up-ddl)]))
 
 ;; Likely all test system components are stateless, so maybe ok to start without ever halting this.
 ;; But take steps to also stop the system before starting it again on each reload of this ns.
