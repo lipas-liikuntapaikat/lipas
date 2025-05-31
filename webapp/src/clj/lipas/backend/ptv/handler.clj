@@ -182,16 +182,7 @@
                                    [:description {:optional true} #'ptv-schema/audit-field]]]]}
       :handler
       (fn [req]
-        (let [body (-> req :parameters :body)
-              audit (:audit body)]
-          ;; Additional validation to catch extra fields in audit sub-maps
-          (if (or (and (contains? audit :summary)
-                       (let [summary (:summary audit)]
-                         (some #(not (contains? #{:status :feedback} %)) (keys summary))))
-                  (and (contains? audit :description)
-                       (let [description (:description audit)]
-                         (some #(not (contains? #{:status :feedback} %)) (keys description)))))
-            {:status 400 :body {:error "Invalid audit field: extra keys not allowed"}}
-            (if-let [result (ptv-core/save-ptv-audit db search (:identity req) body)]
-              {:status 200 :body result}
-              {:status 404 :body {:error "Sports site not found"}}))))}}]])
+        (let [body (-> req :parameters :body)]
+          (if-let [result (ptv-core/save-ptv-audit db search (:identity req) body)]
+            {:status 200 :body result}
+            {:status 404 :body {:error "Sports site not found"}})))}}]])

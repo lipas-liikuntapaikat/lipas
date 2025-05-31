@@ -323,6 +323,7 @@
 (defn save-ptv-audit
   "Saves PTV audit information for a sports site."
   [db search user {:keys [lipas-id audit]}]
+  (tap> user)
   (jdbc/with-db-transaction [tx db]
     (when-let [site (core/get-sports-site tx lipas-id)]
       ;; Add timestamp and auditor information to the audit data
@@ -341,7 +342,7 @@
                              (assoc-in [:ptv :audit] audit-with-meta))
 
             ;; Use the original author for the database update
-            original-author (:author site)]
+            original-author {:id (:author-id (meta site))}]
 
         ;; Save and index the updated site with original author preserved
         (core/upsert-sports-site!* tx original-author updated-site)
@@ -355,6 +356,5 @@
    (user/search)
    {:sub-category-id 2200
     :city-codes [992 #_92]})
-
   (generate-ptv-descriptions (user/search) 612967)
   (generate-ptv-descriptions (user/search) 506032))

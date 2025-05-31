@@ -17,7 +17,7 @@
     utils/->snake-case-keywords
     (assoc :document sports-site))))
 
-(defn unmarshall [{:keys [document]}]
-  document)
+(defn unmarshall [{:keys [document author_id status]}]
+  (with-meta document {:author-id author_id :doc-status status}))
 
 (hugsql/def-db-fns "sql/sports_site.sql")
