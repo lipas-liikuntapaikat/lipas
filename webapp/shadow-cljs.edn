@@ -1,5 +1,6 @@
 {:deps {:aliases [:dev]}
  :dev-http {3449 "resources/public"}
+ :nrepl {:port 64195}
  :builds
  {:app
   {:target     :browser
