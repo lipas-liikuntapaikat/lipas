@@ -12,6 +12,7 @@
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [re-frame.core :as rf]
             [uix.core :as uix :refer [$ defui]]))
@@ -93,6 +94,7 @@
                                      (.. e -target -value)]))}))))
 
 ;; Complete audit form for a site with single save button
+;; Complete audit form for a site with single save button
 (defui site-form
   [{:keys [tr lipas-id site]}]
   (let [has-privilege? (use-subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
@@ -100,12 +102,20 @@
         site-audit-data (use-subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
         summary-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :summary])
         description-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :description])
+        org-id (use-subscribe [:lipas.ui.ptv.subs/selected-org-id])
 
         ;; Check if at least one field has status set for validation
         any-status? (or summary-status description-status)]
 
     ($ Paper {:sx #js{:p 3}}
        ($ Typography {:variant "h6"} (:name site))
+
+       ;; Service Location Preview Section
+       ($ Box {:sx #js{:mt 3 :mb 3}}
+          ($ Typography {:variant "h6" :sx #js{:mb 2}} "PTV-palvelupaikan esikatselu")
+          ($ ptv-components/service-location-preview
+             {:org-id org-id
+              :lipas-id lipas-id}))
 
        ;; Summary content
        ($ content-panel
