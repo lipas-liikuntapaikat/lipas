@@ -156,10 +156,7 @@
                         (mock/content-type "application/json")
                         (mock/body (->json {:lipas-id nonexistent-id
                                             :audit {:summary audit-data}}))
-                        (tu/token-header token)))
-
-          body (safe-parse-json resp)]
-
+                        (tu/token-header token)))]
       (is (= 404 (:status resp))))))
 
 (deftest save-ptv-audit-empty-audit-data-test

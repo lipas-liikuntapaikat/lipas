@@ -1,11 +1,16 @@
 (ns lipas.ui.ptv.views
-  (:require ["@mui/icons-material/Close$default" :as CloseIcon]
+  (:require ["@mui/icons-material/CheckCircle$default" :as CheckCircleIcon]
+            ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/HourglassTop$default" :as PartialIcon]
             ["@mui/icons-material/Sync$default" :as Sync]
             ["@mui/icons-material/SyncDisabled$default" :as SyncDisabled]
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
+            ["@mui/icons-material/Warning$default" :as WarningIcon]
             ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
             ["@mui/material/Button$default" :as Button]
@@ -96,6 +101,26 @@
         :on-change (fn [_e v]
                      (on-change [(:value v)]))})))
 
+(defn audit-feedback-component
+  "Displays audit feedback for a specific field (summary or description)"
+  [{:keys [lipas-id field-name]}]
+  (let [feedback (<== [::subs/site-audit-field-feedback lipas-id field-name])
+        status (<== [::subs/site-audit-field-status lipas-id field-name])]
+    (when (and feedback (not (str/blank? feedback)))
+      ($ Alert
+       {:severity (case status
+                    "changes-requested" "error"
+                    "approved" "success"
+                    "warning")
+        :variant "outlined"
+        :sx #js {:mt 1 :mb 1}}
+       ($ AlertTitle
+          (case status
+            "changes-requested" "Auditoijan palaute - vaatii muutoksia"
+            "approved" "Auditoijan palaute - hyväksytty"
+            "Auditoijan palaute"))
+       feedback))))
+
 (defn form
   [{:keys [org-id tr site]}]
   (let [services @(rf/subscribe [::subs/services org-id])
@@ -167,6 +192,11 @@
              :label "Tiivistelmä"
              :value (get-in site [:summary @selected-tab])}]
 
+           ;; Summary audit feedback
+           [audit-feedback-component
+            {:lipas-id (:lipas-id site)
+             :field-name :summary}]
+
            ;; Description
            [lui/text-field
             {:disabled loading?
@@ -177,6 +207,11 @@
              :label "Kuvaus"
              :value (get-in site [:description @selected-tab])}]
 
+           ;; Description audit feedback
+           [audit-feedback-component
+            {:lipas-id (:lipas-id site)
+             :field-name :description}]
+
            (if (:sync-enabled site)
              [mui/button {:disabled loading?
                           :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
@@ -186,11 +221,52 @@
               "Tallenna"])]]))]))
 
 (defn table []
-  (r/with-let [expanded-rows (r/atom {})]
+  (r/with-let [expanded-rows (r/atom {})
+               show-only-changes-requested (r/atom false)]
     (let [tr (<== [:lipas.ui.subs/translator])
           org-id (<== [::subs/selected-org-id])
           sites (<== [::subs/sports-sites org-id])
           sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
+
+          ;; Helper function to determine audit status
+
+          ;; Audit status component
+          audit-status-cell (fn [site]
+                              (let [{:keys [audit-status]} site
+
+                                    audit-data (get-in site [:ptv :audit])
+                                    last-audit (some-> audit-data :timestamp (subs 0 10))
+                                    summary-status (get-in audit-data [:summary :status])
+                                    desc-status (get-in audit-data [:description :status])
+
+                                    tooltip-text (case audit-status
+                                                   :changes-requested
+                                                   (str "Muutoksia pyydetty "
+                                                        (when last-audit (str last-audit " - "))
+                                                        (when (= summary-status "changes-requested") "Tiivistelmä ")
+                                                        (when (= desc-status "changes-requested") "Kuvaus"))
+
+                                                   :approved
+                                                   (str "Hyväksytty " (or last-audit ""))
+
+                                                   :partial
+                                                   (str "Osittain auditoitu " (or last-audit ""))
+
+                                                   :none
+                                                   "Ei auditoitu")]
+
+                                [mui/table-cell {:sx #js{:textAlign "center"}}
+                                 (when (not= audit-status :none)
+                                   ($ Tooltip {:title tooltip-text}
+                                      (case audit-status
+                                        :changes-requested
+                                        ($ WarningIcon {:sx #js{:color "warning.main" :fontSize "large" :width "32px" :height "32px"}})
+
+                                        :approved
+                                        ($ CheckCircleIcon {:sx #js{:color "success.main" :fontSize "large" :width "32px" :height "32px"}})
+
+                                        :partial
+                                        ($ PartialIcon {:sx #js{:color "info.main" :fontSize "large" :width "32px" :height "32px"}}))))]))
 
           headers [{:key :expand :label "" :padding "checkbox"}
                    #_{:key :selected :label (tr :ptv.actions/export)
@@ -200,7 +276,8 @@
                        {:value sync-all-enabled?
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
-                   {:key :event-data :label "Tila"}
+                   {:key :event-data :label "Integraatio" :sx {:textAlign "center"}}
+                   {:key :audit :label "Audit" :sx {:textAlign "center"}}
                    #_{:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
                    {:key :type :label (tr :general/type)}
@@ -219,15 +296,25 @@
           [mui/table-head
            [mui/table-row
             (doall
-             (for [{:keys [key label action-component padding]} headers]
-               [mui/table-cell {:key (name key) :padding padding}
+             (for [{:keys [key label action-component padding sx]} headers]
+               [mui/table-cell {:key (name key) :padding padding :sx (clj->js sx)}
                 action-component
                 label]))]]
 
           ;; Body
           [mui/table-body
            (doall
-            (for [{:keys [lipas-id sync-status] :as site} (sort-by :type sites)]
+            (for [{:keys [lipas-id sync-status] :as site}
+                  ;; Sort by audit priority first, then by type
+                  (sort-by (fn [site]
+                             (let [audit-priority (case (:audit-status site)
+                                                    :changes-requested 1 ; Most critical
+                                                    :partial 2 ; Needs completion
+                                                    :none 3 ; Not audited
+                                                    :approved 4 ; All good
+                                                    5)] ; Default/unknown
+                               [audit-priority (:type site)]))
+                           sites)]
 
               [:<> {:key lipas-id}
 
@@ -251,10 +338,11 @@
                     {:value (:sync-enabled site)
                      :on-change #(==> [::events/toggle-sync-enabled site %])}]]
 
-                [mui/table-cell
+                [mui/table-cell {:sx #js{:textAlign "center"}}
                  ($ Stack
                     {:direction "row"
-                     :alignItems "center"}
+                     :alignItems "center"
+                     :justifyContent "center"}
                     ($ Tooltip {:placement "right-end"
                                 :title (if (:sync-enabled site)
                                          (case sync-status
@@ -277,6 +365,9 @@
                                  {:color "white"}))
                             ($ SyncDisabled {:background "white"}))))
                     #_(:event-date-human site))]
+
+                ;; Audit status
+                (audit-status-cell site)
 
                 ;; Last-sync
                 #_[mui/table-cell
