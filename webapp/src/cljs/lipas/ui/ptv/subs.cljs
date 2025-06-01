@@ -3,7 +3,6 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
-            [lipas.ui.utils :as utils]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.utils :as utils :refer [prod?]]
             [re-frame.core :as rf]))
@@ -19,8 +18,9 @@
 
 (rf/reg-sub ::selected-tab
   :<- [::ptv]
-  (fn [ptv _]
-    (:selected-tab ptv)))
+  :<- [::default-tab]
+  (fn [[ptv default-tab] _]
+    (or (:selected-tab ptv) default-tab)))
 
 (rf/reg-sub ::selected-step
   :<- [::ptv]
@@ -62,12 +62,19 @@
 (rf/reg-sub ::users-orgs
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user-data _]
-    (filterv (fn [{:keys [city-codes :as _org]}]
-               (some
-                (fn [city-code]
-                  (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
-                city-codes))
-             orgs)))
+    (cond
+      ;; If user has audit privilege (global), show all orgs
+      (roles/check-privilege user-data {} :ptv/audit)
+      orgs
+
+      ;; Otherwise, filter by manage privilege per city-code
+      :else
+      (filterv (fn [{:keys [city-codes :as _org]}]
+                 (some
+                   (fn [city-code]
+                     (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
+                   city-codes))
+               orgs))))
 
 (rf/reg-sub ::selected-org
   :<- [::ptv]
@@ -96,21 +103,21 @@
   (fn [ptv [_ org-id]]
     (when org-id
       (let [{:keys [services _service-channels]} (get-in ptv [:org org-id :data])]
-        (for [s  services
+        (for [s services
               sc (:serviceChannels s)]
           (let [service-name (->> s
                                   :serviceNames
                                   (ptv-data/select-service-name))
                 channel-name (-> sc :serviceChannel :name)]
-            {:label                       (str service-name " > " channel-name)
-             :service-id                  (:id s)
-             :service-name                service-name
+            {:label (str service-name " > " channel-name)
+             :service-id (:id s)
+             :service-name service-name
              :service-description-summary (->> s
                                                :serviceDescriptions
                                                (some (comp #{"summary"} :type)))
-             :service-modified            (:modified s)
+             :service-modified (:modified s)
 
-             :service-channel-id   (-> sc :serviceChannel :id)
+             :service-channel-id (-> sc :serviceChannel :id)
              :service-channel-name channel-name
             ;; TODO rest of the gunk, service hours, descriptions etc.
              }))))))
@@ -130,22 +137,22 @@
     (for [[id service] services]
       (let [service-name (->> service :serviceNames (ptv-data/select-service-name))
             descriptions (->> service :serviceDescriptions (filter #(= (:type %) "Description")))
-            summaries    (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
-        {:label               service-name
-         :service-id          id
-         :source-id           (:sourceId service)
-         :last-modified       (:modified service)
+            summaries (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
+        {:label service-name
+         :service-id id
+         :source-id (:sourceId service)
+         :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
-         :service-classes     (->> service
-                                   :serviceClasses
-                                   (map (fn [m]
-                                          (utils/index-by (comp langs :language) :value (:name m)))))
-         :languages           (map langs (:languages service))
-         :summary             (utils/index-by (comp langs :language) :value summaries)
-         :description         (utils/index-by (comp langs :language) :value descriptions)
-         :service-name        service-name
-         :service-modified    (:modified service)
-         :service-channels    (->> service :serviceChannels (map :serviceChannel))
+         :service-classes (->> service
+                               :serviceClasses
+                               (map (fn [m]
+                                      (utils/index-by (comp langs :language) :value (:name m)))))
+         :languages (map langs (:languages service))
+         :summary (utils/index-by (comp langs :language) :value summaries)
+         :description (utils/index-by (comp langs :language) :value descriptions)
+         :service-name service-name
+         :service-modified (:modified service)
+         :service-channels (->> service :serviceChannels (map :serviceChannel))
          :city-codes (->> service
                           :areas
                           (mapcat (fn [{:keys [type municipalities]}]
@@ -153,10 +160,10 @@
                                       municipalities)))
                           (map (comp parse-long :code))
                           vec)
-         :ontology-terms      (->> service
-                                   :ontologyTerms
-                                   (map (fn [m]
-                                          (utils/index-by (comp langs :language) :value (:name m)))))}))))
+         :ontology-terms (->> service
+                              :ontologyTerms
+                              (map (fn [m]
+                                     (utils/index-by (comp langs :language) :value (:name m)))))}))))
 
 (rf/reg-sub ::services-filter
   :<- [::ptv]
@@ -192,7 +199,7 @@
 
 (rf/reg-sub ::service-details-tab
   :<- [::ptv]
-  (fn [ptv [_ ]]
+  (fn [ptv [_]]
     (:service-details-tab ptv)))
 
 (rf/reg-sub ::service-preview
@@ -202,13 +209,13 @@
           descriptions (get-in ptv [:org org-id :data :service-candidates source-id])
           org-params (ptv-data/org-id->params org-id)]
       (ptv-data/->ptv-service
-       {:org-id org-id
-        :city-codes (:city-codes org-params)
-        :source-id source-id
-        :sub-category-id sub-category-id
-        :languages (ptv-data/org-id->languages org-id)
-        :description (:description descriptions)
-        :summary (:summary descriptions)}))))
+        {:org-id org-id
+         :city-codes (:city-codes org-params)
+         :source-id source-id
+         :sub-category-id sub-category-id
+         :languages (ptv-data/org-id->languages org-id)
+         :description (:description descriptions)
+         :summary (:summary descriptions)}))))
 
 (rf/reg-sub ::service-location-preview
   :<- [::ptv]
@@ -235,8 +242,8 @@
                  manual-services)
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
-                      summary     (get-in descriptions [source-id :summary])
-                      languages   (ptv-data/org-id->languages org-id)]
+                      summary (get-in descriptions [source-id :summary])
+                      languages (ptv-data/org-id->languages org-id)]
                   (-> m
                       (assoc :languages languages)
                       (assoc :description description)
@@ -263,7 +270,7 @@
   (fn [channels [_ _org-id]]
     (for [m channels]
       {:service-channel-id (:id m)
-       :name               (ptv-data/resolve-service-channel-name m)})))
+       :name (ptv-data/resolve-service-channel-name m)})))
 
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
@@ -312,15 +319,15 @@
   (fn [{:keys [processed-lipas-ids size halt? in-progress?]} _]
     (let [processed-count (count processed-lipas-ids)]
       {:processed-lipas-ids (set processed-lipas-ids)
-       :in-progress?        in-progress?
-       :halt?               halt?
-       :total-count         size
-       :processed-count     processed-count
-       :processed-percent   (if (pos? size)
-                              (if (zero? processed-count)
-                                0
-                                (* 100 (- 1 (/ (- size processed-count) size))))
-                              100)})))
+       :in-progress? in-progress?
+       :halt? halt?
+       :total-count size
+       :processed-count processed-count
+       :processed-percent (if (pos? size)
+                            (if (zero? processed-count)
+                              0
+                              (* 100 (- 1 (/ (- size processed-count) size))))
+                            100)})))
 
 (rf/reg-sub ::sports-site-setup-done
   (fn [[_ org-id]]
@@ -374,11 +381,11 @@
   :<- [::service-descriptions-generation]
   (fn [{:keys [processed-ids size halt? in-progress?]} _]
     (let [processed-count (count processed-ids)]
-      {:processed-ids     (set processed-ids)
-       :in-progress?      in-progress?
-       :halt?             halt?
-       :total-count       size
-       :processed-count   processed-count
+      {:processed-ids (set processed-ids)
+       :in-progress? in-progress?
+       :halt? halt?
+       :total-count size
+       :processed-count processed-count
        :processed-percent (if (pos? size)
                             (if (zero? processed-count)
                               0
@@ -395,15 +402,15 @@
   (fn [{:keys [processed-ids size halt? in-progress?]} _]
     (let [processed-count (count processed-ids)]
       {:processed-lipas-ids (set processed-ids)
-       :in-progress?        in-progress?
-       :halt?               halt?
-       :total-count         size
-       :processed-count     processed-count
-       :processed-percent   (if (pos? size)
-                              (if (zero? processed-count)
-                                0
-                                (* 100 (- 1 (/ (- size processed-count) size))))
-                              100)})))
+       :in-progress? in-progress?
+       :halt? halt?
+       :total-count size
+       :processed-count processed-count
+       :processed-percent (if (pos? size)
+                            (if (zero? processed-count)
+                              0
+                              (* 100 (- 1 (/ (- size processed-count) size))))
+                            100)})))
 
 (rf/reg-sub ::services-creation
   :<- [::ptv]
@@ -414,15 +421,15 @@
   :<- [::services-creation]
   (fn [{:keys [processed-ids size halt? in-progress?]} _]
     (let [processed-count (count processed-ids)]
-      {:in-progress?        in-progress?
-       :halt?               halt?
-       :total-count         size
-       :processed-count     processed-count
-       :processed-percent   (if (pos? size)
-                              (if (zero? processed-count)
-                                0
-                                (* 100 (- 1 (/ (- size processed-count) size))))
-                              100)})))
+      {:in-progress? in-progress?
+       :halt? halt?
+       :total-count size
+       :processed-count processed-count
+       :processed-percent (if (pos? size)
+                            (if (zero? processed-count)
+                              0
+                              (* 100 (- 1 (/ (- size processed-count) size))))
+                            100)})))
 
 (rf/reg-sub ::missing-subcategories
   (fn [[_ org-id]]
@@ -440,3 +447,111 @@
                                :label (get-in sub-cat [:name :fi])}))))
               []
               sub-cats))))
+
+;; PTV Audit subscriptions
+(rf/reg-sub ::audit
+  :<- [::ptv]
+  (fn [ptv _]
+    (:audit ptv)))
+
+(rf/reg-sub ::audit-tab
+  :<- [::audit]
+  (fn [audit _]
+    (get audit :selected-tab :summary)))
+
+(rf/reg-sub ::saving-audit?
+  :<- [::audit]
+  (fn [audit _]
+    (:saving? audit)))
+
+(rf/reg-sub ::audit-feedback
+  :<- [::audit]
+  (fn [audit [_ field]]
+    (get-in audit [:feedback field])))
+
+(rf/reg-sub ::audit-status
+  :<- [::audit]
+  (fn [audit [_ field]]
+    (get-in audit [:status field])))
+
+(rf/reg-sub ::site-audit-data
+  (fn [db [_ lipas-id]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit]))))
+
+(rf/reg-sub ::site-audit-field-feedback
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :feedback]))))
+
+(rf/reg-sub ::site-audit-field-status
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :id])]
+      (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
+
+(rf/reg-sub ::has-audit-privilege?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user-data _]
+    (roles/check-privilege user-data {} :ptv/audit)))
+
+(rf/reg-sub ::has-manage-privilege?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user-data _]
+    (roles/check-privilege user-data {} :ptv/manage)))
+
+(rf/reg-sub ::default-tab
+  :<- [::has-manage-privilege?]
+  :<- [::has-audit-privilege?]
+  (fn [[has-manage? has-audit?] _]
+    (cond
+      has-manage? "wizard"
+      has-audit? "audit"
+      :else nil)))
+
+(rf/reg-sub ::selected-audit-site
+  :<- [::ptv]
+  (fn [ptv _]
+    (:selected-audit-site ptv)))
+
+(rf/reg-sub ::selected-audit-tab
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:audit :selected-tab] "todo")))
+
+(rf/reg-sub ::auditable-sites
+  (fn [[_ org-id status]]
+    [(rf/subscribe [::ptv])])
+  (fn [[ptv] [_ org-id status]]
+    (let [sites (get-in ptv [:org org-id :data :sports-sites] {})
+
+          filter-fn (case status
+                      ;; Sites with content but not audited yet
+                      :todo (fn [site]
+                              (let [ptv (:ptv site)]
+                                (and
+                                 ;; Has summary and description content
+                                  (some-> ptv :summary :fi count (> 5))
+                                  (some-> ptv :description :fi count (> 5))
+                                 ;; Not already audited
+                                  (or (nil? (get-in ptv [:audit :summary :status]))
+                                      (nil? (get-in ptv [:audit :description :status]))))))
+
+                      ;; Sites that have been fully audited
+                      :completed (fn [site]
+                                   (let [ptv (:ptv site)]
+                                     (and
+                                      ;; Has audit data for both summary and description
+                                       (some? (get-in ptv [:audit :summary :status]))
+                                       (some? (get-in ptv [:audit :description :status])))))
+
+                      ;; All sites with PTV content
+                      (fn [site]
+                        (let [ptv (:ptv site)]
+                          (and
+                            (some-> ptv :summary :fi count (> 5))
+                            (some-> ptv :description :fi count (> 5))))))]
+
+      ;; Apply filter and sort by name
+      (->> (vals sites)
+           (filter filter-fn)
+           (sort-by :name)))))

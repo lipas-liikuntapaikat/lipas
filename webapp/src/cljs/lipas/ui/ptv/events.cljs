@@ -909,3 +909,70 @@
 
   (rf/dispatch [::fetch-services {:id ptv-data/uta-org-id-test}])
   (rf/dispatch [::select-org nil]))
+
+;; PTV Audit events
+
+(rf/reg-event-db ::select-audit-tab
+  (fn [db [_ v]]
+    (assoc-in db [:ptv :audit :selected-tab] v)))
+
+(rf/reg-event-db ::update-audit-feedback
+  (fn [db [_ lipas-id field value]]
+    (let [org-id (get-in db [:ptv :selected-org :id])
+          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
+      (assoc-in db (conj path :feedback) value))))
+
+(rf/reg-event-db ::update-audit-status
+  (fn [db [_ lipas-id field status]]
+    (let [org-id (get-in db [:ptv :selected-org :id])
+          path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
+      (-> db
+          (assoc-in (conj path :status) status)
+          ;; Add timestamp when status is changed
+          (assoc-in (conj path :timestamp) (utils/timestamp))))))
+
+(rf/reg-event-fx ::save-ptv-audit
+  (fn [{:keys [db]} [_ lipas-id audit-data]]
+    (let [token (-> db :user :login :token)]
+      (when (seq audit-data) ; Only proceed if we have some audit data
+        {:db (-> db
+                 (assoc-in [:ptv :audit :saving?] true))
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/save-ptv-audit")
+                :params          {:lipas-id lipas-id
+                                  :audit audit-data}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::save-ptv-audit-success lipas-id]
+                :on-failure      [::save-ptv-audit-failure]}]]}))))
+
+(rf/reg-event-fx ::save-ptv-audit-success
+  (fn [{:keys [db]} [_ lipas-id resp]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-success)
+                        :success? true}
+          org-id (get-in db [:ptv :selected-org :id])]
+      {:db (-> db
+               (assoc-in [:ptv :audit :saving?] false)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::save-ptv-audit-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:ptv :audit :saving?] false)
+               (assoc-in [:ptv :errors :audit] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-db ::select-audit-site
+  (fn [db [_ site]]
+    (assoc-in db [:ptv :selected-audit-site] site)))
+
+(rf/reg-event-db ::select-audit-tab
+  (fn [db [_ tab]]
+    (assoc-in db [:ptv :audit :selected-tab] tab)))

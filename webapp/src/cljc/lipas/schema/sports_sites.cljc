@@ -78,7 +78,6 @@
                                        description
                                        extras-schema
                                        location-schema]}]
-  ;; TODO audit
   (mu/merge
    [:map
     {:title title

@@ -56,55 +56,55 @@
   nil)
 
 (defn address-search-dialog []
-  (let [tr      (<== [:lipas.ui.subs/translator])
-        open?   (<== [::subs/address-search-dialog-open?])
-        value   (<== [::subs/address-search-keyword])
-        toggle  (fn [] (==> [::events/toggle-address-search-dialog]))
+  (let [tr (<== [:lipas.ui.subs/translator])
+        open? (<== [::subs/address-search-dialog-open?])
+        value (<== [::subs/address-search-keyword])
+        toggle (fn [] (==> [::events/toggle-address-search-dialog]))
         results (<== [::subs/address-search-results])]
     [lui/dialog
-     {:open?         open?
-      :title         (tr :map.address-search/title)
-      :on-close      toggle
+     {:open? open?
+      :title (tr :map.address-search/title)
+      :on-close toggle
       :save-enabled? false
-      :cancel-label  (tr :actions/close)}
+      :cancel-label (tr :actions/close)}
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [lui/text-field
         {:auto-focus true
-         :fullWidth  true
-         :defer-ms   150
-         :label      (tr :search/search)
-         :value      value
-         :on-change  #(==> [::events/update-address-search-keyword %])}]]
+         :fullWidth true
+         :defer-ms 150
+         :label (tr :search/search)
+         :value value
+         :on-change #(==> [::events/update-address-search-keyword %])}]]
       [mui/grid {:item true :xs 12}
        (into
-         [mui/list]
-         (for [m results]
-           [mui/list-item            {:button   true
-             :on-click #(==> [::events/show-address m])}
-            [mui/list-item-text
-             (:label m)]]))]]]))
+        [mui/list]
+        (for [m results]
+          [mui/list-item {:button true
+                          :on-click #(==> [::events/show-address m])}
+           [mui/list-item-text
+            (:label m)]]))]]]))
 
 (defn restore-site-backup-dialog []
-  (let [tr       (<== [:lipas.ui.subs/translator])
-        open?    (<== [::subs/restore-site-backup-dialog-open?])
+  (let [tr (<== [:lipas.ui.subs/translator])
+        open? (<== [::subs/restore-site-backup-dialog-open?])
         lipas-id (<== [::subs/restore-site-backup-lipas-id])
-        error    (<== [::subs/restore-site-backup-error])]
+        error (<== [::subs/restore-site-backup-error])]
     [lui/dialog
-     {:open?         open?
-      :title         (tr :map.tools/restore-backup-tooltip)
-      :on-close      #(==> [::events/close-restore-site-backup-dialog])
+     {:open? open?
+      :title (tr :map.tools/restore-backup-tooltip)
+      :on-close #(==> [::events/close-restore-site-backup-dialog])
       :save-enabled? false
-      :cancel-label  (tr :actions/close)}
+      :cancel-label (tr :actions/close)}
      [mui/grid {:container true}
       [mui/grid {:item true :xs 12}
        [mui/grid {:item true}
-          [:input
-           {:type      "file"
-            :accept    ".json"
-            :on-change #(==> [::events/restore-site-backup
-                              (-> % .-target .-files)
-                              lipas-id])}]]]
+        [:input
+         {:type "file"
+          :accept ".json"
+          :on-change #(==> [::events/restore-site-backup
+                            (-> % .-target .-files)
+                            lipas-id])}]]]
       (when error
         [mui/grid {:item true :xs 12}
          [mui/typography {:variant "h6"} "Error"]
@@ -115,13 +115,13 @@
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [mui/slide {:direction "up" :in open?}
      [:r> (react/forwardRef
-            (fn [_props ref]
-              (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
-                             @simplify-tool-component])))]]))
+           (fn [_props ref]
+             (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
+                            @simplify-tool-component])))]]))
 
 (defn simplify-tool
   [{:keys [tr on-change on-close]
-    :or   {on-close #(==> [::events/close-simplify-tool])}}]
+    :or {on-close #(==> [::events/close-simplify-tool])}}]
   (let [tolerance (<== [::subs/simplify-tolerance])]
     [mui/paper {:style {:padding "1em"} :elevation 5}
      [mui/grid {:container true}
@@ -144,11 +144,11 @@
          [mui/slider
           {:size "small"
            :on-change #(==> [::events/set-simplify-tolerance %2])
-           :value     tolerance
-           :marks     (mapv (fn [n] {:label (str n) :value n}) (range 11))
-           :step      0.5
-           :min       0
-           :max       10}]]
+           :value tolerance
+           :marks (mapv (fn [n] {:label (str n) :value n}) (range 11))
+           :step 0.5
+           :min 0
+           :max 10}]]
 
         ;; More
         [mui/grid {:item true}
@@ -161,30 +161,30 @@
         ;; OK
         [mui/grid {:item true}
          [mui/button
-          {:variant  "contained"
-           :color    "secondary"
+          {:variant "contained"
+           :color "secondary"
            :on-click #(on-change tolerance)}
           "OK"]]
 
         ;; Cancel
         [mui/grid {:item true}
          [mui/button
-          {:variant  "outlined"
+          {:variant "outlined"
            :on-click on-close}
           (tr :actions/cancel)]]]]]]))
 
 (defn layer-switcher [{:keys [tr]}]
   (let [basemaps {:taustakartta (tr :map.basemap/taustakartta)
                   :maastokartta (tr :map.basemap/maastokartta)
-                  :ortokuva     (tr :map.basemap/ortokuva)}
-        basemap  (<== [::subs/basemap])]
+                  :ortokuva (tr :map.basemap/ortokuva)}
+        basemap (<== [::subs/basemap])]
     [mui/grid {:container true :direction "column"}
      [mui/grid {:item true}
       [lui/select
-       {:items     basemaps
-        :value     (:layer basemap)
-        :label-fn  second
-        :value-fn  first
+       {:items basemaps
+        :value (:layer basemap)
+        :label-fn second
+        :value-fn first
         :on-change #(==> [::events/select-basemap %])}]]
      [mui/grid {:item true}
       [mui/typography {:variant "caption"}
@@ -193,63 +193,63 @@
 (defn overlay-selector
   [{:keys [tr]}]
   (r/with-let [anchor-el (r/atom nil)]
-    (let [overlays          {:light-traffic
-                             {:label  (tr :map.overlay/light-traffic)
-                              :label2 "© Väylävirasto"
-                              :icon   [mui/icon "timeline"]}
-                             :retkikartta-snowmobile-tracks
-                             {:label  (tr :map.overlay/retkikartta-snowmobile-tracks)
-                              :label2 "© Metsähallitus"
-                              :icon   [mui/icon
-                                       {:style {:color "#0000FF"}}
-                                       "timeline"]}
-                             :mml-kiinteisto
-                             {:label  (tr :map.overlay/mml-kiinteisto)
-                              :label2 "© Maanmittauslaitos"
-                              :icon   [mui/icon
-                                       {:style {:color "red"}}
-                                       "timeline"]}
-                             :mml-kiinteistotunnukset
-                             {:label  "Kiinteistötunnukset"
-                              :label2 "© Maanmittauslaitos"
-                              :icon   [mui/icon
-                                       {:style {:color "black"}}
-                                       "text_format"]}
-                             :mml-kuntarajat
-                             {:label  "Kuntarajat"
-                              :label2 "© Maanmittauslaitos"
-                              :icon   [mui/icon
-                                       {:style {:color "#6222BC"}}
-                                       "timeline"]}}
+    (let [overlays {:light-traffic
+                    {:label (tr :map.overlay/light-traffic)
+                     :label2 "© Väylävirasto"
+                     :icon [mui/icon "timeline"]}
+                    :retkikartta-snowmobile-tracks
+                    {:label (tr :map.overlay/retkikartta-snowmobile-tracks)
+                     :label2 "© Metsähallitus"
+                     :icon [mui/icon
+                            {:style {:color "#0000FF"}}
+                            "timeline"]}
+                    :mml-kiinteisto
+                    {:label (tr :map.overlay/mml-kiinteisto)
+                     :label2 "© Maanmittauslaitos"
+                     :icon [mui/icon
+                            {:style {:color "red"}}
+                            "timeline"]}
+                    :mml-kiinteistotunnukset
+                    {:label "Kiinteistötunnukset"
+                     :label2 "© Maanmittauslaitos"
+                     :icon [mui/icon
+                            {:style {:color "black"}}
+                            "text_format"]}
+                    :mml-kuntarajat
+                    {:label "Kuntarajat"
+                     :label2 "© Maanmittauslaitos"
+                     :icon [mui/icon
+                            {:style {:color "#6222BC"}}
+                            "timeline"]}}
           selected-overlays (<== [::subs/selected-overlays])]
       [:<>
        (into
 
-         [mui/menu
-          {:open            (boolean @anchor-el)
-           :anchorEl       @anchor-el
-           :anchorOrigin    {:vertical "top" :horizontal "left"}
-           :transformOrigin {:vertical "bottom" :horizontal "left"}
-           :on-close        #(reset! anchor-el nil)}]
+        [mui/menu
+         {:open (boolean @anchor-el)
+          :anchorEl @anchor-el
+          :anchorOrigin {:vertical "top" :horizontal "left"}
+          :transformOrigin {:vertical "bottom" :horizontal "left"}
+          :on-close #(reset! anchor-el nil)}]
 
-         (for [[k {:keys [label label2 icon]}] overlays
-               :let                            [v (contains? selected-overlays k)]]
-           [mui/menu-item
-            {:button   true
-             :on-click #(==> [::events/toggle-overlay k])}
-            [mui/list-item-icon
-             [mui/checkbox
-              {:checked   (boolean v)
-               :size      "medium"
-               :value     (str v)
-               :color     "secondary"
-               :on-change #()}]]
-            [mui/list-item-text
-             {:primaryTypographyProps   {:style {:font-size "0.9em" :margin-right "2em"}}
-              :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
-              :primary                  label :secondary label2}]
-            [mui/list-item-icon
-             icon]]))
+        (for [[k {:keys [label label2 icon]}] overlays
+              :let [v (contains? selected-overlays k)]]
+          [mui/menu-item
+           {:button true
+            :on-click #(==> [::events/toggle-overlay k])}
+           [mui/list-item-icon
+            [mui/checkbox
+             {:checked (boolean v)
+              :size "medium"
+              :value (str v)
+              :color "secondary"
+              :on-change #()}]]
+           [mui/list-item-text
+            {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
+             :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
+             :primary label :secondary label2}]
+           [mui/list-item-icon
+            icon]]))
 
        [mui/grid {:item true}
         [mui/tooltip {:title (tr :map.overlay/tooltip)}
@@ -265,28 +265,28 @@
     (let [opacity (<== [::subs/basemap-opacity])]
       [:<>
        [mui/popper
-        {:id        "basemap-transparency-selector"
+        {:id "basemap-transparency-selector"
          :placement "top"
-         :open      (some? @anchor-el)
-         :anchorEl  @anchor-el}
+         :open (some? @anchor-el)
+         :anchorEl @anchor-el}
         [mui/paper
          {:style
-          {:width          "200px"
-           :padding-right  "2em"
-           :padding-left   "2em"
-           :padding-top    "0.5em"
+          {:width "200px"
+           :padding-right "2em"
+           :padding-left "2em"
+           :padding-top "0.5em"
            :padding-bottom "0.5em"
-           :margin-bottom  "1em"}}
+           :margin-bottom "1em"}}
          #_[mui/typography {:variant "caption"} (tr :map.basemap/transparency)]
          [mui/slider
-          {:size      "small"
-           :value     (- 1 opacity)
+          {:size "small"
+           :value (- 1 opacity)
            :on-change #(==> [::events/set-basemap-opacity (- 1 %2)])
-           :marks     [{:value 0 :label "0%"}
-                       {:value 1 :label "100%"}]
-           :step      0.05
-           :min       0.0
-           :max       1.0}]]]
+           :marks [{:value 0 :label "0%"}
+                   {:value 1 :label "100%"}]
+           :step 0.05
+           :min 0.0
+           :max 1.0}]]]
        [mui/tooltip {:title (tr :map.basemap/transparency)}
         [mui/icon-button
          {:on-click (fn [evt]
@@ -329,17 +329,17 @@
             [mui/table-cell (tr :type/geometry)]
             [mui/table-cell (tr :general/description)]]]
           (into
-            [mui/table-body {:component "th" :scope "row"}]
-            (for [row sorted-and-filtered-table-data]
-              [mui/table-row {:on-click #(on-select (row :type-code))}
-               [mui/table-cell (row :name)]
-               [mui/table-cell (->>  row :geometry-type (keyword :type) tr)]
-               [mui/table-cell (row :description)]]))]]]])))
+           [mui/table-body {:component "th" :scope "row"}]
+           (for [row sorted-and-filtered-table-data]
+             [mui/table-row {:on-click #(on-select (row :type-code))}
+              [mui/table-cell (row :name)]
+              [mui/table-cell (->> row :geometry-type (keyword :type) tr)]
+              [mui/table-cell (row :description)]]))]]]])))
 
 (defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)
                geom-help-open? (r/atom false)]
-    (let [locale        (tr)]
+    (let [locale (tr)]
       [:<>
 
        ;; Modal
@@ -361,12 +361,12 @@
         ;; Autocomplete
         [mui/grid {:item true :xs 11}
          [lui/autocomplete
-          {:multi?    false
-           :items     (vals types)
-           :value     @selected-type
-           :label     (tr :type/name)
-           :value-fn  :type-code
-           :label-fn  (comp locale :name)
+          {:multi? false
+           :items (vals types)
+           :value @selected-type
+           :label (tr :type/name)
+           :value-fn :type-code
+           :label-fn (comp locale :name)
            :on-change #(reset! selected-type %)}]]
 
         ;; Apu ankka button
@@ -382,23 +382,23 @@
           [mui/grid {:item true :xs 12}
            [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
-           [mui/button {:on-click   #(on-change @selected-type)
+           [mui/button {:on-click #(on-change @selected-type)
                         :auto-focus true
-                        :variant    "contained"
-                        :color      "secondary"}
+                        :variant "contained"
+                        :color "secondary"}
             "OK"]])]])))
 
 (defmulti popup-body :type)
 
 (defmethod popup-body :default [popup]
-  (let [name'  (-> popup :data :features first :properties :name)
+  (let [name' (-> popup :data :features first :properties :name)
         status (-> popup :data :features first :properties :status)
-        tr     (-> popup :tr)
+        tr (-> popup :tr)
         locale (tr)]
     [mui/paper
      {:style
       {:padding "0.5em"
-       :width   (when (< 100 (count name')) "150px")}}
+       :width (when (< 100 (count name')) "150px")}}
      [mui/typography {:variant "body2"}
       name']
      (when-not (#{"active"} status)
@@ -406,25 +406,25 @@
         (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :loi [popup]
-  (let [loi-type     (-> popup :data :features first :properties :loi-type)
+  (let [loi-type (-> popup :data :features first :properties :loi-type)
         loi-category (-> popup :data :features first :properties :loi-category)
-        #_#_tr       (-> popup :tr)
-        texts        (<== [:lipas.ui.loi.subs/popup-localized loi-type loi-category])]
+        #_#_tr (-> popup :tr)
+        texts (<== [:lipas.ui.loi.subs/popup-localized loi-type loi-category])]
     [mui/paper
      {:style
       {:padding "0.5em"
-       :width   (when (< 100 (count loi-type)) "150px")}}
+       :width (when (< 100 (count loi-type)) "150px")}}
      [mui/typography {:variant "body2"}
       (:loi-type texts)]
      [mui/typography {:variant "caption"}
       (:loi-category texts)]]))
 
 (defmethod popup-body :population [popup]
-  (let [tr          (<== [:lipas.ui.subs/translator])
+  (let [tr (<== [:lipas.ui.subs/translator])
         zone-labels (<== [:lipas.ui.analysis.reachability.subs/zones-popup-labels])
-        metric      (<== [:lipas.ui.analysis.reachability.subs/selected-travel-metric])
-        data        (-> popup :data :features first :properties)
-        zone-id     (keyword (:zone data))]
+        metric (<== [:lipas.ui.analysis.reachability.subs/selected-travel-metric])
+        data (-> popup :data :features first :properties)
+        zone-id (keyword (:zone data))]
     [mui/paper
      {:style
       {:padding "0.5em"}}
@@ -452,7 +452,7 @@
           (get-in zone-labels [[metric zone-id]])]]]]]]))
 
 (defmethod popup-body :school [popup]
-  (let [data   (-> popup :data :features first :properties)]
+  (let [data (-> popup :data :features first :properties)]
     [mui/paper
      {:style
       {:padding "0.5em"}}
@@ -462,7 +462,7 @@
       (:type data)]]))
 
 (defmethod popup-body :diversity-grid [popup]
-  (let [tr   (<== [:lipas.ui.subs/translator])
+  (let [tr (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
     [mui/paper
      {:style
@@ -487,7 +487,7 @@
           (or (:population data) "<10")]]]]]]))
 
 (defmethod popup-body :diversity-area [popup]
-  (let [tr   (<== [:lipas.ui.subs/translator])
+  (let [tr (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
     [mui/paper
      {:style
@@ -526,7 +526,7 @@
           [mui/table-cell
            [mui/typography {:variant "caption" :no-wrap true}
             (utils/round-safe
-              (:population-weighted-mean data))]]]
+             (:population-weighted-mean data))]]]
 
          ;; Population
          [mui/table-row
@@ -574,7 +574,7 @@
         tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)
         properties (use-subscribe [::subs/edit-geom-properties fid])
-        value  (:route-part-difficulty properties)]
+        value (:route-part-difficulty properties)]
     ($ Paper
        {:sx
         #js {:padding 2
@@ -609,7 +609,7 @@
 
 (defn popup [{:keys [popup-ref]}]
   (let [{:keys [data placement]
-         :as   popup'} (<== [::subs/popup])
+         :as popup'} (<== [::subs/popup])
         tr (<== [:lipas.ui.subs/translator])
         [anchor-el set-anchor-el] (uix/use-state nil)]
     [:<>
@@ -618,7 +618,7 @@
                    (set! (.-current popup-ref) el))}]
      (when (seq data)
        [mui/popper
-        {:open      (boolean (seq data))
+        {:open (boolean (seq data))
          :placement (or placement "top-end")
          ;; FIXME:
          :anchor-el anchor-el
@@ -633,24 +633,24 @@
 
 (defn address-locator
   [{:keys [tr lipas-id cities]}]
-  (let [first-point      (<== [:lipas.ui.sports-sites.subs/editing-first-point lipas-id])
-        dialog-open?     (<== [::subs/address-locator-dialog-open?])
+  (let [first-point (<== [:lipas.ui.sports-sites.subs/editing-first-point lipas-id])
+        dialog-open? (<== [::subs/address-locator-dialog-open?])
         selected-address (<== [::subs/address-locator-selected-address])
-        addresses        (<== [::subs/address-locator-addresses])]
+        addresses (<== [::subs/address-locator-addresses])]
 
     [:<>
 
      ;; Dialog
      [lui/dialog
-      {:open?         dialog-open?
-       :title         (tr :map.resolve-address/choose-address)
-       :save-label    "Ok"
+      {:open? dialog-open?
+       :title (tr :map.resolve-address/choose-address)
+       :save-label "Ok"
        :save-enabled? (some? selected-address)
-       :on-close      #(==> [::events/close-address-locator-dialog])
-       :cancel-label  (tr :actions/cancel)
-       :on-save       (fn []
-                        (==> [::events/close-address-locator-dialog])
-                        (==> [::events/populate-address-with-reverse-geocoding-results lipas-id (vals cities) {:features [{:properties selected-address}]}]))}
+       :on-close #(==> [::events/close-address-locator-dialog])
+       :cancel-label (tr :actions/cancel)
+       :on-save (fn []
+                  (==> [::events/close-address-locator-dialog])
+                  (==> [::events/populate-address-with-reverse-geocoding-results lipas-id (vals cities) {:features [{:properties selected-address}]}]))}
 
       [mui/grid {:container true :spacing 2}
 
@@ -665,23 +665,23 @@
        ;; Address selector
        [mui/grid {:item true :xs 12}
         [lui/autocomplete
-         {:label        (tr :map.resolve-address/addresses)
-          :items        addresses
-          :value        selected-address
-          :label-fn     :label
+         {:label (tr :map.resolve-address/addresses)
+          :items addresses
+          :value selected-address
+          :label-fn :label
           #_#_:label-fn #(str (:label %) " " (:confidence %) " " (:distance %))
-          :value-fn     identity
-          :sort-fn      (juxt (comp - :confidence) :distance)
-          :on-change    #(==> [::events/select-address-locator-address %])}]]]]
+          :value-fn identity
+          :sort-fn (juxt (comp - :confidence) :distance)
+          :on-change #(==> [::events/select-address-locator-address %])}]]]]
 
      ;; Button
      [lui/locator-button
-      {:tooltip  (tr :map.resolve-address/tooltip)
+      {:tooltip (tr :map.resolve-address/tooltip)
        :on-click (fn []
                    (==> [::events/open-address-locator-dialog])
                    (==> [::events/resolve-address
-                         {:lon        (first first-point)
-                          :lat        (second first-point)
+                         {:lon (first first-point)
+                          :lat (second first-point)
                           :on-success [:lipas.ui.map.events/on-reverse-geocoding-success]}]))}]]))
 
 (defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? editing? can-edit-map? geom-type]}]
@@ -734,7 +734,7 @@
                "change_history"])]
            [mui/list-item-text (case geom-type
                                  "LineString" (tr :map/draw-linestring)
-                                 "Polygon"    (tr :map/draw-polygon))]])
+                                 "Polygon" (tr :map/draw-polygon))]])
 
         ;; Delete geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
@@ -748,7 +748,7 @@
              {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
            [mui/list-item-text (case geom-type
                                  "LineString" (tr :map/remove-linestring)
-                                 "Polygon"    (tr :map/remove-polygon))]])
+                                 "Polygon" (tr :map/remove-polygon))]])
 
         ;; Split linestring
         (when (and editing? can-edit-map? (#{"LineString"} geom-type))
@@ -839,41 +839,41 @@
 (defn sports-site-view
   [{:keys [tr site-data width]}]
   (let [display-data (:display-data site-data)
-        lipas-id     (:lipas-id display-data)
-        edit-data    (:edit-data site-data)
+        lipas-id (:lipas-id display-data)
+        edit-data (:edit-data site-data)
 
         role-site-ctx (roles/site-roles-context display-data)
 
-        type-code            (-> display-data :type :type-code)
-        #_#_football-types   (<== [:lipas.ui.sports-sites.football.subs/type-codes])
+        type-code (-> display-data :type :type-code)
+        #_#_football-types (<== [:lipas.ui.sports-sites.football.subs/type-codes])
 
-        accessibility-type?  (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
+        accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
-        activity-value       (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
-        view-activities?     (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
-        edit-activities?     (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
+        activity-value (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
+        view-activities? (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
+        edit-activities? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
 
-        floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-        floorball-type?      (contains? floorball-types type-code)
-        view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
-        edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
+        floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+        floorball-type? (contains? floorball-types type-code)
+        view-floorball? (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
+        edit-floorball? (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
-        hide-actions?        (<== [::subs/hide-actions?])
+        hide-actions? (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
         {:keys [types admins owners editing? edits-valid?
                 problems? editing-allowed? delete-dialog-open?
-                can-publish? logged-in?  size-categories sub-mode
+                can-publish? logged-in? size-categories sub-mode
                 geom-type portal save-in-progress? undo redo
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
         ;; Show PTV tab in read-only mode only when sync is enabled.
         ;; In edit mode show only when it's possible to sync.
-        view-ptv?            (and (if editing?
-                                    (ptv-data/ptv-candidate? edit-data)
-                                    (:sync-enabled (:ptv display-data)))
-                                  (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
+        view-ptv? (and (if editing?
+                         (ptv-data/ptv-candidate? edit-data)
+                         (:sync-enabled (:ptv display-data)))
+                       (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
 
         ;; Allow map tools to be used with either regular or activity privileges
         can-use-map-tools? (or can-publish?
@@ -903,7 +903,7 @@
 
     [mui/grid
      {:container true
-      :style     (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
+      :style (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
 
      (when editing?
        [import/import-geoms-view
@@ -917,8 +917,8 @@
 
       ;; Headline
       [mui/grid
-       {:container   true
-        :style       {:flex-wrap "nowrap"}
+       {:container true
+        :style {:flex-wrap "nowrap"}
         :align-items :center}
 
        [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
@@ -931,30 +931,30 @@
                    {:on-change (fn [tolerance]
                                  (let [geoms (-> edit-data :location :geometries)]
                                    (==> [::events/simplify lipas-id geoms tolerance])))
-                    :tr        tr}]))
+                    :tr tr}]))
 
        [mui/grid {:item true}
         ;; Close button
         [mui/grid {:item true}
          (when (not editing?)
            [mui/icon-button
-            {:style    {:margin-left "-0.25em"}
+            {:style {:margin-left "-0.25em"}
              :on-click #(==> [::events/show-sports-site nil])}
             [mui/icon "close"]])]]]
 
       ;; Tabs
       [mui/grid {:item true :xs 12}
        [mui/tabs
-        {:value       selected-tab
-         :on-change   #(==> [::events/select-sports-site-tab %2])
-         :variant     (if view-activities?
-                        "scrollable"
-                        "fullWidth")
+        {:value selected-tab
+         :on-change #(==> [::events/select-sports-site-tab %2])
+         :variant (if view-activities?
+                    "scrollable"
+                    "fullWidth")
          #_#_:variant "scrollable"
          #_#_:variant "standard"
-         :style       {:margin-bottom "1em"}
+         :style {:margin-bottom "1em"}
          :indicator-color "secondary"
-         :text-color  "secondary"}
+         :text-color "secondary"}
         [mui/tab
          {:style {:min-width 0}
           :value 0
@@ -998,7 +998,7 @@
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
-          {:tr       tr
+          {:tr tr
            :lipas-id lipas-id
            :on-close #(==> [::sports-site-events/toggle-delete-dialog])}])
 
@@ -1017,46 +1017,46 @@
 
              ^{:key (str "basic-data-" lipas-id)}
              [sports-sites/form
-              {:tr              tr
-               :display-data    display-data
-               :edit-data       edit-data
-               :read-only?      (or (not editing?) (not can-publish?))
+              {:tr tr
+               :display-data display-data
+               :edit-data edit-data
+               :read-only? (or (not editing?) (not can-publish?))
                :status-read-only? false
-               :types           (vals types)
+               :types (vals types)
                :size-categories size-categories
-               :admins          admins
-               :owners          owners
-               :on-change       set-field
-               :lipas-id        lipas-id
-               :sub-headings?   true}]
+               :admins admins
+               :owners owners
+               :on-change set-field
+               :lipas-id lipas-id
+               :sub-headings? true}]
 
              ^{:key (str "location-" lipas-id)}
              [sports-sites/location-form
-              {:tr                        tr
-               :read-only?                (or (not editing?) (not can-publish?))
-               :cities                    (vals cities)
-               :edit-data                 (:location edit-data)
-               :display-data              (:location display-data)
-               :on-change                 (partial set-field :location)
-               :sub-headings?             true
+              {:tr tr
+               :read-only? (or (not editing?) (not can-publish?))
+               :cities (vals cities)
+               :edit-data (:location edit-data)
+               :display-data (:location display-data)
+               :on-change (partial set-field :location)
+               :sub-headings? true
                :address-locator-component (when editing?
                                             [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
-               :address-required?         (not (#{201 2011} type-code))}]]]
+               :address-required? (not (#{201 2011} type-code))}]]]
 
          ;; Properties tab - "Lisätiedot"
          1 [sports-sites/properties-form
-            {:tr           tr
-             :type-code    (or (-> edit-data :type :type-code) type-code)
-             :read-only?   (or (not editing?) (not can-publish?))
-             :on-change    (partial set-field :properties)
+            {:tr tr
+             :type-code (or (-> edit-data :type :type-code) type-code)
+             :read-only? (or (not editing?) (not can-publish?))
+             :on-change (partial set-field :properties)
              :display-data (:properties display-data)
-             :edit-data    (:properties edit-data)
-             :editing?     (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
-             :geoms        (-> edit-data :location :geometries)
-             :geom-type    geom-type
-             :problems?    problems?
-             :key          (-> edit-data :type :type-code)
-             :pools        (:pools edit-data)}]
+             :edit-data (:properties edit-data)
+             :editing? (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
+             :geoms (-> edit-data :location :geometries)
+             :geom-type geom-type
+             :problems? problems?
+             :key (-> edit-data :type :type-code)
+             :pools (:pools edit-data)}]
 
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]
@@ -1067,25 +1067,25 @@
               [mui/tabs {:value "floorball" :variant "standard"}
                [mui/tab {:value "floorball" :label "Salibandy"}]]
               [floorball/form
-               {:tr           tr
-                :lipas-id     lipas-id
-                :type-code    (or (-> edit-data :type :type-code) type-code)
-                :read-only?   (or (not edit-floorball?) (not editing?))
-                :on-change    set-field
+               {:tr tr
+                :lipas-id lipas-id
+                :type-code (or (-> edit-data :type :type-code) type-code)
+                :read-only? (or (not edit-floorball?) (not editing?))
+                :on-change set-field
                 :display-data display-data
-                :edit-data    edit-data
-                :key          (-> edit-data :type :type-code)}]]
+                :edit-data edit-data
+                :key (-> edit-data :type :type-code)}]]
 
              ;; Football specific
              #_#_football-types
                [football/circumstances-form
-                {:tr           tr
-                 :type-code    (or (-> edit-data :type :type-code) type-code)
-                 :read-only?   (not editing?)
-                 :on-change    (partial set-field :circumstances)
+                {:tr tr
+                 :type-code (or (-> edit-data :type :type-code) type-code)
+                 :read-only? (not editing?)
+                 :on-change (partial set-field :circumstances)
                  :display-data (:circumstances display-data)
-                 :edit-data    (:circumstances edit-data)
-                 :key          (-> edit-data :type :type-code)}])
+                 :edit-data (:circumstances edit-data)
+                 :key (-> edit-data :type :type-code)}])
 
          4 (when (#{"LineString"} geom-type)
              [mui/grid {:item true :xs 12 :style {:margin-top "0.5em"}}
@@ -1093,24 +1093,23 @@
 
          5 [mui/grid {:item true :xs 12}
             [activities/view
-             {:tr           tr
-              :lipas-id     lipas-id
-              :type-code    type-code
+             {:tr tr
+              :lipas-id lipas-id
+              :type-code type-code
               :display-data display-data
-              :edit-data    edit-data
-              :can-edit?    edit-activities?}]]
+              :edit-data edit-data
+              :can-edit? edit-activities?}]]
 
          6 [mui/grid {:item true :xs 12}
             ($ ptv-site/site-view
-               {:tr           tr
-                :lipas-id     lipas-id
-                :type-code    type-code
+               {:tr tr
+                :lipas-id lipas-id
+                :type-code type-code
                 ; :display-data display-data
-                :edit-data    edit-data
-                :can-edit?    can-publish?
-                })])]
+                :edit-data edit-data
+                :can-edit? can-publish?})])]
 
-     ;; "Landing bay" for floating tools
+;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
 
      ;; Actions
@@ -1118,143 +1117,143 @@
         [lui/floating-container
          {:bottom 0 :background-color "transparent"}
          (into
-           [mui/grid
-            {:container     true
-             :align-items   "center"
-             :align-content "flex-start"
-             :spacing       1
-             :style         {:padding "0.5em 0em 0.5em 0em"}}]
-           (->>
-             [;; Undo
+          [mui/grid
+           {:container true
+            :align-items "center"
+            :align-content "flex-start"
+            :spacing 1
+            :style {:padding "0.5em 0em 0.5em 0em"}}]
+          (->>
+           [;; Undo
               ;; TODO: Undo/redo are only for map edits, so not useful if
               ;; you only have floorball or activity privileges (if current activity doesn't have map tools)
-              (when editing?
-                [mui/tooltip {:title (tr :actions/undo)}
-                 [:span
-                  [mui/fab
-                   {:disabled (not undo)
-                    :size     "small"
-                    :on-click #(==> [::events/undo lipas-id])}
-                   [mui/icon "undo"]]]])
+            (when editing?
+              [mui/tooltip {:title (tr :actions/undo)}
+               [:span
+                [mui/fab
+                 {:disabled (not undo)
+                  :size "small"
+                  :on-click #(==> [::events/undo lipas-id])}
+                 [mui/icon "undo"]]]])
 
            ;; Redo
-              (when editing?
-                [mui/tooltip {:title (tr :actions/redo)}
-                 [:span
-                  [mui/fab
-                   {:disabled (not redo)
-                    :size     "small"
-                    :on-click #(==> [::events/redo lipas-id])}
-                   [mui/icon "redo"]]]])
+            (when editing?
+              [mui/tooltip {:title (tr :actions/redo)}
+               [:span
+                [mui/fab
+                 {:disabled (not redo)
+                  :size "small"
+                  :on-click #(==> [::events/redo lipas-id])}
+                 [mui/icon "redo"]]]])
 
             ;; Active editing tool
-              (when (and editing? (seq map-tool-items))
-                [mui/tooltip
-                 {:title
+            (when (and editing? (seq map-tool-items))
+              [mui/tooltip
+               {:title
+                (case sub-mode
+                  :drawing (tr :map.tools/drawing-tooltip)
+                  :drawing-hole (tr :map.tools/drawing-hole-tooltip)
+                  (:editing :undo) (tr :map/delete-vertices-hint)
+                  :importing (tr :map.tools/importing-tooltip)
+                  :deleting (tr :map.tools/deleting-tooltip)
+                  :splitting (tr :map.tools/splitting-tooltip)
+                  :simplifying (tr :map.tools/simplifying-tooltip)
+                  :selecting (tr :map.tools/selecting-tooltip)
+                  :travel-direction (tr :map.tools/travel-direction-tooltip)
+                  :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                  :view-only "-")}
+               [mui/fab
+                {:size "small"
+                 :on-click #() ; noop
+                 :color "inherit"}
+                (let [props {:color "secondary"}]
                   (case sub-mode
-                    :drawing          (tr :map.tools/drawing-tooltip)
-                    :drawing-hole     (tr :map.tools/drawing-hole-tooltip)
-                    (:editing :undo)  (tr :map/delete-vertices-hint)
-                    :importing        (tr :map.tools/importing-tooltip)
-                    :deleting         (tr :map.tools/deleting-tooltip)
-                    :splitting        (tr :map.tools/splitting-tooltip)
-                    :simplifying      (tr :map.tools/simplifying-tooltip)
-                    :selecting        (tr :map.tools/selecting-tooltip)
-                    :travel-direction (tr :map.tools/travel-direction-tooltip)
-                    :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
-                    :view-only        "-")}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #() ; noop
-                   :color    "inherit"}
-                  (let [props {:color "secondary"}]
-                    (case sub-mode
-                      :drawing          (case geom-type
-                                          "Point"      [mui/icon props "edit"]
-                                          "LineString" [mui/icon props "timeline"]
-                                          "Polygon"    [mui/icon props "change_history"])
-                      :drawing-hole     [mui/icon props "vignette"]
-                      (:editing :undo)  [mui/icon props "edit"]
-                      :importing        [:> FileUpload props]
-                      :deleting         [:> Eraser props]
-                      :splitting        [:> ContentCut props]
-                      :simplifying      [mui/icon props "auto_fix_high"]
-                      :selecting        [mui/icon props "handshake"]
-                      :travel-direction [mui/icon props "turn_slight_right"]
-                      :route-part-difficulty [mui/icon props "warning"]
-                      :view-only        [mui/icon props "dash"]))]])
+                    :drawing (case geom-type
+                               "Point" [mui/icon props "edit"]
+                               "LineString" [mui/icon props "timeline"]
+                               "Polygon" [mui/icon props "change_history"])
+                    :drawing-hole [mui/icon props "vignette"]
+                    (:editing :undo) [mui/icon props "edit"]
+                    :importing [:> FileUpload props]
+                    :deleting [:> Eraser props]
+                    :splitting [:> ContentCut props]
+                    :simplifying [mui/icon props "auto_fix_high"]
+                    :selecting [mui/icon props "handshake"]
+                    :travel-direction [mui/icon props "turn_slight_right"]
+                    :route-part-difficulty [mui/icon props "warning"]
+                    :view-only [mui/icon props "dash"]))]])
 
            ;; Tool select button
-              (when editing?
-                (when (seq map-tool-items)
-                  [:<>
-                   [mui/tooltip {:title (tr :actions/select-tool)}
-                    [mui/fab
-                     {:size     "medium"
-                      :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-                      :color    "secondary"}
-                     [mui/icon "more_horiz"]]]
+            (when editing?
+              (when (seq map-tool-items)
+                [:<>
+                 [mui/tooltip {:title (tr :actions/select-tool)}
+                  [mui/fab
+                   {:size "medium"
+                    :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
+                    :color "secondary"}
+                   [mui/icon "more_horiz"]]]
 
-                   (into [mui/menu
-                          {:variant    "menu"
-                           :auto-focus false
-                           :anchor-el  more-tools-menu-anchor
-                           :open       (some? more-tools-menu-anchor)
-                           :on-close   #(==> [::events/close-more-tools-menu])}]
-                         map-tool-items)]))
+                 (into [mui/menu
+                        {:variant "menu"
+                         :auto-focus false
+                         :anchor-el more-tools-menu-anchor
+                         :open (some? more-tools-menu-anchor)
+                         :on-close #(==> [::events/close-more-tools-menu])}]
+                       map-tool-items)]))
 
            ;; Download GPX
-              (when (and (not editing?) (#{"LineString"} geom-type))
-                [mui/tooltip {:title (tr :map/download-gpx)}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #(==> [::events/download-gpx lipas-id])
-                   :color    "inherit"}
-                  [mui/icon "save_alt"]]])
+            (when (and (not editing?) (#{"LineString"} geom-type))
+              [mui/tooltip {:title (tr :map/download-gpx)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/download-gpx lipas-id])
+                 :color "inherit"}
+                [mui/icon "save_alt"]]])
 
            ;; Zoom to site
-              (when-not editing?
-                [mui/tooltip {:title (tr :map/zoom-to-site)}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #(==> [::events/zoom-to-site lipas-id width])
-                   :color    "inherit"}
-                  [mui/icon {:color "inherit"}
-                   "place"]]])
+            (when-not editing?
+              [mui/tooltip {:title (tr :map/zoom-to-site)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/zoom-to-site lipas-id width])
+                 :color "inherit"}
+                [mui/icon {:color "inherit"}
+                 "place"]]])
 
            ;; Add reminder
-              (when (and logged-in? (not editing?))
-                (let [name (-> display-data :name)
-                      link (-> js/window .-location .-href)]
-                  [reminders/add-button
-                   {:message (tr :reminders/placeholder name link)}]))
+            (when (and logged-in? (not editing?))
+              (let [name (-> display-data :name)
+                    link (-> js/window .-location .-href)]
+                [reminders/add-button
+                 {:message (tr :reminders/placeholder name link)}]))
 
            ;; Copy sports site
-              (when (and logged-in? (not editing?))
-                [mui/tooltip {:title (tr :actions/duplicate)}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #(==> [::events/duplicate-sports-site lipas-id])}
-                  [:> ContentDuplicate]]])
+            (when (and logged-in? (not editing?))
+              [mui/tooltip {:title (tr :actions/duplicate)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/duplicate-sports-site lipas-id])}
+                [:> ContentDuplicate]]])
 
            ;; Resurrect button
-              (when (and dead? logged-in? can-publish? editing-allowed?)
-                [mui/tooltip {:title (tr :actions/resurrect)}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #(==> [::events/resurrect lipas-id])}
-                  [mui/icon "360"]]])
+            (when (and dead? logged-in? can-publish? editing-allowed?)
+              [mui/tooltip {:title (tr :actions/resurrect)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/resurrect lipas-id])}
+                [mui/icon "360"]]])
 
            ;; Analysis
-              (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
-                                         (roles/site-roles-context display-data)
-                                         :analysis-tool/use])
-                         (not editing?))
-                [mui/tooltip {:title (tr :map.demographics/tooltip)}
-                 [mui/fab
-                  {:size     "small"
-                   :on-click #(==> [::events/show-analysis lipas-id])}
-                  [mui/icon "insights"]]])
+            (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
+                                       (roles/site-roles-context display-data)
+                                       :analysis-tool/use])
+                       (not editing?))
+              [mui/tooltip {:title (tr :map.demographics/tooltip)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/show-analysis lipas-id])}
+                [mui/icon "insights"]]])
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -1330,36 +1329,36 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-              ]
+            ]
 
-             (concat
+           (concat
            ;; FIXME: Just reagent elements, maybe :<>
-               (misc/edit-actions-list
-                 {:editing?              editing?
-                  :editing-allowed?      editing-allowed?
-                  :edit-activities?      edit-activities?
-                  :edit-floorball?       edit-floorball?
-                  :save-in-progress?     save-in-progress?
-                  :valid?                edits-valid?
-                  :logged-in?            logged-in?
-                  :user-can-publish?     can-publish?
-                  :on-discard            #(==> [::events/discard-edits lipas-id])
-                  :discard-tooltip       (tr :actions/cancel)
-                  :on-edit-start         #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
-                  :edit-tooltip          (tr :actions/edit)
-                  :on-publish            #(==> [::events/save-edits lipas-id])
-                  :publish-tooltip       (tr :actions/save)
-                  :invalid-message       (tr :error/invalid-form)
-                  :on-delete             #(==> [::events/delete-site])
-                  :delete-tooltip        (tr :lipas.sports-site/delete-tooltip)}))
+            (misc/edit-actions-list
+             {:editing? editing?
+              :editing-allowed? editing-allowed?
+              :edit-activities? edit-activities?
+              :edit-floorball? edit-floorball?
+              :save-in-progress? save-in-progress?
+              :valid? edits-valid?
+              :logged-in? logged-in?
+              :user-can-publish? can-publish?
+              :on-discard #(==> [::events/discard-edits lipas-id])
+              :discard-tooltip (tr :actions/cancel)
+              :on-edit-start #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
+              :edit-tooltip (tr :actions/edit)
+              :on-publish #(==> [::events/save-edits lipas-id])
+              :publish-tooltip (tr :actions/save)
+              :invalid-message (tr :error/invalid-form)
+              :on-delete #(==> [::events/delete-site])
+              :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 
-             (remove nil?)
-             (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
+           (remove nil?)
+           (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
    [mui/fab
-    {:color    "secondary"
+    {:color "secondary"
      :on-click #(==> [::events/start-adding-new-site])}
     [mui/icon "add"]]])
 
@@ -1368,7 +1367,7 @@
 
 (defn add-sports-site-view
   [{:keys [tr width]}]
-  (r/with-let [geom-tab     (r/atom "draw")]
+  (r/with-let [geom-tab (r/atom "draw")]
     (let [locale (tr)
 
           {:keys [type data is-planning? save-enabled? admins owners
@@ -1387,29 +1386,29 @@
 
           role-site-ctx (roles/site-roles-context data)
           type-code (-> data :type :type-code)
-          floorball-types      (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
-          floorball-type?      (contains? floorball-types type-code)
+          floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
+          floorball-type? (contains? floorball-types type-code)
           ;; view-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
-          edit-floorball?      (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
-          set-field            set-new-site-field
-          geom-type            (:geometry-type type)]
+          edit-floorball? (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
+          set-field set-new-site-field
+          geom-type (:geometry-type type)]
 
       [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
 
        [mui/grid {:item true :xs 12}
 
         [import/import-geoms-view
-         {:geom-type     geom-type
-          :on-import     #(==> [::events/import-selected-geoms-to-new])
+         {:geom-type geom-type
+          :on-import #(==> [::events/import-selected-geoms-to-new])
           :show-replace? false}]
 
         (rreset! simplify-tool-component
                  [simplify-tool
-                  {:on-close  (fn []
-                                (==> [::events/new-geom-drawn geom])
-                                (==> [::events/toggle-simplify-dialog]))
+                  {:on-close (fn []
+                               (==> [::events/new-geom-drawn geom])
+                               (==> [::events/toggle-simplify-dialog]))
                    :on-change (fn [tolerance] (==> [::events/simplify-new geom tolerance]))
-                   :tr        tr}])
+                   :tr tr}])
 
         [mui/typography {:variant "h6" :style {:margin-left "8px"}}
          (if-let [type-name (get-in type [:name locale])]
@@ -1425,10 +1424,10 @@
            (tr :lipas.sports-site/creating-planning-site)])
 
         [mui/stepper
-         {:active-step      active-step
+         {:active-step active-step
           :alternativeLabel true
-          :style            {:margin-left  "-18px"}
-          :orientation      "horizontal"
+          :style {:margin-left "-18px"}
+          :orientation "horizontal"
           :sx (fn [theme]
                 #js {".Mui-active" #js {:fill (.. theme -palette -secondary -main)}})}
 
@@ -1451,9 +1450,9 @@
           [mui/grid {:container true}
            [mui/grid {:item true :xs 12}
             [type-selector-single
-             {:value     (when type [(:type-code type)])
-              :tr        tr
-              :types     types
+             {:value (when type [(:type-code type)])
+              :tr tr
+              :types types
               :on-change #(==> [::sports-site-events/select-new-site-type %])}]]])
 
         ;; Step 2 geom
@@ -1468,9 +1467,9 @@
                #_(when (#{"LineString" "Polygon"} geom-type))
                [mui/grid {:item true :xs 12}
 
-                [mui/tabs {:value      @geom-tab
-                           :on-change  #(reset! geom-tab %2)
-                           :variant    "fullWidth"
+                [mui/tabs {:value @geom-tab
+                           :on-change #(reset! geom-tab %2)
+                           :variant "fullWidth"
                            :indicator-color "secondary"
                            :text-color "secondary"}
                  [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
@@ -1497,8 +1496,8 @@
                   [mui/grid {:item true}
                    [mui/button
                     {:disabled (not zoomed?)
-                     :color    "secondary"
-                     :variant  "contained"
+                     :color "secondary"
+                     :variant "contained"
                      :on-click #(==> [::events/start-adding-geom geom-type])}
                     [mui/icon "add_location"]
                     (tr :map/add-to-map)]]])
@@ -1516,37 +1515,37 @@
                      [:<>
                       [mui/grid {:item true :xs 12}
                        [lui/select
-                        {:style     {:min-width "150px"}
-                         :label     "CRS"
-                         :items     [{:value :epsg3067 :label "TM35FIN EUREF"}
-                                     {:value :epsg4326 :label "WGS84"}]
-                         :value     (:crs @state)
+                        {:style {:min-width "150px"}
+                         :label "CRS"
+                         :items [{:value :epsg3067 :label "TM35FIN EUREF"}
+                                 {:value :epsg4326 :label "WGS84"}]
+                         :value (:crs @state)
                          :on-change #(swap! state assoc :crs %1)}]]
                       [mui/grid {:item true :xs 6}
                        [lui/text-field
-                        {:label     (condp = (:crs @state)
-                                      :epsg4326 "Lon"
-                                      :epsg3067 "N")
-                         :type      "number"
-                         :spec      lon-spec
-                         :value     (:lon @state)
+                        {:label (condp = (:crs @state)
+                                  :epsg4326 "Lon"
+                                  :epsg3067 "N")
+                         :type "number"
+                         :spec lon-spec
+                         :value (:lon @state)
                          :on-change #(swap! state assoc :lon %1)}]]
                       [mui/grid {:item true :xs 6}
                        [lui/text-field
-                        {:label     (condp = (:crs @state)
-                                      :epsg4326 "Lat"
-                                      :epsg3067 "E")
-                         :type      "number"
-                         :spec      lat-spec
-                         :value     (:lat @state)
+                        {:label (condp = (:crs @state)
+                                  :epsg4326 "Lat"
+                                  :epsg3067 "E")
+                         :type "number"
+                         :spec lat-spec
+                         :value (:lat @state)
                          :on-change #(swap! state assoc :lat %1)}]]
                       [mui/grid {:item true}
                        [mui/button
-                        {:color    "secondary"
+                        {:color "secondary"
                          :disabled (not (and
-                                          (s/valid? lon-spec (:lon @state))
-                                          (s/valid? lat-spec (:lat @state))))
-                         :variant  "contained"
+                                         (s/valid? lon-spec (:lon @state))
+                                         (s/valid? lat-spec (:lat @state))))
+                         :variant "contained"
                          :on-click #(==> [::events/add-point-from-coords @state])}
                         [mui/icon "add_location"]
                         (tr :map/add-to-map)]]])))
@@ -1563,8 +1562,8 @@
                     ;; Open import dialog button
                     [mui/grid {:item true}
                      [mui/button
-                      {:color    "secondary"
-                       :variant  "contained"
+                      {:color "secondary"
+                       :variant "contained"
                        :on-click #(==> [::events/toggle-import-dialog])}
                       (tr :map.import/tooltip)]]]))]
 
@@ -1580,7 +1579,7 @@
                 [mui/typography {:variant "body2"}
                  (case geom-type
                    "LineString" (tr :map/modify-linestring)
-                   "Polygon"    (tr :map/modify-polygon)
+                   "Polygon" (tr :map/modify-polygon)
                    (tr :map/modify))]
                 [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
                  (tr :map/edit-later-hint)]]
@@ -1590,11 +1589,11 @@
                  [mui/grid {:item true}
                   [mui/button
                    {:on-click #(==> [::events/start-adding-geom geom-type])
-                    :variant  "contained"
-                    :color    "secondary"}
+                    :variant "contained"
+                    :color "secondary"}
                    (case geom-type
                      "LineString" (tr :map/draw-linestring)
-                     "Polygon"    (tr :map/draw-polygon)
+                     "Polygon" (tr :map/draw-polygon)
                      (tr :map/draw))]])
 
                ;; Delete geom
@@ -1603,7 +1602,7 @@
                   [mui/tooltip
                    {:title (case geom-type
                              "LineString" (tr :map/remove-linestring)
-                             "Polygon"    (tr :map/remove-polygon)
+                             "Polygon" (tr :map/remove-polygon)
                              (tr :map/remove))}
                    [:span
                     [mui/button
@@ -1611,10 +1610,10 @@
                                    (==> [::events/stop-deleting-geom geom-type])
                                    (==> [::events/start-deleting-geom geom-type]))
                       :disabled (-> geom :features empty?)
-                      :style    (when (= sub-mode :deleting)
-                                  {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"
-                      :color    "gray1"}
+                      :style (when (= sub-mode :deleting)
+                               {:outline (str "2px solid " mui/secondary)})
+                      :variant "contained"
+                      :color "gray1"}
                      [:> Eraser]]]]])
 
                ;; Split
@@ -1627,10 +1626,10 @@
                                    (==> [::events/stop-splitting-geom geom-type])
                                    (==> [::events/start-splitting-geom geom-type]))
                       :disabled (-> geom :features empty?)
-                      :style    (when (= sub-mode :splitting)
-                                  {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"
-                      :color    "gray1"}
+                      :style (when (= sub-mode :splitting)
+                               {:outline (str "2px solid " mui/secondary)})
+                      :variant "contained"
+                      :color "gray1"}
                      [:> ContentCut]]]]])
 
                ;; Simplify
@@ -1642,10 +1641,10 @@
                      {:on-click #(==> [::events/open-simplify-tool])
                       :disabled (or (-> geom :features empty?)
                                     (= sub-mode :simplifying))
-                      :style    (when (= sub-mode :simplifying)
-                                  {:outline (str "2px solid " mui/secondary)})
-                      :variant  "contained"
-                      :color    "gray1"}
+                      :style (when (= sub-mode :simplifying)
+                               {:outline (str "2px solid " mui/secondary)})
+                      :variant "contained"
+                      :color "gray1"}
                      [mui/icon "auto_fix_high"]]]]])
 
                ;; Delete vertices helper text
@@ -1657,18 +1656,18 @@
                ;; Done button and undo / redo
                [mui/grid {:item true :xs 12}
                 [mui/grid
-                 {:container       true
+                 {:container true
                   :justify-content "flex-start"
-                  :align-items     "center"
-                  :spacing         1}
+                  :align-items "center"
+                  :spacing 1}
 
                  ;; Ready button
                  [mui/grid {:item true}
                   [mui/button
                    {:on-click #(==> [::events/finish-adding-geom geom type-code])
-                    :variant  "contained"
+                    :variant "contained"
                     :disabled (-> geom :features empty?)
-                    :color    "secondary"}
+                    :color "secondary"}
                    (tr :general/done)]]
                  [mui/grid {:item true}
                   [mui/grid {:item true}
@@ -1699,10 +1698,10 @@
                  [mui/grid {:item true}
                   [mui/tooltip
                    {:placement "right"
-                    :title     (str
-                                 (tr :map/retkikartta-problems-warning)
-                                 " "
-                                 (tr :map/retkikartta-checkbox-reminder))}
+                    :title (str
+                            (tr :map/retkikartta-problems-warning)
+                            " "
+                            (tr :map/retkikartta-checkbox-reminder))}
                    [:span
                     [lui/icon-text
                      {:icon "warning"
@@ -1715,12 +1714,12 @@
            ;; Tabs
            [mui/grid {:item true}
             [mui/tabs
-             {:value     selected-tab
+             {:value selected-tab
               :on-change #(==> [::events/select-new-sports-site-tab %2])
-              :variant   "fullWidth"
+              :variant "fullWidth"
               :indicator-color "secondary"
               :text-color "inherit"
-              :style     {:margin-bottom "1em" :margin-top "1em"}}
+              :style {:margin-bottom "1em" :margin-top "1em"}}
              [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
              [mui/tab {:label (tr :lipas.sports-site/properties)}]
              ;; TODO: This could be view-floorball? but right not it is not useful to
@@ -1735,41 +1734,41 @@
                  [mui/grid {:item true :xs 12}
 
                   [sports-sites/form
-                   {:tr              tr
-                    :edit-data       data
-                    :read-only?      false
+                   {:tr tr
+                    :edit-data data
+                    :read-only? false
                     :status-read-only? is-planning?
-                    :types           (vals types)
+                    :types (vals types)
                     :size-categories size-categories
-                    :admins          admins
-                    :owners          owners
-                    :on-change       set-field
-                    :sub-headings?   true
-                    :lipas-id        0}]
+                    :admins admins
+                    :owners owners
+                    :on-change set-field
+                    :sub-headings? true
+                    :lipas-id 0}]
 
                   [sports-sites/location-form
-                   {:tr                        tr
-                    :read-only?                false
-                    :cities                    (vals cities)
-                    :edit-data                 (:location data)
-                    :on-change                 (partial set-field :location)
-                    :sub-headings?             true
+                   {:tr tr
+                    :read-only? false
+                    :cities (vals cities)
+                    :edit-data (:location data)
+                    :on-change (partial set-field :location)
+                    :sub-headings? true
                     :address-locator-component [address-locator
                                                 {:tr tr
                                                  :cities (vals cities)}]
-                    :address-required?         (not (#{201 2011} (:type-code type)))}]]]
+                    :address-required? (not (#{201 2011} (:type-code type)))}]]]
 
               ;; Properties tab
               1 [sports-sites/properties-form
-                 {:key        (-> data :type :type-code)
-                  :tr         tr
-                  :type-code  (-> data :type :type-code)
+                 {:key (-> data :type :type-code)
+                  :tr tr
+                  :type-code (-> data :type :type-code)
                   :read-only? false
-                  :width      width
-                  :on-change  (partial set-field :properties)
-                  :edit-data  (:properties data)
-                  :geoms      (-> data :location :geometries)
-                  :problems?  problems?}]
+                  :width width
+                  :on-change (partial set-field :properties)
+                  :edit-data (:properties data)
+                  :geoms (-> data :location :geometries)
+                  :problems? problems?}]
               2 (cond
                   ;; Floorball specific
                   floorball-type?
@@ -1781,35 +1780,35 @@
                      :text-color "inherit"}
                     [mui/tab {:value "floorball" :label "Salibandy"}]]
                    [floorball/form
-                    {:tr           tr
-                     :lipas-id     nil
-                     :type-code    (-> data :type :type-code)
-                     :read-only?   (not edit-floorball?)
-                     :on-change    set-field
+                    {:tr tr
+                     :lipas-id nil
+                     :type-code (-> data :type :type-code)
+                     :read-only? (not edit-floorball?)
+                     :on-change set-field
                      :display-data data
-                     :edit-data    data
-                     :key          (-> data :type :type-code)}]]
+                     :edit-data data
+                     :key (-> data :type :type-code)}]]
 
                   ;; Football specific
                   #_#_football-types
                     [football/circumstances-form
-                     {:tr           tr
-                      :type-code    (or (-> edit-data :type :type-code) type-code)
-                      :read-only?   (not editing?)
-                      :on-change    (partial set-field :circumstances)
+                     {:tr tr
+                      :type-code (or (-> edit-data :type :type-code) type-code)
+                      :read-only? (not editing?)
+                      :on-change (partial set-field :circumstances)
                       :display-data (:circumstances display-data)
-                      :edit-data    (:circumstances edit-data)
-                      :key          (-> edit-data :type :type-code)}]))]])]
+                      :edit-data (:circumstances edit-data)
+                      :key (-> edit-data :type :type-code)}]))]])]
 
        ;; Actions
        [mui/grid {:container true :align-items "flex-end"}
         [mui/grid {:item true :xs 12 :style {:height "50px"}}
          [lui/floating-container {:bottom 0 :background-color "transparent"}
           [mui/grid
-           {:container   true
+           {:container true
             :align-items "center"
-            :spacing     1
-            :style       {:padding "0.5em"}}
+            :spacing 1
+            :style {:padding "0.5em"}}
 
            [address-search-dialog]
 
@@ -1817,33 +1816,35 @@
            (when data
              [mui/grid {:item true}
               [lui/save-button
-               {:tooltip          (tr :actions/save)
+               {:tooltip (tr :actions/save)
                 :disabled-tooltip (tr :actions/fill-required-fields)
-                :disabled         (not save-enabled?)
-                :on-click         #(==> [::events/save-new-site data])}]])
+                :disabled (not save-enabled?)
+                :on-click #(==> [::events/save-new-site data])}]])
 
            [mui/grid {:item true}
 
             ;; Discard
             [lui/discard-button
              {:on-click #(==> [::events/discard-new-site])
-              :tooltip  (tr :actions/discard)}]]
+              :tooltip (tr :actions/discard)}]]
 
            ;; Address search button
            [mui/tooltip {:title (tr :map.address-search/tooltip)}
             [mui/grid {:item true}
              [mui/fab
-              {:size     "small"
+              {:size "small"
                :on-click #(==> [::events/toggle-address-search-dialog])}
               [:> MapSearchOutline]]]]]]]]])))
 
 (defn default-tools
   [{:keys [tr logged-in?]}]
-  (let [result-view         (<== [:lipas.ui.search.subs/search-results-view])
-        mode-name           (<== [::subs/mode-name])
+  (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
+        mode-name (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
-        ptv-dialog-open?    (<== [:lipas.ui.ptv.subs/dialog-open?])
-        ptv-privilege       (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])]
+        ptv-dialog-open? (<== [:lipas.ui.ptv.subs/dialog-open?])
+        ptv-manage-privilege (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])
+        ptv-audit-privilege (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/audit])
+        ptv-privilege (or ptv-manage-privilege ptv-audit-privilege)]
     [:<>
      ;; PTV dialog
      ;; TODO Disabled until ready for release
@@ -1856,10 +1857,10 @@
      ;; Floating container
      [lui/floating-container {:bottom 0 :background-color "transparent"}
       [mui/grid
-       {:container   true
+       {:container true
         :align-items "center"
-        :spacing     1
-        :style       {:padding-bottom "0.5em"}}
+        :spacing 1
+        :style {:padding-bottom "0.5em"}}
 
        ;; Create sports site btn
        (when show-create-button?
@@ -1870,7 +1871,7 @@
          [mui/grid {:item true}
           [mui/tooltip {:title (tr :lipas.sports-site/add-new-planning)}
            [mui/fab
-            {:color    "secondary"
+            {:color "secondary"
              :variant "extended"
              :on-click #(==> [::events/add-analysis-target])}
             [mui/icon "add"]
@@ -1892,16 +1893,16 @@
        (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
                                   {:type-code ::roles/any
                                    :city-code ::roles/any
-                                   :lipas-id  ::roles/any}
+                                   :lipas-id ::roles/any}
                                   :analysis-tool/use])
                   ;; logged-in?
                   (= :list result-view))
          [mui/tooltip {:title (tr :map.demographics/tooltip)}
           [mui/grid {:item true}
            [mui/fab
-            {:size     "small"
-             :style    (when (= mode-name :analysis)
-                         {:border (str "5px solid " mui/secondary)})
+            {:size "small"
+             :style (when (= mode-name :analysis)
+                      {:border (str "5px solid " mui/secondary)})
              :on-click #(==> (if (= mode-name :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
@@ -1912,7 +1913,7 @@
          [mui/tooltip {:title (tr :ptv/tooltip)}
           [mui/grid {:item true}
            [mui/fab
-            {:size     "small"
+            {:size "small"
              :on-click #(==> (if ptv-dialog-open?
                                [:lipas.ui.ptv.events/close-dialog]
                                [:lipas.ui.ptv.events/open-dialog]))}
@@ -1920,15 +1921,15 @@
 
 (defn add-view
   [{:keys [tr width]}]
-  (let [add-mode              (<== [::subs/selected-add-mode])
+  (let [add-mode (<== [::subs/selected-add-mode])
         can-add-sports-sites? (<== [:lipas.ui.user.subs/can-add-sports-sites?])
-        can-add-lois?         (<== [:lipas.ui.user.subs/can-add-lois?])]
+        can-add-lois? (<== [:lipas.ui.user.subs/can-add-lois?])]
     [:<>
      (when (and can-add-sports-sites? can-add-lois?)
        [mui/tabs
-        {:value     add-mode
+        {:value add-mode
          :on-change #(==> [::events/select-add-mode %2])
-         :variant   "fullWidth"
+         :variant "fullWidth"
          :indicator-color "secondary"
          :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
@@ -1936,26 +1937,26 @@
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]
-       "loi"         [loi/view])]))
+       "loi" [loi/view])]))
 
 (defn map-contents-view [{:keys [tr logged-in? width]}]
   (let [selected-site (<== [::subs/selected-sports-site])
-        show-tools?   (<== [::subs/show-default-tools?])
-        view          (<== [::subs/view])
-        loi           (<== [:lipas.ui.loi.subs/selected-loi])]
+        show-tools? (<== [::subs/show-default-tools?])
+        view (<== [::subs/view])
+        loi (<== [:lipas.ui.loi.subs/selected-loi])]
 
     [:<>
      ;; Search, filters etc.
      (case view
-       :adding   [add-view {:tr tr :width width}]
+       :adding [add-view {:tr tr :width width}]
        :analysis [analysis/view
                   {:tr tr}]
-       :site     [sports-site-view {:tr tr :site-data selected-site :width width}]
-       :loi      [loi/view {:display-data loi}]
-       :search   [search/search-view
-                  {:tr              tr
-                   :on-result-click (fn [{:keys [lipas-id]}]
-                                      (==> [::events/show-sports-site lipas-id]))}])
+       :site [sports-site-view {:tr tr :site-data selected-site :width width}]
+       :loi [loi/view {:display-data loi}]
+       :search [search/search-view
+                {:tr tr
+                 :on-result-click (fn [{:keys [lipas-id]}]
+                                    (==> [::events/show-sports-site lipas-id]))}])
 
      ;; Floating bottom toolbar
      (when show-tools?
@@ -1964,12 +1965,12 @@
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
 (defn map-view []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        logged-in?   (<== [:lipas.ui.subs/logged-in?])
+  (let [tr (<== [:lipas.ui.subs/translator])
+        logged-in? (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
-        width        (mui/use-width)
+        width (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])
-        popup-ref    (uix/use-ref nil)]
+        popup-ref (uix/use-ref nil)]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
@@ -1991,24 +1992,24 @@
         [lui/floating-container {:background-color "transparent"}
          [mui/tool-bar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
           [mui/fab
-           {:size     (if (utils/mobile? width) "small" "medium")
+           {:size (if (utils/mobile? width) "small" "medium")
             :on-click #(==> [::events/toggle-drawer])
-            :color    "secondary"}
+            :color "secondary"}
            [mui/icon "search"]]]])
 
       ;; Closable left sidebar drawer
       [mui/drawer
-       {:variant    "persistent"
+       {:variant "persistent"
         :PaperProps {:style {:width drawer-width}}
         :SlideProps {:direction "down"}
-        :open       drawer-open?}
+        :open drawer-open?}
 
        ;; Close button
        [mui/button
         {:on-click #(==> [::events/toggle-drawer])
-         :style    {:min-height "36px" :margin-bottom "1em"}
-         :variant  "outlined"
-         :color    "inherit"}
+         :style {:min-height "36px" :margin-bottom "1em"}
+         :variant "outlined"
+         :color "inherit"}
         [mui/icon "expand_less"]]
 
        ;; Content
@@ -2016,17 +2017,17 @@
 
      ;; Floating container (bottom right)
      [lui/floating-container
-      {:bottom           "0.9em"
-       :right            "3.5em"
+      {:bottom "0.9em"
+       :right "3.5em"
        :background-color "transparent"}
 
       [mui/grid2
-       {:container   true
+       {:container true
         :align-items "center"
-        :spacing     1
-        :style       {:background-color mui/gray2
-                      :border-radius    "4px"}
-        :wrap        "nowrap"}
+        :spacing 1
+        :style {:background-color mui/gray2
+                :border-radius "4px"}
+        :wrap "nowrap"}
 
        ;; Feedback btn
        #_[mui/grid2
@@ -2054,7 +2055,7 @@
          {:elevation 1
           :style
           {:background-color "rgba(255,255,255,0.9)"
-           :padding-left     "0.5em" :padding-right "0.5em"}}
+           :padding-left "0.5em" :padding-right "0.5em"}}
          [layer-switcher {:tr tr}]]]]]
 
      [:f> popup

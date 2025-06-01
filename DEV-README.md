@@ -1,151 +1,139 @@
 # Lipas Development Environment
 
-This project uses a **two-level development setup**:
+A streamlined development setup for the Lipas sports facility management system.
 
 ## Architecture Overview
 
-**Top Level** (`/deps.edn`): Infrastructure orchestration, deployment, and tooling integration
-- Minimal dependencies (just webapp as local dependency)
-- **All webapp production dependencies automatically available via :local/root**
-- Development paths include both levels
-- Ideal for tools like **clojure-mcp** (used by Claude for REPL access)
-- Provides unified access to entire project scope
+This project uses a **simplified two-level structure**:
 
-**Webapp Level** (`/webapp/deps.edn`): Application-specific dependencies and tooling
-- Full application dependencies (Clojure, ClojureScript, databases, etc.)
-- Development aliases (`:dev`, `:test`) with rich tooling
-- Domain-specific development utilities
+- **Root Level** (`/deps.edn` + `/dev/user.clj`): Development tooling and infrastructure
+- **Webapp Level** (`/webapp/deps.edn`): Clean production dependencies
 
-The top-level setup **dynamically loads only the :dev and :test dependencies** from webapp/deps.edn on demand. All production dependencies are already available through the :local/root inclusion.
-
----
+The root-level REPL provides development utilities that dynamically load webapp dependencies when needed, keeping production dependencies clean while providing rich development tooling.
 
 ## Quick Start
 
-1. **Set up environment variables**:
-   ```bash
-   cp .env.sample.sh .env.sh  # Copy and customize
-   source .env.sh             # Load variables
-   ```
-
-2. **Start supporting services**:
-   ```bash
-   docker compose up -d proxy-local
-   ```
-
-3. **Start the REPL** from the project root:
+1. **Start the REPL from project root**:
    ```bash
    clj -M:nrepl
    ```
 
-4. **Load environment and start system**:
+2. **Launch the webapp**:
    ```clojure
-   (setup-and-go!)  ; Loads :dev and :test deps, starts system
+   (dev-webapp!)
    ```
 
-**Alternative step-by-step approach**:
+That's it! The system will:
+- Load all necessary dependencies
+- Start the Jetty server
+- Connect to PostgreSQL and Elasticsearch
+- Initialize all integrations (AWS, email, PTV, etc.)
+
+## Available Development Functions
+
+The `user` namespace provides these utilities:
+
+### System Management
+- `(dev-webapp!)` - **One-command startup**: loads dependencies and starts the complete system
+- `(load-webapp-dev-deps!)` - Loads only the :dev and :test dependencies from webapp/deps.edn
+- `(read-webapp-deps)` - Inspects webapp dependency structure
+- `(extract-dev-deps webapp-deps)` - Extracts development dependencies from webapp deps.edn
+
+### System Access
+Once the system is running, you can access components via:
 ```clojure
-(setup!)  ; Load :dev and :test dependencies only
-(go)      ; Start system when ready
+integrant.repl.state/system  ; Full system map with all components
 ```
 
-## Available Functions
+The system includes:
+- `:lipas/server` - Jetty web server
+- `:lipas/db` - PostgreSQL database connection
+- `:lipas/search` - Elasticsearch client with configured indices
+- `:lipas/emailer` - Email configuration
+- `:lipas/aws` - S3 integration
+- `:lipas/ptv` - Finnish public service integration
+- `:lipas/mailchimp` - Newsletter integration
 
-### System Lifecycle
-- `(go)` - Start the system
-- `(halt)` - Stop the system
-- `(reset)` - Restart system with code reload
-- `(reset-all)` - Full reset clearing all state
+## Development Workflow
 
-### Code Reloading
-- `(refresh)` - Reload changed namespaces
-- `(refresh-all)` - Reload all namespaces
-
-### System Access (when system is running)
-- `(current-system)` - Get system map
-- `(current-config)` - Get config map
-- `(db)` - Get database connection
-- `(search)` - Get search client
-- `(ptv)` - Get PTV integration
-
-### Webapp Utilities
-- `(reindex-search!)` - Rebuild search index
-- `(reindex-analytics!)` - Rebuild analytics index
-- `(reset-admin-password! "password")` - Reset admin password
-- `(run-db-migrations!)` - Run database migrations
-
-### Development Utilities
-- `(status)` - Check development environment status
-- `(setup!)` - Load :dev and :test dependencies from webapp/deps.edn
-- `(setup-and-go!)` - Load :dev and :test dependencies and start system
-
-## Running Tests
-
-After loading the development environment:
-
+### Starting Development
 ```clojure
+;; Single command to get everything running
+(dev-webapp!)
+
+;; System is now ready for development
+;; All namespaces loaded, server running, databases connected
+```
+
+### Exploring the System
+```clojure
+;; List all available namespaces
+(clj-mcp.repl-tools/list-ns)
+
+;; Explore specific namespaces
+(clj-mcp.repl-tools/list-vars 'lipas.backend.core)
+
+;; Check system status
+integrant.repl.state/system
+```
+
+### Running Tests
+```clojure
+;; After dev-webapp! has loaded everything
 (require '[cognitect.test-runner.api :as tr])
 (tr/test {:dirs ["webapp/test/clj"]})
 ```
 
-## Dev Setup Architecture
-
-### File Structure
+## Project Structure
 
 ```
-├── deps.edn              # Top-level project dependencies
-├── dev/
-│   └── user.clj          # Development utilities with dynamic loading
+├── deps.edn              # Root dependencies + development tooling
+├── dev/user.clj          # Development utilities (simplified)
 └── webapp/
-    ├── deps.edn          # Webapp-specific dependencies
-    └── dev/
-        └── user.clj      # Webapp-specific development helpers
+    ├── deps.edn          # Clean production dependencies
+    ├── src/              # Application source code
+    ├── test/             # Tests
+    └── dev/              # Webapp-specific development helpers
 ```
 
-### User.clj Files
+## Environment Setup
 
-**Top-level `/dev/user.clj`**:
-- Provides `(setup!)` function to dynamically load :dev and :test dependencies
-- Reads webapp/deps.edn and loads only development-specific dependencies
-- Sets up integrant.repl workflow functions (go, halt, reset)
-- Loads webapp's user.clj to access domain-specific utilities
-- Minimal, focused on bootstrapping development tooling (production deps already available)
+The system requires environment variables for external services:
 
-**Webapp `/webapp/dev/user.clj`**:
-- Domain-specific development helpers for the Lipas application
-- System access functions: `(db)`, `(search)`, `(ptv)`
-- Application utilities: `(reindex-search!)`, `(reset-admin-password!)`
-- Database management: `(run-db-migrations!)`
-- Rich comment blocks with development workflows and examples
+1. **Copy the sample environment**:
+   ```bash
+   cp .env.sample.sh .env.sh
+   ```
 
-The top-level user.clj acts as a "launcher" that dynamically loads development tooling, while the webapp user.clj contains the actual domain knowledge and operational utilities. All webapp production dependencies are available immediately via the :local/root inclusion.
+2. **Edit `.env.sh`** with your configuration
 
-## Environment Variables
-
-The system requires various environment variables for full functionality.
-
-**Setup**: Use the shell script approach:
-```bash
-# Copy the sample and customize
-cp .env.sample.sh .env.sh
-# Edit .env.sh with your values
-# Source before starting REPL
-source .env.sh
-clj -M:nrepl
-```
-
-See `.env.sample.sh` for documentation and `webapp/src/clj/lipas/backend/config.clj` to see how they're loaded.
-
+3. **Load environment before starting REPL**:
+   ```bash
+   source .env.sh
+   clj -M:nrepl
+   ```
 ## Troubleshooting
 
-**Problem**: Functions not available after REPL start
-**Solution**: Run `(setup!)`
+**Issue**: Functions not available after REPL start
+**Solution**: Run `(dev-webapp!)` to load everything
 
-**Problem**: System won't start with `(go)`
-**Solution**: Ensure all required environment variables are set
+**Issue**: System components not accessible
+**Solution**: Check `integrant.repl.state/system` to see loaded components
 
-**Problem**: Can't access webapp namespaces
-**Solution**: Check that webapp paths are on classpath with `(status)`
+**Issue**: Environment variables not set
+**Solution**: Ensure you've run `source .env.sh` before starting the REPL
 
-**Problem**: Tests not found
-**Solution**: Ensure `webapp/test/clj` is on classpath (should be automatic)
+**Issue**: Tests not found
+**Solution**: Run `(dev-webapp!)` first to ensure all paths are loaded
+
+## For LLM Developers
+
+This setup is designed to be LLM-friendly:
+
+- **Single entry point**: `(dev-webapp!)` gets everything running
+- **Predictable structure**: Two-level architecture with clear separation
+- **Rich introspection**: Use `clj-mcp.repl-tools/*` functions to explore
+- **Full system access**: Everything available via `integrant.repl.state/system`
+- **Simple commands**: Minimal complexity, maximum capability
+
+The system automatically handles dependency loading, path configuration, and service initialization, allowing you to focus on understanding and modifying the application logic.
