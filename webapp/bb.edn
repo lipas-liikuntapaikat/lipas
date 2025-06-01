@@ -1,5 +1,20 @@
 {:tasks {:requires ([clojure.string :as str])
 
+         ;; === DEPLOYMENT CONFIGURATION ===
+         :init (def deploy-config
+                 {:paths {:backend-jar "target/backend.jar"
+                          :frontend-js "resources/public/js/compiled/app.js"
+                          :remote-backend "/var/lipas/webapp/backend.jar"
+                          :remote-frontend "/var/lipas/webapp/resources/public/js/compiled/app.js"}
+                  :hosts {:dev "lipas-dev"
+                          :prod "lipas-prod"}
+                  :urls {:dev "https://lipas-dev.cc.jyu.fi"
+                         :prod "https://lipas.fi"}
+                  :health-endpoints {:dev "/api/health"
+                                     :prod "/api/health"}
+                  :curl-opts {:dev "curl -f -k --connect-timeout 10" ; -k for self-signed certs
+                              :prod "curl -f --connect-timeout 10"}})
+
          user-repl {:doc "Start user configured nREPL process"
                     :task (if-let [cmd (:repl-command (read-string (slurp ".user.edn")))]
                             (shell "bash -c" (apply str "source ../.env.sh && " cmd))
@@ -21,8 +36,113 @@
 
          dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
                           :task (do (shell "clojure -M -m shadow.cljs.devtools.cli release app")
-                                    (shell "scp resources/public/js/compiled/app.js lipas-dev.cc.jyu.fi:/var/tmp/app.js")
-                                    (shell "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js /var/lipas/webapp/resources/public/js/compiled/app.js\""))}
+                                    (shell (str "scp " (get-in deploy-config [:paths :frontend-js]) " lipas-dev.cc.jyu.fi:/var/tmp/app.js"))
+                                    (shell (str "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js " (get-in deploy-config [:paths :remote-frontend]) "\"")))}
+
+         ;; === NEW DEPLOYMENT TASKS ===
+
+         ;; Core deployment function
+         -do-deploy {:doc "Internal deployment worker - do not call directly"
+                     :task (let [[env deploy-type] *command-line-args*
+                                 _ (when (or (not env) (not deploy-type))
+                                     (do (println "❌ Usage: bb -do-deploy <env> <type>")
+                                         (System/exit 1)))
+                                 env-key (keyword env)
+                                 host (get-in deploy-config [:hosts env-key])
+                                 _ (when-not host
+                                     (do (println (str "❌ Unknown environment: " env))
+                                         (System/exit 1)))
+                                 deploy-both? (= deploy-type "both")
+                                 deploy-backend? (or deploy-both? (= deploy-type "backend"))
+                                 deploy-frontend? (or deploy-both? (= deploy-type "frontend"))
+                                 type-str (case deploy-type
+                                            "both" "backend + frontend"
+                                            "backend" "backend only"
+                                            "frontend" "frontend only")]
+
+                             (println (str "🚀 Starting " type-str " deployment to " env " environment..."))
+
+                             ;; Build backend if needed
+                             (when deploy-backend?
+                               (println "🏗️  Building backend uberjar...")
+                               (shell "bb uberjar")
+                               (when-not (.exists (java.io.File. (get-in deploy-config [:paths :backend-jar])))
+                                 (println (str "❌ Backend jar not found at " (get-in deploy-config [:paths :backend-jar])))
+                                 (System/exit 1)))
+
+                             ;; Build frontend if needed
+                             (when deploy-frontend?
+                               (println "🏗️  Building frontend app.js...")
+                               (shell "npm run build")
+                               (when-not (.exists (java.io.File. (get-in deploy-config [:paths :frontend-js])))
+                                 (println (str "❌ Frontend app.js not found at " (get-in deploy-config [:paths :frontend-js])))
+                                 (System/exit 1)))
+
+                             ;; Upload files
+                             (println (str "📦 Uploading " type-str " to " host "..."))
+                             (when deploy-backend?
+                               (shell (str "scp " (get-in deploy-config [:paths :backend-jar]) " " host ":/tmp/")))
+                             (when deploy-frontend?
+                               (shell (str "scp " (get-in deploy-config [:paths :frontend-js]) " " host ":/tmp/")))
+
+                             ;; Deploy files and restart if needed
+                             (println (str "🔄 Deploying " type-str " on " host "..."))
+                             (let [backend-commands (when deploy-backend?
+                                                      (str "sudo cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend])))
+                                   frontend-commands (when deploy-frontend?
+                                                       (str "sudo cp /tmp/app.js " (get-in deploy-config [:paths :remote-frontend])))
+                                   restart-commands (when deploy-backend?
+                                                      "sudo bash -c 'cd /var/lipas && source .env.sh && docker compose rm -sf backend && docker compose up -d backend'")
+                                   all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
+
+                               (shell (str "ssh " host " 'set -e && " all-commands "'")))
+
+                             ;; Health check only if backend was deployed
+                             (when deploy-backend?
+                               (println "🏥 Checking service health...")
+                               (Thread/sleep 3000) ; Give service time to start
+
+                               (try
+                                 (let [base-url (get-in deploy-config [:urls env-key])
+                                       health-endpoint (get-in deploy-config [:health-endpoints env-key])
+                                       health-url (str base-url health-endpoint)
+                                       curl-opts (get-in deploy-config [:curl-opts env-key])]
+                                   (shell (str curl-opts " " health-url " > /dev/null 2>&1"))
+                                   (println "✅ Service is healthy and responding"))
+                                 (catch Exception _
+                                   (println "⚠️  Health check failed or timed out - please verify manually"))))
+
+                             (println (str "✅ " (str/capitalize type-str) " deployment to " env " completed successfully!"))
+                             (println (str "🌐 " (get-in deploy-config [:urls env-key]))))}
+
+         ;; Base deployment tasks (require environment argument)
+         deploy {:doc "Deploy both backend and frontend to specified environment (dev|prod)"
+                 :task (shell "bb" "-do-deploy" (first *command-line-args*) "both")}
+
+         deploy-backend {:doc "Deploy only backend to specified environment (dev|prod)"
+                         :task (shell "bb" "-do-deploy" (first *command-line-args*) "backend")}
+
+         deploy-frontend {:doc "Deploy only frontend to specified environment (dev|prod)"
+                          :task (shell "bb" "-do-deploy" (first *command-line-args*) "frontend")}
+
+         ;; Convenience tasks (no arguments needed)
+         deploy-dev {:doc "Deploy both backend and frontend to lipas-dev"
+                     :task (shell "bb" "-do-deploy" "dev" "both")}
+
+         deploy-prod {:doc "Deploy both backend and frontend to lipas-prod"
+                      :task (shell "bb" "-do-deploy" "prod" "both")}
+
+         deploy-backend-dev {:doc "Deploy only backend to lipas-dev"
+                             :task (shell "bb" "-do-deploy" "dev" "backend")}
+
+         deploy-backend-prod {:doc "Deploy only backend to lipas-prod"
+                              :task (shell "bb" "-do-deploy" "prod" "backend")}
+
+         deploy-frontend-dev {:doc "Deploy only frontend to lipas-dev"
+                              :task (shell "bb" "-do-deploy" "dev" "frontend")}
+
+         deploy-frontend-prod {:doc "Deploy only frontend to lipas-prod"
+                               :task (shell "bb" "-do-deploy" "prod" "frontend")}
 
          ;; Database Migration Tasks
          db-migrate {:doc "Run all pending database migrations"
@@ -93,7 +213,7 @@
               :task (shell "clojure -T:build jar")}
 
          verify-uberjar {:doc "Verify uberjar was built correctly"
-                         :task (do (let [jar-file "target/backend.jar"]
+                         :task (do (let [jar-file (get-in deploy-config [:paths :backend-jar])]
                                      (if (.exists (java.io.File. jar-file))
                                        (do (println "✅ Uberjar exists:" jar-file)
                                            (let [size (-> (java.io.File. jar-file) .length (/ 1024 1024) int)]

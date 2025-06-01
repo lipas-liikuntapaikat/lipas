@@ -9,6 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "watch": "npx shadow-cljs watch app",
+    "build": "npx shadow-cljs release app",
     "build-report": "npx shadow-cljs run shadow.cljs.build-report app report.html"
   },
   "keywords": [],
