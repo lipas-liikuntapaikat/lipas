@@ -108,18 +108,18 @@
         status (<== [::subs/site-audit-field-status lipas-id field-name])]
     (when (and feedback (not (str/blank? feedback)))
       ($ Alert
-       {:severity (case status
-                    "changes-requested" "error"
-                    "approved" "success"
-                    "warning")
-        :variant "outlined"
-        :sx #js {:mt 1 :mb 1}}
-       ($ AlertTitle
-          (case status
-            "changes-requested" "Auditoijan palaute - vaatii muutoksia"
-            "approved" "Auditoijan palaute - hyväksytty"
-            "Auditoijan palaute"))
-       feedback))))
+         {:severity (case status
+                      "changes-requested" "error"
+                      "approved" "success"
+                      "warning")
+          :variant "outlined"
+          :sx #js {:mt 1 :mb 1}}
+         ($ AlertTitle
+            (case status
+              "changes-requested" "Auditoijan palaute - vaatii muutoksia"
+              "approved" "Auditoijan palaute - hyväksytty"
+              "Auditoijan palaute"))
+         feedback))))
 
 (defn form
   [{:keys [org-id tr site]}]
@@ -1232,6 +1232,9 @@
         org-data (<== [::subs/selected-org-data org-id])
         sites (<== [::subs/sports-sites org-id])
 
+        has-manage-privilege? (<== [::subs/has-manage-privilege?])
+        has-audit-privilege? (<== [::subs/has-audit-privilege?])
+
         on-close #(==> [::events/close-dialog])]
 
     [:> Dialog
@@ -1281,20 +1284,23 @@
            :textColor "primary"
            :indicatorColor "secondary"}
 
-          [mui/tab {:value "wizard" :label (tr :ptv/wizard)}]
-          [mui/tab {:value "services" :label (tr :ptv/services)}]
-          [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}]
-          (when (<== [::subs/has-audit-privilege?])
+          (when has-manage-privilege?
+            [mui/tab {:value "wizard" :label (tr :ptv/wizard)}])
+          (when has-manage-privilege?
+            [mui/tab {:value "services" :label (tr :ptv/services)}])
+          (when has-manage-privilege?
+            [mui/tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
+          (when has-audit-privilege?
             [mui/tab {:value "audit" :label (tr :ptv.audit/tab-label)}])]
 
-         (when (= selected-tab "wizard")
+         (when (and (= selected-tab "wizard") has-manage-privilege?)
            [wizard])
 
-         (when (= selected-tab "services")
+         (when (and (= selected-tab "services") has-manage-privilege?)
            [services])
 
-         (when (= selected-tab "sports-sites")
+         (when (and (= selected-tab "sports-sites") has-manage-privilege?)
            [table])
 
-         (when (= selected-tab "audit")
+         (when (and (= selected-tab "audit") has-audit-privilege?)
            ($ audit/main-view {:tr tr}))])]]))

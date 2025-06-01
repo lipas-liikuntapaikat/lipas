@@ -18,8 +18,9 @@
 
 (rf/reg-sub ::selected-tab
   :<- [::ptv]
-  (fn [ptv _]
-    (:selected-tab ptv)))
+  :<- [::default-tab]
+  (fn [[ptv default-tab] _]
+    (or (:selected-tab ptv) default-tab)))
 
 (rf/reg-sub ::selected-step
   :<- [::ptv]
@@ -61,12 +62,19 @@
 (rf/reg-sub ::users-orgs
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user-data _]
-    (filterv (fn [{:keys [city-codes :as _org]}]
-               (some
-                 (fn [city-code]
-                   (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
-                 city-codes))
-             orgs)))
+    (cond
+      ;; If user has audit privilege (global), show all orgs
+      (roles/check-privilege user-data {} :ptv/audit)
+      orgs
+
+      ;; Otherwise, filter by manage privilege per city-code
+      :else
+      (filterv (fn [{:keys [city-codes :as _org]}]
+                 (some
+                   (fn [city-code]
+                     (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
+                   city-codes))
+               orgs))))
 
 (rf/reg-sub ::selected-org
   :<- [::ptv]
@@ -485,6 +493,20 @@
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user-data _]
     (roles/check-privilege user-data {} :ptv/audit)))
+
+(rf/reg-sub ::has-manage-privilege?
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user-data _]
+    (roles/check-privilege user-data {} :ptv/manage)))
+
+(rf/reg-sub ::default-tab
+  :<- [::has-manage-privilege?]
+  :<- [::has-audit-privilege?]
+  (fn [[has-manage? has-audit?] _]
+    (cond
+      has-manage? "wizard"
+      has-audit? "audit"
+      :else nil)))
 
 (rf/reg-sub ::selected-audit-site
   :<- [::ptv]
