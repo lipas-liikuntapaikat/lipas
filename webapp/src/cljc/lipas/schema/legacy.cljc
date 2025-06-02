@@ -152,7 +152,8 @@
                 [:page [pos-int?]]
                 [:fields [:or
                           [:vector (into [:enum] legacy-fields)]
-                          (into [:enum] legacy-fields)]]
+                          (into [:enum] legacy-fields)
+                          [:string {:min 1}]]]
                 [:typeCodes [:or
                              #'types-schema/active-type-code
                              #'types-schema/active-type-codes]]

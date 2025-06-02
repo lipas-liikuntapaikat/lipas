@@ -16,40 +16,38 @@
     (-> x
         (java.time.LocalDateTime/parse df-in)
         (.format df-out))
-    (catch Exception e)
-    ))
+    (catch Exception e)))
 
 (comment
   (parse-date "2014-10-02 12:50:37.123")
   (parse-date "KEKKONEN")
   (parse-date "2014-10-02 12:50:37.12")
   (parse-date "2014-10-02 12:50:37.1")
-  (parse-date "2014-10-02 12:50:37")
-  )
+  (parse-date "2014-10-02 12:50:37"))
 
 (defn format-sports-place
   [sports-place locale location-format-fn]
-  {:sportsPlaceId    (:id sports-place)
-   :name             (:name sports-place)
-   :marketingName    (:marketingName sports-place)
-   :type             {:typeCode (-> sports-place :type :typeCode)
-                      :name     (-> (types-old/all
-                                     (-> sports-place :type :typeCode))
-                                    :name)}
-   :schoolUse        (:schoolUse sports-place)
-   :freeUse          (:freeUse sports-place)
+  {:sportsPlaceId (:id sports-place)
+   :name (:name sports-place)
+   :marketingName (:marketingName sports-place)
+   :type {:typeCode (-> sports-place :type :typeCode)
+          :name (-> (types-old/all
+                     (-> sports-place :type :typeCode))
+                    :name)}
+   :schoolUse (:schoolUse sports-place)
+   :freeUse (:freeUse sports-place)
    :constructionYear (parse-year (:constructionYear sports-place))
-   :renovationYears  (:renovationYears sports-place)
-   :lastModified     (-> sports-place :lastModified parse-date)
-   :owner            (owners/all (-> sports-place :owner))
-   :admin            (admins/all (-> sports-place :admin))
-   :phoneNumber      (:phoneNumber sports-place)
+   :renovationYears (:renovationYears sports-place)
+   :lastModified (-> sports-place :lastModified parse-date)
+   :owner (owners/all (-> sports-place :owner))
+   :admin (admins/all (-> sports-place :admin))
+   :phoneNumber (:phoneNumber sports-place)
    :reservationsLink (:reservationsLink sports-place)
-   :www              (:www sports-place)
-   :email            (:email sports-place)
-   :location         (when-let [location (:location sports-place)]
-                       (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
-   :properties       (:properties sports-place)})
+   :www (:www sports-place)
+   :email (:email sports-place)
+   :location (when-let [location (:location sports-place)]
+               (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
+   :properties (:properties sports-place)})
 
 ;;
 ;; Elastic Search Backend
@@ -70,7 +68,11 @@
       (update-with-locale locale :fi [:location :city :name])
       (update-with-locale locale :fi [:location :neighborhood])
       (update-with-locale locale :fi [:owner])
-      (update-with-locale locale :fi [:admin])))
+      (update-with-locale locale :fi [:admin])
+      ;; Extract schoolUse and freeUse from properties for legacy API compatibility
+      ;; Only if they don't already exist at the top level
+      (update :schoolUse #(or % (get-in sports-place [:properties :school-use?])))
+      (update :freeUse #(or % (get-in sports-place [:properties :free-use?])))))
 
 (defn filter-and-format
   [locale fields sp]
