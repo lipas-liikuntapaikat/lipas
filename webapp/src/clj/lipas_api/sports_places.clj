@@ -81,8 +81,15 @@
       (update-with-locale locale :fi [:type :name])
       (update-with-locale locale :fi [:location :city :name])
       (update-with-locale locale :fi [:location :neighborhood])
-      (update-with-locale locale :fi [:owner])
-      (update-with-locale locale :fi [:admin])
+      ;; Handle owner and admin fields - convert enum keys to localized strings
+      (update :owner #(or (get-in % [locale]) ; Preserve if already localized
+                          (get-in owners/all [% locale]) ; Convert enum key to localized string
+                          (get-in owners/all [% :en]) ; Fallback to English
+                          %)) ; Fallback to original value
+      (update :admin #(or (get-in % [locale]) ; Preserve if already localized
+                          (get-in admins/all [% locale]) ; Convert enum key to localized string
+                          (get-in admins/all [% :en]) ; Fallback to English
+                          %)) ; Fallback to original value
       ;; Handle lastModified field conversion
       (update :lastModified #(or % (convert-iso8601-to-legacy (:event-date sports-place))))
       ;; Extract schoolUse and freeUse from properties for legacy API compatibility
