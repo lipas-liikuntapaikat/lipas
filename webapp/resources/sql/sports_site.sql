@@ -122,3 +122,36 @@ WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
 SELECT *
 FROM sports_site_current
 WHERE city_code = :city_code
+
+-- :name get-deleted-sports-places
+-- :command :query
+-- :result :many
+-- :doc Returns sports places that were previously active but are now deleted/inactive
+WITH latest_revisions AS (
+  SELECT 
+    lipas_id,
+    status,
+    event_date,
+    ROW_NUMBER() OVER (PARTITION BY lipas_id ORDER BY event_date DESC) as rn
+  FROM sports_site
+),
+previously_active AS (
+  SELECT DISTINCT lipas_id
+  FROM sports_site
+  WHERE status = 'published'
+),
+currently_non_active AS (
+  SELECT 
+    lr.lipas_id,
+    lr.status,
+    lr.event_date
+  FROM latest_revisions lr
+  WHERE lr.rn = 1 AND lr.status != 'published'
+)
+SELECT 
+  cna.lipas_id as sports_place_id,
+  cna.event_date as deleted_at
+FROM currently_non_active cna
+INNER JOIN previously_active pa ON cna.lipas_id = pa.lipas_id
+WHERE cna.event_date >= :since ::timestamptz
+ORDER BY cna.event_date DESC
