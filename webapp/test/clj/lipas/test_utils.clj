@@ -74,9 +74,9 @@
                 (update-in [:search :indices :lois :search] test-suffix)))
 
 (defn init-db! []
-  (let [migratus-opts {:store         :database
+  (let [migratus-opts {:store :database
                        :migration-dir "migrations"
-                       :db            (:db config)}]
+                       :db (:db config)}]
     (try
       (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
                            false
@@ -87,11 +87,11 @@
           (throw e))))
 
     (jdbc/db-do-commands (:db config)
-                           false
-                           [(str "CREATE EXTENSION IF NOT EXISTS postgis")
-                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                            (str "CREATE EXTENSION IF NOT EXISTS citext")
-                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+                         false
+                         [(str "CREATE EXTENSION IF NOT EXISTS postgis")
+                          (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                          (str "CREATE EXTENSION IF NOT EXISTS citext")
+                          (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
 
     (migratus/init migratus-opts)
     (migratus/migrate migratus-opts)))
@@ -138,7 +138,7 @@
 (def search (:lipas/search system))
 
 (defn prune-es! []
-  (let [client   (:client search)
+  (let [client (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
                   (-> search :indices :analysis :diversity) diversity/mappings
                   (-> search :indices :lois :search) (:lois search/mappings)}]
@@ -147,9 +147,10 @@
       (try
         (search/delete-index! client idx-name)
         (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
+          (let [error-type (-> ex ex-data :body :error :root_cause first :type)]
+            (when-not (or (= "index_not_found_exception" error-type)
+                          (= "illegal_argument_exception" error-type))
+              (throw ex)))))
       (when-let [mapping (mappings idx-name)]
         (search/create-index! client idx-name mapping)))))
 
@@ -163,7 +164,7 @@
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
   ([{:keys [db? admin? status]
-     :or   {admin? false status "active"}}]
+     :or {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
                   ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
@@ -186,5 +187,7 @@
       (assoc :id (str (java.util.UUID/randomUUID)))))
 
 (comment
-  (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site))
+  (every?
+   #(s/valid? :lipas/sports-site %)
+   (repeatedly 100 gen-sports-site))
   )

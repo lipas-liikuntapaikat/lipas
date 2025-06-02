@@ -65,11 +65,13 @@
                               etaoin/etaoin {:mvn/version "1.0.40"}}}
 
            :test {:extra-paths ["test/clj"]
-                  :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+                  :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}
+                               ring/ring-mock {:mvn/version "0.3.2"}}
                   :main-opts ["-m" "cognitect.test-runner" "--exclude" "integration"]}
 
            :test-integration {:extra-paths ["test/clj"]
-                              :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+                              :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}
+                                           ring/ring-mock {:mvn/version "0.3.2"}}
                               :main-opts ["-m" "cognitect.test-runner" "--include" "integration"]}
 
            :migrate {:main-opts ["-m" "lipas.migrate-db"]}
