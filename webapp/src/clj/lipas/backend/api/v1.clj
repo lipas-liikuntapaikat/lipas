@@ -90,7 +90,11 @@ Access to the hierarchical type classification system used for categorizing spor
                 fields (let [fields-value (:fields qp)]
                          (cond
                            (nil? fields-value) []
-                           (string? fields-value) [fields-value]
+                           (string? fields-value)
+                           ;; Handle comma-separated string by splitting
+                           (if (re-find #"," fields-value)
+                             (mapv clojure.string/trim (clojure.string/split fields-value #","))
+                             [fields-value])
                            :else fields-value))
                 locale (or (keyword lang) :se)
                 resp (legacy-core/fetch-sports-places-es search locale params fields)
