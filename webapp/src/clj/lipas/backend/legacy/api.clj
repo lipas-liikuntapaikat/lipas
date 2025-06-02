@@ -8,10 +8,7 @@
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
 
 (defn fill-properties [m]
-  (reduce (fn [acc k] (assoc-in acc [:props k] (prop-types/all k)))
-          m
-          (-> m :props keys)))
-
+  (assoc m :props (select-keys prop-types/all (keys (:props m)))))
 
 (defn localize-properties [m locale]
   (reduce (fn [acc k]
@@ -23,7 +20,6 @@
   (-> m
       (update :name lang)
       (update :description lang)))
-
 
 (defn- ->legacy-api-with-properties [m lang]
   (-> m
@@ -41,22 +37,20 @@
       utils/->camel-case-keywords))
 
 (defn sports-place-types [locale]
-  (->>  (vals types/all)
-        (map #(->legacy-api % locale))))
+  (->> (vals types/all)
+       (map #(->legacy-api % locale))))
 
 (defn sports-place-by-type-code [locale type-code]
   (-> (types/all type-code)
       (->legacy-api-with-properties locale)))
 
 (defn collect-sport-place-types [sub-category-type-code]
-  (->> (vals types/all)
-       (filter #(= (% :sub-category) sub-category-type-code))
+  (->> (types/by-sub-category sub-category-type-code)
        (map :type-code)))
 
 (defn- collect-subcategories [type-code locale]
   (->>
-   (vals types/sub-categories)
-   (filter #(= (% :main-category) (str type-code)))
+   (types/by-main-category (str type-code))
    (map (fn [x]
           {:typeCode (x :type-code)
            :name (-> x :name locale)
