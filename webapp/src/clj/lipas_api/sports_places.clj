@@ -99,6 +99,8 @@
 
 (defn filter-and-format
   [locale fields sp]
-  (let [paths (map parse-path fields)
-        formatted (format-sports-place-es sp locale)]
-    (apply select-paths (cons formatted paths))))
+  (let [formatted (format-sports-place-es sp locale)]
+    (if (empty? fields)
+      formatted ; Return all formatted data if no specific fields requested
+      (let [paths (map parse-path fields)]
+        (apply select-paths (cons formatted paths))))))

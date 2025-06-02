@@ -48,3 +48,5 @@ webapp/.eca/
 webapp/local-scrap
 .clj-kondo/**/*
 .lsp
+webapp/.clj-kondo
+.nrepl-port
