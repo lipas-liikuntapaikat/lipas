@@ -1,7 +1,6 @@
 (ns lipas.backend.api.v1
   (:require [lipas-api.core :as legacy-core]
             [lipas-api.http :as legacy-http]
-            [lipas.backend.db.sports-site :as sports-site]
             [lipas.backend.legacy.api :as legacy-api]
             [lipas.schema.legacy :as legacy-schema]
             [lipas.schema.sports-sites.types :as types-schema]
@@ -115,14 +114,8 @@ Access to the hierarchical type classification system used for categorizing spor
         :handler
         (fn [req]
           (let [since-str (or (-> req :parameters :query :since) "1984-01-01 00:00:00.000")
-                ;; Convert string to timestamp for database query
-                since-ts (java.sql.Timestamp/valueOf since-str)
-                deleted-places (sports-site/get-deleted-sports-places db {:since since-ts})
-                ;; Transform database results to API format
-                api-results (map (fn [{:keys [sports_place_id deleted_at]}]
-                                   {:sportsPlaceId sports_place_id
-                                    :deletedAt (str deleted_at)})
-                                 deleted-places)]
+                ;; Use the since string directly for ES query (ES accepts ISO format)
+                api-results (legacy-core/fetch-deleted-sports-places-es search since-str)]
             {:status 200
              :body api-results}))
         :responses {200 {:body legacy-schema/deleted-sports-places-response}}}}]
