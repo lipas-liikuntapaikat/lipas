@@ -11,8 +11,8 @@
 
 (defn routes [{:keys [search db]}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                    {:url "/v1/openapi.json"})]
-    ["/v1"
+                    {:url "/rest/api/openapi.json"})]
+    ["/rest/api"
      {:openapi
       {:id :api-v1
 
