@@ -80,8 +80,6 @@
 (def timestamp-regex
   #"\d{4}-[01]\d-[0-3]\dT[0-2]\d:[0-5]\d:[0-5]\d\.\d+([+-][0-2]\d:[0-5]\d|Z)")
 
-(re-find timestamp-regex "2020-01-01T00:00:00.000Z")
-
 (def date-regex
   #"\d{4}-[01]\d-[0-3]\d")
 

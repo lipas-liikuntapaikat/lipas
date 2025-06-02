@@ -305,6 +305,4 @@
   (tap> wat)
 
 
-  (lipas.backend.core/get-sports-site2 (search) 666)
-
-  )
+  (lipas.backend.core/get-sports-site2 (search) 666))
