@@ -346,7 +346,7 @@
             (fn [idx feature]
               [idx {:feature feature
                     :jts-geom (extract-linestring-from-feature feature)}])
-             features)))
+            features)))
 
 (defn find-matching-feature-index
   "Find the index of a feature that matches the given geometry"
@@ -358,19 +358,19 @@
 
     ;; Find a feature with matching start and end coordinates
     (first
-      (for [[idx {:keys [jts-geom]}] feature-map
-            :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
-                                (.getCoordinateN jts-geom i))
-                  feat-start (first feat-coords)
-                  feat-end (last feat-coords)]
-            :when (or
-                    ;; Match in same direction
-                    (and (.equals2D start-coord feat-start)
-                         (.equals2D end-coord feat-end))
-                    ;; Match in reverse direction
-                    (and (.equals2D start-coord feat-end)
-                         (.equals2D end-coord feat-start)))]
-        idx))))
+     (for [[idx {:keys [jts-geom]}] feature-map
+           :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
+                               (.getCoordinateN jts-geom i))
+                 feat-start (first feat-coords)
+                 feat-end (last feat-coords)]
+           :when (or
+                  ;; Match in same direction
+                  (and (.equals2D start-coord feat-start)
+                       (.equals2D end-coord feat-end))
+                  ;; Match in reverse direction
+                  (and (.equals2D start-coord feat-end)
+                       (.equals2D end-coord feat-start)))]
+       idx))))
 
 (defn sequence-features
   "Sequence LineString features using JTS LineSequencer"
@@ -400,8 +400,8 @@
 
                                        ;; Find matching features for each geometry in the sequence
                                        ordered-indices (for [i (range (.getNumGeometries sequenced))]
-                                                        (let [seq-geom (.getGeometryN sequenced i)]
-                                                          (find-matching-feature-index seq-geom feature-map)))]
+                                                         (let [seq-geom (.getGeometryN sequenced i)]
+                                                           (find-matching-feature-index seq-geom feature-map)))]
 
                                    ;; Get features in the new order, filtering out any nil indices
                                    (mapv #(nth features %) (filter some? ordered-indices)))
@@ -439,10 +439,7 @@
        :geometry
        {:type        "Point",
         :coordinates [25.720539797408946,
-                      62.62057217751676
-                      666]}}]})
-
-  (strip-z-fcoll test-point)
+                      62.62057217751676]}}]})
 
   (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100}  test-point))
   (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000}  test-point))
@@ -501,10 +498,8 @@
        :geometry
        {:type "LineString",
         :coordinates
-        [[26.2436550567509, 63.9531552213109 666],
-         [25.7583312263512, 63.9746827436437 666]]}}]})
-
-  (strip-z-fcoll test-route)
+        [[26.2436550567509, 63.9531552213109],
+         [25.7583312263512, 63.9746827436437]]}}]})
 
   (-> test-route ->flat-coords)
 
@@ -557,7 +552,7 @@
        :geometry
        {:type "Polygon",
         :coordinates
-        [[[26.2436753445903, 63.9531598143881 666],
+        [[[26.2436753445903, 63.9531598143881],
           [26.4505514903968, 63.9127506671744],
           [26.4505514903968, 63.9531598143881],
           [26.2436753445903, 63.9531598143881]]]}},
@@ -566,12 +561,10 @@
        :geometry
        {:type "Polygon",
         :coordinates
-        [[[26.2436550567509, 63.9531552213109 666],
+        [[[26.2436550567509, 63.9531552213109],
           [25.7583312263512, 63.9746827436437],
           [25.7583312263512, 63.9531552213109],
           [26.2436550567509, 63.9531552213109]]]}}]})
-
-  (strip-z-fcoll test-polygon)
 
   (centroid test-polygon)
 

@@ -237,10 +237,9 @@
         (System/exit 0)))))
 
 (comment
-  (-main "--legacy")
   (-main)
-  (-main "--analytics")
   (-main "--legacy")
+  (-main "--analytics")
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
   (def db (:db system))
@@ -267,4 +266,5 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"
-                           :search-string "kissa*"})))
+                           :search-string "kissa*"}))
+  )
