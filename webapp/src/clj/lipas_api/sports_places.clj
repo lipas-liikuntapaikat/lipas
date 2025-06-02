@@ -18,6 +18,20 @@
         (.format df-out))
     (catch Exception e)))
 
+(defn convert-iso8601-to-legacy [iso-timestamp]
+  "Converts ISO8601 timestamp (2021-09-16T08:49:04.675Z) to legacy format (2021-09-16 08:49:04.675)"
+  (try
+    (when iso-timestamp
+      (-> iso-timestamp
+          (clojure.string/replace #"T" " ")
+          (clojure.string/replace #"Z$" "")
+          ;; Ensure we have 3 decimal places for milliseconds
+          (as-> s (if (re-find #"\.\d{1,3}$" s)
+                    s
+                    (str s ".000")))))
+    (catch Exception e
+      nil)))
+
 (comment
   (parse-date "2014-10-02 12:50:37.123")
   (parse-date "KEKKONEN")
@@ -69,6 +83,8 @@
       (update-with-locale locale :fi [:location :neighborhood])
       (update-with-locale locale :fi [:owner])
       (update-with-locale locale :fi [:admin])
+      ;; Handle lastModified field conversion
+      (update :lastModified #(or % (convert-iso8601-to-legacy (:event-date sports-place))))
       ;; Extract schoolUse and freeUse from properties for legacy API compatibility
       ;; Only if they don't already exist at the top level
       (update :schoolUse #(or % (get-in sports-place [:properties :school-use?])))
