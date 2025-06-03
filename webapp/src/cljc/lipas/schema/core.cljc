@@ -29,7 +29,7 @@
 
 (defn str-in [min max]
   (st/spec
-   {:spec              (s/and string? #(<= min (count %) max))
+   {:spec (s/and string? #(<= min (count %) max))
     :swagger/minLength min
     :swagger/maxLength max}))
 
@@ -38,22 +38,22 @@
   min (inclusive) to max (exclusive)."
   [& {:keys [min max]}]
   (st/spec
-   {:spec            (s/and number? #(<= min % (dec max)))
+   {:spec (s/and number? #(<= min % (dec max)))
     ;; Generate only doubles to avoid problems with ES index type
     ;; inference and generated values being randomly int / double.
     ;; Ints are ingested fine by ES but if the initial mapping expects
     ;; all inputs to be ints it fails when it sees doubles.
-    :gen             gen/double
-    :swagger/type    "number"
+    :gen gen/double
+    :swagger/type "number"
     :swagger/minimum min
     :swagger/maximum max}))
 
 (defn double-in
   [& {:keys [min max infinite? NaN?]}]
   (st/spec
-   {:spec            (s/double-in :min min :max max :NaN? NaN? :infinite? infinite?)
-    :swagger/type    "number"
-    :swagger/format  "double"
+   {:spec (s/double-in :min min :max max :NaN? NaN? :infinite? infinite?)
+    :swagger/type "number"
+    :swagger/format "double"
     :swagger/minimum min
     :swagger/maximum max}))
 
@@ -62,13 +62,12 @@
   min (inclusive) to max (exclusive)."
   [min max]
   (st/spec
-   {:spec            (s/int-in min max)
-    :type            :long
-    :swagger/type    "number"
-    :swagger/format  "int64"
+   {:spec (s/int-in min max)
+    :type :long
+    :swagger/type "number"
+    :swagger/format "int64"
     :swagger/minimum min
     :swagger/maximum max}))
-
 
 ;;; Regexes ;;;
 
@@ -158,7 +157,7 @@
 (s/def :lipas/timestamp-type (s/and string? #(re-matches timestamp-regex %)))
 (s/def :lipas/timestamp
   (st/spec
-   {:spec         (s/with-gen :lipas/timestamp-type timestamp-gen)
+   {:spec (s/with-gen :lipas/timestamp-type timestamp-gen)
     :swagger/type "string"
     :swagger/format "date-time"}))
 
@@ -167,8 +166,8 @@
 
 (s/def :lipas/date
   (st/spec
-   {:spec           :lipas/date-type
-    :swagger/type   "string"
+   {:spec :lipas/date-type
+    :swagger/type "string"
     :swagger/format "date"}))
 
 (s/def :lipas/email-type (s/and string?
@@ -177,14 +176,14 @@
 
 (s/def :lipas/email (s/with-gen :lipas/email-type email-gen))
 
-(s/def :lipas/hours-in-day (int-in  0 (inc 24)))
+(s/def :lipas/hours-in-day (int-in 0 (inc 24)))
 (s/def :lipas/hours-in-day-with-fractions (number-in {:min 0 :max (inc 24)}))
 
 (s/def :lipas/locale* #{:fi :se :en})
 (s/def :lipas/locale
   (st/spec
-   {:spec         :lipas/locale*
-    :type         :keyword
+   {:spec :lipas/locale*
+    :type :keyword
     :swagger/type "enum"}))
 
 ;;; Reminder ;;;
@@ -382,8 +381,8 @@
   (s/and string? #(re-matches postal-code-regex %)))
 
 (s/def :lipas.location/postal-code (s/with-gen
-                       :lipas.location/postal-code-type
-                       postal-code-gen))
+                                     :lipas.location/postal-code-type
+                                     postal-code-gen))
 
 (s/def :lipas.location/postal-office (str-in 0 50))
 
@@ -391,8 +390,8 @@
 (s/def :lipas.location.city/city-code* city-codes)
 (s/def :lipas.location.city/city-code
   (st/spec
-   {:spec         :lipas.location.city/city-code*
-    :type         :long
+   {:spec :lipas.location.city/city-code*
+    :type :long
     :swagger/type "number"
     :swagger/enum city-codes}))
 
@@ -470,14 +469,14 @@
 (s/def :lipas.sports-site/owner* (into #{} (keys owners/all)))
 (s/def :lipas.sports-site/owner
   (st/spec
-   {:spec         :lipas.sports-site/owner*
+   {:spec :lipas.sports-site/owner*
     :swagger/type "string"
     :swagger/enum (keys owners/all)}))
 
 (s/def :lipas.sports-site/admin* (into #{} (keys admins/all)))
 (s/def :lipas.sports-site/admin
   (st/spec
-   {:spec         :lipas.sports-site/admin*
+   {:spec :lipas.sports-site/admin*
     :swagger/type "string"
     :swagger/enum (keys admins/all)}))
 
@@ -496,8 +495,8 @@
 
 (s/def :lipas.sports-site.type/type-code
   (st/spec
-   {:spec         :lipas.sports-site.type/type-code*
-    :type         :long
+   {:spec :lipas.sports-site.type/type-code*
+    :type :long
     :swagger/type "number"
     :swagger/enum type-codes}))
 
@@ -506,7 +505,7 @@
 
 (s/def :lipas.sports-site/construction-year
   (st/spec
-   {:spec         :lipas.sports-site/construction-year*
+   {:spec :lipas.sports-site/construction-year*
     :swagger/type "number"}))
 
 (s/def :lipas.sports-site/renovation-year*
@@ -514,7 +513,7 @@
 
 (s/def :lipas.sports-site/renovation-year
   (st/spec
-   {:spec         :lipas.sports-site/renovation-year*
+   {:spec :lipas.sports-site/renovation-year*
     :swagger/type "number"}))
 
 (s/def :lipas.sports-site/renovation-years
@@ -565,7 +564,7 @@
 
 (s/def ::real
   (st/spec
-   {:spec         ::real*
+   {:spec ::real*
     :swagger/type "number"}))
 
 (s/def :lipas.sports-site.properties/height-m ::real)
@@ -725,7 +724,8 @@
 (s/def :lipas.sports-site.properties/rapid-canoeing-centre? boolean?)
 (s/def :lipas.sports-site.properties/canoeing-club? boolean?)
 (s/def :lipas.sports-site.properties/activity-service-company? boolean?)
-(s/def :lipas.sports-site.properties/boating-service-class string?)
+(s/def :lipas.sports-site.properties/boating-service-class
+  (into #{} (keys (get-in prop-types/all [:boating-service-class :opts]))))
 (s/def :lipas.sports-site.properties/water-point
   (into #{} (keys (get-in prop-types/all [:water-point :opts]))))
 (s/def :lipas.sports-site.properties/customer-service-point? boolean?)
@@ -755,10 +755,7 @@
 (s/def :lipas.sports-site.properties/pyramid-tables-count ::real)
 (s/def :lipas.sports-site.properties/carom-tables-count ::real)
 (s/def :lipas.sports-site.properties/total-billiard-tables-count ::real)
-(s/def :lipas.sports-site.properties/boating-service-class
-  (s/coll-of
-   (into #{} (keys (get-in prop-types/all [:boating-service-class :opts])))
-   :distinct true))
+
 (s/def :lipas.sports-site.properties/travel-modes
   (s/coll-of
    (into #{} (keys (get-in prop-types/all [:travel-modes :opts])))
@@ -955,7 +952,6 @@
                    :lipas.sports-site.properties/pyramid-tables-count
                    :lipas.sports-site.properties/carom-tables-count
                    :lipas.sports-site.properties/total-billiard-tables-count
-                   :lipas.sports-site.properties/boating-service-class
                    :lipas.sports-site.properties/free-use?
                    :lipas.sports-site.properties/school-use?
                    :lipas.sports-site.properties/year-round-use?
@@ -988,7 +984,7 @@
 
 (s/def :lipas.sports-site.type/size-category
   (st/spec
-   {:spec         :lipas.sports-site.type/size-category*
+   {:spec :lipas.sports-site.type/size-category*
     :swagger/type "string"
     :swagger/enum (keys ice-stadiums/size-categories)}))
 
@@ -1051,7 +1047,7 @@
 
 ;; Visitors ;;
 
-(s/def :lipas.visitors/total-count (int-in 0 1000000))      ; Users
+(s/def :lipas.visitors/total-count (int-in 0 1000000)) ; Users
 (s/def :lipas.visitors/spectators-count (int-in 0 1000000)) ; Spectators
 
 (s/def :lipas/visitors
@@ -2139,13 +2135,12 @@
 (s/def :lipas.magic-link/email-variant #{"lipas" "portal"})
 (s/def :lipas.magic-link/login-url
   (s/or :local #(str/starts-with? % "https://localhost")
-        :dev   #(str/starts-with? % "https://lipas-dev.cc.jyu.fi")
+        :dev #(str/starts-with? % "https://lipas-dev.cc.jyu.fi")
         :prod1 #(str/starts-with? % "https://uimahallit.lipas.fi")
         :prod2 #(str/starts-with? % "https://jaahallit.lipas.fi")
         :prod3 #(str/starts-with? % "https://liikuntapaikat.lipas.fi")
         :prod4 #(str/starts-with? % "https://www.lipas.fi")
         :prod5 #(str/starts-with? % "https://lipas.fi")))
-
 
 ;;; Diversity index calculation
 
@@ -2221,8 +2216,8 @@
 
 (s/def :lipas.api.create-upload-url/extension
   (st/spec
-   {:spec         :lipas.api.create-upload-url/content-type*
-    :type         :string
+   {:spec :lipas.api.create-upload-url/content-type*
+    :type :string
     :swagger/type "enum"}))
 
 (s/def :lipas.api.create-upload-url/payload
@@ -2246,12 +2241,12 @@
 (s/def :lipas.loi/event-date :lipas/timestamp)
 
 (s/def :lipas.loi/status
-  (st/spec {:spec         (into #{} (keys status/statuses))
+  (st/spec {:spec (into #{} (keys status/statuses))
             :swagger/type "string"
             :swagger/enum (keys status/statuses)}))
 
 (s/def :lipas.loi/loi-category
-  (st/spec {:spec         (into #{} (keys loi/categories))
+  (st/spec {:spec (into #{} (keys loi/categories))
             :swagger/type "string"
             :swagger/enum (keys loi/categories)}))
 
@@ -2277,7 +2272,6 @@
 (s/def :lipas.loi/documents
   (s/coll-of :lipas.loi/document))
 
-
 ;; LOI search API
 (s/def :lipas.api.search-lois.payload/distance ::real)
 
@@ -2295,13 +2289,11 @@
   (s/keys :opt-un [:lipas.api.search-lois.payload/loi-statuses
                    :lipas.api.search-lois.payload/location]))
 
-
 ;;; Calc stats API
 
 (s/def :lipas.city.population/year (into #{} (range 2000 (inc 2022))))
 (s/def :lipas.stats.sports-sites/grouping #{"location.city.city-code"
                                             "type.type-code"})
-
 
 (s/def :lipas.api.calculate-stats/payload
   (s/keys :req-un [:lipas.city.population/year]
@@ -2309,14 +2301,11 @@
                    :lipas.api.report.req/type-codes
                    :lipas.stats.sports-sites/grouping]))
 
-
 (comment
   (s/valid? :lipas.api.search-lois/payload {:loi-statuses ["active" "planned"]
                                             :location {:lon 25.48347583491476
                                                        :lat 62.0546268484493
-                                                       :distance 100}})
-  )
-
+                                                       :distance 100}}))
 
 (comment
   (stp/parse-spec :lipas.loi/document)
