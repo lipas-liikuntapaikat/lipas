@@ -1,0 +1,145 @@
+(ns lipas.jobs.core
+  "Unified job queue system for LIPAS background processing.
+  
+  Replaces the existing separate queue tables (analysis_queue, elevation_queue,
+  email_out_queue, integration_out_queue, webhook_queue) with a single
+  unified jobs table and smart concurrency control."
+  (:require
+   [lipas.jobs.db :as jobs-db]
+   [malli.core :as m]
+   [taoensso.timbre :as log]))
+
+;; Load SQL queries
+ ;; Database functions are loaded in lipas.jobs.db namespace 
+
+;; Job type specifications
+ ;; Job type schemas using Malli
+(def job-type-schema
+  [:enum "analysis" "elevation" "email" "integration" "webhook"
+   "produce-reminders" "cleanup-jobs"])
+
+(def job-status-schema
+  [:enum "pending" "processing" "completed" "failed" "dead"])
+
+(def priority-schema
+  [:and int? [:>= 0]])
+
+(def payload-schema map?)
+
+(def job-spec-schema
+  [:map
+   [:job-type job-type-schema]
+   [:payload payload-schema]
+   [:priority {:optional true} priority-schema]
+   [:max-attempts {:optional true} int?]
+   [:run-at {:optional true} any?]])
+
+;; Job duration classifications for smart concurrency
+(def job-duration-types
+  "Classification of job types by expected duration.
+  Fast jobs get priority thread allocation to prevent blocking."
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook"}
+   :slow #{"analysis" "elevation"}})
+
+(defn fast-job?
+  "Check if a job type is classified as fast."
+  [job-type]
+  (contains? (:fast job-duration-types) job-type))
+
+(defn enqueue-job!
+  "Add a new job to the unified queue.
+  
+  Parameters:
+  - db: Database connection
+  - job-type: String job type (must be in ::job-type spec)
+  - payload: Map containing job data
+  - opts: Optional map with :priority, :max-attempts, :run-at
+  
+  Returns: Job ID"
+  [db job-type payload & [{:keys [priority max-attempts run-at]
+                           :or {priority 100 max-attempts 3 run-at (java.sql.Timestamp/from (java.time.Instant/now))}}]]
+
+  {:pre [(m/validate job-type-schema job-type)
+         (map? payload)]}
+
+  (log/debug "Enqueuing job" {:type job-type :payload payload :priority priority})
+
+  (let [result (jobs-db/enqueue-job! db {:type job-type
+                                         :payload payload
+                                         :priority priority
+                                         :max_attempts max-attempts
+                                         :run_at run-at})]
+    (:id result)))
+
+(defn fetch-next-jobs
+  "Fetch the next batch of jobs to process, with atomic locking.
+  
+  Uses PostgreSQL SELECT FOR UPDATE SKIP LOCKED for safe concurrent access.
+  
+  Parameters:
+  - db: Database connection
+  - opts: Map with :limit, :job-types (vector of allowed types)
+  
+  Returns: Vector of job maps"
+  [db {:keys [limit job-types] :or {limit 5}}]
+
+  (let [jobs (jobs-db/fetch-next-jobs db {:limit limit
+                                          :job_types (when job-types (into-array String job-types))})]
+    (when (seq jobs)
+      (log/debug "Fetched jobs" {:count (count jobs) :types (map :type jobs)}))
+    jobs))
+
+(defn mark-completed!
+  "Mark a job as successfully completed."
+  [db job-id]
+  (log/debug "Marking job completed" {:id job-id})
+  (jobs-db/mark-job-completed! db {:id job-id}))
+
+(defn mark-failed!
+  "Mark a job as failed. Will retry if attempts < max-attempts, otherwise mark as dead."
+  [db job-id error-message]
+  (log/warn "Marking job failed" {:id job-id :error error-message})
+  (jobs-db/mark-job-failed! db {:id job-id :error_message (str error-message)}))
+
+(defn get-queue-stats
+  "Get current queue statistics for monitoring."
+  [db]
+  (->> (jobs-db/get-job-stats db)
+       (map #(update % :status keyword))
+       (group-by :status)
+       (map (fn [[status entries]]
+              [status (first entries)]))
+       (into {})))
+
+(defn cleanup-old-jobs!
+  "Remove completed and dead jobs older than specified days."
+  [db days]
+  (log/info "Cleaning up jobs older than" days "days")
+  (jobs-db/cleanup-old-jobs! db {:days days}))
+
+;; Legacy compatibility functions for existing code
+
+(defn add-to-analysis-queue!
+  "Legacy compatibility: Add analysis job to unified queue."
+  [db sports-site]
+  (enqueue-job! db "analysis" {:lipas-id (:lipas-id sports-site)} {:priority 80}))
+
+(defn add-to-elevation-queue!
+  "Legacy compatibility: Add elevation job to unified queue."
+  [db sports-site]
+  (enqueue-job! db "elevation" {:lipas-id (:lipas-id sports-site)} {:priority 70}))
+
+(defn add-to-integration-out-queue!
+  "Legacy compatibility: Add integration job to unified queue."
+  [db sports-site]
+  (enqueue-job! db "integration" {:lipas-id (:lipas-id sports-site)} {:priority 90}))
+
+(defn add-to-webhook-queue!
+  "Legacy compatibility: Add webhook job to unified queue."
+  [db batch-data]
+  (enqueue-job! db "webhook" {:batch-data batch-data} {:priority 85}))
+
+(defn add-to-email-out-queue!
+  "Legacy compatibility: Add email job to unified queue."
+  [db message]
+  (enqueue-job! db "email" message {:priority 95}))
