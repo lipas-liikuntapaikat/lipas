@@ -1,6 +1,6 @@
 (ns lipas.jobs.core
   "Unified job queue system for LIPAS background processing.
-  
+
   Replaces the existing separate queue tables (analysis_queue, elevation_queue,
   email_out_queue, integration_out_queue, webhook_queue) with a single
   unified jobs table and smart concurrency control."
@@ -9,11 +9,8 @@
    [malli.core :as m]
    [taoensso.timbre :as log]))
 
-;; Load SQL queries
- ;; Database functions are loaded in lipas.jobs.db namespace 
-
 ;; Job type specifications
- ;; Job type schemas using Malli
+
 (def job-type-schema
   [:enum "analysis" "elevation" "email" "integration" "webhook"
    "produce-reminders" "cleanup-jobs"])
@@ -48,13 +45,13 @@
 
 (defn enqueue-job!
   "Add a new job to the unified queue.
-  
+
   Parameters:
   - db: Database connection
   - job-type: String job type (must be in ::job-type spec)
   - payload: Map containing job data
   - opts: Optional map with :priority, :max-attempts, :run-at
-  
+
   Returns: Job ID"
   [db job-type payload & [{:keys [priority max-attempts run-at]
                            :or {priority 100 max-attempts 3 run-at (java.sql.Timestamp/from (java.time.Instant/now))}}]]
@@ -73,13 +70,13 @@
 
 (defn fetch-next-jobs
   "Fetch the next batch of jobs to process, with atomic locking.
-  
+
   Uses PostgreSQL SELECT FOR UPDATE SKIP LOCKED for safe concurrent access.
-  
+
   Parameters:
   - db: Database connection
   - opts: Map with :limit, :job-types (vector of allowed types)
-  
+
   Returns: Vector of job maps"
   [db {:keys [limit job-types] :or {limit 5}}]
 
@@ -98,7 +95,7 @@
 (defn mark-failed!
   "Mark a job as failed. Will retry if attempts < max-attempts, otherwise mark as dead."
   [db job-id error-message]
-  (log/warn "Marking job failed" {:id job-id :error error-message})
+  (log/info "Marking job failed" {:id job-id :error error-message})
   (jobs-db/mark-job-failed! db {:id job-id :error_message (str error-message)}))
 
 (defn get-queue-stats

@@ -25,7 +25,7 @@
 
   ;; Initialize the test system
   (reset! test-system
-          (ig/init (select-keys config/system-config [:lipas/db]))))
+          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
 
 (defn teardown-test-system! []
   (when @test-system
