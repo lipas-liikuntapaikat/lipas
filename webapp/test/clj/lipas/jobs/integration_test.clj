@@ -1,7 +1,7 @@
 (ns lipas.jobs.integration-test
   "End-to-end integration tests for the unified job queue system.
-  
-  Focuses on high-value testing with Malli validation instead of 
+
+  Focuses on high-value testing with Malli validation instead of
   manual assertions for better maintainability."
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
@@ -11,6 +11,7 @@
    [lipas.jobs.core :as jobs]
    [lipas.jobs.worker :as worker]
    [lipas.jobs.scheduler :as scheduler]
+   [lipas.test-utils :as test-utils]
    [malli.core :as m]
    [next.jdbc :as jdbc]
    [taoensso.timbre :as log]))
@@ -19,6 +20,10 @@
 (defonce test-system (atom nil))
 
 (defn setup-test-system! []
+  ;; Ensure database is properly initialized with current migrations
+  (test-utils/ensure-test-database!)
+
+  ;; Initialize the test system
   (reset! test-system
           (ig/init (select-keys config/system-config [:lipas/db]))))
 
@@ -35,22 +40,22 @@
 
 (use-fixtures :each
   (fn [f]
-    ;; Clean jobs table before each test
-    (jdbc/execute! (:lipas/db @test-system) ["DELETE FROM jobs"])
+    ;; Clean all tables before each test (including jobs table)
+    (test-utils/prune-db! (:lipas/db @test-system))
     (f)))
 
 ;; Malli schemas for test validation
 
 (def job-schema
   [:map
-   [:id pos-int?]
-   [:type jobs/job-type-schema]
-   [:status jobs/job-status-schema]
-   [:payload map?]
-   [:priority [:>= 0]]
-   [:attempts [:>= 0]]
-   [:max_attempts pos-int?]
-   [:created_at inst?]])
+   [:jobs/id pos-int?]
+   [:jobs/type jobs/job-type-schema]
+   [:jobs/status jobs/job-status-schema]
+   [:jobs/payload map?]
+   [:jobs/priority [:>= 0]]
+   [:jobs/attempts [:>= 0]]
+   [:jobs/max_attempts pos-int?]
+   [:jobs/created_at inst?]])
 
 (def worker-stats-schema
   [:map
@@ -181,3 +186,6 @@
           (is (= #{"analysis" "elevation" "integration" "email"} (set job-types)))
           (is (every? #(>= % 70) priorities)) ; All have reasonable priorities
           (is (some #(= 95 %) priorities))))))) ; Email has high priority
+
+(comment
+  (clojure.test/run-tests *ns*))

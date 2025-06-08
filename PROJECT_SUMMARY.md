@@ -19,6 +19,7 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 - **Search**: Elasticsearch with Logstash and Kibana (ELK stack) for search functionality
 - **Mapping**: Nginx reverse proxy, MapProxy for basemap caching, GeoServer for legacy support
 - **Routing**: OSRM (Open Source Routing Machine) for multi-modal route calculation
+- **Job Queue System**: Unified background job processing with smart concurrency control
 - **Legacy Integration**: Maintains compatibility with existing LIPAS services
 
 ## Technology Stack
@@ -45,6 +46,7 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 - **Cheshire 5.13.0** - JSON handling
 - **Integrant 0.10.0** - System management
 - **Migratus 1.0.6** - Database migrations
+- **Malli 0.17.0** - Data validation and schemas
 
 ### Infrastructure
 - **PostgreSQL/PostGIS** - Spatial database
@@ -67,13 +69,17 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 │   ├── package.json           # NPM dependencies
 │   ├── src/
 │   │   ├── clj/               # Backend Clojure source
-│   │   │   └── lipas/backend/ # Core backend logic
+│   │   │   ├── lipas/backend/ # Core backend logic
+│   │   │   └── lipas/jobs/    # Unified job queue system
 │   │   ├── cljc/              # Shared Clojure(Script) code
 │   │   │   └── lipas/         # Data models, schemas, i18n
 │   │   └── cljs/              # Frontend ClojureScript source
 │   │       └── lipas/ui/      # UI components and logic
 │   ├── resources/             # Static resources, SQL migrations
+│   │   ├── migrations/        # Database schema migrations
+│   │   └── sql/               # HugSQL query definitions
 │   └── test/                  # Test suites
+│       └── clj/lipas/jobs/    # Job system integration tests
 ├── docker-compose.yml         # Container definitions
 ├── scripts/                   # Deployment and utility scripts
 ├── nginx/                     # Nginx configuration
@@ -94,6 +100,14 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 - **`lipas.backend.auth`** - Authentication and authorization
 - **`lipas.backend.gis`** - Geospatial operations and utilities
 
+### Unified Job Queue System (`lipas.jobs.*`) 🆕
+- **`lipas.jobs.core`** - Public API for job management and lifecycle
+- **`lipas.jobs.db`** - Database access layer with HugSQL queries
+- **`lipas.jobs.dispatcher`** - Multimethod job handlers by type
+- **`lipas.jobs.worker`** - Mixed-duration worker with fast/general lanes
+- **`lipas.jobs.scheduler`** - Periodic job producer scheduling
+- **`lipas.jobs.system`** - Integrant system configuration for workers
+
 ### Frontend Core (`lipas.ui.*`)
 - **`lipas.ui.core`** - Application initialization and routing
 - **`lipas.ui.events`** - re-frame event handlers
@@ -107,6 +121,50 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 - **`lipas.schema.*`** - Data validation schemas using Malli
 - **`lipas.i18n.*`** - Internationalization (Finnish, English, Swedish)
 - **`lipas.utils`** - Shared utility functions
+
+## Unified Job Queue System 🆕
+
+### Architecture
+The system replaces 5 separate queue tables with a unified approach:
+
+```
+Scheduler → Jobs Table → Worker (Fast/General Lanes) → Job Handlers
+   ↓           ↓              ↓                          ↓
+Periodic    Unified       Smart                    Email, Analysis,
+Tasks       Queue         Concurrency              Elevation, etc.
+```
+
+### Key Features
+- **Smart Concurrency**: Fast lane (emails, reminders) + general lane (analysis, elevation)
+- **Prevents Head-of-Line Blocking**: Fast jobs never wait for slow jobs
+- **Automatic Scheduling**: Replaces tea-time with job producers
+- **Error Handling**: Retry logic, failure tracking, dead letter queue
+- **Legacy Compatibility**: All existing queue functions continue to work
+
+### Job Types
+- **Fast Jobs** (< 30 seconds): email, produce-reminders, cleanup-jobs, integration, webhook
+- **Slow Jobs** (minutes): analysis, elevation
+
+### Usage Examples
+```clojure
+;; Enqueue a job
+(jobs/enqueue-job! db "email" 
+                   {:to "user@example.com" :subject "Welcome"} 
+                   {:priority 95})
+
+;; Start worker system
+(worker/start-mixed-duration-worker! 
+  {:db db :search search :emailer emailer}
+  {:fast-threads 3 :general-threads 5})
+
+;; Legacy compatibility (still works)
+(jobs/add-to-analysis-queue! db sports-site)
+```
+
+### Database Schema
+- **`jobs` table**: Unified queue with status, priority, retry logic
+- **HugSQL queries**: `resources/sql/jobs.sql`
+- **Migration**: `20250108000000-unified-jobs-table.up.sql`
 
 ## Development Workflow
 
@@ -161,6 +219,10 @@ The project supports REPL-driven development with Integrant for system managemen
 (reset)         ; Restart system with code changes
 (go)            ; Start system  
 (halt)          ; Stop system
+
+;; Job system testing
+(require '[lipas.jobs.core :as jobs])
+(jobs/enqueue-job! db "cleanup-jobs" {:days-old 7})
 ```
 
 ## Key APIs and Integration Points
@@ -176,6 +238,12 @@ The project supports REPL-driven development with Integrant for system managemen
 - Diversity and reachability analysis for urban planning
 - Statistical reporting and data visualization
 - Population and accessibility analysis
+
+### Background Job Processing 🆕
+- Unified job queue with smart concurrency control
+- Automatic retry logic and error handling
+- Periodic task scheduling (reminders, cleanup)
+- Legacy queue compatibility layer
 
 ### Geospatial Services
 - Multi-modal routing (OSRM integration)
@@ -196,7 +264,7 @@ The application uses PostgreSQL with PostGIS extensions. Key migrations are loca
 - **Users and authentication** - User accounts, permissions, roles
 - **Sports sites** - Main entity with extensive geospatial and metadata fields
 - **Location data** - Cities, administrative regions, population data
-- **Analysis queues** - Background job processing
+- **Jobs** - Unified background job processing queue 🆕
 - **Integration tables** - Legacy system synchronization
 
 ## Configuration and Deployment
@@ -221,6 +289,7 @@ clojure -M -m shadow.cljs.devtools.cli release app
 - **Backend**: Uberjar deployment via Docker containers
 - **Frontend**: Static asset serving through Nginx
 - **Database**: Automated migrations via Migratus
+- **Worker System**: Separate Docker container for background processing 🆕
 - **Infrastructure**: Docker Compose orchestration
 
 ## Extension Points
@@ -231,16 +300,22 @@ clojure -M -m shadow.cljs.devtools.cli release app
 3. Implement specialized UI components in `lipas.ui.sports-sites`
 4. Add database migrations if needed
 
+### New Job Types 🆕
+1. Add job type to `lipas.jobs.core/job-type-schema`
+2. Implement handler in `lipas.jobs.dispatcher`
+3. Classify as fast or slow in `job-duration-types`
+4. Test with integration tests
+
 ### New Analysis Features
 1. Extend `lipas.backend.analysis.*` namespaces
 2. Add Elasticsearch mappings and queries
 3. Create UI components for visualization
-4. Integrate with existing queue-based processing
+4. Add background job handlers for async processing 🆕
 
 ### External Service Integration
 1. Add configuration in `lipas.backend.config`
 2. Implement service clients in `lipas.backend.*`
-3. Add background job processing if needed
+3. Add background job processing for async operations 🆕
 4. Update authentication/authorization as required
 
 ## Development Conventions
@@ -254,8 +329,9 @@ clojure -M -m shadow.cljs.devtools.cli release app
 ### Testing Strategy
 - Unit tests for pure functions
 - Integration tests marked with `^:integration` metadata
-- End-to-end tests using Etaoin for UI testing
+- End-to-end job system tests using Malli validation 🆕
 - Database tests using transaction rollback
+- Focus on test value over assertion details 🆕
 
 ### State Management (Frontend)
 - All application state in re-frame app-db
@@ -267,6 +343,23 @@ clojure -M -m shadow.cljs.devtools.cli release app
 - Integrant for system lifecycle management
 - Ring/Reitit for HTTP handling
 - Component-based architecture with dependency injection
-- Queue-based background processing
+- Unified queue-based background processing 🆕
+- Malli schemas for data validation 🆕
 
-This summary provides a comprehensive foundation for understanding and contributing to the LIPAS codebase. The project exemplifies modern Clojure(Script) web development with sophisticated geospatial capabilities and integration requirements.
+### Job System Patterns 🆕
+- Use `jobs/enqueue-job!` for all background work
+- Implement job handlers as multimethods in dispatcher
+- Use Malli schemas for job payload validation
+- Follow fast/slow job classification for optimal performance
+- Maintain legacy compatibility wrappers
+
+## Recent Major Changes 🆕
+
+### Unified Job Queue System (2025-01)
+- **Replaced**: 5 separate queue tables with unified `jobs` table
+- **Added**: Smart concurrency control (fast lane + general lane)
+- **Architecture**: Scheduler → Queue → Worker → Handlers pipeline
+- **Benefits**: Prevents head-of-line blocking, better monitoring, easier maintenance
+- **Migration**: Legacy queue functions continue to work during transition
+
+This summary provides a comprehensive foundation for understanding and contributing to the LIPAS codebase. The project exemplifies modern Clojure(Script) web development with sophisticated geospatial capabilities, robust background processing, and integration requirements.

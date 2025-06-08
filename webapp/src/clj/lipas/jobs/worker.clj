@@ -136,7 +136,7 @@
   ;; Wait for worker threads to finish
   (doseq [future (:futures @worker-state)]
     (try
-      (deref future 10000) ; Wait up to 10 seconds
+      (deref future 10000 :timeout) ; Wait up to 10 seconds
       (catch Exception ex
         (log/warn ex "Error stopping worker thread"))))
 
