@@ -1,5 +1,8 @@
 (ns lipas.worker
-  "See also `lipas.integrator` namespace."
+  "Legacy worker using tea-time scheduler.
+   See also `lipas.integrator` namespace.
+   
+   For the new unified job queue system, use `lipas.jobs.main` instead."
   (:require [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.system :as backend]
@@ -46,45 +49,6 @@
 
       ;; Keep running forever
       (while true (Thread/sleep 100)))))
-
-(defn -main-unified
-  "New unified worker main function using the job queue system.
-   
-   Usage:
-   - No args: Run full worker system (scheduler + mixed-duration worker)
-   - 'worker': Run only the mixed-duration worker
-   - 'scheduler': Run only the scheduler"
-  [& args]
-  (let [mode (first args)]
-    (case mode
-      "worker"
-      (do
-        (log/info "Starting unified job worker (worker only)")
-        (let [config (select-keys config/system-config [:lipas/db :lipas/search :lipas/emailer])
-              {:lipas/keys [db search emailer]} (backend/start-system! config)
-              system {:db db :search search :emailer emailer}]
-          (lipas.jobs.worker/start-mixed-duration-worker! system {})
-          ;; Keep running
-          (while true (Thread/sleep 1000))))
-
-      "scheduler"
-      (do
-        (log/info "Starting unified job scheduler (scheduler only)")
-        (let [config (select-keys config/system-config [:lipas/db])
-              {:lipas/keys [db]} (backend/start-system! config)]
-          (lipas.jobs.scheduler/start-scheduler! db)
-          ;; Keep running
-          (while true (Thread/sleep 1000))))
-
-      ;; Default: run both scheduler and worker
-      (do
-        (log/info "Starting unified job system (scheduler + worker)")
-        (let [system (lipas.jobs.system/start-worker-system!)]
-          ;; Add shutdown hook
-          (.addShutdownHook (Runtime/getRuntime)
-                            (Thread. #(lipas.jobs.system/stop-worker-system! system) "shutdown-hook"))
-          ;; Keep running
-          (while true (Thread/sleep 1000)))))))
 
 (comment
   (-main)

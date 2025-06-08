@@ -353,6 +353,43 @@ clojure -M -m shadow.cljs.devtools.cli release app
 - Follow fast/slow job classification for optimal performance
 - Maintain legacy compatibility wrappers
 
+### Test Database Isolation ⚠️ **CRITICAL**
+**All tests MUST use the test database with `_test` suffix to ensure proper isolation.**
+
+#### Configuration Requirements
+- ✅ **Correct**: Use `(config/->system-config test-utils/config)` for Integrant system initialization
+- ❌ **Wrong**: Never use `config/system-config` directly in tests (connects to production database)
+
+#### Test Database Setup
+The `test-utils/config` automatically applies the `_test` suffix to:
+- Database name: `lipas` → `lipas_test`
+- Search indices: `sports_sites_current` → `sports_sites_current_test`
+- All other external services get test-specific configurations
+
+#### Common Pitfalls to Avoid
+1. **New test files forgetting test config**: Always use `test-utils/config` in test setup
+2. **Direct database connections**: Use the test system's database connection, not direct configs  
+3. **Shared resources**: Ensure search indices, email services, etc. use test configurations
+4. **CI/Local differences**: Test configurations work identically in both environments
+
+#### Example Correct Test Setup
+```clojure
+(defn setup-test-system! []
+  (test-utils/ensure-test-database!)
+  (reset! test-system
+          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
+```
+
+#### Verification
+Always verify your tests are using the correct database:
+```clojure
+;; In test, check database name includes _test suffix
+(println "Using database:" (-> (test-db) :dbname)) 
+;; Should print: "lipas_test"
+```
+
+This isolation prevents tests from interfering with production data and ensures consistent CI/local behavior.
+
 ## Recent Major Changes 🆕
 
 ### Unified Job Queue System (2025-01)
