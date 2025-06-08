@@ -20,8 +20,8 @@
   (let [config (select-keys config/system-config [:lipas/db :lipas/emailer :lipas/search])
 
         {:lipas/keys [db emailer search]} (backend/start-system! config)
-        task-ks                     (or (not-empty (mapv keyword args))
-                                        all-tasks)]
+        task-ks (or (not-empty (mapv keyword args))
+                    all-tasks)]
 
     (log/info "Starting to run tasks:" task-ks)
 
@@ -41,11 +41,50 @@
 
       (when (some #{:utp-webhook} task-ks)
         (let [config (get-in config/default-config [:app :utp])
-              task   (tt/every! 30 (fn [] (utp-webhook/process! db config)))]
+              task (tt/every! 30 (fn [] (utp-webhook/process! db config)))]
           (swap! tasks assoc :utp-webhook task)))
 
       ;; Keep running forever
       (while true (Thread/sleep 100)))))
+
+(defn -main-unified
+  "New unified worker main function using the job queue system.
+   
+   Usage:
+   - No args: Run full worker system (scheduler + mixed-duration worker)
+   - 'worker': Run only the mixed-duration worker
+   - 'scheduler': Run only the scheduler"
+  [& args]
+  (let [mode (first args)]
+    (case mode
+      "worker"
+      (do
+        (log/info "Starting unified job worker (worker only)")
+        (let [config (select-keys config/system-config [:lipas/db :lipas/search :lipas/emailer])
+              {:lipas/keys [db search emailer]} (backend/start-system! config)
+              system {:db db :search search :emailer emailer}]
+          (lipas.jobs.worker/start-mixed-duration-worker! system {})
+          ;; Keep running
+          (while true (Thread/sleep 1000))))
+
+      "scheduler"
+      (do
+        (log/info "Starting unified job scheduler (scheduler only)")
+        (let [config (select-keys config/system-config [:lipas/db])
+              {:lipas/keys [db]} (backend/start-system! config)]
+          (lipas.jobs.scheduler/start-scheduler! db)
+          ;; Keep running
+          (while true (Thread/sleep 1000))))
+
+      ;; Default: run both scheduler and worker
+      (do
+        (log/info "Starting unified job system (scheduler + worker)")
+        (let [system (lipas.jobs.system/start-worker-system!)]
+          ;; Add shutdown hook
+          (.addShutdownHook (Runtime/getRuntime)
+                            (Thread. #(lipas.jobs.system/stop-worker-system! system) "shutdown-hook"))
+          ;; Keep running
+          (while true (Thread/sleep 1000)))))))
 
 (comment
   (-main)
@@ -54,6 +93,4 @@
 
   (def my-conf (select-keys config/system-config [:lipas/db :lipas/emailer :lipas/search]))
   (def my-system (backend/start-system! my-conf))
-  (core/process-analysis-queue! (:lipas/db my-system) (:lipas/search my-system))
-
-  )
+  (core/process-analysis-queue! (:lipas/db my-system) (:lipas/search my-system)))
