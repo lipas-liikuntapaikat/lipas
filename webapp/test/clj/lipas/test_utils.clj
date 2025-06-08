@@ -102,11 +102,16 @@
                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
 
      ;; Initialize and run migrations
-     (migratus/init migratus-opts)
-     (migratus/migrate migratus-opts)
-
-     ;; Return successful completion
-     {:status :migrated})))
+     (try
+       (migratus/init migratus-opts)
+       (let [pending (migratus/pending-list migratus-opts)]
+         (when (seq pending)
+           (println "Running migrations:" (map :id pending)))
+         (migratus/migrate migratus-opts)
+         {:status :migrated :pending-count (count pending)})
+       (catch Exception e
+         (println "Migration failed:" (.getMessage e))
+         (throw e))))))
 
 (def tables
   ["account"
@@ -154,13 +159,49 @@
   ([]
    (ensure-test-database! (:db config)))
   ([db-config]
+   (println "Setting up test database...")
    (let [init-result (init-db! db-config)
          migration-status (check-migration-status db-config)]
      (when-not (:up-to-date? migration-status)
        (throw (ex-info "Database migrations not up to date after init!"
                        migration-status)))
+
+     ;; Verify that required tables actually exist
+     (try
+       ;; First check if we can connect to the database
+       (let [connection-test (jdbc/query db-config ["SELECT 1"])]
+         (println "✓ Database connection successful"))
+
+       ;; Then check for the account table specifically
+       (let [table-check (jdbc/query db-config
+                                     ["SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'account'"])]
+         (if (empty? table-check)
+           (throw (ex-info "Account table not found in information_schema" {:db-config (dissoc db-config :password)}))
+           (println "✓ Account table exists in schema")))
+
+       ;; Finally, try to query the account table
+       (jdbc/query db-config ["SELECT 1 FROM account LIMIT 1"])
+       (println "✓ Database setup successful - account table verified")
+       (catch Exception e
+         (println "✗ Database verification failed:" (.getMessage e))
+         (println "Database config (without password):" (dissoc db-config :password))
+         (println "Init result:" init-result)
+         (println "Migration status:" migration-status)
+         ;; Additional debugging - list all tables
+         (try
+           (let [all-tables (jdbc/query db-config
+                                        ["SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"])]
+             (println "Available tables:" (mapv :table_name all-tables)))
+           (catch Exception debug-e
+             (println "Could not list tables:" (.getMessage debug-e))))
+         (throw (ex-info "Required tables not found after migration - database setup incomplete!"
+                         {:error (.getMessage e)
+                          :init-result init-result
+                          :migration-status migration-status
+                          :db-config (dissoc db-config :password)}))))
+
      {:db-config db-config
-      :migrations-applied (count init-result)
+      :migrations-applied (:status init-result)
       :status :ready})))
 
 (def wfs-up-ddl

@@ -27,8 +27,9 @@
 (defmethod handle-job "elevation"
   [{:keys [db search]} {:keys [id payload]}]
   (let [{:keys [lipas-id]} payload
-        user (core/get-user! db {:email "robot@lipas.fi"})
+        user (core/get-user! db "robot@lipas.fi")
         orig (core/get-sports-site db lipas-id)
+        _ (when-not orig (throw (ex-info "Sports site not found" {:lipas-id lipas-id})))
         fcoll (-> orig :location :geometries elevation/enrich-elevation)
 
         ;; Check if site was updated while processing elevation
