@@ -84,3 +84,47 @@ SET status = 'failed',
     error_message = 'Job stuck in processing state - reset by cleanup'
 WHERE status = 'processing'
   AND started_at < (now() - (:timeout_minutes || ' minutes')::interval);
+
+-- :name get-performance-metrics :? :*
+-- :doc Get detailed performance metrics by job type within timeframe
+SELECT 
+    type,
+    status,
+    count(*) as job_count,
+    round(avg(extract(epoch from (coalesce(completed_at, now()) - started_at)))) as avg_duration_seconds,
+    round(percentile_cont(0.5) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p50_duration_seconds,
+    round(percentile_cont(0.95) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p95_duration_seconds,
+    round(avg(attempts)) as avg_attempts,
+    min(created_at) as earliest_job,
+    max(created_at) as latest_job
+FROM jobs 
+WHERE created_at >= :from_timestamp
+  AND created_at <= :to_timestamp
+  AND started_at IS NOT NULL
+GROUP BY type, status
+ORDER BY type, status;
+
+-- :name get-hourly-throughput :? :*
+-- :doc Get job throughput by hour within timeframe
+SELECT 
+    date_trunc('hour', created_at) as hour,
+    type,
+    status,
+    count(*) as job_count
+FROM jobs
+WHERE created_at >= :from_timestamp
+  AND created_at <= :to_timestamp
+GROUP BY date_trunc('hour', created_at), type, status
+ORDER BY hour DESC, type;
+
+-- :name get-queue-health :? :1
+-- :doc Get current queue health metrics
+SELECT 
+    count(*) FILTER (WHERE status = 'pending') as pending_count,
+    count(*) FILTER (WHERE status = 'processing') as processing_count,
+    count(*) FILTER (WHERE status = 'failed') as failed_count,
+    count(*) FILTER (WHERE status = 'dead') as dead_count,
+    extract(epoch from (now() - min(created_at))) / 60 as oldest_pending_minutes,
+    extract(epoch from (now() - min(started_at))) / 60 as longest_processing_minutes
+FROM jobs
+WHERE status IN ('pending', 'processing', 'failed');
