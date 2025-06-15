@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.handler
   (:require [clojure.spec.alpha :as s]
+            [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
@@ -12,6 +13,7 @@
 (defn routes [{:keys [db search ptv] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
+    :middleware [mw/token-auth mw/auth]
     :tags ["ptv"]
     :no-doc false}
 

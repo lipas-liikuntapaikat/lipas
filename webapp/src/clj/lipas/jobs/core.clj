@@ -102,8 +102,7 @@
   "Get current queue statistics for monitoring."
   [db]
   (->> (jobs-db/get-job-stats db)
-       (map #(update % :status keyword))
-       (group-by :status)
+       (group-by :status) ; Keep status as string from database
        (map (fn [[status entries]]
               [status (first entries)]))
        (into {})))
@@ -118,7 +117,6 @@
     (->> (jobs-db/get-performance-metrics db {:from_timestamp from-timestamp
                                               :to_timestamp to-timestamp})
          (map #(-> %
-                   (update :status keyword)
                    (update :earliest_job str)
                    (update :latest_job str))))))
 
@@ -132,7 +130,6 @@
     (->> (jobs-db/get-hourly-throughput db {:from_timestamp from-timestamp
                                             :to_timestamp to-timestamp})
          (map #(-> %
-                   (update :status keyword)
                    (update :hour str))))))
 
 (defn get-queue-health
@@ -151,8 +148,8 @@
    :health (get-queue-health db)
    :performance-metrics (vec (get-performance-metrics db opts))
    :hourly-throughput (vec (get-hourly-throughput db opts))
-   :fast-job-types (get job-duration-types :fast)
-   :slow-job-types (get job-duration-types :slow)
+   :fast-job-types (vec (get job-duration-types :fast)) ; Convert set to vector
+   :slow-job-types (vec (get job-duration-types :slow)) ; Convert set to vector
    :generated-at (str (java.time.Instant/now))})
 
 (defn cleanup-old-jobs!
