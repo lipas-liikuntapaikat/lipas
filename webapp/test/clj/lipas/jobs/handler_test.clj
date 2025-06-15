@@ -36,6 +36,8 @@
                                          {:to (str "user" i "@example.com")
                                           :subject "Newsletter"}))]
     (doseq [job-id jobs-2h-ago]
+      ;; Simulate job processing by setting started_at before completion
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
       (jobs/mark-completed! db job-id)))
 
   ;; 1 hour ago: Analysis jobs completed (slow jobs)
@@ -43,6 +45,8 @@
                         (jobs/enqueue-job! db "analysis"
                                            {:lipas-id (+ 10000 i)}))]
     (doseq [job-id analysis-jobs]
+      ;; Simulate job processing by setting started_at before completion
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
       (jobs/mark-completed! db job-id)))
 
   ;; 30 minutes ago: Some webhook jobs failed
@@ -50,6 +54,8 @@
                        (jobs/enqueue-job! db "webhook"
                                           {:batch-data {:batch i}}))]
     (doseq [job-id webhook-jobs]
+      ;; Simulate job processing by setting started_at before failure
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
       (jobs/mark-failed! db job-id "Connection timeout")))
 
   ;; Now: Some jobs are pending
@@ -108,10 +114,10 @@
             "No jobs should be dead in this scenario"))
 
       ;; Test job type classification
-      (is (contains? (:fast-job-types body) "email"))
-      (is (contains? (:fast-job-types body) "webhook"))
-      (is (contains? (:slow-job-types body) "analysis"))
-      (is (contains? (:slow-job-types body) "elevation"))
+      (is (some #(= "email" %) (:fast-job-types body)))
+      (is (some #(= "webhook" %) (:fast-job-types body)))
+      (is (some #(= "analysis" %) (:slow-job-types body)))
+      (is (some #(= "elevation" %) (:slow-job-types body)))
 
       ;; Test performance metrics contain expected job types
       (let [perf-metrics (:performance-metrics body)
@@ -122,7 +128,7 @@
         (is (not-empty analysis-metrics) "Should have analysis performance metrics")
 
         ;; Email jobs should show as completed
-        (let [completed-emails (filter #(= :completed (:status %)) email-metrics)]
+        (let [completed-emails (filter #(= "completed" (:status %)) email-metrics)]
           (is (not-empty completed-emails) "Should have completed email metrics")
           (is (= (:completed-emails expected)
                  (:job_count (first completed-emails)))
@@ -203,11 +209,15 @@
 
     ;; Create jobs at different times (simulate with manual updates)
     (let [old-job (jobs/enqueue-job! db "email" {:to "old@example.com"})]
+      ;; Simulate job processing by setting started_at before completion
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" old-job])
       (jobs/mark-completed! db old-job)
       ;; Simulate this job being from 48 hours ago
       (jdbc/execute! db ["UPDATE jobs SET created_at = now() - interval '48 hours', completed_at = now() - interval '48 hours' WHERE id = ?" old-job]))
 
     (let [recent-job (jobs/enqueue-job! db "email" {:to "recent@example.com"})]
+      ;; Simulate job processing by setting started_at before completion
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" recent-job])
       (jobs/mark-completed! db recent-job))
 
     (let [admin (tu/gen-user {:db? true :admin? true})
@@ -225,7 +235,7 @@
 
           ;; Should only see the recent job
           (let [email-metrics (filter #(and (= "email" (:type %))
-                                            (= :completed (:status %)))
+                                            (= "completed" (:status %)))
                                       (:performance-metrics body))]
             (when (not-empty email-metrics)
               (is (= 1 (:job_count (first email-metrics)))
@@ -243,7 +253,7 @@
 
           ;; Should see both jobs
           (let [email-metrics (filter #(and (= "email" (:type %))
-                                            (= :completed (:status %)))
+                                            (= "completed" (:status %)))
                                       (:performance-metrics body))]
             (when (not-empty email-metrics)
               (is (= 2 (:job_count (first email-metrics)))
@@ -299,3 +309,9 @@
                             (mock/body (->json {:from-hours-ago 200})) ; > 168 hours (1 week)
                             (tu/token-header token)))]
           (is (= 400 (:status resp)) "Should reject timeframe > 1 week"))))))
+
+(comment
+  (clojure.test/run-test authorization-test)
+  (clojure.test/run-test request-validation-test)
+  (clojure.test/run-test job-health-accuracy-test)
+  (clojure.test/run-test timeframe-filtering-test))

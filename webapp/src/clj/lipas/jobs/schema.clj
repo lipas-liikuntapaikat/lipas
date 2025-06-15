@@ -19,13 +19,13 @@
    "produce-reminders" "cleanup-jobs"])
 
 (def job-status-schema
-  [:enum :pending :processing :completed :failed :dead])
+  [:enum "pending" "processing" "completed" "failed" "dead"])
 
 ;; Response schemas
 (def current-stats-entry-schema
   "Schema for individual current stats entry"
   [:map
-   [:status {:optional true} keyword?]
+   [:status {:optional true} :string] ; Changed from keyword? to :string
    [:count :int]
    [:oldest_created_at [:maybe [:or :string inst?]]]
    [:oldest_minutes [:maybe number?]]])
@@ -78,8 +78,8 @@
    [:health health-schema]
    [:performance-metrics [:vector performance-metric-schema]]
    [:hourly-throughput [:vector hourly-throughput-entry-schema]]
-   [:fast-job-types [:set :string]]
-   [:slow-job-types [:set :string]]
+   [:fast-job-types [:vector :string]] ; Changed from [:set :string] to [:vector :string]
+   [:slow-job-types [:vector :string]] ; Changed from [:set :string] to [:vector :string]
    [:generated-at :string]])
 
 (def jobs-health-response-schema

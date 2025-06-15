@@ -2,8 +2,8 @@
   "Admin endpoints for job queue monitoring and management."
   (:require
    [lipas.backend.core :as core]
+   [lipas.backend.middleware :as mw]
    [lipas.jobs.schema :as schema]
-   [lipas.roles :as roles]
    [reitit.coercion.malli]))
 
 (defn routes
@@ -11,12 +11,13 @@
   [{:keys [db] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
+    :middleware [mw/token-auth mw/auth]
     :tags ["admin-jobs"]
-    :no-doc true}
+    :no-doc false}
 
    ["/actions/create-jobs-metrics-report"
     {:post
-     {:require-privilege :users/manage
+     {:require-privilege :jobs/manage
       :parameters {:body schema/jobs-metrics-request-schema}
       :responses {200 {:body schema/jobs-metrics-response-schema}}
       :handler
@@ -27,7 +28,7 @@
 
    ["/actions/get-jobs-health-status"
     {:post
-     {:require-privilege :users/manage
+     {:require-privilege :jobs/manage
       :parameters {:body schema/jobs-health-request-schema}
       :responses {200 {:body schema/jobs-health-response-schema}}
       :handler

@@ -28,12 +28,13 @@
                             Antaa myös oikeuden luoda paikkoja vedos-tilassa"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
-   
+
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
-   
-   :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}})
+
+   :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}
+   :jobs/manage {:doc "Oikeus hallita taustaprosesseja"}})
 
 (def basic #{:site/create-edit
              :site/save-api
@@ -118,7 +119,7 @@
     :privileges #{:ptv/manage}
     :required-context-keys [:city-code]
     :optional-context-keys []}
-    
+
    :ptv-auditor
    {:sort 51
     :assignable true
