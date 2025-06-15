@@ -220,7 +220,8 @@
                                :email :lipas.user/email))
 
 (s/def :lipas.user.user-data.saved-report/name (str-in 1 128))
-(s/def :lipas.user.user-data.saved-report/fields (s/coll-of (str-in 1 256)))
+(s/def :lipas.user.user-data.saved-report/field (into #{} (keys reports/fields)))
+(s/def :lipas.user.user-data.saved-report/fields (s/coll-of :lipas.user.user-data.saved-report/field))
 
 (s/def :lipas.user.user-data/saved-report
   (s/keys :req-un [:lipas.user.user-data.saved-report/name]

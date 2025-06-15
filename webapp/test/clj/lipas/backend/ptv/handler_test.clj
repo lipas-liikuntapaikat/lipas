@@ -372,4 +372,6 @@
   (clojure.test/run-tests *ns*)
   (clojure.test/run-test-var #'save-ptv-audit-no-auth-token-test)
   (clojure.test/run-test-var #'save-ptv-audit-invalid-extra-fields-test)
-  (clojure.test/run-test-var #'save-ptv-audit-invalid-audit-schema-test))
+  (clojure.test/run-test-var #'save-ptv-audit-invalid-audit-schema-test)
+  (clojure.test/run-test-var #'save-ptv-audit-empty-audit-data-test)
+  )
