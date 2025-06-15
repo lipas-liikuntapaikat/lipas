@@ -496,8 +496,12 @@
 
 (rf/reg-sub ::has-manage-privilege?
   :<- [:lipas.ui.user.subs/user-data]
-  (fn [user-data _]
-    (roles/check-privilege user-data {} :ptv/manage)))
+  :<- [::selected-org]
+  (fn [[user-data selected-org] _]
+    (let [city-codes (:city-codes selected-org)]
+      (some (fn [city-code]
+              (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
+            city-codes))))
 
 (rf/reg-sub ::default-tab
   :<- [::has-manage-privilege?]
