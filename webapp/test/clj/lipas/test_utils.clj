@@ -28,7 +28,19 @@
         (dissoc :ptv))
     (catch Throwable _t (gen-sports-site))))
 
-(def <-json #(j/parse-string (slurp %) true))
+(def <-json
+  (fn [response-body]
+    (cond
+      (string? response-body)
+      (if (empty? response-body)
+        nil
+        (j/parse-string response-body true))
+
+      (instance? java.io.InputStream response-body)
+      (j/parse-string (slurp response-body) true)
+
+      :else
+      (j/parse-string (slurp response-body) true))))
 (def ->json j/generate-string)
 
 (defn ->transit [x]

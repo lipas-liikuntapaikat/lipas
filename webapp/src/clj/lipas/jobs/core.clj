@@ -108,6 +108,53 @@
               [status (first entries)]))
        (into {})))
 
+(defn get-performance-metrics
+  "Get detailed performance metrics by job type within timeframe."
+  [db {:keys [from-hours-ago to-hours-ago]
+       :or {from-hours-ago 24 to-hours-ago 0}}]
+  (let [now (java.time.Instant/now)
+        from-timestamp (java.sql.Timestamp/from (.minus now from-hours-ago java.time.temporal.ChronoUnit/HOURS))
+        to-timestamp (java.sql.Timestamp/from (.minus now to-hours-ago java.time.temporal.ChronoUnit/HOURS))]
+    (->> (jobs-db/get-performance-metrics db {:from_timestamp from-timestamp
+                                              :to_timestamp to-timestamp})
+         (map #(-> %
+                   (update :status keyword)
+                   (update :earliest_job str)
+                   (update :latest_job str))))))
+
+(defn get-hourly-throughput
+  "Get job throughput by hour within timeframe."
+  [db {:keys [from-hours-ago to-hours-ago]
+       :or {from-hours-ago 24 to-hours-ago 0}}]
+  (let [now (java.time.Instant/now)
+        from-timestamp (java.sql.Timestamp/from (.minus now from-hours-ago java.time.temporal.ChronoUnit/HOURS))
+        to-timestamp (java.sql.Timestamp/from (.minus now to-hours-ago java.time.temporal.ChronoUnit/HOURS))]
+    (->> (jobs-db/get-hourly-throughput db {:from_timestamp from-timestamp
+                                            :to_timestamp to-timestamp})
+         (map #(-> %
+                   (update :status keyword)
+                   (update :hour str))))))
+
+(defn get-queue-health
+  "Get current queue health metrics."
+  [db]
+  (-> (jobs-db/get-queue-health db)
+      (update :oldest_pending_minutes #(when % (Math/round (double %))))
+      (update :longest_processing_minutes #(when % (Math/round (double %))))))
+
+(defn get-admin-metrics
+  "Get comprehensive admin metrics for monitoring dashboard."
+  [db {:keys [from-hours-ago to-hours-ago]
+       :or {from-hours-ago 24 to-hours-ago 0}
+       :as opts}]
+  {:current-stats (get-queue-stats db)
+   :health (get-queue-health db)
+   :performance-metrics (vec (get-performance-metrics db opts))
+   :hourly-throughput (vec (get-hourly-throughput db opts))
+   :fast-job-types (get job-duration-types :fast)
+   :slow-job-types (get job-duration-types :slow)
+   :generated-at (str (java.time.Instant/now))})
+
 (defn cleanup-old-jobs!
   "Remove completed and dead jobs older than specified days."
   [db days]
