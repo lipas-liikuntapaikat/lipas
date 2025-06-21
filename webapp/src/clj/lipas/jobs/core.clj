@@ -104,7 +104,7 @@
   (->> (jobs-db/get-job-stats db)
        (group-by :status) ; Keep status as string from database
        (map (fn [[status entries]]
-              [status (first entries)]))
+              [(keyword status) (first entries)]))
        (into {})))
 
 (defn get-performance-metrics
