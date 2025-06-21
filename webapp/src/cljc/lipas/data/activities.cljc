@@ -582,7 +582,7 @@
                  :en "Outdoor Recreation Routes"}
    :value       "outdoor-recreation-routes"
    :description {:fi ""}
-   :type-codes  #{4401 4402 4403 4404 4405}
+   :type-codes  #{4401 4402 4403 4404 4405 4406}
    :sort-order  [:status
                  :route-name
                  :description-short
@@ -1315,7 +1315,10 @@
                            :en "Route type"}
              :props
              (merge
-              common-route-props
+              ;; Otherwise same as others, but without "ohjeet"
+              (assoc-in common-route-props [:rules :field :label] {:fi "Luvat, säännöt"
+                                                                   :se "Tillstånd, regler"
+                                                                   :en "Permits, regulations"})
               {:route-name
                {:field
                 {:type        "text-field"

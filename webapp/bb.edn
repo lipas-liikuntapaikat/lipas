@@ -92,7 +92,7 @@
                                    frontend-commands (when deploy-frontend?
                                                        (str "sudo cp /tmp/app.js " (get-in deploy-config [:paths :remote-frontend])))
                                    restart-commands (when deploy-backend?
-                                                      "sudo bash -c 'cd /var/lipas && source .env.sh && docker compose rm -sf backend && docker compose up -d backend'")
+                                                      "sudo bash -c \"source /var/lipas/.env.sh && docker compose -f /var/lipas/docker-compose.yml rm -sf backend && docker compose -f /var/lipas/docker-compose.yml up -d backend\"")
                                    all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
 
                                (shell (str "ssh " host " 'set -e && " all-commands "'")))

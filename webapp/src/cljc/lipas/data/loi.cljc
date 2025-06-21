@@ -267,7 +267,7 @@
       :props (merge common-props)}
 
      :rowboat-rental
-     {:label {:fi "Soutuvenevuokraus" :en "Rowboat rental" :se "Roddbåtuthyrning"}
+     {:label {:fi "Kanootti-/soutuvenevuokraus" :en "Canoe/rowboat rental" :se "Kanot-/roddbåtuthyrning"}
       :value "rowboat-rental"
       :props (merge common-props)}
 
