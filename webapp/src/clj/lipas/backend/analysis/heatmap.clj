@@ -102,13 +102,14 @@
                        school-filter]))))
 
 (defn build-dimension-aggs
-  "Build aggregation based on dimension and weight
-  "
+  "Build aggregation based on dimension and weight"
   [dimension weight-by]
   (let [base-agg (case (or weight-by :count)
                    :count {}
                    :area-m2 {:sum {:field "properties.area-m2"}}
-                   :route-length-km {:sum {:field "properties.route-length-km"}})]
+                   :route-length-km {:sum {:field "properties.route-length-km"}}
+                   ;; Default case for unknown weight-by values
+                   {})]
 
     (case dimension
       :density base-agg
@@ -123,7 +124,7 @@
 
       :activities {:activities {:terms {:field "search-meta.activities.keyword" :size 10}}}
 
-      ;; Default to count
+      ;; Default to count-based aggregation
       base-agg)))
 
 (defn build-es-query
@@ -136,10 +137,10 @@
             {:geohash_grid {:field "search-meta.location.wgs84-point"
                             :precision geohash-precision
                             #_#_:size (case geohash-precision
-                                    (1 2 3 4) 10000
-                                    (5 6 7) 50000
-                                    (8 9 10) 100000
-                                    10000)}
+                                        (1 2 3 4) 10000
+                                        (5 6 7) 50000
+                                        (8 9 10) 100000
+                                        10000)}
              :aggs (merge
                     {:centroid {:geo_centroid {:field "search-meta.location.wgs84-point"}}}
                     (build-dimension-aggs dimension weight-by))}}}))
@@ -227,20 +228,20 @@
   [{:keys [bbox filters]}]
   {:size 0
    :query {:bool {:filter (build-filters bbox (dissoc filters :type-codes :owners :admins))}}
-   :aggs {:type_codes {:terms {:field "type.type-code" :size 200}}
+   :aggs {:type-codes {:terms {:field "type.type-code" :size 200}}
           :owners {:terms {:field "owner.keyword" :size 100}}
           :admins {:terms {:field "admin.keyword" :size 100}}
-          :year_range {:stats {:field "construction-year"}}
+          :year-range {:stats {:field "construction-year"}}
           :statuses {:terms {:field "status.keyword" :size 10}}}})
 
 (defn transform-facets
   "Transform ES facet results to UI-friendly format"
   [es-result]
   (let [aggs (get-in es-result [:body :aggregations])]
-    {:type_codes (mapv (fn [bucket]
+    {:type-codes (mapv (fn [bucket]
                          {:value (:key bucket)
                           :count (:doc_count bucket)})
-                       (get-in aggs [:type_codes :buckets] []))
+                       (get-in aggs [:type-codes :buckets] []))
      :owners (mapv (fn [bucket]
                      {:value (:key bucket)
                       :count (:doc_count bucket)})
@@ -249,8 +250,8 @@
                      {:value (:key bucket)
                       :count (:doc_count bucket)})
                    (get-in aggs [:admins :buckets] []))
-     :year_range {:min (int (get-in aggs [:year_range :min] 1900))
-                  :max (int (get-in aggs [:year_range :max] 2024))}
+     :year-range {:min (or (some-> (get-in aggs [:year-range :min]) int) 1900)
+                  :max (or (some-> (get-in aggs [:year-range :max]) int) 2024)}
      :statuses (mapv (fn [bucket]
                        {:value (:key bucket)
                         :count (:doc_count bucket)})
