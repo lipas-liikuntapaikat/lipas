@@ -25,6 +25,7 @@
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.analysis.heatmap.map :as heatmap]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]
@@ -181,7 +182,8 @@
     :mml-kuntarajat
     (->wmts
       {:url        (:kuntarajat urls)
-       :layer-name "MML-Kuntarajat"})}})
+       :layer-name "MML-Kuntarajat"})
+    :heatmap (heatmap/create-heatmap-layer (heatmap/create-heatmap-source))}})
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
@@ -223,7 +225,8 @@
                                      (-> layers :overlays :retkikartta-snowmobile-tracks)
                                      (-> layers :overlays :mml-kiinteisto)
                                      (-> layers :overlays :mml-kiinteistotunnukset)
-                                     (-> layers :overlays :mml-kuntarajat)]
+                                     (-> layers :overlays :mml-kuntarajat)
+                                     (-> layers :overlays :heatmap)]
                   :interactions #js [(MouseWheelZoom.)
                                      (KeyboardZoom.)
                                      (KeyboardPan.)
@@ -576,11 +579,25 @@
         (show-diversity-grid! diversity)
         (map-utils/fit-to-extent! (-> layer .getSource .getExtent)))))
 
+(defn set-heatmap-mode!
+  [{:keys [layers] :as map-ctx}
+   {:keys [analysis] :as mode}]
+  (let [heatmap (:heatmap analysis)]
+    (-> map-ctx
+        editing/clear-edits!
+        map-utils/clear-population!
+        map-utils/unselect-features!
+        map-utils/clear-interactions!
+        map-utils/clear-markers!
+        (heatmap/update-heatmap-data! heatmap)
+        (heatmap/update-heatmap-visuals! heatmap))))
+
 (defn set-analysis-mode!
   [map-ctx {:keys [sub-mode] :as mode}]
   (condp = sub-mode
     :reachability (set-reachability-mode! map-ctx mode)
-    :diversity    (set-diversity-mode! map-ctx mode)))
+    :diversity    (set-diversity-mode! map-ctx mode)
+    :heatmap (set-heatmap-mode! map-ctx mode)))
 
 (defn update-reachability-mode!
   [{:keys [layers] :as map-ctx}
@@ -626,7 +643,10 @@
                       (set-reachability-mode! map-ctx mode))
       :diversity    (if (#{:diversity} old-sub-mode)
                       (update-diversity-mode! map-ctx mode)
-                      (set-diversity-mode! map-ctx mode)))))
+                      (set-diversity-mode! map-ctx mode))
+      :heatmap (if (#{:heatmap} old-sub-mode)
+                 (set-heatmap-mode! map-ctx mode)
+                 (set-heatmap-mode! map-ctx mode)))))
 
 (defn set-mode! [map-ctx mode]
   (let [map-ctx (case (:name mode)

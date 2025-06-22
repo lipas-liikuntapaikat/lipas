@@ -769,10 +769,12 @@
              (assoc-in [:map :mode :sub-mode] :reachability))
      :dispatch-n
      [[::set-overlays [[:vectors true]
+                       [:lois false]
                        [:schools true]
                        [:population true]
                        [:diversity-grid false]
                        [:diversity-area false]
+                       [:heatmap false]
                        [:analysis true]]]
       [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))
 
@@ -795,6 +797,7 @@
                                    [:population false]
                                    [:diversity-grid false]
                                    [:diversity-area false]
+                                   [:heatmap false]
                                    [:analysis false]]]
                   [:lipas.ui.search.events/remove-status-filter "planning"]
                   [:lipas.ui.search.events/clear-filters]]}))

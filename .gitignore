@@ -1,6 +1,9 @@
 /.env*
 !/.env.sample.sh
 .DS_Store
+.nrepl-port
+*.backup
+test_routes.clj
 /certs/*
 !/certs/README.md
 *.jar
@@ -23,10 +26,21 @@ webapp/resources/public/js/compiled
 webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
 webapp/.clj-kondo/.cache
+webapp/.clj-kondo/*/
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache
+webapp/.lsp/*.db
 webapp/out
 webapp/.shadow-cljs
 webapp/.user.edn
+webapp/.nrepl.edn
+webapp/.dir-locals.el
+webapp/logs/
+webapp/test_routes.clj
 webapp/local-scrap
+webapp/.eca/
+
+# IDE and development files
+.claude/
+.git-rewrite/

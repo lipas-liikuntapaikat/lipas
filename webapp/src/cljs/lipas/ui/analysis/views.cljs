@@ -2,6 +2,7 @@
   (:require ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.analysis.diversity.view :as diversity]
             [lipas.ui.analysis.events :as events]
+            [lipas.ui.analysis.heatmap.views :as heatmap]
             [lipas.ui.analysis.reachability.views :as reachability]
             [lipas.ui.analysis.subs :as subs]
             [lipas.ui.map.events :as map-events]
@@ -12,24 +13,25 @@
   (let [selected-tool (<== [::subs/selected-tool])]
     [mui/grid
      {:container true
-      :spacing   2
-      :style     {:padding "1em"}}
+      :spacing 2
+      :style {:padding "1em"}}
 
      ;; Header and close button
      [mui/grid
-      {:item            true
-       :container       true
+      {:item true
+       :container true
        :justify-content "space-between"}
       [mui/grid {:item true :xs 10}
        [mui/tabs
-        {:value          selected-tool
-         :on-change      #(==> [::events/select-tool %2])
-         :variant        "fullWidth"
-         :centered       true
-         :text-color     "secondary"
+        {:value selected-tool
+         :on-change #(==> [::events/select-tool %2])
+         :variant "fullWidth"
+         :centered true
+         :text-color "secondary"
          :indicator-color "secondary"}
         [mui/tab {:value "reachability" :label "Saavutettavuus"}]
-        [mui/tab {:value "diversity" :label "Monipuolisuus"}]]]
+        [mui/tab {:value "diversity" :label "Monipuolisuus"}]
+        [mui/tab {:value "heatmap" :label "Lämpökartta"}]]]
       [mui/grid {:item true}
        [:> Tooltip
         {:title (tr :analysis/close)}
@@ -39,4 +41,5 @@
      [mui/grid {:item true :xs 12}
       (condp = selected-tool
         "reachability" [reachability/analysis-view]
-        "diversity"    [diversity/view])]]))
+        "diversity" [diversity/view]
+        "heatmap" [heatmap/heatmap-controls])]]))
