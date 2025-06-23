@@ -23,29 +23,29 @@
     :keywords         "Avainsanat"}
 
    :ptv.audit
-   {:tab-label                "Auditointi"
-    :headline                 "PTV tekstien auditointi"
-    :description              "Tässä näkymässä voit auditoida liikuntapaikkojen PTV-kuvauksia ja tiivistelmiä."
-    :select-site              "Valitse auditoitava liikuntapaikka"
-    :select-site-label        "Liikuntapaikka"
-    :select-site-placeholder  "Kirjoita liikuntapaikan nimi"
-    :sites-stats              "Yhteensä %1$s liikuntapaikkaa, joista %2$s auditoitu ja %3$s auditoimatta"
-    :status                   "Tila"
-    :feedback                 "Palaute"
-    :feedback-placeholder     "Kirjoita tähän mahdollinen palaute tekstin sisällöstä..."
-    :last-audit               "Edellinen auditointi"
-    :todo-tab                 "Odottavat"
-    :completed-tab            "Valmiit"
-    :sites-to-audit           "Auditoitavat kohteet"
-    :audited-sites            "Auditoidut kohteet"
-    :no-sites-to-audit        "Ei auditoitavia kohteita"
-    :no-audited-sites         "Ei auditoituja kohteita"
-    :no-sites                 "Ei kohteita"
-    :select-site-prompt       "Valitse kohde listasta nähdäksesi sen tiedot"}
+   {:tab-label               "Auditointi"
+    :headline                "PTV tekstien auditointi"
+    :description             "Tässä näkymässä voit auditoida liikuntapaikkojen PTV-kuvauksia ja tiivistelmiä."
+    :select-site             "Valitse auditoitava liikuntapaikka"
+    :select-site-label       "Liikuntapaikka"
+    :select-site-placeholder "Kirjoita liikuntapaikan nimi"
+    :sites-stats             "Yhteensä %1$s liikuntapaikkaa, joista %2$s auditoitu ja %3$s auditoimatta"
+    :status                  "Tila"
+    :feedback                "Palaute"
+    :feedback-placeholder    "Kirjoita tähän mahdollinen palaute tekstin sisällöstä..."
+    :last-audit              "Edellinen auditointi"
+    :todo-tab                "Odottavat"
+    :completed-tab           "Valmiit"
+    :sites-to-audit          "Auditoitavat kohteet"
+    :audited-sites           "Auditoidut kohteet"
+    :no-sites-to-audit       "Ei auditoitavia kohteita"
+    :no-audited-sites        "Ei auditoituja kohteita"
+    :no-sites                "Ei kohteita"
+    :select-site-prompt      "Valitse kohde listasta nähdäksesi sen tiedot"}
 
    :ptv.audit.status
-   {:approved           "Hyväksytty"
-    :changes-requested  "Muutoksia pyydetty"}
+   {:approved          "Hyväksytty"
+    :changes-requested "Muutoksia pyydetty"}
    :ptv.service
    {:classes                 "Palveluluokat"
     :show-only-lipas-managed "Näytä vain Lipakseen liitetyt palvelut"}
@@ -883,14 +883,16 @@
    {:roles             "Roolit"
     :role              "Rooli"
     :context-value-all "Kaikki"
-    :role-names        {:admin              "Admin"
-                        :city-manager       "Kuntakäyttäjä"
-                        :type-manager       "Tyyppikäyttäjä"
-                        :site-manager       "Paikkakäyttäjä"
-                        :activities-manager "UTP-käyttäjä"
-                        :floorball-manager  "Salibandy muokkaaja"
-                        :analysis-user      "Analyysityökalukäyttäjä"
-                        :ptv-manager        "PTV-käyttäjä"}
+    :role-names        {:admin                      "Admin"
+                        :city-manager               "Kuntakäyttäjä"
+                        :type-manager               "Tyyppikäyttäjä"
+                        :site-manager               "Paikkakäyttäjä"
+                        :activities-manager         "UTP-käyttäjä"
+                        :floorball-manager          "Salibandy muokkaaja"
+                        :analysis-user              "Analyysityökalukäyttäjä"
+                        :analysis-experimental-user "Analyysityökalukehittäjä"
+                        :ptv-manager                "PTV-käyttäjä"
+                        :ptv-auditor                "PTV-auditoija"}
     :context-keys      {:city-code "Kunta"
                         :type-code "Tyyppi"
                         :activity  "Aktiviteetti"

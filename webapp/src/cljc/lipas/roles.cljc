@@ -114,6 +114,13 @@
     :required-context-keys []
     :optional-context-keys []}
 
+   :analysis-experimental-user
+   {:sort 45
+    :assignable true
+    :privileges #{:analysis-tool/use :analysis-tool/experimental}
+    :required-context-keys []
+    :optional-context-keys []}
+
    :ptv-manager
    {:sort 50
     :assignable true
