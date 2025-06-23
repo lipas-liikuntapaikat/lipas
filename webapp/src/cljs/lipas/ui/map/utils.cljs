@@ -33,10 +33,10 @@
             [lipas.ui.map.styles :as styles]
             [lipas.ui.utils :refer [==>] :as utils]))
 
-(def geoJSON (GeoJSON. #js {:dataProjection    "EPSG:4326"
+(def geoJSON (GeoJSON. #js {:dataProjection "EPSG:4326"
                             :featureProjection "EPSG:3067"}))
 
-(def wkt (WKT. #js {:dataProjection    "EPSG:4326"
+(def wkt (WKT. #js {:dataProjection "EPSG:4326"
                     :featureProjection "EPSG:3067"}))
 
 (defn ->ol-features [geoJSON-features]
@@ -57,7 +57,7 @@
   (.writeFeature wkt ol-feature))
 
 (defn <-wkt [s]
-  (.readFeature wkt s #js {:dataProjection    "EPSG:4326"
+  (.readFeature wkt s #js {:dataProjection "EPSG:4326"
                            :featureProjection "EPSG:3067"}))
 
 (defn ->geom-coll [fcoll]
@@ -77,14 +77,14 @@
 
 (defn- text->geoJSON [{:keys [file ext enc cb]}]
   (let [reader (js/FileReader.)
-        cb     (fn [e]
-                 (let [text   (-> e .-target .-result)
-                       parsed (condp = ext
-                                "geojson" (js/JSON.parse text)
-                                "json"    (js/JSON.parse text)
-                                "kml"     (-> text parse-dom toGeoJSON/kml)
-                                "gpx"     (-> text parse-dom toGeoJSON/gpx))]
-                   (cb parsed)))]
+        cb (fn [e]
+             (let [text (-> e .-target .-result)
+                   parsed (condp = ext
+                            "geojson" (js/JSON.parse text)
+                            "json" (js/JSON.parse text)
+                            "kml" (-> text parse-dom toGeoJSON/kml)
+                            "gpx" (-> text parse-dom toGeoJSON/gpx))]
+               (cb parsed)))]
     (set! (.-onload reader) cb)
     (.readAsText reader file enc)
     {}))
@@ -148,12 +148,12 @@
   (->> geom-coll
        :geometries
        (map-indexed
-         (fn [idx g]
-           {:type     "Feature"
-            :geometry g
-            :properties
-            {:id   (str (gensym))
-             :name (str "geom-" (inc idx))}}))))
+        (fn [idx g]
+          {:type "Feature"
+           :geometry g
+           :properties
+           {:id (str (gensym))
+            :name (str "geom-" (inc idx))}}))))
 
 (defn normalize-geom-colls
   "Handles a special case where geometries are contained in a
@@ -173,19 +173,19 @@
   (->> multi-geom
        :coordinates
        (map-indexed
-         (fn [idx coords]
-           {:type "Feature"
-            :geometry
-            {:type        geom-type
-             :coordinates coords}
-            :properties
-            (merge
-              props
-              {:id (str (gensym))}
-              (when-let [s (:nimi props)]
-                {:nimi (str s " osa " (inc idx))})
-              (when-let [s (:name props)]
-                {:name (str s " part " (inc idx))}))}))))
+        (fn [idx coords]
+          {:type "Feature"
+           :geometry
+           {:type geom-type
+            :coordinates coords}
+           :properties
+           (merge
+            props
+            {:id (str (gensym))}
+            (when-let [s (:nimi props)]
+              {:nimi (str s " osa " (inc idx))})
+            (when-let [s (:name props)]
+              {:name (str s " part " (inc idx))}))}))))
 
 (defn normalize-multi-geoms
   "Makes an effort to convert multi-geoms into single geoms."
@@ -230,6 +230,23 @@
     (-> layer .getSource .clear))
   map-ctx)
 
+(defn show-heatmap-hover-highlight!
+  [{:keys [layers ^js view] :as map-ctx} coords]
+  (let [^js layer (-> layers :overlays :highlights)
+        source (.getSource layer)
+        ;; Calculate radius based on current zoom level for better visual scaling
+        ;; Higher zoom = smaller radius
+        resolution (.getResolution view)
+        radius (* 20 resolution) ; This will scale nicely with zoom
+        feature (Feature. #js {:geometry (Circle. coords radius)})]
+    ;; Clear previous highlights
+    (.clear source)
+    ;; Set the heatmap highlight style
+    (.setStyle feature styles/heatmap-highlight-style)
+    ;; Add new highlight
+    (.addFeature source feature))
+  map-ctx)
+
 (defn show-problems!
   [map-ctx problems]
   (doseq [p (-> problems :data :features)]
@@ -246,13 +263,13 @@
 (defn update-geoms!
   [{:keys [layers] :as map-ctx} geoms]
   (let [^js vectors (-> layers :overlays :vectors)
-        source      (.getSource vectors)]
+        source (.getSource vectors)]
 
     ;; Remove existing features
     (.clear source)
 
     ;; Add new geoms
-    (doseq [g    geoms
+    (doseq [g geoms
             :let [fs (->ol-features g)]]
       (.addFeatures source fs))
 
@@ -261,13 +278,13 @@
 (defn update-lois!
   [{:keys [layers] :as map-ctx} geoms]
   (let [^js lois (-> layers :overlays :lois)
-        source   (.getSource lois)]
+        source (.getSource lois)]
 
     ;; Remove existing features
     (.clear source)
 
     ;; Add new geoms
-    (doseq [g    geoms
+    (doseq [g geoms
             :let [fs (->ol-features (clj->js g))]]
       (.addFeatures source fs))
 
@@ -276,7 +293,7 @@
 (defn set-basemap!
   [{:keys [layers] :as map-ctx} {:keys [opacity layer] :as _basemap}]
   (doseq [[k ^js v] (:basemaps layers)
-          :let      [visible? (= k layer)]]
+          :let [visible? (= k layer)]]
     (.setOpacity v opacity)
     (.setVisible v visible?))
   map-ctx)
@@ -284,7 +301,7 @@
 (defn set-overlays!
   [{:keys [layers] :as map-ctx} selected-overlays]
   (doseq [[k ^js v] (:overlays layers)
-          :let      [visible? (contains? selected-overlays k)]]
+          :let [visible? (contains? selected-overlays k)]]
     (.setVisible v visible?))
   map-ctx)
 
@@ -342,11 +359,15 @@
   [map-ctx]
   (enable-hover! map-ctx :diversity-area-hover))
 
+(defn enable-heatmap-hover!
+  [map-ctx]
+  (enable-hover! map-ctx :heatmap-hover))
+
 (defn enable-edits-hover!
   [{:keys [^js lmap layers] :as map-ctx}]
   (let [layer (-> layers :overlays :edits)
-        hover (interaction/Select. #js {:layers    #js [layer]
-                                        :style     #js [styles/editing-hover-style styles/vertices-style]
+        hover (interaction/Select. #js {:layers #js [layer]
+                                        :style #js [styles/editing-hover-style styles/vertices-style]
                                         :condition events-condition/pointerMove})]
     (.addInteraction lmap hover)
     (assoc-in map-ctx [:interactions :edits-hover] hover)))
@@ -368,14 +389,14 @@
 (defn find-feature-by-id
   [{:keys [layers]} fid]
   (let [^js layer (-> layers :overlays :vectors)
-        source    (.getSource layer)]
+        source (.getSource layer)]
     (.getFeatureById source fid)))
 
 (defn find-features-by-lipas-id
   [{:keys [layers]} lipas-id]
   (let [^js layer (-> layers :overlays :vectors)
-        source    (.getSource layer)
-        res       #js []]
+        source (.getSource layer)
+        res #js []]
     (.forEachFeature source
                      (fn [f]
                        (when (-> (.get f "lipas-id")
@@ -396,15 +417,15 @@
    (let [padding (or (-> map-ctx :mode :content-padding) #js [0 0 0 0])]
      (when (and view lmap (some finite? extent))
        (.fit view extent (clj->js
-                           (merge
-                             {:size                (.getSize lmap)
-                              :padding             (clj->js padding)
-                              :constrainResolution true}
-                             opts))))
+                          (merge
+                           {:size (.getSize lmap)
+                            :padding (clj->js padding)
+                            :constrainResolution true}
+                           opts))))
      map-ctx)))
 
 (defn fit-to-features! [map-ctx fs opts]
-  (let [^js f      (first fs)
+  (let [^js f (first fs)
         ^js extent (-> f .getGeometry .getExtent)]
     (doseq [^js f (rest fs)]
       (extent/extend extent (-> f .getGeometry .getExtent)))
@@ -442,18 +463,18 @@
 (defn show-feature!
   [{:keys [layers] :as map-ctx} geoJSON-feature]
   (let [^js vectors (-> layers :overlays :edits)
-        source      (.getSource vectors)
-        fs          (-> geoJSON-feature clj->js ->ol-features)]
+        source (.getSource vectors)
+        fs (-> geoJSON-feature clj->js ->ol-features)]
     (.addFeatures source fs)
     map-ctx))
 
 (defn clear-interactions!
   [{:keys [^js lmap interactions interactions*]
-    :as   map-ctx}]
+    :as map-ctx}]
   ;; Special treatment for 'singleton' interactions*. OpenLayers
   ;; doesn't treat 'copies' identical to original ones. Therefore we
   ;; need to pass the original ones explicitly.
-  (doseq [v     (vals (merge interactions interactions*))
+  (doseq [v (vals (merge interactions interactions*))
           :when (some? v)]
     (.removeInteraction lmap v))
 
@@ -462,7 +483,7 @@
 (defn refresh-select!
   [{:keys [interactions] :as map-ctx} lipas-id]
   (let [^js select (-> interactions :select)
-        fs         (find-features-by-lipas-id map-ctx lipas-id)]
+        fs (find-features-by-lipas-id map-ctx lipas-id)]
     (doto (.getFeatures select)
       (.clear)
       (.extend fs))
@@ -484,8 +505,8 @@
     splitted))
 
 (defn split-at-coords [ol-feature coords]
-  (let [point   #js {:type "Point" :coordinates coords}
-        line    (.writeFeatureObject geoJSON ol-feature)
+  (let [point #js {:type "Point" :coordinates coords}
+        line (.writeFeatureObject geoJSON ol-feature)
         nearest (turf-nearest-point-on-line line point)]
     (-> line
         (split-by-features nearest)
@@ -499,7 +520,7 @@
       #js [f])))
 
 (defn ->fcoll [fs]
-  #js {:type     "FeatureCollection"
+  #js {:type "FeatureCollection"
        :features (clj->js fs)})
 
 (defn fix-kinks [fcoll]
@@ -535,7 +556,7 @@
 
 (defn find-problems [fcoll]
   (when (#{"LineString"} (-> fcoll :features first :geometry :type))
-    {:kinks         (find-kinks fcoll)
+    {:kinks (find-kinks fcoll)
      ;;:intersections (find-intersections fcoll)
      }))
 
@@ -571,16 +592,16 @@
                  (let [d (- curr prev)]
                    (cond
                      (zero? d) res
-                     (pos? d)  (update res :ascend-m + d)
-                     (neg? d)  (update res :descend-m + (Math/abs d)))))
+                     (pos? d) (update res :ascend-m + d)
+                     (neg? d) (update res :descend-m + (Math/abs d)))))
                {:ascend-m 0 :descend-m 0})))
 
 (defn wgs84->epsg3067 [wgs84-coords]
-  (let [proj      (proj/get "EPSG:3067")]
+  (let [proj (proj/get "EPSG:3067")]
     (proj/fromLonLat wgs84-coords proj)))
 
 (defn epsg3067->wgs84 [epsg3067-coords]
-  (let [proj      (proj/get "EPSG:3067")]
+  (let [proj (proj/get "EPSG:3067")]
     (proj/toLonLat epsg3067-coords proj)))
 
 (defn calc-buffer-geom [geoms distance-km]

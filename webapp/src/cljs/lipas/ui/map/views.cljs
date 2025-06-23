@@ -18,6 +18,7 @@
             [lipas.roles :as roles]
             [lipas.ui.accessibility.views :as accessibility]
             [lipas.ui.analysis.views :as analysis]
+            [lipas.ui.analysis.heatmap.subs :as heatmap-subs]
             [lipas.ui.components :as lui]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.loi.views :as loi]
@@ -606,6 +607,72 @@
 
 (defmethod popup-body :route-part-difficulty [popup]
   ($ route-part-difficulty {:data (:data popup)}))
+
+(defmethod popup-body :heatmap [popup]
+  (let [tr (<== [:lipas.ui.subs/translator])
+        locale (tr)
+        data (-> popup :data :features first :properties)
+        dimension (<== [::heatmap-subs/dimension])
+        weight-by (<== [::heatmap-subs/weight-by])
+        ;; Get type labels for type-distribution dimension
+        types-db (<== [:lipas.ui.sports-sites.subs/all-types])]
+
+    [mui/paper
+     {:style
+      {:padding "0.5em"
+       :min-width "200px"}}
+
+     [mui/stack {:direction "column"}
+      ;; Facility count
+      [mui/typography {:variant "body2" :style {:font-weight "bold"}}
+       (str (:doc_count data) " " (if (= 1 (:doc_count data))
+                                    "liikuntapaikka"
+                                    "liikuntapaikkaa"))]
+
+      ;; Weight info
+      (when (and weight-by (not= "doc-count" weight-by))
+        [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+         (case (keyword weight-by)
+           :area-m2 (str "Pinta-ala yhteensä: "
+                         (utils/round-safe (:weight data) 0) " m²")
+           (str "Paino: " (:weight data) " "))])
+
+      ;; Relative intensity
+      (let [intensity (* 100 (:normalized-weight data))]
+        [mui/typography {:variant "caption" :color "textSecondary"}
+         (cond
+           (> intensity 80) "Erittäin korkea tiheys"
+           (> intensity 60) "Korkea tiheys"
+           (> intensity 40) "Keskitaso"
+           (> intensity 20) "Matala tiheys"
+           :else "Erittäin matala tiheys")])
+
+      ;; Type distribution for type-distribution dimension
+      (when (and (= :type-distribution dimension) (:types data))
+        [:<>
+         [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
+          (str "TOP-5 Tyypit: (yht. " (count (:types data)) ")")]
+         (into [mui/list {:dense true :style {:padding 0}}]
+               (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:types data)))
+                     :let [type-label (get-in types-db [key :name locale] (str "Tyyppi " key))]]
+                 [mui/list-item {:style {:padding "2px 0"}}
+                  [mui/typography {:variant "caption"}
+                   (str type-label ": " doc_count)]]))])
+
+      ;; Activities for activities dimension
+      (when (and (= :activities dimension) (:activities data))
+        [:<>
+         [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
+          "Aktiviteetit:"]
+         (into [mui/list {:dense true :style {:padding 0}}]
+               (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:activities data)))]
+                 [mui/list-item {:style {:padding "2px 0"}}
+                  [mui/typography {:variant "caption"}
+                   (str key ": " doc_count)]]))])]
+
+     ;; Grid reference (optional, for debugging)
+     #_[mui/typography {:variant "caption" :color "textSecondary" :style {:margin-top "0.5em"}}
+        (str "Grid: " (:grid_key data))]]))
 
 (defn popup [{:keys [popup-ref]}]
   (let [{:keys [data placement]

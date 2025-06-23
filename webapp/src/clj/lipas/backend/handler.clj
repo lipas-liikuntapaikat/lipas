@@ -1,6 +1,7 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
+            [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
@@ -32,16 +33,16 @@
      (when print-stack?
        (log/error e))
      (-> {:status status
-          :body   {:message (.getMessage e)
-                   :type    type}}
+          :body {:message (.getMessage e)
+                 :type type}}
          mw/add-cors-headers))))
 
 (def exception-handlers
-  {:username-conflict  (exception-handler 409 :username-conflict)
-   :email-conflict     (exception-handler 409 :email-conflict)
-   :no-permission      (exception-handler 403 :no-permission)
-   :user-not-found     (exception-handler 404 :user-not-found)
-   :email-not-found    (exception-handler 404 :email-not-found)
+  {:username-conflict (exception-handler 409 :username-conflict)
+   :email-conflict (exception-handler 409 :email-conflict)
+   :no-permission (exception-handler 403 :no-permission)
+   :user-not-found (exception-handler 404 :user-not-found)
+   :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
@@ -78,36 +79,36 @@
        {:no-doc true
         :handler
         (fn [_]
-          {:status  200
+          {:status 200
            :headers {"Content-Type" "image/x-icon"}
-           :body    (io/input-stream (io/resource "public/favicon.ico"))})}}]
+           :body (io/input-stream (io/resource "public/favicon.ico"))})}}]
 
      ["/index.html"
       {:get
        {:no-doc true
         :handler
         (fn [_]
-          {:status  200
+          {:status 200
            :headers {"Content-Type" "text/html"}
-           :body    (io/input-stream (io/resource "public/index.html"))})}}]
+           :body (io/input-stream (io/resource "public/index.html"))})}}]
 
      ["/api"
       {:middleware [mw/cors]
-       :no-doc     true
+       :no-doc true
        :options
        {:handler
         (fn [_]
           {:status 200
-           :body   {:status "OK"}})}}
+           :body {:status "OK"}})}}
 
       ["/swagger.json"
        {:get
-        {:no-doc  true
+        {:no-doc true
          :swagger {:info {:title "Lipas-API v2"}
                    :securityDefinitions
                    {:token-auth
                     {:type "apiKey"
-                     :in   "header"
+                     :in "header"
                      :name "Authorization"}}}
          :handler (swagger/create-swagger-handler)}}]
 
@@ -117,150 +118,150 @@
          :handler
          (fn [_]
            {:status 200
-            :body   {:status "OK"}})}}]
+            :body {:status "OK"}})}}]
 
       ["/sports-sites"
        {:post
-        {:no-doc     false
+        {:no-doc false
          :middleware [mw/token-auth mw/auth]
          ;; NOTE: privilege checked in the core code
-         :responses  {201 {:body :lipas/sports-site}
-                      400 {:body map?}}
+         :responses {201 {:body :lipas/sports-site}
+                     400 {:body map?}}
          :parameters
          {:query (s/keys :opt-un [:lipas.api/draft])
-          :body  :lipas/new-or-existing-sports-site}
+          :body :lipas/new-or-existing-sports-site}
          :handler
          (fn [{:keys [body-params identity] :as req}]
-           (let [spec   :lipas/new-or-existing-sports-site
+           (let [spec :lipas/new-or-existing-sports-site
                  draft? (-> req :parameters :query :draft utils/->bool)
                  valid? (s/valid? spec body-params)]
              (if valid?
                {:status 201
-                :body   (core/save-sports-site! db search ptv identity body-params draft?)}
+                :body (core/save-sports-site! db search ptv identity body-params draft?)}
                {:status 400
-                :body   (s/explain-data spec body-params)})))}}]
+                :body (s/explain-data spec body-params)})))}}]
 
       ["/sports-sites/:lipas-id"
        {:get
-        {:no-doc     false
-         :parameters {:path  {:lipas-id int?}
+        {:no-doc false
+         :parameters {:path {:lipas-id int?}
                       :query :lipas.api.get-sports-site/query-params}
-         :responses  {200 {:body :lipas/sports-site}
-                      404 {:body map?}}
+         :responses {200 {:body :lipas/sports-site}
+                     404 {:body map?}}
          :handler
          (fn [req]
            (let [lipas-id (-> req :parameters :path :lipas-id)
-                 locale   (or (-> req :parameters :query :lang keyword)
-                              :none)]
+                 locale (or (-> req :parameters :query :lang keyword)
+                            :none)]
              (if-let [res (core/get-sports-site2 search lipas-id locale)]
                {:status 200 :body res}
                {:status 404 :body {:message "Not found"}})))}}]
 
       ["/sports-sites/history/:lipas-id"
        {:get
-        {:no-doc     false
+        {:no-doc false
          :parameters {:path {:lipas-id int?}}
-         :responses  {200 {:body (s/coll-of :lipas/sports-site)}}
+         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            {:status 200
-            :body   (core/get-sports-site-history db lipas-id)})}}]
+            :body (core/get-sports-site-history db lipas-id)})}}]
 
       ["/sports-sites/type/:type-code"
        {:get
-        {:no-doc    false
+        {:no-doc false
          :responses {200 {:body (s/coll-of map?)}}
          :parameters
-         {:path  {:type-code :lipas.sports-site.type/type-code}
+         {:path {:type-code :lipas.sports-site.type/type-code}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
-                 #_#_revs  (or (-> parameters :query :revs)
-                               "latest")
-                 locale    (or (-> parameters :query :lang keyword)
-                               :none)]
+                 #_#_revs (or (-> parameters :query :revs)
+                              "latest")
+                 locale (or (-> parameters :query :lang keyword)
+                            :none)]
              {:status 200
-              :body   (core/get-sports-sites-by-type-code db
-                                                          type-code
-                                                          {#_#_:revs revs
-                                                           :locale   locale})}))}}]
+              :body (core/get-sports-sites-by-type-code db
+                                                        type-code
+                                                        {#_#_:revs revs
+                                                         :locale locale})}))}}]
 
       ["/lois"
        {:get
-        {:no-doc     false
-         :responses  {200 {:body :lipas.loi/documents}}
+        {:no-doc false
+         :responses {200 {:body :lipas.loi/documents}}
          :parameters {}
          :handler
          (fn []
            (let [query {:size 10000 :query {:match_all {}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body (core/search-lois search query)}))}}]
 
       ["/lois/:loi-id"
        {:get
-        {:no-doc     false
-         :responses  {200 {:body :lipas.loi/document}}
+        {:no-doc false
+         :responses {200 {:body :lipas.loi/document}}
          :parameters {:path {:loi-id :lipas.loi/id}}
          :handler
          (fn [{:keys [parameters]}]
            {:status 200
-            :body   (core/get-loi search (get-in parameters [:path :loi-id]))})}}]
+            :body (core/get-loi search (get-in parameters [:path :loi-id]))})}}]
 
       ["/lois/type/:loi-type"
        {:get
-        {:no-doc    false
+        {:no-doc false
          :responses {200 {:body :lipas.loi/documents}}
          :parameters
-         {:path  {:loi-type :lipas.loi/loi-type}
+         {:path {:loi-type :lipas.loi/loi-type}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-type (-> parameters :path :loi-type)
-                 query    {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
+                 query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body (core/search-lois search query)}))}}]
 
       ["/lois/category/:loi-category"
        {:get
-        {:no-doc    false
+        {:no-doc false
          :responses {200 {:body :lipas.loi/documents}}
          :parameters
-         {:path  {:loi-category :lipas.loi/loi-category}
+         {:path {:loi-category :lipas.loi/loi-category}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-category (-> parameters :path :loi-category)
-                 query        {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
+                 query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body (core/search-lois search query)}))}}]
 
       ["/lois/status/:status"
        {:get
-        {:no-doc    false
+        {:no-doc false
          :responses {200 {:body :lipas.loi/documents}}
          :parameters
-         {:path  {:status :lipas.loi/status}
+         {:path {:status :lipas.loi/status}
           :query :lipas.api.get-sports-sites-by-type-code/query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-status (-> parameters :path :status)
-                 query      {:size 10000 :query {:term {:status.keyword loi-status}}}]
+                 query {:size 10000 :query {:term {:status.keyword loi-status}}}]
              {:status 200
-              :body   (core/search-lois search query)}))}}]
+              :body (core/search-lois search query)}))}}]
 
       ["/users"
        {:get
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :users/manage
          :handler
          (fn [_]
            {:status 200
-            :body   (core/get-users db)})}}]
+            :body (core/get-users db)})}}]
 
       ["/actions/gdpr-remove-user"
        {:post
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :users/manage
          :handler
          (fn [{:keys [body-params]}]
@@ -269,7 +270,7 @@
                                                               (:email body-params)))]
              (core/gdpr-remove-user! db user)
              {:status 200
-              :body   (core/get-user db (str id))}))}}]
+              :body (core/get-user db (str id))}))}}]
 
       ["/actions/search"
        {:post
@@ -280,13 +281,13 @@
 
       ["/actions/find-fields"
        {:post
-        {:no-doc     false
+        {:no-doc false
          :parameters {:body :lipas.api.find-fields/payload}
-         :responses  {200 {:body (s/coll-of :lipas/sports-site)}}
+         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-fields search body-params)})}}]
+            :body (core/search-fields search body-params)})}}]
 
       ["/actions/register"
        {:post
@@ -296,13 +297,13 @@
            (let [user (-> req
                           :body-params
                           (dissoc :permissions))
-                 _    (core/register! db emailer user)]
+                 _ (core/register! db emailer user)]
              {:status 201
-              :body   {:status "OK"}}))}}]
+              :body {:status "OK"}}))}}]
 
       ["/actions/login"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [(mw/basic-auth db) mw/auth]
          :handler
          (fn [{:keys [identity]}]
@@ -311,123 +312,123 @@
 
       ["/actions/refresh-login"
        {:get
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
            (let [user (core/get-user! db (-> identity :id))]
              {:status 200
-              :body   (merge (dissoc user :password)
-                             {:token (jwt/create-token user)})}))}}]
+              :body (merge (dissoc user :password)
+                           {:token (jwt/create-token user)})}))}}]
 
       ["/actions/request-password-reset"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :parameters {:body {:email string?}}
          :handler
          (fn [{:keys [body-params]}]
            (let [_ (core/send-password-reset-link! db emailer body-params)]
              {:status 200
-              :body   {:status "OK"}}))}}]
+              :body {:status "OK"}}))}}]
 
       ["/actions/reset-password"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters {:body {:password string?}}
          :handler
          (fn [req]
            (let [user (-> req :identity)
                  pass (-> req :parameters :body :password)
-                 _    (core/reset-password! db user pass)]
+                 _ (core/reset-password! db user pass)]
              {:status 200
-              :body   {:status "OK"}}))}}]
+              :body {:status "OK"}}))}}]
 
       ["/actions/update-user-permissions"
        {:post
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :users/manage
          :parameters
          {:body
-          {:id          string?
-           :login-url   :lipas.magic-link/login-url
+          {:id string?
+           :login-url :lipas.magic-link/login-url
            :permissions :lipas.user/permissions}}
          :handler
          (fn [req]
            (let [params (-> req :parameters :body)
-                 _      (core/update-user-permissions! db emailer params)]
+                 _ (core/update-user-permissions! db emailer params)]
              {:status 200
-              :body   {:status "OK"}}))}}]
+              :body {:status "OK"}}))}}]
 
       ["/actions/update-user-status"
        {:post
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :users/manage
          :parameters
          {:body
-          {:id     string?
+          {:id string?
            :status :lipas.user/status}}
          :handler
          (fn [req]
            {:status 200
-            :body   (core/update-user-status! db (-> req :parameters :body))})}}]
+            :body (core/update-user-status! db (-> req :parameters :body))})}}]
 
       ["/actions/update-user-data"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas.user/user-data}
          :handler
          (fn [req]
            (let [user-data (-> req :parameters :body)
-                 user      (:identity req)]
+                 user (:identity req)]
              {:status 200
-              :body   (core/update-user-data! db user user-data)}))}}]
+              :body (core/update-user-data! db user user-data)}))}}]
 
       ["/actions/order-magic-link"
        {:post
         {:no-doc true
          :parameters
          {:body
-          {:email     :lipas/email
+          {:email :lipas/email
            :login-url :lipas.magic-link/login-url
-           :variant   :lipas.magic-link/email-variant}}
+           :variant :lipas.magic-link/email-variant}}
          :handler
          (fn [req]
-           (let [email   (-> req :parameters :body :email)
+           (let [email (-> req :parameters :body :email)
                  variant (-> req :parameters :body :variant keyword)
-                 user    (core/get-user! db email)
-                 url     (-> req :parameters :body :login-url)
-                 _       (core/send-magic-link! db emailer {:user      user
-                                                            :login-url url
-                                                            :variant   variant})]
+                 user (core/get-user! db email)
+                 url (-> req :parameters :body :login-url)
+                 _ (core/send-magic-link! db emailer {:user user
+                                                      :login-url url
+                                                      :variant variant})]
              {:status 200 :body {:status "OK"}}))}}]
 
       ["/actions/send-magic-link"
        {:post
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :users/manage
          :parameters
          {:body
           {:login-url string?
-           :variant   :lipas.magic-link/email-variant
-           :user      :lipas/new-user}}
+           :variant :lipas.magic-link/email-variant
+           :user :lipas/new-user}}
          :handler
          (fn [req]
-           (let [user    (-> req :parameters :body :user)
+           (let [user (-> req :parameters :body :user)
                  variant (-> req :parameters :body :variant keyword)
-                 user    (or (core/get-user db (:email user))
-                             (do (core/add-user! db user)
-                                 (core/get-user db (:email user))))
-                 url     (-> req :parameters :body :login-url)
-                 params  {:user user :variant variant :login-url url}
-                 _       (core/send-magic-link! db emailer params)]
+                 user (or (core/get-user db (:email user))
+                          (do (core/add-user! db user)
+                              (core/get-user db (:email user))))
+                 url (-> req :parameters :body :login-url)
+                 params {:user user :variant variant :login-url url}
+                 _ (core/send-magic-link! db emailer params)]
              {:status 200 :body {:status "OK"}}))}}]
 
       ["/actions/add-reminder"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body :lipas/new-reminder}
@@ -435,30 +436,30 @@
          (fn [{:keys [identity parameters]}]
            (let [reminder (:body parameters)]
              {:status 200
-              :body   (core/add-reminder! db identity reminder)}))}}]
+              :body (core/add-reminder! db identity reminder)}))}}]
 
       ["/actions/update-reminder-status"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters
          {:body
-          {:id     uuid?
+          {:id uuid?
            :status :lipas.reminder/status}}
          :handler
          (fn [{:keys [identity parameters]}]
            (let [params (:body parameters)]
              {:status 200
-              :body   (core/update-reminder-status! db identity params)}))}}]
+              :body (core/update-reminder-status! db identity params)}))}}]
 
       ["/actions/get-upcoming-reminders"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
            {:status 200
-            :body   (core/get-users-pending-reminders! db identity)})}}]
+            :body (core/get-users-pending-reminders! db identity)})}}]
 
       ["/actions/create-energy-report"
        {:post
@@ -468,9 +469,9 @@
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :body :type-code)
-                 year      (-> parameters :body :year)]
+                 year (-> parameters :body :year)]
              {:status 200
-              :body   (core/energy-report db type-code year)}))}}]
+              :body (core/energy-report db type-code year)}))}}]
 
       ["/actions/create-sports-sites-report"
        {:post
@@ -479,25 +480,25 @@
          {:body :lipas.api.sports-site-report/req}
          :handler
          (fn [{:keys [parameters]}]
-           (let [query   (-> parameters :body :search-query)
-                 fields  (-> parameters :body :fields)
-                 locale  (-> parameters :body :locale)
+           (let [query (-> parameters :body :search-query)
+                 fields (-> parameters :body :fields)
+                 locale (-> parameters :body :locale)
                  format* (or (-> parameters :body :format) "xlsx")]
-             {:status  200
+             {:status 200
               :headers (condp = format*
-                         "xlsx"    {"Content-Type"        (-> utils/content-type :xlsx)
-                                    "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
-                         "geojson" {"Content-Type"        "application/json"
+                         "xlsx" {"Content-Type" (-> utils/content-type :xlsx)
+                                 "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+                         "geojson" {"Content-Type" "application/json"
                                     "Content-Disposition" "inline; filename=\"lipas.geojson\""}
-                         "csv"     {"Content-Type"        "text/csv"
-                                    "Content-Disposition" "inline; filename=\"lipas.csv\""})
+                         "csv" {"Content-Type" "text/csv"
+                                "Content-Disposition" "inline; filename=\"lipas.csv\""})
               :body
               (ring-io/piped-input-stream
                (fn [out]
                  (condp = format*
-                   "xlsx"    (core/sports-sites-report-excel search query fields locale out)
+                   "xlsx" (core/sports-sites-report-excel search query fields locale out)
                    "geojson" (core/sports-sites-report-geojson search query fields locale out)
-                   "csv"     (core/sports-sites-report-csv search query fields locale out))))}))}}]
+                   "csv" (core/sports-sites-report-csv search query fields locale out))))}))}}]
 
       ;; Old simple db version
       ["/actions/create-finance-report"
@@ -509,7 +510,7 @@
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
              {:status 200
-              :body   (core/finance-report db params)}))}}]
+              :body (core/finance-report db params)}))}}]
 
       ;; New version that uses ES backend
       ["/actions/query-finance-report"
@@ -521,7 +522,7 @@
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
              {:status 200
-              :body   (core/query-finance-report search params)}))}}]
+              :body (core/query-finance-report search params)}))}}]
 
       ;; Subsidies
       ["/actions/query-subsidies"
@@ -533,38 +534,38 @@
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
              {:status 200
-              :body   (core/query-subsidies search params)}))}}]
+              :body (core/query-subsidies search params)}))}}]
 
       ["/actions/calculate-stats"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :parameters {:body :lipas.api.calculate-stats/payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/calculate-stats db search body-params)})}}]
+            :body (core/calculate-stats db search body-params)})}}]
 
       ;; Accessibility
       ["/actions/get-accessibility-statements"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :parameters {:lipas-id int?}
          :handler
          (fn [{:keys [body-params]}]
            (let [lipas-id (-> body-params :lipas-id)]
              {:status 200
-              :body   (core/get-accessibility-statements lipas-id)}))}}]
+              :body (core/get-accessibility-statements lipas-id)}))}}]
 
       ["/actions/get-accessibility-app-url"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters {:lipas-id int?}
          :handler
          (fn [{:keys [body-params identity]}]
            (let [lipas-id (-> body-params :lipas-id)]
              {:status 200
-              :body   (core/get-accessibility-app-url db identity lipas-id)}))}}]
+              :body (core/get-accessibility-app-url db identity lipas-id)}))}}]
 
       ;;; Analysis ;;;
 
@@ -591,7 +592,7 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/calc-distances-and-travel-times search body-params)})}}]
+            :body (core/calc-distances-and-travel-times search body-params)})}}]
 
       ;; Create analysis report
       ["/actions/create-analysis-report"
@@ -599,8 +600,8 @@
         {:no-doc true
          :handler
          (fn [{:keys [body-params]}]
-           {:status  200
-            :headers {"Content-Type"        (-> utils/content-type :xlsx)
+           {:status 200
+            :headers {"Content-Type" (-> utils/content-type :xlsx)
                       "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
             :body
             (ring-io/piped-input-stream
@@ -614,7 +615,7 @@
          :handler
          (fn [_]
            {:status 200
-            :body   (core/get-newsletter mailchimp)})}}]
+            :body (core/get-newsletter mailchimp)})}}]
 
       ;; Subscribe newsletter
       ["/actions/subscribe-newsletter"
@@ -626,21 +627,21 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/subscribe-newsletter mailchimp body-params)})}}]
+            :body (core/subscribe-newsletter mailchimp body-params)})}}]
 
       ;; Calculate diversity indices
       ["/actions/calc-diversity-indices"
        {:post
-        {:no-doc     true
+        {:no-doc true
          :parameters {:body map?} ;; TODO proper spec
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
              (if (s/valid? :lipas.api.diversity-indices/req body)
                {:status 200
-                :body   (core/calc-diversity-indices search body)}
+                :body (core/calc-diversity-indices search body)}
                {:status 400
-                :body   {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]
+                :body {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]
 
       ;; Send feedback
       ["/actions/send-feedback"
@@ -652,7 +653,7 @@
          (fn [{:keys [body-params]}]
            (core/send-feedback! emailer body-params)
            {:status 200
-            :body   {:status "OK"}})}}]
+            :body {:status "OK"}})}}]
 
       ;; Check sports-site name
       ["/actions/check-sports-site-name"
@@ -663,11 +664,11 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/check-sports-site-name search body-params)})}}]
+            :body (core/check-sports-site-name search body-params)})}}]
 
       ["/actions/create-upload-url"
        {:post
-        {:no-doc     false
+        {:no-doc false
          ;; TODO: role, :activity/edit?
          :middleware [mw/token-auth mw/auth]
          :parameters
@@ -675,11 +676,11 @@
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
-            :body   (core/presign-upload-url aws (assoc body-params :user identity))})}}]
+            :body (core/presign-upload-url aws (assoc body-params :user identity))})}}]
 
       ["/actions/upload-utp-image"
        {:post
-        {:no-doc     false
+        {:no-doc false
          ;; TODO: role, :activity/edit?
          :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
          :parameters {:multipart {:file multipart/temp-file-part}}
@@ -687,28 +688,28 @@
          (fn [{:keys [parameters multipart-params identity]}]
            (let [params {:lipas-id (get multipart-params "lipas-id")
                          :filename (-> parameters :multipart :file :filename)
-                         :data     (-> parameters :multipart :file :tempfile)
-                         :user     identity}]
+                         :data (-> parameters :multipart :file :tempfile)
+                         :user identity}]
              {:status 200
-              :body   (core/upload-utp-image! params)}))}}]
+              :body (core/upload-utp-image! params)}))}}]
 
       ["/actions/save-loi"
        {:post
-        {:no-doc            false
+        {:no-doc false
          :require-privilege [{:type-code ::roles/any
                               :city-code ::roles/any
-                              :activity  ::roles/any}
+                              :activity ::roles/any}
                              :loi/create-edit]
          :parameters
          {:body :lipas.loi/document}
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
-            :body   (core/upsert-loi! db search identity body-params)})}}]
+            :body (core/upsert-loi! db search identity body-params)})}}]
 
       ["/actions/search-lois"
        {:post
-        {:no-doc     false
+        {:no-doc false
          ;; TODO: Tests don't use auth for this endpoint now
                                         ; :require-privilege [{:type-code ::roles/any
                                         ;                      :city-code ::roles/any
@@ -718,38 +719,68 @@
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/search-lois-with-params search body-params)})}}]
+            :body (core/search-lois-with-params search body-params)})}}]
 
       ["/actions/save-help-data"
        {:post
-        {:no-doc            true
+        {:no-doc true
          :require-privilege :help/manage
-         :coercion          reitit.coercion.malli/coercion
-         :parameters        {:body help-schema/HelpData}
+         :coercion reitit.coercion.malli/coercion
+         :parameters {:body help-schema/HelpData}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
-            :body   (core/save-help-data db body-params)})}}]
+            :body (core/save-help-data db body-params)})}}]
 
       ["/actions/get-help-data"
        {:post
-        {:no-doc    true
-         :coercion  reitit.coercion.malli/coercion
+        {:no-doc true
+         :coercion reitit.coercion.malli/coercion
          :responses {200 {:body help-schema/HelpData}}
          :handler
          (fn [_]
            {:status 200
-            :body   (core/get-help-data db)})}}]
+            :body (core/get-help-data db)})}}]
+
+      ;; Heatmap analysis
+      ["/actions/create-heatmap"
+       {:post
+        {:no-doc false
+         #_#_:require-privilege :analysis-tool/experimental
+         :coercion reitit.coercion.malli/coercion
+         :parameters {:body heatmap/HeatmapParams}
+         :responses {200 {:body heatmap/CreateHeatmapResponse}}
+         :handler
+         (fn [req]
+           (let [params (:body-params req)
+                 data (heatmap/create ctx params)]
+             {:status 200
+              :body {:data data
+                     :metadata {:dimension (:dimension params)
+                                :weight-by (:weight-by params)
+                                :total-features (count data)}}}))}}]
+
+      ["/actions/get-heatmap-facets"
+       {:post
+        {:no-doc false
+         #_#_:require-privilege :analysis-tool/experimental
+         :coercion reitit.coercion.malli/coercion
+         :parameters {:body heatmap/FacetParams}
+         :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
+         :handler
+         (fn [req]
+           (let [params (:body-params req)]
+             {:status 200
+              :body (heatmap/get-facets ctx params)}))}}]
 
       (ptv-handler/routes ctx)]
 
      (v2/routes ctx)]
 
     {:data
-     {:coercion   reitit.coercion.spec/coercion
-      :muuntaja   m/instance
-      :middleware [
-                   ;; query-params & form-params
+     {:coercion reitit.coercion.spec/coercion
+      :muuntaja m/instance
+      :middleware [;; query-params & form-params
                    params/wrap-params
                    ;; content-negotiation
                    muuntaja/format-negotiate-middleware

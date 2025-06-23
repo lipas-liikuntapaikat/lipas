@@ -196,15 +196,17 @@
   :<- [::mode*]
   :<- [:lipas.ui.analysis.reachability.subs/reachability]
   :<- [:lipas.ui.analysis.diversity.subs/diversity]
+  :<- [:lipas.ui.analysis.heatmap.subs/heatmap]
   :<- [::simplify]
-  (fn [[content-padding mode reachability diversity simplify] _]
+  (fn [[content-padding mode reachability diversity heatmap simplify] _]
     (let [analysis?  (= (:name mode) :analysis)
           simplify? (and (#{:adding :editing} (:name mode))
                          (= (:sub-mode mode) :simplifying))]
       (cond-> mode
         true       (assoc :content-padding content-padding)
         analysis?  (assoc :analysis {:reachability reachability
-                                     :diversity    diversity})
+                                     :diversity diversity
+                                     :heatmap heatmap})
         simplify? (assoc :simplify simplify)))))
 
 (rf/reg-sub ::selected-features

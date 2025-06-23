@@ -15,9 +15,11 @@
      [[:lipas.ui.search.events/clear-filters]
       [:lipas.ui.map.events/set-overlays
        [[:vectors true]
+        [:lois false]
         [:schools false]
         [:population false]
         [:analysis false]
+        [:heatmap false]
         [:diversity-grid true]
         [:diversity-area true]]]]}))
 
