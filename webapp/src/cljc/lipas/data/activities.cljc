@@ -1192,6 +1192,23 @@
              :se "Svår"
              :en "Hard"}})
 
+(def paddling-difficulty-v2
+  {"class-1" {:fi "1. Suojaisa reitti. Sopii myös kokemattomille melojille, lapsiperheille ja matkailijoille."
+              :se "1. Skyddad rutt. Passar även för oerfarna paddlare, barnfamiljer och turister."
+              :en "1. Sheltered route. Suitable also for inexperienced paddlers, families with children and tourists."}
+   "class-2" {:fi "2. Pääosin suojaisa reitti melonnan perustaidot hallitseville melonnan harrastajille."
+              :se "2. Huvudsakligen skyddad rutt för paddlingsharrastare som behärskar grundläggande paddlingsteknik."
+              :en "2. Mainly sheltered route for paddling enthusiasts who master basic paddling skills."}
+   "class-3" {:fi "3. Vaativia osuuksia sisältävä kokeneen melontaretkeilijän reitti."
+              :se "3. Rutt med krävande avsnitt för erfaren kanotturist."
+              :en "3. Route with demanding sections for experienced canoe trekker."}
+   "class-4" {:fi "4. Vaikeita ja riskialttiita osuuksia sisältävä kokeneen ja taitavan melojan reitti."
+              :se "4. Rutt med svåra och riskfyllda avsnitt för erfaren och skicklig paddlare."
+              :en "4. Route with difficult and risky sections for experienced and skilled paddler."}
+   "class-5" {:fi "5. Kokeneiden seikkailijöiden erittäin vaativa ja riskialtis extreme-reitti."
+              :se "5. Extremt krävande och riskfylld extremrutt för erfarna äventyrare."
+              :en "5. Extremely demanding and risky extreme route for experienced adventurers."}})
+
 (def paddling
   "Paddling is a bastard child and it contains
 
@@ -1224,6 +1241,7 @@
                  :duration
                  :travel-direction
                  :paddling-difficulty
+                 :paddling-difficulty-v2
                  :paddling-properties
                  :equipment-rental?
                  :rapid-canoeing-centre?
@@ -1307,6 +1325,7 @@
                        [:paddling-properties {:optional true}
                         [:sequential (into [:enum] (keys paddling-properties))]]
                        [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
+                       [:paddling-difficulty-v2 (into [:enum] (keys paddling-difficulty-v2))]
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                        [:safety {:optional true} common-schema/localized-string]
                        [:good-to-know {:optional true} common-schema/localized-string]
@@ -1361,15 +1380,26 @@
                :paddling-properties
                {:field
                 {:type        "multi-select"
-                 :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia."
-                               :se "Välj de alternativ som beskriver ruttens egenskaper."
-                               :en "Select the choices that describe the characteristics of the route."}
+                 :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia. HUOM! Tiedot eivät toistaiseksi siirry luontoon.fi-palveluun"
+                               :se "Välj de punkter som beskriver ruttens egenskaper. OBS! Uppgifterna överförs inte till luonto.fi-tjänsten för tillfället."
+                               :en "Select the points that describe the route's features. NOTE! The information is not currently transferred to the luonto.fi service."}
                  :label       {:fi "Ominaisuudet"
                                :se "Egenskaper"
                                :en "Characteristics"}
                  :opts        paddling-properties}}
 
-               :paddling-difficulty
+               ;; :paddling-difficulty
+               ;; {:field
+               ;;  {:type        "select"
+               ;;   :description {:fi "Haastavuus"
+               ;;                 :se "Svårighetsgrad"
+               ;;                 :en "Difficulty"}
+               ;;   :label       {:fi "Reitin arvioitu haastavuus."
+               ;;                 :se "Uppskattad svårighetsgrad för rutten"
+               ;;                 :en "Estimated difficulty of the route"}
+               ;;   :opts        paddling-difficulty}}
+
+               :paddling-difficulty-v2
                {:field
                 {:type        "select"
                  :description {:fi "Haastavuus"
@@ -1378,7 +1408,7 @@
                  :label       {:fi "Reitin arvioitu haastavuus."
                                :se "Uppskattad svårighetsgrad för rutten"
                                :en "Estimated difficulty of the route"}
-                 :opts        paddling-difficulty}}
+                 :opts        paddling-difficulty-v2}}
 
                :safety
                {:field
