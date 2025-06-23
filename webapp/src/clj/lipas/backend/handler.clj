@@ -746,6 +746,7 @@
       ["/actions/create-heatmap"
        {:post
         {:no-doc false
+         #_#_:require-privilege :analysis-tool/experimental
          :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/HeatmapParams}
          :responses {200 {:body heatmap/CreateHeatmapResponse}}
@@ -762,6 +763,7 @@
       ["/actions/get-heatmap-facets"
        {:post
         {:no-doc false
+         #_#_:require-privilege :analysis-tool/experimental
          :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/FacetParams}
          :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}

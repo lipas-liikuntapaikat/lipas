@@ -733,6 +733,16 @@
   (clojure.test/run-test-var #'get-heatmap-facets-with-filters-test)
   (clojure.test/run-test-var #'bbox-filtering-test)
 
+  (clojure.test/run-test-var #'create-heatmap-dimension-density-test)
+  (clojure.test/run-test-var #'create-heatmap-dimension-area-test)
+  (clojure.test/run-test-var #'weight-by-functionality-test)
+
+  (clojure.test/run-test-var #'create-heatmap-validation-test)
+  (clojure.test/run-test-var #'create-heatmap-dimension-year-round-test)
+  (clojure.test/run-test-var #'create-heatmap-year-round-filter-test)
+  (clojure.test/run-test-var #'create-heatmap-with-filters-test)
+
+
   ;; Run just unit tests
   (clojure.test/run-test-var #'zoom-precision-mapping-test)
   (clojure.test/run-test-var #'normalize-weights-test)

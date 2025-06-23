@@ -10,7 +10,8 @@
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn view [{:keys [tr]}]
-  (let [selected-tool (<== [::subs/selected-tool])]
+  (let [selected-tool (<== [::subs/selected-tool])
+        experimental? (<== [::subs/privilege-to-experimental-tools?])]
     [mui/grid
      {:container true
       :spacing 2
@@ -31,7 +32,8 @@
          :indicator-color "secondary"}
         [mui/tab {:value "reachability" :label "Saavutettavuus"}]
         [mui/tab {:value "diversity" :label "Monipuolisuus"}]
-        [mui/tab {:value "heatmap" :label "Lämpökartta"}]]]
+        (when experimental?
+          [mui/tab {:value "heatmap" :label "Lämpökartta"}])]]
       [mui/grid {:item true}
        [:> Tooltip
         {:title (tr :analysis/close)}
