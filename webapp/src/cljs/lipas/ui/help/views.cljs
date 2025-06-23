@@ -519,69 +519,66 @@
                                        (< selected-page-idx (count selected-pages)))
                                (nth selected-pages selected-page-idx))
         tr                   (use-subscribe [:lipas.ui.subs/translator])
-        has-permission?      (use-subscribe [::user-subs/check-privilege nil :help/manage])
         locale-kw            (tr)]
 
-    ;; Remove this check to make non-admins see help button
-    (when has-permission?
-      ($ :<>
-         ;; Help button in main UI
-         ($ Tooltip {:title (tr :help/headline)}
-            ($ IconButton {:size     "large"
-                           :on-click #(==> [::events/open-dialog])}
-               ($ Help)))
+    ($ :<>
+       ;; Help button in main UI
+       ($ Tooltip {:title (tr :help/headline)}
+          ($ IconButton {:size     "large"
+                         :on-click #(==> [::events/open-dialog])}
+             ($ Help)))
 
-         ;; Help dialog
-         ($ Dialog
-            {:fullScreen  true
-             :keepMounted true
-             :open        dialog-open?
-             :onClose     #(==> [::events/close-dialog])}
+       ;; Help dialog
+       ($ Dialog
+          {:fullScreen  true
+           :keepMounted true
+           :open        dialog-open?
+           :onClose     #(==> [::events/close-dialog])}
 
-            ($ AppBar {:sx #js {:position "relative"}}
-               ($ Toolbar {}
-                  ($ Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}}
-                     (tr :help/headline))
+          ($ AppBar {:sx #js {:position "relative"}}
+             ($ Toolbar {}
+                ($ Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}}
+                   (tr :help/headline))
 
-                  ;; Manage content button (only visible with permission)
-                  ($ HelpManageButton)
+                ;; Manage content button (only visible with permission)
+                ($ HelpManageButton)
 
-                  ($ IconButton
-                     {:edge    "start"
-                      :color   "inherit"
-                      :onClick #(==> [::events/close-dialog])}
-                     ($ CloseIcon))))
+                ($ IconButton
+                   {:edge    "start"
+                    :color   "inherit"
+                    :onClick #(==> [::events/close-dialog])}
+                   ($ CloseIcon))))
 
-            ($ DialogContent {:sx #js {:display "flex" :flexDirection "column" :gap 2}}
+          ($ DialogContent {:sx #js {:display "flex" :flexDirection "column" :gap 2}}
 
-               (when (= :edit mode)
-                 ($ manage/view))
+             (when (= :edit mode)
+               ($ manage/view))
 
-               (when (= :read mode)
-                 ($ :<>
-                    ($ Tabs {:value    selected-section-idx
-                             :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
-                       (map-indexed
-                         (fn [idx section]
-                           ($ Tab {:key idx
-                                  :value idx
-                                  :label (locale-kw (:title section))}))
-                         sections))
+             (when (= :read mode)
+               ($ :<>
+                  ($ Tabs {:value    selected-section-idx
+                           :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
+                     (map-indexed
+                      (fn [idx section]
+                        ($ Tab {:key idx
+                                :value idx
+                                :label (locale-kw (:title section))}))
+                      sections))
 
-                    ($ Breadcrumbs {:sx #js{:mt 1}}
-                       ($ Typography (tr :help/headline))
+                  ($ Breadcrumbs {:sx #js{:mt 1}}
+                     ($ Typography (tr :help/headline))
 
-                       (when selected-section
-                         ($ Link {:underline "hover"
-                                 :color "inherit"
-                                 :on-click #(==> [::events/select-page nil nil])}
-                            (locale-kw (:title selected-section))))
+                     (when selected-section
+                       ($ Link {:underline "hover"
+                                :color "inherit"
+                                :on-click #(==> [::events/select-page nil nil])}
+                          (locale-kw (:title selected-section))))
 
-                       (when selected-page
-                         ($ Link {:underline "hover"
-                                 :color "inherit"
-                                 :href "/"}
-                            (locale-kw (:title selected-page)))))
+                     (when selected-page
+                       ($ Link {:underline "hover"
+                                :color "inherit"
+                                :href "/"}
+                          (locale-kw (:title selected-page)))))
 
-                    (when selected-section
-                      ($ HelpSection selected-section))))))))))
+                  (when selected-section
+                    ($ HelpSection selected-section)))))))))
