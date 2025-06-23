@@ -85,7 +85,7 @@
         filters @(rf/subscribe [::subs/filters])
         selected-types (get filters :type-codes [])]
     [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
-     [selects/type-selector
+     [selects/type-category-selector
       {:value selected-types
        :label (tr :actions/select-types)
        :on-change #(rf/dispatch [::events/update-filter-and-refresh :type-codes %])}]]))
