@@ -238,6 +238,7 @@
     [autocompletes/autocomplete
      {:items            cats
       :value            (map (partial str "type-") value)
+      :deselect?        true
       :label            (or label (tr :search/search))
       :multi?           true
       :value-fn         :cat-id
@@ -250,21 +251,21 @@
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
-                              [:r> Typography
-                               props
-                               (cond
-                                 (string/includes? option "sub-cat")  (strong1 v)
-                                 (string/includes? option "main-cat") (strong2 v)
-                                 :else                                v)])))
+                             [:r> Typography
+                              props
+                              (cond
+                                (string/includes? option "sub-cat")  (strong1 v)
+                                (string/includes? option "main-cat") (strong2 v)
+                                :else                                v)])))
       :sort-fn          (fn [{:keys [type-code cat-id]}]
                           (case type-code
                             (1 2) (* 100 type-code)
                             ;; Special case workaround to sort 7000 codes
                             ;; main -> sub -> type
-                            7000 (case cat-id
-                                   "main-cat-7000" 7000
-                                   "sub-cat-7000" 7001
-                                   7002)
+                            7000  (case cat-id
+                                    "main-cat-7000" 7000
+                                    "sub-cat-7000"  7001
+                                    7002)
                             type-code))
       :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
