@@ -4,7 +4,8 @@
   {:dimension :density
    :weight-by :count
    :precision nil ; nil means use auto-precision based on zoom
-   :filters {:status-codes #{"active" "out-of-service-temporarily"}}
+   :use-bbox-filter? true ; true = current map view, false = whole Finland
+   :filters {:status-codes ["active" "out-of-service-temporarily"]}
    :visual {:radius 20
             :blur 15
             :opacity 0.8
@@ -27,6 +28,9 @@
 
 (defn set-precision [db precision]
   (assoc-in db [:heatmap :precision] precision))
+
+(defn set-use-bbox-filter [db use-bbox?]
+  (assoc-in db [:heatmap :use-bbox-filter?] use-bbox?))
 
 (defn set-filter [db filter-key value]
   (assoc-in db [:heatmap :filters filter-key] value))

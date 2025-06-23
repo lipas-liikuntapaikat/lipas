@@ -171,3 +171,5 @@
                                                     :geometry {:type "Point"
                                                                :coordinates [0.0 0.0]}}]}}
                 :type {:type-code 1530}}]))
+
+(def prop-types prop-types/schemas)

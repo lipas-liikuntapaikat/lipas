@@ -1,6 +1,7 @@
 (ns lipas.ui.analysis.heatmap.views
   (:require [lipas.ui.analysis.heatmap.events :as events]
             [lipas.ui.analysis.heatmap.subs :as subs]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.mui :as mui]
             [re-frame.core :as rf]
             [reagent.core :as r]))
@@ -31,7 +32,6 @@
          :on-change #(rf/dispatch [::events/set-weight-by (keyword (.. % -target -value))])}
         [mui/menu-item {:value :count} "Count"]
         [mui/menu-item {:value :area-m2} "Area (m²)"]
-        [mui/menu-item {:value :capacity} "Capacity"]
         [mui/menu-item {:value :route-length-km} "Route Length (km)"]]])))
 
 (defn precision-selector []
@@ -64,47 +64,102 @@
       [mui/menu-item {:value 10} "10 - Ultra Fine (~1.2m)"]]
      [mui/form-helper-text "Higher precision = more detailed heatmap but slower performance"]]))
 
-(defn type-filter []
-  (let [type-codes @(rf/subscribe [::subs/type-codes-with-labels])
-        selected (or @(rf/subscribe [::subs/filters]) [])]
+(defn bbox-filter-selector []
+  (let [use-bbox-filter? @(rf/subscribe [::subs/use-bbox-filter?])]
     [mui/form-control {:full-width true :margin "normal"}
-     [mui/input-label "Facility Types"]
-     [mui/select
-      {:multiple true
-       :value (vec (get selected :type-codes []))
-       :on-change #(rf/dispatch [::events/update-filter-and-refresh
-                                 :type-codes
-                                 (vec (.. % -target -value))])
-       :render-value (fn [selected]
-                       (str (count selected) " selected"))}
-      (for [{:keys [value label]} type-codes]
-        ^{:key value}
-        [mui/menu-item {:value value}
-         [mui/checkbox {:checked (some #{value} (get selected :type-codes []))}]
-         [mui/list-item-text {:primary label}]])]]))
+     [mui/form-control-label
+      {:control (r/as-element
+                 [mui/switch
+                  {:checked use-bbox-filter?
+                   :on-change #(rf/dispatch [::events/update-bbox-filter-and-refresh
+                                             (.. % -target -checked)])}])
+       :label "Filter by current map view"}]
+     [mui/form-helper-text
+      (if use-bbox-filter?
+        "Analyzing data within current map bounds"
+        "Analyzing data for whole Finland")]]))
+
+;; Updated selectors using existing components
+(defn type-filter []
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        filters @(rf/subscribe [::subs/filters])
+        selected-types (get filters :type-codes [])]
+    [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
+     [selects/type-selector
+      {:value selected-types
+       :label (tr :actions/select-types)
+       :on-change #(rf/dispatch [::events/update-filter-and-refresh :type-codes %])}]]))
+
+(defn owner-filter []
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        filters @(rf/subscribe [::subs/filters])
+        selected-owners (get filters :owners [])]
+    [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
+     [selects/owner-selector
+      {:value selected-owners
+       :label (tr :actions/select-owners)
+       :on-change #(rf/dispatch [::events/update-filter-and-refresh :owners %])}]]))
+
+(defn admin-filter []
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        filters @(rf/subscribe [::subs/filters])
+        selected-admins (get filters :admins [])]
+    [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
+     [selects/admin-selector
+      {:value selected-admins
+       :label (tr :actions/select-admins)
+       :on-change #(rf/dispatch [::events/update-filter-and-refresh :admins %])}]]))
+
+(defn status-filter []
+  (let [filters @(rf/subscribe [::subs/filters])
+        selected-statuses (get filters :status-codes [])]
+    [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
+     [selects/status-selector
+      {:value selected-statuses
+       :on-change #(rf/dispatch [::events/update-filter-and-refresh :status-codes %])}]]))
 
 (defn year-range-filter []
-  (let [year-range @(rf/subscribe [::subs/year-range])
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        facets @(rf/subscribe [::subs/facets])
         filters @(rf/subscribe [::subs/filters])
+        year-range (get facets :year-range)
         current-range (or (:year-range filters)
                           (when year-range [(:min year-range) (:max year-range)]))]
     (when (and year-range current-range)
-      [mui/grid {:item true :xs 12 :style {:margin-top "16px"}}
-       [mui/typography {:gutterBottom true} "Construction Year"]
-       [mui/slider
-        {:value current-range
-         :min (:min year-range)
-         :max (:max year-range)
-         :marks true
-         :value-label-display "auto"
-         :on-change (fn [_ value]
-                      (rf/dispatch [::events/set-filter :year-range value]))
-         :on-change-committed (fn [_ value]
-                                (rf/dispatch [::events/update-filter-and-refresh :year-range value]))}]])))
+      [mui/grid {:item true :xs 12 :sx #js{:mt 1}}
+       [mui/typography {:gutterBottom true} (tr :actions/filter-construction-year)]
+       [mui/stack {:direction "column" :style {:padding "1em"}}
+        [mui/slider
+         {:value current-range
+          :min (:min year-range)
+          :max (:max year-range)
+          :marks true
+          :value-label-display "auto"
+          :on-change (fn [_ value]
+                       (rf/dispatch [::events/set-filter :year-range value]))
+          :on-change-committed (fn [_ value]
+                                 (rf/dispatch [::events/update-filter-and-refresh :year-range value]))}]]])))
+
+(defn city-filter []
+  (let [filters @(rf/subscribe [::subs/filters])
+        selected-cities (get filters :city-codes [])]
+    [mui/grid {:item true :xs 12 :style {:margin-top "8px"}}
+     ;; TODO: Add city selector component when available
+     [mui/typography {:variant "body2" :color "textSecondary"}
+      "City filter (to be implemented)"]]))
 
 (defn boolean-filters []
   (let [filters @(rf/subscribe [::subs/filters])]
     [mui/grid {:container true :spacing 1}
+     [mui/grid {:item true :xs 12}
+      [mui/form-control-label
+       {:control (r/as-element
+                  [mui/switch
+                   {:checked (boolean (:year-round-only filters))
+                    :on-change #(rf/dispatch [::events/update-filter-and-refresh
+                                              :year-round-only
+                                              (.. % -target -checked)])}])
+        :label "Year-round facilities only"}]]
      [mui/grid {:item true :xs 12}
       [mui/form-control-label
        {:control (r/as-element
@@ -192,18 +247,20 @@
    [mui/expansion-panel-summary {:expand-icon (r/as-element [mui/icon "expand_more"])}
     [mui/typography "Filters"]]
    [mui/expansion-panel-details
-    [mui/grid {:container true :spacing 1}
-     [mui/grid {:item true :xs 12}
-      [type-filter]]
-     [mui/grid {:item true :xs 12}
-      [year-range-filter]]
-     [mui/grid {:item true :xs 12}
-      [boolean-filters]]]]])
+    [mui/grid {:container true :spacing 2}
+     [type-filter]
+     [status-filter]
+     [owner-filter]
+     [admin-filter]
+     [year-range-filter]
+     ;; Boolean filters hidden for now. Maybe revealed later
+     #_[mui/grid {:item true :xs 12}
+        [boolean-filters]]]]])
 
 (defn heatmap-controls []
   (let [loading? @(rf/subscribe [::subs/loading?])
         error @(rf/subscribe [::subs/error])]
-    [mui/stack {:direction "column"}
+    [mui/stack {:direction "column" :spacing 2}
      [mui/paper {:style {:padding "0.5em"
                          :overflow-y "auto"}}
       [mui/typography {:variant "h5" :gutterBottom true} "Heatmap Analysis"]
@@ -218,6 +275,7 @@
       [dimension-selector]
       [weight-selector]
       [precision-selector]
+      [bbox-filter-selector]
 
       [filters-panel]
 

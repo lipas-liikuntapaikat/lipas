@@ -25,6 +25,12 @@
    (:precision heatmap)))
 
 (rf/reg-sub
+ ::use-bbox-filter?
+ :<- [::heatmap]
+ (fn [heatmap _]
+   (:use-bbox-filter? heatmap)))
+
+(rf/reg-sub
  ::filters
  :<- [::heatmap]
  (fn [heatmap _]
@@ -60,6 +66,7 @@
  (fn [heatmap _]
    (:facets heatmap)))
 
+;; Updated to match backend response structure with hyphens
 (rf/reg-sub
  ::type-codes-with-labels
  :<- [::facets]
@@ -69,7 +76,7 @@
             {:value value
              :label (str "Type " value " (" count ")")
              :count count})
-          (:type_codes facets)))))
+          (:type-codes facets)))))
 
 (rf/reg-sub
  ::admins-with-counts
@@ -94,8 +101,19 @@
           (:owners facets)))))
 
 (rf/reg-sub
+ ::statuses-with-counts
+ :<- [::facets]
+ (fn [facets _]
+   (when facets
+     (map (fn [{:keys [value count]}]
+            {:value value
+             :label (str value " (" count ")")
+             :count count})
+          (:statuses facets)))))
+
+(rf/reg-sub
  ::year-range
  :<- [::facets]
  (fn [facets _]
    (when facets
-     (:year_range facets))))
+     (:year-range facets))))

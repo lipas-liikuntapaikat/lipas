@@ -27,8 +27,13 @@
         ;; Helper function to set coordinates consistently
         set-coordinates (fn [site [lon lat]]
                           (-> site
-                              (assoc-in [:location :wgs84-point :coordinates] [lon lat])
                               (assoc-in [:location :geometries :features 0 :geometry :coordinates] [lon lat])))
+
+        ;; Helper function to clean random properties and set controlled values
+        clean-properties (fn [site area-m2 route-length-km]
+                           (-> site
+                               (assoc :properties {:area-m2 area-m2
+                                                   :route-length-km route-length-km})))
 
         ;; Site 1: Swimming hall in Helsinki
         site1 (-> (tu/gen-sports-site)
@@ -37,10 +42,10 @@
                   (assoc-in [:type :type-code] 3110) ; swimming hall
                   (assoc-in [:location :city :city-code] 91) ; Helsinki
                   (set-coordinates [24.9384 60.1699])
-                  (assoc-in [:properties :area-m2] 1000)
+                  (clean-properties 1000 0.0) ; No route
                   (assoc :construction-year 2010)
-                  (assoc :owner "Helsinki")
-                  (assoc :admin "Helsinki"))
+                  (assoc :owner "city")
+                  (assoc :admin "city-sports"))
 
         ;; Site 2: Football field in Espoo
         site2 (-> (tu/gen-sports-site)
@@ -49,10 +54,10 @@
                   (assoc-in [:type :type-code] 1110) ; football field
                   (assoc-in [:location :city :city-code] 49) ; Espoo
                   (set-coordinates [24.8200 60.1719])
-                  (assoc-in [:properties :area-m2] 5000)
+                  (clean-properties 5000 2.5) ; Has 2.5km route
                   (assoc :construction-year 2015)
-                  (assoc :owner "Espoo")
-                  (assoc :admin "Espoo"))
+                  (assoc :owner "municipal-consortium")
+                  (assoc :admin "municipal-consortium"))
 
         ;; Site 3: Ice hockey hall in Helsinki with year-round use
         site3 (-> (tu/gen-sports-site)
@@ -61,12 +66,12 @@
                   (assoc-in [:type :type-code] 2120) ; ice hockey hall
                   (assoc-in [:location :city :city-code] 91) ; Helsinki
                   (set-coordinates [24.9500 60.1800])
-                  (assoc-in [:properties :area-m2] 2000)
+                  (clean-properties 2000 0.0) ; No route
                   (assoc-in [:properties :year-round-use?] true)
                   (assoc-in [:properties :lighting?] true)
                   (assoc :construction-year 2020)
-                  (assoc :owner "Helsinki")
-                  (assoc :admin "Helsinki"))
+                  (assoc :owner "city")
+                  (assoc :admin "city-sports"))
 
         ;; Site 4: Planned gym in Vantaa
         site4 (-> (tu/gen-sports-site)
@@ -75,17 +80,17 @@
                   (assoc-in [:type :type-code] 4510) ; gym
                   (assoc-in [:location :city :city-code] 92) ; Vantaa
                   (set-coordinates [25.0400 60.2900])
-                  (assoc-in [:properties :area-m2] 800)
+                  (clean-properties 800 1.2) ; Has 1.2km route
                   (assoc :construction-year 2025)
-                  (assoc :owner "Vantaa")
-                  (assoc :admin "Vantaa"))
+                  (assoc :owner "registered-association")
+                  (assoc :admin "private-association"))
 
         sites [site1 site2 site3 site4]]
 
     ;; Save all sites to database and index to Elasticsearch
     (doseq [site sites]
       (core/upsert-sports-site!* db admin-user site)
-      (core/index! search site :sync))
+      (core/index! search (core/enrich site) :sync))
 
     ;; Return created sites for reference
     sites))
@@ -229,7 +234,7 @@
       (is (coll? (:data body))))
 
     ;; Test with status filter - only active sites
-    (let [params (valid-heatmap-params {:filters {:status-codes #{"active"}}})
+    (let [params (valid-heatmap-params {:filters {:status-codes ["active"]}})
 
           resp (app (-> (mock/request :post "/api/actions/create-heatmap")
                         (mock/content-type "application/transit+json")
@@ -356,7 +361,7 @@
   (testing "Facets respect existing filters"
     (create-test-sports-sites)
     (let [params {:bbox (valid-bbox)
-                  :filters {:status-codes #{"active"}}}
+                  :filters {:status-codes ["active"]}}
 
           resp (app (-> (mock/request :post "/api/actions/get-heatmap-facets")
                         (mock/content-type "application/transit+json")
@@ -378,15 +383,16 @@
       (let [type-codes (set (map :value (:type-codes body)))]
         (is (= 3 (count type-codes)))
         (is (contains? type-codes 3110)) ; swimming hall
-        (is (contains? type-codes 1110)) ; football field  
+        (is (contains? type-codes 1110)) ; football field
         (is (contains? type-codes 2120)) ; ice hockey hall
         (is (not (contains? type-codes 4510)))) ; gym (planned site)
 
       ;; Owners should only include those with active sites
+      ;; Owners should only include those with active sites
       (let [owners (set (map :value (:owners body)))]
-        (is (contains? owners "Helsinki")) ; 2 active sites
-        (is (contains? owners "Espoo")) ; 1 active site
-        (is (not (contains? owners "Vantaa")))))))
+        (is (contains? owners "city")) ; 2 active sites (Helsinki sites)
+        (is (contains? owners "municipal-consortium")) ; 1 active site (Espoo site)
+        (is (not (contains? owners "registered-association")))))))
 
 (deftest get-heatmap-facets-validation-test
   (testing "Validates facet parameters"
@@ -632,6 +638,26 @@
                           :dimension :density}]
       (is (not (m/validate heatmap/HeatmapParams invalid-params))))
 
+    ;; Invalid HeatmapParams - capacity weight-by no longer supported
+    (let [invalid-capacity-params {:zoom 10
+                                   :bbox {:min-x 24.8 :max-x 25.1 :min-y 60.1 :max-y 60.3}
+                                   :dimension :density
+                                   :weight-by :capacity}]
+      (is (not (m/validate heatmap/HeatmapParams invalid-capacity-params))))
+
+    ;; Valid weight-by options should work
+    (let [area-params {:zoom 10
+                       :bbox {:min-x 24.8 :max-x 25.1 :min-y 60.1 :max-y 60.3}
+                       :dimension :density
+                       :weight-by :area-m2}]
+      (is (m/validate heatmap/HeatmapParams area-params)))
+
+    (let [route-params {:zoom 10
+                        :bbox {:min-x 24.8 :max-x 25.1 :min-y 60.1 :max-y 60.3}
+                        :dimension :density
+                        :weight-by :route-length-km}]
+      (is (m/validate heatmap/HeatmapParams route-params)))
+
     ;; Valid FacetParams
     (let [valid-facet-params {:bbox {:min-x 24.8 :max-x 25.1 :min-y 60.1 :max-y 60.3}}]
       (is (m/validate heatmap/FacetParams valid-facet-params)))
@@ -640,6 +666,61 @@
     (let [invalid-facet-params {:filters {:type-codes [1110]}}]
       (is (not (m/validate heatmap/FacetParams invalid-facet-params))))))
 
+(deftest weight-by-functionality-test
+  (testing "Weight-by options produce different meaningful results"
+    (create-test-sports-sites)
+
+    ;; Test count-based weighting (baseline)
+    (let [count-params (valid-heatmap-params {:dimension :density :weight-by :count})
+          count-resp (app (-> (mock/request :post "/api/actions/create-heatmap")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/body (->transit count-params))))
+          count-features (:data (<-transit (:body count-resp)))]
+
+      (is (= 200 (:status count-resp)))
+      (is (= 4 (count count-features))) ; Should have 4 features for our 4 test sites
+
+      ;; All features should have weight = 1 (count per grid cell)
+      (doseq [feature count-features]
+        (is (= 1 (get-in feature [:properties :weight]))
+            "Count-based weight should be 1 for each grid cell with one facility")))
+
+    ;; Test area-based weighting
+    (let [area-params (valid-heatmap-params {:dimension :density :weight-by :area-m2})
+          area-resp (app (-> (mock/request :post "/api/actions/create-heatmap")
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit area-params))))
+          area-features (:data (<-transit (:body area-resp)))]
+
+      (is (= 200 (:status area-resp))
+          (str "Area request failed: " (:status area-resp) " - " (:body area-resp)))
+      (is (= 4 (count area-features)))
+
+      ;; Weights should correspond to our test data areas (ES returns doubles)
+      (let [weights (set (map #(get-in % [:properties :weight]) area-features))
+            expected-areas #{800.0 1000.0 2000.0 5000.0}] ; ES returns doubles
+        (is (= expected-areas weights)
+            (str "Area-based weights should match test data. Got: " weights " Expected: " expected-areas))))
+
+    ;; Test route-length weighting with known controlled values
+    (let [route-params (valid-heatmap-params {:dimension :density :weight-by :route-length-km})
+          route-resp (app (-> (mock/request :post "/api/actions/create-heatmap")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/body (->transit route-params))))
+          route-features (:data (<-transit (:body route-resp)))]
+
+      (is (= 200 (:status route-resp))
+          (str "Route request failed: " (:status route-resp) " - " (:body route-resp)))
+      (is (= 4 (count route-features)))
+
+      ;; Route weights should match our controlled test data: two sites with 0.0, one with 1.2, one with 2.5
+      (let [weights (set (map #(get-in % [:properties :weight]) route-features))
+            expected-routes #{0.0 1.2000000476837158 2.5}] ; From our controlled test data
+        (is (= expected-routes weights)
+            (str "Route-length weights should match controlled test data. Got: " weights " Expected: " expected-routes))))))
 (comment
   ;; Run all tests
   (clojure.test/run-tests *ns*)

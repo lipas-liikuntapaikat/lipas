@@ -268,7 +268,7 @@
                             type-code))
       :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
-(defn type-selector [{:keys [value on-change]}]
+(defn type-selector [{:keys [value on-change label]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
@@ -277,7 +277,7 @@
      {:items     types
       :value     value
       :multi?    true
-      :label     (tr :search/search)
+      :label     (or label (tr :search/search))
       :value-fn  :type-code
       :label-fn  (comp locale :name)
       :on-change on-change}]))
@@ -324,7 +324,7 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn admin-selector [{:keys [value on-change]}]
+(defn admin-selector [{:keys [value on-change label]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/admins])]
@@ -334,7 +334,7 @@
       :value     value
       :deselect? true
       :multi?    true
-      :label     (tr :search/search)
+      :label     (or label (tr :search/search))
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first
@@ -352,7 +352,7 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn owner-selector [{:keys [value on-change]}]
+(defn owner-selector [{:keys [value on-change label]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
@@ -362,7 +362,7 @@
       :value     value
       :multi?    true
       :deselect? true
-      :label     (tr :search/search)
+      :label     (or label (tr :search/search))
       :items     items
       :label-fn  (comp locale second)
       :value-fn  first

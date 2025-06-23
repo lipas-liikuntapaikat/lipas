@@ -38,6 +38,11 @@
    (heatmap-db/set-precision db precision)))
 
 (rf/reg-event-db
+ ::set-use-bbox-filter
+ (fn [db [_ use-bbox?]]
+   (heatmap-db/set-use-bbox-filter db use-bbox?)))
+
+(rf/reg-event-db
  ::set-filter
  (fn [db [_ filter-key value]]
    (heatmap-db/set-filter db filter-key value)))
@@ -52,6 +57,13 @@
  (fn [db [_ param value]]
    (heatmap-db/set-visual-param db param value)))
 
+;; Finland's approximate bounding box
+(def finland-bbox
+  {:min-x 19.5 ; Western longitude
+   :max-x 31.5 ; Eastern longitude  
+   :min-y 59.5 ; Southern latitude
+   :max-y 70.5}) ; Northern latitude
+
 (defn get-map-bounds [db]
   (let [top-left (-> db :map :top-left-wgs84)
         bottom-right (-> db :map :bottom-right-wgs84)]
@@ -60,6 +72,12 @@
      :min-y (second bottom-right)
      :max-y (second top-left)}))
 
+(defn get-bbox [db]
+  (let [use-bbox-filter? (-> db :heatmap :use-bbox-filter?)]
+    (if use-bbox-filter?
+      (get-map-bounds db)
+      finland-bbox)))
+
 (rf/reg-event-fx
  ::create-heatmap
  (fn [{:keys [db]} _]
@@ -67,7 +85,7 @@
          params (merge
                  (select-keys (:heatmap db) [:dimension :weight-by :filters :precision])
                  {:zoom (-> db :map :zoom)
-                  :bbox (get-map-bounds db)})]
+                  :bbox (get-bbox db)})]
      {:db (heatmap-db/set-loading db true)
       :http-xhrio {:method :post
                    :headers {:Authorization (str "Token " token)}
@@ -97,12 +115,14 @@
  ::get-facets
  (fn [{:keys [db]} _]
    (let [token (-> db :user :login :token)
-         params {:bbox (get-map-bounds db)
-                 :filters (select-keys (-> db :heatmap :filters) [:status-codes])}]
+         ;; Updated to match backend API - only send bbox and filters that affect facets
+         filters (-> db :heatmap :filters)
+         params {:bbox (get-bbox db)
+                 :filters (select-keys filters [:type-codes :status-codes])}]
      {:http-xhrio {:method :post
                    :headers {:Authorization (str "Token " token)}
                    :uri (str (:backend-url db) "/actions/get-heatmap-facets")
-                   :params params
+                   :params (utils/clean params)
                    :format (ajax/transit-request-format)
                    :response-format (ajax/transit-response-format {:keywords? true})
                    :on-success [::facets-loaded]
@@ -126,12 +146,20 @@
    {:db (heatmap-db/set-filter db filter-key value)
     :dispatch [::create-heatmap]}))
 
- ;; Combined event to update precision and refresh heatmap
+;; Combined event to update precision and refresh heatmap
 (rf/reg-event-fx
  ::update-precision-and-refresh
  (fn [{:keys [db]} [_ precision]]
    {:db (heatmap-db/set-precision db precision)
     :dispatch [::create-heatmap]}))
+
+;; Combined event to update bbox filter and refresh heatmap
+(rf/reg-event-fx
+ ::update-bbox-filter-and-refresh
+ (fn [{:keys [db]} [_ use-bbox?]]
+   {:db (heatmap-db/set-use-bbox-filter db use-bbox?)
+    :dispatch-n [[::get-facets]
+                 [::create-heatmap]]}))
 
 ;; Combined event to update visual param and refresh heatmap layer
 (rf/reg-event-fx
@@ -161,7 +189,8 @@
 (rf/reg-event-fx
  ::map-view-changed
  (fn [{:keys [db]} _]
-   (when (= (get-in db [:analysis :selected-tool]) "heatmap")
+   (when (and (= (get-in db [:analysis :selected-tool]) "heatmap")
+              (-> db :heatmap :use-bbox-filter?))
      {:dispatch-n [[::get-facets]
                    [::create-heatmap]]})))
 

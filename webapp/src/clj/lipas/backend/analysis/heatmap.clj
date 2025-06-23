@@ -1,10 +1,10 @@
 (ns lipas.backend.analysis.heatmap
   (:require [lipas.backend.search :as search]
             [lipas.schema.common :as common]
+            [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.schema.sports-sites :as sports-sites]
+            [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.sports-sites.types :as types]
-            [malli.core :as m]
-            [malli.error :as me]
             [taoensso.timbre :as log]))
 
 ;; Malli schemas for validation
@@ -15,25 +15,28 @@
    [:min-y :double]
    [:max-y :double]])
 
+(def SurfaceMaterials
+  (:surface-material sports-site-schema/prop-types))
+
 (def HeatmapParams
   [:map
    [:zoom number?]
    [:bbox Bbox]
-   [:dimension [:enum :density :area :capacity :type-distribution
+   [:dimension [:enum :density :area :type-distribution
                 :year-round :lighting :activities]]
    [:weight-by {:optional true}
-    [:enum :count :area-m2 :capacity :route-length-km]]
+    [:enum :count :area-m2 :route-length-km]]
    [:precision {:optional true} number?]
    [:filters {:optional true}
     [:map
-     [:type-codes {:optional true} [:vector :int]]
+     [:type-codes {:optional true} [:sequential :int]]
      [:year-range {:optional true} [:tuple :int :int]]
      [:year-round-only {:optional true} :boolean]
-     [:status-codes {:optional true} [:set :string]]
-     [:city-codes {:optional true} [:vector :int]]
-     [:admins {:optional true} [:vector :string]]
-     [:owners {:optional true} [:vector :string]]
-     [:surface-materials {:optional true} [:vector :string]]
+     [:status-codes {:optional true} [:sequential #'common/status]]
+     [:city-codes {:optional true} [:sequential #'location-schema/city-code]]
+     [:admins {:optional true} [:sequential #'sports-site-schema/admin]]
+     [:owners {:optional true} [:sequential #'sports-site-schema/owner]]
+     [:surface-materials {:optional true} #'SurfaceMaterials]
      [:retkikartta? {:optional true} :boolean]
      [:harrastuspassi? {:optional true} :boolean]
      [:school-use? {:optional true} :boolean]]]])
@@ -43,8 +46,8 @@
    [:bbox Bbox]
    [:filters {:optional true}
     [:map
-     [:type-codes {:optional true} [:vector :int]]
-     [:status-codes {:optional true} [:set :string]]]]])
+     [:type-codes {:optional true} [:sequential :int]]
+     [:status-codes {:optional true} [:sequential :string]]]]])
 
 ;; Response schemas
 
@@ -55,7 +58,7 @@
 
 (def HeatmapFeatureProperties
   [:map
-   [:weight :double]
+   [:weight number?]
    [:grid_key :string]
    [:doc_count :int]
    [:normalized-weight :double]])
@@ -68,9 +71,9 @@
 
 (def HeatmapMetadata
   [:map
-   [:dimension [:enum :density :area :capacity :type-distribution
+   [:dimension [:enum :density :area :type-distribution
                 :year-round :lighting :activities]]
-   [:weight-by [:maybe [:enum :count :area-m2 :capacity :route-length-km]]]
+   [:weight-by [:maybe [:enum :count :area-m2 :route-length-km]]]
    [:total-features :int]])
 
 (def CreateHeatmapResponse
@@ -174,8 +177,8 @@
   [dimension weight-by]
   (let [base-agg (case (or weight-by :count)
                    :count {}
-                   :area-m2 {:sum {:field "properties.area-m2"}}
-                   :route-length-km {:sum {:field "properties.route-length-km"}}
+                   :area-m2 {:area_sum {:sum {:field "properties.area-m2"}}}
+                   :route-length-km {:route_sum {:sum {:field "properties.route-length-km"}}}
                    ;; Default case for unknown weight-by values
                    {})]
 
@@ -204,11 +207,11 @@
      :aggs {:grid
             {:geohash_grid {:field "search-meta.location.wgs84-point"
                             :precision geohash-precision
-                            #_#_:size (case geohash-precision
-                                        (1 2 3 4) 10000
-                                        (5 6 7) 50000
-                                        (8 9 10) 100000
-                                        10000)}
+                            :size (case geohash-precision
+                                    (1 2 3 4) 10000
+                                    (5 6 7) 50000
+                                    (8 9 10) 100000
+                                    10000)}
              :aggs (merge
                     {:centroid {:geo_centroid {:field "search-meta.location.wgs84-point"}}}
                     (build-dimension-aggs dimension weight-by))}}}))
@@ -241,11 +244,14 @@
 
 (defn transform-bucket
   "Transform ES aggregation bucket to GeoJSON feature"
-  [bucket dimension _weight-by]
+  [bucket dimension weight-by]
   (let [weight (case dimension
-                 :density (get bucket :doc_count 0)
+                 :density (case (or weight-by :count)
+                            :count (get bucket :doc_count 0)
+                            :area-m2 (get-in bucket [:area_sum :value] 0)
+                            :route-length-km (get-in bucket [:route_sum :value] 0)
+                            (get bucket :doc_count 0))
                  :area (get-in bucket [:area_sum :value] 0)
-                 :capacity (get-in bucket [:capacity_sum :value] 0)
                  :year-round (get-in bucket [:year_round_count :doc_count] 0)
                  :lighting (get-in bucket [:lighting_count :doc_count] 0)
                  :type-distribution (get bucket :doc_count 0)
