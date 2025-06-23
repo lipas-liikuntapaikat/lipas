@@ -4,7 +4,7 @@
   {:dimension :density
    :weight-by :count
    :precision nil ; nil means use auto-precision based on zoom
-   :use-bbox-filter? true ; true = current map view, false = whole Finland
+   :use-bbox-filter? false ; true = current map view, false = whole Finland
    :filters {:status-codes ["active" "out-of-service-temporarily"]}
    :visual {:radius 20
             :blur 15
