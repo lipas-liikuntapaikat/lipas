@@ -161,6 +161,20 @@
     :dispatch-n [[::get-facets]
                  [::create-heatmap]]}))
 
+ ;; Combined event to update dimension and refresh heatmap
+(rf/reg-event-fx
+ ::update-dimension-and-refresh
+ (fn [{:keys [db]} [_ dimension]]
+   {:db (heatmap-db/set-dimension db dimension)
+    :dispatch [::create-heatmap]}))
+
+;; Combined event to update weight-by and refresh heatmap
+(rf/reg-event-fx
+ ::update-weight-by-and-refresh
+ (fn [{:keys [db]} [_ weight-by]]
+   {:db (heatmap-db/set-weight-by db weight-by)
+    :dispatch [::create-heatmap]}))
+
 ;; Combined event to update visual param and refresh heatmap layer
 (rf/reg-event-fx
  ::update-visual-param

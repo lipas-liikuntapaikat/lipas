@@ -12,7 +12,7 @@
      [mui/input-label "Dimension"]
      [mui/select
       {:value dimension
-       :on-change #(rf/dispatch [::events/set-dimension (keyword (.. % -target -value))])}
+       :on-change #(rf/dispatch [::events/update-dimension-and-refresh (keyword (.. % -target -value))])}
       [mui/menu-item {:value :density} "Facility Density"]
       [mui/menu-item {:value :area} "Total Area Coverage"]
       [mui/menu-item {:value :capacity} "Capacity Distribution"]
@@ -29,7 +29,7 @@
        [mui/input-label "Weight By"]
        [mui/select
         {:value weight-by
-         :on-change #(rf/dispatch [::events/set-weight-by (keyword (.. % -target -value))])}
+         :on-change #(rf/dispatch [::events/update-weight-by-and-refresh (keyword (.. % -target -value))])}
         [mui/menu-item {:value :count} "Count"]
         [mui/menu-item {:value :area-m2} "Area (m²)"]
         [mui/menu-item {:value :route-length-km} "Route Length (km)"]]])))
@@ -285,11 +285,9 @@
        [mui/expansion-panel-details
         [visual-controls]]]
 
-      [mui/button
-       {:variant "contained"
-        :color "primary"
-        :full-width true
-        :style {:margin-top "16px"}
-        :disabled loading?
-        :on-click #(rf/dispatch [::events/create-heatmap])}
-       (if loading? "Loading..." "Update Heatmap")]]]))
+      ;; Add a helpful note for users
+      [mui/typography {:variant "body2" :color "textSecondary" :style {:margin-top "16px" :text-align "center"}}
+       "Heatmap updates automatically when you change any filter or setting"]
+
+      ;; "Landing bay" so the floating controls don't overlap content
+      [:div {:style {:height "3.5em"}}]]]))

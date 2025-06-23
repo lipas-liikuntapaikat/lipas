@@ -61,7 +61,10 @@
    [:weight number?]
    [:grid_key :string]
    [:doc_count :int]
-   [:normalized-weight :double]])
+   [:normalized-weight :double]
+   ;; Optional dimension-specific properties
+   [:types {:optional true} [:sequential [:map [:key :int] [:doc_count :int]]]]
+   [:activities {:optional true} [:sequential [:map [:key :string] [:doc_count :int]]]]])
 
 (def HeatmapFeature
   [:map
