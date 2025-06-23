@@ -748,6 +748,7 @@
         {:no-doc false
          :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/HeatmapParams}
+         :responses {200 {:body heatmap/CreateHeatmapResponse}}
          :handler
          (fn [req]
            (let [params (:body-params req)
@@ -763,6 +764,7 @@
         {:no-doc false
          :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/FacetParams}
+         :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
          :handler
          (fn [req]
            (let [params (:body-params req)]

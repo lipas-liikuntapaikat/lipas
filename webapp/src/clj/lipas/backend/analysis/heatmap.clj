@@ -1,5 +1,8 @@
 (ns lipas.backend.analysis.heatmap
   (:require [lipas.backend.search :as search]
+            [lipas.schema.common :as common]
+            [lipas.schema.sports-sites :as sports-sites]
+            [lipas.schema.sports-sites.types :as types]
             [malli.core :as m]
             [malli.error :as me]
             [taoensso.timbre :as log]))
@@ -42,6 +45,71 @@
     [:map
      [:type-codes {:optional true} [:vector :int]]
      [:status-codes {:optional true} [:set :string]]]]])
+
+;; Response schemas
+
+(def GeoJSONPoint
+  [:map
+   [:type [:= "Point"]]
+   [:coordinates [:tuple :double :double]]])
+
+(def HeatmapFeatureProperties
+  [:map
+   [:weight :double]
+   [:grid_key :string]
+   [:doc_count :int]
+   [:normalized-weight :double]])
+
+(def HeatmapFeature
+  [:map
+   [:type [:= "Feature"]]
+   [:geometry #'GeoJSONPoint]
+   [:properties #'HeatmapFeatureProperties]])
+
+(def HeatmapMetadata
+  [:map
+   [:dimension [:enum :density :area :capacity :type-distribution
+                :year-round :lighting :activities]]
+   [:weight-by [:maybe [:enum :count :area-m2 :capacity :route-length-km]]]
+   [:total-features :int]])
+
+(def CreateHeatmapResponse
+  [:map
+   [:data [:sequential #'HeatmapFeature]]
+   [:metadata #'HeatmapMetadata]])
+
+(def TypeCodeFacetValue
+  [:map
+   [:value #'types/active-type-code]
+   [:count :int]])
+
+(def OwnerFacetValue
+  [:map
+   [:value #'sports-sites/owner]
+   [:count :int]])
+
+(def AdminFacetValue
+  [:map
+   [:value #'sports-sites/admin]
+   [:count :int]])
+
+(def StatusFacetValue
+  [:map
+   [:value #'common/status]
+   [:count :int]])
+
+(def YearRange
+  [:map
+   [:min :int]
+   [:max :int]])
+
+(def GetHeatmapFacetsResponse
+  [:map
+   [:type-codes [:sequential #'TypeCodeFacetValue]]
+   [:owners [:sequential #'OwnerFacetValue]]
+   [:admins [:sequential #'AdminFacetValue]]
+   [:year-range #'YearRange]
+   [:statuses [:sequential #'StatusFacetValue]]])
 
 (defn zoom->precision
   "Convert zoom level to appropriate geohash precision for aggregation"
