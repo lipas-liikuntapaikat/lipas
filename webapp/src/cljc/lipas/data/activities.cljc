@@ -631,7 +631,7 @@
                 [:outdoor-recreation-activities {:optional true}
                  [:sequential (into [:enum] (keys outdoor-recreation-routes-activities))]]
                 [:duration {:optional true} duration-schema]
-                [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
+                [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise" "no-preference"]]
                 [:route-marking {:optional true} common-schema/localized-string]
                 [:rules-structured {:optional true} rules-structured-schema]
                 [:route-length-km {:optional true} common-schema/number]
@@ -762,12 +762,19 @@
         :travel-direction
         {:field
          {:type        "select"
-          :opts        {"clockwise"         {:fi "Myötäpäivään"
-                                             :se "Medurs"
-                                             :en "Clockwise"}
-                        "counter-clockwise" {:fi "Vastapäivään"
-                                             :se "Moturs"
-                                             :en "Counter-clockwise"}}
+          :opts        {"clockwise"
+                        {:fi "Rengasreitti, suositeltu kulkusuunta myötäpäivään"
+                         :se "Rundslinga, rekommenderad riktning medurs"
+                         :en "Loop trail, recommended direction clockwise"}
+                        "counter-clockwise"
+                        {:fi "Rengasreitti, suositeltu kulkusuunta vastapäivään"
+                         :se "Rundslinga, rekommenderad riktning moturs"
+                         :en "Loop trail, recommended direction counter-clockwise"}
+                        "no-preference"
+                        {:fi "Rengasreitti, ei suositeltua kulkusuuntaa"
+                         :se "Rundslinga, ingen rekommenderad riktning"
+                         :en "Loop trail, no recommended direction"}}
+
           :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
                         :se "Välj ruttens gångriktning, medurs/moturs om rutten har en rekommenderad gångriktning."
                         :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
