@@ -27,6 +27,7 @@
    "properties"
    "www"
    "phone-number"
+   "email"
    "type"
    "activities"
    "comment"
