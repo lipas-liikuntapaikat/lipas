@@ -32,10 +32,15 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 
 ### Frontend Dependencies
 - **Material-UI 5.15.19** (@mui/material) - UI component library
-- **OpenLayers 7.5.2** - Web mapping library
-- **Turf.js** - Geospatial analysis functions
+- **OpenLayers 10.6.1** - Web mapping library (major version update)
+- **Turf.js 6.5.0** - Geospatial analysis functions
 - **React 18.3.1** - UI framework
 - **Recharts 2.2.0** - Data visualization
+- **@hello-pangea/dnd 16.6.0** - Drag and drop functionality
+- **mdi-material-ui 7.9.1** - Material Design Icons
+- **ol-ext 4.0.33** - OpenLayers extensions
+- **shpjs 4.0.4** - Shapefile parsing
+- **zipcelx 1.6.2** - Excel file generation
 
 ### Backend Dependencies
 - **next.jdbc 1.3.939** - Database access
@@ -45,6 +50,12 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 - **Cheshire 5.13.0** - JSON handling
 - **Integrant 0.10.0** - System management
 - **Migratus 1.0.6** - Database migrations
+- **Malli 0.17.0** - Data validation and schema
+- **Shadow-CLJS 2.28.16** - ClojureScript compilation and tooling
+- **Spandex 0.8.2** - Elasticsearch client
+- **AWS SDK 2.20.135** - S3 and cloud services integration
+- **Apache Commons Math3 3.6.1** - Mathematical computations
+- **GeoWave 1.2.0** - Geospatial analytics API
 
 ### Infrastructure
 - **PostgreSQL/PostGIS** - Spatial database
@@ -111,7 +122,7 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 ## Development Workflow
 
 ### Prerequisites
-- Java 21+ (Temurin recommended)
+- Java 21+ (Temurin recommended, currently tested with Java 24.0.1)
 - Clojure CLI 1.12.0+
 - Node.js and NPM (for frontend dependencies)
 - Docker and Docker Compose
@@ -129,29 +140,73 @@ cp .env.sample.sh .env.sh
 # Option 2: Local development
 bb up                                    # Start Docker services
 cd webapp
+
+# Option A: Use user-configured REPL (recommended)
+bb user-repl                            # Requires .user.edn with :repl-command
+
+# Option B: Standard REPL
 clojure -M:nrepl                        # Start backend REPL (port 7888)
 # In REPL: (reset)
+
 npm install && npm run watch             # Start frontend build
 ```
+
+**User Configuration (.user.edn):**
+Create a `.user.edn` file in the webapp directory for personalized development setup:
+```edn
+{:repl-command "clojure -M:dev:nrepl"}
+```
+Then use `bb user-repl` to start your configured REPL environment.
 
 ### Available Babashka Tasks
 
 #### Development
-- `bb test` - Run fast tests
-- `bb test-integration` - Run integration tests  
-- `bb test-all` - Run all tests
-- `bb db-migrate` - Run database migrations
+- `bb test` - Run fast tests (excludes integration tests)
+- `bb test-integration` - Run integration tests only  
+- `bb test-all` - Run all tests (fast + integration)
+- `bb test-specific <namespace>` - Run a specific test namespace
+- `bb lint` - Run clj-kondo static analysis
+- `bb cljfmt <files>` - Format Clojure files
+- `bb cljs-watch` - Watch and rebuild ClojureScript
+
+#### Database Operations
+- `bb db-migrate` - Run pending database migrations
 - `bb db-status` - Check migration status
+- `bb db-rollback` - Rollback last migration
+- `bb db-reset` - Reset entire database (with confirmation)
+- `bb db-create <name>` - Create new migration file
+- `bb db-up <id>` - Migrate up to specific ID
+- `bb db-down <id>` - Migrate down specific ID
+- `bb db-help` - Show database migration help
+
+#### Build Operations
 - `bb uberjar` - Build production JAR
+- `bb verify-uberjar` - Verify JAR was built correctly
+- `bb build-clean` - Clean build artifacts
+- `bb jar` - Build library jar
 
 #### Docker Operations
 - `bb docker-build` - Build in Docker
 - `bb docker-migrate` - Run migrations in Docker
 - `bb docker-test` - Run tests in Docker
+- `bb docker-seed` - Seed database in Docker
+- `bb docker-dev` - Start backend in development mode
 
-#### Frontend
-- `bb cljs-watch` - Watch and rebuild ClojureScript
-- `bb dev-deploy-cljs` - Quick deploy to dev server
+#### Deployment (Production Ready)
+- `bb deploy <env>` - Deploy both backend and frontend (dev|prod)
+- `bb deploy-backend <env>` - Deploy only backend
+- `bb deploy-frontend <env>` - Deploy only frontend
+- `bb deploy-dev` - Quick deploy to development server
+- `bb deploy-prod` - Quick deploy to production server
+- `bb deploy-backend-dev` / `bb deploy-backend-prod` - Backend-only deployments
+- `bb deploy-frontend-dev` / `bb deploy-frontend-prod` - Frontend-only deployments
+
+**Deployment Features:**
+- Automated build verification before deployment
+- Health checks after backend deployments
+- Atomic deployments with rollback capability
+- Environment-specific configuration
+- Service restart automation
 
 ### REPL-Driven Development
 The project supports REPL-driven development with Integrant for system management:

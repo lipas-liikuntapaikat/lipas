@@ -263,7 +263,8 @@
     :count "Totalt antal typer",
     :LineString "Rutt",
     :Polygon "Område",
-    :sub-cateogires "Uderkategorier"},
+    :sub-cateogires "Uderkategorier"
+    :sports-site-types "Typ av idrottsanläggning"}
    :ptv.service
    {:classes "Serviceklasser",
     :show-only-lipas-managed
@@ -272,7 +273,9 @@
    {:light-traffic "Gång- och cykelvägar",
     :mml-kiinteisto "Fastighetsgränser",
     :tooltip "Andra kartlager",
-    :retkikartta-snowmobile-tracks "Forststyrelsens snöskoterleder"},
+    :retkikartta-snowmobile-tracks "Forststyrelsens snöskoterleder"
+    :property-identifiers "Fastighetsbeteckningar"
+    :municipal-boundaries "Kommungränser"}
    :duration
    {:hour "timmar", :month "månader", :years "år", :years-short "år"},
    :size-categories
@@ -300,7 +303,8 @@
     :status "Status",
     :type "Objekttyp",
     :type-and-category-disclaimer
-    "Kategori och typ måste väljas innan de läggs till på kartan"},
+    "Kategori och typ måste väljas innan de läggs till på kartan"
+    :other-target "Annat objekt"}
    :lipas.ice-stadium.refrigeration
    {:headline "",
     :refrigerant-solution-amount-l "",
@@ -617,7 +621,8 @@
     :settings "Inställningar",
     :schools "Skolor",
     :close "Stäng analysverktygen",
-    :diversity "Mångfald",
+    :diversity "Mångfald"
+    :heatmap "Värmekarta"
     :by-foot "Till fots",
     :description3
     "Beräkningen av restider med olika färdsätt (till fots, cykel, bil) baseras på öppna OpenStreetMap-data och OSRM-verktyget.",
@@ -630,14 +635,44 @@
     :population "Befolkning",
     :population-weighted-mean "Befolkningsvägd mångfaldighetsindex",
     :diversity-help3
-    "Beräkningen görs per 250 x 250 m befolkningsrutor från Statistikcentralen. Områdesresultaten visar den genomsnittliga mångfalden av motionsförhållanden i invånarnas närmiljö (befolkningsvägd medeltal av mångfaldighetsindex). Beräkningsavståndet för mångfaldsverktyget baseras på vägnätsdata från OpenStreetMap och OSRM-verktyget.",
+    "Mångfalden beräknas för varje befolkningsruta utifrån de motionsplatser som påverkar mångfalden och som är belägna inom det angivna gångavståndet längs vägnätet från befolkningsrutans mittpunkt."
     :zones "Zoner",
     :diversity-grid "Resultatgrid",
     :distance "Avstånd",
     :add-new "Lägg till ny",
     :high-school "Gymnasium",
     :travel-time "Restid",
-    :results "Resultat"},
+    :results "Resultat"
+    :use-postal-code-areas "Använd postnummerområden"
+    :import-own-areas "Importera egna områden"
+    :cumulative-results "Kumulativa resultat"
+    :ready-classifications "Färdiga klassificeringar"
+    :default "Standard"
+    :constraints "Begränsningar"
+    :in-use-summer "I bruk på sommaren"
+    :in-use-winter "I bruk på vintern"
+    :in-use-year-round "I bruk året runt"
+    :new-category "Ny kategori"
+    :restore-default-categories "Återställ standardkategorier"
+    :save-categories "Spara kategorier"
+    ;; New translations for diversity view
+    :calculate-all "Beräkna alla"
+    :calculate-diversity "Beräkna mångfald"
+    :factor "Faktor"
+    :delete-category "Ta bort kategori"
+    :confirm-restore-defaults "Vill du verkligen återställa standardkategorierna?"
+    :save-categorization "Spara kategorisering"
+    :categorization-name "Kategoriseringens namn"
+    :format "Format"
+    :download-areas "Ladda ner områden"
+    :download-grid "Ladda ner rutnät"
+    :download-categories "Ladda ner kategorier"
+    :download-parameters "Ladda ner parametrar"
+    :population-chart "Befolkning"
+    :diversity-index-chart "Mångfaldsindex"
+    :total-population-chart "Totala befolkningen"
+    :population-weighted-diversity-chart "Befolkningsvägd mångfaldsindex"
+    :name-chart "Namn"},
    :status
    {:active "Aktiv",
     :planned "Planerad",

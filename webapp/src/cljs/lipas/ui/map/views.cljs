@@ -211,13 +211,13 @@
                             {:style {:color "red"}}
                             "timeline"]}
                     :mml-kiinteistotunnukset
-                    {:label "Kiinteistötunnukset"
+                    {:label (tr :map.overlay/property-identifiers)
                      :label2 "© Maanmittauslaitos"
                      :icon [mui/icon
                             {:style {:color "black"}}
                             "text_format"]}
                     :mml-kuntarajat
-                    {:label "Kuntarajat"
+                    {:label (tr :map.overlay/municipal-boundaries)
                      :label2 "© Maanmittauslaitos"
                      :icon [mui/icon
                             {:style {:color "#6222BC"}}
@@ -2000,7 +2000,7 @@
          :indicator-color "secondary"
          :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
-        [mui/tab {:value "loi" :label "Muu kohde"}]])
+        [mui/tab {:value "loi" :label (tr :loi/other-target)}]])
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]

@@ -30,10 +30,10 @@
          :centered true
          :text-color "secondary"
          :indicator-color "secondary"}
-        [mui/tab {:value "reachability" :label "Saavutettavuus"}]
-        [mui/tab {:value "diversity" :label "Monipuolisuus"}]
+        [mui/tab {:value "reachability" :label (tr :analysis/reachability)}]
+        [mui/tab {:value "diversity" :label (tr :analysis/diversity)}]
         (when experimental?
-          [mui/tab {:value "heatmap" :label "Lämpökartta"}])]]
+          [mui/tab {:value "heatmap" :label (tr :analysis/heatmap)}])]]
       [mui/grid {:item true}
        [:> Tooltip
         {:title (tr :analysis/close)}
