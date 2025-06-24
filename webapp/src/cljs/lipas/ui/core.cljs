@@ -10,7 +10,7 @@
             [lipas.ui.utils :refer [==>] :as utils]
             [lipas.ui.views :as views]
             [re-frame.core :as rf]
-            [reagent.dom :as reagent-dom]))
+            [reagent.dom.client :as rdomc]))
 
 (def dev-backend-url "http://localhost:8091/api")
 
@@ -24,13 +24,13 @@
   (when-not (utils/prod?)
     (==> [::events/show-test-version-disclaimer])))
 
+(defonce react-root (rdomc/create-root (.getElementById js/document "app")))
+
 (defn ^:dev/after-load mount-root []
   (rf/clear-subscription-cache!)
   (project-devtools/start!)
   (routes/init!)
-  (reagent-dom/render
-    [:f> views/main-panel]
-    (.getElementById js/document "app")))
+  (rdomc/render react-root [:f> views/main-panel]))
 
 (defn init []
   (rf/dispatch-sync [::events/initialize-db])
