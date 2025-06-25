@@ -1,64 +1,64 @@
 (ns lipas.ui.help.views
   (:require
-    ["@mui/icons-material/Close$default" :as CloseIcon]
-    ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
-    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
-    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-    ["@mui/icons-material/Help$default" :as Help]
-    ["@mui/icons-material/Edit$default" :as EditIcon]
-    ["@mui/material/Accordion$default" :as Accordion]
-    ["@mui/material/AccordionSummary$default" :as AccordionSummary]
-    ["@mui/material/AccordionDetails$default" :as AccordionDetails]
-    ["@mui/material/AppBar$default" :as AppBar]
-    ["@mui/material/Box$default" :as Box]
-    ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
-    ["@mui/material/Button$default" :as Button]
-    ["@mui/material/Card$default" :as Card]
-    ["@mui/material/CardContent$default" :as CardContent]
-    ["@mui/material/Chip$default" :as Chip]
-    ["@mui/material/Dialog$default" :as Dialog]
-    ["@mui/material/DialogContent$default" :as DialogContent]
-    ["@mui/material/Divider$default" :as Divider]
-    ["@mui/material/Grid$default" :as Grid]
-    ["@mui/material/IconButton$default" :as IconButton]
-    ["@mui/material/Link$default" :as Link]
-    ["@mui/material/List$default" :as List]
-    ["@mui/material/ListItem$default" :as ListItem]
-    ["@mui/material/ListItemButton$default" :as ListItemButton]
-    ["@mui/material/ListItemText$default" :as ListItemText]
-    ["@mui/material/ListItemIcon$default" :as ListItemIcon]
-    ["@mui/material/Paper$default" :as Paper]
-    ["@mui/material/Stack$default" :as Stack]
-    ["@mui/material/Tab$default" :as Tab]
-    ["@mui/material/Table$default" :as Table]
-    ["@mui/material/TableBody$default" :as TableBody]
-    ["@mui/material/TableCell$default" :as TableCell]
-    ["@mui/material/TableContainer$default" :as TableContainer]
-    ["@mui/material/TableHead$default" :as TableHead]
-    ["@mui/material/TableRow$default" :as TableRow]
-    ["@mui/material/Tabs$default" :as Tabs]
-    ["@mui/material/TextField$default" :as TextField]
-    ["@mui/material/Toolbar$default" :as Toolbar]
-    ["@mui/material/Tooltip$default" :as Tooltip]
-    ["@mui/material/Typography$default" :as Typography]
-    [lipas.ui.help.events :as events]
-    [lipas.ui.help.manage :as manage]
-    [lipas.ui.help.subs :as subs]
-    [lipas.ui.uix.hooks :refer [use-subscribe]]
-    [lipas.ui.user.subs :as user-subs]
-    [lipas.ui.utils :as utils :refer [==>]]
-    [uix.core :as uix :refer [$ defui]]))
+   ["@mui/icons-material/Close$default" :as CloseIcon]
+   ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
+   ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
+   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/Help$default" :as Help]
+   ["@mui/icons-material/Edit$default" :as EditIcon]
+   ["@mui/material/Accordion$default" :as Accordion]
+   ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+   ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+   ["@mui/material/AppBar$default" :as AppBar]
+   ["@mui/material/Box$default" :as Box]
+   ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
+   ["@mui/material/Button$default" :as Button]
+   ["@mui/material/Card$default" :as Card]
+   ["@mui/material/CardContent$default" :as CardContent]
+   ["@mui/material/Chip$default" :as Chip]
+   ["@mui/material/Dialog$default" :as Dialog]
+   ["@mui/material/DialogContent$default" :as DialogContent]
+   ["@mui/material/Divider$default" :as Divider]
+   ["@mui/material/GridLegacy$default" :as Grid]
+   ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/Link$default" :as Link]
+   ["@mui/material/List$default" :as List]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemButton$default" :as ListItemButton]
+   ["@mui/material/ListItemText$default" :as ListItemText]
+   ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+   ["@mui/material/Paper$default" :as Paper]
+   ["@mui/material/Stack$default" :as Stack]
+   ["@mui/material/Tab$default" :as Tab]
+   ["@mui/material/Table$default" :as Table]
+   ["@mui/material/TableBody$default" :as TableBody]
+   ["@mui/material/TableCell$default" :as TableCell]
+   ["@mui/material/TableContainer$default" :as TableContainer]
+   ["@mui/material/TableHead$default" :as TableHead]
+   ["@mui/material/TableRow$default" :as TableRow]
+   ["@mui/material/Tabs$default" :as Tabs]
+   ["@mui/material/TextField$default" :as TextField]
+   ["@mui/material/Toolbar$default" :as Toolbar]
+   ["@mui/material/Tooltip$default" :as Tooltip]
+   ["@mui/material/Typography$default" :as Typography]
+   [lipas.ui.help.events :as events]
+   [lipas.ui.help.manage :as manage]
+   [lipas.ui.help.subs :as subs]
+   [lipas.ui.uix.hooks :refer [use-subscribe]]
+   [lipas.ui.user.subs :as user-subs]
+   [lipas.ui.utils :as utils :refer [==>]]
+   [uix.core :as uix :refer [$ defui]]))
 
 (defui YoutubeIframe
   [{:keys [video-id title]}]
   ($ :iframe
-     {:width             "560"
-      :height            "315"
-      :src               (str "https://www.youtube.com/embed/" video-id)
-      :title             (or title "YouTube video player")
-      :frame-border      "0"
-      :allow             "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      :referrer-policy   "strict-origin-when-cross-origin"
+     {:width "560"
+      :height "315"
+      :src (str "https://www.youtube.com/embed/" video-id)
+      :title (or title "YouTube video player")
+      :frame-border "0"
+      :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      :referrer-policy "strict-origin-when-cross-origin"
       :allow-full-screen true}))
 
 (defui PdfIframe
@@ -66,11 +66,11 @@
   ($ Box {:width "100%" :height "100%"}
      ($ Paper {:elevation 2 :sx #js {:p 2}}
         ($ :iframe
-           {:width             "100%"
-            :height            "600px"
-            :src               url
-            :title             (or title "PDF")
-            :frame-border      "0"
+           {:width "100%"
+            :height "600px"
+            :src url
+            :title (or title "PDF")
+            :frame-border "0"
             :allow-full-screen true}))))
 
 ;; Helper component to display a list of types
@@ -176,7 +176,6 @@
                                              ($ TableCell
                                                 (get-in option-data [:description locale] "")))))))))))))))))))
 
-
 (defui TypeCodeExplorer
   []
   (let [types-data (use-subscribe [:lipas.ui.subs/sports-site-types])
@@ -227,8 +226,7 @@
     ;; Main component view
     ($ Stack {:direction "column" :spacing 2 :sx #js{:flex 1}}
 
-
-       ;; Search bar
+;; Search bar
        ($ Grid {:container true :spacing 2 :alignItems "center" :sx #js{:mb 2}}
           ($ Grid {:item true :xs 12 :md 9}
              ($ TextField {:fullWidth true
@@ -361,7 +359,6 @@
                                        (set-view-mode! :categories)))}
                (tr :actions/back)))))))
 
-
 (defui ContentBlock
   [{:keys [block]}]
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
@@ -381,7 +378,7 @@
 
       :pdf
       ($ PdfIframe {:url (:url block)
-                     :title (when (:title block) (locale (:title block)))})
+                    :title (when (:title block) (locale (:title block)))})
 
       :type-code-explorer
       ($ TypeCodeExplorer {})
@@ -404,7 +401,7 @@
 
 (defui SummaryGrid
   [{:keys [pages on-page-select]}]
-  (let [tr     (use-subscribe [:lipas.ui.subs/translator])
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)]
     ($ Grid {:container true :spacing 2 :sx #js{:pl 4 :flex 1}}
        ($ Grid {:item true :xs 12}
@@ -414,12 +411,12 @@
              (tr :help/available-pages)))
 
        (map-indexed
-         (fn [idx {:keys [slug title blocks]}]
+        (fn [idx {:keys [slug title blocks]}]
            ;; Find the first text block to display as summary
-           (let [summary-block (first (filter #(= :text (:type %)) blocks))
-                 summary-text (when summary-block (:content summary-block))]
-             ($ Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
-                ($ Card {:sx #js{:height "100%"
+          (let [summary-block (first (filter #(= :text (:type %)) blocks))
+                summary-text (when summary-block (:content summary-block))]
+            ($ Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
+               ($ Card {:sx #js{:height "100%"
                                 :cursor "pointer"
                                 :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
                                 :boxShadow 3
@@ -427,51 +424,51 @@
                                 :borderColor "divider"
                                 :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
                                 ":hover" #js{:transform "scale(1.03)"
-                                            :boxShadow 6
-                                            :borderColor "secondary.main"}} ;; Use secondary color for border on hover
+                                             :boxShadow 6
+                                             :borderColor "secondary.main"}} ;; Use secondary color for border on hover
                         :onClick #(on-page-select idx slug)}
                   ($ CardContent
-                    ($ Typography
-                      {:variant "subtitle2"
-                        :gutterBottom true
-                        :fontWeight "bold"}
-                      (locale title))
-                    ($ Typography
-                      {:variant "body2"
-                        :color "text.secondary"
-                        :sx #js{:overflow "hidden"
-                              :textOverflow "ellipsis"
-                              :display "-webkit-box"
-                              :-webkit-line-clamp 3
-                              :-webkit-box-orient "vertical"}}
-                      (locale summary-text)))))))
-         pages))))
+                     ($ Typography
+                        {:variant "subtitle2"
+                         :gutterBottom true
+                         :fontWeight "bold"}
+                        (locale title))
+                     ($ Typography
+                        {:variant "body2"
+                         :color "text.secondary"
+                         :sx #js{:overflow "hidden"
+                                 :textOverflow "ellipsis"
+                                 :display "-webkit-box"
+                                 :-webkit-line-clamp 3
+                                 :-webkit-box-orient "vertical"}}
+                        (locale summary-text)))))))
+        pages))))
 
 (defui HelpMenu
   [{:keys [pages selected-page on-page-select]}]
-  (let [tr     (use-subscribe [:lipas.ui.subs/translator])
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)]
     ($ Stack {:direction "column"}
        ($ List {:sx #js{:min-width "200px"}}
           (map-indexed
-            (fn [idx {:keys [slug title]}]
-              ($ :<> {:key (name slug)}
-                 ($ Divider)
-                 ($ ListItem
-                    {:key (name slug)
-                     :disablePadding true
-                     :component "a"
-                     :sx #js{:transition "border-color 0.2s"
-                             :border "2px solid"
-                             :borderColor (if (= selected-page idx) "secondary.main" "transparent")
-                             ":hover" #js{:borderColor "secondary.main"}}}
-                    ($ ListItemButton {:on-click #(on-page-select idx slug)
-                                       :sx #js{:padding "8px 16px"}}
-                       (when (= selected-page idx)
-                         ($ ListItemIcon
-                            ($ ArrowForwadIosIcon {:color "secondary"})))
-                       ($ ListItemText {:primary (locale title)})))))
-            pages)))))
+           (fn [idx {:keys [slug title]}]
+             ($ :<> {:key (name slug)}
+                ($ Divider)
+                ($ ListItem
+                   {:key (name slug)
+                    :disablePadding true
+                    :component "a"
+                    :sx #js{:transition "border-color 0.2s"
+                            :border "2px solid"
+                            :borderColor (if (= selected-page idx) "secondary.main" "transparent")
+                            ":hover" #js{:borderColor "secondary.main"}}}
+                   ($ ListItemButton {:on-click #(on-page-select idx slug)
+                                      :sx #js{:padding "8px 16px"}}
+                      (when (= selected-page idx)
+                        ($ ListItemIcon
+                           ($ ArrowForwadIosIcon {:color "secondary"})))
+                      ($ ListItemText {:primary (locale title)})))))
+           pages)))))
 
 (defui HelpSection
   [{:keys [pages] :as _section}]
@@ -492,48 +489,48 @@
 
 (defui HelpManageButton []
   (let [has-permission? (use-subscribe [::user-subs/check-privilege nil :help/manage])
-        tr              (use-subscribe [:lipas.ui.subs/translator])]
+        tr (use-subscribe [:lipas.ui.subs/translator])]
     (when has-permission?
       ($ Button
-         {:variant  "contained"
-          :color    "secondary"
-          :size     "small"
-          :sx       #js{:ml 2 :mr 2}
+         {:variant "contained"
+          :color "secondary"
+          :size "small"
+          :sx #js{:ml 2 :mr 2}
           :startIcon ($ EditIcon)
-          :on-click  #(==> [::events/open-edit-mode])}
+          :on-click #(==> [::events/open-edit-mode])}
          (tr :help/manage-content)))))
 
 (defui view
   [{:keys []}]
-  (let [sections             (use-subscribe [::subs/help-data])
-        mode                 (use-subscribe [::subs/mode])
-        dialog-open?         (use-subscribe [::subs/dialog-open?])
+  (let [sections (use-subscribe [::subs/help-data])
+        mode (use-subscribe [::subs/mode])
+        dialog-open? (use-subscribe [::subs/dialog-open?])
         selected-section-idx (use-subscribe [::subs/selected-section-idx])
-        selected-page-idx    (use-subscribe [::subs/selected-page-idx])
-        selected-section     (when (and sections (number? selected-section-idx)
-                                       (< selected-section-idx (count sections)))
-                               (nth sections selected-section-idx))
-        selected-pages       (when selected-section
-                               (:pages selected-section))
-        selected-page        (when (and selected-pages (number? selected-page-idx)
-                                       (< selected-page-idx (count selected-pages)))
-                               (nth selected-pages selected-page-idx))
-        tr                   (use-subscribe [:lipas.ui.subs/translator])
-        locale-kw            (tr)]
+        selected-page-idx (use-subscribe [::subs/selected-page-idx])
+        selected-section (when (and sections (number? selected-section-idx)
+                                    (< selected-section-idx (count sections)))
+                           (nth sections selected-section-idx))
+        selected-pages (when selected-section
+                         (:pages selected-section))
+        selected-page (when (and selected-pages (number? selected-page-idx)
+                                 (< selected-page-idx (count selected-pages)))
+                        (nth selected-pages selected-page-idx))
+        tr (use-subscribe [:lipas.ui.subs/translator])
+        locale-kw (tr)]
 
     ($ :<>
        ;; Help button in main UI
        ($ Tooltip {:title (tr :help/headline)}
-          ($ IconButton {:size     "large"
+          ($ IconButton {:size "large"
                          :on-click #(==> [::events/open-dialog])}
              ($ Help)))
 
        ;; Help dialog
        ($ Dialog
-          {:fullScreen  true
+          {:fullScreen true
            :keepMounted true
-           :open        dialog-open?
-           :onClose     #(==> [::events/close-dialog])}
+           :open dialog-open?
+           :onClose #(==> [::events/close-dialog])}
 
           ($ AppBar {:sx #js {:position "relative"}}
              ($ Toolbar {}
@@ -544,8 +541,8 @@
                 ($ HelpManageButton)
 
                 ($ IconButton
-                   {:edge    "start"
-                    :color   "inherit"
+                   {:edge "start"
+                    :color "inherit"
                     :onClick #(==> [::events/close-dialog])}
                    ($ CloseIcon))))
 
@@ -556,7 +553,7 @@
 
              (when (= :read mode)
                ($ :<>
-                  ($ Tabs {:value    selected-section-idx
+                  ($ Tabs {:value selected-section-idx
                            :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
                      (map-indexed
                       (fn [idx section]

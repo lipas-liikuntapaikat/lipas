@@ -4,7 +4,7 @@
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
             ["@mui/material/FormGroup$default" :as FormGroup]
-            ["@mui/material/Grid$default" :as Grid]
+            ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
@@ -31,17 +31,17 @@
 
 (defui error-msg [{:keys [tr error]}]
   (let [error (or (-> error :response :error)
-                 (-> error :response :type))]
+                  (-> error :response :type))]
     ($ Grid {:container true
-             :spacing   1
-             :style     {:margin-top "0.5em"}}
+             :spacing 1
+             :style {:margin-top "0.5em"}}
 
        ;; Error message
        ($ Grid {:item true :xs 12}
           ($ Typography {:color "error"}
              (case error
-               "Not authorized"  (tr :login/bad-credentials)
-               "user-not-found"  (tr :error/email-not-found)
+               "Not authorized" (tr :login/bad-credentials)
+               "user-not-found" (tr :error/email-not-found)
                "email-not-found" (tr :error/email-not-found)
                (tr :error/unknown))))
 
@@ -49,12 +49,12 @@
        (when (#{"user-not-found" "email-not-found"} error)
          ($ Grid {:item true :xs 12}
             ($ Button {:full-width true
-                       :href       "/rekisteroidy"}
+                       :href "/rekisteroidy"}
                (tr :register/headline)))))))
 
 (defui magic-link-form [{:keys [tr]}]
-  (let [form-data     (use-subscribe [::subs/login-form])
-        error         (use-subscribe [::subs/login-error])
+  (let [form-data (use-subscribe [::subs/login-form])
+        error (use-subscribe [::subs/login-error])
         link-ordered? (use-subscribe [::subs/magic-link-ordered?])]
 
     ($ Grid {:container true :spacing 2}
@@ -74,27 +74,27 @@
              ;; Email
              (r/as-element
               [lui/text-field
-               {:id          "magic-link-login-email-input"
-                :label       (tr :lipas.user/email)
-                :spec        :lipas.user/email
-                :auto-focus  true
-                :value       (:email form-data)
-                :on-change   (comp clear-errors #(set-field :email %))
-                :required    true
+               {:id "magic-link-login-email-input"
+                :label (tr :lipas.user/email)
+                :spec :lipas.user/email
+                :auto-focus true
+                :value (:email form-data)
+                :on-change (comp clear-errors #(set-field :email %))
+                :required true
                 :placeholder (tr :lipas.user/email-example)}])
 
              ;; Login button
              ($ Button
-                {:id         "magic-link-submit-btn"
-                 :color      "secondary"
-                 :disabled   (or link-ordered?
-                                 (some? error)
-                                 (not (s/valid? :lipas.user/email (:email form-data))))
-                 :style      {:margin-top "1em"}
+                {:id "magic-link-submit-btn"
+                 :color "secondary"
+                 :disabled (or link-ordered?
+                               (some? error)
+                               (not (s/valid? :lipas.user/email (:email form-data))))
+                 :style {:margin-top "1em"}
                  :full-width true
-                 :size       "large"
-                 :variant    "contained"
-                 :on-click   #(==> [::events/order-magic-link form-data])}
+                 :size "large"
+                 :variant "contained"
+                 :on-click #(==> [::events/order-magic-link form-data])}
                 (tr :login/order-magic-link))
 
              ;; Error messages
@@ -108,7 +108,7 @@
 
 (defui login-form [{:keys [tr]}]
   (let [form-data (use-subscribe [::subs/login-form])
-        error     (use-subscribe [::subs/login-error])]
+        error (use-subscribe [::subs/login-error])]
 
     ($ Grid {:container true :spacing 2}
 
@@ -116,12 +116,12 @@
        ($ Grid {:item true :xs 12 :style {:padding-top "1em" :padding-bottom "1em"}}
           ($ Paper {:style
                     {:background-color mui/gray3
-                     :padding          "0.5em 1em 0.5em 1em"}}
+                     :padding "0.5em 1em 0.5em 1em"}}
 
              ($ Typography {:variant "body2" :style {:display "inline"}}
                 (tr :login/login-help))
-             ($ Button {:style    {:padding 0 :margin-bottom "0.25em"}
-                        :color    "secondary"
+             ($ Button {:style {:padding 0 :margin-bottom "0.25em"}
+                        :color "secondary"
                         :on-click #(==> [::events/select-login-mode :magic-link])}
                 (tr :login/login-here))))
 
@@ -133,40 +133,40 @@
              ;; Username
              (r/as-element
               [lui/text-field
-               {:id          "login-username-input"
-                :label       (tr :login/username)
-                :auto-focus  true
-                :value       (:username form-data)
-                :on-change   (comp clear-errors #(set-field :username %))
-                :required    true
+               {:id "login-username-input"
+                :label (tr :login/username)
+                :auto-focus true
+                :value (:username form-data)
+                :on-change (comp clear-errors #(set-field :username %))
+                :required true
                 :placeholder (tr :login/username-example)}])
 
              ;; Password
              (r/as-element
               [lui/text-field
-               {:id           "login-password-input"
-                :label        (tr :login/password)
-                :type         "password"
-                :value        (:password form-data)
+               {:id "login-password-input"
+                :label (tr :login/password)
+                :type "password"
+                :value (:password form-data)
                 ;; Enter press might occur 'immediately' so we can't afford
                 ;; waiting default 200ms for text-field to update
                 ;; asynchronously.
-                :defer-ms     0
-                :on-change    (comp clear-errors #(set-field :password %))
+                :defer-ms 0
+                :on-change (comp clear-errors #(set-field :password %))
                 :on-key-press (fn [e]
                                 (when (= 13 (.-charCode e)) ; Enter
                                   (==> [::events/submit-login-form form-data])))
-                :required     true}])
+                :required true}])
 
              ;; Login button
              ($ Button
-                {:id         "login-submit-btn"
-                 :color      "secondary"
-                 :style      {:margin-top "1em"}
+                {:id "login-submit-btn"
+                 :color "secondary"
+                 :style {:margin-top "1em"}
                  :full-width true
-                 :size       "large"
-                 :variant    "contained"
-                 :on-click   #(==> [::events/submit-login-form form-data])}
+                 :size "large"
+                 :variant "contained"
+                 :on-click #(==> [::events/submit-login-form form-data])}
                 (tr :login/login))
 
              ;; Error messages
@@ -175,7 +175,7 @@
 
              ;; Forgot password
              ($ Button {:style {:margin-top "2em"}
-                        :href  "/passu-hukassa"}
+                        :href "/passu-hukassa"}
                 (tr :login/forgot-password?))
 
              ;; Register
@@ -192,21 +192,21 @@
   (let [login-mode (use-subscribe [::subs/login-mode])
         card-props {:square true :style {:height "100%"}}]
     ($ Grid
-       {:container       true
+       {:container true
         :justify-content "center"
-        :style           {:padding "1em"}}
+        :style {:padding "1em"}}
        ($ Grid {:item true :xs 12 :md 8 :lg 6}
           ($ Card card-props
              ($ CardHeader
-                {:title  (tr :login/headline)
+                {:title (tr :login/headline)
                  :action (r/as-element
                           [register-btn
                            {:tooltip (tr :register/headline)}])})
              ($ CardContent
                 {}
-                ($ Tabs {:value      login-mode
-                         :on-change  #(==> [::events/select-login-mode (keyword %2)])
-                         :style      {:margin-bottom "1em"}
+                ($ Tabs {:value login-mode
+                         :on-change #(==> [::events/select-login-mode (keyword %2)])
+                         :style {:margin-bottom "1em"}
                          :indicator-color "secondary"
                          :text-color "secondary"}
                    ($ Tab {:label (tr :login/login-with-password) :value :password})
@@ -216,11 +216,11 @@
                   ($ login-form {:tr tr}))))))))
 
 (defui main []
-  (let [tr            (use-subscribe [:lipas.ui.subs/translator])
-        logged-in?    (use-subscribe [::subs/logged-in?])
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
+        logged-in? (use-subscribe [::subs/logged-in?])
         comeback-path (use-subscribe [::subs/comeback-path])
-        token         (utils/parse-token (-> js/window .-location .-href))]
+        token (utils/parse-token (-> js/window .-location .-href))]
     (cond
-      token      (do (rf/dispatch [:lipas.ui.login.events/login-with-magic-link token]) nil)
+      token (do (rf/dispatch [:lipas.ui.login.events/login-with-magic-link token]) nil)
       logged-in? (do (utils/navigate! (or comeback-path "/profiili")) nil)
-      :else      ($ login-panel {:tr tr}))))
+      :else ($ login-panel {:tr tr}))))

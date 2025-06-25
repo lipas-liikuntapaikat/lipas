@@ -4,7 +4,7 @@
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
             ["@mui/material/FormGroup$default" :as FormGroup]
-            ["@mui/material/Grid$default" :as Grid]
+            ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
@@ -26,7 +26,7 @@
 
 (defui registration-form [{:keys [tr]}]
   (let [form-data (use-subscribe [::subs/registration-form])
-        error     (use-subscribe [::subs/registration-error])]
+        error (use-subscribe [::subs/registration-error])]
 
     ($ FormGroup
        {}
@@ -34,74 +34,74 @@
        ;; Email
        (r/as-element
         [lui/text-field
-         {:required    true
-          :label       (tr :lipas.user/email)
-          :type        "email"
-          :spec        users/email-schema
-          :value       (:email form-data)
-          :on-change   #(==> [::events/set-registration-form-email %])
+         {:required true
+          :label (tr :lipas.user/email)
+          :type "email"
+          :spec users/email-schema
+          :value (:email form-data)
+          :on-change #(==> [::events/set-registration-form-email %])
           :placeholder (tr :lipas.user/email-example)}])
 
        ;; Username
        (r/as-element
         [lui/text-field
-         {:required          true
+         {:required true
           :Input-label-props (when-not (-> form-data :username empty?)
                                {:shrink true})
-          :label             (tr :lipas.user/username)
-          :type              "text"
-          :spec              users/username-schema
-          :value             (:username form-data)
-          :on-change         #(set-field :username %)
-          :placeholder       (tr :lipas.user/username-example)}])
+          :label (tr :lipas.user/username)
+          :type "text"
+          :spec users/username-schema
+          :value (:username form-data)
+          :on-change #(set-field :username %)
+          :placeholder (tr :lipas.user/username-example)}])
 
        ;; Password
        (r/as-element
         [lui/text-field
-         {:required  true
-          :label     (tr :lipas.user/password)
-          :type      "password"
-          :spec      users/password-schema
-          :value     (:password form-data)
+         {:required true
+          :label (tr :lipas.user/password)
+          :type "password"
+          :spec users/password-schema
+          :value (:password form-data)
           :on-change #(set-field :password %)}])
 
        ;; Firstname
        (r/as-element
         [lui/text-field
-         {:required  true
-          :label     (tr :lipas.user/firstname)
-          :spec      users/firstname-schema
-          :value     (-> form-data :user-data :firstname)
+         {:required true
+          :label (tr :lipas.user/firstname)
+          :spec users/firstname-schema
+          :value (-> form-data :user-data :firstname)
           :on-change #(set-field :user-data :firstname %)}])
 
        ;; Lastname
        (r/as-element
         [lui/text-field
-         {:required  true
-          :label     (tr :lipas.user/lastname)
-          :spec      users/lastname-schema
-          :value     (-> form-data :user-data :lastname)
+         {:required true
+          :label (tr :lipas.user/lastname)
+          :spec users/lastname-schema
+          :value (-> form-data :user-data :lastname)
           :on-change #(set-field :user-data :lastname %)}])
 
        ;; Permissions request
        (r/as-element
         [lui/text-field
-         {:label       (tr :lipas.user/permissions)
-          :multiline   true
-          :spec        users/permissions-request-schema
-          :value       (-> form-data :user-data :permissions-request)
-          :on-change   #(set-field :user-data :permissions-request %)
-          :min-rows    3
+         {:label (tr :lipas.user/permissions)
+          :multiline true
+          :spec users/permissions-request-schema
+          :value (-> form-data :user-data :permissions-request)
+          :on-change #(set-field :user-data :permissions-request %)
+          :min-rows 3
           :placeholder (tr :lipas.user/permissions-example)
           :helper-text (tr :lipas.user/permissions-help)}])
 
        ;; Register button
        ($ Button
-          {:style    {:margin-top "1em"}
-           :color    "secondary"
-           :variant  "contained"
+          {:style {:margin-top "1em"}
+           :color "secondary"
+           :variant "contained"
            :disabled (not (m/validate users/new-user-schema form-data))
-           :size     "large"
+           :size "large"
            :on-click #(==> [::events/submit-registration-form form-data])}
           (tr :register/headline))
 
@@ -109,8 +109,8 @@
 
           ;; Privacy policy
           ($ Link
-             {:style  {:margin-top "0.5em"}
-              :href   "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
+             {:style {:margin-top "0.5em"}
+              :href "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"
               :target "_blank"}
              (tr :help/privacy-policy))
 
@@ -125,7 +125,7 @@
        (when error
          ($ Typography {:color "error"}
             (case (-> error :response :type)
-              "email-conflict"    (tr :error/email-conflict)
+              "email-conflict" (tr :error/email-conflict)
               "username-conflict" (tr :error/username-conflict)
               (tr :error/unknown)))))))
 
@@ -149,7 +149,7 @@
                   ($ registration-form {:tr tr}))))))))
 
 (defui main []
-  (let [tr         (use-subscribe [:lipas.ui.subs/translator])
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])
         logged-in? (use-subscribe [::subs/logged-in?])]
     (if logged-in?
       (do (navigate! "/profiili") nil)
