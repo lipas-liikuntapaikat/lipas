@@ -81,8 +81,7 @@
        (into
         [mui/list]
         (for [m results]
-          [mui/list-item {:button true
-                          :on-click #(==> [::events/show-address m])}
+          [mui/list-item-button {:on-click #(==> [::events/show-address m])}
            [mui/list-item-text
             (:label m)]]))]]]))
 

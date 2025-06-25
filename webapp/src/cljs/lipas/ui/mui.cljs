@@ -123,8 +123,7 @@
 
 (def jyu-styles-dark
   {:typography
-   {:use-next-variants true
-    :font-family "Lato, sans-serif"
+   {:font-family "Lato, sans-serif"
 
     :h1 headline-common
     :h2 headline-common
