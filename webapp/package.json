@@ -46,7 +46,7 @@
     "react-dom": "^18.3.1",
     "react-use": "^17.5.1",
     "react-window": "^1.8.10",
-    "recharts": "^2.2.0",
+    "recharts": "^3.0.0",
     "shpjs": "^4.0.4",
     "togpx": "^0.5.4",
     "use-sync-external-store": "^1.2.2",
