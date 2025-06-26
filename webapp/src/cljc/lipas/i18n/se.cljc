@@ -299,7 +299,8 @@
     :lipas-managed-helper
     "LIPAS skapar en servicepunkt för varje idrottsanläggning i PTV och kopplar automatiskt idrottsanläggningarnas uppgifter till dem."},
    :loi
-   {:category "Kategori",
+   {:headline "Annat objekt"
+    :category "Kategori",
     :status "Status",
     :type "Objekttyp",
     :type-and-category-disclaimer

@@ -1997,7 +1997,7 @@
          :indicator-color "secondary"
          :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
-        [mui/tab {:value "loi" :label (tr :loi/other-target)}]])
+        [mui/tab {:value "loi" :label (tr :loi/headline)}]])
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]

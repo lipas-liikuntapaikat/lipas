@@ -2,7 +2,8 @@
 
 (def translations
   {:loi
-   {:category "Kategoria"
+   {:headline "Muu kohde"
+    :category "Kategoria"
     :status "Tila"
     :type "Kohteen tyyppi"
     :type-and-category-disclaimer "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"}

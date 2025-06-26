@@ -2,7 +2,8 @@
 
 (def translations
   {:loi
-   {:category "Category"
+   {:headline "Other object"
+    :category "Category"
     :status "Status"
     :type "Object Type"
     :type-and-category-disclaimer "Category and type must be selected before adding to the map"}
