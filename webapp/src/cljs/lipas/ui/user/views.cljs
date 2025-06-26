@@ -59,9 +59,8 @@
       [mui/list
 
        ;; View basic info button
-       [mui/list-item
-        {:button   true
-         :on-click (comp
+       [mui/list-item-button
+        {:on-click (comp
                      close
                      #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
@@ -71,10 +70,9 @@
 
        ;; Report energy consumption button
        [mui/list-item
-        {:button   true
-         :on-click (comp
-                     close
-                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
+        {:on-click (comp
+                    close
+                    #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}

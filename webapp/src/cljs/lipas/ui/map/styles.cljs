@@ -288,7 +288,6 @@
 
 (defn line-direction-style-fn
   [feature resolution]
-  (println resolution)
   (let [styles #js [edit-style]
         ^js geometry (.getGeometry feature)
         travel-direction (.get feature "travel-direction")

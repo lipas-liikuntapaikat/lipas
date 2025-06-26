@@ -1,5 +1,6 @@
 (ns lipas.ui.components.lists
   (:require ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemButton$default" :as ListItemButton]
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["react-use/lib/useMeasure$default" :as useMeasure]
@@ -10,9 +11,8 @@
   [{:keys [style item list-props]}]
   (let [{:keys [on-item-click label-fn label2-fn]} list-props]
     ($ Stack {:style style}
-       ($ ListItem
-          {:button  (some? item)
-           :divider (some? item)
+       ($ (if (some? item) ListItemButton ListItem)
+          {:divider (some? item)
            :on-click (fn [_e]
                        (when item
                          (on-item-click item)))}
