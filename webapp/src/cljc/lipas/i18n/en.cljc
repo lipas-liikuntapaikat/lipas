@@ -564,6 +564,8 @@
    :map.overlay
    {:tooltip "Other layers"
     :mml-kiinteisto "Property boundaries"
+    :mml-property-identifiers "Property identifiers"
+    :municipal-boundaries "Municipal boundaries"
     :light-traffic "Light traffic"
     :retkikartta-snowmobile-tracks "Metsähallitus snowmobile tracks"}
    :lipas.swimming-pool.pools

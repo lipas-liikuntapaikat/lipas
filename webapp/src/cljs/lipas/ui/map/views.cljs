@@ -210,7 +210,7 @@
                             {:style {:color "red"}}
                             "timeline"]}
                     :mml-kiinteistotunnukset
-                    {:label (tr :map.overlay/property-identifiers)
+                    {:label (tr :map.overlay/mml-property-identifiers)
                      :label2 "© Maanmittauslaitos"
                      :icon [mui/icon
                             {:style {:color "black"}}
@@ -235,8 +235,7 @@
         (for [[k {:keys [label label2 icon]}] overlays
               :let [v (contains? selected-overlays k)]]
           [mui/menu-item
-           {:button true
-            :on-click #(==> [::events/toggle-overlay k])}
+           {:on-click #(==> [::events/toggle-overlay k])}
            [mui/list-item-icon
             [mui/checkbox
              {:checked (boolean v)
@@ -716,7 +715,7 @@
        :cancel-label (tr :actions/cancel)
        :on-save (fn []
                   (==> [::events/close-address-locator-dialog])
-                  (==> [::events/populate-address-with-reverse-geocoding-results lipas-id (vals cities) {:features [{:properties selected-address}]}]))}
+                  (==> [::events/populate-address-with-reverse-geocoding-results lipas-id cities {:features [{:properties selected-address}]}]))}
 
       [mui/grid {:container true :spacing 2}
 
@@ -1106,7 +1105,7 @@
                :on-change (partial set-field :location)
                :sub-headings? true
                :address-locator-component (when editing?
-                                            [address-locator {:tr tr :lipas-id lipas-id :cities cities}])
+                                            [address-locator {:tr tr :lipas-id lipas-id :cities (vals cities)}])
                :address-required? (not (#{201 2011} type-code))}]]]
 
          ;; Properties tab - "Lisätiedot"

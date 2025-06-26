@@ -274,7 +274,7 @@
     :mml-kiinteisto "Fastighetsgränser",
     :tooltip "Andra kartlager",
     :retkikartta-snowmobile-tracks "Forststyrelsens snöskoterleder"
-    :property-identifiers "Fastighetsbeteckningar"
+    :mml-property-identifiers "Fastighetsbeteckningar"
     :municipal-boundaries "Kommungränser"}
    :duration
    {:hour "timmar", :month "månader", :years "år", :years-short "år"},

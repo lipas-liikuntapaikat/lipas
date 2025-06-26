@@ -766,6 +766,8 @@
    :map.overlay
    {:tooltip "Muut karttatasot"
     :mml-kiinteisto "Kiinteistörajat"
+    :mml-property-identifiers "Kiinteistötunnukset"
+    :municipal-boundaries "Kuntarajat"
     :light-traffic "Kevyen liikenteen väylät"
     :retkikartta-snowmobile-tracks "Metsähallituksen moottorikelkkaurat"}
    :lipas.swimming-pool.pools
