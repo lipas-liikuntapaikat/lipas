@@ -128,25 +128,25 @@
    [separator]
    [lang-btn :en]])
 
-(defn toggle-drawer [_]
-  (==> [:lipas.ui.events/toggle-drawer]))
+(defn close-drawer [_]
+  (==> [:lipas.ui.events/close-drawer]))
 
 (defn drawer [{:keys [tr logged-in?]}]
   (let [open? (<== [::subs/drawer-open?])
-        hide-and-navigate! (comp toggle-drawer navigate!)]
+        hide-and-navigate! (comp close-drawer navigate!)]
     [mui/swipeable-drawer {:open open?
                            :anchor :top
-                           :on-open #()
-                           :on-close toggle-drawer}
+                           :on-open #(==> [:lipas.ui.events/open-drawer])
+                           :on-close close-drawer}
 
      [mui/list
 
       ;; Close btn
-      [mui/list-item-button {:on-click toggle-drawer}
+      [mui/list-item-button {:on-click close-drawer}
        [mui/typography {:variant "h6"}
         (tr :menu/headline)]
        [mui/list-item-secondary-action
-        [mui/icon-button {:on-click toggle-drawer}
+        [mui/icon-button {:on-click close-drawer}
          [mui/icon {:color "secondary"} "close"]]]]
 
       ;; Lang-selector
@@ -242,7 +242,7 @@
   [mui/icon-button
    {:id "main-menu-btn"
     :aria-label (tr :actions/open-main-menu)
-    :on-click toggle-drawer}
+    :on-click #(==> [:lipas.ui.events/open-drawer])}
    [mui/icon
     {:color "secondary"
      :style {:font-weight :bold}} "menu"]])
