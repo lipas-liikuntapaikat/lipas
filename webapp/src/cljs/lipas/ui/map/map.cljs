@@ -203,6 +203,12 @@
         :element (.-current popup-ref)}))
 
 (defn init-map! [{:keys [center zoom popup-ref]}]
+
+  #_(when ^boolean goog.DEBUG
+    (js/console.log "Creating new OpenLayers map instance")
+    (js/setTimeout #(js/console.log "Active WebGL contexts:"
+                                    (.-length (.querySelectorAll js/document "canvas"))) 100))
+
   (let [layers (init-layers)
         view (init-view center zoom)
         popup-overlay (init-overlay popup-ref)
@@ -763,6 +769,19 @@
             (and (= :default (:name mode))
                  lipas-id) (map-utils/refresh-select! lipas-id)
             true (as-> $ (reset! map-ctx* $)))))
+
+      :component-will-unmount
+      (fn [_comp]
+        (when-let [map-ctx @map-ctx*]
+          ;; Dispose of the OpenLayers map instance
+          (when-let [ol-map (:lmap map-ctx)]
+            (.dispose ol-map)
+
+            #_(when ^boolean goog.DEBUG
+                (js/setTimeout #(js/console.log "After disposal, WebGL contexts:"
+                                                (.-length (.querySelectorAll js/document "canvas"))) 50)))
+
+          (reset! map-ctx* nil)))
 
       :display-name "map-inner"})))
 

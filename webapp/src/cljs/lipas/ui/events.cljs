@@ -33,9 +33,13 @@
   (fn [db [_ anchor]]
     (assoc db :account-menu-anchor anchor)))
 
-(rf/reg-event-db ::toggle-drawer
+(rf/reg-event-db ::open-drawer
   (fn [db [_ _]]
-    (update db :drawer-open? not)))
+    (assoc db :drawer-open? true)))
+
+(rf/reg-event-db ::close-drawer
+  (fn [db [_ _]]
+    (assoc db :drawer-open? false)))
 
 (rf/reg-event-db ::set-translator
   (fn [db [_ locale]]
