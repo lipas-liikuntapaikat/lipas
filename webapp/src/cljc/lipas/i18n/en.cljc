@@ -32,6 +32,7 @@
     :results "Results"
     :mean "Mean"
     :population-weighted-mean "Population-weighted diversity index"
+    :diversity-idx "Diversity index"
     :median "Median"
     :mode "Mode"
     :reachability "Reachability"

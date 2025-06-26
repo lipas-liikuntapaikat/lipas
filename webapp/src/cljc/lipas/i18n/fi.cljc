@@ -156,6 +156,7 @@
     :mean "Keskiarvo"
     :graphs "Kuvaajat"
     :population-weighted-mean "Väestöpainotettu monipuolisuusindeksi"
+    :diversity-idx "Monipuolisuusindeksi"
     :median "Mediaani"
     :mode "Moodi"
     :no-analyses-done "Analyyseja ei ole tehty"

@@ -634,6 +634,7 @@
     "Motionsplatskategorier som tillhör samma kategori påverkar mångfaldighetsindexet endast en gång.",
     :population "Befolkning",
     :population-weighted-mean "Befolkningsvägd mångfaldighetsindex",
+    :diversity-idx "Mångfaldighetsindex"
     :diversity-help3
     "Mångfalden beräknas för varje befolkningsruta utifrån de motionsplatser som påverkar mångfalden och som är belägna inom det angivna gångavståndet längs vägnätet från befolkningsrutans mittpunkt."
     :zones "Zoner",
