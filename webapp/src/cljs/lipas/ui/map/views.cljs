@@ -464,15 +464,14 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
     [mui/paper
-     {:style
-      {:padding "0.5em"}}
-     [mui/table {:padding "dense"}
+     {:style {:padding "0.5em"}}
+     [mui/table {:padding "normal" :size "small"}
       [mui/table-body
 
        ;; Diversity index
        [mui/table-row
         [mui/table-cell
-         [mui/typography "Monipuolisuusindeksi"]]
+         [mui/typography {:variant "caption"} (tr :analysis/diversity-idx)]]
         [mui/table-cell
          [mui/typography {:variant "caption" :no-wrap true}
           (:diversity_idx data)]]]
@@ -480,7 +479,7 @@
        ;; Population
        [mui/table-row
         [mui/table-cell
-         [mui/typography (tr :analysis/population)]]
+         [mui/typography {:variant "caption"} (tr :analysis/population)]]
         [mui/table-cell
          [mui/typography {:variant "caption" :no-wrap true}
           (or (:population data) "<10")]]]]]]))
@@ -494,7 +493,7 @@
 
      (if (or (:population-weighted-mean data) (:population data))
        ;; Results table
-       [mui/table {:padding "normal"}
+       [mui/table {:padding "normal" :size "small"}
         [mui/table-body
 
          ;; Area name
@@ -1998,7 +1997,7 @@
          :indicator-color "secondary"
          :text-color "inherit"}
         [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
-        [mui/tab {:value "loi" :label (tr :loi/other-target)}]])
+        [mui/tab {:value "loi" :label (tr :loi/headline)}]])
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]
@@ -2086,7 +2085,7 @@
        :right "3.5em"
        :background-color "transparent"}
 
-      [mui/grid2
+      [mui/grid
        {:container true
         :align-items "center"
         :spacing 1
@@ -2095,27 +2094,27 @@
         :wrap "nowrap"}
 
        ;; Feedback btn
-       #_[mui/grid2
+       #_[mui/grid
           [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
            [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
-       [mui/grid2
+       [mui/grid
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [user-location-btn {:tr tr}]]]
 
        ;; Overlay selector
-       [mui/grid2
+       [mui/grid
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [overlay-selector {:tr tr}]]]
 
        ;; Basemap opacity selector
-       [mui/grid2
+       [mui/grid
         [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [basemap-transparency-selector {:tr tr}]]]
 
        ;; Basemap switcher
-       [mui/grid2
+       [mui/grid
         [mui/paper
          {:elevation 1
           :style

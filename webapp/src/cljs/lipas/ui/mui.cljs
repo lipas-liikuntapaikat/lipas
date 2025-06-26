@@ -27,7 +27,8 @@
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/FormLabel$default" :as FormLabel]
-            ["@mui/material/Grid$default" :as Grid]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Grid$default" :as Grid2]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/InputAdornment$default" :as InputAdornment]
@@ -73,7 +74,7 @@
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
-            ["@mui/material/Grid2$default" :as Grid2]
+
             ["@mui/material/styles" :refer [createTheme ThemeProvider useTheme]]
             ["@mui/material/useMediaQuery$default" :as useMediaQuery]
             ["@mui/material/AppBar$default" :as AppBar] ; ["@mui/material/withWidth$default" :as withWidth]
@@ -222,6 +223,7 @@
 ;; the new v2 Grid has padding all around.
 (def grid (r/adapt-react-class Grid))
 (def grid2 (r/adapt-react-class Grid2))
+
 #_(def grow (r/adapt-react-class Grow))
 (def icon (r/adapt-react-class Icon))
 (def icon-button (r/adapt-react-class IconButton))

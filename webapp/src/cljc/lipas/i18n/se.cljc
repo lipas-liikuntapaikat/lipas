@@ -299,7 +299,8 @@
     :lipas-managed-helper
     "LIPAS skapar en servicepunkt för varje idrottsanläggning i PTV och kopplar automatiskt idrottsanläggningarnas uppgifter till dem."},
    :loi
-   {:category "Kategori",
+   {:headline "Annat objekt"
+    :category "Kategori",
     :status "Status",
     :type "Objekttyp",
     :type-and-category-disclaimer
@@ -634,6 +635,7 @@
     "Motionsplatskategorier som tillhör samma kategori påverkar mångfaldighetsindexet endast en gång.",
     :population "Befolkning",
     :population-weighted-mean "Befolkningsvägd mångfaldighetsindex",
+    :diversity-idx "Mångfaldighetsindex"
     :diversity-help3
     "Mångfalden beräknas för varje befolkningsruta utifrån de motionsplatser som påverkar mångfalden och som är belägna inom det angivna gångavståndet längs vägnätet från befolkningsrutans mittpunkt."
     :zones "Zoner",

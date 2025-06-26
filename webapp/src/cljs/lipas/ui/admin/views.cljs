@@ -5,7 +5,7 @@
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
             ["@mui/material/FormGroup$default" :as FormGroup]
-            ["@mui/material/Grid$default" :as Grid]
+            ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/List$default" :as List]
@@ -29,10 +29,10 @@
             [uix.core :as uix :refer [$ defui]]))
 
 (defn magic-link-dialog [{:keys [tr]}]
-  (let [open?    (<== [::subs/magic-link-dialog-open?])
+  (let [open? (<== [::subs/magic-link-dialog-open?])
         variants (<== [::subs/magic-link-variants])
-        variant  (<== [::subs/selected-magic-link-variant])
-        user     (<== [::subs/editing-user])]
+        variant (<== [::subs/selected-magic-link-variant])
+        user (<== [::subs/editing-user])]
 
     [mui/dialog {:open open?}
      [mui/dialog-title
@@ -40,16 +40,16 @@
      [mui/dialog-content
       [mui/form-group
        [lui/select
-        {:label     (tr :lipas.admin/select-magic-link-template)
-         :items     variants
-         :value     variant
+        {:label (tr :lipas.admin/select-magic-link-template)
+         :items variants
+         :value variant
          :on-change #(==> [::events/select-magic-link-variant %])}]
        [mui/button
-        {:style    {:margin-top "1em"}
+        {:style {:margin-top "1em"}
          :on-click #(==> [::events/send-magic-link user variant])}
         (tr :actions/submit)]
        [mui/button
-        {:style    {:margin-top "1em"}
+        {:style {:margin-top "1em"}
          :on-click #(==> [::events/close-magic-link-dialog])}
         (tr :actions/cancel)]]]]))
 
@@ -71,14 +71,14 @@
 (defui site-select [{:keys [tr required data]}]
   (let [sites (use-subscribe [::subs/sites-list])]
     ($ ac/autocomplete2
-       {:options   sites
-        :label     (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-                        (when required
-                          " *"))
-        :value     (to-array (or (:lipas-id data) []))
-        :onChange  (fn [_e v]
-                     (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
-        :multiple  true
+       {:options sites
+        :label (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
+                    (when required
+                      " *"))
+        :value (to-array (or (:lipas-id data) []))
+        :onChange (fn [_e v]
+                    (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
+        :multiple true
         :selectOnFocus true
         :clearOnBlue true
         :handleHomeEndKeys true
@@ -99,37 +99,37 @@
                            filtered))})))
 
 (defui type-code-select [{:keys [tr required data]}]
-  (let [types  (use-subscribe [::subs/types-list (tr)])]
+  (let [types (use-subscribe [::subs/types-list (tr)])]
     ($ ac/autocomplete2
-       {:options   types
-        :label     (str (tr :lipas.user.permissions/types)
-                        (when required
-                          " *"))
-        :value     (to-array (or (:type-code data) []))
-        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
-        :multiple  true})))
+       {:options types
+        :label (str (tr :lipas.user.permissions/types)
+                    (when required
+                      " *"))
+        :value (to-array (or (:type-code data) []))
+        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
+        :multiple true})))
 
 (defui city-code-select [{:keys [tr required data]}]
   (let [cities (use-subscribe [::subs/cities-list (tr)])]
     ($ ac/autocomplete2
-       {:options   cities
-        :label     (str (tr :lipas.user.permissions/cities)
-                        (when required
-                          " *"))
-        :value     (to-array (or (:city-code data) []))
-        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
-        :multiple  true})))
+       {:options cities
+        :label (str (tr :lipas.user.permissions/cities)
+                    (when required
+                      " *"))
+        :value (to-array (or (:city-code data) []))
+        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
+        :multiple true})))
 
 (defui activity-select [{:keys [tr required data]}]
   (let [activities (<== [::subs/activities-list (tr)])]
     ($ ac/autocomplete2
-       {:options   activities
-        :label     (str (tr :lipas.user.permissions/activities)
-                        (when required
-                          " *"))
-        :value     (to-array (or (:activity data) []))
-        :onChange  (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
-        :multiple  true})))
+       {:options activities
+        :label (str (tr :lipas.user.permissions/activities)
+                    (when required
+                      " *"))
+        :value (to-array (or (:activity data) []))
+        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
+        :multiple true})))
 
 (defui context-key-edit [{:keys [k] :as props}]
   (case k
@@ -162,14 +162,14 @@
             (tr :lipas.user.permissions.roles.edit-role/new-header)))
 
        ($ ac/autocomplete2
-          {:options   (for [[k {:keys [assignable]}] roles/roles
-                            :when assignable]
-                        {:value k
-                         :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
-           :readOnly  editing?
-           :label     (tr :lipas.user.permissions.roles/role)
-           :value     (:role data)
-           :onChange  (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))})
+          {:options (for [[k {:keys [assignable]}] roles/roles
+                          :when assignable]
+                      {:value k
+                       :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
+           :readOnly editing?
+           :label (tr :lipas.user.permissions.roles/role)
+           :value (:role data)
+           :onChange (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))})
 
        (when-not (:role data)
          ($ Typography
@@ -274,25 +274,25 @@
                    {:tr tr})))))))
 
 (defn user-dialog [tr]
-  (let [locale     (tr)
-        cities     (<== [::subs/cities-list locale])
-        types      (<== [::subs/types-list locale])
-        sites      (<== [::subs/sites-list])
+  (let [locale (tr)
+        cities (<== [::subs/cities-list locale])
+        types (<== [::subs/types-list locale])
+        sites (<== [::subs/sites-list])
         activities (<== [::subs/activities-list locale])
-        user       (<== [::subs/editing-user])
-        history    (<== [::subs/user-history])
-        existing?  (some? (:id user))]
+        user (<== [::subs/editing-user])
+        history (<== [::subs/user-history])
+        existing? (some? (:id user))]
 
     [lui/full-screen-dialog
-     {:open?       (boolean (seq user))
-      :title       (or (:username user) (:email user))
+     {:open? (boolean (seq user))
+      :title (or (:username user) (:email user))
       :close-label (tr :actions/close)
-      :on-close    #(==> [::events/set-user-to-edit nil])
+      :on-close #(==> [::events/set-user-to-edit nil])
       :bottom-actions
       [;; GDPR remove button
        [mui/button
-        {:variant  "contained"
-         :color    "secondary"
+        {:variant "contained"
+         :color "secondary"
          :on-click (fn []
                      (==> [:lipas.ui.events/confirm
                            "Haluatko varmasti GDPR-poistaa tämän käyttäjän?"
@@ -303,8 +303,8 @@
        ;; Archive button
        (when (= "active" (:status user))
          [mui/button
-          {:variant  "contained"
-           :color    "secondary"
+          {:variant "contained"
+           :color "secondary"
            :on-click #(==> [::events/update-user-status user "archived"])}
           [mui/icon {:sx {:mr 1}} "archive"]
           "Arkistoi"])
@@ -312,23 +312,23 @@
        ;; Restore button
        (when (= "archived" (:status user))
          [mui/button
-          {:variant  "contained"
-           :color    "secondary"
+          {:variant "contained"
+           :color "secondary"
            :on-click #(==> [::events/update-user-status user "active"])}
           [mui/icon {:sx {:mr 1}} "restore"]
           "Palauta"])
 
        ;; Send magic link button
        [lui/email-button
-        {:label    (tr :lipas.admin/magic-link)
+        {:label (tr :lipas.admin/magic-link)
          :disabled (not (s/valid? :lipas/new-user user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
 
        ;; Save button
        (when existing?
          [mui/button
-          {:variant  "contained"
-           :color    "secondary"
+          {:variant "contained"
+           :color "secondary"
            :on-click #(==> [::events/save-user user])}
           [mui/icon {:sx {:mr 1}} "save"]
           (tr :actions/save)])]}
@@ -343,31 +343,31 @@
 
         ;; Email
         [lui/text-field
-         {:label     (tr :lipas.user/email)
-          :value     (:email user)
+         {:label (tr :lipas.user/email)
+          :value (:email user)
           :on-change #(==> [::events/edit-user [:email] %])
-          :disabled  existing?}]
+          :disabled existing?}]
 
         ;; Username
         [lui/text-field
-         {:label     (tr :lipas.user/username)
-          :value     (:username user)
+         {:label (tr :lipas.user/username)
+          :value (:username user)
           :on-change #(==> [::events/edit-user [:username] %])
-          :disabled  existing?}]
+          :disabled existing?}]
 
         ;; Firstname
         [lui/text-field
-         {:label     (tr :lipas.user/firstname)
-          :value     (-> user :user-data :firstname)
+         {:label (tr :lipas.user/firstname)
+          :value (-> user :user-data :firstname)
           :on-change #(==> [::events/edit-user [:user-data :firstname] %])
-          :disabled  existing?}]
+          :disabled existing?}]
 
         ;; Lastname
         [lui/text-field
-         {:label     (tr :lipas.user/lastname)
-          :value     (-> user :user-data :lastname)
+         {:label (tr :lipas.user/lastname)
+          :value (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
-          :disabled  existing?}]]]
+          :disabled existing?}]]]
 
       ($ roles-card
          {:tr tr})
@@ -385,58 +385,58 @@
         ;; Admin?
         [lui/checkbox
          {:disabled true
-          :label     (tr :lipas.user.permissions/admin?)
-          :value     (-> user :permissions :admin?)
+          :label (tr :lipas.user.permissions/admin?)
+          :value (-> user :permissions :admin?)
           :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
 
         ;; Permission to all types?
         [lui/checkbox
          {:disabled true
-          :label     (tr :lipas.user.permissions/all-types?)
-          :value     (-> user :permissions :all-types?)
+          :label (tr :lipas.user.permissions/all-types?)
+          :value (-> user :permissions :all-types?)
           :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
 
         ;; Permission to all cities?
         [lui/checkbox
          {:disabled true
-          :label     (tr :lipas.user.permissions/all-cities?)
-          :value     (-> user :permissions :all-cities?)
+          :label (tr :lipas.user.permissions/all-cities?)
+          :value (-> user :permissions :all-cities?)
           :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
 
         ;; Permission to individual spoorts-sites
         [lui/autocomplete
          {:disabled true
-          :items     sites
-          :label     (tr :lipas.user.permissions/sports-sites)
-          :value     (-> user :permissions :sports-sites)
-          :multi?    true
+          :items sites
+          :label (tr :lipas.user.permissions/sports-sites)
+          :value (-> user :permissions :sports-sites)
+          :multi? true
           :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
 
         ;; Permission to individual types
         [lui/autocomplete
          {:disabled true
-          :items     types
-          :label     (tr :lipas.user.permissions/types)
-          :value     (-> user :permissions :types)
-          :multi?    true
+          :items types
+          :label (tr :lipas.user.permissions/types)
+          :value (-> user :permissions :types)
+          :multi? true
           :on-change #(==> [::events/edit-user [:permissions :types] %])}]
 
         ;; Permission to individual cities
         [lui/autocomplete
          {:disabled true
-          :items     cities
-          :label     (tr :lipas.user.permissions/cities)
-          :value     (-> user :permissions :cities)
-          :multi?    true
+          :items cities
+          :label (tr :lipas.user.permissions/cities)
+          :value (-> user :permissions :cities)
+          :multi? true
           :on-change #(==> [::events/edit-user [:permissions :cities] %])}]
 
         ;; Permission to activities
         [lui/autocomplete
          {:disabled true
-          :items     activities
-          :label     (tr :lipas.user.permissions/activities)
-          :value     (-> user :permissions :activities)
-          :multi?    true
+          :items activities
+          :label (tr :lipas.user.permissions/activities)
+          :value (-> user :permissions :activities)
+          :multi? true
           :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
 
         [mui/button
@@ -450,19 +450,19 @@
        [lui/table-v2
         {:items history
          :headers
-         {:event      {:label (tr :general/event)}
+         {:event {:label (tr :general/event)}
           :event-date {:label (tr :time/time)}}}]]]]))
 
 (defn color-picker [{:keys [value on-change]}]
   [:input
-   {:type      "color"
-    :value     value
+   {:type "color"
+    :value value
     :on-change #(on-change (-> % .-target .-value))}])
 
 (defn color-selector []
   (let [new-colors (<== [::subs/selected-colors])
         pick-color (fn [k1 k2 v] (==> [::events/select-color k1 k2 v]))
-        types      (<== [:lipas.ui.sports-sites.subs/active-types])]
+        types (<== [:lipas.ui.sports-sites.subs/active-types])]
     [mui/table
      [mui/table-head
       [mui/table-row
@@ -477,62 +477,62 @@
        [mui/table-cell "New-stroke"]]]
 
      (into
-       [mui/table-body]
-       (for [[type-code type] (sort-by first types)
-             :let             [shape (-> type-code types :geometry-type)
-                               fill (-> type-code styles/symbols :fill :color)
-                               stroke (-> type-code styles/symbols :stroke :color)]]
-         [mui/table-row
-          [mui/table-cell type-code]
-          [mui/table-cell (-> type :name :fi)]
-          [mui/table-cell shape]
+      [mui/table-body]
+      (for [[type-code type] (sort-by first types)
+            :let [shape (-> type-code types :geometry-type)
+                  fill (-> type-code styles/symbols :fill :color)
+                  stroke (-> type-code styles/symbols :stroke :color)]]
+        [mui/table-row
+         [mui/table-cell type-code]
+         [mui/table-cell (-> type :name :fi)]
+         [mui/table-cell shape]
 
          ;; Old symbol
-          [mui/table-cell (condp = shape
-                            "Point" "Circle"
-                            shape)]
+         [mui/table-cell (condp = shape
+                           "Point" "Circle"
+                           shape)]
 
          ;; New symbol
-          [mui/table-cell (condp = shape
-                            "Point" [lui/select
-                                     {:items     [{:label "Circle" :value "circle"}
-                                                  {:label "Square" :value "square"}]
-                                      :value     (or (-> type-code new-colors :symbol)
-                                                     "circle")
-                                      :on-change (partial pick-color type-code :symbol)}]
-                            shape)]
+         [mui/table-cell (condp = shape
+                           "Point" [lui/select
+                                    {:items [{:label "Circle" :value "circle"}
+                                             {:label "Square" :value "square"}]
+                                     :value (or (-> type-code new-colors :symbol)
+                                                "circle")
+                                     :on-change (partial pick-color type-code :symbol)}]
+                           shape)]
 
          ;; Old fill
-          [mui/table-cell
-           [color-picker {:value fill :on-change #()}]]
+         [mui/table-cell
+          [color-picker {:value fill :on-change #()}]]
 
          ;; New fill
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
-             [color-picker
-              {:value     (-> (new-colors type-code) :fill)
-               :on-change (partial pick-color type-code :fill)}]]
-            [mui/grid {:item true}
-             [mui/button
-              {:size :small :on-click #(pick-color type-code :fill fill)}
-              "reset"]]]]
+         [mui/table-cell
+          [mui/grid {:container true :wrap "nowrap"}
+           [mui/grid {:item true}
+            [color-picker
+             {:value (-> (new-colors type-code) :fill)
+              :on-change (partial pick-color type-code :fill)}]]
+           [mui/grid {:item true}
+            [mui/button
+             {:size :small :on-click #(pick-color type-code :fill fill)}
+             "reset"]]]]
 
          ;; Old stroke
-          [mui/table-cell
-           [color-picker {:value stroke :on-change #()}]]
+         [mui/table-cell
+          [color-picker {:value stroke :on-change #()}]]
 
          ;; New stroke
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
-             [color-picker
-              {:value     (-> (new-colors type-code) :stroke)
-               :on-change (partial pick-color type-code :stroke)}]]
-            [mui/grid {:item true}
-             [mui/button
-              {:size :small :on-click #(pick-color type-code :stroke stroke)}
-              "reset"]]]]]))]))
+         [mui/table-cell
+          [mui/grid {:container true :wrap "nowrap"}
+           [mui/grid {:item true}
+            [color-picker
+             {:value (-> (new-colors type-code) :stroke)
+              :on-change (partial pick-color type-code :stroke)}]]
+           [mui/grid {:item true}
+            [mui/button
+             {:size :small :on-click #(pick-color type-code :stroke stroke)}
+             "reset"]]]]]))]))
 
 (defn type-codes-view []
   (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
@@ -549,14 +549,14 @@
          [:sub-category "Alaluokka"]
          [:description "Kuvaus"]
          [:geometry-type "Geometria"]]
-        :sort-fn   :type-code
-        :items     types
+        :sort-fn :type-code
+        :items types
         :on-select #(js/alert "Ei tee mitään vielä...")}]]]))
 
 (defn admin-panel []
-  (let [tr           (<== [:lipas.ui.subs/translator])
-        status       (<== [::subs/users-status])
-        users        (<== [::subs/users-list])
+  (let [tr (<== [:lipas.ui.subs/translator])
+        status (<== [::subs/users-status])
+        users (<== [::subs/users-list])
         users-filter (<== [::subs/users-filter])
         selected-tab (<== [::subs/selected-tab])]
     [mui/paper
@@ -564,7 +564,7 @@
       [mui/grid {:item true :xs 12}
        [mui/tool-bar
         [mui/tabs
-         {:value     selected-tab
+         {:value selected-tab
           :on-change #(==> [::events/select-tab %2])
           :indicator-color "secondary"
           :text-color "inherit"}
@@ -576,9 +576,9 @@
          [:<>
           [color-selector]
           [mui/fab
-           {:style    {:position "sticky" :bottom "1em" :left "1em"}
-            :variant  "extended"
-            :color    "secondary"
+           {:style {:position "sticky" :bottom "1em" :left "1em"}
+            :variant "extended"
+            :color "secondary"
             :on-click #(==> [::events/download-new-colors-excel])}
            [mui/icon "save"]
            "Lataa"]])
@@ -597,29 +597,29 @@
             ;; Add user button
             [mui/grid {:item true :style {:flex-grow 1}}
              [mui/fab
-              {:color    "secondary"
-               :size     "small"
-               :style    {:margin-top "1em"}
+              {:color "secondary"
+               :size "small"
+               :style {:margin-top "1em"}
                :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
               [mui/icon "add"]]]
 
             ;; Status selector
             [mui/grid {:item true}
              [lui/select
-              {:style     {:width "150px"}
-               :label     "Status"
-               :value     status
-               :items     ["active" "archived"]
-               :value-fn  identity
-               :label-fn  identity
+              {:style {:width "150px"}
+               :label "Status"
+               :value status
+               :items ["active" "archived"]
+               :value-fn identity
+               :label-fn identity
                :on-change #(==> [::events/select-status %])}]]
 
             ;; Users filter
             [mui/grid {:item true}
              [lui/text-field
-              {:label     (tr :search/search)
+              {:label (tr :search/search)
                :on-change #(==> [::events/filter-users %])
-               :value     users-filter}]]]
+               :value users-filter}]]]
 
            ;; Users table
            [lui/table
@@ -628,8 +628,8 @@
               [:firstname (tr :lipas.user/firstname)]
               [:lastname (tr :lipas.user/lastname)]
               [:roles (tr :lipas.user.permissions.roles/roles)]]
-             :sort-fn   :email
-             :items     users
+             :sort-fn :email
+             :items users
              :on-select #(==> [::events/set-user-to-edit %])}]]])
 
        (when (= 2 selected-tab)

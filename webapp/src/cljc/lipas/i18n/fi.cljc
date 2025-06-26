@@ -2,7 +2,8 @@
 
 (def translations
   {:loi
-   {:category "Kategoria"
+   {:headline "Muu kohde"
+    :category "Kategoria"
     :status "Tila"
     :type "Kohteen tyyppi"
     :type-and-category-disclaimer "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"}
@@ -156,6 +157,7 @@
     :mean "Keskiarvo"
     :graphs "Kuvaajat"
     :population-weighted-mean "Väestöpainotettu monipuolisuusindeksi"
+    :diversity-idx "Monipuolisuusindeksi"
     :median "Mediaani"
     :mode "Moodi"
     :no-analyses-done "Analyyseja ei ole tehty"
