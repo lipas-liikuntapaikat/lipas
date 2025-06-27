@@ -14,32 +14,6 @@
   {:Authorization (str "Bearer " (:api-key openai-config))
    :Content-Type  "application/json"})
 
-(def ptv-system-instruction
-  "Olet avustaja, joka auttaa käyttäjiä tuottamaan sisältöä
-  Palvelutietovarantoon. Sinulle esitetään kysymyksiä, ja käytät
-  ensisijaisesti lähdeaineistoa ja toissijaisesti omaa tietoasi
-  antaaksesi vastauksia. Noudata vastuksissa seuraavia tyyliohjeita:
-
-  - Vastauksissa tulee käyttää neutraalia asiatyyliä
-  - Tekstit eivät saa olla mainosmaisia
-  - Tekstit eivät ole markkinointiviestintää
-  - Puhuttele ja kohdista tekstin sisältö sen käyttäjälle sinä-muodossa.
-  - Kuvaa asiakkaalle tarjottavaa palvelua, älä palvelua järjestävää organisaatiota tai sen tehtäviä.
-  - Vältä mainosmaisia ilmauksia. Keskity kuvaamaan palvelua ja sen käyttöä.
-  - Käytä yksinkertaisia ilmaisuja ja tuttuja sanoja.
-  - Selitä lyhenteet ja vaikeat termit, jos niitä on pakko käyttää.
-  - Vältä ympäripyöreyttä ja epäinformatiivisia lauseita.
-  - Muodosta täydellisiä lauseita ja käytä sekä pää- että sivulauseita. Vältä kiemuraisia lauseenvastikkeita ja korvaa ne sivulauseilla.
-  - Esitä tärkein asia tekstin alussa ensimmäisessä kappaleessa. Käy suoraan asiaan, taustoita lopussa.
-  - Mieti, mitä tietoja lukija tarvitsee saadakseen kokonaiskuvan palvelusta ja tarjolla olevista asiointikanavista sekä päästäkseen käyttämään palvelua.
-  - Esitä yhdessä kappaleessa vain yksi asia.
-  - Tee tekstiin kappalejakoja.
-  - Kappaleessa on korkeintaan neljä virkettä.
-
-Annat vastaukset englanniksi, suomeksi ja ruotsiksi. Eri kieliversiot
-voivat poiketa kieliasultaan toisistaan. Tärkeää on, että kieliasu on
-luettavaa ja selkeää.")
-
 (def ptv-system-instruction-v2
   "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
 
@@ -163,20 +137,21 @@ Each response must be:
                    :choices
                    first
                    (update-in [:message :content] #(json/decode % keyword)))]
-    (log/infof "AI Result: %s" result)
+    (log/infof "AI Result (%s): %s" model result)
     result))
 
 (def generate-utp-descriptions-prompt
   "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
         1.	A concise summary (max 150 characters per language) that captures the essential service information
-        2.	A structured description divided into clear paragraphs (max 4 sentences each)
+        2.	A structured description divided into clear paragraphs. (max 2000 characters per language)
 Follow these requirements:
         •	Focus on information relevant to service users
         •	Use \"you\" form when addressing users
-        •	Exclude technical specifications and condition reports
+        •	Exclude detailed technical specifications and condition reports
         •	Start with the most essential information
         •	Use clear, everyday language
         •	Maintain neutral, non-promotional tone
+        •	Exclude street address from descriptions
 %s")
 
 (defn ->prompt-doc

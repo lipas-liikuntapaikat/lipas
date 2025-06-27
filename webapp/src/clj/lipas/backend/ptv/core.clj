@@ -356,5 +356,15 @@
    (user/search)
    {:sub-category-id 2200
     :city-codes [992 #_92]})
-  (generate-ptv-descriptions (user/search) 612967)
-  (generate-ptv-descriptions (user/search) 506032))
+
+  (def s1 (core/get-sports-site (repl/db) 612967))
+  (def s2 (core/get-sports-site (repl/db) 506032))
+  (core/enrich s1)
+  (generate-ptv-descriptions-from-data s1)
+  (generate-ptv-descriptions-from-data s2)
+
+  (generate-ptv-descriptions-from-data (assoc s1 :comment "Luistinrata ylläpidetään lumisena aikana viikottain. Pukukopit käytössä aukioloaikoina. Kentälle on saatavissa pieniä jääkiekkomaaleja pelien järjestämistä ja lajitaitojen harjoittelua varten."))
+  (generate-ptv-descriptions-from-data s2)
+
+  *1
+  )
