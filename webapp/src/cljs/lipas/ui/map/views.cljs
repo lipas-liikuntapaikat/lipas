@@ -2081,16 +2081,18 @@
 
      ;; Floating container (bottom right)
      [lui/floating-container
-      {:bottom "0.9em"
+      {:bottom "0.2em"
        :right "3.5em"
        :background-color "transparent"}
 
-      [mui/grid
+      [mui/grid2
        {:container true
-        :align-items "center"
         :spacing 1
-        :style {:background-color mui/gray2
-                :border-radius "4px"}
+        :sx #js {:bgcolor mui/gray2
+                 :padding 1
+                 :justifyContent "center"
+                 :alignItems "center"
+                 :border-radius 4}
         :wrap "nowrap"}
 
        ;; Feedback btn
