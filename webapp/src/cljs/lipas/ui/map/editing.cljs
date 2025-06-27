@@ -330,7 +330,7 @@
     (.on select "select" (fn [^js e]
                            (let [selected (.-selected e)]
                              (when (not-empty selected)
-                               (let [f        (first selected)
+                               (let [^js f        (first selected)
                                      fid      (.getId f)
                                      lipas-id (.get f "lipas-id")]
                                  (==> [::events/toggle-travel-direction lipas-id fid]))))))

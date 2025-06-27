@@ -37,6 +37,7 @@
 
         ;; Site 1: Swimming hall in Helsinki
         site1 (-> (tu/gen-sports-site)
+                  (assoc :lipas-id 1)
                   (assoc :status "active")
                   (assoc :author admin-user)
                   (assoc-in [:type :type-code] 3110) ; swimming hall
@@ -49,6 +50,7 @@
 
         ;; Site 2: Football field in Espoo
         site2 (-> (tu/gen-sports-site)
+                  (assoc :lipas-id 2)
                   (assoc :status "active")
                   (assoc :author admin-user)
                   (assoc-in [:type :type-code] 1110) ; football field
@@ -61,6 +63,7 @@
 
         ;; Site 3: Ice hockey hall in Helsinki with year-round use
         site3 (-> (tu/gen-sports-site)
+                  (assoc :lipas-id 3)
                   (assoc :status "active")
                   (assoc :author admin-user)
                   (assoc-in [:type :type-code] 2120) ; ice hockey hall
@@ -75,6 +78,7 @@
 
         ;; Site 4: Planned gym in Vantaa
         site4 (-> (tu/gen-sports-site)
+                  (assoc :lipas-id 4)
                   (assoc :status "planned")
                   (assoc :author admin-user)
                   (assoc-in [:type :type-code] 4510) ; gym

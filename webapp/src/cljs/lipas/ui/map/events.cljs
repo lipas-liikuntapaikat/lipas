@@ -328,7 +328,7 @@
       #_(js/console.log (.-pixel event))
       (when selecting?
         (.forEachFeatureAtPixel lmap (.-pixel event)
-                                (fn [f]
+                                (fn [^js f]
                                   (swap! fids conj (.getId f)))
                                 opts))
       {:fx (into [[:dispatch [::hide-address]]]

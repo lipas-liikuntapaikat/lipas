@@ -43,7 +43,7 @@
   (Style. #js {:image (Circle. #js {:radius 5
                                     :stroke (Stroke. #js {:color mui/primary})
                                     :fill (Fill. #js {:color mui/secondary2})})
-               :geometry (fn [f]
+               :geometry (fn [^js f]
                            (let [geom-type (-> f .getGeometry .getType)
                                  coords (case geom-type
                                           "Polygon" (-> f
@@ -239,7 +239,7 @@
   (reduce (fn [m [k v]] (assoc m k (->symbol-style v :planning true))) {} styleset))
 
 (defn shift-likely-overlapping!
-  [type-code ^js style resolution f]
+  [type-code ^js style resolution ^js f]
   (when (#{4402 4440} type-code)
     (let [delta (* resolution 4)
           copy (-> f .getGeometry .clone)]
@@ -287,7 +287,7 @@
            js/encodeURIComponent)))
 
 (defn line-direction-style-fn
-  [feature resolution]
+  [^js feature resolution]
   (let [styles #js [edit-style]
         ^js geometry (.getGeometry feature)
         travel-direction (.get feature "travel-direction")

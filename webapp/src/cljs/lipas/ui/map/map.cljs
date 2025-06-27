@@ -404,7 +404,7 @@
                  deselected (.-deselected e)
                  ;; Get the actual feature center from geometry
                  feature-coords (when (not-empty selected)
-                                  (let [feature (aget selected 0)
+                                  (let [^js feature (aget selected 0)
                                         geometry (.getGeometry feature)]
                                     (.getCoordinates geometry)))]
 
