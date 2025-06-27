@@ -10,6 +10,7 @@
             [lipas.ui.utils :refer [==>] :as utils]
             [lipas.ui.views :as views]
             [re-frame.core :as rf]
+            [reagent.core :as r]
             [reagent.dom.client :as rdomc]))
 
 (def dev-backend-url "http://localhost:8091/api")
@@ -26,11 +27,14 @@
 
 (defonce react-root (rdomc/create-root (.getElementById js/document "app")))
 
+(defonce ugly-enforcer (atom 0))
+
 (defn ^:dev/after-load mount-root []
   (rf/clear-subscription-cache!)
   (project-devtools/start!)
   (routes/init!)
-  (rdomc/render react-root [:f> views/main-panel]))
+  (swap! ugly-enforcer inc)
+  (rdomc/render react-root ^{:key @ugly-enforcer} [:f> views/main-panel]))
 
 (defn init []
   (rf/dispatch-sync [::events/initialize-db])
