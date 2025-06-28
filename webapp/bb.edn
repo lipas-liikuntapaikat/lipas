@@ -244,56 +244,21 @@
                      :task (shell "docker-compose -f ../docker-compose.yml up backend-dev")}
 
          ;; Test Tasks
-         test {:doc "Run fast tests (excludes integration tests)"
+         test {:doc "Run all tests"
                :task (shell "clojure -M:dev:test")}
 
-         test-integration {:doc "Run integration tests only"
-                           :task (shell "clojure -M:dev:test-integration")}
-
-         test-all {:doc "Run all tests (fast tests + integration tests)"
-                   :task (do (println "Running fast tests...")
-                             (shell "clojure -M:dev:test")
-                             (println "\nRunning integration tests...")
-                             (shell "clojure -M:dev:test-integration")
-                             (println "\n✅ All tests completed!"))}
 
          test-specific {:doc "Run a specific test namespace"
-                        :task (let [test-ns (first *command-line-args*)]
-                                (if test-ns
-                                  (shell "clojure" "-M:dev:test" "--namespace" test-ns)
-                                  (do (println "Usage: bb test-specific <test-namespace>")
-                                      (println "Example: bb test-specific lipas.gis-test"))))}
+                        :task (if-let [test-ns (first *command-line-args*)]
+                                (shell "clojure" "-M:dev:test" "--namespace" test-ns)
+                                (do (println "Usage: bb test-specific <test-namespace>")
+                                    (println "Example: bb test-specific lipas.gis-test")))}
 
-         test-watch {:doc "Run fast tests in watch mode (requires manual restart)"
-                     :task (do (println "Note: cognitect test-runner doesn't support watch mode.")
-                               (println "Consider using: clojure -M:dev:test --namespace <specific-test>")
-                               (println "Or use: bb test (runs all fast tests once)"))}
+         test-ns {:doc "Alias to test-specific"
+                  :task (run 'test-specific)}
 
-         test-help {:doc "Show testing help and options"
-                    :task (do (println "Testing Tasks:")
-                              (println "==============")
-                              (println "")
-                              (println "🚀 AVAILABLE TASKS:")
-                              (println "  bb test              - Run fast tests only")
-                              (println "  bb test-integration  - Run integration tests only")
-                              (println "  bb test-all          - Run all tests (fast + integration)")
-                              (println "  bb test-specific <n> - Run a specific test namespace")
-                              (println "  bb test-watch        - Info about watch mode")
-                              (println "  bb test-help         - Show this help")
-                              (println "")
-                              (println "🔧 DIRECT COMMANDS:")
-                              (println "  clojure -M:dev:test                - Fast tests")
-                              (println "  clojure -M:dev:test-integration     - Integration tests")
-                              (println "")
-                              (println "📋 TEST CONFIGURATION:")
-                              (println "  Fast tests: Excludes tests marked with ^:integration")
-                              (println "  Integration tests: Only tests marked with ^:integration")
-                              (println "  Test path: test/clj")
-                              (println "  Dev dependencies: Included via alias composition (:dev:test)")
-                              (println "")
-                              (println "💡 TIPS:")
-                              (println "  • Use 'bb test' for quick feedback during development")
-                              (println "  • Use 'bb test-integration' before commits/deployments")
-                              (println "  • Use 'bb test-all' for comprehensive testing")
-                              (println "  • Mark slow tests with ^:integration metadata")
-                              (println "  • Alias composition (:dev:test) avoids dependency duplication"))}}}
+         test-var {:doc "Run a specific test var"
+                        :task (if-let [test-var (first *command-line-args*)]
+                                (shell "clojure" "-M:dev:test" "--var" test-var)
+                                (do (println "Usage: bb test-var <test-var>")
+                                    (println "Example: bb test-var lipas.gis-test/test-sequence-features")))}}}
