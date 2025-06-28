@@ -6,6 +6,7 @@
   unified jobs table and smart concurrency control."
   (:require
    [lipas.jobs.db :as jobs-db]
+   [lipas.jobs.patterns :as patterns]
    [malli.core :as m]
    [taoensso.timbre :as log]))
 
@@ -13,7 +14,7 @@
 
 (def job-type-schema
   [:enum "analysis" "elevation" "email" "integration" "webhook"
-   "produce-reminders" "cleanup-jobs"])
+   "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
 
 (def job-status-schema
   [:enum "pending" "processing" "completed" "failed" "dead"])
@@ -35,7 +36,7 @@
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "monitor-queue-health"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?
@@ -68,6 +69,49 @@
                                          :run_at run-at})]
     (:id result)))
 
+(defn enqueue-job-with-correlation!
+  "Enhanced job enqueue with correlation ID and deduplication support.
+  
+  Parameters:
+  - db: Database connection
+  - job-type: String job type
+  - payload: Map containing job data
+  - opts: Map with:
+    :priority - Job priority (default 100)
+    :max-attempts - Max retry attempts (default 3)
+    :run-at - When to run (default now)
+    :correlation-id - UUID for tracking related jobs
+    :parent-job-id - ID of parent job
+    :created-by - Who created this job
+    :dedup-key - Deduplication key (prevents duplicate jobs)
+    
+  Returns: Map with :id and :correlation-id, or nil if deduplicated"
+  [db job-type payload & [{:keys [priority max-attempts run-at correlation-id
+                                  parent-job-id created-by dedup-key]
+                           :or {priority 100
+                                max-attempts 3
+                                run-at (java.sql.Timestamp/from (java.time.Instant/now))
+                                correlation-id (java.util.UUID/randomUUID)}}]]
+  {:pre [(m/validate job-type-schema job-type)
+         (map? payload)]}
+
+  (log/debug "Enqueuing job with correlation"
+             {:type job-type
+              :correlation-id correlation-id
+              :dedup-key dedup-key})
+
+  (jobs-db/enqueue-job-with-correlation!
+   db
+   {:type job-type
+    :payload payload
+    :priority priority
+    :max_attempts max-attempts
+    :run_at run-at
+    :correlation_id correlation-id
+    :parent_job_id parent-job-id
+    :created_by created-by
+    :dedup_key dedup-key}))
+
 (defn fetch-next-jobs
   "Fetch the next batch of jobs to process, with atomic locking.
 
@@ -97,6 +141,57 @@
   [db job-id error-message]
   (log/info "Marking job failed" {:id job-id :error error-message})
   (jobs-db/mark-job-failed! db {:id job-id :error_message (str error-message)}))
+
+(defn fail-job!
+  "Mark a job as failed with exponential backoff retry scheduling.
+  
+  Uses the patterns library to calculate next retry time.
+  Moves to dead letter queue if max attempts exceeded.
+  
+  Parameters:
+  - db: Database connection
+  - job-id: Job ID
+  - error-message: Error description
+  - opts: Map with :backoff-opts for exponential backoff config"
+  [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts]
+                               :or {backoff-opts {}}}]]
+  (log/info "Job failed" {:id job-id :error error-message :attempt current-attempt})
+
+  (if (and current-attempt max-attempts (>= current-attempt max-attempts))
+    ;; Max attempts reached - move to dead letter
+    (do
+      (log/warn "Moving job to dead letter queue" {:id job-id :attempts current-attempt})
+      (jobs-db/move-job-to-dead-letter! db {:id job-id :error_message error-message}))
+    ;; Schedule retry with exponential backoff
+    (let [delay-ms (patterns/exponential-backoff-ms (or current-attempt 0) backoff-opts)
+          run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))]
+      (log/debug "Scheduling job retry" {:id job-id :delay-ms delay-ms :run-at run-at})
+      (jobs-db/update-job-retry! db {:id job-id
+                                     :error_message error-message
+                                     :run_at run-at}))))
+
+(defn move-to-dead-letter!
+  "Move a permanently failed job to the dead letter queue.
+  
+  Parameters:
+  - db: Database connection
+  - job-id: Job ID
+  - error-message: Final error description
+  - error-details: Optional map with additional error context"
+  [db job-id error-message & [error-details]]
+  (log/warn "Moving job to dead letter queue"
+            {:id job-id
+             :error error-message
+             :details error-details})
+  (jobs-db/move-job-to-dead-letter! db {:id job-id
+                                        :error_message error-message})
+  ;; Optionally record additional details
+  (when error-details
+    (jobs-db/insert-dead-letter!
+     db
+     {:original_job {:job_id job-id}
+      :error_message error-message
+      :error_details error-details})))
 
 (defn get-queue-stats
   "Get current queue statistics for monitoring."

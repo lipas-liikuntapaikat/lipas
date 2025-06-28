@@ -128,3 +128,115 @@ SELECT
     extract(epoch from (now() - min(started_at))) / 60 as longest_processing_minutes
 FROM jobs
 WHERE status IN ('pending', 'processing', 'failed');
+
+-- Circuit Breaker Queries
+
+-- :name get-circuit-breaker :? :1
+-- :doc Get circuit breaker state for a service
+SELECT service_name, state, failure_count, success_count, 
+       last_failure_at, opened_at, half_opened_at, updated_at
+FROM circuit_breakers
+WHERE service_name = :service_name;
+
+-- :name get-circuit-breakers :? :*
+-- :doc Get all circuit breaker states
+SELECT service_name, state, failure_count, success_count, 
+       last_failure_at, opened_at, half_opened_at, updated_at
+FROM circuit_breakers
+ORDER BY service_name;
+
+-- :name update-circuit-breaker! :! :n
+-- :doc Update or insert circuit breaker state
+INSERT INTO circuit_breakers (service_name, state, failure_count, success_count, 
+                              last_failure_at, opened_at, half_opened_at)
+VALUES (:service_name, 
+        COALESCE(:state, 'closed'), 
+        COALESCE(:failure_count, 0), 
+        COALESCE(:success_count, 0),
+        :last_failure_at, 
+        :opened_at, 
+        :half_opened_at)
+ON CONFLICT (service_name) DO UPDATE
+SET state = COALESCE(EXCLUDED.state, circuit_breakers.state),
+    failure_count = COALESCE(EXCLUDED.failure_count, circuit_breakers.failure_count),
+    success_count = COALESCE(EXCLUDED.success_count, circuit_breakers.success_count),
+    last_failure_at = COALESCE(EXCLUDED.last_failure_at, circuit_breakers.last_failure_at),
+    opened_at = COALESCE(EXCLUDED.opened_at, circuit_breakers.opened_at),
+    half_opened_at = COALESCE(EXCLUDED.half_opened_at, circuit_breakers.half_opened_at);
+
+-- Dead Letter Queue Queries
+
+-- :name insert-dead-letter! :! :n
+-- :doc Insert a job into the dead letter queue
+INSERT INTO dead_letter_jobs (original_job, error_message, error_details)
+VALUES (:original_job::jsonb, :error_message, :error_details::jsonb);
+
+-- :name get-dead-letters :? :*
+-- :doc Get unacknowledged dead letter jobs
+SELECT id, original_job, error_message, error_details, died_at
+FROM dead_letter_jobs
+WHERE acknowledged = false
+ORDER BY died_at DESC
+LIMIT :limit
+OFFSET :offset;
+
+-- :name acknowledge-dead-letter! :! :n
+-- :doc Acknowledge a dead letter job
+UPDATE dead_letter_jobs
+SET acknowledged = true,
+    acknowledged_by = :acknowledged_by,
+    acknowledged_at = now()
+WHERE id = :id;
+
+-- Job Metrics Queries
+
+-- :name record-job-metric! :! :n
+-- :doc Record a job execution metric
+INSERT INTO job_metrics (job_type, status, duration_ms, queue_time_ms)
+VALUES (:job_type, :status, :duration_ms, :queue_time_ms);
+
+-- Enhanced Job Queries
+
+-- :name update-job-retry! :! :n
+-- :doc Update job for retry with exponential backoff
+UPDATE jobs
+SET status = 'pending',
+    run_at = :run_at,
+    last_error = :error_message,
+    last_error_at = now()
+WHERE id = :id;
+
+-- :name move-job-to-dead-letter! :! :n
+-- :doc Move a permanently failed job to dead letter queue
+WITH moved AS (
+  UPDATE jobs
+  SET status = 'dead'
+  WHERE id = :id
+  RETURNING *
+)
+INSERT INTO dead_letter_jobs (original_job, error_message)
+SELECT row_to_json(moved), :error_message
+FROM moved;
+
+-- :name enqueue-job-with-correlation! :<! :1
+-- :doc Add a new job with correlation ID and deduplication
+INSERT INTO jobs (type, payload, priority, run_at, max_attempts, 
+                  correlation_id, parent_job_id, created_by, dedup_key)
+VALUES (:type, :payload::jsonb, :priority, :run_at, :max_attempts,
+        :correlation_id, :parent_job_id, :created_by, :dedup_key)
+ON CONFLICT (type, dedup_key) WHERE status IN ('pending', 'processing') DO NOTHING
+RETURNING id, correlation_id;
+
+-- :name get-job-by-correlation :? :*
+-- :doc Find jobs by correlation ID
+SELECT id, type, payload, status, created_at, completed_at
+FROM jobs
+WHERE correlation_id = :correlation_id
+ORDER BY created_at;
+
+-- Monitoring Queries
+
+-- :name get-queue-health-detailed :? :*
+-- :doc Get detailed health metrics by job type
+SELECT * FROM job_queue_health
+ORDER BY type, status;

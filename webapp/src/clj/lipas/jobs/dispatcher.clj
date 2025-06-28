@@ -9,6 +9,8 @@
    [lipas.integration.utp.webhook :as utp-webhook]
    [lipas.reminders :as reminders]
    [lipas.jobs.core :as jobs]
+   [lipas.jobs.monitoring :as monitoring]
+   [lipas.jobs.patterns :as patterns]
    [taoensso.timbre :as log]))
 
 (defmulti handle-job
@@ -53,14 +55,15 @@
         (jobs/enqueue-job! db "elevation" payload {:priority 70})))))
 
 (defmethod handle-job "email"
-  [{:keys [emailer]} {:keys [id payload]}]
-  (log/info "Processing email job" {:type (:type payload)})
-  (case (:type payload)
-    "reminder"
-    (email/send-reminder-email! emailer (:email payload) (:link payload) (:body payload))
+  [{:keys [emailer db]} {:keys [id payload correlation-id]}]
+  (log/info "Processing email job" {:type (:type payload) :correlation-id correlation-id})
+  (patterns/with-circuit-breaker db "email-service" {}
+    (case (:type payload)
+      "reminder"
+      (email/send-reminder-email! emailer (:email payload) (:link payload) (:body payload))
 
-    ;; Default email handling
-    (email/send! emailer payload))
+      ;; Default email handling
+      (email/send! emailer payload)))
   (log/debug "Email sent successfully"))
 
 (defmethod handle-job "integration"
@@ -72,11 +75,12 @@
     (log/debug "Integration job processed for lipas-id" lipas-id)))
 
 (defmethod handle-job "webhook"
-  [{:keys [db]} {:keys [id payload]}]
+  [{:keys [db]} {:keys [id payload correlation-id]}]
   (let [{:keys [batch-data]} payload
         config (get-in lipas.backend.config/default-config [:app :utp])]
-    (log/info "Processing webhook job")
-    (utp-webhook/process! db config batch-data)
+    (log/info "Processing webhook job" {:correlation-id correlation-id})
+    (patterns/with-circuit-breaker db "webhook-service" {}
+      (utp-webhook/process! db config batch-data))
     (log/debug "Webhook job processed successfully")))
 
 (defmethod handle-job "produce-reminders"
@@ -97,6 +101,24 @@
   (let [days-old (get payload :days-old 7)]
     (log/info "Cleaning up jobs older than" days-old "days")
     (jobs/cleanup-old-jobs! db days-old)))
+
+(defmethod handle-job "monitor-queue-health"
+  [{:keys [db]} {:keys [id payload correlation-id]}]
+  (log/info "Running queue health monitor" {:correlation-id correlation-id})
+  (let [alert-fn (fn [alert]
+                   ;; In production, this could send emails or post to monitoring service
+                   (log/warn "QUEUE ALERT" alert)
+                   ;; Could also enqueue email alerts
+                   (when (= (:type alert) :circuit-breaker-open)
+                     (jobs/enqueue-job! db "email"
+                                        {:to "admin@lipas.fi"
+                                         :subject (str "Circuit breaker open: " (:service alert))
+                                         :body (str "Service " (:service alert)
+                                                    " circuit breaker opened at "
+                                                    (:timestamp alert))}
+                                        {:priority 100})))
+        result (monitoring/monitor-and-alert! db {:alert-fn alert-fn})]
+    (log/debug "Health monitor completed" result)))
 
 (defmethod handle-job :default
   [_system job]

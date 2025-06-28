@@ -9,8 +9,9 @@
    [lipas.backend.config :as config]
    [lipas.backend.email :as email]
    [lipas.jobs.core :as jobs]
-   [lipas.jobs.worker :as worker]
+   [lipas.jobs.db :as jobs-db]
    [lipas.jobs.scheduler :as scheduler]
+   [lipas.jobs.worker :as worker]
    [lipas.test-utils :as test-utils]
    [malli.core :as m]
    [next.jdbc :as jdbc]
@@ -185,7 +186,70 @@
               priorities (map :jobs/priority all-jobs)]
           (is (= #{"analysis" "elevation" "integration" "email"} (set job-types)))
           (is (every? #(>= % 70) priorities)) ; All have reasonable priorities
-          (is (some #(= 95 %) priorities))))))) ; Email has high priority
+          (is (some #(= 95 %) priorities)))))))
+
+(deftest ^:integration job-retry-and-dead-letter-test
+  (testing "Jobs retry with exponential backoff and move to dead letter queue"
+    (let [db (:lipas/db @test-system)]
+
+      ;; Create a job that will fail
+      (let [job-id (jobs/enqueue-job! db "email"
+                                      {:to "fail@test.com" :error "simulate-failure"}
+                                      {:max-attempts 3})]
+
+        ;; Process with mock handler that fails
+        (dotimes [attempt 3]
+          ;; Simulate job failure
+          (jobs/fail-job! db job-id "Simulated failure"
+                          {:current-attempt (inc attempt)
+                           :max-attempts 3})
+
+          ;; Check job state after each failure
+          (let [job (first (jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" job-id]))]
+            (if (< (inc attempt) 3)
+              (do
+                (is (= "pending" (:jobs/status job)))
+                (is (= "Simulated failure" (:jobs/last_error job)))
+                (is (inst? (:jobs/run_at job))))
+              (is (= "dead" (:jobs/status job))))))
+
+        ;; Verify job moved to dead letter queue
+        (let [dead-letters (jdbc/execute! db ["SELECT * FROM dead_letter_jobs"])]
+          (is (= 1 (count dead-letters)))
+          (is (= "Simulated failure" (:error_message (first dead-letters)))))))))
+
+(deftest ^:integration correlation-id-tracking-test
+  (testing "Correlation IDs track related jobs across the system"
+    (let [db (:lipas/db @test-system)
+          correlation-id (java.util.UUID/randomUUID)]
+
+      ;; Create parent job
+      (let [parent-result (jobs/enqueue-job-with-correlation!
+                           db "analysis"
+                           {:lipas-id 12345}
+                           {:correlation-id correlation-id})
+            parent-id (:id parent-result)]
+
+        ;; Create child jobs with same correlation
+        (jobs/enqueue-job-with-correlation!
+         db "email"
+         {:to "notify@test.com" :subject "Analysis started"}
+         {:correlation-id correlation-id
+          :parent-job-id parent-id})
+
+        (jobs/enqueue-job-with-correlation!
+         db "webhook"
+         {:url "https://example.com/webhook"}
+         {:correlation-id correlation-id
+          :parent-job-id parent-id})
+
+        ;; Find all jobs by correlation ID
+        (let [correlated-jobs (jobs-db/get-job-by-correlation
+                               db {:correlation_id correlation-id})]
+          (is (= 3 (count correlated-jobs)))
+          (is (every? #(= correlation-id (:correlation_id %)) correlated-jobs))
+          (is (= #{"analysis" "email" "webhook"}
+                 (set (map :type correlated-jobs))))))))) ; Email has high priority
 
 (comment
   (clojure.test/run-tests *ns*))

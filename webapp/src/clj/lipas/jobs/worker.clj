@@ -6,6 +6,8 @@
   (:require
    [lipas.jobs.core :as jobs]
    [lipas.jobs.dispatcher :as dispatcher]
+   [lipas.jobs.monitoring :as monitoring]
+   [lipas.jobs.patterns :as patterns]
    [taoensso.timbre :as log])
   (:import
    [java.util.concurrent Executors ThreadPoolExecutor TimeUnit]))
@@ -40,20 +42,54 @@
   (log/info "Thread pools shut down"))
 
 (defn process-job-batch
-  "Process a batch of jobs using the appropriate thread pool."
+  "Process a batch of jobs using the appropriate thread pool with enhanced reliability."
   [system pools jobs lane-type]
   (let [pool (case lane-type
                :fast (:fast-pool pools)
-               :general (:general-pool pools))]
+               :general (:general-pool pools))
+        {:keys [db]} system
+        timeout-ms (case lane-type
+                     :fast 120000 ; 2 minutes for fast jobs
+                     :general 1200000)] ; 20 minutes for slow jobs
 
     (doseq [job jobs]
       (.submit pool
                ^Runnable
                (fn []
-                 (try
-                   (dispatcher/dispatch-job system job)
-                   (catch Exception ex
-                     (log/error ex "Unexpected error processing job" {:job job}))))))))
+                 (let [correlation-id (:correlation_id job)
+                       job-id (:id job)
+                       job-type (:type job)
+                       started-at (java.sql.Timestamp. (System/currentTimeMillis))]
+                   (try
+                     ;; Add correlation ID to logging context
+                     (log/with-context {:correlation-id correlation-id
+                                        :job-id job-id
+                                        :job-type job-type}
+                       (log/debug "Processing job" job)
+
+                       ;; Execute with timeout protection
+                       (patterns/with-timeout timeout-ms
+                         (dispatcher/dispatch-job system job))
+
+                       ;; Record success metrics
+                       (monitoring/record-job-metric! db job-type "completed"
+                                                      started-at (:created_at job)))
+
+                     (catch java.util.concurrent.TimeoutException ex
+                       (log/error "Job timed out" {:job-id job-id :timeout-ms timeout-ms})
+                       (jobs/fail-job! db job-id "Job execution timed out"
+                                       {:current-attempt (:attempts job)
+                                        :max-attempts (:max_attempts job)})
+                       (monitoring/record-job-metric! db job-type "failed"
+                                                      started-at (:created_at job)))
+
+                     (catch Exception ex
+                       (log/error ex "Job processing failed" {:job job})
+                       (jobs/fail-job! db job-id (.getMessage ex)
+                                       {:current-attempt (:attempts job)
+                                        :max-attempts (:max_attempts job)})
+                       (monitoring/record-job-metric! db job-type "failed"
+                                                      started-at (:created_at job))))))))))
 
 (defn fetch-and-process-jobs
   "Fetch jobs and route them to appropriate thread pools."
