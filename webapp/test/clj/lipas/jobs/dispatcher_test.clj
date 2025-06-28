@@ -122,17 +122,19 @@
         (is (= :success (:status result)))))))
 
 (deftest webhook-job-handler-test
-  (testing "Webhook job handler processes batch data"
+  (testing "Webhook job handler processes lipas and loi IDs"
     (let [system {:db (test-db) :search (create-mock-search)}
           job {:id 1 :type "webhook"
-               :payload {:batch-data [{:id 1 :action "create"}
-                                      {:id 2 :action "update"}]}}]
+               :payload {:lipas-ids [1 2]
+                         :operation-type "test-update"}}]
 
-      ;; Should not throw - handler should complete
-      ;; The webhook handler has signature issues, so expect it to fail gracefully
-      (let [result (dispatcher/dispatch-job system job)]
-        (is (= :failed (:status result))) ; Expected due to function signature mismatch
-        (is (string? (:error result)))))))
+      ;; Mock the webhook process function to avoid external dependencies
+      (with-redefs [lipas.integration.utp.webhook/process-v2!
+                    (fn [db config payload]
+                      (log/info "Mock webhook process called" payload)
+                      {:status :success})]
+        (let [result (dispatcher/dispatch-job system job)]
+          (is (= :success (:status result))))))))
 
 (deftest cleanup-jobs-handler-test
   (testing "Cleanup jobs handler removes old completed jobs"
@@ -233,7 +235,5 @@
           (is (= :failed (:status result)))
           (is (string? (:error result))))))))
 
-
 (comment
-  (clojure.test/run-tests *ns*)
-  )
+  (clojure.test/run-tests *ns*))

@@ -76,33 +76,22 @@
 
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload correlation-id]}]
-  (let [{:keys [batch-data]} payload
-        config (get-in lipas.backend.config/default-config [:app :utp])]
-    (log/info "Processing webhook job" {:correlation-id correlation-id})
-    (patterns/with-circuit-breaker db "webhook-service" {}
-      (utp-webhook/process! db config batch-data))
-    (log/debug "Webhook job processed successfully")))
+  (let [config (get-in lipas.backend.config/default-config [:app :utp])
+        webhook-payload (assoc payload :correlation-id correlation-id)]
 
-(defmethod handle-job "webhook-batch"
-  [{:keys [db]} {:keys [id payload correlation-id]}]
-  (let [{:keys [changes operation-type site-count]} payload
-        config (get-in lipas.backend.config/default-config [:app :utp])]
-
-    (log/info "Processing webhook batch"
+    (log/info "Processing webhook job"
               {:job-id id
-               :operation-type operation-type
-               :site-count site-count
+               :lipas-ids-count (count (:lipas-ids payload []))
+               :loi-ids-count (count (:loi-ids payload []))
+               :operation-type (:operation-type payload)
                :correlation-id correlation-id})
 
     (patterns/with-circuit-breaker db "webhook-service" {}
-      ;; Send all changes in a single webhook call
-      (utp-webhook/process! db config {:changes changes
-                                       :batch-info {:operation-type operation-type
-                                                    :site-count site-count
-                                                    :correlation-id correlation-id}}))
+      (utp-webhook/process-v2! db config webhook-payload))
 
-    (log/info "Webhook batch processed successfully"
-              {:job-id id :site-count site-count})))
+    (log/debug "Webhook job processed successfully" {:job-id id})))
+
+;; webhook-batch handler removed - now handled by unified webhook handler
 
 (defmethod handle-job "produce-reminders"
   [{:keys [db]} {:keys [id payload]}]

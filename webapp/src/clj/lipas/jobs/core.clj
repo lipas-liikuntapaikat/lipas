@@ -7,13 +7,14 @@
   (:require
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
+   [lipas.jobs.payload-schema :as payload-schema]
    [malli.core :as m]
    [taoensso.timbre :as log]))
 
 ;; Job type specifications
 
 (def job-type-schema
-  [:enum "analysis" "elevation" "email" "integration" "webhook" "webhook-batch"
+  [:enum "analysis" "elevation" "email" "integration" "webhook"
    "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
 
 (def job-status-schema
@@ -36,7 +37,7 @@
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "webhook-batch" "monitor-queue-health"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "monitor-queue-health"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?
@@ -260,46 +261,49 @@
   
   Parameters:
   - db: Database connection
-  - webhook-data: Map with webhook payload
+  - webhook-data: Map with :lipas-ids and/or :loi-ids vectors
   - opts: Optional priority and other job options
   
   Returns: Job ID"
   [db webhook-data & [opts]]
-  (log/debug "Enqueuing individual webhook" {:data webhook-data})
+  (log/debug "Enqueuing individual webhook"
+             {:lipas-ids-count (count (:lipas-ids webhook-data []))
+              :loi-ids-count (count (:loi-ids webhook-data []))})
   (enqueue-job! db "webhook" webhook-data (merge {:priority 90} opts)))
 
 (defn enqueue-webhook-batch!
   "Enqueue a batch webhook job for bulk operations.
   
-  Use this for operations that affect multiple sports sites at once,
-  like bulk email updates or mass data imports.
+  Extracts lipas-ids and loi-ids from changes and creates a unified webhook job.
   
   Parameters:
   - db: Database connection
-  - changes: Vector of change maps, each with site data
+  - changes: Vector of change maps with :lipas-id or :id fields
   - operation-info: Map with:
     :operation-type - Description of the bulk operation
     :initiated-by - Who initiated the operation
-    :site-count - Number of sites affected (optional, will be calculated)
   - opts: Optional priority and other job options
   
   Returns: Job ID"
   [db changes operation-info & [opts]]
   {:pre [(vector? changes) (map? operation-info)]}
 
-  (let [site-count (count changes)
-        payload (merge operation-info
-                       {:type "bulk-update"
-                        :changes changes
-                        :site-count site-count
-                        :created-at (java.time.Instant/now)})]
+  (let [lipas-ids (keep :lipas-id changes)
+        loi-ids (keep #(when (and (:id %) (not (:lipas-id %))) (:id %)) changes)
+        site-count (+ (count lipas-ids) (count loi-ids))
+        payload {:lipas-ids (vec lipas-ids)
+                 :loi-ids (vec loi-ids)
+                 :operation-type (:operation-type operation-info)
+                 :initiated-by (:initiated-by operation-info)
+                 :site-count site-count}]
 
     (log/info "Enqueuing webhook batch"
               {:operation-type (:operation-type operation-info)
-               :site-count site-count
+               :lipas-ids-count (count lipas-ids)
+               :loi-ids-count (count loi-ids)
                :initiated-by (:initiated-by operation-info)})
 
-    (enqueue-job! db "webhook-batch" payload (merge {:priority 85} opts))))
+    (enqueue-job! db "webhook" payload (merge {:priority 85} opts))))
 
 (defn should-use-batch-webhook?
   "Determine if a set of changes should use batch webhook or individual webhooks.
@@ -364,3 +368,43 @@
   "Legacy compatibility: Add email job to unified queue."
   [db message]
   (enqueue-job! db "email" message {:priority 95}))
+
+(defn validate-and-enqueue-job!
+  "Enqueue a job with payload validation.
+   
+   Like enqueue-job! but validates the payload against the job type schema first.
+   Throws ex-info if validation fails.
+   
+   Parameters:
+   - db: Database connection
+   - job-type: String job type
+   - payload: Job payload (will be validated)
+   - opts: Optional job options (priority, max-attempts, run-at)
+   
+   Returns: Job ID if successful, throws if validation fails"
+  [db job-type payload & [opts]]
+  (let [validation (payload-schema/validate-payload-for-type job-type payload)]
+    (if (:valid? validation)
+      (let [transformed-payload (payload-schema/transform-payload job-type payload)]
+        (enqueue-job! db job-type transformed-payload opts))
+      (do
+        (log/error "Invalid job payload"
+                   {:job-type job-type
+                    :payload payload
+                    :errors (:errors validation)})
+        (throw (ex-info "Invalid job payload"
+                        {:job-type job-type
+                         :payload payload
+                         :errors (:errors validation)}))))))
+
+(defn validate-payload
+  "Validate a payload for a specific job type.
+   
+   Returns: {:valid? boolean :errors [...] :value ...}"
+  [job-type payload]
+  (payload-schema/validate-payload-for-type job-type payload))
+
+(defn example-job-payloads
+  "Get example payloads for all job types for documentation/testing."
+  []
+  (payload-schema/example-payloads))

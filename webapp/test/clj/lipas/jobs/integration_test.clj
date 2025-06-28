@@ -216,7 +216,7 @@
         ;; Verify job moved to dead letter queue
         (let [dead-letters (jdbc/execute! db ["SELECT * FROM dead_letter_jobs"])]
           (is (= 1 (count dead-letters)))
-          (is (= "Simulated failure" (:error_message (first dead-letters)))))))))
+          (is (= "Simulated failure" (:dead_letter_jobs/error_message (first dead-letters)))))))))
 
 (deftest ^:integration correlation-id-tracking-test
   (testing "Correlation IDs track related jobs across the system"
@@ -252,4 +252,7 @@
                  (set (map :type correlated-jobs))))))))) ; Email has high priority
 
 (comment
-  (clojure.test/run-tests *ns*))
+  (clojure.test/run-tests *ns*)
+  (clojure.test/run-test-var #'job-retry-and-dead-letter-test)
+  (clojure.test/run-test-var #'correlation-id-tracking-test)
+  )

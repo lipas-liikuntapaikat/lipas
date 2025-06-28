@@ -224,12 +224,12 @@ INSERT INTO jobs (type, payload, priority, run_at, max_attempts,
                   correlation_id, parent_job_id, created_by, dedup_key)
 VALUES (:type, :payload::jsonb, :priority, :run_at, :max_attempts,
         :correlation_id, :parent_job_id, :created_by, :dedup_key)
-ON CONFLICT (type, dedup_key) WHERE status IN ('pending', 'processing') DO NOTHING
+ON CONFLICT (type, dedup_key) WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing') DO NOTHING
 RETURNING id, correlation_id;
 
 -- :name get-job-by-correlation :? :*
 -- :doc Find jobs by correlation ID
-SELECT id, type, payload, status, created_at, completed_at
+SELECT id, type, payload, status, created_at, completed_at, correlation_id
 FROM jobs
 WHERE correlation_id = :correlation_id
 ORDER BY created_at;

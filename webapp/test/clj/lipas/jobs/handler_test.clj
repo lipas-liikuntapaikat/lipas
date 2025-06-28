@@ -52,7 +52,8 @@
   ;; 30 minutes ago: Some webhook jobs failed
   (let [webhook-jobs (for [i (range 2)]
                        (jobs/enqueue-job! db "webhook"
-                                          {:batch-data {:batch i}}))]
+                                          {:lipas-ids [(+ 1000 i)]
+                                           :operation-type "test-webhook"}))]
     (doseq [job-id webhook-jobs]
       ;; Simulate job processing by setting started_at before failure
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])

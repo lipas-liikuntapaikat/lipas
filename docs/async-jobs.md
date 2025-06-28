@@ -138,6 +138,10 @@ The system processes several types of background jobs:
 - **`analysis`** - Calculate diversity analysis for sports sites
 - **`elevation`** - Enrich location data with elevation information
 
+### Job Type Payload Schemas
+
+See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/payload_schema.clj)
+
 ## Core API
 
 ### Enqueueing Jobs
@@ -149,7 +153,7 @@ The system processes several types of background jobs:
 (jobs/enqueue-job! db "email" {:to "user@example.com" :template "welcome"})
 
 ;; With options
-(jobs/enqueue-job! db "analysis" 
+(jobs/enqueue-job! db "analysis"
                    {:lipas-id 12345}
                    {:priority 50
                     :run-at (time/plus (time/now) (time/minutes 5))
@@ -209,7 +213,7 @@ Job handlers are implemented as multimethods in `lipas.jobs.dispatcher`:
 
 Job handlers receive:
 - `:db` - Database connection
-- `:search` - Elasticsearch client  
+- `:search` - Elasticsearch client
 - `:emailer` - Email service
 - Job data: `:id`, `:payload`, `:correlation-id`, `:attempts`
 
@@ -241,7 +245,7 @@ Failed jobs are retried with increasing delays:
 External services are protected by circuit breakers that prevent cascade failures:
 
 ```clojure
-(patterns/with-circuit-breaker db "email-service" 
+(patterns/with-circuit-breaker db "email-service"
   {:failure-threshold 5
    :open-duration-ms 60000}
   (email/send-email! emailer payload))
@@ -254,7 +258,7 @@ External services are protected by circuit breakers that prevent cascade failure
 
 ### Timeouts
 
-Long-running jobs are protected by timeouts:
+Long-running jobs can be protected by timeouts:
 
 ```clojure
 (patterns/with-timeout 300000  ; 5 minutes
@@ -266,12 +270,14 @@ Long-running jobs are protected by timeouts:
 Permanently failed jobs are moved to the dead letter queue for manual review:
 
 ```sql
-SELECT * FROM dead_letter_jobs 
-WHERE acknowledged = false 
+SELECT * FROM dead_letter_jobs
+WHERE acknowledged = false
 ORDER BY died_at DESC;
 ```
 
 ## Configuration
+
+See [webapp/src/clj/lipas/jobs/system.clj](webapp/src/clj/lipas/jobs/system.clj)
 
 ### Development
 
@@ -297,7 +303,7 @@ ORDER BY died_at DESC;
 
 ```clojure
 {:lipas.jobs/worker
- {:enabled-job-types #{"produce-reminders" "cleanup-jobs" "analysis" 
+ {:enabled-job-types #{"produce-reminders" "cleanup-jobs" "analysis"
                        "elevation" "email" "integration" "webhook"}
   :fast-threads 3              ; Dedicated for fast jobs
   :general-threads 5           ; All job types including slow ones
@@ -350,10 +356,10 @@ services:
   {:lipas/db {...}
    :lipas/search {...}
    :lipas/emailer {...}
-   
+
    :lipas.jobs/scheduler     ; Produces periodic jobs
    {:db (ig/ref :lipas/db)}
-   
+
    :lipas.jobs/worker        ; Processes all job types
    {:db (ig/ref :lipas/db)
     :search (ig/ref :lipas/search)
@@ -371,14 +377,14 @@ SELECT * FROM job_queue_health ORDER BY type, status;
 
 -- Find stuck jobs
 SELECT id, type, status, attempts, created_at, started_at
-FROM jobs 
-WHERE status = 'processing' 
+FROM jobs
+WHERE status = 'processing'
   AND started_at < NOW() - INTERVAL '1 hour';
 
 -- Recent failures by type
 SELECT type, COUNT(*) as failures, MAX(last_error_at) as latest_failure
-FROM jobs 
-WHERE status = 'failed' 
+FROM jobs
+WHERE status = 'failed'
   AND last_error_at > NOW() - INTERVAL '1 hour'
 GROUP BY type;
 ```
@@ -388,7 +394,7 @@ GROUP BY type;
 ```sql
 -- Check external service health
 SELECT service_name, state, failure_count, last_failure_at
-FROM circuit_breakers 
+FROM circuit_breakers
 WHERE state != 'closed';
 ```
 
@@ -396,7 +402,7 @@ WHERE state != 'closed';
 
 Monitor these indicators:
 - **Queue depth** - Jobs pending by type
-- **Processing time** - P50, P95, P99 by job type  
+- **Processing time** - P50, P95, P99 by job type
 - **Error rate** - Failed jobs percentage by type
 - **Thread utilization** - Fast vs general lane usage
 - **Circuit breaker trips** - External service failures
@@ -417,15 +423,15 @@ Set up monitoring for:
 #### View Dead Letter Queue
 ```sql
 SELECT id, original_job->>'type' as job_type, error_message, died_at
-FROM dead_letter_jobs 
-WHERE acknowledged = false 
+FROM dead_letter_jobs
+WHERE acknowledged = false
 ORDER BY died_at DESC;
 ```
 
 #### Acknowledge Dead Letter
 ```clojure
-(db/acknowledge-dead-letter! db 
-  {:id 123 
+(db/acknowledge-dead-letter! db
+  {:id 123
    :acknowledged_by "admin@lipas.fi"})
 ```
 
@@ -433,7 +439,7 @@ ORDER BY died_at DESC;
 ```clojure
 (let [dead-letter (db/get-dead-letter db 123)
       original-job (:original_job dead-letter)]
-  (jobs/enqueue-job! db 
+  (jobs/enqueue-job! db
                      (:type original-job)
                      (:payload original-job)
                      {:correlation-id (:correlation_id original-job)}))
@@ -448,7 +454,7 @@ ORDER BY died_at DESC;
 
 #### Force Circuit Open
 ```clojure
-(db/update-circuit-breaker! db 
+(db/update-circuit-breaker! db
   {:service_name "external-api"
    :state "open"
    :opened_at (time/now)})
@@ -468,8 +474,8 @@ docker-compose kill lipas-worker
 #### Drain Queue Before Maintenance
 ```clojure
 ;; Stop accepting new jobs of certain types
-(db/update-jobs! db 
-  {:status "pending"} 
+(db/update-jobs! db
+  {:status "pending"}
   {:status "paused"})
 
 ;; Wait for processing jobs to complete
@@ -488,12 +494,12 @@ docker-compose kill lipas-worker
 #### Jobs Stuck in Processing
 **Symptom:** Jobs show `processing` status but don't complete
 **Cause:** Worker crashed or job timed out
-**Solution:** 
+**Solution:**
 ```sql
 -- Reset stuck jobs to pending
-UPDATE jobs 
+UPDATE jobs
 SET status = 'pending', started_at = null
-WHERE status = 'processing' 
+WHERE status = 'processing'
   AND started_at < NOW() - INTERVAL '1 hour';
 ```
 
@@ -526,14 +532,14 @@ WHERE status = 'processing'
 ```sql
 -- Trace a user action across multiple jobs
 SELECT id, type, status, created_at, completed_at, error_message
-FROM jobs 
+FROM jobs
 WHERE correlation_id = 'user-action-123'
 ORDER BY created_at;
 
 -- Find related jobs
 SELECT j1.id as parent_id, j1.type as parent_type,
        j2.id as child_id, j2.type as child_type
-FROM jobs j1 
+FROM jobs j1
 JOIN jobs j2 ON j1.id = j2.parent_job_id
 WHERE j1.correlation_id = 'user-action-123';
 ```
@@ -543,7 +549,7 @@ WHERE j1.correlation_id = 'user-action-123';
 Potential improvements to consider:
 
 1. **Job Chaining** - Explicit workflows (job A → job B → job C)
-2. **Rate Limiting** - Prevent overwhelming external services  
+2. **Rate Limiting** - Prevent overwhelming external services
 3. **Priority Lanes** - More granular than just fast/slow
 4. **Job Versioning** - Handle payload schema evolution
 5. **Batch Operations** - Process multiple items in single job
@@ -554,7 +560,7 @@ Potential improvements to consider:
 
 The async jobs system replaced five separate queue tables:
 - `analysis_queue` - Diversity analysis calculations
-- `elevation_queue` - Elevation data enrichment  
+- `elevation_queue` - Elevation data enrichment
 - `email_out_queue` - Email notifications
 - `integration_out_queue` - Legacy system sync
 - `webhook_queue` - UTP webhook processing
@@ -571,7 +577,7 @@ Benefits realized:
 ### For Developers
 
 1. **Understand the Architecture** - Review this documentation and existing code
-2. **Run Tests** - Execute `bb test` to validate functionality  
+2. **Run Tests** - Execute `bb test` to validate functionality
 3. **Create Feature Branch** - `git checkout -b feature/new-job-type`
 4. **Add Job Handler** - Implement in `lipas.jobs.dispatcher`
 5. **Test Incrementally** - Add unit and integration tests
@@ -588,7 +594,7 @@ Benefits realized:
   )
 ```
 
-2. **Configure Duration** 
+2. **Configure Duration**
 ```clojure
 ;; In lipas.jobs.worker
 (def job-duration-types

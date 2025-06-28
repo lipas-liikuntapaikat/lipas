@@ -17,7 +17,8 @@ ALTER TABLE public.jobs
 
 -- Indexes for new functionality
 CREATE INDEX IF NOT EXISTS idx_jobs_correlation ON public.jobs (correlation_id);
-CREATE INDEX IF NOT EXISTS idx_jobs_dedup ON public.jobs (type, dedup_key)
+-- Unique constraint for deduplication - prevents duplicate jobs
+CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_dedup_unique ON public.jobs (type, dedup_key)
   WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing');
 
 -- Dead letter queue
