@@ -13,7 +13,7 @@
 ;; Job type specifications
 
 (def job-type-schema
-  [:enum "analysis" "elevation" "email" "integration" "webhook"
+  [:enum "analysis" "elevation" "email" "integration" "webhook" "webhook-batch"
    "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
 
 (def job-status-schema
@@ -36,7 +36,7 @@
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "monitor-queue-health"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "webhook-batch" "monitor-queue-health"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?
@@ -252,6 +252,91 @@
   [db days]
   (log/info "Cleaning up jobs older than" days "days")
   (jobs-db/cleanup-old-jobs! db {:days days}))
+
+;; Webhook Operations
+
+(defn enqueue-webhook!
+  "Enqueue a single webhook job for immediate delivery.
+  
+  Parameters:
+  - db: Database connection
+  - webhook-data: Map with webhook payload
+  - opts: Optional priority and other job options
+  
+  Returns: Job ID"
+  [db webhook-data & [opts]]
+  (log/debug "Enqueuing individual webhook" {:data webhook-data})
+  (enqueue-job! db "webhook" webhook-data (merge {:priority 90} opts)))
+
+(defn enqueue-webhook-batch!
+  "Enqueue a batch webhook job for bulk operations.
+  
+  Use this for operations that affect multiple sports sites at once,
+  like bulk email updates or mass data imports.
+  
+  Parameters:
+  - db: Database connection
+  - changes: Vector of change maps, each with site data
+  - operation-info: Map with:
+    :operation-type - Description of the bulk operation
+    :initiated-by - Who initiated the operation
+    :site-count - Number of sites affected (optional, will be calculated)
+  - opts: Optional priority and other job options
+  
+  Returns: Job ID"
+  [db changes operation-info & [opts]]
+  {:pre [(vector? changes) (map? operation-info)]}
+
+  (let [site-count (count changes)
+        payload (merge operation-info
+                       {:type "bulk-update"
+                        :changes changes
+                        :site-count site-count
+                        :created-at (java.time.Instant/now)})]
+
+    (log/info "Enqueuing webhook batch"
+              {:operation-type (:operation-type operation-info)
+               :site-count site-count
+               :initiated-by (:initiated-by operation-info)})
+
+    (enqueue-job! db "webhook-batch" payload (merge {:priority 85} opts))))
+
+(defn should-use-batch-webhook?
+  "Determine if a set of changes should use batch webhook or individual webhooks.
+  
+  Parameters:
+  - changes: Vector of change maps
+  - operation-context: Map with context about the operation
+  
+  Returns: Boolean - true if should use batch webhook"
+  [changes operation-context]
+  (let [change-count (count changes)
+        batch-threshold (get operation-context :batch-threshold 5)
+        is-bulk-operation? (get operation-context :is-bulk-operation false)]
+
+    (or is-bulk-operation?
+        (>= change-count batch-threshold))))
+
+(defn enqueue-webhooks-smart!
+  "Smart webhook enqueuing - automatically chooses between individual and batch.
+  
+  Parameters:
+  - db: Database connection
+  - changes: Vector of change maps
+  - operation-context: Map with:
+    :operation-type - Type of operation
+    :initiated-by - Who initiated
+    :is-bulk-operation - Force batch mode (optional)
+    :batch-threshold - Minimum changes for batch (default 5)
+  
+  Returns: Vector of job IDs"
+  [db changes operation-context]
+  (if (should-use-batch-webhook? changes operation-context)
+    ;; Use batch webhook for bulk operations
+    [(enqueue-webhook-batch! db changes operation-context)]
+
+    ;; Use individual webhooks for single/few changes
+    (mapv #(enqueue-webhook! db %) changes)))
 
 ;; Legacy compatibility functions for existing code
 
