@@ -26,7 +26,7 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 
 ### Core Languages & Frameworks
 - **Clojure 1.12.0** - Backend services
-- **ClojureScript 1.11.132** - Frontend application  
+- **ClojureScript 1.11.132** - Frontend application
 - **re-frame 1.4.3** - Frontend state management
 - **Reagent 1.2.0** - React wrapper for ClojureScript
 - **Reitit 0.7.1** - Routing (both backend and frontend)
@@ -148,12 +148,12 @@ Tasks       Queue         Concurrency              Elevation, etc.
 ### Usage Examples
 ```clojure
 ;; Enqueue a job
-(jobs/enqueue-job! db "email" 
-                   {:to "user@example.com" :subject "Welcome"} 
+(jobs/enqueue-job! db "email"
+                   {:to "user@example.com" :subject "Welcome"}
                    {:priority 95})
 
 ;; Start worker system
-(worker/start-mixed-duration-worker! 
+(worker/start-mixed-duration-worker!
   {:db db :search search :emailer emailer}
   {:fast-threads 3 :general-threads 5})
 
@@ -175,29 +175,12 @@ Tasks       Queue         Concurrency              Elevation, etc.
 - Docker and Docker Compose
 - Babashka (for task automation)
 
-### Quick Start
-```bash
-# Clone and setup environment
-cp .env.sample.sh .env.sh
-# Edit .env.sh with required secrets
-
-# Option 1: Full Docker setup
-./setup-dev.sh
-
-# Option 2: Local development
-bb up                                    # Start Docker services
-cd webapp
-clojure -M:nrepl                        # Start backend REPL (port 7888)
-# In REPL: (reset)
-npm install && npm run watch             # Start frontend build
-```
-
 ### Available Babashka Tasks
 
 #### Development
-- `bb test` - Run fast tests
-- `bb test-integration` - Run integration tests  
-- `bb test-all` - Run all tests
+- `bb test` - Run all tests
+- `bb test-ns <namespace>` - Run tests for a single namespace
+- `bb test-var <var>` - Run a single test var
 - `bb db-migrate` - Run database migrations
 - `bb db-status` - Check migration status
 - `bb uberjar` - Build production JAR
@@ -217,7 +200,7 @@ The project supports REPL-driven development with Integrant for system managemen
 ```clojure
 ;; In REPL after connecting to port 7888
 (reset)         ; Restart system with code changes
-(go)            ; Start system  
+(go)            ; Start system
 (halt)          ; Stop system
 
 ;; Job system testing
@@ -279,7 +262,7 @@ The application uses PostgreSQL with PostGIS extensions. Key migrations are loca
 # Backend
 bb uberjar                               # Creates target/backend.jar
 
-# Frontend  
+# Frontend
 npm run build                            # Creates optimized ClojureScript bundle
 # OR
 clojure -M -m shadow.cljs.devtools.cli release app
@@ -368,7 +351,7 @@ The `test-utils/config` automatically applies the `_test` suffix to:
 
 #### Common Pitfalls to Avoid
 1. **New test files forgetting test config**: Always use `test-utils/config` in test setup
-2. **Direct database connections**: Use the test system's database connection, not direct configs  
+2. **Direct database connections**: Use the test system's database connection, not direct configs
 3. **Shared resources**: Ensure search indices, email services, etc. use test configurations
 4. **CI/Local differences**: Test configurations work identically in both environments
 
@@ -384,7 +367,7 @@ The `test-utils/config` automatically applies the `_test` suffix to:
 Always verify your tests are using the correct database:
 ```clojure
 ;; In test, check database name includes _test suffix
-(println "Using database:" (-> (test-db) :dbname)) 
+(println "Using database:" (-> (test-db) :dbname))
 ;; Should print: "lipas_test"
 ```
 
@@ -392,7 +375,7 @@ This isolation prevents tests from interfering with production data and ensures 
 
 ## Recent Major Changes 🆕
 
-### Unified Job Queue System (2025-01)
+### Unified Job Queue System (2025-06)
 - **Replaced**: 5 separate queue tables with unified `jobs` table
 - **Added**: Smart concurrency control (fast lane + general lane)
 - **Architecture**: Scheduler → Queue → Worker → Handlers pipeline

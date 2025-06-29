@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS public.dead_letter_jobs (
   original_job      jsonb NOT NULL,
   error_message     text NOT NULL,
   error_details     jsonb,
+  correlation_id    uuid,
   died_at           timestamp with time zone NOT NULL DEFAULT now(),
   acknowledged      boolean DEFAULT false,
   acknowledged_by   text,
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS public.job_metrics (
   status            text NOT NULL,
   duration_ms       bigint,
   queue_time_ms     bigint,
+  correlation_id    uuid,
   recorded_at       timestamp with time zone NOT NULL DEFAULT now()
 );
 

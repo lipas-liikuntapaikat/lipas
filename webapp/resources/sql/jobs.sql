@@ -150,9 +150,9 @@ ORDER BY service_name;
 INSERT INTO circuit_breakers (service_name, state, failure_count, success_count, 
                               last_failure_at, opened_at, half_opened_at)
 VALUES (:service_name, 
-        COALESCE(:state, 'closed'), 
-        COALESCE(:failure_count, 0), 
-        COALESCE(:success_count, 0),
+        :state, 
+        :failure_count, 
+        :success_count,
         :last_failure_at, 
         :opened_at, 
         :half_opened_at)
@@ -162,7 +162,8 @@ SET state = COALESCE(EXCLUDED.state, circuit_breakers.state),
     success_count = COALESCE(EXCLUDED.success_count, circuit_breakers.success_count),
     last_failure_at = COALESCE(EXCLUDED.last_failure_at, circuit_breakers.last_failure_at),
     opened_at = COALESCE(EXCLUDED.opened_at, circuit_breakers.opened_at),
-    half_opened_at = COALESCE(EXCLUDED.half_opened_at, circuit_breakers.half_opened_at);
+    half_opened_at = COALESCE(EXCLUDED.half_opened_at, circuit_breakers.half_opened_at),
+    updated_at = now();
 
 -- Dead Letter Queue Queries
 
@@ -219,13 +220,29 @@ SELECT row_to_json(moved), :error_message
 FROM moved;
 
 -- :name enqueue-job-with-correlation! :<! :1
--- :doc Add a new job with correlation ID and deduplication
-INSERT INTO jobs (type, payload, priority, run_at, max_attempts, 
-                  correlation_id, parent_job_id, created_by, dedup_key)
-VALUES (:type, :payload::jsonb, :priority, :run_at, :max_attempts,
-        :correlation_id, :parent_job_id, :created_by, :dedup_key)
-ON CONFLICT (type, dedup_key) WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing') DO NOTHING
-RETURNING id, correlation_id;
+-- :doc Add a new job with correlation ID and optional deduplication
+/*~
+(if (:dedup_key params)
+  "WITH existing AS (
+     SELECT id FROM jobs 
+     WHERE type = :type 
+       AND dedup_key = :dedup_key 
+       AND status IN ('pending', 'processing')
+     LIMIT 1
+   )
+   INSERT INTO jobs (type, payload, priority, run_at, max_attempts, 
+                     correlation_id, parent_job_id, created_by, dedup_key)
+   SELECT :type, :payload::jsonb, :priority, :run_at, :max_attempts,
+          :correlation_id, :parent_job_id, :created_by, :dedup_key
+   WHERE NOT EXISTS (SELECT 1 FROM existing)
+   RETURNING id, correlation_id"
+  
+  "INSERT INTO jobs (type, payload, priority, run_at, max_attempts, 
+                    correlation_id, parent_job_id, created_by, dedup_key)
+   VALUES (:type, :payload::jsonb, :priority, :run_at, :max_attempts,
+           :correlation_id, :parent_job_id, :created_by, :dedup_key)
+   RETURNING id, correlation_id")
+~*/
 
 -- :name get-job-by-correlation :? :*
 -- :doc Find jobs by correlation ID
