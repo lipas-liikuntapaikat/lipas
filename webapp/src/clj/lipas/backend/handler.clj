@@ -7,6 +7,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.handler :as ptv-handler]
+            [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.schema.help :as help-schema]
@@ -773,7 +774,8 @@
              {:status 200
               :body (heatmap/get-facets ctx params)}))}}]
 
-      (ptv-handler/routes ctx)]
+      (ptv-handler/routes ctx)
+      (jobs-handler/routes ctx)]
 
      (v2/routes ctx)]
 

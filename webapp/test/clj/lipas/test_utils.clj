@@ -28,7 +28,20 @@
         (dissoc :ptv))
     (catch Throwable _t (gen-sports-site))))
 
-(def <-json #(j/parse-string (slurp %) true))
+(def <-json
+  (fn [response-body]
+    (cond
+      (string? response-body)
+      (if (empty? response-body)
+        nil
+        (j/parse-string response-body true))
+
+      (instance? java.io.InputStream response-body)
+      (j/parse-string (slurp response-body) true)
+
+      :else
+      (j/parse-string (slurp response-body) true))))
+
 (def ->json j/generate-string)
 
 (defn ->transit [x]
@@ -73,28 +86,45 @@
                 (update-in [:search :indices :analysis :diversity] test-suffix)
                 (update-in [:search :indices :lois :search] test-suffix)))
 
-(defn init-db! []
-  (let [migratus-opts {:store         :database
-                       :migration-dir "migrations"
-                       :db            (:db config)}]
-    (try
-      (jdbc/db-do-commands (-> config :db (assoc :dbname ""))
-                           false
-                           [(str "CREATE DATABASE " (-> config :db :dbname))])
-      (catch Exception e
-        (when-not (= "ERROR: database \"lipas_test\" already exists"
-                     (-> e .getCause .getMessage))
-          (throw e))))
+;; Enhanced database initialization with migration status checking
+(defn init-db!
+  "Initialize test database with all extensions and current migrations.
+   Optionally accepts a custom db config."
+  ([]
+   (init-db! (:db config)))
+  ([db-config]
+   (let [migratus-opts {:store :database
+                        :migration-dir "migrations"
+                        :db db-config}]
+     ;; Create database if it doesn't exist
+     (try
+       (jdbc/db-do-commands (-> db-config (assoc :dbname ""))
+                            false
+                            [(str "CREATE DATABASE " (:dbname db-config))])
+       (catch Exception e
+         (when-not (str/includes? (-> e .getCause .getMessage str/lower-case)
+                                  "already exists")
+           (throw e))))
 
-    (jdbc/db-do-commands (:db config)
-                           false
-                           [(str "CREATE EXTENSION IF NOT EXISTS postgis")
-                            (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
-                            (str "CREATE EXTENSION IF NOT EXISTS citext")
-                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
+     ;; Install extensions
+     (jdbc/db-do-commands db-config
+                          false
+                          [(str "CREATE EXTENSION IF NOT EXISTS postgis")
+                           (str "CREATE EXTENSION IF NOT EXISTS postgis_topology")
+                           (str "CREATE EXTENSION IF NOT EXISTS citext")
+                           (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
 
-    (migratus/init migratus-opts)
-    (migratus/migrate migratus-opts)))
+     ;; Initialize and run migrations
+     (try
+       (migratus/init migratus-opts)
+       (let [pending (migratus/pending-list migratus-opts)]
+         (when (seq pending)
+           (println "Running migrations:" (map :id pending)))
+         (migratus/migrate migratus-opts)
+         {:status :migrated :pending-count (count pending)})
+       (catch Exception e
+         (println "Migration failed:" (.getMessage e))
+         (throw e))))))
 
 (def tables
   ["account"
@@ -104,16 +134,92 @@
    "email_out_queue"
    "integration_log"
    "integration_out_queue"
+   "jobs"
+   "job_metrics"
+   "dead_letter_jobs"
+   "circuit_breakers"
+   "versioned_data"
    "reminder"
    "sports_site"
    "subsidy"
    "loi"])
 
 ;; For all other tests except the legacy WFS compatibility layer
-(defn prune-db! []
-  (jdbc/execute! (:db config) [(str "TRUNCATE "
-                                    (str/join "," tables)
-                                    " RESTART IDENTITY CASCADE")]))
+;; Enhanced database utilities that accept db parameter
+(defn prune-db!
+  "Truncate all tables. Optionally accepts a custom db connection."
+  ([]
+   (prune-db! (:db config)))
+  ([db-connection]
+   (jdbc/execute! db-connection [(str "TRUNCATE "
+                                      (str/join "," tables)
+                                      " RESTART IDENTITY CASCADE")])))
+
+(defn check-migration-status
+  "Check if migrations are up to date by attempting migration (idempotent)."
+  ([]
+   (check-migration-status (:db config)))
+  ([db-config]
+   (let [migratus-opts {:store :database
+                        :migration-dir "migrations"
+                        :db db-config}]
+     (try
+       ;; This is idempotent - won't re-run completed migrations
+       (migratus/migrate migratus-opts)
+       {:up-to-date? true :status :checked}
+       (catch Exception ex
+         {:up-to-date? false :error (str ex)})))))
+
+(defn ensure-test-database!
+  "Comprehensive test database setup: create, migrate, and verify.
+   Returns database connection details."
+  ([]
+   (ensure-test-database! (:db config)))
+  ([db-config]
+   (println "Setting up test database...")
+   (let [init-result (init-db! db-config)
+         migration-status (check-migration-status db-config)]
+     (when-not (:up-to-date? migration-status)
+       (throw (ex-info "Database migrations not up to date after init!"
+                       migration-status)))
+
+     ;; Verify that required tables actually exist
+     (try
+       ;; First check if we can connect to the database
+       (let [connection-test (jdbc/query db-config ["SELECT 1"])]
+         (println "✓ Database connection successful"))
+
+       ;; Then check for the account table specifically
+       (let [table-check (jdbc/query db-config
+                                     ["SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'account'"])]
+         (if (empty? table-check)
+           (throw (ex-info "Account table not found in information_schema" {:db-config (dissoc db-config :password)}))
+           (println "✓ Account table exists in schema")))
+
+       ;; Finally, try to query the account table
+       (jdbc/query db-config ["SELECT 1 FROM account LIMIT 1"])
+       (println "✓ Database setup successful - account table verified")
+       (catch Exception e
+         (println "✗ Database verification failed:" (.getMessage e))
+         (println "Database config (without password):" (dissoc db-config :password))
+         (println "Init result:" init-result)
+         (println "Migration status:" migration-status)
+         ;; Additional debugging - list all tables
+         (try
+           (let [all-tables (jdbc/query db-config
+                                        ["SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"])]
+             (println "Available tables:" (mapv :table_name all-tables)))
+           (catch Exception debug-e
+             (println "Could not list tables:" (.getMessage debug-e))))
+         (throw (ex-info "Required tables not found after migration - database setup incomplete!"
+                         {:error (.getMessage e)
+                          :init-result init-result
+                          :migration-status migration-status
+                          :db-config (dissoc db-config :password)}))))
+
+     {:db-config db-config
+      :migrations-applied (:status init-result)
+      :status :ready})))
 
 (def wfs-up-ddl
   (slurp (io/resource "migrations/20250209182407-legacy-wfs.up.sql")))
@@ -138,7 +244,7 @@
 (def search (:lipas/search system))
 
 (defn prune-es! []
-  (let [client   (:client search)
+  (let [client (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
                   (-> search :indices :analysis :diversity) diversity/mappings
                   (-> search :indices :lois :search) (:lois search/mappings)}]
@@ -163,7 +269,7 @@
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
   ([{:keys [db? admin? status]
-     :or   {admin? false status "active"}}]
+     :or {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
                   ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
@@ -186,5 +292,4 @@
       (assoc :id (str (java.util.UUID/randomUUID)))))
 
 (comment
-  (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site))
-  )
+  (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site)))

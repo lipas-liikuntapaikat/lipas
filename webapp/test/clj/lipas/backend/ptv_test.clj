@@ -18,7 +18,10 @@
                       (tu/prune-es!)
                       (f)))
 
-(deftest ^:ptv ^:integration init-site-ptv
+;; This test requires PTV training environment to be operational.
+;; It's up only on weekdays between 8-17 Finnish time...
+
+#_(deftest ^:ptv ^:integration init-site-ptv
   (let [user     (tu/gen-user {:db? true :admin? true})
         token    (jwt/create-token user)
 
@@ -50,7 +53,7 @@
 
         sports-sites (->> [body]
                           (utils/index-by :lipas-id))]
-    (println sports-sites)
+
     (is (some? lipas-id))
     (is (= 200 (:status resp)))
     ;; (is (some? (:ptv body)))
@@ -126,3 +129,7 @@
     ;; TODO: Archive the site in Lipas and PTV
     ))
 
+(comment
+  (t/run-tests *ns*)
+  (t/run-test-var #'init-site-ptv)
+  )
