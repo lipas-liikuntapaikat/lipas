@@ -3,6 +3,8 @@
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.walk :as walk]
+   [lipas-api.locations :as legacy-locations]
+   [lipas-api.sports-places :as legacy-sports-places]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
@@ -11,6 +13,7 @@
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
    [lipas.data.types :as types]
+   [lipas.integration.old-lipas.transform :as transform]
    [lipas.utils :as utils]
    [qbits.spandex :as es]
    [taoensso.timbre :as log]))
@@ -46,6 +49,27 @@
            (search/bulk-index! client)
            (wait-one))))
   (log/info "LOI indexing done!"))
+
+(defn index-legacy-search-sports-sites!
+  ([db client idx-name types]
+   (index-legacy-search-sports-sites! db client idx-name types []))
+  ([db client idx-name types results]
+   (let [type-code (first types)]
+     (log/info "Starting to re-index type" type-code)
+     (if type-code
+       (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
+            (map #(-> %
+                      (transform/->old-lipas-sports-site)
+                      (assoc :id (:lipas-id %))
+                      (legacy-sports-places/format-sports-place
+                       :all
+                       legacy-locations/format-location)))
+            (search/->bulk idx-name :sportsPlaceId)
+            (search/bulk-index! client)
+            (wait-one)
+            (conj results)
+            (recur db client idx-name (rest types)))
+       (print-results results)))))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]
@@ -159,11 +183,14 @@
    (main nil db search mode))
   ([_system db {:keys [indices client]} mode]
    (let [idx-name (str mode "-" (search/gen-idx-name))
-         mappings (:sports-sites search/mappings)
+         mappings (case mode
+                    "search" (:sports-sites search/mappings)
+                    "legacy" (:legacy-sports-sites search/mappings))
          types    (keys types/all)
          alias    (case mode
                     "search"    (get-in indices [:sports-site :search])
-                    "analytics" (get-in indices [:sports-site :analytics]))]
+                    "analytics" (get-in indices [:sports-site :analytics])
+                    "legacy"    (get-in indices [:legacy-sports-site :search]))]
      (log/info "Starting to re-index types" types)
      (search/create-index! client idx-name mappings)
      (log/info "Created index" idx-name)
@@ -172,7 +199,8 @@
      (case mode
        "search"    (index-search-sports-sites! db client idx-name types)
        "analytics" (let [users (get-users db)]
-                     (index-analytics2! db client idx-name types users))          )
+                     (index-analytics2! db client idx-name types users))
+       "legacy" (index-legacy-search-sports-sites! db client idx-name types))
 
      (log/info "Indexing data done!")
      (log/info "Swapping alias" alias "to point to index" idx-name)
@@ -186,6 +214,7 @@
   (let [mode   (case (first args)
                  "--analytics" "analytics"
                  "--diversity" "diversity"
+                 "--legacy" "legacy"
                  "search")
         config (-> (select-keys config/system-config [:lipas/db :lipas/search])
                    (assoc-in [:lipas/search :create-indices] false))
@@ -209,6 +238,7 @@
 
 (comment
   (-main)
+  (-main "--legacy")
   (-main "--analytics")
   (def config (select-keys config/default-config [:db :search]))
   (def system (backend/start-system! config))
@@ -236,4 +266,5 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name      "sports_sites_current"
-                           :search-string "kissa*"})))
+                           :search-string "kissa*"}))
+  )

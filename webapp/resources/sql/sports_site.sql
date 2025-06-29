@@ -122,3 +122,5 @@ WHERE lipas_id = :lipas_id AND event_date > :event_date ::timestamptz
 SELECT *
 FROM sports_site_current
 WHERE city_code = :city_code
+
+
