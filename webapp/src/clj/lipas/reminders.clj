@@ -8,6 +8,10 @@
 
 (defn add-to-queue!
   [db emails]
+  ;; DEPRECATED: This function is no longer used.
+  ;; The new jobs system handles reminder emails through the "produce-reminders" job type.
+  ;; Keeping for backward compatibility during migration.
+  (log/warn "add-to-queue! is deprecated. Use the jobs system instead.")
   (log/info "Adding" (count emails) "reminder emails to queue")
   (doseq [{:keys [reminder-id] :as m} emails]
     (jdbc/with-db-transaction [tx db]
@@ -17,13 +21,13 @@
 (defn ->email
   [db {:keys [id body account-id]}]
   (let [user (db/get-user-by-id db {:id account-id})
-        url  "https://liikuntapaikat.lipas.fi/kirjaudu"]
+        url "https://liikuntapaikat.lipas.fi/kirjaudu"]
     {:reminder-id id
-     :account-id  account-id
-     :email       (:email user)
-     :link        (core/create-magic-link url user)
-     :type        "reminder"
-     :body        body}))
+     :account-id account-id
+     :email (:email user)
+     :link (core/create-magic-link url user)
+     :type "reminder"
+     :body body}))
 
 (defn add-overdue-to-queue!
   [db]
@@ -38,10 +42,14 @@
 
 (defn process-email-out-queue!
   [db emailer]
+  ;; DEPRECATED: This function is replaced by the new jobs system.
+  ;; Email processing is now handled by the "email" job type.
+  ;; Keeping for backward compatibility during migration.
+  (log/warn "process-email-out-queue! is deprecated. Use the jobs system instead.")
   (let [entries (db/get-email-out-queue! db)]
     (log/info "Processing" (count entries) "entries from email out queue")
     (doseq [entry entries
-            :let  [email (:message entry)]]
+            :let [email (:message entry)]]
       (case (:type email)
         "reminder" (send-reminder-email! emailer email)
         (throw (ex-info "Unknown email type!" (select-keys email [:type]))))

@@ -42,14 +42,17 @@
 ;;; Jobs ;;;
 
 (defn add-to-analysis-queue-v2!
+  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
   [db {:keys [lipas-id] :as _sports-site}]
   (jobs/enqueue-job! db "analysis" {:lipas-id lipas-id}))
 
 (defn add-to-elevation-queue-v2!
+  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
   [db {:keys [lipas-id] :as _sports-site}]
   (jobs/enqueue-job! db "elevation" {:lipas-id lipas-id}))
 
 (defn add-to-webhook-queue-v2!
+  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
   [db {:keys [_lipas-ids _loi-ids] :as m}]
   (jobs/enqueue-job! db "webhook" m))
 
@@ -532,18 +535,22 @@
         (->> (map :_source)))))
 
 (defn add-to-integration-out-queue!
+  "DEPRECATED: Integration system is being phased out."
   [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
 (defn add-to-analysis-queue!
+  "DEPRECATED: Use add-to-analysis-queue-v2! or jobs/enqueue-job! instead."
   [db sports-site]
   (db/add-to-analysis-queue! db (:lipas-id sports-site)))
 
 (defn add-to-elevation-queue!
+  "DEPRECATED: Use add-to-elevation-queue-v2! or jobs/enqueue-job! instead."
   [db sports-site]
   (db/add-to-elevation-queue! db (:lipas-id sports-site)))
 
 (defn add-to-webhook-queue!
+  "DEPRECATED: Use add-to-webhook-queue-v2! or jobs/enqueue-job! instead."
   [db {:keys [_lipas-ids _loi-ids] :as m}]
   (db/add-to-webhook-queue! db m))
 
@@ -559,50 +566,72 @@
   ([db search ptv user sports-site]
    (save-sports-site! db search ptv user sports-site false))
   ([db search ptv user sports-site draft?]
-   (jdbc/with-db-transaction [tx db]
-     (let [resp (upsert-sports-site! tx user sports-site draft?)
-           route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
-       (when-not draft?
-         ;; NOTE: routes will be re-indexed after elevation has been
-         ;; resolved.
-         (index! search resp :sync)
+   (let [correlation-id (jobs/gen-correlation-id)]
+     (jobs/with-correlation-context correlation-id
+       (fn []
+         (jdbc/with-db-transaction [tx db]
+           (let [resp (upsert-sports-site! tx user sports-site draft?)
+                 route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
-         (when route?
-           (add-to-elevation-queue! tx resp))
+             (when-not draft?
+               (log/info "Saving sports site with background jobs"
+                         {:lipas-id (:lipas-id resp)
+                          :is-route? route?
+                          :user (:email user)})
 
-         (when-not route?
-           ;; Routes will be integrated only after elevation has been
-           ;; resolved. See `process-elevation-queue!`
-           (add-to-integration-out-queue! tx resp))
+               ;; NOTE: routes will be re-indexed after elevation has been
+               ;; resolved.
+               (index! search resp :sync)
 
-         ;; Analysis doesn't require elevation information
-         (add-to-analysis-queue! tx resp)
+               (when route?
+                 (jobs/enqueue-job! tx "elevation"
+                                    {:lipas-id (:lipas-id resp)}
+                                    {:correlation-id correlation-id
+                                     :priority 70}))
 
-         (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
+               (when-not route?
+                 ;; Routes will be integrated only after elevation has been
+                 ;; resolved. See `process-elevation-queue!`
+                 ;; NOTE: Integration system is being phased out, keeping for now
+                 (add-to-integration-out-queue! tx resp))
 
-       ;; Sync the site to PTV if
-       ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
-       ;; - it is PTV candidate now
-       ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
-       ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
-       ;; that doesn't trigger update if sync-enabled is false.
-       (if (and (not draft?)
-                (or (:sync-enabled (:ptv resp))
-                    (:delete-existing (:ptv resp)))
-                ;; TODO: Check privilage :ptv/basic or such
-                (or (ptv-data/ptv-candidate? resp)
-                    (ptv-data/is-sent-to-ptv? resp)))
-         ;; NOTE:  this will create a new sports-site rev.
-         ;; Make it instead update the sports-site already created in the tx?
-         ;; Otherwise each save-sports-site! will create two sports-site revs.
-         (let [new-ptv-data (sync-ptv! tx search ptv user
-                                       {:sports-site resp
-                                        :org-id (:org-id (:ptv resp))
-                                        :lipas-id (:lipas-id resp)
-                                        :ptv (:ptv resp)})]
-           (log/infof "Sports site updated and PTV integration enabled")
-           (assoc resp :ptv new-ptv-data))
-         resp)))))
+               ;; Analysis doesn't require elevation information
+               (jobs/enqueue-job! tx "analysis"
+                                  {:lipas-id (:lipas-id resp)}
+                                  {:correlation-id correlation-id
+                                   :priority 80})
+
+               ;; Webhook notification
+               (jobs/enqueue-job! tx "webhook"
+                                  {:lipas-ids [(:lipas-id resp)]
+                                   :operation-type (if (new? sports-site) "create" "update")
+                                   :initiated-by (:email user)}
+                                  {:correlation-id correlation-id
+                                   :priority 85}))
+
+             ;; Sync the site to PTV if
+             ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+             ;; - it is PTV candidate now
+             ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+             ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+             ;; that doesn't trigger update if sync-enabled is false.
+             (if (and (not draft?)
+                      (or (:sync-enabled (:ptv resp))
+                          (:delete-existing (:ptv resp)))
+                      ;; TODO: Check privilage :ptv/basic or such
+                      (or (ptv-data/ptv-candidate? resp)
+                          (ptv-data/is-sent-to-ptv? resp)))
+               ;; NOTE:  this will create a new sports-site rev.
+               ;; Make it instead update the sports-site already created in the tx?
+               ;; Otherwise each save-sports-site! will create two sports-site revs.
+               (let [new-ptv-data (sync-ptv! tx search ptv user
+                                             {:sports-site resp
+                                              :org-id (:org-id (:ptv resp))
+                                              :lipas-id (:lipas-id resp)
+                                              :ptv (:ptv resp)})]
+                 (log/infof "Sports site updated and PTV integration enabled")
+                 (assoc resp :ptv new-ptv-data))
+               resp))))))))
 
 ;;; Cities ;;;
 
@@ -783,7 +812,11 @@
   (diversity/calc-diversity-indices-2 search params))
 
 (defn process-analysis-queue!
+  "DEPRECATED: This function is replaced by the new jobs system.
+  Analysis processing is now handled by the 'analysis' job type.
+  Keeping for backward compatibility during migration."
   [db search]
+  (log/warn "process-analysis-queue! is deprecated. Use the jobs system instead.")
   (let [entries (->> (db/get-analysis-queue db))]
     (log/info "Processing" (count entries) "entries from analysis queue")
 
@@ -808,7 +841,11 @@
           (db/update-analysis-status! db lipas-id "failed"))))))
 
 (defn process-elevation-queue!
+  "DEPRECATED: This function is replaced by the new jobs system.
+  Elevation processing is now handled by the 'elevation' job type.
+  Keeping for backward compatibility during migration."
   [db search]
+  (log/warn "process-elevation-queue! is deprecated. Use the jobs system instead.")
   (let [entries (->> (db/get-elevation-queue db))
         user (when (seq entries)
                (db/get-user-by-email db {:email "robot@lipas.fi"}))]
@@ -981,10 +1018,24 @@
 
 (defn upsert-loi!
   [db search user loi]
-  (jdbc/with-db-transaction [tx db]
-    (db/upsert-loi! tx user loi)
-    (add-to-webhook-queue! tx {:loi-ids [(:id loi)]})
-    (index-loi! search loi :sync)))
+  (let [correlation-id (jobs/gen-correlation-id)]
+    (jobs/with-correlation-context correlation-id
+      (fn []
+        (jdbc/with-db-transaction [tx db]
+          (let [result (db/upsert-loi! tx user loi)]
+            (log/info "Saving LOI with background jobs"
+                      {:loi-id (:id loi)
+                       :user (:email user)})
+
+            ;; Enqueue webhook with same correlation ID
+            (jobs/enqueue-job! tx "webhook"
+                               {:loi-ids [(:id loi)]
+                                :operation-type (if (nil? (:id loi)) "create" "update")
+                                :initiated-by (:email user)}
+                               {:correlation-id correlation-id
+                                :priority 85})
+            (index-loi! search loi :sync)
+            result))))))
 
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]

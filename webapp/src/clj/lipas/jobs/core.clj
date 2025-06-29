@@ -288,6 +288,11 @@
              (assoc opts :correlation-id correlation-id)))
           jobs)))
 
+(defn gen-correlation-id
+  "Generate a new correlation ID for tracking related jobs."
+  []
+  (java.util.UUID/randomUUID))
+
 (defn with-correlation-context
   "Execute a function with correlation ID in the logging context.
 
