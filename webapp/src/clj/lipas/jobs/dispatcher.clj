@@ -66,7 +66,10 @@
       (email/send! emailer payload)))
   (log/debug "Email sent successfully"))
 
-(defmethod handle-job "integration"
+;; Integration between lipas and legacy-lipas db can be removed
+;; soon. Let's not waste time making it work with the new Jobs system.
+
+#_(defmethod handle-job "integration"
   [_system {:keys [id payload]}]
   (let [{:keys [lipas-id]} payload]
     (log/info "Processing integration for lipas-id" lipas-id)
