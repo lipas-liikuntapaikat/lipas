@@ -1,6 +1,6 @@
 (ns lipas.ui.analysis.reachability.views
   (:require ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
-            ["rc-slider" :as Slider]
+            ["rc-slider$default" :as Slider]
             [lipas.ui.analysis.reachability.events :as events]
             [lipas.ui.analysis.reachability.subs :as subs]
             [lipas.ui.charts :as charts]
@@ -9,9 +9,6 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
-
-#_(def ^js Slider (.-Slider js/rcslider))
-(def ^js RangeSlider (.createSliderWithTooltip Slider (.-Range Slider)))
 
 (defn sports-sites-tab
   [{:keys [tr]}]
@@ -24,7 +21,6 @@
         metric (<== [::subs/selected-travel-metric])
         zone-colors (<== [::subs/zone-colors metric])]
     [:<>
-
      ;; Tools
 
      [mui/grid {:item true :xs 12}
@@ -238,27 +234,30 @@
         max-v (<== [::subs/zones-selector-max metric])
         zones-count (<== [::subs/zones-count metric])
         zones-count-max (<== [::subs/zones-count-max metric])]
+
     (r/with-let [value* (r/atom value)]
-
       [mui/grid {:container true}
-
        ;; Slider
        ;; Rc-slider works better here, MUI does allow
        ;; multiple values, but probably not separate track colors
        ;; between the values ("korit")
        [mui/grid {:item true :xs 10 :style {:padding "1em"}}
-        [:> RangeSlider
+        [:> Slider
          {:min 0
           :max max-v
           :pushable true
           :marks selector-marks
-          :trackStyle selector-colors
+          ;; For multi-handle sliders in v11, pass an array of values
           :value @value*
-          :on-after-change #(==> [::events/set-zones %1 metric])
-          :on-change (fn [v]
-                       (reset! value* v))
-          :style {:font-family "Lato, sans-serif"}
-          :tipFormatter (fn [idx] (get selector-marks idx))}]]
+          ;; Use the styles prop to style individual track segments
+          :trackStyle (clj->js selector-colors)
+          #_#_:styles {:tracks #_(clj->js selector-colors) "linear-gradient(to right ,#C8D4D9, #006190)"}
+          :onAfterChange #(==> [::events/set-zones %1 metric])
+          :onChange (fn [v]
+                      (reset! value* v))
+          :className "rc-slider-custom"
+          ;; Enable range mode for multi-handle support
+          :range true}]]
 
        ;; Zone count selector
        [mui/grid {:item true :xs 2}

@@ -4,7 +4,8 @@
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [re-frame.db]
-            [reagent-dev-tools.core :as dev-tools]))
+            [reagent-dev-tools.core :as dev-tools]
+            [reagent.dom.client :as rdomc]))
 
 (rf/reg-event-db ::set-privilege-override
   (fn [db [_ k value]]
@@ -72,15 +73,22 @@
 
 (def K "lipas.ui.dev-tools")
 
+(defonce react-root (delay
+                      (let [el (.createElement js/document "div")]
+                        (set! (.-id el) "rdt")
+                        (.appendChild (.-body js/document) el)
+                        (rdomc/create-root el))))
+
 (defn start! []
   (when (or (= "localhost" (.. js/window -location -hostname))
             (and (= "true" (js/localStorage.getItem K))
                  (not (utils/prod?))))
-    (dev-tools/start!
-      {:state-atom re-frame.db/app-db
-       :panels [{:key :roles
-                 :label "Roles"
-                 :view [roles]}]})
+    (rdomc/render
+      @react-root
+      [dev-tools/dev-tool {:panels (into (dev-tools/create-default-panels {:state-atom  re-frame.db/app-db})
+                                         [{:key :roles
+                                           :label "Roles"
+                                           :view [roles]}])}])
     :started))
 
 (defn ^:export enable []

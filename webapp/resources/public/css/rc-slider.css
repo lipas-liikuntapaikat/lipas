@@ -1,8 +1,8 @@
 .rc-slider {
   position: relative;
+  width: 100%;
   height: 14px;
   padding: 5px 0;
-  width: 100%;
   border-radius: 6px;
   touch-action: none;
   box-sizing: border-box;
@@ -15,36 +15,55 @@
 .rc-slider-rail {
   position: absolute;
   width: 100%;
-  background-color: #e9e9e9;
   height: 4px;
+  background-color: #e9e9e9;
   border-radius: 6px;
 }
-.rc-slider-track {
+.rc-slider-track,
+.rc-slider-tracks {
   position: absolute;
-  left: 0;
   height: 4px;
-  border-radius: 6px;
   background-color: #abe2fb;
+  border-radius: 6px;
+}
+.rc-slider-track-draggable {
+  z-index: 1;
+  box-sizing: content-box;
+  background-clip: content-box;
+  border-top: 5px solid rgba(0, 0, 0, 0);
+  border-bottom: 5px solid rgba(0, 0, 0, 0);
+  transform: translateY(-5px);
 }
 .rc-slider-handle {
   position: absolute;
+  z-index: 1;
   width: 14px;
   height: 14px;
+  margin-top: -5px;
+  background-color: #fff;
+  border: solid 2px #96dbfa;
+  border-radius: 50%;
   cursor: pointer;
   cursor: -webkit-grab;
-  margin-top: -5px;
   cursor: grab;
-  border-radius: 50%;
-  border: solid 2px #96dbfa;
-  background-color: #fff;
+  opacity: 0.8;
+  user-select: none;
   touch-action: pan-x;
 }
 .rc-slider-handle-dragging.rc-slider-handle-dragging.rc-slider-handle-dragging {
   border-color: #57c5f7;
   box-shadow: 0 0 0 5px #96dbfa;
 }
+.rc-slider-handle-dragging.rc-slider-handle-dragging.rc-slider-handle-dragging-delete {
+  opacity: 0;
+}
 .rc-slider-handle:focus {
   outline: none;
+  box-shadow: none;
+}
+.rc-slider-handle:focus-visible {
+  border-color: #2db7f5;
+  box-shadow: 0 0 0 3px #96dbfa;
 }
 .rc-slider-handle-click-focused:focus {
   border-color: #96dbfa;
@@ -69,10 +88,10 @@
 .rc-slider-mark-text {
   position: absolute;
   display: inline-block;
-  vertical-align: middle;
-  text-align: center;
-  cursor: pointer;
   color: #999;
+  text-align: center;
+  vertical-align: middle;
+  cursor: pointer;
 }
 .rc-slider-mark-text-active {
   color: #666;
@@ -86,14 +105,13 @@
 .rc-slider-dot {
   position: absolute;
   bottom: -2px;
-  margin-left: -4px;
   width: 8px;
   height: 8px;
-  border: 2px solid #e9e9e9;
-  background-color: #fff;
-  cursor: pointer;
-  border-radius: 50%;
   vertical-align: middle;
+  background-color: #fff;
+  border: 2px solid #e9e9e9;
+  border-radius: 50%;
+  cursor: pointer;
 }
 .rc-slider-dot-active {
   border-color: #96dbfa;
@@ -109,9 +127,9 @@
 }
 .rc-slider-disabled .rc-slider-handle,
 .rc-slider-disabled .rc-slider-dot {
+  background-color: #fff;
   border-color: #ccc;
   box-shadow: none;
-  background-color: #fff;
   cursor: not-allowed;
 }
 .rc-slider-disabled .rc-slider-mark-text,
@@ -124,15 +142,25 @@
   padding: 0 5px;
 }
 .rc-slider-vertical .rc-slider-rail {
-  height: 100%;
   width: 4px;
+  height: 100%;
 }
 .rc-slider-vertical .rc-slider-track {
-  left: 5px;
   bottom: 0;
+  left: 5px;
   width: 4px;
 }
+.rc-slider-vertical .rc-slider-track-draggable {
+  border-top: 0;
+  border-right: 5px solid rgba(0, 0, 0, 0);
+  border-bottom: 0;
+  border-left: 5px solid rgba(0, 0, 0, 0);
+  transform: translateX(-5px);
+}
 .rc-slider-vertical .rc-slider-handle {
+  position: absolute;
+  z-index: 1;
+  margin-top: 0;
   margin-left: -5px;
   touch-action: pan-y;
 }
@@ -142,30 +170,23 @@
   height: 100%;
 }
 .rc-slider-vertical .rc-slider-step {
-  height: 100%;
   width: 4px;
+  height: 100%;
 }
 .rc-slider-vertical .rc-slider-dot {
-  left: 2px;
-  margin-bottom: -4px;
-}
-.rc-slider-vertical .rc-slider-dot:first-child {
-  margin-bottom: -4px;
-}
-.rc-slider-vertical .rc-slider-dot:last-child {
-  margin-bottom: -4px;
+  margin-left: -2px;
 }
 .rc-slider-tooltip-zoom-down-enter,
 .rc-slider-tooltip-zoom-down-appear {
+  display: block !important;
   animation-duration: 0.3s;
   animation-fill-mode: both;
-  display: block !important;
   animation-play-state: paused;
 }
 .rc-slider-tooltip-zoom-down-leave {
+  display: block !important;
   animation-duration: 0.3s;
   animation-fill-mode: both;
-  display: block !important;
   animation-play-state: paused;
 }
 .rc-slider-tooltip-zoom-down-enter.rc-slider-tooltip-zoom-down-enter-active,
@@ -187,30 +208,30 @@
 }
 @keyframes rcSliderTooltipZoomDownIn {
   0% {
-    opacity: 0;
-    transform-origin: 50% 100%;
     transform: scale(0, 0);
+    transform-origin: 50% 100%;
+    opacity: 0;
   }
   100% {
-    transform-origin: 50% 100%;
     transform: scale(1, 1);
+    transform-origin: 50% 100%;
   }
 }
 @keyframes rcSliderTooltipZoomDownOut {
   0% {
-    transform-origin: 50% 100%;
     transform: scale(1, 1);
+    transform-origin: 50% 100%;
   }
   100% {
-    opacity: 0;
-    transform-origin: 50% 100%;
     transform: scale(0, 0);
+    transform-origin: 50% 100%;
+    opacity: 0;
   }
 }
 .rc-slider-tooltip {
   position: absolute;
-  left: -9999px;
   top: -9999px;
+  left: -9999px;
   visibility: visible;
   box-sizing: border-box;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -226,12 +247,12 @@
   padding: 4px 0 8px 0;
 }
 .rc-slider-tooltip-inner {
-  padding: 6px 2px;
   min-width: 24px;
   height: 24px;
+  padding: 6px 2px;
+  color: #fff;
   font-size: 12px;
   line-height: 1;
-  color: #fff;
   text-align: center;
   text-decoration: none;
   background-color: #6c6c6c;
@@ -251,4 +272,12 @@
   margin-left: -4px;
   border-width: 4px 4px 0;
   border-top-color: #6c6c6c;
+}
+
+/* Custom styles for zones selector */
+.rc-slider-custom {
+  font-family: Lato, sans-serif;
+}
+.rc-slider-custom .rc-slider-mark-text {
+  font-family: Lato, sans-serif;
 }
