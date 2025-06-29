@@ -142,7 +142,8 @@
           system {:db db :search (create-mock-search)}]
 
       ;; Add some old completed jobs to clean up
-      (let [old-job-id (jobs/enqueue-job! db "email" {:to "old@example.com"})]
+      (let [old-result (jobs/enqueue-job! db "email" {:to "old@example.com" :subject "Old Email" :body "Old test email"})
+            old-job-id (:id old-result)]
         ;; Mark as completed and backdate it
         (jobs/mark-completed! db old-job-id)
         (jdbc/execute! db
@@ -150,7 +151,8 @@
                         old-job-id])
 
         ;; Add a recent job that shouldn't be cleaned
-        (let [recent-job-id (jobs/enqueue-job! db "email" {:to "recent@example.com"})]
+        (let [recent-result (jobs/enqueue-job! db "email" {:to "recent@example.com" :subject "Recent Email" :body "Recent test email"})
+              recent-job-id (:id recent-result)]
           (jobs/mark-completed! db recent-job-id)
 
           ;; Run cleanup job
@@ -172,8 +174,8 @@
                     (fn [db]
                       (log/info "Mock reminder production called")
                       ;; Simulate creating 2 reminder jobs
-                      (jobs/enqueue-job! db "email" {:type "reminder" :to "user1@example.com"})
-                      (jobs/enqueue-job! db "email" {:type "reminder" :to "user2@example.com"}))]
+                      (jobs/enqueue-job! db "email" {:type "reminder" :email "user1@example.com" :link "http://test.com" :body "Reminder 1"})
+                      (jobs/enqueue-job! db "email" {:type "reminder" :email "user2@example.com" :link "http://test.com" :body "Reminder 2"}))]
 
         (let [job {:id 1 :type "produce-reminders" :payload {}}]
           (dispatcher/dispatch-job system job)

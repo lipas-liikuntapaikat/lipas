@@ -91,20 +91,14 @@
 
     (log/debug "Webhook job processed successfully" {:job-id id})))
 
-;; webhook-batch handler removed - now handled by unified webhook handler
-
 (defmethod handle-job "produce-reminders"
-  [{:keys [db]} {:keys [id payload]}]
-  (log/info "Producing reminder jobs")
-  (let [overdue-reminders (lipas.backend.db.db/get-overdue-reminders db)]
+  [{:keys [db]} _paylopad]
+  (log/info "Producing reminder emails")
+  (let [overdue-reminders (reminders/get-overdue db)]
     (doseq [reminder overdue-reminders]
-      (jobs/enqueue-job! db "email"
-                         {:type "reminder"
-                          :email (:email reminder)
-                          :link (:link reminder)
-                          :body (:body reminder)}
+      (jobs/enqueue-job! db "email" (reminders/->email db reminder)
                          {:priority 95}))
-    (log/info "Produced" (count overdue-reminders) "reminder jobs")))
+    (log/info "Produced" (count overdue-reminders) "reminder emails")))
 
 (defmethod handle-job "cleanup-jobs"
   [{:keys [db]} {:keys [id payload]}]

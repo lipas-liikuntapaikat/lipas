@@ -32,9 +32,11 @@
 
   ;; 2 hours ago: Email campaign completed successfully (fast jobs)
   (let [jobs-2h-ago (for [i (range 10)]
-                      (jobs/enqueue-job! db "email"
-                                         {:to (str "user" i "@example.com")
-                                          :subject "Newsletter"}))]
+                      (let [result (jobs/enqueue-job! db "email"
+                                                      {:to (str "user" i "@example.com")
+                                                       :subject "Newsletter"
+                                                       :body "Thank you for subscribing to our newsletter!"})]
+                        (:id result)))]
     (doseq [job-id jobs-2h-ago]
       ;; Simulate job processing by setting started_at before completion
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
@@ -42,8 +44,9 @@
 
   ;; 1 hour ago: Analysis jobs completed (slow jobs)
   (let [analysis-jobs (for [i (range 3)]
-                        (jobs/enqueue-job! db "analysis"
-                                           {:lipas-id (+ 10000 i)}))]
+                        (let [result (jobs/enqueue-job! db "analysis"
+                                                        {:lipas-id (+ 10000 i)})]
+                          (:id result)))]
     (doseq [job-id analysis-jobs]
       ;; Simulate job processing by setting started_at before completion
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
@@ -51,9 +54,10 @@
 
   ;; 30 minutes ago: Some webhook jobs failed
   (let [webhook-jobs (for [i (range 2)]
-                       (jobs/enqueue-job! db "webhook"
-                                          {:lipas-ids [(+ 1000 i)]
-                                           :operation-type "test-webhook"}))]
+                       (let [result (jobs/enqueue-job! db "webhook"
+                                                       {:lipas-ids [(+ 1000 i)]
+                                                        :operation-type "test-webhook"})]
+                         (:id result)))]
     (doseq [job-id webhook-jobs]
       ;; Simulate job processing by setting started_at before failure
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
@@ -63,13 +67,15 @@
   (doseq [i (range 5)]
     (jobs/enqueue-job! db "email"
                        {:to (str "pending" i "@example.com")
-                        :subject "Urgent"}))
+                        :subject "Urgent"
+                        :body "This is an urgent message that needs your attention."}))
 
   (jobs/enqueue-job! db "elevation" {:lipas-id 99999})
 
   ;; Simulate one job currently processing
-  (let [processing-job (jobs/enqueue-job! db "analysis" {:lipas-id 88888})]
-    (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" processing-job]))
+  (let [processing-result (jobs/enqueue-job! db "analysis" {:lipas-id 88888})
+        processing-job-id (:id processing-result)]
+    (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" processing-job-id]))
 
   ;; Return expected counts for validation
   {:completed-emails 10
@@ -209,14 +215,16 @@
     (tu/prune-db!)
 
     ;; Create jobs at different times (simulate with manual updates)
-    (let [old-job (jobs/enqueue-job! db "email" {:to "old@example.com"})]
+    (let [old-result (jobs/enqueue-job! db "email" {:to "old@example.com" :subject "Old Email" :body "This is an old email for testing."})
+          old-job (:id old-result)]
       ;; Simulate job processing by setting started_at before completion
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" old-job])
       (jobs/mark-completed! db old-job)
       ;; Simulate this job being from 48 hours ago
       (jdbc/execute! db ["UPDATE jobs SET created_at = now() - interval '48 hours', completed_at = now() - interval '48 hours' WHERE id = ?" old-job]))
 
-    (let [recent-job (jobs/enqueue-job! db "email" {:to "recent@example.com"})]
+    (let [recent-result (jobs/enqueue-job! db "email" {:to "recent@example.com" :subject "Recent Email" :body "This is a recent email for testing."})
+          recent-job (:id recent-result)]
       ;; Simulate job processing by setting started_at before completion
       (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" recent-job])
       (jobs/mark-completed! db recent-job))

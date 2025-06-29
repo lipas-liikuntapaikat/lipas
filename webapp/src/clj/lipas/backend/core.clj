@@ -9,6 +9,7 @@
             [lipas.backend.accessibility :as accessibility]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
+            [lipas.jobs.core :as jobs]
             [lipas.backend.db.db :as db]
             [lipas.backend.elevation :as elevation]
             [lipas.backend.email :as email]
@@ -37,6 +38,30 @@
 (def types types/all)
 (def admins admins/all)
 (def owners owners/all)
+
+;;; Jobs ;;;
+
+(defn add-to-analysis-queue-v2!
+  [db {:keys [lipas-id] :as _sports-site}]
+  (jobs/enqueue-job! db "analysis" {:lipas-id lipas-id}))
+
+(defn add-to-elevation-queue-v2!
+  [db {:keys [lipas-id] :as _sports-site}]
+  (jobs/enqueue-job! db "elevation" {:lipas-id lipas-id}))
+
+(defn add-to-webhook-queue-v2!
+  [db {:keys [_lipas-ids _loi-ids] :as m}]
+  (jobs/enqueue-job! db "webhook" m))
+
+(defn get-job-admin-metrics
+  "Get comprehensive job queue metrics for admin dashboard."
+  [db opts]
+  (jobs/get-admin-metrics db opts))
+
+(defn get-job-queue-health
+  "Get current job queue health for admin monitoring."
+  [db]
+  (jobs/get-queue-health db))
 
 ;;; User ;;;
 
@@ -156,6 +181,8 @@
   (db/reset-user-password! db (assoc user :password
                                      (hashers/encrypt password)))
   (add-user-event! db user "password-reset"))
+
+;;; Reminders ;;;
 
 (defn get-users-pending-reminders! [db {:keys [id]}]
   (db/get-users-pending-reminders db id))
@@ -982,18 +1009,6 @@
 (defn save-help-data
   [db help-data]
   (db/add-versioned-data! db "help" "active" help-data))
-
-(defn get-job-admin-metrics
-  "Get comprehensive job queue metrics for admin dashboard."
-  [db opts]
-  (require '[lipas.jobs.core :as jobs])
-  ((resolve 'jobs/get-admin-metrics) db opts))
-
-(defn get-job-queue-health
-  "Get current job queue health for admin monitoring."
-  [db]
-  (require '[lipas.jobs.core :as jobs])
-  ((resolve 'jobs/get-queue-health) db))
 
 (comment
   (get-categories)

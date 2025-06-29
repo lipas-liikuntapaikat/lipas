@@ -18,25 +18,6 @@
     :interval-seconds 300 ; Every 5 minutes
     :priority 90}
 
-   :process-analysis-queue
-   {:job-type "analysis"
-    :payload {}
-    :interval-seconds 120 ; Every 2 minutes
-    :priority 70}
-
-   :process-elevation-queue
-   {:job-type "elevation"
-    :payload {}
-    :interval-seconds 15 ; Every 15 seconds
-    :priority 80}
-
-   ;; Commented out - enable when UTP webhook integration is needed
-   #_:process-utp-webhook
-   #_{:job-type "webhook"
-      :payload {}
-      :interval-seconds 30 ; Every 30 seconds
-      :priority 60}
-
    :cleanup-old-jobs
    {:job-type "cleanup-jobs"
     :payload {:days-old 30}

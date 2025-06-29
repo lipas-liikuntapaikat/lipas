@@ -104,12 +104,14 @@
           worker-system {:db db :emailer test-emailer :search nil}]
 
       ;; 1. Enqueue jobs of different types and priorities
-      (let [email-job-id (jobs/enqueue-job! db "email"
-                                            {:to "test@example.com" :subject "Test"}
-                                            {:priority 95})
-            cleanup-job-id (jobs/enqueue-job! db "cleanup-jobs"
-                                              {:days-old 30}
-                                              {:priority 50})]
+      (let [email-job-result (jobs/enqueue-job! db "email"
+                                                {:to "test@example.com" :subject "Test" :body "Test message"}
+                                                {:priority 95})
+            email-job-id (:id email-job-result)
+            cleanup-job-result (jobs/enqueue-job! db "cleanup-jobs"
+                                                  {:days-old 30}
+                                                  {:priority 50})
+            cleanup-job-id (:id cleanup-job-result)]
 
         ;; Validate job creation with Malli
         (is (m/validate pos-int? email-job-id))
@@ -193,9 +195,10 @@
     (let [db (:lipas/db @test-system)]
 
       ;; Create a job that will fail
-      (let [job-id (jobs/enqueue-job! db "email"
-                                      {:to "fail@test.com" :error "simulate-failure"}
-                                      {:max-attempts 3})]
+      (let [job-result (jobs/enqueue-job! db "email"
+                                          {:to "fail@test.com" :subject "Test" :body "This will fail"}
+                                          {:max-attempts 3})
+            job-id (:id job-result)]
 
         ;; Process with mock handler that fails
         (dotimes [attempt 3]
@@ -224,22 +227,22 @@
           correlation-id (java.util.UUID/randomUUID)]
 
       ;; Create parent job
-      (let [parent-result (jobs/enqueue-job-with-correlation!
+      (let [parent-result (jobs/enqueue-job!
                            db "analysis"
                            {:lipas-id 12345}
                            {:correlation-id correlation-id})
             parent-id (:id parent-result)]
 
         ;; Create child jobs with same correlation
-        (jobs/enqueue-job-with-correlation!
+        (jobs/enqueue-job!
          db "email"
-         {:to "notify@test.com" :subject "Analysis started"}
+         {:to "notify@test.com" :subject "Analysis started" :body "Analysis has started"}
          {:correlation-id correlation-id
           :parent-job-id parent-id})
 
-        (jobs/enqueue-job-with-correlation!
+        (jobs/enqueue-job!
          db "webhook"
-         {:url "https://example.com/webhook"}
+         {:lipas-ids [12345]}
          {:correlation-id correlation-id
           :parent-job-id parent-id})
 
@@ -254,5 +257,4 @@
 (comment
   (clojure.test/run-tests *ns*)
   (clojure.test/run-test-var #'job-retry-and-dead-letter-test)
-  (clojure.test/run-test-var #'correlation-id-tracking-test)
-  )
+  (clojure.test/run-test-var #'correlation-id-tracking-test))

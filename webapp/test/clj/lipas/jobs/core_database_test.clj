@@ -55,24 +55,27 @@
 
       ;; Test basic enqueueing
       (testing "Basic job enqueueing"
-        (let [job-id (jobs/enqueue-job! db "email" {:to "test@example.com"})]
+        (let [job-result (jobs/enqueue-job! db "email" {:to "test@example.com" :subject "Test Email" :body "This is a test email"})
+              job-id (:id job-result)]
           (is (pos-int? job-id))
           (let [job (get-job-by-id db job-id)]
             (is (= "email" (:jobs/type job)))
-            (is (= {:to "test@example.com"} (:jobs/payload job)))
+            (is (= {:to "test@example.com" :subject "Test Email" :body "This is a test email"} (:jobs/payload job)))
             (is (= 100 (:jobs/priority job))) ; default priority
             (is (= "pending" (:jobs/status job))))))
 
       ;; Test with custom priority
       (testing "Job enqueueing with custom priority"
-        (let [job-id (jobs/enqueue-job! db "analysis" {:lipas-id 123} {:priority 50})]
+        (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 123} {:priority 50})
+              job-id (:id job-result)]
           (is (pos-int? job-id))
           (let [job (get-job-by-id db job-id)]
             (is (= 50 (:jobs/priority job))))))
 
       ;; Test with custom max-attempts
       (testing "Job enqueueing with custom max-attempts"
-        (let [job-id (jobs/enqueue-job! db "webhook" {} {:max-attempts 5})]
+        (let [job-result (jobs/enqueue-job! db "webhook" {} {:max-attempts 5})
+              job-id (:id job-result)]
           (is (pos-int? job-id))
           (let [job (get-job-by-id db job-id)]
             (is (= 5 (:jobs/max_attempts job))))))
@@ -80,7 +83,8 @@
       ;; Test with future run-at
       (testing "Job enqueueing with future run-at time"
         (let [future-time (java.sql.Timestamp/valueOf "2025-12-31 23:59:59")
-              job-id (jobs/enqueue-job! db "cleanup-jobs" {} {:run-at future-time})]
+              job-result (jobs/enqueue-job! db "cleanup-jobs" {} {:run-at future-time})
+              job-id (:id job-result)]
           (is (pos-int? job-id))
           (let [job (get-job-by-id db job-id)]
             ;; Should be scheduled for future
@@ -91,9 +95,12 @@
     (let [db (test-db)]
 
       ;; Enqueue jobs with different priorities
-      (let [high-pri-id (jobs/enqueue-job! db "email" {:to "high@example.com"} {:priority 95})
-            med-pri-id (jobs/enqueue-job! db "analysis" {:lipas-id 123} {:priority 50})
-            low-pri-id (jobs/enqueue-job! db "cleanup-jobs" {:days-old 7} {:priority 30})]
+      (let [high-pri-result (jobs/enqueue-job! db "email" {:to "high@example.com" :subject "High Priority" :body "Priority test"} {:priority 95})
+            high-pri-id (:id high-pri-result)
+            med-pri-result (jobs/enqueue-job! db "analysis" {:lipas-id 123} {:priority 50})
+            med-pri-id (:id med-pri-result)
+            low-pri-result (jobs/enqueue-job! db "cleanup-jobs" {:days-old 7} {:priority 30})
+            low-pri-id (:id low-pri-result)]
 
         ;; Test priority ordering
         (testing "Jobs fetched in priority order"
@@ -107,8 +114,8 @@
         (testing "Job type filtering"
           ;; Clean slate - re-enqueue for clean test
           (test-utils/prune-db! db)
-          (jobs/enqueue-job! db "email" {:to "test1@example.com"})
-          (jobs/enqueue-job! db "email" {:to "test2@example.com"})
+          (jobs/enqueue-job! db "email" {:to "test1@example.com" :subject "Test 1" :body "Body 1"})
+          (jobs/enqueue-job! db "email" {:to "test2@example.com" :subject "Test 2" :body "Body 2"})
           (jobs/enqueue-job! db "analysis" {:lipas-id 456})
 
           (let [email-jobs (jobs/fetch-next-jobs db {:job-types ["email"] :limit 5})]
@@ -118,7 +125,7 @@
         ;; Test that fetched jobs are marked as processing
         (testing "Fetched jobs are marked as processing"
           (test-utils/prune-db! db)
-          (jobs/enqueue-job! db "email" {:to "test@example.com"})
+          (jobs/enqueue-job! db "email" {:to "test@example.com" :subject "Test Email" :body "This is a test email"})
 
           (let [jobs (jobs/fetch-next-jobs db {:limit 1})]
             (is (= 1 (count jobs)))
@@ -135,7 +142,8 @@
 
       ;; Test completion
       (testing "Job completion"
-        (let [job-id (jobs/enqueue-job! db "email" {:to "test@example.com"})]
+        (let [job-result (jobs/enqueue-job! db "email" {:to "test@example.com" :subject "Test Email" :body "This is a test email"})
+              job-id (:id job-result)]
           ;; Fetch job (marks as processing)
           (let [jobs (jobs/fetch-next-jobs db {:limit 1})
                 job (first jobs)]
@@ -153,7 +161,8 @@
 
       ;; Test failure with retry
       (testing "Job failure and retry logic"
-        (let [job-id (jobs/enqueue-job! db "analysis" {:lipas-id 789} {:max-attempts 3})]
+        (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 789} {:max-attempts 3})
+              job-id (:id job-result)]
           ;; Fetch and fail
           (jobs/fetch-next-jobs db {:limit 1})
           (jobs/mark-failed! db job-id "Test error message")
@@ -167,7 +176,8 @@
 
       ;; Test dead letter after max attempts
       (testing "Dead letter queue after max attempts"
-        (let [job-id (jobs/enqueue-job! db "webhook" {:data "test"} {:max-attempts 1})]
+        (let [job-result (jobs/enqueue-job! db "webhook" {:lipas-ids [123]} {:max-attempts 1})
+              job-id (:id job-result)]
           ;; Fetch and fail (should go to dead immediately)
           (jobs/fetch-next-jobs db {:limit 1})
           (jobs/mark-failed! db job-id "Final failure")
@@ -182,7 +192,7 @@
     (let [db (test-db)]
       ;; Enqueue multiple jobs
       (doseq [i (range 5)]
-        (jobs/enqueue-job! db "email" {:to (str "test" i "@example.com")}))
+        (jobs/enqueue-job! db "email" {:to (str "test" i "@example.com") :subject (str "Test " i) :body (str "Body " i)}))
 
       ;; Fetch jobs concurrently - should get different jobs due to SKIP LOCKED
       (let [batch1 (jobs/fetch-next-jobs db {:limit 2})
@@ -199,9 +209,12 @@
   (testing "Queue statistics reporting"
     (let [db (test-db)]
       ;; Enqueue jobs in different states
-      (let [pending-id (jobs/enqueue-job! db "email" {:to "pending@example.com"})
-            processing-id (jobs/enqueue-job! db "analysis" {:lipas-id 123})
-            completed-id (jobs/enqueue-job! db "cleanup-jobs" {:days-old 7})]
+      (let [pending-result (jobs/enqueue-job! db "email" {:to "pending@example.com" :subject "Pending" :body "Pending test"})
+            pending-id (:id pending-result)
+            processing-result (jobs/enqueue-job! db "analysis" {:lipas-id 123})
+            processing-id (:id processing-result)
+            completed-result (jobs/enqueue-job! db "cleanup-jobs" {:days-old 7})
+            completed-id (:id completed-result)]
 
         ;; Mark one as processing, one as completed  
         (jobs/fetch-next-jobs db {:limit 1}) ; processing-id becomes processing

@@ -51,7 +51,8 @@
     (let [db (test-db)]
 
       (testing "Job retries on failure with exponential backoff"
-        (let [job-id (jobs/enqueue-job! db "email" {:to "retry@example.com"} {:max-attempts 3})]
+        (let [job-result (jobs/enqueue-job! db "email" {:to "retry@example.com" :subject "Retry Test" :body "This will be retried"} {:max-attempts 3})
+              job-id (:id job-result)]
 
           ;; First failure - should retry
           (jobs/fetch-next-jobs db {:limit 1})
@@ -87,7 +88,8 @@
             (is (= "Final failure" (:jobs/error_message job-after-final-failure))))))
 
       (testing "Custom max-attempts respected"
-        (let [job-id (jobs/enqueue-job! db "analysis" {:lipas-id 456} {:max-attempts 1})]
+        (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 456} {:max-attempts 1})
+              job-id (:id job-result)]
           (jobs/fetch-next-jobs db {:limit 1})
           (jobs/mark-failed! db job-id "Single failure")
 
@@ -107,23 +109,22 @@
         (is (thrown? AssertionError
                      (jobs/enqueue-job! db "invalid-type" {:data "test"}))))
 
-      (testing "Malformed payload causes processing failure"
-        (let [job-id (jobs/enqueue-job! db "email" {:no-to-field true})]
-          (let [jobs (jobs/fetch-next-jobs db {:limit 1})]
-            (is (= 1 (count jobs)))
-            (let [job (first jobs)]
-              (jobs/mark-failed! db (:id job) "Missing required field: to")
+      (testing "Malformed payload throws validation exception"
+        ;; Now that validation always runs, malformed payloads throw immediately
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Invalid job payload"
+                              (jobs/enqueue-job! db "email" {:no-to-field true})))
 
-              (let [failed-job (get-job-by-id db job-id)]
-                (is (= "failed" (:jobs/status failed-job)))
-                (is (= "Missing required field: to" (:jobs/error_message failed-job)))))))))))
+        ;; Verify no job was created in the database
+        (let [all-jobs (jdbc/execute! db ["SELECT * FROM jobs"])]
+          (is (= 0 (count all-jobs))))))))
 
 (deftest database-connection-failure-test
   (testing "Handling database connection failures"
     (let [db (test-db)]
 
       (testing "Transient database errors don't corrupt queue state"
-        (let [job-id (jobs/enqueue-job! db "cleanup-jobs" {:days-old 30})]
+        (let [job-result (jobs/enqueue-job! db "cleanup-jobs" {:days-old 30})
+              job-id (:id job-result)]
 
           ;; Simulate database connection issue
           (let [bad-db {:datasource nil}]
@@ -138,8 +139,10 @@
 (deftest system-recovery-stuck-jobs-test
   (testing "Stuck jobs are recovered after system restart"
     (let [db (test-db)
-          stuck-job-id (jobs/enqueue-job! db "analysis" {:lipas-id 789})
-          normal-job-id (jobs/enqueue-job! db "email" {:to "test@example.com"})]
+          stuck-job-result (jobs/enqueue-job! db "analysis" {:lipas-id 789})
+          stuck-job-id (:id stuck-job-result)
+          normal-job-result (jobs/enqueue-job! db "email" {:to "test@example.com" :subject "Test" :body "Test message"})
+          normal-job-id (:id normal-job-result)]
 
       ;; Fetch jobs (marks as processing)
       (jobs/fetch-next-jobs db {:limit 2})
@@ -164,8 +167,9 @@
 (deftest system-recovery-queue-consistency-test
   (testing "Queue maintains consistency after partial processing failures"
     (let [db (test-db)
-          job-ids (doall (for [i (range 5)]
-                           (jobs/enqueue-job! db "email" {:to (str "test" i "@example.com")})))]
+          job-results (doall (for [i (range 5)]
+                               (jobs/enqueue-job! db "email" {:to (str "test" i "@example.com") :subject "Test" :body "Test message"})))
+          job-ids (mapv :id job-results)]
 
       ;; Process some jobs successfully, fail others
       (let [jobs (jobs/fetch-next-jobs db {:limit 5})]
@@ -189,7 +193,8 @@
 (deftest system-recovery-failed-jobs-test
   (testing "Failed jobs can be processed after system recovery"
     (let [db (test-db)
-          job-id (jobs/enqueue-job! db "integration" {:lipas-id 456})]
+          job-result (jobs/enqueue-job! db "integration" {:lipas-id 456})
+          job-id (:id job-result)]
 
       ;; Fail the job initially
       (jobs/fetch-next-jobs db {:limit 1})
@@ -220,7 +225,8 @@
     (let [db (test-db)]
 
       (testing "Jobs become dead after exceeding max attempts"
-        (let [job-id (jobs/enqueue-job! db "webhook" {:url "http://invalid.example.com"} {:max-attempts 2})]
+        (let [job-result (jobs/enqueue-job! db "webhook" {:url "http://invalid.example.com"} {:max-attempts 2})
+              job-id (:id job-result)]
 
           ;; First failure
           (jobs/fetch-next-jobs db {:limit 1})
@@ -241,14 +247,16 @@
 
       (testing "Dead letter queue jobs don't block normal processing"
         ;; Create a dead job
-        (let [dead-job-id (jobs/enqueue-job! db "analysis" {:lipas-id 999} {:max-attempts 1})]
+        (let [dead-job-result (jobs/enqueue-job! db "analysis" {:lipas-id 999} {:max-attempts 1})
+              dead-job-id (:id dead-job-result)]
           (jobs/fetch-next-jobs db {:limit 1})
           (jobs/mark-failed! db dead-job-id "Goes straight to dead")
 
           (is (= "dead" (:jobs/status (get-job-by-id db dead-job-id)))))
 
         ;; Create normal jobs - should still be processable
-        (let [normal-job-id (jobs/enqueue-job! db "email" {:to "normal@example.com"})]
+        (let [normal-job-result (jobs/enqueue-job! db "email" {:to "normal@example.com" :subject "Normal" :body "Normal message"})
+              normal-job-id (:id normal-job-result)]
           (let [jobs (jobs/fetch-next-jobs db {:limit 5})]
             ;; Should only fetch the normal job, not the dead one
             (is (= 1 (count jobs)))
@@ -257,7 +265,8 @@
       (testing "Dead letter queue can be cleaned up"
         ;; Create some dead jobs
         (doseq [i (range 3)]
-          (let [job-id (jobs/enqueue-job! db "cleanup-jobs" {:days-old (* 30 i)} {:max-attempts 1})]
+          (let [job-result (jobs/enqueue-job! db "cleanup-jobs" {:days-old (* 30 (inc i))} {:max-attempts 1})
+                job-id (:id job-result)]
             (jobs/fetch-next-jobs db {:limit 1})
             (jobs/mark-failed! db job-id "Test dead job")))
 

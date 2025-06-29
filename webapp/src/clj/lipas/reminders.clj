@@ -57,6 +57,9 @@
     (log/info "Done!")
     (catch Exception e (log/error e))))
 
+(defn get-overdue [db]
+  (db/get-overdue-reminders db))
+
 (comment
   (require '[lipas.backend.config :as config])
   (require '[lipas.backend.system :as backend])

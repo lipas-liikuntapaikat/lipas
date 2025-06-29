@@ -16,8 +16,9 @@
   - job-type: Type of job
   - status: Final status (completed/failed/dead)
   - started-at: When job started
-  - created-at: When job was created"
-  [db job-type status started-at created-at]
+  - created-at: When job was created
+  - correlation-id: Job correlation ID for tracing"
+  [db job-type status started-at created-at correlation-id]
   (let [now (System/currentTimeMillis)
         duration-ms (when started-at
                       (- now (.getTime started-at)))
@@ -28,7 +29,8 @@
      {:job_type job-type
       :status status
       :duration_ms duration-ms
-      :queue_time_ms queue-time-ms})))
+      :queue_time_ms queue-time-ms
+      :correlation_id correlation-id})))
 
 (defn health-check
   "Perform comprehensive health check of the job queue.

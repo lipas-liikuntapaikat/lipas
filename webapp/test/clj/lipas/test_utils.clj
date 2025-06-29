@@ -135,6 +135,7 @@
    "integration_log"
    "integration_out_queue"
    "jobs"
+   "job_metrics"
    "dead_letter_jobs"
    "circuit_breakers"
    "versioned_data"

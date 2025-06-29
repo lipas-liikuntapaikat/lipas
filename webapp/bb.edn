@@ -258,7 +258,13 @@
                   :task (run 'test-specific)}
 
          test-var {:doc "Run a specific test var"
-                        :task (if-let [test-var (first *command-line-args*)]
-                                (shell "clojure" "-M:dev:test" "--var" test-var)
-                                (do (println "Usage: bb test-var <test-var>")
-                                    (println "Example: bb test-var lipas.gis-test/test-sequence-features")))}}}
+                   :task (if-let [test-var (first *command-line-args*)]
+                           (shell "clojure" "-M:dev:test" "--var" test-var)
+                           (do (println "Usage: bb test-var <test-var>")
+                               (println "Example: bb test-var lipas.gis-test/test-sequence-features")))}
+
+         test-regex {:doc "Run tests with matching namespace regex"
+                     :task (if-let [test-ns-regex (first *command-line-args*)]
+                             (shell "clojure" "-M:dev:test" "--namespace-regex" test-ns-regex)
+                             (do (println "Usage: bb test-regex <test-ns-regex>")
+                                 (println "Example: bb test-regex '^lipas\\.jobs\\..*'")))}}}

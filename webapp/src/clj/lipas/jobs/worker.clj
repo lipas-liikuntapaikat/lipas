@@ -73,23 +73,25 @@
 
                        ;; Record success metrics
                        (monitoring/record-job-metric! db job-type "completed"
-                                                      started-at (:created_at job)))
+                                                      started-at (:created_at job) correlation-id))
 
                      (catch java.util.concurrent.TimeoutException ex
                        (log/error "Job timed out" {:job-id job-id :timeout-ms timeout-ms})
                        (jobs/fail-job! db job-id "Job execution timed out"
                                        {:current-attempt (:attempts job)
-                                        :max-attempts (:max_attempts job)})
+                                        :max-attempts (:max_attempts job)
+                                        :correlation-id correlation-id})
                        (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job)))
+                                                      started-at (:created_at job) correlation-id))
 
                      (catch Exception ex
                        (log/error ex "Job processing failed" {:job job})
                        (jobs/fail-job! db job-id (.getMessage ex)
                                        {:current-attempt (:attempts job)
-                                        :max-attempts (:max_attempts job)})
+                                        :max-attempts (:max_attempts job)
+                                        :correlation-id correlation-id})
                        (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job))))))))))
+                                                      started-at (:created_at job) correlation-id)))))))))
 
 (defn fetch-and-process-jobs
   "Fetch jobs and route them to appropriate thread pools."

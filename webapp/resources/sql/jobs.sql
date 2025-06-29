@@ -19,7 +19,7 @@ WHERE id IN (
     LIMIT :limit
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, type, payload, priority, attempts, max_attempts, created_at;
+RETURNING id, type, payload, priority, attempts, max_attempts, created_at, correlation_id;
 
 -- :name mark-job-completed! :! :n
 -- :doc Mark a job as completed
@@ -168,8 +168,8 @@ SET state = COALESCE(EXCLUDED.state, circuit_breakers.state),
 
 -- :name insert-dead-letter! :! :n
 -- :doc Insert a job into the dead letter queue
-INSERT INTO dead_letter_jobs (original_job, error_message, error_details)
-VALUES (:original_job::jsonb, :error_message, :error_details::jsonb);
+INSERT INTO dead_letter_jobs (original_job, error_message, error_details, correlation_id)
+VALUES (:original_job::jsonb, :error_message, :error_details::jsonb, :correlation_id);
 
 -- :name get-dead-letters :? :*
 -- :doc Get unacknowledged dead letter jobs
@@ -192,8 +192,8 @@ WHERE id = :id;
 
 -- :name record-job-metric! :! :n
 -- :doc Record a job execution metric
-INSERT INTO job_metrics (job_type, status, duration_ms, queue_time_ms)
-VALUES (:job_type, :status, :duration_ms, :queue_time_ms);
+INSERT INTO job_metrics (job_type, status, duration_ms, queue_time_ms, correlation_id)
+VALUES (:job_type, :status, :duration_ms, :queue_time_ms, :correlation_id);
 
 -- Enhanced Job Queries
 
@@ -233,6 +233,62 @@ SELECT id, type, payload, status, created_at, completed_at, correlation_id
 FROM jobs
 WHERE correlation_id = :correlation_id
 ORDER BY created_at;
+
+-- :name get-metrics-by-correlation :? :*
+-- :doc Get job metrics by correlation ID
+SELECT job_type, status, duration_ms, queue_time_ms, recorded_at
+FROM job_metrics
+WHERE correlation_id = :correlation_id
+ORDER BY recorded_at;
+
+-- :name get-correlation-trace :? :*
+-- :doc Get complete trace of all jobs and metrics for a correlation ID
+WITH job_data AS (
+    SELECT 
+        'job' as record_type,
+        id::text as record_id,
+        type as job_type,
+        status,
+        created_at as timestamp,
+        attempts,
+        error_message
+    FROM jobs
+    WHERE correlation_id = :correlation_id
+),
+metric_data AS (
+    SELECT
+        'metric' as record_type,
+        id::text as record_id,
+        job_type,
+        status,
+        recorded_at as timestamp,
+        NULL::int as attempts,
+        NULL::text as error_message
+    FROM job_metrics
+    WHERE correlation_id = :correlation_id
+)
+SELECT * FROM job_data
+UNION ALL
+SELECT * FROM metric_data
+ORDER BY timestamp;
+
+-- :name get-performance-metrics-by-correlation :? :*
+-- :doc Get detailed performance metrics for a specific correlation ID
+SELECT 
+    type,
+    status,
+    count(*) as job_count,
+    round(avg(extract(epoch from (coalesce(completed_at, now()) - started_at)))) as avg_duration_seconds,
+    round(percentile_cont(0.5) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p50_duration_seconds,
+    round(percentile_cont(0.95) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p95_duration_seconds,
+    round(avg(attempts)) as avg_attempts,
+    min(created_at) as earliest_job,
+    max(created_at) as latest_job
+FROM jobs 
+WHERE correlation_id = :correlation_id
+  AND started_at IS NOT NULL
+GROUP BY type, status
+ORDER BY type, status;
 
 -- Monitoring Queries
 
