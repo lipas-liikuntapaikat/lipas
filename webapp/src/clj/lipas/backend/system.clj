@@ -29,12 +29,12 @@
   (email/->SMTPEmailer config))
 
 (defmethod ig/init-key :lipas/search [_ config]
-  (let [client  (search/create-cli config)
+  (let [client (search/create-cli config)
         indices (:indices config)]
 
     ;; Ensure indices exist
     (when (:create-indices config true)
-      (doseq [[group m]      indices
+      (doseq [[group m] indices
               [_k index-name] m]
         (println "Ensuring index" index-name "exists")
         (when-not (search/index-exists? client index-name)
@@ -43,8 +43,8 @@
             (pprint mappings)
             (search/create-index! client index-name mappings)))))
 
-    {:client   client
-     :indices  indices
+    {:client client
+     :indices indices
      :mappings search/mappings}))
 
 (defmethod ig/init-key :lipas/mailchimp [_ config]
@@ -68,21 +68,16 @@
 (defmethod ig/init-key :lipas/aws [_ config]
   (assoc config :credentials-provider (DefaultCredentialsProvider/create)))
 
-(defmethod ig/halt-key! :lipas/aws [_ _m]
-  )
+(defmethod ig/halt-key! :lipas/aws [_ _m])
 
-(defmethod ig/init-key :lipas/open-ai [_ _config]
-  )
+(defmethod ig/init-key :lipas/open-ai [_ _config])
 
-(defmethod ig/halt-key! :lipas/open-ai [_ _m]
-  )
+(defmethod ig/halt-key! :lipas/open-ai [_ _m])
 
 (defmethod ig/init-key :lipas/ptv [_ config]
   (assoc config :tokens (atom {})))
 
-(defmethod ig/halt-key! :lipas/ptv [_ _m]
-  )
-
+(defmethod ig/halt-key! :lipas/ptv [_ _m])
 
 (defn mask [_s]
   "[secret]")
@@ -109,5 +104,23 @@
 (defn stop-system! [system]
   (ig/halt! system))
 
-(defn -main [& _args]
-  (reset! current-system (start-system! config/system-config)))
+(defn -main [& args]
+  (let [mode (first args)]
+    (case mode
+      "server"
+      (do
+        (println "Starting LIPAS server...")
+        (reset! current-system (start-system! config/system-config)))
+
+      "worker"
+      (do
+        (println "Starting LIPAS worker...")
+        (require 'lipas.jobs.system)
+        (let [start-worker! (resolve 'lipas.jobs.system/start-worker-system!)]
+          (reset! current-system (start-worker!))))
+
+      ;; Default to server for backward compatibility
+      (do
+        (println "No mode specified, defaulting to server...")
+        (println "Usage: java -jar backend.jar [server|worker]")
+        (reset! current-system (start-system! config/system-config))))))

@@ -157,6 +157,9 @@ services:
       GEOSERVER_ADMIN_PASSWORD:
       GEOSERVER_ADMIN_USER:
       ENVIRONMENT:
+      # Worker configuration (via environment variables)
+      WORKER_FAST_THREADS: 2
+      WORKER_GENERAL_THREADS: 3
     volumes:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
@@ -164,7 +167,7 @@ services:
   backend:
     extends:
       service: backend-base
-    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar -m lipas.backend.system server
     ports:
       - '8091:8091'
       - '7888:7888'
@@ -301,7 +304,7 @@ services:
       options:
         gelf-address: "udp://localhost:5000"
         tag: "worker-v2"
-    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar worker
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar -m lipas.backend.system worker
     links:
       - postgres
       - elasticsearch
