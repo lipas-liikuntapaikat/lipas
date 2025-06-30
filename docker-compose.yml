@@ -259,40 +259,40 @@ services:
       - postgres
       - elasticsearch
 
-  worker:
-    extends:
-      service: backend-base
-    restart: unless-stopped
-    logging:
-      options:
-        tag: "worker"
-    entrypoint: clojure -M -m lipas.worker
-    links:
-      - postgres
-      - elasticsearch
-      - osrm-foot
-      - osrm-bicycle
-      - osrm-car
+  # worker:
+  #   extends:
+  #     service: backend-base
+  #   restart: unless-stopped
+  #   logging:
+  #     options:
+  #       tag: "worker"
+  #   entrypoint: clojure -M -m lipas.worker
+  #   links:
+  #     - postgres
+  #     - elasticsearch
+  #     - osrm-foot
+  #     - osrm-bicycle
+  #     - osrm-car
 
-  worker-v2:
-    extends:
-      service: backend-base
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "3"
-    entrypoint: clojure -M -m lipas.jobs.main
-    links:
-      - postgres
-      - elasticsearch
-      - osrm-foot
-      - osrm-bicycle
-      - osrm-car
+  # worker:
+  #   extends:
+  #     service: backend-base
+  #   restart: unless-stopped
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "100m"
+  #       max-file: "3"
+  #   entrypoint: clojure -M -m lipas.jobs.main
+  #   links:
+  #     - postgres
+  #     - elasticsearch
+  #     - osrm-foot
+  #     - osrm-bicycle
+  #     - osrm-car
 
   # Alternative: Using uberjar for worker-v2 (for production deployments)
-  worker-v2-jar:
+  worker:
     extends:
       service: backend-base
     restart: unless-stopped
@@ -301,14 +301,13 @@ services:
       options:
         gelf-address: "udp://localhost:5000"
         tag: "worker-v2"
-    command: java -Duser.timezone=UTC -Xmx1G -jar backend.jar worker
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar worker
     links:
       - postgres
       - elasticsearch
       - osrm-foot
       - osrm-bicycle
       - osrm-car
-
 
   node-base:
     image: node:16-alpine
