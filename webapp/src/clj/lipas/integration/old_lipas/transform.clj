@@ -69,7 +69,9 @@
                        :construction-year :location :properties :reservations-link])
 
          (assoc :last-modified (-> m :event-date UTC->last-modified)
-                :nameSe (-> m :name-localized :se)
+                :name {:fi (:name m)
+                       :se (-> m :name-localized :se)
+                       :en (-> m :name-localized :en)}
                 :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
                 :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
                 :school-use (-> m :properties :school-use?)
