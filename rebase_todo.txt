@@ -1,0 +1,40 @@
+pick 2d9f0ec3 Add sports-place-types and by type-code
+squash 2f7c3bd8 Remove redudant import
+squash 336eee37 Remove auth
+squash 992ba069 Add properties to sports-place-type
+squash 9ad0facf add stuff to .gitignore
+squash 381dee92 Add properties to sports-place-type by type code
+squash 6077fa8c Implement categories
+squash 59f0db98 Add schema for legacy sports places
+squash 0fddaa29 Working on legacy-api get-sports-places schema
+squash 14c5ae83 collection format wip
+squash 81f2cb91 Move to malli part1
+
+pick 18c2f33d Implement legacy API sportsplaces endpoint
+squash 61d3d9ec Index to legacy_sports_sites_current
+squash 4b7b83b5 Use format-sports-place in fetch-sports-places function
+squash 18bf5569 Legacy sports place indexing name type
+squash 6d5cb8c4 Dissoc nameLocalized
+squash 9aff1ec4 Overhaul just copy code from old lipas
+squash 386ac090 Util function to reindex single legacy sport-site
+squash 9431817c Legacy reindex geometries
+squash f5ca7bf8 First working version for sports-places
+squash a9501456 remove unused code
+squash 38f5a646 Implement sports-places by id
+squash f4c77b7e Delete old route
+
+pick 1d8f163a Add template for deleted-sports-places
+squash fa00e791 Add legacy sports place malli
+squash 9179e0be Remove dead code
+squash 047be8e6 Add malli for legacy types and categories
+squash eceb79a0 Fix typo
+squash 9cbb940c Implement get deleted-sports-places
+
+pick ec93e91f Fix freeUse and schoolUse
+squash 93e540a8 Fix timestamp to legay format
+squash f48e6172 Fix owner and admin
+squash dab74b2a Fix legacy API data filtering and field selection logic
+squash 5862bbc3 Fix unit tests
+squash e9265e9b Pull request review changes
+squash d68790e0 Polish up review fixes
+squash 38158832 Fetch deleted sports sites from ES

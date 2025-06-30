@@ -253,9 +253,10 @@
       (try
         (search/delete-index! client idx-name)
         (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
+          (let [error-type (-> ex ex-data :body :error :root_cause first :type)]
+            (when-not (or (= "index_not_found_exception" error-type)
+                          (= "illegal_argument_exception" error-type))
+              (throw ex)))))
       (when-let [mapping (mappings idx-name)]
         (search/create-index! client idx-name mapping)))))
 

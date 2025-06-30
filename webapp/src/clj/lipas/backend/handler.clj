@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
+            [lipas.backend.api.v1 :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
@@ -13,8 +14,8 @@
             [lipas.schema.help :as help-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
-            [reitit.coercion.spec]
             [reitit.coercion.malli]
+            [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -777,6 +778,7 @@
       (ptv-handler/routes ctx)
       (jobs-handler/routes ctx)]
 
+     (v1/routes ctx)
      (v2/routes ctx)]
 
     {:data
