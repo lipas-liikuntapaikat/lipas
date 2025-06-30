@@ -27,6 +27,7 @@ webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
 webapp/.clj-kondo/.cache
 webapp/.clj-kondo/*/
+webapp/.clj-kondo/imports
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache
@@ -44,3 +45,8 @@ webapp/.eca/
 # IDE and development files
 .claude/
 .git-rewrite/
+webapp/local-scrap
+.clj-kondo/**/*
+.lsp
+webapp/.clj-kondo
+.nrepl-port
