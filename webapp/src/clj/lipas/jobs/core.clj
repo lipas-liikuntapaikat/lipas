@@ -20,19 +20,6 @@
 (def job-status-schema
   [:enum "pending" "processing" "completed" "failed" "dead"])
 
-(def priority-schema
-  [:and int? [:>= 0]])
-
-(def payload-schema map?)
-
-(def job-spec-schema
-  [:map
-   [:job-type job-type-schema]
-   [:payload payload-schema]
-   [:priority {:optional true} priority-schema]
-   [:max-attempts {:optional true} int?]
-   [:run-at {:optional true} any?]])
-
 ;; Job duration classifications for smart concurrency
 (def job-duration-types
   "Classification of job types by expected duration.
@@ -307,111 +294,6 @@
   [db days]
   (log/info "Cleaning up jobs older than" days "days")
   (jobs-db/cleanup-old-jobs! db {:days days}))
-
-;; Webhook Operations
-
-(defn enqueue-webhook!
-  "Enqueue a single webhook job for immediate delivery.
-
-  Parameters:
-  - db: Database connection
-  - webhook-data: Map with :lipas-ids and/or :loi-ids vectors
-  - opts: Optional priority and other job options
-
-  Returns: Job ID"
-  [db webhook-data & [opts]]
-  (log/debug "Enqueuing individual webhook"
-             {:lipas-ids-count (count (:lipas-ids webhook-data []))
-              :loi-ids-count (count (:loi-ids webhook-data []))})
-  (enqueue-job! db "webhook" webhook-data (merge {:priority 90} opts)))
-
-(defn enqueue-webhook-batch!
-  "Enqueue a batch webhook job for bulk operations.
-
-  Extracts lipas-ids and loi-ids from changes and creates a unified webhook job.
-
-  Parameters:
-  - db: Database connection
-  - changes: Vector of change maps with :lipas-id or :id fields
-  - operation-info: Map with:
-    :operation-type - Description of the bulk operation
-    :initiated-by - Who initiated the operation
-  - opts: Optional priority and other job options
-
-  Returns: Job ID"
-  [db changes operation-info & [opts]]
-  {:pre [(vector? changes) (map? operation-info)]}
-
-  (let [lipas-ids (keep :lipas-id changes)
-        loi-ids (keep #(when (and (:id %) (not (:lipas-id %))) (:id %)) changes)
-        site-count (+ (count lipas-ids) (count loi-ids))
-        payload {:lipas-ids (vec lipas-ids)
-                 :loi-ids (vec loi-ids)
-                 :operation-type (:operation-type operation-info)
-                 :initiated-by (:initiated-by operation-info)
-                 :site-count site-count}]
-
-    (log/info "Enqueuing webhook batch"
-              {:operation-type (:operation-type operation-info)
-               :lipas-ids-count (count lipas-ids)
-               :loi-ids-count (count loi-ids)
-               :initiated-by (:initiated-by operation-info)})
-
-    (enqueue-job! db "webhook" payload (merge {:priority 85} opts))))
-
-(defn should-use-batch-webhook?
-  "Determine if a set of changes should use batch webhook or individual webhooks.
-
-  Parameters:
-  - changes: Vector of change maps
-  - operation-context: Map with context about the operation
-
-  Returns: Boolean - true if should use batch webhook"
-  [changes operation-context]
-  (let [change-count (count changes)
-        batch-threshold (get operation-context :batch-threshold 5)
-        is-bulk-operation? (get operation-context :is-bulk-operation false)]
-
-    (or is-bulk-operation?
-        (>= change-count batch-threshold))))
-
-;; Legacy compatibility functions for existing code
-
-(defn add-to-analysis-queue!
-  "Legacy compatibility: Add analysis job to unified queue."
-  [db sports-site]
-  (enqueue-job! db "analysis" {:lipas-id (:lipas-id sports-site)} {:priority 80}))
-
-(defn add-to-elevation-queue!
-  "Legacy compatibility: Add elevation job to unified queue."
-  [db sports-site]
-  (enqueue-job! db "elevation" {:lipas-id (:lipas-id sports-site)} {:priority 70}))
-
-(defn add-to-integration-out-queue!
-  "Legacy compatibility: Add integration job to unified queue."
-  [db sports-site]
-  (enqueue-job! db "integration" {:lipas-id (:lipas-id sports-site)} {:priority 90}))
-
-(defn add-to-webhook-queue!
-  "Legacy compatibility: Add webhook job to unified queue."
-  [db batch-data]
-  (enqueue-job! db "webhook" {:batch-data batch-data} {:priority 85}))
-
-(defn add-to-email-out-queue!
-  "Legacy compatibility: Add email job to unified queue."
-  [db message]
-  (let [normalized-message (cond-> message
-                             ;; If missing body, add default body for general email format
-                             (and (:to message) (:subject message) (not (:body message)))
-                             (assoc :body ""))]
-    (enqueue-job! db "email" normalized-message {:priority 95})))
-
-(defn validate-payload
-  "Validate a payload for a specific job type.
-
-   Returns: {:valid? boolean :errors [...] :value ...}"
-  [job-type payload]
-  (payload-schema/validate-payload-for-type job-type payload))
 
 (defn example-job-payloads
   "Get example payloads for all job types for documentation/testing."

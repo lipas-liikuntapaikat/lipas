@@ -103,7 +103,18 @@
 (defn update-circuit-breaker!
   "Update circuit breaker state in database."
   [db service-name updates]
-  (jobs-db/update-circuit-breaker! db (merge {:service_name service-name} updates)))
+  ;; Ensure breaker exists before updating
+  (jobs-db/ensure-circuit-breaker! db {:service_name service-name})
+  ;; Now update specific fields
+  (let [params (merge {:service_name service-name
+                       :state nil
+                       :failure_count nil
+                       :success_count nil
+                       :last_failure_at nil
+                       :opened_at nil
+                       :half_opened_at nil}
+                      updates)]
+    (jobs-db/update-circuit-breaker! db params)))
 
 (defn circuit-breaker-state
   "Determine if circuit breaker should allow request.
@@ -112,19 +123,19 @@
   [breaker {:keys [open-duration-ms failure-threshold]
             :or {open-duration-ms 60000
                  failure-threshold 5}}]
-  (let [{:keys [state failure-count opened-at]} breaker
+  (let [{:keys [state failure_count opened_at]} breaker
         now (System/currentTimeMillis)]
     (cond
       ;; Not in database yet - closed
       (nil? breaker) :closed
 
-      ;; Currently closed
-      (= state "closed") :closed
+      ;; No state or closed state - closed
+      (or (nil? state) (= state "closed")) :closed
 
       ;; Open but timeout expired - half-open
       (and (= state "open")
-           opened-at
-           (> (- now (.getTime opened-at)) open-duration-ms))
+           opened_at
+           (> (- now (.getTime opened_at)) open-duration-ms))
       :half-open
 
       ;; Otherwise use current state
@@ -176,23 +187,24 @@
                                      {:success_count (inc (or (:success_count breaker) 0))}))
           result)
         (catch Exception e
-          ;; Failure - increment failure count
-          (let [failure-count (inc (or (:failure_count breaker) 0))]
-            (if (>= failure-count (:failure-threshold opts 5))
-              ;; Open the circuit
-              (do
-                (update-circuit-breaker! db service-name
-                                         {:state "open"
-                                          :failure_count failure-count
-                                          :opened_at (java.sql.Timestamp. (System/currentTimeMillis))
-                                          :last_failure_at (java.sql.Timestamp. (System/currentTimeMillis))})
-                (when-let [on-open (:on-open opts)]
-                  (on-open {:service service-name
-                            :failure-count failure-count})))
-              ;; Just increment failure count
-              (update-circuit-breaker! db service-name
-                                       {:failure_count failure-count
-                                        :last_failure_at (java.sql.Timestamp. (System/currentTimeMillis))})))
+          ;; Ensure breaker exists
+          (jobs-db/ensure-circuit-breaker! db {:service_name service-name})
+          ;; Atomically increment failure count and check if we should open
+          (let [now (java.sql.Timestamp. (System/currentTimeMillis))
+                rows-updated (jobs-db/increment-circuit-breaker-failure!
+                              db {:service_name service-name
+                                  :last_failure_at now
+                                  :failure_threshold (:failure-threshold opts 5)
+                                  :opened_at now})]
+            ;; If no rows updated, circuit was already open or half-open
+            (when (> rows-updated 0)
+              ;; Check if we just opened the circuit
+              (let [updated-breaker (get-circuit-breaker db service-name)]
+                (when (and (= "open" (:state updated-breaker))
+                           (>= (:failure_count updated-breaker) (:failure-threshold opts 5)))
+                  (when-let [on-open (:on-open opts)]
+                    (on-open {:service service-name
+                              :failure-count (:failure_count updated-breaker)}))))))
           (throw e))))))
 
 (defmacro with-circuit-breaker

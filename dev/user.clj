@@ -60,6 +60,3 @@
   (println "⚡ Dev System ready!"))
 
 ;;; NOTE: webapp-repl contains several handy development utilities! ***
-
-;; Load the deps always for convenience
-(load-webapp-dev-deps!)

@@ -13,7 +13,7 @@
 (defn routes [{:keys [db search ptv] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
-    :middleware [mw/token-auth mw/auth]
+    #_#_:middleware [mw/token-auth mw/auth]
     :tags ["ptv"]
     :no-doc false}
 

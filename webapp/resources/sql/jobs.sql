@@ -146,24 +146,54 @@ FROM circuit_breakers
 ORDER BY service_name;
 
 -- :name update-circuit-breaker! :! :n
--- :doc Update or insert circuit breaker state
-INSERT INTO circuit_breakers (service_name, state, failure_count, success_count, 
-                              last_failure_at, opened_at, half_opened_at)
-VALUES (:service_name, 
-        :state, 
-        :failure_count, 
-        :success_count,
-        :last_failure_at, 
-        :opened_at, 
-        :half_opened_at)
-ON CONFLICT (service_name) DO UPDATE
-SET state = COALESCE(EXCLUDED.state, circuit_breakers.state),
-    failure_count = COALESCE(EXCLUDED.failure_count, circuit_breakers.failure_count),
-    success_count = COALESCE(EXCLUDED.success_count, circuit_breakers.success_count),
-    last_failure_at = COALESCE(EXCLUDED.last_failure_at, circuit_breakers.last_failure_at),
-    opened_at = COALESCE(EXCLUDED.opened_at, circuit_breakers.opened_at),
-    half_opened_at = COALESCE(EXCLUDED.half_opened_at, circuit_breakers.half_opened_at),
-    updated_at = now();
+-- :doc Update or insert circuit breaker state  
+-- For new breakers, use ensure-circuit-breaker! first
+-- This preserves existing values when updating specific fields
+UPDATE circuit_breakers
+SET state = COALESCE(:state, state),
+    failure_count = COALESCE(:failure_count, failure_count),
+    success_count = COALESCE(:success_count, success_count),
+    last_failure_at = COALESCE(:last_failure_at, last_failure_at),
+    opened_at = COALESCE(:opened_at, opened_at),
+    half_opened_at = COALESCE(:half_opened_at, half_opened_at),
+    updated_at = now()
+WHERE service_name = :service_name;
+
+-- :name ensure-circuit-breaker! :! :n
+-- :doc Ensure circuit breaker exists with default values
+INSERT INTO circuit_breakers (service_name, state, failure_count, success_count)
+VALUES (:service_name, 'closed', 0, 0)
+ON CONFLICT (service_name) DO NOTHING;
+
+-- :name increment-circuit-breaker-failure! :! :n
+-- :doc Atomically increment failure count and potentially open circuit
+-- Returns number of rows updated
+UPDATE circuit_breakers
+SET failure_count = failure_count + 1,
+    last_failure_at = :last_failure_at,
+    state = CASE 
+      WHEN failure_count + 1 >= :failure_threshold THEN 'open'
+      ELSE state
+    END,
+    opened_at = CASE
+      WHEN failure_count + 1 >= :failure_threshold AND state != 'open' THEN :opened_at
+      ELSE opened_at
+    END,
+    updated_at = now()
+WHERE service_name = :service_name
+  AND state = 'closed';
+
+-- :name reset-circuit-breaker! :! :n
+-- :doc Reset circuit breaker to closed state
+UPDATE circuit_breakers
+SET state = 'closed',
+    failure_count = 0,
+    success_count = 0,
+    last_failure_at = NULL,
+    opened_at = NULL,
+    half_opened_at = NULL,
+    updated_at = now()
+WHERE service_name = :service_name;
 
 -- Dead Letter Queue Queries
 

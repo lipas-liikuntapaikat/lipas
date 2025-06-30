@@ -21,8 +21,13 @@
    [:map
     [:type [:= "reminder"]]
     [:email :string]
-    [:link :string]
-    [:body :string]]
+    [:link
+     [:map
+      [:link :string]
+      [:valid-days :int]]]
+    [:body
+     [:map
+      [:message :string]]]]
    ;; General email
    [:map
     [:to :string]
@@ -79,21 +84,6 @@
                             [:type [:= "monitor-queue-health"]]
                             [:payload monitor-queue-health-payload-schema]]]])
 
-;; Validation functions
-(defn validate-job-payload
-  "Validate a complete job with type and payload.
-   Returns {:valid? boolean :errors [...] :value ...}"
-  [job]
-  (try
-    (if (m/validate job-payload-schema job)
-      {:valid? true :value job}
-      {:valid? false
-       :errors (-> job-payload-schema
-                   (m/explain job)
-                   (me/humanize))})
-    (catch Exception e
-      {:valid? false
-       :errors {:exception (.getMessage e)}})))
 
 (defn validate-payload-for-type
   "Validate just a payload for a specific job type.

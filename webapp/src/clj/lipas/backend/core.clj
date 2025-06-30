@@ -41,21 +41,6 @@
 
 ;;; Jobs ;;;
 
-(defn add-to-analysis-queue-v2!
-  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
-  [db {:keys [lipas-id] :as _sports-site}]
-  (jobs/enqueue-job! db "analysis" {:lipas-id lipas-id}))
-
-(defn add-to-elevation-queue-v2!
-  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
-  [db {:keys [lipas-id] :as _sports-site}]
-  (jobs/enqueue-job! db "elevation" {:lipas-id lipas-id}))
-
-(defn add-to-webhook-queue-v2!
-  "DEPRECATED: Use jobs/enqueue-job! directly with correlation ID for better tracing."
-  [db {:keys [_lipas-ids _loi-ids] :as m}]
-  (jobs/enqueue-job! db "webhook" m))
-
 (defn get-job-admin-metrics
   "Get comprehensive job queue metrics for admin dashboard."
   [db opts]
@@ -539,21 +524,6 @@
   [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
-(defn add-to-analysis-queue!
-  "DEPRECATED: Use add-to-analysis-queue-v2! or jobs/enqueue-job! instead."
-  [db sports-site]
-  (db/add-to-analysis-queue! db (:lipas-id sports-site)))
-
-(defn add-to-elevation-queue!
-  "DEPRECATED: Use add-to-elevation-queue-v2! or jobs/enqueue-job! instead."
-  [db sports-site]
-  (db/add-to-elevation-queue! db (:lipas-id sports-site)))
-
-(defn add-to-webhook-queue!
-  "DEPRECATED: Use add-to-webhook-queue-v2! or jobs/enqueue-job! instead."
-  [db {:keys [_lipas-ids _loi-ids] :as m}]
-  (db/add-to-webhook-queue! db m))
-
 (defn sync-ptv! [tx search ptv-component user props]
   (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
     (f tx search ptv-component user props)))
@@ -601,8 +571,12 @@
                                   {:correlation-id correlation-id
                                    :priority 80})
 
-               ;; Webhook notification
-               (jobs/enqueue-job! tx "webhook"
+               ;; Webhook Notification
+
+               ;; NOTE: Webhook is disabled until UTP or someone else
+               ;; starts using it again.
+
+               #_(jobs/enqueue-job! tx "webhook"
                                   {:lipas-ids [(:lipas-id resp)]
                                    :operation-type (if (new? sports-site) "create" "update")
                                    :initiated-by (:email user)}

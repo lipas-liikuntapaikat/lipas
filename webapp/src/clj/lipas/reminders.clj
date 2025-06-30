@@ -68,6 +68,10 @@
 (defn get-overdue [db]
   (db/get-overdue-reminders db))
 
+(defn mark-processed!
+  [db reminder-id]
+  (db/update-reminder-status! db {:id reminder-id :status "sent"}))
+
 (comment
   (require '[lipas.backend.config :as config])
   (require '[lipas.backend.system :as backend])
@@ -75,7 +79,7 @@
   (def system (backend/start-system! config))
   (def db (:db system))
   (def emailer (:emailer system))
-  (db/get-overdue-reminders db)
+  (db/get-overdue-reminders (repl/db))
   (add-overdue-to-queue! db)
   (process-email-out-queue! db emailer)
   (process! db emailer))

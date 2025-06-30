@@ -11,7 +11,7 @@
   [{:keys [db] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
-    :middleware [mw/token-auth mw/auth]
+    #_#_:middleware [mw/token-auth mw/auth]
     :tags ["admin-jobs"]
     :no-doc false}
 
@@ -35,3 +35,12 @@
       (fn [_req]
         {:status 200
          :body (core/get-job-queue-health db)})}}]])
+
+(comment
+  (require '[lipas.backend.jwt :as jwt])
+  (def admin (repl/get-robot-user))
+  (def token (jwt/create-token admin {:terse? true :valid-seconds (* 15 60)}))
+  (println
+   (str (format
+         "curl -X POST -H \"Authorization: Token %s\" http://localhost:8091/api/actions/create-jobs-metrics-report"
+         token))))

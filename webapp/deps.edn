@@ -20,8 +20,11 @@
         metosin/ring-http-response {:mvn/version "0.9.0"},
         cheshire/cheshire {:mvn/version "5.13.0"},
         buddy/buddy {:mvn/version "2.0.0"},
+        ;; Legacy
+        org.clojure/java.jdbc {:mvn/version "0.7.12"}
+        ;; Migrating ^ to this, gradually
         com.github.seancorfield/next.jdbc {:mvn/version "1.3.939"},
-        com.layerware/hugsql {:mvn/version "0.4.8"},
+        com.layerware/hugsql {:mvn/version "0.5.3"},
         org.postgresql/postgresql {:mvn/version "42.2.2"},
         com.github.seancorfield/honeysql {:mvn/version "2.6.1270"},
         nrepl/nrepl {:mvn/version "1.2.0"},

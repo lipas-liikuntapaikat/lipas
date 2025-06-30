@@ -99,8 +99,8 @@
   (log/info "Producing reminder emails")
   (let [overdue-reminders (reminders/get-overdue db)]
     (doseq [reminder overdue-reminders]
-      (jobs/enqueue-job! db "email" (reminders/->email db reminder)
-                         {:priority 95}))
+      (jobs/enqueue-job! db "email" (reminders/->email db reminder) {:priority 95})
+      (reminders/mark-processed! db (:id reminder)))
     (log/info "Produced" (count overdue-reminders) "reminder emails")))
 
 (defmethod handle-job "cleanup-jobs"

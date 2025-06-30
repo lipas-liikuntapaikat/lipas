@@ -167,29 +167,6 @@
       ;; Stop scheduler
       (scheduler/stop-scheduler!))))
 
-(deftest ^:integration legacy-compatibility-test
-  (testing "Legacy queue functions still work with unified system"
-    (let [db (:lipas/db @test-system)
-          test-site {:lipas-id 12345 :name "Test Site"}]
-
-      ;; Test all legacy functions
-      (jobs/add-to-analysis-queue! db test-site)
-      (jobs/add-to-elevation-queue! db test-site)
-      (jobs/add-to-integration-out-queue! db test-site)
-      (jobs/add-to-email-out-queue! db {:to "legacy@test.com" :subject "Legacy"})
-
-      ;; Validate jobs were created correctly
-      (let [all-jobs (get-all-jobs db)]
-        (is (m/validate [:sequential job-schema] all-jobs))
-        (is (= 4 (count all-jobs)))
-
-        ;; Validate job types and priorities match legacy expectations
-        (let [job-types (map :jobs/type all-jobs)
-              priorities (map :jobs/priority all-jobs)]
-          (is (= #{"analysis" "elevation" "integration" "email"} (set job-types)))
-          (is (every? #(>= % 70) priorities)) ; All have reasonable priorities
-          (is (some #(= 95 %) priorities)))))))
-
 (deftest ^:integration job-retry-and-dead-letter-test
   (testing "Jobs retry with exponential backoff and move to dead letter queue"
     (let [db (:lipas/db @test-system)]
