@@ -134,14 +134,13 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                :url "https://creativecommons.org/licenses/by-sa/4.0/"}}
 
        ;; These get merged in a wild way
-       #_#_:tags [{:name "Sports Sites"
+       #_#_:tags [{:name        "Sports Sites"
                    :description "The core entities of LIPAS."}
-                  {:name "Sports Site Categories"
+                  {:name        "Sports Site Categories"
                    :description "Hierarchical categorization of sports facilities"}
-                  {:name "Locations of Interest"
+                  {:name        "Locations of Interest"
                    :description "Additional non-facility entities in LIPAS"}]}
-
-;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
+      ;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
       ;; these routes from that.
       :swagger {:id :hide-from-default}
       :coercion reitit.coercion.malli/coercion}
