@@ -295,6 +295,15 @@
   (log/info "Cleaning up jobs older than" days "days")
   (jobs-db/cleanup-old-jobs! db {:days days}))
 
+(defn reset-stuck-jobs!
+  "Reset jobs that have been stuck in processing state for too long.
+   This should be called on worker startup to recover from crashes."
+  [db timeout-minutes]
+  (let [result (jobs-db/reset-stuck-jobs! db {:timeout_minutes timeout-minutes})]
+    (when (pos? result)
+      (log/warn "Reset stuck jobs on startup" {:count result :timeout-minutes timeout-minutes}))
+    result))
+
 (defn example-job-payloads
   "Get example payloads for all job types for documentation/testing."
   []

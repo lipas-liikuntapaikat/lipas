@@ -6,6 +6,7 @@
   (:require
    [integrant.core :as ig]
    [lipas.backend.config :as config]
+   [lipas.jobs.core :as jobs]
    [lipas.jobs.scheduler :as scheduler]
    [lipas.jobs.worker :as worker]
    [taoensso.timbre :as log]))
@@ -26,6 +27,12 @@
 (defmethod ig/init-key :lipas.jobs/worker
   [_ {:keys [db search emailer config]}]
   (log/info "Starting unified job worker")
+
+  ;; Reset any jobs stuck in processing state from previous crashes
+  (log/info "Checking for stuck jobs from previous worker crashes")
+  (let [timeout-minutes (get config :stuck-job-timeout-minutes 60)]
+    (jobs/reset-stuck-jobs! db timeout-minutes))
+
   (worker/start-mixed-duration-worker!
    {:db db :search search :emailer emailer}
    config))
@@ -55,7 +62,8 @@
               :batch-size 10
               :poll-interval-ms 3000
               :fast-timeout-minutes 2
-              :slow-timeout-minutes 20}}}))
+              :slow-timeout-minutes 20
+              :stuck-job-timeout-minutes 60}}}))
 
 (defn start-worker-system!
   "Start the worker system using the main system configuration."

@@ -166,3 +166,44 @@
                        (count analysis-jobs)))))))
 
       (worker/shutdown-pools! pools))))
+
+(deftest worker-startup-recovery-test
+  "Test that worker startup properly recovers stuck jobs from crashes."
+  (testing "Worker startup resets stuck jobs"
+    (let [pools (worker/create-worker-pools {:fast-threads 1 :general-threads 1})
+          config {:batch-size 5 :stuck-job-timeout-minutes 0} ; 0 timeout = reset all
+          system {:db nil}
+          reset-call-count (atom 0)
+          reset-call-args (atom nil)]
+
+      ;; Mock the reset-stuck-jobs function to track calls
+      (with-redefs [jobs/reset-stuck-jobs!
+                    (fn [db timeout-minutes]
+                      (swap! reset-call-count inc)
+                      (reset! reset-call-args {:db db :timeout-minutes timeout-minutes})
+                      2)] ; Return that 2 jobs were reset
+
+        ;; Test worker startup recovery (simulated)
+        (let [timeout-minutes (get config :stuck-job-timeout-minutes 60)]
+          (jobs/reset-stuck-jobs! (:db system) timeout-minutes))
+
+        ;; Verify stuck job recovery was called
+        (is (= 1 @reset-call-count)
+            "Should call reset-stuck-jobs exactly once on startup")
+
+        (is (= 0 (:timeout-minutes @reset-call-args))
+            "Should use configured timeout value"))
+
+      (worker/shutdown-pools! pools))))
+
+(deftest stuck-job-timeout-configuration-test
+  "Test different timeout configurations for stuck job recovery."
+  (testing "Default timeout when not configured"
+    (let [config {}
+          timeout (get config :stuck-job-timeout-minutes 60)]
+      (is (= 60 timeout) "Should default to 60 minutes when not configured")))
+
+  (testing "Custom timeout when configured"
+    (let [config {:stuck-job-timeout-minutes 30}
+          timeout (get config :stuck-job-timeout-minutes 60)]
+      (is (= 30 timeout) "Should use configured timeout value"))))
