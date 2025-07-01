@@ -8,7 +8,8 @@
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
    [nrepl.server :as nrepl]
-   [ring.adapter.jetty :as jetty])
+   [ring.adapter.jetty :as jetty]
+   [taoensso.timbre :as log])
   (:import
    (software.amazon.awssdk.auth.credentials DefaultCredentialsProvider)))
 
@@ -114,6 +115,7 @@
 
       "worker"
       (do
+        (log/set-level! :info)
         (println "Starting LIPAS worker...")
         (require 'lipas.jobs.system)
         (let [start-worker! (resolve 'lipas.jobs.system/start-worker-system!)]

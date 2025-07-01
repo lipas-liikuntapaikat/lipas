@@ -115,10 +115,14 @@
         ;; For slow jobs: fetch one at a time to allow thread reuse
         general-fetch-limit (min 1 general-available)]
 
-    (log/debug "Thread capacity check"
-               {:fast-active fast-active :fast-available fast-available
-                :general-active general-active :general-available general-available
-                :fast-fetch-limit fast-fetch-limit :general-fetch-limit general-fetch-limit})
+    ;; Only log capacity when we have work to do or when pools are at capacity
+    (when (or (pos? fast-fetch-limit)
+              (pos? general-fetch-limit)
+              (and (zero? fast-available) (zero? general-available)))
+      (log/debug "Thread capacity check"
+                 {:fast-active fast-active :fast-available fast-available
+                  :general-active general-active :general-available general-available
+                  :fast-fetch-limit fast-fetch-limit :general-fetch-limit general-fetch-limit}))
 
     ;; Fetch jobs for fast lane only if we have capacity
     (let [fast-jobs (when (pos? fast-fetch-limit)

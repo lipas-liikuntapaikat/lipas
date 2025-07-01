@@ -1,6 +1,6 @@
 (ns lipas.jobs.main
   "Main entry point for the unified job queue system worker.
-   
+
    Usage:
    - No args: Run full worker system (scheduler + mixed-duration worker)
    - 'worker': Run only the mixed-duration worker
@@ -19,6 +19,9 @@
   (println "🚀 LIPAS Jobs Main starting...")
   (println "📋 Arguments received:" (vec args))
   (try
+
+    (log/set-min-level! :info)
+
     (let [mode (first args)]
       (println "🎯 Running in mode:" (or mode "default (scheduler + worker)"))
       (case mode
