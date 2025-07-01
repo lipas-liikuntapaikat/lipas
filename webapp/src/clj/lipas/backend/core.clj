@@ -10,7 +10,6 @@
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
             [lipas.backend.db.db :as db]
-            [lipas.backend.elevation :as elevation]
             [lipas.backend.email :as email]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
@@ -24,6 +23,7 @@
             [lipas.data.types :as types]
             [lipas.i18n.core :as i18n]
             [lipas.integration.utp.cms :as utp-cms]
+            [lipas.jobs.core :as jobs]
             [lipas.reports :as reports]
             [lipas.roles :as roles]
             [lipas.utils :as utils]
@@ -37,6 +37,18 @@
 (def types types/all)
 (def admins admins/all)
 (def owners owners/all)
+
+;;; Jobs ;;;
+
+(defn get-job-admin-metrics
+  "Get comprehensive job queue metrics for admin dashboard."
+  [db opts]
+  (jobs/get-admin-metrics db opts))
+
+(defn get-job-queue-health
+  "Get current job queue health for admin monitoring."
+  [db]
+  (jobs/get-queue-health db))
 
 ;;; User ;;;
 
@@ -56,12 +68,12 @@
                     {:type :email-conflict})))
 
   (let [defaults {:permissions {:roles []}
-                  :status      "active"
-                  :username    (:email user)
-                  :user-data   {}
-                  :password    (str (utils/gen-uuid))}
-        user     (-> (merge defaults user)
-                     (update :password hashers/encrypt))]
+                  :status "active"
+                  :username (:email user)
+                  :user-data {}
+                  :password (str (utils/gen-uuid))}
+        user (-> (merge defaults user)
+                 (update :password hashers/encrypt))]
 
     (db/add-user! db user)
     {:status "OK"}))
@@ -70,10 +82,10 @@
   ([db user evt-name]
    (add-user-event! db user evt-name {}))
   ([db user evt-name data]
-   (let [user     (db/get-user-by-id db user)
+   (let [user (db/get-user-by-id db user)
          defaults {:event-date (utils/timestamp) :event evt-name}
-         evt      (merge defaults data)
-         user     (update-in user [:history :events] conj evt)]
+         evt (merge defaults data)
+         user (update-in user [:history :events] conj evt)]
      (db/update-user-history! db user))))
 
 (defn login! [db user]
@@ -110,7 +122,7 @@
 
 (defn create-magic-link [url user]
   (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
-    {:link       (str url "?token=" token)
+    {:link (str url "?token=" token)
      :valid-days 7}))
 
 (defn- send-permissions-updated-email!
@@ -120,9 +132,9 @@
 
 (defn update-user-permissions!
   [db emailer {:keys [id permissions login-url]}]
-  (let [user      (get-user! db id)
+  (let [user (get-user! db id)
         old-perms (-> user :permissions)
-        new-user  (assoc user :permissions permissions)]
+        new-user (assoc user :permissions permissions)]
     (db/update-user-permissions! db new-user)
     (publish-users-drafts! db new-user)
     (send-permissions-updated-email! emailer login-url user)
@@ -131,9 +143,9 @@
 
 (defn update-user-status!
   [db {:keys [id status] :as user}]
-  (let [user       (db/get-user-by-id db user)
+  (let [user (db/get-user-by-id db user)
         old-status (-> user :status)
-        new-user   (assoc user :status status)]
+        new-user (assoc user :status status)]
     (db/update-user-status! db new-user)
     (add-user-event! db new-user "status-changed"
                      {:from old-status :to status})
@@ -147,7 +159,7 @@
     (throw (ex-info "User not found" {:type :email-not-found}))))
 
 (defn send-magic-link! [db emailer {:keys [user login-url variant]}]
-  (let [email      (-> user :email)
+  (let [email (-> user :email)
         magic-link (create-magic-link login-url user)]
     (email/send-magic-login-email! emailer email variant magic-link)
     (add-user-event! db user "magic-link-sent")))
@@ -156,6 +168,8 @@
   (db/reset-user-password! db (assoc user :password
                                      (hashers/encrypt password)))
   (add-user-event! db user "password-reset"))
+
+;;; Reminders ;;;
 
 (defn get-users-pending-reminders! [db {:keys [id]}]
   (db/get-users-pending-reminders db id))
@@ -186,7 +200,7 @@
   [db user]
   (jdbc/with-db-transaction [tx db]
     (let [username (str "gdpr_removed_" (java.util.UUID/randomUUID))
-          email    (str username "@lipas.fi")]
+          email (str username "@lipas.fi")]
       (db/update-user-username! tx (assoc user :username username))
       (db/update-user-email! tx (assoc user :email email))
       (update-user-data! tx user {})
@@ -213,7 +227,7 @@
 
 (defn process-gdpr-removals!
   [db]
-  (let [now   (java.time.Instant/now)
+  (let [now (java.time.Instant/now)
         users (->> (get-users db)
                    (filter (partial gdpr-remove? now)))]
     (log/info "Found" (count users) "users to GDPR remove.")
@@ -230,7 +244,7 @@
 
 (defn- deref-fids
   [sports-site route]
-  (let [fids  (-> route :fids set)
+  (let [fids (-> route :fids set)
         geoms (when (seq fids)
                 {:type "FeatureCollection"
                  :features (->> (get-in sports-site [:location :geometries :features])
@@ -261,8 +275,8 @@
                (enrich-activities))]
      (cond
        (#{:fi :en :se} locale) (i18n/localize locale m)
-       (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
-       :else                   m))))
+       (#{:all} locale) (i18n/localize2 [:fi :se :en] m)
+       :else m))))
 
 (defn get-sports-site2
   ([search lipas-id] (get-sports-site2 search lipas-id :none))
@@ -274,14 +288,14 @@
                  (if (= 404 (-> ex ex-data :status))
                    nil
                    (throw ex))))
-         m   (some-> doc
-                     (get-in [:body :_source])
-                     (enrich-activities))]
+         m (some-> doc
+                   (get-in [:body :_source])
+                   (enrich-activities))]
      (cond
-       (nil? m)                m
+       (nil? m) m
        (#{:fi :en :se} locale) (i18n/localize locale m)
-       (#{:all} locale)        (i18n/localize2 [:fi :se :en] m)
-       :else                   m))))
+       (#{:all} locale) (i18n/localize2 [:fi :se :en] m)
+       :else m))))
 
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))
@@ -296,7 +310,7 @@
 (defn- check-sports-site-exists! [db lipas-id]
   (when (empty? (db/get-sports-site db lipas-id))
     (throw (ex-info "Sports site not found"
-                    {:type     :sports-site-not-found
+                    {:type :sports-site-not-found
                      :lipas-id lipas-id}))))
 
 (defn upsert-sports-site!*
@@ -345,8 +359,8 @@
                    (map enrich-activities))]
      (cond
        (#{:fi :en :se} locale) (map (partial i18n/localize locale) data)
-       (#{:all} locale)        (map (partial i18n/localize2 [:fi :se :en]) data)
-       :else                   data))))
+       (#{:all} locale) (map (partial i18n/localize2 [:fi :se :en]) data)
+       :else data))))
 
 (defn get-sports-site-history [db lipas-id]
   (db/get-sports-site-history db lipas-id))
@@ -389,13 +403,13 @@
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
   [sports-site]
-  (let [sports-site  (fix-geoms sports-site)
-        fcoll        (-> sports-site :location :geometries)
-        geom         (-> fcoll :features first :geometry)
+  (let [sports-site (fix-geoms sports-site)
+        fcoll (-> sports-site :location :geometries)
+        geom (-> fcoll :features first :geometry)
         start-coords (case (:type geom)
-                       "Point"      (-> geom :coordinates)
+                       "Point" (-> geom :coordinates)
                        "LineString" (-> geom :coordinates first)
-                       "Polygon"    (-> geom :coordinates first first))
+                       "Polygon" (-> geom :coordinates first first))
 
         center-coords (try (-> fcoll gis/centroid :coordinates)
                            (catch Exception ex
@@ -403,62 +417,62 @@
                                        (:lipas-id sports-site) "fcoll" fcoll)
                              nil))
 
-        geom2      (-> fcoll :features last :geometry)
+        geom2 (-> fcoll :features last :geometry)
         end-coords (case (:type geom2)
-                     "Point"      (-> geom2 :coordinates)
+                     "Point" (-> geom2 :coordinates)
                      "LineString" (-> geom2 :coordinates last)
-                     "Polygon"    (-> geom2 :coordinates last last))
+                     "Polygon" (-> geom2 :coordinates last last))
 
         city-code (-> sports-site :location :city :city-code)
-        province  (-> city-code cities :province-id cities/provinces)
-        avi-area  (-> city-code cities :avi-id cities/avi-areas)
+        province (-> city-code cities :province-id cities/provinces)
+        avi-area (-> city-code cities :avi-id cities/avi-areas)
 
-        type-code     (-> sports-site :type :type-code)
+        type-code (-> sports-site :type :type-code)
         main-category (-> type-code types :main-category types/main-categories)
-        sub-category  (-> type-code types :sub-category types/sub-categories)
-        field-types   (->> sports-site :fields (map :type) distinct)
-        latest-audit  (some-> sports-site
-                              :audits
-                              (->> (sort-by :audit-date utils/reverse-cmp))
-                              first
-                              :audit-date)
-        search-meta   {:name   (utils/->sortable-name (:name sports-site))
-                       :admin  {:name (-> sports-site :admin admins)}
-                       :owner  {:name (-> sports-site :owner owners)}
-                       :audits {:latest-audit-date latest-audit}
-                       :location
-                       {:wgs84-point  start-coords
-                        :wgs84-center center-coords
-                        :wgs84-end    end-coords
-                        :geometries   (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
-                        :city         {:name (-> city-code cities :name)}
-                        :province     {:name (:name province)}
-                        :avi-area     {:name (:name avi-area)}
-                        :simple-geoms (simplify fcoll)}
-                       :type
-                       {:name          (-> type-code types :name)
-                        :tags          (-> type-code types :tags)
-                        :main-category {:name (:name main-category)}
-                        :sub-category  {:name (:name sub-category)}}
-                       :fields
-                       {:field-types field-types}}]
+        sub-category (-> type-code types :sub-category types/sub-categories)
+        field-types (->> sports-site :fields (map :type) distinct)
+        latest-audit (some-> sports-site
+                             :audits
+                             (->> (sort-by :audit-date utils/reverse-cmp))
+                             first
+                             :audit-date)
+        search-meta {:name (utils/->sortable-name (:name sports-site))
+                     :admin {:name (-> sports-site :admin admins)}
+                     :owner {:name (-> sports-site :owner owners)}
+                     :audits {:latest-audit-date latest-audit}
+                     :location
+                     {:wgs84-point start-coords
+                      :wgs84-center center-coords
+                      :wgs84-end end-coords
+                      :geometries (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
+                      :city {:name (-> city-code cities :name)}
+                      :province {:name (:name province)}
+                      :avi-area {:name (:name avi-area)}
+                      :simple-geoms (simplify fcoll)}
+                     :type
+                     {:name (-> type-code types :name)
+                      :tags (-> type-code types :tags)
+                      :main-category {:name (:name main-category)}
+                      :sub-category {:name (:name sub-category)}}
+                     :fields
+                     {:field-types field-types}}]
     (assoc sports-site :search-meta search-meta)))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
-  (let [smaterial (-> envelope :base-floor-structure)
-        area-m2   (-> building :total-ice-area-m2)]
-    (-> ice-stadium
-        (cond->
-            smaterial (assoc-in [:properties :surface-material] [smaterial])
-            area-m2   (assoc-in [:properties :area-m2] area-m2))
-        utils/clean
-        enrich*)))
+    (let [smaterial (-> envelope :base-floor-structure)
+          area-m2 (-> building :total-ice-area-m2)]
+      (-> ice-stadium
+          (cond->
+           smaterial (assoc-in [:properties :surface-material] [smaterial])
+           area-m2 (assoc-in [:properties :area-m2] area-m2))
+          utils/clean
+          enrich*)))
 
 #_(defn enrich-swimming-pool [{:keys [building] :as swimming-pool}]
-  (-> swimming-pool
-      (assoc-in [:properties :area-m2] (-> building :total-water-area-m2))
-      utils/clean
-      enrich*))
+    (-> swimming-pool
+        (assoc-in [:properties :area-m2] (-> building :total-water-area-m2))
+        utils/clean
+        enrich*))
 
 (defn enrich-cycling-route [sports-site]
   (-> sports-site
@@ -478,7 +492,7 @@
    (index! search sports-site false))
   ([{:keys [indices client]} sports-site sync?]
    (let [idx-name (get-in indices [:sports-site :search])
-         data     (enrich sports-site)]
+         data (enrich sports-site)]
      (search/index! client idx-name :lipas-id data sync?))))
 
 (defn search
@@ -490,14 +504,14 @@
   [{:keys [indices client]}
    {:keys [field-types]}]
   (let [idx-name (get-in indices [:sports-site :search])
-        params   {:size             1000
-                  :track_total_hits 50000
-                  :_source
-                  {:excludes ["search-meta.*"]}
-                  :query
-                  {:bool
-                   {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
-                           {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
+        params {:size 1000
+                :track_total_hits 50000
+                :_source
+                {:excludes ["search-meta.*"]}
+                :query
+                {:bool
+                 {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
+                         {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
     (-> (search/search client idx-name params)
         :body
         :hits
@@ -505,20 +519,9 @@
         (->> (map :_source)))))
 
 (defn add-to-integration-out-queue!
+  "DEPRECATED: Integration system is being phased out."
   [db sports-site]
   (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
-
-(defn add-to-analysis-queue!
-  [db sports-site]
-  (db/add-to-analysis-queue! db (:lipas-id sports-site)))
-
-(defn add-to-elevation-queue!
-  [db sports-site]
-  (db/add-to-elevation-queue! db (:lipas-id sports-site)))
-
-(defn add-to-webhook-queue!
-  [db {:keys [_lipas-ids _loi-ids] :as m}]
-  (db/add-to-webhook-queue! db m))
 
 (defn sync-ptv! [tx search ptv-component user props]
   (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
@@ -532,50 +535,76 @@
   ([db search ptv user sports-site]
    (save-sports-site! db search ptv user sports-site false))
   ([db search ptv user sports-site draft?]
-   (jdbc/with-db-transaction [tx db]
-     (let [resp   (upsert-sports-site! tx user sports-site draft?)
-           route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
-       (when-not draft?
-         ;; NOTE: routes will be re-indexed after elevation has been
-         ;; resolved.
-         (index! search resp :sync)
+   (let [correlation-id (jobs/gen-correlation-id)]
+     (jobs/with-correlation-context correlation-id
+       (fn []
+         (jdbc/with-db-transaction [tx db]
+           (let [resp (upsert-sports-site! tx user sports-site draft?)
+                 route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
-         (when route?
-           (add-to-elevation-queue! tx resp))
+             (when-not draft?
+               (log/info "Saving sports site with background jobs"
+                         {:lipas-id (:lipas-id resp)
+                          :is-route? route?
+                          :user (:email user)})
 
-         (when-not route?
-           ;; Routes will be integrated only after elevation has been
-           ;; resolved. See `process-elevation-queue!`
-           (add-to-integration-out-queue! tx resp))
+               ;; NOTE: routes will be re-indexed after elevation has been
+               ;; resolved.
+               (index! search resp :sync)
 
-         ;; Analysis doesn't require elevation information
-         (add-to-analysis-queue! tx resp)
+               (when route?
+                 (jobs/enqueue-job! tx "elevation"
+                                    {:lipas-id (:lipas-id resp)}
+                                    {:correlation-id correlation-id
+                                     :priority 70}))
 
-         (add-to-webhook-queue! tx {:lipas-ids [(:lipas-id resp)]}))
+               (when-not route?
+                 ;; Routes will be integrated only after elevation has been
+                 ;; resolved. See `process-elevation-queue!`
+                 ;; NOTE: Integration system is being phased out, keeping for now
+                 (add-to-integration-out-queue! tx resp))
 
-       ;; Sync the site to PTV if
-       ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
-       ;; - it is PTV candidate now
-       ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
-       ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
-       ;; that doesn't trigger update if sync-enabled is false.
-       (if (and (not draft?)
-                (or (:sync-enabled (:ptv resp))
-                    (:delete-existing (:ptv resp)))
-                ;; TODO: Check privilage :ptv/basic or such
-                (or (ptv-data/ptv-candidate? resp)
-                    (ptv-data/is-sent-to-ptv? resp)))
-         ;; NOTE:  this will create a new sports-site rev.
-         ;; Make it instead update the sports-site already created in the tx?
-         ;; Otherwise each save-sports-site! will create two sports-site revs.
-         (let [new-ptv-data (sync-ptv! tx search ptv user
-                                       {:sports-site resp
-                                        :org-id (:org-id (:ptv resp))
-                                        :lipas-id (:lipas-id resp)
-                                        :ptv (:ptv resp)})]
-           (log/infof "Sports site updated and PTV integration enabled")
-           (assoc resp :ptv new-ptv-data))
-         resp)))))
+               ;; Analysis doesn't require elevation information
+               (jobs/enqueue-job! tx "analysis"
+                                  {:lipas-id (:lipas-id resp)}
+                                  {:correlation-id correlation-id
+                                   :priority 80})
+
+               ;; Webhook Notification
+
+               ;; NOTE: Webhook is disabled until UTP or someone else
+               ;; starts using it again.
+
+               #_(jobs/enqueue-job! tx "webhook"
+                                  {:lipas-ids [(:lipas-id resp)]
+                                   :operation-type (if (new? sports-site) "create" "update")
+                                   :initiated-by (:id user)}
+                                  {:correlation-id correlation-id
+                                   :priority 85}))
+
+             ;; Sync the site to PTV if
+             ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+             ;; - it is PTV candidate now
+             ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+             ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+             ;; that doesn't trigger update if sync-enabled is false.
+             (if (and (not draft?)
+                      (or (:sync-enabled (:ptv resp))
+                          (:delete-existing (:ptv resp)))
+                      ;; TODO: Check privilage :ptv/basic or such
+                      (or (ptv-data/ptv-candidate? resp)
+                          (ptv-data/is-sent-to-ptv? resp)))
+               ;; NOTE:  this will create a new sports-site rev.
+               ;; Make it instead update the sports-site already created in the tx?
+               ;; Otherwise each save-sports-site! will create two sports-site revs.
+               (let [new-ptv-data (sync-ptv! tx search ptv user
+                                             {:sports-site resp
+                                              :org-id (:org-id (:ptv resp))
+                                              :lipas-id (:lipas-id resp)
+                                              :ptv (:ptv resp)})]
+                 (log/infof "Sports site updated and PTV integration enabled")
+                 (assoc resp :ptv new-ptv-data))
+               resp))))))))
 
 ;;; Cities ;;;
 
@@ -592,14 +621,14 @@
 (defn get-populations
   [{:keys [indices client]} year]
   (let [idx (get-in indices [:report :city-stats])]
-    (-> (search/search client idx {:size    500 ;; Finland has ~300 cities
-                                   :_source {:includes ["city-code" "population" "year"] }
+    (-> (search/search client idx {:size 500 ;; Finland has ~300 cities
+                                   :_source {:includes ["city-code" "population" "year"]}
                                    :query
                                    {:terms {:year [year]}}})
-         (get-in [:body :hits :hits])
-         (->> (map :_source)
-              (utils/index-by :city-code))
-         (update-vals :population))))
+        (get-in [:body :hits :hits])
+        (->> (map :_source)
+             (utils/index-by :city-code))
+        (update-vals :population))))
 
 ;;; Subsidies ;;;
 
@@ -619,10 +648,10 @@
 
 (defn sports-sites-report-excel
   [{:keys [indices client]} params fields locale out]
-  (let [idx-name  (get-in indices [:sports-site :search])
-        in-chan   (search/scroll client idx-name params)
-        locale    (or locale :fi)
-        headers   (mapv #(get-in reports/fields [% locale]) fields)
+  (let [idx-name (get-in indices [:sports-site :search])
+        in-chan (search/scroll client idx-name params)
+        locale (or locale :fi)
+        headers (mapv #(get-in reports/fields [% locale]) fields)
         data-chan (async/go
                     (loop [res [headers]]
                       (if-let [page (async/<! in-chan)]
@@ -640,16 +669,16 @@
 (defn sports-sites-report-geojson
   [{:keys [indices client]} params fields locale out]
   (let [idx-name (get-in indices [:sports-site :search])
-        in-chan  (search/scroll client idx-name (update params :_source dissoc :excludes))
-        locale   (or locale :fi)
-        headers  (mapv #(get-in reports/fields [% locale]) fields)
+        in-chan (search/scroll client idx-name (update params :_source dissoc :excludes))
+        locale (or locale :fi)
+        headers (mapv #(get-in reports/fields [% locale]) fields)
         localize (partial i18n/localize locale)
-        ->row    (partial reports/->row fields)]
+        ->row (partial reports/->row fields)]
     (with-open [writer (OutputStreamWriter. out)]
       (.write writer "{\"type\":\"FeatureCollection\",\"features\":[")
       (loop [page-num 0]
         (when-let [page (async/<!! in-chan)]
-          (let [ms    (-> page :body :hits :hits)
+          (let [ms (-> page :body :hits :hits)
                 feats (mapcat
                        (fn [m]
                          (let [props (-> m
@@ -659,10 +688,10 @@
                                          (->> (zipmap headers)))]
                            (->> m :_source :location :geometries :features
                                 (map (fn [f] (assoc f :properties props))))))
-                           ms)]
+                       ms)]
             (loop [feat-num 0
-                   f    (first feats)
-                   fs   (rest feats)]
+                   f (first feats)
+                   fs (rest feats)]
               (.write writer (str (when-not (= 0 page-num feat-num) ",")
                                   (json/encode f)))
               (when-let [next-f (first fs)]
@@ -673,12 +702,12 @@
 (defn sports-sites-report-csv
   [{:keys [indices client]} params fields locale out]
   (let [idx-name (get-in indices [:sports-site :search])
-        in-chan  (search/scroll client idx-name params)
-        locale   (or locale :fi)
-        headers  (mapv #(get-in reports/fields [% locale]) fields)
-        xform    (comp (partial reports/->row fields)
-                       (partial i18n/localize locale)
-                       :_source)]
+        in-chan (search/scroll client idx-name params)
+        locale (or locale :fi)
+        headers (mapv #(get-in reports/fields [% locale]) fields)
+        xform (comp (partial reports/->row fields)
+                    (partial i18n/localize locale)
+                    :_source)]
     (with-open [writer (OutputStreamWriter. out)]
       (csv/write-csv writer [headers])
       (loop []
@@ -698,25 +727,25 @@
 
 (defn calculate-stats
   [db search* {:keys [city-codes type-codes grouping year]
-               :or   {grouping "location.city.city-code"}}]
-  (let [pop-data  (get-populations search* year)
-        statuses  ["active" "out-of-service-temporarily"]
-        query     {:size 0,
-                   :query
-                   {:bool
-                    {:filter
-                     (into [] (remove nil?)
-                           [{:terms {:status.keyword statuses}}
-                            (when (not-empty type-codes)
-                              {:terms {:type.type-code type-codes}})
-                            (when (not-empty city-codes)
-                              {:terms {:location.city.city-code city-codes}})])}}
-                   :aggs
-                   {:grouping
-                    {:terms {:field (keyword grouping) :size 400}
-                     :aggs
-                     {:area_m2_stats   {:stats {:field :properties.area-m2}}
-                      :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
+               :or {grouping "location.city.city-code"}}]
+  (let [pop-data (get-populations search* year)
+        statuses ["active" "out-of-service-temporarily"]
+        query {:size 0,
+               :query
+               {:bool
+                {:filter
+                 (into [] (remove nil?)
+                       [{:terms {:status.keyword statuses}}
+                        (when (not-empty type-codes)
+                          {:terms {:type.type-code type-codes}})
+                        (when (not-empty city-codes)
+                          {:terms {:location.city.city-code city-codes}})])}}
+               :aggs
+               {:grouping
+                {:terms {:field (keyword grouping) :size 400}
+                 :aggs
+                 {:area_m2_stats {:stats {:field :properties.area-m2}}
+                  :length_km_stats {:stats {:field :properties.route-length-km}}}}}}
         aggs-data (-> (search search* query) :body :aggregations :grouping :buckets)]
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city aggs-data pop-data)
@@ -755,78 +784,6 @@
 (defn calc-diversity-indices [search params]
   (diversity/calc-diversity-indices-2 search params))
 
-(defn process-analysis-queue!
-  [db search]
-  (let [entries (->> (db/get-analysis-queue db))]
-    (log/info "Processing" (count entries) "entries from analysis queue")
-
-    ;; Lock
-    (jdbc/with-db-transaction [tx db]
-      (doseq [{:keys [lipas-id]} entries]
-        (db/update-analysis-status! tx lipas-id "in-progress")))
-
-    ;; Process
-    (doseq [{:keys [lipas-id]} entries]
-      (log/info "Processing analysis for" lipas-id)
-      (try
-        (let [fcoll (-> (get-sports-site db lipas-id)
-                        :location
-                        :geometries
-                        simplify)]
-          (diversity/recalc-grid! search fcoll)
-          (db/delete-from-analysis-queue! db lipas-id)
-          (log/info "Analysis for" lipas-id "completed successfully!"))
-        (catch Exception ex
-          (log/error ex)
-          (db/update-analysis-status! db lipas-id "failed"))))))
-
-(defn process-elevation-queue!
-  [db search]
-  (let [entries (->> (db/get-elevation-queue db))
-        user    (when (seq entries)
-                  (db/get-user-by-email db {:email "robot@lipas.fi"}))]
-    (log/info "Processing" (count entries) "entries from elevation queue")
-
-    ;; Lock
-    (jdbc/with-db-transaction [tx db]
-      (doseq [{:keys [lipas-id]} entries]
-        (db/update-elevation-status! tx lipas-id "in-progress")))
-
-    ;; Process
-    (doseq [{:keys [lipas-id]} entries]
-      (log/info "Processing elevation for" lipas-id)
-      (try
-        (let [orig  (get-sports-site db lipas-id)
-              fcoll (-> orig
-                        :location
-                        :geometries
-                        elevation/enrich-elevation)
-
-              ;; Because previous step might take a while, let's fetch
-              ;; the latest revision again fresh from the db before
-              ;; updating the geoms with elevation.
-              current      (get-sports-site db lipas-id)
-              still-valid? (= (:event-date current) (:event-date orig))]
-
-          (when still-valid?
-            (-> current
-                (assoc-in [:location :geometries] fcoll)
-                (->> (upsert-sports-site!* db user))
-                (as-> $ (index! search $ :sync)))
-
-            (add-to-integration-out-queue! db current)
-
-            (db/delete-from-elevation-queue! db lipas-id)
-            (log/info "Elevation enrichment for" lipas-id "completed successfully!"))
-
-          (when-not still-valid?
-            (log/info "Sports site updated in meanwhile. Putting back into the queue.")
-            (db/update-elevation-status! db lipas-id "pending")))
-
-        (catch Exception ex
-          (log/error ex)
-          (db/update-elevation-status! db lipas-id "failed"))))))
-
 ;;; Newsletter ;;;
 
 (defn get-newsletter [config]
@@ -839,14 +796,14 @@
   (email/send-feedback-email! emailer "lipasinfo@jyu.fi" feedback))
 
 (defn check-sports-site-name [search-cli {:keys [lipas-id name]}]
-  (let [query {:size    1
+  (let [query {:size 1
                :_source {:includes ["lipas-id" "name" "status"]}
                :query
                {:bool
-                {:must     [{:match_phrase {:name.keyword name}}
-                            {:terms {:status.keyword ["active" "out-of-service-temporarily"]}}]
+                {:must [{:match_phrase {:name.keyword name}}
+                        {:terms {:status.keyword ["active" "out-of-service-temporarily"]}}]
                  :must_not {:term {:lipas-id lipas-id}}}}}
-        resp  (search search-cli query)]
+        resp (search search-cli query)]
     (merge
      {:status (if (-> resp :body :hits :total :value (>= 1))
                 :conflict
@@ -864,44 +821,43 @@
                (utils/gen-uuid)
                "."
                extension)]
-    (s3/presign-put {:region               region
-                     :bucket               s3-bucket
-                     :content-type         (str "image/" extension)
-                     :object-key           k
-                     :meta                 {:lipas-id lipas-id
-                                            :user-id  (:id user)}
+    (s3/presign-put {:region region
+                     :bucket s3-bucket
+                     :content-type (str "image/" extension)
+                     :object-key k
+                     :meta {:lipas-id lipas-id
+                            :user-id (:id user)}
                      :credentials-provider credentials-provider})))
-
 
 ;;; LOI ;;;
 
 (defn ->lois-es-query
   [{:keys [location loi-statuses]}]
-  (let [lon           (:lon location)
-        lat           (:lat location)
-        distance      (:distance location)
-        origin        (str lat "," lon)
-        decay-factor  2
-        offset        (str (* distance (* decay-factor 0.5)) "m")
-        scale         (str (* distance decay-factor) "m")
-        size          100
-        from          0
-        excludes      ["search-meta"]
-        query         {:size    size
-                       :from    from
-                       :sort    ["_score"]
-                       :_source {:excludes excludes}
-                       :query   {:function_score
-                                 {:score_mode "max"
-                                  :boost_mode "max"
-                                  :functions  [{:exp
-                                                {:search-meta.location.wgs84-point
-                                                 {:origin origin
-                                                  :offset offset
-                                                  :scale  scale}}}]
-                                  :query      {:bool
-                                               {:filter
-                                                [{:terms {:status.keyword loi-statuses}}]}}}}}
+  (let [lon (:lon location)
+        lat (:lat location)
+        distance (:distance location)
+        origin (str lat "," lon)
+        decay-factor 2
+        offset (str (* distance (* decay-factor 0.5)) "m")
+        scale (str (* distance decay-factor) "m")
+        size 100
+        from 0
+        excludes ["search-meta"]
+        query {:size size
+               :from from
+               :sort ["_score"]
+               :_source {:excludes excludes}
+               :query {:function_score
+                       {:score_mode "max"
+                        :boost_mode "max"
+                        :functions [{:exp
+                                     {:search-meta.location.wgs84-point
+                                      {:origin origin
+                                       :offset offset
+                                       :scale scale}}}]
+                        :query {:bool
+                                {:filter
+                                 [{:terms {:status.keyword loi-statuses}}]}}}}}
         default-query {:size size :query {:match_all {}}}]
     (if (and lat lon distance)
       query
@@ -950,15 +906,27 @@
    (index-loi! search loi false))
   ([{:keys [indices client]} loi sync?]
    (let [idx-name (get-in indices [:lois :search])
-         loi      (enrich-loi loi)]
+         loi (enrich-loi loi)]
      (search/index! client idx-name :id loi sync?))))
 
 (defn upsert-loi!
   [db search user loi]
-  (jdbc/with-db-transaction [tx db]
-    (db/upsert-loi! tx user loi)
-    (add-to-webhook-queue! tx {:loi-ids [(:id loi)]})
-    (index-loi! search loi :sync)))
+  (let [correlation-id (jobs/gen-correlation-id)]
+    (jdbc/with-db-transaction [tx db]
+      (let [result (db/upsert-loi! tx user loi)]
+        (log/info "Saving LOI with background jobs"
+                  {:loi-id (:id loi)
+                   :user (:email user)})
+
+        ;; Enqueue webhook with same correlation ID
+        (jobs/enqueue-job! tx "webhook"
+                           {:loi-ids [(:id loi)]
+                            :operation-type (if (nil? (:id loi)) "create" "update")
+                            :initiated-by (:id user)}
+                           {:correlation-id correlation-id
+                            :priority 85})
+        (index-loi! search loi :sync)
+        result))))
 
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]
@@ -1014,7 +982,6 @@
           (swap! results conj page)
           (recur)))))
 
-
   @results
   (count @results)
 
@@ -1022,23 +989,23 @@
         grouping "location.city.city-code"
         type-codes [1340]
         city-codes [992]
-        query    {:size 0,
-                  :query
-                  {:bool
-                   {:filter
-                    (into [] (remove nil?)
-                          [{:terms {:status.keyword statuses}}
-                           (when (not-empty type-codes)
-                             {:terms {:type.type-code type-codes}})
-                           (when (not-empty city-codes)
-                             {:terms {:location.city.city-code city-codes}})])}}
-                  :aggs
-                  {:grouping
-                   {:terms {:field (keyword grouping) :size 400}
-                    :aggs  {:area_m2_stats {:stats {:field "properties.area-m2"}}}}}}]
+        query {:size 0,
+               :query
+               {:bool
+                {:filter
+                 (into [] (remove nil?)
+                       [{:terms {:status.keyword statuses}}
+                        (when (not-empty type-codes)
+                          {:terms {:type.type-code type-codes}})
+                        (when (not-empty city-codes)
+                          {:terms {:location.city.city-code city-codes}})])}}
+               :aggs
+               {:grouping
+                {:terms {:field (keyword grouping) :size 400}
+                 :aggs {:area_m2_stats {:stats {:field "properties.area-m2"}}}}}}]
     (search search2 query))
 
-  #_(flat-finance-report db-spec [992 175] )
+  #_(flat-finance-report db-spec [992 175])
 
   (process-elevation-queue! db-spec search2)
   search2

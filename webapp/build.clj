@@ -17,7 +17,11 @@
 (def jar-file (format "target/%s-%s.jar" (name lib) version))
 
 ;; Main class for uberjar (matching Leiningen :main)
-(def main-class 'lipas.aot)
+;; Main class for uberjar - no AOT needed for simple main functions
+;; Main class for uberjar - minimal launcher namespace
+;; No main class needed - we'll use clojure.main
+;; (commented out to be explicit about this choice)
+;; (def main-class 'clojure.main)
 
 (defn clean [_]
   (b/delete {:path "target"}))
@@ -50,21 +54,17 @@
   (b/copy-dir {:src-dirs ["src/clj" "src/cljc" "resources"]
                :target-dir class-dir})
 
-  ;; AOT compile the main namespace (matching Leiningen :aot [lipas.aot])
-  (println "AOT compiling main namespace...")
-  (b/compile-clj {:basis basis
-                  :src-dirs ["src/clj" "src/cljc"]
-                  :class-dir class-dir
-                  :ns-compile '[lipas.aot]})
-
-  ;; Create uberjar
+  ;; Create uberjar with clojure.main as default entry point
   (println "Creating uberjar...")
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
-           :main main-class})
+           :main 'clojure.main})
 
-  (println (str "Uberjar created: " uber-file)))
+  (println (str "Uberjar created: " uber-file))
+  (println "Usage:")
+  (println "  Web server: java -jar " uber-file " -m lipas.backend.system server")
+  (println "  Worker:     java -jar " uber-file " -m lipas.backend.system worker"))
 
 (defn deploy [opts]
   (jar opts)

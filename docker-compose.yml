@@ -1,4 +1,3 @@
-version: '2'
 services:
 
   proxy-base:
@@ -158,6 +157,9 @@ services:
       GEOSERVER_ADMIN_PASSWORD:
       GEOSERVER_ADMIN_USER:
       ENVIRONMENT:
+      # Worker configuration (via environment variables)
+      WORKER_FAST_THREADS: 2
+      WORKER_GENERAL_THREADS: 3
     volumes:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
@@ -165,7 +167,7 @@ services:
   backend:
     extends:
       service: backend-base
-    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar -m lipas.backend.system server
     ports:
       - '8091:8091'
       - '7888:7888'
@@ -260,14 +262,34 @@ services:
       - postgres
       - elasticsearch
 
+  worker-local:
+    extends:
+      service: backend-base
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    entrypoint: clojure -M -m lipas.jobs.main
+    links:
+      - postgres
+      - elasticsearch
+      - osrm-foot
+      - osrm-bicycle
+      - osrm-car
+
+  # uberjar for production deployments
   worker:
     extends:
       service: backend-base
     restart: unless-stopped
     logging:
+      driver: "gelf"
       options:
-        tag: "worker"
-    entrypoint: clojure -M -m lipas.worker
+        gelf-address: "udp://localhost:5000"
+        tag: "worker-v2"
+    command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar -m lipas.backend.system worker
     links:
       - postgres
       - elasticsearch

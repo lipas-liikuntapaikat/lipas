@@ -1,6 +1,7 @@
 (ns lipas.ui.mui
   (:refer-clojure :exclude [list])
   (:require ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Autocomplete$default" :as Autocomplete]
@@ -186,6 +187,7 @@
 (comment
   (-> jyu-theme-dark (js->clj :keywordize-keys true)))
 
+(def alert (r/adapt-react-class Alert))
 (def autocomplete (r/adapt-react-class Autocomplete))
 (def app-bar (r/adapt-react-class AppBar))
 (def avatar (r/adapt-react-class Avatar))

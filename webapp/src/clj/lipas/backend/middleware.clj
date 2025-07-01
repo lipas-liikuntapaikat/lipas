@@ -11,7 +11,8 @@
    authenticated a 401 not authorized response will be returned"
   [handler]
   (fn [request]
-    (if (authenticated? request)
+    (if (or (authenticated? request)
+            (= :options (:request-method request)))
       (handler request)
       (resp/unauthorized {:error "Not authorized"}))))
 

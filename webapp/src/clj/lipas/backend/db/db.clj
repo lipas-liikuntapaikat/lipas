@@ -3,9 +3,7 @@
   (:require
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
-   [lipas.backend.db.analysis :as analysis]
    [lipas.backend.db.city :as city]
-   [lipas.backend.db.elevation :as elevation]
    [lipas.backend.db.email :as email]
    [lipas.backend.db.integration :as integration]
    [lipas.backend.db.loi :as loi]
@@ -15,7 +13,6 @@
    [lipas.backend.db.user :as user]
    [lipas.backend.db.utils :as db-utils]
    [lipas.backend.db.versioned-data :as versioned-data]
-   [lipas.backend.db.webhook :as webhook]
    [lipas.utils :as utils]))
 
 ;; User ;;
@@ -208,48 +205,6 @@
        utils/->snake-case-keywords
        (integration/delete-from-out-queue! db-spec)))
 
-;; Analysis queue ;;
-
-(defn add-to-analysis-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       analysis/marshall
-       (analysis/add-to-queue! db-spec)))
-
-(defn delete-from-analysis-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       analysis/marshall
-       (analysis/delete-from-queue! db-spec)))
-
-(defn update-analysis-status! [db-spec lipas-id status]
-  (->> {:lipas-id lipas-id :status status}
-       analysis/marshall
-       (analysis/update-status! db-spec)))
-
-(defn get-analysis-queue [db-spec]
-  (->> (analysis/get-queue db-spec)
-       (map analysis/unmarshall)))
-
-;; Elevation queue ;;
-
-(defn add-to-elevation-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       elevation/marshall
-       (elevation/add-to-queue! db-spec)))
-
-(defn delete-from-elevation-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       elevation/marshall
-       (elevation/delete-from-queue! db-spec)))
-
-(defn update-elevation-status! [db-spec lipas-id status]
-  (->> {:lipas-id lipas-id :status status}
-       elevation/marshall
-       (elevation/update-status! db-spec)))
-
-(defn get-elevation-queue [db-spec]
-  (->> (elevation/get-queue db-spec)
-       (map elevation/unmarshall)))
-
 ;; City ;;
 
 (defn add-city! [db-spec city]
@@ -336,25 +291,6 @@
       (assoc :author-id (:id user))
       (loi/marshall user)
       (->> (loi/insert-loi-rev! db))))
-
-;; Webhook ;;
-
-(defn add-to-webhook-queue!
-  [db-spec batch-data]
-  (->> {:batch-data batch-data}
-       webhook/marshall
-       (webhook/add-to-queue! db-spec)))
-
-(defn update-webhook-batch-status!
-  [db-spec id status]
-  (->> {:id id :status status}
-       webhook/marshall
-       (webhook/update-status! db-spec)))
-
-(defn get-webhook-queue
-  [db-spec]
-  (->> (webhook/get-queue db-spec)
-       (map webhook/unmarshall)))
 
 ;; Versioned Data ;;
 

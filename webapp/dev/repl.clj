@@ -301,7 +301,7 @@
   (def wat (lipas.backend.core/get-sports-site (db) 520086))
   (tap> wat)
 
-
+  (reindex-search!)
   (lipas.backend.core/get-sports-site2 (search) 666)
 
   )

@@ -14,7 +14,7 @@
 
 This single command will:
 - Load all webapp dependencies
-- Start the Jetty server  
+- Start the Jetty server
 - Connect to PostgreSQL and Elasticsearch
 - Initialize all system components (AWS, email, PTV, etc.)
 
@@ -23,7 +23,7 @@ This single command will:
 The `user` namespace provides these utilities immediately:
 
 - `(dev-webapp!)` - **One-command startup**: loads dependencies and starts the complete system
-- `(load-webapp-dev-deps!)` - Loads only :dev and :test dependencies from webapp/deps.edn  
+- `(load-webapp-dev-deps!)` - Loads only :dev and :test dependencies from webapp/deps.edn
 - `(read-webapp-deps)` - Inspects webapp dependency structure
 - `(extract-dev-deps webapp-deps)` - Extracts development dependencies
 
@@ -37,7 +37,7 @@ integrant.repl.state/system  ; Full system map with all components
 
 Available components:
 - `:lipas/server` - Jetty web server
-- `:lipas/db` - PostgreSQL database connection  
+- `:lipas/db` - PostgreSQL database connection
 - `:lipas/search` - Elasticsearch client
 - `:lipas/emailer` - Email configuration
 - `:lipas/aws` - S3 integration
@@ -52,7 +52,7 @@ Use the built-in REPL exploration tools:
 ;; List all available namespaces
 (clj-mcp.repl-tools/list-ns)
 
-;; Explore specific namespaces  
+;; Explore specific namespaces
 (clj-mcp.repl-tools/list-vars 'lipas.backend.core)
 
 ;; Show documentation for functions
@@ -64,12 +64,26 @@ Use the built-in REPL exploration tools:
 
 ## 🧪 Running Tests
 
+Important! Always reload changed code before running the tests:
+- changed code namespaces
+- changed test namespaces
+- explicitly reload lipas.test-utils
+
 After the system is loaded with `(dev-webapp!)`:
 
 ```clojure
 (require '[cognitect.test-runner.api :as tr])
 (tr/test {:dirs ["webapp/test/clj"]})
 ```
+
+Options for Cognitect test runner
+
+  :dirs - coll of directories containing tests, default= ["test"]
+  :nses - coll of namespace symbols to test
+  :patterns - coll of regex strings to match namespaces
+  :vars - coll of fully qualified symbols to run tests on
+  :includes - coll of test metadata keywords to include
+  :excludes - coll of test metadata keywords to exclude"
 
 ## 🛠️ Webapp REPL Utilities
 
@@ -79,7 +93,7 @@ Once `(dev-webapp!)` has loaded the system, you have access to rich webapp-speci
 ```clojure
 ;; Access system components directly
 (repl/db)           ; Database connection
-(repl/search)       ; Elasticsearch client  
+(repl/search)       ; Elasticsearch client
 (repl/ptv)          ; PTV integration
 (repl/current-system) ; Full system map
 (repl/current-config) ; System configuration
@@ -108,7 +122,7 @@ Once `(dev-webapp!)` has loaded the system, you have access to rich webapp-speci
 ;; System control (integrant.repl functions)
 (repl/reset)  ; Reset system with code reload
 (go)          ; Start system
-(halt)        ; Stop system  
+(halt)        ; Stop system
 (reset-all)   ; Full reset clearing all state
 ```
 
@@ -131,7 +145,7 @@ Once `(dev-webapp!)` has loaded the system, you have access to rich webapp-speci
 
 The `webapp/dev/repl.clj` file includes extensive comment blocks with real-world examples of:
 - Database migrations and schema updates
-- Search index management  
+- Search index management
 - Data type management and merging
 - User management operations
 - System maintenance tasks
@@ -148,7 +162,7 @@ These comment blocks serve as documentation and executable examples for common d
 └── webapp/
     ├── deps.edn          # Clean production dependencies
     ├── src/clj/          # Backend Clojure code
-    ├── src/cljs/         # Frontend ClojureScript code  
+    ├── src/cljs/         # Frontend ClojureScript code
     ├── src/cljc/         # Shared Clojure/ClojureScript code
     └── test/             # Tests
 ```
@@ -163,7 +177,7 @@ These comment blocks serve as documentation and executable examples for common d
 
 ### No Need For:
 - ❌ Complex setup scripts
-- ❌ Build commands  
+- ❌ Build commands
 - ❌ Manual dependency management
 - ❌ Figuring out how to start the system
 
@@ -194,7 +208,7 @@ The clojure-mcp environment provides:
 ```clojure
 ;; Simple component
 (defui greeting [{:keys [name]}]
-  ($ :div.greeting 
+  ($ :div.greeting
      ($ :h1 (str "Hello " name "!"))))
 
 ;; With state
@@ -202,7 +216,7 @@ The clojure-mcp environment provides:
   (let [[count set-count!] (use-state 0)]
     ($ :div
        ($ :p (str "Count: " count))
-       ($ :button {:on-click #(set-count! inc)} 
+       ($ :button {:on-click #(set-count! inc)}
           "Increment"))))
 ```
 
