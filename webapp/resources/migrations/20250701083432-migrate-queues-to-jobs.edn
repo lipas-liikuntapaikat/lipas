@@ -1,0 +1,4 @@
+{:ns lipas.migrations.migrate-queues-to-jobs
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}
