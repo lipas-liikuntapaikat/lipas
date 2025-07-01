@@ -115,7 +115,7 @@
 
       "worker"
       (do
-        (log/set-level! :info)
+        (log/set-min-level! :info)
         (println "Starting LIPAS worker...")
         (require 'lipas.jobs.system)
         (let [start-worker! (resolve 'lipas.jobs.system/start-worker-system!)]

@@ -3,7 +3,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.0"},
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.0"},
         hiposfer/geojson.specs {:mvn/version "0.2.0"},
-        com.taoensso/timbre {:mvn/version "4.10.0"},
+        com.taoensso/timbre {:mvn/version "6.7.1"},
         com.cemerick/url {:mvn/version "0.1.1"},
         metosin/reitit {:mvn/version "0.7.1"},
         metosin/ring-swagger-ui {:mvn/version "5.18.2"},

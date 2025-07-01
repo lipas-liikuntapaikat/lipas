@@ -3,7 +3,7 @@
             [etaoin.api :as e]
             [taoensso.timbre :as timbre]))
 
-(timbre/set-level! :info)
+(timbre/set-min-level! :info)
 
 (def ^:dynamic *driver*)
 
