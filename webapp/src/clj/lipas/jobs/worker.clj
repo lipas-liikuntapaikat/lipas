@@ -94,33 +94,54 @@
                                                       started-at (:created_at job) correlation-id)))))))))
 
 (defn fetch-and-process-jobs
-  "Fetch jobs and route them to appropriate thread pools."
+  "Fetch jobs and route them to appropriate thread pools.
+   Only fetch jobs that can actually be processed based on available thread capacity."
   [system pools config]
   (let [{:keys [batch-size]} config
         {:keys [db]} system
+        {:keys [fast-pool general-pool]} pools
 
-        ;; Fetch jobs for fast lane (only fast job types)
-        fast-job-types (vec (:fast jobs/job-duration-types))
-        fast-jobs (jobs/fetch-next-jobs db {:limit batch-size
-                                            :job-types fast-job-types})
+        ;; Check available thread capacity first
+        fast-active (.getActiveCount ^ThreadPoolExecutor fast-pool)
+        fast-capacity (.getCorePoolSize ^ThreadPoolExecutor fast-pool)
+        fast-available (max 0 (- fast-capacity fast-active))
 
-        ;; Fetch jobs for general lane (any remaining jobs)
-        remaining-batch-size (max 0 (- batch-size (count fast-jobs)))
-        general-jobs (when (pos? remaining-batch-size)
-                       (jobs/fetch-next-jobs db {:limit remaining-batch-size}))]
+        general-active (.getActiveCount ^ThreadPoolExecutor general-pool)
+        general-capacity (.getCorePoolSize ^ThreadPoolExecutor general-pool)
+        general-available (max 0 (- general-capacity general-active))
 
-    ;; Process fast jobs in fast lane
-    (when (seq fast-jobs)
-      (log/debug "Processing fast jobs" {:count (count fast-jobs)})
-      (process-job-batch system pools fast-jobs :fast))
+        ;; For fast jobs: batch up to available capacity
+        fast-fetch-limit (min batch-size fast-available)
+        ;; For slow jobs: fetch one at a time to allow thread reuse
+        general-fetch-limit (min 1 general-available)]
 
-    ;; Process general jobs in general lane  
-    (when (seq general-jobs)
-      (log/debug "Processing general jobs" {:count (count general-jobs)})
-      (process-job-batch system pools general-jobs :general))
+    (log/debug "Thread capacity check"
+               {:fast-active fast-active :fast-available fast-available
+                :general-active general-active :general-available general-available
+                :fast-fetch-limit fast-fetch-limit :general-fetch-limit general-fetch-limit})
 
-    ;; Return total processed
-    (+ (count fast-jobs) (count general-jobs))))
+    ;; Fetch jobs for fast lane only if we have capacity
+    (let [fast-jobs (when (pos? fast-fetch-limit)
+                      (let [fast-job-types (vec (:fast jobs/job-duration-types))]
+                        (jobs/fetch-next-jobs db {:limit fast-fetch-limit
+                                                  :job-types fast-job-types})))
+
+          ;; Fetch jobs for general lane only if we have capacity (one at a time)
+          general-jobs (when (pos? general-fetch-limit)
+                         (jobs/fetch-next-jobs db {:limit general-fetch-limit}))]
+
+      ;; Process fast jobs in fast lane
+      (when (seq fast-jobs)
+        (log/debug "Processing fast jobs" {:count (count fast-jobs)})
+        (process-job-batch system pools fast-jobs :fast))
+
+      ;; Process general jobs in general lane  
+      (when (seq general-jobs)
+        (log/debug "Processing general jobs" {:count (count general-jobs)})
+        (process-job-batch system pools general-jobs :general))
+
+      ;; Return total processed
+      (+ (count (or fast-jobs [])) (count (or general-jobs []))))))
 
 (defn worker-loop
   "Main worker loop that polls for jobs and processes them."
