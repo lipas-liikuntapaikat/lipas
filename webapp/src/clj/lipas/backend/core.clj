@@ -9,9 +9,7 @@
             [lipas.backend.accessibility :as accessibility]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
-            [lipas.jobs.core :as jobs]
             [lipas.backend.db.db :as db]
-            [lipas.backend.elevation :as elevation]
             [lipas.backend.email :as email]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
@@ -25,6 +23,7 @@
             [lipas.data.types :as types]
             [lipas.i18n.core :as i18n]
             [lipas.integration.utp.cms :as utp-cms]
+            [lipas.jobs.core :as jobs]
             [lipas.reports :as reports]
             [lipas.roles :as roles]
             [lipas.utils :as utils]
@@ -579,7 +578,7 @@
                #_(jobs/enqueue-job! tx "webhook"
                                   {:lipas-ids [(:lipas-id resp)]
                                    :operation-type (if (new? sports-site) "create" "update")
-                                   :initiated-by (:email user)}
+                                   :initiated-by (:id user)}
                                   {:correlation-id correlation-id
                                    :priority 85}))
 
@@ -785,86 +784,6 @@
 (defn calc-diversity-indices [search params]
   (diversity/calc-diversity-indices-2 search params))
 
-(defn process-analysis-queue!
-  "DEPRECATED: This function is replaced by the new jobs system.
-  Analysis processing is now handled by the 'analysis' job type.
-  Keeping for backward compatibility during migration."
-  [db search]
-  (log/warn "process-analysis-queue! is deprecated. Use the jobs system instead.")
-  (let [entries (->> (db/get-analysis-queue db))]
-    (log/info "Processing" (count entries) "entries from analysis queue")
-
-    ;; Lock
-    (jdbc/with-db-transaction [tx db]
-      (doseq [{:keys [lipas-id]} entries]
-        (db/update-analysis-status! tx lipas-id "in-progress")))
-
-    ;; Process
-    (doseq [{:keys [lipas-id]} entries]
-      (log/info "Processing analysis for" lipas-id)
-      (try
-        (let [fcoll (-> (get-sports-site db lipas-id)
-                        :location
-                        :geometries
-                        simplify)]
-          (diversity/recalc-grid! search fcoll)
-          (db/delete-from-analysis-queue! db lipas-id)
-          (log/info "Analysis for" lipas-id "completed successfully!"))
-        (catch Exception ex
-          (log/error ex)
-          (db/update-analysis-status! db lipas-id "failed"))))))
-
-(defn process-elevation-queue!
-  "DEPRECATED: This function is replaced by the new jobs system.
-  Elevation processing is now handled by the 'elevation' job type.
-  Keeping for backward compatibility during migration."
-  [db search]
-  (log/warn "process-elevation-queue! is deprecated. Use the jobs system instead.")
-  (let [entries (->> (db/get-elevation-queue db))
-        user (when (seq entries)
-               (db/get-user-by-email db {:email "robot@lipas.fi"}))]
-    (log/info "Processing" (count entries) "entries from elevation queue")
-
-    ;; Lock
-    (jdbc/with-db-transaction [tx db]
-      (doseq [{:keys [lipas-id]} entries]
-        (db/update-elevation-status! tx lipas-id "in-progress")))
-
-    ;; Process
-    (doseq [{:keys [lipas-id]} entries]
-      (log/info "Processing elevation for" lipas-id)
-      (try
-        (let [orig (get-sports-site db lipas-id)
-              fcoll (-> orig
-                        :location
-                        :geometries
-                        elevation/enrich-elevation)
-
-              ;; Because previous step might take a while, let's fetch
-              ;; the latest revision again fresh from the db before
-              ;; updating the geoms with elevation.
-              current (get-sports-site db lipas-id)
-              still-valid? (= (:event-date current) (:event-date orig))]
-
-          (when still-valid?
-            (-> current
-                (assoc-in [:location :geometries] fcoll)
-                (->> (upsert-sports-site!* db user))
-                (as-> $ (index! search $ :sync)))
-
-            (add-to-integration-out-queue! db current)
-
-            (db/delete-from-elevation-queue! db lipas-id)
-            (log/info "Elevation enrichment for" lipas-id "completed successfully!"))
-
-          (when-not still-valid?
-            (log/info "Sports site updated in meanwhile. Putting back into the queue.")
-            (db/update-elevation-status! db lipas-id "pending")))
-
-        (catch Exception ex
-          (log/error ex)
-          (db/update-elevation-status! db lipas-id "failed"))))))
-
 ;;; Newsletter ;;;
 
 (defn get-newsletter [config]
@@ -993,23 +912,21 @@
 (defn upsert-loi!
   [db search user loi]
   (let [correlation-id (jobs/gen-correlation-id)]
-    (jobs/with-correlation-context correlation-id
-      (fn []
-        (jdbc/with-db-transaction [tx db]
-          (let [result (db/upsert-loi! tx user loi)]
-            (log/info "Saving LOI with background jobs"
-                      {:loi-id (:id loi)
-                       :user (:email user)})
+    (jdbc/with-db-transaction [tx db]
+      (let [result (db/upsert-loi! tx user loi)]
+        (log/info "Saving LOI with background jobs"
+                  {:loi-id (:id loi)
+                   :user (:email user)})
 
-            ;; Enqueue webhook with same correlation ID
-            (jobs/enqueue-job! tx "webhook"
-                               {:loi-ids [(:id loi)]
-                                :operation-type (if (nil? (:id loi)) "create" "update")
-                                :initiated-by (:email user)}
-                               {:correlation-id correlation-id
-                                :priority 85})
-            (index-loi! search loi :sync)
-            result))))))
+        ;; Enqueue webhook with same correlation ID
+        (jobs/enqueue-job! tx "webhook"
+                           {:loi-ids [(:id loi)]
+                            :operation-type (if (nil? (:id loi)) "create" "update")
+                            :initiated-by (:id user)}
+                           {:correlation-id correlation-id
+                            :priority 85})
+        (index-loi! search loi :sync)
+        result))))
 
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]

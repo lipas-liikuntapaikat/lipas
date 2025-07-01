@@ -168,7 +168,7 @@
    :webhook {:lipas-ids [1 2 3]
              :loi-ids [4 5]
              :operation-type "bulk-import"
-             :initiated-by "admin@lipas.fi"}
+             :initiated-by "admin"}
    :webhook-single {:lipas-ids [123]}
    :produce-reminders {}
    :cleanup-jobs {:days-old 30}

@@ -262,39 +262,24 @@ services:
       - postgres
       - elasticsearch
 
-  # worker:
-  #   extends:
-  #     service: backend-base
-  #   restart: unless-stopped
-  #   logging:
-  #     options:
-  #       tag: "worker"
-  #   entrypoint: clojure -M -m lipas.worker
-  #   links:
-  #     - postgres
-  #     - elasticsearch
-  #     - osrm-foot
-  #     - osrm-bicycle
-  #     - osrm-car
+  worker-local:
+    extends:
+      service: backend-base
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+    entrypoint: clojure -M -m lipas.jobs.main
+    links:
+      - postgres
+      - elasticsearch
+      - osrm-foot
+      - osrm-bicycle
+      - osrm-car
 
-  # worker:
-  #   extends:
-  #     service: backend-base
-  #   restart: unless-stopped
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "100m"
-  #       max-file: "3"
-  #   entrypoint: clojure -M -m lipas.jobs.main
-  #   links:
-  #     - postgres
-  #     - elasticsearch
-  #     - osrm-foot
-  #     - osrm-bicycle
-  #     - osrm-car
-
-  # Alternative: Using uberjar for worker-v2 (for production deployments)
+  # uberjar for production deployments
   worker:
     extends:
       service: backend-base

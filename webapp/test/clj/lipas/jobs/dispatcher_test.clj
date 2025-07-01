@@ -4,6 +4,8 @@
    [clojure.test :refer [deftest testing is use-fixtures]]
    [integrant.core :as ig]
    [lipas.backend.config :as config]
+   [lipas.backend.core :as core]
+   [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.dispatcher :as dispatcher]
@@ -115,14 +117,14 @@
 ;; soon. Let's not waste time making it work with the new Jobs system.
 
 #_(deftest integration-job-handler-test
-  (testing "Integration job handler processes sports site sync"
-    (let [system {:db (test-db) :search (create-mock-search)}
-          job {:id 1 :type "integration" :payload {:lipas-id 12345}}]
+    (testing "Integration job handler processes sports site sync"
+      (let [system {:db (test-db) :search (create-mock-search)}
+            job {:id 1 :type "integration" :payload {:lipas-id 12345}}]
 
       ;; Should not throw - handler should complete
       ;; Should return success status
-      (let [result (dispatcher/dispatch-job system job)]
-        (is (= :success (:status result)))))))
+        (let [result (dispatcher/dispatch-job system job)]
+          (is (= :success (:status result)))))))
 
 (deftest webhook-job-handler-test
   (testing "Webhook job handler processes lipas and loi IDs"
@@ -168,27 +170,62 @@
                   "Only recent completed job should remain"))))))))
 
 (deftest produce-reminders-handler-test
-  (testing "Produce reminders handler creates reminder jobs"
-    (let [db (test-db)
-          system {:db db :search (create-mock-search)}]
+  (testing "Produce reminders handler creates email jobs from overdue reminders"
+    (let [system {:db (test-db)}
+          ;; Create a test user
+          test-user-data {:email "reminder-test@example.com"
+                          :username "reminderuser"
+                          :password "test123"
+                          :status "active"
+                          :user_data "{\"firstname\": \"Reminder\", \"lastname\": \"User\"}"
+                          :permissions "{}"}
+          _ (jdbc/execute! (test-db)
+                           ["INSERT INTO account (email, username, password, status, user_data, permissions) VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb)"
+                            (:email test-user-data) (:username test-user-data) (:password test-user-data)
+                            (:status test-user-data) (:user_data test-user-data) (:permissions test-user-data)])
+          test-user (first (db/get-users (test-db)))]
 
-      ;; Mock the reminders function to avoid database dependencies
-      (with-redefs [lipas.reminders/add-overdue-to-queue!
-                    (fn [db]
-                      (log/info "Mock reminder production called")
-                      ;; Simulate creating 2 reminder jobs
-                      (jobs/enqueue-job! db "email" {:type "reminder" :email "user1@example.com" :link "http://test.com" :body "Reminder 1"})
-                      (jobs/enqueue-job! db "email" {:type "reminder" :email "user2@example.com" :link "http://test.com" :body "Reminder 2"}))]
+      ;; Clear any existing reminders and jobs for clean test
+      (jdbc/execute! (test-db) ["DELETE FROM reminder WHERE account_id = ?" (:id test-user)])
+      (jdbc/execute! (test-db) ["DELETE FROM jobs WHERE type IN ('email', 'produce-reminders')"])
 
-        (let [job {:id 1 :type "produce-reminders" :payload {}}]
-          (dispatcher/dispatch-job system job)
+      ;; Create test reminders that are overdue
+      (let [reminder1 {:body {:message "This is your first reminder" :title "First Reminder"}
+                       :event-date (java.sql.Timestamp/valueOf "2024-01-01 10:00:00")}
+            reminder2 {:body {:message "This is your second reminder" :title "Second Reminder"}
+                       :event-date (java.sql.Timestamp/valueOf "2024-01-02 10:00:00")}]
 
-          ;; Should have created reminder email jobs
-          ;; Job should complete successfully (mocked reminder creation)
-          ;; Note: The mock should have created jobs, but the actual implementation
-          ;; calls the real function, so we just verify successful completion
-          (let [result (dispatcher/dispatch-job system job)]
-            (is (= :success (:status result)))))))))
+        ;; Add reminders using core function
+        (core/add-reminder! (test-db) test-user reminder1)
+        (core/add-reminder! (test-db) test-user reminder2)
+
+        ;; Verify reminders were added and are overdue
+        (let [overdue-before (db/get-overdue-reminders (test-db))]
+          (is (= 2 (count overdue-before)) "Should have 2 overdue reminders"))
+
+        ;; Get initial queue stats
+        (let [queue-stats-before (jobs/get-queue-stats (test-db))
+              pending-before (get-in queue-stats-before [:pending :count] 0)]
+
+          ;; Run the produce-reminders handler
+          (let [job {:id 1 :type "produce-reminders" :payload {} :correlation-id "test-123"}]
+            (dispatcher/dispatch-job system job))
+
+          ;; Verify email jobs were created
+          (let [email-jobs (jdbc/execute! (test-db) ["SELECT * FROM jobs WHERE type = 'email'"])]
+            (is (= 2 (count email-jobs)) "Should have created 2 email jobs")
+
+            ;; Verify email job payloads contain reminder data
+            (doseq [job email-jobs]
+              (let [payload (:jobs/payload job)]
+                (is (= "reminder" (:type payload)) "Email should be of type reminder")
+                (is (= (:email test-user) (:email payload)) "Email should be sent to test user")
+                (is (some? (:reminder-id payload)) "Email should have reminder ID")
+                (is (some? (:body payload)) "Email should have body content"))))
+
+          ;; Verify reminders were marked as processed (no longer overdue)
+          (let [overdue-after (db/get-overdue-reminders (test-db))]
+            (is (= 0 (count overdue-after)) "Should have no overdue reminders after processing")))))))
 
 (deftest job-handler-error-handling-test
   (testing "Job handlers handle errors gracefully"

@@ -2,7 +2,6 @@
   (:require [camel-snake-kebab.core :as csk]
             [cheshire.core :as json]
             [clj-http.client :as client]
-            [clojure.java.jdbc :as jdbc]
             [lipas.backend.db.db :as db]
             [taoensso.timbre :as log]))
 
@@ -69,40 +68,6 @@
                                     :objects payload})}]
     (client/post (:webhook-url config) params)))
 
-(defn process!
-  [db config]
-  (let [batches (db/get-webhook-queue db)
-        lipas-ids (mapcat (comp :lipas-ids :batch-data) batches)
-        loi-ids (mapcat (comp :loi-ids :batch-data) batches)
-        sites (when (seq lipas-ids)
-                (->> (db/get-sports-sites-by-lipas-ids db lipas-ids)
-                     (map sports-site->webhook-entry)))
-        lois (when (seq loi-ids)
-               (->> (db/get-lois-by-ids db loi-ids)
-                    (map loi->webhook-entry)))
-        entries (into (or sites []) lois)]
-
-    (when (seq entries)
-      (jdbc/with-db-transaction [tx db]
-
-        (log/info "Sending" (count entries) "UTP webhook entries")
-
-        (doseq [batch batches]
-          (db/update-webhook-batch-status! tx (:id batch) "in-progress"))
-
-        (try
-          (call-webhook! config entries)
-
-          (doseq [batch batches]
-            (db/update-webhook-batch-status! tx (:id batch) "finished"))
-
-          (log/info "Great success!")
-
-          (catch Exception e
-            (log/error e)
-            (log/info "Resetting batches to 'pending' status for retry")
-            (doseq [batch batches]
-              (db/update-webhook-batch-status! tx (:id batch) "pending"))))))))
 
 (defn process-v2!
   "Process webhook payload in the new jobs system format.
