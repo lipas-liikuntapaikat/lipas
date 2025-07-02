@@ -39,7 +39,6 @@
         site1 (-> (tu/gen-sports-site)
                   (assoc :lipas-id 1)
                   (assoc :status "active")
-                  (assoc :author admin-user)
                   (assoc-in [:type :type-code] 3110) ; swimming hall
                   (assoc-in [:location :city :city-code] 91) ; Helsinki
                   (set-coordinates [24.9384 60.1699])
@@ -52,7 +51,6 @@
         site2 (-> (tu/gen-sports-site)
                   (assoc :lipas-id 2)
                   (assoc :status "active")
-                  (assoc :author admin-user)
                   (assoc-in [:type :type-code] 1110) ; football field
                   (assoc-in [:location :city :city-code] 49) ; Espoo
                   (set-coordinates [24.8200 60.1719])
@@ -65,7 +63,6 @@
         site3 (-> (tu/gen-sports-site)
                   (assoc :lipas-id 3)
                   (assoc :status "active")
-                  (assoc :author admin-user)
                   (assoc-in [:type :type-code] 2120) ; ice hockey hall
                   (assoc-in [:location :city :city-code] 91) ; Helsinki
                   (set-coordinates [24.9500 60.1800])
@@ -80,7 +77,6 @@
         site4 (-> (tu/gen-sports-site)
                   (assoc :lipas-id 4)
                   (assoc :status "planned")
-                  (assoc :author admin-user)
                   (assoc-in [:type :type-code] 4510) ; gym
                   (assoc-in [:location :city :city-code] 92) ; Vantaa
                   (set-coordinates [25.0400 60.2900])
