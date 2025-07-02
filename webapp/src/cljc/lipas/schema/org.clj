@@ -27,7 +27,14 @@
   [:map
    [:changes
     [:vector
-     [:map
-      [:user-id :uuid]
-      [:change [:enum "add" "remove"]]
-      [:role [:enum "org-admin" "org-user"]]]]]])
+     [:or
+      ;; Case 1: Has user-id but not email (existing admin workflow)
+      [:map {:closed true}
+       [:user-id :uuid]
+       [:change [:enum "add" "remove"]]
+       [:role [:enum "org-admin" "org-user"]]]
+      ;; Case 2: Has email but not user-id (new email-based workflow)
+      [:map {:closed true}
+       [:email :string]
+       [:change [:enum "add" "remove"]]
+       [:role [:enum "org-admin" "org-user"]]]]]]])

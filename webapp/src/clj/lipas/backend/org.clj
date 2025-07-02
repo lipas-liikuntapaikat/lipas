@@ -28,19 +28,39 @@
 
 (defn update-org-users! [db org-id changes]
   (jdbc-old/with-db-transaction [tx db]
-    (doseq [{:keys [user-id change role]} changes]
-      (let [user (db/get-user-by-id tx {:id user-id})
-            user (case change
-                   "add" (update-in user [:permissions :roles] (fnil conj []) {:role role
-                                                                               :org-id org-id})
-                   "remove" (update-in user [:permissions :roles] (fn [roles]
-                                                                    (into (empty roles)
-                                                                          (remove (fn [x]
-                                                                                    (and (= (keyword role) (:role x))
-                                                                                         ;; Should always a vector with one item...
-                                                                                         (= [(str org-id)] (:org-id x))))
-                                                                                  roles)))))]
-        (db/update-user-permissions! tx user)))))
+    (doseq [change-spec changes]
+      (let [;; Handle both user-id and email cases
+            user (cond
+                   (:user-id change-spec)
+                   (db/get-user-by-id tx {:id (:user-id change-spec)})
+
+                   (:email change-spec)
+                   (let [email (:email change-spec)
+                         user (db/get-user-by-email tx {:email email})]
+                     (when (nil? user)
+                       (throw (ex-info (str "No user found with email address: " email ". "
+                                            "The user must first register an account with LIPAS "
+                                            "before they can be added to an organization.")
+                                       {:type :user-not-found
+                                        :email email})))
+                     user))
+
+            {:keys [change role]} change-spec
+
+            updated-user (case change
+                           "add" (update-in user [:permissions :roles]
+                                            (fnil conj [])
+                                            {:role (keyword role)
+                                             :org-id [(str org-id)]})
+                           "remove" (update-in user [:permissions :roles]
+                                               (fn [roles]
+                                                 (into (empty roles)
+                                                       (remove (fn [x]
+                                                                 (and (= (keyword role) (:role x))
+                                                                    ;; Should always a vector with one item...
+                                                                      (= [(str org-id)] (:org-id x))))
+                                                               roles)))))]
+        (db/update-user-permissions! tx updated-user)))))
 
 (defn user-orgs [db id]
   (let [q (hsql/format {:select [:o.*]

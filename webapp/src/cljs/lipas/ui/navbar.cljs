@@ -67,6 +67,17 @@
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
+     ;; Organizations
+     (when (and logged-in?
+                (or @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :org/admin])
+                    @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :org/manage])
+                    (seq @(rf/subscribe [:lipas.ui.org.subs/user-orgs]))))
+       [mui/menu-item {:id "account-menu-item-organizations"
+                       :on-click (comp close #(navigate! "/organisaatiot"))}
+        [mui/list-item-icon
+         [mui/icon "corporate_fare"]]
+        [mui/list-item-text {:primary (tr :lipas.admin/organizations)}]])
+
      ;; Admin
      (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
        [mui/menu-item {:id "account-menu-item-admin"
