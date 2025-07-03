@@ -1,0 +1,10 @@
+{:lipas-managed-ptv-fields "Använd en separat beskrivning",
+ :lipas-managed-comment-field
+ "Använd ytterligare informationsfältet för idrottsplatsen.",
+ :lipas-managed-comment-field-helper
+ "Beskrivningen av serviceplatsen underhålls i idrottsanläggningens ytterligare informationsfält. Sammanfattningen är det första stycket som separeras med enter-tangenten i informationsfältet.",
+ :lipas-managed-ptv-fields-helper
+ "Beskrivningen och sammanfattningen underhålls separat från idrottsanläggningen i det här verktyget. Beskrivningsförslag kan automatiskt genereras med hjälp av artificiell intelligens.",
+ :ptv-managed "Uppdatera inte beskrivningarna.",
+ :ptv-managed-helper
+ "Beskrivningen och sammanfattningen underhålls i PTV. Lipas ändrar eller uppdaterar inte beskrivningarna."}

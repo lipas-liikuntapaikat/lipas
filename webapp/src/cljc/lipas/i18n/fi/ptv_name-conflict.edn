@@ -1,0 +1,7 @@
+{:opt1
+ "Liitä liikuntapaikka olemassa olevaan palvelupaikkaan painamalla \"Liitä tähän palvelupaikkaan\" -painiketta (suositus)",
+ :opt2 "Valitse haluamasi palvelupaikka alla olevasta valitsimesta",
+ :opt3
+ "Laita liukukytkin pois päältä, jolloin tätä kohdetta ei integroida PTV:oon.",
+ :opt4 "Arkistoi kyseinen palvelupaikka PTV:stä.",
+ :do-one-of-these "Tee yksi näistä"}

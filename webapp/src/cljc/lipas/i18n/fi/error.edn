@@ -1,0 +1,9 @@
+{:email-conflict "Sähköpostiosoite on jo käytössä",
+ :email-not-found "Sähköpostiosoitetta ei ole rekisteröity.",
+ :invalid-form "Korjaa punaisella merkityt kohdat",
+ :no-data "Ei tietoja",
+ :reset-token-expired
+ "Salasanan vaihto epäonnistui. Linkki on vanhentunut.",
+ :unknown "Tuntematon virhe tapahtui. :/",
+ :user-not-found "Käyttäjää ei löydy.",
+ :username-conflict "Käyttäjätunnus on jo käytössä"}

@@ -1,0 +1,6 @@
+{:hall-heating "Hallin lämmitys",
+ :maintenance-water-heating "Jäänhoitoveden lämmitys",
+ :other-space-heating "Muun tilan lämmitys",
+ :service-water-heating "Käyttöveden lämmitys",
+ :snow-melting "Lumensulatus",
+ :track-heating "Ratapohjan lämmitys"}

@@ -1,0 +1,18 @@
+{:headline "Logga in",
+ :login-here "här",
+ :login-with-password "Logga in med lösenord",
+ :password "Lösenord",
+ :logout "Logga ut",
+ :username "E-post / användarnamn",
+ :login-help
+ "Om du har ett användarnamn till LIPAS, du kan också logga in med e-post",
+ :login "Logga in",
+ :magic-link-help
+ "Om du har ett användarnamn till LIPAS, du kan beställa en logga in-länk till din e-post.",
+ :order-magic-link "Skicka länken till min e-post",
+ :login-with-magic-link "Logga in med e-post",
+ :bad-credentials "Lösenord eller användarnamn är felaktigt",
+ :magic-link-ordered
+ "Länken har skickats och den är snart i din e-post. Kolla också spam!",
+ :username-example "paavo.paivittaja@kunta.fi",
+ :forgot-password? "Glömt ditt lösenord?"}

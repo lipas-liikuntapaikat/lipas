@@ -1,0 +1,5 @@
+{:brick "Tiili",
+ :concrete "Betoni",
+ :solid-rock "Kallio",
+ :steel "Teräs",
+ :wood "Puu"}

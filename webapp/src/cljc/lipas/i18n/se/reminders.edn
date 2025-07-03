@@ -1,0 +1,10 @@
+{:description "Meddelandet ska skickas till din e-post på vald tid.",
+ :after-one-month "Om en månad",
+ :placeholder "Kom ihåg att kolla idrottsanläggningen \"{1}\" {2}",
+ :select-date "Välj datum",
+ :tomorrow "I morgon",
+ :title "Lägg till en påminnelse",
+ :after-six-months "Om halv år",
+ :in-a-year "Om ett år",
+ :message "Meddelande",
+ :in-a-week "Om en vecka"}

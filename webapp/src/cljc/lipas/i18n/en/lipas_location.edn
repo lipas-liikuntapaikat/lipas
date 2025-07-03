@@ -1,0 +1,7 @@
+{:address "Address",
+ :city "City",
+ :city-code "City code",
+ :headline "Location",
+ :neighborhood "Neighborhood",
+ :postal-code "Postal code",
+ :postal-office "Postal office"}

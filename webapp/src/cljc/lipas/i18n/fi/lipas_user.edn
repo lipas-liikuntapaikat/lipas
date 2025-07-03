@@ -1,0 +1,34 @@
+{:email "Sähköposti",
+ :permissions "Käyttöoikeudet",
+ :permissions-example
+ "Oikeus päivittää Jyväskylän jäähallien tietoja.",
+ :saved-searches "Tallennetut haut",
+ :report-energy-and-visitors "Ilmoita energia- ja kävijämäärätiedot",
+ :permission-to-cities "Sinulla on käyttöoikeus seuraaviin kuntiin:",
+ :password "Salasana",
+ :lastname "Sukunimi",
+ :save-report "Tallenna raporttipohja",
+ :sports-sites "Omat kohteet",
+ :permission-to-all-cities "Sinulla on käyttöoikeus kaikkiin kuntiin",
+ :username "Käyttäjätunnus",
+ :history "Historia",
+ :saved-reports "Tallennetut raporttipohjat",
+ :contact-info "Yhteystiedot",
+ :permission-to-all-types
+ "Sinulla on käyttöoikeus kaikkiin  liikuntapaikkatyyppeihin",
+ :requested-permissions "Pyydetyt oikeudet",
+ :email-example "kalle.kayttaja@kunta.fi",
+ :organizations "Käyttäjän organisaatiot",
+ :permission-to-portal-sites
+ "Sinulla on käyttöoikeus seuraaviin  yksittäisiin liikuntapaikkoihin:",
+ :permissions-help "Kerro, mitä tietoja haluat päivittää Lipaksessa",
+ :report-energy-consumption "Ilmoita energiankulutus",
+ :firstname "Etunimi",
+ :save-search "Tallenna haku",
+ :view-basic-info "Tarkista perustiedot",
+ :no-permissions "Sinulle ei ole vielä myönnetty käyttöoikeuksia.",
+ :permission-to-activities
+ "Sinulla on käyttöoikeus seuraaviin aktiviteetteihin",
+ :username-example "tane12",
+ :permission-to-types
+ "Sinulla on käyttöoikeus seuraaviin  liikuntapaikkatyyppeihin:"}

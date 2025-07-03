@@ -1,0 +1,5 @@
+{:air-source "Ilmalämpöpumppu",
+ :air-water-source "Ilma-vesilämpöpumppu",
+ :exhaust-air-source "Poistoilmalämpöpumppu",
+ :ground-source "Maalämpöpumppu",
+ :none "Ei lämpöpumppua"}

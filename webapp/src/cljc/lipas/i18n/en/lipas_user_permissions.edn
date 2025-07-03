@@ -1,0 +1,7 @@
+{:admin? "Admin",
+ :all-cities? "Permission to all cities",
+ :all-types? "Permission to all types",
+ :cities "Access to sports faclities in cities",
+ :sports-sites "Access to sports faclities",
+ :types "Access to sports faclities of type",
+ :activities "Activities"}

@@ -1,0 +1,7 @@
+{:brick "Tegel",
+ :concrete "Betong",
+ :concrete-beam "Häll",
+ :concrete-pillar "Stål",
+ :solid-rock "Häll",
+ :steel "Stål",
+ :wood "Trä"}

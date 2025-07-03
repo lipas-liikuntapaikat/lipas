@@ -1,0 +1,18 @@
+{:contains-other-buildings?
+ "Energialukemat sisältävät myös muita  rakennuksia tai tiloja",
+ :headline "Energian​kulutus",
+ :yearly "Vuositasolla*",
+ :report "Ilmoita lukemat",
+ :electricity "Sähköenergia MWh",
+ :headline-year "Lukemat vuonna {1}",
+ :monthly? "Haluan ilmoittaa energiankulutuksen kuukausitasolla",
+ :reported-for-year "Vuoden {1} energiankulutus ilmoitettu",
+ :monthly "Kuukausitasolla",
+ :operating-hours "Käyttötunnit",
+ :not-reported "Ei energiankulutustietoja",
+ :not-reported-monthly "Ei kuukausikulutustietoja",
+ :heat "Lämpöenergia (ostettu) MWh",
+ :cold "Kylmäenergia (ostettu) MWh",
+ :comment "Kommentti",
+ :water "Vesi m³",
+ :monthly-readings-in-year "Kuukausikulutukset vuonna {1}"}

@@ -1,0 +1,13 @@
+{:headline "Hallien energiankulutus vuonna {1}",
+ :energy-reported-for
+ "Sähkön-, lämmön- ja vedenkulutus ilmoitettu vuodelta {1}",
+ :report "Ilmoita lukemat",
+ :disclaimer "*Perustuu ilmoitettuihin kulutuksiin vuonna {1}",
+ :reported "Ilmoitettu {1}",
+ :cold-mwh "Kylmä MWh",
+ :hall-missing? "Puuttuvatko hallisi tiedot kuvasta?",
+ :not-reported "Ei tietoa {1}",
+ :water-m3 "Vesi m³",
+ :electricity-mwh "Sähkö MWh",
+ :heat-mwh "Lämpö MWh",
+ :energy-mwh "Sähkö + lämpö MWh"}

@@ -1,0 +1,11 @@
+{:private-foundation "Privat / stiftelse",
+ :city-other "Kommun / annat",
+ :unknown "Okänt",
+ :municipal-consortium "Samkommun",
+ :private-company "Privat / företag",
+ :private-association "Privat / förening",
+ :other "Annat",
+ :city-technical-services "Kommun / teknisk väsende",
+ :city-sports "Kommun/ idrottsväsende",
+ :state "Stat",
+ :city-education "Kommun / utbildingsväsende"}

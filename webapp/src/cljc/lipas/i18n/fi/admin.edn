@@ -1,0 +1,11 @@
+{:private-foundation "Yksityinen / säätiö",
+ :city-other "Kunta / muu",
+ :unknown "Ei tietoa",
+ :municipal-consortium "Kuntayhtymä",
+ :private-company "Yksityinen / yritys",
+ :private-association "Yksityinen / yhdistys",
+ :other "Muu",
+ :city-technical-services "Kunta / tekninen toimi",
+ :city-sports "Kunta / liikuntatoimi",
+ :state "Valtio",
+ :city-education "Kunta / opetustoimi"}

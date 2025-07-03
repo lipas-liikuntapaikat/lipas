@@ -1,0 +1,7 @@
+{:area-m2 "Area m²",
+ :depth-max-m "Depth max m",
+ :depth-min-m "Depth min m",
+ :length-m "Length m",
+ :surface-area-m2 "Surface area m²",
+ :volume-m3 "Volume m³",
+ :width-m "Width m"}

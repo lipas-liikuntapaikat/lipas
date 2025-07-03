@@ -1,0 +1,10 @@
+{:open-days-in-year "Aukiolopäivät vuodessa",
+ :open-hours-mon "Maanantaisin",
+ :headline "Aukiolo",
+ :open-hours-wed "Keskiviikkoisin",
+ :open-hours-thu "Torstaisin",
+ :open-hours-fri "Perjantaisin",
+ :open-hours-tue "Tiistaisin",
+ :open-hours-sun "Sunnuntaisin",
+ :daily-open-hours "Aukiolotunnit päivässä",
+ :open-hours-sat "Lauantaisin"}

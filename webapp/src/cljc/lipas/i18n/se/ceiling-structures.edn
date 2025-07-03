@@ -1,0 +1,7 @@
+{:concrete "Betong",
+ :double-t-beam "TT-bricka",
+ :glass "Glas",
+ :hollow-core-slab "Häll",
+ :solid-rock "Häll",
+ :steel "Stål",
+ :wood "Trä"}

@@ -1,0 +1,9 @@
+{:mm "mm",
+ :hour "h",
+ :m3 "m³",
+ :m "m",
+ :temperature-c "Temperature °C",
+ :l "l",
+ :mwh "MWh",
+ :m2 "m²",
+ :celsius "°C"}

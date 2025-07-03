@@ -1,0 +1,7 @@
+{:headline "Annat objekt",
+ :category "Kategori",
+ :status "Status",
+ :type "Objekttyp",
+ :type-and-category-disclaimer
+ "Kategori och typ måste väljas innan de läggs till på kartan",
+ :other-target "Annat objekt"}

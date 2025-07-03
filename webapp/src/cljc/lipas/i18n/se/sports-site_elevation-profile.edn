@@ -1,0 +1,6 @@
+{:headline "Höjdprofil",
+ :distance-from-start-m "Avstånd från start (m)",
+ :distance-from-start-km "Avstånd från start (km)",
+ :height-from-sea-level-m "Höjd över havet (m)",
+ :total-ascend "Total stigning",
+ :total-descend "Total nedstigning"}

@@ -1,0 +1,5 @@
+{:LPG "LPG",
+ :electicity "Electricity",
+ :gasoline "Gasoline",
+ :natural-gas "Natural gas",
+ :propane "Propane"}

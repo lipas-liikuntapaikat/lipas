@@ -1,0 +1,6 @@
+{:headline "Kävijämäärät",
+ :monthly-visitors-in-year "Kuukausittaiset kävijämäärät vuonna {1}",
+ :not-reported "Ei kävijämäärätietoja",
+ :not-reported-monthly "Ei kuukausitason tietoja",
+ :spectators-count "Katsojamäärä",
+ :total-count "Käyttäjämäärä"}

@@ -1,0 +1,5 @@
+{:lipas-managed "LIPAS definierar servicepunkterna (rekommenderas).",
+ :manual-helper
+ "Idrottsanläggningen kopplas manuellt till den befintliga servicepunkten i det här verktyget. Kopplingen måste göras för varje idrottsanläggning en gång.",
+ :lipas-managed-helper
+ "LIPAS skapar en servicepunkt för varje idrottsanläggning i PTV och kopplar automatiskt idrottsanläggningarnas uppgifter till dem."}

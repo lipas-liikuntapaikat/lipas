@@ -1,0 +1,18 @@
+{:headline "Import geometries",
+ :geoJSON
+ "Upload .json file containing FeatureCollection. Coordinates must be in WGS84 format.",
+ :gpx "Coordinates must be in WGS84 format",
+ :supported-formats "Supported formats are {1}",
+ :no-geoms-of-type
+ "The provided file does not contain any {1} geometries.",
+ :replace-existing? "Replace existing geometries",
+ :select-encoding "Select encoding",
+ :tab-header "Import",
+ :kml "Coordinates must be in WGS84 format",
+ :coords-not-in-finland-wgs84-bounds
+ "The provided file does not contain coordinates in the WGS84 (EPSG:4326) coordinate system. Check that the source material is in the correct coordinate system.",
+ :shapefile "Import zip file containing .shp .dbf and .prj file.",
+ :import-selected "Import selected",
+ :tooltip "Import from file",
+ :unknown-format "Unkonwn format '{1}'",
+ :unknown-error "An unexpected error occurred. Try with another file."}

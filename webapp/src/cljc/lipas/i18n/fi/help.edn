@@ -1,0 +1,8 @@
+{:headline "Ohjeet",
+ :available-pages "Sivut tässä osiossa",
+ :permissions-help "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
+ :permissions-help-body
+ "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
+ :permissions-help-subject "Haluan lisää käyttöoikeuksia",
+ :privacy-policy "Tietosuojailmoitus",
+ :manage-content "Hallitse ohjesisältöä"}

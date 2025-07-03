@@ -1,0 +1,10 @@
+{:headline "Refrigeration",
+ :refrigerant-solution-amount-l "Refrigerant solution amount (l)",
+ :individual-metering? "Individual metering",
+ :original? "Original",
+ :refrigerant "Refrigerant",
+ :refrigerant-solution "Refrigerant solution",
+ :condensate-energy-main-targets "Condensate energy main target",
+ :power-kw "Power (kW)",
+ :condensate-energy-recycling? "Condensate energy recycling",
+ :refrigerant-amount-kg "Refrigerant amount (kg)"}

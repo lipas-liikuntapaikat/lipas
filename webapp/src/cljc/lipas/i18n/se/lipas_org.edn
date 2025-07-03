@@ -1,0 +1,12 @@
+{:email "E-post",
+ :phone "Telefonnummer",
+ :name "Namn",
+ :org-role "Roll",
+ :contact-admin
+ "Kontakta systemadministratören för att läggas till i en organisation",
+ :no-organizations "Du tillhör ingen organisation",
+ :users-section "Användare",
+ :website "Webbsida",
+ :reservation-link "Bokningslänk",
+ :add-user "Lägg till"
+ :add-user-by-email "Lägg till via e-post"}

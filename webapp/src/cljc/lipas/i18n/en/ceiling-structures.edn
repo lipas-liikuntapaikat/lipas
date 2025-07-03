@@ -1,0 +1,7 @@
+{:concrete "Concrete",
+ :double-t-beam "Double-T",
+ :glass "Glass",
+ :hollow-core-slab "Hollow-core slab",
+ :solid-rock "Solid rock",
+ :steel "Steel",
+ :wood "Wood"}

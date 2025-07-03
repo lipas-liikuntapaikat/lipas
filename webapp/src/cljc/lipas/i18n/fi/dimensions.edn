@@ -1,0 +1,7 @@
+{:area-m2 "Pinta-ala m²",
+ :depth-max-m "Syvyys max m",
+ :depth-min-m "Syvyys min m",
+ :length-m "Pituus m",
+ :surface-area-m2 "Pinta-ala m²",
+ :volume-m3 "Tilavuus m³",
+ :width-m "Leveys m"}

@@ -1,0 +1,9 @@
+{:email-conflict "E-post är redan registrerad",
+ :email-not-found "E-post är inte registrerad",
+ :invalid-form "Korrigera röda fält",
+ :no-data "Ingen information",
+ :reset-token-expired
+ "Lösenordet har inte ändrats. Länken har utgått.",
+ :unknown "Ett okänt fel uppstod. :/",
+ :user-not-found "Användare hittas inte.",
+ :username-conflict "Användarnamnet redan används"}

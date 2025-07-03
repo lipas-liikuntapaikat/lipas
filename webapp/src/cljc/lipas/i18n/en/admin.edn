@@ -1,0 +1,11 @@
+{:private-foundation "Private / foundation",
+ :city-other "City / other",
+ :unknown "Unknown",
+ :municipal-consortium "Municipal consortium",
+ :private-company "Private / company",
+ :private-association "Private / association",
+ :other "Other",
+ :city-technical-services "City / technical services",
+ :city-sports "City / sports",
+ :state "State",
+ :city-education "City / education"}

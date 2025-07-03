@@ -1,0 +1,12 @@
+{:email "Email",
+ :phone "Phone number",
+ :name "Name",
+ :org-role "Role",
+ :contact-admin
+ "Contact the system administrator to be added to an organization",
+ :no-organizations "You are not a member of any organization",
+ :users-section "Users",
+ :website "Website",
+ :reservation-link "Reservation link",
+ :add-user "Add"
+ :add-user-by-email "Add by email"}

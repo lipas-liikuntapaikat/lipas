@@ -1,0 +1,6 @@
+{:no-existing-description "Alla utan beskrivning",
+ :all "Allt",
+ :sync-enabled "Valda för export",
+ :sync-enabled-no-existing-description
+ "Valda för export som saknar beskrivning",
+ :label "Välj idrottsanläggningar"}

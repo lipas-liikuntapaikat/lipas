@@ -1,0 +1,6 @@
+{:get-failed "Couldn't get data.",
+ :save-failed "Saving failed",
+ :save-success "Saving succeeded",
+ :ie
+ "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge.",
+ :thank-you-for-feedback "Thank you for feedback!"}

@@ -1,0 +1,8 @@
+{:discard-changes? "Do you want to discard all changes?",
+ :headline "Confirmation",
+ :no "No",
+ :delete-confirm "Are you sure you want to delete the row?",
+ :resurrect?
+ "Are you sure you want to resurrect this sports facility?",
+ :save-basic-data? "Do you want to save general information?",
+ :yes "Yes"}

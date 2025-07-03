@@ -1,0 +1,6 @@
+{:headline "Vienti Palvelutietovarantoon",
+ :label "Milloin muutokset viedään Palvelutietovarantoon",
+ :immediate
+ "Automaattisesti kun muutoksia tallennetaan Lipaksessa (suositeltu)",
+ :daily "Automaattisesti kerran päivässä",
+ :manual "Vain manuaalisesti"}

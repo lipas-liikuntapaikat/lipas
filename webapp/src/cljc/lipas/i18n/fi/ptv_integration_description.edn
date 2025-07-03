@@ -1,0 +1,9 @@
+{:lipas-managed-comment-field "Käytä liikuntapaikan lisätietokenttää",
+ :lipas-managed-comment-field-helper
+ "Palvelupaikan kuvaus ylläpidetään liikuntapaikan lisätietokentässä. Tiivistelmä on lisätietokentän ensimmäinen enter-painikkeella erotettu kappale.",
+ :lipas-managed-ptv-fields "Käytä erillistä kuvausta",
+ :lipas-managed-ptv-fields-helper
+ "Kuvaus ja tiivistelmä ylläpidetään liikuntapaikasta erillään tässä työkalussa. Kuvausehdotukset voidaan laatia automaattisesti tekoälyn avulla.",
+ :ptv-managed "Älä päivitä kuvauksia",
+ :ptv-managed-helper
+ "Kuvaus ja tiivistelmä ylläpidetään PTV:ssä. Lipas ei muuta tai päivitä kuvauksia."}

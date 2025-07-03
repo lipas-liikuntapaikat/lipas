@@ -1,0 +1,3 @@
+{:classes "Serviceklasser",
+ :show-only-lipas-managed
+ "Visa endast tjänster som är kopplade till LIPAS."}

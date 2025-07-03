@@ -1,0 +1,8 @@
+{:description
+ "LIPAS is the national database of sports facilities and their conditions in Finland.",
+ :headline "Sports Facilities",
+ :open-interfaces "Open data and APIs",
+ :up-to-date-information
+ "Up-to-date information about sports facilities",
+ :updating-tools "Tools for data maintainers",
+ :analysis-tools "Analysis tools"}

@@ -1,0 +1,9 @@
+{:get-failed "Tietojen hakeminen epäonnistui.",
+ :save-failed "Tallennus epäonnistui",
+ :save-success "Tallennus onnistui",
+ :ie
+ (str
+  "Internet Explorer ei ole tuettu selain. "
+  "Suosittelemme käyttämään toista selainta, "
+  "esim. Chrome, Firefox tai Edge."),
+ :thank-you-for-feedback "Kiitos palautteesta!"}

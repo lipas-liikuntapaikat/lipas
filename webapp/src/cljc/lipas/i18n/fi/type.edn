@@ -1,0 +1,11 @@
+{:main-categories "Pääryhmät",
+ :name "Liikuntapaikkatyyppi",
+ :type-code "Tyyppikoodi",
+ :geometry "Geometria",
+ :Point "Piste",
+ :main-category "Pääryhmä",
+ :sub-category "Alaryhmä",
+ :count "Tyyppejä yhteensä",
+ :LineString "Reitti",
+ :Polygon "Alue",
+ :sub-cateogires "Alaryhmät"}

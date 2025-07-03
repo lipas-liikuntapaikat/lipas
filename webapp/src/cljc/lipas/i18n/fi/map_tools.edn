@@ -1,0 +1,13 @@
+{:simplifying "Yksinkertaistutyökalu valittu",
+ :route-part-difficulty-tooltip "Reittiosan vaativuus työkalu valittu",
+ :simplify "Yksinkertaista",
+ :drawing-hole-tooltip "Reikäpiirtotyökalu valittu",
+ :deleting-tooltip "Poistotyökalu valittu",
+ :splitting-tooltip "Katkaisutyökalu valittu",
+ :drawing-tooltip "Piirtotyökalu valittu",
+ :importing-tooltip "Tuontityökalu valittu",
+ :travel-direction-tooltip "Kulkusuuntatyökalu valittu",
+ :download-backup-tooltip "Lataa varmuuskopio",
+ :restore-backup-tooltip "Palauta varmuuskopio",
+ :selecting "Valintatyökalu valittu",
+ :edit-tool "Muokkaustyökalu"}

@@ -1,0 +1,12 @@
+{:email "Sähköposti",
+ :phone "Puhelinnumero",
+ :name "Nimi",
+ :org-role "Rooli",
+ :contact-admin
+ "Ota yhteyttä järjestelmän ylläpitäjään organisaatiojäsenyyden lisäämiseksi",
+ :no-organizations "Et kuulu mihinkään organisaatioon",
+ :users-section "Käyttäjät",
+ :website "Verkkosivu",
+ :reservation-link "Varauslinkki",
+ :add-user "Lisää"
+ :add-user-by-email "Lisää sähköpostilla"}

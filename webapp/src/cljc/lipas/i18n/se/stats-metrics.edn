@@ -1,0 +1,9 @@
+{:operational-expenses "Verksamhetskostnader",
+ :deficit "Underskott för räkenskapsåret",
+ :surplus "Överskott för räkenskapsåret",
+ :investments "Investeringar",
+ :subsidies "Understöd och bidrag från kommunen",
+ :operational-income "Verksamhetsintäkter",
+ :operating-incomes "Driftsintäkter",
+ :operating-expenses "Driftskostnader",
+ :net-costs "Nettokostnader"}

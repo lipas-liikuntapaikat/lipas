@@ -1,0 +1,9 @@
+{:access-all-sites "You have admin permissions.",
+ :confirm-magic-link
+ "Are you sure you want to send magic link to {1}?",
+ :headline "Admin",
+ :magic-link "Magic Link",
+ :select-magic-link-template "Select letter",
+ :send-magic-link "Send magic link to {1}",
+ :users "Users",
+ :organizations "Organizations"}

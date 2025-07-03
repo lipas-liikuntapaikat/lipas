@@ -1,0 +1,7 @@
+{:admin? "Admin",
+ :all-cities? "Rättighet till alla kommuner",
+ :all-types? "Rättighet till alla typer",
+ :cities "Kommuner",
+ :sports-sites "Idrottsanläggning",
+ :types "Typer",
+ :activities "Aktiviteter"}

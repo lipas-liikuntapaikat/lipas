@@ -1,0 +1,22 @@
+{:headline "Ulkoilutietopalvelu",
+ :video "Video",
+ :length-km "Pituus km",
+ :unit "yksikkö",
+ :add-subroute-ok "OK",
+ :highlight "Kohokohta",
+ :add-subroute "Lisää osareitti",
+ :select-route-parts-on-map "Valitse reitin osat kartalta",
+ :add-video "Lisää video",
+ :add-highlight "Lisää kohokohta",
+ :delete-route-prompt "Haluatko varmasti poistaa tämän reitin?",
+ :finish-route-details "Reitti valmis",
+ :route-is-made-of-subroutes
+ "Reitti koostuu monesta erillisestä osuudesta",
+ :photo "Valokuva",
+ :read-only-disclaimer
+ "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan.",
+ :link "Linkki",
+ :add-contact "Lisää yhteystieto",
+ :custom-rules "Omat säännöt",
+ :custom-rule "Oma lupa, sääntö, ohje",
+ :add-photo "Lisää valokuva"}

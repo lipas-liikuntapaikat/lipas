@@ -1,0 +1,19 @@
+{:export-service-locations-to-ptv "Vie palvelutietovarantoon",
+ :integrate-service-locations "Luo liikuntapaikoista palvelupaikat",
+ :unselect-helper
+ "Jos et halua viedä tiettyä kohdetta, voit avata\n     kohteen oikealta ja laittaa liukukytkimen pois päältä.",
+ :all-services-exist
+ "Kaikki tarvittavat palvelut on PTV:ssä. Hieno juttu!",
+ :generate-descriptions-helper3
+ "Palvelupaikat voidaan perustaa PTV:hen kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti.",
+ :service-channel-name-conflict
+ "PTV:ssä on jo olemassa palvelupaikka nimellä {1}.",
+ :assign-services-to-sports-sites "Liitä liikuntapaikat palveluihin",
+ :generate-descriptions-helper2
+ "Paina \"Laadi kuvaukset\" -painiketta luodaksesi kuvaukset automaattisesti tekoälyn avulla. Kuvaukset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta.",
+ :services-to-add "Perustettavat palvelut",
+ :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan",
+ :export-services-to-ptv "Vie palvelutietovarantoon",
+ :generate-descriptions-helper1
+ "Palvelut voidaan perustaa PTV:hen, kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti.",
+ :generate-descriptions "Laadi kuvaukset"}

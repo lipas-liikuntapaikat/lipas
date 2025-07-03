@@ -1,0 +1,5 @@
+{:headline "Laadi palvelupaikkojen kuvaukset tekoälyn avulla",
+ :start "Aloita",
+ :start-helper
+ "Voit muokata tekoälyn ehdotuksia sitä mukaa kuin ne valmistuvat.",
+ :canceling "Peruutetaan... Odota hetki"}

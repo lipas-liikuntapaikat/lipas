@@ -1,0 +1,7 @@
+{:choose-address "Välj adress",
+ :addresses "Närmaste adresserna",
+ :helper-text1
+ "Verktyget hämtar de närmaste adresserna baserat på idrottsläggningens geometri.",
+ :tooltip "Hitta adress automatiskt",
+ :helper-text2
+ "Välj gatuadress efter bästa kunskap. Du kan komplettera husnumret efter att ha tryckt på OK-knappen. "}

@@ -1,0 +1,10 @@
+{:headline "Kylmätekniikka",
+ :refrigerant-solution-amount-l "Rataliuoksen määrä (l)",
+ :individual-metering? "Alamittaroitu",
+ :original? "Alkuperäinen",
+ :refrigerant "Kylmäaine",
+ :refrigerant-solution "Rataliuos",
+ :condensate-energy-main-targets "Lauhdelämmön pääkäyttökohde",
+ :power-kw "Kylmäkoneen sähköteho (kW)",
+ :condensate-energy-recycling? "Lauhde-energia hyötykäytetty",
+ :refrigerant-amount-kg "Kylmäaineen määrä (kg)"}

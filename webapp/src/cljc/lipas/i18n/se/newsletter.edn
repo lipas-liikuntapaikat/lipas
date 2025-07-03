@@ -1,0 +1,4 @@
+{:subscribe "Prenumerera på nyhetsbrevet",
+ :subscribe-short "Prenumerera",
+ :subscription-failed "Prenumerationen misslyckades. Försök igen.",
+ :subscription-success "Nyhetsbrevet beställt!"}

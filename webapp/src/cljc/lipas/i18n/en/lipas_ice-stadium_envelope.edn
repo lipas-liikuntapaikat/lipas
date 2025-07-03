@@ -1,0 +1,5 @@
+{:base-floor-structure "Base floor structure",
+ :headline "Envelope structure",
+ :insulated-ceiling? "Insulated ceiling",
+ :insulated-exterior? "Insulated exterior",
+ :low-emissivity-coating? "Low emissivity coating"}

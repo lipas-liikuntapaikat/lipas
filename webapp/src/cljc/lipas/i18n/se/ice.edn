@@ -1,0 +1,13 @@
+{:description "Stor tävlingshall > 3000",
+ :large "Stor tävlingshall > 3000",
+ :competition "Tävlingsishall < 3000 person",
+ :headline "Ishallsportal",
+ :video "Video",
+ :comparison "Jämförelse av hallar",
+ :size-category "Storlek kategori",
+ :basic-data-of-halls "Grunddata av ishallar",
+ :updating-basic-data "Uppdatering av grunddata",
+ :entering-energy-data "Ishallsportal",
+ :small "Liten tävlingshall > 500 person",
+ :watch "Titta",
+ :video-description "Titta"}

@@ -1,0 +1,10 @@
+{:description
+ "Uimahalliportaali sisältää hallien perus- ja  energiankulutustietoja sekä ohjeita energiatehokkuuden  parantamiseen.",
+ :latest-updates "Viimeksi päivitetyt tiedot",
+ :headline "Uimahalli​portaali",
+ :basic-data-of-halls "Uimahallien perustiedot",
+ :updating-basic-data "Perustietojen päivitys",
+ :edit "Uimahalli​portaali",
+ :entering-energy-data "Energiankulutustietojen syöttäminen",
+ :list "Hallien tiedot",
+ :visualizations "Hallien vertailu"}

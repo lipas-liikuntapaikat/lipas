@@ -1,0 +1,6 @@
+{:data-user? "Använder du LIPAS-data?",
+ :email-body
+ "Trevligt att du använder LIPAS-data! Skriv här vem du är och hur du använder LIPAS. Använder du möjligen något av våra gränssnitt?",
+ :email-subject "Vi använder också LIPAS-data",
+ :headline "Några som använder LIPAS-data",
+ :tell-us "Berättä om det för oss"}

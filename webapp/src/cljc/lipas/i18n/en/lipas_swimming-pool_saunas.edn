@@ -1,0 +1,6 @@
+{:accessible? "Accessible",
+ :add-sauna "Add sauna",
+ :edit-sauna "Edit sauna",
+ :headline "Saunas",
+ :men? "Men",
+ :women? "Women"}

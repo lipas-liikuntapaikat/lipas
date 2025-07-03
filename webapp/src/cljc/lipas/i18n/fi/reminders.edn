@@ -1,0 +1,10 @@
+{:description "Viesti lähetetään sähköpostiisi valittuna ajankohtana",
+ :after-one-month "Kuukauden kuluttua",
+ :placeholder "Muista tarkistaa liikuntapaikka \"{1}\" {2}",
+ :select-date "Valitse päivämäärä",
+ :tomorrow "Huomenna",
+ :title "Lisää muistutus",
+ :after-six-months "Puolen vuoden kuluttua",
+ :in-a-year "Vuoden kuluttua",
+ :message "Viesti",
+ :in-a-week "Viikon kuluttua"}

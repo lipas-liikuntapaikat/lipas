@@ -1,0 +1,52 @@
+{:elementary-and-high-school "Elementary and high school",
+ :description
+ "The analysis tool can be used to evaluate the supply and accessibility of physical activity conditions by comparing the distance and travel times to physical activity facilities in relation to other facilities, population, and educational institutions.",
+ :filter-types "Filter by type",
+ :direct "As the crow flies",
+ :headline "Analysis Tool (beta)",
+ :settings-zones "Distances and travel times",
+ :by-bicycle "By bicycle",
+ :daycare "Early childhood education unit",
+ :by-car "By car",
+ :diversity-idx "Diversity index",
+ :mean "Mean",
+ :heatmap "Heatmap",
+ :diversity-help2
+ "The tool uses a postal code-based area division by default. The division can also be made based on another existing area division by importing the desired geometry file (Shapefile, GeoJSON or KML).",
+ :settings-map "Objects shown on the map",
+ :zone "Zone",
+ :elementary-school "Elementary school",
+ :reachability "Reachability",
+ :special-school "Special school",
+ :diversity-help1
+ "The diversity tool can be used to evaluate and compare the diversity of physical activity conditions in the residents' local environment at the grid and area level. The diversity index calculated by the diversity tool describes how diversely different physical activity opportunities the resident can reach within the selected distance along the road and path network (assuming 800 m). The higher the index value, the more diverse physical activity facilities are available in the residents' local environment.",
+ :analysis-areas "Analysis areas",
+ :description2
+ "The population data used is from Statistics Finland's 250x250m and 1x1km grid data, which shows the population distribution in three age groups (0-14, 15-65, 65-) in each grid.",
+ :mode "Mode",
+ :analysis-buffer "Analysis area",
+ :description4
+ "The name and location data of educational institutions is based on open data from Statistics Finland. The name and location data of early childhood education units is based on data collected and provided by LIKES.",
+ :settings "Settings",
+ :schools "Schools",
+ :diversity "Diversity",
+ :by-foot "On foot",
+ :description3
+ "The calculation of travel times by different modes of transport (walking, cycling, car) is based on open OpenStreetMap data and the OSRM tool.",
+ :categories "Categories",
+ :median "Median",
+ :settings-help
+ "The analysis area is determined by the largest distance zone. Travel times are also not calculated outside this area.",
+ :categories-help
+ "Physical activity facility types belonging to the same category affect the diversity index only once.",
+ :population "Population",
+ :population-weighted-mean "Population-weighted diversity index",
+ :diversity-help3
+ "The calculation is done per 250 x 250 m population grid from Statistics Finland. The area-level results indicate the average diversity of physical activity conditions in the residents' local environments (population-weighted average of the diversity index). The calculation distance of the diversity tool is based on the OpenStreetMap road network data and the OSRM tool.",
+ :zones "Zones",
+ :diversity-grid "Result grid",
+ :distance "Distance",
+ :add-new "Add new",
+ :high-school "High school",
+ :travel-time "Travel time",
+ :results "Results"}

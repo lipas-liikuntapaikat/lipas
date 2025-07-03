@@ -1,0 +1,11 @@
+{:multipurpose-pool "Multi-purpose pool",
+ :whirlpool-bath "Whirlpool bath",
+ :main-pool "Main pool",
+ :therapy-pool "Therapy pool",
+ :fitness-pool "Fitness pool",
+ :diving-pool "Diving pool",
+ :childrens-pool "Childrens pool",
+ :paddling-pool "Paddling pool",
+ :cold-pool "Cold pool",
+ :other-pool "Other pool",
+ :teaching-pool "Teaching pool"}

@@ -1,0 +1,21 @@
+{:video "Video",
+ :length-km "Length km",
+ :unit "unit",
+ :add-subroute-ok "OK",
+ :highlight "Highlight",
+ :add-subroute "Add sub-route",
+ :select-route-parts-on-map "Select route parts on the map",
+ :add-video "Add video",
+ :add-highlight "Add highlight",
+ :delete-route-prompt "Are you sure you want to delete this route?",
+ :finish-route-details "Route completed",
+ :route-is-made-of-subroutes
+ "The route consists of multiple separate sections",
+ :photo "Photograph",
+ :read-only-disclaimer
+ "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol.",
+ :link "Link",
+ :add-contact "Add contact information",
+ :custom-rules "Custom instructions",
+ :custom-rule "Custom permit, regulation, instruction",
+ :add-photo "Add photograph"}
