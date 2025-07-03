@@ -1,8 +1,6 @@
-(ns lipas.backend.legacy.api
-  (:require [lipas.backend.core :as core]
-            [lipas.data.prop-types :as prop-types]
+(ns legacy-api.api
+  (:require [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
-            [lipas.schema.legacy :refer [legacy-fields]]
             [lipas.utils :as utils]))
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])

@@ -3,6 +3,8 @@
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.walk :as walk]
+   [legacy-api.locations :as legacy-locations]
+   [legacy-api.sports-places :as legacy-sports-places]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
@@ -36,7 +38,7 @@
 (defn index-search-lois!
   [db {:keys [client indices]}]
   (log/info "Starting to index LOIs..")
-  (let [lois     (db/get-lois db)
+  (let [lois (db/get-lois db)
         idx-name (get-in indices [:lois :search])]
     (doseq [batch (partition-all 500 lois)]
       (log/info "Indexing batch of" (count batch))
@@ -82,7 +84,7 @@
   ([db client idx-name types users]
    (index-analytics! db client idx-name types users []))
   ([db client idx-name types users results]
-   (let [type-code  (first types)
+   (let [type-code (first types)
          query-opts {:raw? true :revs "all"}]
      (log/info "Starting to re-index type" type-code)
      (if type-code
@@ -131,11 +133,11 @@
 
   (log/info "Parsing grid data")
   (let [grid-data (read-csv->maps csv-path)
-        on-error  prn
+        on-error prn
 
         {:keys [input-ch output-ch]}
-        (es/bulk-chan search {:flush-threshold         100
-                              :flush-interval          5000
+        (es/bulk-chan search {:flush-threshold 100
+                              :flush-interval 5000
                               :max-concurrent-requests 3})]
 
     (log/info "Grid data parsed. Starting to calculate and index")
@@ -159,18 +161,21 @@
    (main nil db search mode))
   ([_system db {:keys [indices client]} mode]
    (let [idx-name (str mode "-" (search/gen-idx-name))
-         mappings (:sports-sites search/mappings)
-         types    (keys types/all)
-         alias    (case mode
-                    "search"    (get-in indices [:sports-site :search])
-                    "analytics" (get-in indices [:sports-site :analytics]))]
+         mappings (case mode
+                    "search" (:sports-sites search/mappings)
+                    "legacy" (:legacy-sports-sites search/mappings))
+         types (keys types/all)
+         alias (case mode
+                 "search" (get-in indices [:sports-site :search])
+                 "analytics" (get-in indices [:sports-site :analytics])
+                 "legacy" (get-in indices [:legacy-sports-site :search]))]
      (log/info "Starting to re-index types" types)
      (search/create-index! client idx-name mappings)
      (log/info "Created index" idx-name)
      (log/info "Starting to index data...")
 
      (case mode
-       "search"    (index-search-sports-sites! db client idx-name types)
+       "search" (index-search-sports-sites! db client idx-name types)
        "analytics" (let [users (get-users db)]
                      (index-analytics2! db client idx-name types users))          )
 
@@ -183,14 +188,15 @@
      (log/info "All done!"))))
 
 (defn -main [& args]
-  (let [mode   (case (first args)
-                 "--analytics" "analytics"
-                 "--diversity" "diversity"
-                 "search")
+  (let [mode (case (first args)
+               "--analytics" "analytics"
+               "--diversity" "diversity"
+               "--legacy" "legacy"
+               "search")
         config (-> (select-keys config/system-config [:lipas/db :lipas/search])
                    (assoc-in [:lipas/search :create-indices] false))
         system (backend/start-system! config)
-        db     (:lipas/db system)
+        db (:lipas/db system)
         search (:lipas/search system)]
     (try
       (if (= "diversity" mode)
@@ -235,5 +241,5 @@
     (search/create-index! search "test" (:sports-sites search/mappings))
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
-    (search/search search {:idx-name      "sports_sites_current"
+    (search/search search {:idx-name "sports_sites_current"
                            :search-string "kissa*"})))

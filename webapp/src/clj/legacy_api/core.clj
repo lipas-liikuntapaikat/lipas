@@ -1,9 +1,9 @@
-(ns lipas-api.core
+(ns legacy-api.core
   (:require
-   [lipas-api.search.cli :as es]
-   [lipas-api.sports-places :refer [filter-and-format
-                                    format-sports-place-es]]
-   [lipas-api.util :refer [only-non-nil-recur] :as util]
+   [legacy-api.search :as es]
+   [legacy-api.sports-places :refer [filter-and-format
+                                     format-sports-place-es]]
+   [legacy-api.util :refer [only-non-nil-recur] :as util]
    [qbits.spandex :as elastic]
    [qbits.spandex.utils :as es-utils]))
 
@@ -27,7 +27,7 @@
   "Fetches single sports-place from search engine index."
   [search locale sports-place-id]
   (try
-    (-> (es/es-get search sports-place-id)
+    (-> (es/by-id search sports-place-id)
         :body
         :_source
         (format-sports-place-es locale)

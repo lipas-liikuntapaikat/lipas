@@ -1,7 +1,7 @@
-(ns lipas.backend.api.v1
-  (:require [lipas-api.core :as legacy-core]
-            [lipas-api.http :as legacy-http]
-            [lipas.backend.legacy.api :as legacy-api]
+(ns legacy-api.routes
+  (:require [legacy-api.core :as legacy-core]
+            [legacy-api.http :as legacy-http]
+            [legacy-api.api :as legacy-api]
             [lipas.schema.legacy :as legacy-schema]
             [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli :as malli]

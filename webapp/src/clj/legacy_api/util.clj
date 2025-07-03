@@ -1,4 +1,4 @@
-(ns lipas-api.util
+(ns legacy-api.util
   (:require
    [clojure.string :refer [blank?]]))
 
