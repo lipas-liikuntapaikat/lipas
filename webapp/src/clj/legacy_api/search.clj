@@ -84,5 +84,3 @@
   (let [total (-> results :hits :total :value)
         n (count (-> results :hits :hits))]
     (< (+ (* page page-size) n) total)))
-
-(def partial? "Alias for `more?`" more?)

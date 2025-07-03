@@ -5,20 +5,6 @@
    [lipas.backend.gis :as gis]
    [lipas.data.cities :as cities]))
 
-(defn find-geoms
-  ;; Pick geometries attached to a location.
-  ;; A location can have only one kind of geoms.
-  ;; Returns a map { :points ... :routes ... :areas ... }
-  [location geoms]
-  (let [p (:point-id location)
-        r (:route-id location)
-        a (:area-id location)]
-    (cond
-      p {:points (filter #(= p (:point-id %)) (:points geoms))}
-      r {:routes (filter #(= r (:route-coll-id %)) (:routes geoms))}
-      a {:areas (filter #(= a (:area-id %)) (:areas geoms))}
-      :else nil)))
-
 (defn start-coord [location]
   (let [geom (-> location :geometries :features first :geometry)]
     (case (:type geom)

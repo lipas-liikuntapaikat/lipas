@@ -26,14 +26,6 @@
                   %1))
              {} a-map))
 
-(defn locale-key
-  [a-key locale]
-  (if (= :all locale)
-    (fn [sp] {:fi ((locale-key a-key :fi) sp)
-              :se ((locale-key a-key :se) sp)
-              :en ((locale-key a-key :en) sp)})
-    (keyword (str (name a-key) "-" (name locale)))))
-
 (defn select-paths
   "Similar to select-keys, just the 'key' here is a path in the nested map"
   [m & paths]
