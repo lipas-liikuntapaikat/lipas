@@ -1,4 +1,5 @@
 (ns lipas.schema.sports-sites
+  (:refer-clojure :exclude [name comment])
   (:require [lipas.data.admins :as admins]
             [lipas.data.owners :as owners]
             [lipas.data.activities :as activities]

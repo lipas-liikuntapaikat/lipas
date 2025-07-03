@@ -455,9 +455,9 @@
     :headline "Admin",
     :magic-link "Taikalinkki",
     :select-magic-link-template "Valitse saatekirje",
-    :send-magic-link            "Taikalinkki käyttäjälle {1}",
-    :users                      "Käyttäjät"
-    :organizations              "Organisaatiot"},
+    :send-magic-link "Taikalinkki käyttäjälle {1}",
+    :users "Käyttäjät"
+    :organizations "Organisaatiot"},
    :lipas.ice-stadium.refrigeration
    {:headline "Kylmätekniikka",
     :refrigerant-solution-amount-l "Rataliuoksen määrä (l)",
@@ -680,7 +680,7 @@
     :delete-tooltip "Poista liikuntapaikka...",
     :headline "Liikuntapaikka",
     :new-site-of-type "Uusi {1}",
-    :address "Osoite",
+    :reservation-link "Varauslinkki"
     :new-site "Uusi liikuntapaikka",
     :phone-number "Puhelinnumero",
     :admin "Ylläpitäjä",
@@ -930,29 +930,29 @@
    {:roles "Roolit"
     :role "Rooli"
     :context-value-all "Kaikki"
-    :role-names        {:admin              "Admin"
-                        :city-manager       "Kuntakäyttäjä"
-                        :type-manager       "Tyyppikäyttäjä"
-                        :site-manager       "Paikkakäyttäjä"
-                        :activities-manager "UTP-käyttäjä"
-                        :floorball-manager  "Salibandy muokkaaja"
-                        :analysis-user      "Analyysityökalukäyttäjä"
-                        :analysis-experimental-user "Analyysityökalukehittäjä"
-                        :ptv-manager        "PTV-käyttäjä"
-                        :ptv-auditor "PTV-auditoija"
-                        :org-admin          "Organisaatio admin"
-                        :org-user           "Organisaatio käyttäjä"}
-    :context-keys      {:city-code "Kunta"
-                        :type-code "Tyyppi"
-                        :activity  "Aktiviteetti"
-                        :lipas-id  "Paikka"
-                        :org-id    "Organisaatio"}
-    :edit-role         {:edit-header  "Muokkaa"
-                        :new-header   "Lisää rooli"
-                        :stop-editing "Lopeta muokkaus"
-                        :add          "Lisää"
-                        :choose-role  "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
-    :permissions-old   "(vanhat, vain luku)"}
+    :role-names {:admin "Admin"
+                 :city-manager "Kuntakäyttäjä"
+                 :type-manager "Tyyppikäyttäjä"
+                 :site-manager "Paikkakäyttäjä"
+                 :activities-manager "UTP-käyttäjä"
+                 :floorball-manager "Salibandy muokkaaja"
+                 :analysis-user "Analyysityökalukäyttäjä"
+                 :analysis-experimental-user "Analyysityökalukehittäjä"
+                 :ptv-manager "PTV-käyttäjä"
+                 :ptv-auditor "PTV-auditoija"
+                 :org-admin "Organisaatio admin"
+                 :org-user "Organisaatio käyttäjä"}
+    :context-keys {:city-code "Kunta"
+                   :type-code "Tyyppi"
+                   :activity "Aktiviteetti"
+                   :lipas-id "Paikka"
+                   :org-id "Organisaatio"}
+    :edit-role {:edit-header "Muokkaa"
+                :new-header "Lisää rooli"
+                :stop-editing "Lopeta muokkaus"
+                :add "Lisää"
+                :choose-role "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."}
+    :permissions-old "(vanhat, vain luku)"}
    :help
    {:headline "Ohjeet",
     :available-pages "Sivut tässä osiossa"
@@ -1212,7 +1212,14 @@
    :lipas.org
    {:name "Nimi"
     :phone "Puhelinnumero"
-    :org-role "Rooli"},
+    :email "Sähköposti"
+    :website "Verkkosivu"
+    :reservation-link "Varauslinkki"
+    :org-role "Rooli"
+    :users-section "Käyttäjät"
+    :add-user "Lisää"
+    :no-organizations "Et kuulu mihinkään organisaatioon"
+    :contact-admin "Ota yhteyttä järjestelmän ylläpitäjään organisaatiojäsenyyden lisäämiseksi"}
    :org.form
    {:details "Organisaation tiedot"
     :users "Organisaation käyttäjät"}

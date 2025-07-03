@@ -284,7 +284,8 @@
     :magic-link "Magic Link",
     :select-magic-link-template "Select letter",
     :send-magic-link "Send magic link to {1}",
-    :users "Users"},
+    :users "Users"
+    :organizations "Organizations"}
    :lipas.ice-stadium.refrigeration
    {:headline "Refrigeration",
     :refrigerant-solution-amount-l "Refrigerant solution amount (l)",
@@ -490,7 +491,7 @@
     :delete-tooltip "Delete sports facility...",
     :headline "Sports facility",
     :new-site-of-type "New {1}",
-    :address "Address",
+    :reservation-link "Reservation link"
     :new-site "New Sports Facility",
     :phone-number "Phone number",
     :admin "Admin",
@@ -719,26 +720,26 @@ The site administrator is responsible for the accuracy of information, safety of
    {:roles "Roles"
     :role "Role"
     :context-value-all "All"
-    :role-names        {:admin              "Admin"
-                        :city-manager       "City Manager"
-                        :type-manager       "Type Manager"
-                        :site-manager       "Site Manager"
-                        :activities-manager "UTP Manager"
-                        :floorball-manager  "Floorball Editor"
-                        :analysis-user      "Analysis tool user"
-                        :ptv-manager        "PTV Manager"
-                        :org-admin          "Organization admin"
-                        :org-user           "Organization user"}
-    :context-keys      {:city-code "Municipality"
-                        :type-code "Type"
-                        :activity  "Activity"
-                        :lipas-id  "Site"}
-    :edit-role         {:edit-header  "Edit"
-                        :new-header   "Add Role"
-                        :stop-editing "Stop Editing"
-                        :add          "Add"
-                        :choose-role  "Choose a role first to select which resources the role affects."}
-    :permissions-old   "(old, read-only)"}
+    :role-names {:admin "Admin"
+                 :city-manager "City Manager"
+                 :type-manager "Type Manager"
+                 :site-manager "Site Manager"
+                 :activities-manager "UTP Manager"
+                 :floorball-manager "Floorball Editor"
+                 :analysis-user "Analysis tool user"
+                 :ptv-manager "PTV Manager"
+                 :org-admin "Organization admin"
+                 :org-user "Organization user"}
+    :context-keys {:city-code "Municipality"
+                   :type-code "Type"
+                   :activity "Activity"
+                   :lipas-id "Site"}
+    :edit-role {:edit-header "Edit"
+                :new-header "Add Role"
+                :stop-editing "Stop Editing"
+                :add "Add"
+                :choose-role "Choose a role first to select which resources the role affects."}
+    :permissions-old "(old, read-only)"}
    :help
    {:headline "Help",
     :permissions-help
@@ -983,4 +984,15 @@ The site administrator is responsible for the accuracy of information, safety of
    :heat-recovery-types
    {:liquid-circulation "Liquid circulation",
     :plate-heat-exchanger "Plate heat exchanger",
-    :thermal-wheel "Thermal wheel"}})
+    :thermal-wheel "Thermal wheel"}
+   :lipas.org
+   {:name "Name"
+    :phone "Phone number"
+    :email "Email"
+    :website "Website"
+    :reservation-link "Reservation link"
+    :org-role "Role"
+    :users-section "Users"
+    :add-user "Add"
+    :no-organizations "You are not a member of any organization"
+    :contact-admin "Contact the system administrator to be added to an organization"}})

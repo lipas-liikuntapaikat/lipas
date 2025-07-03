@@ -14,8 +14,11 @@
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.schema.org :as org-schema]
+            [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
@@ -31,8 +34,9 @@
 
         {:keys [org-id]} (:path @(rf/subscribe [::ui-subs/parameters]))
 
-        org @(rf/subscribe [:lipas.ui.org.subs/user-org-by-id org-id])
-        org-users @(rf/subscribe [::subs/org-users])]
+        org @(rf/subscribe [::subs/editing-org])
+        org-users @(rf/subscribe [::subs/org-users])
+        org-valid? @(rf/subscribe [::subs/org-valid?])]
 
     [mui/grid {:container true
                :spacing 2
@@ -43,26 +47,44 @@
         :md 12}
        [mui/form-group
         {:sx {:gap 1}}
-        [lui/text-field
+        [text-fields/text-field-controlled
          {:label (tr :lipas.org/name)
           :value (:name org)
+          :spec [:string {:min 1 :max 128}]
+          :required true
           :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
-        [lui/text-field
+        [text-fields/text-field-controlled
          {:label (tr :lipas.org/phone)
-          :value (:phone (:data org))
-          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]
+          :value (get-in org [:data :primary-contact :phone])
+          :spec sites-schema/phone-number
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :phone] x]))}]
+        [text-fields/text-field-controlled
+         {:label (tr :lipas.org/email)
+          :value (get-in org [:data :primary-contact :email])
+          :spec sites-schema/email
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :email] x]))}]
+        [text-fields/text-field-controlled
+         {:label (tr :lipas.org/website)
+          :value (get-in org [:data :primary-contact :website])
+          :spec sites-schema/www
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :website] x]))}]
+        [text-fields/text-field-controlled
+         {:label (tr :lipas.org/reservation-link)
+          :value (get-in org [:data :primary-contact :reservation-link])
+          :spec sites-schema/reservation-link
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservation-link] x]))}]
 
         [mui/grid {:item true}
          [mui/button
           {:variant "contained"
            :color "secondary"
-           ;; TODO:
+           :disabled (not org-valid?)
            :on-click #(rf/dispatch [::events/save-org org])}
           [mui/icon {:sx {:mr 1}} "save"]
           (tr :actions/save)]]]]
 
       [lui/form-card
-       {:title "Käyttäjät"
+       {:title (tr :lipas.org/users-section)
         :md 12}
        (let [add-form @(rf/subscribe [::subs/add-user-form])]
          [:> Box
@@ -90,7 +112,7 @@
            {:variant "contained"
             :color "primary"
             :on-click #(rf/dispatch [::events/add-user-to-org org-id])}
-           "Lisää"]])
+           (tr :lipas.org/add-user)]])
        [:> Table
         [:> TableHead
          [:> TableRow
@@ -106,7 +128,8 @@
                    ;; These users HAVE role for this org, but this value contains all the user roles so filter to find the
                    ;; current org roles:
                    :when (contains? (set (:org-id x)) org-id)]
-               [:span (tr (keyword :lipas.user.permissions.roles.role-names role))
+               [:span {:key (str (:id item) "-" role)}
+                (tr (keyword :lipas.user.permissions.roles.role-names role))
                 [:> Button
                  {:size "small"
                   :color "error"
@@ -126,15 +149,15 @@
         (for [org user-orgs]
           [mui/grid {:item true :xs 12 :md 6 :key (:id org)}
            [mui/paper {:sx {:p 2 :cursor "pointer"}
-                       :on-click #(rfe/navigate :lipas.ui.routes/org {:org-id (:id org)})}
+                       :on-click #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id (str (:id org))}})}
             [mui/typography {:variant "h6"}
              (:name org)]
-            (when-let [phone (get-in org [:data :phone])]
+            (when-let [phone (get-in org [:data :primary-contact :phone])]
               [mui/typography {:variant "body2" :color "text.secondary"}
                phone])]])]
 
        [mui/paper {:sx {:p 3 :text-align "center"}}
         [mui/typography {:variant "h6" :color "text.secondary"}
-         "Et kuulu mihinkään organisaatioon"]
+         (tr :lipas.org/no-organizations)]
         [mui/typography {:variant "body2" :color "text.secondary" :sx {:mt 1}}
-         "Ota yhteyttä järjestelmän ylläpitäjään organisaatiojäsenyyden lisäämiseksi"]])]))
+         (tr :lipas.org/contact-admin)]])]))

@@ -282,7 +282,8 @@
     :magic-link "Magic link",
     :select-magic-link-template "Välj brev",
     :send-magic-link "Skicka magic link till användare",
-    :users "Användare"},
+    :users "Användare"
+    :organizations "Organisationer"}
    :ptv.integration.service-channel
    {:lipas-managed
     "LIPAS definierar servicepunkterna (rekommenderas).",
@@ -541,7 +542,7 @@
     :delete-tooltip "Ta bort idrottsanläggningen...",
     :headline "Idrottsanläggning",
     :new-site-of-type "Ny {1}",
-    :address "Adress",
+    :reservation-link "Bokningslänk"
     :new-site "Ny idrottsplats",
     :phone-number "Telefonnummer",
     :admin "Administratör",
@@ -874,32 +875,32 @@
     :all-types? "Rättighet till alla typer",
     :cities "Kommuner",
     :sports-sites "Idrottsanläggning",
-    :types        "Typer"
-    :activities   "Aktiviteter"},
+    :types "Typer"
+    :activities "Aktiviteter"},
    :lipas.user.permissions.roles
-   {:roles             "Roller"
-    :role              "Roll"
+   {:roles "Roller"
+    :role "Roll"
     :context-value-all "Alla"
-    :role-names        {:admin              "Admin"
-                        :city-manager       "Stadsadministratör"
-                        :type-manager       "Typadministratör"
-                        :site-manager       "Platsadministratör"
-                        :activities-manager "UTP-administratör"
-                        :floorball-manager  "Innebandyredigerare"
-                        :analysis-user      "Analysverktygsanvändare"
-                        :ptv-manager        "PTV-administratör"
-                        :org-admin          "Organisationsadministratör"
-                        :org-user           "Organisationsanvändare"}
-    :context-keys      {:city-code "Kommun"
-                        :type-code "Typ"
-                        :activity  "Aktivitet"
-                        :lipas-id  "Plats"}
-    :edit-role         {:edit-header  "Redigera"
-                        :new-header   "Lägg till roll"
-                        :stop-editing "Avsluta redigering"
-                        :add          "Lägg till"
-                        :choose-role  "Välj roll först för att välja vilka resurser rollen påverkar."}
-    :permissions-old   "(gamla, endast läs)"}
+    :role-names {:admin "Admin"
+                 :city-manager "Stadsadministratör"
+                 :type-manager "Typadministratör"
+                 :site-manager "Platsadministratör"
+                 :activities-manager "UTP-administratör"
+                 :floorball-manager "Innebandyredigerare"
+                 :analysis-user "Analysverktygsanvändare"
+                 :ptv-manager "PTV-administratör"
+                 :org-admin "Organisationsadministratör"
+                 :org-user "Organisationsanvändare"}
+    :context-keys {:city-code "Kommun"
+                   :type-code "Typ"
+                   :activity "Aktivitet"
+                   :lipas-id "Plats"}
+    :edit-role {:edit-header "Redigera"
+                :new-header "Lägg till roll"
+                :stop-editing "Avsluta redigering"
+                :add "Lägg till"
+                :choose-role "Välj roll först för att välja vilka resurser rollen påverkar."}
+    :permissions-old "(gamla, endast läs)"}
    :help
    {:headline "Hjälp",
     :available-pages "Sidor i detta avsnitt",
@@ -1193,4 +1194,15 @@
    :heat-recovery-types
    {:thermal-wheel "Hjälp",
     :plate-heat-exchanger "",
-    :liquid-circulation ""}})
+    :liquid-circulation ""}
+   :lipas.org
+   {:name "Namn"
+    :phone "Telefonnummer"
+    :email "E-post"
+    :website "Webbsida"
+    :reservation-link "Bokningslänk"
+    :org-role "Roll"
+    :users-section "Användare"
+    :add-user "Lägg till"
+    :no-organizations "Du tillhör ingen organisation"
+    :contact-admin "Kontakta systemadministratören för att läggas till i en organisation"}})

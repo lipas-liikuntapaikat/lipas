@@ -81,7 +81,7 @@
 
 (rf/reg-event-db ::edit-org
                  (fn [db [_ path value]]
-                   (assoc-in db (into [:admin :editing-org] path) value)))
+                   (assoc-in db (into [:org :editing-org] path) value)))
 
 (rf/reg-event-fx ::save-org-success
                  (fn [{:keys [db]} [_ _org resp]]
@@ -95,7 +95,10 @@
 (rf/reg-event-fx ::save-org
                  (fn [{:keys [db]} [_ org]]
                    (let [token (-> db :user :login :token)
-                         body (-> org)
+                         ;; Clean up the org data before sending
+                         body (-> org
+                                  ;; Remove old phone field if it exists in data
+                                  (update :data #(dissoc % :phone)))
                          new? false]
                      {:http-xhrio
                       {:method (if new? :post :put)
