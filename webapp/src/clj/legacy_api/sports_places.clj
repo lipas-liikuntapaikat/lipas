@@ -1,6 +1,6 @@
-(ns lipas-api.sports-places
+(ns legacy-api.sports-places
   (:require
-   [lipas-api.util :refer [parse-path parse-year select-paths]]
+   [legacy-api.util :refer [parse-path parse-year select-paths]]
    [lipas.data.admins :as admins]
    [lipas.data.owners :as owners]
    [lipas.data.types-old :as types-old]))
@@ -62,10 +62,6 @@
    :location (when-let [location (:location sports-place)]
                (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
    :properties (:properties sports-place)})
-
-;;
-;; Elastic Search Backend
-;;
 
 (defn update-with-locale
   [sp locale fallback-locale path]
