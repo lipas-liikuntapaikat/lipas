@@ -1,12 +1,12 @@
-(ns lipas-api.search.cli
+(ns legacy-api.search
   (:require [qbits.spandex :as es]
             [qbits.spandex.utils :as es-utils]
             [clojure.string]))
 
-(defn es-get
+(defn by-id
   [client id]
   (es/request client {:method :get
-                      :url    (es-utils/url [:legacy_sports_sites_current :_doc id])}))
+                      :url (es-utils/url [:legacy_sports_sites_current :_doc id])}))
 
 (defn create-excursion-map-filter [excursion-map?]
   (when excursion-map?
@@ -64,17 +64,17 @@
                       (append-search-string params)
                       not-empty)]
     query
-    {:match_all        {}}))
+    {:match_all {}}))
 
 (defn fetch-sports-places
   [client params]
   (let [response (es/request client {:method :get
-                                     :url    (es-utils/url [:legacy_sports_sites_current :_search])
+                                     :url (es-utils/url [:legacy_sports_sites_current :_search])
                                      :body
-                                     {:query            (resolve-query params)
+                                     {:query (resolve-query params)
                                       :track_total_hits true
-                                      :size             (:limit params)
-                                      :from             (* (:offset params) (:limit params))}})]
+                                      :size (:limit params)
+                                      :from (* (:offset params) (:limit params))}})]
     response))
 
 (defn more?
@@ -82,7 +82,7 @@
   page-size and requested page, otherwise false."
   [results page-size page]
   (let [total (-> results :hits :total :value)
-        n     (count (-> results :hits :hits))]
+        n (count (-> results :hits :hits))]
     (< (+ (* page page-size) n) total)))
 
 (def partial? "Alias for `more?`" more?)

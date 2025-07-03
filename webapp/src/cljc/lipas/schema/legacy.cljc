@@ -1,6 +1,5 @@
 (ns lipas.schema.legacy
   (:require [clojure.spec.alpha :as s]
-            [lipas.schema.common :as common-schema]
             [lipas.schema.common :as common]
             [lipas.schema.core]
             [lipas.schema.sports-sites.location :as location-schema]
@@ -47,9 +46,9 @@
                    :description "Neighborhood name"
                    :example "Metsämäki"} :string]
    [:geometries [:or
-                 #'common-schema/polygon-feature-collection
-                 #'common-schema/line-string-feature-collection
-                 #'common-schema/point-feature-collection]]
+                 #'common/polygon-feature-collection
+                 #'common/line-string-feature-collection
+                 #'common/point-feature-collection]]
    [:coordinates
     {:optional true
      :description "Simple Point coordinates of the location."
@@ -163,7 +162,7 @@
                 [:modifiedAfter [:re date-re]]
                 [:retkikartta :boolean]
                 [:closeToMatch [:enum "start-point" "any-point"]]
-                [:closeToDistanceKm [common-schema/number]]
+                [:closeToDistanceKm [common/number]]
                 [:harrastuspassi :boolean]
                 [:cityCodes [:or
                              [:int]
