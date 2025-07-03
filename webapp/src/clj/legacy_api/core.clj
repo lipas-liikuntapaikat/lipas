@@ -1,7 +1,7 @@
 (ns legacy-api.core
   (:require
    [legacy-api.search :as es]
-   [legacy-api.sports-places :refer [filter-and-format
+   [legacy-api.sports-place :refer [filter-and-format
                                      format-sports-place-es]]
    [legacy-api.util :refer [only-non-nil-recur] :as util]
    [qbits.spandex :as elastic]
