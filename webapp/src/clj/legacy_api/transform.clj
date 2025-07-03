@@ -2,11 +2,10 @@
   (:require
    [clojure.set :as set]
    [lipas.data.types :as types]
-   [legacy-api.sports-places :as old]
+   [legacy-api.sports-place :as old]
    [lipas.utils :as utils]
    [clojure.string :as str]
-   [lipas.backend.gis :as gis]
-   ))
+   [lipas.backend.gis :as gis]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
