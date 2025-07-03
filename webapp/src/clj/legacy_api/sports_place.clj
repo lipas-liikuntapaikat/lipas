@@ -1,6 +1,7 @@
 (ns legacy-api.sports-place
   (:require
    [clojure.set :as set]
+   [clojure.string :as str]
    [legacy-api.util :refer [parse-path parse-year select-paths]]
    [lipas.data.admins :as admins]
    [lipas.data.owners :as owners]
@@ -38,26 +39,64 @@
 (def df-out (java.time.format.DateTimeFormatter/ofPattern
              "yyyy-MM-dd HH:mm:ss.SSS"))
 
-(defn parse-date [x]
+(defn parse-date
+  "Parses a date string using the defined input formatter."
+  [x]
   (try
-    (-> x
-        (java.time.LocalDateTime/parse df-in)
-        (.format df-out))
-    (catch Exception e)))
+    (when x
+      (when-not (string? x)
+        (throw (ex-info "Date input must be a string"
+                        {:type :invalid-input
+                         :date x
+                         :date-type (type x)})))
 
-(defn convert-iso8601-to-legacy [iso-timestamp]
+      (-> x
+          (java.time.LocalDateTime/parse df-in)
+          (.format df-out)))
+    (catch java.time.format.DateTimeParseException ex
+      (throw (ex-info "Invalid date format"
+                      {:type :date-parse-error
+                       :date x
+                       :expected-format "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"}
+                      ex)))
+    (catch clojure.lang.ExceptionInfo ex
+      (throw ex)) ; Re-throw our own exceptions
+    (catch Exception ex
+      (throw (ex-info "Unexpected error parsing date"
+                      {:type :unexpected-error
+                       :date x}
+                      ex)))))
+
+(defn convert-iso8601-to-legacy
   "Converts ISO8601 timestamp (2021-09-16T08:49:04.675Z) to legacy format (2021-09-16 08:49:04.675)"
+  [iso-timestamp]
   (try
     (when iso-timestamp
+      (when-not (string? iso-timestamp)
+        (throw (ex-info "Timestamp must be a string"
+                        {:type :invalid-input
+                         :timestamp iso-timestamp
+                         :timestamp-type (type iso-timestamp)})))
+
       (-> iso-timestamp
-          (clojure.string/replace #"T" " ")
-          (clojure.string/replace #"Z$" "")
+          (str/replace #"T" " ")
+          (str/replace #"Z$" "")
           ;; Ensure we have 3 decimal places for milliseconds
           (as-> s (if (re-find #"\.\d{1,3}$" s)
                     s
                     (str s ".000")))))
-    (catch Exception e
-      nil)))
+    (catch clojure.lang.ExceptionInfo ex
+      (if (= :invalid-input (:type (ex-data ex)))
+        (throw ex)
+        (throw (ex-info "Failed to convert timestamp format"
+                        {:type :conversion-error
+                         :timestamp iso-timestamp}
+                        ex))))
+    (catch Exception ex
+      (throw (ex-info "Unexpected error converting timestamp"
+                      {:type :unexpected-error
+                       :timestamp iso-timestamp}
+                      ex)))))
 
 (comment
   (parse-date "2014-10-02 12:50:37.123")
