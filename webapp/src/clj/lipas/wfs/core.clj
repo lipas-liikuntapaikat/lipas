@@ -27,7 +27,7 @@
             [lipas.data.owners :as owners]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
-            [legacy-api.sports-places :as legacy-utils]
+            [legacy-api.sports-place :as legacy-utils]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))

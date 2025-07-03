@@ -427,8 +427,7 @@
           ;; These come from 'normal properties' again
          #_#_:area-m2 (-> m :building :total-surface-area-m2)
          #_#_:stand-capacity-person (-> m :building :seating-capacity)
-         #_#_:surface-material (-> m :building :envelope :base-floor-structure)})
-       (update m :properties merge)))
+         #_#_:surface-material (-> m :building :envelope :base-floor-structure)})))
 
 (defn add-swimming-pool-props
   "Extracts old Lipas swimming pool props from new LIPAS sport site m
@@ -464,10 +463,7 @@
          :water-slides-count (-> m :slides count)
          :waterslides-total-length-m (->> (:slides m)
                                           (map :length-m)
-                                          (reduce utils/+safe))})
-       (update m :properties merge)))
-
-(update m :properties merge)
+                                          (reduce utils/+safe))})))
 
 ;; Geometry adaptation function (moved from sports-place.clj)
 (defn adapt-geoms [sports-site]
