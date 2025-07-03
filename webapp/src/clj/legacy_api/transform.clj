@@ -2,7 +2,7 @@
   (:require
    [clojure.set :as set]
    [lipas.data.types :as types]
-   [legacy-api.sports-place :as old]
+   [legacy-api.sports-places :as old]
    [lipas.utils :as utils]
    [clojure.string :as str]
    [lipas.backend.gis :as gis]

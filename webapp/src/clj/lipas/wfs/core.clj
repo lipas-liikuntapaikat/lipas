@@ -81,14 +81,14 @@
                     ("lipas_kaikki_pisteet" "retkikartta_pisteet") "Point"
                     ("lipas_kaikki_reitit" "retkikartta_reitit") "LineString"
                     ("lipas_kaikki_alueet" "retkikartta_alueet") "Polygon")]
-    {:create-materialized-view [ (keyword (str "wfs." view-name)) :if-not-exists]
+    {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
      :select (for [[k data-type] fields]
                (case k
                  :the_geom [[[:cast [:st_force_2d k]
                               (case geom-type
-                                "Point"      (keyword "geometry(Point,3067)")
+                                "Point" (keyword "geometry(Point,3067)")
                                 "LineString" (keyword "geometry(LineString,3067)")
-                                "Polygon"    (keyword "geometry(Polygon,3067)"))]] k]
+                                "Polygon" (keyword "geometry(Polygon,3067)"))]] k]
                  :x [[:st_x [:st_centroid :the_geom]] k]
                  :y [[:st_y [:st_centroid :the_geom]] k]
 
@@ -264,37 +264,37 @@
    - publish-name: Name to be published
   "
   [feature-name publish-name geom-type]
-  (let [url (str (get geoserver-config :root-url)  "/workspaces/"
+  (let [url (str (get geoserver-config :root-url) "/workspaces/"
                  (get geoserver-config :workspace-name)
                  "/datastores/" (get geoserver-config :datastore-name)
                  "/featuretypes")
 
         style {:name (case geom-type
-                       "Point"      "lipas:tyyli_pisteet"
-                       "Polygon"    "lipas:tyyli_alueet_2"
+                       "Point" "lipas:tyyli_pisteet"
+                       "Polygon" "lipas:tyyli_alueet_2"
                        "LineString" "lipas:tyyli_reitit")}
 
-        settings {:name              publish-name
-                  :nativeName        feature-name
-                  :title             publish-name
-                  :srs               "EPSG:3067"
-                  :nativeCRS         "EPSG:3067"
-                  :enabled           true
-                  :advertised        true
-                  :queryable         true
+        settings {:name publish-name
+                  :nativeName feature-name
+                  :title publish-name
+                  :srs "EPSG:3067"
+                  :nativeCRS "EPSG:3067"
+                  :enabled true
+                  :advertised true
+                  :queryable true
                   :nativeBoundingBox {:minx 50000.0
                                       :maxx 760000.0
                                       :miny 6600000.0
                                       :maxy 7800000.0
-                                      :crs  "EPSG:3067"}
+                                      :crs "EPSG:3067"}
                   :latLonBoundingBox {:minx 19.08
                                       :maxx 31.59
                                       :miny 59.45
                                       :maxy 70.09
-                                      :crs  "EPSG:4326"}
+                                      :crs "EPSG:4326"}
 
                   :projectionPolicy "NONE"
-                  :defaultStyle     style}]
+                  :defaultStyle style}]
 
     (log/info "Publishing layer" publish-name)
     (http/post url
@@ -304,13 +304,13 @@
 
     ;; Style is not setting correctly during POST se we PUT it after publishing
     (let [layer-url (str (get geoserver-config :root-url) "/layers/"
-                          (get geoserver-config :workspace-name) ":" publish-name)]
+                         (get geoserver-config :workspace-name) ":" publish-name)]
 
-        (http/put layer-url
-                  (merge (:default-http-opts geoserver-config)
-                         {:body         (json/generate-string
-                                         {:layer {:defaultStyle style}})
-                          :content-type "application/json"})))))
+      (http/put layer-url
+                (merge (:default-http-opts geoserver-config)
+                       {:body (json/generate-string
+                               {:layer {:defaultStyle style}})
+                        :content-type "application/json"})))))
 
 (defn delete-layer
   "Deletes a published layer from GeoServer.
@@ -323,7 +323,7 @@
    (delete-layer publish-name true))
   ([publish-name recurse]
    (let [url (str (get geoserver-config :root-url) "/layers/"
-                 (get geoserver-config :workspace-name) ":" publish-name)
+                  (get geoserver-config :workspace-name) ":" publish-name)
 
          ;; Add recurse parameter to query string if true
          url-with-params (if recurse
@@ -412,7 +412,6 @@
                                      sub-category-layer-grpups
                                      all-sites-layer-group)]
 
-
     (log/info "Deleting layer group" group-name)
     (try
       (http/delete (str (:root-url geoserver-config)
@@ -432,21 +431,21 @@
                     "/layergroups")
                (merge (:default-http-opts geoserver-config)
                       {:content-type "application/json"
-                       :as           :raw
-                       :body         (json/generate-string
-                                      {:layerGroup
-                                       {:name      group-name
-                                        :mode      "SINGLE"
-                                        :workspace {:name (:workspace-name geoserver-config)}
-                                        :bounds    {:minx 50000.0
-                                                    :maxx 760000.0
-                                                    :miny 6600000.0
-                                                    :maxy 7800000.0
-                                                    :crs  "EPSG:3067"}
-                                        :publishables
-                                        {:published (for [layer layers]
-                                                      {"@type" "layer"
-                                                       :name   (str "lipas:" layer)})}}})})))
+                       :as :raw
+                       :body (json/generate-string
+                              {:layerGroup
+                               {:name group-name
+                                :mode "SINGLE"
+                                :workspace {:name (:workspace-name geoserver-config)}
+                                :bounds {:minx 50000.0
+                                         :maxx 760000.0
+                                         :miny 6600000.0
+                                         :maxy 7800000.0
+                                         :crs "EPSG:3067"}
+                                :publishables
+                                {:published (for [layer layers]
+                                              {"@type" "layer"
+                                               :name (str "lipas:" layer)})}}})})))
 
   (log/info "All layergroups rebuilt!"))
 
@@ -461,7 +460,7 @@
 
 (defn -main [& _]
   (let [system (system/start-system! (select-keys config/system-config [:lipas/db]))
-        db     (:lipas/db system)]
+        db (:lipas/db system)]
     (refresh-all! db)
     (system/stop-system! system)
     (shutdown-agents)
@@ -478,16 +477,16 @@
   *1
 
   (http/delete (str (:root-url geoserver-config)
-                 "/workspaces/"
-                 (:workspace-name geoserver-config)
-                   "/layergroups/"
-                   "lipas_4800_ampumaurheilupaikat")
-                 (:default-http-opts geoserver-config))
+                    "/workspaces/"
+                    (:workspace-name geoserver-config)
+                    "/layergroups/"
+                    "lipas_4800_ampumaurheilupaikat")
+               (:default-http-opts geoserver-config))
 
   (rebuild-all-legacy-layer-groups)
 
   (println (json/generate-string
-    {:layerGroup {:name "lipas_4800_ampumaurheilupaikat", :mode "SINGLE", :workspace "lipas", :bounds {:minx 50000.0, :maxx 760000.0, :miny 6600000.0, :maxy 7800000.0, :crs "EPSG:3067"}, :publishables {:published '({:type "layer", :name "lipas:lipas_4830_jousiammuntarata"} {:type "layer", :name "lipas:lipas_4840_jousiammuntamaastorata"} {:type "layer", :name "lipas:lipas_4820_ampumaurheilukeskus"} {:type "layer", :name "lipas:lipas_4810_ampumarata"})}}}))
+            {:layerGroup {:name "lipas_4800_ampumaurheilupaikat", :mode "SINGLE", :workspace "lipas", :bounds {:minx 50000.0, :maxx 760000.0, :miny 6600000.0, :maxy 7800000.0, :crs "EPSG:3067"}, :publishables {:published '({:type "layer", :name "lipas:lipas_4830_jousiammuntarata"} {:type "layer", :name "lipas:lipas_4840_jousiammuntamaastorata"} {:type "layer", :name "lipas:lipas_4820_ampumaurheilukeskus"} {:type "layer", :name "lipas:lipas_4810_ampumarata"})}}}))
 
   (list-featuretypes)
 
@@ -530,9 +529,9 @@
          csv/read-csv
          (drop 1)
          (map (fn [[schema type-code view-name column-name data-type]]
-                {:type-code    (parse-long type-code)
-                 :view-name    view-name
-                 :data-type    data-type
+                {:type-code (parse-long type-code)
+                 :view-name view-name
+                 :data-type data-type
                  :legacy-field (keyword column-name)}))))
 
   (->> legacy-fields
@@ -548,9 +547,9 @@
                       (not (str/starts-with? (:data-type m) "character varying"))))))
 
   (update-vals (group-by :type-code legacy-fields)
-   (fn [coll] (set/difference
-               (->> coll (map :legacy-field) set)
-               common-fields)))
+               (fn [coll] (set/difference
+                           (->> coll (map :legacy-field) set)
+                           common-fields)))
 
   (require '[clojure.set :as set])
 
@@ -558,7 +557,7 @@
 
   (def all-sites (atom []))
   (doseq [type-code (keys types/all)
-          site      (core/get-sports-sites-by-type-code (user/db) type-code)]
+          site (core/get-sports-sites-by-type-code (user/db) type-code)]
     (swap! all-sites conj site))
 
   (count @all-sites)
@@ -588,10 +587,9 @@
                        :connectionParameters
                        {:entry (map (fn [[k v]] {"@key" (name k) "$" (str v)}) params)}}})]
       (http/put url (merge auth
-                            {:body json-body
-                             :content-type "application/json"
-                             :accept "application/json"}))))
-
+                           {:body json-body
+                            :content-type "application/json"
+                            :accept "application/json"}))))
 
   (publish-layer "lipas_4402_latu_3d" "lipas_4402_latu_3d_test" "LineString")
 
@@ -600,6 +598,4 @@
                                       {:basic-auth ["GEOSERVER_ADMIN_USER" ""]}))]
     (get-in response [:body :styles :style]))
 
-  (get-layer "lipas_1170_pyorailurata")
-
-  )
+  (get-layer "lipas_1170_pyorailurata"))

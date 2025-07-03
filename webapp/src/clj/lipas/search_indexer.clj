@@ -4,7 +4,7 @@
    [clojure.data.csv :as csv]
    [clojure.walk :as walk]
    [legacy-api.locations :as legacy-locations]
-   [legacy-api.sports-places :as legacy-sports-places]
+   [legacy-api.sports-place :as legacy-sports-place]
    [lipas.backend.analysis.diversity :as diversity]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
@@ -61,7 +61,7 @@
             (map #(-> %
                       (legacy-transform/->old-lipas-sports-site)
                       (assoc :id (:lipas-id %))
-                      (legacy-sports-places/format-sports-place
+                      (legacy-sports-place/format-sports-place
                        :all
                        legacy-locations/format-location)))
             (search/->bulk idx-name :sportsPlaceId)
