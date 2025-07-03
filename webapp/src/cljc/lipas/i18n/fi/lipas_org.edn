@@ -1,4 +1,5 @@
-{:email "Sähköposti",
+{:headline "Organisaatiot"
+ :email "Sähköposti",
  :phone "Puhelinnumero",
  :name "Nimi",
  :org-role "Rooli",

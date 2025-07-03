@@ -2,6 +2,8 @@
   (:require ["@mui/icons-material/Delete$default" :as DeleteIcon]
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Select$default" :as Select]
             ["@mui/material/Table$default" :as Table]
@@ -9,12 +11,6 @@
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
-            ["@mui/material/Container$default" :as Container]
-            ["@mui/material/Card$default" :as Card]
-            ["@mui/material/CardContent$default" :as CardContent]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.schema.org :as org-schema]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
@@ -24,10 +20,78 @@
             [lipas.ui.org.subs :as subs]
             [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]
-            [uix.core :refer [$]]
-            ["@mui/material/FormControl$default" :as FormControl]
-            ["@mui/material/InputLabel$default" :as InputLabel]
-            [reitit.frontend.easy :as rfe]))
+            [reitit.frontend.easy :as rfe]
+            [uix.core :refer [$]]))
+
+;; Component for LIPAS admins who can see all users
+(defn admin-user-management [tr org-id]
+  (let [add-form @(rf/subscribe [::subs/add-user-form])
+        all-users @(rf/subscribe [::subs/all-users-options])]
+    [:> Box
+     {:sx {:display "flex"
+           :flex-direction "row"
+           :gap 1
+           :align-items "center"}}
+     ;; User autocomplete dropdown
+     ($ ac/autocomplete2
+        {:sx #js {:minWidth 250}
+         :label (tr :lipas.user/email)
+         :options all-users
+         :value (:user-id add-form)
+         :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))})
+     ;; Role selector
+     [:> FormControl
+      {:sx {:min-width 120}}
+      [:> InputLabel
+       {:id "add-org-user-admin"}
+       (tr :lipas.org/org-role)]
+      [:> Select
+       {:value (or (:role add-form) "org-user")
+        :labelId "add-org-user-admin"
+        :onChange (fn [e] (rf/dispatch [::events/set-add-user-form [:role] (.-value (.-target e))]))}
+       [:> MenuItem {:value "org-user"} (tr (keyword :lipas.user.permissions.roles.role-names :org-user))]
+       [:> MenuItem {:value "org-admin"} (tr (keyword :lipas.user.permissions.roles.role-names :org-admin))]]]
+     ;; Add button
+     [:> Button
+      {:variant "contained"
+       :color "primary"
+       :on-click #(rf/dispatch [::events/add-user-to-org org-id])}
+      (tr :lipas.org/add-user)]]))
+
+;; Component for org admins who add users by email
+(defn org-admin-user-management [tr org-id]
+  (let [add-form @(rf/subscribe [::subs/add-user-email-form])]
+    [:> Box
+     {:sx {:display "flex"
+           :flex-direction "row"
+           :gap 1
+           :align-items "center"}}
+     ;; Email input field
+     [text-fields/text-field-controlled
+      {:label (tr :lipas.user/email)
+       :value (:email add-form)
+       :type "email"
+       :spec sites-schema/email
+       :on-change #(rf/dispatch [::events/set-add-user-email-form [:email] %])
+       :sx {:min-width 200}}]
+     ;; Role selector
+     [:> FormControl
+      {:sx {:min-width 120}}
+      [:> InputLabel
+       {:id "add-org-user-email"}
+       (tr :lipas.org/org-role)]
+      [:> Select
+       {:value (or (:role add-form) "org-user")
+        :labelId "add-org-user-email"
+        :onChange (fn [e] (rf/dispatch [::events/set-add-user-email-form [:role] (.-value (.-target e))]))}
+       [:> MenuItem {:value "org-user"} (tr (keyword :lipas.user.permissions.roles.role-names :org-user))]
+       [:> MenuItem {:value "org-admin"} (tr (keyword :lipas.user.permissions.roles.role-names :org-admin))]]]
+     ;; Add button
+     [:> Button
+      {:variant "contained"
+       :color "primary"
+       :on-click #(rf/dispatch [::events/add-user-by-email org-id])}
+      (tr :lipas.org/add-user-by-email)]]))
 
 (defn org-view []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
@@ -36,7 +100,8 @@
 
         org @(rf/subscribe [::subs/editing-org])
         org-users @(rf/subscribe [::subs/org-users])
-        org-valid? @(rf/subscribe [::subs/org-valid?])]
+        org-valid? @(rf/subscribe [::subs/org-valid?])
+        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
 
     [mui/grid {:container true
                :spacing 2
@@ -86,33 +151,10 @@
       [lui/form-card
        {:title (tr :lipas.org/users-section)
         :md 12}
-       (let [add-form @(rf/subscribe [::subs/add-user-form])]
-         [:> Box
-          {:sx {:display "flex"
-                :flex-direction "row"
-                :gap 1
-                :align-items "center"}}
-          ($ ac/autocomplete2
-             {:label (tr :lipas.user/username)
-              :options @(rf/subscribe [::subs/all-users-options])
-              :value (:user-id add-form)
-              :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))})
-          [:> FormControl
-           {:sx {:min-width 120}}
-           [:> InputLabel
-            {:id "add-org-user"}
-            (tr :lipas.org/org-role)]
-           [:> Select
-            {:value (or (:role add-form) "org-user")
-             :labelId "add-org-user"
-             :onChange (fn [e] (rf/dispatch [::events/set-add-user-form [:role] (.-value (.-target e))]))}
-            [:> MenuItem {:value "org-user"} (tr (keyword :lipas.user.permissions.roles.role-names :org-user))]
-            [:> MenuItem {:value "org-admin"} (tr (keyword :lipas.user.permissions.roles.role-names :org-admin))]]]
-          [:> Button
-           {:variant "contained"
-            :color "primary"
-            :on-click #(rf/dispatch [::events/add-user-to-org org-id])}
-           (tr :lipas.org/add-user)]])
+       ;; Role-based user management form
+       (if is-lipas-admin?
+         [admin-user-management tr org-id] ; LIPAS admin form
+         [org-admin-user-management tr org-id]) ; Org admin form
        [:> Table
         [:> TableHead
          [:> TableRow

@@ -223,7 +223,7 @@
 (defn site-roles-context
   "Create role-context for given site"
   [site]
-  {:lipas-id  (:lipas-id site)
+  {:lipas-id (:lipas-id site)
    :type-code (-> site :type :type-code)
    :city-code (-> site :location :city :city-code)
    ;; Sites SHOULD usually just have one activity type
@@ -252,6 +252,7 @@
             (:type-code role) (update :type-code set)
             (:city-code role) (update :city-code set)
             (:lipas-id role) (update :lipas-id set)
+            (:org-id role) (update :org-id set)
             (:activity role) (update :activity set)))
         roles))
 

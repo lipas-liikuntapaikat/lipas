@@ -1,5 +1,6 @@
 (ns lipas.ui.org.subs
   (:require [clojure.string :as str]
+            [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
             [malli.core :as m]
             [re-frame.core :as rf]))
@@ -62,11 +63,20 @@
 (rf/reg-sub ::all-users-options
             :<- [::all-users]
             (fn [users _]
-              (map (fn [{:keys [id username]}]
+              (map (fn [{:keys [id email]}]
                      {:value id
-                      :label username})
+                      :label email})
                    users)))
 
 (rf/reg-sub ::add-user-form
             (fn [db _]
               (get-in db [:org :add-user-form])))
+
+(rf/reg-sub ::add-user-email-form
+            (fn [db _]
+              (get-in db [:org :add-user-email-form])))
+
+(rf/reg-sub ::is-lipas-admin
+            :<- [:lipas.ui.user.subs/user-data]
+            (fn [user _]
+              (roles/check-privilege user {} :users/manage)))

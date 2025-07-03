@@ -135,6 +135,7 @@
    "integration_log"
    "integration_out_queue"
    "jobs"
+   "org"
    "job_metrics"
    "dead_letter_jobs"
    "circuit_breakers"
@@ -268,14 +269,16 @@
 (defn gen-user
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
-  ([{:keys [db? admin? status]
+  ([{:keys [db? admin? status permissions]
      :or {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
                   ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
                   ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
-                  (update :permissions (fn [permissions]
-                                         (cond-> (or permissions {})
+                  (update :permissions (fn [generated-permissions]
+                                         (cond-> (or generated-permissions {})
+                                           ;; If custom permissions provided, use them instead of generated ones
+                                           permissions (merge permissions)
                                            ;; generated result might include admin role, remove if the flag is false
                                            (not admin?) (update :roles (fn [roles]
                                                                          (into [] (remove (fn [x] (= :admin (:role x))) roles))))

@@ -62,6 +62,21 @@
                                                                roles)))))]
         (db/update-user-permissions! tx updated-user)))))
 
+(defn add-org-user-by-email!
+  "Add user to organization by email address. For use by org admins who can't see all users."
+  [db org-id email role]
+  (try
+    (update-org-users! db org-id [{:email email :change "add" :role role}])
+    {:success? true :message "User successfully added to organization"}
+    (catch Exception e
+      (let [ex-data (ex-data e)]
+        (if (= (:type ex-data) :user-not-found)
+          {:success? false
+           :message (str "No user found with email address: " email ". "
+                         "The user must first register an account with LIPAS "
+                         "before they can be added to an organization.")}
+          (throw e))))))
+
 (defn user-orgs [db id]
   (let [q (hsql/format {:select [:o.*]
                         :from [[:org :o]]

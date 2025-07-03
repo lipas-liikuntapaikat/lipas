@@ -6,7 +6,7 @@
 (def org-detail-routes
   ["organisaatio/:org-id"
    {:name :lipas.ui.routes/org
-    :tr-key :org/headline
+    :tr-key :lipas.org/headline
     :no-navbar-link? true
     :view #'views/org-view
     :parameters {:path [:map

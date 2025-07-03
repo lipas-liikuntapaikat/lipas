@@ -1,4 +1,5 @@
-{:email "E-post",
+{:headline "Organisationer"
+ :email "E-post",
  :phone "Telefonnummer",
  :name "Namn",
  :org-role "Roll",

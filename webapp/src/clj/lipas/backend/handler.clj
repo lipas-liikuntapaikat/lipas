@@ -96,7 +96,7 @@
            :body (io/input-stream (io/resource "public/index.html"))})}}]
 
      ["/api"
-      {:cors   true
+      {:cors true
        :no-doc true}
 
       ["/swagger.json"
@@ -271,14 +271,13 @@
                      :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
 
       ["/orgs"
-       {
-        :no-doc false
+       {:no-doc false
         :coercion reitit.coercion.malli/coercion}
        [""
         {;; Only admin users
          :require-privilege :org/admin
          :get
-         {          :handler
+         {:handler
           (fn [_]
             {:status 200
              :body (org/all-orgs db)})}
@@ -290,7 +289,7 @@
              :body (org/create-org db (-> req :parameters :body))})}}]
        ["/:org-id"
         {;; Check privilege for this specific org-id (org-admins)
-         :require-privilege [(fn [req] {:org-id (-> req :parameters :path :org-id)}) :org/manage]
+         :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
          :parameters {:path [:map
                              [:org-id org-schema/org-id]]}}
         [""
@@ -314,7 +313,19 @@
                                              (-> req :parameters :path :org-id)
                                              (-> req :parameters :body :changes))
                       {:status 200
-                       :body {}})}}]]]
+                       :body {}})}}]
+        ["/add-user-by-email"
+         {:post
+          {:parameters {:body [:map
+                               [:email :string]
+                               [:role [:enum "org-admin" "org-user"]]]}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            email (-> req :parameters :body :email)
+                            role (-> req :parameters :body :role)
+                            result (org/add-org-user-by-email! db org-id email role)]
+                        {:status (if (:success? result) 200 400)
+                         :body result}))}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post
