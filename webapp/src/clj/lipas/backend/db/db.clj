@@ -182,30 +182,6 @@
         :result
         (as-> $ (when $ (str (.toInstant $)))))))
 
-(defn add-integration-entry! [db-spec entry]
-  (->> (integration/marshall entry)
-       (integration/insert-entry! db-spec)))
-
-(defn get-integration-out-queue [db-spec]
-  (->> db-spec
-       integration/get-out-queue
-       (map integration/unmarshall)))
-
-(defn add-to-integration-out-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       utils/->snake-case-keywords
-       (integration/add-to-out-queue! db-spec)))
-
-(defn add-all-to-integration-out-queue! [db-spec lipas-ids]
-  (jdbc/with-db-transaction [tx db-spec]
-    (doseq [lipas-id lipas-ids]
-      (add-to-integration-out-queue! tx lipas-id))))
-
-(defn delete-from-integration-out-queue! [db-spec lipas-id]
-  (->> {:lipas-id lipas-id}
-       utils/->snake-case-keywords
-       (integration/delete-from-out-queue! db-spec)))
-
 ;; City ;;
 
 (defn add-city! [db-spec city]
@@ -328,9 +304,6 @@
   (def db-spec (:db config/default-config))
   (get-last-integration-timestamp db-spec "old-lipas")
   (get-users-drafts db-spec {:id "a112fd21-9470-480a-8961-6ddd308f58d9"})
-  (add-to-integration-out-queue db-spec 234)
-  (get-integration-out-queue db-spec)
-  (delete-from-integration-out-queue db-spec 234)
   (hikari/validate-options (->hikari-opts db-spec))
   (def cp1 (setup-connection-pool db-spec))
   (get-user-by-email cp1 {:email "admin@lipas.fi"})
