@@ -1,12 +1,12 @@
-(ns lipas.integration.old-lipas.transform
+(ns legacy-api.transform
   (:require
    [clojure.set :as set]
-   [clojure.spec.alpha :as spec]
    [lipas.data.types :as types]
-   [lipas.integration.old-lipas.sports-site :as old]
-   [lipas.utils :as utils :refer [sreplace trim]]
+   [legacy-api.sports-place :as old]
+   [lipas.utils :as utils]
    [clojure.string :as str]
-   [lipas.backend.gis :as gis]))
+   [lipas.backend.gis :as gis]
+   ))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 

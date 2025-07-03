@@ -13,6 +13,7 @@
    [lipas.backend.system :as backend]
    [lipas.data.cities :as cities]
    [lipas.data.types :as types]
+   [legacy-api.transform :as legacy-transform]
    [lipas.utils :as utils]
    [qbits.spandex :as es]
    [taoensso.timbre :as log]))
@@ -48,6 +49,27 @@
            (search/bulk-index! client)
            (wait-one))))
   (log/info "LOI indexing done!"))
+
+(defn index-legacy-search-sports-sites!
+  ([db client idx-name types]
+   (index-legacy-search-sports-sites! db client idx-name types []))
+  ([db client idx-name types results]
+   (let [type-code (first types)]
+     (log/info "Starting to re-index type" type-code)
+     (if type-code
+       (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
+            (map #(-> %
+                      (legacy-transform/->old-lipas-sports-site)
+                      (assoc :id (:lipas-id %))
+                      (legacy-sports-places/format-sports-place
+                       :all
+                       legacy-locations/format-location)))
+            (search/->bulk idx-name :sportsPlaceId)
+            (search/bulk-index! client)
+            (wait-one)
+            (conj results)
+            (recur db client idx-name (rest types)))
+       (print-results results)))))
 
 (defn index-search-sports-sites!
   ([db client idx-name types]

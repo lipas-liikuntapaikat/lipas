@@ -511,11 +511,6 @@
         :hits
         (->> (map :_source)))))
 
-(defn add-to-integration-out-queue!
-  "DEPRECATED: Integration system is being phased out."
-  [db sports-site]
-  (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
-
 (defn sync-ptv! [tx search ptv-component user props]
   (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
     (f tx search ptv-component user props)))
@@ -550,12 +545,6 @@
                                     {:lipas-id (:lipas-id resp)}
                                     {:correlation-id correlation-id
                                      :priority 70}))
-
-               (when-not route?
-                 ;; Routes will be integrated only after elevation has been
-                 ;; resolved. See `process-elevation-queue!`
-                 ;; NOTE: Integration system is being phased out, keeping for now
-                 (add-to-integration-out-queue! tx resp))
 
                ;; Analysis doesn't require elevation information
                (jobs/enqueue-job! tx "analysis"
