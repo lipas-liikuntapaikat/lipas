@@ -343,3 +343,34 @@ ORDER BY type, status;
 -- :doc Get detailed health metrics by job type
 SELECT * FROM job_queue_health
 ORDER BY type, status;
+
+-- :name find-stuck-jobs :? :*
+-- :doc Find jobs that have been processing for too long
+SELECT id, type, status, started_at, attempts, correlation_id
+FROM jobs
+WHERE status = 'processing'
+  AND started_at < NOW() - (:minutes * INTERVAL '1 minute')
+ORDER BY started_at;
+
+-- :name get-job-stats-by-type :? :*
+-- :doc Get job statistics grouped by type
+SELECT 
+    type,
+    COUNT(CASE WHEN status = 'failed' OR status = 'dead' THEN 1 END) as failed,
+    COUNT(*) as total
+FROM jobs
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY type;
+
+-- :name query-jobs :? :*
+-- :doc Query jobs with flexible filters
+SELECT * FROM jobs
+WHERE 1=1
+  /*~ (when (:error_message params) */
+  AND error_message = :error_message
+  /*~ ) ~*/
+  /*~ (when (:created_after params) */
+  AND created_at > :created_after::timestamp
+  /*~ ) ~*/
+ORDER BY created_at DESC
+LIMIT 100;

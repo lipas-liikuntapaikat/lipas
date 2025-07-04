@@ -146,7 +146,7 @@
 
                     ;; Mock process-job-batch to track jobs that would be marked as processing
                     worker/process-job-batch
-                    (fn [system pools jobs lane-type]
+                    (fn [system pools jobs lane-type config]
                       (swap! processing-jobs concat jobs))]
 
         ;; Test multiple iterations to ensure consistent behavior

@@ -191,6 +191,11 @@
               [(keyword status) (first entries)]))
        (into {})))
 
+(defn get-job-stats-by-type
+  "Get job statistics grouped by type."
+  [db]
+  (jobs-db/get-job-stats-by-type db))
+
 (defn get-performance-metrics
   "Get detailed performance metrics by job type within timeframe."
   [db {:keys [from-hours-ago to-hours-ago]

@@ -43,14 +43,16 @@
 
 (defn process-job-batch
   "Process a batch of jobs using the appropriate thread pool with enhanced reliability."
-  [system pools jobs lane-type]
+  [system pools jobs lane-type config]
   (let [pool (case lane-type
                :fast (:fast-pool pools)
                :general (:general-pool pools))
         {:keys [db]} system
-        timeout-ms (case lane-type
-                     :fast 120000 ; 2 minutes for fast jobs
-                     :general 1200000)] ; 20 minutes for slow jobs
+        ;; Use configuration values instead of hardcoded timeouts
+        base-timeout-ms (case lane-type
+                          :fast (* 60000 (:fast-timeout-minutes config 2))
+                          :general (* 60000 (:slow-timeout-minutes config 20)))
+        job-type-timeouts (:job-type-timeouts config {})]
 
     (doseq [job jobs]
       (.submit pool
@@ -59,13 +61,34 @@
                  (let [correlation-id (:correlation_id job)
                        job-id (:id job)
                        job-type (:type job)
-                       started-at (java.sql.Timestamp. (System/currentTimeMillis))]
+                       started-at (java.sql.Timestamp. (System/currentTimeMillis))
+                       ;; Use job-type specific timeout if available
+                       timeout-ms (if-let [job-timeout (get job-type-timeouts job-type)]
+                                    (* 60000 job-timeout)
+                                    base-timeout-ms)]
                    (try
+                     ;; Check memory before processing
+                     (let [runtime (Runtime/getRuntime)
+                           used-memory (- (.totalMemory runtime) (.freeMemory runtime))
+                           max-memory (.maxMemory runtime)
+                           memory-percent (long (* 100 (/ used-memory max-memory)))]
+
+                       (when (> memory-percent (:memory-threshold-percent config 85))
+                         (log/warn "High memory usage before job processing"
+                                   {:job-id job-id
+                                    :job-type job-type
+                                    :memory-percent memory-percent
+                                    :used-mb (/ used-memory 1024 1024)
+                                    :max-mb (/ max-memory 1024 1024)})
+                         ;; Force garbage collection if memory is critically high
+                         (when (> memory-percent 90)
+                           (System/gc))))
+
                      ;; Add correlation ID to logging context
                      (log/with-context {:correlation-id correlation-id
                                         :job-id job-id
                                         :job-type job-type}
-                       (log/debug "Processing job" job)
+                       (log/debug "Processing job" {:job job :timeout-ms timeout-ms})
 
                        ;; Execute with timeout protection
                        (patterns/with-timeout timeout-ms
@@ -76,8 +99,25 @@
                                                       started-at (:created_at job) correlation-id))
 
                      (catch java.util.concurrent.TimeoutException ex
-                       (log/error "Job timed out" {:job-id job-id :timeout-ms timeout-ms})
+                       (log/error "Job timed out"
+                                  {:job-id job-id
+                                   :job-type job-type
+                                   :timeout-ms timeout-ms
+                                   :timeout-minutes (/ timeout-ms 60000)})
                        (jobs/fail-job! db job-id "Job execution timed out"
+                                       {:current-attempt (:attempts job)
+                                        :max-attempts (:max_attempts job)
+                                        :correlation-id correlation-id})
+                       (monitoring/record-job-metric! db job-type "failed"
+                                                      started-at (:created_at job) correlation-id))
+
+                     (catch OutOfMemoryError oom
+                       (log/error "Job failed with OutOfMemoryError"
+                                  {:job-id job-id
+                                   :job-type job-type})
+                       ;; Try to recover by forcing GC
+                       (System/gc)
+                       (jobs/fail-job! db job-id "java.lang.OutOfMemoryError: Java heap space"
                                        {:current-attempt (:attempts job)
                                         :max-attempts (:max_attempts job)
                                         :correlation-id correlation-id})
@@ -91,7 +131,18 @@
                                         :max-attempts (:max_attempts job)
                                         :correlation-id correlation-id})
                        (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job) correlation-id)))))))))
+                                                      started-at (:created_at job) correlation-id))
+
+                     (finally
+                       ;; Log memory usage after job completion
+                       (let [runtime (Runtime/getRuntime)
+                             used-memory (- (.totalMemory runtime) (.freeMemory runtime))
+                             max-memory (.maxMemory runtime)]
+                         (log/debug "Memory usage after job"
+                                    {:job-id job-id
+                                     :job-type job-type
+                                     :used-mb (/ used-memory 1024 1024)
+                                     :max-mb (/ max-memory 1024 1024)}))))))))))
 
 (defn fetch-and-process-jobs
   "Fetch jobs and route them to appropriate thread pools.
@@ -137,12 +188,12 @@
       ;; Process fast jobs in fast lane
       (when (seq fast-jobs)
         (log/debug "Processing fast jobs" {:count (count fast-jobs)})
-        (process-job-batch system pools fast-jobs :fast))
+        (process-job-batch system pools fast-jobs :fast config))
 
       ;; Process general jobs in general lane  
       (when (seq general-jobs)
         (log/debug "Processing general jobs" {:count (count general-jobs)})
-        (process-job-batch system pools general-jobs :general))
+        (process-job-batch system pools general-jobs :general config))
 
       ;; Return total processed
       (+ (count (or fast-jobs [])) (count (or general-jobs []))))))
