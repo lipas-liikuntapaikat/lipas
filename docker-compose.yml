@@ -455,7 +455,7 @@ services:
       - "./data:/data:z"
 
   osrm-car:
-    image: osrm/osrm-backend
+    image: ghcr.io/project-osrm/osrm-backend
     restart: unless-stopped
     command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
@@ -464,7 +464,7 @@ services:
       - "5001:5000"
 
   osrm-bicycle:
-    image: osrm/osrm-backend
+    image: ghcr.io/project-osrm/osrm-backend
     restart: unless-stopped
     command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
@@ -473,7 +473,7 @@ services:
       - "5002:5000"
 
   osrm-foot:
-    image: osrm/osrm-backend
+    image: ghcr.io/project-osrm/osrm-backend
     restart: unless-stopped
     command: osrm-routed --max-table-size 3000 --algorithm mld /data/finland-latest.osrm
     volumes:
