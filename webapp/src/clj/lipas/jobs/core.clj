@@ -372,19 +372,25 @@
   - dead-letter-ids: Collection of dead letter job IDs
   - user-email: Email of admin performing the action
   
-  Returns number of acknowledged jobs."
+  Returns map with :acknowledged count."
   [db dead-letter-ids user-email]
-  (reduce (fn [count id]
-            (try
-              (jobs-db/acknowledge-dead-letter! db
-                                                {:id id
-                                                 :acknowledged_by user-email})
-              (inc count)
-              (catch Exception e
-                (log/error e "Failed to acknowledge dead letter job" {:id id})
-                count)))
-          0
-          dead-letter-ids))
+  (let [count (reduce (fn [count id]
+                        (try
+                          ;; First check if the job exists and is not already acknowledged
+                          (let [dlj (jobs-db/get-dead-letter-by-id db {:id id})]
+                            (if (and dlj (not (:acknowledged dlj)))
+                              (do
+                                (jobs-db/acknowledge-dead-letter! db
+                                                                  {:id id
+                                                                   :acknowledged_by user-email})
+                                (inc count))
+                              count))
+                          (catch Exception e
+                            (log/error e "Failed to acknowledge dead letter job" {:id id})
+                            count)))
+                      0
+                      dead-letter-ids)]
+    {:acknowledged count}))
 
 (defn gen-correlation-id
   "Generate a new correlation ID for tracking related jobs."

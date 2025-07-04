@@ -594,6 +594,12 @@
       [mui/button
        {:on-click #(==> [::events/close-job-details-dialog])}
        "Close"]
+      (when (not (:acknowledged job))
+        [mui/button
+         {:variant "outlined"
+          :on-click #(when (js/confirm "Mark this job as acknowledged?")
+                       (==> [::events/acknowledge-single-job (:id job)]))}
+         "Acknowledge"])
       [mui/button
        {:variant "contained"
         :color "primary"
@@ -724,6 +730,7 @@
         filter-value (<== [::subs/dead-letter-filter])
         selected-ids (<== [::subs/selected-job-ids])
         bulk-reprocessing? (<== [::subs/bulk-reprocessing?])
+        bulk-acknowledging? (<== [::subs/bulk-acknowledging?])
         tr (<== [:lipas.ui.subs/translator])
         all-job-ids (set (map :id dlq-jobs))
         some-selected? (seq selected-ids)
@@ -769,6 +776,15 @@
            :on-click #(when (js/confirm (str "Reprocess " (count selected-ids) " selected job(s)?"))
                         (==> [::events/reprocess-selected-jobs]))}
           (if bulk-reprocessing? "Reprocessing..." "Reprocess Selected")]
+         [mui/button
+          {:variant "outlined"
+           :size "small"
+           :disabled bulk-acknowledging?
+           :start-icon (when bulk-acknowledging?
+                         (r/as-element [mui/circular-progress {:size 16}]))
+           :on-click #(when (js/confirm (str "Acknowledge " (count selected-ids) " selected job(s)?"))
+                        (==> [::events/acknowledge-selected-jobs]))}
+          (if bulk-acknowledging? "Acknowledging..." "Acknowledge Selected")]
          [mui/button
           {:variant "outlined"
            :size "small"
@@ -849,7 +865,13 @@
                 :color "primary"
                 :on-click #(when (js/confirm "Reprocess this job?")
                              (==> [::events/reprocess-single-job (:id job)]))}
-               "Reprocess"]]]])]])]))
+               "Reprocess"]
+              (when (not (:acknowledged job))
+                [mui/button
+                 {:size "small"
+                  :on-click #(when (js/confirm "Acknowledge this job?")
+                               (==> [::events/acknowledge-single-job (:id job)]))}
+                 "Ack"])]]])]])]))
 
 (defn jobs-monitor-view []
   (let [selected-sub-tab (<== [::subs/jobs-selected-sub-tab])]

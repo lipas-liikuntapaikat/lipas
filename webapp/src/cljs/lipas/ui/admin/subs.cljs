@@ -268,3 +268,11 @@
 (rf/reg-sub ::bulk-reprocessing?
             (fn [db _]
               (get-in db [:admin :jobs :dead-letter :bulk-reprocessing?] false)))
+
+(rf/reg-sub ::acknowledging?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :acknowledging?] false)))
+
+(rf/reg-sub ::bulk-acknowledging?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :bulk-acknowledging?] false)))

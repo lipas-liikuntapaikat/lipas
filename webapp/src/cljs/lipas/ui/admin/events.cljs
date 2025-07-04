@@ -467,3 +467,92 @@
                                                (-> response :status-text)
                                                (tr :error/unknown))
                                   :success? false}]})))
+
+(rf/reg-event-fx ::acknowledge-single-job
+                 (fn [{:keys [db]} [_ job-id]]
+                   {:db (assoc-in db [:admin :jobs :dead-letter :acknowledging?] true)
+                    :http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/acknowledge-dead-letter-jobs")
+                     :params {:dead-letter-ids [job-id]}
+                     :format (ajax/transit-request-format)
+                     :response-format (ajax/transit-response-format
+                                       {:reader transit-reader})
+                     :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                     :on-success [::acknowledge-success]
+                     :on-failure [::acknowledge-error]}}))
+
+(rf/reg-event-fx ::acknowledge-selected-jobs
+                 (fn [{:keys [db]} _]
+                   (let [selected-ids (vec (get-in db [:admin :jobs :dead-letter :selected-job-ids] #{}))]
+                     (if (empty? selected-ids)
+                       {:dispatch [:lipas.ui.events/set-active-notification
+                                   {:message "No jobs selected"
+                                    :success? false}]}
+                       {:db (assoc-in db [:admin :jobs :dead-letter :bulk-acknowledging?] true)
+                        :http-xhrio
+                        {:method :post
+                         :uri (str (:backend-url db) "/actions/acknowledge-dead-letter-jobs")
+                         :params {:dead-letter-ids selected-ids}
+                         :format (ajax/transit-request-format)
+                         :response-format (ajax/transit-response-format
+                                           {:reader transit-reader})
+                         :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                         :on-success [::bulk-acknowledge-success]
+                         :on-failure [::bulk-acknowledge-error]}}))))
+
+(rf/reg-event-fx ::acknowledge-success
+                 (fn [{:keys [db]} [_ result]]
+                   (let [tr (:translator db)
+                         acknowledged (:acknowledged result 0)]
+                     {:db (-> db
+                              (assoc-in [:admin :jobs :dead-letter :acknowledging?] false)
+                              (assoc-in [:admin :jobs :dead-letter :details-dialog-open?] false))
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification]
+                            {:message (str (tr :notifications/save-success)
+                                           " - " acknowledged " job(s) acknowledged")
+                             :success? true}]
+                           [:dispatch [::fetch-dead-letter-jobs]
+                            {:acknowledged (case (get-in db [:admin :jobs :dead-letter :filter])
+                                             :unacknowledged false
+                                             :acknowledged true
+                                             nil)}]]})))
+
+(rf/reg-event-fx ::acknowledge-error
+                 (fn [{:keys [db]} [_ response]]
+                   (let [tr (:translator db)]
+                     {:db (assoc-in db [:admin :jobs :dead-letter :acknowledging?] false)
+                      :dispatch [:lipas.ui.events/set-active-notification
+                                 {:message (or (-> response :response :message)
+                                               (-> response :response :error)
+                                               (-> response :status-text)
+                                               (tr :error/unknown))
+                                  :success? false}]})))
+
+(rf/reg-event-fx ::bulk-acknowledge-success
+                 (fn [{:keys [db]} [_ result]]
+                   (let [tr (:translator db)
+                         acknowledged (:acknowledged result 0)]
+                     {:db (-> db
+                              (assoc-in [:admin :jobs :dead-letter :bulk-acknowledging?] false)
+                              (assoc-in [:admin :jobs :dead-letter :selected-job-ids] #{}))
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification]
+                            {:message (str (tr :notifications/save-success)
+                                           " - " acknowledged " job(s) acknowledged")
+                             :success? true}]
+                           [:dispatch [::fetch-dead-letter-jobs]
+                            {:acknowledged (case (get-in db [:admin :jobs :dead-letter :filter])
+                                             :unacknowledged false
+                                             :acknowledged true
+                                             nil)}]]})))
+
+(rf/reg-event-fx ::bulk-acknowledge-error
+                 (fn [{:keys [db]} [_ response]]
+                   (let [tr (:translator db)]
+                     {:db (assoc-in db [:admin :jobs :dead-letter :bulk-acknowledging?] false)
+                      :dispatch [:lipas.ui.events/set-active-notification
+                                 {:message (or (-> response :response :message)
+                                               (-> response :response :error)
+                                               (-> response :status-text)
+                                               (tr :error/unknown))
+                                  :success? false}]})))

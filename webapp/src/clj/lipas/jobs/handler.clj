@@ -62,7 +62,22 @@
                   db
                   dead-letter-ids
                   user-email
-                  (when max-attempts {:max-attempts max-attempts}))}))}}]])
+                  (when max-attempts {:max-attempts max-attempts}))}))}}]
+
+   ["/actions/acknowledge-dead-letter-jobs"
+    {:post
+     {:require-privilege :jobs/manage
+      :parameters {:body [:map
+                          [:dead-letter-ids [:sequential :int]]]}
+      :handler
+      (fn [req]
+        (let [{:keys [dead-letter-ids]} (-> req :parameters :body)
+              user-email (-> req :identity :email)]
+          {:status 200
+           :body (core/acknowledge-dead-letter-jobs!
+                  db
+                  dead-letter-ids
+                  user-email)}))}}]])
 
 (comment
   (require '[lipas.backend.jwt :as jwt])

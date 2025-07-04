@@ -197,6 +197,110 @@
                   job (first (jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" new-job-id]))]
               (is (= 5 (:jobs/max_attempts job))))))))))
 
+(deftest acknowledge-dead-letter-jobs-endpoint-test
+  (testing "POST /api/actions/acknowledge-dead-letter-jobs"
+    (let [db (:lipas/db @test-system)
+          app (:lipas/app @test-system)]
+
+      ;; Create test dead letter jobs
+      (let [dlj1 (create-test-dead-letter-job! db {:acknowledged false})
+            dlj2 (create-test-dead-letter-job! db {:acknowledged false})
+            dlj3 (create-test-dead-letter-job! db {:acknowledged true})]
+
+        (testing "successfully acknowledges single job"
+          (let [params {:dead-letter-ids [(:id dlj1)]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            (is (= 1 (:acknowledged body)))
+
+            ;; Verify the job was acknowledged
+            (let [dlj (jobs-db/get-dead-letter-by-id db {:id (:id dlj1)})]
+              (is (:acknowledged dlj))
+              (is (= "admin@lipas.fi" (:acknowledged_by dlj)))
+              (is (some? (:acknowledged_at dlj))))))
+
+        (testing "successfully acknowledges multiple jobs"
+          (let [dlj4 (create-test-dead-letter-job! db {:acknowledged false})
+                dlj5 (create-test-dead-letter-job! db {:acknowledged false})
+                params {:dead-letter-ids [(:id dlj4) (:id dlj5)]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            (is (= 2 (:acknowledged body)))
+
+            ;; Verify both jobs were acknowledged
+            (let [dlj4-after (jobs-db/get-dead-letter-by-id db {:id (:id dlj4)})
+                  dlj5-after (jobs-db/get-dead-letter-by-id db {:id (:id dlj5)})]
+              (is (:acknowledged dlj4-after))
+              (is (:acknowledged dlj5-after)))))
+
+        (testing "handles already acknowledged jobs gracefully"
+          (let [params {:dead-letter-ids [(:id dlj3)]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            ;; Already acknowledged jobs are skipped
+            (is (= 0 (:acknowledged body)))))
+
+        (testing "handles invalid dead letter ID gracefully"
+          (let [params {:dead-letter-ids [99999]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            (is (= 0 (:acknowledged body)))))
+
+        (testing "handles mixed valid and invalid IDs"
+          (let [dlj6 (create-test-dead-letter-job! db {:acknowledged false})
+                params {:dead-letter-ids [(:id dlj6) 99999 88888]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            ;; Only the valid job should be acknowledged
+            (is (= 1 (:acknowledged body)))))
+
+        (testing "handles empty dead-letter-ids"
+          (let [params {:dead-letter-ids []}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Accept" "application/transit+json")
+                              (mock/header "Authorization" (str "Token " (create-admin-token)))
+                              (mock/body (->transit params))))
+                body (<-transit (:body resp))]
+            (is (= 200 (:status resp)))
+            (is (= 0 (:acknowledged body)))))
+
+        (testing "requires authorization"
+          (let [no-auth-token (jwt/create-token
+                               {:id 1 :email "user@test.com" :permissions {:roles []}}
+                               {:valid-seconds 300})
+                params {:dead-letter-ids [(:id dlj2)]}
+                resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
+                              (mock/content-type "application/transit+json")
+                              (mock/header "Authorization" (str "Token " no-auth-token))
+                              (mock/body (->transit params))))]
+            (is (= 403 (:status resp)))))))))
+
 (deftest authorization-test
   (testing "Dead letter endpoints require jobs/manage permission"
     (let [app (:lipas/app @test-system)
@@ -211,8 +315,15 @@
                             (mock/header "Authorization" (str "Token " no-auth-token))))]
           (is (= 403 (:status resp)))))
 
-      (testing "POST endpoint returns 403 without permission"
+      (testing "POST reprocess endpoint returns 403 without permission"
         (let [resp (app (-> (mock/request :post "/api/actions/reprocess-dead-letter-jobs")
+                            (mock/content-type "application/transit+json")
+                            (mock/header "Authorization" (str "Token " no-auth-token))
+                            (mock/body (->transit {:dead-letter-ids [1]}))))]
+          (is (= 403 (:status resp)))))
+
+      (testing "POST acknowledge endpoint returns 403 without permission"
+        (let [resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
                             (mock/content-type "application/transit+json")
                             (mock/header "Authorization" (str "Token " no-auth-token))
                             (mock/body (->transit {:dead-letter-ids [1]}))))]
