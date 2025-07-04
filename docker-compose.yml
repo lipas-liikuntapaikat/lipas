@@ -289,7 +289,7 @@ services:
       options:
         gelf-address: "udp://localhost:5000"
         tag: "worker-v2"
-    command: java -Duser.timezone=UTC -Xmx4G -jar backend.jar -m lipas.backend.system worker
+    command: java -Duser.timezone=UTC -Xmx8G -jar backend.jar -m lipas.backend.system worker
     links:
       - postgres
       - elasticsearch
