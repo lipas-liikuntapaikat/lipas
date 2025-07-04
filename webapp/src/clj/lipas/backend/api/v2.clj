@@ -116,7 +116,9 @@ The core entities of LIPAS. Each sports facility is classified using a hierarchi
 Access to the hierarchical type classification system used for categorizing sports facilities.
 
 **Locations of Interest**
-Additional non-facility entities in LIPAS, that complement the sports facility data."
+Additional non-facility entities in LIPAS, that complement the sports facility data.
+
+**More about the Data Model** [LIPAS Data Model Primer for API V2 Users](https://github.com/lipas-liikuntapaikat/lipas/blob/master/docs/api-v2-data-model-primer.md)"
 
               :contact
               {:name "Support, feature requests and bug reports"
