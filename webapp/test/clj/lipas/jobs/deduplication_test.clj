@@ -177,15 +177,23 @@
     (let [db (test-db)
           dedup-key "test-dedup-failed"
 
-          ;; Create and fail first job
+          ;; Create first job
           job1 (jobs/enqueue-job! db "email"
                                   {:to "test@example.com"
                                    :subject "Test email"
                                    :body "Email body"}
-                                  {:dedup-key dedup-key})
-          _ (jobs/mark-failed! db (:id job1) "Test failure")
+                                  {:dedup-key dedup-key
+                                   :max-attempts 1}) ; Set to 1 so it goes straight to dead
 
-          ;; Should be able to enqueue new job
+          ;; Fetch and fail the job (simulating it going to dead letter after max attempts)
+          _ (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+                  job (first fetched-jobs)]
+              ;; Fail with max attempts to move to dead letter
+              (jobs/fail-job! db (:id job) "Test failure"
+                              {:current-attempt 1 ; First attempt = max attempts
+                               :max-attempts 1}))
+
+          ;; Should be able to enqueue new job since the first one is dead
           job2 (jobs/enqueue-job! db "email"
                                   {:to "test@example.com"
                                    :subject "Test email"
@@ -199,7 +207,7 @@
       ;; Both jobs should exist
       (let [jobs (jdbc/query db ["SELECT * FROM jobs WHERE dedup_key = ? ORDER BY id" dedup-key])]
         (is (= 2 (count jobs)))
-        (is (= "failed" (:status (first jobs))))
+        (is (= "dead" (:status (first jobs)))) ; Changed from "failed" to "dead"
         (is (= "pending" (:status (second jobs))))))))
 
 (deftest deduplication-concurrent-test

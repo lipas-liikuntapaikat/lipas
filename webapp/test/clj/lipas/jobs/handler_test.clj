@@ -59,9 +59,14 @@
                                                         :operation-type "test-webhook"})]
                          (:id result)))]
     (doseq [job-id webhook-jobs]
-      ;; Simulate job processing by setting started_at before failure
-      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" job-id])
-      (jobs/mark-failed! db job-id "Connection timeout")))
+      ;; Fetch the job to fail it properly
+      (jdbc/execute! db ["UPDATE jobs SET status = 'pending' WHERE id = ?" job-id]) ; Reset to pending to fetch
+      (let [fetched (jobs/fetch-next-jobs db {:limit 1})
+            job (first fetched)]
+        ;; Use proper fail-job! which will retry by default
+        (jobs/fail-job! db job-id "Connection timeout"
+                        {:current-attempt (:attempts job)
+                         :max-attempts (:max_attempts job)}))))
 
   ;; Now: Some jobs are pending
   (doseq [i (range 5)]
@@ -78,9 +83,10 @@
     (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" processing-job-id]))
 
   ;; Return expected counts for validation
+  ;; Return expected counts for validation
   {:completed-emails 10
    :completed-analysis 3
-   :failed-webhooks 2
+   :pending-webhooks 2 ; Changed from failed-webhooks since they're retrying
    :pending-emails 5
    :pending-elevation 1
    :processing-analysis 1})
@@ -104,8 +110,11 @@
                (schema/explain-metrics-response body)))
 
       ;; Test health metrics accuracy
+      ;; Test health metrics accuracy
       (let [health (:health body)]
-        (is (= (+ (:pending-emails expected) (:pending-elevation expected))
+        (is (= (+ (:pending-emails expected)
+                  (:pending-elevation expected)
+                  (:pending-webhooks expected)) ; Include retrying webhooks
                (:pending_count health))
             "Pending count should match test scenario")
 
@@ -113,9 +122,8 @@
                (:processing_count health))
             "Processing count should match test scenario")
 
-        (is (= (:failed-webhooks expected)
-               (:failed_count health))
-            "Failed count should match test scenario")
+        (is (= 0 (:failed_count health)) ; No failed jobs, they're retrying
+            "Failed count should be 0 since jobs retry")
 
         (is (= 0 (:dead_count health))
             "No jobs should be dead in this scenario"))
@@ -160,10 +168,13 @@
                (schema/explain-health-response body)))
 
       ;; Test each health metric
-      (is (= (+ (:pending-emails expected) (:pending-elevation expected))
+      ;; Test each health metric
+      (is (= (+ (:pending-emails expected)
+                (:pending-elevation expected)
+                (:pending-webhooks expected))
              (:pending_count body)))
       (is (= (:processing-analysis expected) (:processing_count body)))
-      (is (= (:failed-webhooks expected) (:failed_count body)))
+      (is (= 0 (:failed_count body))) ; No failed, they're retrying
       (is (= 0 (:dead_count body)))
 
       ;; Time-based metrics should be reasonable

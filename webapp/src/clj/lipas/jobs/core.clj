@@ -115,13 +115,13 @@
   (jobs-db/mark-job-completed! db {:id job-id}))
 
 (defn mark-failed!
-  "Mark a job as failed. DO NOT USE DIRECTLY - use fail-job! instead.
-   This is only for backward compatibility and will be deprecated."
+  "DEPRECATED - DO NOT USE. Use fail-job! instead.
+   This function will be removed in the next version."
   [db job-id error-message]
-  (log/warn "DEPRECATED: mark-failed! called directly. Use fail-job! instead"
-            {:id job-id :caller (str *ns*)})
-  ;; Just update the status, don't handle dead letter logic here
-  (jobs-db/mark-job-failed! db {:id job-id :error_message (str error-message)}))
+  (throw (ex-info "mark-failed! is deprecated and has been removed. Use fail-job! instead."
+                  {:job-id job-id
+                   :error-message error-message
+                   :suggestion "Use (fail-job! db job-id error-message {:current-attempt attempts :max-attempts max-attempts})"})))
 
 (defn move-to-dead-letter!
   "Move a permanently failed job to the dead letter queue.

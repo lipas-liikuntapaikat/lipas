@@ -195,15 +195,16 @@
         (jobs/mark-completed! db (:id (nth jobs 0)))
         (jobs/mark-completed! db (:id (nth jobs 1)))
 
-        ;; For failed jobs, use mark-failed! to get simple failure without retry logic
-        (jobs/mark-failed! db (:id (nth jobs 2)) "Simulated failure")
-        (jobs/mark-failed! db (:id (nth jobs 3)) "Simulated failure")
-        (jobs/mark-failed! db (:id (nth jobs 4)) "Simulated failure"))
+        ;; Fail remaining 3 jobs - they will go to dead letter since max-attempts reached
+        (doseq [job (drop 2 jobs)]
+          (jobs/fail-job! db (:id job) "Simulated failure"
+                          {:current-attempt (:max_attempts job) ; Set to max to go straight to dead
+                           :max-attempts (:max_attempts job)})))
 
       ;; Verify queue state is consistent
       (let [stats (jobs/get-queue-stats db)]
         (is (>= (get-in stats [:completed :count] 0) 2) "Should have completed jobs")
-        (is (>= (get-in stats [:failed :count] 0) 3) "Should have failed jobs")
+        (is (>= (get-in stats [:dead :count] 0) 3) "Should have dead jobs")
         (is (>= (get-in stats [:total :count] 0) 5) "Total should match")))))
 
 (deftest system-recovery-failed-jobs-test
