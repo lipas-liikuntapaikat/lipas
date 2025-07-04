@@ -242,3 +242,25 @@
 (rf/reg-sub ::jobs-selected-sub-tab
             (fn [db _]
               (get-in db [:admin :jobs :selected-sub-tab] 0)))
+
+(rf/reg-sub ::job-details-dialog-open?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :details-dialog-open?] false)))
+
+(rf/reg-sub ::selected-job-details
+            :<- [::dead-letter-jobs]
+            (fn [jobs [_ job-id]]
+              (when job-id
+                (first (filter #(= (:id %) job-id) jobs)))))
+
+(rf/reg-sub ::selected-job-id
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :selected-job-id])))
+
+(rf/reg-sub ::reprocessing?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :reprocessing?] false)))
+
+(rf/reg-sub ::selected-job-ids
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :selected-job-ids] #{})))

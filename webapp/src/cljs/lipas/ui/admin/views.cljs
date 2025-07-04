@@ -29,7 +29,8 @@
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
-            [uix.core :as uix :refer [$ defui]]))
+            [uix.core :as uix :refer [$ defui]]
+            [reagent.core :as r]))
 
 (defn magic-link-dialog [{:keys [tr]}]
   (let [open? (<== [::subs/magic-link-dialog-open?])
@@ -537,6 +538,71 @@
              {:size :small :on-click #(pick-color type-code :stroke stroke)}
              "reset"]]]]]))]))
 
+(defn job-details-dialog [tr]
+  (let [open? (<== [::subs/job-details-dialog-open?])
+        job-id (<== [::subs/selected-job-id])
+        job (<== [::subs/selected-job-details job-id])
+        reprocessing? (<== [::subs/reprocessing?])]
+    [mui/dialog
+     {:open open?
+      :on-close #(==> [::events/close-job-details-dialog])
+      :max-width "md"
+      :full-width true}
+     [mui/dialog-title "Job Details"
+      [mui/icon-button
+       {:on-click #(==> [::events/close-job-details-dialog])
+        :sx #js{:position "absolute" :right 8 :top 8}}
+       [mui/icon "close"]]]
+
+     (when job
+       [mui/dialog-content
+        ;; Basic info
+        [mui/typography {:variant "h6" :gutterBottom true} "Basic Information"]
+        [mui/grid2 {:container true :spacing 2 :sx #js{:mb 3}}
+         [mui/grid2 {:size 6}
+          [mui/typography {:color "textSecondary"} "ID"]
+          [mui/typography (str (:id job))]]
+         [mui/grid2 {:size 6}
+          [mui/typography {:color "textSecondary"} "Job Type"]
+          [mui/typography (get-in job [:original-job :type] "Unknown")]]
+         [mui/grid2 {:size 6}
+          [mui/typography {:color "textSecondary"} "Failed At"]
+          [mui/typography (let [died-at (:died-at job)]
+                            (cond
+                              (inst? died-at) (.toLocaleString died-at)
+                              (string? died-at) died-at
+                              :else (str died-at)))]]
+         [mui/grid2 {:size 6}
+          [mui/typography {:color "textSecondary"} "Status"]
+          [mui/chip {:label (if (:acknowledged job) "Acknowledged" "Unacknowledged")
+                     :color (if (:acknowledged job) "default" "warning")
+                     :size "small"}]]]
+
+        ;; Error details
+        [mui/typography {:variant "h6" :gutterBottom true} "Error Details"]
+        [mui/paper {:sx #js{:p 2 :mb 3 :bgcolor "#f5f5f5"}}
+         [mui/typography {:variant "body2" :component "pre" :sx #js{:whiteSpace "pre-wrap" :fontFamily "monospace"}}
+          (:error-message job)]]
+
+        ;; Job payload
+        [mui/typography {:variant "h6" :gutterBottom true} "Job Payload"]
+        [mui/paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :overflow "auto"}}
+         [mui/typography {:variant "body2" :component "pre" :sx #js{:fontFamily "monospace"}}
+          (js/JSON.stringify (clj->js (:original-job job)) nil 2)]]])
+
+     [mui/dialog-actions
+      [mui/button
+       {:on-click #(==> [::events/close-job-details-dialog])}
+       "Close"]
+      [mui/button
+       {:variant "contained"
+        :color "primary"
+        :disabled reprocessing?
+        :start-icon (when reprocessing? (r/as-element [mui/circular-progress {:size 16}]))
+        :on-click #(when (js/confirm "Are you sure you want to reprocess this job?")
+                     (==> [::events/reprocess-single-job (:id job)]))}
+       (if reprocessing? "Reprocessing..." "Reprocess")]]]))
+
 ;; Dead Letter Queue section
  ;; Jobs Monitoring tab content
 (defn jobs-monitoring-tab []
@@ -655,8 +721,12 @@
   (let [dlq-jobs (<== [::subs/filtered-dead-letter-jobs])
         loading? (<== [::subs/dead-letter-loading?])
         error (<== [::subs/dead-letter-error])
-        filter-value (<== [::subs/dead-letter-filter])]
+        filter-value (<== [::subs/dead-letter-filter])
+        tr (<== [:lipas.ui.subs/translator])]
     [:<>
+     ;; Job details dialog
+     [job-details-dialog tr]
+
      ;; Filter buttons
      [mui/toggle-button-group
       {:value filter-value
@@ -685,29 +755,62 @@
      ;; Jobs table
      (if (empty? dlq-jobs)
        [mui/typography {:color "textSecondary"} "No jobs in the selected filter"]
-       [lui/table
-        {:headers [[:id "ID"]
-                   [:type "Job Type"]
-                   [:error "Error Message"]
-                   [:died-at "Failed At"]
-                   [:acknowledged "Status"]]
-         :items (map (fn [job]
-                       {:id (:id job)
-                        :type (get-in job [:original-job :type] "Unknown")
-                        :error (let [msg (:error-message job)]
-                                 (if (> (count msg) 50)
-                                   (str (subs msg 0 47) "...")
-                                   msg))
-                        :died-at (-> job :died-at
-                                     (str/replace "T" " ")
-                                     (str/split ".")
-                                     first)
-                        :acknowledged (if (:acknowledged job)
-                                        "Acknowledged"
-                                        "Unacknowledged")})
-                     dlq-jobs)
-         :sort-fn :died-at
-         :sort-order :desc}])]))
+       [mui/table {:sx #js{:minWidth 650}}
+        [mui/table-head
+         [mui/table-row
+          [mui/table-cell "ID"]
+          [mui/table-cell "Job Type"]
+          [mui/table-cell "Error Message"]
+          [mui/table-cell "Failed At"]
+          [mui/table-cell "Status"]
+          [mui/table-cell {:align "right"} "Actions"]]]
+
+        [mui/table-body
+         (for [job (sort-by :died-at #(compare %2 %1) dlq-jobs)]
+           [mui/table-row {:key (:id job)
+                           :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}}
+            [mui/table-cell (:id job)]
+            [mui/table-cell (get-in job [:original-job :type] "Unknown")]
+            [mui/table-cell
+             (let [msg (:error-message job)]
+               [mui/tooltip {:title msg}
+                [mui/typography {:variant "body2"
+                                 :sx #js{:cursor "help"
+                                         :maxWidth 300
+                                         :overflow "hidden"
+                                         :textOverflow "ellipsis"
+                                         :whiteSpace "nowrap"}}
+                 (if (> (count msg) 50)
+                   (str (subs msg 0 47) "...")
+                   msg)]])]
+            [mui/table-cell (let [died-at (:died-at job)]
+                              (cond
+                                (inst? died-at) (.toLocaleString died-at)
+                                (string? died-at) (-> died-at
+                                                      (str/replace "T" " ")
+                                                      (str/split ".")
+                                                      first)
+                                :else (str died-at)))]
+            [mui/table-cell
+             (if (:acknowledged job)
+               [mui/chip {:label "Acknowledged"
+                          :size "small"
+                          :color "default"}]
+               [mui/chip {:label "Unacknowledged"
+                          :size "small"
+                          :color "warning"}])]
+            [mui/table-cell {:align "right"}
+             [mui/stack {:direction "row" :spacing 1 :justifyContent "flex-end"}
+              [mui/button
+               {:size "small"
+                :on-click #(==> [::events/open-job-details-dialog (:id job)])}
+               "View"]
+              [mui/button
+               {:size "small"
+                :color "primary"
+                :on-click #(when (js/confirm "Reprocess this job?")
+                             (==> [::events/reprocess-single-job (:id job)]))}
+               "Reprocess"]]]])]])]))
 
 (defn jobs-monitor-view []
   (let [selected-sub-tab (<== [::subs/jobs-selected-sub-tab])]

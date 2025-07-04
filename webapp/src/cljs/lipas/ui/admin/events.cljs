@@ -337,3 +337,122 @@
 (rf/reg-event-db ::select-jobs-sub-tab
                  (fn [db [_ tab-value]]
                    (assoc-in db [:admin :jobs :selected-sub-tab] tab-value)))
+
+(rf/reg-event-db ::open-job-details-dialog
+                 (fn [db [_ job-id]]
+                   (-> db
+                       (assoc-in [:admin :jobs :dead-letter :selected-job-id] job-id)
+                       (assoc-in [:admin :jobs :dead-letter :details-dialog-open?] true))))
+
+(rf/reg-event-db ::close-job-details-dialog
+                 (fn [db _]
+                   (-> db
+                       (assoc-in [:admin :jobs :dead-letter :selected-job-id] nil)
+                       (assoc-in [:admin :jobs :dead-letter :details-dialog-open?] false))))
+
+(rf/reg-event-fx ::reprocess-single-job
+                 (fn [{:keys [db]} [_ job-id max-attempts]]
+                   {:db (assoc-in db [:admin :jobs :dead-letter :reprocessing?] true)
+                    :http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/reprocess-dead-letter-jobs")
+                     :params (cond-> {:dead-letter-ids [job-id]}
+                               max-attempts (assoc :max-attempts max-attempts))
+                     :format (ajax/transit-request-format)
+                     :response-format (ajax/transit-response-format
+                                       {:reader transit-reader})
+                     :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                     :on-success [::reprocess-job-success]
+                     :on-failure [::reprocess-job-error]}}))
+
+(rf/reg-event-fx ::reprocess-job-success
+                 (fn [{:keys [db]} [_ result]]
+                   (let [tr (:translator db)
+                         processed (:processed result 0)
+                         errors (:errors result [])]
+                     {:db (assoc-in db [:admin :jobs :dead-letter :reprocessing?] false)
+                      :fx (cond-> [[:dispatch [:lipas.ui.events/set-active-notification]
+                                    {:message (str (tr :notifications/save-success)
+                                                   " - " processed " job(s) reprocessed")
+                                     :success? true}]
+                                   [:dispatch [::close-job-details-dialog]]
+                                   [:dispatch [::fetch-dead-letter-jobs]
+                                    {:acknowledged (case (get-in db [:admin :jobs :dead-letter :filter])
+                                                     :unacknowledged false
+                                                     :acknowledged true
+                                                     nil)}]]
+                            (seq errors)
+                            (conj [:dispatch [:lipas.ui.events/set-active-notification]
+                                   {:message (str "Errors: " (pr-str errors))
+                                    :success? false}]))})))
+
+(rf/reg-event-fx ::reprocess-job-error
+                 (fn [{:keys [db]} [_ response]]
+                   (let [tr (:translator db)]
+                     {:db (assoc-in db [:admin :jobs :dead-letter :reprocessing?] false)
+                      :dispatch [:lipas.ui.events/set-active-notification
+                                 {:message (or (-> response :response :message)
+                                               (-> response :response :error)
+                                               (-> response :status-text)
+                                               (tr :error/unknown))
+                                  :success? false}]})))
+
+(rf/reg-event-db ::toggle-job-selection
+                 (fn [db [_ job-id]]
+                   (update-in db [:admin :jobs :dead-letter :selected-job-ids]
+                              (fnil (fn [ids]
+                                      (if (contains? ids job-id)
+                                        (disj ids job-id)
+                                        (conj ids job-id)))
+                                    #{}))))
+
+(rf/reg-event-db ::select-all-jobs
+                 (fn [db [_ job-ids]]
+                   (assoc-in db [:admin :jobs :dead-letter :selected-job-ids]
+                             (set job-ids))))
+
+(rf/reg-event-db ::clear-job-selection
+                 (fn [db _]
+                   (assoc-in db [:admin :jobs :dead-letter :selected-job-ids] #{})))
+
+(rf/reg-event-fx ::reprocess-selected-jobs
+                 (fn [{:keys [db]} [_ max-attempts]]
+                   (let [selected-ids (vec (get-in db [:admin :jobs :dead-letter :selected-job-ids] #{}))]
+                     (if (empty? selected-ids)
+                       {:dispatch [:lipas.ui.events/set-active-notification
+                                   {:message "No jobs selected"
+                                    :success? false}]}
+                       {:db (assoc-in db [:admin :jobs :dead-letter :bulk-reprocessing?] true)
+                        :http-xhrio
+                        {:method :post
+                         :uri (str (:backend-url db) "/actions/reprocess-dead-letter-jobs")
+                         :params (cond-> {:dead-letter-ids selected-ids}
+                                   max-attempts (assoc :max-attempts max-attempts))
+                         :format (ajax/transit-request-format)
+                         :response-format (ajax/transit-response-format
+                                           {:reader transit-reader})
+                         :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                         :on-success [::bulk-reprocess-success]
+                         :on-failure [::bulk-reprocess-error]}}))))
+
+(rf/reg-event-fx ::bulk-reprocess-success
+                 (fn [{:keys [db]} [_ result]]
+                   (let [tr (:translator db)
+                         processed (:processed result 0)
+                         errors (:errors result [])]
+                     {:db (-> db
+                              (assoc-in [:admin :jobs :dead-letter :bulk-reprocessing?] false)
+                              (assoc-in [:admin :jobs :dead-letter :selected-job-ids] #{}))
+                      :fx (cond-> [[:dispatch [:lipas.ui.events/set-active-notification]
+                                    {:message (str (tr :notifications/save-success)
+                                                   " - " processed " job(s) reprocessed")
+                                     :success? true}]
+                                   [:dispatch [::fetch-dead-letter-jobs]
+                                    {:acknowledged (case (get-in db [:admin :jobs :dead-letter :filter])
+                                                     :unacknowledged false
+                                                     :acknowledged true
+                                                     nil)}]]
+                            (seq errors)
+                            (conj [:dispatch [:lipas.ui.events/set-active-notification]
+                                   {:message (str "Errors: " (pr-str errors))
+                                    :success? false}]))})))
