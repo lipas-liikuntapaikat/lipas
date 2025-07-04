@@ -7,6 +7,7 @@
    [lipas.backend.email :as email]
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
+   [lipas.jobs.system :as jobs-system]
    [nrepl.server :as nrepl]
    [ring.adapter.jetty :as jetty]
    [taoensso.timbre :as log])
@@ -119,7 +120,9 @@
         (println "Starting LIPAS worker...")
         (require 'lipas.jobs.system)
         (let [start-worker! (resolve 'lipas.jobs.system/start-worker-system!)]
-          (reset! current-system (start-worker!))))
+          (reset! current-system (start-worker!))
+          (.addShutdownHook (Runtime/getRuntime)
+                            (Thread. #((resolve 'lipas.jobs.system/stop-worker-system!) @current-system) "shutdown-hook"))))
 
       ;; Default to server for backward compatibility
       (do
