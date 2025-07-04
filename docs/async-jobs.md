@@ -30,9 +30,9 @@ The jobs system implements a **Fast Lane + General Lane** architecture that prev
 │                 │                    │                 │
 │ • emails        │                    │ • any job type  │
 │ • reminders     │                    │ • analysis      │
-│ • integration   │                    │ • elevation     │
-│ • cleanup       │                    │ • webhooks      │
+│ • cleanup       │                    │ • elevation     │
 │ • webhooks      │                    │                 │
+│ • monitoring    │                    │                 │
 └─────────────────┘                    └─────────────────┘
 ```
 
@@ -43,6 +43,8 @@ The jobs system implements a **Fast Lane + General Lane** architecture that prev
 - **Multi-Process Safe**: Uses PostgreSQL `SELECT FOR UPDATE SKIP LOCKED` for coordination
 - **Request Tracing**: Correlation IDs for debugging and monitoring
 - **Zero Downtime**: Graceful shutdown and rolling deployments
+- **Deduplication**: Prevents duplicate jobs using unique keys
+- **Job Chaining**: Create related jobs with shared correlation IDs
 
 ## Database Schema
 
@@ -76,6 +78,10 @@ CREATE TABLE public.jobs (
   CONSTRAINT jobs_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'dead')),
   CONSTRAINT jobs_priority_check CHECK (priority >= 0)
 );
+
+-- Deduplication index
+CREATE UNIQUE INDEX idx_jobs_dedup_unique ON public.jobs (type, dedup_key)
+  WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing');
 ```
 
 **Status Values:**
@@ -94,6 +100,7 @@ CREATE TABLE public.dead_letter_jobs (
   original_job      jsonb NOT NULL,
   error_message     text NOT NULL,
   error_details     jsonb,
+  correlation_id    uuid,
   died_at           timestamp with time zone NOT NULL DEFAULT now(),
   acknowledged      boolean DEFAULT false,
   acknowledged_by   text,
@@ -119,6 +126,7 @@ CREATE TABLE public.job_metrics (
   status            text NOT NULL,
   duration_ms       bigint,
   queue_time_ms     bigint,
+  correlation_id    uuid,
   recorded_at       timestamp with time zone NOT NULL DEFAULT now()
 );
 ```
@@ -131,16 +139,43 @@ The system processes several types of background jobs:
 - **`email`** - Send email notifications and alerts
 - **`produce-reminders`** - Generate reminder tasks for overdue items
 - **`cleanup-jobs`** - Remove old completed jobs and maintain system hygiene
-- **`integration`** - Sync data with external systems
 - **`webhook`** - Process UTP webhook notifications
+- **`monitor-queue-health`** - Monitor queue health and send alerts
 
 ### Slow Jobs (minutes to hours)
 - **`analysis`** - Calculate diversity analysis for sports sites
 - **`elevation`** - Enrich location data with elevation information
 
+Note: The `integration` job type for legacy system sync has been deprecated and is no longer implemented.
+
 ### Job Type Payload Schemas
 
-See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/payload_schema.clj)
+All job payloads are validated using Malli schemas. See `webapp/src/clj/lipas/jobs/payload_schema.clj` for detailed schemas. Example payloads:
+
+```clojure
+;; Email job
+{:to "user@example.com"
+ :subject "Welcome!"
+ :body "Your account is ready"
+ :type "notification"}  ; Optional: "reminder" for special handling
+
+;; Analysis job
+{:lipas-id 12345}
+
+;; Elevation job
+{:lipas-id 12345}
+
+;; Webhook job
+{:lipas-ids [1234, 5678]
+ :loi-ids [91011, 121314]
+ :operation-type "update"}
+
+;; Cleanup job
+{:days-old 7}  ; Optional, defaults to 7
+
+;; Monitor queue health job
+{}  ; No payload required
+```
 
 ## Core API
 
@@ -150,7 +185,7 @@ See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/pay
 (require '[lipas.jobs.core :as jobs])
 
 ;; Basic job
-(jobs/enqueue-job! db "email" {:to "user@example.com" :template "welcome"})
+(jobs/enqueue-job! db "email" {:to "user@example.com" :subject "Welcome"})
 
 ;; With options
 (jobs/enqueue-job! db "analysis"
@@ -158,7 +193,8 @@ See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/pay
                    {:priority 50
                     :run-at (time/plus (time/now) (time/minutes 5))
                     :correlation-id "user-action-123"
-                    :dedup-key "analysis-12345"})
+                    :dedup-key "analysis-12345"
+                    :max-attempts 5})
 ```
 
 **Options:**
@@ -167,22 +203,39 @@ See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/pay
 - `:correlation-id` - For request tracing (auto-generated if not provided)
 - `:dedup-key` - Prevent duplicate jobs (combined with job type)
 - `:max-attempts` - Override default retry limit
+- `:parent-job-id` - Link to parent job
+- `:created-by` - Track who created the job
 
 ### Job Management
 
 ```clojure
 ;; Get queue statistics
 (jobs/get-queue-stats db)
-;; => {:pending 42 :processing 3 :failed 1 :oldest-pending-minutes 5}
+;; => {:pending {:count 42 :oldest "2024-01-01T10:00:00Z"}
+;;     :processing {:count 3}
+;;     :failed {:count 1}}
+
+;; Get admin metrics dashboard data
+(jobs/get-admin-metrics db {:from-hours-ago 24})
+;; => {:current-stats {...}
+;;     :health {...}
+;;     :performance-metrics [...]
+;;     :hourly-throughput [...]}
 
 ;; Find jobs by correlation ID
 (jobs/get-jobs-by-correlation db "user-action-123")
 
-;; Manually fail a job
-(jobs/fail-job! db job-id "External service unavailable" {:will-retry? true})
+;; Get complete correlation trace (jobs + metrics)
+(jobs/get-correlation-trace db "user-action-123")
 
-;; Move to dead letter
-(jobs/move-to-dead-letter! db job-id "Permanent validation error")
+;; Manually fail a job (used internally by workers)
+(jobs/fail-job! db job-id "External service unavailable" 
+                {:current-attempt 2 :max-attempts 3})
+
+;; Create job chain with shared correlation
+(jobs/create-job-chain db 
+  [{:type "email" :payload {:to "user@example.com"}}
+   {:type "analysis" :payload {:lipas-id 123}}])
 ```
 
 ## Job Handlers
@@ -192,57 +245,52 @@ See [webapp/src/clj/lipas/jobs/payload_schema.clj](webapp/src/clj/lipas/jobs/pay
 Job handlers are implemented as multimethods in `lipas.jobs.dispatcher`:
 
 ```clojure
-(defmethod handle-job "email"
-  [{:keys [db emailer]} {:keys [id payload correlation-id]}]
-  (let [{:keys [to template data]} payload]
-    (log/info "Sending email" {:correlation-id correlation-id :template template})
-    (patterns/with-circuit-breaker db "email-service" {}
-      (email/send-templated-email! emailer to template data))))
-
-(defmethod handle-job "analysis"
-  [{:keys [db search]} {:keys [id payload correlation-id]}]
-  (let [{:keys [lipas-id]} payload
-        sports-site (core/get-sports-site db lipas-id)
-        fcoll (-> sports-site :location :geometries core/simplify)]
-    (log/info "Starting diversity analysis" {:correlation-id correlation-id :lipas-id lipas-id})
-    (patterns/with-timeout 600000  ; 10 minutes
-      (diversity/recalc-grid! search fcoll))))
+(defmethod handle-job "new-job-type"
+  [{:keys [db emailer search]} {:keys [id payload correlation-id]}]
+  (log/info "Processing new job" {:correlation-id correlation-id})
+  
+  ;; Use circuit breaker for external services
+  (patterns/with-circuit-breaker db "external-service" {}
+    (external-api/call! payload))
+  
+  ;; Use timeout for long operations
+  (patterns/with-timeout 300000  ; 5 minutes
+    (process-data! payload)))
 ```
 
 ### Handler Context
 
 Job handlers receive:
-- `:db` - Database connection
-- `:search` - Elasticsearch client
-- `:emailer` - Email service
-- Job data: `:id`, `:payload`, `:correlation-id`, `:attempts`
+- System components: `:db`, `:search`, `:emailer`
+- Job data: `:id`, `:type`, `:payload`, `:correlation-id`, `:attempts`
 
 ### Error Handling
 
 Handlers should throw exceptions for failures. The worker automatically:
-- Retries with exponential backoff
+- Retries with exponential backoff (with jitter)
 - Records error details
 - Moves to dead letter after max attempts
 - Triggers circuit breakers for external service failures
+- Records metrics for monitoring
 
 ## Reliability Patterns
 
 ### Exponential Backoff
 
 Failed jobs are retried with increasing delays:
-- Attempt 1: 1 second
+- Attempt 1: 1 second base (with jitter)
 - Attempt 2: ~2 seconds (with jitter)
 - Attempt 3: ~4 seconds (with jitter)
 - Max delay: 5 minutes
 
 ```clojure
-(patterns/exponential-backoff-ms 1000 3 0.1)  ; Base 1s, attempt 3, 10% jitter
-;; => ~4100ms
+(patterns/exponential-backoff-ms 1 {:base-ms 1000 :max-ms 300000 :jitter 0.1})
+;; => ~2200ms (2s base + 10% jitter)
 ```
 
 ### Circuit Breakers
 
-External services are protected by circuit breakers that prevent cascade failures:
+External services are protected by circuit breakers:
 
 ```clojure
 (patterns/with-circuit-breaker db "email-service"
@@ -258,68 +306,67 @@ External services are protected by circuit breakers that prevent cascade failure
 
 ### Timeouts
 
-Long-running jobs can be protected by timeouts:
+Long-running jobs are protected by timeouts:
 
 ```clojure
 (patterns/with-timeout 300000  ; 5 minutes
   (elevation/enrich-sports-site! elevation-service payload))
 ```
 
+Timeouts throw `TimeoutException` which triggers normal retry logic.
+
 ### Dead Letter Queue
 
-Permanently failed jobs are moved to the dead letter queue for manual review:
+Permanently failed jobs are moved to dead letter queue for manual review:
 
-```sql
-SELECT * FROM dead_letter_jobs
-WHERE acknowledged = false
-ORDER BY died_at DESC;
+```clojure
+;; Get unacknowledged dead letter jobs
+(jobs/get-dead-letter-jobs db {:acknowledged false})
+
+;; Reprocess dead letter job
+(jobs/reprocess-dead-letter-job! db dead-letter-id "admin@lipas.fi"
+                                 {:max-attempts 3})
+
+;; Bulk operations
+(jobs/reprocess-dead-letter-jobs! db [123 456 789] "admin@lipas.fi")
+(jobs/acknowledge-dead-letter-jobs! db [123 456] "admin@lipas.fi")
 ```
 
 ## Configuration
 
-See [webapp/src/clj/lipas/jobs/system.clj](webapp/src/clj/lipas/jobs/system.clj)
+### Worker Configuration
 
-### Development
+The worker system uses environment variables for configuration:
 
 ```clojure
-{:lipas.jobs/worker
- {:enabled-job-types #{"email" "analysis" "elevation"}
-  :fast-threads 1
-  :general-threads 2
-  :batch-size 5
-  :poll-interval-ms 2000}
-
- :lipas.jobs/retry
- {:base-ms 1000
-  :max-ms 60000
-  :jitter 0.1}
-
- :lipas.jobs/circuit-breaker
- {:failure-threshold 3
-  :open-duration-ms 30000}}
+;; Default configuration (can be overridden via environment)
+{:fast-threads 3                    ; WORKER_FAST_THREADS
+ :general-threads 5                 ; WORKER_GENERAL_THREADS
+ :batch-size 10                     ; WORKER_BATCH_SIZE
+ :poll-interval-ms 3000             ; WORKER_POLL_INTERVAL_MS
+ :fast-timeout-minutes 2            ; WORKER_FAST_TIMEOUT_MINUTES
+ :slow-timeout-minutes 20           ; WORKER_SLOW_TIMEOUT_MINUTES
+ :stuck-job-timeout-minutes 60      ; WORKER_STUCK_JOB_TIMEOUT_MINUTES
+ 
+ ;; Memory management
+ :memory-check-interval-ms 60000    ; WORKER_MEMORY_CHECK_INTERVAL_MS
+ :memory-threshold-percent 85       ; WORKER_MEMORY_THRESHOLD_PERCENT
+ 
+ ;; Per-job-type timeout overrides
+ :job-type-timeouts {"analysis" 30  ; WORKER_ANALYSIS_TIMEOUT_MINUTES
+                     "elevation" 10 ; WORKER_ELEVATION_TIMEOUT_MINUTES
+                     "email" 1}}    ; WORKER_EMAIL_TIMEOUT_MINUTES
 ```
 
-### Production
+### Scheduler Configuration
+
+The scheduler produces periodic jobs:
 
 ```clojure
-{:lipas.jobs/worker
- {:enabled-job-types #{"produce-reminders" "cleanup-jobs" "analysis"
-                       "elevation" "email" "integration" "webhook"}
-  :fast-threads 3              ; Dedicated for fast jobs
-  :general-threads 5           ; All job types including slow ones
-  :batch-size 20               ; Fetch more jobs per database round-trip
-  :poll-interval-ms 1000       ; Poll every second
-  :fast-timeout-minutes 2      ; Fast job timeout
-  :slow-timeout-minutes 20}    ; Slow job timeout
-
- :lipas.jobs/retry
- {:base-ms 1000
-  :max-ms 300000               ; Max 5 minute delay
-  :jitter 0.1}
-
- :lipas.jobs/circuit-breaker
- {:failure-threshold 5
-  :open-duration-ms 60000}}    ; 1 minute open state
+{:produce-reminders {:cron "0 0 8 * * ?"      ; Daily at 8 AM
+                     :initial-delay-ms 60000}   ; 1 minute startup delay
+ :cleanup-jobs {:interval-ms 86400000          ; Daily
+                :initial-delay-ms 300000}}     ; 5 minute startup delay
 ```
 
 ## Deployment Architecture
@@ -338,38 +385,55 @@ services:
   backend:
     image: lipas:latest
     command: ["java", "-jar", "backend.jar", "server"]
+    environment:
+      - DATABASE_URL=postgresql://...
     # ... web app configuration
 
   lipas-worker:
     image: lipas:latest
     command: ["java", "-jar", "backend.jar", "worker"]
     environment:
+      - DATABASE_URL=postgresql://...
       - WORKER_FAST_THREADS=3
       - WORKER_GENERAL_THREADS=5
+      - WORKER_BATCH_SIZE=20
+      - WORKER_POLL_INTERVAL_MS=1000
 ```
 
 ### Integrant Systems
 
-**Worker System (`src/clj/lipas/jobs/system.clj`):**
+The worker system uses Integrant for component management:
+
 ```clojure
-(def worker-system-config
-  {:lipas/db {...}
-   :lipas/search {...}
-   :lipas/emailer {...}
-
-   :lipas.jobs/scheduler     ; Produces periodic jobs
-   {:db (ig/ref :lipas/db)}
-
-   :lipas.jobs/worker        ; Processes all job types
-   {:db (ig/ref :lipas/db)
-    :search (ig/ref :lipas/search)
-    :emailer (ig/ref :lipas/emailer)
-    :config {:fast-threads 3 :general-threads 5}}})
+;; Worker system components
+{:lipas/db {...}              ; Database connection
+ :lipas/search {...}          ; Elasticsearch client
+ :lipas/emailer {...}         ; Email service
+ 
+ :lipas.jobs/scheduler        ; Produces periodic jobs
+ {:db (ig/ref :lipas/db)}
+ 
+ :lipas.jobs/worker           ; Processes all job types
+ {:db (ig/ref :lipas/db)
+  :search (ig/ref :lipas/search)
+  :emailer (ig/ref :lipas/emailer)
+  :config (get-worker-config)}
+  
+ :lipas.jobs/health-monitor   ; Monitors system health
+ {:db (ig/ref :lipas/db)
+  :config (get-worker-config)}}
 ```
 
 ## Monitoring and Operations
 
 ### Health Monitoring
+
+The system includes automatic health monitoring that checks:
+- Queue depth and age
+- Processing times
+- Error rates
+- Memory usage
+- Circuit breaker states
 
 ```sql
 -- Check overall queue health
@@ -387,15 +451,46 @@ FROM jobs
 WHERE status = 'failed'
   AND last_error_at > NOW() - INTERVAL '1 hour'
 GROUP BY type;
+
+-- Performance metrics
+SELECT job_type, 
+       AVG(duration_ms) as avg_duration,
+       MAX(duration_ms) as max_duration,
+       COUNT(*) as total_jobs
+FROM job_metrics
+WHERE recorded_at > NOW() - INTERVAL '24 hours'
+GROUP BY job_type;
 ```
 
-### Circuit Breaker Status
+### Admin API Endpoints
 
-```sql
--- Check external service health
-SELECT service_name, state, failure_count, last_failure_at
-FROM circuit_breakers
-WHERE state != 'closed';
+The system provides REST endpoints for monitoring:
+
+```bash
+# Get comprehensive metrics
+POST /api/actions/create-jobs-metrics-report
+{
+  "from-hours-ago": 24,
+  "to-hours-ago": 0
+}
+
+# Get health status
+POST /api/actions/get-jobs-health-status
+{}
+
+# Manage dead letter queue
+GET /api/actions/get-dead-letter-jobs?acknowledged=false
+
+POST /api/actions/reprocess-dead-letter-jobs
+{
+  "dead-letter-ids": [123, 456],
+  "max-attempts": 3
+}
+
+POST /api/actions/acknowledge-dead-letter-jobs
+{
+  "dead-letter-ids": [123, 456]
+}
 ```
 
 ### Key Metrics
@@ -406,6 +501,7 @@ Monitor these indicators:
 - **Error rate** - Failed jobs percentage by type
 - **Thread utilization** - Fast vs general lane usage
 - **Circuit breaker trips** - External service failures
+- **Memory usage** - Worker process heap utilization
 
 ### Alerts
 
@@ -415,6 +511,7 @@ Set up monitoring for:
 - Fast lane utilization > 90% for > 2 minutes
 - Oldest pending job > 1 hour
 - Circuit breaker in open state
+- Worker memory usage > 85%
 
 ## Operational Procedures
 
@@ -422,42 +519,38 @@ Set up monitoring for:
 
 #### View Dead Letter Queue
 ```sql
-SELECT id, original_job->>'type' as job_type, error_message, died_at
+SELECT id, 
+       original_job->>'type' as job_type,
+       original_job->>'correlation_id' as correlation_id,
+       error_message, 
+       died_at
 FROM dead_letter_jobs
 WHERE acknowledged = false
 ORDER BY died_at DESC;
 ```
 
-#### Acknowledge Dead Letter
-```clojure
-(db/acknowledge-dead-letter! db
-  {:id 123
-   :acknowledged_by "admin@lipas.fi"})
-```
-
-#### Requeue Dead Job
-```clojure
-(let [dead-letter (db/get-dead-letter db 123)
-      original-job (:original_job dead-letter)]
-  (jobs/enqueue-job! db
-                     (:type original-job)
-                     (:payload original-job)
-                     {:correlation-id (:correlation_id original-job)}))
+#### Investigate Failure Chain
+```sql
+-- Trace all related jobs
+SELECT * FROM jobs
+WHERE correlation_id = (
+  SELECT original_job->>'correlation_id'::uuid
+  FROM dead_letter_jobs
+  WHERE id = 123
+)
+ORDER BY created_at;
 ```
 
 ### Circuit Breaker Management
 
-#### Reset Circuit Breaker
-```clojure
-(db/reset-circuit-breaker! db "email-service")
-```
+```sql
+-- Check circuit breaker status
+SELECT * FROM circuit_breakers;
 
-#### Force Circuit Open
-```clojure
-(db/update-circuit-breaker! db
-  {:service_name "external-api"
-   :state "open"
-   :opened_at (time/now)})
+-- Reset circuit breaker
+UPDATE circuit_breakers
+SET state = 'closed', failure_count = 0, success_count = 0
+WHERE service_name = 'email-service';
 ```
 
 ### Emergency Procedures
@@ -467,24 +560,29 @@ ORDER BY died_at DESC;
 # Graceful shutdown - completes current jobs
 docker-compose stop lipas-worker
 
-# Force stop if needed
-docker-compose kill lipas-worker
+# Wait for processing to complete
+watch "docker-compose exec db psql -c \"SELECT status, COUNT(*) FROM jobs WHERE status='processing' GROUP BY status\""
 ```
 
 #### Drain Queue Before Maintenance
-```clojure
-;; Stop accepting new jobs of certain types
-(db/update-jobs! db
-  {:status "pending"}
-  {:status "paused"})
+```sql
+-- Pause new job processing (manual intervention required)
+-- Workers will naturally drain the queue
 
-;; Wait for processing jobs to complete
-(loop []
-  (let [processing (db/count-processing-jobs db)]
-    (if (> processing 0)
-      (do (Thread/sleep 5000)
-          (recur))
-      (log/info "All jobs completed, safe for maintenance"))))
+-- Monitor progress
+SELECT type, status, COUNT(*) 
+FROM jobs 
+WHERE status IN ('pending', 'processing')
+GROUP BY type, status;
+```
+
+#### Handle Memory Issues
+```bash
+# Check worker memory usage
+docker stats lipas-worker
+
+# Restart if needed
+docker-compose restart lipas-worker
 ```
 
 ## Troubleshooting
@@ -492,121 +590,125 @@ docker-compose kill lipas-worker
 ### Common Issues
 
 #### Jobs Stuck in Processing
-**Symptom:** Jobs show `processing` status but don't complete
-**Cause:** Worker crashed or job timed out
-**Solution:**
-```sql
--- Reset stuck jobs to pending
-UPDATE jobs
-SET status = 'pending', started_at = null
-WHERE status = 'processing'
-  AND started_at < NOW() - INTERVAL '1 hour';
-```
+**Symptom:** Jobs show `processing` status indefinitely
+**Cause:** Worker crashed or network partition
+**Solution:** Handled automatically on worker restart via `reset-stuck-jobs!`
 
 #### High Error Rate
 **Symptom:** Many jobs failing repeatedly
-**Cause:** External service down or configuration issue
 **Solution:**
 1. Check circuit breaker status
-2. Verify external service connectivity
-3. Review error messages in dead letter queue
+2. Review dead letter queue for patterns
+3. Check external service connectivity
+4. Review recent deployments
 
 #### Queue Backing Up
 **Symptom:** Pending job count increasing
-**Cause:** Jobs taking longer than expected or insufficient workers
 **Solution:**
-1. Check for slow jobs blocking fast lane
-2. Increase worker threads if needed
-3. Optimize slow job handlers
+1. Check for slow jobs in general lane
+2. Review thread pool metrics
+3. Scale worker processes if needed
+4. Check for circuit breakers in open state
 
-#### Memory Issues
-**Symptom:** Worker process consuming excessive memory
-**Cause:** Large payloads or memory leaks
+#### Deduplication Not Working
+**Symptom:** Duplicate jobs being created
 **Solution:**
-1. Monitor job payload sizes
-2. Restart worker process
-3. Add heap dump analysis
+1. Ensure `dedup-key` is being set
+2. Check that previous job completed/failed
+3. Review unique index on (type, dedup_key)
 
 ### Debugging with Correlation IDs
 
 ```sql
--- Trace a user action across multiple jobs
-SELECT id, type, status, created_at, completed_at, error_message
-FROM jobs
-WHERE correlation_id = 'user-action-123'
-ORDER BY created_at;
-
--- Find related jobs
-SELECT j1.id as parent_id, j1.type as parent_type,
-       j2.id as child_id, j2.type as child_type
-FROM jobs j1
-JOIN jobs j2 ON j1.id = j2.parent_job_id
-WHERE j1.correlation_id = 'user-action-123';
+-- Full trace of a user action
+WITH job_trace AS (
+  SELECT 'job' as source, id, type, status, created_at, 
+         completed_at, error_message, attempts
+  FROM jobs
+  WHERE correlation_id = 'user-action-123'
+  
+  UNION ALL
+  
+  SELECT 'metric' as source, id, job_type as type, 
+         status, recorded_at as created_at,
+         NULL as completed_at, NULL as error_message, 
+         NULL as attempts
+  FROM job_metrics
+  WHERE correlation_id = 'user-action-123'
+)
+SELECT * FROM job_trace ORDER BY created_at;
 ```
 
-## Future Enhancements
+## Best Practices
 
-Potential improvements to consider:
+### Job Design
 
-1. **Job Chaining** - Explicit workflows (job A → job B → job C)
-2. **Rate Limiting** - Prevent overwhelming external services
-3. **Priority Lanes** - More granular than just fast/slow
-4. **Job Versioning** - Handle payload schema evolution
-5. **Batch Operations** - Process multiple items in single job
-6. **Job Scheduling** - Cron-like recurring jobs
-7. **Workflow Engine** - Complex multi-step processes
+1. **Keep Payloads Small** - Store references, not large data
+2. **Make Jobs Idempotent** - Safe to retry without side effects
+3. **Use Correlation IDs** - Track related operations
+4. **Set Appropriate Timeouts** - Prevent indefinite hanging
+5. **Use Deduplication** - Prevent duplicate work
+6. **Handle Partial Failures** - Design for resumability
+
+### Error Handling
+
+1. **Fail Fast** - Don't retry unrecoverable errors
+2. **Log Context** - Include correlation ID and relevant data
+3. **Use Circuit Breakers** - Protect external services
+4. **Monitor Dead Letters** - Review and address root causes
+
+### Performance
+
+1. **Batch Operations** - Process multiple items per job
+2. **Use Priority Wisely** - Reserve low priorities for critical work
+3. **Monitor Thread Usage** - Balance fast/slow lane allocation
+4. **Clean Up Old Jobs** - Prevent table bloat
 
 ## Migration History
 
-The async jobs system replaced five separate queue tables:
-- `analysis_queue` - Diversity analysis calculations
-- `elevation_queue` - Elevation data enrichment
-- `email_out_queue` - Email notifications
-- `integration_out_queue` - Legacy system sync
-- `webhook_queue` - UTP webhook processing
+The unified jobs system replaced five separate queue tables in January 2025:
+- `analysis_queue` → `jobs` type='analysis'
+- `elevation_queue` → `jobs` type='elevation'
+- `email_out_queue` → `jobs` type='email'
+- `integration_out_queue` → deprecated (legacy system being retired)
+- `webhook_queue` → `jobs` type='webhook'
 
-Benefits realized:
-- **Simplified Architecture** - One system instead of five
-- **Better Resource Management** - Smart concurrency prevents blocking
-- **Improved Reliability** - Consistent retry and error handling
-- **Enhanced Observability** - Unified monitoring and metrics
-- **Easier Maintenance** - Single codebase for all background processing
+Migration benefits:
+- **Unified Architecture** - Single system for all background work
+- **Better Resource Management** - Smart concurrency control
+- **Improved Reliability** - Consistent patterns across all job types
+- **Enhanced Observability** - Unified monitoring and tracing
+- **Easier Maintenance** - One codebase, one set of patterns
+
+## Future Roadmap
+
+Potential enhancements under consideration:
+
+1. **Job Workflows** - DAG-based job orchestration
+2. **Rate Limiting** - Per-service request throttling
+3. **Priority Lanes** - More granular than fast/slow
+4. **Job Versioning** - Handle payload schema migrations
+5. **Event Sourcing** - Full job history retention
+6. **Distributed Tracing** - OpenTelemetry integration
+7. **Auto-scaling** - Dynamic worker pool sizing
 
 ## Getting Started
 
 ### For Developers
 
-1. **Understand the Architecture** - Review this documentation and existing code
-2. **Run Tests** - Execute `bb test` to validate functionality
-3. **Create Feature Branch** - `git checkout -b feature/new-job-type`
-4. **Add Job Handler** - Implement in `lipas.jobs.dispatcher`
-5. **Test Incrementally** - Add unit and integration tests
-6. **Deploy and Monitor** - Watch metrics after deployment
+1. **Read This Documentation** - Understand the architecture
+2. **Explore Examples** - See `(jobs/example-job-payloads)`
+3. **Run Tests** - `lein test :only lipas.jobs.*`
+4. **Try REPL Examples** - See correlation and deduplication examples
+5. **Monitor Locally** - Watch logs during development
 
 ### Adding New Job Types
 
-1. **Define Handler**
-```clojure
-(defmethod handle-job "new-job-type"
-  [{:keys [db]} {:keys [payload correlation-id]}]
-  (log/info "Processing new job" {:correlation-id correlation-id})
-  ;; Implementation here
-  )
-```
+1. **Define Payload Schema** in `payload_schema.clj`
+2. **Classify Duration** in `core.clj` job-duration-types
+3. **Implement Handler** in `dispatcher.clj`
+4. **Add Tests** for handler and integration
+5. **Update Documentation** with examples
+6. **Deploy and Monitor** metrics and errors
 
-2. **Configure Duration**
-```clojure
-;; In lipas.jobs.worker
-(def job-duration-types
-  {:fast #{"email" "new-fast-job"}
-   :slow #{"analysis" "new-slow-job"}})
-```
-
-3. **Add to Configuration**
-```clojure
-{:enabled-job-types #{"existing-jobs" "new-job-type"}}
-```
-
-4. **Test and Deploy**
-
-The async jobs system provides a robust foundation for all background processing needs in LIPAS, ensuring reliable operation while maintaining operational simplicity.
+The LIPAS async jobs system provides a robust, scalable foundation for all background processing needs, ensuring reliable operation at scale while maintaining operational simplicity.
