@@ -264,3 +264,7 @@
 (rf/reg-sub ::selected-job-ids
             (fn [db _]
               (get-in db [:admin :jobs :dead-letter :selected-job-ids] #{})))
+
+(rf/reg-sub ::bulk-reprocessing?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :bulk-reprocessing?] false)))

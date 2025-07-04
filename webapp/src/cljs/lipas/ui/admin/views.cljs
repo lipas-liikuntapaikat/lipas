@@ -722,7 +722,13 @@
         loading? (<== [::subs/dead-letter-loading?])
         error (<== [::subs/dead-letter-error])
         filter-value (<== [::subs/dead-letter-filter])
-        tr (<== [:lipas.ui.subs/translator])]
+        selected-ids (<== [::subs/selected-job-ids])
+        bulk-reprocessing? (<== [::subs/bulk-reprocessing?])
+        tr (<== [:lipas.ui.subs/translator])
+        all-job-ids (set (map :id dlq-jobs))
+        some-selected? (seq selected-ids)
+        all-selected? (and some-selected?
+                           (= (count selected-ids) (count dlq-jobs)))]
     [:<>
      ;; Job details dialog
      [job-details-dialog tr]
@@ -734,6 +740,7 @@
        :on-change (fn [_ new-value]
                     (when-let [new-value (and new-value (keyword new-value))]
                       (==> [::events/toggle-dead-letter-filter new-value])
+                      (==> [::events/clear-job-selection])
                       (==> [::events/fetch-dead-letter-jobs
                             {:acknowledged (case new-value
                                              :all nil
@@ -748,6 +755,26 @@
      (when error
        [mui/alert {:severity "error" :sx #js{:mb 2}} error])
 
+     ;; Bulk actions toolbar
+     (when some-selected?
+       [mui/paper {:sx #js{:p 2 :mb 2 :bgcolor "action.hover"}}
+        [mui/stack {:direction "row" :spacing 2 :alignItems "center"}
+         [mui/typography (str (count selected-ids) " selected")]
+         [mui/button
+          {:variant "contained"
+           :size "small"
+           :disabled bulk-reprocessing?
+           :start-icon (when bulk-reprocessing?
+                         (r/as-element [mui/circular-progress {:size 16}]))
+           :on-click #(when (js/confirm (str "Reprocess " (count selected-ids) " selected job(s)?"))
+                        (==> [::events/reprocess-selected-jobs]))}
+          (if bulk-reprocessing? "Reprocessing..." "Reprocess Selected")]
+         [mui/button
+          {:variant "outlined"
+           :size "small"
+           :on-click #(==> [::events/clear-job-selection])}
+          "Clear Selection"]]])
+
      ;; Loading indicator
      (when loading?
        [mui/linear-progress {:sx #js{:mb 2}}])
@@ -758,6 +785,13 @@
        [mui/table {:sx #js{:minWidth 650}}
         [mui/table-head
          [mui/table-row
+          [mui/table-cell {:padding "checkbox"}
+           [mui/checkbox
+            {:checked all-selected?
+             :indeterminate (and some-selected? (not all-selected?))
+             :on-change #(if all-selected?
+                           (==> [::events/clear-job-selection])
+                           (==> [::events/select-all-jobs all-job-ids]))}]]
           [mui/table-cell "ID"]
           [mui/table-cell "Job Type"]
           [mui/table-cell "Error Message"]
@@ -768,7 +802,12 @@
         [mui/table-body
          (for [job (sort-by :died-at #(compare %2 %1) dlq-jobs)]
            [mui/table-row {:key (:id job)
-                           :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}}
+                           :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}
+                           :selected (contains? selected-ids (:id job))}
+            [mui/table-cell {:padding "checkbox"}
+             [mui/checkbox
+              {:checked (contains? selected-ids (:id job))
+               :on-change #(==> [::events/toggle-job-selection (:id job)])}]]
             [mui/table-cell (:id job)]
             [mui/table-cell (get-in job [:original-job :type] "Unknown")]
             [mui/table-cell

@@ -456,3 +456,14 @@
                             (conj [:dispatch [:lipas.ui.events/set-active-notification]
                                    {:message (str "Errors: " (pr-str errors))
                                     :success? false}]))})))
+
+(rf/reg-event-fx ::bulk-reprocess-error
+                 (fn [{:keys [db]} [_ response]]
+                   (let [tr (:translator db)]
+                     {:db (assoc-in db [:admin :jobs :dead-letter :bulk-reprocessing?] false)
+                      :dispatch [:lipas.ui.events/set-active-notification
+                                 {:message (or (-> response :response :message)
+                                               (-> response :response :error)
+                                               (-> response :status-text)
+                                               (tr :error/unknown))
+                                  :success? false}]})))
