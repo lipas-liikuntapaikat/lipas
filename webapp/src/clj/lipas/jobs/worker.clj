@@ -226,9 +226,26 @@
     nil)
 
   (let [merged-config (merge default-config config)
-        pools (create-worker-pools merged-config)]
+        pools (create-worker-pools merged-config)
+        {:keys [db]} system]
 
     (log/info "Starting mixed-duration worker" merged-config)
+
+    ;; Check for and migrate any orphaned dead jobs on startup
+    (try
+      (let [migrated-count (jobs/migrate-orphaned-dead-jobs! db)]
+        (when (pos? migrated-count)
+          (log/info "Migrated orphaned dead jobs on worker startup"
+                    {:count migrated-count})))
+      (catch Exception e
+        (log/error e "Failed to migrate orphaned dead jobs during startup")))
+
+    ;; Also reset any stuck jobs from previous run
+    (try
+      (jobs/reset-stuck-jobs! db (:stuck-job-timeout-minutes merged-config 30))
+      (log/info "Reset stuck jobs from previous run")
+      (catch Exception e
+        (log/error e "Failed to reset stuck jobs during startup")))
 
     (swap! worker-state assoc
            :running? true

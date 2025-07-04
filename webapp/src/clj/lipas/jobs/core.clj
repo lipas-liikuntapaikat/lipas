@@ -5,10 +5,12 @@
   email_out_queue, integration_out_queue, webhook_queue) with a single
   unified jobs table and smart concurrency control."
   (:require
+   [cheshire.core]
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
    [lipas.jobs.payload-schema :as payload-schema]
    [malli.core :as m]
+   [next.jdbc :as jdbc]
    [taoensso.timbre :as log]))
 
 ;; Job type specifications
@@ -301,6 +303,72 @@
   [correlation-id f]
   (log/with-context {:correlation-id correlation-id}
     (f)))
+
+(defn migrate-orphaned-dead-jobs!
+  "Migrate any jobs with status 'dead' that aren't in dead_letter_jobs table.
+   This handles legacy dead jobs that were marked dead before the proper
+   dead letter queue mechanism was implemented.
+   
+   Returns the number of jobs migrated."
+  [db]
+  (try
+    (let [orphaned-dead-jobs (jdbc/execute! db
+                                            ["SELECT j.* FROM jobs j
+                                LEFT JOIN dead_letter_jobs dlj ON dlj.original_job->>'id' = j.id::text
+                                WHERE j.status = 'dead' AND dlj.id IS NULL"])
+          count (count orphaned-dead-jobs)]
+
+      (when (pos? count)
+        (log/warn "Found orphaned dead jobs that need migration to dead_letter_jobs"
+                  {:count count})
+
+        (doseq [job orphaned-dead-jobs]
+          (let [job-id (:jobs/id job)
+                error-msg (or (:jobs/error_message job)
+                              (:jobs/last_error job)
+                              "Legacy dead job - no error message recorded")
+                ;; Convert job data to JSON-safe format
+                job-data {:id job-id
+                          :type (:jobs/type job)
+                          :payload (:jobs/payload job)
+                          :status (:jobs/status job)
+                          :priority (:jobs/priority job)
+                          :attempts (:jobs/attempts job)
+                          :max_attempts (:jobs/max_attempts job)
+                          :created_at (str (:jobs/created_at job))
+                          :started_at (when (:jobs/started_at job) (str (:jobs/started_at job)))
+                          :completed_at (when (:jobs/completed_at job) (str (:jobs/completed_at job)))
+                          :error_message error-msg
+                          :last_error (:jobs/last_error job)
+                          :correlation_id (when (:jobs/correlation_id job) (str (:jobs/correlation_id job)))
+                          :dedup_key (:jobs/dedup_key job)}]
+            (try
+              ;; Insert into dead_letter_jobs
+              (jdbc/execute! db
+                             ["INSERT INTO dead_letter_jobs (original_job, error_message, correlation_id)
+                  VALUES (?::jsonb, ?, ?)
+                  ON CONFLICT DO NOTHING"
+                              (cheshire.core/generate-string job-data)
+                              error-msg
+                              (:jobs/correlation_id job)])
+
+              (log/info "Migrated orphaned dead job to dead_letter_jobs"
+                        {:job-id job-id
+                         :job-type (:jobs/type job)
+                         :error error-msg})
+
+              (catch Exception e
+                (log/error e "Failed to migrate dead job"
+                           {:job-id job-id})))))
+
+        (log/info "Completed migration of orphaned dead jobs"
+                  {:migrated count}))
+
+      count)
+
+    (catch Exception e
+      (log/error e "Error checking for orphaned dead jobs")
+      0)))
 
 (defn cleanup-old-jobs!
   "Remove completed and dead jobs older than specified days."

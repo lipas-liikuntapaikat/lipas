@@ -40,7 +40,7 @@
   [db]
   (try
     ;; Check for jobs stuck in processing
-    (let [stuck-jobs (jobs-db/find-stuck-jobs db 60)]
+    (let [stuck-jobs (jobs-db/find-stuck-jobs db {:minutes 60})]
       (when (seq stuck-jobs)
         (log/warn "Found stuck jobs"
                   {:count (count stuck-jobs)
