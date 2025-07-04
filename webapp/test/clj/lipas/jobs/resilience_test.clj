@@ -55,11 +55,15 @@
               job-id (:id job-result)]
 
           ;; First failure - should retry
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "First failure")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "First failure"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (let [job-after-first-failure (get-job-by-id db job-id)]
-            (is (= "failed" (:jobs/status job-after-first-failure)))
+            (is (= "pending" (:jobs/status job-after-first-failure)))
             (is (= 1 (:jobs/attempts job-after-first-failure)))
             (is (= "First failure" (:jobs/error_message job-after-first-failure)))
             ;; Should have exponential backoff delay (1 minute)
@@ -67,11 +71,15 @@
 
           ;; Second failure - should retry
           (jdbc/execute! db ["UPDATE jobs SET run_at = now() WHERE id = ?" job-id])
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "Second failure")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "Second failure"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (let [job-after-second-failure (get-job-by-id db job-id)]
-            (is (= "failed" (:jobs/status job-after-second-failure)))
+            (is (= "pending" (:jobs/status job-after-second-failure)))
             (is (= 2 (:jobs/attempts job-after-second-failure)))
             (is (= "Second failure" (:jobs/error_message job-after-second-failure)))
             ;; Should have longer backoff delay (2 minutes)
@@ -79,8 +87,12 @@
 
           ;; Third failure - should go to dead letter queue
           (jdbc/execute! db ["UPDATE jobs SET run_at = now() WHERE id = ?" job-id])
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "Final failure")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "Final failure"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (let [job-after-final-failure (get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status job-after-final-failure)))
@@ -90,8 +102,12 @@
       (testing "Custom max-attempts respected"
         (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 456} {:max-attempts 1})
               job-id (:id job-result)]
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "Single failure")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "Single failure"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (let [dead-job (get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))
@@ -179,7 +195,7 @@
         (jobs/mark-completed! db (:id (nth jobs 0)))
         (jobs/mark-completed! db (:id (nth jobs 1)))
 
-        ;; Fail remaining 3 jobs
+        ;; For failed jobs, use mark-failed! to get simple failure without retry logic
         (jobs/mark-failed! db (:id (nth jobs 2)) "Simulated failure")
         (jobs/mark-failed! db (:id (nth jobs 3)) "Simulated failure")
         (jobs/mark-failed! db (:id (nth jobs 4)) "Simulated failure"))
@@ -197,11 +213,15 @@
           job-id (:id job-result)]
 
       ;; Fail the job initially
-      (jobs/fetch-next-jobs db {:limit 1})
-      (jobs/mark-failed! db job-id "Transient network error")
+      (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+            job (first fetched-jobs)]
+        (jobs/fail-job! db job-id "Transient network error"
+                        {:current-attempt (:attempts job)
+                         :max-attempts (:max_attempts job)}))
 
       (let [failed-job (get-job-by-id db job-id)]
-        (is (= "failed" (:jobs/status failed-job)))
+        (is (= "pending" (:jobs/status failed-job))) ; Changed from "failed" to "pending"
         (is (= 1 (:jobs/attempts failed-job))))
 
       ;; Simulate time passing (reset run_at to allow immediate retry)
@@ -229,16 +249,24 @@
               job-id (:id job-result)]
 
           ;; First failure
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "HTTP 500 error")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "HTTP 500 error"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
           (let [job1 (get-job-by-id db job-id)]
-            (is (= "failed" (:jobs/status job1)))
+            (is (= "pending" (:jobs/status job1)))
             (is (= 1 (:jobs/attempts job1))))
 
           ;; Second failure - should go to dead letter queue
           (jdbc/execute! db ["UPDATE jobs SET run_at = now() WHERE id = ?" job-id])
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "HTTP 500 error - final attempt")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db job-id "HTTP 500 error - final attempt"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (let [dead-job (get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))
@@ -249,8 +277,12 @@
         ;; Create a dead job
         (let [dead-job-result (jobs/enqueue-job! db "analysis" {:lipas-id 999} {:max-attempts 1})
               dead-job-id (:id dead-job-result)]
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db dead-job-id "Goes straight to dead")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                job (first fetched-jobs)]
+            (jobs/fail-job! db dead-job-id "Goes straight to dead"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
           (is (= "dead" (:jobs/status (get-job-by-id db dead-job-id)))))
 
@@ -267,8 +299,12 @@
         (doseq [i (range 3)]
           (let [job-result (jobs/enqueue-job! db "cleanup-jobs" {:days-old (* 30 (inc i))} {:max-attempts 1})
                 job-id (:id job-result)]
-            (jobs/fetch-next-jobs db {:limit 1})
-            (jobs/mark-failed! db job-id "Test dead job")))
+            (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+
+                  job (first fetched-jobs)]
+              (jobs/fail-job! db job-id "Test dead job"
+                              {:current-attempt (:attempts job)
+                               :max-attempts (:max_attempts job)}))))
 
         ;; Verify dead jobs exist
         (let [dead-jobs (jdbc/execute! db ["SELECT COUNT(*) as count FROM jobs WHERE status = 'dead'"])]

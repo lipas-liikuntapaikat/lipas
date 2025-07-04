@@ -1,7 +1,7 @@
 (ns lipas.jobs.dispatcher-test
   "Unit tests for job dispatcher handlers."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
+   [clojure.test :refer [deftest testing is use-fixtures] :as t]
    [integrant.core :as ig]
    [lipas.backend.config :as config]
    [lipas.backend.core :as core]
@@ -231,20 +231,18 @@
   (testing "Job handlers handle errors gracefully"
     (let [system {:db (test-db) :emailer nil :search nil}] ; Broken system
 
-      ;; Email job should fail gracefully
+      ;; Email job should throw exception (dispatcher no longer catches)
       (testing "Email job with broken emailer"
         (let [job {:id 1 :type "email"
-                   :payload {:to "test@example.com" :subject "Test"}}
-              result (dispatcher/dispatch-job system job)]
-          (is (= :failed (:status result)))
-          (is (string? (:error result)))))
+                   :payload {:to "test@example.com" :subject "Test"}}]
+          (is (thrown? Exception
+                       (dispatcher/dispatch-job system job)))))
 
-      ;; Analysis job should fail gracefully
+      ;; Analysis job should throw exception
       (testing "Analysis job with broken search"
-        (let [job {:id 2 :type "analysis" :payload {:lipas-id 12345}}
-              result (dispatcher/dispatch-job system job)]
-          (is (= :failed (:status result)))
-          (is (string? (:error result))))))))
+        (let [job {:id 2 :type "analysis" :payload {:lipas-id 12345}}]
+          (is (thrown? Exception
+                       (dispatcher/dispatch-job system job))))))))
 
 (deftest unknown-job-type-handler-test
   (testing "Unknown job types are handled by default handler"
@@ -252,16 +250,14 @@
           job {:id 1 :type "unknown-job-type" :payload {:data "test"}}]
 
       ;; Should throw for unknown job type
-      ;; Should return failed status for unknown job type
-      (let [result (dispatcher/dispatch-job system job)]
-        (is (= :failed (:status result)))
-        (is (re-find #"Unknown job type" (:error result)))))))
+      (is (thrown-with-msg? Exception
+                            #"Unknown job type"
+                            (dispatcher/dispatch-job system job))))))
 
 (deftest malformed-payload-handling-test
   (testing "Handlers validate job payloads appropriately"
     (let [system {:db (test-db) :emailer (create-test-emailer) :search (create-mock-search)}]
 
-      ;; Email job with missing required fields
       ;; Email job with missing required fields
       (testing "Email job with missing 'to' field"
         (let [job {:id 1 :type "email" :payload {:subject "Test"}} ; Missing :to
@@ -271,11 +267,10 @@
 
       ;; Analysis job with missing lipas-id
       (testing "Analysis job with missing lipas-id"
-        (let [job {:id 2 :type "analysis" :payload {}} ; Missing :lipas-id
-              result (dispatcher/dispatch-job system job)]
-          ;; Should fail when trying to process
-          (is (= :failed (:status result)))
-          (is (string? (:error result))))))))
+        (let [job {:id 2 :type "analysis" :payload {}}] ; Missing :lipas-id
+          ;; Should throw when trying to process
+          (is (thrown? Exception
+                       (dispatcher/dispatch-job system job))))))))
 
 (comment
   (clojure.test/run-tests *ns*))

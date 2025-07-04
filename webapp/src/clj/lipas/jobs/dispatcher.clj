@@ -70,12 +70,12 @@
 ;; soon. Let's not waste time making it work with the new Jobs system.
 
 #_(defmethod handle-job "integration"
-  [_system {:keys [id payload]}]
-  (let [{:keys [lipas-id]} payload]
-    (log/info "Processing integration for lipas-id" lipas-id)
+    [_system {:keys [id payload]}]
+    (let [{:keys [lipas-id]} payload]
+      (log/info "Processing integration for lipas-id" lipas-id)
     ;; Integration logic would go here - delegating to existing integration system
     ;; For now, just log as the actual integration might be handled elsewhere
-    (log/debug "Integration job processed for lipas-id" lipas-id)))
+      (log/debug "Integration job processed for lipas-id" lipas-id)))
 
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload correlation-id]}]
@@ -155,7 +155,8 @@
         {:status :success})
 
       (catch Exception ex
-        (let [error-msg (str "Job failed: " (.getMessage ex))]
-          (log/error ex "Job failed" {:id job-id :type job-type})
-          (jobs/mark-failed! (:db system) job-id error-msg)
-          {:status :failed :error error-msg})))))
+        (let [error-msg (.getMessage ex)]
+          (log/error ex "Job failed in dispatcher" {:id job-id :type job-type})
+          ;; Don't call mark-failed! here - let the worker handle it
+          ;; This is just a re-throw to let the worker's error handling take over
+          (throw ex))))))

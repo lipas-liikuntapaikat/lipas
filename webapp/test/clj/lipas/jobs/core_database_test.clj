@@ -164,11 +164,15 @@
         (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 789} {:max-attempts 3})
               job-id (:id job-result)]
           ;; Fetch and fail
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "Test error message")
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+                job (first fetched-jobs)]
+            ;; Use fail-job! with proper attempt tracking
+            (jobs/fail-job! db job-id "Test error message" 
+                           {:current-attempt (:attempts job)
+                            :max-attempts (:max_attempts job)}))
 
           (let [failed-job (get-job-by-id db job-id)]
-            (is (= "failed" (:jobs/status failed-job)))
+            (is (= "pending" (:jobs/status failed-job)))
             (is (= 1 (:jobs/attempts failed-job)))
             (is (= "Test error message" (:jobs/error_message failed-job)))
             ;; Should have retry delay
@@ -178,9 +182,13 @@
       (testing "Dead letter queue after max attempts"
         (let [job-result (jobs/enqueue-job! db "webhook" {:lipas-ids [123]} {:max-attempts 1})
               job-id (:id job-result)]
-          ;; Fetch and fail (should go to dead immediately)
-          (jobs/fetch-next-jobs db {:limit 1})
-          (jobs/mark-failed! db job-id "Final failure")
+          ;; Fetch and fail (should go to dead letter immediately)
+          (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
+                job (first fetched-jobs)]
+            ;; Use fail-job! - with max-attempts=1 and current-attempt=1, should go to dead letter
+            (jobs/fail-job! db job-id "Final failure"
+                           {:current-attempt (:attempts job)
+                            :max-attempts (:max_attempts job)}))
 
           (let [dead-job (get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))

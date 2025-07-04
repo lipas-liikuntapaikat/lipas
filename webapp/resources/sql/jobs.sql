@@ -30,17 +30,12 @@ SET status = 'completed',
 WHERE id = :id;
 
 -- :name mark-job-failed! :! :n
--- :doc Mark a job as failed
+-- :doc Mark a job as failed (for retry)
 UPDATE jobs
-SET status = CASE
-    WHEN attempts >= max_attempts THEN 'dead'
-    ELSE 'failed'
-    END,
+SET status = 'failed',
     error_message = :error_message,
-    run_at = CASE
-        WHEN attempts < max_attempts THEN now() + (attempts * interval '1 minute')
-        ELSE run_at
-    END
+    last_error = :error_message,
+    last_error_at = now()
 WHERE id = :id;
 
 -- :name get-job-stats :? :*
@@ -233,6 +228,7 @@ VALUES (:job_type, :status, :duration_ms, :queue_time_ms, :correlation_id);
 UPDATE jobs
 SET status = 'pending',
     run_at = :run_at,
+    error_message = :error_message,
     last_error = :error_message,
     last_error_at = now()
 WHERE id = :id;
@@ -241,7 +237,8 @@ WHERE id = :id;
 -- :doc Move a permanently failed job to dead letter queue
 WITH moved AS (
   UPDATE jobs
-  SET status = 'dead'
+  SET status = 'dead',
+      error_message = :error_message
   WHERE id = :id
   RETURNING *
 )

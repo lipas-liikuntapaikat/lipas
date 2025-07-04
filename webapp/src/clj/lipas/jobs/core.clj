@@ -115,9 +115,12 @@
   (jobs-db/mark-job-completed! db {:id job-id}))
 
 (defn mark-failed!
-  "Mark a job as failed. Will retry if attempts < max-attempts, otherwise mark as dead."
+  "Mark a job as failed. DO NOT USE DIRECTLY - use fail-job! instead.
+   This is only for backward compatibility and will be deprecated."
   [db job-id error-message]
-  (log/info "Marking job failed" {:id job-id :error error-message})
+  (log/warn "DEPRECATED: mark-failed! called directly. Use fail-job! instead"
+            {:id job-id :caller (str *ns*)})
+  ;; Just update the status, don't handle dead letter logic here
   (jobs-db/mark-job-failed! db {:id job-id :error_message (str error-message)}))
 
 (defn move-to-dead-letter!
@@ -133,15 +136,10 @@
             {:id job-id
              :error error-message
              :details error-details})
+  ;; The SQL query already handles both updating status to 'dead' 
+  ;; and inserting into dead_letter_jobs table
   (jobs-db/move-job-to-dead-letter! db {:id job-id
-                                        :error_message error-message})
-  ;; Optionally record additional details
-  (when error-details
-    (jobs-db/insert-dead-letter!
-     db
-     {:original_job {:job_id job-id}
-      :error_message error-message
-      :error_details error-details})))
+                                        :error_message error-message}))
 
 (defn fail-job!
   "Mark a job as failed with exponential backoff retry scheduling.
@@ -154,27 +152,37 @@
   - job-id: Job ID
   - error-message: Error description
   - opts: Map with :backoff-opts for exponential backoff config,
-          :correlation-id for tracing"
+          :correlation-id for tracing,
+          :current-attempt (the attempt that just failed),
+          :max-attempts"
   [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts correlation-id]
                                :or {backoff-opts {}}}]]
   (log/info "Job failed" {:id job-id
                           :error error-message
                           :attempt current-attempt
+                          :max-attempts max-attempts
                           :correlation-id correlation-id})
 
+  ;; Note: current-attempt is the attempt that just failed (already incremented)
+  ;; So if current-attempt >= max-attempts, we've exhausted all retries
   (if (and current-attempt max-attempts (>= current-attempt max-attempts))
     ;; Max attempts reached - move to dead letter
     (do
-      (log/warn "Moving job to dead letter queue"
+      (log/warn "Moving job to dead letter queue - max attempts exhausted"
                 {:id job-id
                  :attempts current-attempt
+                 :max-attempts max-attempts
                  :correlation-id correlation-id})
-      (move-to-dead-letter! db job-id error-message))
+      (move-to-dead-letter! db job-id error-message
+                            {:attempts current-attempt
+                             :max-attempts max-attempts
+                             :correlation-id correlation-id}))
     ;; Schedule retry with exponential backoff
-    (let [delay-ms (patterns/exponential-backoff-ms (or current-attempt 0) backoff-opts)
+    (let [delay-ms (patterns/exponential-backoff-ms (or current-attempt 1) backoff-opts)
           run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))]
       (log/debug "Scheduling job retry"
                  {:id job-id
+                  :current-attempt current-attempt
                   :delay-ms delay-ms
                   :run-at run-at
                   :correlation-id correlation-id})
