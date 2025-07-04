@@ -192,10 +192,11 @@ WHERE service_name = :service_name;
 
 -- Dead Letter Queue Queries
 
--- :name insert-dead-letter! :! :n
+-- :name insert-dead-letter! :<! :1
 -- :doc Insert a job into the dead letter queue
 INSERT INTO dead_letter_jobs (original_job, error_message, error_details, correlation_id)
-VALUES (:original_job::jsonb, :error_message, :error_details::jsonb, :correlation_id);
+VALUES (:original_job::jsonb, :error_message, :error_details::jsonb, :correlation_id)
+RETURNING *;
 
 -- :name get-dead-letters :? :*
 -- :doc Get unacknowledged dead letter jobs
@@ -213,6 +214,140 @@ SET acknowledged = true,
     acknowledged_by = :acknowledged_by,
     acknowledged_at = now()
 WHERE id = :id;
+
+-- :name get-dead-letter-jobs-admin :? :*
+-- :doc Get dead letter jobs for admin view with optional filters
+SELECT 
+  dlj.id,
+  dlj.original_job,
+  dlj.error_message,
+  dlj.error_details,
+  dlj.died_at,
+  dlj.acknowledged,
+  dlj.acknowledged_by,
+  dlj.acknowledged_at,
+  dlj.correlation_id,
+  dlj.original_job->>'type' as job_type,
+  dlj.original_job->>'status' as original_status,
+  (dlj.original_job->>'attempts')::int as attempts
+FROM dead_letter_jobs dlj
+WHERE (:acknowledged::boolean IS NULL OR dlj.acknowledged = :acknowledged)
+  AND (:job_type::text IS NULL OR dlj.original_job->>'type' = :job_type)
+ORDER BY dlj.died_at DESC
+LIMIT :limit
+OFFSET :offset;
+
+-- :name get-dead-letter-job-by-id :? :1
+-- :doc Get a single dead letter job by ID
+SELECT 
+  dlj.id,
+  dlj.original_job,
+  dlj.error_message,
+  dlj.error_details,
+  dlj.died_at,
+  dlj.acknowledged,
+  dlj.acknowledged_by,
+  dlj.acknowledged_at,
+  dlj.correlation_id
+FROM dead_letter_jobs dlj
+WHERE dlj.id = :id;
+
+-- :name requeue-dead-letter-job! :<! :1
+-- :doc Requeue a dead letter job back to main queue and mark as acknowledged
+WITH dlj AS (
+  SELECT * FROM dead_letter_jobs WHERE id = :id
+),
+new_job AS (
+  INSERT INTO jobs (
+    type, 
+    payload, 
+    priority, 
+    max_attempts,
+    correlation_id, 
+    created_by,
+    dedup_key
+  )
+  SELECT 
+    original_job->>'type',
+    original_job->'payload',
+    COALESCE((original_job->>'priority')::int, 100),
+    :max_attempts,
+    COALESCE(dlj.correlation_id, gen_random_uuid()),
+    :reprocessed_by,
+    NULL -- Clear dedup key for reprocessing
+  FROM dlj
+  RETURNING *
+),
+updated AS (
+  UPDATE dead_letter_jobs
+  SET acknowledged = true,
+      acknowledged_by = :reprocessed_by,
+      acknowledged_at = now()
+  WHERE id = :id
+)
+SELECT * FROM new_job;
+
+-- :name acknowledge-dead-letter-jobs! :! :n
+-- :doc Bulk acknowledge dead letter jobs
+UPDATE dead_letter_jobs
+SET acknowledged = true,
+    acknowledged_by = :acknowledged_by,
+    acknowledged_at = now()
+WHERE id = ANY(:ids::bigint[]);
+
+-- :name get-dead-letter-jobs :? :*
+-- :doc Get dead letter jobs with optional filter for acknowledgment status
+SELECT 
+  id,
+  original_job,
+  error_message,
+  error_details,
+  correlation_id,
+  died_at,
+  acknowledged,
+  acknowledged_by,
+  acknowledged_at
+FROM dead_letter_jobs
+WHERE (:acknowledged::boolean IS NULL OR acknowledged = :acknowledged)
+ORDER BY died_at DESC;
+
+-- :name get-dead-letter-by-id :? :1
+-- :doc Get a single dead letter job by ID
+SELECT 
+  id,
+  original_job,
+  error_message,
+  error_details,
+  correlation_id,
+  died_at,
+  acknowledged,
+  acknowledged_by,
+  acknowledged_at
+FROM dead_letter_jobs
+WHERE id = :id;
+
+-- :name requeue-dead-letter-job! :<! :1
+-- :doc Requeue a dead letter job back to main queue
+WITH dlj AS (
+  SELECT * FROM dead_letter_jobs WHERE id = :id
+)
+INSERT INTO jobs (
+  type, 
+  payload, 
+  priority, 
+  max_attempts,
+  correlation_id,
+  created_by
+)
+SELECT 
+  (original_job->>'type')::text,
+  original_job->'payload',
+  COALESCE((original_job->>'priority')::int, 100),
+  :max_attempts,
+  COALESCE(correlation_id, uuid_generate_v4()),
+  :reprocessed_by
+FROM dlj
+RETURNING *;
 
 -- Job Metrics Queries
 
@@ -242,8 +377,8 @@ WITH moved AS (
   WHERE id = :id
   RETURNING *
 )
-INSERT INTO dead_letter_jobs (original_job, error_message)
-SELECT row_to_json(moved), :error_message
+INSERT INTO dead_letter_jobs (original_job, error_message, correlation_id)
+SELECT row_to_json(moved), :error_message, moved.correlation_id
 FROM moved;
 
 -- :name enqueue-job-with-correlation! :<! :1

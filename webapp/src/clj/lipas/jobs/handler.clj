@@ -1,7 +1,8 @@
 (ns lipas.jobs.handler
   "Admin endpoints for job queue monitoring and management."
   (:require
-   [lipas.backend.core :as core]
+   [lipas.backend.core :as backend-core]
+   [lipas.jobs.core :as core]
    [lipas.backend.middleware :as mw]
    [lipas.jobs.schema :as schema]
    [reitit.coercion.malli]))
@@ -24,7 +25,7 @@
       (fn [req]
         (let [opts (-> req :parameters :body)]
           {:status 200
-           :body (core/get-job-admin-metrics db opts)}))}}]
+           :body (backend-core/get-job-admin-metrics db opts)}))}}]
 
    ["/actions/get-jobs-health-status"
     {:post
@@ -34,7 +35,34 @@
       :handler
       (fn [_req]
         {:status 200
-         :body (core/get-job-queue-health db)})}}]])
+         :body (backend-core/get-job-queue-health db)})}}]
+
+   ["/actions/get-dead-letter-jobs"
+    {:get
+     {:require-privilege :jobs/manage
+      :parameters {:query [:map [:acknowledged {:optional true} :boolean]]}
+      :handler
+      (fn [req]
+        (let [opts (-> req :parameters :query)]
+          {:status 200
+           :body (core/get-dead-letter-jobs db opts)}))}}]
+
+   ["/actions/reprocess-dead-letter-jobs"
+    {:post
+     {:require-privilege :jobs/manage
+      :parameters {:body [:map
+                          [:dead-letter-ids [:sequential :int]]
+                          [:max-attempts {:optional true} :int]]}
+      :handler
+      (fn [req]
+        (let [{:keys [dead-letter-ids max-attempts]} (-> req :parameters :body)
+              user-email (-> req :identity :email)]
+          {:status 200
+           :body (core/reprocess-dead-letter-jobs!
+                  db
+                  dead-letter-ids
+                  user-email
+                  (when max-attempts {:max-attempts max-attempts}))}))}}]])
 
 (comment
   (require '[lipas.backend.jwt :as jwt])

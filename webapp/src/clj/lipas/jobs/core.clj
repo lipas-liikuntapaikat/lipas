@@ -6,6 +6,7 @@
   unified jobs table and smart concurrency control."
   (:require
    [cheshire.core]
+   [lipas.backend.db.utils :refer [->kebab-case-keywords]]
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
    [lipas.jobs.payload-schema :as payload-schema]
@@ -289,6 +290,101 @@
              db type payload
              (assoc opts :correlation-id correlation-id)))
           jobs)))
+
+(defn get-dead-letter-jobs
+  "Get dead letter jobs with optional acknowledgment filter.
+  
+  Parameters:
+  - db: Database connection
+  - opts: {:acknowledged true/false/nil} - nil returns all"
+  [db {:keys [acknowledged] :as _opts}]
+  (map ->kebab-case-keywords
+       (jobs-db/get-dead-letter-jobs db {:acknowledged acknowledged})))
+
+(defn reprocess-dead-letter-job!
+  "Reprocess a dead letter job by requeuing it and marking as acknowledged.
+  
+  Parameters:
+  - db: Database connection  
+  - dead-letter-id: ID of the dead letter job
+  - user-email: Email of admin performing the action
+  - opts: Optional {:max-attempts 3}
+  
+  Returns the newly created job or throws on error."
+  [db dead-letter-id user-email & [{:keys [max-attempts] :or {max-attempts 3}}]]
+  ;; First verify the dead letter job exists
+  (when-not (jobs-db/get-dead-letter-by-id db {:id dead-letter-id})
+    (throw (ex-info "Dead letter job not found" {:id dead-letter-id})))
+
+  ;; Requeue the job
+  (let [new-job (jobs-db/requeue-dead-letter-job! db
+                                                  {:id dead-letter-id
+                                                   :max_attempts max-attempts
+                                                   :reprocessed_by user-email})]
+
+    ;; Mark as acknowledged
+    (jobs-db/acknowledge-dead-letter! db
+                                      {:id dead-letter-id
+                                       :acknowledged_by user-email})
+
+    (log/info "Reprocessed dead letter job"
+              {:dead-letter-id dead-letter-id
+               :new-job-id (:id new-job)
+               :user user-email})
+
+    (->kebab-case-keywords new-job)))
+
+(defn reprocess-dead-letter-jobs!
+  "Bulk reprocess multiple dead letter jobs.
+  
+  Parameters:
+  - db: Database connection
+  - dead-letter-ids: Collection of dead letter job IDs
+  - user-email: Email of admin performing the action
+  - opts: Optional {:max-attempts 3}
+  
+  Returns map with :succeeded and :failed job IDs."
+  [db dead-letter-ids user-email & [opts]]
+  (let [results (reduce (fn [acc id]
+                          (try
+                            (let [job (reprocess-dead-letter-job! db id user-email opts)]
+                              (update acc :succeeded conj {:dead-letter-id id
+                                                           :new-job-id (:id job)}))
+                            (catch Exception e
+                              (log/error e "Failed to reprocess dead letter job" {:id id})
+                              (update acc :failed conj {:dead-letter-id id
+                                                        :error (.getMessage e)}))))
+                        {:succeeded []
+                         :failed []}
+                        dead-letter-ids)]
+    (log/info "Bulk reprocess completed"
+              {:total (count dead-letter-ids)
+               :succeeded (count (:succeeded results))
+               :failed (count (:failed results))
+               :user user-email})
+    results))
+
+(defn acknowledge-dead-letter-jobs!
+  "Acknowledge multiple dead letter jobs without reprocessing them.
+  
+  Parameters:
+  - db: Database connection
+  - dead-letter-ids: Collection of dead letter job IDs
+  - user-email: Email of admin performing the action
+  
+  Returns number of acknowledged jobs."
+  [db dead-letter-ids user-email]
+  (reduce (fn [count id]
+            (try
+              (jobs-db/acknowledge-dead-letter! db
+                                                {:id id
+                                                 :acknowledged_by user-email})
+              (inc count)
+              (catch Exception e
+                (log/error e "Failed to acknowledge dead letter job" {:id id})
+                count)))
+          0
+          dead-letter-ids))
 
 (defn gen-correlation-id
   "Generate a new correlation ID for tracking related jobs."

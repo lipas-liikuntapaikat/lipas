@@ -8,9 +8,9 @@
             [re-frame.core :as rf]))
 
 (def transit-extra-read-handlers
-  {"f" #(js/parseFloat %)           ; BigDecimal -> float
-   "n" #(js/parseInt % 10)          ; BigInteger -> int
-   "r" (fn [[n d]]                  ; Ratio -> decimal
+  {"f" #(js/parseFloat %) ; BigDecimal -> float
+   "n" #(js/parseInt % 10) ; BigInteger -> int
+   "r" (fn [[n d]] ; Ratio -> decimal
          (/ (js/parseFloat n) (js/parseFloat d)))})
 
 (def transit-reader (t/reader :json {:handlers transit-extra-read-handlers}))
@@ -194,7 +194,8 @@
                    (let [effects {:db (assoc-in db [:admin :selected-tab] v)}]
                      (if (= v 3) ; Jobs Monitor tab
                        (assoc effects :fx [[:dispatch [::fetch-jobs-health]]
-                                           [:dispatch [::fetch-jobs-metrics]]])
+                                           [:dispatch [::fetch-jobs-metrics]]
+                                           [:dispatch [::fetch-dead-letter-jobs {:acknowledged false}]]])
                        effects))))
 
 (rf/reg-event-fx ::download-new-colors-excel
@@ -294,3 +295,45 @@
                      :headers {:Authorization (str "Token " (-> db :user :login :token))}
                      :on-success [::jobs-metrics-success]
                      :on-failure [::jobs-error]}}))
+
+ ;; Dead Letter Queue events
+
+(rf/reg-event-fx ::fetch-dead-letter-jobs
+                 (fn [{:keys [db]} [_ {:keys [acknowledged]}]]
+                   {:db (-> db
+                            (assoc-in [:admin :jobs :dead-letter :loading?] true)
+                            (assoc-in [:admin :jobs :dead-letter :error] nil))
+                    :http-xhrio
+                    {:method :get
+                     :uri (str (:backend-url db) "/actions/get-dead-letter-jobs")
+                     :params (when (some? acknowledged) {:acknowledged acknowledged})
+                     :format (ajax/transit-request-format)
+                     :response-format (ajax/transit-response-format
+                                       {:reader transit-reader})
+                     :headers {:Authorization (str "Token " (-> db :user :login :token))}
+                     :on-success [::dead-letter-jobs-success]
+                     :on-failure [::dead-letter-jobs-error]}}))
+
+(rf/reg-event-db ::dead-letter-jobs-success
+                 (fn [db [_ jobs]]
+                   (-> db
+                       (assoc-in [:admin :jobs :dead-letter :jobs] jobs)
+                       (assoc-in [:admin :jobs :dead-letter :loading?] false))))
+
+(rf/reg-event-fx ::dead-letter-jobs-error
+                 (fn [{:keys [db]} [_ response]]
+                   {:db (-> db
+                            (assoc-in [:admin :jobs :dead-letter :error]
+                                      (or (-> response :response :message)
+                                          (-> response :response :error)
+                                          (-> response :status-text)
+                                          "Failed to fetch dead letter jobs"))
+                            (assoc-in [:admin :jobs :dead-letter :loading?] false))}))
+
+(rf/reg-event-db ::toggle-dead-letter-filter
+                 (fn [db [_ filter-value]]
+                   (assoc-in db [:admin :jobs :dead-letter :filter] filter-value)))
+
+(rf/reg-event-db ::select-jobs-sub-tab
+                 (fn [db [_ tab-value]]
+                   (assoc-in db [:admin :jobs :selected-sub-tab] tab-value)))

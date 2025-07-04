@@ -14,7 +14,10 @@
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
+            ["@mui/material/ToggleButton$default" :as ToggleButton]
+            ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
             [clojure.spec.alpha :as s]
+            [clojure.string :as str]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
             [lipas.ui.admin.events :as events]
@@ -534,11 +537,180 @@
              {:size :small :on-click #(pick-color type-code :stroke stroke)}
              "reset"]]]]]))]))
 
-(defn jobs-monitor-view []
+;; Dead Letter Queue section
+ ;; Jobs Monitoring tab content
+(defn jobs-monitoring-tab []
   (let [health-data (<== [::subs/jobs-health])
         metrics-data (<== [::subs/jobs-metrics])
         loading? (<== [::subs/jobs-loading?])
         error (<== [::subs/jobs-error])]
+    [:<>
+     ;; Error display
+     (when error
+       [mui/alert {:severity "error" :sx #js{:mb 2}}
+        error])
+
+     ;; Loading indicator
+     (when loading?
+       [mui/linear-progress {:sx #js{:mb 2}}])
+
+     ;; Health Overview Card
+     (when health-data
+       [mui/card {:sx #js{:mb 2}}
+        [mui/card-header {:title "Queue Health"}]
+        [mui/card-content
+         [mui/grid2 {:container true :spacing 2}
+          ;; Pending jobs
+          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
+           [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:pending_count health-data) 0) 100) "#ffebee" "#f5f5f5")}}
+            [mui/typography {:variant "h4"} (str (or (:pending_count health-data) 0))]
+            [mui/typography {:color "textSecondary"} "Pending Jobs"]
+            (when-let [oldest (:oldest_pending_minutes health-data)]
+              [mui/typography {:variant "caption" :color "textSecondary"}
+               (str "Oldest: " oldest " min")])]]
+
+          ;; Processing jobs
+          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
+           [mui/paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
+            [mui/typography {:variant "h4"} (str (or (:processing_count health-data) 0))]
+            [mui/typography {:color "textSecondary"} "Processing"]
+            (when-let [longest (:longest_processing_minutes health-data)]
+              [mui/typography {:variant "caption" :color "textSecondary"}
+               (str "Longest: " longest " min")])]]
+
+          ;; Failed jobs
+          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
+           [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:failed_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
+            [mui/typography {:variant "h4"} (str (or (:failed_count health-data) 0))]
+            [mui/typography {:color "textSecondary"} "Failed"]]]
+
+          ;; Dead letter jobs
+          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
+           (let [dlq-stats (<== [::subs/dead-letter-stats])
+                 unacknowledged (:unacknowledged dlq-stats 0)]
+             [mui/paper {:sx #js{:p 2 :bgcolor (if (> unacknowledged 0) "#ffebee" "#f5f5f5")}}
+              [mui/typography {:variant "h4"} (str unacknowledged)]
+              [mui/typography {:color "textSecondary"} "Unacknowledged DLQ"]
+              [mui/button
+               {:size "small"
+                :sx #js{:mt 1}
+                :on-click #(==> [::events/select-jobs-sub-tab 1])}
+               "View DLQ"]])]]]])
+
+     ;; Performance Metrics
+     (when-let [metrics-table-data (<== [::subs/jobs-metrics-table-data])]
+       [mui/card {:sx #js{:mb 2}}
+        [mui/card-header {:title "Performance Metrics"}]
+        [mui/card-content
+         [lui/table
+          {:headers [[:type "Job Type"]
+                     [:status "Status"]
+                     [:job_count "Count"]
+                     [:avg_duration_seconds "Avg Duration (s)"]
+                     [:p95_duration_seconds "P95 Duration (s)"]
+                     [:avg_attempts "Avg Attempts"]]
+           :items metrics-table-data
+           :sort-fn :type}]]])
+
+     ;; Current Stats by Status
+     (when-let [current-stats (:current-stats metrics-data)]
+       [mui/card {:sx #js{:mb 2}}
+        [mui/card-header {:title "Current Queue Status"}]
+        [mui/card-content
+         [mui/grid2 {:container true :spacing 2}
+          (for [[status data] current-stats
+                :when data]
+            [mui/grid2 {:key status :size 12 :size/sm 6 :size/md 4}
+             [mui/paper {:sx #js{:p 2}}
+              [mui/typography {:variant "h6"} (if (keyword? status) (name status) (str status))]
+              [mui/typography (str "Count: " (:count data))]
+              (when-let [oldest (:oldest_created_at data)]
+                [mui/typography {:variant "caption" :display "block"}
+                 (str "Oldest: " oldest)])
+              (when-let [oldest-min (:oldest_minutes data)]
+                [mui/typography {:variant "caption"}
+                 (str oldest-min " minutes ago")])]])]]])
+
+     ;; Job Types Configuration
+     (when metrics-data
+       [mui/card
+        [mui/card-header {:title "Job Types Configuration"}]
+        [mui/card-content
+         [mui/grid2 {:container true :spacing 2}
+          [mui/grid2 {:size 12 :size/md 6}
+           [mui/typography {:variant "subtitle1"} "Fast Lane Jobs"]
+           [mui/list {:dense true}
+            (for [job-type (:fast-job-types metrics-data)]
+              [mui/list-item {:key job-type}
+               [mui/list-item-text job-type]])]]
+          [mui/grid2 {:size 12 :size/md 6}
+           [mui/typography {:variant "subtitle1"} "Slow Lane Jobs"]
+           [mui/list {:dense true}
+            (for [job-type (:slow-job-types metrics-data)]
+              [mui/list-item {:key job-type}
+               [mui/list-item-text job-type]])]]]]])]))
+
+;; Dead Letter Queue tab content
+(defn dead-letter-queue-tab []
+  (let [dlq-jobs (<== [::subs/filtered-dead-letter-jobs])
+        loading? (<== [::subs/dead-letter-loading?])
+        error (<== [::subs/dead-letter-error])
+        filter-value (<== [::subs/dead-letter-filter])]
+    [:<>
+     ;; Filter buttons
+     [mui/toggle-button-group
+      {:value filter-value
+       :exclusive true
+       :on-change (fn [_ new-value]
+                    (when-let [new-value (and new-value (keyword new-value))]
+                      (==> [::events/toggle-dead-letter-filter new-value])
+                      (==> [::events/fetch-dead-letter-jobs
+                            {:acknowledged (case new-value
+                                             :all nil
+                                             :unacknowledged false
+                                             :acknowledged true)}])))
+       :sx #js{:mb 2}}
+      [mui/toggle-button {:value :unacknowledged} "Unacknowledged"]
+      [mui/toggle-button {:value :acknowledged} "Acknowledged"]
+      [mui/toggle-button {:value :all} "All"]]
+
+     ;; Error display
+     (when error
+       [mui/alert {:severity "error" :sx #js{:mb 2}} error])
+
+     ;; Loading indicator
+     (when loading?
+       [mui/linear-progress {:sx #js{:mb 2}}])
+
+     ;; Jobs table
+     (if (empty? dlq-jobs)
+       [mui/typography {:color "textSecondary"} "No jobs in the selected filter"]
+       [lui/table
+        {:headers [[:id "ID"]
+                   [:type "Job Type"]
+                   [:error "Error Message"]
+                   [:died-at "Failed At"]
+                   [:acknowledged "Status"]]
+         :items (map (fn [job]
+                       {:id (:id job)
+                        :type (get-in job [:original-job :type] "Unknown")
+                        :error (let [msg (:error-message job)]
+                                 (if (> (count msg) 50)
+                                   (str (subs msg 0 47) "...")
+                                   msg))
+                        :died-at (-> job :died-at
+                                     (str/replace "T" " ")
+                                     (str/split ".")
+                                     first)
+                        :acknowledged (if (:acknowledged job)
+                                        "Acknowledged"
+                                        "Unacknowledged")})
+                     dlq-jobs)
+         :sort-fn :died-at
+         :sort-order :desc}])]))
+
+(defn jobs-monitor-view []
+  (let [selected-sub-tab (<== [::subs/jobs-selected-sub-tab])]
     [mui/card {:square true}
      [mui/card-content
       [mui/typography {:variant "h5"} "Jobs Queue Monitor"]
@@ -547,114 +719,27 @@
       [mui/button
        {:variant "contained"
         :color "primary"
-        :disabled loading?
         :on-click #(do
                      (==> [::events/fetch-jobs-health])
-                     (==> [::events/fetch-jobs-metrics]))
+                     (==> [::events/fetch-jobs-metrics])
+                     (==> [::events/fetch-dead-letter-jobs {:acknowledged false}]))
         :style {:margin-bottom "1em"}}
        [mui/icon {:sx #js{:mr 1}} "refresh"]
        "Refresh"]
 
-      ;; Error display
-      (when error
-        [mui/alert {:severity "error" :sx #js{:mb 2}}
-         error])
+      ;; Sub-tabs
+      [mui/tabs
+       {:value selected-sub-tab
+        :on-change #(==> [::events/select-jobs-sub-tab %2])
+        :sx #js{:borderBottom 1 :borderColor "divider" :mb 2}}
+       [mui/tab {:label "Monitoring"}]
+       [mui/tab {:label "Dead Letter Queue"}]]
 
-      ;; Loading indicator
-      (when loading?
-        [mui/linear-progress {:sx #js{:mb 2}}])
-
-      ;; Health Overview Card
-      (when health-data
-        [mui/card {:sx #js{:mb 2}}
-         [mui/card-header {:title "Queue Health"}]
-         [mui/card-content
-          [mui/grid2 {:container true :spacing 2}
-           ;; Pending jobs
-           [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-            [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:pending_count health-data) 0) 100) "#ffebee" "#f5f5f5")}}
-             [mui/typography {:variant "h4"} (str (or (:pending_count health-data) 0))]
-             [mui/typography {:color "textSecondary"} "Pending Jobs"]
-             (when-let [oldest (:oldest_pending_minutes health-data)]
-               [mui/typography {:variant "caption" :color "textSecondary"}
-                (str "Oldest: " oldest " min")])]]
-
-           ;; Processing jobs
-           [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-            [mui/paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
-             [mui/typography {:variant "h4"} (str (or (:processing_count health-data) 0))]
-             [mui/typography {:color "textSecondary"} "Processing"]
-             (when-let [longest (:longest_processing_minutes health-data)]
-               [mui/typography {:variant "caption" :color "textSecondary"}
-                (str "Longest: " longest " min")])]]
-
-           ;; Failed jobs
-           [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-            [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:failed_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
-             [mui/typography {:variant "h4"} (str (or (:failed_count health-data) 0))]
-             [mui/typography {:color "textSecondary"} "Failed"]]]
-
-           ;; Dead letter jobs
-           [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-            [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:dead_count health-data) 0) 0) "#ffebee" "#f5f5f5")}}
-             [mui/typography {:variant "h4"} (str (or (:dead_count health-data) 0))]
-             [mui/typography {:color "textSecondary"} "Dead Letter"]]]]]])
-
-      ;; Performance Metrics
-      ;; Performance Metrics
-      (when-let [metrics-table-data (<== [::subs/jobs-metrics-table-data])]
-        [mui/card {:sx #js{:mb 2}}
-         [mui/card-header {:title "Performance Metrics"}]
-         [mui/card-content
-          [lui/table
-           {:headers [[:type "Job Type"]
-                      [:status "Status"]
-                      [:job_count "Count"]
-                      [:avg_duration_seconds "Avg Duration (s)"]
-                      [:p95_duration_seconds "P95 Duration (s)"]
-                      [:avg_attempts "Avg Attempts"]
-                      #_[:avg_execution_seconds "Avg Exec (s)"]
-                      #_[:avg_queue_seconds "Avg Queue (s)"]]
-            :items metrics-table-data
-            :sort-fn :type}]]])
-
-      ;; Current Stats by Status
-      (when-let [current-stats (:current-stats metrics-data)]
-        [mui/card {:sx #js{:mb 2}}
-         [mui/card-header {:title "Current Queue Status"}]
-         [mui/card-content
-          [mui/grid2 {:container true :spacing 2}
-           (for [[status data] current-stats
-                 :when data]
-             [mui/grid2 {:key status :size 12 :size/sm 6 :size/md 4}
-              [mui/paper {:sx #js{:p 2}}
-               [mui/typography {:variant "h6"} (if (keyword? status) (name status) (str status))]
-               [mui/typography (str "Count: " (:count data))]
-               (when-let [oldest (:oldest_created_at data)]
-                 [mui/typography {:variant "caption" :display "block"}
-                  (str "Oldest: " oldest)])
-               (when-let [oldest-min (:oldest_minutes data)]
-                 [mui/typography {:variant "caption"}
-                  (str oldest-min " minutes ago")])]])]]])
-
-      ;; Job Types Configuration
-      (when metrics-data
-        [mui/card
-         [mui/card-header {:title "Job Types Configuration"}]
-         [mui/card-content
-          [mui/grid2 {:container true :spacing 2}
-           [mui/grid2 {:size 12 :size/md 6}
-            [mui/typography {:variant "subtitle1"} "Fast Lane Jobs"]
-            [mui/list {:dense true}
-             (for [job-type (:fast-job-types metrics-data)]
-               [mui/list-item {:key job-type}
-                [mui/list-item-text job-type]])]]
-           [mui/grid2 {:size 12 :size/md 6}
-            [mui/typography {:variant "subtitle1"} "Slow Lane Jobs"]
-            [mui/list {:dense true}
-             (for [job-type (:slow-job-types metrics-data)]
-               [mui/list-item {:key job-type}
-                [mui/list-item-text job-type]])]]]]])]]))
+      ;; Tab content
+      (case selected-sub-tab
+        0 [jobs-monitoring-tab]
+        1 [dead-letter-queue-tab]
+        [jobs-monitoring-tab])]]))
 
 (defn type-codes-view []
   (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]

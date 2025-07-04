@@ -200,3 +200,45 @@
 (rf/reg-sub ::jobs-error
             (fn [db _]
               (get-in db [:admin :jobs :error])))
+
+ ;; Dead Letter Queue subscriptions
+
+(rf/reg-sub ::dead-letter-jobs
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :jobs] [])))
+
+(rf/reg-sub ::dead-letter-filter
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :filter] :unacknowledged)))
+
+(rf/reg-sub ::dead-letter-loading?
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :loading?] false)))
+
+(rf/reg-sub ::dead-letter-error
+            (fn [db _]
+              (get-in db [:admin :jobs :dead-letter :error])))
+
+(rf/reg-sub ::dead-letter-stats
+            :<- [::dead-letter-jobs]
+            (fn [jobs _]
+              (let [total (count jobs)
+                    unacknowledged (count (remove :acknowledged jobs))
+                    acknowledged (count (filter :acknowledged jobs))]
+                {:total total
+                 :unacknowledged unacknowledged
+                 :acknowledged acknowledged})))
+
+(rf/reg-sub ::filtered-dead-letter-jobs
+            :<- [::dead-letter-jobs]
+            :<- [::dead-letter-filter]
+            (fn [[jobs filter-value] _]
+              (case filter-value
+                :all jobs
+                :unacknowledged (remove :acknowledged jobs)
+                :acknowledged (filter :acknowledged jobs)
+                jobs)))
+
+(rf/reg-sub ::jobs-selected-sub-tab
+            (fn [db _]
+              (get-in db [:admin :jobs :selected-sub-tab] 0)))

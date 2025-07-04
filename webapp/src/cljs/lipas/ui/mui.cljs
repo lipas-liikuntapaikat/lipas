@@ -73,6 +73,8 @@
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/ToggleButton$default" :as ToggleButton]
+            ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
 
@@ -270,6 +272,8 @@
 (def table-sort-label (r/adapt-react-class TableSortLabel))
 (def tabs (r/adapt-react-class Tabs))
 (def text-field (r/adapt-react-class TextField))
+(def toggle-button (r/adapt-react-class ToggleButton))
+(def toggle-button-group (r/adapt-react-class ToggleButtonGroup))
 (def tool-bar (r/adapt-react-class Toolbar))
 (def tooltip (r/adapt-react-class Tooltip))
 (def typography (r/adapt-react-class Typography))
