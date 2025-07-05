@@ -8,6 +8,8 @@
  [use-cases](https://trello.com/b/S8i6NexB/k%C3%A4ytt%C3%B6tapaukset) (finnish) |
  [ideas](https://trello.com/b/IEwJ5Nrq/lipas) (finnish)
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/lipas-liikuntapaikat/lipas)
+
 LIPAS is a nationwide, public GIS service of Finnish sport
 facilities. More information
 [here](https://www.jyu.fi/fi/lipas-liikunnan-paikkatietojarjestelma).
