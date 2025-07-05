@@ -17,4 +17,6 @@
    ;; TODO: module-hash-names
    :devtools
    {:preloads   [devtools.preload
-                 day8.re-frame-10x.preload]}}}}
+                 ;; Not compatible with React 19 currently
+                 ;; day8.re-frame-10x.preload
+                 ]}}}}
