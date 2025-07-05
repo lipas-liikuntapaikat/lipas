@@ -26,6 +26,12 @@
         sports-site (core/get-sports-site db lipas-id)
         status (:status sports-site)
         fcoll (-> sports-site :location :geometries gis/simplify-safe)]
+
+    (when-not sports-site
+      (throw (ex-info (str "Sports site not found with lipas-id " lipas-id)
+                      {:lipas-id lipas-id
+                       :job-type "analysis"})))
+
     (if (contains? analysis-statuses status)
       (do
         (log/info "Processing analysis for lipas-id" lipas-id)

@@ -239,7 +239,7 @@
                        (dispatcher/dispatch-job system job)))))
 
       ;; Analysis job should throw exception
-      (testing "Analysis job with broken search"
+      (testing "Analysis job with non-existing sports-site"
         (let [job {:id 2 :type "analysis" :payload {:lipas-id 12345}}]
           (is (thrown? Exception
                        (dispatcher/dispatch-job system job))))))))
