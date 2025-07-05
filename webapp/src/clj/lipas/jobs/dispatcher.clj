@@ -17,14 +17,21 @@
   "Handle a job based on its type. Each job type has its own implementation."
   (fn [_system job] (:type job)))
 
+(def analysis-statuses
+  #{"active" "planned" "out-of-service-temporarily"})
+
 (defmethod handle-job "analysis"
   [{:keys [db search]} {:keys [id payload]}]
   (let [{:keys [lipas-id]} payload
         sports-site (core/get-sports-site db lipas-id)
+        status (:status sports-site)
         fcoll (-> sports-site :location :geometries gis/simplify-safe)]
-    (log/info "Processing analysis for lipas-id" lipas-id)
-    (diversity/recalc-grid! search fcoll)
-    (log/info "Analysis completed for lipas-id" lipas-id)))
+    (if (contains? analysis-statuses status)
+      (do
+        (log/info "Processing analysis for lipas-id" lipas-id)
+        (diversity/recalc-grid! search fcoll)
+        (log/info "Analysis completed for lipas-id" lipas-id))
+      (log/info "Skpping analysis for lipas-id" lipas-id "due to" status "status"))))
 
 (defmethod handle-job "elevation"
   [{:keys [db search]} {:keys [id payload]}]
