@@ -386,19 +386,6 @@
 (defmethod fix-geoms "Polygon" [sports-site]
   (update-in sports-site [:location :geometries] gis/dedupe-polygon-coords))
 
-(defn- simplify
-  [fcoll]
-  (try
-    (let [simplified (gis/simplify fcoll)]
-      (if (gis/contains-coords? simplified)
-        simplified
-        ;; If simplification removes all coords
-        ;; fallback to original geoms
-        fcoll))
-    (catch Exception ex
-      (log/warn ex "Failed to simplify fcoll" fcoll)
-      fcoll)))
-
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -448,7 +435,7 @@
                       :city {:name (-> city-code cities :name)}
                       :province {:name (:name province)}
                       :avi-area {:name (:name avi-area)}
-                      :simple-geoms (simplify fcoll)}
+                      :simple-geoms (gis/simplify-safe fcoll)}
                      :type
                      {:name (-> type-code types :name)
                       :tags (-> type-code types :tags)

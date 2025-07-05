@@ -4,7 +4,8 @@
    [clojure.string :as str]
    [geo.io :as gio]
    [geo.jts :as jts]
-   [geo.spatial :as geo])
+   [geo.spatial :as geo]
+   [taoensso.timbre :as log])
   (:import
    [org.locationtech.geowave.analytic GeometryHullTool]
    [org.locationtech.geowave.analytic.distance CoordinateEuclideanDistanceFn]
@@ -49,19 +50,6 @@
 
 (defn point? [fcoll]
   (= "Point" (-> fcoll :features first :geometry :type)))
-
-(defn simplify
-  "Returns simplified version of `m` where `m` is a map representing
-  GeoJSON FeatureCollection."
-  ([m] (simplify m default-simplify-tolerance))
-  ([m tolerance]
-   (-> m
-       (update :features #(map dummy-props %))
-       json/encode
-       (gio/read-geojson srid)
-       (->> (map #(simplify-geom % tolerance)))
-       gio/to-geojson-feature-collection
-       (json/decode keyword))))
 
 (defn centroid
   "Returns centroids of `m` where `m` is a map representing
@@ -171,6 +159,36 @@
 
 (defn contains-coords? [fcoll]
   (boolean (seq (->flat-coords fcoll))))
+
+(defn simplify
+  "Returns simplified version of `m` where `m` is a map representing
+  GeoJSON FeatureCollection."
+  ([m] (simplify m default-simplify-tolerance))
+  ([m tolerance]
+   (-> m
+       (update :features #(map dummy-props %))
+       json/encode
+       (gio/read-geojson srid)
+       (->> (map #(simplify-geom % tolerance)))
+       gio/to-geojson-feature-collection
+       (json/decode keyword))))
+
+
+(defn simplify-safe
+  "Returns simplified version of `m` where `m` is a map representing
+  GeoJSON FeatureCollection."
+  ([fcoll] (simplify-safe fcoll default-simplify-tolerance))
+  ([fcoll tolerance]
+   (try
+     (let [simplified (simplify fcoll tolerance)]
+       (if (contains-coords? simplified)
+         simplified
+         ;; If simplification removes all coords
+         ;; fallback to original geoms
+         fcoll))
+     (catch Exception ex
+       (log/warn ex "Failed to simplify fcoll" fcoll)
+       fcoll))))
 
 (defn ->jts-point [lon lat]
   (geo/jts-point lat lon))

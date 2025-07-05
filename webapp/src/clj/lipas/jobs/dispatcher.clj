@@ -21,7 +21,7 @@
   [{:keys [db search]} {:keys [id payload]}]
   (let [{:keys [lipas-id]} payload
         sports-site (core/get-sports-site db lipas-id)
-        fcoll (-> sports-site :location :geometries gis/simplify)]
+        fcoll (-> sports-site :location :geometries gis/simplify-safe)]
     (log/info "Processing analysis for lipas-id" lipas-id)
     (diversity/recalc-grid! search fcoll)
     (log/info "Analysis completed for lipas-id" lipas-id)))
