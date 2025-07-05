@@ -30,4 +30,32 @@
                   ptv
                   identity
                   lipas-ids
-                  updates)}))}}]])
+                  updates)}))}}]
+
+   ["/actions/get-editable-sports-sites"
+    {:get
+     {:no-doc false
+      :middleware [mw/token-auth mw/auth]
+      :coercion reitit.coercion.malli/coercion
+      :responses {200 {:body [:vector [:map
+                                       [:lipas-id :int]
+                                       [:name :string]
+                                       [:type [:map
+                                               [:type-code :int]
+                                               [:name {:optional true} :any]]]
+                                       [:location [:map
+                                                   [:city [:map
+                                                           [:city-code :int]
+                                                           [:city-name {:optional true} :any]]]]]
+                                       [:admin {:optional true} :string]
+                                       [:owner {:optional true} :string]
+                                       [:email {:optional true} [:maybe :string]]
+                                       [:phone-number {:optional true} [:maybe :string]]
+                                       [:www {:optional true} [:maybe :string]]
+                                       [:reservations-link {:optional true} [:maybe :string]]]]}}
+      :handler
+      (fn [{:keys [identity] :as req}]
+        {:status 200
+         :body (bulk-ops/get-editable-sites
+                search
+                identity)})}}]])

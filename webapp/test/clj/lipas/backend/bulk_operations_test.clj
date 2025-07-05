@@ -311,6 +311,66 @@
 
         (is (= 400 (:status resp)))))))
 
+(deftest get-editable-sites-admin-test
+  (testing "Admin user can retrieve all sites"
+    (let [admin-user (gen-admin-user)
+          token (jwt/create-token admin-user)
+          _ (create-test-sports-sites)
+
+          ;; Get editable sites
+          resp ((test-app) (-> (mock/request :get "/api/actions/get-editable-sports-sites")
+                               (test-utils/token-header token)))
+
+          body (safe-parse-json resp)]
+
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+      (is (>= (count body) 3)) ;; Should have at least the 3 test sites
+
+      ;; Check that all expected fields are present
+      (when (seq body)
+        (let [site (first body)]
+          (is (contains? site :lipas-id))
+          (is (contains? site :name))
+          (is (contains? site :type))
+          (is (contains? site :location))
+          (is (contains? site :admin))
+          (is (contains? site :owner))
+          (is (contains? site :email))
+          (is (contains? site :phone-number))
+          (is (contains? site :www))
+          (is (contains? site :reservations-link)))))))
+
+(deftest get-editable-sites-city-manager-test
+  (testing "City manager can only retrieve sites in their city"
+    (let [_ (create-test-sports-sites)
+          ;; Create city manager for Helsinki (city-code 91)
+          helsinki-manager (gen-city-manager-user 91)
+          token (jwt/create-token helsinki-manager)
+
+          ;; Get editable sites
+          resp ((test-app) (-> (mock/request :get "/api/actions/get-editable-sports-sites")
+                               (test-utils/token-header token)))
+
+          body (safe-parse-json resp)]
+
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+
+      ;; Check that only Helsinki sites are returned
+      (when (seq body)
+        (doseq [site body]
+          (is (= 91 (get-in site [:location :city :city-code]))))))))
+
+(deftest get-editable-sites-authentication-required-test
+  (testing "Get editable sites requires authentication"
+    (let [_ (create-test-sports-sites)
+
+          ;; Request without token
+          resp ((test-app) (mock/request :get "/api/actions/get-editable-sports-sites"))]
+
+      (is (= 401 (:status resp))))))
+
 (comment
   (setup-test-system!)
   (create-test-sports-sites)

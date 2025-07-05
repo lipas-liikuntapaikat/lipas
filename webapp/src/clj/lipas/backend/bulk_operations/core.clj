@@ -51,7 +51,18 @@
 
         final-query (assoc base-query
                            :size 10000
-                           :_source {:includes ["lipas-id" "location.city.city-code" "name" "type.type-code"]})]
+                           :_source {:includes ["lipas-id"
+                                                "location.city.city-code"
+                                                "location.city.city-name"
+                                                "name"
+                                                "type.type-code"
+                                                "type.name"
+                                                "admin"
+                                                "owner"
+                                                "email"
+                                                "phone-number"
+                                                "www"
+                                                "reservations-link"]})]
 
     (log/info "ES Query for fetching editable sites"
               {:user-id (:id user)
@@ -65,7 +76,7 @@
            :body
            :hits
            :hits
-           (map :_source)))))
+           (mapv :_source)))))
 
 (defn mass-update-sports-sites-contacts
   "Mass update contact information for multiple sports sites using bulk operations"
