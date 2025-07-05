@@ -159,7 +159,7 @@ services:
       ENVIRONMENT:
       # Worker configuration (via environment variables)
       WORKER_FAST_THREADS: 2
-      WORKER_GENERAL_THREADS: 3
+      WORKER_GENERAL_THREADS: 2
     volumes:
       - './webapp/:/usr/src/app:z'
       - 'mvn_cache:/root/.m2'
