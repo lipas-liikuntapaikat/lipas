@@ -33,67 +33,67 @@
 
        ;; Email
        (r/as-element
-        [lui/text-field
-         {:required true
-          :label (tr :lipas.user/email)
-          :type "email"
-          :spec users/email-schema
-          :value (:email form-data)
-          :on-change #(==> [::events/set-registration-form-email %])
-          :placeholder (tr :lipas.user/email-example)}])
+         [lui/text-field
+          {:required true
+           :label (tr :lipas.user/email)
+           :type "email"
+           :spec users/email-schema
+           :value (:email form-data)
+           :on-change #(==> [::events/set-registration-form-email %])
+           :placeholder (tr :lipas.user/email-example)}])
 
        ;; Username
        (r/as-element
-        [lui/text-field
-         {:required true
-          :Input-label-props (when-not (-> form-data :username empty?)
-                               {:shrink true})
-          :label (tr :lipas.user/username)
-          :type "text"
-          :spec users/username-schema
-          :value (:username form-data)
-          :on-change #(set-field :username %)
-          :placeholder (tr :lipas.user/username-example)}])
+         [lui/text-field
+          {:required true
+           :Input-label-props (when-not (-> form-data :username empty?)
+                                {:shrink true})
+           :label (tr :lipas.user/username)
+           :type "text"
+           :spec users/username-schema
+           :value (:username form-data)
+           :on-change #(set-field :username %)
+           :placeholder (tr :lipas.user/username-example)}])
 
        ;; Password
        (r/as-element
-        [lui/text-field
-         {:required true
-          :label (tr :lipas.user/password)
-          :type "password"
-          :spec users/password-schema
-          :value (:password form-data)
-          :on-change #(set-field :password %)}])
+         [lui/text-field
+          {:required true
+           :label (tr :lipas.user/password)
+           :type "password"
+           :spec users/password-schema
+           :value (:password form-data)
+           :on-change #(set-field :password %)}])
 
        ;; Firstname
        (r/as-element
-        [lui/text-field
-         {:required true
-          :label (tr :lipas.user/firstname)
-          :spec users/firstname-schema
-          :value (-> form-data :user-data :firstname)
-          :on-change #(set-field :user-data :firstname %)}])
+         [lui/text-field
+          {:required true
+           :label (tr :lipas.user/firstname)
+           :spec users/firstname-schema
+           :value (-> form-data :user-data :firstname)
+           :on-change #(set-field :user-data :firstname %)}])
 
        ;; Lastname
        (r/as-element
-        [lui/text-field
-         {:required true
-          :label (tr :lipas.user/lastname)
-          :spec users/lastname-schema
-          :value (-> form-data :user-data :lastname)
-          :on-change #(set-field :user-data :lastname %)}])
+         [lui/text-field
+          {:required true
+           :label (tr :lipas.user/lastname)
+           :spec users/lastname-schema
+           :value (-> form-data :user-data :lastname)
+           :on-change #(set-field :user-data :lastname %)}])
 
        ;; Permissions request
        (r/as-element
-        [lui/text-field
-         {:label (tr :lipas.user/permissions)
-          :multiline true
-          :spec users/permissions-request-schema
-          :value (-> form-data :user-data :permissions-request)
-          :on-change #(set-field :user-data :permissions-request %)
-          :min-rows 3
-          :placeholder (tr :lipas.user/permissions-example)
-          :helper-text (tr :lipas.user/permissions-help)}])
+         [lui/text-field
+          {:label (tr :lipas.user/permissions)
+           :multiline true
+           :spec users/permissions-request-schema
+           :value (-> form-data :user-data :permissions-request)
+           :on-change #(set-field :user-data :permissions-request %)
+           :min-rows 3
+           :placeholder (tr :lipas.user/permissions-example)
+           :helper-text (tr :lipas.user/permissions-help)}])
 
        ;; Register button
        ($ Button

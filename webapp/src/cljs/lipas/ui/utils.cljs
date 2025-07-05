@@ -261,7 +261,7 @@
       ;; duplicates from :location :geometries and can be dereferenced
       ;; using :fids
       (cond->
-          (:activities sports-site)
+        (:activities sports-site)
         (update :activities (fn [activities]
                               (into (empty activities)
                                     (map (fn [[k v]]

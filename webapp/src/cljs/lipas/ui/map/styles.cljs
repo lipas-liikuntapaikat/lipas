@@ -344,13 +344,13 @@
 
 (def route-part-label-style
   (Style.
-   #js {:text (Text.
-               #js {:font "16px sans-serif"
-                    :fill (Fill. #js {:color "#000"})
-                    :backgroundFill (Fill. #js {:color "#fff"})
-                    :backgroundStroke (Stroke. #js {:color "blue"
-                                                    :width 4})
-                    :padding #js [5 5 5 5]})}))
+    #js {:text (Text.
+                 #js {:font "16px sans-serif"
+                      :fill (Fill. #js {:color "#000"})
+                      :backgroundFill (Fill. #js {:color "#fff"})
+                      :backgroundStroke (Stroke. #js {:color "blue"
+                                                      :width 4})
+                      :padding #js [5 5 5 5]})}))
 
 (defn route-part-difficulty-style-fn
   [feature tr hover? _selected?]

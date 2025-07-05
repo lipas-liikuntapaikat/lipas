@@ -73,15 +73,15 @@
 
              ;; Email
              (r/as-element
-              [lui/text-field
-               {:id "magic-link-login-email-input"
-                :label (tr :lipas.user/email)
-                :spec :lipas.user/email
-                :auto-focus true
-                :value (:email form-data)
-                :on-change (comp clear-errors #(set-field :email %))
-                :required true
-                :placeholder (tr :lipas.user/email-example)}])
+               [lui/text-field
+                {:id "magic-link-login-email-input"
+                 :label (tr :lipas.user/email)
+                 :spec :lipas.user/email
+                 :auto-focus true
+                 :value (:email form-data)
+                 :on-change (comp clear-errors #(set-field :email %))
+                 :required true
+                 :placeholder (tr :lipas.user/email-example)}])
 
              ;; Login button
              ($ Button
@@ -132,31 +132,31 @@
 
              ;; Username
              (r/as-element
-              [lui/text-field
-               {:id "login-username-input"
-                :label (tr :login/username)
-                :auto-focus true
-                :value (:username form-data)
-                :on-change (comp clear-errors #(set-field :username %))
-                :required true
-                :placeholder (tr :login/username-example)}])
+               [lui/text-field
+                {:id "login-username-input"
+                 :label (tr :login/username)
+                 :auto-focus true
+                 :value (:username form-data)
+                 :on-change (comp clear-errors #(set-field :username %))
+                 :required true
+                 :placeholder (tr :login/username-example)}])
 
              ;; Password
              (r/as-element
-              [lui/text-field
-               {:id "login-password-input"
-                :label (tr :login/password)
-                :type "password"
-                :value (:password form-data)
+               [lui/text-field
+                {:id "login-password-input"
+                 :label (tr :login/password)
+                 :type "password"
+                 :value (:password form-data)
                 ;; Enter press might occur 'immediately' so we can't afford
                 ;; waiting default 200ms for text-field to update
                 ;; asynchronously.
-                :defer-ms 0
-                :on-change (comp clear-errors #(set-field :password %))
-                :on-key-press (fn [e]
-                                (when (= 13 (.-charCode e)) ; Enter
-                                  (==> [::events/submit-login-form form-data])))
-                :required true}])
+                 :defer-ms 0
+                 :on-change (comp clear-errors #(set-field :password %))
+                 :on-key-press (fn [e]
+                                 (when (= 13 (.-charCode e)) ; Enter
+                                   (==> [::events/submit-login-form form-data])))
+                 :required true}])
 
              ;; Login button
              ($ Button
@@ -200,8 +200,8 @@
              ($ CardHeader
                 {:title (tr :login/headline)
                  :action (r/as-element
-                          [register-btn
-                           {:tooltip (tr :register/headline)}])})
+                           [register-btn
+                            {:tooltip (tr :register/headline)}])})
              ($ CardContent
                 {}
                 ($ Tabs {:value login-mode

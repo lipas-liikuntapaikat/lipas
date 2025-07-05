@@ -85,7 +85,7 @@
                 :description :ptv/description)))
 
        ;; Content display (existing text to audit)
-       #_($ Paper {:sx #js{:p 2 :mt 1 :mb 1 }})
+       #_($ Paper {:sx #js{:p 2 :mt 1 :mb 1}})
        ($ Box {:sx #js {:mb 2 :border "1px solid #eee" :p 2}}
           ($ Typography {:variant "body1" :whiteSpace "pre-wrap"}
              content))

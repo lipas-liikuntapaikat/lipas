@@ -173,15 +173,15 @@
 
 (def jyu-styles-light
   (utils/deep-merge
-   jyu-styles-dark
-   {:palette
-    {:mode "light"
-     :text {:disabled "rgba(0,0,0,0.88)"}}
-    :typography
-    {:body1 {:color primary}
-     :body2 {:color primary}}
-    :components
-    {:MuiCardHeader {:styleOverrides {:title {:color secondary}}}}}))
+    jyu-styles-dark
+    {:palette
+     {:mode "light"
+      :text {:disabled "rgba(0,0,0,0.88)"}}
+     :typography
+     {:body1 {:color primary}
+      :body2 {:color primary}}
+     :components
+     {:MuiCardHeader {:styleOverrides {:title {:color secondary}}}}}))
 
 (def jyu-theme-dark (->mui-theme jyu-styles-dark))
 (def jyu-theme-light (->mui-theme jyu-styles-light))

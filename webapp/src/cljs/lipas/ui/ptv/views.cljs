@@ -296,121 +296,121 @@
           [mui/table-head
            [mui/table-row
             (doall
-             (for [{:keys [key label action-component padding sx]} headers]
-               [mui/table-cell {:key (name key) :padding padding :sx (clj->js sx)}
-                action-component
-                label]))]]
+              (for [{:keys [key label action-component padding sx]} headers]
+                [mui/table-cell {:key (name key) :padding padding :sx (clj->js sx)}
+                 action-component
+                 label]))]]
 
           ;; Body
           [mui/table-body
            (doall
-            (for [{:keys [lipas-id sync-status] :as site}
+             (for [{:keys [lipas-id sync-status] :as site}
                   ;; Sort by audit priority first, then by type
-                  (sort-by (fn [site]
-                             (let [audit-priority (case (:audit-status site)
-                                                    :changes-requested 1 ; Most critical
-                                                    :partial 2 ; Needs completion
-                                                    :none 3 ; Not audited
-                                                    :approved 4 ; All good
-                                                    5)] ; Default/unknown
-                               [audit-priority (:type site)]))
-                           sites)]
+                   (sort-by (fn [site]
+                              (let [audit-priority (case (:audit-status site)
+                                                     :changes-requested 1 ; Most critical
+                                                     :partial 2 ; Needs completion
+                                                     :none 3 ; Not audited
+                                                     :approved 4 ; All good
+                                                     5)] ; Default/unknown
+                                [audit-priority (:type site)]))
+                            sites)]
 
-              [:<> {:key lipas-id}
+               [:<> {:key lipas-id}
 
-               [mui/table-row
-                {:sx [#js{}]}
+                [mui/table-row
+                 {:sx [#js{}]}
 
                 ;; Expand toggle
-                [mui/table-cell
-                 [mui/icon-button
-                  {:style {:zIndex 1}
-                   :size "small"
-                   :on-click (fn [] (swap! expanded-rows update lipas-id not))}
-                  [mui/icon
-                   (if (get @expanded-rows lipas-id false)
-                     "keyboard_arrow_up_icon"
-                     "keyboard_arrow_down_icon")]]]
+                 [mui/table-cell
+                  [mui/icon-button
+                   {:style {:zIndex 1}
+                    :size "small"
+                    :on-click (fn [] (swap! expanded-rows update lipas-id not))}
+                   [mui/icon
+                    (if (get @expanded-rows lipas-id false)
+                      "keyboard_arrow_up_icon"
+                      "keyboard_arrow_down_icon")]]]
 
                 ;; Enable sync
-                #_[mui/table-cell
-                   [lui/switch
-                    {:value (:sync-enabled site)
-                     :on-change #(==> [::events/toggle-sync-enabled site %])}]]
+                 #_[mui/table-cell
+                    [lui/switch
+                     {:value (:sync-enabled site)
+                      :on-change #(==> [::events/toggle-sync-enabled site %])}]]
 
-                [mui/table-cell {:sx #js{:textAlign "center"}}
-                 ($ Stack
-                    {:direction "row"
-                     :alignItems "center"
-                     :justifyContent "center"}
-                    ($ Tooltip {:placement "right-end"
-                                :title (if (:sync-enabled site)
-                                         (case sync-status
-                                           :ok "PTV:ssä on ajantasaiset tiedot tästä liikuntapaikasta"
-                                           :not-synced "Liikuntapaikkaa ei ole vielä koskaan viety Palvelutietovarantoon"
-                                           :out-of-date "Liikuntapaikkaan on tehty muutoksia, joita ei ole viety Palvelutietovarantoon")
-                                         "Integraatio ei ole päällä tälle liikuntapaikalle")}
-                       ($ Avatar
-                          {:sx #js {:bgcolor (if (:sync-enabled site)
-                                               (case sync-status
-                                                 :ok "success.main"
-                                                 :not-synced "error.main"
-                                                 :out-of-date "warning.main")
-                                               mui/gray3)
-                                    :mr 2}}
-                          (if (:sync-enabled site)
-                            (if (= :ok sync-status)
-                              ($ Sync {:color "white"})
-                              ($ SyncProblem
-                                 {:color "white"}))
-                            ($ SyncDisabled {:background "white"}))))
-                    #_(:event-date-human site))]
+                 [mui/table-cell {:sx #js{:textAlign "center"}}
+                  ($ Stack
+                     {:direction "row"
+                      :alignItems "center"
+                      :justifyContent "center"}
+                     ($ Tooltip {:placement "right-end"
+                                 :title (if (:sync-enabled site)
+                                          (case sync-status
+                                            :ok "PTV:ssä on ajantasaiset tiedot tästä liikuntapaikasta"
+                                            :not-synced "Liikuntapaikkaa ei ole vielä koskaan viety Palvelutietovarantoon"
+                                            :out-of-date "Liikuntapaikkaan on tehty muutoksia, joita ei ole viety Palvelutietovarantoon")
+                                          "Integraatio ei ole päällä tälle liikuntapaikalle")}
+                        ($ Avatar
+                           {:sx #js {:bgcolor (if (:sync-enabled site)
+                                                (case sync-status
+                                                  :ok "success.main"
+                                                  :not-synced "error.main"
+                                                  :out-of-date "warning.main")
+                                                mui/gray3)
+                                     :mr 2}}
+                           (if (:sync-enabled site)
+                             (if (= :ok sync-status)
+                               ($ Sync {:color "white"})
+                               ($ SyncProblem
+                                  {:color "white"}))
+                             ($ SyncDisabled {:background "white"}))))
+                     #_(:event-date-human site))]
 
                 ;; Audit status
-                (audit-status-cell site)
+                 (audit-status-cell site)
 
                 ;; Last-sync
-                #_[mui/table-cell
-                   (or (some-> site :last-sync utils/->human-date-time-at-user-tz)
-                       "Ei koskaan")]
+                 #_[mui/table-cell
+                    (or (some-> site :last-sync utils/->human-date-time-at-user-tz)
+                        "Ei koskaan")]
 
                 ;; Name
-                [mui/table-cell
-                 (:name site)]
+                 [mui/table-cell
+                  (:name site)]
 
                 ;; Type
-                [mui/table-cell
-                 (:type site)]
+                 [mui/table-cell
+                  (:type site)]
 
                 ;; Admin
                 ;;[mui/table-cell]
 
                 ;; Owner
-                [mui/table-cell
-                 (:owner site)]
+                 [mui/table-cell
+                  (:owner site)]
 
                 ;; Service
-                #_[mui/table-cell
-                   [services-selector]]
+                 #_[mui/table-cell
+                    [services-selector]]
 
                 ;; Service channell
-                #_[mui/table-cell
-                   #_[service-channel-selector]]
+                 #_[mui/table-cell
+                    #_[service-channel-selector]]
 
                 ;; Description
-                #_[mui/table-cell]]
+                 #_[mui/table-cell]]
 
                ;; Details row
-               [mui/table-row
-                [mui/table-cell
-                 {:style {:paddingTop 0 :paddingBottom 0}
-                  :colSpan (count headers)}
-                 [mui/collapse {:in (get @expanded-rows lipas-id false)
-                                :timeout "auto"
-                                :unmountOnExit true}
-                  [form {:tr tr
-                         :org-id org-id
-                         :site site}]]]]]))]]]))))
+                [mui/table-row
+                 [mui/table-cell
+                  {:style {:paddingTop 0 :paddingBottom 0}
+                   :colSpan (count headers)}
+                  [mui/collapse {:in (get @expanded-rows lipas-id false)
+                                 :timeout "auto"
+                                 :unmountOnExit true}
+                   [form {:tr tr
+                          :org-id org-id
+                          :site site}]]]]]))]]]))))
 
 (defui set-types []
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
@@ -686,68 +686,68 @@
 
           [:div
            (doall
-            (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
+             (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
 
-              ^{:key sub-category-id}
-              [lui/expansion-panel
-               {:label sub-category
-                :label-icon (if valid
-                              [mui/icon {:color "success"} "done"]
-                              [mui/icon {:color "disabled"} "done"])}
+               ^{:key sub-category-id}
+               [lui/expansion-panel
+                {:label sub-category
+                 :label-icon (if valid
+                               [mui/icon {:color "success"} "done"]
+                               [mui/icon {:color "disabled"} "done"])}
 
-               ($ Stack {:spacing 2}
-                  ($ Tabs {:value service-details-tab
-                           :indicatorColor "secondary"
-                           :on-change #(==> [::events/select-service-details-tab %2])}
-                     ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
-                     ($ Tab {:value "preview" :label "Esikatselu"}))
+                ($ Stack {:spacing 2}
+                   ($ Tabs {:value service-details-tab
+                            :indicatorColor "secondary"
+                            :on-change #(==> [::events/select-service-details-tab %2])}
+                      ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
+                      ($ Tab {:value "preview" :label "Esikatselu"}))
 
                    ;; Enter descriptions form
-                  (when (= "descriptions" service-details-tab)
-                    (r/as-element
-                     [mui/stack {:spacing 2}
+                   (when (= "descriptions" service-details-tab)
+                     (r/as-element
+                       [mui/stack {:spacing 2}
                        ;; TODO: Allow linking service to existing PTV Service
                        ;; NOTE: This currently also lists other Services created from Lipas, not only Services created in PTV,
                        ;;       this doesn't really make sense as overriding the Lipas linking would disconnect this from the other Lipas type.
-                      #_($ controls/services-selector
-                           {:options services
-                            :value (get m :service-ids)
-                            :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
-                            :value-fn :service-id
-                            :label (tr :ptv/service)})
+                        #_($ controls/services-selector
+                             {:options services
+                              :value (get m :service-ids)
+                              :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
+                              :value-fn :service-id
+                              :label (tr :ptv/service)})
 
-                      (let [languages (set languages)]
-                        [mui/tabs
-                         {:value @selected-tab
-                          :on-change #(reset! selected-tab (keyword %2))}
-                         (when (contains? languages "fi")
-                           [mui/tab {:value "fi" :label "FI"}])
-                         (when (contains? languages "se")
-                           [mui/tab {:value "se" :label "SE"}])
-                         (when (contains? languages "en")
-                           [mui/tab {:value "en" :label "EN"}])])
+                        (let [languages (set languages)]
+                          [mui/tabs
+                           {:value @selected-tab
+                            :on-change #(reset! selected-tab (keyword %2))}
+                           (when (contains? languages "fi")
+                             [mui/tab {:value "fi" :label "FI"}])
+                           (when (contains? languages "se")
+                             [mui/tab {:value "se" :label "SE"}])
+                           (when (contains? languages "en")
+                             [mui/tab {:value "en" :label "EN"}])])
 
                        ;; Summary
-                      [lui/text-field
-                       {:multiline true
-                        :variant "outlined"
-                        :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
-                        :label (tr :ptv/summary)
-                        :value (get-in m [:summary @selected-tab])}]
+                        [lui/text-field
+                         {:multiline true
+                          :variant "outlined"
+                          :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+                          :label (tr :ptv/summary)
+                          :value (get-in m [:summary @selected-tab])}]
 
                        ;; Description
-                      [lui/text-field
-                       {:variant "outlined"
-                        :rows 5
-                        :multiline true
-                        :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
-                        :label (tr :ptv/description)
-                        :value (get-in m [:description @selected-tab])}]]))
+                        [lui/text-field
+                         {:variant "outlined"
+                          :rows 5
+                          :multiline true
+                          :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+                          :label (tr :ptv/description)
+                          :value (get-in m [:description @selected-tab])}]]))
 
-                  (when (= "preview" service-details-tab)
-                    ($ service-preview
-                       {:source-id source-id
-                        :sub-category-id sub-category-id})))]))]]]]])))
+                   (when (= "preview" service-details-tab)
+                     ($ service-preview
+                        {:source-id source-id
+                         :sub-category-id sub-category-id})))]))]]]]])))
 
 (defui service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
@@ -757,101 +757,101 @@
     ($ AccordionDetails
        {}
        (r/as-element
-        [mui/stack {:spacing 2}
+         [mui/stack {:spacing 2}
 
-         ($ Tabs {:value selected-tab2
-                  :indicatorColor "secondary"
-                  :on-change #(set-selected-tab2 %2)}
-            ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
-            ($ Tab {:value "preview" :label "Esikatselu"}))
+          ($ Tabs {:value selected-tab2
+                   :indicatorColor "secondary"
+                   :on-change #(set-selected-tab2 %2)}
+             ($ Tab {:value "descriptions" :label "Syötä kuvaukset"})
+             ($ Tab {:value "preview" :label "Esikatselu"}))
 
-         (when (= selected-tab2 "preview")
-           ($ ptv-components/service-location-preview
-              {:org-id org-id
-               :lipas-id lipas-id}))
+          (when (= selected-tab2 "preview")
+            ($ ptv-components/service-location-preview
+               {:org-id org-id
+                :lipas-id lipas-id}))
 
-         (when (= selected-tab2 "descriptions")
-           [mui/stack {:spacing 2}
+          (when (= selected-tab2 "descriptions")
+            [mui/stack {:spacing 2}
 
             ;; Services selector
-            ($ controls/services-selector
-               {:options services
-                :value service-ids
-                :value-fn :service-id
-                :on-change (fn [v]
-                             (rf/dispatch [::events/select-services site v]))
-                :label (tr :ptv/services)})
+             ($ controls/services-selector
+                {:options services
+                 :value service-ids
+                 :value-fn :service-id
+                 :on-change (fn [v]
+                              (rf/dispatch [::events/select-services site v]))
+                 :label (tr :ptv/services)})
 
             ;; Service channel selector
 
-            [:span (when name-conflict {:style
-                                        {:border "1px solid rgb(237, 108, 2)"
-                                         :padding "1em"}})
+             [:span (when name-conflict {:style
+                                         {:border "1px solid rgb(237, 108, 2)"
+                                          :padding "1em"}})
 
-             (when name-conflict
-               [mui/stack
-                [lui/icon-text
-                 {:icon "warning"
-                  :icon-color "warning"
-                  :text (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
+              (when name-conflict
+                [mui/stack
+                 [lui/icon-text
+                  {:icon "warning"
+                   :icon-color "warning"
+                   :text (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
 
-                [mui/typography
-                 {:style {:padding-left "1em" :margin-bottom "0"}
-                  :variant "body2"}
-                 (tr :ptv.name-conflict/do-one-of-these)]
+                 [mui/typography
+                  {:style {:padding-left "1em" :margin-bottom "0"}
+                   :variant "body2"}
+                  (tr :ptv.name-conflict/do-one-of-these)]
 
-                [:ul
-                 [:li (tr :ptv.name-conflict/opt1)]
-                 [:li (tr :ptv.name-conflict/opt2)]
-                 [:li (tr :ptv.name-conflict/opt3)]
-                 #_[:li (tr :ptv.name-conflict/opt4)]]])
+                 [:ul
+                  [:li (tr :ptv.name-conflict/opt1)]
+                  [:li (tr :ptv.name-conflict/opt2)]
+                  [:li (tr :ptv.name-conflict/opt3)]
+                  #_[:li (tr :ptv.name-conflict/opt4)]]])
 
-             (when name-conflict
-               [mui/button
-                {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
-                                  [(:service-channel-id name-conflict)]])}
-                (tr :ptv.wizard/attach-to-conflicting-service-channel)])
+              (when name-conflict
+                [mui/button
+                 {:on-click #(==> [::events/select-service-channels {:lipas-id lipas-id}
+                                   [(:service-channel-id name-conflict)]])}
+                 (tr :ptv.wizard/attach-to-conflicting-service-channel)])
 
-             ($ service-channel-selector
-                {:org-id org-id
-                 :value service-channel-ids
-                 :value-fn :service-channel-id
-                 :on-change #(==> [::events/select-service-channels site %])
-                 :label (tr :ptv/service-channel)})
+              ($ service-channel-selector
+                 {:org-id org-id
+                  :value service-channel-ids
+                  :value-fn :service-channel-id
+                  :on-change #(==> [::events/select-service-channels site %])
+                  :label (tr :ptv/service-channel)})
 
-             (when-let [id (first (seq service-channel-ids))]
-               ($ Button
-                  {:type "button"
-                   :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
-                  "Lataa tekstit PTV:stä"))]
+              (when-let [id (first (seq service-channel-ids))]
+                ($ Button
+                   {:type "button"
+                    :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
+                   "Lataa tekstit PTV:stä"))]
 
-            [lang-selector
-             {:value selected-tab
-              :on-change set-selected-tab
-              :enabled-languages org-languages}]
+             [lang-selector
+              {:value selected-tab
+               :on-change set-selected-tab
+               :enabled-languages org-languages}]
 
             ;; Summary
-            [lui/text-field
-             {:multiline true
-              :variant "outlined"
-              :on-change #(==> [::events/set-summary site selected-tab %])
-              :label (tr :ptv/summary)
-              :value (get-in site [:summary selected-tab])}]
+             [lui/text-field
+              {:multiline true
+               :variant "outlined"
+               :on-change #(==> [::events/set-summary site selected-tab %])
+               :label (tr :ptv/summary)
+               :value (get-in site [:summary selected-tab])}]
 
             ;; Description
-            [lui/text-field
-             {:variant "outlined"
-              :rows 5
-              :multiline true
-              :on-change #(==> [::events/set-description site selected-tab %])
-              :label (tr :ptv/description)
-              :value (get-in site [:description selected-tab])}]
+             [lui/text-field
+              {:variant "outlined"
+               :rows 5
+               :multiline true
+               :on-change #(==> [::events/set-description site selected-tab %])
+               :label (tr :ptv/description)
+               :value (get-in site [:description selected-tab])}]
 
             ;; Disclaimer and enable switch
-            [lui/switch
-             {:label (tr :ptv.actions/export-disclaimer)
-              :value sync-enabled
-              :on-change #(==> [::events/toggle-sync-enabled site %])}]])]))))
+             [lui/switch
+              {:label (tr :ptv.actions/export-disclaimer)
+               :value sync-enabled
+               :on-change #(==> [::events/toggle-sync-enabled site %])}]])]))))
 
 (defui service-location
   [{:keys [site sync-enabled name-conflict valid]
@@ -1037,19 +1037,19 @@
           [mui/typography (tr :ptv.service/classes)]
           [mui/stack {:direction "row" :spacing 1}
            (doall
-            (for [class (:service-classes service)]
-              (let [label (get class @lang)]
-                ^{:key label}
-                [mui/chip {:label label :variant "outlined"}])))]
+             (for [class (:service-classes service)]
+               (let [label (get class @lang)]
+                 ^{:key label}
+                 [mui/chip {:label label :variant "outlined"}])))]
 
           ;; keywords
           [mui/typography (tr :ptv/keywords)]
           [mui/stack {:direction "row" :spacing 1}
            (doall
-            (for [onto (:ontology-terms service)]
-              (let [label (get onto @lang)]
-                ^{:key label}
-                [mui/chip {:label label :variant "outlined"}])))]
+             (for [onto (:ontology-terms service)]
+               (let [label (get onto @lang)]
+                 ^{:key label}
+                 [mui/chip {:label label :variant "outlined"}])))]
 
           [lang-selector
            {:value @lang
@@ -1087,10 +1087,10 @@
           [mui/typography (tr :ptv/service-channels)]
           [:ul
            (doall
-            (for [sc (sort-by :name (:service-channels service))]
-              (let [label (:name sc)]
-                ^{:key label}
-                [:li label])))]]]]])))
+             (for [sc (sort-by :name (:service-channels service))]
+               (let [label (:name sc)]
+                 ^{:key label}
+                 [:li label])))]]]]])))
 
 (defn services
   []
@@ -1109,12 +1109,12 @@
 
      ;; Services list
      (doall
-      (for [service services]
-        ^{:key (:service-id service)}
-        [service-panel
-         {:org-id org-id
-          :service service
-          :descriptions (get descriptions (:source-id service))}]))]))
+       (for [service services]
+         ^{:key (:service-id service)}
+         [service-panel
+          {:org-id org-id
+           :service service
+           :descriptions (get descriptions (:source-id service))}]))]))
 
 (defn wizard
   []

@@ -417,26 +417,26 @@
        :drawing               (start-drawing! map-ctx geom-type on-modifyend)
        :drawing-hole          (start-drawing-hole! map-ctx on-modifyend) ; For polygons
        :editing               (if continue?
-                       (-> map-ctx
-                           (continue-editing! on-modifyend)
-                           (map-utils/show-problems! problems)
-                           (enable-highlighting! mode))
-                       (-> map-ctx
-                           (start-editing-site! lipas-id geoms on-modifyend)
-                           (map-utils/show-problems! problems)
-                           (enable-highlighting! mode)))
+                                (-> map-ctx
+                                    (continue-editing! on-modifyend)
+                                    (map-utils/show-problems! problems)
+                                    (enable-highlighting! mode))
+                                (-> map-ctx
+                                    (start-editing-site! lipas-id geoms on-modifyend)
+                                    (map-utils/show-problems! problems)
+                                    (enable-highlighting! mode)))
        :deleting              (-> map-ctx
                          ;;(continue-editing! on-modifyend)
-                         (enable-delete! on-modifyend))
+                                  (enable-delete! on-modifyend))
        :splitting             (-> map-ctx
-                         (enable-splitting! geoms on-modifyend))
+                                  (enable-splitting! geoms on-modifyend))
        :undo                  (undo-edits! map-ctx mode)
        :importing             (refresh-edits! map-ctx mode)
        :simplifying           (simplify-edits! map-ctx mode)
        :selecting             (-> map-ctx
-                         (enable-highlighting! mode))
+                                  (enable-highlighting! mode))
        :travel-direction      (-> map-ctx
-                             (set-travel-direction-edit-mode! mode))
+                                  (set-travel-direction-edit-mode! mode))
        :route-part-difficulty (-> map-ctx
                                   (set-route-part-difficulty-edit-mode mode))
        (do

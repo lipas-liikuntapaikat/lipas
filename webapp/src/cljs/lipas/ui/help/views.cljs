@@ -1,53 +1,53 @@
 (ns lipas.ui.help.views
   (:require
-   ["@mui/icons-material/Close$default" :as CloseIcon]
-   ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
-   ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
-   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-   ["@mui/icons-material/Help$default" :as Help]
-   ["@mui/icons-material/Edit$default" :as EditIcon]
-   ["@mui/material/Accordion$default" :as Accordion]
-   ["@mui/material/AccordionSummary$default" :as AccordionSummary]
-   ["@mui/material/AccordionDetails$default" :as AccordionDetails]
-   ["@mui/material/AppBar$default" :as AppBar]
-   ["@mui/material/Box$default" :as Box]
-   ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardContent$default" :as CardContent]
-   ["@mui/material/Chip$default" :as Chip]
-   ["@mui/material/Dialog$default" :as Dialog]
-   ["@mui/material/DialogContent$default" :as DialogContent]
-   ["@mui/material/Divider$default" :as Divider]
-   ["@mui/material/GridLegacy$default" :as Grid]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/Link$default" :as Link]
-   ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/ListItemButton$default" :as ListItemButton]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/ListItemIcon$default" :as ListItemIcon]
-   ["@mui/material/Paper$default" :as Paper]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Tab$default" :as Tab]
-   ["@mui/material/Table$default" :as Table]
-   ["@mui/material/TableBody$default" :as TableBody]
-   ["@mui/material/TableCell$default" :as TableCell]
-   ["@mui/material/TableContainer$default" :as TableContainer]
-   ["@mui/material/TableHead$default" :as TableHead]
-   ["@mui/material/TableRow$default" :as TableRow]
-   ["@mui/material/Tabs$default" :as Tabs]
-   ["@mui/material/TextField$default" :as TextField]
-   ["@mui/material/Toolbar$default" :as Toolbar]
-   ["@mui/material/Tooltip$default" :as Tooltip]
-   ["@mui/material/Typography$default" :as Typography]
-   [lipas.ui.help.events :as events]
-   [lipas.ui.help.manage :as manage]
-   [lipas.ui.help.subs :as subs]
-   [lipas.ui.uix.hooks :refer [use-subscribe]]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :as utils :refer [==>]]
-   [uix.core :as uix :refer [$ defui]]))
+    ["@mui/icons-material/Close$default" :as CloseIcon]
+    ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
+    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
+    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+    ["@mui/icons-material/Help$default" :as Help]
+    ["@mui/icons-material/Edit$default" :as EditIcon]
+    ["@mui/material/Accordion$default" :as Accordion]
+    ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+    ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+    ["@mui/material/AppBar$default" :as AppBar]
+    ["@mui/material/Box$default" :as Box]
+    ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
+    ["@mui/material/Button$default" :as Button]
+    ["@mui/material/Card$default" :as Card]
+    ["@mui/material/CardContent$default" :as CardContent]
+    ["@mui/material/Chip$default" :as Chip]
+    ["@mui/material/Dialog$default" :as Dialog]
+    ["@mui/material/DialogContent$default" :as DialogContent]
+    ["@mui/material/Divider$default" :as Divider]
+    ["@mui/material/GridLegacy$default" :as Grid]
+    ["@mui/material/IconButton$default" :as IconButton]
+    ["@mui/material/Link$default" :as Link]
+    ["@mui/material/List$default" :as List]
+    ["@mui/material/ListItem$default" :as ListItem]
+    ["@mui/material/ListItemButton$default" :as ListItemButton]
+    ["@mui/material/ListItemText$default" :as ListItemText]
+    ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+    ["@mui/material/Paper$default" :as Paper]
+    ["@mui/material/Stack$default" :as Stack]
+    ["@mui/material/Tab$default" :as Tab]
+    ["@mui/material/Table$default" :as Table]
+    ["@mui/material/TableBody$default" :as TableBody]
+    ["@mui/material/TableCell$default" :as TableCell]
+    ["@mui/material/TableContainer$default" :as TableContainer]
+    ["@mui/material/TableHead$default" :as TableHead]
+    ["@mui/material/TableRow$default" :as TableRow]
+    ["@mui/material/Tabs$default" :as Tabs]
+    ["@mui/material/TextField$default" :as TextField]
+    ["@mui/material/Toolbar$default" :as Toolbar]
+    ["@mui/material/Tooltip$default" :as Tooltip]
+    ["@mui/material/Typography$default" :as Typography]
+    [lipas.ui.help.events :as events]
+    [lipas.ui.help.manage :as manage]
+    [lipas.ui.help.subs :as subs]
+    [lipas.ui.uix.hooks :refer [use-subscribe]]
+    [lipas.ui.user.subs :as user-subs]
+    [lipas.ui.utils :as utils :refer [==>]]
+    [uix.core :as uix :refer [$ defui]]))
 
 (defui YoutubeIframe
   [{:keys [video-id title]}]
@@ -211,16 +211,16 @@
                          (let [term (clojure.string/lower-case search-term)]
                            (->> types-data
                                 (filter #(or
-                                          (clojure.string/includes?
-                                           (clojure.string/lower-case (get-in % [:name locale] ""))
-                                           term)
-                                          (clojure.string/includes?
-                                           (clojure.string/lower-case (str (:type-code %)))
-                                           term)
-                                          (when-let [desc (get-in % [:description locale])]
-                                            (clojure.string/includes?
-                                             (clojure.string/lower-case desc)
-                                             term))))
+                                           (clojure.string/includes?
+                                             (clojure.string/lower-case (get-in % [:name locale] ""))
+                                             term)
+                                           (clojure.string/includes?
+                                             (clojure.string/lower-case (str (:type-code %)))
+                                             term)
+                                           (when-let [desc (get-in % [:description locale])]
+                                             (clojure.string/includes?
+                                               (clojure.string/lower-case desc)
+                                               term))))
                                 (sort-by :type-code))))]
 
     ;; Main component view
@@ -411,38 +411,38 @@
              (tr :help/available-pages)))
 
        (map-indexed
-        (fn [idx {:keys [slug title blocks]}]
+         (fn [idx {:keys [slug title blocks]}]
            ;; Find the first text block to display as summary
-          (let [summary-block (first (filter #(= :text (:type %)) blocks))
-                summary-text (when summary-block (:content summary-block))]
-            ($ Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
-               ($ Card {:sx #js{:height "100%"
-                                :cursor "pointer"
-                                :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
-                                :boxShadow 3
-                                :border "1px solid"
-                                :borderColor "divider"
-                                :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
-                                ":hover" #js{:transform "scale(1.03)"
-                                             :boxShadow 6
-                                             :borderColor "secondary.main"}} ;; Use secondary color for border on hover
-                        :onClick #(on-page-select idx slug)}
-                  ($ CardContent
-                     ($ Typography
-                        {:variant "subtitle2"
-                         :gutterBottom true
-                         :fontWeight "bold"}
-                        (locale title))
-                     ($ Typography
-                        {:variant "body2"
-                         :color "text.secondary"
-                         :sx #js{:overflow "hidden"
-                                 :textOverflow "ellipsis"
-                                 :display "-webkit-box"
-                                 :-webkit-line-clamp 3
-                                 :-webkit-box-orient "vertical"}}
-                        (locale summary-text)))))))
-        pages))))
+           (let [summary-block (first (filter #(= :text (:type %)) blocks))
+                 summary-text (when summary-block (:content summary-block))]
+             ($ Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
+                ($ Card {:sx #js{:height "100%"
+                                 :cursor "pointer"
+                                 :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
+                                 :boxShadow 3
+                                 :border "1px solid"
+                                 :borderColor "divider"
+                                 :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
+                                 ":hover" #js{:transform "scale(1.03)"
+                                              :boxShadow 6
+                                              :borderColor "secondary.main"}} ;; Use secondary color for border on hover
+                         :onClick #(on-page-select idx slug)}
+                   ($ CardContent
+                      ($ Typography
+                         {:variant "subtitle2"
+                          :gutterBottom true
+                          :fontWeight "bold"}
+                         (locale title))
+                      ($ Typography
+                         {:variant "body2"
+                          :color "text.secondary"
+                          :sx #js{:overflow "hidden"
+                                  :textOverflow "ellipsis"
+                                  :display "-webkit-box"
+                                  :-webkit-line-clamp 3
+                                  :-webkit-box-orient "vertical"}}
+                         (locale summary-text)))))))
+         pages))))
 
 (defui HelpMenu
   [{:keys [pages selected-page on-page-select]}]
@@ -451,24 +451,24 @@
     ($ Stack {:direction "column"}
        ($ List {:sx #js{:min-width "200px"}}
           (map-indexed
-           (fn [idx {:keys [slug title]}]
-             ($ :<> {:key (name slug)}
-                ($ Divider)
-                ($ ListItem
-                   {:key (name slug)
-                    :disablePadding true
-                    :component "a"
-                    :sx #js{:transition "border-color 0.2s"
-                            :border "2px solid"
-                            :borderColor (if (= selected-page idx) "secondary.main" "transparent")
-                            ":hover" #js{:borderColor "secondary.main"}}}
-                   ($ ListItemButton {:on-click #(on-page-select idx slug)
-                                      :sx #js{:padding "8px 16px"}}
-                      (when (= selected-page idx)
-                        ($ ListItemIcon
-                           ($ ArrowForwadIosIcon {:color "secondary"})))
-                      ($ ListItemText {:primary (locale title)})))))
-           pages)))))
+            (fn [idx {:keys [slug title]}]
+              ($ :<> {:key (name slug)}
+                 ($ Divider)
+                 ($ ListItem
+                    {:key (name slug)
+                     :disablePadding true
+                     :component "a"
+                     :sx #js{:transition "border-color 0.2s"
+                             :border "2px solid"
+                             :borderColor (if (= selected-page idx) "secondary.main" "transparent")
+                             ":hover" #js{:borderColor "secondary.main"}}}
+                    ($ ListItemButton {:on-click #(on-page-select idx slug)
+                                       :sx #js{:padding "8px 16px"}}
+                       (when (= selected-page idx)
+                         ($ ListItemIcon
+                            ($ ArrowForwadIosIcon {:color "secondary"})))
+                       ($ ListItemText {:primary (locale title)})))))
+            pages)))))
 
 (defui HelpSection
   [{:keys [pages] :as _section}]
@@ -556,11 +556,11 @@
                   ($ Tabs {:value selected-section-idx
                            :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
                      (map-indexed
-                      (fn [idx section]
-                        ($ Tab {:key idx
-                                :value idx
-                                :label (locale-kw (:title section))}))
-                      sections))
+                       (fn [idx section]
+                         ($ Tab {:key idx
+                                 :value idx
+                                 :label (locale-kw (:title section))}))
+                       sections))
 
                   ($ Breadcrumbs {:sx #js{:mt 1}}
                      ($ Typography (tr :help/headline))

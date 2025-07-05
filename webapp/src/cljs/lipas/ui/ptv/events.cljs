@@ -24,8 +24,7 @@
   (fn [{:keys [db]} [_ org]]
     {:db (assoc-in db [:ptv :selected-org] org)
      :fx [[:dispatch [::fetch-org-data org]]
-          #_
-          [:dispatch [::fetch-integration-candidates org]]]}))
+          #_[:dispatch [::fetch-integration-candidates org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
   (fn [{:keys [db]} [_ search]]
@@ -36,7 +35,7 @@
     (let [prev-step (or (:selected-step (:ptv db)) 0)]
       {:db (assoc-in db [:ptv :selected-step] v)
        :fx [(when (= 0 prev-step)
-                     [:dispatch [::fetch-integration-candidates (:selected-org (:ptv db))]])]})))
+              [:dispatch [::fetch-integration-candidates (:selected-org (:ptv db))]])]})))
 
 (rf/reg-event-db ::select-tab
   (fn [db [_ v]]

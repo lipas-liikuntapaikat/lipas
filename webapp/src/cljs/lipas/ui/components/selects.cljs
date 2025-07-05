@@ -251,12 +251,12 @@
                           (let [c (-> option read-string cats-by-v)
                                 v (str (:type-code c) " " (-> c :name locale))]
                             (r/as-element
-                             [:r> Typography
-                              props
-                              (cond
-                                (string/includes? option "sub-cat")  (strong1 v)
-                                (string/includes? option "main-cat") (strong2 v)
-                                :else                                v)])))
+                              [:r> Typography
+                               props
+                               (cond
+                                 (string/includes? option "sub-cat")  (strong1 v)
+                                 (string/includes? option "main-cat") (strong2 v)
+                                 :else                                v)])))
       :sort-fn          (fn [{:keys [type-code cat-id]}]
                           (case type-code
                             (1 2) (* 100 type-code)

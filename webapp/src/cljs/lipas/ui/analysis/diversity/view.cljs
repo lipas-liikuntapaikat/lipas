@@ -396,35 +396,35 @@
                 :diversity-idx (tr :analysis/diversity-index-chart)}]
     [:> ResponsiveContainer {:width "100%" :height 300}
      (into
-      [:> BarChart
-       {:data chart-data
-        :layout "horizontal"
-        #_#_:on-click #(println %)
-        :margin {:bottom 20 :left 20}}
-       [:> CartesianGrid]
-       [:> Tooltip
-        {:content
-         (fn [props]
-           (charts/labeled-tooltip labels :label :hide-header identity props))}]
-       [:> XAxis
-        {:dataKey "diversity-idx"
-         :type "number"
-         :allowDecimals false
-         :label (merge {:value (:diversity-idx labels) :position "bottom"}
-                       charts/font-styles)
-         :tick charts/font-styles
-         :tickCount 10
-         :domain #js ["dataMin" "dataMax"]
-         :padding #js {:left 16 :right 16}}]
+       [:> BarChart
+        {:data chart-data
+         :layout "horizontal"
+         #_#_:on-click #(println %)
+         :margin {:bottom 20 :left 20}}
+        [:> CartesianGrid]
+        [:> Tooltip
+         {:content
+          (fn [props]
+            (charts/labeled-tooltip labels :label :hide-header identity props))}]
+        [:> XAxis
+         {:dataKey "diversity-idx"
+          :type "number"
+          :allowDecimals false
+          :label (merge {:value (:diversity-idx labels) :position "bottom"}
+                        charts/font-styles)
+          :tick charts/font-styles
+          :tickCount 10
+          :domain #js ["dataMin" "dataMax"]
+          :padding #js {:left 16 :right 16}}]
 
-       [:> YAxis
-        {:tick charts/font-styles
-         :label (merge {:value (:population labels) :angle -90 :position "left"}
-                       charts/font-styles)}]
-       (into
-        [:> Bar {:dataKey "population" :fill "#9D191A"}]
-        (for [diversity-idx (->> chart-data (map :diversity-idx))]
-          [:> Cell {:fill (diversity-colors diversity-idx)}]))])]))
+        [:> YAxis
+         {:tick charts/font-styles
+          :label (merge {:value (:population labels) :angle -90 :position "left"}
+                        charts/font-styles)}]
+        (into
+          [:> Bar {:dataKey "population" :fill "#9D191A"}]
+          (for [diversity-idx (->> chart-data (map :diversity-idx))]
+            [:> Cell {:fill (diversity-colors diversity-idx)}]))])]))
 
 (defn area-chart []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -458,26 +458,26 @@
                    #_(charts/legend labels props)
                    (let [payload (gobj/get props "payload")]
                      (r/as-element
-                      (->> payload
-                           (map
-                            (fn [obj]
-                              {:label (or (labels (gobj/get obj "value"))
-                                          (labels (keyword (gobj/get obj "value"))))
-                               :color (gobj/get obj "color")
-                               :type (gobj/get obj "type")}))
-                           (sort-by :label)
-                           (map
-                            (fn [{:keys [label color type]}]
-                              [mui/grid {:item true}
-                               [misc/icon-text3
-                                {:icon (charts/legend-icons type)
-                                 :icon-color color
-                                 :text label}]]))
-                           (into
-                            [mui/grid
-                             {:container true
-                              :style {:margin-bottom "1.5em"}
-                              :justify-content "center"}])))))}]
+                       (->> payload
+                            (map
+                              (fn [obj]
+                                {:label (or (labels (gobj/get obj "value"))
+                                            (labels (keyword (gobj/get obj "value"))))
+                                 :color (gobj/get obj "color")
+                                 :type (gobj/get obj "type")}))
+                            (sort-by :label)
+                            (map
+                              (fn [{:keys [label color type]}]
+                                [mui/grid {:item true}
+                                 [misc/icon-text3
+                                  {:icon (charts/legend-icons type)
+                                   :icon-color color
+                                   :text label}]]))
+                            (into
+                              [mui/grid
+                               {:container true
+                                :style {:margin-bottom "1.5em"}
+                                :justify-content "center"}])))))}]
 
       ;; Area names on y-axis
       [:> YAxis
@@ -531,9 +531,9 @@
                       :right 16}}]
 
       (into
-       [:> Bar {:xAxisId "pwm" :dataKey "pwm" :fill (get diversity-colors 8)}]
-       (for [diversity-idx (->> chart-data (map (comp js/Math.round :pwm)))]
-         [:> Cell {:fill (get diversity-colors diversity-idx)}]))]]))
+        [:> Bar {:xAxisId "pwm" :dataKey "pwm" :fill (get diversity-colors 8)}]
+        (for [diversity-idx (->> chart-data (map (comp js/Math.round :pwm)))]
+          [:> Cell {:fill (get diversity-colors diversity-idx)}]))]]))
 
 (defn areas-selector []
   (let [tr (<== [:lipas.ui.subs/translator])

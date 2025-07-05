@@ -43,13 +43,13 @@
   (let [visual-params (:visual db/default-db)
         {:keys [radius blur opacity gradient weight-fn]} visual-params]
     (HeatmapLayer.
-     #js {:source source
-          :visible true
-          :radius (or radius 20)
-          :blur (or blur 15)
-          :opacity (or opacity 0.8)
-          :gradient (get gradients gradient (get gradients :default))
-          :weight (create-weight-fn (or weight-fn :linear))})))
+      #js {:source source
+           :visible true
+           :radius (or radius 20)
+           :blur (or blur 15)
+           :opacity (or opacity 0.8)
+           :gradient (get gradients gradient (get gradients :default))
+           :weight (create-weight-fn (or weight-fn :linear))})))
 
 (defn update-heatmap-source!
   [^js source heatmap-data]

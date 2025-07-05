@@ -39,8 +39,8 @@
                                      "-"))
         get-name (fn [type lang] (or (->> preview :serviceChannelNames
                                           (filter (fn [m] (and
-                                                           (= (:language m) lang)
-                                                           (= (:type m) type))))
+                                                            (= (:language m) lang)
+                                                            (= (:type m) type))))
                                           (map :value)
                                           join)
                                      "-"))

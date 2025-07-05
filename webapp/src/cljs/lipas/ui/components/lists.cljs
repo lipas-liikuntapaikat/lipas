@@ -33,8 +33,8 @@
         ;; it could be something else.
         [measure-item-ref measure-item] (useMeasure)
         item-height (if (pos? (.-height measure))
-                       (.-height measure-item)
-                       70)
+                      (.-height measure-item)
+                      70)
         ;; When opening the "Rajaa hakua" box, there often will be
         ;; no space left for the search results flex item.
         ;; Best solution would be to rework the whole sidebar contents

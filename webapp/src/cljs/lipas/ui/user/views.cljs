@@ -71,8 +71,8 @@
        ;; Report energy consumption button
        [mui/list-item
         {:on-click (comp
-                    close
-                    #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
+                     close
+                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}

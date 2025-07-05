@@ -77,26 +77,26 @@
 
           ;; Summary
           (r/as-element
-           [lui/text-field
-            {:disabled (or loading?
-                           read-only?)
-             :multiline true
-             :variant "outlined"
-             :on-change (fn [v])
-             :label "Tiivistelmä"
-             :value (get summary selected-tab)}])
+            [lui/text-field
+             {:disabled (or loading?
+                            read-only?)
+              :multiline true
+              :variant "outlined"
+              :on-change (fn [v])
+              :label "Tiivistelmä"
+              :value (get summary selected-tab)}])
 
           ;; Description
           (r/as-element
-           [lui/text-field
-            {:disabled (or loading?
-                           read-only?)
-             :variant "outlined"
-             :rows 5
-             :multiline true
-             :on-change (fn [v])
-             :label "Kuvaus"
-             :value (get description selected-tab)}])
+            [lui/text-field
+             {:disabled (or loading?
+                            read-only?)
+              :variant "outlined"
+              :rows 5
+              :multiline true
+              :on-change (fn [v])
+              :label "Kuvaus"
+              :value (get description selected-tab)}])
 
           ($ Button
              {:variant "contained"
@@ -402,16 +402,16 @@
 
            ;; Summary
             (r/as-element
-             [lui/text-field
-              {:disabled (or loading?
-                             read-only?)
-               :multiline true
-               :variant "outlined"
-               :on-change (fn [v]
-                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
-               :label "Tiivistelmä"
-               :value (or (get-in edit-data [:ptv :summary selected-tab])
-                          (get-in sports-site [:ptv :summary selected-tab]))}])
+              [lui/text-field
+               {:disabled (or loading?
+                              read-only?)
+                :multiline true
+                :variant "outlined"
+                :on-change (fn [v]
+                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
+                :label "Tiivistelmä"
+                :value (or (get-in edit-data [:ptv :summary selected-tab])
+                           (get-in sports-site [:ptv :summary selected-tab]))}])
 
             ;; Summary audit feedback
             ($ audit-feedback-component
@@ -420,17 +420,17 @@
 
            ;; Description
             (r/as-element
-             [lui/text-field
-              {:disabled (or loading?
-                             read-only?)
-               :variant "outlined"
-               :rows 5
-               :multiline true
-               :on-change (fn [v]
-                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
-               :label "Kuvaus"
-               :value (or (get-in edit-data [:ptv :description selected-tab])
-                          (get-in sports-site [:ptv :description selected-tab]))}])
+              [lui/text-field
+               {:disabled (or loading?
+                              read-only?)
+                :variant "outlined"
+                :rows 5
+                :multiline true
+                :on-change (fn [v]
+                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
+                :label "Kuvaus"
+                :value (or (get-in edit-data [:ptv :description selected-tab])
+                           (get-in sports-site [:ptv :description selected-tab]))}])
 
             ;; Description audit feedback
             ($ audit-feedback-component

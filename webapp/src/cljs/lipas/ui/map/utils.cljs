@@ -148,12 +148,12 @@
   (->> geom-coll
        :geometries
        (map-indexed
-        (fn [idx g]
-          {:type "Feature"
-           :geometry g
-           :properties
-           {:id (str (gensym))
-            :name (str "geom-" (inc idx))}}))))
+         (fn [idx g]
+           {:type "Feature"
+            :geometry g
+            :properties
+            {:id (str (gensym))
+             :name (str "geom-" (inc idx))}}))))
 
 (defn normalize-geom-colls
   "Handles a special case where geometries are contained in a
@@ -173,19 +173,19 @@
   (->> multi-geom
        :coordinates
        (map-indexed
-        (fn [idx coords]
-          {:type "Feature"
-           :geometry
-           {:type geom-type
-            :coordinates coords}
-           :properties
-           (merge
-            props
-            {:id (str (gensym))}
-            (when-let [s (:nimi props)]
-              {:nimi (str s " osa " (inc idx))})
-            (when-let [s (:name props)]
-              {:name (str s " part " (inc idx))}))}))))
+         (fn [idx coords]
+           {:type "Feature"
+            :geometry
+            {:type geom-type
+             :coordinates coords}
+            :properties
+            (merge
+              props
+              {:id (str (gensym))}
+              (when-let [s (:nimi props)]
+                {:nimi (str s " osa " (inc idx))})
+              (when-let [s (:name props)]
+                {:name (str s " part " (inc idx))}))}))))
 
 (defn normalize-multi-geoms
   "Makes an effort to convert multi-geoms into single geoms."
@@ -417,11 +417,11 @@
    (let [padding (or (-> map-ctx :mode :content-padding) #js [0 0 0 0])]
      (when (and view lmap (some finite? extent))
        (.fit view extent (clj->js
-                          (merge
-                           {:size (.getSize lmap)
-                            :padding (clj->js padding)
-                            :constrainResolution true}
-                           opts))))
+                           (merge
+                             {:size (.getSize lmap)
+                              :padding (clj->js padding)
+                              :constrainResolution true}
+                             opts))))
      map-ctx)))
 
 (defn fit-to-features! [map-ctx fs opts]

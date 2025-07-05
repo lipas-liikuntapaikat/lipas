@@ -69,10 +69,10 @@
     [mui/form-control {:full-width true :margin "normal"}
      [mui/form-control-label
       {:control (r/as-element
-                 [mui/switch
-                  {:checked use-bbox-filter?
-                   :on-change #(rf/dispatch [::events/update-bbox-filter-and-refresh
-                                             (.. % -target -checked)])}])
+                  [mui/switch
+                   {:checked use-bbox-filter?
+                    :on-change #(rf/dispatch [::events/update-bbox-filter-and-refresh
+                                              (.. % -target -checked)])}])
        :label "Filter by current map view"}]
      [mui/form-helper-text
       (if use-bbox-filter?
@@ -154,38 +154,38 @@
      [mui/grid {:item true :xs 12}
       [mui/form-control-label
        {:control (r/as-element
-                  [mui/switch
-                   {:checked (boolean (:year-round-only filters))
-                    :on-change #(rf/dispatch [::events/update-filter-and-refresh
-                                              :year-round-only
-                                              (.. % -target -checked)])}])
+                   [mui/switch
+                    {:checked (boolean (:year-round-only filters))
+                     :on-change #(rf/dispatch [::events/update-filter-and-refresh
+                                               :year-round-only
+                                               (.. % -target -checked)])}])
         :label "Year-round facilities only"}]]
      [mui/grid {:item true :xs 12}
       [mui/form-control-label
        {:control (r/as-element
-                  [mui/switch
-                   {:checked (boolean (:retkikartta? filters))
-                    :on-change #(rf/dispatch [::events/update-filter-and-refresh
-                                              :retkikartta?
-                                              (.. % -target -checked)])}])
+                   [mui/switch
+                    {:checked (boolean (:retkikartta? filters))
+                     :on-change #(rf/dispatch [::events/update-filter-and-refresh
+                                               :retkikartta?
+                                               (.. % -target -checked)])}])
         :label "Retkikartta sites only"}]]
      [mui/grid {:item true :xs 12}
       [mui/form-control-label
        {:control (r/as-element
-                  [mui/switch
-                   {:checked (boolean (:harrastuspassi? filters))
-                    :on-change #(rf/dispatch [::events/update-filter-and-refresh
-                                              :harrastuspassi?
-                                              (.. % -target -checked)])}])
+                   [mui/switch
+                    {:checked (boolean (:harrastuspassi? filters))
+                     :on-change #(rf/dispatch [::events/update-filter-and-refresh
+                                               :harrastuspassi?
+                                               (.. % -target -checked)])}])
         :label "Harrastuspassi sites only"}]]
      [mui/grid {:item true :xs 12}
       [mui/form-control-label
        {:control (r/as-element
-                  [mui/switch
-                   {:checked (boolean (:school-use? filters))
-                    :on-change #(rf/dispatch [::events/update-filter-and-refresh
-                                              :school-use?
-                                              (.. % -target -checked)])}])
+                   [mui/switch
+                    {:checked (boolean (:school-use? filters))
+                     :on-change #(rf/dispatch [::events/update-filter-and-refresh
+                                               :school-use?
+                                               (.. % -target -checked)])}])
         :label "School use only"}]]]))
 
 (defn visual-controls []
