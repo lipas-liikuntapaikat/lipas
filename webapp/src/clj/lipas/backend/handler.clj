@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v2 :as v2]
+            [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
@@ -47,6 +48,7 @@
    :user-not-found (exception-handler 404 :user-not-found)
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
+   :invalid-payload (exception-handler 400 :invalid-payload)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -841,6 +843,7 @@
              {:status 200
               :body (heatmap/get-facets ctx params)}))}}]
 
+      (bulk-ops-handler/routes ctx)
       (ptv-handler/routes ctx)
       (jobs-handler/routes ctx)]
 

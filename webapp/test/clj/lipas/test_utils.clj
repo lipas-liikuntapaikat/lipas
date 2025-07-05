@@ -244,21 +244,23 @@
 (def app (:lipas/app system))
 (def search (:lipas/search system))
 
-(defn prune-es! []
-  (let [client (:client search)
-        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                  (-> search :indices :analysis :diversity) diversity/mappings
-                  (-> search :indices :lois :search) (:lois search/mappings)}]
+(defn prune-es!
+  ([] (prune-es! search))
+  ([search]
+   (let [client (:client search)
+         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                   (-> search :indices :analysis :diversity) diversity/mappings
+                   (-> search :indices :lois :search) (:lois search/mappings)}]
 
-    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
-      (try
-        (search/delete-index! client idx-name)
-        (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
-      (when-let [mapping (mappings idx-name)]
-        (search/create-index! client idx-name mapping)))))
+     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+       (try
+         (search/delete-index! client idx-name)
+         (catch Exception ex
+           (when (not= "index_not_found_exception"
+                       (-> ex ex-data :body :error :root_cause first :type))
+             (throw ex))))
+       (when-let [mapping (mappings idx-name)]
+         (search/create-index! client idx-name mapping))))))
 
 (comment
   (init-db!)
