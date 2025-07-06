@@ -356,6 +356,91 @@
       ;; Assert org admin can view users in org A
       (is (= 200 (:status resp-org-a)) "Org admin should be able to view users in their own org"))))
 
+(deftest update-org-ptv-config-test
+  (testing "LIPAS admin can update organization PTV configuration"
+    (let [[org-a _org-b] (create-test-orgs)
+          org-id (:id org-a)
+          admin-user (gen-admin-user)
+          admin-token (jwt/create-token admin-user)
+
+          ptv-config {:ptv-org-id #uuid "92374b0f-7d3c-4017-858e-666ee3ca2761"
+                      :prod-org-id #uuid "d0a60c4c-89ff-4c09-a948-a2ecca780105"
+                      :test-credentials {:username "API15@testi.fi"
+                                         :password "APIinterfaceUser15-1015*"}
+                      :city-codes [564]
+                      :owners ["city" "city-main-owner"]
+                      :supported-languages ["fi" "se" "en"]
+                      :sync-enabled true}
+
+          resp (test-utils/app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json ptv-config))
+                                   (test-utils/token-header admin-token)))]
+
+      (is (= 200 (:status resp)) "Admin should be able to update PTV config")
+      ;; Verify the config was saved
+      (let [all-orgs (backend-org/all-orgs (test-db))
+            updated-org (->> all-orgs
+                             (filter (fn [org] (= org-id (:id org))))
+                             first)
+            saved-config (:ptv-data updated-org)]
+        (is (= (str (:ptv-org-id ptv-config)) (:ptv-org-id saved-config)))
+        (is (= (str (:prod-org-id ptv-config)) (:prod-org-id saved-config)))
+        (is (= (:test-credentials ptv-config) (:test-credentials saved-config)))
+        (is (= (:city-codes ptv-config) (:city-codes saved-config)))
+        (is (= (:owners ptv-config) (:owners saved-config)))
+        (is (= (:supported-languages ptv-config) (:supported-languages saved-config)))
+        (is (= (:sync-enabled ptv-config) (:sync-enabled saved-config))))))
+
+  (testing "Non-admin cannot update organization PTV configuration"
+    (let [[org-a _org-b] (create-test-orgs)
+          org-id (:id org-a)
+          org-admin (gen-org-admin-user org-id)
+          org-admin-token (jwt/create-token org-admin)
+          regular-user (gen-regular-user)
+          regular-token (jwt/create-token regular-user)
+
+          ptv-config {:ptv-org-id #uuid "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+                      :city-codes [91]
+                      :owners ["city"]
+                      :supported-languages ["fi"]
+                      :sync-enabled false}
+
+          ;; Try with org admin
+          resp-org-admin (test-utils/app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+                                             (mock/content-type "application/json")
+                                             (mock/body (test-utils/->json ptv-config))
+                                             (test-utils/token-header org-admin-token)))
+
+          ;; Try with regular user
+          resp-regular (test-utils/app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+                                           (mock/content-type "application/json")
+                                           (mock/body (test-utils/->json ptv-config))
+                                           (test-utils/token-header regular-token)))]
+
+      (is (= 403 (:status resp-org-admin)) "Org admin should not be able to update PTV config")
+      (is (= 403 (:status resp-regular)) "Regular user should not be able to update PTV config")))
+
+  (testing "Invalid PTV config data is rejected"
+    (let [[org-a _org-b] (create-test-orgs)
+          org-id (:id org-a)
+          admin-user (gen-admin-user)
+          admin-token (jwt/create-token admin-user)
+
+          ;; Invalid config - missing required fields
+          invalid-config {:ptv-org-id "not-a-uuid" ; Should be UUID
+                          :city-codes ["not-a-number"] ; Should be numbers
+                          :owners ["invalid-owner-type"] ; Invalid enum value
+                          :supported-languages ["xx"] ; Invalid language code
+                          :sync-enabled "not-a-boolean"} ; Should be boolean
+
+          resp (test-utils/app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json invalid-config))
+                                   (test-utils/token-header admin-token)))]
+
+      (is (= 400 (:status resp)) "Invalid config should be rejected"))))
+
 (comment
   ;; Cross org tests are currently failing
   (clojure.test/run-test-var #'cross-org-view-users-test)
@@ -368,4 +453,6 @@
   (clojure.test/run-test-var #'add-user-by-email-user-not-found-test)
   (clojure.test/run-test-var #'add-user-by-email-success-test)
   (clojure.test/run-test-var #'create-org-invalid-data-test)
-  (clojure.test/run-test-var #'create-org-success-test))
+  (clojure.test/run-test-var #'create-org-success-test)
+  (clojure.test/run-test-var #'update-org-ptv-config-test)
+  )

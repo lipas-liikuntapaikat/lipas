@@ -5,11 +5,32 @@
 
 ;; TODO: How to ensure values are set when needed?
 (def ptv-data
+  "Schema for PTV integration configuration"
   [:map
-   [:ptv-org-id {:optional true} [:maybe common/uuid]]
-   [:city-codes {:optional true} [:vector number?]]
-   [:owners {:optional true} [:vector [:enum "city" "city-main-owner"]]]
-   [:supported-languages {:optional true} [:vector [:enum "fi" "se" "en"]]]])
+   [:ptv-org-id {:optional true
+                 :description "PTV organization UUID"}
+    [:maybe common/uuid]]
+   [:prod-org-id {:optional true
+                  :description "Special UUID used in production for apiUserOrganisation"}
+    [:maybe common/uuid]]
+   [:test-credentials {:optional true
+                       :description "API credentials for test environment"}
+    [:maybe [:map
+             [:username [:string {:min 1}]]
+             [:password [:string {:min 1}]]]]]
+   [:city-codes {:optional true
+                 :description "Municipality codes for filtering eligible sites"}
+    [:vector [:int {:min 1 :max 999}]]]
+   [:owners {:optional true
+             :description "Ownership types for filtering"}
+    [:vector [:enum "city" "city-main-owner" "municipal-consortium"
+              "state" "private" "organization" "other"]]]
+   [:supported-languages {:optional true
+                          :description "Languages supported by the org in PTV"}
+    [:vector [:enum "fi" "se" "en"]]]
+   [:sync-enabled {:optional true
+                   :description "Global flag to enable/disable PTV sync for the organization"}
+    [:maybe :boolean]]])
 
 (def org-id :uuid)
 
@@ -51,3 +72,18 @@
 ;; Schema for API updates (no ID required since it's in URL)
 (def org-update
   (mu/dissoc org :id))
+
+ ;; Schema for PTV config updates (stricter validation for API endpoint)
+(def ptv-config-update
+  [:map
+   [:ptv-org-id common/uuid]
+   [:prod-org-id {:optional true} common/uuid]
+   [:test-credentials {:optional true}
+    [:map
+     [:username [:string {:min 1}]]
+     [:password [:string {:min 1}]]]]
+   [:city-codes [:sequential [:int {:min 1 :max 999}]]]
+   [:owners [:sequential [:enum "city" "city-main-owner" "municipal-consortium"
+                          "state" "private" "organization" "other"]]]
+   [:supported-languages [:sequential [:enum "fi" "se" "en"]]]
+   [:sync-enabled :boolean]])

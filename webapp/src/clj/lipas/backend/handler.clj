@@ -333,7 +333,18 @@
                             role (-> req :parameters :body :role)
                             result (org/add-org-user-by-email! db org-id email role)]
                         {:status (if (:success? result) 200 400)
-                         :body result}))}}]]]
+                         :body result}))}}]
+        ["/ptv-config"
+         {;; Only LIPAS admins can configure PTV settings
+          :require-privilege :users/manage
+          :put
+          {:parameters {:body org-schema/ptv-config-update}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            ptv-config (-> req :parameters :body)]
+                        (org/update-org-ptv-config! db org-id ptv-config)
+                        {:status 200
+                         :body {:message "PTV configuration updated successfully"}}))}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post

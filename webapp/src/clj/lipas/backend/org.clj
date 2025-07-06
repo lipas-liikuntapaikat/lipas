@@ -95,6 +95,11 @@
          (map (fn [user]
                 (db-utils/->kebab-case-keywords user))))))
 
+(defn update-org-ptv-config!
+  "Update organization's PTV configuration. Only updates the ptv_data field."
+  [db org-id ptv-config]
+  (sql/update! db :org {:ptv-data ptv-config} ["id = ?" org-id] jdbc/unqualified-snake-kebab-opts))
+
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))
 
