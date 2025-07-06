@@ -80,3 +80,15 @@
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user _]
     (roles/check-privilege user {} :users/manage)))
+
+(rf/reg-sub ::is-org-admin?
+  (fn [[_ org-id] _]
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id org-id} :org/manage]))
+  (fn [v _]
+    v))
+
+(rf/reg-sub ::is-org-member?
+  (fn [[_ org-id] _]
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id org-id} :org/member]))
+  (fn [v _]
+    v))

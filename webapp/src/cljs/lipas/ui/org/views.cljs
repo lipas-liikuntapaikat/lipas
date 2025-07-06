@@ -105,7 +105,13 @@
         org @(rf/subscribe [::subs/editing-org])
         org-users @(rf/subscribe [::subs/org-users])
         org-valid? @(rf/subscribe [::subs/org-valid?])
-        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
+        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
+        is-org-admin? @(rf/subscribe [::subs/is-org-admin? org-id])
+        is-org-member? @(rf/subscribe [::subs/is-org-member? org-id])]
+
+    (println "Is org member? " is-org-member?)
+    (println "Is org admin? " is-org-admin?)
+    (println "Is LIPAS admin? " is-lipas-admin?)
 
     [mui/grid {:container true
                :spacing 2
@@ -121,50 +127,59 @@
           :value (:name org)
           :spec [:string {:min 1 :max 128}]
           :required true
+          :disabled (not (or is-lipas-admin? is-org-admin?))
           :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
         [text-fields/text-field-controlled
          {:label (tr :lipas.org/phone)
           :value (get-in org [:data :primary-contact :phone])
           :spec sites-schema/phone-number
+          :disabled (not (or is-lipas-admin? is-org-admin?))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :phone] x]))}]
         [text-fields/text-field-controlled
          {:label (tr :lipas.org/email)
           :value (get-in org [:data :primary-contact :email])
           :spec sites-schema/email
+          :disabled (not (or is-lipas-admin? is-org-admin?))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :email] x]))}]
         [text-fields/text-field-controlled
          {:label (tr :lipas.org/website)
           :value (get-in org [:data :primary-contact :website])
           :spec sites-schema/www
+          :disabled (not (or is-lipas-admin? is-org-admin?))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :website] x]))}]
         [text-fields/text-field-controlled
          {:label (tr :lipas.org/reservations-link)
           :value (get-in org [:data :primary-contact :reservations-link])
           :spec sites-schema/reservations-link
+          :disabled (not (or is-lipas-admin? is-org-admin?))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservations-link] x]))}]
 
         [mui/grid {:item true}
          [mui/box {:sx {:display "flex" :gap 2}}
-          [mui/button
-           {:variant "contained"
-            :color "secondary"
-            :disabled (not org-valid?)
-            :on-click #(rf/dispatch [::events/save-org org])}
-           [mui/icon {:sx {:mr 1}} "save"]
-           (tr :actions/save)]
-          [mui/button
-           {:variant "outlined"
-            :on-click #(rfe/navigate :lipas.ui.routes/org-bulk-operations {:path-params {:org-id org-id}})}
-           [mui/icon {:sx {:mr 1}} "update"]
-           (tr :lipas.org/bulk-operations)]]]]]
+          (when (or is-lipas-admin? is-org-admin?)
+            [mui/button
+             {:variant "contained"
+              :color "secondary"
+              :disabled (not org-valid?)
+              :on-click #(rf/dispatch [::events/save-org org])}
+             [mui/icon {:sx {:mr 1}} "save"]
+             (tr :actions/save)])
+          (when (or is-lipas-admin? is-org-admin? is-org-member?)
+            [mui/button
+             {:variant "outlined"
+              :on-click #(rfe/navigate :lipas.ui.routes/org-bulk-operations {:path-params {:org-id org-id}})}
+             [mui/icon {:sx {:mr 1}} "update"]
+             (tr :lipas.org/bulk-operations)])]]]]
 
       [lui/form-card
        {:title (tr :lipas.org/users-section)
         :md 12}
-       ;; Role-based user management form
-       (if is-lipas-admin?
-         [admin-user-management tr org-id] ; LIPAS admin form
-         [org-admin-user-management tr org-id]) ; Org admin form
+       ;; Only show user management form for admins
+       (when (or is-lipas-admin? is-org-admin?)
+         (if is-lipas-admin?
+           [admin-user-management tr org-id] ; LIPAS admin form
+           [org-admin-user-management tr org-id])) ; Org admin form
+       ;; Show members list to all org members
        [:> Table
         [:> TableHead
          [:> TableRow
@@ -182,12 +197,14 @@
                    :when (contains? (set (:org-id x)) org-id)]
                [:span {:key (str (:id item) "-" role)}
                 (tr (keyword :lipas.user.permissions.roles.role-names role))
-                [:> Button
-                 {:size "small"
-                  :color "error"
-                  :on-click (fn [_e]
-                              (rf/dispatch [::events/org-user-update org-id (:id item) role "remove"]))}
-                 [:> DeleteIcon]]])]])]]]]]))
+                ;; Only show delete button for admins
+                (when (or is-lipas-admin? is-org-admin?)
+                  [:> Button
+                   {:size "small"
+                    :color "error"
+                    :on-click (fn [_e]
+                                (rf/dispatch [::events/org-user-update org-id (:id item) role "remove"]))}
+                   [:> DeleteIcon]])])]])]]]]]))
 
 (defn orgs-list-view []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])

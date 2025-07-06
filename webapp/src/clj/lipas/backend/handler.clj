@@ -290,12 +290,12 @@
             {:status 200
              :body (org/create-org db (-> req :parameters :body))})}}]
        ["/:org-id"
-        {;; Check privilege for this specific org-id (org-admins)
-         :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
-         :parameters {:path [:map
+        {:parameters {:path [:map
                              [:org-id org-schema/org-id]]}}
         [""
-         {:put
+         {;; Only org-admins can update org details
+          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :put
           {:parameters {:body org-schema/org}
            :handler (fn [req]
                       (org/update-org! db
@@ -305,11 +305,15 @@
                        :body {}})}}]
         ["/users"
          {:get
-          {:handler (fn [req]
+          {;; Both org-admins and org-members can view users
+           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/member]
+           :handler (fn [req]
                       {:status 200
                        :body (org/get-org-users db (-> req :parameters :path :org-id))})}
           :post
-          {:parameters {:body org-schema/user-updates}
+          {;; Only org-admins can modify users
+           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+           :parameters {:body org-schema/user-updates}
            :handler (fn [req]
                       (org/update-org-users! db
                                              (-> req :parameters :path :org-id)
@@ -317,7 +321,9 @@
                       {:status 200
                        :body {}})}}]
         ["/add-user-by-email"
-         {:post
+         {;; Only org-admins can add users
+          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :post
           {:parameters {:body [:map
                                [:email :string]
                                [:role [:enum "org-admin" "org-user"]]]}

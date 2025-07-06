@@ -190,10 +190,10 @@
 
 (deftest get-org-users-test
   (testing "Successfully retrieves organization users"
-    (let [admin-user (gen-admin-user)
-          target-user (gen-regular-user)
+    (let [target-user (gen-regular-user)
           [org1 _] (create-test-orgs)
           org-id (:id org1)
+          admin-user (gen-org-admin-user org-id)
           token (jwt/create-token admin-user)
 
           ;; First add a user to the org
