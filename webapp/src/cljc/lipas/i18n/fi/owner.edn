@@ -1,9 +1,9 @@
-{:unknown "Ei tietoa",
+{:city "Kunta",
+ :city-main-owner "Kuntaenemmistöinen yritys",
+ :company-ltd "Yritys",
+ :foundation "Säätiö",
  :municipal-consortium "Kuntayhtymä",
  :other "Muu",
- :company-ltd "Yritys",
- :city "Kunta",
- :state "Valtio",
  :registered-association "Rekisteröity yhdistys",
- :foundation "Säätiö",
- :city-main-owner "Kuntaenemmistöinen yritys"}
+ :state "Valtio",
+ :unknown "Ei tietoa"}

@@ -1,5 +1,5 @@
-{:headline "Other object",
- :category "Category",
+{:category "Category",
+ :headline "Other object",
  :status "Status",
  :type "Object Type",
  :type-and-category-disclaimer

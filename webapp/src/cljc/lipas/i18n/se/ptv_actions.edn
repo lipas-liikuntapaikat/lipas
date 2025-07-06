@@ -1,10 +1,10 @@
-{:select-integration "Välj anslutningssätt",
+{:export "Skicka till",
  :export-disclaimer
  "Jag har läst beskrivningarna och vill att denna objekt skickas till PTV.",
- :select-service-channel "Välj servicepunkt",
- :select-languages "Välj språk",
- :select-service "Välj service",
  :generate-with-ai
  "Generera beskrivningar med artificiell intelligens",
- :export "Skicka till",
- :select-org "Välj organisation"}
+ :select-integration "Välj anslutningssätt",
+ :select-languages "Välj språk",
+ :select-org "Välj organisation",
+ :select-service "Välj service",
+ :select-service-channel "Välj servicepunkt"}

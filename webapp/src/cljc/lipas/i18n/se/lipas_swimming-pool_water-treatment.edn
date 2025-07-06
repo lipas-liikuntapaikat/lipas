@@ -1,5 +1,5 @@
-{:filtering-methods "E-post",
+{:activated-carbon? "",
+ :filtering-methods "E-post",
  :headline "Kontaktuppgifter",
  :ozonation? "E-post",
- :uv-treatment? "Kontaktuppgifter",
- :activated-carbon? ""}
+ :uv-treatment? "Kontaktuppgifter"}

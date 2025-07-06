@@ -1,18 +1,18 @@
-{:headline "Kirjaudu",
- :login-here "täältä",
- :login-with-password "Kirjaudu salasanalla",
- :password "Salasana",
- :logout "Kirjaudu ulos",
- :username "Sähköposti / käyttäjätunnus",
+{:bad-credentials "Käyttäjätunnus tai salasana ei kelpaa",
+ :forgot-password? "Unohtuiko salasana?",
+ :headline "Kirjaudu",
+ :login "Kirjaudu",
  :login-help
  "Jos olet jo LIPAS-käyttäjä, voit tilata suoran sisäänkirjautumislinkin sähköpostiisi",
- :login "Kirjaudu",
+ :login-here "täältä",
+ :login-with-magic-link "Kirjaudu sähköpostilla",
+ :login-with-password "Kirjaudu salasanalla",
+ :logout "Kirjaudu ulos",
  :magic-link-help
  "Jos olet jo LIPAS-käyttäjä, voit tilata suoran sisäänkirjautumislinkin sähköpostiisi. Linkkiä käyttämällä sinun  ei tarvitse muistaa salasanaasi.",
- :order-magic-link "Lähetä linkki sähköpostiini",
- :login-with-magic-link "Kirjaudu sähköpostilla",
- :bad-credentials "Käyttäjätunnus tai salasana ei kelpaa",
  :magic-link-ordered
  "Linkki on lähetetty ja sen pitäisi saapua  sähköpostiisi parin minuutin sisällä. Tarkistathan myös  roskapostin!",
- :username-example "paavo.paivittaja@kunta.fi",
- :forgot-password? "Unohtuiko salasana?"}
+ :order-magic-link "Lähetä linkki sähköpostiini",
+ :password "Salasana",
+ :username "Sähköposti / käyttäjätunnus",
+ :username-example "paavo.paivittaja@kunta.fi"}

@@ -1,6 +1,6 @@
-{:headline "Korkeusprofiili",
+{:distance-from-start-km "Etäisyys alusta (km)",
  :distance-from-start-m "Etäisyys alusta (m)",
- :distance-from-start-km "Etäisyys alusta (km)",
+ :headline "Korkeusprofiili",
  :height-from-sea-level-m "Korkeus merenpinnasta (m)",
  :total-ascend "Nousua yhteensä",
  :total-descend "Laskua yhteensä"}

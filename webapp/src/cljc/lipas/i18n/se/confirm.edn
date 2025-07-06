@@ -1,7 +1,7 @@
-{:discard-changes? "Vill du förkasta ändringar?",
+{:delete-confirm "Vill du verkligen ta bort raden?",
+ :discard-changes? "Vill du förkasta ändringar?",
  :headline "Bekräftelse",
  :no "Nej",
- :delete-confirm "Vill du verkligen ta bort raden?",
  :resurrect? "Vill du spara grunddata?",
  :save-basic-data? "Vill du spara grunddata?",
  :yes "Ja"}

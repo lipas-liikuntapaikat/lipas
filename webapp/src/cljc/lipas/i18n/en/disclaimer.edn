@@ -1,5 +1,5 @@
-{:headline "NOTICE!",
+{:data-ownership
+ "The LIPAS geographic information system's data repository is owned and managed by the University of Jyväskylä. The University of Jyväskylä reserves the rights to all content, information, and material added to the system and created during the system's development. The user who adds material to the system is responsible for ensuring that the material is accurate and does not infringe on third-party copyrights. The University of Jyväskylä is not liable for claims made by third parties regarding the material. By adding data to the LIPAS geographic information system, the user is considered to have accepted the use of the added material in the system as part of the data repository. The data stored in the LIPAS database is open and freely available under the CC 4.0 Attribution license.",
+ :headline "NOTICE!",
  :test-version
- "This is LIPAS TEST-ENVIRONMENT. Changes made here  don't affect the production system.",
- :data-ownership
- "The LIPAS geographic information system's data repository is owned and managed by the University of Jyväskylä. The University of Jyväskylä reserves the rights to all content, information, and material added to the system and created during the system's development. The user who adds material to the system is responsible for ensuring that the material is accurate and does not infringe on third-party copyrights. The University of Jyväskylä is not liable for claims made by third parties regarding the material. By adding data to the LIPAS geographic information system, the user is considered to have accepted the use of the added material in the system as part of the data repository. The data stored in the LIPAS database is open and freely available under the CC 4.0 Attribution license."}
+ "This is LIPAS TEST-ENVIRONMENT. Changes made here  don't affect the production system."}

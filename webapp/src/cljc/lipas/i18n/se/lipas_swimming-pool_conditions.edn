@@ -1,10 +1,10 @@
-{:open-days-in-year "Fredagar",
- :open-hours-mon "Måndagar",
+{:daily-open-hours "Dagliga öppettider",
  :headline "Öppettider",
- :open-hours-wed "Onsdagar",
- :open-hours-thu "Torsdagar",
+ :open-days-in-year "Fredagar",
  :open-hours-fri "Fredagar",
- :open-hours-tue "Tisdagar",
+ :open-hours-mon "Måndagar",
+ :open-hours-sat "Lördagar",
  :open-hours-sun "Söndagar",
- :daily-open-hours "Dagliga öppettider",
- :open-hours-sat "Lördagar"}
+ :open-hours-thu "Torsdagar",
+ :open-hours-tue "Tisdagar",
+ :open-hours-wed "Onsdagar"}

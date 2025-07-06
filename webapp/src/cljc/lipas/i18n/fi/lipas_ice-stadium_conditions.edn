@@ -1,19 +1,19 @@
-{:open-months "Aukiolokuukaudet vuodessa",
- :headline "Käyttöolosuhteet",
- :ice-resurfacer-fuel "Jäänhoitokoneen polttoaine",
- :stand-temperature-c
- "Katsomon tavoiteltu keskilämpötila  ottelun aikana",
- :ice-average-thickness-mm "Jään keskipaksuus mm",
+{:air-humidity-max "Ilman suhteellinen kosteus % max",
  :air-humidity-min "Ilman suhteellinen kosteus % min",
- :daily-maintenances-weekends "Jäähoitokerrat viikonlppuina",
- :air-humidity-max "Ilman suhteellinen kosteus % max",
+ :average-water-consumption-l
+ "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)",
  :daily-maintenances-week-days "Jäähoitokerrat arkipäivinä",
+ :daily-maintenances-weekends "Jäähoitokerrat viikonlppuina",
+ :daily-open-hours "Käyttötunnit päivässä",
+ :headline "Käyttöolosuhteet",
+ :ice-average-thickness-mm "Jään keskipaksuus mm",
+ :ice-resurfacer-fuel "Jäänhoitokoneen polttoaine",
+ :ice-surface-temperature-c "Jään pinnan lämpötila",
  :maintenance-water-temperature-c
  "Jäähoitoveden  lämpötila (tavoite +40)",
- :ice-surface-temperature-c "Jään pinnan lämpötila",
- :weekly-maintenances "Jäänhoitokerrat viikossa",
+ :open-months "Aukiolokuukaudet vuodessa",
  :skating-area-temperature-c
  "Luistelualueen lämpötila 1 m korkeudella",
- :daily-open-hours "Käyttötunnit päivässä",
- :average-water-consumption-l
- "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)"}
+ :stand-temperature-c
+ "Katsomon tavoiteltu keskilämpötila  ottelun aikana",
+ :weekly-maintenances "Jäänhoitokerrat viikossa"}

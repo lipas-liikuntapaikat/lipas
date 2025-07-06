@@ -1,7 +1,7 @@
-{:admin? "Admin",
+{:activities "Aktiviteetit",
+ :admin? "Admin",
  :all-cities? "Oikeus kaikkiin kuntiin",
  :all-types? "Oikeus kaikkiin tyyppeihin",
  :cities "Kunnat",
  :sports-sites "Liikunta- ja ulkoilupaikat",
- :types "Tyypit",
- :activities "Aktiviteetit"}
+ :types "Tyypit"}

@@ -1,4 +1,4 @@
 {:lift "Lyft i bassängen",
- :slope "Ramp",
+ :low-rise-stairs "",
  :mobile-lift "",
- :low-rise-stairs ""}
+ :slope "Ramp"}

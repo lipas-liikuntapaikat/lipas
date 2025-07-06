@@ -1,6 +1,6 @@
-{:service-water-heating "Nej",
- :snow-melting "Vill du förkasta ändringar?",
- :track-heating "Vill du förkasta ändringar?",
+{:hall-heating "",
  :maintenance-water-heating "",
- :hall-heating "",
- :other-space-heating ""}
+ :other-space-heating "",
+ :service-water-heating "Nej",
+ :snow-melting "Vill du förkasta ändringar?",
+ :track-heating "Vill du förkasta ändringar?"}

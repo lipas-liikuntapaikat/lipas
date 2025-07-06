@@ -1,10 +1,10 @@
-{:headline "",
- :refrigerant-solution-amount-l "",
+{:condensate-energy-main-targets "",
+ :condensate-energy-recycling? "",
+ :headline "",
  :individual-metering? "",
  :original? "",
- :refrigerant "",
- :refrigerant-solution "",
- :condensate-energy-main-targets "",
  :power-kw "",
- :condensate-energy-recycling? "",
- :refrigerant-amount-kg ""}
+ :refrigerant "",
+ :refrigerant-amount-kg "",
+ :refrigerant-solution "",
+ :refrigerant-solution-amount-l ""}

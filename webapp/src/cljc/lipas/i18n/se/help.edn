@@ -1,9 +1,9 @@
-{:headline "Hjälp",
- :available-pages "Sidor i detta avsnitt",
+{:available-pages "Sidor i detta avsnitt",
+ :headline "Hjälp",
+ :manage-content "Redigera hjälpinnehåll",
  :permissions-help
  "Om du behöver ytterligare användarrättigheter, kontakt ",
  :permissions-help-body
  "Jag behöver användarrättigheter till följande platser:",
  :permissions-help-subject "Jag behöver mera användarrättigheter",
- :privacy-policy "Privacy policy",
- :manage-content "Redigera hjälpinnehåll"}
+ :privacy-policy "Privacy policy"}

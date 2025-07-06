@@ -1,4 +1,4 @@
-{:name "Type",
- :main-category "Main category",
+{:main-category "Main category",
+ :name "Type",
  :sub-category "Sub category",
  :type-code "Type code"}

@@ -1,9 +1,9 @@
 {:contacts "Kontaktuppgifter",
  :download-as-excel "Skapa Excel",
+ :excel-limit-exceeded
+ "För stor Excel-fil (> 10 000 sökresultat). Begränsa sökningen eller välj ett annat filformat.",
+ :file-format "Filformat",
  :select-fields "Välj fält för rapport",
  :selected-fields "Vald fält",
  :shortcuts "Genvägar",
- :tooltip "Skapa Excel-rapport från resultaten",
- :file-format "Filformat",
- :excel-limit-exceeded
- "För stor Excel-fil (> 10 000 sökresultat). Begränsa sökningen eller välj ett annat filformat."}
+ :tooltip "Skapa Excel-rapport från resultaten"}

@@ -1,7 +1,7 @@
-{:description
+{:analysis-tools "Liikuntaolosuhteiden analysointityökalut",
+ :description
  "LIPAS är en landsomfattande databas för offentliga finländska idrottsplatser.",
  :headline "Idrottsanläggningar",
  :open-interfaces "Öppna gränssnitt",
  :up-to-date-information "Aktuell data om finska idrottsanläggningar",
- :updating-tools "Uppdateringsverktyg",
- :analysis-tools "Liikuntaolosuhteiden analysointityökalut"}
+ :updating-tools "Uppdateringsverktyg"}

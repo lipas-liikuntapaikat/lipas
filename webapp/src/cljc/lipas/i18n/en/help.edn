@@ -1,8 +1,8 @@
 {:headline "Help",
+ :manage-content "Manage help content",
  :permissions-help
  "Please contact us in case you need more permissions",
  :permissions-help-body
  "I need permissions to following sports facilities:",
  :permissions-help-subject "I need more permissions",
- :privacy-policy "Privacy policy",
- :manage-content "Manage help content"}
+ :privacy-policy "Privacy policy"}

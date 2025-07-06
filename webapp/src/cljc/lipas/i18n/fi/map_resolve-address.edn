@@ -1,7 +1,7 @@
-{:tooltip "Selvitä osoite automaattisesti",
+{:addresses "Lähimmät osoitteet",
  :choose-address "Valitse osoite",
  :helper-text1
  "Työkalu hakee lähimmät osoitteet liikuntapaikan geometrian perusteella.",
  :helper-text2
  "Valitse katuosoite parhaan tietosi mukaan. Voit täydentää osoitenumeron OK-napin painamisen jälkeen.",
- :addresses "Lähimmät osoitteet"}
+ :tooltip "Selvitä osoite automaattisesti"}

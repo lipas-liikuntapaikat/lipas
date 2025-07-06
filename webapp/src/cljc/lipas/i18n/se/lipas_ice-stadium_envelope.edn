@@ -1,5 +1,5 @@
-{:headline "",
+{:base-floor-structure "",
+ :headline "",
  :insulated-ceiling? "",
- :low-emissivity-coating? "",
  :insulated-exterior? "",
- :base-floor-structure ""}
+ :low-emissivity-coating? ""}

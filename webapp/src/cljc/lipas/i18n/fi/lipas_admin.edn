@@ -4,7 +4,7 @@
  "Haluatko varmasti lähettää taikalinkin käyttäjälle {1}?",
  :headline "Admin",
  :magic-link "Taikalinkki",
+ :organizations "Organisaatiot",
  :select-magic-link-template "Valitse saatekirje",
  :send-magic-link "Taikalinkki käyttäjälle {1}",
- :users "Käyttäjät",
- :organizations "Organisaatiot"}
+ :users "Käyttäjät"}

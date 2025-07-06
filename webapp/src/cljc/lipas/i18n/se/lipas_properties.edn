@@ -1,1 +1,1 @@
-{:label "Namn", :allowed-values "Möjliga värden.", :value "Värde"}
+{:allowed-values "Möjliga värden.", :label "Namn", :value "Värde"}

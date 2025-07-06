@@ -1,5 +1,5 @@
-{:headline "HUOMIO!",
+{:data-ownership
+ "LIPAS-paikkatietojärjestelmän tietovarannon omistaa ja sitä hallinnoi Jyväskylän yliopisto. Jyväskylän yliopisto pidättää oikeudet kaikkeen järjestelmään lisättyyn sekä järjestelmän kehittämisen yhteydessä luotuun sisältöön, tietoon ja aineistoon. Aineistoa järjestelmään lisäävä käyttäjä vastaa siitä, että aineisto on oikeellista eikä se loukkaa kolmannen osapuolen tekijänoikeuksia. Jyväskylän yliopisto ei vastaa aineistoon kohdistuvista kolmansien osapuolten vaateista. Lisäämällä tietoaineistoa LIPAS-paikkatietojärjestelmään käyttäjän katsotaan hyväksyneen lisäämänsä aineiston käytön järjestelmässä osana tietovarantoa. LIPAS-tietokantaan tallennettu tietoaineisto on avointa ja vapaasti käytettävissä CC 4.0 Nimeä -lisenssin mukaisesti.",
+ :headline "HUOMIO!",
  :test-version
- "Tämä on LIPAS-sovelluksen testiversio ja  tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan  Lipakseen.",
- :data-ownership
- "LIPAS-paikkatietojärjestelmän tietovarannon omistaa ja sitä hallinnoi Jyväskylän yliopisto. Jyväskylän yliopisto pidättää oikeudet kaikkeen järjestelmään lisättyyn sekä järjestelmän kehittämisen yhteydessä luotuun sisältöön, tietoon ja aineistoon. Aineistoa järjestelmään lisäävä käyttäjä vastaa siitä, että aineisto on oikeellista eikä se loukkaa kolmannen osapuolen tekijänoikeuksia. Jyväskylän yliopisto ei vastaa aineistoon kohdistuvista kolmansien osapuolten vaateista. Lisäämällä tietoaineistoa LIPAS-paikkatietojärjestelmään käyttäjän katsotaan hyväksyneen lisäämänsä aineiston käytön järjestelmässä osana tietovarantoa. LIPAS-tietokantaan tallennettu tietoaineisto on avointa ja vapaasti käytettävissä CC 4.0 Nimeä -lisenssin mukaisesti."}
+ "Tämä on LIPAS-sovelluksen testiversio ja  tarkoitettu koekäyttöön. Muutokset eivät tallennu oikeaan  Lipakseen."}

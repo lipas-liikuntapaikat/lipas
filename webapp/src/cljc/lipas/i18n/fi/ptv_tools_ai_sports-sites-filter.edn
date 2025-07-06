@@ -1,6 +1,6 @@
-{:label "Valitse liikuntapaikat",
- :all "Kaikki",
- :sync-enabled "Vietäväksi valitut",
+{:all "Kaikki",
+ :label "Valitse liikuntapaikat",
  :no-existing-description "Kaikki joista kuvaus puuttuu",
+ :sync-enabled "Vietäväksi valitut",
  :sync-enabled-no-existing-description
  "Vietäväksi valitut joista kuvaus puuttuu"}

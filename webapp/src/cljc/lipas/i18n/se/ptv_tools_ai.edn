@@ -1,6 +1,6 @@
-{:start-helper
- "Du kan justera de förslag som genereras av AI i takt med att de färdigställs.",
- :canceling "Avbryter... Vänta ett ögonblick.",
- :start "Starta",
+{:canceling "Avbryter... Vänta ett ögonblick.",
  :headline
- "Skapa beskrivningar av servicepunkter med hjälp av artificiell intelligens."}
+ "Skapa beskrivningar av servicepunkter med hjälp av artificiell intelligens.",
+ :start "Starta",
+ :start-helper
+ "Du kan justera de förslag som genereras av AI i takt med att de färdigställs."}

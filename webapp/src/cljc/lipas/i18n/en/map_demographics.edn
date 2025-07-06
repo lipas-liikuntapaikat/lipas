@@ -1,6 +1,6 @@
-{:headline "Analysis tool",
- :tooltip "Analysis tool",
- :helper-text "Select sports facility on the map.",
- :copyright1 "Statistics of Finland 2019/2020",
+{:copyright1 "Statistics of Finland 2019/2020",
  :copyright2 "1x1km and 250x250m population grids",
- :copyright3 "with license"}
+ :copyright3 "with license",
+ :headline "Analysis tool",
+ :helper-text "Select sports facility on the map.",
+ :tooltip "Analysis tool"}

@@ -1,3 +1,3 @@
-{:large "Betong",
- :small "Liten tävlingshall > 500 person",
- :competition "Tävlingshall < 3000 pers."}
+{:competition "Tävlingshall < 3000 pers.",
+ :large "Betong",
+ :small "Liten tävlingshall > 500 person"}

@@ -1,8 +1,8 @@
-{:description
+{:analysis-tools "Liikuntaolosuhteiden analysointityökalut",
+ :description
  "LIPAS on valtakunnallinen liikunnan paikkatietojärjestelmä.",
  :headline "Liikunta- ja ulkoilupaikat",
  :open-interfaces "Avoimet rajapinnat",
  :up-to-date-information
  "Ajantasainen tieto Suomen liikunta- ja ulkoilupaikoista",
- :updating-tools "Päivitystyökalut tiedontuottajille",
- :analysis-tools "Liikuntaolosuhteiden analysointityökalut"}
+ :updating-tools "Päivitystyökalut tiedontuottajille"}

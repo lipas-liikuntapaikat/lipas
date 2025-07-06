@@ -1,6 +1,6 @@
-{:tooltip "Other layers",
+{:light-traffic "Light traffic",
  :mml-kiinteisto "Property boundaries",
  :mml-property-identifiers "Property identifiers",
  :municipal-boundaries "Municipal boundaries",
- :light-traffic "Light traffic",
- :retkikartta-snowmobile-tracks "Metsähallitus snowmobile tracks"}
+ :retkikartta-snowmobile-tracks "Metsähallitus snowmobile tracks",
+ :tooltip "Other layers"}

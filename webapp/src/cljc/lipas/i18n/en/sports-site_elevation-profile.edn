@@ -1,6 +1,6 @@
-{:headline "Elevation Profile",
+{:distance-from-start-km "Distance from Start (km)",
  :distance-from-start-m "Distance from Start (m)",
- :distance-from-start-km "Distance from Start (km)",
+ :headline "Elevation Profile",
  :height-from-sea-level-m "Height from Sea Level (m)",
  :total-ascend "Total Ascent",
  :total-descend "Total Descent"}

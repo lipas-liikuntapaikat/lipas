@@ -1,5 +1,5 @@
-{:headline "Muu kohde",
- :category "Kategoria",
+{:category "Kategoria",
+ :headline "Muu kohde",
  :status "Tila",
  :type "Kohteen tyyppi",
  :type-and-category-disclaimer

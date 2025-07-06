@@ -1,12 +1,12 @@
-{:headline "Profile",
- :admin-page-link "Admin page",
- :promo1-link "Show TEAviisari targets I can update",
- :swimming-pools-link "Swimming pools",
- :promo-headline "Current News",
+{:admin-page-link "Admin page",
  :data-ownership "Terms of use ",
  :front-page-link "front page",
- :promo1-text "View PDF",
- :ice-stadiums-link "Ice stadiums",
  :greeting "Hello {1} {2}!",
+ :headline "Profile",
+ :ice-stadiums-link "Ice stadiums",
+ :promo-headline "Current News",
+ :promo1-link "Show TEAviisari targets I can update",
+ :promo1-text "View PDF",
  :promo1-topic
- "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) "}
+ "NOTICE! AN UPDATE IN THE CLASSIFICATION SYSTEM OF LIPAS SPORTS FACILITIES (11 January 2022) ",
+ :swimming-pools-link "Swimming pools"}

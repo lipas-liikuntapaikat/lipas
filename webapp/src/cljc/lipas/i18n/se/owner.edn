@@ -1,9 +1,9 @@
-{:unknown "Ingen information",
+{:city "Kommun",
+ :city-main-owner "Företag med kommun som majoritetsägare",
+ :company-ltd "Företag",
+ :foundation "Stiftelse",
  :municipal-consortium "Samkommun",
  :other "Annat",
- :company-ltd "Företag",
- :city "Kommun",
- :state "Stat",
  :registered-association "Registrerad förening",
- :foundation "Stiftelse",
- :city-main-owner "Företag med kommun som majoritetsägare"}
+ :state "Stat",
+ :unknown "Ingen information"}

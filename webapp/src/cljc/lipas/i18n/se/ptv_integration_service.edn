@@ -1,5 +1,5 @@
-{:lipas-managed-helper
+{:lipas-managed "LIPAS definierar tjänsterna (rekommenderas)",
+ :lipas-managed-helper
  "LIPAS etablerar de nödvändiga tjänsterna i PTV enligt DVV:s rekommendationer och kopplar automatiskt servicepunkterna (idrottsanläggningarna) till dem.",
  :manual-helper
- "Idrottsanläggningarna kopplas manuellt till de befintliga tjänsterna i PTV i det här verktyget. Kopplingen måste göras för varje idrottsanläggning en gång.",
- :lipas-managed "LIPAS definierar tjänsterna (rekommenderas)"}
+ "Idrottsanläggningarna kopplas manuellt till de befintliga tjänsterna i PTV i det här verktyget. Kopplingen måste göras för varje idrottsanläggning en gång."}

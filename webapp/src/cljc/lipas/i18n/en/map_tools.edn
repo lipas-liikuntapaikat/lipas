@@ -1,13 +1,13 @@
-{:simplifying "Simplify tool selected",
+{:deleting-tooltip "Delete tool selected",
+ :download-backup-tooltip "Download backup",
+ :drawing-hole-tooltip "Hole drawing tool selected",
+ :drawing-tooltip "Drawing tool selected",
+ :edit-tool "Edit tool",
+ :importing-tooltip "Import tool selected",
  :route-part-difficulty-tooltip
  "Route section difficulty tool selected",
- :simplify "Simplify",
- :drawing-hole-tooltip "Hole drawing tool selected",
- :deleting-tooltip "Delete tool selected",
- :splitting-tooltip "Split tool selected",
- :drawing-tooltip "Drawing tool selected",
- :importing-tooltip "Import tool selected",
- :travel-direction-tooltip "Travel direction tool selected",
- :download-backup-tooltip "Download backup",
  :selecting "Select tool selected",
- :edit-tool "Edit tool"}
+ :simplify "Simplify",
+ :simplifying "Simplify tool selected",
+ :splitting-tooltip "Split tool selected",
+ :travel-direction-tooltip "Travel direction tool selected"}

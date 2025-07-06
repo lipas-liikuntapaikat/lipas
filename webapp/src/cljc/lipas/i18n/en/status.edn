@@ -1,5 +1,5 @@
 {:active "Active",
- :planned "Planned",
  :incorrect-data "Incorrect data",
  :out-of-service-permanently "Permanently out of service",
- :out-of-service-temporarily "Temporarily out of service"}
+ :out-of-service-temporarily "Temporarily out of service",
+ :planned "Planned"}

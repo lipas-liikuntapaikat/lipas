@@ -1,9 +1,9 @@
-{:unknown "Unknown",
+{:city "City",
+ :city-main-owner "City main owner",
+ :company-ltd "Company ltd",
+ :foundation "Foundation",
  :municipal-consortium "Municipal consortium",
  :other "Other",
- :company-ltd "Company ltd",
- :city "City",
- :state "State",
  :registered-association "Registered association",
- :foundation "Foundation",
- :city-main-owner "City main owner"}
+ :state "State",
+ :unknown "Unknown"}

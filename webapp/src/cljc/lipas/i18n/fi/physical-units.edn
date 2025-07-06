@@ -1,9 +1,9 @@
-{:mm "mm",
+{:celsius "°C",
  :hour "h",
- :m3 "m³",
- :m "m",
- :temperature-c "Lämpötila °C",
  :l "l",
- :mwh "MWh",
+ :m "m",
  :m2 "m²",
- :celsius "°C"}
+ :m3 "m³",
+ :mm "mm",
+ :mwh "MWh",
+ :temperature-c "Lämpötila °C"}

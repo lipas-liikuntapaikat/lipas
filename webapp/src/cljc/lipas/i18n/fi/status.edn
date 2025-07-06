@@ -1,5 +1,5 @@
 {:active "Toiminnassa",
- :planned "Suunniteltu",
  :incorrect-data "Väärä tieto",
  :out-of-service-permanently "Poistettu käytöstä pysyvästi",
- :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti"}
+ :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti",
+ :planned "Suunniteltu"}

@@ -1,2 +1,2 @@
-{:update-n-sites "Päivitä {1} liikuntapaikkaa"
- :select-sites-to-update "Valitse päivitettävät liikuntapaikat"}
+{:select-sites-to-update "Valitse päivitettävät liikuntapaikat"
+ :update-n-sites "Päivitä {1} liikuntapaikkaa"}
