@@ -1,4 +1,5 @@
-{:duplicate "Kopiera",
+{:update-n-sites "Uppdatera {1} sportplatser"
+ :duplicate "Kopiera",
  :resurrect "Öppna huvudmeny",
  :select-year "Välj år",
  :select-owners "Välj ägare",
@@ -41,4 +42,7 @@
  :select-hall "Välj hall",
  :clear-selections "Ta bort val",
  :select "Välj",
- :select-types "Välj typer"}
+ :select-types "Välj typer"
+ :filter "Filtrera"
+ :deselect-all "Avmarkera alla"
+ :update "Uppdatera"}

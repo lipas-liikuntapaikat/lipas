@@ -36,6 +36,7 @@
    :ice-rinks
    :lipas.admin
    :lipas.building
+   :lipas.bulk-operations
    :lipas.energy-consumption
    :lipas.energy-stats
    :lipas.floorball
@@ -76,8 +77,6 @@
    :newsletter
    :notifications
    :open-data
-   :org
-   :org.form
    :owner
    :partners
    :physical-units

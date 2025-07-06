@@ -287,7 +287,7 @@
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         types  (or types
-                   (<== [:lipas.ui.sports-sites.subs/types-by-type-code]))]
+                   (<== [:lipas.ui.sports-sites.subs/active-types]))]
     ^{:key value}
     [select
      {:items     types

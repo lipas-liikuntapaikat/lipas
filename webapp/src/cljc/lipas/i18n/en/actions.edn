@@ -1,4 +1,5 @@
-{:duplicate "Duplicate",
+{:update-n-sites "Update {1} sports sites"
+ :duplicate "Duplicate",
  :resurrect "Resurrect",
  :select-year "Select year",
  :select-owners "Select owners",
@@ -40,4 +41,7 @@
  :select-hall "Select hall",
  :clear-selections "Clear",
  :select "Select",
- :select-types "Select types"}
+ :select-types "Select types",
+ :filter "Filter",
+ :deselect-all "Deselect all",
+ :update "Update"}

@@ -3,6 +3,7 @@
             [lipas.i18n.core :as i18n]
             [lipas.ui.admin.db :as admin]
             [lipas.ui.analysis.db :as analysis]
+            [lipas.ui.bulk-operations.db :as bulk-ops]
             [lipas.ui.energy.db :as energy]
             [lipas.ui.feedback.db :as feedback]
             [lipas.ui.front-page.db :as front-page]
@@ -88,4 +89,7 @@
    :ptv ptv/default-db
 
    ;; Help
-   :help help/default-db})
+   :help help/default-db
+
+   ;; Bulk operations
+   :bulk-operations bulk-ops/default-db})

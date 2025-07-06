@@ -42,4 +42,7 @@
  :select-hall "Valitse halli",
  :clear-selections "Poista valinnat",
  :select "Valitse",
- :select-types "Valitse tyypit"}
+ :select-types "Valitse tyypit",
+ :filter "Suodata",
+ :deselect-all "Poista kaikki valinnat",
+ :update "Päivitä"}

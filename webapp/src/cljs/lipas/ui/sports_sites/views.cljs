@@ -258,7 +258,7 @@
            :container true
            :align-items "center"
            :justify-content "space-between"}
-          [lui/sub-heading {:label (tr :lipas.sports-site/address)}]
+          [lui/sub-heading {:label (tr :lipas.location/headline)}]
 
           ;; Address locator
           (when (and editing? address-locator-component)

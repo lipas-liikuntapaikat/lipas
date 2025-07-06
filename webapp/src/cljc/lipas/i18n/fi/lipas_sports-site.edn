@@ -2,6 +2,7 @@
  :delete-tooltip "Poista liikuntapaikka...",
  :headline "Liikuntapaikka",
  :new-site-of-type "Uusi {1}",
+ :address "Osoite",
  :new-site "Uusi liikuntapaikka",
  :phone-number "Puhelinnumero",
  :admin "Ylläpitäjä",
@@ -16,8 +17,7 @@
  :type "Tyyppi",
  :delete "Poista {1}",
  :planning-site "Vedos",
- :creating-planning-site
- "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten.",
+ :creating-planning-site "Olet lisäämässä paikkaa vedos-tilassa analyysityökaluja varten.",
  :admin-helper-text "Kohteen ylläpidon toteuttava taho",
  :renovation-years "Perus​korjaus​vuodet",
  :name-localized-se "Nimi ruotsiksi",
@@ -25,12 +25,10 @@
  :status "Liikuntapaikan tila",
  :id "LIPAS-ID",
  :details-in-portal "Näytä kaikki lisätiedot",
- :no-permission-tab
- "Sinulla ei ole oikeutta muokata tämän välilehden tietoja",
+ :no-permission-tab "Sinulla ei ole oikeutta muokata tämän välilehden tietoja",
  :comment "Lisätieto",
  :ownership "Omistus",
- :owner-helper-text
- "Kohteessa olevien rakenteiden tai palveluiden omistaja",
+ :owner-helper-text "Kohteessa olevien rakenteiden tai palveluiden omistaja",
  :name-short "Nimi",
  :basic-data "Perustiedot",
  :reservation-link "Varauslinkki",
@@ -40,7 +38,6 @@
  :email-public "Sähköposti (julkinen)",
  :add-new "Lisää liikunta- tai ulkoilupaikka",
  :contact "Yhteystiedot",
- :contact-helper-text
- "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot",
+ :contact-helper-text "Yleisesti kohteesta, palveluista tai rakenteista vastaavan organisaation yhteystiedot",
  :owner "Omistaja",
  :marketing-name "Markkinointinimi"}

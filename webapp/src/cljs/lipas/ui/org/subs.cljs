@@ -6,22 +6,22 @@
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::user-orgs
-            (fn [db _]
-              (:orgs (:user db))))
+  (fn [db _]
+    (:orgs (:user db))))
 
 (rf/reg-sub ::user-orgs-by-id
-            :<- [::user-orgs]
-            (fn [orgs _]
-              (into {} (map (juxt :id identity) orgs))))
+  :<- [::user-orgs]
+  (fn [orgs _]
+    (into {} (map (juxt :id identity) orgs))))
 
 (rf/reg-sub ::user-org-by-id
-            :<- [::user-orgs-by-id]
-            (fn [orgs [_ id]]
-              (get orgs id)))
+  :<- [::user-orgs-by-id]
+  (fn [orgs [_ id]]
+    (get orgs id)))
 
 (rf/reg-sub ::editing-org
-            (fn [db _]
-              (get-in db [:org :editing-org])))
+  (fn [db _]
+    (get-in db [:org :editing-org])))
 
 (defn- empty-string->nil [x]
   (if (and (string? x) (str/blank? x))
@@ -42,41 +42,41 @@
         (update-in [:data :primary-contact :reservation-link] empty-string->nil))))
 
 (rf/reg-sub ::org-validation-errors
-            :<- [::editing-org]
-            (fn [org _]
-              (when-let [prepared-org (prepare-org-for-validation org)]
-                (m/explain org-schema/org-form-validation prepared-org))))
+  :<- [::editing-org]
+  (fn [org _]
+    (when-let [prepared-org (prepare-org-for-validation org)]
+      (m/explain org-schema/org-form-validation prepared-org))))
 
 (rf/reg-sub ::org-valid?
-            :<- [::org-validation-errors]
-            (fn [errors _]
-              (nil? errors)))
+  :<- [::org-validation-errors]
+  (fn [errors _]
+    (nil? errors)))
 
 (rf/reg-sub ::org-users
-            (fn [db _]
-              (:users (:org db))))
+  (fn [db _]
+    (:users (:org db))))
 
 (rf/reg-sub ::all-users
-            (fn [db _]
-              (:all-users (:org db))))
+  (fn [db _]
+    (:all-users (:org db))))
 
 (rf/reg-sub ::all-users-options
-            :<- [::all-users]
-            (fn [users _]
-              (map (fn [{:keys [id email]}]
-                     {:value id
-                      :label email})
-                   users)))
+  :<- [::all-users]
+  (fn [users _]
+    (map (fn [{:keys [id email]}]
+           {:value id
+            :label email})
+         users)))
 
 (rf/reg-sub ::add-user-form
-            (fn [db _]
-              (get-in db [:org :add-user-form])))
+  (fn [db _]
+    (get-in db [:org :add-user-form])))
 
 (rf/reg-sub ::add-user-email-form
-            (fn [db _]
-              (get-in db [:org :add-user-email-form])))
+  (fn [db _]
+    (get-in db [:org :add-user-email-form])))
 
 (rf/reg-sub ::is-lipas-admin
-            :<- [:lipas.ui.user.subs/user-data]
-            (fn [user _]
-              (roles/check-privilege user {} :users/manage)))
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [user _]
+    (roles/check-privilege user {} :users/manage)))

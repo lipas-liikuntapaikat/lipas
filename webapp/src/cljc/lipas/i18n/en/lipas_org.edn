@@ -1,13 +1,20 @@
 {:headline "Organizations"
- :email "Email",
- :phone "Phone number",
- :name "Name",
- :org-role "Role",
+ :email "Email"
+ :phone "Phone number"
+ :name "Name"
+ :org-role "Role"
  :contact-admin
- "Contact the system administrator to be added to an organization",
- :no-organizations "You are not a member of any organization",
- :users-section "Users",
- :website "Website",
- :reservation-link "Reservation link",
+ "Contact the system administrator to be added to an organization"
+ :no-organizations "You are not a member of any organization"
+ :users-section "Users"
+ :details "Organization details"
+ :users "Organization users"
+ :website "Website"
+ :reservation-link "Reservation link"
  :add-user "Add"
- :add-user-by-email "Add by email"}
+ :add-user-by-email "Add by email"
+ :bulk-operations "Bulk Operations"
+ :bulk-operations-description "Update contact information for multiple sports facilities at once"
+ :contact-info-update "Contact Information to Update"
+ :bulk-update-info "Leave a field empty to clear that field in the selected sports facilities"
+ :empty-field-clears "Empty field clears the data"}

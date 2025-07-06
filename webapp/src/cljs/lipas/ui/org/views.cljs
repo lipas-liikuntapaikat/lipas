@@ -1,7 +1,9 @@
 (ns lipas.ui.org.views
   (:require ["@mui/icons-material/Delete$default" :as DeleteIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/MenuItem$default" :as MenuItem]
@@ -12,9 +14,11 @@
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             [lipas.schema.sports-sites :as sites-schema]
+            [lipas.ui.bulk-operations.views :as bulk-ops-views]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.mui :as mui]
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
@@ -140,13 +144,19 @@
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservation-link] x]))}]
 
         [mui/grid {:item true}
-         [mui/button
-          {:variant "contained"
-           :color "secondary"
-           :disabled (not org-valid?)
-           :on-click #(rf/dispatch [::events/save-org org])}
-          [mui/icon {:sx {:mr 1}} "save"]
-          (tr :actions/save)]]]]
+         [mui/box {:sx {:display "flex" :gap 2}}
+          [mui/button
+           {:variant "contained"
+            :color "secondary"
+            :disabled (not org-valid?)
+            :on-click #(rf/dispatch [::events/save-org org])}
+           [mui/icon {:sx {:mr 1}} "save"]
+           (tr :actions/save)]
+          [mui/button
+           {:variant "outlined"
+            :on-click #(rfe/navigate :lipas.ui.routes/org-bulk-operations {:path-params {:org-id org-id}})}
+           [mui/icon {:sx {:mr 1}} "update"]
+           (tr :lipas.org/bulk-operations)]]]]]
 
       [lui/form-card
        {:title (tr :lipas.org/users-section)
@@ -203,3 +213,8 @@
          (tr :lipas.org/no-organizations)]
         [mui/typography {:variant "body2" :color "text.secondary" :sx {:mt 1}}
          (tr :lipas.org/contact-admin)]])]))
+
+(defn bulk-operations-view []
+  (let [{:keys [org-id]} (:path @(rf/subscribe [::ui-subs/parameters]))]
+    [bulk-ops-views/main
+     {:on-cancel #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id org-id}})}]))

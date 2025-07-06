@@ -28,7 +28,23 @@
       (fn [_]
         (rf/dispatch [::events/get-user-orgs]))}]}])
 
+(def bulk-operations-routes
+  ["organisaatio/:org-id/massa-paivitys"
+   {:name :lipas.ui.routes/org-bulk-operations
+    :tr-key :lipas.org/bulk-operations
+    :no-navbar-link? true
+    :view #'views/bulk-operations-view
+    :parameters {:path [:map
+                        [:org-id :string]]}
+    :controllers
+    [{:identity (fn [match]
+                  (-> match :parameters :path :org-id))
+      :start
+      (fn [org-id]
+        (rf/dispatch [::events/init-bulk-operations org-id]))}]}])
+
 (def routes
   [""
    org-list-routes
-   org-detail-routes])
+   org-detail-routes
+   bulk-operations-routes])

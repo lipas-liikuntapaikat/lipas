@@ -1,7 +1,7 @@
 (ns lipas.ui.org.events
   (:require [ajax.core :as ajax]
             [lipas.roles :as roles]
-            [re-frame.core :as rf]))
+            [lipas.ui.bulk-operations.events :as bulk-ops-events] [re-frame.core :as rf]))
 
 (rf/reg-event-db ::get-user-orgs-success
                  (fn [db [_ resp]]
@@ -54,14 +54,38 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [user-data (get-in db [:user :login])
                          is-lipas-admin? (roles/check-privilege user-data {} :users/manage)
+                         user-orgs (-> db :user :orgs)
+                         current-org (when user-orgs
+                                       (some (fn [o]
+                                               (when (= org-id (str (:id o)))
+                                                 o))
+                                             user-orgs))
                          fx (cond-> [[:dispatch [::get-org-users org-id]]]
-                              is-lipas-admin? (conj [:dispatch [::get-all-users]]))]
+                              is-lipas-admin? (conj [:dispatch [::get-all-users]])
+                              (nil? user-orgs) (conj [:dispatch [::get-user-orgs-then-init org-id]]))]
                      {:fx fx
                       :db (assoc db :org {:org-id org-id
-                                          :editing-org (some (fn [o]
-                                                               (when (= org-id (:id o))
-                                                                 o))
-                                                             (-> db :user :orgs))})})))
+                                          :editing-org current-org})})))
+
+(rf/reg-event-fx ::get-user-orgs-then-init
+                 (fn [{:keys [db]} [_ org-id]]
+                   {:dispatch-n [[::get-user-orgs]
+                                 [::wait-for-orgs-then-init org-id]]}))
+
+(rf/reg-event-fx ::wait-for-orgs-then-init
+                 (fn [{:keys [db]} [_ org-id retry-count]]
+                   (let [user-orgs (-> db :user :orgs)
+                         retry-count (or retry-count 0)]
+                     (if (or user-orgs (> retry-count 10))
+        ;; If we have orgs or exceeded retries, find the org
+                       (let [current-org (some (fn [o]
+                                                 (when (= org-id (str (:id o)))
+                                                   o))
+                                               user-orgs)]
+                         {:db (assoc-in db [:org :editing-org] current-org)})
+        ;; Otherwise wait and retry
+                       {:dispatch-later [{:ms 100
+                                          :dispatch [::wait-for-orgs-then-init org-id (inc retry-count)]}]}))))
 
 (rf/reg-event-db ::set-add-user-form
                  (fn [db [_ path value]]
@@ -175,3 +199,9 @@
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-org-users org-id]
                        :on-failure [::TODO]}})))
+
+;; Bulk operations integration
+(rf/reg-event-fx ::init-bulk-operations
+                 (fn [{:keys [db]} [_ org-id]]
+                   {:db (assoc-in db [:org :current-org-id] org-id)
+                    :dispatch [::bulk-ops-events/init {}]}))
