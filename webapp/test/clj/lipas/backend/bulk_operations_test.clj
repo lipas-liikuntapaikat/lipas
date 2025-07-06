@@ -87,7 +87,7 @@
                          :email "old@helsinki.fi"
                          :phone-number "+358401111111"
                          :www "old.helsinki.fi"
-                         :reservation-link "old-booking.helsinki.fi")
+                         :reservations-link "old-booking.helsinki.fi")
                   (assoc-in [:type :type-code] 1110)
                   (assoc-in [:location :city :city-code] 91))
 
@@ -97,7 +97,7 @@
                          :email "old@espoo.fi"
                          :phone-number "+358402222222"
                          :www nil
-                         :reservation-link nil)
+                         :reservations-link nil)
                   (assoc-in [:type :type-code] 1120)
                   (assoc-in [:location :city :city-code] 49))
 
@@ -107,7 +107,7 @@
                          :email nil
                          :phone-number nil
                          :www "tampere.fi"
-                         :reservation-link "booking.tampere.fi")
+                         :reservations-link "booking.tampere.fi")
                   (assoc-in [:type :type-code] 1130)
                   (assoc-in [:location :city :city-code] 837))]
 
@@ -131,7 +131,7 @@
           contact-updates {:email "contact@helsinki.fi"
                            :phone-number "+358 9 123 4567"
                            :www "helsinki.fi/sports"
-                           :reservation-link "booking.helsinki.fi"}
+                           :reservations-link "booking.helsinki.fi"}
 
           payload {:lipas-ids lipas-ids
                    :updates contact-updates}
@@ -153,7 +153,7 @@
           (is (= "contact@helsinki.fi" (:email updated-site)))
           (is (= "+358 9 123 4567" (:phone-number updated-site)))
           (is (= "helsinki.fi/sports" (:www updated-site)))
-          (is (= "booking.helsinki.fi" (:reservation-link updated-site))))))))
+          (is (= "booking.helsinki.fi" (:reservations-link updated-site))))))))
 
 (deftest mass-update-city-manager-permissions-test
   (testing "City manager can only update sites in their city"
@@ -253,7 +253,7 @@
           contact-updates {:email nil
                            :phone-number nil
                            :www nil
-                           :reservation-link nil}
+                           :reservations-link nil}
 
           payload {:lipas-ids [(:lipas-id target-site)] :updates contact-updates}
 
@@ -271,7 +271,7 @@
         (is (nil? (:email updated-site)))
         (is (nil? (:phone-number updated-site)))
         (is (nil? (:www updated-site)))
-        (is (nil? (:reservation-link updated-site)))))))
+        (is (nil? (:reservations-link updated-site)))))))
 
 (deftest mass-update-authentication-required-test
   (testing "Mass update requires authentication"

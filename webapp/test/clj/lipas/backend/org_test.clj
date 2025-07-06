@@ -73,7 +73,7 @@
               :data {:primary-contact {:phone "+358401234567"
                                        :email "helsinki@sports.fi"
                                        :website "https://helsinkisports.fi"
-                                       :reservation-link "https://booking.helsinkisports.fi"}}
+                                       :reservations-link "https://booking.helsinkisports.fi"}}
               :ptv-data {:ptv-org-id nil
                          :city-codes [91]
                          :owners ["city"]
@@ -84,7 +84,7 @@
               :data {:primary-contact {:phone "+358509876543"
                                        :email "info@espooathletics.fi"
                                        :website nil
-                                       :reservation-link nil}}
+                                       :reservations-link nil}}
               :ptv-data {:ptv-org-id nil
                          :city-codes [49]
                          :owners ["city-main-owner"]
@@ -109,7 +109,7 @@
                     :data {:primary-contact {:phone "+358401234567"
                                              :email "test@example.com"
                                              :website "https://test.org"
-                                             :reservation-link "https://booking.test.org"}}
+                                             :reservations-link "https://booking.test.org"}}
                     :ptv-data {:ptv-org-id nil
                                :city-codes [91]
                                :owners ["city"]
@@ -308,7 +308,7 @@
                         :data {:primary-contact {:phone "+358401234567"
                                                  :email "updated@example.com"
                                                  :website "https://updated.com"
-                                                 :reservation-link "https://booking.updated.com"}}
+                                                 :reservations-link "https://booking.updated.com"}}
                         :ptv-data {:city-codes [49]
                                    :owners ["city"]
                                    :supported-languages ["fi"]}}

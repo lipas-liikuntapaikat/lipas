@@ -16,7 +16,7 @@
                                      [:email {:optional true} [:maybe [:string {:min 1 :max 200}]]]
                                      [:phone-number {:optional true} [:maybe [:string {:min 1 :max 50}]]]
                                      [:www {:optional true} [:maybe [:string {:min 1 :max 500}]]]
-                                     [:reservation-link {:optional true} [:maybe [:string {:min 1 :max 500}]]]]]]}
+                                     [:reservations-link {:optional true} [:maybe [:string {:min 1 :max 500}]]]]]]}
       :responses {200 {:body [:map
                               [:updated-sites [:vector :int]]
                               [:total-updated :int]]}}

@@ -14,7 +14,7 @@
  :no-organizations "Du tillhör ingen organisation"
  :org-role "Roll"
  :phone "Telefonnummer"
- :reservation-link "Bokningslänk"
+ :reservations-link "Bokningslänk"
  :users "Organisationens användare"
  :users-section "Användare"
  :website "Webbsida"}

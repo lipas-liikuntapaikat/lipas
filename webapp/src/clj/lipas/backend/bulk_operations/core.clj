@@ -20,7 +20,7 @@
               [:email {:optional true} [:maybe sites-schema/email]]
               [:phone-number {:optional true} [:maybe sites-schema/phone-number]]
               [:www {:optional true} [:maybe sites-schema/www]]
-              [:reservation-link {:optional true} [:maybe sites-schema/reservation-link]]]]])
+              [:reservations-link {:optional true} [:maybe sites-schema/reservations-link]]]]])
 
 (defn get-editable-sites
   "Get all sites user can edit using existing roles system"

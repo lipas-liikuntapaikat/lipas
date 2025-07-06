@@ -14,13 +14,10 @@
             [lipas.ui.bulk-operations.events :as events]
             [lipas.ui.bulk-operations.subs :as subs]
             [lipas.ui.components :as lui]
-            [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
-            [lipas.ui.subs :as ui-subs]
-            [re-frame.core :as rf]
-            [uix.core :refer [$]]))
+            [re-frame.core :as rf]))
 
 (defn filters-section [tr filters]
   [lui/form-card {:title (tr :actions/filter) :md 12}
@@ -135,17 +132,17 @@
     [mui/grid {:item true :xs 12 :md 6}
      [text-fields/text-field-controlled
       {:label (tr :lipas.sports-site/reservations-link)
-       :value (:reservation-link update-form)
-       :spec sites-schema/reservation-link
+       :value (:reservations-link update-form)
+       :spec sites-schema/reservations-link
        :helper-text (tr :lipas.org/empty-field-clears)
-       :on-change #(rf/dispatch [::events/set-bulk-update-field :reservation-link %])}]]]
+       :on-change #(rf/dispatch [::events/set-bulk-update-field :reservations-link %])}]]]
 
    [:> Box {:sx {:mt 2 :display "flex" :gap 2}}
     [:> Button {:variant "contained"
                 :color "primary"
                 :disabled (zero? selected-count)
                 :on-click on-submit}
-     (str (tr :actions/update-n-sports-sites selected-count))]
+     (str (tr :lipas.bulk-operations/update-n-sites selected-count))]
 
     [:> Button {:variant "outlined"
                 :on-click on-cancel}

@@ -14,7 +14,7 @@
  :no-organizations "You are not a member of any organization"
  :org-role "Role"
  :phone "Phone number"
- :reservation-link "Reservation link"
+ :reservations-link "Reservation link"
  :users "Organization users"
  :users-section "Users"
  :website "Website"}

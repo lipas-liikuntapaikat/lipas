@@ -39,7 +39,7 @@
         (update-in [:data :primary-contact :phone] empty-string->nil)
         (update-in [:data :primary-contact :email] empty-string->nil)
         (update-in [:data :primary-contact :website] empty-string->nil)
-        (update-in [:data :primary-contact :reservation-link] empty-string->nil))))
+        (update-in [:data :primary-contact :reservations-link] empty-string->nil))))
 
 (rf/reg-sub ::org-validation-errors
   :<- [::editing-org]

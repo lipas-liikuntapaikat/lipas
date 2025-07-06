@@ -55,7 +55,7 @@
                    :min 1
                    :max 500}])
 
-(def reservation-link [:string {:description "Link to external booking system."
+(def reservations-link [:string {:description "Link to external booking system."
                                 :min 1
                                 :max 500}])
 
@@ -95,7 +95,7 @@
     [:admin #'admin]
     [:email {:optional true} #'email]
     [:www {:optional true} #'www]
-    [:reservations-link {:optional true} #'reservation-link]
+    [:reservations-link {:optional true} #'reservations-link]
     [:phone-number {:optional true} #'phone-number]
     [:comment {:optional true} #'comment]
     [:construction-year {:optional true} #'construction-year]

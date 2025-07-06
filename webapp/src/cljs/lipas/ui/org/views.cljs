@@ -138,10 +138,10 @@
           :spec sites-schema/www
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :website] x]))}]
         [text-fields/text-field-controlled
-         {:label (tr :lipas.org/reservation-link)
-          :value (get-in org [:data :primary-contact :reservation-link])
-          :spec sites-schema/reservation-link
-          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservation-link] x]))}]
+         {:label (tr :lipas.org/reservations-link)
+          :value (get-in org [:data :primary-contact :reservations-link])
+          :spec sites-schema/reservations-link
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservations-link] x]))}]
 
         [mui/grid {:item true}
          [mui/box {:sx {:display "flex" :gap 2}}

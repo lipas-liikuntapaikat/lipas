@@ -22,7 +22,7 @@
                               [:phone [:maybe sites/phone-number]]
                               [:email [:maybe sites/email]]
                               [:website [:maybe sites/www]]
-                              [:reservation-link [:maybe sites/reservation-link]]]]]]
+                              [:reservations-link [:maybe sites/reservations-link]]]]]]
    [:ptv-data ptv-data]])
 
 (def new-org

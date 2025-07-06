@@ -14,7 +14,7 @@
  :no-organizations "Et kuulu mihinkään organisaatioon"
  :org-role "Rooli"
  :phone "Puhelinnumero"
- :reservation-link "Varauslinkki"
+ :reservations-link "Varauslinkki"
  :users "Organisaation käyttäjät"
  :users-section "Käyttäjät"
  :website "Verkkosivu"}
