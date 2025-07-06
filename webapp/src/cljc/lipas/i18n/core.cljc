@@ -17,6 +17,7 @@
    [lipas.i18n.en :as en]
    [lipas.i18n.fi :as fi]
    [lipas.i18n.se :as se]
+   [lipas.i18n.utils :as i18n-utils]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
 

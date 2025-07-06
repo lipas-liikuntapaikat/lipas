@@ -11,6 +11,7 @@
  :delete "Radera",
  :deselect-all "Avmarkera alla",
  :discard "Förkasta",
+ :done "Klar"
  :download "Ladda ner",
  :download-excel "Ladda",
  :duplicate "Kopiera",

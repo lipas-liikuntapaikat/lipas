@@ -13,14 +13,15 @@
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.bulk-operations.events :as events]
             [lipas.ui.bulk-operations.subs :as subs]
-            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [uix.core :refer [$]]))
 
 ;; Navigation buttons component
-(defn navigation-buttons [tr current-step selected-count on-cancel]
+(defn navigation-buttons [tr current-step selected-count selected-fields-count on-cancel]
   [:> Box {:sx {:display "flex" :justify-content "space-between"}}
    [:> Box
     (when (pos? current-step)
@@ -42,10 +43,12 @@
 
       1 [:> Button {:variant "contained"
                     :color "primary"
+                    :disabled (zero? selected-fields-count)
                     :on-click #(rf/dispatch [::events/execute-bulk-update
-                                             {:on-success nil
+                                             {:on-success (fn [_]
+                                                            (rf/dispatch [::events/get-editable-sites]))
                                               :on-failure nil}])}
-         (str (tr :lipas.bulk-operations/update-n-sites) " " selected-count)]
+         (str (tr :lipas.bulk-operations/update-n-sites selected-count))]
 
       nil)]])
 
@@ -55,19 +58,18 @@
         selected-sites @(rf/subscribe [::subs/selected-sites])
         all-selected? @(rf/subscribe [::subs/all-sites-selected?])
         filters @(rf/subscribe [::subs/sites-filters])
+        types @(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
         admins @(rf/subscribe [:lipas.ui.sports-sites.subs/admins])
         owners @(rf/subscribe [:lipas.ui.sports-sites.subs/owners])
         locale (tr)]
     [:> Box
-     ;; Navigation buttons at top
      [:> Box {:sx {:mb 3}}
-      [navigation-buttons tr 0 selected-count on-cancel]]
+      [navigation-buttons tr 0 selected-count 0 on-cancel]]
 
-     ;; Selection count and actions
      [:> Box {:sx {:mb 2 :display "flex" :justify-content "space-between" :align-items "center"}}
       [mui/typography {:variant "h6"}
        (if (pos? selected-count)
-         (str (tr :lipas.bulk-operations/n-sites-selected) " " selected-count)
+         (str (tr :lipas.bulk-operations/n-sites-selected selected-count))
          (tr :lipas.bulk-operations/select-sites-to-update))]
       [:> Box
        [:> Button {:variant "outlined"
@@ -78,7 +80,6 @@
                    :on-click #(rf/dispatch [::events/deselect-all-sites])}
         (tr :actions/deselect-all)]]]
 
-     ;; Filters accordion
      [mui/expansion-panel {:sx {:mb 2}}
       [mui/expansion-panel-summary
        {:expandIcon (r/as-element [mui/icon "expand_more"])}
@@ -92,26 +93,29 @@
            :on-change #(rf/dispatch [::events/set-sites-filter :search-text %])}]]
 
         [mui/grid {:item true :xs 12 :md 2}
-         [selects/type-selector-single
-          {:value (:type-code filters)
-           :label (tr :type/name)
-           :on-change (fn [v] (rf/dispatch [::events/set-sites-filter :type-code v]))}]]
+         ($ ac/type-selector
+            {:value (:type-code filters)
+             :label (tr :type/name)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :type-code value]))})]
 
         [mui/grid {:item true :xs 12 :md 3}
-         [selects/admin-selector
-          {:value (:admin filters)
-           :label (tr :lipas.sports-site/admin)
-           :on-change (fn [v] (rf/dispatch [::events/set-sites-filter :admin v]))}]]
+         ($ ac/admin-selector
+            {:value (:admin filters)
+             :label (tr :lipas.sports-site/admin)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :admin value]))})]
 
         [mui/grid {:item true :xs 12 :md 3}
-         [selects/owner-selector
-          {:value (:owner filters)
-           :label (tr :lipas.sports-site/owner)
-           :on-change (fn [v] (rf/dispatch [::events/set-sites-filter :owner v]))}]]]]]
+         ($ ac/owner-selector
+            {:value (:owner filters)
+             :label (tr :lipas.sports-site/owner)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :owner value]))})]]]]
 
-     ;; Table
-     [:> TableContainer
-      [:> Table
+     ;; Table container with its own horizontal scroll
+     [:> TableContainer {:sx {:overflow-x "auto" :width "100%"}}
+      [:> Table {:size "small"}
        [:> TableHead
         [:> TableRow
          [:> TableCell {:padding "checkbox"}
@@ -136,7 +140,7 @@
             [:> Checkbox {:checked (contains? selected-sites (:lipas-id site))
                           :on-change #(rf/dispatch [::events/toggle-site-selection (:lipas-id site)])}]]
            [:> TableCell (:name site)]
-           [:> TableCell (get-in site [:type :name :fi] (get-in site [:type :type-code]))]
+           [:> TableCell (get-in types [(get-in site [:type :type-code]) :name locale])]
            [:> TableCell (get-in admins [(:admin site) locale])]
            [:> TableCell (get-in owners [(:owner site) locale])]
            [:> TableCell (:email site)]
@@ -144,66 +148,145 @@
            [:> TableCell (:www site)]
            [:> TableCell (:reservations-link site)]])]]]
 
-     ;; Navigation buttons at bottom
      [:> Box {:sx {:mt 3}}
-      [navigation-buttons tr 0 selected-count on-cancel]]]))
+      [navigation-buttons tr 0 selected-count 0 on-cancel]]]))
 
 ;; Step 2: Enter contact information
 (defn step-enter-info [tr selected-count on-cancel]
-  (let [update-form @(rf/subscribe [::subs/bulk-update-form])]
+  (let [update-form @(rf/subscribe [::subs/bulk-update-form])
+        selected-fields @(rf/subscribe [::subs/selected-fields])
+        all-fields #{:email :phone-number :www :reservations-link}
+        all-fields-selected? (= selected-fields all-fields)]
     [:> Box
-     ;; Navigation buttons at top
      [:> Box {:sx {:mb 3}}
-      [navigation-buttons tr 1 selected-count on-cancel]]
+      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel]]
 
      [:> Alert {:severity "info" :sx {:mb 3}}
-      (tr :lipas.org/bulk-update-info)]
+      (tr :lipas.bulk-operations/selective-update-info)]
+
+     ;; Header with select all/none buttons
+     [:> Box {:sx {:display "flex" :justify-content "space-between" :align-items "center" :mb 2}}
+      [mui/typography {:variant "body1"}
+       (tr :lipas.bulk-operations/select-fields-to-update)]
+      [:> Box {:sx {:display "flex" :gap 1}}
+       [:> Button {:variant "text"
+                   :size "small"
+                   :on-click #(rf/dispatch [::events/set-selected-fields all-fields])}
+        (tr :actions/select-all)]
+       [:> Button {:variant "text"
+                   :size "small"
+                   :on-click #(rf/dispatch [::events/set-selected-fields #{}])}
+        (tr :actions/deselect-all)]]]
 
      [mui/grid {:container true :spacing 2}
       [mui/grid {:item true :xs 12 :md 6}
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.sports-site/email-public)
-         :value (:email update-form)
-         :spec sites-schema/email
-         :helper-text (tr :lipas.org/empty-field-clears)
-         :on-change #(rf/dispatch [::events/set-bulk-update-field :email %])}]]
+       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :email) 2 1)
+                        :border-color (if (contains? selected-fields :email) "primary.main" "divider")
+                        :background-color (when-not (contains? selected-fields :email) "action.disabledBackground")}}
+        [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
+         [:> Box {:sx {:pt 1}}
+          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+           [:> Checkbox {:checked (contains? selected-fields :email)
+                         :color "primary"
+                         :on-change #(rf/dispatch [::events/toggle-field-selection :email])}]]]
+         [:> Box {:sx {:flex 1}}
+          [text-fields/text-field-controlled
+           {:label (tr :lipas.sports-site/email-public)
+            :value (:email update-form)
+            :spec sites-schema/email
+            :disabled (not (contains? selected-fields :email))
+            :helper-text (if (contains? selected-fields :email)
+                           (if (seq (:email update-form))
+                             (str (tr :lipas.bulk-operations/will-update-to) " " (:email update-form))
+                             (tr :lipas.bulk-operations/will-clear-field))
+                           (tr :lipas.bulk-operations/field-will-not-change))
+            :on-change #(rf/dispatch [::events/set-bulk-update-field :email %])}]]]]]
 
       [mui/grid {:item true :xs 12 :md 6}
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.sports-site/phone-number)
-         :value (:phone-number update-form)
-         :spec sites-schema/phone-number
-         :helper-text (tr :lipas.org/empty-field-clears)
-         :on-change #(rf/dispatch [::events/set-bulk-update-field :phone-number %])}]]
+       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :phone-number) 2 1)
+                        :border-color (if (contains? selected-fields :phone-number) "primary.main" "divider")
+                        :background-color (when-not (contains? selected-fields :phone-number) "action.disabledBackground")}}
+        [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
+         [:> Box {:sx {:pt 1}}
+          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+           [:> Checkbox {:checked (contains? selected-fields :phone-number)
+                         :color "primary"
+                         :on-change #(rf/dispatch [::events/toggle-field-selection :phone-number])}]]]
+         [:> Box {:sx {:flex 1}}
+          [text-fields/text-field-controlled
+           {:label (tr :lipas.sports-site/phone-number)
+            :value (:phone-number update-form)
+            :spec sites-schema/phone-number
+            :disabled (not (contains? selected-fields :phone-number))
+            :helper-text (if (contains? selected-fields :phone-number)
+                           (if (seq (:phone-number update-form))
+                             (str (tr :lipas.bulk-operations/will-update-to) " " (:phone-number update-form))
+                             (tr :lipas.bulk-operations/will-clear-field))
+                           (tr :lipas.bulk-operations/field-will-not-change))
+            :on-change #(rf/dispatch [::events/set-bulk-update-field :phone-number %])}]]]]]
 
       [mui/grid {:item true :xs 12 :md 6}
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.sports-site/www)
-         :value (:www update-form)
-         :spec sites-schema/www
-         :helper-text (tr :lipas.org/empty-field-clears)
-         :on-change #(rf/dispatch [::events/set-bulk-update-field :www %])}]]
+       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :www) 2 1)
+                        :border-color (if (contains? selected-fields :www) "primary.main" "divider")
+                        :background-color (when-not (contains? selected-fields :www) "action.disabledBackground")}}
+        [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
+         [:> Box {:sx {:pt 1}}
+          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+           [:> Checkbox {:checked (contains? selected-fields :www)
+                         :color "primary"
+                         :on-change #(rf/dispatch [::events/toggle-field-selection :www])}]]]
+         [:> Box {:sx {:flex 1}}
+          [text-fields/text-field-controlled
+           {:label (tr :lipas.sports-site/www)
+            :value (:www update-form)
+            :spec sites-schema/www
+            :disabled (not (contains? selected-fields :www))
+            :helper-text (if (contains? selected-fields :www)
+                           (if (seq (:www update-form))
+                             (str (tr :lipas.bulk-operations/will-update-to) " " (:www update-form))
+                             (tr :lipas.bulk-operations/will-clear-field))
+                           (tr :lipas.bulk-operations/field-will-not-change))
+            :on-change #(rf/dispatch [::events/set-bulk-update-field :www %])}]]]]]
 
       [mui/grid {:item true :xs 12 :md 6}
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.sports-site/reservations-link)
-         :value (:reservations-link update-form)
-         :spec sites-schema/reservations-link
-         :helper-text (tr :lipas.org/empty-field-clears)
-         :on-change #(rf/dispatch [::events/set-bulk-update-field :reservations-link %])}]]]
+       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :reservations-link) 2 1)
+                        :border-color (if (contains? selected-fields :reservations-link) "primary.main" "divider")
+                        :background-color (when-not (contains? selected-fields :reservations-link) "action.disabledBackground")}}
+        [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
+         [:> Box {:sx {:pt 1}}
+          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+           [:> Checkbox {:checked (contains? selected-fields :reservations-link)
+                         :color "primary"
+                         :on-change #(rf/dispatch [::events/toggle-field-selection :reservations-link])}]]]
+         [:> Box {:sx {:flex 1}}
+          [text-fields/text-field-controlled
+           {:label (tr :lipas.sports-site/reservations-link)
+            :value (:reservations-link update-form)
+            :spec sites-schema/reservations-link
+            :disabled (not (contains? selected-fields :reservations-link))
+            :helper-text (if (contains? selected-fields :reservations-link)
+                           (if (seq (:reservations-link update-form))
+                             (str (tr :lipas.bulk-operations/will-update-to) " " (:reservations-link update-form))
+                             (tr :lipas.bulk-operations/will-clear-field))
+                           (tr :lipas.bulk-operations/field-will-not-change))
+            :on-change #(rf/dispatch [::events/set-bulk-update-field :reservations-link %])}]]]]]]
 
      [:> Box {:sx {:mt 3}}
       [mui/typography {:variant "body2" :color "text.secondary"}
-       (str (tr :lipas.bulk-operations/will-update-n-sites) " " selected-count)]]
+       (str (tr :lipas.bulk-operations/will-update-n-sites selected-count) " "
+            (tr :lipas.bulk-operations/selected-fields-count (count selected-fields)))]]
 
-     ;; Navigation buttons at bottom
      [:> Box {:sx {:mt 3}}
-      [navigation-buttons tr 1 selected-count on-cancel]]]))
+      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel]]]))
 
 ;; Step 3: Summary
 (defn step-summary [tr on-cancel]
   (let [update-results @(rf/subscribe [::subs/update-results])
-        update-form @(rf/subscribe [::subs/bulk-update-form])]
+        update-form @(rf/subscribe [::subs/bulk-update-form])
+        selected-fields @(rf/subscribe [::subs/selected-fields])
+        editable-sites @(rf/subscribe [::subs/editable-sites])
+        updated-site-ids (set (:updated-sites update-results))
+        updated-sites (filter #(contains? updated-site-ids (:lipas-id %)) editable-sites)]
     [:> Box
      [:> Alert {:severity "success" :sx {:mb 3}}
       (tr :lipas.bulk-operations/update-completed)]
@@ -212,29 +295,41 @@
       (tr :lipas.bulk-operations/updated-fields)]
 
      [mui/list
-      (when (:email update-form)
+      (when (and (contains? selected-fields :email) (:email update-form))
         [mui/list-item
          [mui/list-item-text
           {:primary (tr :lipas.sports-site/email-public)
            :secondary (:email update-form)}]])
 
-      (when (:phone-number update-form)
+      (when (and (contains? selected-fields :phone-number) (:phone-number update-form))
         [mui/list-item
          [mui/list-item-text
           {:primary (tr :lipas.sports-site/phone-number)
            :secondary (:phone-number update-form)}]])
 
-      (when (:www update-form)
+      (when (and (contains? selected-fields :www) (:www update-form))
         [mui/list-item
          [mui/list-item-text
           {:primary (tr :lipas.sports-site/www)
            :secondary (:www update-form)}]])
 
-      (when (:reservations-link update-form)
+      (when (and (contains? selected-fields :reservations-link) (:reservations-link update-form))
         [mui/list-item
          [mui/list-item-text
           {:primary (tr :lipas.sports-site/reservations-link)
            :secondary (:reservations-link update-form)}]])]
+
+     ;; Updated sites list
+     [mui/typography {:variant "h6" :sx {:mt 3 :mb 2}}
+      (str (tr :lipas.bulk-operations/updated-sites-list) " (" (:total-updated update-results) ")")]
+
+     [:> Box {:sx {:max-height 300 :overflow-y "auto" :border 1 :border-color "divider" :border-radius 1 :p 2}}
+      [mui/list {:dense true}
+       (for [site updated-sites]
+         [mui/list-item {:key (:lipas-id site)}
+          [mui/list-item-text
+           {:primary (:name site)
+            :secondary (str "ID: " (:lipas-id site))}]])]]
 
      [:> Box {:sx {:mt 3 :display "flex" :gap 2}}
       [:> Button {:variant "contained"

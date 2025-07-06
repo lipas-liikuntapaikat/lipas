@@ -11,6 +11,7 @@
  :delete "Poista",
  :deselect-all "Poista kaikki valinnat",
  :discard "Kumoa",
+ :done "Valmis"
  :download "Lataa",
  :download-excel "Lataa",
  :duplicate "Kopioi",

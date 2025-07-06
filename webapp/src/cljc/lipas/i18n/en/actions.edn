@@ -10,6 +10,7 @@
  :delete "Delete",
  :deselect-all "Deselect all",
  :discard "Discard",
+ :done "Done"
  :download "Download",
  :download-excel "Download",
  :duplicate "Duplicate",

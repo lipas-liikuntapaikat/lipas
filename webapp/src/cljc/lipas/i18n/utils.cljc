@@ -10,6 +10,7 @@
    :admin
    :analysis
    :building-materials
+   :bulk-operations
    :ceiling-structures
    :condensate-energy-targets
    :confirm

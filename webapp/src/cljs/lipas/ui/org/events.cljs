@@ -156,6 +156,14 @@
   (fn [db [_ path value]]
     (assoc-in db (into [:org :editing-org] path) value)))
 
+(rf/reg-event-fx ::set-current-tab
+  (fn [{:keys [db]} [_ tab]]
+    (let [org-id (get-in db [:org :org-id])]
+      (cond-> {:db (assoc-in db [:org :current-tab] tab)}
+                       ;; Initialize bulk operations when switching to that tab
+        (= tab "bulk-operations")
+        (assoc :dispatch [::bulk-ops-events/init {}])))))
+
 (rf/reg-event-fx ::save-org-success
   (fn [{:keys [db]} [_ _org resp]]
     (let [tr (:translator db)]

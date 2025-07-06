@@ -52,6 +52,10 @@
   (fn [errors _]
     (nil? errors)))
 
+(rf/reg-sub ::current-tab
+  (fn [db _]
+    (get-in db [:org :current-tab] "contact")))
+
 (rf/reg-sub ::org-users
   (fn [db _]
     (:users (:org db))))
