@@ -1,6 +1,5 @@
 (ns lipas.ui.org.views
   (:require ["@mui/icons-material/Delete$default" :as DeleteIcon]
-            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
@@ -13,12 +12,12 @@
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            [clojure.string :as str]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
-            [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as ac]
-            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
@@ -28,16 +27,131 @@
             [uix.core :refer [$]]))
 
 (defn ptv-tab []
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
+        org @(rf/subscribe [::subs/editing-org])
+        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
+        ptv-config (or (:ptv-data org) {})
+        ptv-enabled? (and (:sync-enabled ptv-config)
+                          (not (str/blank? (:ptv-org-id ptv-config))))]
+
     [mui/box {:sx {:p 2}}
      [mui/typography {:variant "h5" :sx {:mb 2}}
-      "PTV " (tr :lipas.org/ptv-integration)]
-     [mui/typography {:variant "body1" :color "text.secondary"}
-      "TODO: PTV integration functionality will be implemented here."]
-     [mui/typography {:variant "body2" :sx {:mt 2}}
-      "This will include:"
-      [:ul
-       [:li "Organization's PTV integration settings that are currently hardcoded"]]]]))
+      (tr :lipas.org.ptv/prefix) (tr :lipas.org/ptv-integration)]
+
+     ;; PTV Integration Status Banner
+     [mui/alert {:severity (if ptv-enabled? "success" "info")
+                 :sx {:mb 3}}
+      (if ptv-enabled?
+        (tr :lipas.org.ptv/integration-enabled)
+        [:span
+         (tr :lipas.org.ptv/integration-not-enabled-1)
+         (tr :lipas.org.ptv/please-contact)
+         [:a {:href "mailto:lipasinfo@jyu.fi"
+              :style {:color "inherit" :text-decoration "underline"}}
+          "lipasinfo@jyu.fi"]
+         (tr :lipas.org.ptv/integration-not-enabled-2)])]
+
+     ;; Show configuration to everyone, but only LIPAS admins can edit
+     [mui/form-group {:sx {:gap 2 :max-width 800}}
+
+      ;; PTV Organization ID
+      [text-fields/text-field-controlled
+       {:label (tr :lipas.org.ptv/org-id-label)
+        :value (:ptv-org-id ptv-config)
+        :placeholder (tr :lipas.org.ptv/org-id-placeholder)
+        :helper-text (tr :lipas.org.ptv/org-id-helper)
+        :disabled (not is-lipas-admin?)
+        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :ptv-org-id] %])}]
+
+      ;; Production Organization ID
+      [text-fields/text-field-controlled
+       {:label (tr :lipas.org.ptv/prod-org-id-label)
+        :value (:prod-org-id ptv-config)
+        :placeholder (tr :lipas.org.ptv/prod-org-id-placeholder)
+        :helper-text (tr :lipas.org.ptv/prod-org-id-helper)
+        :disabled (not is-lipas-admin?)
+        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :prod-org-id] %])}]
+
+      ;; Test environment credentials
+      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+       (tr :lipas.org.ptv/test-credentials-title)]
+
+      [mui/box {:sx {:pl 2}}
+       [text-fields/text-field-controlled
+        {:label (tr :lipas.org.ptv/test-username-label)
+         :value (get-in ptv-config [:test-credentials :username])
+         :placeholder (tr :lipas.org.ptv/test-username-placeholder)
+         :disabled (not is-lipas-admin?)
+         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :username] %])}]
+
+       [text-fields/text-field-controlled
+        {:label (tr :lipas.org.ptv/test-password-label)
+         :type "password"
+         :value (get-in ptv-config [:test-credentials :password])
+         :placeholder (tr :lipas.org.ptv/test-password-placeholder)
+         :disabled (not is-lipas-admin?)
+         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :password] %])}]]
+
+      ;; City codes
+      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+       (tr :lipas.org.ptv/municipality-codes-title)]
+
+      [selects/city-selector
+       {:label (tr :lipas.org.ptv/cities-label)
+        :value (:city-codes ptv-config [])
+        :disabled (not is-lipas-admin?)
+        :on-change (fn [value]
+                     (rf/dispatch [::events/edit-org [:ptv-data :city-codes] value]))}]
+
+      ;; Owners
+      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+       (tr :lipas.org.ptv/ownership-types-title)]
+
+      [selects/owner-selector
+       {:label (tr :lipas.org.ptv/owners-label)
+        :value (:owners ptv-config [])
+        :disabled (not is-lipas-admin?)
+        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :owners] %])}]
+
+      ;; Supported languages
+      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+       (tr :lipas.org.ptv/supported-languages-title)]
+
+      [selects/multi-select
+       {:label (tr :lipas.org.ptv/languages-label)
+        :value (:supported-languages ptv-config [])
+        :items [{:value "fi" :label (tr :lipas.org.ptv/finnish-label)}
+                {:value "se" :label (tr :lipas.org.ptv/swedish-label)}
+                {:value "en" :label (tr :lipas.org.ptv/english-label)}]
+        :disabled (not is-lipas-admin?)
+        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :supported-languages] %])}]
+
+      ;; Sync enabled
+      [mui/form-control-label
+       {:control ($ Checkbox
+                    {:checked (boolean (:sync-enabled ptv-config))
+                     :disabled (not is-lipas-admin?)
+                     :onChange (fn [e]
+                                 (rf/dispatch [::events/edit-org
+                                               [:ptv-data :sync-enabled]
+                                               (.-checked (.-target e))]))})
+        :label (tr :lipas.org.ptv/sync-enabled-label)
+        :sx {:mt 2}}]
+
+      ;; Save button - only visible to LIPAS admins
+      (when is-lipas-admin?
+        [mui/button
+         {:variant "contained"
+          :color "primary"
+          :on-click #(rf/dispatch [::events/save-ptv-config])
+          :sx {:mt 3 :align-self "flex-start"}}
+         [mui/icon {:sx {:mr 1}} "save"]
+         (tr :lipas.org.ptv/save-configuration)])
+
+      ;; Info message for non-admins
+      (when (not is-lipas-admin?)
+        [mui/alert {:severity "info" :sx {:mt 2}}
+         (tr :lipas.org.ptv/admin-only-message)])]]))
 
 ;; Component for LIPAS admins who can see all users
 (defn admin-user-management [tr org-id]

@@ -48,6 +48,7 @@
    :lipas.ice-stadium.ventilation
    :lipas.location
    :lipas.org
+   :lipas.org.ptv
    :lipas.properties
    :lipas.sports-site
    :lipas.swimming-pool.conditions

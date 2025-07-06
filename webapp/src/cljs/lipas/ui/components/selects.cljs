@@ -269,7 +269,7 @@
                             type-code))
       :on-change        (comp on-change (partial ->type-codes by-main-cats by-sub-cats))}]))
 
-(defn type-selector [{:keys [value on-change label]}]
+(defn type-selector [{:keys [value on-change label disabled]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         types  (<== [:lipas.ui.sports-sites.subs/types-list locale])]
@@ -277,6 +277,7 @@
     [autocompletes/autocomplete
      {:items     types
       :value     value
+      :disabled  disabled
       :multi?    true
       :label     (or label (tr :search/search))
       :value-fn  :type-code
@@ -292,6 +293,23 @@
     [select
      {:items     types
       :value     value
+      :value-fn  first
+      :label-fn  (comp locale :name second)
+      :on-change on-change}]))
+
+(defn city-selector [{:keys [value on-change cities disabled]}]
+  (let [tr     (<== [:lipas.ui.subs/translator])
+        locale (tr)
+        cities (or cities
+                   (<== [:lipas.ui.sports-sites.subs/cities-by-city-code]))]
+    ^{:key value}
+    [autocompletes/autocomplete
+     {:items     cities
+      :disabled  disabled
+      :multi?    true
+      :value     value
+      :style     select-style
+      :label     (tr :stats/select-city)
       :value-fn  first
       :label-fn  (comp locale :name second)
       :on-change on-change}]))
@@ -325,7 +343,7 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn admin-selector [{:keys [value on-change label]}]
+(defn admin-selector [{:keys [value on-change label disabled]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/admins])]
@@ -333,6 +351,7 @@
     [autocompletes/autocomplete
      {:style     {:min-width "150px"}
       :value     value
+      :disabled  disabled
       :deselect? true
       :multi?    true
       :label     (or label (tr :search/search))
@@ -353,7 +372,7 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn owner-selector [{:keys [value on-change label]}]
+(defn owner-selector [{:keys [value on-change label disabled]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
@@ -361,6 +380,7 @@
     [autocompletes/autocomplete
      {:style     {:min-width "150px"}
       :value     value
+      :disabled  disabled
       :multi?    true
       :deselect? true
       :label     (or label (tr :search/search))
