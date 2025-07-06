@@ -6,4 +6,6 @@
    :update-form {}
    :filters {}
    :loading? false
-   :error nil})
+   :error nil
+   :current-step 0
+   :update-results nil})

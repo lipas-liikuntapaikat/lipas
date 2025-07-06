@@ -23,6 +23,7 @@
  :filter-surface-materials "Rajaa pintamateriaalit",
  :load-as-file "Lataa tiedostona",
  :more "Lisää...",
+ :next "Seuraava"
  :open-main-menu "Avaa päävalikko",
  :redo "Tee uudelleen",
  :resurrect "Palauta",

@@ -21,6 +21,7 @@
  :filter-construction-year "Filter construction years",
  :filter-surface-materials "Filter surface materials",
  :more "More...",
+ :next "Next"
  :open-main-menu "Open main menu",
  :redo "Redo",
  :resurrect "Resurrect",

@@ -11,7 +11,8 @@
  :delete-reason "Reason",
  :delete-tooltip "Delete sports facility...",
  :details-in-portal "Click here to see details",
- :email-public "Email (public)",
+ :editable-sports-sites "Editable sports sites",
+ :email-public "Email (public)"
  :event-date "Modified",
  :headline "Sports facility",
  :id "LIPAS-ID",

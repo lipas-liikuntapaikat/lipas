@@ -16,7 +16,8 @@
  :delete-reason "Orsak",
  :delete-tooltip "Ta bort idrottsanläggningen...",
  :details-in-portal "Visa alla ytterligare information",
- :email-public "E-post (publik)",
+ :editable-sports-sites "Redigerbara idrottsplatser",
+ :email-public "E-post (publik)"
  :event-date "Redigerad",
  :headline "Idrottsanläggning",
  :id "LIPAS-ID",

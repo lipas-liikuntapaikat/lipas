@@ -7,9 +7,8 @@
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]
-            [reitit.frontend.easy :as rfe]))
+            [reitit.frontend.easy :as rfe]
+            [uix.core :as uix :refer [$]]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
@@ -36,7 +35,9 @@
 (defn account-menu
   [{:keys [tr logged-in?]}]
   (let [anchor (<== [::subs/account-menu-anchor])
-        close #(==> [:lipas.ui.events/show-account-menu nil])]
+        close #(==> [:lipas.ui.events/show-account-menu nil])
+        admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
+        org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
 
     [mui/menu {:anchor-el anchor
                :open (some? anchor)
@@ -69,9 +70,8 @@
 
      ;; Organizations
      (when (and logged-in?
-                (or @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :org/admin])
-                    @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :org/manage])
-                    (seq @(rf/subscribe [:lipas.ui.org.subs/user-orgs]))))
+                (or admin?
+                    org?))
        [mui/menu-item {:id "account-menu-item-organizations"
                        :on-click (comp close #(navigate! "/organisaatiot"))}
         [mui/list-item-icon
@@ -79,7 +79,7 @@
         [mui/list-item-text {:primary (tr :lipas.admin/organizations)}]])
 
      ;; Admin
-     (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
+     (when admin?
        [mui/menu-item {:id "account-menu-item-admin"
                        :on-click (comp close #(navigate! "/admin"))}
         [mui/list-item-icon

@@ -1,2 +1,10 @@
 {:select-sites-to-update "Select sports sites for update"
- :update-n-sites "Update {1} sports sites"}
+ :update-n-sites "Update {1} sports sites"
+ :n-sites-selected "{1} sports sites selected"
+ :will-update-n-sites "Will update {1} sports sites"
+ :update-completed "Update completed!"
+ :updated-fields "Updated fields"
+ :update-more-sites "Update more sports sites"
+ :step-select-sites "Select sports sites"
+ :step-enter-info "Enter contact info"
+ :step-summary "Summary"}

@@ -1,2 +1,10 @@
 {:select-sites-to-update "Valitse päivitettävät liikuntapaikat"
- :update-n-sites "Päivitä {1} liikuntapaikkaa"}
+ :update-n-sites "Päivitä {1} liikuntapaikkaa"
+ :n-sites-selected "Valittu {1} liikuntapaikkaa"
+ :will-update-n-sites "Päivitetään {1} liikuntapaikkaa"
+ :update-completed "Päivitys valmis!"
+ :updated-fields "Päivitetyt tiedot"
+ :update-more-sites "Päivitä lisää liikuntapaikkoja"
+ :step-select-sites "Valitse liikuntapaikat"
+ :step-enter-info "Syötä yhteystiedot"
+ :step-summary "Yhteenveto"}

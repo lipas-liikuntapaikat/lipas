@@ -22,6 +22,7 @@
  :filter-construction-year "Avgränsa enligt byggnadsår",
  :filter-surface-materials "Avgränsa enligt ytmaterial",
  :more "Mer...",
+ :next "Nästa"
  :open-main-menu "Öppna huvudmeny",
  :redo "Gör igen",
  :resurrect "Öppna huvudmeny",

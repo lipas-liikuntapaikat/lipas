@@ -14,6 +14,7 @@
  :delete-reason "Poiston syy",
  :delete-tooltip "Poista liikuntapaikka...",
  :details-in-portal "Näytä kaikki lisätiedot",
+ :editable-sports-sites "Muokattavat liikuntapaikat",
  :email-public "Sähköposti (julkinen)",
  :event-date "Muokattu",
  :headline "Liikuntapaikka",

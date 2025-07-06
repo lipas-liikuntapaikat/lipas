@@ -45,6 +45,11 @@
                                               :site/create-edit))
                      all-types))))
 
+(rf/reg-sub ::can-access-some-org?
+  :<- [::user-data]
+  (fn [user _]
+    (roles/check-privilege user {:org-id ::roles/any} :org/member)))
+
 (rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any

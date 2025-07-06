@@ -1,1 +1,10 @@
-{}
+{:select-sites-to-update "Välj idrottsplatser för uppdatering"
+ :update-n-sites "Uppdatera {1} idrottsplatser"
+ :n-sites-selected "{1} idrottsplatser valda"
+ :will-update-n-sites "Uppdaterar {1} idrottsplatser"
+ :update-completed "Uppdatering klar!"
+ :updated-fields "Uppdaterade fält"
+ :update-more-sites "Uppdatera fler idrottsplatser"
+ :step-select-sites "Välj idrottsplatser"
+ :step-enter-info "Ange kontaktuppgifter"
+ :step-summary "Sammanfattning"}
