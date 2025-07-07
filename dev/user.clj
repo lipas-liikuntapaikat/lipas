@@ -56,7 +56,7 @@
   []
   (println "⚡ LIPAS Dev setup")
   (load-webapp-dev-deps!)
-  (tns/set-refresh-dirs "webapp/src" "webapp/test")
+  (tns/set-refresh-dirs "webapp/src" "webapp/test" "src" "test")
   (require '[lipas.backend.system])
   ((requiring-resolve 'repl/reset))
   (println "⚡ Dev System ready!"))

@@ -13,4 +13,5 @@
     ;; TODO: Move to effect hook(s)?
     :controllers [{:start
                    (fn [& _params]
-                     (==> [:lipas.ui.admin.events/get-users]))}]}])
+                     (==> [:lipas.ui.admin.events/get-users])
+                     (==> [:lipas.ui.admin.events/get-orgs]))}]}])

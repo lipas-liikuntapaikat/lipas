@@ -14,6 +14,7 @@
  :headline "Organisationer"
  :members-tab "Medlemmar"
  :name "Namn"
+ :new-organization "Ny organisation"
  :no-organizations "Du tillhör ingen organisation"
  :org-role "Roll"
  :phone "Telefonnummer"

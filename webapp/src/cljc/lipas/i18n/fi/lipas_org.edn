@@ -14,6 +14,7 @@
  :headline "Organisaatiot"
  :members-tab "Jäsenet"
  :name "Nimi"
+ :new-organization "Uusi organisaatio"
  :no-organizations "Et kuulu mihinkään organisaatioon"
  :org-role "Rooli"
  :phone "Puhelinnumero"

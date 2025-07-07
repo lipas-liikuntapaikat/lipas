@@ -269,8 +269,11 @@
          ;; Need to mount the auth manually when no :require-privilege enabled
          :middleware [mw/token-auth mw/auth]
          :handler (fn [req]
-                    {:status 200
-                     :body (org/user-orgs db (parse-uuid (-> req :identity :id)))})}}]
+                    (let [user (:identity req)]
+                      {:status 200
+                       :body (if (roles/check-role user :admin)
+                               (org/all-orgs db)
+                               (org/user-orgs db (parse-uuid (:id user))))}))}}]
 
       ["/orgs"
        {:no-doc false
@@ -306,7 +309,11 @@
         ["/users"
          {:get
           {;; Both org-admins and org-members can view users
-           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/member]
+           :require-privilege [(fn [req]
+                                 (let [user (:identity req)]
+                                   {:org-id (if (roles/check-role user :admin)
+                                              ::roles/any
+                                              (str (-> req :parameters :path :org-id)))})) :org/member]
            :handler (fn [req]
                       {:status 200
                        :body (org/get-org-users db (-> req :parameters :path :org-id))})}

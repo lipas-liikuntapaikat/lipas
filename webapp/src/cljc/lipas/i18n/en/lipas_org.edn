@@ -14,6 +14,7 @@
  :headline "Organizations"
  :members-tab "Members"
  :name "Name"
+ :new-organization "New Organization"
  :no-organizations "You are not a member of any organization"
  :org-role "Role"
  :phone "Phone number"

@@ -3,7 +3,9 @@
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Select$default" :as Select]
@@ -232,24 +234,28 @@
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
         is-org-admin? @(rf/subscribe [::subs/is-org-admin? org-id])
         is-org-member? @(rf/subscribe [::subs/is-org-member? org-id])
-        current-tab @(rf/subscribe [::subs/current-tab])]
+        current-tab @(rf/subscribe [::subs/current-tab])
+        is-new? (= "new" org-id)]
 
     [mui/paper {:sx {:p 3 :m 2}}
      ;; Organization name as headline
      [mui/typography {:variant "h4" :sx {:mb 3}}
-      (:name org)]
+      (if is-new?
+        (tr :lipas.org/new-organization)
+        (:name org))]
 
-     ;; Tabs
-     [mui/tabs {:value current-tab
-                :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
-                :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
-      [mui/tab {:label (tr :lipas.org/contact-info-tab) :value "contact"}]
-      [mui/tab {:label (tr :lipas.org/members-tab) :value "members"}]
-      [mui/tab {:label (tr :lipas.org/bulk-operations-tab) :value "bulk-operations"}]
-      [mui/tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]]
+     ;; Tabs - only show if not new
+     (when-not is-new?
+       [mui/tabs {:value current-tab
+                  :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
+                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
+        [mui/tab {:label (tr :lipas.org/contact-info-tab) :value "contact"}]
+        [mui/tab {:label (tr :lipas.org/members-tab) :value "members"}]
+        [mui/tab {:label (tr :lipas.org/bulk-operations-tab) :value "bulk-operations"}]
+        [mui/tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]])
 
      ;; Tab panels
-     (case current-tab
+     (case (if is-new? "contact" current-tab)
        "contact"
        [mui/box {:sx {:p 2}}
         [mui/form-group {:sx {:gap 2 :max-width 600}}
@@ -258,34 +264,34 @@
            :value (:name org)
            :spec [:string {:min 1 :max 128}]
            :required true
-           :disabled (not (or is-lipas-admin? is-org-admin?))
+           :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/phone)
            :value (get-in org [:data :primary-contact :phone])
            :spec sites-schema/phone-number
-           :disabled (not (or is-lipas-admin? is-org-admin?))
+           :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :phone] x]))}]
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/email)
            :value (get-in org [:data :primary-contact :email])
            :spec sites-schema/email
-           :disabled (not (or is-lipas-admin? is-org-admin?))
+           :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :email] x]))}]
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/website)
            :value (get-in org [:data :primary-contact :website])
            :spec sites-schema/www
-           :disabled (not (or is-lipas-admin? is-org-admin?))
+           :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :website] x]))}]
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/reservations-link)
            :value (get-in org [:data :primary-contact :reservations-link])
            :spec sites-schema/reservations-link
-           :disabled (not (or is-lipas-admin? is-org-admin?))
+           :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservations-link] x]))}]
 
-         (when (or is-lipas-admin? is-org-admin?)
+         (when (or is-lipas-admin? is-org-admin? is-new?)
            [mui/button
             {:variant "contained"
              :color "secondary"
@@ -348,10 +354,20 @@
 
 (defn orgs-list-view []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        user-orgs @(rf/subscribe [::subs/user-orgs])]
+        user-orgs @(rf/subscribe [::subs/user-orgs])
+        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
     [mui/paper {:sx {:p 3 :m 2}}
      [mui/typography {:variant "h4" :sx {:mb 3}}
       (tr :lipas.admin/organizations)]
+
+     ;; Add organization button for LIPAS admins
+     (when is-lipas-admin?
+       [:> Fab
+        {:color "secondary"
+         :size "small"
+         :sx {:mb 2}
+         :on-click #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id "new"}})}
+        [:> Icon "add"]])
 
      (if (seq user-orgs)
        [mui/grid {:container true :spacing 2}

@@ -3,5 +3,6 @@
  :all-cities? "Oikeus kaikkiin kuntiin",
  :all-types? "Oikeus kaikkiin tyyppeihin",
  :cities "Kunnat",
+ :orgs "Organisaatio(t)"
  :sports-sites "Liikunta- ja ulkoilupaikat",
  :types "Tyypit"}

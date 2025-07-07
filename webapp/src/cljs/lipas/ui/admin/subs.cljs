@@ -322,33 +322,3 @@
 (rf/reg-sub ::add-user-to-org-role
   (fn [db _]
     (get-in db [:admin :add-user-to-org :role])))
-
-(rf/reg-sub ::org-users-data
-  (fn [db [_ org-id]]
-    (get-in db [:admin :org-users org-id])))
-
-(rf/reg-sub ::org-users
-  (fn [[_ org-id]]
-    [(rf/subscribe [::org-users-data org-id])])
-  (fn [[users] [_ org-id]]
-    (vals users)))
-
-(rf/reg-sub ::org-users-table-data
-  (fn [[_ org-id]]
-    [(rf/subscribe [::org-users org-id])
-     (rf/subscribe [:lipas.ui.subs/translator])])
-  (fn [[users tr] [_ org-id]]
-    (->> users
-         (map (fn [user]
-                (let [org-roles (->> user
-                                     :permissions
-                                     :roles
-                                     (filter #(= org-id (first (:org-id %))))
-                                     (map :role)
-                                     (sort-by #(get-in roles/roles [% :sort] 999)))
-                      primary-role (first org-roles)]
-                  {:id (:id user)
-                   :email (:email user)
-                   :username (or (:username user) (:email user))
-                   :role (when primary-role
-                           (tr (keyword :lipas.user.permissions.roles.role-names primary-role)))}))))))

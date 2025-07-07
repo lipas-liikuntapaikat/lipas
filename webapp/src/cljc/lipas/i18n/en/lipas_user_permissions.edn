@@ -4,4 +4,5 @@
  :all-types? "Permission to all types",
  :cities "Access to sports faclities in cities",
  :sports-sites "Access to sports faclities",
- :types "Access to sports faclities of type"}
+ :types "Access to sports faclities of type"
+ :orgs "Permissions to organizations"}

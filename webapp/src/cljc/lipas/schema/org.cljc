@@ -38,12 +38,13 @@
   [:map
    [:id org-id]
    [:name [:string {:min 1 :max 128}]]
-   [:data [:map
-           [:primary-contact [:map
-                              [:phone [:maybe sites/phone-number]]
-                              [:email [:maybe sites/email]]
-                              [:website [:maybe sites/www]]
-                              [:reservations-link [:maybe sites/reservations-link]]]]]]
+   [:data [:map {:optional true}
+           [:primary-contact {:optional true}
+            [:map
+             [:phone {:optional true} [:maybe sites/phone-number]]
+             [:email {:optional true} [:maybe sites/email]]
+             [:website {:optional true} [:maybe sites/www]]
+             [:reservations-link {:optional true} [:maybe sites/reservations-link]]]]]]
    [:ptv-data ptv-data]])
 
 (def new-org

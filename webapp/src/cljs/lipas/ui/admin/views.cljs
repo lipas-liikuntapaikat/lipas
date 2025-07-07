@@ -727,37 +727,6 @@
            :on-click #(rf/dispatch [::events/open-add-user-to-org-dialog edit-id])}
           [mui/icon "person_add"]]]]]]]))
 
-(defn orgs-view []
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        orgs @(rf/subscribe [::subs/orgs-list])]
-    ;; TODO: Needed for user edit (for role select) and other cases also!
-    (react/useEffect (fn []
-                       (rf/dispatch [::events/get-orgs])
-                       js/undefined)
-                     #js [])
-    [mui/card {:square true}
-     [mui/card-content
-      [mui/typography {:variant "h5"}
-       (tr :lipas.admin/organizations)]
-
-      [:f> org-dialog tr]
-
-      [mui/grid {:container true :spacing 4}
-       [mui/grid {:item true :style {:flex-grow 1}}
-        [mui/fab
-         {:color "secondary"
-          :size "small"
-          :style {:margin-top "1em"}
-          :on-click (fn [x] (rfe/set-query #(assoc % :edit-id "new")))}
-         [mui/icon "add"]]]]
-
-      [lui/table
-       {:headers
-        [[:name (tr :lipas.org/name)]]
-        :sort-fn :name
-        :items orgs
-        :on-select (fn [x] (rfe/set-query #(assoc % :edit-id (:id x))))}]]]))
-
 (defn job-details-dialog [tr]
   (let [open? (<== [::subs/job-details-dialog-open?])
         job-id (<== [::subs/selected-job-id])
@@ -1140,8 +1109,6 @@
           :text-color "inherit"}
          [mui/tab {:label (tr :lipas.admin/users)
                    :value "users"}]
-         [mui/tab {:label (tr :lipas.admin/organizations)
-                   :value "orgs"}]
          [mui/tab {:label "Symbolityökalu"
                    :value "symbol"}]
          [mui/tab {:label "Tyyppikoodit"
@@ -1161,9 +1128,6 @@
 
          :jobs
          [jobs-monitor-view]
-
-         :orgs
-         [:f> orgs-view]
 
          [:div "Missing view"])]]]))
 
