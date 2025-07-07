@@ -64,11 +64,11 @@
                                                 "www"
                                                 "reservations-link"]})]
 
-    (log/info "ES Query for fetching editable sites"
-              {:user-id (:id user)
-               :user-roles user-roles
-               :is-admin? is-admin?
-               :query final-query})
+    (log/debug "ES Query for fetching editable sites"
+               {:user-id (:id user)
+                :user-roles user-roles
+                :is-admin? is-admin?
+                :query final-query})
 
     (let [search-index (get-in search [:indices :sports-site :search])
           response (search/search (:client search) search-index final-query)]
@@ -151,12 +151,21 @@
           (search/bulk-index-sync! (:client search) bulk-data)
 
           ;; Process background jobs for all updated sites
-          (let [correlation-id (jobs/gen-correlation-id)]
+
+          ;; NOTE: Disabled for now, because current background
+          ;; processes are relevant only, if geoms change and bulk-ops
+          ;; don't touch geoms.
+          ;;
+          ;; TODO: If/when webhooks are enabled again, they need to be
+          ;; added here!
+          ;;
+          #_(let [correlation-id (jobs/gen-correlation-id)]
             (jobs/with-correlation-context correlation-id
               (fn []
                 (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
                   (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
-                    (when route?
+
+                    #_(when route?
                       (jobs/enqueue-job! tx "elevation"
                                          {:lipas-id lipas-id}
                                          {:correlation-id correlation-id
