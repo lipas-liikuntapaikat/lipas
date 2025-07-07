@@ -29,7 +29,7 @@
         (rf/dispatch [::events/get-user-orgs]))}]}])
 
 (def bulk-operations-routes
-  ["organisaatio/:org-id/massa-paivitys"
+  ["organisaatiot/:org-id/massa-paivitys"
    {:name :lipas.ui.routes/org-bulk-operations
     :tr-key :lipas.org/bulk-operations
     :no-navbar-link? true
