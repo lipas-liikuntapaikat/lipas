@@ -100,15 +100,6 @@
           {}
           organizations))
 
-;; For UI org dropdown
-(def orgs
-  (mapv (fn [org]
-          {:name (:name org)
-           :prod (:prod org)
-           :id (:org-id (:props org))
-           :city-codes (:city-codes (:props org))})
-        organizations))
-
 (def lang->locale
   {"fi" :fi, "sv" :se, "en" :en})
 
@@ -619,7 +610,7 @@
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
 
-     ;; Audit status determination  
+     ;; Audit status determination
      :audit-status (determine-audit-status site)}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
