@@ -34,7 +34,7 @@
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
         ptv-config (or (:ptv-data org) {})
         ptv-enabled? (and (:sync-enabled ptv-config)
-                          (not (str/blank? (:ptv-org-id ptv-config))))]
+                          (not (str/blank? (:org-id ptv-config))))]
 
     [mui/box {:sx {:p 2}}
      [mui/typography {:variant "h5" :sx {:mb 2}}
@@ -59,11 +59,11 @@
       ;; PTV Organization ID
       [text-fields/text-field-controlled
        {:label (tr :lipas.org.ptv/org-id-label)
-        :value (:ptv-org-id ptv-config)
+        :value (:org-id ptv-config)
         :placeholder (tr :lipas.org.ptv/org-id-placeholder)
         :helper-text (tr :lipas.org.ptv/org-id-helper)
         :disabled (not is-lipas-admin?)
-        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :ptv-org-id] %])}]
+        :on-change #(rf/dispatch [::events/edit-org [:ptv-data :org-id] %])}]
 
       ;; Production Organization ID
       [text-fields/text-field-controlled

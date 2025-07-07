@@ -7,8 +7,8 @@
 (def ptv-data
   "Schema for PTV integration configuration"
   [:map
-   [:ptv-org-id {:optional true
-                 :description "PTV organization UUID"}
+   [:org-id {:optional true
+             :description "PTV organization UUID"}
     [:maybe common/uuid]]
    [:prod-org-id {:optional true
                   :description "Special UUID used in production for apiUserOrganisation"}
@@ -77,7 +77,7 @@
  ;; Schema for PTV config updates (stricter validation for API endpoint)
 (def ptv-config-update
   [:map
-   [:ptv-org-id common/uuid]
+   [:org-id common/uuid]
    [:prod-org-id {:optional true} common/uuid]
    [:test-credentials {:optional true}
     [:map

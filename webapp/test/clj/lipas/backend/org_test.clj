@@ -74,7 +74,7 @@
                                        :email "helsinki@sports.fi"
                                        :website "https://helsinkisports.fi"
                                        :reservations-link "https://booking.helsinkisports.fi"}}
-              :ptv-data {:ptv-org-id nil
+              :ptv-data {:org-id nil
                          :city-codes [91]
                          :owners ["city"]
                          :supported-languages ["fi" "se"]}}
@@ -85,7 +85,7 @@
                                        :email "info@espooathletics.fi"
                                        :website nil
                                        :reservations-link nil}}
-              :ptv-data {:ptv-org-id nil
+              :ptv-data {:org-id nil
                          :city-codes [49]
                          :owners ["city-main-owner"]
                          :supported-languages ["fi"]}}
@@ -110,7 +110,7 @@
                                              :email "test@example.com"
                                              :website "https://test.org"
                                              :reservations-link "https://booking.test.org"}}
-                    :ptv-data {:ptv-org-id nil
+                    :ptv-data {:org-id nil
                                :city-codes [91]
                                :owners ["city"]
                                :supported-languages ["fi"]}}
@@ -363,7 +363,7 @@
           admin-user (gen-admin-user)
           admin-token (jwt/create-token admin-user)
 
-          ptv-config {:ptv-org-id #uuid "92374b0f-7d3c-4017-858e-666ee3ca2761"
+          ptv-config {:org-id #uuid "92374b0f-7d3c-4017-858e-666ee3ca2761"
                       :prod-org-id #uuid "d0a60c4c-89ff-4c09-a948-a2ecca780105"
                       :test-credentials {:username "API15@testi.fi"
                                          :password "APIinterfaceUser15-1015*"}
@@ -384,7 +384,7 @@
                              (filter (fn [org] (= org-id (:id org))))
                              first)
             saved-config (:ptv-data updated-org)]
-        (is (= (str (:ptv-org-id ptv-config)) (:ptv-org-id saved-config)))
+        (is (= (str (:org-id ptv-config)) (:org-id saved-config)))
         (is (= (str (:prod-org-id ptv-config)) (:prod-org-id saved-config)))
         (is (= (:test-credentials ptv-config) (:test-credentials saved-config)))
         (is (= (:city-codes ptv-config) (:city-codes saved-config)))
@@ -400,7 +400,7 @@
           regular-user (gen-regular-user)
           regular-token (jwt/create-token regular-user)
 
-          ptv-config {:ptv-org-id #uuid "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
+          ptv-config {:org-id #uuid "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
                       :city-codes [91]
                       :owners ["city"]
                       :supported-languages ["fi"]
@@ -428,7 +428,7 @@
           admin-token (jwt/create-token admin-user)
 
           ;; Invalid config - missing required fields
-          invalid-config {:ptv-org-id "not-a-uuid" ; Should be UUID
+          invalid-config {:org-id "not-a-uuid" ; Should be UUID
                           :city-codes ["not-a-number"] ; Should be numbers
                           :owners ["invalid-owner-type"] ; Invalid enum value
                           :supported-languages ["xx"] ; Invalid language code
