@@ -45,6 +45,18 @@
   [url]
   (str/includes? url ".trn.suomi.fi"))
 
+(defn get-org-ptv-config-with-fallback
+  "Get organization PTV configuration with fallback to hard-coded data.
+   This is a temporary function during migration."
+  [ptv ptv-org-id]
+  (if-let [get-config-fn (:get-config-by-ptv-org-id-fn ptv)]
+    (or (get-config-fn ptv-org-id)
+        (do
+          (log/warn "Using hard-coded PTV config for PTV org" ptv-org-id)
+          (get ptv-data/org-id->params ptv-org-id)))
+    ;; No get-config-fn available (e.g., in tests), use hard-coded data
+    (get ptv-data/org-id->params ptv-org-id)))
+
 (defn authenticate
   "If API account is connected to multiple organisations, user should
   define Palveluhallinta organisation ID by using apiUserOrganisation parameter.
@@ -53,20 +65,21 @@
   for active organization (can be check from Palveluhallinta UI).
 
   In test-env token seems to be valid for 24h."
-  [{:keys [token-url username password org-id]}]
+  [{:keys [token-url username password org-id ptv]}]
   (let [token-key (if (test-env? token-url) :ptvToken :serviceToken) ; wtf
         ;; Prod needs a different type of ID for apiUserOrganisation value
-        user-org-id    (or (:prod-org-id (get ptv-data/org-id->params org-id))
-                           org-id)
-        req       {:url token-url
-                   :method :post
-                   :as :json
-                   :accept :json
-                   :content-type :json
-                   :form-params (merge {:username username
-                                        :password password}
-                                       (when user-org-id
-                                         {:apiUserOrganisation user-org-id}))}]
+        org-config (get-org-ptv-config-with-fallback ptv org-id)
+        user-org-id (or (:prod-org-id org-config)
+                        org-id)
+        req {:url token-url
+             :method :post
+             :as :json
+             :accept :json
+             :content-type :json
+             :form-params (merge {:username username
+                                  :password password}
+                                 (when user-org-id
+                                   {:apiUserOrganisation user-org-id}))}]
     (-> (client/request req)
         :body
         token-key)))
@@ -81,14 +94,15 @@
   (let [x (get @(:tokens ptv) org-id)]
     (if (or (not x) (expired? (:payload x)))
       (let [token-props (merge {:token-url (:token-url ptv)
-                                :username  (get-in ptv [:creds :api :username])
-                                :password  (get-in ptv [:creds :api :password])
-                                :org-id    org-id}
+                                :username (get-in ptv [:creds :api :username])
+                                :password (get-in ptv [:creds :api :password])
+                                :org-id org-id
+                                :ptv ptv}
                                (when (= "test" (:env ptv))
                                  (get-test-credentials org-id)))
             new-token (authenticate token-props)
-            payload   (parse-payload new-token)
-            x {:token   new-token
+            payload (parse-payload new-token)
+            x {:token new-token
                :payload payload}]
         (log/infof "Create token %s => %s (%s)" org-id new-token payload)
         (swap! (:tokens ptv) assoc org-id x)
@@ -114,9 +128,8 @@
            (if (and (not retried?)
                     (= 401 (:status d))
                     ;; Just retry once for every 401
-                    #_
-                    (= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
-                       (get (:headers d) "WWW-Authenticate")))
+                    #_(= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
+                         (get (:headers d) "WWW-Authenticate")))
              (do
                (log/infof "Invalid token, trying to get a new token and retry")
                (swap! (:tokens ptv) dissoc auth-org-id)
@@ -159,7 +172,7 @@
   [ptv org-id]
   (ptv-data/get-all-pages (fn [page]
                             (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
-                                          :method       :get
+                                          :method :get
                                           :query-params {:page page}}]
                               (-> (http ptv org-id params)
                                   :body)))))
@@ -167,7 +180,7 @@
 (defn get-org-service-channel
   [ptv auth-org-id service-channel-id]
   (let [params {:url (make-url ptv "/v11/ServiceChannel/" service-channel-id)
-                :method       :get}]
+                :method :get}]
     (-> (http ptv auth-org-id params)
         :body)))
 
@@ -225,26 +238,26 @@
   [{:keys [indices client] :as _search}
    {:keys [city-codes type-codes owners] :as _criteria}]
   (let [idx-name (get-in indices [:sports-site :search])
-        params   {:size             5000
-                  :track_total_hits 50000
-                  :_source          {:excludes ["location.geometries.*"
-                                                "search-meta.location.geometries.*"
-                                                "search-meta.location.simple-geoms.*"]}
-                  :query
-                  {:bool
-                   {;; Remove these, they aren't PTV candidates
+        params {:size 5000
+                :track_total_hits 50000
+                :_source {:excludes ["location.geometries.*"
+                                     "search-meta.location.geometries.*"
+                                     "search-meta.location.simple-geoms.*"]}
+                :query
+                {:bool
+                 {;; Remove these, they aren't PTV candidates
                     ;; Huoltorakennus
                     ;; Opastuspiste
-                    :must_not [{:terms {:type.type-code [207 7000]}}]
-                    :must
-                    (remove nil?
-                            [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
-                             (when city-codes
-                               {:terms {:location.city.city-code city-codes}})
-                             (when owners
-                               {:terms {:owner owners}})
-                             (when type-codes
-                               {:terms {:type.type-code type-codes}})])}}}]
+                  :must_not [{:terms {:type.type-code [207 7000]}}]
+                  :must
+                  (remove nil?
+                          [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
+                           (when city-codes
+                             {:terms {:location.city.city-code city-codes}})
+                           (when owners
+                             {:terms {:owner owners}})
+                           (when type-codes
+                             {:terms {:type.type-code type-codes}})])}}}]
     (-> (search/search client idx-name params)
         :body
         :hits
@@ -364,20 +377,15 @@
 
   (update-service-location ptv*
                            "fc768bb4-268c-4054-9b88-9ecc9a943452"
-                           {:org-id           org-id*
+                           {:org-id org-id*
                             :publishingStatus "Deleted"})
 
-
-
-  ;; Get all prod orgs
+;; Get all prod orgs
   (def ptv-prod-orgs
     (ptv-data/get-all-pages
      (fn [page]
-       (let [params {:url          "https://api.palvelutietovaranto.suomi.fi/api/v11/Organization"
-                     :method       :get
-                     :as           :json
+       (let [params {:url "https://api.palvelutietovaranto.suomi.fi/api/v11/Organization"
+                     :method :get
+                     :as :json
                      :query-params {:page page :status "Published"}}]
-         (:body (client/request params))))))
-
-
-  )
+         (:body (client/request params)))))))

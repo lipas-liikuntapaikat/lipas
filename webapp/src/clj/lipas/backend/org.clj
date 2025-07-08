@@ -22,6 +22,21 @@
 (defn create-org [db org]
   (sql/insert! db :org org (assoc jdbc/unqualified-snake-kebab-opts
                                   :return-keys true)))
+(defn get-org
+  "Get organization by ID"
+  [db org-id]
+  (sql/get-by-id db :org (if (string? org-id)
+                           (parse-uuid org-id)
+                           org-id)
+                 {:builder-fn rs/as-unqualified-kebab-maps}))
+
+(defn get-org-by-ptv-org-id
+  "Get organization by its PTV org ID"
+  [db ptv-org-id]
+  (let [q (hsql/format {:select [:*]
+                        :from [:org]
+                        :where [:= [:->> :ptv_data [:inline "org-id"]] (str ptv-org-id)]})]
+    (first (sql/query db q {:builder-fn rs/as-unqualified-kebab-maps}))))
 
 (defn update-org! [db org-id org]
   (sql/update! db :org org ["id = ?" org-id] jdbc/unqualified-snake-kebab-opts))

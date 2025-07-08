@@ -8,6 +8,7 @@
    [lipas.backend.handler :as handler]
    [lipas.backend.search :as search]
    [lipas.jobs.system :as jobs-system]
+   [lipas.backend.org :as org]
    [nrepl.server :as nrepl]
    [ring.adapter.jetty :as jetty]
    [taoensso.timbre :as log])
@@ -77,7 +78,17 @@
 (defmethod ig/halt-key! :lipas/open-ai [_ _m])
 
 (defmethod ig/init-key :lipas/ptv [_ config]
-  (assoc config :tokens (atom {})))
+  (let [db (:db config)
+        get-config-fn (fn [ptv-org-id]
+                        (if-let [org (org/get-org-by-ptv-org-id db ptv-org-id)]
+                          (:ptv-data org)
+                          (do
+                            (log/warn "No LIPAS org found for PTV org-id" ptv-org-id)
+                            nil)))]
+    (-> config
+        (dissoc :db) ; Remove db from config as we don't need to carry it around
+        (assoc :tokens (atom {})
+               :get-config-by-ptv-org-id-fn get-config-fn))))
 
 (defmethod ig/halt-key! :lipas/ptv [_ _m])
 
