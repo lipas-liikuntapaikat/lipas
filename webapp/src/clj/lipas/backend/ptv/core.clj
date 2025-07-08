@@ -318,7 +318,8 @@
                           (assoc :event-date (utils/timestamp))
                           (assoc :ptv ptv))]
         (core/upsert-sports-site! tx user site)
-        (core/index! search site :sync)))))
+        (core/index! search site :sync))))
+  {:status "OK"})
 
 (defn save-ptv-audit
   "Saves PTV audit information for a sports site."

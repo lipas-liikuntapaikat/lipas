@@ -33,7 +33,7 @@
 
         [selected-tab set-selected-tab] (uix/use-state :fi)
 
-        org-languages (ptv-data/org-id->languages org-id)
+        org-languages (use-subscribe [::subs/org-languages org-id])
         service-candidate-descriptions (use-subscribe [::subs/service-candidate-descriptions org-id])
         {:keys [summary description]} (get service-candidate-descriptions source-id)
 
@@ -184,7 +184,7 @@
         {:keys [org-id sync-enabled delete-existing last-sync publishing-status]} (:ptv site)
 
         orgs (use-subscribe [::subs/users-orgs])
-        org-languages (ptv-data/org-id->languages org-id)
+        org-languages (use-subscribe [::subs/org-languages org-id])
 
         ;; _ (js/console.log org-id)
 
@@ -224,18 +224,18 @@
 
         org-options (uix/use-memo (fn []
                                     (->> orgs
-                                         (map (fn [{:keys [name id]}]
+                                         (map (fn [{:keys [name _id ptv-data]}]
                                                 {:label name
-                                                 :value id}))))
+                                                 :value (:org-id ptv-data)}))))
                                   [orgs])]
 
-    (js/console.log missing-services new-service new-service-sub-cat)
-    (js/console.log "sync enabled" sync-enabled)
+    #_(js/console.log missing-services new-service new-service-sub-cat)
+    #_(js/console.log "sync enabled" sync-enabled)
 
     (uix/use-effect (fn []
                       (when org-id
-                        (rf/dispatch [::events/fetch-org {:id org-id}])
-                        (rf/dispatch [::events/fetch-services {:id org-id}])))
+                        (rf/dispatch [::events/fetch-ptv-org {:id org-id}])
+                        (rf/dispatch [::events/fetch-ptv-services {:id org-id}])))
                     [org-id])
 
     ($ Stack

@@ -331,10 +331,11 @@
 
   ;; Delete all org services
   (doseq [x (:itemList (get-org-services ptv* org-id*))]
-    (update-service ptv*
-                    (:sourceId x)
-                    {:mainResponsibleOrganization org-id*
-                     :publishingStatus "Deleted"}))
+    (when-let [source-id (:sourceId x)]
+      (update-service ptv*
+                      source-id
+                      {:mainResponsibleOrganization org-id*
+                       :publishingStatus "Deleted"})))
 
   (get-service ptv*
                org-id*
@@ -343,25 +344,28 @@
                    first
                    :id))
 
+  (map :serviceNames (:itemList (get-org-services ptv* org-id*)))
+
   (require 'user)
 
   ;; Remove :ptv key
-  (doseq [search-site (get-eligible-sites (user/search)
+  (def robot (repl/get-robot-user))
+  (doseq [search-site (get-eligible-sites (repl/search)
                                           {:city-codes [425]
                                            :owners ["city" "city-main-owner"]})
-          :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
-    (let [resp (core/upsert-sports-site! (user/db)
-                                         user/robot
+          :let [site (core/get-sports-site (repl/db) (:lipas-id search-site))]]
+    (let [resp (core/upsert-sports-site! (repl/db)
+                                         robot
                                          (-> (dissoc site :ptv)
                                              (assoc :event-date (utils/timestamp)))
                                          false)]
-      (core/index! (user/search) resp :sync)))
+      (core/index! (repl/search) resp :sync)))
 
-  (doseq [search-site (get-eligible-sites (user/search)
+  (doseq [search-site (get-eligible-sites (repl/search)
                                           {:city-codes [425]
                                            :owners ["city" "city-main-owner"]})
-          :let [site (core/get-sports-site (user/db) (:lipas-id search-site))]]
-    (core/index! (user/search) site :sync))
+          :let [site (core/get-sports-site (repl/db) (:lipas-id search-site))]]
+    (core/index! (repl/search) site :sync))
 
   (get-org-service-channels ptv* org-id*)
 
