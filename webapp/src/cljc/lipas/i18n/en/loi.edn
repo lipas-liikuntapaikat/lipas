@@ -1,0 +1,6 @@
+{:category "Category",
+ :headline "Other object",
+ :status "Status",
+ :type "Object Type",
+ :type-and-category-disclaimer
+ "Category and type must be selected before adding to the map"}

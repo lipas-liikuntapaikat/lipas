@@ -1,0 +1,6 @@
+{:hall-heating "Hall heating",
+ :maintenance-water-heating "Maintenance water heating",
+ :other-space-heating "Other heating",
+ :service-water-heating "Service water heating",
+ :snow-melting "Snow melting",
+ :track-heating "Track heating"}

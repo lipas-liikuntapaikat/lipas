@@ -1,0 +1,11 @@
+{:childrens-pool "Barnbassäng",
+ :cold-pool "Kallbassäng",
+ :diving-pool "Hoppbassäng",
+ :fitness-pool "Konditionsbassäng",
+ :main-pool "Huvudsbassäng",
+ :multipurpose-pool "Allaktivitetsbassäng",
+ :other-pool "Annan bassäng",
+ :paddling-pool "Plaskdamm",
+ :teaching-pool "Undervisningsbassäng",
+ :therapy-pool "Terapibassäng",
+ :whirlpool-bath "Bubbelbad"}

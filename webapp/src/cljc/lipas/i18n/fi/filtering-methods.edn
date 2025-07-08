@@ -1,0 +1,8 @@
+{:activated-carbon "Aktiivihiili",
+ :coal "Hiili",
+ :membrane-filtration "Kalvosuodatus",
+ :multi-layer-filtering "Monikerrossuodatus",
+ :open-sand "Avohiekka",
+ :other "Muu",
+ :precipitation "Saostus",
+ :pressure-sand "Painehiekka"}

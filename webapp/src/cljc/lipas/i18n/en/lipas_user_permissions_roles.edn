@@ -1,0 +1,27 @@
+{:context-keys
+ {:city-code "Municipality",
+  :type-code "Type",
+  :activity "Activity",
+  :lipas-id "Site"},
+ :context-value-all "All",
+ :edit-role
+ {:edit-header "Edit",
+  :new-header "Add Role",
+  :stop-editing "Stop Editing",
+  :add "Add",
+  :choose-role
+  "Choose a role first to select which resources the role affects."},
+ :permissions-old "(old, read-only)",
+ :role "Role",
+ :role-names
+ {:activities-manager "UTP Manager",
+  :ptv-manager "PTV Manager",
+  :admin "Admin",
+  :analysis-user "Analysis tool user",
+  :org-admin "Organization admin",
+  :type-manager "Type Manager",
+  :floorball-manager "Floorball Editor",
+  :site-manager "Site Manager",
+  :city-manager "City Manager",
+  :org-user "Organization user"},
+ :roles "Roles"}

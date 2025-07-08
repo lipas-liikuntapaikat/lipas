@@ -1,0 +1,14 @@
+{:basic-data-of-halls "Jäähallien perustiedot",
+ :comparison "Hallien vertailu",
+ :competition "Kilpahalli < 3000 hlö",
+ :description
+ "Jäähalliportaali sisältää  hallien perus- ja energiankulutustietoja sekä ohjeita  energiatehokkuuden parantamiseen.",
+ :entering-energy-data "Energiankulutustietojen syöttäminen",
+ :headline "Jäähalli​portaali",
+ :large "Suurhalli > 3000 hlö",
+ :size-category "Kokoluokitus",
+ :small "Pieni kilpahalli > 500 hlö",
+ :updating-basic-data "Perustietojen päivitys",
+ :video "Video",
+ :video-description "Pihlajalinna Areena on energiatehokas jäähalli",
+ :watch "Katso"}

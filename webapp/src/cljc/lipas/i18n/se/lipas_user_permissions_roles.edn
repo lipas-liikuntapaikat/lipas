@@ -1,0 +1,27 @@
+{:context-keys
+ {:city-code "Kommun",
+  :type-code "Typ",
+  :activity "Aktivitet",
+  :lipas-id "Plats"},
+ :context-value-all "Alla",
+ :edit-role
+ {:edit-header "Redigera",
+  :new-header "Lägg till roll",
+  :stop-editing "Avsluta redigering",
+  :add "Lägg till",
+  :choose-role
+  "Välj roll först för att välja vilka resurser rollen påverkar."},
+ :permissions-old "(gamla, endast läs)",
+ :role "Roll",
+ :role-names
+ {:activities-manager "UTP-administratör",
+  :ptv-manager "PTV-administratör",
+  :admin "Admin",
+  :analysis-user "Analysverktygsanvändare",
+  :org-admin "Organisationsadministratör",
+  :type-manager "Typadministratör",
+  :floorball-manager "Innebandyredigerare",
+  :site-manager "Platsadministratör",
+  :city-manager "Stadsadministratör",
+  :org-user "Organisationsanvändare"},
+ :roles "Roller"}

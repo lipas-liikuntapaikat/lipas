@@ -1,0 +1,5 @@
+{:brick "Brick",
+ :concrete "Concrete",
+ :solid-rock "Solid rock",
+ :steel "Steel",
+ :wood "Wood"}

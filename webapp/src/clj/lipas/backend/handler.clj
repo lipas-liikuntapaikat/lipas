@@ -3,18 +3,21 @@
             [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v2 :as v2]
+            [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
+            [lipas.backend.org :as org]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.core]
             [lipas.schema.help :as help-schema]
+            [lipas.schema.org :as org-schema]
             [lipas.utils :as utils]
             [muuntaja.core :as m]
-            [reitit.coercion.spec]
             [reitit.coercion.malli]
+            [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -45,6 +48,7 @@
    :user-not-found (exception-handler 404 :user-not-found)
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
+   :invalid-payload (exception-handler 400 :invalid-payload)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -94,13 +98,8 @@
            :body (io/input-stream (io/resource "public/index.html"))})}}]
 
      ["/api"
-      {:middleware [mw/cors]
-       :no-doc true
-       :options
-       {:handler
-        (fn [_]
-          {:status 200
-           :body {:status "OK"}})}}
+      {:cors true
+       :no-doc true}
 
       ["/swagger.json"
        {:get
@@ -259,6 +258,100 @@
          (fn [_]
            {:status 200
             :body (core/get-users db)})}}]
+
+      ;; FIXME: Where should this be?
+      ["/current-user-orgs"
+       {:get
+        {:coercion reitit.coercion.malli/coercion
+         :no-doc false
+         ;; Doesn't require privileges, no :org/member just means no orgs.
+         :require-privilege nil
+         ;; Need to mount the auth manually when no :require-privilege enabled
+         :middleware [mw/token-auth mw/auth]
+         :handler (fn [req]
+                    (let [user (:identity req)]
+                      {:status 200
+                       :body (if (roles/check-role user :admin)
+                               (org/all-orgs db)
+                               (org/user-orgs db (parse-uuid (:id user))))}))}}]
+
+      ["/orgs"
+       {:no-doc false
+        :coercion reitit.coercion.malli/coercion}
+       [""
+        {;; Only admin users
+         :require-privilege :org/admin
+         :get
+         {:handler
+          (fn [_]
+            {:status 200
+             :body (org/all-orgs db)})}
+         :post
+         {:parameters {:body org-schema/new-org}
+          :handler
+          (fn [req]
+            {:status 200
+             :body (org/create-org db (-> req :parameters :body))})}}]
+       ["/:org-id"
+        {:parameters {:path [:map
+                             [:org-id org-schema/org-id]]}}
+        [""
+         {;; Only org-admins can update org details
+          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :put
+          {:parameters {:body org-schema/org}
+           :handler (fn [req]
+                      (org/update-org! db
+                                       (-> req :parameters :path :org-id)
+                                       (-> req :parameters :body))
+                      {:status 200
+                       :body {}})}}]
+        ["/users"
+         {:get
+          {;; Both org-admins and org-members can view users
+           :require-privilege [(fn [req]
+                                 (let [user (:identity req)]
+                                   {:org-id (if (roles/check-role user :admin)
+                                              ::roles/any
+                                              (str (-> req :parameters :path :org-id)))})) :org/member]
+           :handler (fn [req]
+                      {:status 200
+                       :body (org/get-org-users db (-> req :parameters :path :org-id))})}
+          :post
+          {;; Only org-admins can modify users
+           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+           :parameters {:body org-schema/user-updates}
+           :handler (fn [req]
+                      (org/update-org-users! db
+                                             (-> req :parameters :path :org-id)
+                                             (-> req :parameters :body :changes))
+                      {:status 200
+                       :body {}})}}]
+        ["/add-user-by-email"
+         {;; Only org-admins can add users
+          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :post
+          {:parameters {:body [:map
+                               [:email :string]
+                               [:role [:enum "org-admin" "org-user"]]]}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            email (-> req :parameters :body :email)
+                            role (-> req :parameters :body :role)
+                            result (org/add-org-user-by-email! db org-id email role)]
+                        {:status (if (:success? result) 200 400)
+                         :body result}))}}]
+        ["/ptv-config"
+         {;; Only LIPAS admins can configure PTV settings
+          :require-privilege :users/manage
+          :put
+          {:parameters {:body org-schema/ptv-config-update}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            ptv-config (-> req :parameters :body)]
+                        (org/update-org-ptv-config! db org-id ptv-config)
+                        {:status 200
+                         :body {:message "PTV configuration updated successfully"}}))}}]]]
 
       ["/actions/gdpr-remove-user"
        {:post
@@ -774,6 +867,7 @@
              {:status 200
               :body (heatmap/get-facets ctx params)}))}}]
 
+      (bulk-ops-handler/routes ctx)
       (ptv-handler/routes ctx)
       (jobs-handler/routes ctx)]
 
@@ -788,6 +882,10 @@
                    muuntaja/format-negotiate-middleware
                    ;; encoding response body
                    muuntaja/format-response-middleware
+                   ;; add cors headers and respond to OPTIONS requests,
+                   ;; - before privilege check, so options request is handled first.
+                   ;; - before exception handling, so error responses also get cors headers.
+                   mw/cors-middleware
                    ;; exception handling
                    exceptions-mw
                    ;; decoding request body

@@ -3,6 +3,7 @@
             [lipas.i18n.core :as i18n]
             [lipas.ui.admin.db :as admin]
             [lipas.ui.analysis.db :as analysis]
+            [lipas.ui.bulk-operations.db :as bulk-ops]
             [lipas.ui.energy.db :as energy]
             [lipas.ui.feedback.db :as feedback]
             [lipas.ui.front-page.db :as front-page]
@@ -27,6 +28,8 @@
    :drawer-open?  false
    :screen-size   "lg"
    :current-route nil
+   ;; This is just a wrapper fn calling latest translate fn (var) in the i18n.core
+   ;; so if core ns is reloaded, app uses the latest translation dicts.
    :translator    (i18n/->tr-fn :fi)
 
    ;; Admin
@@ -86,4 +89,7 @@
    :ptv ptv/default-db
 
    ;; Help
-   :help help/default-db})
+   :help help/default-db
+
+   ;; Bulk operations
+   :bulk-operations bulk-ops/default-db})

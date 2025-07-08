@@ -1,0 +1,10 @@
+{:daily-open-hours "Daily open hours",
+ :headline "Open hours",
+ :open-days-in-year "Open days in year",
+ :open-hours-fri "Fridays",
+ :open-hours-mon "Mondays",
+ :open-hours-sat "Saturdays",
+ :open-hours-sun "Sundays",
+ :open-hours-thu "Thursdays",
+ :open-hours-tue "Tuesdays",
+ :open-hours-wed "Wednesdays"}

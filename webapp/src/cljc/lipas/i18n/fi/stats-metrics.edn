@@ -1,0 +1,9 @@
+{:deficit "Tilikauden alijäämä",
+ :investments "Investoinnit",
+ :net-costs "Nettokustannukset",
+ :operating-expenses "Käyttökustannukset",
+ :operating-incomes "Käyttötuotot",
+ :operational-expenses "Toimintakulut",
+ :operational-income "Toimintatuotot",
+ :subsidies "Kunnan myöntämät avustukset",
+ :surplus "Tilikauden ylijäämä"}

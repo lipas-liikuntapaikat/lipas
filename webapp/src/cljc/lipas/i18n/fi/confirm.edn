@@ -1,0 +1,7 @@
+{:delete-confirm "Haluatko varmasti poistaa rivin?",
+ :discard-changes? "Tahdotko kumota tekemäsi muutokset?",
+ :headline "Varmistus",
+ :no "Ei",
+ :resurrect? "Tahdotko palauttaa liikuntapaikan aktiiviseksi?",
+ :save-basic-data? "Haluatko tallentaa perustiedot?",
+ :yes "Kyllä"}

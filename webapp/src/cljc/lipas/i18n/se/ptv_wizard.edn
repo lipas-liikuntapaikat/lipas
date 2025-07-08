@@ -1,0 +1,21 @@
+{:all-services-exist "Alla nödvändiga service är i PTV. Fantastiskt!",
+ :assign-services-to-sports-sites
+ "Koppla idrottsanläggningar till tjänsterna.",
+ :attach-to-conflicting-service-channel
+ "Koppla till denna servicepunkt",
+ :export-service-locations-to-ptv "Skicka till PTV",
+ :export-services-to-ptv "Skicka till PTV",
+ :generate-descriptions "Skapa beskrivningar",
+ :generate-descriptions-helper1
+ "Tjänster kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ :generate-descriptions-helper2
+ "Tryck på knappen 'Skapa beskrivningar' för att automatiskt skapa beskrivningar med hjälp av artificiell intelligens. Beskrivningarna skapas baserat på de idrottsanläggningar som är sparade i LIPAS.",
+ :generate-descriptions-helper3
+ "Servicepunkter kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
+ :integrate-service-locations
+ "Skapa servicepunkter från idrottsanläggningar.",
+ :service-channel-name-conflict
+ "Det finns redan en servicepunkt med namnet {1} i PTV.",
+ :services-to-add "Service att upprätta",
+ :unselect-helper
+ "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."}

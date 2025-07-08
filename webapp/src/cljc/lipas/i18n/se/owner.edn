@@ -1,0 +1,9 @@
+{:city "Kommun",
+ :city-main-owner "Företag med kommun som majoritetsägare",
+ :company-ltd "Företag",
+ :foundation "Stiftelse",
+ :municipal-consortium "Samkommun",
+ :other "Annat",
+ :registered-association "Registrerad förening",
+ :state "Stat",
+ :unknown "Ingen information"}

@@ -1,0 +1,7 @@
+{:contacts "Contacts",
+ :download-as-excel "Download Excel",
+ :file-format "Format",
+ :select-fields "Select field",
+ :selected-fields "Selected fields",
+ :shortcuts "Shortcuts",
+ :tooltip "Create Excel from search results"}

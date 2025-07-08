@@ -1,0 +1,18 @@
+{:cold "Cold energy (acquired) MWh",
+ :comment "Comment",
+ :contains-other-buildings?
+ "Readings contain also other buildings or spaces",
+ :electricity "Electricity MWh",
+ :headline "Energy consumption",
+ :headline-year "Energy consumption in {1}",
+ :heat "Heat (acquired) MWh",
+ :monthly "Monthly",
+ :monthly-readings-in-year "Monthly energy consumption in {1}",
+ :monthly? "I want to report monthly energy consumption",
+ :not-reported "Energy consumption not reported",
+ :not-reported-monthly "No monthly data available",
+ :operating-hours "Operating hours",
+ :report "Report readings",
+ :reported-for-year "Energy consumption reported for {1}",
+ :water "Water m³",
+ :yearly "Yearly"}

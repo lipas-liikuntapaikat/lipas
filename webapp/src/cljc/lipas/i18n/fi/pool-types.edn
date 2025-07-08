@@ -1,0 +1,11 @@
+{:childrens-pool "Lastenallas",
+ :cold-pool "Kylmäallas",
+ :diving-pool "Hyppyallas",
+ :fitness-pool "Kuntouintiallas",
+ :main-pool "Pääallas",
+ :multipurpose-pool "Monitoimiallas",
+ :other-pool "Muu allas",
+ :paddling-pool "Kahluuallas",
+ :teaching-pool "Opetusallas",
+ :therapy-pool "Terapia-allas",
+ :whirlpool-bath "Poreallas"}

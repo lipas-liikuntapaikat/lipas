@@ -1,0 +1,12 @@
+{:apr "Huhtikuu",
+ :aug "Elokuu",
+ :dec "Joulukuu",
+ :feb "Helmikuu",
+ :jan "Tammikuu",
+ :jul "Heinäkuu",
+ :jun "Kesäkuu",
+ :mar "Maaliskuu",
+ :may "Toukokuu",
+ :nov "Marraskuu",
+ :oct "Lokakuu",
+ :sep "Syyskuu"}

@@ -7,9 +7,8 @@
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==> navigate!] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]
-            [reitit.frontend.easy :as rfe]))
+            [reitit.frontend.easy :as rfe]
+            [uix.core :as uix :refer [$]]))
 
 (def links
   {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
@@ -36,7 +35,9 @@
 (defn account-menu
   [{:keys [tr logged-in?]}]
   (let [anchor (<== [::subs/account-menu-anchor])
-        close #(==> [:lipas.ui.events/show-account-menu nil])]
+        close #(==> [:lipas.ui.events/show-account-menu nil])
+        admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
+        org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
 
     [mui/menu {:anchor-el anchor
                :open (some? anchor)
@@ -67,8 +68,18 @@
          [mui/icon "account_circle"]]
         [mui/list-item-text {:primary (tr :user/headline)}]])
 
+     ;; Organizations
+     (when (and logged-in?
+                (or admin?
+                    org?))
+       [mui/menu-item {:id "account-menu-item-organizations"
+                       :on-click (comp close #(navigate! "/organisaatiot"))}
+        [mui/list-item-icon
+         [mui/icon "corporate_fare"]]
+        [mui/list-item-text {:primary (tr :lipas.admin/organizations)}]])
+
      ;; Admin
-     (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
+     (when admin?
        [mui/menu-item {:id "account-menu-item-admin"
                        :on-click (comp close #(navigate! "/admin"))}
         [mui/list-item-icon
@@ -236,7 +247,9 @@
   (let [name (-> route :data :name)
         tr-key (-> route :data :tr-key)]
     (when name
-      {:text (tr tr-key) :href (rfe/href name)})))
+      {:text (tr tr-key)
+       :href (when (not (-> route :data :no-navbar-link?))
+               (rfe/href name))})))
 
 (defn menu-button [{:keys [tr]}]
   [mui/icon-button

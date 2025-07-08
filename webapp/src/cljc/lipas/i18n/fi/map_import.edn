@@ -1,0 +1,19 @@
+{:coords-not-in-finland-wgs84-bounds
+ "Annettu tiedosto ei sisällä koordinaatteja WGS84 (EPSG:4326) koordinaatistossa. Tarkista että lähtöaineisto on oikeassa koordinaattijärjestelmässä.",
+ :geoJSON
+ "Tuo .json tai .geojson päätteinen tiedosto, joka sisältää GeoJSON FeatureCollection -objektin. Lähtöaineiston pitää olla WGS84-koordinaatistossa.",
+ :gpx "Lähtöaineiston pitää olla WGS84-koordinaatistossa.",
+ :headline "Tuo geometriat",
+ :import-selected "Tuo valitut",
+ :kml "Lähtöaineiston pitää olla WGS84 koordinaatistossa.",
+ :no-geoms-of-type "Annettu tiedosto ei sisällä {1} geometrioita.",
+ :replace-existing? "Korvaa nykyiset geometriat",
+ :select-encoding "Valitse merkistö",
+ :shapefile
+ "Tuo .shp-, .dbf- ja .prj-tiedostot pakattuna .zip-muotoon.",
+ :supported-formats "Tuetut tiedostomuodot ovat {1}",
+ :tab-header "Tuo tiedostosta",
+ :tooltip "Tuo geometriat tiedostosta",
+ :unknown-error
+ "Odottamaton virhe tapahtui. Yritä toisella tiedostolla.",
+ :unknown-format "Tuntematon tiedostopääte '{1}'"}

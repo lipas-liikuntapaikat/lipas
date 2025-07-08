@@ -102,7 +102,7 @@
         site-audit-data (use-subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
         summary-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :summary])
         description-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :description])
-        org-id (use-subscribe [:lipas.ui.ptv.subs/selected-org-id])
+        org-id (use-subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
 
         ;; Check if at least one field has status set for validation
         any-status? (or summary-status description-status)]
@@ -224,7 +224,7 @@
 ;; Main audit view
 (defui main-view
   [{:keys [tr]}]
-  (let [org-id (use-subscribe [:lipas.ui.ptv.subs/selected-org-id])
+  (let [org-id (use-subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
         selected-tab (use-subscribe [:lipas.ui.ptv.subs/selected-audit-tab])
         selected-site (use-subscribe [:lipas.ui.ptv.subs/selected-audit-site])
 

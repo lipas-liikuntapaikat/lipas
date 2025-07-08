@@ -1,0 +1,7 @@
+{:days-in-year "days a year",
+ :hours-per-day "hours a day",
+ :pcs "pcs",
+ :percent "%",
+ :person "person",
+ :times-per-day "times a day",
+ :times-per-week "times a wekk"}

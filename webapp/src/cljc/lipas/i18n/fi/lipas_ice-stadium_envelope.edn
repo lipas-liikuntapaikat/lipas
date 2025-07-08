@@ -1,0 +1,6 @@
+{:base-floor-structure "Alapohjan laatan rakenne",
+ :headline "Vaipan rakenne",
+ :insulated-ceiling? "Yläpohja lämpöeristetty",
+ :insulated-exterior? "Ulkoseinä lämpöeristetty",
+ :low-emissivity-coating?
+ "Yläpohjassa  matalaemissiiviteettipinnoite (heijastus/säteily)"}

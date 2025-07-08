@@ -1,0 +1,14 @@
+{:deleting-tooltip "Raderingsverktyg valt",
+ :download-backup-tooltip "Ladda ner säkerhetskopia",
+ :drawing-hole-tooltip "Hålteckningsverktyg valt",
+ :drawing-tooltip "Ritverktyg valt",
+ :edit-tool "Redigeringsverktyg",
+ :importing-tooltip "Importverktyg valt",
+ :restore-backup-tooltip "Återställ säkerhetskopia",
+ :route-part-difficulty-tooltip
+ "Verktyg för val av svårighetsgrad för ruttsektion valt",
+ :selecting "Valverktyg valt",
+ :simplify "Förenkla",
+ :simplifying "Förenklingsverktyg valt",
+ :splitting-tooltip "Delningsverktyg valt",
+ :travel-direction-tooltip "Reseriktningverktyg valt"}

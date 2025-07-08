@@ -1,0 +1,9 @@
+{:access-all-sites "Du har admin rättigheter.",
+ :confirm-magic-link
+ "Är du säker på att du vill skicka magic link till {1}?",
+ :headline "Admin",
+ :magic-link "Magic link",
+ :organizations "Organisationer",
+ :select-magic-link-template "Välj brev",
+ :send-magic-link "Skicka magic link till användare",
+ :users "Användare"}

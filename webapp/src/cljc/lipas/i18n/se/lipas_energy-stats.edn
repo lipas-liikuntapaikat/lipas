@@ -1,0 +1,12 @@
+{:cold-mwh "El + värme MWh",
+ :disclaimer "El MWh",
+ :electricity-mwh "El MWh",
+ :energy-mwh "El + värme MWh",
+ :energy-reported-for "Värme MWh",
+ :hall-missing? "Vatten m³",
+ :headline "Värme MWh",
+ :heat-mwh "Värme MWh",
+ :not-reported "Vatten m³",
+ :report "",
+ :reported "Vatten m³",
+ :water-m3 "Vatten m³"}

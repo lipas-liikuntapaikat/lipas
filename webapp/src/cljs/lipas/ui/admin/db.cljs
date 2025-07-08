@@ -2,8 +2,7 @@
   (:require [lipas.data.styles :as styles]))
 
 (def default-db
-  {:selected-tab                0
-   :users-status                "active"
+  {:users-status                "active"
    :magic-link-dialog-open?     false
    :magic-link-variants         [{:value "lipas" :label "Lipas"}
                                  {:value "portal" :label "Portaali"}]

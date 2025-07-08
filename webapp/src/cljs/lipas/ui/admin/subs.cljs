@@ -1,5 +1,6 @@
 (ns lipas.ui.admin.subs
   (:require [clojure.string :as str]
+            [lipas.roles :as roles]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
@@ -276,3 +277,48 @@
 (rf/reg-sub ::bulk-acknowledging?
   (fn [db _]
     (get-in db [:admin :jobs :dead-letter :bulk-acknowledging?] false)))
+
+;;; Orgs ;;;
+
+(rf/reg-sub ::orgs
+  (fn [db _]
+    (-> db :admin :orgs)))
+
+(rf/reg-sub ::org
+  :<- [::orgs]
+  (fn [orgs [_ id]]
+    (get orgs id)))
+
+(rf/reg-sub ::orgs-list
+  :<- [::orgs]
+  (fn [orgs _]
+    (vals orgs)))
+
+(rf/reg-sub ::orgs-options
+  :<- [::orgs-list]
+  (fn [orgs _]
+    (->> orgs
+         (map (fn [{:keys [id name]}]
+                {:value id
+                 :label name}))
+         (sort-by :label))))
+
+(rf/reg-sub ::editing-org
+  (fn [db _]
+    (get-in db [:admin :editing-org])))
+
+(rf/reg-sub ::add-user-to-org-dialog-open?
+  (fn [db _]
+    (get-in db [:admin :add-user-to-org :dialog-open?])))
+
+(rf/reg-sub ::add-user-to-org-dialog-org-id
+  (fn [db _]
+    (get-in db [:admin :add-user-to-org :org-id])))
+
+(rf/reg-sub ::add-user-to-org-email
+  (fn [db _]
+    (get-in db [:admin :add-user-to-org :email])))
+
+(rf/reg-sub ::add-user-to-org-role
+  (fn [db _]
+    (get-in db [:admin :add-user-to-org :role])))

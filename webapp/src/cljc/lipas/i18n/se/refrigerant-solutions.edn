@@ -1,0 +1,7 @@
+{:CO2 "CO2",
+ :H2ONH3 "H2O/NH3",
+ :cacl "CaCl",
+ :ethanol-water "Freezium",
+ :ethylene-glycol "R134A",
+ :freezium "Freezium",
+ :water-glycol "R134A"}

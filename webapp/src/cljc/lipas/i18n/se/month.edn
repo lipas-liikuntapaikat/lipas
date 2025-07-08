@@ -1,0 +1,12 @@
+{:apr "April",
+ :aug "Augusti",
+ :dec "December",
+ :feb "Februari",
+ :jan "Januari",
+ :jul "Juli",
+ :jun "Juni",
+ :mar "Mars",
+ :may "Maj",
+ :nov "November",
+ :oct "Oktober",
+ :sep "September"}

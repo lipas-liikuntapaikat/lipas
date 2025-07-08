@@ -1,0 +1,23 @@
+{:add-contact "Lägg till kontaktuppgift",
+ :add-highlight "Lägg till höjdpunkt",
+ :add-photo "Lägg till foto",
+ :add-subroute "Lägg till delrutt",
+ :add-subroute-ok "OK",
+ :add-video "Lägg till video",
+ :custom-rule "Egna tillstånd, regler, anvisningar",
+ :custom-rules "Egen regler",
+ :delete-route-prompt
+ "Är du säker på att du vill ta bort den här rutten?",
+ :finish-route-details "Rutt färdig",
+ :headline "Friluftsdatatjänst",
+ :highlight "Höjdpunkt",
+ :length-km "Längd km",
+ :link "Länk",
+ :photo "Foto",
+ :read-only-disclaimer
+ "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen.",
+ :route-is-made-of-subroutes
+ "Rutten består av flera separata sektioner",
+ :select-route-parts-on-map "Välj ruttdelar på kartan",
+ :unit "enhet",
+ :video "Video"}

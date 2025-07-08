@@ -1,0 +1,6 @@
+{:light-traffic "Gång- och cykelvägar",
+ :mml-kiinteisto "Fastighetsgränser",
+ :mml-property-identifiers "Fastighetsbeteckningar",
+ :municipal-boundaries "Kommungränser",
+ :retkikartta-snowmobile-tracks "Forststyrelsens snöskoterleder",
+ :tooltip "Andra kartlager"}

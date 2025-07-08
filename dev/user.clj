@@ -7,7 +7,8 @@
   (:require
    [clojure.repl.deps :as deps]
    [clojure.java.io :as io]
-   [clojure.edn :as edn]))
+   [clojure.edn :as edn]
+   [clojure.tools.namespace.repl :as tns]))
 
 (defn read-webapp-deps
   "Read webapp dependencies from webapp/deps.edn"
@@ -55,6 +56,7 @@
   []
   (println "⚡ LIPAS Dev setup")
   (load-webapp-dev-deps!)
+  (tns/set-refresh-dirs "webapp/src" "webapp/test" "src" "test")
   (require '[lipas.backend.system])
   ((requiring-resolve 'repl/reset))
   (println "⚡ Dev System ready!"))

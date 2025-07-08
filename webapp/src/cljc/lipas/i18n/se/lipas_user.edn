@@ -1,0 +1,32 @@
+{:contact-info "Kontaktuppgifter",
+ :email "E-post",
+ :email-example "epost@exempel.fi",
+ :firstname "Förnamn",
+ :history "Historia",
+ :lastname "Efternamn",
+ :no-permissions "Användarnamn till Lipas har inte ännu konfirmerats",
+ :password "Lösenord",
+ :permission-to-activities
+ "Du har behörighet till följande aktiviteter",
+ :permission-to-all-cities
+ "Du har rättighet att uppdatera alla kommuner",
+ :permission-to-all-types "Du har rättighet att uppdatera alla typer",
+ :permission-to-cities
+ "Du har rättighet att uppdatera de här kommunerna:",
+ :permission-to-portal-sites
+ "Du har rättighet att uppdatera de här platserna:",
+ :permission-to-types "Du har rättighet att uppdatera de här typerna:",
+ :permissions "Rättigheter",
+ :permissions-example "Rätt att uppdatera Jyväskylä ishallen.",
+ :permissions-help "Skriv vad du vill uppdatera i Lipas",
+ :report-energy-and-visitors "Spara raportmodellen",
+ :report-energy-consumption "Begärda rättigheter",
+ :requested-permissions "Begärda rättigheter",
+ :save-report "Spara raportmodellen",
+ :save-search "Spara söket",
+ :saved-reports "Sparad raportmodeller",
+ :saved-searches "Sparad sök",
+ :sports-sites "Egna platser",
+ :username "Användarnamn",
+ :username-example "tane12",
+ :view-basic-info "Kolla ut grunddata"}

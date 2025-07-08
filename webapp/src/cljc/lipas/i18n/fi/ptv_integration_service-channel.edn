@@ -1,0 +1,5 @@
+{:lipas-managed "LIPAS määrittää palvelupaikat (suositeltu)",
+ :lipas-managed-helper
+ "LIPAS perustaa jokaiselle liikuntapaikalle palvelupaikan PTV:hen ja liittää liikuntapaikkojen tiedot niihin automaattisesti.",
+ :manual-helper
+ "Liikuntapaikka liitetään olemassa olevaan palvelupaikkaan manuaalisesti tässä työkalussa. Liitos täytyy tehdä jokaiselle liikuntapaikalle kerran"}

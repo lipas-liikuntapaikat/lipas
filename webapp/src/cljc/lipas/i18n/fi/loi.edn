@@ -1,0 +1,6 @@
+{:category "Kategoria",
+ :headline "Muu kohde",
+ :status "Tila",
+ :type "Kohteen tyyppi",
+ :type-and-category-disclaimer
+ "Kategoria ja tyyppi tulee olla valittuna ennen kartalle lisäämistä"}

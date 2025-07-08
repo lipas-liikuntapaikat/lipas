@@ -1,0 +1,10 @@
+{:address "Katuosoite",
+ :avi-area "AVI-alue",
+ :city "Kunta",
+ :city-code "Kuntanumero",
+ :headline "Osoite",
+ :neighborhood "Kuntaosa",
+ :no-address "Kohteelle ei voi määrittää katuosoitetta",
+ :postal-code "Postinumero",
+ :postal-office "Postitoimipaikka",
+ :province "Maakunta"}

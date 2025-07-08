@@ -1,0 +1,8 @@
+{:email-conflict "Email is already in use",
+ :email-not-found "Email address is not registered",
+ :invalid-form "Fix fields marked with red",
+ :no-data "No data",
+ :reset-token-expired "Password reset failed. Link has expired.",
+ :unknown "Unknown error occurred. :/",
+ :user-not-found "User not found.",
+ :username-conflict "Username is already in use"}

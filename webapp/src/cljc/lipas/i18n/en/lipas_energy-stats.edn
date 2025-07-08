@@ -1,0 +1,13 @@
+{:cold-mwh "Cold MWh",
+ :disclaimer "*Based on reported consumption in {1}",
+ :electricity-mwh "Electricity MWh",
+ :energy-mwh "Energy MWh",
+ :energy-reported-for
+ "Electricity, heat and water consumption reported for {1}",
+ :hall-missing? "Is your data missing from the diagram?",
+ :headline "Energy consumption in {1}",
+ :heat-mwh "Heat MWh",
+ :not-reported "Not reported {1}",
+ :report "Report consumption",
+ :reported "Reported {1}",
+ :water-m3 "Water m³"}

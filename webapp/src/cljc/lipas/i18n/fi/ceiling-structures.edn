@@ -1,0 +1,7 @@
+{:concrete "Betoni",
+ :double-t-beam "TT-laatta",
+ :glass "Lasi",
+ :hollow-core-slab "Ontelolaatta",
+ :solid-rock "Kallio",
+ :steel "Teräs",
+ :wood "Puu"}

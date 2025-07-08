@@ -1,0 +1,6 @@
+{:get-failed "Datasökning misslyckades.",
+ :ie
+ "Internet Explorer stöds inte. Vi rekommenderar du använder t.ex. Chrome, Firefox eller Edge.",
+ :save-failed "Sparningen misslyckades",
+ :save-success "Sparningen lyckades",
+ :thank-you-for-feedback "Tack för feedbacken!"}

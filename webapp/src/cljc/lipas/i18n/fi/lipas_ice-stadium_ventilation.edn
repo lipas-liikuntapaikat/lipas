@@ -1,0 +1,6 @@
+{:dryer-duty-type "Ilmankuivauksen käyttötapa",
+ :dryer-type "Ilmankuivaustapa",
+ :headline "Hallin ilmanvaihto",
+ :heat-pump-type "Lämpöpumpputyyppi",
+ :heat-recovery-efficiency "Lämmöntalteenoton hyötysuhde %",
+ :heat-recovery-type "Lämmöntalteenoton tyyppi"}

@@ -124,7 +124,7 @@
 (defn form
   [{:keys [org-id tr site]}]
   (let [services @(rf/subscribe [::subs/services org-id])
-        org-languages (ptv-data/org-id->languages org-id)]
+        org-languages (<== [::subs/org-languages org-id])]
     [mui/grid
      {:container true
       :spacing 2
@@ -224,7 +224,7 @@
   (r/with-let [expanded-rows (r/atom {})
                show-only-changes-requested (r/atom false)]
     (let [tr (<== [:lipas.ui.subs/translator])
-          org-id (<== [::subs/selected-org-id])
+          org-id (<== [::subs/selected-ptv-org-id])
           sites (<== [::subs/sports-sites org-id])
           sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
 
@@ -573,7 +573,7 @@
   []
   (r/with-let [selected-tab (r/atom :fi)]
     (let [tr (<== [:lipas.ui.subs/translator])
-          org-id (<== [::subs/selected-org-id])
+          org-id (<== [::subs/selected-ptv-org-id])
           service-candidates (<== [::subs/service-candidates org-id])
           {:keys [in-progress?
                   halt?
@@ -752,7 +752,7 @@
 (defui service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
   (let [services (use-subscribe [::subs/services org-id])
-        org-languages (ptv-data/org-id->languages org-id)
+        org-languages (<== [::subs/org-languages org-id])
         [selected-tab2 set-selected-tab2] (uix/use-state "descriptions")]
     ($ AccordionDetails
        {}
@@ -884,7 +884,7 @@
 (defn integrate-service-locations
   []
   (let [tr (<== [:lipas.ui.subs/translator])
-        org-id (<== [::subs/selected-org-id])
+        org-id (<== [::subs/selected-ptv-org-id])
         sports-sites (<== [::subs/sports-sites org-id])
         setup-done? (<== [::subs/sports-site-setup-done org-id])
         sports-sites-count (<== [::subs/sports-sites-count org-id])
@@ -1016,7 +1016,7 @@
     (let [tr (<== [:lipas.ui.subs/translator])
           source-id (:source-id service)
           loading? false
-          org-languages (ptv-data/org-id->languages org-id)
+          org-languages (<== [::subs/org-languages org-id])
           ;; Turn the PTV Service data structure back to Lipas API call for save!
           data {:org-id org-id
                 :source-id source-id
@@ -1096,7 +1096,7 @@
   []
   (let [tr (<== [:lipas.ui.subs/translator])
         services-filter (<== [::subs/services-filter])
-        org-id (<== [::subs/selected-org-id])
+        org-id (<== [::subs/selected-ptv-org-id])
         services (<== [::subs/services-filtered org-id])
         descriptions (<== [::subs/service-candidate-descriptions org-id])]
     [mui/paper
@@ -1123,7 +1123,7 @@
         set-step (fn [i _e]
                    (rf/dispatch [::events/set-step i]))
 
-        org-id (<== [::subs/selected-org-id])
+        org-id (<== [::subs/selected-ptv-org-id])
         services-done? (empty? (<== [::subs/service-candidates org-id]))
         site-setup-done? (<== [::subs/sports-site-setup-done org-id])]
     [:> Stack
@@ -1228,9 +1228,9 @@
   (let [open? (<== [::subs/dialog-open?])
         selected-tab (<== [::subs/selected-tab])
         loading? (<== [::subs/loading-from-ptv?])
-        org-id (<== [::subs/selected-org-id])
-        org-data (<== [::subs/selected-org-data org-id])
-        sites (<== [::subs/sports-sites org-id])
+        ptv-org-id (<== [::subs/selected-ptv-org-id])
+        org-data (<== [::subs/selected-org-data ptv-org-id])
+        sites (<== [::subs/sports-sites ptv-org-id])
 
         has-manage-privilege? (<== [::subs/has-manage-privilege?])
         has-audit-privilege? (<== [::subs/has-audit-privilege?])

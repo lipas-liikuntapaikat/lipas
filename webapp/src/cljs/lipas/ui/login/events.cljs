@@ -3,6 +3,7 @@
             [lipas.roles :as roles]
             [lipas.ui.db :as db]
             [lipas.ui.local-storage :as local-storage]
+            [lipas.ui.org.events]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -44,7 +45,8 @@
          :dispatch-n
          [(when (= :magic-link login-type) [:lipas.ui.events/navigate "/profiili"])
           (when (not= :refresh login-type)
-            [:lipas.ui.search.events/set-logged-in-filters])]}
+            [:lipas.ui.search.events/set-logged-in-filters])
+          [:lipas.ui.org.events/get-user-orgs]]}
 
         (when (not= :refresh login-type)
           {:tracker/set-dimension! ["user-type" (if (roles/check-role body :admin)

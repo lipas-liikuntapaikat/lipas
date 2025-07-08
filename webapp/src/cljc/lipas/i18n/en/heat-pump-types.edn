@@ -1,0 +1,5 @@
+{:air-source "Air source heat pump",
+ :air-water-source "Air-water source heat pump",
+ :exhaust-air-source "Exhaust air source heat pump",
+ :ground-source "Ground source heat pump",
+ :none "None"}

@@ -1,0 +1,16 @@
+{:bad-credentials "Wrong username or password",
+ :forgot-password? "Forgot password?",
+ :headline "Login",
+ :login "Login",
+ :login-help
+ "If you are already a LIPAS-user you can login using just your email address.",
+ :login-here "here",
+ :login-with-magic-link "Login with email",
+ :login-with-password "Login with password",
+ :logout "Log out",
+ :magic-link-help "Order login link",
+ :magic-link-ordered "Password",
+ :order-magic-link "Order login link",
+ :password "Password",
+ :username "Email / Username",
+ :username-example "paavo.paivittaja@kunta.fi"}

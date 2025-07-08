@@ -1,0 +1,9 @@
+{:export "Vie",
+ :export-disclaimer
+ "Olen lukenut kuvaukset ja haluan, että tämä kohde viedään PTV:hen.",
+ :generate-with-ai "Generoi kuvaukset tekoälyllä",
+ :select-integration "Valitse liittämistapa",
+ :select-languages "Valitse kielet",
+ :select-org "Valitse organisaatio",
+ :select-service "Valitse palvelu",
+ :select-service-channel "Valitse palvelupaikka"}

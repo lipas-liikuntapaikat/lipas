@@ -54,27 +54,69 @@
   (fn [[loading-from-ptv? loading-from-lipas?] _]
     (or loading-from-ptv? loading-from-lipas?)))
 
-(def orgs
-  (if (prod?)
-    (filterv :prod ptv-data/orgs)
-    (filterv #(not (:prod %)) ptv-data/orgs)))
+ ;; New subscriptions to get PTV config from organizations in app-db
+
+(rf/reg-sub ::all-orgs
+  :<- [:lipas.ui.org.subs/user-orgs]
+  (fn [orgs _]
+    orgs))
+
+(rf/reg-sub ::ptv-config-by-ptv-org-id
+  :<- [::all-orgs]
+  (fn [orgs [_ ptv-org-id]]
+    ;; Find the org that has this PTV org ID in its ptv-data
+    (some (fn [org]
+            (when (= ptv-org-id (get-in org [:ptv-data :org-id]))
+              (:ptv-data org)))
+          orgs)))
+
+(rf/reg-sub ::ptv-config-by-lipas-org-id
+  :<- [::all-orgs]
+  (fn [orgs [_ lipas-org-id]]
+    ;; Get PTV config by LIPAS org ID
+    (some (fn [org]
+            (when (= lipas-org-id (:id org))
+              (:ptv-data org)))
+          orgs)))
+
+(rf/reg-sub ::org-languages
+  (fn [[_ ptv-org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  (fn [ptv-config]
+    (or (:supported-languages ptv-config) ["fi" "sv" "en"])))
+
+(rf/reg-sub ::org-city-codes
+  (fn [[_ ptv-org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  (fn [ptv-config]
+    (:city-codes ptv-config)))
+
+(rf/reg-sub ::org-params
+  (fn [[_ ptv-org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  (fn [ptv-config]
+    ;; Return the config in the same format as org-id->params
+    (when ptv-config
+      (select-keys ptv-config [:org-id :city-codes :owners :supported-languages]))))
 
 (rf/reg-sub ::users-orgs
   :<- [:lipas.ui.user.subs/user-data]
-  (fn [user-data _]
+  :<- [::all-orgs]
+  (fn [[user-data all-orgs] _]
     (cond
-      ;; If user has audit privilege (global), show all orgs
+                ;; If user has audit privilege (global), show all orgs with PTV data
       (roles/check-privilege user-data {} :ptv/audit)
-      orgs
+      (filterv :ptv-data all-orgs)
 
-      ;; Otherwise, filter by manage privilege per city-code
+                ;; Otherwise, filter by manage privilege per city-code
       :else
-      (filterv (fn [{:keys [city-codes :as _org]}]
-                 (some
-                   (fn [city-code]
-                     (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
-                   city-codes))
-               orgs))))
+      (filterv (fn [org]
+                 (let [city-codes (get-in org [:ptv-data :city-codes])]
+                   (some
+                     (fn [city-code]
+                       (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
+                     city-codes)))
+               all-orgs))))
 
 (rf/reg-sub ::selected-org
   :<- [::ptv]
@@ -86,15 +128,25 @@
   (fn [org _]
     (:id org)))
 
-(rf/reg-sub ::org-default-settings
-  :<- [::ptv]
-  (fn [ptv [_ org-id]]
-    (get-in ptv [:org org-id :default-settings])))
+(rf/reg-sub ::selected-ptv-org
+  :<- [::selected-org]
+  (fn [lipas-org _]
+    (:ptv-data lipas-org)))
+
+(rf/reg-sub ::selected-ptv-org-id
+  :<- [::selected-ptv-org]
+  (fn [ptv-org _]
+    (:org-id ptv-org)))
+
+(rf/reg-sub ::ptv-org-default-settings
+  :<- [::selected-ptv-org]
+  (fn [ptv-org [_ _org-id]]
+    ptv-org))
 
 (rf/reg-sub ::default-settings
   (fn [[_ org-id]]
     [(rf/subscribe [::ptv])
-     (rf/subscribe [::org-default-settings org-id])])
+     (rf/subscribe [::ptv-org-default-settings org-id])])
   (fn [[ptv org-defaults] _]
     (merge (:default-settings ptv) org-defaults)))
 
@@ -203,17 +255,21 @@
     (:service-details-tab ptv)))
 
 (rf/reg-sub ::service-preview
-  :<- [::ptv]
-  (fn [ptv [_ source-id sub-category-id]]
-    (let [org-id (get-in ptv [:selected-org :id])
+  (fn [[_ _ _]]
+    [(rf/subscribe [::ptv])])
+  (fn [[ptv] [_ source-id sub-category-id]]
+    (let [org-id (get-in ptv [:selected-org :ptv-data :org-id])
           descriptions (get-in ptv [:org org-id :data :service-candidates source-id])
-          org-params (ptv-data/org-id->params org-id)]
+                    ;; Get languages from selected org - NOTE: this is LIPAS org which has PTV config
+          selected-org (:selected-org ptv)
+          org-languages (get-in selected-org [:ptv-data :supported-languages] ["fi"])
+          org-city-codes (get-in selected-org [:ptv-data :city-codes])]
       (ptv-data/->ptv-service
         {:org-id org-id
-         :city-codes (:city-codes org-params)
+         :city-codes org-city-codes
          :source-id source-id
          :sub-category-id sub-category-id
-         :languages (ptv-data/org-id->languages org-id)
+         :languages org-languages
          :description (:description descriptions)
          :summary (:summary descriptions)}))))
 
@@ -236,14 +292,16 @@
   (fn [[_ org-id]]
     [(rf/subscribe [::missing-services org-id])
      (rf/subscribe [::manual-services org-id])
-     (rf/subscribe [::service-candidate-descriptions org-id])])
-  (fn [[missing-services manual-services descriptions] [_ org-id]]
+     (rf/subscribe [::service-candidate-descriptions org-id])
+     (rf/subscribe [::selected-org])])
+  (fn [[missing-services manual-services descriptions selected-org] [_ org-id]]
     (->> (concat missing-services
                  manual-services)
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
                       summary (get-in descriptions [source-id :summary])
-                      languages (ptv-data/org-id->languages org-id)]
+                                ;; Get languages from selected org's PTV config
+                      languages (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])]
                   (-> m
                       (assoc :languages languages)
                       (assoc :description description)
@@ -278,11 +336,13 @@
      (rf/subscribe [::services-by-id org-id])
      (rf/subscribe [::service-channels-by-id org-id])
      (rf/subscribe [::default-settings org-id])
-     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])])
-  (fn [[ptv services service-channels org-defaults types] [_ org-id]]
-    (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])]
-      (for [site (vals lipas-id->site)
-            :let [org-langs (ptv-data/org-id->languages org-id)]]
+     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])
+     (rf/subscribe [::selected-org])])
+  (fn [[ptv services service-channels org-defaults types selected-org] [_ org-id]]
+    (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])
+                    ;; Get languages from selected org's PTV config
+          org-langs (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])]
+      (for [site (vals lipas-id->site)]
         (ptv-data/sports-site->ptv-input {:org-id org-id
                                           :types types
                                           :org-defaults org-defaults
@@ -476,17 +536,17 @@
 
 (rf/reg-sub ::site-audit-data
   (fn [db [_ lipas-id]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit]))))
 
 (rf/reg-sub ::site-audit-field-feedback
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :feedback]))))
 
 (rf/reg-sub ::site-audit-field-status
   (fn [db [_ lipas-id field]]
-    (let [org-id (get-in db [:ptv :selected-org :id])]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
 
 (rf/reg-sub ::has-audit-privilege?
@@ -498,7 +558,7 @@
   :<- [:lipas.ui.user.subs/user-data]
   :<- [::selected-org]
   (fn [[user-data selected-org] _]
-    (let [city-codes (:city-codes selected-org)]
+    (let [city-codes (get-in selected-org [:ptv-data :city-codes])]
       (some (fn [city-code]
               (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
             city-codes))))

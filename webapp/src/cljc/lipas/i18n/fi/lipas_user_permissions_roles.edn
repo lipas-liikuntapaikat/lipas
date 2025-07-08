@@ -1,0 +1,30 @@
+{:context-keys
+ {:city-code "Kunta",
+  :type-code "Tyyppi",
+  :activity "Aktiviteetti",
+  :lipas-id "Paikka",
+  :org-id "Organisaatio"},
+ :context-value-all "Kaikki",
+ :edit-role
+ {:edit-header "Muokkaa",
+  :new-header "Lisää rooli",
+  :stop-editing "Lopeta muokkaus",
+  :add "Lisää",
+  :choose-role
+  "Valitse rooli ensiksi, jotta voi valita mihin resursseihin rooli vaikuttaa."},
+ :permissions-old "(vanhat, vain luku)",
+ :role "Rooli",
+ :role-names
+ {:activities-manager "UTP-käyttäjä",
+  :ptv-manager "PTV-käyttäjä",
+  :admin "Admin",
+  :analysis-user "Analyysityökalukäyttäjä",
+  :ptv-auditor "PTV-auditoija",
+  :org-admin "Organisaation pääkäyttäjä",
+  :type-manager "Tyyppikäyttäjä",
+  :floorball-manager "Salibandymuokkaaja",
+  :site-manager "Paikkakäyttäjä",
+  :city-manager "Kuntakäyttäjä",
+  :analysis-experimental-user "Analyysityökalukehittäjä",
+  :org-user "Organisaatiokäyttäjä"},
+ :roles "Roolit"}

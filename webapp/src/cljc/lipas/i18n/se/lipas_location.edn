@@ -1,0 +1,10 @@
+{:address "Gatuadress",
+ :avi-area "RFV-område",
+ :city "Kommun",
+ :city-code "Kommunkod",
+ :headline "Position",
+ :neighborhood "Kommundel",
+ :no-address "Kan inte att ange en gatuadress för målet.",
+ :postal-code "Postnummer",
+ :postal-office "Postkontor",
+ :province "Landskap"}

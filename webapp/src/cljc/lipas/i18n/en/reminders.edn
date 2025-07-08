@@ -1,0 +1,10 @@
+{:after-one-month "After one month",
+ :after-six-months "After six months",
+ :description "We will email the message to you at the selected time",
+ :in-a-week "In a week",
+ :in-a-year "In a year",
+ :message "Message",
+ :placeholder "Remember to check sports-facility \"{1}\" {2}",
+ :select-date "Select date",
+ :title "Add reminder",
+ :tomorrow "Tomorrow"}

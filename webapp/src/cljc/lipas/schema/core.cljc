@@ -318,6 +318,12 @@
              :distint true
              :into #{}))
 
+(s/def :lipas.role/org-id
+  (s/coll-of string?
+             :min-count 1
+             :distint true
+             :into #{}))
+
 (defmulti role-type :role)
 
 (defmethod role-type :type-manager [_]
@@ -338,6 +344,14 @@
 (defmethod role-type :floorball-manager [_]
   (s/keys :req-un [:lipas.role/role]
           :opt-un [:lipas.role/type-code]))
+
+(defmethod role-type :org-admin [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/org-id]))
+
+(defmethod role-type :org-user [_]
+  (s/keys :req-un [:lipas.role/role]
+          :opt-un [:lipas.role/org-id]))
 
 ;; :admin and others without any role-context-keys
 (defmethod role-type :default [_]

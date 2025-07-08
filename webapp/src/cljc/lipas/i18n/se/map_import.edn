@@ -1,0 +1,17 @@
+{:coords-not-in-finland-wgs84-bounds
+ "Den angivna filen innehåller inte koordinater i WGS84 (EPSG:4326) koordinatsystemet. Kontrollera att ursprungsmaterialet är i rätt koordinatsystem.",
+ :geoJSON
+ "Laddar upp .json file som innehåller GeoJSON FeatureCollect object. Koordinater måste vara i WGS84 koordinatsystem.",
+ :gpx "Utgångsmaterial måste vara i WGS84 koordinatsystem.",
+ :headline "Importera geometri",
+ :import-selected "Importera valda",
+ :kml "Utgångsmaterial måste vara i WGS84 koordinatsystem.",
+ :no-geoms-of-type "Den angivna filen innehåller inga {1} geometrier.",
+ :replace-existing? "Ersätt gammal geometri",
+ :select-encoding "Välj teckenuppsättning",
+ :shapefile "Importera .shp .dbf och .prj filer i packade .zip filen.",
+ :supported-formats "Filformat som passar är {1}",
+ :tab-header "Importera från filen",
+ :tooltip "Importera geometrier från filen",
+ :unknown-error "Ett oväntat fel inträffade. Försök med en annan fil.",
+ :unknown-format "Okänt filformat '{1}'"}

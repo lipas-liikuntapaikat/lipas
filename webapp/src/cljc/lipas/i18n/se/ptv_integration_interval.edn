@@ -1,0 +1,6 @@
+{:daily "Automatiskt en gång om dagen",
+ :headline "Export till PTV",
+ :immediate
+ "Automatiskt när ändringar sparas i Lipas (rekommenderas).",
+ :label "När exporteras ändringarna till PTV",
+ :manual "Endast manuellt"}

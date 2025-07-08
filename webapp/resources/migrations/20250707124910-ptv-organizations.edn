@@ -1,0 +1,4 @@
+{:ns lipas.migrations.ptv-organizations
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}

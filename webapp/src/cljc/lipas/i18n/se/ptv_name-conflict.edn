@@ -1,0 +1,6 @@
+{:do-one-of-these "Gör en av dessa.",
+ :opt1
+ "Koppla idrottsanläggningen till den befintliga servicepunkten genom att trycka på knappen 'Koppla till denna servicepunkt' (rekommenderas).",
+ :opt2 "Välj önskad servicepunkt från väljaren nedan.",
+ :opt3 "Stäng av reglaget, så att denna objekt inte integreras i PTV.",
+ :opt4 "Arkivera den aktuella servicepunkten i PTV."}

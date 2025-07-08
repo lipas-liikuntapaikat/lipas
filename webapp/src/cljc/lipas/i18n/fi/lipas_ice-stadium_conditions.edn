@@ -1,0 +1,19 @@
+{:air-humidity-max "Ilman suhteellinen kosteus % max",
+ :air-humidity-min "Ilman suhteellinen kosteus % min",
+ :average-water-consumption-l
+ "Keskimääräinen jäänhoitoon  käytetty veden määrä (per ajo)",
+ :daily-maintenances-week-days "Jäähoitokerrat arkipäivinä",
+ :daily-maintenances-weekends "Jäähoitokerrat viikonlppuina",
+ :daily-open-hours "Käyttötunnit päivässä",
+ :headline "Käyttöolosuhteet",
+ :ice-average-thickness-mm "Jään keskipaksuus mm",
+ :ice-resurfacer-fuel "Jäänhoitokoneen polttoaine",
+ :ice-surface-temperature-c "Jään pinnan lämpötila",
+ :maintenance-water-temperature-c
+ "Jäähoitoveden  lämpötila (tavoite +40)",
+ :open-months "Aukiolokuukaudet vuodessa",
+ :skating-area-temperature-c
+ "Luistelualueen lämpötila 1 m korkeudella",
+ :stand-temperature-c
+ "Katsomon tavoiteltu keskilämpötila  ottelun aikana",
+ :weekly-maintenances "Jäänhoitokerrat viikossa"}

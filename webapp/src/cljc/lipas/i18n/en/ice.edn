@@ -1,0 +1,16 @@
+{:basic-data-of-halls
+ "General information about building and facilities",
+ :comparison "Compare venues",
+ :competition "Competition hall < 3000 persons",
+ :description
+ "Ice stadiums portal contains data about ice stadiums  energy consumption and related factors.",
+ :entering-energy-data "Reporing energy consumption",
+ :headline "Ice stadiums",
+ :large "Grand hall > 3000 persons",
+ :size-category "Size category",
+ :small "Small competition hall > 500 persons",
+ :updating-basic-data "Updating general information",
+ :video "Video",
+ :video-description
+ "Pihjalalinna Areena - An Energy Efficient Ice Stadium",
+ :watch "Watch"}

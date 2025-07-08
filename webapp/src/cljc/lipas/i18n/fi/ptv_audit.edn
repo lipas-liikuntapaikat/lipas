@@ -1,0 +1,22 @@
+{:audited-sites "Auditoidut kohteet",
+ :completed-tab "Valmiit",
+ :description
+ "Tässä näkymässä voit auditoida liikuntapaikkojen PTV-kuvauksia ja tiivistelmiä.",
+ :feedback "Palaute",
+ :feedback-placeholder
+ "Kirjoita tähän mahdollinen palaute tekstin sisällöstä...",
+ :headline "PTV tekstien auditointi",
+ :last-audit "Edellinen auditointi",
+ :no-audited-sites "Ei auditoituja kohteita",
+ :no-sites "Ei kohteita",
+ :no-sites-to-audit "Ei auditoitavia kohteita",
+ :select-site "Valitse auditoitava liikuntapaikka",
+ :select-site-label "Liikuntapaikka",
+ :select-site-placeholder "Kirjoita liikuntapaikan nimi",
+ :select-site-prompt "Valitse kohde listasta nähdäksesi sen tiedot",
+ :sites-stats
+ "Yhteensä %1$s liikuntapaikkaa, joista %2$s auditoitu ja %3$s auditoimatta",
+ :sites-to-audit "Auditoitavat kohteet",
+ :status "Tila",
+ :tab-label "Auditointi",
+ :todo-tab "Odottavat"}

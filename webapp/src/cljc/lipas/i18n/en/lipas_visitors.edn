@@ -1,0 +1,6 @@
+{:headline "Visitors",
+ :monthly-visitors-in-year "Monthly visitors in {1}",
+ :not-reported "Visitors not reported",
+ :not-reported-monthly "No monthly data",
+ :spectators-count "Spectators count",
+ :total-count "Visitors count"}

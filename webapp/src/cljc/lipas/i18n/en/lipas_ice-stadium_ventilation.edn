@@ -1,0 +1,6 @@
+{:dryer-duty-type "Dryer duty type",
+ :dryer-type "Dryer type",
+ :headline "Ventilation",
+ :heat-pump-type "Heat pump type",
+ :heat-recovery-efficiency "Heat recovery efficiency",
+ :heat-recovery-type "Heat recovery type"}

@@ -1,0 +1,7 @@
+{:days-in-year "dagar per år",
+ :hours-per-day "timmar per dag",
+ :pcs "st",
+ :percent "%",
+ :person "pers.",
+ :times-per-day "gånger per dag",
+ :times-per-week "gånger per vecka"}

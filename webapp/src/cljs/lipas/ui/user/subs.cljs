@@ -45,6 +45,11 @@
                                               :site/create-edit))
                      all-types))))
 
+(rf/reg-sub ::can-access-some-org?
+  :<- [::user-data]
+  (fn [user _]
+    (roles/check-privilege user {:org-id ::roles/any} :org/member)))
+
 (rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any
@@ -154,9 +159,15 @@
       :city-code (rf/subscribe [:lipas.ui.sports-sites.subs/city v])
       :type-code (rf/subscribe [:lipas.ui.sports-sites.subs/type-by-type-code v])
       :activity (rf/subscribe [:lipas.ui.sports-sites.activities.subs/activity-by-value v])
-      :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])))
+      :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])
+      :org-id [;; Session user or org admin, managing their own orgs
+               (rf/subscribe [:lipas.ui.org.subs/user-org-by-id v])
+               ;; Admin view
+               (rf/subscribe [:lipas.ui.admin.subs/org v])]))
   (fn [x [_ context-key _v locale]]
     (case context-key
       :lipas-id (:name x)
+      :org-id (or (:org/name (first x))
+                  (:name (second x)))
       :activity (get (:label x) locale)
       (get (:name x) locale))))

@@ -1,0 +1,11 @@
+{:basic-data-of-halls
+ "General information about building and facilities",
+ :description
+ "Swimming pools portal contains data about indoor  swimming pools energy consumption and related factors.",
+ :edit "Report consumption",
+ :entering-energy-data "Reporing energy consumption",
+ :headline "Swimming pools",
+ :latest-updates "Latest updates",
+ :list "Pools list",
+ :updating-basic-data "Updating general information",
+ :visualizations "Comparison"}

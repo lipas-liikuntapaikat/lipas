@@ -1,0 +1,16 @@
+{:air-humidity-max "Air humidity % max",
+ :air-humidity-min "Air humidity % min",
+ :average-water-consumption-l
+ "Average water consumption (l) / maintenance",
+ :daily-maintenances-week-days "Daily maintenances on weekdays",
+ :daily-maintenances-weekends "Daily maintenances on weekends",
+ :daily-open-hours "Daily open hours",
+ :headline "Conditions",
+ :ice-average-thickness-mm "Average ice thickness (mm)",
+ :ice-resurfacer-fuel "Ice resurfacer fuel",
+ :ice-surface-temperature-c "Ice surface temperature",
+ :maintenance-water-temperature-c "Maintenance water temperature",
+ :open-months "Open months in year",
+ :skating-area-temperature-c "Skating area temperature (at 1m height)",
+ :stand-temperature-c "Stand temperature (during match)",
+ :weekly-maintenances "Weekly maintenances"}

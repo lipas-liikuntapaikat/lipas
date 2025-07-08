@@ -1,0 +1,11 @@
+{:city-education "Kunta / opetustoimi",
+ :city-other "Kunta / muu",
+ :city-sports "Kunta / liikuntatoimi",
+ :city-technical-services "Kunta / tekninen toimi",
+ :municipal-consortium "Kuntayhtymä",
+ :other "Muu",
+ :private-association "Yksityinen / yhdistys",
+ :private-company "Yksityinen / yritys",
+ :private-foundation "Yksityinen / säätiö",
+ :state "Valtio",
+ :unknown "Ei tietoa"}

@@ -135,6 +135,7 @@
    "integration_log"
    "integration_out_queue"
    "jobs"
+   "org"
    "job_metrics"
    "dead_letter_jobs"
    "circuit_breakers"
@@ -243,21 +244,23 @@
 (def app (:lipas/app system))
 (def search (:lipas/search system))
 
-(defn prune-es! []
-  (let [client (:client search)
-        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                  (-> search :indices :analysis :diversity) diversity/mappings
-                  (-> search :indices :lois :search) (:lois search/mappings)}]
+(defn prune-es!
+  ([] (prune-es! search))
+  ([search]
+   (let [client (:client search)
+         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                   (-> search :indices :analysis :diversity) diversity/mappings
+                   (-> search :indices :lois :search) (:lois search/mappings)}]
 
-    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
-      (try
-        (search/delete-index! client idx-name)
-        (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
-      (when-let [mapping (mappings idx-name)]
-        (search/create-index! client idx-name mapping)))))
+     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+       (try
+         (search/delete-index! client idx-name)
+         (catch Exception ex
+           (when (not= "index_not_found_exception"
+                       (-> ex ex-data :body :error :root_cause first :type))
+             (throw ex))))
+       (when-let [mapping (mappings idx-name)]
+         (search/create-index! client idx-name mapping))))))
 
 (comment
   (init-db!)
@@ -268,14 +271,16 @@
 (defn gen-user
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
-  ([{:keys [db? admin? status]
+  ([{:keys [db? admin? status permissions]
      :or {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
                   ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
                   ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
-                  (update :permissions (fn [permissions]
-                                         (cond-> (or permissions {})
+                  (update :permissions (fn [generated-permissions]
+                                         (cond-> (or generated-permissions {})
+                                           ;; If custom permissions provided, use them instead of generated ones
+                                           permissions (merge permissions)
                                            ;; generated result might include admin role, remove if the flag is false
                                            (not admin?) (update :roles (fn [roles]
                                                                          (into [] (remove (fn [x] (= :admin (:role x))) roles))))
