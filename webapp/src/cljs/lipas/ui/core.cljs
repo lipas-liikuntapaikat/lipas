@@ -27,14 +27,11 @@
 
 (defonce react-root (rdomc/create-root (.getElementById js/document "app")))
 
-(defonce ugly-enforcer (atom 0))
-
 (defn ^:dev/after-load mount-root []
   (rf/clear-subscription-cache!)
   (project-devtools/start!)
   (routes/init!)
-  (swap! ugly-enforcer inc)
-  (rdomc/render react-root ^{:key @ugly-enforcer} [:f> views/main-panel]))
+  (rdomc/render react-root [:f> views/main-panel]))
 
 (defn init []
   (rf/dispatch-sync [::events/initialize-db])
