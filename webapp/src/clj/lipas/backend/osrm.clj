@@ -2,6 +2,7 @@
   (:require
    [cemerick.url :as url]
    [clj-http.client :as client]
+   [clojure.core.cache :as cache]
    [clojure.string :as str]
    [environ.core :refer [env]]
    [lipas.backend.gis :as gis]
@@ -11,6 +12,15 @@
   {:car {:url (:osrm-car-url env)}
    :bicycle {:url (:osrm-bicycle-url env)}
    :foot {:url (:osrm-foot-url env)}})
+
+;; 5-minute TTL cache for OSRM requests
+(defonce osrm-cache
+  (atom (cache/ttl-cache-factory {}
+                                 :ttl (* 5 60 1000)))) ; 5 minutes in milliseconds
+
+;; Cache statistics
+(defonce cache-stats
+  (atom {:hits 0 :misses 0}))
 
 (def http-options
   {:as :json ; Parse JSON directly, skipping string intermediate
@@ -53,25 +63,40 @@
   [{:keys [sources destinations] :as m}]
   (when (and (seq sources) (seq destinations))
     (let [url (make-url m)
-          response (client/get url http-options)]
-      (cond
-        ;; Success - body is already parsed JSON
-        (= 200 (:status response))
-        (:body response)
+          cached-value (cache/lookup @osrm-cache url)]
 
-        ;; Error response
-        (>= (:status response) 400)
+      (if (cache/has? @osrm-cache url)
+        ;; Cache hit
         (do
-          (log/error "OSRM error:" (:status response) (:body response))
-          nil)
+          (swap! cache-stats update :hits inc)
+          (log/debug "OSRM cache hit for URL:" url)
+          cached-value)
 
-        ;; Connection error or timeout
-        (:error response)
+        ;; Cache miss - fetch and cache
         (do
-          (log/error "OSRM connection error:" (:error response))
-          nil)
+          (swap! cache-stats update :misses inc)
+          (log/debug "OSRM cache miss for URL:" url)
+          (let [response (client/get url http-options)]
+            (cond
+              ;; Success - cache and return
+              (= 200 (:status response))
+              (let [result (:body response)]
+                (swap! osrm-cache cache/miss url result)
+                result)
 
-        :else nil))))
+              ;; Error response
+              (>= (:status response) 400)
+              (do
+                (log/error "OSRM error:" (:status response) (:body response))
+                nil)
+
+              ;; Connection error or timeout
+              (:error response)
+              (do
+                (log/error "OSRM connection error:" (:error response))
+                nil)
+
+              :else nil)))))))
 
 (defn get-distances-and-travel-times
   [{:keys [profiles]
@@ -80,6 +105,27 @@
   (->> profiles
        (mapv (fn [p] (vector p (future (get-data (assoc m :profile p))))))
        (reduce (fn [res [p f]] (assoc res p (deref f))) {})))
+
+(defn cache-info
+  "Get cache statistics"
+  []
+  (let [stats @cache-stats
+        total (+ (:hits stats) (:misses stats))
+        hit-rate (if (pos? total)
+                   (double (/ (:hits stats) total))
+                   0.0)]
+    {:size (count @osrm-cache)
+     :hits (:hits stats)
+     :misses (:misses stats)
+     :hit-rate hit-rate
+     :total-requests total}))
+
+(defn clear-cache!
+  "Clear the cache and reset stats"
+  []
+  (reset! osrm-cache (cache/ttl-cache-factory {} :ttl (* 5 60 1000)))
+  (reset! cache-stats {:hits 0 :misses 0})
+  (log/info "OSRM cache cleared"))
 
 (comment
   (def destinations
