@@ -1,7 +1,7 @@
 (ns lipas.jobs.worker
   "Mixed-duration job worker with fast lane and general lane processing.
-  
-  Prevents head-of-line blocking by reserving threads for fast jobs while 
+
+  Prevents head-of-line blocking by reserving threads for fast jobs while
   allowing slow jobs to run in the general pool."
   (:require
    [lipas.jobs.core :as jobs]
@@ -18,7 +18,7 @@
 
 (def default-config
   {:fast-threads 2
-   :general-threads 4
+   :general-threads 2
    :batch-size 5
    :poll-interval-ms 3000
    :fast-timeout-minutes 2
@@ -190,7 +190,7 @@
         (log/debug "Processing fast jobs" {:count (count fast-jobs)})
         (process-job-batch system pools fast-jobs :fast config))
 
-      ;; Process general jobs in general lane  
+      ;; Process general jobs in general lane
       (when (seq general-jobs)
         (log/debug "Processing general jobs" {:count (count general-jobs)})
         (process-job-batch system pools general-jobs :general config))

@@ -1,6 +1,6 @@
 (ns lipas.jobs.system
   "Integrant system configuration for the unified job worker.
-  
+
   Reuses existing system components from the main webapp system
   and adds worker-specific components."
   (:require
@@ -80,8 +80,8 @@
                            (log/warn "Invalid env var value, using default" {:key key :value env-val})
                            default))
                        default))]
-    {:fast-threads (env-config :fast-threads 3)
-     :general-threads (env-config :general-threads 5)
+    {:fast-threads (env-config :fast-threads 2)
+     :general-threads (env-config :general-threads 2)
      :batch-size (env-config :batch-size 10)
      :poll-interval-ms (env-config :poll-interval-ms 3000)
      :fast-timeout-minutes (env-config :fast-timeout-minutes 2)

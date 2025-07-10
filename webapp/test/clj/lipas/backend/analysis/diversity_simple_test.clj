@@ -95,11 +95,13 @@
                                           [{:geometry {:coordinates [24.95 60.17]
                                                        :type "Point"}
                                             :type "Feature"}]}}}}}]})
-                  osrm/get-distances-and-travel-times
-                  (fn [_]
-                    {:car {:distances [[1000.0]] :durations [[120.0]]}
-                     :bicycle {:distances [[1200.0]] :durations [[360.0]]}
-                     :foot {:distances [[950.0]] :durations [[684.0]]}})]
+                  osrm/get-data
+                  (fn [{:keys [profile]}]
+                    (case profile
+                      :car {:distances [[1000.0]] :durations [[120.0]]}
+                      :bicycle {:distances [[1200.0]] :durations [[360.0]]}
+                      :foot {:distances [[950.0]] :durations [[684.0]]}
+                      nil))]
 
       (let [grid-item {:grd_id "test-123"
                        :WKT "POINT (24.9477 60.1678)"
