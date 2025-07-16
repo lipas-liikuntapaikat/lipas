@@ -447,14 +447,15 @@
 
     (.on lmap "moveend"
          (fn [_]
+           (println "moveend")
            (let [center (.getCenter view)
-                 lonlat (ol-proj/toLonLat center proj/epsg3067)
+                 lonlat (when (seq center) (ol-proj/toLonLat center proj/epsg3067))
                  zoom (.getZoom view)
                  extent (.calculateExtent view)
                  width (extent/getWidth extent)
                  height (extent/getHeight extent)]
 
-             (when (and (> width 0) (> height 0))
+             (when (and (seq center) (> width 0) (> height 0))
                (==> [::events/set-view center lonlat zoom extent width height])))))
 
     {:lmap lmap

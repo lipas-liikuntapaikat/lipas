@@ -323,11 +323,11 @@
           lmap       (.-map event)
           opts       #js {:layerFilter  (fn [layer] (= "edits" (.get layer "name")))
                           :hitTolerance 5}
-          selecting? (= :selecting (-> db :map :mode :sub-mode))]
+          selecting? (= :selecting (-> db :map :mode :sub-mode))
+          pixel (.-pixel event)]
       #_(js/console.log event)
-      #_(js/console.log (.-pixel event))
-      (when selecting?
-        (.forEachFeatureAtPixel lmap (.-pixel event)
+      (when (and pixel selecting?)
+        (.forEachFeatureAtPixel lmap pixel
                                 (fn [^js f]
                                   (swap! fids conj (.getId f)))
                                 opts))
