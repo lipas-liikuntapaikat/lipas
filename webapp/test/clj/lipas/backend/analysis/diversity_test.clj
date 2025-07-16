@@ -155,8 +155,10 @@
 
 ;;; Mock OSRM for deterministic tests ;;;
 
-(defn mock-osrm-call [_params]
-  test-osrm-responses)
+(defn mock-osrm-call
+  "Mock for osrm/get-data that returns profile-specific data"
+  [{:keys [profile] :as _params}]
+  (get test-osrm-responses profile))
 
 ;;; Tests ;;;
 
@@ -174,7 +176,7 @@
 (deftest process-grid-item-test
   (testing "Processing single grid item calculates sports site distances"
     (seed-test-data! (test-search))
-    (with-redefs [osrm/get-distances-and-travel-times mock-osrm-call]
+    (with-redefs [osrm/get-data mock-osrm-call]
       (let [grid-item (first test-grid-items)
             result (diversity/process-grid-item (test-search) 2 grid-item prn)]
 
@@ -230,7 +232,7 @@
 (deftest recalc-grid-test
   (testing "Full grid recalculation workflow"
     (seed-test-data! (test-search))
-    (with-redefs [osrm/get-distances-and-travel-times mock-osrm-call]
+    (with-redefs [osrm/get-data mock-osrm-call]
       (let [test-fcoll (gis/->fcoll
                         [(gis/->feature {:type "Point"
                                          :coordinates [24.9477 60.1678]})])
@@ -265,7 +267,7 @@
           _ (Thread/sleep 100)
           baseline-memory (.totalMemory runtime)]
 
-      (with-redefs [osrm/get-distances-and-travel-times mock-osrm-call
+      (with-redefs [osrm/get-data mock-osrm-call
                     ;; Limit grid items for memory test
                     diversity/fetch-grid (fn [_ _ _]
                                            (take 5 (map #(hash-map :_source %) test-grid-items)))]
@@ -293,7 +295,7 @@
                        [24.9400 60.1650]]
           results (atom [])]
 
-      (with-redefs [osrm/get-distances-and-travel-times mock-osrm-call
+      (with-redefs [osrm/get-data mock-osrm-call
                     search/bulk-index-sync! (fn [_ data]
                                               (swap! results conj data)
                                               {:created (count data)})]
@@ -320,4 +322,5 @@
 
 (comment
   (setup-test-system!)
+  (clojure.test/run-test-var #'process-grid-item-test)
   (seed-test-data! (:lipas/search @test-system)))
