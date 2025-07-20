@@ -52,15 +52,15 @@
 
 (def excel-headers
   [[:main-category "Pääluokka"]
+   [:sub-category "Alaluokka"]
+   [:type-code "Tyyppikoodi"]
+   [:geometry-type "Geometria"]
    [:main-category-name-fi "Pääluokka nimi fi"]
    [:main-category-name-se "Pääluokka nimi se"]
    [:main-category-name-en "Pääluokka nimi en"]
-   [:sub-category "Alaluokka"]
    [:sub-category-name-fi "Alaluokka nimi fi"]
    [:sub-category-name-se "Alaluokka nimi se"]
    [:sub-category-name-en "Alaluokka nimi en"]
-   [:type-code "Tyyppikoodi"]
-   [:geometry-type "Geometria"]
    [:type-name-fi "Tyyppi nimi fi"]
    [:type-name-se "Tyyppi nimi se"]
    [:type-name-en "Tyyppi nimi en"]
@@ -72,15 +72,15 @@
   [m]
   (into {}
         [[:main-category (get-in m [:main-category :type-code])]
+         [:sub-category (get-in m [:sub-category :type-code])]
+         [:type-code (get m :type-code)]
+         [:geometry-type (get m :geometry-type)]
          [:main-category-name-fi (get-in m [:main-category :name :fi])]
          [:main-category-name-se (get-in m [:main-category :name :se])]
          [:main-category-name-en (get-in m [:main-category :name :en])]
-         [:sub-category (get-in m [:sub-category :type-code])]
          [:sub-category-name-fi (get-in m [:sub-category :name :fi])]
          [:sub-category-name-se (get-in m [:sub-category :name :se])]
          [:sub-category-name-en (get-in m [:sub-category :name :en])]
-         [:type-code (get m :type-code)]
-         [:geometry-type (get m :geometry-type)]
          [:type-name-fi (get-in m [:name :fi])]
          [:type-name-se (get-in m [:name :se])]
          [:type-name-en (get-in m [:name :en])]
@@ -100,52 +100,61 @@
 
 (def csv-data
   (into [(mapv second excel-headers-with-props)]
-        (for [[type-code {:keys [main-category sub-category] :as type}] active]
-          [main-category
-           (get-in main-categories [main-category :name :fi])
-           (get-in main-categories [main-category :name :se])
-           (get-in main-categories [main-category :name :en])
-           sub-category
-           (get-in sub-categories [sub-category :name :fi])
-           (get-in sub-categories [sub-category :name :se])
-           (get-in sub-categories [sub-category :name :en])
-           type-code
-           (:geometry-type type)
-           (get-in type [:name :fi])
-           (get-in type [:name :se])
-           (get-in type [:name :en])
-           (get-in type [:description :fi])
-           (get-in type [:description :se])
-           (get-in type [:description :en])])))
+        (sort-by (juxt #(nth % 0) ; main category
+                       #(nth % 1) ; sub category
+                       #(nth % 2) ; type-code
+                       )
+                 (for [[type-code {:keys [main-category sub-category] :as type}] active]
+                   [main-category
+                    sub-category
+                    type-code
+                    (:geometry-type type)
+                    (get-in main-categories [main-category :name :fi])
+                    (get-in main-categories [main-category :name :se])
+                    (get-in main-categories [main-category :name :en])
+                    (get-in sub-categories [sub-category :name :fi])
+                    (get-in sub-categories [sub-category :name :se])
+                    (get-in sub-categories [sub-category :name :en])
+                    (get-in type [:name :fi])
+                    (get-in type [:name :se])
+                    (get-in type [:name :en])
+                    (get-in type [:description :fi])
+                    (get-in type [:description :se])
+                    (get-in type [:description :en])]))))
 
 (def csv-data-with-props
   (into [(mapv second excel-headers-with-props)]
-        (for [[type-code {:keys [main-category sub-category] :as type}] active
-              [prop-k _] (:props type)]
-          [main-category
-           (get-in main-categories [main-category :name :fi])
-           (get-in main-categories [main-category :name :se])
-           (get-in main-categories [main-category :name :en])
-           sub-category
-           (get-in sub-categories [sub-category :name :fi])
-           (get-in sub-categories [sub-category :name :se])
-           (get-in sub-categories [sub-category :name :en])
-           type-code
-           (:geometry-type type)
-           (get-in type [:name :fi])
-           (get-in type [:name :se])
-           (get-in type [:name :en])
-           (get-in type [:description :fi])
-           (get-in type [:description :se])
-           (get-in type [:description :en])
-           (name prop-k)
-           (get-in prop-types/all [prop-k :data-type])
-           (get-in prop-types/all [prop-k :name :fi])
-           (get-in prop-types/all [prop-k :name :se])
-           (get-in prop-types/all [prop-k :name :en])
-           (get-in prop-types/all [prop-k :description :fi])
-           (get-in prop-types/all [prop-k :description :se])
-           (get-in prop-types/all [prop-k :description :en])])))
+        (sort-by (juxt #(nth % 0) ; main category
+                       #(nth % 1) ; sub category
+                       #(nth % 2) ; type-code
+                       #(nth % 16) ; prop-name
+                       )
+         (for [[type-code {:keys [main-category sub-category] :as type}] active
+               [prop-k _] (:props type)]
+           [main-category
+            sub-category
+            type-code
+            (:geometry-type type)
+            (get-in main-categories [main-category :name :fi])
+            (get-in main-categories [main-category :name :se])
+            (get-in main-categories [main-category :name :en])
+            (get-in sub-categories [sub-category :name :fi])
+            (get-in sub-categories [sub-category :name :se])
+            (get-in sub-categories [sub-category :name :en])
+            (get-in type [:name :fi])
+            (get-in type [:name :se])
+            (get-in type [:name :en])
+            (get-in type [:description :fi])
+            (get-in type [:description :se])
+            (get-in type [:description :en])
+            (name prop-k)
+            (get-in prop-types/all [prop-k :data-type])
+            (get-in prop-types/all [prop-k :name :fi])
+            (get-in prop-types/all [prop-k :name :se])
+            (get-in prop-types/all [prop-k :name :en])
+            (get-in prop-types/all [prop-k :description :fi])
+            (get-in prop-types/all [prop-k :description :se])
+            (get-in prop-types/all [prop-k :description :en])]))))
 
 (def used-prop-types
   (let [used (set (mapcat (comp keys :props second) all))]
