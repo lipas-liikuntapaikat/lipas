@@ -463,7 +463,10 @@
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)]
     ($ Stack {:direction "column"}
-       ($ List {:sx #js{:min-width "200px"}}
+       ($ List {:sx #js{:minWidth "200px"
+                        :maxWidth "350px"
+                        :width "100%"
+                        :overflow "auto"}}
           (map-indexed
             (fn [idx {:keys [slug title]}]
               ($ :<> {:key (name slug)}
@@ -481,7 +484,8 @@
                        (when (= selected-page idx)
                          ($ ListItemIcon
                             ($ ArrowForwadIosIcon {:color "secondary"})))
-                       ($ ListItemText {:primary (locale title)})))))
+                       ($ ListItemText {:primary (locale title)
+                                        :primaryTypographyProps #js{:noWrap false}})))))
             pages)))))
 
 (defui HelpSection
@@ -568,12 +572,15 @@
              (when (= :read mode)
                ($ :<>
                   ($ Tabs {:value selected-section-idx
-                           :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])}
+                           :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])
+                           :variant "scrollable"
+                           :scrollButtons true}
                      (map-indexed
                        (fn [idx section]
                          ($ Tab {:key idx
                                  :value idx
-                                 :label (locale-kw (:title section))}))
+                                 :label (locale-kw (:title section))
+                                 :wrapped true}))
                        sections))
 
                   ($ Breadcrumbs {:sx #js{:mt 1}}

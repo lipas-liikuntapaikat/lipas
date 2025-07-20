@@ -884,10 +884,10 @@
                                                             :blocks-count blocks-count
                                                             :block block})
     :data-model-excel-download ($ data-model-excel-download-block-editor {:section-idx section-idx
-                                                            :page-idx page-idx
-                                                            :block-idx block-idx
-                                                            :blocks-count blocks-count
-                                                            :block block})
+                                                                          :page-idx page-idx
+                                                                          :block-idx block-idx
+                                                                          :blocks-count blocks-count
+                                                                          :block block})
     ($ Typography {:color "error"} (str "Unknown block type: " (:type block)))))
 
 (defui add-block-controls [{:keys [section-idx page-idx]}]
