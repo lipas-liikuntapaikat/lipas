@@ -1,10 +1,14 @@
-(ns lipas.schema.sports-sites.circumstances)
+(ns lipas.schema.sports-sites.circumstances
+  (:require [lipas.data.floorball :as floorball]
+            [malli.util :as mu]
+            [malli.core :as m]))
 
 ;; TODO check fields that are exposed via public API before release
 (def floorball
   [:map {:description "Enriched floorball facility information"}
    [:storage-capacity {:optional true} :string]
-   [:roof-trusses-operation-model {:optional true} :string]
+   [:roof-trusses-operation-model {:optional true}
+    (into [:enum] (keys floorball/roof-trussess-operation-model))]
    [:general-information {:optional true} :string]
    [:corner-pieces-count {:optional true} :int]
    [:audience-toilets-count {:optional true} :int]
@@ -14,7 +18,8 @@
    [:fixed-cameras? {:optional true} :boolean]
    [:stretcher? {:optional true} :boolean]
    [:field-level-loading-doors? {:optional true} :boolean]
-   [:car-parking-economics-model {:optional true} :string]
+   [:car-parking-economics-model {:optional true}
+    (into [:enum] (keys floorball/car-parking-economics-model))]
    [:vip-area? {:optional true} :boolean]
    [:separate-referee-locker-room? {:optional true} :boolean]
    [:audit-date {:optional true} :string]
@@ -60,4 +65,24 @@
    [:open-floor-space-area-m2 {:optional true} number?]
    [:detached-tables-quantity {:optional true} :int]
    [:available-goals-count {:optional true} :int]
-   [:player-entrance {:optional true} :string]])
+   [:player-entrance {:optional true}
+    (into [:enum] (keys floorball/player-entrance))]
+   [:floor-elasticity {:optional true}
+    (into [:enum] (keys floorball/floor-elasticity))]
+   [:audience-stand-access {:optional true}
+    (into [:enum] (keys floorball/audience-stand-access))]])
+
+(def csv-headers
+  ["Tietue"
+   "Tietotyyppi"
+   ;; TODO: these are still hardcoded in views
+   #_"Nimi fi"
+   #_"Nimi se"
+   #_"Nimi en"])
+
+(defn schema->csv-data []
+  (let [ast (m/ast floorball)]
+    (into [csv-headers]
+          (for [k (sort (mu/keys floorball))]
+            [(name k)
+             (name (get-in ast [:keys k :value :type]))]))))

@@ -28,3 +28,9 @@
    "unknown"                {:fi "Ei tietoa"
                              :en "Unknown"
                              :se "Okänt"}})
+
+(def csv-headers
+  ["Arvo" "Nimi fi" "Nimi Se" "Nimi En"])
+
+(def csv-data
+  (into [csv-headers] (for [[v {:keys [fi se en]}] all] [v fi se en])))

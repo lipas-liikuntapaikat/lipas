@@ -1954,3 +1954,46 @@
                   "boolean"   [:boolean]
                   "enum"      (into [:enum] (keys (:opts m)))
                   "enum-coll" [:sequential (into [:enum] (keys (:opts m)))])])))
+
+(def csv-headers
+  ["Ominaisuus"
+   "Tietotyyppi"
+   "Nimi fi"
+   "Nimi se"
+   "Nimi en"
+   "Kuvaus fi"
+   "Kuvaus se"
+   "Kuvaus en"])
+
+(def csv-data
+  (into [csv-headers]
+        (for [[k m] all]
+          [(name k)
+           (get-in m [:data-type])
+           (get-in m [:name :fi])
+           (get-in m [:name :se])
+           (get-in m [:name :en])
+           (get-in m [:description :fi])
+           (get-in m [:description :se])
+           (get-in m [:description :en])])))
+
+(def enum-headers
+  ["Ominaisuus"
+   "Yksi/monivalinta"
+   "Arvo"
+   "Nimi fi"
+   "Nimi se"
+   "Nimi en"])
+
+(def enum-csv-data
+  (into [enum-headers]
+        (for [[k v] (filter #(#{"enum" "enum-coll"} (:data-type (second %))) all)
+              [opt-k opt-v] (:opts v)]
+          [(name k)
+           (case (:data-type v)
+             "enum" "single-value"
+             "enum-coll" "multiple-values")
+           (name opt-k)
+           (get-in opt-v [:label :fi])
+           (get-in opt-v [:label :se])
+           (get-in opt-v [:label :en])])))

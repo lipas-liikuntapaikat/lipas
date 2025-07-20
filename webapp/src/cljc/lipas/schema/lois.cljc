@@ -64,53 +64,7 @@
 #?(:clj
    (defn gen-csv
      []
-     (->>
-      (for [[category-code category] loi/categories
-            [_ type] (:types category)
-            [prop-k prop] (:props type)]
-        [category-code
-         (get-in category [:label :fi])
-         (get-in category [:label :se])
-         (get-in category [:label :en])
-         (get-in category [:description :fi])
-         (get-in category [:description :se])
-         (get-in category [:description :en])
-         (:value type)
-         (get-in type [:label :fi])
-         (get-in type [:label :se])
-         (get-in type [:label :en])
-         (get-in type [:description :fi])
-         (get-in type [:description :se])
-         (get-in type [:description :en])
-         (name prop-k)
-         (get-in prop [:field :label :fi])
-         (get-in prop [:field :label :se])
-         (get-in prop [:field :label :en])
-         (get-in prop [:field :description :fi])
-         (get-in prop [:field :description :se])
-         (get-in prop [:field :description :en])])
-      (into [["kategoria"
-              "kategoria nimi fi"
-              "kategoria nimi se"
-              "kategoria nimi en"
-              "kategoria kuvaus fi"
-              "kategoria kuvaus se"
-              "kategoria kuvaus en"
-              "tyyppi"
-              "tyyppi nimi fi"
-              "tyyppi nimi se"
-              "tyyppi nimi en"
-              "tyyppi kuvaus fi"
-              "tyyppi kuvaus se"
-              "tyyppi kuvaus en"
-              "ominaisuus"
-              "ominaisuus nimi fi"
-              "ominaisuus nimi se"
-              "ominaisuus nimi en"
-              "ominaisuus kuvaus fi"
-              "ominaisuus kuvaus se"
-              "ominaisuus kuvaus en"]])
-      (csv/write-csv *out*))))
+     (csv/write-csv *out* loi/csv-data)))
 
 (comment
   (gen-json-schema)

@@ -47,7 +47,8 @@
     [lipas.ui.uix.hooks :refer [use-subscribe]]
     [lipas.ui.user.subs :as user-subs]
     [lipas.ui.utils :as utils :refer [==>]]
-    [uix.core :as uix :refer [$ defui]]))
+    [uix.core :as uix :refer [$ defui]]
+    [re-frame.core :as rf]))
 
 (defui YoutubeIframe
   [{:keys [video-id title]}]
@@ -359,6 +360,16 @@
                                        (set-view-mode! :categories)))}
                (tr :actions/back)))))))
 
+(defui DataModelExcelDownload
+  []
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])]
+    ($ Stack {:spacing 1}
+       ($ Typography {:variant "h6"} (tr :help/data-model))
+       ($ Typography (tr :help/data-model-excel))
+       ($ Button {:variant "contained"
+                  :on-click #(rf/dispatch [:lipas.ui.reports.events/create-data-model-report])}
+          (tr :actions/download-excel)))))
+
 (defui ContentBlock
   [{:keys [block]}]
   (let [tr (use-subscribe [:lipas.ui.subs/translator])
@@ -382,6 +393,9 @@
 
       :type-code-explorer
       ($ TypeCodeExplorer {})
+
+      :data-model-excel-download
+      ($ DataModelExcelDownload {})
 
       ;; Default case - unknown block type
       ($ Typography {:color "error"} (str "Unknown block type: " (:type block))))))

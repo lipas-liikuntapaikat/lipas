@@ -5,4 +5,6 @@
  :permissions-help-body
  "I need permissions to following sports facilities:",
  :permissions-help-subject "I need more permissions",
- :privacy-policy "Privacy policy"}
+ :privacy-policy "Privacy policy"
+ :data-model "Data model"
+ :data-model-excel "Download the description of the Lipas data model in Excel format using the button below."}

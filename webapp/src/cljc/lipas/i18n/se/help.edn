@@ -6,4 +6,6 @@
  :permissions-help-body
  "Jag behöver användarrättigheter till följande platser:",
  :permissions-help-subject "Jag behöver mera användarrättigheter",
- :privacy-policy "Privacy policy"}
+ :privacy-policy "Privacy policy"
+ :data-model "Datamodell"
+ :data-model-excel "Ladda ner beskrivningen av Lipas datamodell i Excel-format via knappen nedan."}

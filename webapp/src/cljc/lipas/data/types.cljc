@@ -88,6 +88,65 @@
          [:description-se (get-in m [:description :se])]
          [:description-en (get-in m [:description :en])]]))
 
+(def excel-headers-with-props
+  (into [] cat [excel-headers [[:property "Ominaisuus"]
+                               [:property-data-type "Ominaisuus tietotyyppi"]
+                               [:property-name-fi "Ominaisuus nimi fi"]
+                               [:property-name-se "Ominaisuus nimi se"]
+                               [:property-name-en "Ominaisuus nimi en"]
+                               [:property-description-fi "Ominaisuus kuvaus fi"]
+                               [:property-description-fi "Ominaisuus kuvaus se"]
+                               [:property-description-fi "Ominaisuus kuvaus en"]]]))
+
+(def csv-data
+  (into [(mapv second excel-headers-with-props)]
+        (for [[type-code {:keys [main-category sub-category] :as type}] active]
+          [main-category
+           (get-in main-categories [main-category :name :fi])
+           (get-in main-categories [main-category :name :se])
+           (get-in main-categories [main-category :name :en])
+           sub-category
+           (get-in sub-categories [sub-category :name :fi])
+           (get-in sub-categories [sub-category :name :se])
+           (get-in sub-categories [sub-category :name :en])
+           type-code
+           (:geometry-type type)
+           (get-in type [:name :fi])
+           (get-in type [:name :se])
+           (get-in type [:name :en])
+           (get-in type [:description :fi])
+           (get-in type [:description :se])
+           (get-in type [:description :en])])))
+
+(def csv-data-with-props
+  (into [(mapv second excel-headers-with-props)]
+        (for [[type-code {:keys [main-category sub-category] :as type}] active
+              [prop-k _] (:props type)]
+          [main-category
+           (get-in main-categories [main-category :name :fi])
+           (get-in main-categories [main-category :name :se])
+           (get-in main-categories [main-category :name :en])
+           sub-category
+           (get-in sub-categories [sub-category :name :fi])
+           (get-in sub-categories [sub-category :name :se])
+           (get-in sub-categories [sub-category :name :en])
+           type-code
+           (:geometry-type type)
+           (get-in type [:name :fi])
+           (get-in type [:name :se])
+           (get-in type [:name :en])
+           (get-in type [:description :fi])
+           (get-in type [:description :se])
+           (get-in type [:description :en])
+           (name prop-k)
+           (get-in prop-types/all [prop-k :data-type])
+           (get-in prop-types/all [prop-k :name :fi])
+           (get-in prop-types/all [prop-k :name :se])
+           (get-in prop-types/all [prop-k :name :en])
+           (get-in prop-types/all [prop-k :description :fi])
+           (get-in prop-types/all [prop-k :description :se])
+           (get-in prop-types/all [prop-k :description :en])])))
+
 (def used-prop-types
   (let [used (set (mapcat (comp keys :props second) all))]
     (select-keys prop-types/all used)))

@@ -16,6 +16,7 @@
             [lipas.backend.newsletter :as newsletter]
             [lipas.backend.s3 :as s3]
             [lipas.backend.search :as search]
+            [lipas.data-model-export :as data-model-export]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
@@ -737,6 +738,10 @@
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
+
+(defn data-model-report
+  [out]
+  (data-model-export/create-excel out))
 
 ;;; Accessibility register ;;;
 

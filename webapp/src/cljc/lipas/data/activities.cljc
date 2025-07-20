@@ -1858,33 +1858,34 @@
    "Ominaisuus kuvaus se"
    "Ominaisuus kuvaus en"])
 
+(def csv-data
+  (into [csv-headers]
+        (for [a             (vals by-types)
+              :let          [rprops (get-in a [:props :routes :field :props])]
+              [prop-k prop] (merge (:props a) rprops)]
+          [(get-in a [:label :fi])
+           (get-in a [:label :se])
+           (get-in a [:label :en])
+           (get-in a [:description :fi])
+           (get-in a [:description :se])
+           (get-in a [:description :en])
+           (get-in a [:value])
+           (-> a :type-codes (->> (str/join " ")))
+           (name prop-k)
+           (get-in prop [:field :type])
+           (get-in prop [:field :label :fi])
+           (get-in prop [:field :label :se])
+           (get-in prop [:field :label :en])
+           (get-in prop [:field :description :fi])
+           (get-in prop [:field :description :se])
+           (get-in prop [:field :description :en])])))
+
 (declare gen-csv)
 
 #?(:clj
    (defn gen-csv
      []
-     (->>
-      (for [a             (vals by-types)
-            :let          [rprops (get-in a [:props :routes :field :props])]
-            [prop-k prop] (merge (:props a) rprops)]
-        [(get-in a [:label :fi])
-         (get-in a [:label :se])
-         (get-in a [:label :en])
-         (get-in a [:description :fi])
-         (get-in a [:description :se])
-         (get-in a [:description :en])
-         (get-in a [:value])
-         (-> a :type-codes (->> (str/join " ")))
-         (name prop-k)
-         (get-in prop [:field :type])
-         (get-in prop [:field :label :fi])
-         (get-in prop [:field :label :se])
-         (get-in prop [:field :label :en])
-         (get-in prop [:field :description :fi])
-         (get-in prop [:field :description :se])
-         (get-in prop [:field :description :en])])
-      (into [csv-headers])
-      (csv/write-csv *out*))))
+     (csv/write-csv *out* csv-data)))
 
 (def by-type-code
   (->> by-types

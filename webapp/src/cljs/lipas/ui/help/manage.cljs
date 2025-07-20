@@ -3,15 +3,16 @@
     ["@mui/icons-material/Add$default" :as AddIcon]
     ["@mui/icons-material/ArrowDownward$default" :as ArrowDownIcon]
     ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
-    ["@mui/icons-material/Delete$default" :as DeleteIcon]
-    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
     ["@mui/icons-material/CategoryOutlined$default" :as CategoryIcon]
+    ["@mui/icons-material/Delete$default" :as DeleteIcon]
+    ["@mui/icons-material/Download$default" :as DownloadIcon]
+    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
     ["@mui/icons-material/Image$default" :as ImageIcon]
+    ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
     ["@mui/icons-material/Preview$default" :as PreviewIcon]
     ["@mui/icons-material/Save$default" :as SaveIcon]
     ["@mui/icons-material/TextFields$default" :as TextIcon]
     ["@mui/icons-material/VideoLibrary$default" :as VideoIcon]
-    ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
     ["@mui/material/Box$default" :as Box]
     ["@mui/material/Button$default" :as Button]
     ["@mui/material/Card$default" :as Card]
@@ -89,7 +90,7 @@
                                   :caption {:fi "" :en "" :se ""}
                                   :title {:fi "" :en "" :se ""})
                       :type-code-explorer base-block ;; No additional props needed for type explorer
-                      )]
+                      :data-model-excel-download base-block)]
       (update-in db [:help :edited-data section-idx :pages page-idx :blocks] conj new-block))))
 
 (rf/reg-event-db
@@ -809,6 +810,52 @@
              ($ Typography {:variant "body2" :color "text.secondary"}
                 "This block will display a hierarchical browser for sports facility types. Users can explore main categories, subcategories, and individual facility types."))))))
 
+(defui data-model-excel-download-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
+  (let [[expanded set-expanded!] (use-state false)]
+    ($ Card {:variant "elevation"
+             :elevation 3
+             :sx #js{:mb 2
+                     :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                     :transition "box-shadow 0.3s ease"}}
+       ($ CardHeader
+          {:title ($ Typography {:variant "subtitle1" :component "div"}
+                     ($ Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
+                        ($ DownloadIcon {:fontSize "small" :color "action" :sx #js{:mr 1}})
+                        "Data Model Excel Download"))
+           :action ($ Box {:sx #js{:display "flex" :gap 0.5}}
+                      ;; Expand/collapse button
+                      ($ IconButton {:onClick #(set-expanded! (not expanded))
+                                     :size "small"
+                                     :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                             :transition "transform 0.3s"}}
+                         ($ ExpandMoreIcon {:fontSize "small"}))
+
+                      ;; Move up button
+                      ($ IconButton {:color "primary"
+                                     :size "small"
+                                     :disabled (zero? block-idx)
+                                     :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
+                         ($ ArrowUpIcon {:fontSize "small"}))
+
+                      ;; Move down button
+                      ($ IconButton {:color "primary"
+                                     :size "small"
+                                     :disabled (= block-idx (dec blocks-count))
+                                     :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
+                         ($ ArrowDownIcon {:fontSize "small"}))
+
+                      ;; Delete button
+                      ($ IconButton {:color "error"
+                                     :size "small"
+                                     :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
+                         ($ DeleteIcon {:fontSize "small"})))})
+
+       ($ Collapse {:in expanded :timeout "auto" :unmountOnExit true}
+          ($ CardContent {}
+             ;; Type explorer has no editable properties - it just displays the sports facility types.
+             ($ Typography {:variant "body2" :color "text.secondary"}
+                "This block will display a button that downloads a data model Excel file."))))))
+
 (defui block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (case (:type block)
     :text ($ text-block-editor {:section-idx section-idx
@@ -832,6 +879,11 @@
                               :blocks-count blocks-count
                               :block block})
     :type-code-explorer ($ type-code-explorer-block-editor {:section-idx section-idx
+                                                            :page-idx page-idx
+                                                            :block-idx block-idx
+                                                            :blocks-count blocks-count
+                                                            :block block})
+    :data-model-excel-download ($ data-model-excel-download-block-editor {:section-idx section-idx
                                                             :page-idx page-idx
                                                             :block-idx block-idx
                                                             :blocks-count blocks-count
@@ -870,7 +922,14 @@
          :color "secondary"
          :startIcon ($ CategoryIcon {})
          :onClick #(rf/dispatch [::add-block section-idx page-idx :type-code-explorer])}
-        "Add Type Explorer")))
+        "Add Type Explorer")
+     ($ Button
+        {:variant "outlined"
+         :size "small"
+         :color "secondary"
+         :startIcon ($ DownloadIcon {})
+         :onClick #(rf/dispatch [::add-block section-idx page-idx :data-model-excel-download])}
+        "Add Data Model Excel Download")))
 
 (defui blocks-editor [{:keys [section-idx page-idx blocks]}]
   ($ Box {}

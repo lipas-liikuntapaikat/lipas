@@ -3,6 +3,7 @@
   (:require [clojure.test :refer :all]
             [lipas.test-utils :as test-utils]
             [lipas.wfs.core :as wfs]
+            [lipas.wfs.mappings :as wfs-mappings]
             [lipas.utils :as utils]))
 
 ;; Test data fixtures
@@ -133,7 +134,7 @@
 
 (deftest test-helsinki-time-conversion
   (testing "->helsinki-time converts ISO instant to Helsinki time string"
-    (let [result (wfs/->helsinki-time sample-instant)]
+    (let [result (wfs-mappings/->helsinki-time sample-instant)]
       (is (string? result))
       (is (re-matches #"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+" result))
       (is (= "2023-12-25T12:15:30.123456" result)))))
@@ -141,22 +142,22 @@
 (deftest test-resolve-geom-field-type
   (testing "resolve-geom-field-type returns correct geometry type keywords"
     (testing "Point geometry without Z"
-      (is (= (keyword "geometry(Point,3067)") (wfs/resolve-geom-field-type 1530 false))))
+      (is (= (keyword "geometry(Point,3067)") (wfs-mappings/resolve-geom-field-type 1530 false))))
 
     (testing "Point geometry with Z"
-      (is (= (keyword "geometry(PointZ,3067)") (wfs/resolve-geom-field-type 1530 true))))
+      (is (= (keyword "geometry(PointZ,3067)") (wfs-mappings/resolve-geom-field-type 1530 true))))
 
     (testing "LineString geometry without Z"
-      (is (= (keyword "geometry(LineString,3067)") (wfs/resolve-geom-field-type 4422 false))))
+      (is (= (keyword "geometry(LineString,3067)") (wfs-mappings/resolve-geom-field-type 4422 false))))
 
     (testing "LineString geometry with Z"
-      (is (= (keyword "geometry(LineStringZ,3067)") (wfs/resolve-geom-field-type 4422 true))))
+      (is (= (keyword "geometry(LineStringZ,3067)") (wfs-mappings/resolve-geom-field-type 4422 true))))
 
     (testing "Polygon geometry without Z"
-      (is (= (keyword "geometry(Polygon,3067)") (wfs/resolve-geom-field-type 110 false))))
+      (is (= (keyword "geometry(Polygon,3067)") (wfs-mappings/resolve-geom-field-type 110 false))))
 
     (testing "Polygon geometry with Z"
-      (is (= (keyword "geometry(Polygonz,3067)") (wfs/resolve-geom-field-type 110 true))))))
+      (is (= (keyword "geometry(Polygonz,3067)") (wfs-mappings/resolve-geom-field-type 110 true))))))
 
 ;; WFS Row Conversion Tests
 
@@ -271,7 +272,7 @@
   (testing "Point geometry includes point-specific fields"
     (let [[_ row-data] (wfs/->wfs-row sample-point-sports-site 0
                                       (first (get-in sample-point-sports-site [:location :geometries :features])))
-          tennis-fields (get wfs/type-code->legacy-fields 1370)]
+          tennis-fields (get wfs-mappings/type-code->legacy-fields 1370)]
 
       ;; Tennis court should have tennis-specific fields in the row
       (doseq [field tennis-fields]
@@ -281,7 +282,7 @@
   (testing "LineString geometry includes route-specific fields"
     (let [[_ row-data] (wfs/->wfs-row sample-linestring-sports-site 0
                                       (first (get-in sample-linestring-sports-site [:location :geometries :features])))
-          trail-fields (get wfs/type-code->legacy-fields 4430)]
+          trail-fields (get wfs-mappings/type-code->legacy-fields 4430)]
 
       ;; Horse trail should have trail-specific fields
       (is (contains? row-data :reitti_id) "Should include route ID")
@@ -293,7 +294,7 @@
   (testing "Polygon geometry includes area-specific fields"
     (let [[_ row-data] (wfs/->wfs-row sample-polygon-sports-site 0
                                       (first (get-in sample-polygon-sports-site [:location :geometries :features])))
-          park-fields (get wfs/type-code->legacy-fields 1110)]
+          park-fields (get wfs-mappings/type-code->legacy-fields 1110)]
 
       ;; Sports park should have park-specific fields
       (is (contains? row-data :alue_id) "Should include area ID")
@@ -307,39 +308,39 @@
 
     (testing "Simple field resolution"
       (let [site {:lipas-id 12345 :name "Test Site" :construction-year 2023}]
-        (is (= 12345 ((get wfs/legacy-field->resolve-fn :id) {:site site})))
-        (is (= "Test Site" ((get wfs/legacy-field->resolve-fn :nimi_fi) {:site site})))
-        (is (= 2023 ((get wfs/legacy-field->resolve-fn :rakennusvuosi) {:site site})))))
+        (is (= 12345 ((get wfs-mappings/legacy-field->resolve-fn :id) {:site site})))
+        (is (= "Test Site" ((get wfs-mappings/legacy-field->resolve-fn :nimi_fi) {:site site})))
+        (is (= 2023 ((get wfs-mappings/legacy-field->resolve-fn :rakennusvuosi) {:site site})))))
 
     (testing "Boolean field resolution"
       (let [site-with-bool {:properties {:school-use? true :free-use? false}}]
-        (is (= true ((get wfs/legacy-field->resolve-fn :koulun_liikuntapaikka) {:site site-with-bool})))
-        (is (= false ((get wfs/legacy-field->resolve-fn :vapaa_kaytto) {:site site-with-bool})))))
+        (is (= true ((get wfs-mappings/legacy-field->resolve-fn :koulun_liikuntapaikka) {:site site-with-bool})))
+        (is (= false ((get wfs-mappings/legacy-field->resolve-fn :vapaa_kaytto) {:site site-with-bool})))))
 
     (testing "Collection field resolution (renovation years)"
       (let [site-with-collection {:renovation-years [2020 2022 2023]}]
         (is (= "2020,2022,2023"
-               ((get wfs/legacy-field->resolve-fn :peruskorjausvuodet) {:site site-with-collection})))))
+               ((get wfs-mappings/legacy-field->resolve-fn :peruskorjausvuodet) {:site site-with-collection})))))
 
     (testing "Helsinki time conversion"
       (let [site-with-date {:event-date "2024-01-15T12:00:00.000Z"}]
         (is (= "2024-01-15T14:00"
-               ((get wfs/legacy-field->resolve-fn :muokattu_viimeksi) {:site site-with-date})))))
+               ((get wfs-mappings/legacy-field->resolve-fn :muokattu_viimeksi) {:site site-with-date})))))
 
     (testing "Feature-specific field resolution"
       (let [feature {:geometry {:type "Point" :coordinates [24.9 60.2]}
                      :properties {:travel-direction "north"}}]
         (is (= {:type "Point" :coordinates [24.9 60.2]}
-               ((get wfs/legacy-field->resolve-fn :the_geom) {:feature feature})))
+               ((get wfs-mappings/legacy-field->resolve-fn :the_geom) {:feature feature})))
         (is (= "north"
-               ((get wfs/legacy-field->resolve-fn :kulkusuunta) {:feature feature})))
-        (is (= 1 ((get wfs/legacy-field->resolve-fn :reitti_id) {:idx 0})))
-        (is (= 2 ((get wfs/legacy-field->resolve-fn :alue_id) {:idx 1})))))))
+               ((get wfs-mappings/legacy-field->resolve-fn :kulkusuunta) {:feature feature})))
+        (is (= 1 ((get wfs-mappings/legacy-field->resolve-fn :reitti_id) {:idx 0})))
+        (is (= 2 ((get wfs-mappings/legacy-field->resolve-fn :alue_id) {:idx 1})))))))
 
 (deftest test-type-specific-field-mapping
   (testing "Different sports site types get correct field sets"
-    (let [ice-hockey-rink-fields (get wfs/type-code->legacy-fields 1530)
-          swimming-pool-fields (get wfs/type-code->legacy-fields 3120)]
+    (let [ice-hockey-rink-fields (get wfs-mappings/type-code->legacy-fields 1530)
+          swimming-pool-fields (get wfs-mappings/type-code->legacy-fields 3120)]
 
       ;; Ice hockey rink should have rink-specific fields
       (is (contains? ice-hockey-rink-fields :kaukalo_lkm))
@@ -350,7 +351,7 @@
       (is (not (contains? swimming-pool-fields :kaukalo_lkm)))))
 
   (testing "Common fields are present in all types"
-    (let [common-set wfs/common-fields]
+    (let [common-set wfs-mappings/common-fields]
       (is (contains? common-set :id))
       (is (contains? common-set :nimi_fi))
       (is (contains? common-set :the_geom))
@@ -361,38 +362,38 @@
 
     (testing "Standard ISO format"
       (is (= "2023-12-25T12:15:30.123456"
-             (wfs/->helsinki-time "2023-12-25T10:15:30.123456Z"))))
+             (wfs-mappings/->helsinki-time "2023-12-25T10:15:30.123456Z"))))
 
     (testing "Winter time (UTC+2)"
       (is (= "2023-12-25T12:15:30.123456"
-             (wfs/->helsinki-time "2023-12-25T10:15:30.123456Z"))))
+             (wfs-mappings/->helsinki-time "2023-12-25T10:15:30.123456Z"))))
 
     (testing "Summer time (UTC+3) - July"
       (is (= "2023-07-15T13:15:30.123456"
-             (wfs/->helsinki-time "2023-07-15T10:15:30.123456Z"))))
+             (wfs-mappings/->helsinki-time "2023-07-15T10:15:30.123456Z"))))
 
     (testing "Handles different precisions"
-      (is (string? (wfs/->helsinki-time "2023-12-25T10:15:30Z")))
-      (is (string? (wfs/->helsinki-time "2023-12-25T10:15:30.123Z"))))))
+      (is (string? (wfs-mappings/->helsinki-time "2023-12-25T10:15:30Z")))
+      (is (string? (wfs-mappings/->helsinki-time "2023-12-25T10:15:30.123Z"))))))
 
 (deftest test-geometry-field-type-resolution
   (testing "Geometry field type resolution for different sports site types"
 
     (testing "Point geometry types"
-      (is (= (keyword "geometry(Point,3067)") (wfs/resolve-geom-field-type 1530 false)))
-      (is (= (keyword "geometry(PointZ,3067)") (wfs/resolve-geom-field-type 1530 true))))
+      (is (= (keyword "geometry(Point,3067)") (wfs-mappings/resolve-geom-field-type 1530 false)))
+      (is (= (keyword "geometry(PointZ,3067)") (wfs-mappings/resolve-geom-field-type 1530 true))))
 
     (testing "LineString geometry types"
-      (is (= (keyword "geometry(LineString,3067)") (wfs/resolve-geom-field-type 4422 false)))
-      (is (= (keyword "geometry(LineStringZ,3067)") (wfs/resolve-geom-field-type 4422 true))))
+      (is (= (keyword "geometry(LineString,3067)") (wfs-mappings/resolve-geom-field-type 4422 false)))
+      (is (= (keyword "geometry(LineStringZ,3067)") (wfs-mappings/resolve-geom-field-type 4422 true))))
 
     (testing "Polygon geometry types"
-      (is (= (keyword "geometry(Polygon,3067)") (wfs/resolve-geom-field-type 110 false)))
-      (is (= (keyword "geometry(Polygonz,3067)") (wfs/resolve-geom-field-type 110 true))))
+      (is (= (keyword "geometry(Polygon,3067)") (wfs-mappings/resolve-geom-field-type 110 false)))
+      (is (= (keyword "geometry(Polygonz,3067)") (wfs-mappings/resolve-geom-field-type 110 true))))
 
     (testing "Throws on unknown type codes"
       (is (thrown? IllegalArgumentException
-                   (wfs/resolve-geom-field-type 99999 false))))))
+                   (wfs-mappings/resolve-geom-field-type 99999 false))))))
 
 (deftest ^:integration test-wfs-e2e-lifecycle
   "Complete end-to-end test of WFS lifecycle with multiple geometry types"
@@ -462,7 +463,7 @@
         ;; Verify sites can be seen in their corresponding materialized views
         (doseq [site test-sites]
           (let [type-code (-> site :type :type-code)
-                view-names (get wfs/type-code->view-names type-code)]
+                view-names (get wfs-mappings/type-code->view-names type-code)]
 
             (when (seq view-names)
               (doseq [view-name view-names]
@@ -552,7 +553,7 @@
                 "New site should have correct type code")))
 
         ;; Verify materialized views reflect the changes
-        (let [tennis-view-names (get wfs/type-code->view-names 1370)]
+        (let [tennis-view-names (get wfs-mappings/type-code->view-names 1370)]
           (when (seq tennis-view-names)
             (doseq [view-name tennis-view-names]
               (let [view-count (try
@@ -572,7 +573,7 @@
         (is (nil? (wfs/drop-legacy-mat-views! test-utils/db)))
 
         ;; Verify views are dropped by trying to query them (should fail)
-        (let [tennis-view-names (get wfs/type-code->view-names 1370)]
+        (let [tennis-view-names (get wfs-mappings/type-code->view-names 1370)]
           (when (seq tennis-view-names)
             (doseq [view-name tennis-view-names]
               (is (thrown? Exception
@@ -592,11 +593,11 @@
   (clojure.test/run-test-var #'test-wfs-row-conversion)
 
   ;; Test helsinki time conversion
-  (wfs/->helsinki-time "2023-12-25T10:15:30.123456Z")
+  (wfs-mappings/->helsinki-time "2023-12-25T10:15:30.123456Z")
 
   ;; Test geometry field type resolution
-  (wfs/resolve-geom-field-type 1110 false)
-  (wfs/resolve-geom-field-type 1110 true)
+  (wfs-mappings/resolve-geom-field-type 1110 false)
+  (wfs-mappings/resolve-geom-field-type 1110 true)
 
   ;; Test with sample data
   (def test-result (wfs/->wfs-row sample-sports-site 0 sample-feature))

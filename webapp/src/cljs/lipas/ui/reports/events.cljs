@@ -56,7 +56,8 @@
           content-type (condp = fmt
                          "xlsx"    (:xlsx cutils/content-type)
                          "geojson" (:json cutils/content-type)
-                         "csv"     (:csv cutils/content-type))]
+                         "csv"     (:csv cutils/content-type))
+          filename (str "lipas_raportti." fmt)]
       {:http-xhrio
        {:method          :post
         :uri             (str (:backend-url db) "/actions/create-sports-sites-report")
@@ -69,14 +70,14 @@
                           :content-type content-type
                           :description  content-type
                           :read         ajaxp/-body}
-        :on-success      [::report-success fmt content-type]
+        :on-success      [::report-success filename content-type]
         :on-failure      [::report-failure]}
        :db (assoc-in db [:reports :downloading?] true)})))
 
 (rf/reg-event-fx ::report-success
-  (fn [{:keys [db]} [_ fmt content-type blob]]
+  (fn [{:keys [db]} [_ filename content-type blob]]
     {:lipas.ui.effects/save-as! {:blob         blob
-                                 :filename     (str "lipas." fmt)
+                                 :filename     filename
                                  :content-type content-type}
      :db (assoc-in db [:reports :downloading?] false)}))
 
@@ -110,3 +111,20 @@
 (rf/reg-event-db ::toggle-save-dialog
   (fn [db _]
     (update-in db [:reports :save-dialog-open?] not)))
+
+(rf/reg-event-fx ::create-data-model-report
+  (fn [{:keys [db]} [_ _]]
+    (let [content-type (:xlsx cutils/content-type)
+          fmt "xlsx"]
+      {:http-xhrio
+       {:method          :post
+        :uri             (str (:backend-url db) "/actions/create-data-model-report")
+        :params          {}
+        :format          (ajax/transit-request-format)
+        :response-format {:type         :blob
+                          :content-type content-type
+                          :description  content-type
+                          :read         ajaxp/-body}
+        :on-success      [::report-success "lipas_tietomalli.xlsx" content-type]
+        :on-failure      [::report-failure]}
+       :db (assoc-in db [:reports :downloading?] true)})))

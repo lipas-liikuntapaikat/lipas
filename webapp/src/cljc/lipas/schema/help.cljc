@@ -51,6 +51,11 @@
    [:block-id BlockId]
    [:type {:decode/string keyword} [:enum :type-code-explorer]]])
 
+(def DataModelExcelDownload
+  [:map {:closed true}
+   [:block-id BlockId]
+   [:type {:decode/string keyword} [:enum :data-model-excel-download]]])
+
 (def ContentBlock
   [:multi {:dispatch :type}
    [:text TextBlock]
@@ -58,6 +63,7 @@
    [:video VideoBlock]
    [:pdf PdfBlock]
    [:type-code-explorer TypeCodeExplorerBlock]
+   [:data-model-excel-download DataModelExcelDownload]
    ;; Add other block types here in the future
    ;; [:heading HeadingBlock]
    ])

@@ -594,6 +594,17 @@
                    "geojson" (core/sports-sites-report-geojson search query fields locale out)
                    "csv" (core/sports-sites-report-csv search query fields locale out))))}))}}]
 
+      ["/actions/create-data-model-report"
+       {:post
+        {:no-doc false
+         :parameters {:body {}}
+         :handler
+         (fn [{:keys [_parameters]}]
+           {:status 200
+            :headers {"Content-Type" (-> utils/content-type :xlsx)
+                      "Content-Disposition" "inline; filename=\"lipas_tietomalli.xlsx\""}
+            :body (ring-io/piped-input-stream (fn [out] (core/data-model-report out)))})}}]
+
       ;; Old simple db version
       ["/actions/create-finance-report"
        {:post
