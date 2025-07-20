@@ -447,7 +447,6 @@
 
     (.on lmap "moveend"
          (fn [_]
-           (println "moveend")
            (let [center (.getCenter view)
                  lonlat (when (seq center) (ol-proj/toLonLat center proj/epsg3067))
                  zoom (.getZoom view)
