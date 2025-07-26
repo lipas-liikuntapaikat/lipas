@@ -68,6 +68,7 @@
       (if (cache/has? @osrm-cache url)
         ;; Cache hit
         (do
+          (cache/hit @osrm-cache cached-value)
           (swap! cache-stats update :hits inc)
           (log/debug "OSRM cache hit for URL:" url)
           cached-value)
