@@ -8,6 +8,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
+            [lipas.backend.route :as route]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
@@ -825,6 +826,32 @@
          (fn [{:keys [body-params]}]
            {:status 200
             :body (core/search-lois-with-params search body-params)})}}]
+
+      ;; POC Route Ordering endpoint
+      ["/actions/poc-suggest-route-order"
+       {:post
+        {:no-doc true
+         :parameters
+         {:body {:lipas-id int?
+                 :activity-type string?}}
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [{:keys [lipas-id activity-type]} body-params
+                 ;; Get the sports site data
+                 sports-site (core/get-sports-site2 search lipas-id)
+                 ;; Extract route segments for the activity
+                 activities (get sports-site :activities [])
+                 activity (first (filter #(= (:activity-type %) activity-type) activities))
+                 routes (get activity :routes [])
+                 ;; Get feature IDs from routes
+                 feature-ids (mapv :fid routes)
+                 ;; Get the actual geometries (features)
+                 features (get-in sports-site [:location :geometries :features])]
+             (if (and sports-site activity (seq feature-ids) features)
+               {:status 200
+                :body (route/suggest-order sports-site feature-ids features)}
+               {:status 404
+                :body {:error "Sports site, activity, or route segments not found"}})))}}]
 
       ["/actions/save-help-data"
        {:post
