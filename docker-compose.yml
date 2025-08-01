@@ -114,7 +114,6 @@ services:
       SEARCH_HOST:
       SEARCH_USER:
       SEARCH_PASS:
-      OLD_LIPAS_URL:
       OLD_LIPAS_USER:
       OLD_LIPAS_PASS:
       ADMIN_PASSWORD:
@@ -250,17 +249,6 @@ services:
     entrypoint: clojure -M -m lipas.wfs.core
     links:
       - postgres
-
-  integrations:
-    extends:
-      service: backend-base
-    logging:
-      options:
-        tag: "integrations"
-    entrypoint: clojure -M -m lipas.integrator
-    links:
-      - postgres
-      - elasticsearch
 
   worker-local:
     extends:
