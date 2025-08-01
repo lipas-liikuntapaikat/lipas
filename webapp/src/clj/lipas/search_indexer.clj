@@ -58,6 +58,8 @@
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> (core/get-sports-sites-by-type-code db type-code {:locale :all})
+            ;; filter vain aktiiviset
+            (filter (comp #{"active" "out-of-service-temporarily"} :status))
             (map #(-> %
                       (legacy-transform/->old-lipas-sports-site)
                       (assoc :id (:lipas-id %))
