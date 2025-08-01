@@ -14,6 +14,9 @@
  :draw-linestring "Lisää reittiosa",
  :draw-polygon "Lisää alue",
  :edit-later-hint "Voit muokata geometriaa myös myöhemmin",
+ :itrs-exposure "Vaarallisuus",
+ :itrs-segment-difficulty "Määritä reittiosan ITRS-vaativuus",
+ :itrs-technical "Tekninen vaativuus",
  :kink
  "Muuta reitin kulkua niin, että reittiosa ei risteä itsensä kanssa. Voit tarvittaessa katkaista reitin useampaan osaan.",
  :modify "Voit raahata pistettä kartalla",

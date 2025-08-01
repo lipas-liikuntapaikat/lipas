@@ -917,6 +917,141 @@
                                           :se "Avsnittets svårighetsgrad"
                                           :en "Section difficulty"})
 
+;; ITRS (International Trail Rating System) difficulty options
+;; https://itrs.bike/
+
+(def itrs-technical-options
+  {"0" {:label {:fi "0 - Siirtymäreitti"
+                :se "0 - Transportsträcka"
+                :en "0 - Transition route"}
+        :color "#9b59b6"} ; Purple
+   "1" {:label {:fi "1 - Erittäin helppo"
+                :se "1 - Mycket lätt"
+                :en "1 - Very easy"}
+        :color "#27ae60"} ; Green
+   "2" {:label {:fi "2 - Helppo"
+                :se "2 - Lätt"
+                :en "2 - Easy"}
+        :color "#3498db"} ; Blue
+   "3" {:label {:fi "3 - Vaativa"
+                :se "3 - Utmanande"
+                :en "3 - Challenging"}
+        :color "#e74c3c"} ; Red
+   "4" {:label {:fi "4 - Vaikea"
+                :se "4 - Svår"
+                :en "4 - Difficult"}
+        :color "#2c3e50"} ; Black
+   "5" {:label {:fi "5 - Erittäin vaikea"
+                :se "5 - Mycket svår"
+                :en "5 - Extremely difficult"}
+        :color "#f39c12"}}) ; Orange
+
+(def itrs-endurance-options
+  {"1" {:label {:fi "1 - Erittäin helppo"
+                :se "1 - Mycket lätt"
+                :en "1 - Very easy"}
+        :description {:fi "Edellyttää normaali liikunnallisuutta"
+                      :se "Kräver normal fysisk aktivitet"
+                      :en "Requires normal fitness"}
+        :color "#27ae60"}
+   "2" {:label {:fi "2 - Helppo"
+                :se "2 - Lätt"
+                :en "2 - Easy"}
+        :description {:fi "Edellyttää satunnaista urheilua ja pyöräilyä"
+                      :se "Kräver sporadisk sport och cykling"
+                      :en "Requires occasional sports and cycling"}
+        :color "#3498db"}
+   "3" {:label {:fi "3 - Vaativa"
+                :se "3 - Utmanande"
+                :en "3 - Challenging"}
+        :description {:fi "Edellyttää säännöllistä pyöräilyä ja urheilua"
+                      :se "Kräver regelbunden cykling och sport"
+                      :en "Requires regular cycling and sports"}
+        :color "#e74c3c"}
+   "4" {:label {:fi "4 - Vaikea"
+                :se "4 - Svår"
+                :en "4 - Difficult"}
+        :description {:fi "Edellyttää aktiivista pyöräilyn lajiharjoittelua"
+                      :se "Kräver aktiv cykelträning"
+                      :en "Requires active cycling training"}
+        :color "#2c3e50"}
+   "5" {:label {:fi "5 - Erittäin vaikea"
+                :se "5 - Mycket svår"
+                :en "5 - Extremely difficult"}
+        :description {:fi "Edellyttää ammattimaista pyöräilyn lajiharjoittelua"
+                      :se "Kräver professionell cykelträning"
+                      :en "Requires professional cycling training"}
+        :color "#f39c12"}})
+
+(def itrs-wilderness-options
+  {"1" {:label {:fi "1 - Sivilisaation läheisyydessä"
+                :se "1 - Nära civilisation"
+                :en "1 - Near civilization"}
+        :description {:fi "Palveluiden lähellä - kävelymatka kauimmasta pisteestä julkiselle tielle enintään 10 minuuttia"
+                      :se "Nära tjänster - gångavstånd från längsta punkten till allmän väg max 10 minuter"
+                      :en "Near services - walking distance from furthest point to public road max 10 minutes"}
+        :color "#27ae60"}
+   "2" {:label {:fi "2 - Vaatii valmistautumista ennakkoon"
+                :se "2 - Kräver förberedelse"
+                :en "2 - Requires preparation"}
+        :description {:fi "Kauempana kiinteästä asutuksesta sijaitseva reitti - kävelymatka kauimmasta pisteestä julkiselle tielle enintään 1 tunti"
+                      :se "Rutt längre från fast bosättning - gångavstånd från längsta punkten till allmän väg max 1 timme"
+                      :en "Route further from settlement - walking distance from furthest point to public road max 1 hour"}
+        :color "#3498db"}
+   "3" {:label {:fi "3 - Vaatii huolellista valmistautumista"
+                :se "3 - Kräver noggrann förberedelse"
+                :en "3 - Requires careful preparation"}
+        :description {:fi "Metsäinen tai erämainen ympäristö - kävelymatka lähimmälle julkiselle tielle enintään 6 tuntia"
+                      :se "Skogsmiljö eller vildmark - gångavstånd till närmaste allmän väg max 6 timmar"
+                      :en "Forest or wilderness environment - walking distance to nearest public road max 6 hours"}
+        :color "#e74c3c"}
+   "4" {:label {:fi "4 - Vaatii ammattimaista valmistautumista"
+                :se "4 - Kräver professionell förberedelse"
+                :en "4 - Requires professional preparation"}
+        :description {:fi "Erämaareitti - kävelymatka lähimmälle julkiselle tielle yli 6 tuntia tai enemmän"
+                      :se "Vildmarksrutt - gångavstånd till närmaste allmän väg över 6 timmar eller mer"
+                      :en "Wilderness route - walking distance to nearest public road over 6 hours or more"}
+        :color "#2c3e50"}})
+
+(def itrs-exposure-options
+  {"1" {:label {:fi "1 - Normaali loukkaantumisriski"
+                :se "1 - Normal skaderisk"
+                :en "1 - Normal injury risk"}
+        :description {:fi "Ei normaalista maastopyöräreitistä poikkeavaa loukkaantumisriskiä"
+                      :se "Ingen avvikande skaderisk från normal mountainbike-rutt"
+                      :en "No abnormal injury risk from normal mountain bike trail"}
+        :color "#27ae60"}
+   "2" {:label {:fi "2 - Korkea loukkaantumisriski"
+                :se "2 - Hög skaderisk"
+                :en "2 - High injury risk"}
+        :description {:fi "Polun välittömässä läheisyydessä on pudotus, jonne ajautuessaan altistuu vakavan loukkaantumisen riskille"
+                      :se "I direkt närhet av stigen finns ett fall där man riskerar allvarlig skada"
+                      :en "In immediate vicinity of trail is a drop where one risks serious injury"}
+        :color "#3498db"}
+   "3" {:label {:fi "3 - Hengenvaaralliset seuraukset"
+                :se "3 - Livsfarliga konsekvenser"
+                :en "3 - Life-threatening consequences"}
+        :description {:fi "Polun välittömässä läheisyydessä on pudotus, jonne ajautuessaan altistuu hengenvaarallisen loukkaantumisen riskille"
+                      :se "I direkt närhet av stigen finns ett fall där man riskerar livshotande skada"
+                      :en "In immediate vicinity of trail is a drop where one risks life-threatening injury"}
+        :color "#e74c3c"}
+   "4" {:label {:fi "4 - Kuolemaan johtavat seuraukset"
+                :se "4 - Dödliga konsekvenser"
+                :en "4 - Fatal consequences"}
+        :description {:fi "Polun välittömässä läheisyydessä on pudotus, jonne ajautuessaan altistuu kuolemaan johtavalle riskille"
+                      :se "I direkt närhet av stigen finns ett fall där man riskerar dödlig utgång"
+                      :en "In immediate vicinity of trail is a drop where one risks fatal outcome"}
+        :color "#2c3e50"}})
+
+;; Migration mapping from legacy to ITRS technical
+(def legacy->itrs-technical
+  {"1a-easy" "1"
+   "1b-easy" "1"
+   "2-easy" "2"
+   "3-moderately-challenging" "3"
+   "4-challenging" "4"
+   "5-extremely-challenging" "5"})
+
 (def cycling
   {:label {:fi "Pyöräily"
            :se "Cykling"
@@ -933,6 +1068,9 @@
                 :cycling-activities
                 :route-length-km
                 :duration
+                :itrs-classification?
+                :itrs-endurance
+                :itrs-wilderness
                 :cycling-difficulty
                 :cycling-route-difficulty
                 :surface-material
@@ -969,6 +1107,11 @@
                 [:route-name {:optional true} common-schema/localized-string]
                 [:cycling-activities {:optional true}
                  [:sequential (into [:enum] (keys cycling-activities))]]
+                ;; ITRS fields
+                [:itrs-classification? {:optional true} :boolean]
+                [:itrs-endurance {:optional true} [:enum "1" "2" "3" "4" "5"]]
+                [:itrs-wilderness {:optional true} [:enum "1" "2" "3" "4"]]
+                ;; Keep legacy fields for backwards compatibility
                 [:cycling-difficulty {:optional true}
                  (into [:enum] (keys cycling-difficulty))]
                 [:cycling-route-difficulty {:optional true} common-schema/localized-string]
@@ -1022,6 +1165,43 @@
                   :en "Subtypes"}
           :opts (dissoc cycling-activities "road-cycling")}}
 
+        ;; ITRS checkbox
+        :itrs-classification?
+        {:field
+         {:type "checkbox"
+          :label {:fi "ITRS-vaativuusluokitus"
+                  :se "ITRS svårighetsklassificering"
+                  :en "ITRS difficulty classification"}
+          :description {:fi "Luokittelu on toteutettu ITRS-vaativuusluokituksen kriteeristöä noudattaen (kts. lisätietoja https://itrs.bike/)"
+                        :se "Klassificeringen följer ITRS svårighetsklassificeringskriterier (se mer information https://itrs.bike/)"
+                        :en "Classification follows ITRS difficulty rating criteria (see more information https://itrs.bike/)"}}}
+
+        ;; ITRS Endurance field
+        :itrs-endurance
+        {:field
+         {:type "select"
+          :label {:fi "Fyysisen kunnon vaatimus"
+                  :se "Fysisk konditionskrav"
+                  :en "Physical fitness requirement"}
+          :description {:fi "Reitin vaatima fyysinen kunto ITRS-luokituksen mukaan"
+                        :se "Ruttens fysiska konditionskrav enligt ITRS-klassificering"
+                        :en "Route's physical fitness requirement according to ITRS classification"}
+          :show-when (fn [{:keys [itrs-classification?]}] itrs-classification?)
+          :opts itrs-endurance-options}}
+
+        ;; ITRS Wilderness field
+        :itrs-wilderness
+        {:field
+         {:type "select"
+          :label {:fi "Reitin erämaisuus"
+                  :se "Ruttens vildmarkskaraktär"
+                  :en "Route remoteness"}
+          :description {:fi "Reitin erämaisuus ja etäisyys palveluista ITRS-luokituksen mukaan"
+                        :se "Ruttens vildmarkskaraktär och avstånd från tjänster enligt ITRS-klassificering"
+                        :en "Route's remoteness and distance from services according to ITRS classification"}
+          :show-when (fn [{:keys [itrs-classification?]}] itrs-classification?)
+          :opts itrs-wilderness-options}}
+
         :cycling-difficulty
         {:field
          {:type "select"
@@ -1031,18 +1211,23 @@
           :label {:fi "Reitin arvioitu haastavuus"
                   :se "Uppskattad utmaning för rutten"
                   :en "Estimated difficulty of the route"}
+          :show-when (fn [{:keys [itrs-classification?]}] (not itrs-classification?))
           :opts cycling-difficulty}}
 
         :cycling-route-difficulty
         {:field
          {:type "textarea"
-          :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
-                        :se "Beskriv den totala svårighetsgraden för leden. Ta med faktorer som till exempel ledens beläggning och framkomlighet, rekommenderad utrustning,
-  trafikintensitet och kuperad terräng."
-                        :en "Describe the overall difficulty level of the route. Consider factors such as the route surface and rideability, recommended equipment, traffic volume, and hilliness."}
-          :label {:fi "Haastavuus"
-                  :se "Utmaning"
-                  :en "Difficulty"}}}
+          :description {:fi (str "Kuvaile reitin kokonaishaastavuutta. "
+                                 "Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, "
+                                 "suositeltava varustus, reitin liikennemäärät ja mäkisyys.")}
+          :label (fn [{:keys [itrs-classification?]}]
+                   (if itrs-classification?
+                     {:fi "Lisätietoja reitin vaativuusluokituksesta"
+                      :se "Ytterligare information om ruttens svårighetsklassificering"
+                      :en "Additional information about route difficulty classification"}
+                     {:fi "Haastavuus"
+                      :se "Utmaning"
+                      :en "Difficulty"}))}}
 
         :duration
         {:field
@@ -1332,8 +1517,8 @@
                         [:sequential (into [:enum] (keys paddling-route-types))]]
                        [:paddling-properties {:optional true}
                         [:sequential (into [:enum] (keys paddling-properties))]]
-                       [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
-                       [:paddling-difficulty-v2 (into [:enum] (keys paddling-difficulty-v2))]
+                       [:paddling-difficulty {:optional true} (into [:enum] (keys paddling-difficulty))]
+                       [:paddling-difficulty-v2 {:optional true} (into [:enum] (keys paddling-difficulty-v2))]
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                        [:safety {:optional true} common-schema/localized-string]
                        [:good-to-know {:optional true} common-schema/localized-string]

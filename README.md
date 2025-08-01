@@ -94,24 +94,9 @@ npm run watch
 
 The project uses [Babashka](https://babashka.org/) for task automation. Run `bb tasks` to see all available tasks.
 
-### Development Tasks
-```shell
-bb test                    # Run fast tests
-bb test-integration        # Run integration tests  
-bb test-all               # Run all tests
-bb db-migrate             # Run database migrations
-bb db-status              # Check migration status
-bb uberjar                # Build production JAR
-```
-
-### Docker Tasks
-```shell
-bb docker-build          # Build in Docker
-bb docker-migrate         # Run migrations in Docker
-bb docker-test            # Run tests in Docker
-```
-
-Run `bb test-help`, `bb db-help`, or `bb docker-help` for detailed information.
+NOTE: There are two bb.edn files
+- bb.edn
+- webapp/bb.edn
 
 ### Extra
 
@@ -188,15 +173,3 @@ docker exec -i lipas-postgres-1 pg_restore -Fc < lipas.backup
 # Rebuild ES index
 docker compose run --rm backend-index-search
 ```
-
-## Migration from Leiningen
-
-This project has been migrated from Leiningen to deps.edn + tools.build + Babashka:
-
-- **Build system**: `lein uberjar` → `bb uberjar` or `clojure -T:build uber`
-- **Tests**: `lein test` → `bb test` or `clojure -M:dev:test`
-- **REPL**: `lein repl` → `clojure -M:nrepl` (connect to port 7888)
-- **Migrations**: `lein migratus migrate` → `bb db-migrate`
-- **Docker**: All docker-compose services updated to use deps.edn
-
-All Babashka tasks provide help: `bb <task>-help` (e.g., `bb db-help`, `bb test-help`)

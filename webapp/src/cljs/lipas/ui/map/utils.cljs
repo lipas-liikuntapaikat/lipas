@@ -664,6 +664,49 @@
 
   map-ctx)
 
+(defn clear-ordered-segments!
+  "Clears all features from the ordered segments layer"
+  [{:keys [layers] :as map-ctx}]
+  (let [^js layer (-> layers :overlays :ordered-segments)]
+    (-> layer .getSource .clear))
+  map-ctx)
+
+(defn show-ordered-segments!
+  "Displays ordered segments on the map with order numbers and direction arrows"
+  [{:keys [layers] :as map-ctx} ordered-segments geoms]
+  (let [^js layer (-> layers :overlays :ordered-segments)
+        ^js source (.getSource layer)]
+
+    (println "show ordered segments!")
+
+    ;; Clear existing ordered segments
+    (.clear source)
+
+    ;; Create a map of feature IDs to order info
+    (let [fid-counts (frequencies (map :fid ordered-segments))
+          geom-features (-> geoms :features)]
+
+      ;; Add ordered segments to the layer
+      (doseq [{:keys [fid direction order] :as segment} ordered-segments]
+        (when-let [geom-feature (first (filter #(= (:id %) fid) geom-features))]
+          (let [ol-feature (->ol-feature (clj->js geom-feature))
+                repeat-count (get fid-counts fid 1)]
+
+            ;; Set properties for styling
+            (.set ol-feature "segment-order" (inc order)) ; 1-based for display
+            (.set ol-feature "segment-direction" direction)
+            (.set ol-feature "repeat-count" repeat-count)
+            (println "Lisätään segmentti kartalle...")
+            ;; Add to source
+            (.addFeature source ol-feature)))))
+
+    map-ctx))
+
+(defn update-ordered-segments!
+  "Updates the ordered segments display when segments are reordered"
+  [{:keys [layers] :as map-ctx} ordered-segments geoms]
+  (show-ordered-segments! map-ctx ordered-segments geoms))
+
 ;; Below is a WIP attempt to automagically fix badly drawn
 ;; linestrings.
 ;;

@@ -144,3 +144,22 @@
   (fn [activities [_ activity-k]]
     (or (get-in activities [:field-sorters activity-k])
         (get-in activities [:field-sorters :default]))))
+
+
+
+(rf/reg-sub ::route-itrs-classification?
+            (fn [[_ lipas-id type-code]]
+              (println "lipas-id" lipas-id "type code" type-code)
+              [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+               (rf/subscribe [::activity-value-for-type-code type-code])
+               (rf/subscribe [::selected-route-id lipas-id])])
+            (fn [[site activity-k route-id] _]
+              (println "Activity" activity-k "route-id" route-id)
+              (when (and site activity-k)
+                (let [routes (get-in site [:activities (keyword activity-k) :routes] [])]
+                  (println (first routes))
+                  (if route-id
+                    (some #(when (= (:id %) route-id)
+                             (:itrs-classification? %))
+                          routes)
+                    (:itrs-classification? (first routes)))))))

@@ -11,6 +11,7 @@
  :highlight "Highlight",
  :length-km "Length km",
  :link "Link",
+ :order-segments "Order segments",
  :photo "Photograph",
  :read-only-disclaimer
  "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol.",

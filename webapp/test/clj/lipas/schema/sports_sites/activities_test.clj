@@ -4,6 +4,9 @@
             [lipas.data.activities :as data-activities]
             [malli.core :as m]))
 
+;; FAIL in (edge-cases-test) (activities_test.clj:136)
+;; Repeated segments allowed
+
 (deftest segment-reference-schema-test
   (testing "Valid segment references"
     (is (m/validate data-activities/segment-reference-schema
@@ -69,7 +72,7 @@
                        :segments [{:fid "water-seg-1" :direction "forward"}
                                   {:fid "water-seg-2" :direction "forward"}]
                        :ordering-method "manual"
-                       :paddling-activities ["kayaking"]
+                       :paddling-activities ["whitewater-paddling"]
                        :route-length-km 8.3}]
       (is (m/validate route-schema [valid-route])))))
 

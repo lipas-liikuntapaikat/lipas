@@ -14,6 +14,7 @@
      [[:lipas.ui.search.events/clear-filters]
       [:lipas.ui.map.events/set-overlays
        [[:vectors false]
+        [:ordered-segments false]
         [:schools false]
         [:lois false]
         [:population false]
@@ -60,7 +61,7 @@
 ;; Finland's approximate bounding box
 (def finland-bbox
   {:min-x 19.5 ; Western longitude
-   :max-x 31.5 ; Eastern longitude  
+   :max-x 31.5 ; Eastern longitude
    :min-y 59.5 ; Southern latitude
    :max-y 70.5}) ; Northern latitude
 

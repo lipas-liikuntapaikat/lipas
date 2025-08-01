@@ -13,6 +13,7 @@
  :highlight "Höjdpunkt",
  :length-km "Längd km",
  :link "Länk",
+ :order-segments "Ordna delar",
  :photo "Foto",
  :read-only-disclaimer
  "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen.",

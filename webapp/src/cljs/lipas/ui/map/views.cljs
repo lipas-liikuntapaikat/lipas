@@ -3,6 +3,8 @@
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/TextField$default" :as TextField]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Typography$default" :as Typography]
             ["mdi-material-ui/ContentCut$default" :as ContentCut]
             ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
@@ -572,35 +574,110 @@
         tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)
         properties (use-subscribe [::subs/edit-geom-properties fid])
-        value (:route-part-difficulty properties)]
+        edit-data (<== [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+        type-code (get-in edit-data [:type :type-code])
+        ;; Check if route is in ITRS mode
+        itrs-mode? (use-subscribe [:lipas.ui.sports-sites.activities.subs/route-itrs-classification? lipas-id type-code])
+        ;; Get appropriate values based on mode
+        legacy-value (:route-part-difficulty properties)
+        technical-value (:itrs-technical properties)
+        exposure-value (:itrs-exposure properties)
+        ;; State for which ITRS field to show
+        [active-tab set-active-tab] (uix/use-state (if technical-value :technical :exposure))]
+
+    (println "ITRS" itrs-mode?)
     ($ Paper
-       {:sx
-        #js {:padding 2
-             :width "350px"}}
-       ($ TextField
-          {:label (tr :map/route-part-difficulty)
-           :select true
-           :fullWidth true
-           :value (or value "")
-           :onChange (fn [e]
-                       (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
-          ($ MenuItem
-             {:key "empty"
-              :value ""}
-             "-")
-          (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
-            ($ MenuItem
-               {:key k
-                :value k
-                :sx #js {:flexDirection "column"
-                         :alignItems "flex-start"
-                         :maxWidth "350px"}}
-               ($ Typography
-                  (get label locale))
-               ($ Typography
-                  {:sx #js {:fontSize "body2.fontSize"
-                            :whiteSpace "normal"}}
-                  (get description locale))))))))
+       {:sx #js {:padding 2
+                 :width "400px"}}
+
+       ;; Show tabs in ITRS mode
+       (when itrs-mode?
+         ($ Tabs
+            {:value active-tab
+             :onChange (fn [_ value] (set-active-tab (keyword value)))
+             :sx #js {:marginBottom 2}}
+            ($ Tab {:value :technical :label (tr :map/itrs-technical)})
+            ($ Tab {:value :exposure :label (tr :map/itrs-exposure)})))
+
+       ;; Legacy difficulty dropdown
+       (when (not itrs-mode?)
+         ($ TextField
+            {:label (tr :map/route-part-difficulty)
+             :select true
+             :fullWidth true
+             :value (or legacy-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale)))))))
+
+       ;; ITRS Technical difficulty
+       (when (and itrs-mode? (= active-tab :technical))
+         ($ TextField
+            {:label (tr :map/itrs-technical)
+             :select true
+             :fullWidth true
+             :value (or technical-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-segment-itrs-property
+                                       lipas-id fid :itrs-technical
+                                       (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description color]}] activities-data/itrs-technical-options]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography
+                    {:sx #js {:color color}}
+                    (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale)))))))
+
+       ;; ITRS Exposure rating
+       (when (and itrs-mode? (= active-tab :exposure))
+         ($ TextField
+            {:label (tr :map/itrs-exposure)
+             :select true
+             :fullWidth true
+             :value (or exposure-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-segment-itrs-property
+                                       lipas-id fid :itrs-exposure
+                                       (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description color]}] activities-data/itrs-exposure-options]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography
+                    {:sx #js {:color color}}
+                    (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale))))))))))
 
 (defmethod popup-body :route-part-difficulty [popup]
   ($ route-part-difficulty {:data (:data popup)}))
@@ -1173,10 +1250,10 @@
                 :edit-data edit-data
                 :can-edit? can-publish?})])]
 
-;; "Landing bay" for floating tools
+      ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
 
-     ;; Actions
+      ;; Actions
       (when-not hide-actions?
         [lui/floating-container
          {:bottom 0 :background-color "transparent"}
@@ -1225,7 +1302,8 @@
                     :selecting (tr :map.tools/selecting-tooltip)
                     :travel-direction (tr :map.tools/travel-direction-tooltip)
                     :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
-                    :view-only "-")}
+                    :view-only "-"
+                    :ordered-segments "-")}
                  [mui/fab
                   {:size "small"
                    :on-click #() ; noop
@@ -1245,7 +1323,8 @@
                       :selecting [mui/icon props "handshake"]
                       :travel-direction [mui/icon props "turn_slight_right"]
                       :route-part-difficulty [mui/icon props "warning"]
-                      :view-only [mui/icon props "dash"]))]])
+                      :view-only [mui/icon props "dash"]
+                      :ordered-segments [mui/icon props "compare_arrows"]))]])
 
            ;; Tool select button
               (when editing?

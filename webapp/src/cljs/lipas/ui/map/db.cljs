@@ -14,7 +14,8 @@
                                    :markers
                                    :analysis
                                    :schools
-                                   :population}
+                                   :population
+                                   :ordered-segments}
    :selected-sports-site-tab     0
    :selected-new-sports-site-tab 0
 

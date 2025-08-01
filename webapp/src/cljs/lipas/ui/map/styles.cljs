@@ -355,19 +355,106 @@
 (defn route-part-difficulty-style-fn
   [feature tr hover? _selected?]
   (let [locale (tr)
-        difficulty (if-let [x (.get feature "route-part-difficulty")]
-                     (get (:label (get activities/cycling-route-part-difficulty x)) locale)
-                     "-")
+        ;; Check if we're in ITRS mode by looking for ITRS properties
+        itrs-technical (.get feature "itrs-technical")
+        itrs-exposure (.get feature "itrs-exposure")
+        itrs-mode? (or itrs-technical itrs-exposure)
+
+        ;; Get the appropriate difficulty and label based on mode
+        [difficulty label-text] (if itrs-mode?
+                                  ;; ITRS mode - prefer technical over exposure for display
+                                  (if itrs-technical
+                                    [(get-in activities/itrs-technical-options
+                                             [itrs-technical :label locale] "-")
+                                     (tr :map/itrs-technical)]
+                                    [(get-in activities/itrs-exposure-options
+                                             [itrs-exposure :label locale] "-")
+                                     (tr :map/itrs-exposure)])
+                                  ;; Legacy mode
+                                  [(if-let [x (.get feature "route-part-difficulty")]
+                                     (get (:label (get activities/cycling-route-part-difficulty x)) locale)
+                                     "-")
+                                   (get activities/cycling-route-part-difficulty-label locale)])
+
         label-style (.clone route-part-label-style)
         _ (.. label-style
               (getText)
-              (setText (str (get activities/cycling-route-part-difficulty-label locale) ": " difficulty)))]
+              (setText (str label-text ": " difficulty)))]
     (when hover?
       (.. label-style
           (getText)
           (setBackgroundStroke hover-stroke)))
     #js [(if hover? hover-style edit-style)
          label-style]))
+
+(defn ordered-segment-style-fn
+  "Creates a style for ordered segments with numbers and direction arrows"
+  [^js feature resolution hover? selected?]
+  (let [order (.get feature "segment-order")
+        direction (.get feature "segment-direction")
+        repeat-count (.get feature "repeat-count")
+        geom (.getGeometry feature)
+
+        ;; Base line style
+        line-stroke (Stroke. #js {:color (cond
+                                           selected? mui/secondary
+                                           hover? mui/primary
+                                           (and repeat-count (> repeat-count 1)) "#ff6b6b"
+                                           :else mui/primary)
+                                  :width (if (or hover? selected?) 5 3)})
+        line-style (Style. #js {:stroke line-stroke
+                                :zIndex 100})
+
+        ;; Label with order number at midpoint
+        label-style (when (and order geom)
+                      (let [midpoint (.getCoordinateAt geom 0.5)]
+                        (Style.
+                          #js {:geometry (Point. midpoint)
+                               :text (Text.
+                                       #js {:font "bold 16px sans-serif"
+                                            :text (str order)
+                                            :fill (Fill. #js {:color (if (and repeat-count (> repeat-count 1))
+                                                                       "#ff6b6b"
+                                                                       "#000")})
+                                            :backgroundFill (Fill. #js {:color "#fff"})
+                                            :backgroundStroke (Stroke.
+                                                                #js {:color (cond
+                                                                              selected? mui/secondary
+                                                                              hover? mui/primary
+                                                                              (and repeat-count (> repeat-count 1)) "#ff6b6b"
+                                                                              :else "blue")
+                                                                     :width 3})
+                                            :padding #js [4 6 4 6]
+                                            :offsetY -15})
+                               :zIndex 101})))
+
+        ;; Arrow styles using forEachSegment
+        arrow-styles (when (and order direction geom)
+                       (let [arrows (atom [])]
+                         (.forEachSegment geom
+                                          (fn [start end]
+                                            (let [dx (- (aget end 0) (aget start 0))
+                                                  dy (- (aget end 1) (aget start 1))
+                                                  rotation (Math/atan2 dy dx)
+                                                  ;; Adjust rotation based on direction
+                                                  final-rotation (if (= direction "backward")
+                                                                   (+ Math/PI rotation)
+                                                                   rotation)]
+                                              (swap! arrows conj
+                                                     (Style.
+                                                       #js {:geometry (Point. end)
+                                                            :image (Icon.
+                                                                     #js {:src (if hover?
+                                                                                 arrow-hover-icon
+                                                                                 arrow-icon)
+                                                                          :scale 0.5
+                                                                          :rotation (- final-rotation)
+                                                                          :anchor #js [0.75 0.5]
+                                                                          :rotateWithView true})
+                                                            :zIndex 102})))))
+                         @arrows))]
+
+    (to-array (filter some? (concat [line-style label-style] arrow-styles)))))
 
 (def population-grid-radius
   "Population grid is 250x250m"

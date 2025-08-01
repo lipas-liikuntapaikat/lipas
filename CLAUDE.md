@@ -9,27 +9,24 @@
 **No setup needed!** Simply run:
 
 ```clojure
-(dev-webapp!)
+(reset)
 ```
 
 This single command will:
-- Load all webapp dependencies
+- Reload code in the REPL
 - Start the Jetty server
 - Connect to PostgreSQL and Elasticsearch
 - Initialize all system components (AWS, email, PTV, etc.)
 
 ### Available User Namespace Functions
 
-The `user` namespace provides these utilities immediately:
+The `user` namespace provides development time utilities. Explore what's available in the `user` namespace.
 
-- `(dev-webapp!)` - **One-command startup**: loads dependencies and starts the complete system
-- `(load-webapp-dev-deps!)` - Loads only :dev and :test dependencies from webapp/deps.edn
-- `(read-webapp-deps)` - Inspects webapp dependency structure
-- `(extract-dev-deps webapp-deps)` - Extracts development dependencies
+- `(clj-mcp.repl-tools/list-vars 'user)`
 
 ### System Access After Startup
 
-Once `(dev-webapp!)` has run, access system components via:
+Once `(reset)` has run, access system components via:
 
 ```clojure
 integrant.repl.state/system  ; Full system map with all components
@@ -43,6 +40,7 @@ Available components:
 - `:lipas/aws` - S3 integration
 - `:lipas/ptv` - Finnish public service integration
 - `:lipas/mailchimp` - Newsletter integration
+- ...etc
 
 ## 🔍 Project Exploration Tools
 
@@ -69,98 +67,60 @@ Important! Always reload changed code before running the tests:
 - changed test namespaces
 - explicitly reload lipas.test-utils
 
-After the system is loaded with `(dev-webapp!)`:
+After the system is loaded with `(reset)`:
 
 ```clojure
-(require '[cognitect.test-runner.api :as tr])
-(tr/test {:dirs ["webapp/test/clj"]})
+;; Example running tests in the REPL
+
+(require '[clojure.test])
+
+;; Require the namespace to test
+(require 'lipas.jobs.handler-test :reload)
+
+;; Run single test
+(clojure.test/run-test lipas.jobs.handler-test/authorization-test)
+
+;; Run all tests in a namespace
+(clojure.test/run-tests 'lipas.jobs.handler-test)
 ```
 
-Options for Cognitect test runner
+### Final checking with bb
 
-  :dirs - coll of directories containing tests, default= ["test"]
-  :nses - coll of namespace symbols to test
-  :patterns - coll of regex strings to match namespaces
-  :vars - coll of fully qualified symbols to run tests on
-  :includes - coll of test metadata keywords to include
-  :excludes - coll of test metadata keywords to exclude"
+Once tests are working in the REPL, a final clean state check should be done with bb:
 
-## 🛠️ Webapp REPL Utilities
+```bash
+cd webapp
 
-Once `(dev-webapp!)` has loaded the system, you have access to rich webapp-specific utilities via the `repl` namespace:
+# Run single test
+bb test-var lipas.jobs.handler-test/authorization-test
 
-### System Access Functions
-```clojure
-;; Access system components directly
-(repl/db)           ; Database connection
-(repl/search)       ; Elasticsearch client
-(repl/ptv)          ; PTV integration
-(repl/current-system) ; Full system map
-(repl/current-config) ; System configuration
-```
-
-### Database & Search Operations
-```clojure
-;; Rebuild search indices
-(repl/reindex-search!)     ; Rebuild main search index
-(repl/reindex-analytics!)  ; Rebuild analytics index
-
-;; Database migrations
-(repl/run-db-migrations!)  ; Run pending database migrations
-```
-
-### User Management
-```clojure
-;; Password management
-(repl/reset-admin-password! "new-password")           ; Reset admin password
-(repl/reset-password! "user@example.com" "password") ; Reset any user's password
-(repl/get-robot-user)                                ; Get the robot admin user
-```
-
-### System Lifecycle
-```clojure
-;; System control (integrant.repl functions)
-(repl/reset)  ; Reset system with code reload
-(go)          ; Start system
-(halt)        ; Stop system
-(reset-all)   ; Full reset clearing all state
+# Run all tests in a namespace
+bb test-ns lipas.jobs.handler-test
 ```
 
 ### Development Examples
 ```clojure
 ;; Common development tasks
-(repl/reindex-search!)  ; After changing search mappings
-(repl/reset-admin-password! "dev123")  ; For local development
-(repl/run-db-migrations!)  ; After adding new migrations
+(user/reindex-search!)  ; After changing search mappings
+(user/reset-admin-password! "dev123")  ; For local development
+(user/run-db-migrations!)  ; After adding new migrations
 
 ;; Access data for exploration
-(def db-conn (repl/db))
-(def search-client (repl/search))
+(def db-conn (user/db))
+(def search-client (user/search))
 
-;; The repl namespace also includes extensive rich comment blocks
+;; The user namespace also includes extensive rich comment blocks
 ;; with real development examples and maintenance operations
 ```
-
-### Rich Comment Block Examples
-
-The `webapp/dev/repl.clj` file includes extensive comment blocks with real-world examples of:
-- Database migrations and schema updates
-- Search index management
-- Data type management and merging
-- User management operations
-- System maintenance tasks
-
-These comment blocks serve as documentation and executable examples for common development and maintenance operations.
 
 ## 📁 Project Structure
 
 ```
-├── deps.edn              # Root dependencies + development tooling
-├── dev/user.clj          # Development utilities (you have access to this!)
-├── CLAUDE.md            # This file
-├── DEV-README.md        # Detailed development documentation
+├── CLAUDE.md             # This file
+├── bb.edn                # Project level tasks
 └── webapp/
     ├── deps.edn          # Clean production dependencies
+    |-- bb.edn            # Webapp level tasks
     ├── src/clj/          # Backend Clojure code
     ├── src/cljs/         # Frontend ClojureScript code
     ├── src/cljc/         # Shared Clojure/ClojureScript code
@@ -170,7 +130,7 @@ These comment blocks serve as documentation and executable examples for common d
 ## 💡 Development Workflow for Claude
 
 ### Starting Work
-1. **Just run** `(dev-webapp!)` - everything will be ready
+1. **Just run** `(reset)` - everything will be ready
 2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
 3. **Make changes** using the clojure editing tools
 4. **Test changes** immediately in the REPL
@@ -228,7 +188,7 @@ The clojure-mcp environment provides:
 ## 🎯 Key Points for Efficient Development
 
 1. **You have immediate REPL access** - no setup required
-2. **Single command startup** - just `(dev-webapp!)`
+2. **Single command startup** - just `(reset)`
 3. **Rich exploration tools** - use `clj-mcp.repl-tools/*` functions
 4. **Real-time feedback** - integrated linting and syntax checking
 5. **Full system access** - all components available via `integrant.repl.state/system`

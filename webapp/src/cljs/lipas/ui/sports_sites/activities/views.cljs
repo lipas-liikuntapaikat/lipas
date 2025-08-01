@@ -9,13 +9,15 @@
             [lipas.ui.config :as config]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
-            [lipas.ui.sports-sites.activities.route-ordering-poc :as route-ordering-poc]
+            [lipas.ui.sports-sites.activities.route-editor :as route-editor]
+            [lipas.ui.sports-sites.activities.route-ordering :as route-ordering]
             [lipas.ui.sports-sites.activities.subs :as subs]
             [lipas.ui.sports-sites.subs :as sports-sites-subs]
             [lipas.ui.sports-sites.views :as sports-sites-views]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
-            [reagent.core :as r]))
+            [reagent.core :as r]
+            [uix.core :as uix :refer [$]]))
 
 (declare make-field)
 
@@ -898,22 +900,50 @@
            locale _label _description _set-field set-field]
     :as props}]
   (r/with-let [route-form-state (r/atom route)
+               ordering-mode (r/atom true)
                _ (add-watch route-form-state :lol
                             (fn [_key _atom _old-state new-state]
                               (set-field [new-state])))]
 
     (let [tr (<== [:lipas.ui.subs/translator])
-          field-sorter (<== [::subs/field-sorter activity-k])]
+          field-sorter (<== [::subs/field-sorter activity-k])
+          fids (<== [::subs/selected-features])
+          editing? (not read-only?)
+          route-ordering? @ordering-mode]
 
-      [route-form
-       {:locale locale
-        :tr tr
-        :field-sorter field-sorter
-        :lipas-id lipas-id
-        :type-code type-code
-        :read-only? read-only?
-        :route-props route-props
-        :state route-form-state}])
+      [:<>
+       (when (and editing? route-ordering?)
+         [mui/grid {:item true :xs 12}
+          [route-editor/integrated-route-editor
+             {:lipas-id lipas-id
+              :activity-k activity-k
+              :locale locale
+              :read-only? read-only?
+              :route (merge @route-form-state
+                            {:fids fids
+                             :id (str (random-uuid))})
+              :on-save (fn [route success-fn error-fn]
+                         (==> [::events/finish-route-details
+                               {:fids (:fids route)
+                                :activity-k activity-k
+                                :id (:id route)
+                                :route (dissoc route :fids :id)
+                                :lipas-id lipas-id}])
+                         (reset! ordering-mode false)
+                         (when success-fn (success-fn)))
+              :on-cancel (fn []
+                           (==> [::events/cancel-route-details])
+                           (reset! ordering-mode false))}]])
+
+       [route-form
+        {:locale locale
+         :tr tr
+         :field-sorter field-sorter
+         :lipas-id lipas-id
+         :type-code type-code
+         :read-only? read-only?
+         :route-props route-props
+         :state route-form-state}]])
 
     (finally
       (remove-watch route-form-state :lol))))
@@ -922,7 +952,8 @@
   [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
            locale label _description _set-field activity-k routes]
     :as props}]
-  (r/with-let [route-form-state (r/atom {})]
+  (r/with-let [route-form-state (r/atom {})
+               ordering-mode (r/atom false)]
     (let [tr (<== [:lipas.ui.subs/translator])
           mode (<== [::subs/mode])
           fids (<== [::subs/selected-features])
@@ -931,7 +962,10 @@
 
           field-sorter (<== [::subs/field-sorter activity-k])
 
-          editing? (not read-only?)]
+          editing? (not read-only?)
+
+          ;; Check if we're in route ordering mode
+          route-ordering? @ordering-mode]
 
       [:<>
 
@@ -954,7 +988,8 @@
 
                :on-select (fn [route]
                             (==> [::events/select-route lipas-id (dissoc route :_route-name)])
-                            (reset! route-form-state (dissoc route :fids)))}]])
+                            (reset! route-form-state (dissoc route :fids))
+                            (reset! ordering-mode true))}]])
 
           (when-not read-only?
             [mui/grid {:item true :xs 12}
@@ -964,25 +999,38 @@
                :style {:margin-top "0.5em" :margin-bottom "0.5em"}
                :on-click (fn []
                            (reset! route-form-state {})
+                           (reset! ordering-mode true)
                            (==> [::events/add-route lipas-id activity-k]))}
               (tr :utp/add-subroute)]])])
 
-       (when (and editing? (= :add-route mode))
+       ;; Use integrated route editor for both add and edit modes
+       (when (and editing? (or (= :add-route mode)
+                               (and (= :route-details mode) route-ordering?)))
          [:<>
-
           [mui/grid {:item true :xs 12}
-           [mui/typography
-            {:variant "body2"}
-            (tr :utp/select-route-parts-on-map)]]
+           [route-editor/integrated-route-editor
+            {:lipas-id lipas-id
+             :activity-k activity-k
+             :locale locale
+             :read-only? read-only?
+             :route (merge @route-form-state
+                           {:fids fids
+                            :id (or selected-route-id (str (random-uuid)))})
+             :on-save (fn [route success-fn error-fn]
+                        (==> [::events/finish-route-details
+                              {:fids (:fids route)
+                               :activity-k activity-k
+                               :id (:id route)
+                               :route (dissoc route :fids :id)
+                               :lipas-id lipas-id}])
+                        (reset! ordering-mode false)
+                        (when success-fn (success-fn)))
+             :on-cancel (fn []
+                          (==> [::events/cancel-route-details])
+                          (reset! ordering-mode false))}]]])
 
-          [mui/grid {:item true :xs 12}
-           [mui/button
-            {:variant "contained"
-             :color "secondary"
-             :on-click #(==> [::events/finish-route])}
-            (tr :utp/add-subroute-ok)]]])
-
-       (when (and editing? (= :route-details mode))
+       ;; Traditional route details form (when not in ordering mode)
+       (when (and editing? (= :route-details mode) (not route-ordering?))
          [:<>
 
           [route-form
@@ -994,6 +1042,15 @@
             :read-only? read-only?
             :route-props route-props
             :state route-form-state}]
+
+          ;; Enable ordering button
+          [mui/grid {:item true :xs 12}
+           [mui/button
+            {:variant "outlined"
+             :color "primary"
+             :style {:margin-right "0.5em"}
+             :on-click #(reset! ordering-mode true)}
+            (tr :utp/order-segments)]]
 
           ;; Buttons
           [mui/grid {:container true :spacing 1}
@@ -1026,22 +1083,10 @@
             [mui/button
              {:variant "contained"
               :on-click #(==> [::events/cancel-route-details])}
-             (tr :actions/cancel)]]]])
+             (tr :actions/cancel)]]]])])
 
-       (when config/debug?
-         [mui/grid {:item true :xs 12}
-          [lui/expansion-panel {:label "debug route props"}
-           [mui/grid {:item true :xs 12}
-            [:pre (with-out-str (pprint/pprint props))]]]
-
-          ;; Route ordering POC
-          [lui/expansion-panel {:label "Route Ordering POC (Development)" :default-expanded true}
-           [route-ordering-poc/route-ordering-poc
-            {:routes routes
-             :locale locale
-             :lipas-id lipas-id
-             :activity-k activity-k
-             :read-only? read-only?}]]])])))
+    (finally
+      (remove-watch route-form-state :lol))))
 
 (defn routes
   [{:keys [read-only? _route-props lipas-id activity-k value

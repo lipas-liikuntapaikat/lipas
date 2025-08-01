@@ -107,6 +107,7 @@
    :reset-password
    :restricted
    :retkikartta
+   :route
    :sauna-types
    :search
    :size-categories

@@ -103,6 +103,13 @@
            :name "edits"
            :zIndex 10
            :style #js [styles/edit-style styles/vertices-style]})
+    :ordered-segments
+    (VectorLayer.
+      #js {:source (VectorSource.)
+           :name "ordered-segments"
+           :zIndex 11
+           :style (fn [feature resolution]
+                    (styles/ordered-segment-style-fn feature resolution false false))})
     :highlights
     (VectorLayer.
       #js {:source (VectorSource.)
@@ -169,21 +176,13 @@
     :mml-kiinteistotunnukset
     (->wmts
       {:url (:kiinteistotunnukset urls)
-      ;; Source (MML WMTS) won't return anything with res 0.25 so we
-      ;; limit this layer grid to min resolution of 0.5 but allow
-      ;; zooming to 0.25. Limiting the grid has a desired effect that
-      ;; WMTS won't try to get the data and it shows geoms of
-      ;; the "previous" resolution.
-       :resolutions (.slice mml-resolutions 0 15)
-       :matrix-ids (.slice mml-matrix-ids 0 15)
        :min-res 0.25
-       :max-res 8
+       :max-res 2
        :layer-name "MML-Kiinteistötunnukset"})
-    :mml-kuntarajat
-    (->wmts
-      {:url (:kuntarajat urls)
-       :layer-name "MML-Kuntarajat"})
-    :heatmap (heatmap/create-heatmap-layer (heatmap/create-heatmap-source))}})
+    :heatmap
+    (VectorLayer.
+      #js {:source (VectorSource.)
+           :name "heatmap"})}})
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
@@ -225,13 +224,13 @@
                                (-> layers :overlays :vectors)
                                (-> layers :overlays :lois)
                                (-> layers :overlays :edits)
+                               (-> layers :overlays :ordered-segments)
                                (-> layers :overlays :highlights)
                                (-> layers :overlays :markers)
                                (-> layers :overlays :light-traffic)
                                (-> layers :overlays :retkikartta-snowmobile-tracks)
                                (-> layers :overlays :mml-kiinteisto)
                                (-> layers :overlays :mml-kiinteistotunnukset)
-                               (-> layers :overlays :mml-kuntarajat)
                                (-> layers :overlays :heatmap)]
                   :interactions #js [(MouseWheelZoom.)
                                      (KeyboardZoom.)

@@ -1,2 +1,4 @@
-{:tasks {up {:doc "Start dev resource with Compose"
-             :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}}}
+{:tasks {up {:doc "Start dev resources with Compose"
+             :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}
+         nrepl {:doc "Start webapp nrepl"
+                :task (shell "bash -c" "source .env.sh && cd webapp && clojure -M:dev:test:nrepl")}}}

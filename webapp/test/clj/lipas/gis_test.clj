@@ -16,7 +16,8 @@
                                                  :geometry {:type "LineString"
                                                             :coordinates [[0 0] [1 1]]}}]}
           result (gis/sequence-features single-feature-collection)]
-      (is (= single-feature-collection result))
+      ;; NOTE sequencer may convert longs to doubles
+      (is (= single-feature-collection (update-in result [:features 0 :geometry :coordinates] (fn [coord-pairs] (mapv #(mapv long %) coord-pairs)))))
       (is (= "line1" (get-in result [:features 0 :id])))))
 
   (testing "Two connected LineStrings"
@@ -426,5 +427,5 @@
 
 (comment
   (t/run-tests *ns*)
-
+  (t/run-test test-sequence-features)
   )

@@ -12,6 +12,7 @@
  :highlight "Kohokohta",
  :length-km "Pituus km",
  :link "Linkki",
+ :order-segments "Järjestä osat",
  :photo "Valokuva",
  :read-only-disclaimer
  "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan.",

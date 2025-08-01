@@ -37,11 +37,11 @@
 (defn point->dummy-area
   [fcoll]
   (let [coords (-> fcoll :features first :geometry :coordinates)
-        [y x]  coords
-        delta  0.0001] ; ~11m in WGS84
-    {:type     "FeatureCollection"
-     :features [{:type       "Feature"
-                 :geometry {:type        "Polygon"
+        [y x] coords
+        delta 0.0001] ; ~11m in WGS84
+    {:type "FeatureCollection"
+     :features [{:type "Feature"
+                 :geometry {:type "Polygon"
                             :coordinates [[coords
                                            [y (+ x delta)]
                                            [(+ y delta) (+ x delta)]
@@ -137,25 +137,25 @@
 
 (defn ->flat-coords [fcoll]
   (->> fcoll
-      :features
-      (map :geometry)
-      (reduce
-       (fn [res g]
-         (case (:type g)
+       :features
+       (map :geometry)
+       (reduce
+        (fn [res g]
+          (case (:type g)
 
-           "Point"
-           (conj res (-> g :coordinates strip-z))
+            "Point"
+            (conj res (-> g :coordinates strip-z))
 
-           "LineString"
-           (into res (map strip-z) (:coordinates g))
+            "LineString"
+            (into res (map strip-z) (:coordinates g))
 
-           ("Polygon" "MultiLineString")
-           (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
+            ("Polygon" "MultiLineString")
+            (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
 
-           ("MultiPolygon")
-           (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
-       [])
-      (into [] #_(distinct))))
+            ("MultiPolygon")
+            (into res (->> g :coordinates (mapcat identity) (mapcat strip-z) (filter seq)))))
+        [])
+       (into [] #_(distinct))))
 
 (defn contains-coords? [fcoll]
   (boolean (seq (->flat-coords fcoll))))
@@ -172,7 +172,6 @@
        (->> (map #(simplify-geom % tolerance)))
        gio/to-geojson-feature-collection
        (json/decode keyword))))
-
 
 (defn simplify-safe
   "Returns simplified version of `m` where `m` is a map representing
@@ -250,10 +249,8 @@
                (update-in f [:geometry :coordinates] #(map dedupe %)))
              fs))))
 
-
-
 (defn ->fcoll [features]
-  {:type     "FeatureCollection"
+  {:type "FeatureCollection"
    :features (mapv #(update % :properties (fnil identity {})) features)})
 
 (defn ->feature [geom]
@@ -303,8 +300,8 @@
   [{:keys [min-x max-x min-y max-y]} max-size]
   (let [n-max-x (Math/floor (/ (- max-x min-x) max-size))
         n-max-y (Math/floor (/ (- max-y min-y) max-size))
-        rem-x   (mod (- max-x min-x) max-size)
-        rem-y   (mod (- max-y min-y) max-size)]
+        rem-x (mod (- max-x min-x) max-size)
+        rem-y (mod (- max-y min-y) max-size)]
     (into []
           (for [row (range (if (zero? rem-y) n-max-y (inc n-max-y)))
                 col (range (if (zero? rem-x) n-max-x (inc n-max-x)))]
@@ -364,7 +361,7 @@
             (fn [idx feature]
               [idx {:feature feature
                     :jts-geom (extract-linestring-from-feature feature)}])
-             features)))
+            features)))
 
 (defn find-matching-feature-index
   "Find the index of a feature that matches the given geometry"
@@ -376,22 +373,26 @@
 
     ;; Find a feature with matching start and end coordinates
     (first
-      (for [[idx {:keys [jts-geom]}] feature-map
-            :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
-                                (.getCoordinateN jts-geom i))
-                  feat-start (first feat-coords)
-                  feat-end (last feat-coords)]
-            :when (or
+     (for [[idx {:keys [jts-geom]}] feature-map
+           :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
+                               (.getCoordinateN jts-geom i))
+                 feat-start (first feat-coords)
+                 feat-end (last feat-coords)]
+           :when (or
                     ;; Match in same direction
-                    (and (.equals2D start-coord feat-start)
-                         (.equals2D end-coord feat-end))
+                  (and (.equals2D start-coord feat-start)
+                       (.equals2D end-coord feat-end))
                     ;; Match in reverse direction
-                    (and (.equals2D start-coord feat-end)
-                         (.equals2D end-coord feat-start)))]
-        idx))))
+                  (and (.equals2D start-coord feat-end)
+                       (.equals2D end-coord feat-start)))]
+       idx))))
 
 (defn sequence-features
-  "Sequence LineString features using JTS LineSequencer"
+  "Sequence LineString features using JTS LineSequencer.
+  Returns features in order with actual sequenced
+  coordinates (possibly reversed).
+
+  NOTE: may convert longs to doubles"
   [feature-collection]
   (let [features (:features feature-collection)]
     ;; Handle empty collections
@@ -411,18 +412,30 @@
               ;; Check if sequenceable
               sequenceable? (.isSequenceable sequencer)
 
-              ;; Get the ordered features
+              ;; Get the ordered features with sequenced geometries
               ordered-features (if sequenceable?
                                  (let [;; Get the sequenced linestrings
                                        sequenced (.getSequencedLineStrings sequencer)
 
-                                       ;; Find matching features for each geometry in the sequence
-                                       ordered-indices (for [i (range (.getNumGeometries sequenced))]
-                                                        (let [seq-geom (.getGeometryN sequenced i)]
-                                                          (find-matching-feature-index seq-geom feature-map)))]
+                                       ;; Build features with sequenced geometries
+                                       sequenced-features (for [i (range (.getNumGeometries sequenced))]
+                                                            (let [seq-geom (.getGeometryN sequenced i)
+                                                                 ;; Find matching original feature
+                                                                  matched-idx (find-matching-feature-index seq-geom feature-map)
+                                                                  original-feature (when matched-idx
+                                                                                     (nth features matched-idx))
+                                                                 ;; Convert JTS geometry back to GeoJSON coordinates
+                                                                  seq-coords (for [j (range (.getNumPoints seq-geom))]
+                                                                               (let [c (.getCoordinateN seq-geom j)]
+                                                                                 [(.x c) (.y c)]))]
+                                                             ;; Return feature with sequenced coordinates
+                                                              (when original-feature
+                                                                (assoc-in original-feature
+                                                                          [:geometry :coordinates]
+                                                                          (vec seq-coords)))))]
 
-                                   ;; Get features in the new order, filtering out any nil indices
-                                   (mapv #(nth features %) (filter some? ordered-indices)))
+                                   ;; Filter out any nil features
+                                   (vec (filter some? sequenced-features)))
 
                                  ;; If not sequenceable, return original features
                                  features)]
@@ -455,15 +468,15 @@
      :features
      [{:type "Feature",
        :geometry
-       {:type        "Point",
+       {:type "Point",
         :coordinates [25.720539797408946,
                       62.62057217751676
                       666]}}]})
 
   (strip-z-fcoll test-point)
 
-  (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100}  test-point))
-  (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000}  test-point))
+  (time (intersects-envelope? {:min-x 0 :max-x 10 :min-y 0 :max-y 100} test-point))
+  (time (intersects-envelope? {:min-x 44000 :max-x 740000 :min-y 6594000 :max-y 7782000} test-point))
 
   (-> test-point ->flat-coords)
 
@@ -489,7 +502,7 @@
      :features
      [{:type "Feature",
        :geometry
-       {:type        "Point",
+       {:type "Point",
         :coordinates [26.720539797408946,
                       61.62057217751676]}}]})
 
@@ -529,15 +542,13 @@
   (->tm35fin-envelope test-route)
 
   (-> test-route
-      ->jts-geom
-      )
+      ->jts-geom)
 
   (->single-linestring-coords test-route)
 
   (def mp (->> test-route
-        ->flat-coords
-        ->jts-multi-point
-        ))
+               ->flat-coords
+               ->jts-multi-point))
 
   (def coords (.getCoordinates mp))
 
@@ -547,8 +558,7 @@
 
   (.getSRID convex)
 
-
-  (.setDistanceFnForCoordinate hull-tool )
+  (.setDistanceFnForCoordinate hull-tool)
   (.getDistanceFnForCoordinate hull-tool)
 
   hull-tool
@@ -609,8 +619,7 @@
        ->jts-geom)
 
   (->> test-polygon
-       concave-hull
-       )
+       concave-hull)
 
   (centroid test-route)
 
@@ -619,7 +628,7 @@
      :features
      [{:type "Feature",
        :geometry
-       {:type        "Point",
+       {:type "Point",
         :coordinates [19.720539797408946,
                       65.62057217751676]}}]})
 
@@ -671,6 +680,4 @@
   (contains-coords? test-point)
   (contains-coords? test-route)
   (contains-coords? test-polygon)
-  (contains-coords? test-polygon-empty)
-
-  )
+  (contains-coords? test-polygon-empty))
