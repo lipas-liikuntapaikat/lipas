@@ -910,8 +910,9 @@
                   {:loi-id (:id loi)
                    :user (:email user)})
 
+        ;; Disabled due to webhooks not being used atm
         ;; Enqueue webhook with same correlation ID
-        (jobs/enqueue-job! tx "webhook"
+        #_(jobs/enqueue-job! tx "webhook"
                            {:loi-ids [(:id loi)]
                             :operation-type (if (nil? (:id loi)) "create" "update")
                             :initiated-by (:id user)}
