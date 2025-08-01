@@ -94,6 +94,19 @@
                        :sports-place-id sports-place-id}
                       ex)))))
 
+(defn format-timestamp-for-es
+  "Converts timestamp from 'yyyy-MM-dd HH:mm:ss.SSS' format to ISO 8601 format for Elasticsearch."
+  [timestamp-str]
+  (when timestamp-str
+    (try
+      (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss.SSS")
+            local-dt (java.time.LocalDateTime/parse timestamp-str formatter)
+            instant (.toInstant local-dt java.time.ZoneOffset/UTC)]
+        (.toString instant))
+      (catch Exception e
+        (log/warn "Failed to parse timestamp, using as-is" {:timestamp timestamp-str :error (.getMessage e)})
+        timestamp-str))))
+
 (defn fetch-deleted-sports-places-es
   "Fetches list of deleted sports-places from ElasticSearch backend.
    Returns sports places that were previously published but are now in non-published status
@@ -108,18 +121,20 @@
                        :parameter :since-timestamp})))
 
     (let [client (:client search)
+          idx-name (get-in (search) [:indices :sports-site :search])
+          formatted-timestamp (format-timestamp-for-es since-timestamp)
           response (elastic/request client
                                     {:method :get
-                                     :url (es-utils/url [:legacy_sports_sites_current :_search])
-                                     :body {:query {:bool {:must [{:range {:lastModified {:gte since-timestamp}}}]
-                                                           :must_not [{:term {:status "published"}}]}}
-                                            :sort [{:lastModified {:order "desc"}}]
-                                            :_source ["sportsPlaceId" "lastModified"]}})
+                                     :url (es-utils/url [idx-name :_search])
+                                     :body {:query {:bool {:must [{:range {:event-date {:gte formatted-timestamp}}}
+                                                                  {:terms {:status.keyword ["out-of-service-permanently" "incorrect-data"]}}]}}
+                                            :sort [{:event-date {:order "desc"}}]
+                                            :_source ["sportsPlaceId" "event-date"]}})
           hits (-> response :body :hits :hits)
           result (map (fn [hit]
                         (let [source (:_source hit)]
                           {:sportsPlaceId (:sportsPlaceId source)
-                           :deletedAt (str (:lastModified source))}))
+                           :deletedAt (str (:event-date source))}))
                       hits)]
 
       (log/debug "Deleted sports places search completed"
