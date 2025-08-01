@@ -74,39 +74,6 @@
     :postal-office "Keuruu"}
    :owner "city"})
 
-(defn old-lipas->new-lipas
-  "Transform old LIPAS format to new LIPAS format"
-  [old-sports-place]
-  {:properties
-   (-> (:properties old-sports-place)
-       (set/rename-keys legacy-sports-place/prop-mappings)
-       (dissoc :info-fi))
-   :email (:email old-sports-place)
-   :phone-number (:phoneNumber old-sports-place)
-   :admin (case (:admin old-sports-place)
-            "Kunta / tekninen toimi" "city-technical-services"
-            "no-information" "unknown"
-            (:admin old-sports-place))
-   :www (:www old-sports-place)
-   :name (:name old-sports-place)
-   :construction-year (:constructionYear old-sports-place)
-   :type {:type-code (-> old-sports-place :type :typeCode)}
-   :lipas-id (:sportsPlaceId old-sports-place)
-   :status "active"
-   :comment (-> old-sports-place :properties :infoFi)
-   :event-date (-> old-sports-place :lastModified
-                   (clojure.string/replace #" " "T")
-                   (str "Z"))
-   :location {:city {:city-code (str (-> old-sports-place :location :city :cityCode))}
-              :address (-> old-sports-place :location :address)
-              :geometries (-> old-sports-place :location :geometries)
-              :postal-code (-> old-sports-place :location :postalCode)
-              :postal-office (-> old-sports-place :location :postalOffice)}
-   :owner (case (:owner old-sports-place)
-            "Kunta" "city"
-            "no-information" "unknown"
-            (:owner old-sports-place))})
-
 (deftest transform-new-to-old-lipas-test
   (testing "Transform new LIPAS sports site to old sports place format"
     (let [result (transform/->old-lipas-sports-site new-lipas-sports-place-example)]
@@ -150,91 +117,6 @@
       (testing "Type transformation"
         (is (= (-> result :type :typeCode) 1120))))))
 
-
-
-(deftest transform-old-to-new-lipas-test
-  (testing "Transform old LIPAS sports place to new format"
-    (let [result (old-lipas->new-lipas old-lipas-sports-place-example)]
-
-      (testing "Basic fields transformation"
-        (is (= (:name result) "Keuruun Koulukeskuksen lähiliikunta-alue /ala-aste"))
-        (is (= (:email result) "email@dot.com"))
-        (is (= (:phone-number result) "+358123456789"))
-        (is (= (:www result) "http://www.keuruu.fi/asukkaat/liikunta-ja-vapaa-aika"))
-        (is (= (:construction-year result) 2011)))
-
-      (testing "Admin and owner transformation"
-        (is (= (:admin result) "city-technical-services"))
-        (is (= (:owner result) "city")))
-
-      (testing "Type transformation"
-        (is (= (-> result :type :type-code) 1120)))
-
-      (testing "Status and ID transformation"
-        (is (= (:status result) "active"))
-        (is (= (:lipas-id result) 72269)))
-
-      (testing "Properties transformation"
-        (let [props (:properties result)]
-          (is (= (:playground? props) true))
-          (is (= (:ligthing? props) true))
-          (is (= (:fields-count props) 1))
-          (is (= (:ice-rinks-count props) 1))))
-
-      (testing "Comment transformation"
-        (is (= (:comment result) "Pannakenttä, lasten leikkivälineitä, pieni jalkapallokenttä, ulkosäbäkaukalo. Osa suurempaa aluetta.")))
-
-      (testing "Location transformation"
-        (let [location (:location result)]
-          (is (= (-> location :city :city-code) "249"))
-          (is (= (:address location) "Keuruuntie 18"))
-          (is (= (:postal-code location) "42700"))
-          (is (= (:postal-office location) "Keuruu"))))
-
-      (testing "Date transformation"
-        (is (= (:event-date result) "2019-08-29T15:55:30.259Z"))))))
-
-(deftest transform-old-to-new-lipas-test
-  (testing "Transform old LIPAS sports place to new format"
-    (let [result (old-lipas->new-lipas old-lipas-sports-place-example)]
-
-      (testing "Basic fields transformation"
-        (is (= (:name result) "Keuruun Koulukeskuksen lähiliikunta-alue /ala-aste"))
-        (is (= (:email result) "email@dot.com"))
-        (is (= (:phone-number result) "+358123456789"))
-        (is (= (:www result) "http://www.keuruu.fi/asukkaat/liikunta-ja-vapaa-aika"))
-        (is (= (:construction-year result) 2011)))
-
-      (testing "Admin and owner transformation"
-        (is (= (:admin result) "city-technical-services"))
-        (is (= (:owner result) "city")))
-
-      (testing "Type transformation"
-        (is (= (-> result :type :type-code) 1120)))
-
-      (testing "Status and ID transformation"
-        (is (= (:status result) "active"))
-        (is (= (:lipas-id result) 72269)))
-
-      (testing "Properties transformation"
-        (let [props (:properties result)]
-          (is (= (:playground? props) true))
-          (is (= (:ligthing? props) true))
-          (is (= (:fields-count props) 1))
-          (is (= (:ice-rinks-count props) 1))))
-
-      (testing "Comment transformation"
-        (is (= (:comment result) "Pannakenttä, lasten leikkivälineitä, pieni jalkapallokenttä, ulkosäbäkaukalo. Osa suurempaa aluetta.")))
-
-      (testing "Location transformation"
-        (let [location (:location result)]
-          (is (= (-> location :city :city-code) "249"))
-          (is (= (:address location) "Keuruuntie 18"))
-          (is (= (:postal-code location) "42700"))
-          (is (= (:postal-office location) "Keuruu"))))
-
-      (testing "Date transformation"
-        (is (= (:event-date result) "2019-08-29T15:55:30.259Z"))))))
 
 (deftest prop-mappings-test
   (testing "Property mappings are consistent"
