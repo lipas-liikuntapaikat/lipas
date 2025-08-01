@@ -249,6 +249,7 @@
   ([search]
    (let [client (:client search)
          mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                   (-> search :indices :legacy-sports-sites :search) (:legacy-sports-sites search/mappings)
                    (-> search :indices :analysis :diversity) diversity/mappings
                    (-> search :indices :lois :search) (:lois search/mappings)}]
 
