@@ -8,6 +8,7 @@
  :custom-rules "Custom instructions",
  :delete-route-prompt "Are you sure you want to delete this route?",
  :finish-route-details "Route completed",
+ :headline "Activities",
  :highlight "Highlight",
  :length-km "Length km",
  :link "Link",

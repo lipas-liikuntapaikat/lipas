@@ -1,4 +1,5 @@
-{:editor-title "Route Editor",
+{:headline "Routes",
+ :editor-title "Route Editor",
  :save-success "Route saved successfully!",
  :retry "Retry",
  :no-segments "No segments available for ordering",

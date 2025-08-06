@@ -9,7 +9,7 @@
  :delete-route-prompt
  "Är du säker på att du vill ta bort den här rutten?",
  :finish-route-details "Rutt färdig",
- :headline "Friluftsdatatjänst",
+ :headline "Aktiviteter",
  :highlight "Höjdpunkt",
  :length-km "Längd km",
  :link "Länk",

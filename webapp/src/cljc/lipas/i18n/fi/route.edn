@@ -1,4 +1,5 @@
-{:editor-title "Reitin muokkaus",
+{:headline "Reitit",
+ :editor-title "Reitin muokkaus",
  :save-success "Reitti tallennettu onnistuneesti!",
  :retry "Yritä uudelleen",
  :no-segments "Ei järjestettäviä osia",

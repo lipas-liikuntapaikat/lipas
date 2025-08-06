@@ -8,7 +8,7 @@
  :custom-rules "Omat säännöt",
  :delete-route-prompt "Haluatko varmasti poistaa tämän reitin?",
  :finish-route-details "Reitti valmis",
- :headline "Ulkoilutietopalvelu",
+ :headline "Aktiviteetit",
  :highlight "Kohokohta",
  :length-km "Pituus km",
  :link "Linkki",

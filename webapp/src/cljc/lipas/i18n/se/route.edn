@@ -1,4 +1,5 @@
-{:editor-title "Ruttredigerare",
+{:headline "Rutter",
+ :editor-title "Ruttredigerare",
  :save-success "Rutt sparad framgångsrikt!",
  :retry "Försök igen",
  :no-segments "Inga segment tillgängliga för ordning",

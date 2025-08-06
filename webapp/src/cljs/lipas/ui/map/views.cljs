@@ -39,6 +39,7 @@
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.floorball.views :as floorball]
             [lipas.ui.sports-sites.views :as sports-sites]
+            [lipas.ui.sports-sites.routes.views :as routes]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -81,11 +82,11 @@
          :on-change #(==> [::events/update-address-search-keyword %])}]]
       [mui/grid {:item true :xs 12}
        (into
-         [mui/list]
-         (for [m results]
-           [mui/list-item-button {:on-click #(==> [::events/show-address m])}
-            [mui/list-item-text
-             (:label m)]]))]]]))
+        [mui/list]
+        (for [m results]
+          [mui/list-item-button {:on-click #(==> [::events/show-address m])}
+           [mui/list-item-text
+            (:label m)]]))]]]))
 
 (defn restore-site-backup-dialog []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -117,9 +118,9 @@
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [mui/slide {:direction "up" :in open?}
      [:r> (react/forwardRef
-            (fn [_props ref]
-              (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
-                             @simplify-tool-component])))]]))
+           (fn [_props ref]
+             (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
+                            @simplify-tool-component])))]]))
 
 (defn simplify-tool
   [{:keys [tr on-change on-close]
@@ -227,30 +228,30 @@
       [:<>
        (into
 
-         [mui/menu
-          {:open (boolean @anchor-el)
-           :anchorEl @anchor-el
-           :anchorOrigin {:vertical "top" :horizontal "left"}
-           :transformOrigin {:vertical "bottom" :horizontal "left"}
-           :on-close #(reset! anchor-el nil)}]
+        [mui/menu
+         {:open (boolean @anchor-el)
+          :anchorEl @anchor-el
+          :anchorOrigin {:vertical "top" :horizontal "left"}
+          :transformOrigin {:vertical "bottom" :horizontal "left"}
+          :on-close #(reset! anchor-el nil)}]
 
-         (for [[k {:keys [label label2 icon]}] overlays
-               :let [v (contains? selected-overlays k)]]
-           [mui/menu-item
-            {:on-click #(==> [::events/toggle-overlay k])}
-            [mui/list-item-icon
-             [mui/checkbox
-              {:checked (boolean v)
-               :size "medium"
-               :value (str v)
-               :color "secondary"
-               :on-change #()}]]
-            [mui/list-item-text
-             {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
-              :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
-              :primary label :secondary label2}]
-            [mui/list-item-icon
-             icon]]))
+        (for [[k {:keys [label label2 icon]}] overlays
+              :let [v (contains? selected-overlays k)]]
+          [mui/menu-item
+           {:on-click #(==> [::events/toggle-overlay k])}
+           [mui/list-item-icon
+            [mui/checkbox
+             {:checked (boolean v)
+              :size "medium"
+              :value (str v)
+              :color "secondary"
+              :on-change #()}]]
+           [mui/list-item-text
+            {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
+             :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
+             :primary label :secondary label2}]
+           [mui/list-item-icon
+            icon]]))
 
        [mui/grid {:item true}
         [mui/tooltip {:title (tr :map.overlay/tooltip)}
@@ -330,12 +331,12 @@
             [mui/table-cell (tr :type/geometry)]
             [mui/table-cell (tr :general/description)]]]
           (into
-            [mui/table-body {:component "th" :scope "row"}]
-            (for [row sorted-and-filtered-table-data]
-              [mui/table-row {:on-click #(on-select (row :type-code))}
-               [mui/table-cell (row :name)]
-               [mui/table-cell (->> row :geometry-type (keyword :type) tr)]
-               [mui/table-cell (row :description)]]))]]]])))
+           [mui/table-body {:component "th" :scope "row"}]
+           (for [row sorted-and-filtered-table-data]
+             [mui/table-row {:on-click #(on-select (row :type-code))}
+              [mui/table-cell (row :name)]
+              [mui/table-cell (->> row :geometry-type (keyword :type) tr)]
+              [mui/table-cell (row :description)]]))]]]])))
 
 (defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)
@@ -526,7 +527,7 @@
           [mui/table-cell
            [mui/typography {:variant "caption" :no-wrap true}
             (utils/round-safe
-              (:population-weighted-mean data))]]]
+             (:population-weighted-mean data))]]]
 
          ;; Population
          [mui/table-row
@@ -990,6 +991,10 @@
 
         accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
+        ;; Define route-enabled facility types (cycling, hiking, skiing, etc.)
+        route-enabled-types #{4412 4411 4421 4422}
+        view-routes? (contains? route-enabled-types type-code)
+
         activity-value (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
         view-activities? (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
         edit-activities? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
@@ -1088,7 +1093,7 @@
        [mui/tabs
         {:value selected-tab
          :on-change #(==> [::events/select-sports-site-tab %2])
-         :variant (if view-activities?
+         :variant (if (or view-activities? view-routes?)
                     "scrollable"
                     "fullWidth")
          #_#_:variant "scrollable"
@@ -1119,6 +1124,14 @@
             :value 3
             :label (tr :lipas.floorball/headline)}])
 
+        ;; REITIT tab for route-enabled facility types
+        (when view-routes?
+          [mui/tab
+           {:style {:min-width 0}
+            :value 7
+            :label (tr :route/headline)}])
+
+        ;; Renamed AKTIVITEETIT tab (previously ULKOILUTIETOPALVELU)
         (when view-activities?
           [mui/tab
            {:style {:min-width 0}
@@ -1248,7 +1261,17 @@
                 :type-code type-code
                 ; :display-data display-data
                 :edit-data edit-data
-                :can-edit? can-publish?})])]
+                :can-edit? can-publish?})]
+
+         ;; REITIT tab content
+         7 [mui/grid {:item true :xs 12}
+            [routes/routes-tab
+             {:tr tr
+              :lipas-id lipas-id
+              :type-code type-code
+              :display-data display-data
+              :edit-data edit-data
+              :can-edit? (or can-publish? edit-activities?)}]])]
 
       ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
@@ -1258,145 +1281,145 @@
         [lui/floating-container
          {:bottom 0 :background-color "transparent"}
          (into
-           [mui/grid
-            {:container true
-             :align-items "center"
-             :align-content "flex-start"
-             :spacing 1
-             :style {:padding "0.5em 0em 0.5em 0em"}}]
-           (->>
-             [;; Undo
+          [mui/grid
+           {:container true
+            :align-items "center"
+            :align-content "flex-start"
+            :spacing 1
+            :style {:padding "0.5em 0em 0.5em 0em"}}]
+          (->>
+           [;; Undo
               ;; TODO: Undo/redo are only for map edits, so not useful if
               ;; you only have floorball or activity privileges (if current activity doesn't have map tools)
-              (when editing?
-                [mui/tooltip {:title (tr :actions/undo)}
-                 [:span
-                  [mui/fab
-                   {:disabled (not undo)
-                    :size "small"
-                    :on-click #(==> [::events/undo lipas-id])}
-                   [mui/icon "undo"]]]])
+            (when editing?
+              [mui/tooltip {:title (tr :actions/undo)}
+               [:span
+                [mui/fab
+                 {:disabled (not undo)
+                  :size "small"
+                  :on-click #(==> [::events/undo lipas-id])}
+                 [mui/icon "undo"]]]])
 
            ;; Redo
-              (when editing?
-                [mui/tooltip {:title (tr :actions/redo)}
-                 [:span
-                  [mui/fab
-                   {:disabled (not redo)
-                    :size "small"
-                    :on-click #(==> [::events/redo lipas-id])}
-                   [mui/icon "redo"]]]])
+            (when editing?
+              [mui/tooltip {:title (tr :actions/redo)}
+               [:span
+                [mui/fab
+                 {:disabled (not redo)
+                  :size "small"
+                  :on-click #(==> [::events/redo lipas-id])}
+                 [mui/icon "redo"]]]])
 
             ;; Active editing tool
-              (when (and editing? (seq map-tool-items))
-                [mui/tooltip
-                 {:title
+            (when (and editing? (seq map-tool-items))
+              [mui/tooltip
+               {:title
+                (case sub-mode
+                  :drawing (tr :map.tools/drawing-tooltip)
+                  :drawing-hole (tr :map.tools/drawing-hole-tooltip)
+                  (:editing :undo) (tr :map/delete-vertices-hint)
+                  :importing (tr :map.tools/importing-tooltip)
+                  :deleting (tr :map.tools/deleting-tooltip)
+                  :splitting (tr :map.tools/splitting-tooltip)
+                  :simplifying (tr :map.tools/simplifying-tooltip)
+                  :selecting (tr :map.tools/selecting-tooltip)
+                  :travel-direction (tr :map.tools/travel-direction-tooltip)
+                  :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                  :view-only "-"
+                  :ordered-segments "-")}
+               [mui/fab
+                {:size "small"
+                 :on-click #() ; noop
+                 :color "inherit"}
+                (let [props {:color "secondary"}]
                   (case sub-mode
-                    :drawing (tr :map.tools/drawing-tooltip)
-                    :drawing-hole (tr :map.tools/drawing-hole-tooltip)
-                    (:editing :undo) (tr :map/delete-vertices-hint)
-                    :importing (tr :map.tools/importing-tooltip)
-                    :deleting (tr :map.tools/deleting-tooltip)
-                    :splitting (tr :map.tools/splitting-tooltip)
-                    :simplifying (tr :map.tools/simplifying-tooltip)
-                    :selecting (tr :map.tools/selecting-tooltip)
-                    :travel-direction (tr :map.tools/travel-direction-tooltip)
-                    :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
-                    :view-only "-"
-                    :ordered-segments "-")}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #() ; noop
-                   :color "inherit"}
-                  (let [props {:color "secondary"}]
-                    (case sub-mode
-                      :drawing (case geom-type
-                                 "Point" [mui/icon props "edit"]
-                                 "LineString" [mui/icon props "timeline"]
-                                 "Polygon" [mui/icon props "change_history"])
-                      :drawing-hole [mui/icon props "vignette"]
-                      (:editing :undo) [mui/icon props "edit"]
-                      :importing [:> FileUpload props]
-                      :deleting [:> Eraser props]
-                      :splitting [:> ContentCut props]
-                      :simplifying [mui/icon props "auto_fix_high"]
-                      :selecting [mui/icon props "handshake"]
-                      :travel-direction [mui/icon props "turn_slight_right"]
-                      :route-part-difficulty [mui/icon props "warning"]
-                      :view-only [mui/icon props "dash"]
-                      :ordered-segments [mui/icon props "compare_arrows"]))]])
+                    :drawing (case geom-type
+                               "Point" [mui/icon props "edit"]
+                               "LineString" [mui/icon props "timeline"]
+                               "Polygon" [mui/icon props "change_history"])
+                    :drawing-hole [mui/icon props "vignette"]
+                    (:editing :undo) [mui/icon props "edit"]
+                    :importing [:> FileUpload props]
+                    :deleting [:> Eraser props]
+                    :splitting [:> ContentCut props]
+                    :simplifying [mui/icon props "auto_fix_high"]
+                    :selecting [mui/icon props "handshake"]
+                    :travel-direction [mui/icon props "turn_slight_right"]
+                    :route-part-difficulty [mui/icon props "warning"]
+                    :view-only [mui/icon props "dash"]
+                    :ordered-segments [mui/icon props "compare_arrows"]))]])
 
            ;; Tool select button
-              (when editing?
-                (when (seq map-tool-items)
-                  [:<>
-                   [mui/tooltip {:title (tr :actions/select-tool)}
-                    [mui/fab
-                     {:size "medium"
-                      :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-                      :color "secondary"}
-                     [mui/icon "more_horiz"]]]
+            (when editing?
+              (when (seq map-tool-items)
+                [:<>
+                 [mui/tooltip {:title (tr :actions/select-tool)}
+                  [mui/fab
+                   {:size "medium"
+                    :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
+                    :color "secondary"}
+                   [mui/icon "more_horiz"]]]
 
-                   (into [mui/menu
-                          {:variant "menu"
-                           :auto-focus false
-                           :anchor-el more-tools-menu-anchor
-                           :open (some? more-tools-menu-anchor)
-                           :on-close #(==> [::events/close-more-tools-menu])}]
-                         map-tool-items)]))
+                 (into [mui/menu
+                        {:variant "menu"
+                         :auto-focus false
+                         :anchor-el more-tools-menu-anchor
+                         :open (some? more-tools-menu-anchor)
+                         :on-close #(==> [::events/close-more-tools-menu])}]
+                       map-tool-items)]))
 
            ;; Download GPX
-              (when (and (not editing?) (#{"LineString"} geom-type))
-                [mui/tooltip {:title (tr :map/download-gpx)}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #(==> [::events/download-gpx lipas-id])
-                   :color "inherit"}
-                  [mui/icon "save_alt"]]])
+            (when (and (not editing?) (#{"LineString"} geom-type))
+              [mui/tooltip {:title (tr :map/download-gpx)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/download-gpx lipas-id])
+                 :color "inherit"}
+                [mui/icon "save_alt"]]])
 
            ;; Zoom to site
-              (when-not editing?
-                [mui/tooltip {:title (tr :map/zoom-to-site)}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #(==> [::events/zoom-to-site lipas-id width])
-                   :color "inherit"}
-                  [mui/icon {:color "inherit"}
-                   "place"]]])
+            (when-not editing?
+              [mui/tooltip {:title (tr :map/zoom-to-site)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/zoom-to-site lipas-id width])
+                 :color "inherit"}
+                [mui/icon {:color "inherit"}
+                 "place"]]])
 
            ;; Add reminder
-              (when (and logged-in? (not editing?))
-                (let [name (-> display-data :name)
-                      link (-> js/window .-location .-href)]
-                  [reminders/add-button
-                   {:message (tr :reminders/placeholder name link)}]))
+            (when (and logged-in? (not editing?))
+              (let [name (-> display-data :name)
+                    link (-> js/window .-location .-href)]
+                [reminders/add-button
+                 {:message (tr :reminders/placeholder name link)}]))
 
            ;; Copy sports site
-              (when (and logged-in? (not editing?))
-                [mui/tooltip {:title (tr :actions/duplicate)}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #(==> [::events/duplicate-sports-site lipas-id])}
-                  [:> ContentDuplicate]]])
+            (when (and logged-in? (not editing?))
+              [mui/tooltip {:title (tr :actions/duplicate)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/duplicate-sports-site lipas-id])}
+                [:> ContentDuplicate]]])
 
            ;; Resurrect button
-              (when (and dead? logged-in? can-publish? editing-allowed?)
-                [mui/tooltip {:title (tr :actions/resurrect)}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #(==> [::events/resurrect lipas-id])}
-                  [mui/icon "360"]]])
+            (when (and dead? logged-in? can-publish? editing-allowed?)
+              [mui/tooltip {:title (tr :actions/resurrect)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/resurrect lipas-id])}
+                [mui/icon "360"]]])
 
            ;; Analysis
-              (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
-                                         (roles/site-roles-context display-data)
-                                         :analysis-tool/use])
-                         (not editing?))
-                [mui/tooltip {:title (tr :map.demographics/tooltip)}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #(==> [::events/show-analysis lipas-id])}
-                  [mui/icon "insights"]]])
+            (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
+                                       (roles/site-roles-context display-data)
+                                       :analysis-tool/use])
+                       (not editing?))
+              [mui/tooltip {:title (tr :map.demographics/tooltip)}
+               [mui/fab
+                {:size "small"
+                 :on-click #(==> [::events/show-analysis lipas-id])}
+                [mui/icon "insights"]]])
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -1472,31 +1495,31 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-              ]
+            ]
 
-             (concat
+           (concat
            ;; FIXME: Just reagent elements, maybe :<>
-               (misc/edit-actions-list
-                 {:editing? editing?
-                  :editing-allowed? editing-allowed?
-                  :edit-activities? edit-activities?
-                  :edit-floorball? edit-floorball?
-                  :save-in-progress? save-in-progress?
-                  :valid? edits-valid?
-                  :logged-in? logged-in?
-                  :user-can-publish? can-publish?
-                  :on-discard #(==> [::events/discard-edits lipas-id])
-                  :discard-tooltip (tr :actions/cancel)
-                  :on-edit-start #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
-                  :edit-tooltip (tr :actions/edit)
-                  :on-publish #(==> [::events/save-edits lipas-id])
-                  :publish-tooltip (tr :actions/save)
-                  :invalid-message (tr :error/invalid-form)
-                  :on-delete #(==> [::events/delete-site])
-                  :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
+            (misc/edit-actions-list
+             {:editing? editing?
+              :editing-allowed? editing-allowed?
+              :edit-activities? edit-activities?
+              :edit-floorball? edit-floorball?
+              :save-in-progress? save-in-progress?
+              :valid? edits-valid?
+              :logged-in? logged-in?
+              :user-can-publish? can-publish?
+              :on-discard #(==> [::events/discard-edits lipas-id])
+              :discard-tooltip (tr :actions/cancel)
+              :on-edit-start #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
+              :edit-tooltip (tr :actions/edit)
+              :on-publish #(==> [::events/save-edits lipas-id])
+              :publish-tooltip (tr :actions/save)
+              :invalid-message (tr :error/invalid-form)
+              :on-delete #(==> [::events/delete-site])
+              :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 
-             (remove nil?)
-             (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
+           (remove nil?)
+           (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
 
 (defn add-btn [{:keys [tr]}]
   [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
@@ -1686,8 +1709,8 @@
                        [mui/button
                         {:color "secondary"
                          :disabled (not (and
-                                          (s/valid? lon-spec (:lon @state))
-                                          (s/valid? lat-spec (:lat @state))))
+                                         (s/valid? lon-spec (:lon @state))
+                                         (s/valid? lat-spec (:lat @state))))
                          :variant "contained"
                          :on-click #(==> [::events/add-point-from-coords @state])}
                         [mui/icon "add_location"]
@@ -1842,9 +1865,9 @@
                   [mui/tooltip
                    {:placement "right"
                     :title (str
-                             (tr :map/retkikartta-problems-warning)
-                             " "
-                             (tr :map/retkikartta-checkbox-reminder))}
+                            (tr :map/retkikartta-problems-warning)
+                            " "
+                            (tr :map/retkikartta-checkbox-reminder))}
                    [:span
                     [lui/icon-text
                      {:icon "warning"
