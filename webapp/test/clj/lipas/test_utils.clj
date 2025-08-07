@@ -84,7 +84,8 @@
                 (update-in [:search :indices :analysis :population] test-suffix)
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
                 (update-in [:search :indices :analysis :diversity] test-suffix)
-                (update-in [:search :indices :lois :search] test-suffix)))
+                (update-in [:search :indices :lois :search] test-suffix)
+                (update-in [:search :indices :legacy-sports-site :search] test-suffix)))
 
 ;; Enhanced database initialization with migration status checking
 (defn init-db!
