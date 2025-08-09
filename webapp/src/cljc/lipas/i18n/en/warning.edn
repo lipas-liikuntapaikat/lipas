@@ -1,0 +1,3 @@
+{:segment-in-routes "Segment Used in Routes"
+ :segment-deletion-affects-routes "Warning: The selected segments are used in one or more routes. Deleting these segments will affect those routes."
+ :affected-routes-list "Affected routes:"}

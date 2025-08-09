@@ -1,0 +1,3 @@
+{:segment-in-routes "Segmentti käytössä reiteissä"
+ :segment-deletion-affects-routes "Varoitus: Valitut segmentit ovat käytössä yhdessä tai useammassa reitissä. Segmenttien poistaminen vaikuttaa näihin reitteihin."
+ :affected-routes-list "Vaikutuksen alaiset reitit:"}

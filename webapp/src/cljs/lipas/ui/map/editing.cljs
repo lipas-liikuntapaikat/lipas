@@ -42,13 +42,15 @@
          (fn [^js e]
            (let [selected (.-selected e)]
              (when (not-empty selected)
-               (==> [:lipas.ui.map.events/confirm-remove-segment
-                     (fn []
-                       (doseq [f selected]
-                         (.removeFeature source f))
-                       (doto (.getFeatures delete)
-                         (.clear))
-                       (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))])))))
+               (let [segment-ids (map #(.getId ^js %) selected)]
+                 (==> [:lipas.ui.map.events/confirm-remove-segment
+                       segment-ids
+                       (fn []
+                         (doseq [f selected]
+                           (.removeFeature source f))
+                         (doto (.getFeatures delete)
+                           (.clear))
+                         (on-delete (map-utils/->geoJSON-clj (.getFeatures source))))]))))))
     (-> map-ctx
         map-utils/enable-edits-hover!
         (assoc-in [:interactions :delete] delete))))

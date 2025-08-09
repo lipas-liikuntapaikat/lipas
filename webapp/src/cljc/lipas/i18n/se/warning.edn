@@ -1,0 +1,3 @@
+{:segment-in-routes "Segment används i rutter"
+ :segment-deletion-affects-routes "Varning: De valda segmenten används i en eller flera rutter. Att radera dessa segment kommer att påverka dessa rutter."
+ :affected-routes-list "Påverkade rutter:"}

@@ -8,6 +8,7 @@
  :clear-selections "Clear",
  :close "Close",
  :delete "Delete",
+ :delete-anyway "Delete anyway",
  :deselect-all "Deselect all",
  :discard "Discard",
  :done "Done"

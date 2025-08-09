@@ -9,6 +9,7 @@
  :clear-selections "Ta bort val",
  :close "Stäng",
  :delete "Radera",
+ :delete-anyway "Radera ändå",
  :deselect-all "Avmarkera alla",
  :discard "Förkasta",
  :done "Klar"

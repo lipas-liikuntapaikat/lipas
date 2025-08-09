@@ -9,6 +9,7 @@
  :clear-selections "Poista valinnat",
  :close "Sulje",
  :delete "Poista",
+ :delete-anyway "Poista silti",
  :deselect-all "Poista kaikki valinnat",
  :discard "Kumoa",
  :done "Valmis"
