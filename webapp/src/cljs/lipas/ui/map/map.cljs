@@ -81,110 +81,110 @@
   {:basemaps
    {:taustakartta
     (->wmts
-     {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
+      {:url (:taustakartta urls) :layer-name "MML-Taustakartta" :visible? true})
     :maastokartta
     (->wmts
-     {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
+      {:url (:maastokartta urls) :layer-name "MML-Maastokartta"}) :ortokuva
     (->wmts
-     {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
+      {:url (:ortokuva urls) :layer-name "MML-Ortokuva"})}
    :overlays
    {:vectors
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :name "vectors"
-          :style styles/feature-style})
+      #js {:source (VectorSource.)
+           :name "vectors"
+           :style styles/feature-style})
     :lois
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :name "lois"
-          :style styles/loi-style})
+      #js {:source (VectorSource.)
+           :name "lois"
+           :style styles/loi-style})
     :edits
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :name "edits"
-          :zIndex 10
-          :style #js [styles/edit-style styles/vertices-style]})
+      #js {:source (VectorSource.)
+           :name "edits"
+           :zIndex 10
+           :style #js [styles/edit-style styles/vertices-style]})
     :ordered-segments
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :name "ordered-segments"
-          :zIndex 11
-          :style (fn [feature resolution]
-                   (styles/ordered-segment-style-fn feature resolution false false))})
+      #js {:source (VectorSource.)
+           :name "ordered-segments"
+           :zIndex 11
+           :style (fn [feature resolution]
+                    (styles/ordered-segment-style-fn feature resolution false false))})
     :highlights
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :name "highlights"
-          :zIndex 12
-          :style #js [styles/highlight-style]})
+      #js {:source (VectorSource.)
+           :name "highlights"
+           :zIndex 12
+           :style #js [styles/highlight-style]})
     :markers
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :name "markers"
-          :style styles/blue-marker-style})
+      #js {:source (VectorSource.)
+           :name "markers"
+           :style styles/blue-marker-style})
     :analysis
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :style styles/analysis-style
-          :name "analysis"})
+      #js {:source (VectorSource.)
+           :style styles/analysis-style
+           :name "analysis"})
     :population
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :style styles/population-style3
-          :name "population"})
+      #js {:source (VectorSource.)
+           :style styles/population-style3
+           :name "population"})
 
     :schools
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :style styles/school-style
-          :name "schools"})
+      #js {:source (VectorSource.)
+           :style styles/school-style
+           :name "schools"})
     :diversity-grid
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :style styles/diversity-grid-style
-          :name "diversity-grid"})
+      #js {:source (VectorSource.)
+           :style styles/diversity-grid-style
+           :name "diversity-grid"})
     :diversity-area
     (VectorImageLayer.
-     #js {:source (VectorSource.)
-          :style styles/diversity-area-style
-          :name "diversity-area"})
+      #js {:source (VectorSource.)
+           :style styles/diversity-area-style
+           :name "diversity-area"})
     :light-traffic
     (ImageLayer.
-     #js {:visible false
-          :source (ImageWMSSource. #js {:url "/vaylavirasto/vaylatiedot/ows"
-                                        :params #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
-                                        :serverType "geoserver"
-                                        :crossOrigin "anonymous"})})
+      #js {:visible false
+           :source (ImageWMSSource. #js {:url "/vaylavirasto/vaylatiedot/ows"
+                                         :params #js {:LAYERS #_"TL166" "tierekisteri:tl166"}
+                                         :serverType "geoserver"
+                                         :crossOrigin "anonymous"})})
     :retkikartta-snowmobile-tracks
     (ImageLayer.
-     #js {:visible false
-          :source (ImageWMSSource. #js {:url "/geoserver/lipas/wms?"
-                                        :params #js {:LAYERS "lipas:metsahallitus_urat2023"}
-                                        :serverType "geoserver"
-                                        :crossOrigin "anonymous"})})
+      #js {:visible false
+           :source (ImageWMSSource. #js {:url "/geoserver/lipas/wms?"
+                                         :params #js {:LAYERS "lipas:metsahallitus_urat2023"}
+                                         :serverType "geoserver"
+                                         :crossOrigin "anonymous"})})
     :mml-kiinteisto
     (->wmts
-     {:url (:kiinteisto urls)
+      {:url (:kiinteisto urls)
       ;; Source (MML WMTS) won't return anything with res 0.25 so we
       ;; limit this layer grid to min resolution of 0.5 but allow
       ;; zooming to 0.25. Limiting the grid has a desired effect that
       ;; WMTS won't try to get the data and it shows geoms of
       ;; the "previous" resolution.
-      :resolutions (.slice mml-resolutions 0 15)
-      :matrix-ids (.slice mml-matrix-ids 0 15)
-      :min-res 0.25
-      :max-res 8
-      :layer-name "MML-Kiinteistö"})
+       :resolutions (.slice mml-resolutions 0 15)
+       :matrix-ids (.slice mml-matrix-ids 0 15)
+       :min-res 0.25
+       :max-res 8
+       :layer-name "MML-Kiinteistö"})
     :mml-kiinteistotunnukset
     (->wmts
-     {:url (:kiinteistotunnukset urls)
-      :min-res 0.25
-      :max-res 2
-      :layer-name "MML-Kiinteistötunnukset"})
+      {:url (:kiinteistotunnukset urls)
+       :min-res 0.25
+       :max-res 2
+       :layer-name "MML-Kiinteistötunnukset"})
     :heatmap
     (VectorLayer.
-     #js {:source (VectorSource.)
-          :name "heatmap"})}})
+      #js {:source (VectorSource.)
+           :name "heatmap"})}})
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
@@ -200,8 +200,8 @@
 
 (defn init-overlay [popup-ref]
   (ol/Overlay.
-   #js {:offset #js [-15 0]
-        :element (.-current popup-ref)}))
+    #js {:offset #js [-15 0]
+         :element (.-current popup-ref)}))
 
 (defn init-map! [{:keys [center zoom popup-ref]}]
 
@@ -244,55 +244,55 @@
                   :view view}
 
         vector-hover (SelectInteraction.
-                      #js {:layers #js [(-> layers :overlays :vectors)]
-                           :style styles/feature-style-hover
-                           :multi true
-                           :condition events-condition/pointerMove})
+                       #js {:layers #js [(-> layers :overlays :vectors)]
+                            :style styles/feature-style-hover
+                            :multi true
+                            :condition events-condition/pointerMove})
 
         loi-hover (SelectInteraction.
-                   #js {:layers #js [(-> layers :overlays :lois)]
-                        :style styles/loi-style-hover
-                        :multi true
-                        :condition events-condition/pointerMove})
+                    #js {:layers #js [(-> layers :overlays :lois)]
+                         :style styles/loi-style-hover
+                         :multi true
+                         :condition events-condition/pointerMove})
 
         marker-hover (SelectInteraction.
-                      #js {:layers #js [(-> layers :overlays :markers)]
-                           :style styles/feature-style-hover
-                           :multi true
-                           :condition events-condition/pointerMove})
+                       #js {:layers #js [(-> layers :overlays :markers)]
+                            :style styles/feature-style-hover
+                            :multi true
+                            :condition events-condition/pointerMove})
 
         population-hover (SelectInteraction.
-                          #js {:layers #js [(-> layers :overlays :population)]
-                               :style styles/population-hover-style3
-                               :multi false
-                               :condition events-condition/pointerMove})
+                           #js {:layers #js [(-> layers :overlays :population)]
+                                :style styles/population-hover-style3
+                                :multi false
+                                :condition events-condition/pointerMove})
 
         schools-hover (SelectInteraction.
-                       #js {:layers #js [(-> layers :overlays :schools)]
-                            :style styles/school-hover-style
-                            :multi false
-                            :condition events-condition/pointerMove})
+                        #js {:layers #js [(-> layers :overlays :schools)]
+                             :style styles/school-hover-style
+                             :multi false
+                             :condition events-condition/pointerMove})
 
         diversity-grid-hover (SelectInteraction.
-                              #js {:layers #js [(-> layers :overlays :diversity-grid)]
-                                   :style styles/diversity-grid-hover-style
-                                   :multi false
-                                   :condition events-condition/pointerMove})
+                               #js {:layers #js [(-> layers :overlays :diversity-grid)]
+                                    :style styles/diversity-grid-hover-style
+                                    :multi false
+                                    :condition events-condition/pointerMove})
 
         diversity-area-hover (SelectInteraction.
-                              #js {:layers #js [(-> layers :overlays :diversity-area)]
-                                   :style styles/diversity-area-hover-style
-                                   :multi false
-                                   :condition events-condition/pointerMove})
+                               #js {:layers #js [(-> layers :overlays :diversity-area)]
+                                    :style styles/diversity-area-hover-style
+                                    :multi false
+                                    :condition events-condition/pointerMove})
 
         diversity-area-select (SelectInteraction.
-                               #js {:layers #js [(-> layers :overlays :diversity-area)]})
+                                #js {:layers #js [(-> layers :overlays :diversity-area)]})
 
         heatmap-hover (SelectInteraction.
-                       #js {:layers #js [(-> layers :overlays :heatmap)]
-                            :style nil ; Heatmap has its own style
-                            :multi false
-                            :condition events-condition/pointerMove})
+                        #js {:layers #js [(-> layers :overlays :heatmap)]
+                             :style nil ; Heatmap has its own style
+                             :multi false
+                             :condition events-condition/pointerMove})
 
         select (SelectInteraction. #js {:layers #js [(-> layers :overlays :vectors)
                                                      (-> layers :overlays :lois)]
@@ -559,10 +559,10 @@
       map-utils/clear-ordered-segments! ;; Clear ordered segments display
       ;; Handle route highlighting in default mode - only if we have valid data
       (cond->
-       (and highlight-source
-            selected-features
-            (seq selected-features)
-            (:geometries highlight-source))
+        (and highlight-source
+             selected-features
+             (seq selected-features)
+             (:geometries highlight-source))
         (route-highlighting/update-route-highlights! mode))
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
@@ -571,7 +571,7 @@
       (cond->
        ;; Only select sports site if we're not using highlight-source
        ;; (highlight-source handles its own display)
-       (and lipas-id (not highlight-source))
+        (and lipas-id (not highlight-source))
         (map-utils/select-sports-site! lipas-id)
 
         address
@@ -594,15 +594,15 @@
         (map-utils/clear-ordered-segments!) ;; Clear ordered segments display
         ;; Handle route highlighting in default mode - only if we have valid data
         (cond->
-         (and highlight-source
-              selected-features
-              (seq selected-features)
-              (:geometries highlight-source))
+          (and highlight-source
+               selected-features
+               (seq selected-features)
+               (:geometries highlight-source))
           (route-highlighting/update-route-highlights! mode))
         (cond->
          ;; Only select sports site if we're not using highlight-source
          ;; (highlight-source handles its own display)
-         (and lipas-id (not highlight-source))
+          (and lipas-id (not highlight-source))
           (map-utils/select-sports-site! lipas-id)
 
           fit?
@@ -683,8 +683,8 @@
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (cond->
-         lipas-id (map-utils/select-sports-site! lipas-id)
-         fit? (map-utils/fit-to-extent! (-> vectors-layer .getSource .getExtent)))
+          lipas-id (map-utils/select-sports-site! lipas-id)
+          fit? (map-utils/fit-to-extent! (-> vectors-layer .getSource .getExtent)))
         (map-utils/enable-population-hover!)
         (show-population! reachability)
         (show-schools! reachability)
@@ -753,70 +753,70 @@
 
     (r/create-class
 
-     {:reagent-render
-      (fn [] [mui/grid {:id "map"
+      {:reagent-render
+       (fn [] [mui/grid {:id "map"
                         ;; Keyboard navigation requires that this element has a tabIndex
                         ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
-                        :tabIndex -1
-                        :item true
-                        :style {:height "100%" :width "100%"}
-                        :xs 12}])
+                         :tabIndex -1
+                         :item true
+                         :style {:height "100%" :width "100%"}
+                         :xs 12}])
 
-      :component-did-mount
-      (fn [comp]
-        (let [opts (r/props comp)
-              basemap (:basemap opts)
-              overlays (:overlays opts)
-              geoms (:geoms opts)
-              lois (:lois opts)
-              mode (-> opts :mode)
+       :component-did-mount
+       (fn [comp]
+         (let [opts (r/props comp)
+               basemap (:basemap opts)
+               overlays (:overlays opts)
+               geoms (:geoms opts)
+               lois (:lois opts)
+               mode (-> opts :mode)
 
-              map-ctx (-> (init-map! opts)
-                          (map-utils/update-geoms! geoms)
-                          (map-utils/update-lois! lois)
-                          (map-utils/set-basemap! basemap)
-                          (set-mode! mode))]
+               map-ctx (-> (init-map! opts)
+                           (map-utils/update-geoms! geoms)
+                           (map-utils/update-lois! lois)
+                           (map-utils/set-basemap! basemap)
+                           (set-mode! mode))]
 
-          (reset! map-ctx* map-ctx)))
+           (reset! map-ctx* map-ctx)))
 
-      :component-did-update
-      (fn [comp]
-        (let [opts (r/props comp)
-              geoms (-> opts :geoms)
-              lois (-> opts :lois)
-              basemap (-> opts :basemap)
-              overlays (-> opts :overlays)
-              center (-> opts :center)
-              zoom (-> opts :zoom)
-              mode (-> opts :mode)
-              lipas-id (:lipas-id mode)]
+       :component-did-update
+       (fn [comp]
+         (let [opts (r/props comp)
+               geoms (-> opts :geoms)
+               lois (-> opts :lois)
+               basemap (-> opts :basemap)
+               overlays (-> opts :overlays)
+               center (-> opts :center)
+               zoom (-> opts :zoom)
+               mode (-> opts :mode)
+               lipas-id (:lipas-id mode)]
 
-          (cond-> @map-ctx*
-            (not= (:geoms @map-ctx*) geoms) (map-utils/update-geoms! geoms)
-            (not= (:lois @map-ctx*) lois) (map-utils/update-lois! lois)
-            (not= (:basemap @map-ctx*) basemap) (map-utils/set-basemap! basemap)
-            (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
-            (not= (:center @map-ctx*) center) (map-utils/update-center! center)
-            (not= (:zoom @map-ctx*) zoom) (map-utils/update-zoom! zoom)
-            (not= (:mode @map-ctx*) mode) (update-mode! mode)
-            (and (= :default (:name mode))
-                 lipas-id) (map-utils/refresh-select! lipas-id)
-            true (as-> $ (reset! map-ctx* $)))))
+           (cond-> @map-ctx*
+             (not= (:geoms @map-ctx*) geoms) (map-utils/update-geoms! geoms)
+             (not= (:lois @map-ctx*) lois) (map-utils/update-lois! lois)
+             (not= (:basemap @map-ctx*) basemap) (map-utils/set-basemap! basemap)
+             (not= (:overlays @map-ctx*) overlays) (map-utils/set-overlays! overlays)
+             (not= (:center @map-ctx*) center) (map-utils/update-center! center)
+             (not= (:zoom @map-ctx*) zoom) (map-utils/update-zoom! zoom)
+             (not= (:mode @map-ctx*) mode) (update-mode! mode)
+             (and (= :default (:name mode))
+                  lipas-id) (map-utils/refresh-select! lipas-id)
+             true (as-> $ (reset! map-ctx* $)))))
 
-      :component-will-unmount
-      (fn [_comp]
-        (when-let [map-ctx @map-ctx*]
+       :component-will-unmount
+       (fn [_comp]
+         (when-let [map-ctx @map-ctx*]
           ;; Dispose of the OpenLayers map instance
-          (when-let [ol-map (:lmap map-ctx)]
-            (.dispose ol-map)
+           (when-let [ol-map (:lmap map-ctx)]
+             (.dispose ol-map)
 
-            #_(when ^boolean goog.DEBUG
-                (js/setTimeout #(js/console.log "After disposal, WebGL contexts:"
-                                                (.-length (.querySelectorAll js/document "canvas"))) 50)))
+             #_(when ^boolean goog.DEBUG
+                 (js/setTimeout #(js/console.log "After disposal, WebGL contexts:"
+                                                 (.-length (.querySelectorAll js/document "canvas"))) 50)))
 
-          (reset! map-ctx* nil)))
+           (reset! map-ctx* nil)))
 
-      :display-name "map-inner"})))
+       :display-name "map-inner"})))
 
 (defn map-outer [{:keys [popup-ref]}]
   (let [geoms-fast (rf/subscribe [::subs/geometries-fast])

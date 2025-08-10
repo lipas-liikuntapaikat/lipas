@@ -1,124 +1,124 @@
 (ns lipas.ui.sports-sites.activities.route-ordering
   "Component for visualizing ordered route segments with drag-and-drop reordering"
   (:require
-   ["@mui/material/Box$default" :as Box]
-   ["@mui/material/Paper$default" :as Paper]
-   ["@mui/material/Typography$default" :as Typography]
-   ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/ListItemIcon$default" :as ListItemIcon]
-   ["@mui/material/Chip$default" :as Chip]
-   ["@mui/material/TextField$default" :as TextField]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/CircularProgress$default" :as CircularProgress]
-   ["@mui/material/Alert$default" :as Alert]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/Tooltip$default" :as Tooltip]
-   ["@mui/icons-material/ArrowForward$default" :as ArrowForwardIcon]
-   ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
-   ["@mui/icons-material/SwapVert$default" :as SwapVertIcon]
-   ["@mui/icons-material/DragIndicator$default" :as DragIndicatorIcon]
-   ["@mui/icons-material/ContentCopy$default" :as ContentCopyIcon]
-   ["@mui/icons-material/Delete$default" :as DeleteIcon]
-   ["@mui/icons-material/FormatListNumbered$default" :as FormatListNumberedIcon]
-   ["@hello-pangea/dnd" :refer [DragDropContext Draggable Droppable] :as dnd]
-   [ajax.core :as ajax]
-   [re-frame.core :as rf]
-   [lipas.ui.uix.hooks :refer [use-subscribe]]
-   [lipas.ui.utils :refer [==>]]
-   [uix.core :as uix :refer [$ defui]]))
+    ["@mui/material/Box$default" :as Box]
+    ["@mui/material/Paper$default" :as Paper]
+    ["@mui/material/Typography$default" :as Typography]
+    ["@mui/material/List$default" :as List]
+    ["@mui/material/ListItem$default" :as ListItem]
+    ["@mui/material/ListItemText$default" :as ListItemText]
+    ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+    ["@mui/material/Chip$default" :as Chip]
+    ["@mui/material/TextField$default" :as TextField]
+    ["@mui/material/Button$default" :as Button]
+    ["@mui/material/CircularProgress$default" :as CircularProgress]
+    ["@mui/material/Alert$default" :as Alert]
+    ["@mui/material/IconButton$default" :as IconButton]
+    ["@mui/material/Tooltip$default" :as Tooltip]
+    ["@mui/icons-material/ArrowForward$default" :as ArrowForwardIcon]
+    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
+    ["@mui/icons-material/SwapVert$default" :as SwapVertIcon]
+    ["@mui/icons-material/DragIndicator$default" :as DragIndicatorIcon]
+    ["@mui/icons-material/ContentCopy$default" :as ContentCopyIcon]
+    ["@mui/icons-material/Delete$default" :as DeleteIcon]
+    ["@mui/icons-material/FormatListNumbered$default" :as FormatListNumberedIcon]
+    ["@hello-pangea/dnd" :refer [DragDropContext Draggable Droppable] :as dnd]
+    [ajax.core :as ajax]
+    [re-frame.core :as rf]
+    [lipas.ui.uix.hooks :refer [use-subscribe]]
+    [lipas.ui.utils :refer [==>]]
+    [uix.core :as uix :refer [$ defui]]))
 
 ;; Re-frame events
 
 (rf/reg-event-db
- ::set-loading
- (fn [db [_ loading?]]
-   (assoc-in db [:route-ordering :loading?] loading?)))
+  ::set-loading
+  (fn [db [_ loading?]]
+    (assoc-in db [:route-ordering :loading?] loading?)))
 
 (rf/reg-event-fx
- ::initialize-ordered-segments-mode
- (fn [{:keys [db]} [_ lipas-id selected-segments]]
-   {:fx [[:dispatch [:lipas.ui.map.events/set-ordered-segments-edit-mode lipas-id selected-segments]]]}))
+  ::initialize-ordered-segments-mode
+  (fn [{:keys [db]} [_ lipas-id selected-segments]]
+    {:fx [[:dispatch [:lipas.ui.map.events/set-ordered-segments-edit-mode lipas-id selected-segments]]]}))
 
 (rf/reg-event-fx
- ::cleanup-ordered-segments-mode
- (fn [{:keys [db]} _]
-   {:fx [[:dispatch [:lipas.ui.map.events/clear-ordered-segments]]]}))
+  ::cleanup-ordered-segments-mode
+  (fn [{:keys [db]} _]
+    {:fx [[:dispatch [:lipas.ui.map.events/clear-ordered-segments]]]}))
 
 (rf/reg-event-fx
- ::calculate-route-order-suggestion
- (fn [{:keys [db]} [_ lipas-id activity-type]]
-   {:db (-> db
-            (assoc-in [:route-ordering :loading?] true)
-            (assoc-in [:route-ordering :error] nil))
-    :http-xhrio {:method :post
-                 :uri "/api/actions/suggest-route-order"
-                 :params {:lipas-id (js/parseInt lipas-id)
-                          :activity-type activity-type}
-                 :format (ajax/json-request-format)
-                 :response-format (ajax/json-response-format {:keywords? true})
-                 :on-success [::calculate-route-order-suggestion-success]
-                 :on-failure [::calculate-route-order-suggestion-failure]}}))
+  ::calculate-route-order-suggestion
+  (fn [{:keys [db]} [_ lipas-id activity-type]]
+    {:db (-> db
+             (assoc-in [:route-ordering :loading?] true)
+             (assoc-in [:route-ordering :error] nil))
+     :http-xhrio {:method :post
+                  :uri "/api/actions/suggest-route-order"
+                  :params {:lipas-id (js/parseInt lipas-id)
+                           :activity-type activity-type}
+                  :format (ajax/json-request-format)
+                  :response-format (ajax/json-response-format {:keywords? true})
+                  :on-success [::calculate-route-order-suggestion-success]
+                  :on-failure [::calculate-route-order-suggestion-failure]}}))
 
 (rf/reg-event-fx
- ::calculate-route-order-suggestion-success
- (fn [{:keys [db]} [_ response]]
-   (if (:success response)
-     (let [raw-segments (:segments response)
+  ::calculate-route-order-suggestion-success
+  (fn [{:keys [db]} [_ response]]
+    (if (:success response)
+      (let [raw-segments (:segments response)
            ;; Ensure all segments have required fields
-           segments-with-ids (mapv (fn [seg idx]
-                                     (merge {:direction "forward" ; Default if missing
-                                             :order idx} ; Ensure order exists
-                                            seg
-                                            {:draggable-id (str "drag-" (or (:fid seg) (random-uuid)))}))
-                                   raw-segments
-                                   (range))
-           confidence (:confidence response)
-           warnings (:warnings response)]
-       {:db (-> db
-                (assoc-in [:route-ordering :loading?] false)
-                (assoc-in [:route-ordering :segments] segments-with-ids)
-                (assoc-in [:route-ordering :confidence] confidence)
-                (assoc-in [:route-ordering :warnings] warnings))
-        :fx [[:dispatch [:lipas.ui.map.events/set-ordered-segments segments-with-ids]]]})
-     {:db (-> db
-              (assoc-in [:route-ordering :loading?] false)
-              (assoc-in [:route-ordering :error] (or (:error response) "Failed to order segments")))})))
+            segments-with-ids (mapv (fn [seg idx]
+                                      (merge {:direction "forward" ; Default if missing
+                                              :order idx} ; Ensure order exists
+                                             seg
+                                             {:draggable-id (str "drag-" (or (:fid seg) (random-uuid)))}))
+                                    raw-segments
+                                    (range))
+            confidence (:confidence response)
+            warnings (:warnings response)]
+        {:db (-> db
+                 (assoc-in [:route-ordering :loading?] false)
+                 (assoc-in [:route-ordering :segments] segments-with-ids)
+                 (assoc-in [:route-ordering :confidence] confidence)
+                 (assoc-in [:route-ordering :warnings] warnings))
+         :fx [[:dispatch [:lipas.ui.map.events/set-ordered-segments segments-with-ids]]]})
+      {:db (-> db
+               (assoc-in [:route-ordering :loading?] false)
+               (assoc-in [:route-ordering :error] (or (:error response) "Failed to order segments")))})))
 
 (rf/reg-event-fx
- ::calculate-route-order-suggestion-failure
- (fn [{:keys [db]} [_ error]]
-   {:db (-> db
-            (assoc-in [:route-ordering :loading?] false)
-            (assoc-in [:route-ordering :error] (or (get-in error [:response :error])
-                                                   "Failed to load route data")))}))
+  ::calculate-route-order-suggestion-failure
+  (fn [{:keys [db]} [_ error]]
+    {:db (-> db
+             (assoc-in [:route-ordering :loading?] false)
+             (assoc-in [:route-ordering :error] (or (get-in error [:response :error])
+                                                    "Failed to load route data")))}))
 
 ;; Re-frame subscriptions
 (rf/reg-sub
- ::loading?
- (fn [db _]
-   (get-in db [:route-ordering :loading?])))
+  ::loading?
+  (fn [db _]
+    (get-in db [:route-ordering :loading?])))
 
 (rf/reg-sub
- ::error
- (fn [db _]
-   (get-in db [:route-ordering :error])))
+  ::error
+  (fn [db _]
+    (get-in db [:route-ordering :error])))
 
 (rf/reg-sub
- ::segments
- (fn [db _]
-   (get-in db [:route-ordering :segments])))
+  ::segments
+  (fn [db _]
+    (get-in db [:route-ordering :segments])))
 
 (rf/reg-sub
- ::confidence
- (fn [db _]
-   (get-in db [:route-ordering :confidence])))
+  ::confidence
+  (fn [db _]
+    (get-in db [:route-ordering :confidence])))
 
 (rf/reg-sub
- ::warnings
- (fn [db _]
-   (get-in db [:route-ordering :warnings])))
+  ::warnings
+  (fn [db _]
+    (get-in db [:route-ordering :warnings])))
 
 (defui segment-item
   "Displays a single draggable segment with its order and direction"
@@ -132,15 +132,15 @@
 
     ($ ListItem
        (merge
-        {:ref (when provided (.-innerRef provided))
-         :divider true
-         :sx #js {:py 2
-                  :backgroundColor (if isDragging "action.hover" "inherit")
-                  :transform (if isDragging "scale(1.02)" "none")
-                  :boxShadow (if isDragging 3 0)
-                  :transition "all 0.2s ease"
-                  :opacity (if disabled 0.6 1)}}
-        draggable-props)
+         {:ref (when provided (.-innerRef provided))
+          :divider true
+          :sx #js {:py 2
+                   :backgroundColor (if isDragging "action.hover" "inherit")
+                   :transform (if isDragging "scale(1.02)" "none")
+                   :boxShadow (if isDragging 3 0)
+                   :transition "all 0.2s ease"
+                   :opacity (if disabled 0.6 1)}}
+         draggable-props)
 
        ;; Drag handle
        ($ ListItemIcon
@@ -235,11 +235,11 @@
                                       ;; Re-index all segments with their new positions
                                       reordered (into []
                                                       (map-indexed
-                                                       (fn [idx seg]
-                                                         (assoc seg :order idx))
-                                                       (concat (subvec without-moved 0 dest-idx)
-                                                               [moved-segment]
-                                                               (subvec without-moved dest-idx))))]
+                                                        (fn [idx seg]
+                                                          (assoc seg :order idx))
+                                                        (concat (subvec without-moved 0 dest-idx)
+                                                                [moved-segment]
+                                                                (subvec without-moved dest-idx))))]
                                   ;; Call parent callback
                                   (when on-segments-change
                                     (on-segments-change reordered)))))))]
@@ -321,62 +321,62 @@
                     (let [droppable-props (js->clj (.-droppableProps provided) :keywordize-keys true)]
                       ($ List
                          (merge
-                          {:ref (.-innerRef provided)
-                           :sx #js {:backgroundColor (if (.-isDraggingOver snapshot)
-                                                       "action.hover"
-                                                       "inherit")
-                                    :transition "background-color 0.2s ease"}}
-                          droppable-props)
+                           {:ref (.-innerRef provided)
+                            :sx #js {:backgroundColor (if (.-isDraggingOver snapshot)
+                                                        "action.hover"
+                                                        "inherit")
+                                     :transition "background-color 0.2s ease"}}
+                           droppable-props)
 
                          ;; Render draggable segments
                          (map-indexed
-                          (fn [idx segment]
-                            ($ Draggable
-                               {:key (:draggable-id segment)
-                                :draggableId (:draggable-id segment)
-                                :index idx}
-                               (fn [provided snapshot]
-                                 ($ segment-item
-                                    {:segment segment
-                                     :index idx
-                                     :provided provided
-                                     :isDragging (.-isDragging snapshot)
-                                     :disabled read-only?
-                                     :on-toggle-direction (fn [idx]
-                                                            (let [updated (update (vec segments) idx
-                                                                                  (fn [seg]
-                                                                                    (assoc seg :direction
-                                                                                           (if (= (:direction seg) "backward")
-                                                                                             "forward"
-                                                                                             "backward"))))]
-                                                              (when on-segments-change
-                                                                (on-segments-change updated))))
-                                     :on-duplicate (fn [idx]
-                                                     (let [segment (nth segments idx)
-                                                           duplicated (assoc segment
-                                                                             :draggable-id (str "drag-" (random-uuid)))
+                           (fn [idx segment]
+                             ($ Draggable
+                                {:key (:draggable-id segment)
+                                 :draggableId (:draggable-id segment)
+                                 :index idx}
+                                (fn [provided snapshot]
+                                  ($ segment-item
+                                     {:segment segment
+                                      :index idx
+                                      :provided provided
+                                      :isDragging (.-isDragging snapshot)
+                                      :disabled read-only?
+                                      :on-toggle-direction (fn [idx]
+                                                             (let [updated (update (vec segments) idx
+                                                                                   (fn [seg]
+                                                                                     (assoc seg :direction
+                                                                                            (if (= (:direction seg) "backward")
+                                                                                              "forward"
+                                                                                              "backward"))))]
+                                                               (when on-segments-change
+                                                                 (on-segments-change updated))))
+                                      :on-duplicate (fn [idx]
+                                                      (let [segment (nth segments idx)
+                                                            duplicated (assoc segment
+                                                                              :draggable-id (str "drag-" (random-uuid)))
                                                            ;; Re-index all segments including the new duplicate
+                                                            updated (into []
+                                                                          (map-indexed
+                                                                            (fn [new-idx seg]
+                                                                              (assoc seg :order new-idx))
+                                                                            (concat (take (inc idx) segments)
+                                                                                    [duplicated]
+                                                                                    (drop (inc idx) segments))))]
+                                                        (when on-segments-change
+                                                          (on-segments-change updated))))
+                                      :on-delete (fn [idx]
+                                                   (when (> (count segments) 1)
+                                                     (let [;; Re-index remaining segments
                                                            updated (into []
                                                                          (map-indexed
-                                                                          (fn [new-idx seg]
-                                                                            (assoc seg :order new-idx))
-                                                                          (concat (take (inc idx) segments)
-                                                                                  [duplicated]
-                                                                                  (drop (inc idx) segments))))]
+                                                                           (fn [new-idx seg]
+                                                                             (assoc seg :order new-idx))
+                                                                           (concat (take idx segments)
+                                                                                   (drop (inc idx) segments))))]
                                                        (when on-segments-change
-                                                         (on-segments-change updated))))
-                                     :on-delete (fn [idx]
-                                                  (when (> (count segments) 1)
-                                                    (let [;; Re-index remaining segments
-                                                          updated (into []
-                                                                        (map-indexed
-                                                                         (fn [new-idx seg]
-                                                                           (assoc seg :order new-idx))
-                                                                         (concat (take idx segments)
-                                                                                 (drop (inc idx) segments))))]
-                                                      (when on-segments-change
-                                                        (on-segments-change updated)))))}))))
-                          segments)
+                                                         (on-segments-change updated)))))}))))
+                           segments)
 
                          ;; Placeholder
                          (.-placeholder provided))))))
