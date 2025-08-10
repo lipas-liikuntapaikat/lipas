@@ -260,7 +260,7 @@
                                (fn [f] (==> [::events/new-geom-drawn f])))
       :editing (-> map-ctx
                    (cond->
-                     (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
+                    (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                    (start-editing! geoms on-modify))
       :deleting (enable-delete! map-ctx on-modify)
       :splitting (enable-splitting! map-ctx geoms on-modify)
@@ -309,12 +309,13 @@
 (defn set-view-only-edit-mode!
   [{:keys [layers] :as map-ctx} {:keys [geoms]}]
   (let [^js layer (-> layers :overlays :edits)
-        source (.getSource layer)
-        _ (.clear source)
-        features (-> geoms clj->js map-utils/->ol-features)]
-
-    (.addFeatures source features)
-
+        source (.getSource layer)]
+    ;; Clear the source first
+    (.clear source)
+    ;; Only add features if geoms is not null
+    (when geoms
+      (let [features (-> geoms clj->js map-utils/->ol-features)]
+        (.addFeatures source features)))
     map-ctx))
 
 (defn set-travel-direction-edit-mode!
@@ -420,6 +421,7 @@
                      map-utils/clear-problems!
                      map-utils/clear-population!
                      map-utils/clear-highlights!
+                     map-utils/clear-ordered-segments! ;; Clear ordered segments when switching sub-modes
                      map-utils/enable-marker-hover!)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
@@ -456,9 +458,8 @@
                                   (set-route-part-difficulty-edit-mode mode))
        :ordered-segments (-> map-ctx
                              (set-ordered-segments-edit-mode! mode))
-       (do
-         (js/console.warn "Unknown sub-mode: " sub-mode)
-         map-ctx)))))
+       ;; Unknown sub-mode - return map-ctx unchanged
+       map-ctx))))
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]

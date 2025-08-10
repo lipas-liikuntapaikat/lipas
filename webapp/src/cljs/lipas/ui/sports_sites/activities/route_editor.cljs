@@ -21,27 +21,28 @@
 (defui route-editor-mode-selector
   "Toggle between selection and ordering modes"
   [{:keys [mode on-mode-change disabled]}]
-  ($ Box {:sx #js {:mb 2}}
-     ($ ToggleButtonGroup
-        {:value mode
-         :exclusive true
-         :onChange (fn [_ new-mode]
-                     (when new-mode
-                       (on-mode-change new-mode)))
-         :size "small"
-         :disabled disabled}
+  (let [tr (use-subscribe [:lipas.ui.subs/translator])]
+    ($ Box {:sx #js {:mb 2}}
+       ($ ToggleButtonGroup
+          {:value mode
+           :exclusive true
+           :onChange (fn [_ new-mode]
+                       (when new-mode
+                         (on-mode-change new-mode)))
+           :size "small"
+           :disabled disabled}
 
-        ($ ToggleButton
-           {:value "select"
-            :sx #js {:px 3}}
-           ($ TouchAppIcon {:sx #js {:mr 1 :fontSize "small"}})
-           "Select segments")
+          ($ ToggleButton
+             {:value "select"
+              :sx #js {:px 3}}
+             ($ TouchAppIcon {:sx #js {:mr 1 :fontSize "small"}})
+             (tr :route/select-segments))
 
-        ($ ToggleButton
-           {:value "order"
-            :sx #js {:px 3}}
-           ($ FormatListNumberedIcon {:sx #js {:mr 1 :fontSize "small"}})
-           "Order segments"))))
+          ($ ToggleButton
+             {:value "order"
+              :sx #js {:px 3}}
+             ($ FormatListNumberedIcon {:sx #js {:mr 1 :fontSize "small"}})
+             (tr :route/order-segments))))))
 
 (defui route-selection-mode
   "UI for selecting route segments on the map"
@@ -114,7 +115,7 @@
              {:variant "outlined"
               :onClick on-cancel
               :disabled saving?}
-             (tr :general/cancel "Cancel"))))))
+             (tr :actions/cancel "Cancel"))))))
 
 (defui integrated-route-editor-ui
   "Main component that integrates selection and ordering workflows"
@@ -137,42 +138,69 @@
         ;; Track if segments have been manually edited
         [manually-edited? set-manually-edited!] (uix/use-state false)
 
+;; Track previous route ID to detect actual route changes
+        prev-route-id-ref (uix/use-ref nil)
+
+        ;; Extract route ID to avoid linter warnings and prevent unnecessary triggers
+        route-id (:id route)
+
+        ;; Clear ordered segments when route changes
+        _ (uix/use-effect
+           (fn []
+             (let [prev-route-id (.-current prev-route-id-ref)]
+               ;; Only clear if route ID actually changed from a non-nil value
+               (when (and prev-route-id
+                          route-id
+                          (not= prev-route-id route-id))
+                 ;; Clear ordered segments from map state
+                 (==> [:lipas.ui.map.events/clear-ordered-segments])
+                 ;; Clear selected features to avoid ghost segments
+                 (==> [:lipas.ui.map.events/clear-selected-features])
+                 ;; Reset local state
+                 (set-segments! nil)
+                 (set-editor-mode! "select")
+                 (set-manually-edited! false))
+
+               ;; Update ref with current route ID
+               (when route-id
+                 (set! (.-current prev-route-id-ref) route-id))))
+           [route-id]) ; Depend on route ID to trigger when switching routes
+
         ;; When switching to order mode, use ordered segments from map if available,
         ;; otherwise create from selected features
         _ (uix/use-effect
-            (fn []
-              (println "editor mode" editor-mode)
-              (when (= editor-mode "order")
-                (cond
+           (fn []
+             (when (= editor-mode "order")
+               (cond
                  ;; Use existing ordered segments if available
-                  (seq ordered-segments-from-map)
-                  (let [segments-with-ids (mapv (fn [seg]
-                                                  (if (:draggable-id seg)
-                                                    seg
-                                                    (assoc seg :draggable-id (str "drag-" (random-uuid)))))
-                                                ordered-segments-from-map)]
-                    (set-segments! segments-with-ids))
+                 (seq ordered-segments-from-map)
+                 (let [segments-with-ids (mapv (fn [seg]
+                                                 (if (:draggable-id seg)
+                                                   seg
+                                                   (assoc seg :draggable-id (str "drag-" (random-uuid)))))
+                                               ordered-segments-from-map)]
+                   (set-segments! segments-with-ids))
 
                  ;; Otherwise create from selected features
-                  (seq selected-fids)
-                  (let [selected-segments (mapv (fn [fid idx]
-                                                  {:fid fid ; Consistently use :fid
-                                                   :name (str "Segment " (inc idx))
-                                                   :order idx
-                                                   :direction "forward" ; Add default direction
-                                                   :draggable-id (str "drag-" (random-uuid))})
-                                                selected-fids
-                                                (range))]
-                    (==> [::ordering/initialize-ordered-segments-mode lipas-id selected-segments])
-                    (set-segments! selected-segments)))))
-            [editor-mode lipas-id selected-fids ordered-segments-from-map manually-edited?])
+                 (seq selected-fids)
+                 (let [selected-segments (mapv (fn [fid idx]
+                                                 {:fid fid ; Consistently use :fid
+                                                  :name (str "Segment " (inc idx))
+                                                  :order idx
+                                                  :direction "forward" ; Add default direction
+                                                  :draggable-id (str "drag-" (random-uuid))})
+                                               selected-fids
+                                               (range))]
+                   (==> [::ordering/initialize-ordered-segments-mode lipas-id selected-segments])
+                   (set-segments! selected-segments)))))
+           [editor-mode lipas-id selected-fids ordered-segments-from-map manually-edited?])
 
         ;; Reset manual edit flag when switching back to select mode
         _ (uix/use-effect
-            (fn []
-              (when (= editor-mode "select")
-                (set-manually-edited! false)))
-            [editor-mode])
+           (fn []
+             (when (= editor-mode "select")
+               (set-manually-edited! false)))
+           [editor-mode])
 
         ;; Handle segment changes from child component
         handle-segments-change (fn [new-segments]
@@ -190,20 +218,20 @@
                       ;; Extract fids in order (using :fid key)
                       (let [ordered-fids (mapv :fid ordered-segments)]
                         (on-save
-                          (assoc route
-                                 :segments ordered-segments ; Include full segment data
-                                 :fids ordered-fids ; For backwards compatibility
-                                 :ordering-method "manual")
-                          (fn []
-                            (set-saving! false)
-                            (set-save-success! true)
-                            (when success-fn (success-fn))
+                         (assoc route
+                                :segments ordered-segments ; Include full segment data
+                                :fids ordered-fids ; For backwards compatibility
+                                :ordering-method "manual")
+                         (fn []
+                           (set-saving! false)
+                           (set-save-success! true)
+                           (when success-fn (success-fn))
                            ;; Clear success message after 3 seconds
-                            (js/setTimeout #(set-save-success! false) 3000))
-                          (fn [error]
-                            (set-saving! false)
-                            (set-save-error! (or (:message error) "Failed to save route"))
-                            (when error-fn (error-fn))))))
+                           (js/setTimeout #(set-save-success! false) 3000))
+                         (fn [error]
+                           (set-saving! false)
+                           (set-save-error! (or (:message error) "Failed to save route"))
+                           (when error-fn (error-fn))))))
 
         ;; Handle cancel with confirmation
         handle-cancel (fn []
@@ -212,15 +240,15 @@
                           (on-cancel)))]
 
     (uix/use-effect
-      (fn []
-        (println "Route editor mount")
+     (fn []
        ;; Start map editing when component mounts
-        #_(==> [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"])
+       (==> [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"])
        ;; Cleanup on unmount
-        (fn []
-          (println "Route editor unmount")
-          (==> [:lipas.ui.map.events/continue-editing])))
-      [lipas-id])
+       (fn []
+         ;; Clear ordered segments when unmounting
+         (==> [:lipas.ui.map.events/clear-ordered-segments])
+         (==> [:lipas.ui.map.events/continue-editing])))
+     [lipas-id])
 
     ($ Paper {:sx #js {:p 3}}
        ($ Typography
@@ -311,7 +339,7 @@
                   ($ Button
                      {:variant "outlined"
                       :onClick #(set-show-discard-dialog! false)}
-                     (tr :general/cancel "Cancel"))
+                     (tr :actions/cancel "Cancel"))
                   ($ Button
                      {:variant "contained"
                       :color "error"
@@ -323,4 +351,4 @@
 ;; Reagent wrapper for use in Reagent components
 (defn integrated-route-editor [props]
   (r/as-element
-    ($ integrated-route-editor-ui props)))
+   ($ integrated-route-editor-ui props)))

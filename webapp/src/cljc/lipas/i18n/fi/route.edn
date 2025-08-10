@@ -1,4 +1,8 @@
 {:headline "Reitit",
+ :route-mode "Reittitila",
+ :add-new-route "Lisää reitti"
+ :selection-mode-info "Valitset reitin osia. Haluatko muokata itse polkua?",
+ :edit-geometry "Muokkaa geometriaa",
  :name "Reitin nimi",
  :length-km "Pituus",
  :simple-mode-help "Yksinkertainen tila: Yksi reitti käyttää kaikkia osia automaattisesti",
@@ -13,9 +17,11 @@
  :discard-title "Hylätäänkö muutokset?",
  :discard-message "Sinulla on tallentamattomia muutoksia. Haluatko varmasti hylätä ne?",
  :discard "Hylkää",
+ :select-segments "Valitse osat"
+ :order-segments "Järjestä osat"
  :selection-mode-title "Valitse reitin osat",
  :no-segments-selected "Klikkaa reitin osia kartalta valitaksesi ne",
- :segments-selected "%s valittu",
+ :segments-selected "{1} valittu",
  :continue-to-ordering "Jatka järjestämiseen",
  :clear-selection "Tyhjennä valinta",
  :order-segments-title "Reitin osien järjestys",

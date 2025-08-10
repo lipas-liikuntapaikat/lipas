@@ -78,7 +78,7 @@
 
 (defn compile-cljs
   []
-  (shadow/compile :app))
+  (shadow/watch-compile! :app))
 
 (comment
   (go)

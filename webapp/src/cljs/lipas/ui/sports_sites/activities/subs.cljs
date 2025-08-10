@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.activities.subs
-  (:require [lipas.roles :as roles]
+  (:require [clojure.set]
+            [lipas.roles :as roles]
             [lipas.ui.map.utils :as map-utils]
             [re-frame.core :as rf]))
 
@@ -63,54 +64,34 @@
 (rf/reg-sub ::routes
   (fn [[_ lipas-id _]]
     [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
-     #_(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
-  (fn [[edit-data #_display-data] [_ _lipas-id activity-k]]
+     (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])])
+  (fn [[edit-data display-data] [_ _lipas-id activity-k]]
+    ;; Use edit-data if available, otherwise use display-data
+    (let [sports-site (or edit-data display-data)
+          routes (get-in sports-site [:activities activity-k :routes] [])]
 
-   ;; Apply logic to allow "easy first entry" of data
+      ;; Apply logic to allow "easy first entry" of data only when editing
+      (if edit-data
+        (condp = (count routes)
+          ;; No routes (yet).
+          ;; Generate first empty "route", assume no sub-routes
+          ;; (all segments belong to this route)
+          0 (let [all-fids (-> sports-site
+                               :location
+                               :geometries
+                               :features
+                               (->> (map :id))
+                               set)]
+              [{:id (str (random-uuid))
+                :route-name {:fi (:name sports-site)
+                             :se (get-in sports-site [:name-localized :se])
+                             :en (:name sports-site)}
+                :fids all-fids}])
 
-    (let [routes (get-in edit-data [:activities activity-k :routes] [])
-          routes (condp = (count routes)
-
-                  ;; No routes (yet).
-                  ;; Generate first empty "route", assume no sub-routes
-                  ;; (all segments belong to this route)
-                   0 [{:id (str (random-uuid))
-
-                       :route-name {:fi (:name edit-data)
-                                    :se (get-in edit-data [:name-localized :se])
-                                    :en (:name edit-data)}
-
-                       :fids (-> edit-data
-                                 :location
-                                 :geometries
-                                 :features
-                                 (->> (map :id))
-                                 set)}]
-
-                  ;; Single route, assume no sub-routes
-                  ;; (all segments belong to this route)
-                   #_#_1 (assoc-in routes [0 :fids] (-> edit-data
-                                                        :location
-                                                        :geometries
-                                                        :features
-                                                        (->> (map :id))
-                                                        set))
-
-                  ;; Multiple routes, don't assume anything about sub-routes,
-                  ;; let the user decide
-                   routes)]
-
-     ;; Calc route/sub-route lengths from segments
-      (for [{:keys [fids] :as route} routes]
-        (let [fids  (set fids)
-              fcoll (-> edit-data
-                        :location
-                        :geometries
-                        (update :features (fn [fs]
-                                            (filterv #(contains? fids (:id %)) fs))))]
-          (-> route
-              (assoc :route-length (map-utils/calculate-length-km fcoll))
-              (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
+          ;; Multiple routes or single route, don't modify
+          routes)
+        ;; In read-only mode, just return routes as-is
+        routes))))
 
 (rf/reg-sub ::selected-route-id
   :<- [::activities]
@@ -119,7 +100,7 @@
 
 (rf/reg-sub ::lipas-prop-value
   :<- [:lipas.ui.map.subs/selected-sports-site]
-  (fn [site-data  [_ prop-k read-only?]]
+  (fn [site-data [_ prop-k read-only?]]
     ;; NOTE: This returns quite different data for most properties because
     ;; display and edit data have different schema
     (if read-only?
@@ -145,21 +126,62 @@
     (or (get-in activities [:field-sorters activity-k])
         (get-in activities [:field-sorters :default]))))
 
-
-
 (rf/reg-sub ::route-itrs-classification?
-            (fn [[_ lipas-id type-code]]
-              (println "lipas-id" lipas-id "type code" type-code)
-              [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
-               (rf/subscribe [::activity-value-for-type-code type-code])
-               (rf/subscribe [::selected-route-id lipas-id])])
-            (fn [[site activity-k route-id] _]
-              (println "Activity" activity-k "route-id" route-id)
-              (when (and site activity-k)
-                (let [routes (get-in site [:activities (keyword activity-k) :routes] [])]
-                  (println (first routes))
-                  (if route-id
-                    (some #(when (= (:id %) route-id)
-                             (:itrs-classification? %))
-                          routes)
-                    (:itrs-classification? (first routes)))))))
+  (fn [[_ lipas-id type-code]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [::activity-value-for-type-code type-code])
+     (rf/subscribe [::selected-route-id lipas-id])])
+  (fn [[site activity-val route-id] _]
+    (when (and site activity-val)
+      (let [routes (get-in site [:activities (keyword activity-val) :routes] [])]
+        (if route-id
+          (some #(when (= (:id %) route-id)
+                   (:itrs-classification? %))
+                routes)
+          (:itrs-classification? (first routes)))))))
+
+(rf/reg-sub ::route-with-calculated-length
+  (fn [[_ lipas-id activity-k route-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [::routes lipas-id activity-k])])
+  (fn [[editing display routes] [_ _lipas-id _activity-k route-id]]
+    (when-let [route (first (filter #(= (:id %) route-id) routes))]
+                ;; Use editing data if available, otherwise fall back to display data
+      (let [sports-site (or editing display)
+            geometries (get-in sports-site [:location :geometries])
+            filtered-geoms (when (and geometries (:fids route))
+                             (update geometries :features
+                                     (fn [features]
+                                       (filterv #(contains? (:fids route) (:id %)) features))))
+            length-km (if (and filtered-geoms (seq (:features filtered-geoms)))
+                        (map-utils/calculate-length-km filtered-geoms)
+                        0)]
+        (assoc route :route-length-km length-km)))))
+
+(rf/reg-sub ::routes-with-calculated-lengths
+  (fn [[_ lipas-id activity-k]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [::routes lipas-id activity-k])])
+  (fn [[editing display routes] _]
+    ;; Use editing data if available, otherwise fall back to display data
+    (let [sports-site (or editing display)
+          geometries (get-in sports-site [:location :geometries])
+          all-features (get geometries :features [])]
+      (mapv (fn [route]
+              (let [route-fids (:fids route)
+                    filtered-geoms (when (and geometries route-fids)
+                                     (update geometries :features
+                                             (fn [features]
+                                               (let [feature-ids (set (map :id features))
+                                                     fids-set (if (set? route-fids)
+                                                                route-fids
+                                                                (set route-fids))
+                                                     filtered (filterv #(contains? fids-set (:id %)) features)]
+                                                 filtered))))
+                    length-km (if (and filtered-geoms (seq (:features filtered-geoms)))
+                                (map-utils/calculate-length-km filtered-geoms)
+                                0)]
+                (assoc route :route-length-km length-km)))
+            routes))))

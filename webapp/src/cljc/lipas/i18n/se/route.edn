@@ -1,4 +1,8 @@
 {:headline "Rutter",
+ :route-mode "Ruttläge",
+ :add-new-route "Lägg till ny rutt"
+ :selection-mode-info "Du väljer segment för att definiera rutter. Behöver du ändra själva leden?",
+ :edit-geometry "Redigera geometri",
  :name "Ruttnamn",
  :length-km "Längd",
  :simple-mode-help "Enkelt läge: En rutt använder alla segment automatiskt",
@@ -13,6 +17,8 @@
  :discard-title "Kasta ändringar?",
  :discard-message "Du har osparade ändringar. Är du säker på att du vill kasta dem?",
  :discard "Kasta",
+ :select-segments "Välj segment"
+ :order-segments "Ordna segment"
  :selection-mode-title "Välj ruttsegment",
  :no-segments-selected "Klicka på ruttsegment på kartan för att välja dem",
  :segments-selected "%s valda",

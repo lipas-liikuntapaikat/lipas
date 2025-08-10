@@ -1,4 +1,8 @@
 {:headline "Routes",
+ :route-mode "Route Mode",
+ :add-new-route "Add new route"
+ :selection-mode-info "You're selecting segments to define routes. Need to modify the trail itself?",
+ :edit-geometry "Edit Geometry",
  :name "Route name",
  :length-km "Length",
  :simple-mode-help "Simple mode: One route uses all segments automatically",
@@ -13,6 +17,8 @@
  :discard-title "Discard changes?",
  :discard-message "You have unsaved changes. Are you sure you want to discard them?",
  :discard "Discard",
+ :select-segments "Select segments"
+ :order-segments "Order segments"
  :selection-mode-title "Select Route Segments",
  :no-segments-selected "Click on route segments on the map to select them",
  :segments-selected "%s selected",

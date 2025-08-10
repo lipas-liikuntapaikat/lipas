@@ -447,7 +447,7 @@
                                                                      #js {:src (if hover?
                                                                                  arrow-hover-icon
                                                                                  arrow-icon)
-                                                                          :scale 0.5
+                                                                          :scale 0.9
                                                                           :rotation (- final-rotation)
                                                                           :anchor #js [0.75 0.5]
                                                                           :rotateWithView true})

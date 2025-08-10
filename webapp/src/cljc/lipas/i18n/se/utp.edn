@@ -1,24 +1,31 @@
 {:add-contact "Lägg till kontaktuppgift",
+ :add-first-route "Lägg till första rutten",
  :add-highlight "Lägg till höjdpunkt",
  :add-photo "Lägg till foto",
+ :add-route "Lägg till rutt",
  :add-subroute "Lägg till delrutt",
  :add-subroute-ok "OK",
  :add-video "Lägg till video",
  :custom-rule "Egna tillstånd, regler, anvisningar",
  :custom-rules "Egen regler",
+ :delete-route "Ta bort rutt"
  :delete-route-prompt
  "Är du säker på att du vill ta bort den här rutten?",
+ :edit-routes "Redigera rutter",
  :finish-route-details "Rutt färdig",
  :headline "Aktiviteter",
  :highlight "Höjdpunkt",
  :length-km "Längd km",
  :link "Länk",
+ :new-route "Ny rutt",
  :order-segments "Ordna delar",
  :photo "Foto",
  :read-only-disclaimer
  "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen.",
+ :route "Rutt",
  :route-is-made-of-subroutes
  "Rutten består av flera separata sektioner",
+ :select-route "Välj rutt",
  :select-route-parts-on-map "Välj ruttdelar på kartan",
  :unit "enhet",
  :video "Video"}

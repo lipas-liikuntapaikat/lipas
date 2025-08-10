@@ -9,8 +9,6 @@
             [lipas.ui.config :as config]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
-            [lipas.ui.sports-sites.activities.route-editor :as route-editor]
-            [lipas.ui.sports-sites.activities.route-ordering :as route-ordering]
             [lipas.ui.sports-sites.activities.subs :as subs]
             [lipas.ui.sports-sites.subs :as sports-sites-subs]
             [lipas.ui.sports-sites.views :as sports-sites-views]
@@ -27,7 +25,7 @@
 
 (defn nice-form
   [props children]
-  [mui/grid {:container true :spacing 4}
+  [mui/grid {:container true :spacing 2 :sx #js{:pt 2}}
    (doall
     (for [[idx child] (map vector (range) children)]
       [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
@@ -870,13 +868,18 @@
 (def independent-entity-ks
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
-(defn route-form
+;; Route attribute components (geometry editing is in routes tab)
+
+(defn route-attributes-form
+  "Form for editing route metadata/attributes (not geometry)"
   [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
-          :when (or (nil? show)
-                    (show {:type-code type-code}))]
+          :when (and (or (nil? show)
+                         (show {:type-code type-code}))
+                     ;; Exclude geometry-related fields - these are in Routes tab
+                     (not (#{:fids :segments :ordering-method :geometries} prop-k)))]
       (when-not (and
                  (contains? route-props :independent-entity)
                  (not (:independent-entity @state))
@@ -895,47 +898,61 @@
                          (swap! state assoc-in path v)))
           :lipas-id lipas-id}])))])
 
-(defn single-route
-  [{:keys [read-only? route-props lipas-id type-code route activity-k
-           locale _label _description _set-field set-field]
-    :as props}]
-  (r/with-let [route-form-state (r/atom route)
-               ordering-mode (r/atom true)
-               _ (add-watch route-form-state :lol
-                            (fn [_key _atom _old-state new-state]
-                              (set-field [new-state])))]
+(defn route-selector
+  "Simple dropdown to select which route to view/edit in Activities tab"
+  [{:keys [routes selected-route-id on-select locale tr]}]
+  (when (> (count routes) 1)
+    [mui/grid {:item true :xs 12}
+     [lui/select
+      {:label (tr :utp/select-route)
+       :items routes
+       :value selected-route-id
+       :label-fn (fn [route]
+                   (let [name (get-in route [:route-name locale])
+                         length (:route-length-km route)]
+                     (if (and name length)
+                       (str name " (" length " km)")
+                       (or name
+                           (str (tr :utp/route) " " (inc (.indexOf routes route)))))))
+       :value-fn :id
+       :on-change on-select}]]))
 
+(defn single-route-attributes
+  "Simplified single route editor - attributes only, no geometry"
+  [{:keys [read-only? route-props lipas-id type-code route activity-k
+           locale _label _description _set-field set-field]}]
+  (r/with-let [route-form-state (r/atom route)
+               ;; Add watcher for auto-save on changes (only in edit mode)
+               _ (when-not read-only?
+                   (add-watch route-form-state :sync-route
+                              (fn [_key _atom old-state new-state]
+                                ;; Use the same approach as multiple-route-attributes for consistency
+                                ;; This ensures routes remain as a vector, not a plain map
+                                (when (and (not= old-state new-state)
+                                           (:id new-state))
+                                  (==> [::events/save-route-attributes
+                                        {:lipas-id lipas-id
+                                         :activity-k activity-k
+                                         :route-id (:id new-state)
+                                         :attributes new-state}])))))]
     (let [tr (<== [:lipas.ui.subs/translator])
           field-sorter (<== [::subs/field-sorter activity-k])
-          fids (<== [::subs/selected-features])
-          editing? (not read-only?)
-          route-ordering? @ordering-mode]
+          ;; Get route with calculated length
+          route-with-length (<== [::subs/route-with-calculated-length lipas-id activity-k (:id route)])]
+
+      ;; Set persistent highlight for the single route
+      (when (and route-with-length (:fids route-with-length) (seq (:fids route-with-length)))
+        (==> [:lipas.ui.map.events/highlight-route-features lipas-id (:fids route-with-length)]))
 
       [:<>
-       (when (and editing? route-ordering?)
-         [mui/grid {:item true :xs 12}
-          [route-editor/integrated-route-editor
-             {:lipas-id lipas-id
-              :activity-k activity-k
-              :locale locale
-              :read-only? read-only?
-              :route (merge @route-form-state
-                            {:fids fids
-                             :id (str (random-uuid))})
-              :on-save (fn [route success-fn error-fn]
-                         (==> [::events/finish-route-details
-                               {:fids (:fids route)
-                                :activity-k activity-k
-                                :id (:id route)
-                                :route (dissoc route :fids :id)
-                                :lipas-id lipas-id}])
-                         (reset! ordering-mode false)
-                         (when success-fn (success-fn)))
-              :on-cancel (fn []
-                           (==> [::events/cancel-route-details])
-                           (reset! ordering-mode false))}]])
+       ;; Show route name and length
+       [mui/grid {:item true :xs 12}
+        [mui/typography {:variant "h6"}
+         (str (get-in route-with-length [:route-name locale] (tr :utp/route))
+              (when-let [length (:route-length-km route-with-length)]
+                (str " (" length " km)")))]]
 
-       [route-form
+       [route-attributes-form
         {:locale locale
          :tr tr
          :field-sorter field-sorter
@@ -943,97 +960,85 @@
          :type-code type-code
          :read-only? read-only?
          :route-props route-props
-         :state route-form-state}]])
+         :state route-form-state}]
 
+       ;; Link to geometry editing in Routes tab - only shown in edit mode
+       (when-not read-only?
+         [mui/grid {:item true :xs 12 :style {:margin-top "1em"}}
+          [mui/button
+           {:variant "contained"
+            :color "primary"
+            :start-icon (r/as-element [mui/icon "map"])
+            :on-click #(==> [:lipas.ui.sports-sites.events/switch-to-routes-tab lipas-id (:id route)])}
+           (tr :utp/edit-routes)]])])
     (finally
-      (remove-watch route-form-state :lol))))
+      (when-not read-only?
+        (remove-watch route-form-state :sync-route))
+      ;; Clear highlights when component unmounts
+      (==> [:lipas.ui.map.events/highlight-route-features lipas-id #{}]))))
 
-(defn multiple-routes
-  [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
-           locale label _description _set-field activity-k routes]
-    :as props}]
-  (r/with-let [route-form-state (r/atom {})
-               ordering-mode (r/atom false)]
+(defn multiple-route-attributes
+  "Multiple routes editor - attributes only, geometry editing in Routes tab"
+  [{:keys [read-only? route-props lipas-id type-code locale label
+           activity-k routes]}]
+  (r/with-let [selected-route-id (r/atom (or (:id (first routes))
+                                             (str (random-uuid))))
+               route-form-state (r/atom {})
+               ;; Add watcher for auto-save on changes (only in edit mode)
+               _ (when-not read-only?
+                   (add-watch route-form-state :sync-route
+                              (fn [_key _atom old-state new-state]
+                                ;; Only save if state actually changed and we have a selected route
+                                (when (and (not= old-state new-state)
+                                           @selected-route-id
+                                           (seq new-state))
+                                  (==> [::events/save-route-attributes
+                                        {:lipas-id lipas-id
+                                         :activity-k activity-k
+                                         :route-id @selected-route-id
+                                         :attributes new-state}])))))]
     (let [tr (<== [:lipas.ui.subs/translator])
-          mode (<== [::subs/mode])
-          fids (<== [::subs/selected-features])
-
-          selected-route-id (<== [::subs/selected-route-id])
-
           field-sorter (<== [::subs/field-sorter activity-k])
+          ;; Get routes with calculated lengths
+          routes-with-lengths (<== [::subs/routes-with-calculated-lengths lipas-id activity-k])
+          current-route (first (filter #(= (:id %) @selected-route-id) routes-with-lengths))]
 
-          editing? (not read-only?)
+      ;; Update form state when route selection changes
+      (reset! route-form-state (dissoc current-route :fids :segments))
 
-          ;; Check if we're in route ordering mode
-          route-ordering? @ordering-mode]
+      ;; Set persistent highlight for selected route
+      (when (and current-route (:fids current-route) (seq (:fids current-route)))
+        (==> [:lipas.ui.map.events/highlight-route-features lipas-id (:fids current-route)]))
 
       [:<>
+       ;; Route selector dropdown - visible in both read-only and edit modes
+       (when (seq routes-with-lengths)
+         [mui/grid {:item true :xs 12}
+          [mui/typography {:variant "h6" :style {:margin-bottom "0.5em"}}
+           (tr :utp/select-route)]
+          [route-selector
+           {:routes routes-with-lengths
+            :selected-route-id @selected-route-id
+            :on-select (fn [route-id]
+                         (reset! selected-route-id route-id)
+                         (let [route (first (filter #(= (:id %) route-id) routes-with-lengths))]
+                           (reset! route-form-state (dissoc route :fids :segments))
+                           ;; Update highlight to new route
+                           (if (and route (:fids route) (seq (:fids route)))
+                             (==> [:lipas.ui.map.events/highlight-route-features lipas-id (:fids route)])
+                             (==> [:lipas.ui.map.events/highlight-route-features lipas-id #{}]))))
+            :locale locale
+            :tr tr}]])
 
-       (when (= :default mode)
-         [:<>
-          (when (seq routes)
-            [mui/grid {:item true :xs 12}
-             [form-label {:label label}]
-             [lui/table
-              {:headers
-               [[:_route-name (tr :general/name)]
-                [:route-length (tr :utp/length-km)]]
-               :items (->> routes
-                           (mapv (fn [m]
-                                   (assoc m :_route-name (get-in m [:route-name locale])))))
-               :on-mouse-enter (fn [item]
-                                 (==> [:lipas.ui.map.events/highlight-features (:fids item)]))
-               :on-mouse-leave (fn [_]
-                                 (==> [:lipas.ui.map.events/highlight-features #{}]))
-
-               :on-select (fn [route]
-                            (==> [::events/select-route lipas-id (dissoc route :_route-name)])
-                            (reset! route-form-state (dissoc route :fids))
-                            (reset! ordering-mode true))}]])
-
-          (when-not read-only?
-            [mui/grid {:item true :xs 12}
-             [mui/button
-              {:variant "contained"
-               :color "secondary"
-               :style {:margin-top "0.5em" :margin-bottom "0.5em"}
-               :on-click (fn []
-                           (reset! route-form-state {})
-                           (reset! ordering-mode true)
-                           (==> [::events/add-route lipas-id activity-k]))}
-              (tr :utp/add-subroute)]])])
-
-       ;; Use integrated route editor for both add and edit modes
-       (when (and editing? (or (= :add-route mode)
-                               (and (= :route-details mode) route-ordering?)))
+       ;; Route attributes form for selected route
+       (when @selected-route-id
          [:<>
           [mui/grid {:item true :xs 12}
-           [route-editor/integrated-route-editor
-            {:lipas-id lipas-id
-             :activity-k activity-k
-             :locale locale
-             :read-only? read-only?
-             :route (merge @route-form-state
-                           {:fids fids
-                            :id (or selected-route-id (str (random-uuid)))})
-             :on-save (fn [route success-fn error-fn]
-                        (==> [::events/finish-route-details
-                              {:fids (:fids route)
-                               :activity-k activity-k
-                               :id (:id route)
-                               :route (dissoc route :fids :id)
-                               :lipas-id lipas-id}])
-                        (reset! ordering-mode false)
-                        (when success-fn (success-fn)))
-             :on-cancel (fn []
-                          (==> [::events/cancel-route-details])
-                          (reset! ordering-mode false))}]]])
+           [mui/typography {:variant "h6" :style {:margin-top "1em"}}
+            (or (get-in current-route [:route-name locale])
+                (tr :utp/new-route))]]
 
-       ;; Traditional route details form (when not in ordering mode)
-       (when (and editing? (= :route-details mode) (not route-ordering?))
-         [:<>
-
-          [route-form
+          [route-attributes-form
            {:locale locale
             :tr tr
             :field-sorter field-sorter
@@ -1043,84 +1048,74 @@
             :route-props route-props
             :state route-form-state}]
 
-          ;; Enable ordering button
-          [mui/grid {:item true :xs 12}
-           [mui/button
-            {:variant "outlined"
-             :color "primary"
-             :style {:margin-right "0.5em"}
-             :on-click #(reset! ordering-mode true)}
-            (tr :utp/order-segments)]]
+          ;; Action buttons - only shown in edit mode
+          (when-not read-only?
+            [mui/grid {:container true :spacing 1 :style {:margin-top "1em"}}
 
-          ;; Buttons
-          [mui/grid {:container true :spacing 1}
+             ;; Edit geometry in Routes tab
+             [mui/grid {:item true}
+              [mui/button
+               {:variant "contained"
+                :color "primary"
+                :start-icon (r/as-element [mui/icon "map"])
+                :on-click #(==> [:lipas.ui.sports-sites.events/switch-to-routes-tab
+                                 lipas-id @selected-route-id])}
+               (tr :utp/edit-routes)]]
 
-           ;; Done
-           [mui/grid {:item true}
-            [mui/button
-             {:variant "contained"
-              :color "secondary"
-              :on-click #(==> [::events/finish-route-details
-                               {:fids fids
-                                :activity-k activity-k
-                                :id selected-route-id
-                                :route @route-form-state
-                                :lipas-id lipas-id}])}
-             (tr :utp/finish-route-details)]]
-
-           ;; Delete
-           [mui/grid {:item true}
-            [mui/button
-             {:variant "contained"
-              :on-click #(==> [:lipas.ui.events/confirm
-                               (tr :utp/delete-route-prompt)
-                               (fn []
-                                 (==> [::events/delete-route lipas-id activity-k selected-route-id]))])}
-             (tr :actions/delete)]]
-
-           ;; Cancel
-           [mui/grid {:item true}
-            [mui/button
-             {:variant "contained"
-              :on-click #(==> [::events/cancel-route-details])}
-             (tr :actions/cancel)]]]])])
-
+             ;; Delete route
+             [mui/grid {:item true}
+              [mui/button
+               {:variant "outlined"
+                :color "error"
+                :on-click #(==> [:lipas.ui.events/confirm
+                                 (tr :utp/delete-route-prompt)
+                                 (fn []
+                                   (==> [::events/delete-route lipas-id activity-k
+                                         @selected-route-id]))])}
+               (tr :utp/delete-route)]]])])])
     (finally
-      (remove-watch route-form-state :lol))))
+      (when-not read-only?
+        (remove-watch route-form-state :sync-route))
+      ;; Clear highlights when component unmounts
+      (==> [:lipas.ui.map.events/highlight-route-features lipas-id #{}]))))
 
 (defn routes
+  "Main routes component for Activities tab - handles attributes only"
   [{:keys [read-only? _route-props lipas-id activity-k value
            _locale _label _description _set-field _type-code]
     :as props}]
   (let [tr (<== [:lipas.ui.subs/translator])
-        routes (if read-only?
-                 value
-                 (<== [::subs/routes lipas-id activity-k]))
-        default-route-view (if (> (count routes) 1)
-                             :multi
-                             :single)
-        selected-route-view (<== [::subs/route-view])
-        route-view (if read-only?
-                     default-route-view
-                     (or selected-route-view
-                         default-route-view))
-        route-count (count routes)]
+        ;; Always get routes with calculated lengths for display
+        routes (<== [::subs/routes-with-calculated-lengths lipas-id activity-k])
+        ;; Fall back to value if subscription returns empty (for read-only mode with no edit data)
+        routes-to-display (if (seq routes) routes value)
+        route-count (count routes-to-display)]
 
-    [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
+    [mui/grid {:container true :spacing 2}
 
-     ;; Hidden until UTP can support multi-tiered routes
-
-     (when-not read-only?
-       [mui/grid {:item true :xs 12}
-        [lui/switch {:label (tr :utp/route-is-made-of-subroutes)
-                     :value (= :multi route-view)
-                     :disabled (> route-count 1)
-                     :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
-
+     ;; Route view based on count
      [mui/grid {:item true :xs 12}
-      (case route-view
-        :single [single-route (assoc props :route (first routes))]
-        :multi [multiple-routes (assoc props :routes routes)])]]))
+      (cond
+        ;; No routes yet - redirect to Routes tab for creation
+        (= route-count 0)
+        [:<>
+         [mui/typography {:variant "body1" :style {:margin-bottom "0.5em"}}
+          (tr :utp/no-routes-yet)]
+         (when-not read-only?
+           [mui/button
+            {:variant "contained"
+             :color "secondary"
+             :start-icon (r/as-element [mui/icon "add_location"])
+             :on-click #(==> [:lipas.ui.sports-sites.events/switch-to-routes-tab lipas-id])}
+            (tr :utp/add-first-route)])]
+
+        ;; Single route - simple view
+        (= route-count 1)
+        [single-route-attributes (assoc props :route (first routes-to-display))]
+
+        ;; Multiple routes - list with selector
+        :else
+        [multiple-route-attributes (assoc props :routes routes-to-display)])]]))
 
 (defn lipas-property
   [{:keys [read-only? lipas-id lipas-prop-k label description]}]
@@ -1353,7 +1348,19 @@
         edit-data (or edit-data
                       ;; Should match the logic in ::edit-site which
                       ;; chooses which rev to base the edit-data on.
-                      @(rf/subscribe [::sports-sites-subs/latest-rev lipas-id]))]
+                      @(rf/subscribe [::sports-sites-subs/latest-rev lipas-id]))
+
+        ;; Check if there's any actual activity data
+        activity-data (get-in edit-data [:activities activity-k])
+        has-activity-data? (and activity-data
+                                (some (fn [[k v]]
+                                        ;; Check if there's meaningful data (not just empty/nil values)
+                                        (and (not= k :status) ; Don't count status itself
+                                             (cond
+                                               (map? v) (some seq (vals v))
+                                               (sequential? v) (seq v)
+                                               :else v)))
+                                      activity-data))]
 
     [:<>
 
@@ -1362,37 +1369,49 @@
         {:severity "info"}
         (tr :lipas.sports-site/no-permission-tab)])
 
-     ;; Header
-     #_[mui/grid {:item true :xs 12}
-        [mui/typography {:variant "h6"}
-         (get-in activities [:label locale])]]
+     ;; If no activities are configured for this type and we're in read-only mode, show a message
+     (if (and (nil? activity) read-only?)
+       [mui/box {:style {:padding "2em" :text-align "center"}}
+        [mui/typography {:variant "body1" :color "textSecondary"}
+         (tr :route/no-activities-defined "No activities defined for this sports site type")]]
 
-     ;; Locale selector
-     [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
-      [lang-selector {:locale locale}]]
+       ;; Otherwise show the normal interface
+       [:<>
+        ;; Header
+        #_[mui/grid {:item true :xs 12}
+           [mui/typography {:variant "h6"}
+            (get-in activities [:label locale])]]
 
-     ;; Form
-     [mui/grid {:item true :xs 12}
-      [nice-form {}
-       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
-         [make-field
-          {:key prop-k
-           :field field
-           :prop-k prop-k
-           :edit-data (get-in edit-data [:activities activity-k])
-           :read-only? read-only?
-           :display-data (get-in display-data [:activities activity-k])
-           :locale locale
-           :activity-k activity-k
-           :type-code type-code
-           :set-field set-field
-           :lipas-id lipas-id}])]]
+        ;; Locale selector
+        [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
+         [lang-selector {:locale locale}]]
 
-     ;; Debug
-     (when config/debug?
-       [mui/grid {:item true :xs 12}
-        [lui/expansion-panel {:label "debug"}
-         [:pre (with-out-str (pprint/pprint activity))]]])]))
+        ;; Form
+        [mui/grid {:item true :xs 12}
+         [nice-form {}
+          (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)
+                ;; In read-only mode, skip fields that have no data
+                ;; Always skip status field if there's no other activity data
+                :when (or (not read-only?)
+                          (not (and (= prop-k :status) (not has-activity-data?))))]
+            [make-field
+             {:key prop-k
+              :field field
+              :prop-k prop-k
+              :edit-data activity-data
+              :read-only? read-only?
+              :display-data (get-in display-data [:activities activity-k])
+              :locale locale
+              :activity-k activity-k
+              :type-code type-code
+              :set-field set-field
+              :lipas-id lipas-id}])]]
+
+        ;; Debug
+        (when config/debug?
+          [mui/grid {:item true :xs 12}
+           [lui/expansion-panel {:label "debug"}
+            [:pre (with-out-str (pprint/pprint activity))]]])])]))
 
 (comment
 
