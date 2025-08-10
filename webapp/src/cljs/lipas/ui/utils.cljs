@@ -225,9 +225,11 @@
                                  fs))))
 
 (defn- cleanup-geoms [activity]
+
   (cond-> activity
     (seq (:routes activity))
-    (update :routes (fn [routes] (map #(dissoc % :geometries) routes)))))
+    (update :routes (fn [routes]
+                      (map #(dissoc % :geometries) routes)))))
 
 (defn make-saveable [sports-site]
   (-> sports-site

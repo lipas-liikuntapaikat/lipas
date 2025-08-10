@@ -298,3 +298,21 @@
 
 (comment
   (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site)))
+
+(defn save-sports-site!
+  "For scenarios where tests need to seed sports-site data to both database and elasticsearch.
+
+  user: the user who is the 'author' of the data
+  sports-site: the sports site to be saved
+
+  If user is not provided (1-arity version), will default to generated
+  admin user. The generated admin user will be persisted to the db.
+
+  Returns the stored sports-site."
+  ([sports-site]
+   (let [user (gen-user {:db? true :admin? true :status "active"})]
+     (save-sports-site! user sports-site)))
+  ([user sports-site]
+   (let [persisted (core/upsert-sports-site!* db user sports-site)]
+     (core/index! search persisted)
+     persisted)))

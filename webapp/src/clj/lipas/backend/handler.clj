@@ -8,6 +8,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
+            [lipas.backend.route :as route]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
@@ -825,6 +826,62 @@
          (fn [{:keys [body-params]}]
            {:status 200
             :body (core/search-lois-with-params search body-params)})}}]
+
+      ;; Route Ordering endpoint (CQRS style)
+      ["/actions/suggest-route-order"
+       {:post
+        {:no-doc false
+         :coercion reitit.coercion.malli/coercion
+         :parameters
+         {:body [:map
+                 [:lipas-id int?]
+                 [:activity-type [:enum
+                                  "outdoor-recreation-areas"
+                                  "outdoor-recreation-routes"
+                                  "outdoor-recreation-facilities"
+                                  "cycling"
+                                  "paddling"
+                                  "fishing"]]
+                 [:fids [:sequential {:min 1} [:string]]]]}
+         :responses {200 {:body [:map
+                                 [:segments [:sequential
+                                             [:map
+                                              [:fid [:string]]
+                                              [:direction [:enum "forward" "backward"]]]]]
+                                 [:confidence [:enum "high" "medium" "low"]]
+                                 [:warnings {:optional true} [:sequential string?]]]}}
+         :handler
+         (fn [{:keys [parameters]}]
+           (let [{:keys [lipas-id activity-type fids]} (:body parameters)]
+             (log/debug "Suggest route order action invoked"
+                        {:lipas-id lipas-id
+                         :activity-type activity-type
+                         :fid-count (count fids)})
+             (try
+               ;; Get the sports site data
+               (if-let [sports-site (core/get-sports-site2 search lipas-id)]
+                 (let [;; Get the actual geometries (features)
+                       features (get-in sports-site [:location :geometries :features])
+                       ;; Call the enhanced route ordering function
+                       result (route/suggest-route-order sports-site activity-type fids features)]
+                   (if (:success result)
+                     {:status 200
+                      :body (cond-> (dissoc result :success)
+                              (nil? (:warnings result)) (dissoc :warnings))}
+                     {:status 400
+                      :body {:error (:error result)
+                             :message (:error result)}}))
+                 ;; Sports site not found
+                 {:status 404
+                  :body {:error "Sports site not found"
+                         :lipas-id lipas-id}})
+               (catch Exception e
+                 (log/error e "Error in suggest-route-order action"
+                            {:lipas-id lipas-id
+                             :activity-type activity-type})
+                 {:status 400
+                  :body {:error (.getMessage e)
+                         :message (.getMessage e)}}))))}}]
 
       ["/actions/save-help-data"
        {:post

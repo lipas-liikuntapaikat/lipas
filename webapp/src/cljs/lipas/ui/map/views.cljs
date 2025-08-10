@@ -3,12 +3,15 @@
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/TextField$default" :as TextField]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Typography$default" :as Typography]
             ["mdi-material-ui/ContentCut$default" :as ContentCut]
             ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
             ["mdi-material-ui/Eraser$default" :as Eraser]
             ["mdi-material-ui/FileUpload$default" :as FileUpload]
             ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+            ["@mui/icons-material/TouchApp$default" :as TouchAppIcon]
             ["react" :as react]
             [clojure.spec.alpha :as s]
             [clojure.string :as str]
@@ -37,6 +40,7 @@
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.floorball.views :as floorball]
             [lipas.ui.sports-sites.views :as sports-sites]
+            [lipas.ui.sports-sites.routes.views :as routes]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -572,35 +576,110 @@
         tr (use-subscribe [:lipas.ui.subs/translator])
         locale (tr)
         properties (use-subscribe [::subs/edit-geom-properties fid])
-        value (:route-part-difficulty properties)]
+        edit-data (<== [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+        type-code (get-in edit-data [:type :type-code])
+        ;; Check if route is in ITRS mode
+        itrs-mode? (use-subscribe [:lipas.ui.sports-sites.activities.subs/route-itrs-classification? lipas-id type-code])
+        ;; Get appropriate values based on mode
+        legacy-value (:route-part-difficulty properties)
+        technical-value (:itrs-technical properties)
+        exposure-value (:itrs-exposure properties)
+        ;; State for which ITRS field to show
+        [active-tab set-active-tab] (uix/use-state (if technical-value :technical :exposure))]
+
+    (println "ITRS" itrs-mode?)
     ($ Paper
-       {:sx
-        #js {:padding 2
-             :width "350px"}}
-       ($ TextField
-          {:label (tr :map/route-part-difficulty)
-           :select true
-           :fullWidth true
-           :value (or value "")
-           :onChange (fn [e]
-                       (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
-          ($ MenuItem
-             {:key "empty"
-              :value ""}
-             "-")
-          (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
-            ($ MenuItem
-               {:key k
-                :value k
-                :sx #js {:flexDirection "column"
-                         :alignItems "flex-start"
-                         :maxWidth "350px"}}
-               ($ Typography
-                  (get label locale))
-               ($ Typography
-                  {:sx #js {:fontSize "body2.fontSize"
-                            :whiteSpace "normal"}}
-                  (get description locale))))))))
+       {:sx #js {:padding 2
+                 :width "400px"}}
+
+       ;; Show tabs in ITRS mode
+       (when itrs-mode?
+         ($ Tabs
+            {:value active-tab
+             :onChange (fn [_ value] (set-active-tab (keyword value)))
+             :sx #js {:marginBottom 2}}
+            ($ Tab {:value :technical :label (tr :map/itrs-technical)})
+            ($ Tab {:value :exposure :label (tr :map/itrs-exposure)})))
+
+       ;; Legacy difficulty dropdown
+       (when (not itrs-mode?)
+         ($ TextField
+            {:label (tr :map/route-part-difficulty)
+             :select true
+             :fullWidth true
+             :value (or legacy-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale)))))))
+
+       ;; ITRS Technical difficulty
+       (when (and itrs-mode? (= active-tab :technical))
+         ($ TextField
+            {:label (tr :map/itrs-technical)
+             :select true
+             :fullWidth true
+             :value (or technical-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-segment-itrs-property
+                                       lipas-id fid :itrs-technical
+                                       (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description color]}] activities-data/itrs-technical-options]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography
+                    {:sx #js {:color color}}
+                    (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale)))))))
+
+       ;; ITRS Exposure rating
+       (when (and itrs-mode? (= active-tab :exposure))
+         ($ TextField
+            {:label (tr :map/itrs-exposure)
+             :select true
+             :fullWidth true
+             :value (or exposure-value "")
+             :onChange (fn [e]
+                         (rf/dispatch [::events/set-segment-itrs-property
+                                       lipas-id fid :itrs-exposure
+                                       (.. e -target -value)]))}
+            ($ MenuItem {:key "empty" :value ""} "-")
+            (for [[k {:keys [label description color]}] activities-data/itrs-exposure-options]
+              ($ MenuItem
+                 {:key k
+                  :value k
+                  :sx #js {:flexDirection "column"
+                           :alignItems "flex-start"
+                           :maxWidth "400px"}}
+                 ($ Typography
+                    {:sx #js {:color color}}
+                    (get label locale))
+                 (when description
+                   ($ Typography
+                      {:sx #js {:fontSize "body2.fontSize"
+                                :whiteSpace "normal"}}
+                      (get description locale))))))))))
 
 (defmethod popup-body :route-part-difficulty [popup]
   ($ route-part-difficulty {:data (:data popup)}))
@@ -913,6 +992,10 @@
 
         accessibility-type? (<== [:lipas.ui.accessibility.subs/accessibility-type? type-code])
 
+        ;; Define route-enabled facility types (cycling, hiking, skiing, etc.)
+        route-enabled-types #{4412 4411 4421 4422}
+        view-routes? (contains? route-enabled-types type-code)
+
         activity-value (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
         view-activities? (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
         edit-activities? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
@@ -1011,7 +1094,7 @@
        [mui/tabs
         {:value selected-tab
          :on-change #(==> [::events/select-sports-site-tab %2])
-         :variant (if view-activities?
+         :variant (if (or view-activities? view-routes?)
                     "scrollable"
                     "fullWidth")
          #_#_:variant "scrollable"
@@ -1042,6 +1125,14 @@
             :value 3
             :label (tr :lipas.floorball/headline)}])
 
+        ;; REITIT tab for route-enabled facility types
+        (when view-routes?
+          [mui/tab
+           {:style {:min-width 0}
+            :value 7
+            :label (tr :route/headline)}])
+
+        ;; Renamed AKTIVITEETIT tab (previously ULKOILUTIETOPALVELU)
         (when view-activities?
           [mui/tab
            {:style {:min-width 0}
@@ -1171,12 +1262,22 @@
                 :type-code type-code
                 ; :display-data display-data
                 :edit-data edit-data
-                :can-edit? can-publish?})])]
+                :can-edit? can-publish?})]
 
-;; "Landing bay" for floating tools
+         ;; REITIT tab content
+         7 [mui/grid {:item true :xs 12}
+            [routes/routes-tab
+             {:tr tr
+              :lipas-id lipas-id
+              :type-code type-code
+              :display-data display-data
+              :edit-data edit-data
+              :can-edit? (or can-publish? edit-activities?)}]])]
+
+      ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
 
-     ;; Actions
+      ;; Actions
       (when-not hide-actions?
         [lui/floating-container
          {:bottom 0 :background-color "transparent"}
@@ -1210,61 +1311,77 @@
                     :on-click #(==> [::events/redo lipas-id])}
                    [mui/icon "redo"]]]])
 
-            ;; Active editing tool
-              (when (and editing? (seq map-tool-items))
-                [mui/tooltip
-                 {:title
-                  (case sub-mode
-                    :drawing (tr :map.tools/drawing-tooltip)
-                    :drawing-hole (tr :map.tools/drawing-hole-tooltip)
-                    (:editing :undo) (tr :map/delete-vertices-hint)
-                    :importing (tr :map.tools/importing-tooltip)
-                    :deleting (tr :map.tools/deleting-tooltip)
-                    :splitting (tr :map.tools/splitting-tooltip)
-                    :simplifying (tr :map.tools/simplifying-tooltip)
-                    :selecting (tr :map.tools/selecting-tooltip)
-                    :travel-direction (tr :map.tools/travel-direction-tooltip)
-                    :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
-                    :view-only "-")}
-                 [mui/fab
-                  {:size "small"
-                   :on-click #() ; noop
-                   :color "inherit"}
-                  (let [props {:color "secondary"}]
-                    (case sub-mode
-                      :drawing (case geom-type
-                                 "Point" [mui/icon props "edit"]
-                                 "LineString" [mui/icon props "timeline"]
-                                 "Polygon" [mui/icon props "change_history"])
-                      :drawing-hole [mui/icon props "vignette"]
-                      (:editing :undo) [mui/icon props "edit"]
-                      :importing [:> FileUpload props]
-                      :deleting [:> Eraser props]
-                      :splitting [:> ContentCut props]
-                      :simplifying [mui/icon props "auto_fix_high"]
-                      :selecting [mui/icon props "handshake"]
-                      :travel-direction [mui/icon props "turn_slight_right"]
-                      :route-part-difficulty [mui/icon props "warning"]
-                      :view-only [mui/icon props "dash"]))]])
+            ;; Special route mode indicator when in Routes tab
+              (if (and editing? (= selected-tab 7)) ; 7 is the Routes tab
+                ;; Show Route Mode chip when in Routes tab
+                [mui/chip
+                 {:label (tr :route/route-mode "Route Mode")
+                  :icon (r/as-element [:> TouchAppIcon])
+                  :size "medium"
+                  :color "primary"
+                  :onClick #(==> [::events/select-sports-site-tab 1])
+                  :onDelete #(==> [::events/select-sports-site-tab 1])
+                  :deleteIcon (r/as-element [mui/icon "edit"])
+                  :sx #js {:ml 1 :mr 1}}]
 
-           ;; Tool select button
-              (when editing?
-                (when (seq map-tool-items)
-                  [:<>
-                   [mui/tooltip {:title (tr :actions/select-tool)}
+                ;; Normal editing tools when NOT in Routes tab
+                [:<>
+                 ;; Active editing tool
+                 (when (and editing? (seq map-tool-items))
+                   [mui/tooltip
+                    {:title
+                     (case sub-mode
+                       :drawing (tr :map.tools/drawing-tooltip)
+                       :drawing-hole (tr :map.tools/drawing-hole-tooltip)
+                       (:editing :undo) (tr :map/delete-vertices-hint)
+                       :importing (tr :map.tools/importing-tooltip)
+                       :deleting (tr :map.tools/deleting-tooltip)
+                       :splitting (tr :map.tools/splitting-tooltip)
+                       :simplifying (tr :map.tools/simplifying-tooltip)
+                       :selecting (tr :map.tools/selecting-tooltip)
+                       :travel-direction (tr :map.tools/travel-direction-tooltip)
+                       :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                       :view-only "-"
+                       :ordered-segments "-")}
                     [mui/fab
-                     {:size "medium"
-                      :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-                      :color "secondary"}
-                     [mui/icon "more_horiz"]]]
+                     {:size "small"
+                      :on-click #() ; noop
+                      :color "inherit"}
+                     (let [props {:color "secondary"}]
+                       (case sub-mode
+                         :drawing (case geom-type
+                                    "Point" [mui/icon props "edit"]
+                                    "LineString" [mui/icon props "timeline"]
+                                    "Polygon" [mui/icon props "change_history"])
+                         :drawing-hole [mui/icon props "vignette"]
+                         (:editing :undo) [mui/icon props "edit"]
+                         :importing [:> FileUpload props]
+                         :deleting [:> Eraser props]
+                         :splitting [:> ContentCut props]
+                         :simplifying [mui/icon props "auto_fix_high"]
+                         :selecting [:> TouchAppIcon props]
+                         :travel-direction [mui/icon props "turn_slight_right"]
+                         :route-part-difficulty [mui/icon props "warning"]
+                         :view-only [mui/icon props "dash"]
+                         :ordered-segments [mui/icon props "compare_arrows"]))]])
 
-                   (into [mui/menu
-                          {:variant "menu"
-                           :auto-focus false
-                           :anchor-el more-tools-menu-anchor
-                           :open (some? more-tools-menu-anchor)
-                           :on-close #(==> [::events/close-more-tools-menu])}]
-                         map-tool-items)]))
+                 ;; Tool select button
+                 (when (and editing? (seq map-tool-items))
+                   [:<>
+                    [mui/tooltip {:title (tr :actions/select-tool)}
+                     [mui/fab
+                      {:size "medium"
+                       :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
+                       :color "secondary"}
+                      [mui/icon "more_horiz"]]]
+
+                    (into [mui/menu
+                           {:variant "menu"
+                            :auto-focus false
+                            :anchor-el more-tools-menu-anchor
+                            :open (some? more-tools-menu-anchor)
+                            :on-close #(==> [::events/close-more-tools-menu])}]
+                          map-tool-items)])])
 
            ;; Download GPX
               (when (and (not editing?) (#{"LineString"} geom-type))

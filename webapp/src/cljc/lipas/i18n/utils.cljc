@@ -107,6 +107,7 @@
    :reset-password
    :restricted
    :retkikartta
+   :route
    :sauna-types
    :search
    :size-categories
@@ -124,7 +125,8 @@
    :type
    :units
    :user
-   :utp])
+   :utp
+   :warning])
 
 (defn safe-filename
   "Converts a keyword name to a safe filename by replacing dots with underscores"

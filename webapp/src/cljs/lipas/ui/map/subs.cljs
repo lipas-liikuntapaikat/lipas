@@ -21,11 +21,11 @@
           adding? (or (and (#{"sports-site"} add-mode) adding-new-site?)
                       (and (#{"loi"} add-mode) (#{:adding} loi-mode)))]
       (cond
-        adding?       :adding
-        analysis?     :analysis
+        adding? :adding
+        analysis? :analysis
         selected-site :site
-        selected-loi  :loi
-        :else         :search))))
+        selected-loi :loi
+        :else :search))))
 
 (rf/reg-sub ::show-default-tools?
   :<- [::view]
@@ -74,14 +74,14 @@
   :<- [::mode-name]
   (fn [[result-view selected-site mode-name] [_ media-width]]
     (cond
-      (#{"xs"} media-width)         "100%"
+      (#{"xs"} media-width) "100%"
       (and (#{"sm"} media-width)
-           (= :table result-view))  "100%"
+           (= :table result-view)) "100%"
       (and (= :table result-view)
-           (empty? selected-site))  "100%"
+           (empty? selected-site)) "100%"
       (and (not (#{"xs" "sm"} media-width))
            (= :analysis mode-name)) "700px"
-      :else                         "530px")))
+      :else "530px")))
 
 (rf/reg-sub ::selected-sports-site-tab
   :<- [::map]
@@ -114,37 +114,37 @@
         (->> data
              (keep
                (fn [^js obj]
-                 (let [obj              (.-_source obj)
+                 (let [obj (.-_source obj)
                        ;; Hmm, consider cljs-bean here? Should be nearly as fast
-                       geoms            (or
+                       geoms (or
                                           ;; Full geoms
-                                          (gobj/getValueByKeys obj
-                                                               "location"
-                                                               "geometries"
-                                                               "features")
+                               (gobj/getValueByKeys obj
+                                                    "location"
+                                                    "geometries"
+                                                    "features")
                                           ;; Simplified geoms
-                                          (gobj/getValueByKeys obj
-                                                               "search-meta"
-                                                               "location"
-                                                               "simple-geoms"
-                                                               "features"))
-                       type-code        (gobj/getValueByKeys obj "type" "type-code")
-                       lipas-id         (gobj/get obj "lipas-id")
-                       name             (gobj/get obj "name")
-                       status           (gobj/get obj "status")
+                               (gobj/getValueByKeys obj
+                                                    "search-meta"
+                                                    "location"
+                                                    "simple-geoms"
+                                                    "features"))
+                       type-code (gobj/getValueByKeys obj "type" "type-code")
+                       lipas-id (gobj/get obj "lipas-id")
+                       name (gobj/get obj "name")
+                       status (gobj/get obj "status")
                        travel-direction (gobj/get obj "travel-direction")]
 
                  ;; To avoid displaying duplicates when editing
                    (when-not (= lipas-id' lipas-id)
-                     #js {:type     "FeatureCollection"
+                     #js {:type "FeatureCollection"
                           :features (garray/map
                                       geoms
                                       (fn [geom idx]
                                         (set! (.-id geom) (str lipas-id "-" idx))
-                                        (set! (.-properties geom) #js {:lipas-id         lipas-id
-                                                                       :name             name
-                                                                       :type-code        type-code
-                                                                       :status           status
+                                        (set! (.-properties geom) #js {:lipas-id lipas-id
+                                                                       :name name
+                                                                       :type-code type-code
+                                                                       :status status
                                                                        :travel-direction travel-direction})
                                         geom))}))))
              not-empty)))))
@@ -169,9 +169,9 @@
   :<- [::drawer-width]
   (fn [[screen-size drawer-open? drawer-width] _]
     (let [drawer-width (condp #(str/ends-with? %2 %1) drawer-width
-                         "%"  0
+                         "%" 0
                          "px" (js/parseInt drawer-width))
-          margin       20]
+          margin 20]
       (if (and (#{"xs sm"} screen-size) (not drawer-open?))
         [margin margin margin margin]
         [margin margin margin (+ margin drawer-width)]))))
@@ -199,14 +199,14 @@
   :<- [:lipas.ui.analysis.heatmap.subs/heatmap]
   :<- [::simplify]
   (fn [[content-padding mode reachability diversity heatmap simplify] _]
-    (let [analysis?  (= (:name mode) :analysis)
+    (let [analysis? (= (:name mode) :analysis)
           simplify? (and (#{:adding :editing} (:name mode))
                          (= (:sub-mode mode) :simplifying))]
       (cond-> mode
-        true       (assoc :content-padding content-padding)
-        analysis?  (assoc :analysis {:reachability reachability
-                                     :diversity diversity
-                                     :heatmap heatmap})
+        true (assoc :content-padding content-padding)
+        analysis? (assoc :analysis {:reachability reachability
+                                    :diversity diversity
+                                    :heatmap heatmap})
         simplify? (assoc :simplify simplify)))))
 
 (rf/reg-sub ::selected-features
@@ -340,7 +340,7 @@
 
 (defn ->result [f]
   {:geometry (-> f :geometry)
-   :label    (-> f :properties :label)})
+   :label (-> f :properties :label)})
 
 (rf/reg-sub ::address-search-results
   :<- [::map]
@@ -381,33 +381,33 @@
         logged-in? size-categories mode undo redo
         more-tools-menu-anchor selected-tab] _]
 
-    {:types                  (filter
-                               (comp #{geom-type} :geometry-type second) types)
-     :admins                 admins
-     :owners                 owners
-     :editing?               editing?
-     :edits-valid?           edits-valid?
-     :editing-allowed?       editing-allowed?
-     :delete-dialog-open?    delete-dialog-open?
-     :can-publish?           can-publish?
-     :logged-in?             logged-in?
-     :size-categories        size-categories
-     :mode                   mode
-     :sub-mode               (:sub-mode mode)
-     :type                   type
-     :types-props            types-props
-     :geom-type              (:geometry-type type)
-     :save-in-progress?      save-in-progress?
-     :problems?              (-> mode :problems :data :features seq)
-     :portal                 (case (:type-code type)
-                               (3110 3130) "uimahallit"
-                               (2510 2520) "jaahallit"
-                               nil)
-     :dead?                  dead?
-     :undo                   undo
-     :redo                   redo
+    {:types (filter
+              (comp #{geom-type} :geometry-type second) types)
+     :admins admins
+     :owners owners
+     :editing? editing?
+     :edits-valid? edits-valid?
+     :editing-allowed? editing-allowed?
+     :delete-dialog-open? delete-dialog-open?
+     :can-publish? can-publish?
+     :logged-in? logged-in?
+     :size-categories size-categories
+     :mode mode
+     :sub-mode (:sub-mode mode)
+     :type type
+     :types-props types-props
+     :geom-type (:geometry-type type)
+     :save-in-progress? save-in-progress?
+     :problems? (-> mode :problems :data :features seq)
+     :portal (case (:type-code type)
+               (3110 3130) "uimahallit"
+               (2510 2520) "jaahallit"
+               nil)
+     :dead? dead?
+     :undo undo
+     :redo redo
      :more-tools-menu-anchor more-tools-menu-anchor
-     :selected-tab           selected-tab}))
+     :selected-tab selected-tab}))
 
 (rf/reg-sub ::add-sports-site-view
   (fn [_]
@@ -429,32 +429,32 @@
   (fn [[type data is-planning? valid? save-in-progress? admins owners
         prop-types size-categories zoomed? geom mode undo redo
         selected-tab] _]
-    (let [sub-mode  (mode :sub-mode)]
-      {:type            type
-       :type-code       (:type-code type)
-       :geom-type       (:geometry-type type)
-       :data            data
-       :is-planning?    is-planning?
-       :save-enabled?   (and valid? (= :finished sub-mode) (not save-in-progress?))
-       :admins          admins
-       :owners          owners
-       :types-props     (reduce (fn [res [k v]]
-                                  (let [prop-type (prop-types k)]
-                                    (assoc res k (merge prop-type v))))
-                                {}
-                                (:props type))
+    (let [sub-mode (mode :sub-mode)]
+      {:type type
+       :type-code (:type-code type)
+       :geom-type (:geometry-type type)
+       :data data
+       :is-planning? is-planning?
+       :save-enabled? (and valid? (= :finished sub-mode) (not save-in-progress?))
+       :admins admins
+       :owners owners
+       :types-props (reduce (fn [res [k v]]
+                              (let [prop-type (prop-types k)]
+                                (assoc res k (merge prop-type v))))
+                            {}
+                            (:props type))
        :size-categories size-categories
-       :zoomed?         zoomed?
-       :geom            geom
-       :problems?       (-> mode :problems :data :features seq)
-       :sub-mode        sub-mode
-       :active-step     (cond
-                          (= :finished sub-mode) 2
-                          (some? type)           1
-                          :else                  0)
-       :undo            undo
-       :redo            redo
-       :selected-tab    selected-tab})))
+       :zoomed? zoomed?
+       :geom geom
+       :problems? (-> mode :problems :data :features seq)
+       :sub-mode sub-mode
+       :active-step (cond
+                      (= :finished sub-mode) 2
+                      (some? type) 1
+                      :else 0)
+       :undo undo
+       :redo redo
+       :selected-tab selected-tab})))
 
 (rf/reg-sub ::new-site-types
   (fn [[_ is-planning? _geom-type]]
@@ -482,10 +482,15 @@
 (rf/reg-sub ::hide-actions?
   :<- [::map]
   :<- [:lipas.ui.sports-sites.activities.subs/mode]
-  (fn [[m activity-mode]]
+  :<- [:lipas.ui.map.subs/selected-sports-site-tab]
+  (fn [[m activity-mode selected-tab]]
     (and (-> m :mode :name #{:editing})
+                   ;; TODO decide where the segment level manipulation
+                   ;; actually happens and change this accordingly if
+                   ;; needed
+         (= 5 selected-tab) ; activities
          (#{:add-route :route-details} activity-mode)
-         #_(-> m :mode :sub-mode #{:selecting}))))
+         (-> m :mode :sub-mode #{:selecting}))))
 
 (rf/reg-sub ::selected-add-mode
   :<- [::map]
@@ -550,3 +555,21 @@
   :<- [::restore-site-backup-dialog]
   (fn [m]
     (:error m)))
+
+(rf/reg-sub ::ordered-segments
+  :<- [::mode*]
+  (fn [mode _]
+    (:ordered-segments mode)))
+
+(rf/reg-sub ::route-itrs-classification?
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.activities.subs/selected-route-id lipas-id])])
+  (fn [[site route-id] _]
+    (println "Selected route id" route-id)
+    (when (and site route-id)
+      (let [activity-value (:activity-value site)
+            routes (get-in site [:activities (keyword activity-value) :routes] [])]
+        (some #(when (= (:id %) route-id)
+                 (:itrs-classification? %))
+              routes)))))

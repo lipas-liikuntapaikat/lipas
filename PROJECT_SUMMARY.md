@@ -61,7 +61,7 @@ LIPAS is a full-stack geospatial web application built around a microservices ar
 
 ```
 /Users/tipo/lipas/lipas/
-├── deps.edn                    # Root project configuration
+├── bb.edn                     # Root project tasks
 ├── webapp/                     # Main application directory
 │   ├── deps.edn               # Webapp dependencies and aliases
 │   ├── bb.edn                 # Babashka task definitions
@@ -258,6 +258,9 @@ The application uses PostgreSQL with PostGIS extensions. Key migrations are loca
 - Feature flags and regional settings in `lipas.backend.config`
 
 ### Build Process
+
+Repo root bb.edn
+
 ```bash
 # Backend
 bb uberjar                               # Creates target/backend.jar
@@ -372,14 +375,3 @@ Always verify your tests are using the correct database:
 ```
 
 This isolation prevents tests from interfering with production data and ensures consistent CI/local behavior.
-
-## Recent Major Changes 🆕
-
-### Unified Job Queue System (2025-06)
-- **Replaced**: 5 separate queue tables with unified `jobs` table
-- **Added**: Smart concurrency control (fast lane + general lane)
-- **Architecture**: Scheduler → Queue → Worker → Handlers pipeline
-- **Benefits**: Prevents head-of-line blocking, better monitoring, easier maintenance
-- **Migration**: Legacy queue functions continue to work during transition
-
-This summary provides a comprehensive foundation for understanding and contributing to the LIPAS codebase. The project exemplifies modern Clojure(Script) web development with sophisticated geospatial capabilities, robust background processing, and integration requirements.

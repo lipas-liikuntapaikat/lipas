@@ -370,9 +370,22 @@
 (defn feature-coll->geom-coll
   "Transforms GeoJSON FeatureCollection to ElasticSearch
   geometrycollection."
-  [{:keys [features]}]
-  {:type "geometrycollection"
-   :geometries (mapv :geometry features)})
+  [geom]
+  (cond
+    ;; Handle direct geometry (Point, LineString, Polygon)
+    (and (:type geom) (:coordinates geom))
+    {:type "geometrycollection"
+     :geometries [geom]}
+
+    ;; Handle FeatureCollection
+    (:features geom)
+    {:type "geometrycollection"
+     :geometries (mapv :geometry (:features geom))}
+
+    ;; Default empty collection
+    :else
+    {:type "geometrycollection"
+     :geometries []}))
 
 (defn feature-type
   [sports-site]
@@ -393,11 +406,17 @@
   [sports-site]
   (let [sports-site (fix-geoms sports-site)
         fcoll (-> sports-site :location :geometries)
-        geom (-> fcoll :features first :geometry)
-        start-coords (case (:type geom)
-                       "Point" (-> geom :coordinates)
-                       "LineString" (-> geom :coordinates first)
-                       "Polygon" (-> geom :coordinates first first))
+        geom (cond
+               ;; Handle direct geometry (not wrapped in FeatureCollection)
+               (and (:type fcoll) (:coordinates fcoll)) fcoll
+               ;; Handle FeatureCollection
+               :else (-> fcoll :features first :geometry))
+        start-coords (when geom
+                       (case (:type geom)
+                         "Point" (-> geom :coordinates)
+                         "LineString" (-> geom :coordinates first)
+                         "Polygon" (-> geom :coordinates first first)
+                         nil))
 
         center-coords (try (-> fcoll gis/centroid :coordinates)
                            (catch Exception ex
@@ -405,11 +424,17 @@
                                        (:lipas-id sports-site) "fcoll" fcoll)
                              nil))
 
-        geom2 (-> fcoll :features last :geometry)
-        end-coords (case (:type geom2)
-                     "Point" (-> geom2 :coordinates)
-                     "LineString" (-> geom2 :coordinates last)
-                     "Polygon" (-> geom2 :coordinates last last))
+        geom2 (cond
+                ;; Handle direct geometry (not wrapped in FeatureCollection)
+                (and (:type fcoll) (:coordinates fcoll)) fcoll
+                ;; Handle FeatureCollection
+                :else (-> fcoll :features last :geometry))
+        end-coords (when geom2
+                     (case (:type geom2)
+                       "Point" (-> geom2 :coordinates)
+                       "LineString" (-> geom2 :coordinates last)
+                       "Polygon" (-> geom2 :coordinates last last)
+                       nil))
 
         city-code (-> sports-site :location :city :city-code)
         province (-> city-code cities :province-id cities/provinces)
@@ -517,6 +542,30 @@
 
 ;; TODO refactor upsert-sports-site!, upsert-sports-site!* and
 ;; save-sports-site! to form more sensible API.
+(defn validate-route-segments
+  "Validates that all segments have required fields and valid values.
+  Returns nil if valid, or an error message if invalid."
+  [sports-site]
+  (when-let [segments (get-in sports-site [:activities :segments])]
+    (let [features (get-in sports-site [:location :geometries :features])
+          feature-fids (set (map :id features))
+          valid-directions #{"forward" "backward"}]
+      (cond
+        ;; Check that all segments have required fields
+        (some #(or (nil? (:fid %)) (nil? (:direction %))) segments)
+        "validation-error: Segments must have both fid and direction fields"
+
+        ;; Check that all directions are valid
+        (some #(not (contains? valid-directions (:direction %))) segments)
+        "validation-error: Direction must be either 'forward' or 'backward'"
+
+        ;; Check that all segment fids reference existing features
+        :else
+        (let [segment-fids (set (map :fid segments))
+              missing-fids (clojure.set/difference segment-fids feature-fids)]
+          (when (seq missing-fids)
+            (str "validation-error: Invalid segment references: " (str/join ", " missing-fids))))))))
+
 (defn save-sports-site!
   "Saves sports-site to db and search and appends it to outbound
   integrations queue."
@@ -527,7 +576,24 @@
      (jobs/with-correlation-context correlation-id
        (fn []
          (jdbc/with-db-transaction [tx db]
-           (let [resp (upsert-sports-site! tx user sports-site draft?)
+           (let [;; Validate segments if present
+                 validation-error (validate-route-segments sports-site)
+                 _ (when validation-error
+                     (throw (ex-info validation-error {:type :validation-error})))
+
+                 ;; Process route segments if present
+                 sports-site (if-let [segments (get-in sports-site [:activities :segments])]
+                               (-> sports-site
+                                   ;; Ensure backwards compatibility by populating fids from segments
+                                   (assoc-in [:activities :fids]
+                                             (mapv :fid segments))
+                                   ;; Add ordering-method if not present
+                                   (update-in [:activities]
+                                              #(if (contains? % :ordering-method)
+                                                 %
+                                                 (assoc % :ordering-method "manual"))))
+                               sports-site)
+                 resp (upsert-sports-site! tx user sports-site draft?)
                  route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
              (when-not draft?
@@ -564,11 +630,11 @@
                ;; starts using it again.
 
                #_(jobs/enqueue-job! tx "webhook"
-                                  {:lipas-ids [(:lipas-id resp)]
-                                   :operation-type (if (new? sports-site) "create" "update")
-                                   :initiated-by (:id user)}
-                                  {:correlation-id correlation-id
-                                   :priority 85}))
+                                    {:lipas-ids [(:lipas-id resp)]
+                                     :operation-type (if (new? sports-site) "create" "update")
+                                     :initiated-by (:id user)}
+                                    {:correlation-id correlation-id
+                                     :priority 85}))
 
              ;; Sync the site to PTV if
              ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)

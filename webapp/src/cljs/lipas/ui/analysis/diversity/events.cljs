@@ -15,6 +15,7 @@
      [[:lipas.ui.search.events/clear-filters]
       [:lipas.ui.map.events/set-overlays
        [[:vectors true]
+        [:ordered-segments true]
         [:lois false]
         [:schools false]
         [:population false]

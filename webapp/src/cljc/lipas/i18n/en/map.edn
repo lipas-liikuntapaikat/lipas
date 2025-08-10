@@ -14,6 +14,9 @@
  :draw-linestring "Add route",
  :draw-polygon "Add area",
  :edit-later-hint "You can modify geometries later",
+ :itrs-exposure "Objective danger",
+ :itrs-segment-difficulty "Set route section ITRS difficulty",
+ :itrs-technical "Technical difficulty",
  :kink
  "Self intersection. Please fix either by re-routing or splitting the segment.",
  :modify "You can move the point on the map",

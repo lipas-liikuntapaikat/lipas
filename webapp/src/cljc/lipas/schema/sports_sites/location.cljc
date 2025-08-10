@@ -23,7 +23,6 @@
             :min 1
             :max 100}])
 
-
 (def city-code
   (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
         (sort (keys cities/by-city-code))))
@@ -55,6 +54,8 @@
    #_[:lipas-id {:optional true} #'lipas-id]
    [:type-code {:optional true} :int]
    [:route-part-difficulty {:optional true} :string]
+   [:itrs-technical {:optional true} :string]
+   [:itrs-exposure {:optional true} :string]
    [:travel-direction {:optional true} :string]])
 
 (def line-string-feature

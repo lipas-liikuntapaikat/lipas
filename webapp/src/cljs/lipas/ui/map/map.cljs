@@ -22,6 +22,7 @@
             [lipas.ui.map.editing :as editing]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.projection :as proj]
+            [lipas.ui.map.route-highlighting :as route-highlighting]
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map.utils :as map-utils]
@@ -103,10 +104,18 @@
            :name "edits"
            :zIndex 10
            :style #js [styles/edit-style styles/vertices-style]})
+    :ordered-segments
+    (VectorLayer.
+      #js {:source (VectorSource.)
+           :name "ordered-segments"
+           :zIndex 11
+           :style (fn [feature resolution]
+                    (styles/ordered-segment-style-fn feature resolution false false))})
     :highlights
     (VectorLayer.
       #js {:source (VectorSource.)
            :name "highlights"
+           :zIndex 12
            :style #js [styles/highlight-style]})
     :markers
     (VectorLayer.
@@ -169,21 +178,13 @@
     :mml-kiinteistotunnukset
     (->wmts
       {:url (:kiinteistotunnukset urls)
-      ;; Source (MML WMTS) won't return anything with res 0.25 so we
-      ;; limit this layer grid to min resolution of 0.5 but allow
-      ;; zooming to 0.25. Limiting the grid has a desired effect that
-      ;; WMTS won't try to get the data and it shows geoms of
-      ;; the "previous" resolution.
-       :resolutions (.slice mml-resolutions 0 15)
-       :matrix-ids (.slice mml-matrix-ids 0 15)
        :min-res 0.25
-       :max-res 8
+       :max-res 2
        :layer-name "MML-Kiinteistötunnukset"})
-    :mml-kuntarajat
-    (->wmts
-      {:url (:kuntarajat urls)
-       :layer-name "MML-Kuntarajat"})
-    :heatmap (heatmap/create-heatmap-layer (heatmap/create-heatmap-source))}})
+    :heatmap
+    (VectorLayer.
+      #js {:source (VectorSource.)
+           :name "heatmap"})}})
 
 (defn init-view [center zoom]
   ;; TODO: Juho later Left side padding
@@ -225,13 +226,13 @@
                                (-> layers :overlays :vectors)
                                (-> layers :overlays :lois)
                                (-> layers :overlays :edits)
+                               (-> layers :overlays :ordered-segments)
                                (-> layers :overlays :highlights)
                                (-> layers :overlays :markers)
                                (-> layers :overlays :light-traffic)
                                (-> layers :overlays :retkikartta-snowmobile-tracks)
                                (-> layers :overlays :mml-kiinteisto)
                                (-> layers :overlays :mml-kiinteistotunnukset)
-                               (-> layers :overlays :mml-kuntarajat)
                                (-> layers :overlays :heatmap)]
                   :interactions #js [(MouseWheelZoom.)
                                      (KeyboardZoom.)
@@ -547,7 +548,7 @@
 
 ;; Browsing and selecting features
 (defn set-default-mode!
-  [map-ctx {:keys [lipas-id address elevation]}]
+  [map-ctx {:keys [lipas-id address elevation highlight-source selected-features] :as mode}]
   (-> map-ctx
       editing/clear-edits!
       map-utils/clear-population!
@@ -555,19 +556,34 @@
       map-utils/clear-interactions!
       map-utils/clear-markers!
       map-utils/clear-highlights!
+      map-utils/clear-ordered-segments! ;; Clear ordered segments display
+      ;; Handle route highlighting in default mode - only if we have valid data
+      (cond->
+        (and highlight-source
+             selected-features
+             (seq selected-features)
+             (:geometries highlight-source))
+        (route-highlighting/update-route-highlights! mode))
       map-utils/enable-vector-hover!
       map-utils/enable-marker-hover!
       map-utils/enable-loi-hover!
       map-utils/enable-select!
       (cond->
-        lipas-id (map-utils/select-sports-site! lipas-id)
-        address (map-utils/show-address-marker! address)
-        elevation (-> (map-utils/show-elevation-marker! elevation)
-                      #_(map-utils/highlight-segment! elevation)))))
+       ;; Only select sports site if we're not using highlight-source
+       ;; (highlight-source handles its own display)
+        (and lipas-id (not highlight-source))
+        (map-utils/select-sports-site! lipas-id)
+
+        address
+        (map-utils/show-address-marker! address)
+
+        elevation
+        (-> (map-utils/show-elevation-marker! elevation)
+            #_(map-utils/highlight-segment! elevation)))))
 
 (defn update-default-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce address elevation]}]
+   {:keys [lipas-id fit-nonce address elevation highlight-source selected-features] :as mode}]
   (let [fit? (and fit-nonce (not= fit-nonce (-> map-ctx :mode :fit-nonce)))
         ^js layer (-> layers :overlays :vectors)]
     (-> map-ctx
@@ -575,12 +591,29 @@
         (map-utils/unselect-features!)
         (map-utils/clear-population!)
         (map-utils/clear-highlights!)
+        (map-utils/clear-ordered-segments!) ;; Clear ordered segments display
+        ;; Handle route highlighting in default mode - only if we have valid data
         (cond->
-          lipas-id (map-utils/select-sports-site! lipas-id)
-          fit? (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
-          address (map-utils/show-address-marker! address)
-          elevation (-> (map-utils/show-elevation-marker! elevation)
-                        #_(map-utils/highlight-segment! elevation))))))
+          (and highlight-source
+               selected-features
+               (seq selected-features)
+               (:geometries highlight-source))
+          (route-highlighting/update-route-highlights! mode))
+        (cond->
+         ;; Only select sports site if we're not using highlight-source
+         ;; (highlight-source handles its own display)
+          (and lipas-id (not highlight-source))
+          (map-utils/select-sports-site! lipas-id)
+
+          fit?
+          (map-utils/fit-to-extent! (-> layer .getSource .getExtent))
+
+          address
+          (map-utils/show-address-marker! address)
+
+          elevation
+          (-> (map-utils/show-elevation-marker! elevation)
+              #_(map-utils/highlight-segment! elevation))))))
 
 (defn set-reachability-mode!
   [map-ctx {:keys [analysis]}]

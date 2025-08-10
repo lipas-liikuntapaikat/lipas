@@ -41,6 +41,9 @@ webapp/test_routes.clj
 webapp/local-scrap
 webapp/.eca/
 
+.shadow-cljs
+.clojure-mcp
+
 # IDE and development files
 .claude/
 .git-rewrite/
