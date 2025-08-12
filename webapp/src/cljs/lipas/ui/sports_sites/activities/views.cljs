@@ -161,7 +161,8 @@
                             (swap! state assoc (:id data) data))
                           (set-field (->> @state
                                           vals
-                                          (mapv #(dissoc % :id))))
+                                          (keep #(dissoc % :id))
+                                          vec))
                           (reset! dialog-state dialog-init-state))}]
 
        ;; Label
