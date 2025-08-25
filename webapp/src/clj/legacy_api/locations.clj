@@ -1,7 +1,7 @@
 (ns legacy-api.locations
   (:require
    [legacy-api.util :refer [only-non-nil-recur]]
-   [lipas.backend.core :refer [feature-coll->geom-coll]]
+   [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
    [lipas.backend.gis :as gis]
    [lipas.data.cities :as cities]))
 

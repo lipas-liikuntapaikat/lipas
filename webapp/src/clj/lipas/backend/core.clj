@@ -6,11 +6,15 @@
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as excel]
+            [legacy-api.locations :as legacy-locations]
+            [legacy-api.sports-place :as legacy-sports-place]
+            [legacy-api.transform :as legacy-transform]
             [lipas.backend.accessibility :as accessibility]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
+            [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.newsletter :as newsletter]
@@ -29,7 +33,8 @@
             [lipas.roles :as roles]
             [lipas.utils :as utils]
             [taoensso.timbre :as log])
-  (:import [java.io OutputStreamWriter]))
+  (:import
+   [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -367,12 +372,7 @@
   (db/get-sports-site-history db lipas-id))
 
 ;; ES doesn't support indexing FeatureCollections
-(defn feature-coll->geom-coll
-  "Transforms GeoJSON FeatureCollection to ElasticSearch
-  geometrycollection."
-  [{:keys [features]}]
-  {:type "geometrycollection"
-   :geometries (mapv :geometry features)})
+;; NOTE: feature-coll->geom-coll moved to lipas.backend.geom-utils to avoid circular dependency
 
 (defn feature-type
   [sports-site]
@@ -483,6 +483,21 @@
          data (enrich sports-site)]
      (search/index! client idx-name :lipas-id data sync?))))
 
+(defn index-legacy-sports-place!
+  "Indexes sports-site to legacy Elasticsearch index with legacy data transformation.
+  This is used by the legacy API to find sports places."
+  ([search sports-site]
+   (index-legacy-sports-place! search sports-site false))
+  ([{:keys [indices client]} sports-site sync?]
+   (let [legacy-data (-> (legacy-transform/->old-lipas-sports-site* sports-site)
+                         (assoc :id (:lipas-id sports-site))
+                         (legacy-sports-place/format-sports-place
+                          :all
+                          legacy-locations/format-location))
+
+         idx-name (get-in indices [:legacy-sports-site :search])]
+     (search/index! client idx-name :lipas-id legacy-data :sync))))
+
 (defn search
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:sports-site :search])]
@@ -553,11 +568,11 @@
                ;; starts using it again.
 
                #_(jobs/enqueue-job! tx "webhook"
-                                  {:lipas-ids [(:lipas-id resp)]
-                                   :operation-type (if (new? sports-site) "create" "update")
-                                   :initiated-by (:id user)}
-                                  {:correlation-id correlation-id
-                                   :priority 85}))
+                                    {:lipas-ids [(:lipas-id resp)]
+                                     :operation-type (if (new? sports-site) "create" "update")
+                                     :initiated-by (:id user)}
+                                    {:correlation-id correlation-id
+                                     :priority 85}))
 
              ;; Sync the site to PTV if
              ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
