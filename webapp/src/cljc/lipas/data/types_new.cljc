@@ -97,9 +97,9 @@
    7000
    {:type-code 7000,
     :name
-    {:fi "Huoltorakennukset",
-     :se "Servicebyggnader",
-     :en "Maintenance/service buildings"},
+    {:fi "Huoltorakennus",
+     :se "Servicebyggnad",
+     :en "Maintenance/service building"},
     :ptv {:ontology-urls [], :service-classes []}}})
 
 (def sub-categories
@@ -2577,9 +2577,9 @@
      :en "Start and finish area, service premises. Tracks."},
     :tags {:fi ["hiihtostadion"]},
     :name
-    {:fi "Kilpahiihtokeskus",
-     :se "Maastohiihtokeskus",
-     :en "Ski competition centre"},
+    {:fi "Maastohiihtokeskus",
+     :se "Skidcentrum",
+     :en "Cross-country skiing centre"},
     :type-code 4630,
     :main-category 4000,
     :status "active",
