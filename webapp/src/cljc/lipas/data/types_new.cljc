@@ -865,14 +865,14 @@
    {:description
     {:fi
      "Liikuntapaikan tai -paikkojen yhteydessä oleva, liikuntapaikan ylläpitoa tai käyttöä palveleva rakennus. Voi sisältää varastoja, pukuhuoneita, suihkutiloja yms.",
-     :se "Servicebyggnader i anslutning till idrottsanläggningar.",
+     :se "Servicebyggnad i anslutning till idrottsanläggningar.",
      :en
-     "Maintenance buildings in connection with sports facilities."},
+     "Maintenance building in connection with sports facilities."},
     :tags {:fi ["konesuoja" "huoltotila"]},
     :name
-    {:fi "Huoltorakennukset",
-     :se "Servicebyggnader",
-     :en "Maintenance/service buildings"},
+    {:fi "Huoltorakennus",
+     :se "Servicebyggnad",
+     :en "Maintenance/service building"},
     :type-code 7000,
     :main-category 7000,
     :status "active",
@@ -2577,9 +2577,9 @@
      :en "Start and finish area, service premises. Tracks."},
     :tags {:fi ["hiihtostadion"]},
     :name
-    {:fi "Kilpahiihtokeskus",
-     :se "Maastohiihtokeskus",
-     :en "Ski competition centre"},
+    {:fi "Maastohiihtokeskus",
+     :se "Skidcentrum",
+     :en "Cross-country skiing centre"},
     :type-code 4630,
     :main-category 4000,
     :status "active",
