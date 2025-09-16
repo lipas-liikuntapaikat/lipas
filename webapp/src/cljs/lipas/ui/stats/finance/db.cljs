@@ -12,6 +12,6 @@
    :groupings               reports/finance-stats-groupings
    :selected-grouping       "avi"
    :metrics                 reports/stats-metrics
-   :selected-metrics        ["net-costs" "investments"]
+   :selected-metrics        ["net-costs" "deficit" "investments"]
    :selected-ranking-metric "net-costs"
    :chart-type              "comparison"})
