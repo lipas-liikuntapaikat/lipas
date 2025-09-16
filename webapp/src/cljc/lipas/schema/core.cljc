@@ -2306,7 +2306,7 @@
 
 ;;; Calc stats API
 
-(s/def :lipas.city.population/year (into #{} (range 2000 (inc 2022))))
+(s/def :lipas.city.population/year (into #{} (range 2000 (inc 2100))))
 (s/def :lipas.stats.sports-sites/grouping #{"location.city.city-code"
                                             "type.type-code"})
 
