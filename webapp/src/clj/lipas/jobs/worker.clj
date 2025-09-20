@@ -17,12 +17,12 @@
                              :futures []}))
 
 (def default-config
-  {:fast-threads 2
-   :general-threads 2
+  {:fast-threads 1
+   :general-threads 1
    :batch-size 5
    :poll-interval-ms 3000
    :fast-timeout-minutes 2
-   :slow-timeout-minutes 20})
+   :slow-timeout-minutes 30})
 
 (defn create-worker-pools
   "Create separate thread pools for fast and general job processing."
