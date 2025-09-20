@@ -1,0 +1,34 @@
+{:allowed-directories ["*." "../"]
+ #_#_#_#_:models {:anthropic/sonnet
+          {:model-name "claude-sonnet-4-20250514"
+           :api-key [:env "ANTHROPIC_API_KEY"]}}
+ :agents [{:id :clojure-coder
+           :name "clojure_coder"
+           :model :anthropic/sonnet
+           :description "Agent specialized for writing code."
+           :system-message "You are a code writing assistant. Create and edit files
+                           responsibly. Always test code before writing to files.
+                           Explain changes clearly."
+           :context ["PROJECT_SUMMARY.md"
+                     "docs/i18n.md"
+                     "docs/clojure-repl-system-prompt.md"
+                     "docs/repl-driven-testing.md"]
+           :memory-size 50
+           :enable-tools [:all]
+           :disable-tools [:dispatch-agent]}
+          {:id :lipas-frontend-specialist
+           :name "lipas_frontend_advisor"
+           :model :anthropic/sonnet
+           :description "Agent specialized for providing advice regarding LIPAS frontend."
+           :system-message "You are an assistant who provides advice on LIPAS frontend architecture, functionality and best practices."
+           :context ["PROJECT_SUMMARY.md"
+                     "docs/ui-geom-editing-anatomy.md"
+                     "docs/route-geometries.md"
+                     "docs/frontend.md"
+                     "docs/frontend-quick-reference.md"
+                     "docs/i18n.md"
+                     "docs/route-ordering-implementation-plan.md"
+                     "docs/routes-tab-implementation-plan.md"]
+           :memory-size 50
+           :enable-tools [:all]
+           :disable-tools [:dispatch-agent]}]}

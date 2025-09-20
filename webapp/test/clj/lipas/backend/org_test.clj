@@ -37,8 +37,6 @@
     (test-utils/prune-db! test-utils/db)
     (f)))
 
-;;; Test System ;;;
-
 ;;; Helper Functions ;;;
 
 (defn test-db []

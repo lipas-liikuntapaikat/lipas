@@ -1,7 +1,8 @@
-(ns repl
+(ns user
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
    [clojure.tools.namespace.repl]
+   [shadow.cljs.devtools.api :as shadow]
    [integrant.repl :refer [reset-all halt go]]
    [integrant.repl.state]
    [migratus.core :as migratus]))
@@ -71,6 +72,21 @@
 (defn reset []
   (integrant.repl/reset))
 
+(defn browser-repl
+  []
+  (shadow/repl :app))
+
+(defn compile-cljs
+  []
+  (let [status (shadow/watch-compile! :app)
+        worker (shadow.cljs.devtools.api/get-worker :app)
+        build-state (-> worker :state-ref deref :build-state)]
+    {:build-exit-code status
+     :warnings (-> build-state
+                   :shadow.build/build-info
+                   :sources
+                   (->> (mapcat :warnings)))}))
+
 (comment
   (go)
   (reset)
@@ -78,6 +94,8 @@
   (reindex-analytics!)
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
+
+  (compile-cljs)
 
   (require '[migratus.core :as migratus])
   (migratus/create nil "activities_status" :sql)
@@ -303,5 +321,13 @@
 
   (reindex-search!)
   (lipas.backend.core/get-sports-site2 (search) 666)
+
+  (def wat2 (lipas.backend.core/get-sports-site (db) 600385))
+  (require '[lipas.backend.elevation :as ele])
+  (def wat2g (-> wat2 :location :geometries ele/enrich-elevation))
+  (def wat2-fixed (assoc-in wat2 [:location :geometries] wat2g))
+
+  (lipas.backend.core/upsert-sports-site!* (db) (get-robot-user) wat2-fixed)
+  (lipas.backend.core/index! (search) wat2-fixed)
 
   )
