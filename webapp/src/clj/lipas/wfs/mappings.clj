@@ -12,234 +12,234 @@
 
 (defn ->helsinki-time [s]
   (-> (java.time.Instant/parse s)
-        (.atZone helsinki-tz)
-        (.toLocalDateTime)
-        (str)))
+      (.atZone helsinki-tz)
+      (.toLocalDateTime)
+      (str)))
 
 (def legacy-handle->prop legacy-utils/prop-mappings)
 
 (def legacy-handle->legacy-prop
-  {:liftsCount                   :hissit_lkm,
-   :boxingRingsCount             :nyrkkeilykehat_lkm,
-   :floorballFieldsCount         :salibandykentat_lkm,
-   :pistolShooting               :pistooliammunta,
-   :shotputCount                 :kuulantyonto_lkm,
-   :swimmingPoolCount            :uima_altaiden_lkm,
-   :pool1TemperatureC            :allas1_veden_lampo_c,
-   :7m5PlatformsCount            :hyppytelineet_7m5_lkm,
-   :classifiedRoute              :luokiteltu_reitti,
-   :equipmentRental              :valinevuokraus,
-   :ligthing                     :valaistus,
-   :kiosk                        :kioski,
-   :fieldsCount                  :kenttien_lkm,
-   :kPoint                       :hyppyrimaki_k_piste,
-   :bikeOrienteering?            :pyöräsuunnistus_mahdollista,
-   :skiService                   :suksihuolto,
-   :fieldLengthM                 :kentan_pituus_m,
-   :showJumping                  :esteratsastus,
-   :skiTrack                     :latu,
-   :cosmicBowling                :hohtokeilaus,
-   :field2FlexibleRink?          :2._kenttä:_onko_joustokaukalo?,
-   :field3AreaM2                 :kentta3_ala_m2,
-   :polevaultPlacesCount         :seivashyppy_lkm,
-   :spinningHall                 :spinning_sali,
-   :waterslidesTotalLengthM      :liukumaet_kokonaispituus_m,
-   :climbingWall                 :kiipeilyseina,
-   :sportSpecification           :lajitarkenne,
-   :iceClimbing                  :jaakiipeily_mahdollisuus,
-   :travelModeInfo               :kulkutavat_lisätieto,
-   :sauna                        :sauna,
-   :trackWidthM                  :radan_leveys_m,
-   :routeWidthM                  :reitin_leveys_m,
-   :basketballFieldsCount        :koripallokentat_lkm,
-   :pier                         :laituri,
-   :radioAndTvCapabilities       :radio_tv_valmius,
-   :10mPlatformsCount            :hyppytelineet_10m_lkm,
-   :pool4TemperatureC            :allas4_veden_lampo_c,
-   :spaceDivisible               :tila_jaettavissa_osiin,
-   :auxiliaryTrainingArea?       :oheisharjoittelutila,
-   :bowlingLanesCount            :keilaradat_lkm,
-   :pyramidTablesCount           :pyramidipöydät_lkm,
-   :squashCourtsCount            :squashkentat_lkm,
-   :altitudeDifference           :korkeusero_m,
-   :gymnasticsSpace              :telinevoimistelutila,
-   :climbingWallWidthM           :kiipeilyseina_leveys_m,
-   :shower                       :suihku,
-   :pool5LengthM                 :allas5_pituus_m,
-   :skijumpHillMaterial          :vauhtimaen_rakenne,
-   :summerUsage                  :kesakaytto,
-   :lightingInfo                 :valaistuksen_lisätieto,
-   :hammerThrowPlacesCount       :moukarinheitto_lkm,
-   :parkingPlace                 :parkkipaikka,
-   :trackLengthM                 :radan_pituus_m,
-   :climbingRoutesCount          :kiipeilyreittien_lkm,
-   :customerServicePoint?        :myynti_tai_asiakaspalvelupiste,
+  {:liftsCount :hissit_lkm,
+   :boxingRingsCount :nyrkkeilykehat_lkm,
+   :floorballFieldsCount :salibandykentat_lkm,
+   :pistolShooting :pistooliammunta,
+   :shotputCount :kuulantyonto_lkm,
+   :swimmingPoolCount :uima_altaiden_lkm,
+   :pool1TemperatureC :allas1_veden_lampo_c,
+   :7m5PlatformsCount :hyppytelineet_7m5_lkm,
+   :classifiedRoute :luokiteltu_reitti,
+   :equipmentRental :valinevuokraus,
+   :ligthing :valaistus,
+   :kiosk :kioski,
+   :fieldsCount :kenttien_lkm,
+   :kPoint :hyppyrimaki_k_piste,
+   :bikeOrienteering? :pyöräsuunnistus_mahdollista,
+   :skiService :suksihuolto,
+   :fieldLengthM :kentan_pituus_m,
+   :showJumping :esteratsastus,
+   :skiTrack :latu,
+   :cosmicBowling :hohtokeilaus,
+   :field2FlexibleRink? :2._kenttä:_onko_joustokaukalo?,
+   :field3AreaM2 :kentta3_ala_m2,
+   :polevaultPlacesCount :seivashyppy_lkm,
+   :spinningHall :spinning_sali,
+   :waterslidesTotalLengthM :liukumaet_kokonaispituus_m,
+   :climbingWall :kiipeilyseina,
+   :sportSpecification :lajitarkenne,
+   :iceClimbing :jaakiipeily_mahdollisuus,
+   :travelModeInfo :kulkutavat_lisätieto,
+   :sauna :sauna,
+   :trackWidthM :radan_leveys_m,
+   :routeWidthM :reitin_leveys_m,
+   :basketballFieldsCount :koripallokentat_lkm,
+   :pier :laituri,
+   :radioAndTvCapabilities :radio_tv_valmius,
+   :10mPlatformsCount :hyppytelineet_10m_lkm,
+   :pool4TemperatureC :allas4_veden_lampo_c,
+   :spaceDivisible :tila_jaettavissa_osiin,
+   :auxiliaryTrainingArea? :oheisharjoittelutila,
+   :bowlingLanesCount :keilaradat_lkm,
+   :pyramidTablesCount :pyramidipöydät_lkm,
+   :squashCourtsCount :squashkentat_lkm,
+   :altitudeDifference :korkeusero_m,
+   :gymnasticsSpace :telinevoimistelutila,
+   :climbingWallWidthM :kiipeilyseina_leveys_m,
+   :shower :suihku,
+   :pool5LengthM :allas5_pituus_m,
+   :skijumpHillMaterial :vauhtimaen_rakenne,
+   :summerUsage :kesakaytto,
+   :lightingInfo :valaistuksen_lisätieto,
+   :hammerThrowPlacesCount :moukarinheitto_lkm,
+   :parkingPlace :parkkipaikka,
+   :trackLengthM :radan_pituus_m,
+   :climbingRoutesCount :kiipeilyreittien_lkm,
+   :customerServicePoint? :myynti_tai_asiakaspalvelupiste,
    :parkourHallEquipmentAndStructures
    :parkour_salin_varustelu_ja_rakenteet,
-   :field3WidthM                 :kentta3_leveys_m,
-   :skiTrackTraditional          :latu_perinteinen,
-   :litSlopesCount               :valaistut_rinteet_lkm,
-   :coveredStandPersonCount      :katsomosta_katettua_hlo,
-   :surfaceMaterial              :pintamateriaali,
-   :iceReduction                 :jaatymisenesto_jarjestelma,
-   :pool1MaxDepthM               :allas1_syvyys_max_m,
-   :waterPoint                   :vesipiste,
-   :poolWaterAreaM2              :allaspinta_ala_m2,
-   :activeSpaceWidthM            :liikuntakäytössä_olevan_tilan_leveys_m,
-   :shortestSlopeM               :lyhin_rinne_m,
-   :fitnessStairsLengthM         :kuntoportaiden_pituus_m,
-   :badmintonCourtsCount         :sulkapallokentat_lkm,
-   :green                        :puttiviherio,
-   :5mPlatformsCount             :hyppytelineet_5m_lkm,
-   :fieldWidthM                  :kentan_leveys_m,
-   :oldLipasTypecode             :liikuntapaikkatyyppi_vanha,
-   :pool5WidthM                  :allas5_leveys_m,
-   :mirrorWall?                  :peiliseinä,
-   :accessibilityInfo            :esteettomyys_tietoa,
-   :trainingWall                 :lyontiseina,
-   :lightRoof                    :kevytkate,
-   :3mPlatformsCount             :hyppytelineet_3m_lkm,
-   :basketballFieldType          :koripallokentan_tyyppi,
-   :pool5MinDepthM               :allas5_syvyys_min_m,
-   :pool4MinDepthM               :allas4_syvyys_min_m,
-   :javelinThrowPlacesCount      :keihaanheittopaikkojen_lkm,
-   :waterSlidesCount             :liukumaet_lkm,
-   :field1LengthM                :kentta1_pituus_m,
-   :areaKm2                      :pinta_alakm2,
-   :airGunShooting               :ilma_aseammunta,
-   :skiTrackFreestyle            :latu_vapaa,
-   :jumpsCount                   :hyppyrit_lkm,
-   :pool1LengthMM                :allas1_pituus_m,
-   :automatedTiming              :automaattinen_ajanotto,
-   :surfaceMaterialInfo          :pintamateriaali_lisatieto,
-   :sleddingHill?                :pulkkamäki,
-   :pool5MaxDepthM               :allas5_syvyys_max_m,
-   :pool2LengthM                 :allas2_pituus_m,
-   :adpReadiness                 :tulospalv_atk_valmius,
-   :weightLiftingSpotsCount      :painonnostopaikat_lkm,
-   :euBeach                      :eu_ranta,
-   #_#_:infoFi                       :lisatieto_fi,
-   :pool3TracksCount             :allas3_ratojen_lkm,
-   :snowparkOrStreet             :temppurinne,
-   :restPlacesCount              :taukopaikat_lkm,
-   :highestObstacleM             :korkeimman_esteen_korkeus_m,
-   :playground                   :leikkipuisto,
-   :pool2MinDepthM               :allas2_syvyys_min_m,
-   :longjumpPlacesCount          :pituus_ja_kolmiloikkapaikkojen_lkm,
-   :tatamisCount                 :tatamit_lkm,
-   :holesCount                   :vaylat_lkm,
-   :skiOrienteering?             :hiihtosuunnistus_mahdollista,
-   :halfpipeCount                :lumikouru_kpl,
-   :beachLengthM                 :rannan_pituus_m,
-   :totalBilliardTablesCount     :biljardipöydät_yhteensä_lkm,
-   :handballFieldsCount          :kasipallokentat_lkm,
-   :matchClock                   :ottelukello,
-   :sprintLanesCount             :etusuorien_lkm,
-   :boatingServiceClass          :venesatama_tai_laituriluokka,
-   :hallLengthM                  :halli1_pituus_m,
-   :kaisaTablesCount             :kaisapöydät_lkm,
-   :exerciseMachinesCount        :kuntoilulaite_lkm,
-   :yearRoundUse?                :ympärivuotinen_käyttö,
-   :pool5TemperatureC            :allas5_veden_lampo_c,
-   :field1FlexibleRink?          :1._kenttä:_onko_joustokaukalo?,
-   :wrestlingMatsCount           :painimatot_lkm,
-   :volleyballFieldsCount        :lentopallokentat_lkm,
-   :tennisCourtsCount            :tenniskentat_lkm,
-   :mayBeShownInExcursionMapFi   :saa_julkaista_retkikartassa,
-   :mobileOrienteering?          :mobiilisuunnistusmahdollisuus,
-   :pool3WidthM                  :allas3_leveys_m,
+   :field3WidthM :kentta3_leveys_m,
+   :skiTrackTraditional :latu_perinteinen,
+   :litSlopesCount :valaistut_rinteet_lkm,
+   :coveredStandPersonCount :katsomosta_katettua_hlo,
+   :surfaceMaterial :pintamateriaali,
+   :iceReduction :jaatymisenesto_jarjestelma,
+   :pool1MaxDepthM :allas1_syvyys_max_m,
+   :waterPoint :vesipiste,
+   :poolWaterAreaM2 :allaspinta_ala_m2,
+   :activeSpaceWidthM :liikuntakäytössä_olevan_tilan_leveys_m,
+   :shortestSlopeM :lyhin_rinne_m,
+   :fitnessStairsLengthM :kuntoportaiden_pituus_m,
+   :badmintonCourtsCount :sulkapallokentat_lkm,
+   :green :puttiviherio,
+   :5mPlatformsCount :hyppytelineet_5m_lkm,
+   :fieldWidthM :kentan_leveys_m,
+   :oldLipasTypecode :liikuntapaikkatyyppi_vanha,
+   :pool5WidthM :allas5_leveys_m,
+   :mirrorWall? :peiliseinä,
+   :accessibilityInfo :esteettomyys_tietoa,
+   :trainingWall :lyontiseina,
+   :lightRoof :kevytkate,
+   :3mPlatformsCount :hyppytelineet_3m_lkm,
+   :basketballFieldType :koripallokentan_tyyppi,
+   :pool5MinDepthM :allas5_syvyys_min_m,
+   :pool4MinDepthM :allas4_syvyys_min_m,
+   :javelinThrowPlacesCount :keihaanheittopaikkojen_lkm,
+   :waterSlidesCount :liukumaet_lkm,
+   :field1LengthM :kentta1_pituus_m,
+   :areaKm2 :pinta_alakm2,
+   :airGunShooting :ilma_aseammunta,
+   :skiTrackFreestyle :latu_vapaa,
+   :jumpsCount :hyppyrit_lkm,
+   :pool1LengthMM :allas1_pituus_m,
+   :automatedTiming :automaattinen_ajanotto,
+   :surfaceMaterialInfo :pintamateriaali_lisatieto,
+   :sleddingHill? :pulkkamäki,
+   :pool5MaxDepthM :allas5_syvyys_max_m,
+   :pool2LengthM :allas2_pituus_m,
+   :adpReadiness :tulospalv_atk_valmius,
+   :weightLiftingSpotsCount :painonnostopaikat_lkm,
+   :euBeach :eu_ranta,
+   #_#_:infoFi :lisatieto_fi,
+   :pool3TracksCount :allas3_ratojen_lkm,
+   :snowparkOrStreet :temppurinne,
+   :restPlacesCount :taukopaikat_lkm,
+   :highestObstacleM :korkeimman_esteen_korkeus_m,
+   :playground :leikkipuisto,
+   :pool2MinDepthM :allas2_syvyys_min_m,
+   :longjumpPlacesCount :pituus_ja_kolmiloikkapaikkojen_lkm,
+   :tatamisCount :tatamit_lkm,
+   :holesCount :vaylat_lkm,
+   :skiOrienteering? :hiihtosuunnistus_mahdollista,
+   :halfpipeCount :lumikouru_kpl,
+   :beachLengthM :rannan_pituus_m,
+   :totalBilliardTablesCount :biljardipöydät_yhteensä_lkm,
+   :handballFieldsCount :kasipallokentat_lkm,
+   :matchClock :ottelukello,
+   :sprintLanesCount :etusuorien_lkm,
+   :boatingServiceClass :venesatama_tai_laituriluokka,
+   :hallLengthM :halli1_pituus_m,
+   :kaisaTablesCount :kaisapöydät_lkm,
+   :exerciseMachinesCount :kuntoilulaite_lkm,
+   :yearRoundUse? :ympärivuotinen_käyttö,
+   :pool5TemperatureC :allas5_veden_lampo_c,
+   :field1FlexibleRink? :1._kenttä:_onko_joustokaukalo?,
+   :wrestlingMatsCount :painimatot_lkm,
+   :volleyballFieldsCount :lentopallokentat_lkm,
+   :tennisCourtsCount :tenniskentat_lkm,
+   :mayBeShownInExcursionMapFi :saa_julkaista_retkikartassa,
+   :mobileOrienteering? :mobiilisuunnistusmahdollisuus,
+   :pool3WidthM :allas3_leveys_m,
    :mayBeShownInHarrastuspassiFi :saa_julkaista_harrastuspassissa,
-   :trainingSpotSurfaceMaterial  :suorituspaikan_pintamateriaali,
-   :longestSlopeM                :pisin_rinne_m,
-   :heightM                      :korkeus_m,
-   :toilet                       :yleiso_wc,
-   :winterSwimming               :talviuintipaikka,
-   :field3FlexibleRink?          :3._kenttä:_onko_joustokaukalo?,
-   :shotgunShooting              :haulikkoammunta,
-   :curlingLanesCount            :curling_ratojen_lkm,
-   :pool3LengthM                 :allas3_pituus_m,
-   :climbingWallHeightM          :kiipeilyseinan_korkeus_m,
-   :pool2TracksCount             :allas2_ratojen_lkm,
-   :freeCustomerUse?             :vapaa_asiakaskäyttö,
-   :litRouteLengthKm             :valaistua_km_reitti,
-   :throwintSportsPlaces         :heittolajit_harjoituspaikat,
-   :changingRooms                :pukukopit,
-   :pool3MinDepthM               :allas3_syvyys_min_m,
-   :groupExerciseRoomsCount      :ryhmaliikuntatila_lkm,
-   :archery                      :jousiammunta,
-   :maxVerticalDifference        :korkeusero_max_m,
-   :futsalFieldsCount            :futsal_kenttien_lkm,
-   :automatedScoring             :kirjanpitoautomaatit,
-   :innerLaneLengthM             :sisaradan_pituus_m,
-   :pool5TracksCount             :allas5_ratojen_lkm,
-   :field1WidthM                 :kentta1_leveys_m,
-   :pool4WidthM                  :allas4_leveys_m,
-   :landingPlacesCount           :telinevoimistelun_alastulomonttu_lkm,
-   :pool4MaxDepthM               :allas4_syvyys_max_m,
-   :sprintTrackLengthM           :juoksuradan_etusuoran_pituus_m,
-   :footballFieldsCount          :jalkapallokentat_lkm,
-   :otherPoolsCount              :muut_altaat_lkm,
-   :pool1TracksCount             :allas1_ratojen_lkm,
-   :gymnasticRoutinesCount       :telinevoimistelun_telinesarja_lkm,
-   :shootingPositionsCount       :ampumapaikat_lkm,
-   :freestyleSlope               :kumparerinne,
-   :1mPlatformsCount             :hyppytelineet_1m_lkm,
-   :scoreboard                   :tulostaulu,
-   :pool1WidthM                  :allas1_leveys_m,
-   :rifleShooting                :kivaariammunta,
-   :travelModes                  :kulkutavat,
-   :finishLineCamera             :maalikamera,
-   :pool3TemperatureC            :allas3_veden_lampo_c,
-   :runningTrackSurfaceMaterial  :juoksuradan_pintamateriaali,
+   :trainingSpotSurfaceMaterial :suorituspaikan_pintamateriaali,
+   :longestSlopeM :pisin_rinne_m,
+   :heightM :korkeus_m,
+   :toilet :yleiso_wc,
+   :winterSwimming :talviuintipaikka,
+   :field3FlexibleRink? :3._kenttä:_onko_joustokaukalo?,
+   :shotgunShooting :haulikkoammunta,
+   :curlingLanesCount :curling_ratojen_lkm,
+   :pool3LengthM :allas3_pituus_m,
+   :climbingWallHeightM :kiipeilyseinan_korkeus_m,
+   :pool2TracksCount :allas2_ratojen_lkm,
+   :freeCustomerUse? :vapaa_asiakaskäyttö,
+   :litRouteLengthKm :valaistua_km_reitti,
+   :throwintSportsPlaces :heittolajit_harjoituspaikat,
+   :changingRooms :pukukopit,
+   :pool3MinDepthM :allas3_syvyys_min_m,
+   :groupExerciseRoomsCount :ryhmaliikuntatila_lkm,
+   :archery :jousiammunta,
+   :maxVerticalDifference :korkeusero_max_m,
+   :futsalFieldsCount :futsal_kenttien_lkm,
+   :automatedScoring :kirjanpitoautomaatit,
+   :innerLaneLengthM :sisaradan_pituus_m,
+   :pool5TracksCount :allas5_ratojen_lkm,
+   :field1WidthM :kentta1_leveys_m,
+   :pool4WidthM :allas4_leveys_m,
+   :landingPlacesCount :telinevoimistelun_alastulomonttu_lkm,
+   :pool4MaxDepthM :allas4_syvyys_max_m,
+   :sprintTrackLengthM :juoksuradan_etusuoran_pituus_m,
+   :footballFieldsCount :jalkapallokentat_lkm,
+   :otherPoolsCount :muut_altaat_lkm,
+   :pool1TracksCount :allas1_ratojen_lkm,
+   :gymnasticRoutinesCount :telinevoimistelun_telinesarja_lkm,
+   :shootingPositionsCount :ampumapaikat_lkm,
+   :freestyleSlope :kumparerinne,
+   :1mPlatformsCount :hyppytelineet_1m_lkm,
+   :scoreboard :tulostaulu,
+   :pool1WidthM :allas1_leveys_m,
+   :rifleShooting :kivaariammunta,
+   :travelModes :kulkutavat,
+   :finishLineCamera :maalikamera,
+   :pool3TemperatureC :allas3_veden_lampo_c,
+   :runningTrackSurfaceMaterial :juoksuradan_pintamateriaali,
    :heightOfBasketOrNetAdjustable?
    :korin_tai_verkon_korkeus_säädettävissä,
-   :field1AreaM2                 :kentta1_ala_m2,
-   :horseCarriageAllowed         :karryilla_ajo_sallittu,
-   :circularLanesCount           :kiertavien_juoksuratojen_lkm,
-   :standCapacityPerson          :katsomo_kapasiteetti_hlo,
-   :pool2WidthM                  :allas2_leveys_m,
-   :discusThrowPlaces            :kiekonheittopaikkojen_lkm,
-   :caromTablesCount             :karapöydät_lkm,
-   :pPoint                       :hyppyrimaki_p_piste,
-   :field2LengthM                :kentta2_pituus_m,
-   :tableTennisCount             :poytatennis_lkm,
-   :boatPlacesCount              :venepaikkojen_lkm,
-   :changingRoomsM2              :pukukoppien_kokonaispinta_ala_m²,
-   :field2AreaM2                 :kentta2_ala_m2,
-   :otherPlatforms               :hyppytelineet_muut,
-   :iceRinksCount                :kaukalo_lkm,
-   :poolTablesCount              :poolpöydät_lkm,
-   :boatLaunchingSpot            :veneen_vesillelaskup,
-   :pool4TracksCount             :allas4_ratojen_lkm,
-   :tobogganRun                  :ohjaskelkkamaki,
-   :field2WidthM                 :kentta2_leveys_m,
-   :areaM2                       :pinta_ala_m2,
-   :pool3MaxDepthM               :allas3_syvyys_max_m,
-   :trackType                    :ratatyyppi,
-   :ringetteBoundaryMarkings?    :ringeten_rajamerkinnät,
-   :routeLengthKm                :reitin_pituus_km,
-   :loudspeakers                 :tulospalvelu_aanentoisto,
-   :pool2MaxDepthM               :allas2_syvyys_max_m,
-   :outdoorExerciseMachines      :kuntoilutelineet_boolean,
-   :pool4LengthM                 :allas4_pituus_m,
-   :slopesCount                  :rinteet_lkm,
-   :field3LengthM                :kentta3_pituus_m,
-   :fencingBasesCount            :miekkailu_alustat_lkm,
-   :hallWidthM                   :halli1_leveys_m,
-   :pool2TemperatureC            :allas2_veden_lampo_c,
-   :heating                      :lammitys,
-   :winterUsage                  :talvikaytto,
-   :padelCourtsCount             :padelkentat_lkm,
-   :plasticOutrun                :alastulo_muovitus,
-   :highjumpPlacesCount          :korkeushyppypaikkojen_lkm,
-   :freeRifleShooting            :pienoiskivaariammunta,
-   :range                        :range_harjoitusalue,
-   :hsPoint                      :hs_piste,
-   :snookerTablesCount           :snookerpöydät_lkm,
-   :pool1MinDepthM               :allas1_syvyys_min_m,
-   :activeSpaceLengthM           :liikuntakäytössä_olevan_tilan_pituus_m,
-   :inrunsMaterial               :vauhtimaen_latumateriaali,
-   :skijumpHillType              :hyppyrimaen_tyyppi})
+   :field1AreaM2 :kentta1_ala_m2,
+   :horseCarriageAllowed :karryilla_ajo_sallittu,
+   :circularLanesCount :kiertavien_juoksuratojen_lkm,
+   :standCapacityPerson :katsomo_kapasiteetti_hlo,
+   :pool2WidthM :allas2_leveys_m,
+   :discusThrowPlaces :kiekonheittopaikkojen_lkm,
+   :caromTablesCount :karapöydät_lkm,
+   :pPoint :hyppyrimaki_p_piste,
+   :field2LengthM :kentta2_pituus_m,
+   :tableTennisCount :poytatennis_lkm,
+   :boatPlacesCount :venepaikkojen_lkm,
+   :changingRoomsM2 :pukukoppien_kokonaispinta_ala_m2,
+   :field2AreaM2 :kentta2_ala_m2,
+   :otherPlatforms :hyppytelineet_muut,
+   :iceRinksCount :kaukalo_lkm,
+   :poolTablesCount :poolpöydät_lkm,
+   :boatLaunchingSpot :veneen_vesillelaskup,
+   :pool4TracksCount :allas4_ratojen_lkm,
+   :tobogganRun :ohjaskelkkamaki,
+   :field2WidthM :kentta2_leveys_m,
+   :areaM2 :pinta_ala_m2,
+   :pool3MaxDepthM :allas3_syvyys_max_m,
+   :trackType :ratatyyppi,
+   :ringetteBoundaryMarkings? :ringeten_rajamerkinnät,
+   :routeLengthKm :reitin_pituus_km,
+   :loudspeakers :tulospalvelu_aanentoisto,
+   :pool2MaxDepthM :allas2_syvyys_max_m,
+   :outdoorExerciseMachines :kuntoilutelineet_boolean,
+   :pool4LengthM :allas4_pituus_m,
+   :slopesCount :rinteet_lkm,
+   :field3LengthM :kentta3_pituus_m,
+   :fencingBasesCount :miekkailu_alustat_lkm,
+   :hallWidthM :halli1_leveys_m,
+   :pool2TemperatureC :allas2_veden_lampo_c,
+   :heating :lammitys,
+   :winterUsage :talvikaytto,
+   :padelCourtsCount :padelkentat_lkm,
+   :plasticOutrun :alastulo_muovitus,
+   :highjumpPlacesCount :korkeushyppypaikkojen_lkm,
+   :freeRifleShooting :pienoiskivaariammunta,
+   :range :range_harjoitusalue,
+   :hsPoint :hs_piste,
+   :snookerTablesCount :snookerpöydät_lkm,
+   :pool1MinDepthM :allas1_syvyys_min_m,
+   :activeSpaceLengthM :liikuntakäytössä_olevan_tilan_pituus_m,
+   :inrunsMaterial :vauhtimaen_latumateriaali,
+   :skijumpHillType :hyppyrimaen_tyyppi})
 
 (def legacy-prop->legacy-handle
   (set/map-invert legacy-handle->legacy-prop))
@@ -247,40 +247,40 @@
 (def legacy-field->resolve-fn
   "Resolve function receives a map with keys :site :feature :idx"
   (merge
-   {:id                    (comp :lipas-id :site)
-    :nimi_fi               (comp :name :site)
-    :nimi_se               (comp :se :name-localized :site)
-    :nimi_en               (comp :en :name-localized :site)
-    :sahkoposti            (comp :email :site)
-    :www                   (comp :www :site)
-    :puhelinnumero         (comp :phone-number :site)
+   {:id (comp :lipas-id :site)
+    :nimi_fi (comp :name :site)
+    :nimi_se (comp :se :name-localized :site)
+    :nimi_en (comp :en :name-localized :site)
+    :sahkoposti (comp :email :site)
+    :www (comp :www :site)
+    :puhelinnumero (comp :phone-number :site)
     :koulun_liikuntapaikka (comp :school-use? :properties :site)
-    :vapaa_kaytto          (comp :free-use? :properties :site)
-    :rakennusvuosi         (comp :construction-year :site)
-    :peruskorjausvuodet    (fn [m] (some->> m :site :renovation-years (str/join ",")))
-    :omistaja              (comp :fi owners/all :owner :site)
-    :yllapitaja            (comp :fi admins/all :admin :site)
-    :katuosoite            (comp :address :location :site)
-    :postinumero           (comp :postal-code :location :site)
-    :postitoimipaikka      (comp :postal-office :location :site)
-    :kunta_nimi_fi         (comp :fi :name cities/by-city-code :city-code :city :location :site)
-    :kuntanumero           (comp :city-code :city :location :site)
-    :kuntaosa              (comp :neighborhood :city :location :site)
-    :tyyppikoodi           (comp :type-code :type :site)
-    :tyyppi_nimi_fi        (comp :fi :name types/all :type-code :type :site)
-    :tyyppi_nimi_se        (comp :se :name types/all :type-code :type :site)
-    :tyyppi_nimi_en        (comp :en :name types/all :type-code :type :site)
-    :tyyppikoodi_paaryhma  (fn [{:keys [site]}]
-                             (let [type-code (-> site :type :type-code)
-                                   main-cat  (get-in types/all [type-code :main-category])]
-                                    (get-in types/main-categories [main-cat :name :fi])))
-    :tyyppikoodi_alaryhma  (fn [{:keys [site]}]
-                             (let [type-code (-> site :type :type-code)
-                                   sub-cat   (get-in types/all [type-code :sub-category])]
-                                    (get-in types/sub-categories [sub-cat :name :fi])))
-    :muokattu_viimeksi     (comp ->helsinki-time :event-date :site)
-    :lisatieto_fi          (comp :comment :site)
-    :sijainti_id           (comp :lipas-id :site)
+    :vapaa_kaytto (comp :free-use? :properties :site)
+    :rakennusvuosi (comp :construction-year :site)
+    :peruskorjausvuodet (fn [m] (some->> m :site :renovation-years (str/join ",")))
+    :omistaja (comp :fi owners/all :owner :site)
+    :yllapitaja (comp :fi admins/all :admin :site)
+    :katuosoite (comp :address :location :site)
+    :postinumero (comp :postal-code :location :site)
+    :postitoimipaikka (comp :postal-office :location :site)
+    :kunta_nimi_fi (comp :fi :name cities/by-city-code :city-code :city :location :site)
+    :kuntanumero (comp :city-code :city :location :site)
+    :kuntaosa (comp :neighborhood :city :location :site)
+    :tyyppikoodi (comp :type-code :type :site)
+    :tyyppi_nimi_fi (comp :fi :name types/all :type-code :type :site)
+    :tyyppi_nimi_se (comp :se :name types/all :type-code :type :site)
+    :tyyppi_nimi_en (comp :en :name types/all :type-code :type :site)
+    :tyyppikoodi_paaryhma (fn [{:keys [site]}]
+                            (let [type-code (-> site :type :type-code)
+                                  main-cat (get-in types/all [type-code :main-category])]
+                              (get-in types/main-categories [main-cat :name :fi])))
+    :tyyppikoodi_alaryhma (fn [{:keys [site]}]
+                            (let [type-code (-> site :type :type-code)
+                                  sub-cat (get-in types/all [type-code :sub-category])]
+                              (get-in types/sub-categories [sub-cat :name :fi])))
+    :muokattu_viimeksi (comp ->helsinki-time :event-date :site)
+    :lisatieto_fi (comp :comment :site)
+    :sijainti_id (comp :lipas-id :site)
 
     ;; Following keys are "special ones" that don't take sports-site as
     ;; argument, but either a feature or idx. This is because for WFS
@@ -288,9 +288,9 @@
     ;; collection to as many rows as there are features. LIPAS WFS
     ;; does not use MultiLineString or MultiPolygon for backwards
     ;; compatibility reasons.
-    :the_geom    (fn [{:keys [feature]}] (:geometry feature))
-    :reitti_id   (fn [{:keys [idx]}] (inc idx))
-    :alue_id     (fn [{:keys [idx]}] (inc idx))
+    :the_geom (fn [{:keys [feature]}] (:geometry feature))
+    :reitti_id (fn [{:keys [idx]}] (inc idx))
+    :alue_id (fn [{:keys [idx]}] (inc idx))
     :kulkusuunta (fn [{:keys [feature]}] (-> feature :properties :travel-direction))}
 
    ;; Create lookup functions for all possible type-specific props.
@@ -298,10 +298,10 @@
                 (fn [legacy-handle]
                   (fn [m]
                     (let [prop-k (legacy-handle->prop legacy-handle)
-                          prop   (get prop-types/all prop-k)
-                          v      (get-in m [:site :properties prop-k])]
+                          prop (get prop-types/all prop-k)
+                          v (get-in m [:site :properties prop-k])]
                       (case (:data-type prop)
-                        "enum"      (get-in prop [:opts v :label :fi])
+                        "enum" (get-in prop [:opts v :label :fi])
                         "enum-coll" (-> (select-keys (:opts prop) v)
                                         vals
                                         (->> (map (comp :fi :label))
@@ -542,6 +542,91 @@
      :leikkipuisto
      :alue_id
      :valaistus},
+   ;; NEW TYPE CODES START HERE
+   1190
+   #{:koulun_liikuntapaikka
+     :valaistuksen_lisätieto
+     :yleiso_wc
+     #_:saa_julkaista_harrastuspassissa
+     :valaistus},
+   1650
+   #{:puttiviherio
+     :koulun_liikuntapaikka
+     :vapaa_kaytto
+     :valaistuksen_lisätieto
+     :yleiso_wc
+     :kioski
+     :alue_id
+     :vaylat_lkm
+     #_:saa_julkaista_harrastuspassissa
+     :valaistus
+     :range_harjoitusalue},
+   2225 #{:pinta_ala_m2 :korkeus_m :kioski},
+   2620
+   #{:biljardipöydät_yhteensä_lkm
+     :karapöydät_lkm
+     :koulun_liikuntapaikka
+     :poolpöydät_lkm
+     :yleiso_wc
+     :kioski
+     :kaisapöydät_lkm
+     #_:saa_julkaista_harrastuspassissa
+     :snookerpöydät_lkm
+     :pyramidipöydät_lkm},
+   3250
+   #{:sauna
+     :pukukopit
+     :vapaa_kaytto
+     :allaspinta_ala_m2
+     :yleiso_wc
+     :kioski
+     :suihku
+     #_:saa_julkaista_harrastuspassissa
+     :laituri},
+   4406
+   #{:reitin_leveys_m
+     :pintamateriaali_lisatieto
+     :reitin_pituus_km
+     :taukopaikat_lkm
+     :valaistua_km_reitti
+     :ympärivuotinen_käyttö
+     :reitti_id
+     :yleiso_wc
+     :kulkutavat_lisätieto
+     :pintamateriaali
+     :kulkutavat},
+   4407
+   #{:reitin_leveys_m
+     :pintamateriaali_lisatieto
+     :reitin_pituus_km
+     :vapaa_kaytto
+     :taukopaikat_lkm
+     :valaistua_km_reitti
+     :reitti_id
+     :yleiso_wc
+     :kuntoilutelineet_boolean
+     :pintamateriaali
+     #_:saa_julkaista_harrastuspassissa},
+   4441
+   #{:reitin_leveys_m
+     :pintamateriaali_lisatieto
+     :reitin_pituus_km
+     :vapaa_kaytto
+     :valaistua_km_reitti
+     :ympärivuotinen_käyttö
+     :reitti_id
+     :pintamateriaali},
+   6150
+   #{:pintamateriaali_lisatieto
+     :vapaa_kaytto
+     :radan_pituus_m
+     :yleiso_wc
+     :kioski
+     :pintamateriaali
+     #_:saa_julkaista_harrastuspassissa
+     :radan_leveys_m
+     :valaistus},
+   ;; NEW TYPE CODES END HERE
    6220
    #{:pinta_ala_m2
      :pintamateriaali_lisatieto
@@ -1796,35 +1881,46 @@
    6210 ["lipas_6210_koiraurheilualue"],
    1370 ["lipas_1370_tenniskentta_alue"],
    1360 ["lipas_1360_pesapallostadion"],
-   110  ["lipas_110_eramaa_alue"],
+   110 ["lipas_110_eramaa_alue"],
    2360 ["lipas_2360_sisa_ampumarata"],
    5310 ["lipas_5310_moottoriurheilukeskus"],
    1560 ["lipas_1560_alamakiluistelurata"],
-   205  ["lipas_205_rantautumispaikka"],
+   205 ["lipas_205_rantautumispaikka"],
    2150 ["lipas_2150_liikuntasali"],
    2210 ["lipas_2210_liikuntahalli"],
-   101  ["lipas_101_lahipuisto"],
-   102  ["lipas_102_ulkoilupuisto"],
+   101 ["lipas_101_lahipuisto"],
+   102 ["lipas_102_ulkoilupuisto"],
    7000 ["lipas_7000_huoltorakennukset"],
    1110 ["lipas_1110_liikuntapuisto"],
+   ;; NEW TYPE CODES START HERE
+   1190 ["lipas_1190_pulkkamaki"],
+   1650 ["lipas_1650_golfkentta"],
+   2225 ["lipas_2225_sisaleikki_sisaaktiviteettipuisto"],
+   2620 ["lipas_2620_biljardisali"],
+   3250 ["lipas_3250_vesiurheilukeskus"],
+   4406 ["lipas_4406_monikayttoreitti" "lipas_4406_monikayttoreitti_3d"],
+   4407 ["lipas_4407_rullahiihtorata" "lipas_4407_rullahiihtorata_3d"],
+   4441 ["lipas_4441_koiravaljakkoreitti" "lipas_4441_koiravaljakkoreitti_3d"],
+   6150 ["lipas_6150_ovaalirata"],
+   ;; NEW TYPE CODES END HERE
    6220 ["lipas_6220_koiraurheiluhalli"],
    4530 ["lipas_4530_pyorasuunnistusalue"],
    4720 ["lipas_4720_kiipeilykallio"],
    1330 ["lipas_1330_beachvolleykentta"],
-   206  ["lipas_206_ruoanlaittopaikka"],
+   206 ["lipas_206_ruoanlaittopaikka"],
    4830 ["lipas_4830_jousiammuntarata"],
    1180 ["lipas_1180_frisbeegolf_rata"],
    4422 ["lipas_4422_moottorikelkkaura"
          "lipas_4422_moottorikelkkaura_3d"],
    4430 ["lipas_4430_hevosreitti"
          "lipas_4430_hevosreitti_3d"],
-   204  ["lipas_204_luontotorni"],
-   106  ["lipas_106_monikayttoalue"],
+   204 ["lipas_204_luontotorni"],
+   106 ["lipas_106_monikayttoalue"],
    4610 ["lipas_4610_ampumahiihdon_harjoittelualue"],
    2610 ["lipas_2610_keilahalli"],
    2110 ["lipas_2110_kuntokeskus"],
    3120 ["lipas_3120_uima_allas"],
-   104  ["lipas_104_retkeilyalue"],
+   104 ["lipas_104_retkeilyalue"],
    2330 ["lipas_2330_poytatennistila"],
    2280 ["lipas_2280_tennishalli"],
    6140 ["lipas_6140_ravirata"],
@@ -1839,20 +1935,20 @@
          "lipas_4440_koirahiihtolatu_3d"],
    2520 ["lipas_2520_kilpajaahalli"],
    4710 ["lipas_4710_ulkokiipeilyseina"],
-   304  ["lipas_304_ulkoilumaja_hiihtomaja"],
+   304 ["lipas_304_ulkoilumaja_hiihtomaja"],
    4412 ["lipas_4412_pyorailyreitti"
          "lipas_4412_pyorailyreitti_3d"],
    4820 ["lipas_4820_ampumaurheilukeskus"],
    1170 ["lipas_1170_pyorailurata"],
    4404 ["lipas_4404_luontopolku"
          "lipas_4404_luontopolku_3d"],
-   108  ["lipas_108_virkistysmetsa"],
+   108 ["lipas_108_virkistysmetsa"],
    4401 ["lipas_4401_kuntorata"
          "lipas_4401_kuntorata_3d"],
    2350 ["lipas_2350_tanssitila"],
    2340 ["lipas_2340_miekkailutila"],
    2120 ["lipas_2120_kuntosali"],
-   109  ["lipas_109_valtion_retkeilyalue"],
+   109 ["lipas_109_valtion_retkeilyalue"],
    5160 ["lipas_5160_soudun_ja_melonnan_sisaharjoittelutila"],
    1550 ["lipas_1550_luistelureitti"],
    3230 ["lipas_3230_uimapaikka"],
@@ -1863,8 +1959,8 @@
    4240 ["lipas_4240_lasketteluhalli"],
    2270 ["lipas_2270_squash_halli"],
    4210 ["lipas_4210_curlingrata"],
-   301  ["lipas_301_laavu_kota_kammi"],
-   111  ["lipas_111_kansallispuisto"],
+   301 ["lipas_301_laavu_kota_kammi"],
+   111 ["lipas_111_kansallispuisto"],
    4630 ["lipas_4630_kilpahiihtokeskus"],
    4810 ["lipas_4810_ampumarata"],
    1540 ["lipas_1540_pikaluistelurata"],
@@ -1875,28 +1971,28 @@
    2310 ["lipas_2310_yksittainen_yleisurheilun_suorituspaikka"],
    5210 ["lipas_5210_urheiluilmailualue"],
    2380 ["lipas_2380_parkour_sali"],
-   103  ["lipas_103_ulkoilualue"],
-   201  ["lipas_201_kalastusalue"],
+   103 ["lipas_103_ulkoilualue"],
+   201 ["lipas_201_kalastusalue"],
    1220 ["lipas_1220_yleisurheilukentta"],
    4411 ["lipas_4411_maastopyorailyreitti"
          "lipas_4411_maastopyorailyreitti_3d"],
    1140 ["lipas_1140_parkouralue"],
    4520 ["lipas_4520_hiihtosuunnistusalue"],
-   107  ["lipas_107_matkailupalveluiden_alue"],
+   107 ["lipas_107_matkailupalveluiden_alue"],
    6110 ["lipas_6110_ratsastuskentta"],
    1120 ["lipas_1120_lahiliikuntapaikka"],
    1390 ["lipas_1390_padelkenttaalue"],
    5340 ["lipas_5340_karting_rata"],
-   302  ["lipas_302_tupa"],
+   302 ["lipas_302_tupa"],
    4405 ["lipas_4405_retkeilyreitti"
          "lipas_4405_retkeilyreitti_3d"],
    6120 ["lipas_6120_ratsastusmaneesi"],
    1310 ["lipas_1310_koripallokentta"],
-   202  ["lipas_202_telttailu_ja_leiriytyminen"],
+   202 ["lipas_202_telttailu_ja_leiriytyminen"],
    1620 ["lipas_1620_golfkentta"],
    2250 ["lipas_2250_skeittihalli"],
    2530 ["lipas_2530_pikaluisteluhalli"],
-   112  ["lipas_112_muu_luonnonsuojelualue"],
+   112 ["lipas_112_muu_luonnonsuojelualue"],
    2130 ["lipas_2130_voimailusali"],
    3220 ["lipas_3220_uimaranta"],
    5330 ["lipas_5330_moottorirata"],
@@ -1904,7 +2000,7 @@
    4320 ["lipas_4320_hyppyrimaki"],
    3130 ["lipas_3130_kylpyla"],
    3110 ["lipas_3110_uimahalli"],
-   203  ["lipas_203_veneilyn_palvelupaikka"],
+   203 ["lipas_203_veneilyn_palvelupaikka"],
    4620 ["lipas_4620_ampumahiihtokeskus"],
    5360 ["lipas_5360_jokamies_ja_rallicross_rata"],
    2290 ["lipas_2290_petanque_halli"],
@@ -1913,7 +2009,7 @@
    1210 ["lipas_1210_yleisurheilun_harjoitusalue"],
    5140 ["lipas_5140_vesihiihtoalue"],
    4310 ["lipas_4310_harjoitushyppyrimaki"],
-   207  ["lipas_207_opastuspiste"],
+   207 ["lipas_207_opastuspiste"],
    1130 ["lipas_1130_ulkokuntoilupaikka"],
    5120 ["lipas_5120_purjehdusalue"],
    4110 ["lipas_4110_laskettelun_suorituspaikat"],
@@ -1947,9 +2043,9 @@
 (defn resolve-geom-field-type [type-code z]
   (let [geom-type (-> type-code types/all :geometry-type)]
     (case geom-type
-      "Point"      (keyword (if z "geometry(PointZ,3067)" "geometry(Point,3067)"))
+      "Point" (keyword (if z "geometry(PointZ,3067)" "geometry(Point,3067)"))
       "LineString" (keyword (if z "geometry(LineStringZ,3067)" "geometry(LineString,3067)"))
-      "Polygon"    (keyword (if z "geometry(Polygonz,3067)" "geometry(Polygon,3067)")))))
+      "Polygon" (keyword (if z "geometry(Polygonz,3067)" "geometry(Polygon,3067)")))))
 
 (defn resolve-field-type
   [field]
@@ -1999,134 +2095,130 @@
 
 (def coll-layer-mat-view-specs
   {:lipas_kaikki_alueet
-    [[:id "integer"]
-     [:tyyppikoodi "integer"]
-     [:tyyppikoodi_alaryhma "character varying(50)"]
-     [:tyyppikoodi_paaryhma "character varying(50)"]
-     [:sijainti_id "integer"]
-     [:alue_id "integer"]
-     [:katuosoite "character varying(100)"]
-     [:postinumero "character varying(50)"]
-     [:postitoimipaikka "character varying(50)"]
-     [:kuntanumero "integer"]
-     [:kunta_nimi_fi "character varying(100)"]
-     [:tyyppi_nimi_fi "character varying(100)"]
-     [:tyyppi_nimi_se "character varying(100)"]
-     [:tyyppi_nimi_en "character varying(100)"]
-     [:nimi_fi "character varying(256)"]
-     [:nimi_se "character varying(256)"]
-     [:www "text"]
-     [:sahkoposti "character varying(100)"]
-     [:puhelinnumero "character varying(50)"]
-     [:omistaja "character varying(100)"]
-     [:yllapitaja "character varying(100)"]
-     [:lisatieto_fi "text"]
-     [:osa_alue_json "text"]
-     [:the_geom "geometry(Polygon,3067)"]
-     [:x "double precision"]
-     [:y "double precision"]]
+   [[:id "integer"]
+    [:tyyppikoodi "integer"]
+    [:tyyppikoodi_alaryhma "character varying(50)"]
+    [:tyyppikoodi_paaryhma "character varying(50)"]
+    [:sijainti_id "integer"]
+    [:alue_id "integer"]
+    [:katuosoite "character varying(100)"]
+    [:postinumero "character varying(50)"]
+    [:postitoimipaikka "character varying(50)"]
+    [:kuntanumero "integer"]
+    [:kunta_nimi_fi "character varying(100)"]
+    [:tyyppi_nimi_fi "character varying(100)"]
+    [:tyyppi_nimi_se "character varying(100)"]
+    [:tyyppi_nimi_en "character varying(100)"]
+    [:nimi_fi "character varying(256)"]
+    [:nimi_se "character varying(256)"]
+    [:www "text"]
+    [:sahkoposti "character varying(100)"]
+    [:puhelinnumero "character varying(50)"]
+    [:omistaja "character varying(100)"]
+    [:yllapitaja "character varying(100)"]
+    [:lisatieto_fi "text"]
+    [:osa_alue_json "text"]
+    [:the_geom "geometry(Polygon,3067)"]
+    [:x "double precision"]
+    [:y "double precision"]]
 
+   :lipas_kaikki_reitit
+   [[:id "integer"]
+    [:tyyppikoodi "integer"]
+    [:tyyppikoodi_alaryhma "character varying(50)"]
+    [:tyyppikoodi_paaryhma "character varying(50)"]
+    [:sijainti_id "integer"]
+    [:reitisto_id "integer"]
+    [:katuosoite "character varying(100)"]
+    [:postinumero "character varying(50)"]
+    [:postitoimipaikka "character varying(50)"]
+    [:kuntanumero "integer"]
+    [:kunta_nimi_fi "character varying(100)"]
+    [:lisatieto_fi "text"]
+    [:reitti_id "integer"]
+    [:tyyppi_nimi_fi "character varying(100)"]
+    [:tyyppi_nimi_se "character varying(100)"]
+    [:tyyppi_nimi_en "character varying(100)"]
+    [:nimi_fi "character varying(256)"]
+    [:nimi_se "character varying(256)"]
+    [:www "text"]
+    [:sahkoposti "character varying(100)"]
+    [:puhelinnumero "character varying(50)"]
+    [:omistaja "character varying(100)"]
+    [:yllapitaja "character varying(100)"]
+    [:reitti_nimi_fi "character varying(100)"]
+    [:reitti_nimi_se "character varying(100)"]
+    [:reittiosa_json "text"]
+    [:the_geom "geometry(LineString,3067)"]
+    [:x "double precision"]
+    [:y "double precision"]]
 
-    :lipas_kaikki_reitit
-    [[:id "integer"]
-     [:tyyppikoodi "integer"]
-     [:tyyppikoodi_alaryhma "character varying(50)"]
-     [:tyyppikoodi_paaryhma "character varying(50)"]
-     [:sijainti_id "integer"]
-     [:reitisto_id "integer"]
-     [:katuosoite "character varying(100)"]
-     [:postinumero "character varying(50)"]
-     [:postitoimipaikka "character varying(50)"]
-     [:kuntanumero "integer"]
-     [:kunta_nimi_fi "character varying(100)"]
-     [:lisatieto_fi "text"]
-     [:reitti_id "integer"]
-     [:tyyppi_nimi_fi "character varying(100)"]
-     [:tyyppi_nimi_se "character varying(100)"]
-     [:tyyppi_nimi_en "character varying(100)"]
-     [:nimi_fi "character varying(256)"]
-     [:nimi_se "character varying(256)"]
-     [:www "text"]
-     [:sahkoposti "character varying(100)"]
-     [:puhelinnumero "character varying(50)"]
-     [:omistaja "character varying(100)"]
-     [:yllapitaja "character varying(100)"]
-     [:reitti_nimi_fi "character varying(100)"]
-     [:reitti_nimi_se "character varying(100)"]
-     [:reittiosa_json "text"]
-     [:the_geom "geometry(LineString,3067)"]
-     [:x "double precision"]
-     [:y "double precision"]]
+   :lipas_kaikki_pisteet
+   [[:id "integer"]
+    [:tyyppikoodi "integer"]
+    [:tyyppi_nimi_fi "character varying(100)"]
+    [:tyyppi_nimi_se "character varying(100)"]
+    [:tyyppi_nimi_en "character varying(100)"]
+    [:nimi_fi "character varying(256)"]
+    [:nimi_se "character varying(256)"]
+    [:sijainti_id "integer"]
+    [:www "text"]
+    [:sahkoposti "character varying(100)"]
+    [:puhelinnumero "character varying(50)"]
+    [:muokattu_viimeksi "timestamp without time zone"]
+    [:omistaja "character varying(100)"]
+    [:yllapitaja "character varying(100)"]
+    [:katuosoite "character varying(100)"]
+    [:postinumero "character varying(50)"]
+    [:postitoimipaikka "character varying(50)"]
+    [:kuntanumero "integer"]
+    [:kunta_nimi_fi "character varying(100)"]
+    [:lisatieto_fi "text"]
+    [:the_geom "geometry(Point,3067)"]
+    [:piste_json "text"]
+    [:x "double precision"]
+    [:y "double precision"]]
 
+   :retkikartta_alueet
+   [[:id "integer"]
+    [:category_id "integer"]
+    [:name_fi "character varying(256)"]
+    [:name_se "character varying(256)"]
+    [:name_en "character varying(256)"]
+    [:ext_link "text"]
+    [:admin "character varying(100)"]
+    [:alue_id "integer"]
+    [:osa_alue_id "integer"]
+    [:geometry "geometry(Polygon,3067)"]
+    [:info_fi "text"]]
 
-    :lipas_kaikki_pisteet
-    [[:id "integer"]
-     [:tyyppikoodi "integer"]
-     [:tyyppi_nimi_fi "character varying(100)"]
-     [:tyyppi_nimi_se "character varying(100)"]
-     [:tyyppi_nimi_en "character varying(100)"]
-     [:nimi_fi "character varying(256)"]
-     [:nimi_se "character varying(256)"]
-     [:sijainti_id "integer"]
-     [:www "text"]
-     [:sahkoposti "character varying(100)"]
-     [:puhelinnumero "character varying(50)"]
-     [:muokattu_viimeksi "timestamp without time zone"]
-     [:omistaja "character varying(100)"]
-     [:yllapitaja "character varying(100)"]
-     [:katuosoite "character varying(100)"]
-     [:postinumero "character varying(50)"]
-     [:postitoimipaikka "character varying(50)"]
-     [:kuntanumero "integer"]
-     [:kunta_nimi_fi "character varying(100)"]
-     [:lisatieto_fi "text"]
-     [:the_geom "geometry(Point,3067)"]
-     [:piste_json "text"]
-     [:x "double precision"]
-     [:y "double precision"]]
+   :retkikartta_reitit
+   [[:id "integer"]
+    [:category_id "integer"]
+    [:name_fi "character varying(256)"]
+    [:name_se "character varying(256)"]
+    [:name_en "character varying(256)"]
+    [:ext_link "text"]
+    [:admin "character varying(100)"]
+    [:reitisto_id "integer"]
+    [:reitti_id "integer"]
+    [:reittiosa_id "integer"]
+    [:geometry "geometry(LineString,3067)"]
+    [:length "double precision"]
+    [:talvikaytto "boolean"]
+    [:kesakaytto "boolean"]
+    [:info_fi "text"]]
 
-
-    :retkikartta_alueet
-    [[:id "integer"]
-     [:category_id "integer"]
-     [:name_fi "character varying(256)"]
-     [:name_se "character varying(256)"]
-     [:name_en "character varying(256)"]
-     [:ext_link "text"]
-     [:admin "character varying(100)"]
-     [:alue_id "integer"]
-     [:osa_alue_id "integer"]
-     [:geometry "geometry(Polygon,3067)"]
-     [:info_fi "text"]]
-
-
-    :retkikartta_reitit
-    [[:id "integer"]
-     [:category_id "integer"]
-     [:name_fi "character varying(256)"]
-     [:name_se "character varying(256)"]
-     [:name_en "character varying(256)"]
-     [:ext_link "text"]
-     [:admin "character varying(100)"]
-     [:reitisto_id "integer"]
-     [:reitti_id "integer"]
-     [:reittiosa_id "integer"]
-     [:geometry "geometry(LineString,3067)"]
-     [:length "double precision"]
-     [:talvikaytto "boolean"]
-     [:kesakaytto "boolean"]
-     [:info_fi "text"]]
-
-    :retkikartta_pisteet
-    [[:id "integer"]
-     [:category_id "integer"]
-     [:name_fi "character varying(256)"]
-     [:name_se "character varying(256)"]
-     [:name_en "character varying(256)"]
-     [:ext_link "text"]
-     [:admin "character varying(100)"]
-     [:geometry "geometry(Point,3067)"]
-     [:info_fi "text"]]})
+   :retkikartta_pisteet
+   [[:id "integer"]
+    [:category_id "integer"]
+    [:name_fi "character varying(256)"]
+    [:name_se "character varying(256)"]
+    [:name_en "character varying(256)"]
+    [:ext_link "text"]
+    [:admin "character varying(100)"]
+    [:geometry "geometry(Point,3067)"]
+    [:info_fi "text"]]})
 
 (def main-category-layer-groups
   {"0" "lipas_0_virkistyskohteet_ja_palvelut"
