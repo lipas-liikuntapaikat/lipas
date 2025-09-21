@@ -150,7 +150,7 @@
     (ImageLayer.
       #js {:visible false
            :source (ImageWMSSource. #js {:url "/geoserver/lipas/wms?"
-                                         :params #js {:LAYERS "lipas:metsahallitus_urat2023"}
+                                         :params #js {:LAYERS "lipas:metsahallitus_urat2025"}
                                          :serverType "geoserver"
                                          :crossOrigin "anonymous"})})
     :mml-kiinteisto

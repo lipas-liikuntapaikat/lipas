@@ -198,7 +198,7 @@
                      :label2 "© Väylävirasto"
                      :icon [mui/icon "timeline"]}
                     :retkikartta-snowmobile-tracks
-                    {:label (tr :map.overlay/retkikartta-snowmobile-tracks)
+                    {:label (str (tr :map.overlay/retkikartta-snowmobile-tracks) " 2025")
                      :label2 "© Metsähallitus"
                      :icon [mui/icon
                             {:style {:color "#0000FF"}}
