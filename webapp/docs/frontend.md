@@ -374,30 +374,15 @@ Event dispatch → HTTP request → Success/Failure handler → DB update → UI
 
 ## Development Workflow
 
-### 1. Hot Reload Development
+### 1. Frontend Development
 
-```bash
-# Start shadow-cljs watch
-npx shadow-cljs watch app
+Shadow-cljs is already running and you have access to a live clojure REPL.
 
-# REPL connection
-npx shadow-cljs cljs-repl app
-```
+Clojure REPL can be promoted to a ClojureScript REPL: `(user/browser-repl)`
 
-### 2. State Inspection
+You can return back to the Clojure REPL by evaluating `:cljs/quit` in ClojureScript REPL.
 
-#### Re-frame 10x
-- Enabled in development
-- Event replay
-- State inspection
-- Performance profiling
-
-### 3. Testing Approach
-
-While test files weren't examined, the architecture supports:
-- Unit tests for pure functions
-- Integration tests for event handlers
-- Component testing with React Testing Library
+You can inspect possible build warnings and errors with: `(user/compile-cljs)`
 
 Currently no automated UI tests exist.
 

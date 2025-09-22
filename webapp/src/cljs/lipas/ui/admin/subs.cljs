@@ -322,3 +322,21 @@
 (rf/reg-sub ::add-user-to-org-role
   (fn [db _]
     (get-in db [:admin :add-user-to-org :role])))
+
+;; Site History subscriptions
+
+(rf/reg-sub ::site-history-search-id
+  (fn [db _]
+    (get-in db [:admin :site-history :search-id])))
+
+(rf/reg-sub ::site-history-results
+  (fn [db _]
+    (get-in db [:admin :site-history :results])))
+
+(rf/reg-sub ::site-history-loading?
+  (fn [db _]
+    (get-in db [:admin :site-history :loading?] false)))
+
+(rf/reg-sub ::site-history-error
+  (fn [db _]
+    (get-in db [:admin :site-history :error])))

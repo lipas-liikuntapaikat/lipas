@@ -497,62 +497,62 @@
         [mui/table-cell "New-stroke"]]]
 
       (into
-        [mui/table-body]
-        (for [[type-code type] (sort-by first types)
-              :let [shape (-> type-code types :geometry-type)
-                    fill (-> type-code styles/symbols :fill :color)
-                    stroke (-> type-code styles/symbols :stroke :color)]]
-          [mui/table-row
-           [mui/table-cell type-code]
-           [mui/table-cell (-> type :name :fi)]
-           [mui/table-cell shape]
+       [mui/table-body]
+       (for [[type-code type] (sort-by first types)
+             :let [shape (-> type-code types :geometry-type)
+                   fill (-> type-code styles/symbols :fill :color)
+                   stroke (-> type-code styles/symbols :stroke :color)]]
+         [mui/table-row
+          [mui/table-cell type-code]
+          [mui/table-cell (-> type :name :fi)]
+          [mui/table-cell shape]
 
            ;; Old symbol
-           [mui/table-cell (condp = shape
-                             "Point" "Circle"
-                             shape)]
+          [mui/table-cell (condp = shape
+                            "Point" "Circle"
+                            shape)]
 
            ;; New symbol
-           [mui/table-cell (condp = shape
-                             "Point" [lui/select
-                                      {:items [{:label "Circle" :value "circle"}
-                                               {:label "Square" :value "square"}]
-                                       :value (or (-> type-code new-colors :symbol)
-                                                  "circle")
-                                       :on-change (partial pick-color type-code :symbol)}]
-                             shape)]
+          [mui/table-cell (condp = shape
+                            "Point" [lui/select
+                                     {:items [{:label "Circle" :value "circle"}
+                                              {:label "Square" :value "square"}]
+                                      :value (or (-> type-code new-colors :symbol)
+                                                 "circle")
+                                      :on-change (partial pick-color type-code :symbol)}]
+                            shape)]
 
            ;; Old fill
-           [mui/table-cell
-            [color-picker {:value fill :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value fill :on-change #()}]]
 
            ;; New fill
-           [mui/table-cell
-            [mui/grid {:container true :wrap "nowrap"}
-             [mui/grid {:item true}
-              [color-picker
-               {:value (-> (new-colors type-code) :fill)
-                :on-change (partial pick-color type-code :fill)}]]
-             [mui/grid {:item true}
-              [mui/button
-               {:size :small :on-click #(pick-color type-code :fill fill)}
-               "reset"]]]]
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value (-> (new-colors type-code) :fill)
+               :on-change (partial pick-color type-code :fill)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :fill fill)}
+              "reset"]]]]
 
            ;; Old stroke
-           [mui/table-cell
-            [color-picker {:value stroke :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value stroke :on-change #()}]]
 
            ;; New stroke
-           [mui/table-cell
-            [mui/grid {:container true :wrap "nowrap"}
-             [mui/grid {:item true}
-              [color-picker
-               {:value (-> (new-colors type-code) :stroke)
-                :on-change (partial pick-color type-code :stroke)}]]
-             [mui/grid {:item true}
-              [mui/button
-               {:size :small :on-click #(pick-color type-code :stroke stroke)}
-               "reset"]]]]]))]
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value (-> (new-colors type-code) :stroke)
+               :on-change (partial pick-color type-code :stroke)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :stroke stroke)}
+              "reset"]]]]]))]
      [mui/fab
       {:style {:position "sticky" :bottom "1em" :left "1em"}
        :variant "extended"
@@ -1094,6 +1094,107 @@
         1 [dead-letter-queue-tab]
         [jobs-monitoring-tab])]]))
 
+(defn format-timestamp [timestamp]
+  (when timestamp
+    (try
+      (let [date (if (string? timestamp)
+                   (js/Date. timestamp)
+                   timestamp)]
+        (.toLocaleDateString date "fi-FI"
+                             #js {:year "numeric"
+                                  :month "2-digit"
+                                  :day "2-digit"
+                                  :hour "2-digit"
+                                  :minute "2-digit"}))
+      (catch js/Error _
+        (str timestamp)))))
+
+(defn get-user-display-name [users author-id]
+  (let [user (get users author-id)]
+    (or (:email user)
+        (:username user)
+        (str "User ID: " author-id))))
+
+(defn site-history-search []
+  (let [search-id (<== [::subs/site-history-search-id])
+        loading? (<== [::subs/site-history-loading?])
+        search-id-str (str (or search-id ""))
+        valid-id? (and (not-empty search-id-str)
+                       (re-matches #"^\d+$" search-id-str))]
+    [mui/card {:sx #js{:mb 2}}
+     [mui/card-content
+      [mui/typography {:variant "h6" :gutterBottom true}
+       "Hae historia Lipas ID:llä"]
+      [mui/grid2 {:container true :spacing 2 :alignItems "flex-end"}
+       [mui/grid2 {:size 8}
+        [lui/text-field
+         {:label "LIPAS ID"
+          :value search-id-str
+          :type "number"
+          :disabled loading?
+          :on-change #(==> [::events/set-site-history-search-id %])
+          :on-key-down (fn [e]
+                         (when (= "Enter" (.-key e))
+                           (when valid-id?
+                             (==> [::events/search-site-history (js/parseInt search-id-str)]))))}]]
+       [mui/grid2 {:size 4}
+        [mui/button
+         {:variant "contained"
+          :disabled (or loading? (not valid-id?))
+          :on-click #(when valid-id?
+                       (==> [::events/search-site-history (js/parseInt search-id-str)]))}
+         (if loading? "Haetaan..." "Hae")]]]]]))
+
+(defn site-history-results []
+  (let [results (<== [::subs/site-history-results])
+        error (<== [::subs/site-history-error])
+        loading? (<== [::subs/site-history-loading?])
+        users (<== [::subs/users])
+        tr (<== [:lipas.ui.subs/translator])]
+    [:<>
+     ;; Error display
+     (when error
+       [mui/alert {:severity "error" :sx #js{:mb 2}}
+        error])
+
+     ;; Loading indicator
+     (when loading?
+       [mui/linear-progress {:sx #js{:mb 2}}])
+
+     ;; Results
+     (when (and results (seq results))
+       [mui/card
+        [mui/card-header {:title (str "Hukutulokset (" (count results) " versiota)")}]
+        [mui/card-content
+         [lui/table-v2
+          {:items (map-indexed (fn [idx revision]
+                                 (-> revision
+                                     (assoc :index (+ idx 1))
+                                     (assoc :formatted-date (format-timestamp (:event-date revision)))
+                                     (assoc :user-display (get-user-display-name users (:author revision)))
+                                     (assoc :type-code (get-in revision [:type :type-code]))))
+                               (sort-by :event-date #(compare %2 %1) results))
+           :headers
+           {:index {:label "#"}
+            :formatted-date {:label (tr :time/time)}
+            :user-display {:label (tr :lipas.user/user)}
+            :status {:label (tr :lipas.sports-site/status)}
+            :name {:label (tr :lipas.sports-site/name)}
+            :type-code {:label (tr :type/type-code)}}}]]])
+
+     ;; No results message
+     (when (and results (empty? results))
+       [mui/alert {:severity "info"}
+        "No history found for this LIPAS ID"])]))
+
+(defn site-history-tab []
+  [mui/card {:square true}
+   [mui/card-content
+    [mui/typography {:variant "h5"}
+     "Liikuntapaikan historia"]
+    [site-history-search]
+    [site-history-results]]])
+
 (defn admin-panel []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         selected-tab @(rf/subscribe [::ui-subs/query-param :tab :users])]
@@ -1109,6 +1210,8 @@
           :text-color "inherit"}
          [mui/tab {:label (tr :lipas.admin/users)
                    :value "users"}]
+         [mui/tab {:label "Historia"
+                   :value "site-history"}]
          [mui/tab {:label "Symbolityökalu"
                    :value "symbol"}]
          [mui/tab {:label "Tyyppikoodit"
@@ -1122,6 +1225,9 @@
 
          :users
          [users-view]
+
+         :site-history
+         [site-history-tab]
 
          :types
          [type-codes-view]

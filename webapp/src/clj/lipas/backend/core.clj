@@ -364,7 +364,12 @@
        :else data))))
 
 (defn get-sports-site-history [db lipas-id]
-  (db/get-sports-site-history db lipas-id))
+  (->> (db/get-sports-site-history db lipas-id)
+       (map (fn [sports-site]
+              (let [metadata (meta sports-site)]
+                (-> sports-site
+                    (assoc :author (:author-id metadata))
+                    (assoc :doc-status (:doc-status metadata))))))))
 
 ;; ES doesn't support indexing FeatureCollections
 (defn feature-coll->geom-coll
@@ -564,11 +569,11 @@
                ;; starts using it again.
 
                #_(jobs/enqueue-job! tx "webhook"
-                                  {:lipas-ids [(:lipas-id resp)]
-                                   :operation-type (if (new? sports-site) "create" "update")
-                                   :initiated-by (:id user)}
-                                  {:correlation-id correlation-id
-                                   :priority 85}))
+                                    {:lipas-ids [(:lipas-id resp)]
+                                     :operation-type (if (new? sports-site) "create" "update")
+                                     :initiated-by (:id user)}
+                                    {:correlation-id correlation-id
+                                     :priority 85}))
 
              ;; Sync the site to PTV if
              ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
@@ -913,11 +918,11 @@
         ;; Disabled due to webhooks not being used atm
         ;; Enqueue webhook with same correlation ID
         #_(jobs/enqueue-job! tx "webhook"
-                           {:loi-ids [(:id loi)]
-                            :operation-type (if (nil? (:id loi)) "create" "update")
-                            :initiated-by (:id user)}
-                           {:correlation-id correlation-id
-                            :priority 85})
+                             {:loi-ids [(:id loi)]
+                              :operation-type (if (nil? (:id loi)) "create" "update")
+                              :initiated-by (:id user)}
+                             {:correlation-id correlation-id
+                              :priority 85})
         (index-loi! search loi :sync)
         result))))
 

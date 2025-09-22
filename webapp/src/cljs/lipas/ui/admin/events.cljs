@@ -566,3 +566,43 @@
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::get-orgs-success]
         :on-failure [::failure]}})))
+
+;;; Site History ;;;
+
+(rf/reg-event-db ::set-site-history-search-id
+  (fn [db [_ lipas-id]]
+    (assoc-in db [:admin :site-history :search-id] lipas-id)))
+
+(rf/reg-event-fx ::search-site-history
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [token (-> db :user :login :token)]
+      {:db (-> db
+               (assoc-in [:admin :site-history :loading?] true)
+               (assoc-in [:admin :site-history :error] nil))
+       :http-xhrio
+       {:method :get
+        :uri (str (:backend-url db) "/sports-sites/history/" lipas-id)
+        :headers {:Authorization (str "Token " token)}
+        :response-format (ajax/json-response-format {:keywords? true})
+        :on-success [::site-history-success]
+        :on-failure [::site-history-failure]}})))
+
+(rf/reg-event-db ::site-history-success
+  (fn [db [_ results]]
+    (-> db
+        (assoc-in [:admin :site-history :results] results)
+        (assoc-in [:admin :site-history :loading?] false))))
+
+(rf/reg-event-fx ::site-history-failure
+  (fn [{:keys [db]} [_ response]]
+    (let [tr (:translator db)]
+      {:db (-> db
+               (assoc-in [:admin :site-history :error]
+                         (or (-> response :response :message)
+                             (-> response :response :error)
+                             (tr :error/unknown)))
+               (assoc-in [:admin :site-history :loading?] false))})))
+
+(rf/reg-event-db ::clear-site-history-results
+  (fn [db _]
+    (update-in db [:admin :site-history] dissoc :results :error)))
