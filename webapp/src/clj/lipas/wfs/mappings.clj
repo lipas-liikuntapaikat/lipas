@@ -626,6 +626,9 @@
      #_:saa_julkaista_harrastuspassissa
      :radan_leveys_m
      :valaistus},
+   113
+   #{:laituri
+     :valinevuokraus}
    ;; NEW TYPE CODES END HERE
    6220
    #{:pinta_ala_m2
@@ -1902,6 +1905,7 @@
    4407 ["lipas_4407_rullahiihtorata" "lipas_4407_rullahiihtorata_3d"],
    4441 ["lipas_4441_koiravaljakkoreitti" "lipas_4441_koiravaljakkoreitti_3d"],
    6150 ["lipas_6150_ovaalirata"],
+   113 ["lipas_113_kalastuskohde"]
    ;; NEW TYPE CODES END HERE
    6220 ["lipas_6220_koiraurheiluhalli"],
    4530 ["lipas_4530_pyorasuunnistusalue"],
