@@ -57,9 +57,15 @@
  ;; New subscriptions to get PTV config from organizations in app-db
 
 (rf/reg-sub ::all-orgs
+  :<- [:lipas.ui.user.subs/user-data]
   :<- [:lipas.ui.org.subs/user-orgs]
-  (fn [orgs _]
-    orgs))
+  :<- [::ptv]
+  (fn [[user-data user-orgs ptv-state] _]
+    (if (roles/check-privilege user-data {} :ptv/audit)
+      ;; For auditors, use all orgs loaded by ::get-all-orgs event, converted to vector format
+      (vals (:all-orgs ptv-state))
+      ;; For regular users, use their assigned organizations
+      user-orgs)))
 
 (rf/reg-sub ::ptv-config-by-ptv-org-id
   :<- [::all-orgs]

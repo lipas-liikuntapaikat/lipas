@@ -368,6 +368,149 @@
 
       (is (not= original-date (:event-date updated-site))))))
 
+;;; PTV Audit Access Tests ;;;
+
+(deftest ptv-audit-can-access-get-ptv-integration-candidates-test
+  (testing "Users with :ptv/audit privilege can access get-ptv-integration-candidates"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          token (jwt/create-token ptv-auditor)
+
+          resp (app (-> (mock/request :post "/api/actions/get-ptv-integration-candidates")
+                        (mock/content-type "application/json")
+                        (mock/body (->json {:city-codes [91]
+                                            :owners ["private" "municipal" "other"]}))
+                        (tu/token-header token)))]
+
+      (is (not= 403 (:status resp))
+          "PTV auditor should be able to access integration candidates endpoint"))))
+
+(deftest ptv-audit-can-access-fetch-ptv-org-test
+  (testing "Users with :ptv/audit privilege can access fetch-ptv-org"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          token (jwt/create-token ptv-auditor)
+
+          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-org")
+                        (mock/content-type "application/json")
+                        (mock/body (->json {:org-id "test-org-id"}))
+                        (tu/token-header token)))]
+
+      (is (not= 403 (:status resp))
+          "PTV auditor should be able to access fetch PTV org endpoint"))))
+
+(deftest ptv-audit-can-access-fetch-ptv-services-test
+  (testing "Users with :ptv/audit privilege can access fetch-ptv-services"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          token (jwt/create-token ptv-auditor)
+
+          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-services")
+                        (mock/content-type "application/json")
+                        (mock/body (->json {:org-id "test-org-id"}))
+                        (tu/token-header token)))]
+
+      (is (not= 403 (:status resp))
+          "PTV auditor should be able to access fetch PTV services endpoint"))))
+
+(deftest ptv-audit-can-access-fetch-ptv-service-channels-test
+  (testing "Users with :ptv/audit privilege can access fetch-ptv-service-channels"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          token (jwt/create-token ptv-auditor)
+
+          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-service-channels")
+                        (mock/content-type "application/json")
+                        (mock/body (->json {:org-id "test-org-id"}))
+                        (tu/token-header token)))]
+
+      (is (not= 403 (:status resp))
+          "PTV auditor should be able to access fetch PTV service channels endpoint"))))
+
+(deftest ptv-audit-can-access-fetch-ptv-service-collections-test
+  (testing "Users with :ptv/audit privilege can access fetch-ptv-service-collections"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          token (jwt/create-token ptv-auditor)
+
+          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-service-collections")
+                        (mock/content-type "application/json")
+                        (mock/body (->json {:org-id "test-org-id"}))
+                        (tu/token-header token)))]
+
+      (is (not= 403 (:status resp))
+          "PTV auditor should be able to access fetch PTV service collections endpoint"))))
+
+(deftest regular-user-cannot-access-ptv-endpoints-test
+  (testing "Regular users without PTV privileges cannot access PTV endpoints"
+    (let [regular-user (tu/gen-user {:db? true :admin? false})
+          token (jwt/create-token regular-user)
+
+          endpoints ["/api/actions/get-ptv-integration-candidates"
+                     "/api/actions/fetch-ptv-org"
+                     "/api/actions/fetch-ptv-services"
+                     "/api/actions/fetch-ptv-service-channels"
+                     "/api/actions/fetch-ptv-service-collections"]
+
+          test-body (->json {:org-id "test-org-id"
+                             :city-codes [91]
+                             :owners ["private"]})]
+
+      (doseq [endpoint endpoints]
+        (let [resp (app (-> (mock/request :post endpoint)
+                            (mock/content-type "application/json")
+                            (mock/body test-body)
+                            (tu/token-header token)))]
+          (is (= 403 (:status resp))
+              (str "Regular user should not be able to access " endpoint)))))))
+
+(deftest ptv-audit-cannot-modify-ptv-data-test
+  (testing "Users with :ptv/audit privilege cannot modify PTV data (write operations)"
+    (let [ptv-auditor (gen-ptv-audit-user)
+          admin-user (gen-admin-user)
+          site (create-test-site-with-ptv admin-user)
+          token (jwt/create-token ptv-auditor)
+
+          ;; Test save-ptv-service (should require :ptv/manage)
+          save-service-resp (app (-> (mock/request :post "/api/actions/save-ptv-service")
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json {:org-id "test-org-id"
+                                                         :city-codes [91]
+                                                         :source-id "test-source"
+                                                         :sub-category-id 1210
+                                                         :languages ["fi"]
+                                                         :summary {:fi "Test"}
+                                                         :description {:fi "Test"}}))
+                                     (tu/token-header token)))
+
+          ;; Test save-ptv-service-location (should require :ptv/manage)
+          ;; Provide complete schema-compliant data
+          save-location-resp (app (-> (mock/request :post "/api/actions/save-ptv-service-location")
+                                      (mock/content-type "application/json")
+                                      (mock/body (->json {:lipas-id (:lipas-id site)
+                                                          :org-id "test-org-id"
+                                                          :ptv {:org-id "test-org-id"
+                                                                :sync-enabled true
+                                                                :service-channel-ids []
+                                                                :service-ids []
+                                                                :summary {:fi "Test summary"}
+                                                                :description {:fi "Test description"}}}))
+                                      (tu/token-header token)))
+
+          ;; Test save-ptv-meta (should require :ptv/manage)
+          ;; Provide complete spec-compliant data
+          save-meta-resp (app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                                  (mock/content-type "application/json")
+                                  (mock/body (->json {(:lipas-id site) {:org-id "test-org-id"
+                                                                        :sync-enabled true
+                                                                        :service-channel-ids []
+                                                                        :service-ids []
+                                                                        :summary {:fi "Test summary"}
+                                                                        :description {:fi "Test description"}}}))
+                                  (tu/token-header token)))]
+
+      (is (= 403 (:status save-service-resp))
+          "PTV auditor should not be able to save PTV services")
+      (is (= 403 (:status save-location-resp))
+          "PTV auditor should not be able to save PTV service locations")
+      (is (= 403 (:status save-meta-resp))
+          "PTV auditor should not be able to save PTV meta data"))))
+
 (comment
   (clojure.test/run-tests *ns*)
   (clojure.test/run-test-var #'save-ptv-audit-success-test)
@@ -375,4 +518,11 @@
   (clojure.test/run-test-var #'save-ptv-audit-invalid-extra-fields-test)
   (clojure.test/run-test-var #'save-ptv-audit-invalid-audit-schema-test)
   (clojure.test/run-test-var #'save-ptv-audit-empty-audit-data-test)
-  )
+  ;; New audit access tests
+  (clojure.test/run-test-var #'ptv-audit-can-access-get-ptv-integration-candidates-test)
+  (clojure.test/run-test-var #'ptv-audit-can-access-fetch-ptv-org-test)
+  (clojure.test/run-test-var #'ptv-audit-can-access-fetch-ptv-services-test)
+  (clojure.test/run-test-var #'ptv-audit-can-access-fetch-ptv-service-channels-test)
+  (clojure.test/run-test-var #'ptv-audit-can-access-fetch-ptv-service-collections-test)
+  (clojure.test/run-test-var #'regular-user-cannot-access-ptv-endpoints-test)
+  (clojure.test/run-test-var #'ptv-audit-cannot-modify-ptv-data-test))

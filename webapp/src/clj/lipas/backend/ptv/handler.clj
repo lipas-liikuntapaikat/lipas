@@ -10,6 +10,18 @@
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
 
+;; Custom privilege check that allows either ptv/manage or ptv/audit
+(defn ptv-read-access? [req]
+  (let [user (:identity req)]
+    (or
+      ;; Global audit privilege
+      (roles/check-privilege user {} :ptv/audit)
+      ;; Context-specific manage privilege (check with any city-code the user has)
+      (some (fn [permission]
+              (when-let [city-code (get-in permission [:context :city-code])]
+                (roles/check-privilege user {:city-code city-code} :ptv/manage)))
+            (get-in user [:permissions :roles])))))
+
 (defn routes [{:keys [db search ptv] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
@@ -19,7 +31,7 @@
 
    ["/actions/get-ptv-integration-candidates"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege ptv-read-access?
       :parameters {:body [:map
                           [:city-codes [:vector :int]]
                           [:type-codes {:optional true} [:vector :int]]
@@ -38,8 +50,8 @@
       (fn [req]
         {:status 200
          :body (ptv-core/generate-ptv-descriptions
-                search
-                (-> req :parameters :body :lipas-id))})}}]
+                 search
+                 (-> req :parameters :body :lipas-id))})}}]
 
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
@@ -50,7 +62,7 @@
       (fn [req]
         {:status 200
          :body (ptv-core/generate-ptv-descriptions-from-data
-                (-> req :parameters :body))})}}]
+                 (-> req :parameters :body))})}}]
 
    ["/actions/translate-to-other-langs"
     {:post
@@ -64,7 +76,7 @@
       (fn [req]
         {:status 200
          :body (ptv-core/translate-to-other-langs
-                (-> req :parameters :body))})}}]
+                 (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-service-descriptions"
     {:post
@@ -88,7 +100,7 @@
 
    ["/actions/fetch-ptv-org"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege ptv-read-access?
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -98,7 +110,7 @@
 
    ["/actions/fetch-ptv-service-collections"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege ptv-read-access?
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -124,7 +136,7 @@
 
    ["/actions/fetch-ptv-services"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege ptv-read-access?
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler
@@ -134,7 +146,7 @@
 
    ["/actions/fetch-ptv-service-channels"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege ptv-read-access?
       :parameters {:body [:map
                           [:org-id :string]]}
       :handler

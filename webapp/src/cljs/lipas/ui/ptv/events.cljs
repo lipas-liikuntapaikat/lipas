@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
+            [lipas.roles :as roles]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -16,7 +17,7 @@
     (let [orgs-loaded? (seq (get-in db [:user :orgs]))]
       {:db (assoc-in db [:ptv :dialog :open?] true)
        :fx (cond-> []
-             ;; Fetch organizations if not already loaded
+             ;; Fetch organizations if not already loaded - /current-user-orgs now handles audit users
              (not orgs-loaded?)
              (conj [:dispatch [:lipas.ui.org.events/get-user-orgs]])
 

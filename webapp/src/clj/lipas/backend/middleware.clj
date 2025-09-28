@@ -1,10 +1,10 @@
 (ns lipas.backend.middleware
   (:require
-   [buddy.auth :refer [authenticated?]]
-   [buddy.auth.middleware :refer [wrap-authentication]]
-   [lipas.backend.auth :as auth]
-   [lipas.roles :as roles]
-   [ring.util.http-response :as resp]))
+    [buddy.auth :refer [authenticated?]]
+    [buddy.auth.middleware :refer [wrap-authentication]]
+    [lipas.backend.auth :as auth]
+    [lipas.roles :as roles]
+    [ring.util.http-response :as resp]))
 
 (defn auth
   "Middleware used in routes that require authentication. If request is not
@@ -55,6 +55,7 @@
    ;; :required-privilege :users/manage
    ;; :required-privilege [{:type-code ::roles/any} :site/create-dit]
    ;; :required-privilege [(fn [req] {:type-code ...}) :site/create-dit]
+   ;; :required-privilege custom-auth-fn ; Function that takes request and returns boolean
    ;; Last case can be used to retreive the role-context values from request parameters (like path-params)
    (fn [route-data _opts]
      (if-let [required-privilege (:require-privilege route-data)]
@@ -65,8 +66,13 @@
            (-> (fn [req]
                  (let [role-context (if (fn? role-context)
                                       (role-context req)
-                                      role-context)]
-                   (if (roles/check-privilege (:identity req) role-context privilege)
+                                      role-context)
+                       authorized? (if (fn? privilege)
+                                     ;; If privilege is a function, call it with the request
+                                     (privilege req)
+                                     ;; Otherwise use the standard privilege check
+                                     (roles/check-privilege (:identity req) role-context privilege))]
+                   (if authorized?
                      (next-handler req)
                      (resp/forbidden {:error "Missing privilege"}))))
                (auth)
