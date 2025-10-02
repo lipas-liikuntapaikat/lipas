@@ -9,7 +9,7 @@
 **No setup needed!** Simply run:
 
 ```clojure
-(reset)
+(user/reset)
 ```
 
 This single command will:
@@ -26,7 +26,7 @@ The `user` namespace provides development time utilities. Explore what's availab
 
 ### System Access After Startup
 
-Once `(reset)` has run, access system components via:
+Once `(user/reset)` has run, access system components via:
 
 ```clojure
 integrant.repl.state/system  ; Full system map with all components
@@ -174,7 +174,7 @@ bb test-ns lipas.jobs.handler-test
 │   │       ├── sports_sites/ # Sports site management UI
 │   │       ├── search/  # Search interface
 │   │       └── routes/  # Route planning features
-│   └── cljc/            # Shared code between frontend and backend
+│   └── cljc/            # Shared code and data model definitions between frontend and backend
 ├── resources/
 │   ├── migrations/      # Database migrations (SQL and EDN)
 │   ├── public/          # Static assets
@@ -195,7 +195,7 @@ Key Configuration Files:
 ## 💡 Development Workflow for Claude
 
 ### Starting Work
-1. **Just run** `(reset)` - everything will be ready
+1. **Just run** `(user/reset)` - everything will be ready
 2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
 3. **Make changes** using the clojure editing tools
 4. **Test changes** immediately in the REPL
@@ -233,7 +233,7 @@ The clojure-mcp environment provides:
 ## 🎯 Key Points for Efficient Development
 
 1. **You have immediate REPL access** - no setup required
-2. **Single command startup** - just `(reset)`
+2. **Single command startup** - just `(user/reset)`
 3. **Rich exploration tools** - use `clj-mcp.repl-tools/*` functions
 4. **Real-time feedback** - integrated linting and syntax checking
 5. **Full system access** - all components available via `integrant.repl.state/system`
