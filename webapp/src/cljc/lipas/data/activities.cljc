@@ -614,7 +614,7 @@
                     (mu/dissoc :latest-updates)
                     (mu/dissoc :rules))
                 [:map
-                 [:id {:optional true} [:string]]
+                 [:id [:string]]
                  [:fids {:optional true} fids-schema]
                  [:geometries {:optional true} common-schema/line-string-feature-collection]
                  [:accessibility-categorized {:optional true}
@@ -1052,7 +1052,7 @@
               (mu/merge
                 common-route-props-schema
                 [:map
-                 [:id {:optional true} [:string]]
+                 [:id [:string]]
                  [:fids {:optional true} fids-schema]
                  [:geometries {:optional true} common-schema/line-string-feature-collection]
                  [:route-name {:optional true} common-schema/localized-string]
@@ -1436,7 +1436,7 @@
                      (mu/merge
                        common-route-props-schema
                        [:map
-                        [:id {:optional true} [:string]]
+                        [:id [:string]]
                         [:fids {:optional true} fids-schema]
                         [:geometries {:optional true} common-schema/line-string-feature-collection]
                         [:route-name {:optional true} common-schema/localized-string]
@@ -1446,8 +1446,8 @@
                          [:sequential (into [:enum] (keys paddling-route-types))]]
                         [:paddling-properties {:optional true}
                          [:sequential (into [:enum] (keys paddling-properties))]]
-                        [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
-                        [:paddling-difficulty-v2 (into [:enum] (keys paddling-difficulty-v2))]
+                        [:paddling-difficulty {:optional true} (into [:enum] (keys paddling-difficulty))]
+                        [:paddling-difficulty-v2 {:optional true} (into [:enum] (keys paddling-difficulty-v2))]
                         [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                         [:safety {:optional true} common-schema/localized-string]
                         [:good-to-know {:optional true} common-schema/localized-string]
