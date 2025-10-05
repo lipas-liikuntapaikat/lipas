@@ -159,6 +159,30 @@ bb test-ns lipas.jobs.handler-test
 ;; with real development examples and maintenance operations
 ```
 
+## 🎭 Browser Testing with Playwright-MCP
+
+**Setup:**
+- LIPAS runs at `https://localhost` (HTTPS, not HTTP)
+- Playwright-MCP is available and configured
+- After `(user/reset)` and ClojureScript compilation, the app is ready to test
+
+**Basic workflow:**
+1. `browser_navigate` to `https://localhost/liikuntapaikat` (or other route)
+2. `browser_snapshot` to see page structure and get element refs
+3. Interact using `browser_click`, `browser_type`, etc. with refs from snapshot
+4. **Important:** Refs expire after interactions - take new snapshot before each action
+
+**After code changes:**
+1. Compile: `(user/compile-cljs)`
+2. Reload page: `browser_evaluate(() => location.reload())`
+3. Take fresh snapshot
+
+**Useful for:**
+- Visual verification of UI changes
+- Testing interactive flows
+- Debugging frontend issues
+- Checking console errors with `browser_console_messages`
+
 ## 📁 Project Structure
 
 ```
