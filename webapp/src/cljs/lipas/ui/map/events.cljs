@@ -47,9 +47,7 @@
        ;; causes an extra unncesssary search call.
                       :dispatch-n
                       [(when (and extent width) [:lipas.ui.search.events/submit-search])
-                       (when (and extent width) [:lipas.ui.loi.events/search])
-        ;; Auto-refresh heatmap when map view changes (zoom, pan)
-                       (when (and extent width) [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
+                       (when (and extent width) [:lipas.ui.loi.events/search])]})))
 
 ;; Map displaying events ;;
 
@@ -888,6 +886,28 @@
                                              (if (seq v)
                                                (update-feature-properties fs fid assoc :route-part-difficulty v)
                                                (update-feature-properties fs fid dissoc :route-part-difficulty)))))]
+                     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+(rf/reg-event-fx ::set-itrs-technical
+                 (fn [{:keys [db]} [_ lipas-id fid v]]
+                   (let [geoms (-> db
+                                   (get-in [:map :mode :geoms])
+                                   (update :features
+                                           (fn [fs]
+                                             (if (seq v)
+                                               (update-feature-properties fs fid assoc :itrs-technical v)
+                                               (update-feature-properties fs fid dissoc :itrs-technical)))))]
+                     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+(rf/reg-event-fx ::set-itrs-exposure
+                 (fn [{:keys [db]} [_ lipas-id fid v]]
+                   (let [geoms (-> db
+                                   (get-in [:map :mode :geoms])
+                                   (update :features
+                                           (fn [fs]
+                                             (if (seq v)
+                                               (update-feature-properties fs fid assoc :itrs-exposure v)
+                                               (update-feature-properties fs fid dissoc :itrs-exposure)))))]
                      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
 ;; Reverse geocoding
