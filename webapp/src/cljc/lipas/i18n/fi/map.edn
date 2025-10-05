@@ -27,6 +27,9 @@
  :retkikartta-problems-warning
  "Korjaa kartalle merkityt ongelmat, jos haluat, että kohde siirtyy Retkikartalle.",
  :route-part-difficulty "Määritä reittiosan vaativuus",
+ :itrs-segment "ITRS-luokitus",
+ :itrs-technical "ITRS Teknisyys",
+ :itrs-exposure "ITRS Altistuminen",
  :split-linestring "Katkaise reittiosa",
  :travel-direction "Määritä kulkusuunta",
  :zoom-closer "Kartta täytyy zoomata lähemmäs",

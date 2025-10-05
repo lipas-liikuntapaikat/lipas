@@ -605,6 +605,70 @@
 (defmethod popup-body :route-part-difficulty [popup]
   [route-part-difficulty {:data (:data popup)}])
 
+(defui itrs-segment [{:keys [data]}]
+  (let [{:keys [lipas-id fid]} data
+        tr (use-subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        properties (use-subscribe [::subs/edit-geom-properties fid])
+        technical-value (:itrs-technical properties)
+        exposure-value (:itrs-exposure properties)]
+    ($ Paper
+       {:sx
+        #js {:padding 2
+             :width "350px"}}
+       ($ TextField
+          {:label (tr :map/itrs-technical)
+           :select true
+           :fullWidth true
+           :value (or technical-value "")
+           :onChange (fn [e]
+                       (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))
+           :sx #js {:marginBottom 2}}
+          ($ MenuItem
+             {:key "empty"
+              :value ""}
+             "-")
+          (for [[k {:keys [label description]}] activities-data/itrs-technical-options]
+            ($ MenuItem
+               {:key k
+                :value k
+                :sx #js {:flexDirection "column"
+                         :alignItems "flex-start"
+                         :maxWidth "350px"}}
+               ($ Typography
+                  (get label locale))
+               ($ Typography
+                  {:sx #js {:fontSize "body2.fontSize"
+                            :whiteSpace "normal"}}
+                  (get description locale)))))
+       ($ TextField
+          {:label (tr :map/itrs-exposure)
+           :select true
+           :fullWidth true
+           :value (or exposure-value "")
+           :onChange (fn [e]
+                       (rf/dispatch [::events/set-itrs-exposure lipas-id fid (.. e -target -value)]))}
+          ($ MenuItem
+             {:key "empty"
+              :value ""}
+             "-")
+          (for [[k {:keys [label description]}] activities-data/itrs-exposure-options]
+            ($ MenuItem
+               {:key k
+                :value k
+                :sx #js {:flexDirection "column"
+                         :alignItems "flex-start"
+                         :maxWidth "350px"}}
+               ($ Typography
+                  (get label locale))
+               ($ Typography
+                  {:sx #js {:fontSize "body2.fontSize"
+                            :whiteSpace "normal"}}
+                  (get description locale))))))))
+
+(defmethod popup-body :itrs-segment [popup]
+  ($ itrs-segment {:data (:data popup)}))
+
 (defmethod popup-body :heatmap [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
         locale (tr)
@@ -844,6 +908,22 @@
              {:color (if (= sub-mode :route-part-difficulty) "secondary" "inherit")}
              "warning"]]
            [mui/list-item-text (tr :map/route-part-difficulty)]])
+
+        ;; ITRS segment
+        (when (and editing?
+                   edit-activities?
+                   (#{"LineString"} geom-type)
+                   (= "cycling" activity-value))
+          [mui/menu-item
+           {:on-click
+            #(do
+               (==> [::events/close-more-tools-menu])
+               (==> [::events/start-editing lipas-id :itrs-segment geom-type]))}
+           [mui/list-item-icon
+            [mui/icon
+             {:color (if (= sub-mode :itrs-segment) "secondary" "inherit")}
+             "terrain"]]
+           [mui/list-item-text (tr :map/itrs-segment)]])
 
         ;; Download backup
         (when editing?
@@ -1207,6 +1287,7 @@
                   :selecting (tr :map.tools/selecting-tooltip)
                   :travel-direction (tr :map.tools/travel-direction-tooltip)
                   :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                  :itrs-segment (tr :map.tools/itrs-segment-tooltip)
                   :view-only "-")}
                [mui/fab
                 {:size "small"
@@ -1227,6 +1308,7 @@
                     :selecting [mui/icon props "handshake"]
                     :travel-direction [mui/icon props "turn_slight_right"]
                     :route-part-difficulty [mui/icon props "warning"]
+                    :itrs-segment [mui/icon props "terrain"]
                     :view-only [mui/icon props "dash"]))]])
 
            ;; Tool select button
