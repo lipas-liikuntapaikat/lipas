@@ -1,5 +1,6 @@
 (ns lipas.ui.org.events
   (:require [ajax.core :as ajax]
+            [cognitect.transit :as t]
             [lipas.roles :as roles]
             [lipas.ui.bulk-operations.events :as bulk-ops-events]
             [re-frame.core :as rf]
@@ -59,7 +60,8 @@
           user-orgs (-> db :user :orgs)
           is-new? (= "new" org-id)
           current-org (if is-new?
-                        {:name ""
+                        {:id (random-uuid)
+                         :name ""
                          :data {:primary-contact {}}
                          :ptv-data {}}
                         (when user-orgs
@@ -188,11 +190,13 @@
 (rf/reg-event-fx ::save-org
   (fn [{:keys [db]} [_ org]]
     (let [token (-> db :user :login :token)
-                         ;; Clean up the org data before sending
+          ;; Clean up the org data before sending
           body (-> org
-                                  ;; Remove old phone field if it exists in data
+                   ;; Remove old phone field if it exists in data
                    (update :data #(dissoc % :phone)))
-          new? (nil? (:id org))]
+          ;; Check if we're on the "new" route
+          org-id (get-in db [:org :org-id])
+          new? (= "new" org-id)]
       {:http-xhrio
        {:method (if new? :post :put)
         :uri (if new?
@@ -200,8 +204,8 @@
                (str (:backend-url db) "/orgs/" (:id org)))
         :headers {:Authorization (str "Token " token)}
         :params body
-        :format (ajax/json-request-format)
-        :response-format (ajax/json-response-format {:keywords? true})
+        :format (ajax/transit-request-format)
+        :response-format (ajax/transit-response-format)
         :on-success [::save-org-success org new?]
         :on-failure [::failure]}})))
 

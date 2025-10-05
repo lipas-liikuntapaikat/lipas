@@ -4,12 +4,16 @@
 
 **IMPORTANT**: When working with this project through clojure-mcp, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
 
+## Large workflow communication
+
+When you're working with large tasks, notify me by using `say` command via bash tool (not the clojure-mcp one) and say "I'm done". If you get stuck, call for help by saying "Please help"
+
 ### Immediate Development Setup
 
 **No setup needed!** Simply run:
 
 ```clojure
-(reset)
+(user/reset)
 ```
 
 This single command will:
@@ -26,7 +30,7 @@ The `user` namespace provides development time utilities. Explore what's availab
 
 ### System Access After Startup
 
-Once `(reset)` has run, access system components via:
+Once `(user/reset)` has run, access system components via:
 
 ```clojure
 integrant.repl.state/system  ; Full system map with all components
@@ -155,6 +159,30 @@ bb test-ns lipas.jobs.handler-test
 ;; with real development examples and maintenance operations
 ```
 
+## 🎭 Browser Testing with Playwright-MCP
+
+**Setup:**
+- LIPAS runs at `https://localhost` (HTTPS, not HTTP)
+- Playwright-MCP is available and configured
+- After `(user/reset)` and ClojureScript compilation, the app is ready to test
+
+**Basic workflow:**
+1. `browser_navigate` to `https://localhost/liikuntapaikat` (or other route)
+2. `browser_snapshot` to see page structure and get element refs
+3. Interact using `browser_click`, `browser_type`, etc. with refs from snapshot
+4. **Important:** Refs expire after interactions - take new snapshot before each action
+
+**After code changes:**
+1. Compile: `(user/compile-cljs)`
+2. Reload page: `browser_evaluate(() => location.reload())`
+3. Take fresh snapshot
+
+**Useful for:**
+- Visual verification of UI changes
+- Testing interactive flows
+- Debugging frontend issues
+- Checking console errors with `browser_console_messages`
+
 ## 📁 Project Structure
 
 ```
@@ -174,7 +202,7 @@ bb test-ns lipas.jobs.handler-test
 │   │       ├── sports_sites/ # Sports site management UI
 │   │       ├── search/  # Search interface
 │   │       └── routes/  # Route planning features
-│   └── cljc/            # Shared code between frontend and backend
+│   └── cljc/            # Shared code and data model definitions between frontend and backend
 ├── resources/
 │   ├── migrations/      # Database migrations (SQL and EDN)
 │   ├── public/          # Static assets
@@ -195,7 +223,7 @@ Key Configuration Files:
 ## 💡 Development Workflow for Claude
 
 ### Starting Work
-1. **Just run** `(reset)` - everything will be ready
+1. **Just run** `(user/reset)` - everything will be ready
 2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
 3. **Make changes** using the clojure editing tools
 4. **Test changes** immediately in the REPL
@@ -233,7 +261,7 @@ The clojure-mcp environment provides:
 ## 🎯 Key Points for Efficient Development
 
 1. **You have immediate REPL access** - no setup required
-2. **Single command startup** - just `(reset)`
+2. **Single command startup** - just `(user/reset)`
 3. **Rich exploration tools** - use `clj-mcp.repl-tools/*` functions
 4. **Real-time feedback** - integrated linting and syntax checking
 5. **Full system access** - all components available via `integrant.repl.state/system`

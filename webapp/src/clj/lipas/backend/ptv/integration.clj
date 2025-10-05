@@ -17,17 +17,17 @@
     ;; org 6
     "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
     {:username "API9@testi.fi"
-     :password "APIinterfaceUser9-1009*"}
+     :password "CLcPFgHQB3&"}
 
     ;; org 9
     "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
     {:username "API15@testi.fi"
-     :password "APIinterfaceUser15-1015*"}
+     :password "BadDPphJx4@"}
 
     ;; org 10
     "52e0f6dc-ec1f-48d5-a0a2-7a4d8b657d53"
     {:username "API17@testi.fi"
-     :password "APIinterfaceUser17-1017*"}
+     :password "KWukVNxPa7@"}
 
     nil))
 
