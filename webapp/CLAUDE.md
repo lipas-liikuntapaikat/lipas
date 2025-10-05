@@ -4,6 +4,10 @@
 
 **IMPORTANT**: When working with this project through clojure-mcp, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
 
+## Large workflow communication
+
+When you're working with large tasks, notify me by using `say` command via bash tool (not the clojure-mcp one) and say "I'm done". If you get stuck, call for help by saying "Please help"
+
 ### Immediate Development Setup
 
 **No setup needed!** Simply run:
