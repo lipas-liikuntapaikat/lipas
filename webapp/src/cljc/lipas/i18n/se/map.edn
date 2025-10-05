@@ -26,6 +26,9 @@
  :retkikartta-problems-warning
  "Korrigera problem som är märkta på kartan för att visa i Retkikartta.fi.",
  :route-part-difficulty "Ange svårighetsgrad för ruttsektion",
+ :itrs-segment "ITRS-klassificering",
+ :itrs-technical "ITRS Teknisk",
+ :itrs-exposure "ITRS Exponering",
  :split-linestring "Klippa ruttdel",
  :travel-direction "Bestäm riktningen",
  :zoom-closer "Zooma in",
