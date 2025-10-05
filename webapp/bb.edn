@@ -15,6 +15,16 @@
                   :curl-opts {:dev "curl -f -k --connect-timeout 10" ; -k for self-signed certs
                               :prod "curl -f --connect-timeout 10"}})
 
+         nuke-cc {:doc "Remove and reinstall Claude Code globally"
+                  :task (do
+                          (println "🗑️  Removing Claude Code installation...")
+                          (shell "rm -rf /opt/homebrew/lib/node_modules/@anthropic-ai/claude-code")
+                          (println "🧹 Cleaning npm cache...")
+                          (shell "npm cache clean --force")
+                          (println "📦 Reinstalling Claude Code...")
+                          (shell "npm install -g @anthropic-ai/claude-code")
+                          (println "✅ Claude Code reinstalled successfully!"))}
+
          user-repl {:doc "Start user configured nREPL process"
                     :task (if-let [cmd (:repl-command (read-string (slurp ".user.edn")))]
                             (shell "bash -c" (apply str "source ../.env.sh && " cmd))
@@ -246,7 +256,6 @@
          ;; Test Tasks
          test {:doc "Run all tests"
                :task (shell "clojure -M:dev:test")}
-
 
          test-specific {:doc "Run a specific test namespace"
                         :task (if-let [test-ns (first *command-line-args*)]
