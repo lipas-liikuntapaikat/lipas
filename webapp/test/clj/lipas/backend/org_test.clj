@@ -439,6 +439,64 @@
 
       (is (= 400 (:status resp)) "Invalid config should be rejected"))))
 
+(deftest current-user-orgs-test
+  (testing "Admin users see all organizations"
+    (let [[org-a org-b] (create-test-orgs)
+          admin-user (gen-admin-user)
+          admin-token (jwt/create-token admin-user)
+          resp (test-utils/app (-> (mock/request :get "/api/current-user-orgs")
+                                   (test-utils/token-header admin-token)))
+          body (safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+      (is (>= (count body) 2) "Admin should see all organizations")
+      ;; Verify both test orgs are in the response (compare string UUIDs)
+      (is (some #(= (str (:id org-a)) (str (:id %))) body))
+      (is (some #(= (str (:id org-b)) (str (:id %))) body))))
+
+  (testing "PTV auditors see all organizations"
+    (let [[org-a org-b] (create-test-orgs)
+          ;; Create user with ptv-auditor role (not namespaced keyword)
+          auditor-user (test-utils/gen-user {:db? true
+                                             :admin? false
+                                             :permissions {:roles [{:role :ptv-auditor}]}})
+          auditor-token (jwt/create-token auditor-user)
+          resp (test-utils/app (-> (mock/request :get "/api/current-user-orgs")
+                                   (test-utils/token-header auditor-token)))
+          body (safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+      (is (>= (count body) 2) "Auditor should see all organizations")
+      ;; Verify both test orgs are in the response (compare string UUIDs)
+      (is (some #(= (str (:id org-a)) (str (:id %))) body))
+      (is (some #(= (str (:id org-b)) (str (:id %))) body))))
+
+  (testing "Regular users see only their assigned organizations"
+    (let [[org-a org-b] (create-test-orgs)
+          org-a-id (:id org-a)
+          ;; Create user that's a member of org-a only
+          org-member (gen-org-admin-user org-a-id)
+          member-token (jwt/create-token org-member)
+          resp (test-utils/app (-> (mock/request :get "/api/current-user-orgs")
+                                   (test-utils/token-header member-token)))
+          body (safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+      ;; Should only see org-a, not org-b (compare string UUIDs)
+      (is (some #(= (str org-a-id) (str (:id %))) body) "Should see org-a")
+      (is (not (some #(= (str (:id org-b)) (str (:id %))) body)) "Should NOT see org-b")))
+
+  (testing "Users with no org memberships see empty list"
+    (let [_orgs (create-test-orgs)
+          regular-user (gen-regular-user)
+          regular-token (jwt/create-token regular-user)
+          resp (test-utils/app (-> (mock/request :get "/api/current-user-orgs")
+                                   (test-utils/token-header regular-token)))
+          body (safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (coll? body))
+      (is (empty? body) "Regular user with no org memberships should see empty list"))))
+
 (comment
   ;; Cross org tests are currently failing
   (clojure.test/run-test-var #'cross-org-view-users-test)
@@ -452,5 +510,4 @@
   (clojure.test/run-test-var #'add-user-by-email-success-test)
   (clojure.test/run-test-var #'create-org-invalid-data-test)
   (clojure.test/run-test-var #'create-org-success-test)
-  (clojure.test/run-test-var #'update-org-ptv-config-test)
-  )
+  (clojure.test/run-test-var #'update-org-ptv-config-test))

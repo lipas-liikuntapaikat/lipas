@@ -57,15 +57,11 @@
  ;; New subscriptions to get PTV config from organizations in app-db
 
 (rf/reg-sub ::all-orgs
-  :<- [:lipas.ui.user.subs/user-data]
   :<- [:lipas.ui.org.subs/user-orgs]
-  :<- [::ptv]
-  (fn [[user-data user-orgs ptv-state] _]
-    (if (roles/check-privilege user-data {} :ptv/audit)
-      ;; For auditors, use all orgs loaded by ::get-all-orgs event, converted to vector format
-      (vals (:all-orgs ptv-state))
-      ;; For regular users, use their assigned organizations
-      user-orgs)))
+  (fn [user-orgs _]
+              ;; Backend already filters organizations by user role
+              ;; Admins see all orgs, auditors see all orgs, regular users see assigned orgs
+    user-orgs))
 
 (rf/reg-sub ::ptv-config-by-ptv-org-id
   :<- [::all-orgs]
@@ -104,25 +100,6 @@
     ;; Return the config in the same format as org-id->params
     (when ptv-config
       (select-keys ptv-config [:org-id :city-codes :owners :supported-languages]))))
-
-(rf/reg-sub ::users-orgs
-  :<- [:lipas.ui.user.subs/user-data]
-  :<- [::all-orgs]
-  (fn [[user-data all-orgs] _]
-    (cond
-                ;; If user has audit privilege (global), show all orgs with PTV data
-      (roles/check-privilege user-data {} :ptv/audit)
-      (filterv :ptv-data all-orgs)
-
-                ;; Otherwise, filter by manage privilege per city-code
-      :else
-      (filterv (fn [org]
-                 (let [city-codes (get-in org [:ptv-data :city-codes])]
-                   (some
-                     (fn [city-code]
-                       (roles/check-privilege user-data {:city-code city-code} :ptv/manage))
-                     city-codes)))
-               all-orgs))))
 
 (rf/reg-sub ::selected-org
   :<- [::ptv]

@@ -72,7 +72,7 @@
 
 (defn org-selector
   [{:keys [label]}]
-  (let [orgs (<== [::subs/users-orgs])
+  (let [orgs (<== [::subs/all-orgs])
         selected-org (<== [::subs/selected-org])]
     [lui/select
      {:items orgs

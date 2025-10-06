@@ -183,7 +183,7 @@
 
         {:keys [org-id sync-enabled delete-existing last-sync publishing-status]} (:ptv site)
 
-        orgs (use-subscribe [::subs/users-orgs])
+        orgs (use-subscribe [::subs/all-orgs])
         org-languages (use-subscribe [::subs/org-languages org-id])
 
         ;; _ (js/console.log org-id)
