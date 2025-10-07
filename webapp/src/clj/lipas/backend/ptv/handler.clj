@@ -18,8 +18,9 @@
       (roles/check-privilege user {} :ptv/audit)
       ;; Context-specific manage privilege (check with any city-code the user has)
       (some (fn [permission]
-              (when-let [city-code (get-in permission [:context :city-code])]
-                (roles/check-privilege user {:city-code city-code} :ptv/manage)))
+              (when-let [city-code (:city-code permission)]
+                (some #(roles/check-privilege user {:city-code %} :ptv/manage)
+                      city-code)))
             (get-in user [:permissions :roles])))))
 
 (defn routes [{:keys [db search ptv] :as _ctx}]
