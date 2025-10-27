@@ -6,7 +6,7 @@
         hiposfer/geojson.specs {:mvn/version "0.2.0"},
         com.taoensso/timbre {:mvn/version "6.7.1"},
         com.cemerick/url {:mvn/version "0.1.1"},
-        metosin/reitit {:mvn/version "0.7.1"},
+        metosin/reitit {:mvn/version "0.9.2-rc1"},
         metosin/ring-swagger-ui {:mvn/version "5.18.2"},
         metosin/spec-tools {:mvn/version "0.10.7"},
         metosin/malli {:mvn/version "0.17.0"},
