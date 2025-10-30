@@ -159,12 +159,15 @@
           sports-site
           (mu/keys sports-site)))
 
+(def new-or-existing-sports-site
+  [:or sports-site new-sports-site])
+
 #_(comment
   (mu/get sports-site 101)
 
   (require '[malli.error :as me])
   (me/humanize
-   (m/explain new-sports-site
+   (m/explain new-or-existing-sports-site
               {:status "active"
                ;; :lipas-id 1
                :event-date "2025-01-01T00:00:00.000Z"

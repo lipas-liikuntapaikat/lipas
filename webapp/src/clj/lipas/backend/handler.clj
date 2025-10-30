@@ -14,7 +14,9 @@
             [lipas.schema.core]
             [lipas.schema.help :as help-schema]
             [lipas.schema.org :as org-schema]
+            [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.utils :as utils]
+            [malli.core :as malli]
             [muuntaja.core :as m]
             [reitit.coercion.malli]
             [reitit.coercion.spec]
@@ -123,23 +125,24 @@
         ["/sports-sites"
          {:post
           {:no-doc false
+           :coercion reitit.coercion.malli/coercion
            :middleware [mw/token-auth mw/auth]
-         ;; NOTE: privilege checked in the core code
-           :responses {201 {:body :lipas/sports-site}
+           ;; NOTE: privilege checked in the core code
+           :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
                        400 {:body map?}}
            :parameters
-           {:query (s/keys :opt-un [:lipas.api/draft])
-            :body :lipas/new-or-existing-sports-site}
+           {:query [:map [:draft {:optional true} :boolean]]
+            :body #'sports-site-schema/new-or-existing-sports-site}
            :handler
            (fn [{:keys [body-params identity] :as req}]
-             (let [spec :lipas/new-or-existing-sports-site
+             (let [spec sports-site-schema/new-or-existing-sports-site
                    draft? (-> req :parameters :query :draft utils/->bool)
-                   valid? (s/valid? spec body-params)]
+                   valid? (malli/validate spec body-params)]
                (if valid?
                  {:status 201
                   :body (core/save-sports-site! db search ptv identity body-params draft?)}
                  {:status 400
-                  :body (s/explain-data spec body-params)})))}}]
+                  :body (malli/explain spec body-params)})))}}]
 
         ["/sports-sites/:lipas-id"
          {:get
