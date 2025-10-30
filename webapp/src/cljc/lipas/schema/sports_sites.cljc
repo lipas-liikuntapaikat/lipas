@@ -154,23 +154,31 @@
                                                    :birdwatching #'activities-schema/birdwatching
                                                    :fishing #'activities-schema/fishing)]]]))})])))
 
+(def new-sports-site
+  (reduce (fn [schema k] (mu/update schema k mu/dissoc :lipas-id))
+          sports-site
+          (mu/keys sports-site)))
+
 #_(comment
   (mu/get sports-site 101)
 
-  (m/validate [:vector sports-site]
-              [{:lipas-id 1
-                :status "active"
-                :name "foo"
-                :owner "city"
-                :admin "city-sports"
-                :location {:city {:city-code 5}
-                           :address "foo"
-                           :postal-code "00100"
-                           :postal-office "foo"
-                           :geometries {:type "FeatureCollection"
-                                        :features [{:type "Feature"
-                                                    :geometry {:type "Point"
-                                                               :coordinates [0.0 0.0]}}]}}
-                :type {:type-code 1530}}]))
+  (require '[malli.error :as me])
+  (me/humanize
+   (m/explain new-sports-site
+              {:status "active"
+               ;; :lipas-id 1
+               :event-date "2025-01-01T00:00:00.000Z"
+               :name "foo"
+               :owner "city"
+               :admin "city-sports"
+               :location {:city {:city-code 5}
+                          :address "foo"
+                          :postal-code "00100"
+                          :postal-office "foo"
+                          :geometries {:type "FeatureCollection"
+                                       :features [{:type "Feature"
+                                                   :geometry {:type "Point"
+                                                              :coordinates [0.0 0.0]}}]}}
+               :type {:type-code 1530}})))
 
 (def prop-types prop-types/schemas)

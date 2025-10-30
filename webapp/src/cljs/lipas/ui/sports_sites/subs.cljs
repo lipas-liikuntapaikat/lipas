@@ -1,12 +1,14 @@
 (ns lipas.ui.sports-sites.subs
   (:require ["@turf/helpers" :refer [lineString]]
             ["@turf/length$default" :as turf-length]
-            [clojure.spec.alpha :as s]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
+            [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.ui.utils :as utils]
             [lipas.utils :as cutils]
+            [malli.core :as m]
+            [malli.error :as me]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::sports-sites
@@ -84,14 +86,13 @@
     (->> rev :status #{"out-of-service-permanently"})))
 
 (defn- valid? [sports-site]
-  (let [spec (case (-> sports-site :type :type-code)
-               (3110 3120 3130) :lipas.sports-site/swimming-pool
-               (2510 2520)      :lipas.sports-site/ice-stadium
-               :lipas/sports-site)]
-    (as-> sports-site $
-      (utils/make-saveable $)
-      (do (tap> (with-out-str (s/explain spec $))) $)
-      (s/valid? spec $))))
+  (let [schema sports-site-schema/sports-site
+        data (utils/make-saveable sports-site)
+        valid? (m/validate sports-site-schema/sports-site data)]
+    (when-not valid?
+      (tap> {:data data
+             :error (me/humanize (m/explain schema data))}))
+    valid?))
 
 (rf/reg-sub ::edits-valid?
   (fn [[_ lipas-id] _]
@@ -513,9 +514,13 @@
 (rf/reg-sub ::new-site-valid?
   :<- [::new-sports-site]
   (fn [new-sports-site _]
-    (let [data (-> new-sports-site :data utils/make-saveable)]
-      (tap> (s/explain :lipas/new-sports-site data))
-      (s/valid? :lipas/new-sports-site data))))
+    (let [schema sports-site-schema/new-sports-site
+          data (-> new-sports-site :data utils/make-saveable)
+          valid? (m/validate schema data)]
+      (when-not valid?
+      (tap> {:data data
+             :error (me/humanize (m/explain schema data))}))
+      valid?)))
 
 (rf/reg-sub ::statuses
   :<- [::sports-sites]

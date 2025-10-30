@@ -1,13 +1,14 @@
 (ns lipas.ui.utils
   (:require [cemerick.url :as url] ;;[clojure.data :as data]
-            [clojure.walk :as walk] ;; FIXME: Closure-lib is deprecated
             [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
             [clojure.string :as str]
+            [clojure.walk :as walk] ;; FIXME: Closure-lib is deprecated
             [goog.crypt.base64 :as b64]
             [goog.date :as gdate]
             [goog.labs.userAgent.browser :as gbrowser]
+            [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.utils :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]))
 
 (def <== (comp deref rf/subscribe))
@@ -227,10 +228,17 @@
 (defn- cleanup-geoms [activity]
   (cond-> activity
     (seq (:routes activity))
-    (update :routes (fn [routes] (map #(dissoc % :geometries) routes)))))
+    (update :routes (fn [routes]
+                      (map (fn [route]
+                             (-> route
+                                 (dissoc :geometries)
+                                 (update :fids #(keep identity %))))
+                           routes)))))
 
 (defn make-saveable [sports-site]
   (-> sports-site
+
+      (update-in [:location :geometries :features] vec)
 
       ;; Swimming pools
       (update-in [:pools]  (comp not-empty remove-ids vals))
@@ -296,13 +304,10 @@
       ;; Audits
       (update-in [:audits] ->indexed-map)))
 
-(defn valid? [sports-site] ;; TODO maybe multimethod?
-  (let [spec (case (-> sports-site :type :type-code)
-               (3110 3120 3130) :lipas.sports-site/swimming-pool
-               (2510 2520)      :lipas.sports-site/ice-stadium
-               :lipas/sports-site)]
-    ; (s/explain spec sports-site)
-    (s/valid? spec sports-site)))
+;; TODO used only in legacy energy consumption view
+;; Should be removed
+(defn valid? [sports-site]
+  (m/validate sports-site-schema/sports-site sports-site))
 
 (defn mobile? [width]
   (case width
