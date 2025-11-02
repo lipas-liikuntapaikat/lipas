@@ -134,5 +134,5 @@
   [{:keys [indices] :as search} csv-path]
   (let [idx-name   (str "population-250m-" (search/gen-idx-name))
         idx-alias  (get-in indices [:analysis :population-high-def])
-        batch-size 100]
+        batch-size 1000]
     (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size)))

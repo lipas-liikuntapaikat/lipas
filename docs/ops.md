@@ -38,6 +38,14 @@ Population grids are updated once every 1-2 years. This affects analysis tools (
 - Calculate centroids (polygon -> point)
 - Export as CSV, geometry in WKT, properties as plain strings, CRS WGS84 (important) !!!
 
+**IMPORTANT:** Tilastokeskus column names may vary between data releases. Normalize field names to match existing indices:
+- `grid_id` → `grd_id`
+- `euref_x` → `xkoord`, `euref_y` → `ykoord`
+- `he_vakiy` → `vaesto`
+- For 1km grid: `id` → `gid`
+
+If field names differ, either rename columns in QGIS/CSV before import, or use Elasticsearch reindex API with Painless script to transform field names after seeding.
+
 ### 1km Population Grid ###
 
 - Run `lipas.backend.analysis.common/seed-population-1km-grid-from-csv!`

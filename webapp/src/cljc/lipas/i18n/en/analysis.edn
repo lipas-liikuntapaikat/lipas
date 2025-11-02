@@ -47,6 +47,7 @@
  :settings-map "Objects shown on the map",
  :settings-zones "Distances and travel times",
  :special-school "Special school",
+ :statistics-center-notice "Statistics Finland population structure 2024",
  :travel-time "Travel time",
  :zone "Zone",
  :zones "Zones"}

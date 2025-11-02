@@ -46,7 +46,7 @@
  :in-use-summer "Käytössä kesällä",
  :confirm-restore-defaults
  "Tahdotko varmasti palauttaa oletuskategoriat?",
- :statistics-center-notice "Tilastokeskus väestörakenne 2022",
+ :statistics-center-notice "Tilastokeskus väestörakenne 2024",
  :import-own-areas "Tuo omat alueet",
  :close "Sulje analyysityökalut",
  :download-areas "Lataa alueet",

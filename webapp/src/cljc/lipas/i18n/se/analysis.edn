@@ -43,6 +43,7 @@
  :in-use-summer "I bruk på sommaren",
  :confirm-restore-defaults
  "Vill du verkligen återställa standardkategorierna?",
+ :statistics-center-notice "Statistikcentralen befolkningsstruktur 2024",
  :import-own-areas "Importera egna områden",
  :close "Stäng analysverktygen",
  :download-areas "Ladda ner områden",
