@@ -1324,8 +1324,8 @@
                         [:sequential (into [:enum] (keys paddling-route-types))]]
                        [:paddling-properties {:optional true}
                         [:sequential (into [:enum] (keys paddling-properties))]]
-                       [:paddling-difficulty (into [:enum] (keys paddling-difficulty))]
-                       [:paddling-difficulty-v2 (into [:enum] (keys paddling-difficulty-v2))]
+                       [:paddling-difficulty {:optional true} (into [:enum] (keys paddling-difficulty))]
+                       [:paddling-difficulty-v2 {:optional true} (into [:enum] (keys paddling-difficulty-v2))]
                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
                        [:safety {:optional true} common-schema/localized-string]
                        [:good-to-know {:optional true} common-schema/localized-string]
