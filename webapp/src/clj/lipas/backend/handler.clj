@@ -147,10 +147,11 @@
         ["/sports-sites/:lipas-id"
          {:get
           {:no-doc false
+           :coercion reitit.coercion.malli/coercion
            :parameters {:path {:lipas-id int?}
-                        :query :lipas.api.get-sports-site/query-params}
-           :responses {200 {:body :lipas/sports-site}
-                       404 {:body map?}}
+                        :query [:map [:lang {:optional true} [:enum "fi" "en" "se" "all"]]]}
+           :responses {200 {:body sports-site-schema/sports-site}
+                       404 {:body [:map]}}
            :handler
            (fn [req]
              (let [lipas-id (-> req :parameters :path :lipas-id)

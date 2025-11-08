@@ -13,13 +13,15 @@
             [lipas.backend.search :as search]
             [lipas.backend.system :as sy]
             [lipas.schema.core]
+            [lipas.schema.sports-sites :as sports-site-schema]
+            [malli.generator :as mg]
             [lipas.utils :as utils]
             [migratus.core :as migratus]
             [ring.mock.request :as mock])
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
-(defn gen-sports-site
+#_(defn gen-sports-site
   []
   (try
     ;; FIXME :ptv generators produce difficult values
@@ -27,6 +29,10 @@
         gen/generate
         (dissoc :ptv))
     (catch Throwable _t (gen-sports-site))))
+
+(defn gen-sports-site
+  []
+  (mg/generate sports-site-schema/sports-site))
 
 (def <-json
   (fn [response-body]

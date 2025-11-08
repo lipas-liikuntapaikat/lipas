@@ -2,7 +2,8 @@
   (:require [lipas.data.floorball :as floorball]
             [lipas.schema.common :as common]
             [malli.util :as mu]
-            [malli.core :as m]))
+            [malli.core :as m]
+            #?(:clj [clojure.test.check.generators])))
 
 ;; Locker room schema
 (def locker-room
@@ -24,7 +25,18 @@
   [:map
    {:description "Floorball facility audit record"}
    [:audit-date {:description "Date of the audit"}
-    [:re #"^\d{4}-\d{2}-\d{2}$"]]
+    [:and
+     {:gen/gen #?(:clj (clojure.test.check.generators/fmap
+                        (fn [millis]
+                          (let [instant (java.time.Instant/ofEpochMilli millis)
+                                formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd")]
+                            (.format (.atZone instant (java.time.ZoneId/of "UTC")) formatter)))
+                        (clojure.test.check.generators/choose
+                         (.getTime #inst "2000-01-01")
+                         (.getTime #inst "2030-12-31")))
+                  :cljs nil)}
+     :string
+     [:re #"^\d{4}-\d{2}-\d{2}$"]]]
    [:audit-type {:description "Type of the audit"}
     [:enum "floorball-circumstances-audit"]]
    [:audit-performed-by {:description "ID of the person who performed the audit"}

@@ -2,7 +2,8 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.materials :as materials]))
+   [lipas.data.materials :as materials]
+   [lipas.schema.common]))
 
 (def all
   {:height-m
@@ -1949,10 +1950,10 @@
 (def schemas
   (into {} (for [[k m] all]
              [k (case (:data-type m)
-                  "string"    [:string]
-                  "numeric"   number?
-                  "boolean"   [:boolean]
-                  "enum"      (into [:enum] (keys (:opts m)))
+                  "string" [:string]
+                  "numeric" #'lipas.schema.common/number
+                  "boolean" [:boolean]
+                  "enum" (into [:enum] (keys (:opts m)))
                   "enum-coll" [:sequential (into [:enum] (keys (:opts m)))])])))
 
 (def csv-headers
