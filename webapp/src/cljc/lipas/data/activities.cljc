@@ -1,15 +1,15 @@
 (ns lipas.data.activities
   (:require
-    #?(:clj [cheshire.core :as json])
-    #?(:clj [clojure.data.csv :as csv])
-    [clojure.string :as str]
-    [lipas.data.materials :as materials]
-    [lipas.data.types :as types]
-    [lipas.schema.common :as common-schema]
-    [lipas.utils :as utils]
-    [malli.core :as m]
-    [malli.json-schema :as json-schema]
-    [malli.util :as mu]))
+   #?(:clj [cheshire.core :as json])
+   #?(:clj [clojure.data.csv :as csv])
+   [clojure.string :as str]
+   [lipas.data.materials :as materials]
+   [lipas.data.types :as types]
+   [lipas.schema.common :as common-schema]
+   [lipas.utils :as utils]
+   [malli.core :as m]
+   [malli.json-schema :as json-schema]
+   [malli.util :as mu]))
 
 (defn collect-schema
   [m]
@@ -501,39 +501,39 @@
                 :videos]
    :props
    (merge
-     (-> common-props
-         (dissoc :rules))
-     {#_#_:everymans-rights
-        {:schema [:boolean {:optional true}]
-         :field
-         {:type "checkbox"
-          :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"
-                        :se "Är allemansrätten i kraft. Ja/Nej"
-                        :en "Are everyman's rights in force. Yes/No"}
-          :label {:fi "Jokamiehenoikeudet"
-                  :se "Allemansrätt"
-                  :en "Everyman's rights"}}}
-      :geo-park
-      {:schema [:boolean {:optional true}]
-       :field
-       {:type "checkbox"
-        :description {:fi "Jos kohde on geopark, niin aktivoi liukukytkin (aktivoitu kytkin muuttuu punaiseksi). HUOM! Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."
-                      :se "Om platsen är en Geopark, aktivera skjutreglaget (det aktiverade reglaget blir rött). OBS! En Geopark är ett sammanhängande geografiskt område med internationellt betydande geologiskt värde."
-                      :en "If the place is a Geopark, activate the slider (activated slider turns red). N.B! A Geopark is a single, unified geographical area of international geological significance."}
-        :label {:fi "Geopark"
-                :se "Geopark"
-                :en "Geopark"}}}
-      :rules-structured
-      {:schema rules-structured-schema
-       :field
-       {:type "rules"
-        :description {:fi "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa ja esim. varoitetaan poistumasta polulta herkällä kohteella. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista."
-                      :se "Rörelse- eller bruksanvisning för att styra driften och till exempel varna för att lämna stigen på ett känsligt område. Eventuella begränsningar av rörelsefriheten eller aktivitetsfriheten kan också beskrivas här."
-                      :en "Instructions for guiding the activity in the region and, for example, warn against leaving the path at a sensitive place. This can also be used to inform about possible restrictions regarding movement."}
-        :label {:fi "Luvat, säännöt, ohjeet"
-                :se "Tillstånd, regler, anvisningar"
-                :en "Permits, regulations, instructions"}
-        :opts common-rules}}})})
+    (-> common-props
+        (dissoc :rules))
+    {#_#_:everymans-rights
+       {:schema [:boolean {:optional true}]
+        :field
+        {:type "checkbox"
+         :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"
+                       :se "Är allemansrätten i kraft. Ja/Nej"
+                       :en "Are everyman's rights in force. Yes/No"}
+         :label {:fi "Jokamiehenoikeudet"
+                 :se "Allemansrätt"
+                 :en "Everyman's rights"}}}
+     :geo-park
+     {:schema [:boolean {:optional true}]
+      :field
+      {:type "checkbox"
+       :description {:fi "Jos kohde on geopark, niin aktivoi liukukytkin (aktivoitu kytkin muuttuu punaiseksi). HUOM! Geopark on yhtenäinen maantieteellinen alue, jolla on kansainvälisesti merkittävää geologista arvoa."
+                     :se "Om platsen är en Geopark, aktivera skjutreglaget (det aktiverade reglaget blir rött). OBS! En Geopark är ett sammanhängande geografiskt område med internationellt betydande geologiskt värde."
+                     :en "If the place is a Geopark, activate the slider (activated slider turns red). N.B! A Geopark is a single, unified geographical area of international geological significance."}
+       :label {:fi "Geopark"
+               :se "Geopark"
+               :en "Geopark"}}}
+     :rules-structured
+     {:schema rules-structured-schema
+      :field
+      {:type "rules"
+       :description {:fi "Liikkumis- tai toimintaohjeet, joiden avulla ohjataan toimintaa ja esim. varoitetaan poistumasta polulta herkällä kohteella. Tässä voidaan kertoa myös mahdollisista liikkumis- tai toimintarajoituksista."
+                     :se "Rörelse- eller bruksanvisning för att styra driften och till exempel varna för att lämna stigen på ett känsligt område. Eventuella begränsningar av rörelsefriheten eller aktivitetsfriheten kan också beskrivas här."
+                     :en "Instructions for guiding the activity in the region and, for example, warn against leaving the path at a sensitive place. This can also be used to inform about possible restrictions regarding movement."}
+       :label {:fi "Luvat, säännöt, ohjeet"
+               :se "Tillstånd, regler, anvisningar"
+               :en "Permits, regulations, instructions"}
+       :opts common-rules}}})})
 
 (def outdoor-recreation-areas-schema
   (collect-schema (:props outdoor-recreation-areas)))
@@ -609,33 +609,33 @@
 
     {:schema [:sequential
               (mu/merge
-                (-> common-route-props-schema
-                    (mu/dissoc :accessibility)
-                    (mu/dissoc :latest-updates)
-                    (mu/dissoc :rules))
-                [:map
-                 [:id [:string]]
-                 [:fids {:optional true} fids-schema]
-                 [:geometries {:optional true} common-schema/line-string-feature-collection]
-                 [:accessibility-categorized {:optional true}
-                  [:map
-                   [:mobility-impaired {:optional true} common-schema/localized-string]
-                   [:hearing-impaired {:optional true} common-schema/localized-string]
-                   [:visually-impaired {:optional true} common-schema/localized-string]
-                   [:developmentally-disabled {:optional true} common-schema/localized-string]]]
-                 [:route-name {:optional true} common-schema/localized-string]
-                 [:outdoor-recreation-activities {:optional true}
-                  [:sequential (into [:enum] (keys outdoor-recreation-routes-activities))]]
-                 [:duration {:optional true} duration-schema]
-                 [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise" "no-preference"]]
-                 [:route-marking {:optional true} common-schema/localized-string]
-                 [:rules-structured {:optional true} rules-structured-schema]
-                 [:route-length-km {:optional true} common-schema/number]
-                 [:surface-material {:optional true} surface-material-schema]
-                 [:accessibility-classification {:optional true}
-                  (into [:enum] (keys accessibility-classification))]
-                 [:independent-entity {:optional true} [:boolean]]
-                 pilgrimage-key-schema])]
+               (-> common-route-props-schema
+                   (mu/dissoc :accessibility)
+                   (mu/dissoc :latest-updates)
+                   (mu/dissoc :rules))
+               [:map
+                [:id [:string]]
+                [:fids {:optional true} fids-schema]
+                [:geometries {:optional true} common-schema/line-string-feature-collection]
+                [:accessibility-categorized {:optional true}
+                 [:map
+                  [:mobility-impaired {:optional true} common-schema/localized-string]
+                  [:hearing-impaired {:optional true} common-schema/localized-string]
+                  [:visually-impaired {:optional true} common-schema/localized-string]
+                  [:developmentally-disabled {:optional true} common-schema/localized-string]]]
+                [:route-name {:optional true} common-schema/localized-string]
+                [:outdoor-recreation-activities {:optional true}
+                 [:sequential (into [:enum] (keys outdoor-recreation-routes-activities))]]
+                [:duration {:optional true} duration-schema]
+                [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise" "no-preference"]]
+                [:route-marking {:optional true} common-schema/localized-string]
+                [:rules-structured {:optional true} rules-structured-schema]
+                [:route-length-km {:optional true} common-schema/number]
+                [:surface-material {:optional true} surface-material-schema]
+                [:accessibility-classification {:optional true}
+                 (into [:enum] (keys accessibility-classification))]
+                [:independent-entity {:optional true} [:boolean]]
+                pilgrimage-key-schema])]
      :field
      {:type "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -646,194 +646,194 @@
               :en "Route type"}
       :props
       (merge
-        (-> common-route-props
-            (dissoc :rules :accessibility)
-            (assoc-in [:description-short :field :description :se] "Beskrivning av platsen i 3–7 meningar. Visas till exempel som en introduktion till en plats eller i en lista med flera platser.")
-            (assoc-in [:description-short :field :description :en] "A description of the place in 3-7 sentences. Showing e.g. as an intro to the presentation of the place or in the listing of several places.")
-            (assoc-in [:description-short :field :description :fi] "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
-        {:accessibility-classification
-         {:field
-          {:type "select"
-           :label {:fi "Esteettömyysluokittelu"
-                   :se "Klassificering av tillgänglighet"
-                   :en "Accessibility classification"}
-           :description {:fi "Valitse onko reitti esteellinen, esteetön vai vaativa esteetön (vaativalla esteettömällä reitillä saatetaan tarvita avustaja ja/tai apuväline, kuten maastopyörätuoli)"
-                         :se "Välj om rutten är inte tillgänglig, tillgänglig eller krävande tillgänglig (på en krävande tillgänglig rutt kan en assistent och/eller hjälpmedel som en terrängrullstol behövas)"
-                         :en "Select if the route is not accessible, is accessible or is demanding accessible (a personal assistant or an assistive device, such as an all-terrain wheelchair might be necessary)"}
-           :opts (dissoc accessibility-classification "unknown")}}
+       (-> common-route-props
+           (dissoc :rules :accessibility)
+           (assoc-in [:description-short :field :description :se] "Beskrivning av platsen i 3–7 meningar. Visas till exempel som en introduktion till en plats eller i en lista med flera platser.")
+           (assoc-in [:description-short :field :description :en] "A description of the place in 3-7 sentences. Showing e.g. as an intro to the presentation of the place or in the listing of several places.")
+           (assoc-in [:description-short :field :description :fi] "3-7 lauseen mittainen kuvaus kohteesta. Näytetään esim. kohde-esittelyn ingressinä tai useamman kohteen listauksessa."))
+       {:accessibility-classification
+        {:field
+         {:type "select"
+          :label {:fi "Esteettömyysluokittelu"
+                  :se "Klassificering av tillgänglighet"
+                  :en "Accessibility classification"}
+          :description {:fi "Valitse onko reitti esteellinen, esteetön vai vaativa esteetön (vaativalla esteettömällä reitillä saatetaan tarvita avustaja ja/tai apuväline, kuten maastopyörätuoli)"
+                        :se "Välj om rutten är inte tillgänglig, tillgänglig eller krävande tillgänglig (på en krävande tillgänglig rutt kan en assistent och/eller hjälpmedel som en terrängrullstol behövas)"
+                        :en "Select if the route is not accessible, is accessible or is demanding accessible (a personal assistant or an assistive device, such as an all-terrain wheelchair might be necessary)"}
+          :opts (dissoc accessibility-classification "unknown")}}
 
-         :rules-structured
-         {:field
-          {:type "rules"
-           :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."
-                         :se "Rörelsesanvisningar som kan användas för att styra en hobby och till exempel varna för att lämna stigen på ett känsligt område. Detta kan också användas för att informera om eventuella lagstadgade begränsningar av rörelsefriheten."
-                         :en "Instructions that can be used to guide a hobby and, for example, warn against leaving the path at a sensitive place. This can also be used to inform about possible statutory restrictions regarding movement."}
-           :label {:fi "Luvat, säännöt, ohjeet"
-                   :se "Tillstånd, regler, anvisningar"
-                   :en "Permits, regulations, instructions"}
-           :opts common-rules}}
+        :rules-structured
+        {:field
+         {:type "rules"
+          :description {:fi "Liikkumisohje, jonka avulla voidaan ohjata harrastusta ja esimerkiksi varoittaa poistumasta polulta herkällä kohteella. Tätä kautta voidaan informoida myös mahdollisista lakisääteisistä liikkumisrajoituksista."
+                        :se "Rörelsesanvisningar som kan användas för att styra en hobby och till exempel varna för att lämna stigen på ett känsligt område. Detta kan också användas för att informera om eventuella lagstadgade begränsningar av rörelsefriheten."
+                        :en "Instructions that can be used to guide a hobby and, for example, warn against leaving the path at a sensitive place. This can also be used to inform about possible statutory restrictions regarding movement."}
+          :label {:fi "Luvat, säännöt, ohjeet"
+                  :se "Tillstånd, regler, anvisningar"
+                  :en "Permits, regulations, instructions"}
+          :opts common-rules}}
 
-         :accessibility-categorized
-         {:field
-          {:type "accessibility"
-           :label {:fi "Esteettömyys vammaryhmittäin"
-                   :se "Tillgänglighet per funktionshindergrupp"
-                   :en "Accessibility per handicap group"}
-           :description {:fi "Syötä esteettömyyskuvailu vammaryhmille"
-                         :se "Ange tillgänglighetsbeskrivningar för funktionshindergrupper."
-                         :en "Enter information about accessibility for the appropriate handicap group(s)"}
-           :props
-           {:mobility-impaired
-            {:value "mobility-impaired"
-             :field
-             {:type "textarea"
-              :description {:fi "Aihekohtainen tekstikuvaus"
-                            :se "Ämnesspecifik textbeskrivning"
-                            :en "Subject-specific text description"}
-              :label {:fi "Liikuntavammaiset"
-                      :se "Rörelsehindrade"
-                      :en "Mobility impaired"}}}
-            :hearing-impaired
-            {:value "hearing-impaired"
-             :field
-             {:type "textarea"
-              :description {:fi "Aihekohtainen tekstikuvaus"
-                            :se "Ämnesspecifik textbeskrivning"
-                            :en "Subject-specific text description"}
-              :label {:fi "Kuurot ja kuulovammaiset"
-                      :se "Döva och hörselskadade"
-                      :en "Hearing impaired"}}}
-            :visually-impaired
-            {:value "visually-impaired"
-             :field
-             {:type "textarea"
-              :description {:fi "Aihekohtainen tekstikuvaus"
-                            :se "Ämnesspecifik textbeskrivning"
-                            :en "Subject-specific text description"}
-              :label {:fi "Näkövammaiset"
-                      :se "Synskadade"
-                      :en "Visually impaired"}}}
-            :developmentally-disabled
-            {:value "developmentally-disabled"
-             :field
-             {:type "textarea"
-              :description {:fi "Aihekohtainen tekstikuvaus"
-                            :se "Ämnesspecifik textbeskrivning"
-                            :en "Subject-specific text description"}
-              :label {:fi "Kehitysvammaiset"
-                      :se "Personer med utvecklingsstörning"
-                      :en "Developmentally disabled"}}}}}}
-
-         :route-name
-         {:field
-          {:type "text-field"
-           :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
-                         :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
-                         :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
-           :label {:fi "Reitin nimi"
-                   :se "Ruttens namn"
-                   :en "Route name"}}}
-
-         :outdoor-recreation-activities
-         {:field
-          {:type "multi-select"
-           :description {:fi "Valitse reitille soveltuvat kulkutavat"
-                         :se "Välj lämpliga färdsätt för rutten."
-                         :en "Select the appropriate means of travel on the route."}
-           :label {:fi "Kulkutavat"
-                   :se "Färdsätt"
-                   :en "Means of travel"}
-           :opts outdoor-recreation-routes-activities}}
-
-         :duration
-         {:field
-          {:type "duration"
-           :description {:fi "Reitin arvioitu kulkuaika"
-                         :se "Beräknad restid på rutten"
-                         :en "The estimated time of travel on the route"}
-           :label {:fi "Kulkuaika"
-                   :se "Tid för passage"
-                   :en "Travel time"}}}
-
-         :travel-direction
-         {:field
-          {:type "select"
-           :opts {"clockwise"
-                  {:fi "Rengasreitti, suositeltu kulkusuunta myötäpäivään"
-                   :se "Rundslinga, rekommenderad riktning medurs"
-                   :en "Loop trail, recommended direction clockwise"}
-                  "counter-clockwise"
-                  {:fi "Rengasreitti, suositeltu kulkusuunta vastapäivään"
-                   :se "Rundslinga, rekommenderad riktning moturs"
-                   :en "Loop trail, recommended direction counter-clockwise"}
-                  "no-preference"
-                  {:fi "Rengasreitti, ei suositeltua kulkusuuntaa"
-                   :se "Rundslinga, ingen rekommenderad riktning"
-                   :en "Loop trail, no recommended direction"}}
-
-           :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
-                         :se "Välj ruttens gångriktning, medurs/moturs om rutten har en rekommenderad gångriktning."
-                         :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
-           :label {:fi "Kulkusuunta"
-                   :se "Färdriktning"
-                   :en "Travel direction"}}}
-
-         :route-marking
-         {:field
-          {:type "text-field"
-           :description {:fi "Kuvaile tapa, jolla reitti on merkitty maastoon. Esim. syötä reittimerkkien symboli ja väri."
-                         :se "Beskriv hur rutten är markerad i terrängen. T.ex. ange symbol och färg på markeringarna."
-                         :en "Describe the way the route is marked in the terrain, e.g. enter the symbol and colour of the route markings."}
-           :label {:fi "Reittimerkintä"
-                   :se "Vägmarkering"
-                   :en "Route marking"}}}
-
-         :route-length-km
-         {:field
-          {:type "lipas-property"
-           :lipas-property :route-length-km
-           :label {:fi "Reitin pituus (km)"
-                   :se "Ruttens längd (km)"
-                   :en "Route length (km)"}
-           :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
-                         :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
-                         :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
-
-         :surface-material
-         {:field
-          {:type "lipas-property"
-           :lipas-property :surface-material
-           :label {:fi "Pintamateriaali"
-                   :se "Underlag"
-                   :en "Surface material"}
-           :description {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
-                         :se "Välj alla underlag som finns på rutten."
-                         :en "Select all the surface materials on the route"}}}
-
-         #_#_:latest-updates
-           {:schema common-schema/localized-string
+        :accessibility-categorized
+        {:field
+         {:type "accessibility"
+          :label {:fi "Esteettömyys vammaryhmittäin"
+                  :se "Tillgänglighet per funktionshindergrupp"
+                  :en "Accessibility per handicap group"}
+          :description {:fi "Syötä esteettömyyskuvailu vammaryhmille"
+                        :se "Ange tillgänglighetsbeskrivningar för funktionshindergrupper."
+                        :en "Enter information about accessibility for the appropriate handicap group(s)"}
+          :props
+          {:mobility-impaired
+           {:value "mobility-impaired"
             :field
             {:type "textarea"
-             :description {:fi "Tähän joku seliteteksti"
-                           :se "Här någon förklarande text"
-                           :en "Some explanatory text here"}
-             :label {:fi "Ajankohtaista"
-                     :se "Aktuellt"
-                     :en "Latest updates"}}}
+             :description {:fi "Aihekohtainen tekstikuvaus"
+                           :se "Ämnesspecifik textbeskrivning"
+                           :en "Subject-specific text description"}
+             :label {:fi "Liikuntavammaiset"
+                     :se "Rörelsehindrade"
+                     :en "Mobility impaired"}}}
+           :hearing-impaired
+           {:value "hearing-impaired"
+            :field
+            {:type "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"
+                           :se "Ämnesspecifik textbeskrivning"
+                           :en "Subject-specific text description"}
+             :label {:fi "Kuurot ja kuulovammaiset"
+                     :se "Döva och hörselskadade"
+                     :en "Hearing impaired"}}}
+           :visually-impaired
+           {:value "visually-impaired"
+            :field
+            {:type "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"
+                           :se "Ämnesspecifik textbeskrivning"
+                           :en "Subject-specific text description"}
+             :label {:fi "Näkövammaiset"
+                     :se "Synskadade"
+                     :en "Visually impaired"}}}
+           :developmentally-disabled
+           {:value "developmentally-disabled"
+            :field
+            {:type "textarea"
+             :description {:fi "Aihekohtainen tekstikuvaus"
+                           :se "Ämnesspecifik textbeskrivning"
+                           :en "Subject-specific text description"}
+             :label {:fi "Kehitysvammaiset"
+                     :se "Personer med utvecklingsstörning"
+                     :en "Developmentally disabled"}}}}}}
 
-         :independent-entity
-         {:schema [:boolean {:optional true}]
-          :field
-          {:type "checkbox"
-           :description {:fi "Aktivoi liukukytkin, jos reitti ei kuulu mihinkään alueeseen tai laajempaan kokonaisuuteen (esim. ulkoilualueeseen tai kansallispuistoon).  Aktivoitu kytkin muuttuu punaiseksi."
-                         :se "Aktivera skjutreglaget om rutten inte hör till ett område eller en större helhet (t.ex. ett rekreationsområde eller en nationalpark). När det är aktiverat blir reglaget rött."
-                         :en "Activate the slider if the route is not a part of any region or a broader entity (e.g. recreational area or national park). The activated slider turns red."}
-           :label {:fi "Itsenäinen kohde"
-                   :se "Fristående plats"
-                   :en "Standalone place"}}}
+        :route-name
+        {:field
+         {:type "text-field"
+          :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
+                        :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
+                        :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
+          :label {:fi "Reitin nimi"
+                  :se "Ruttens namn"
+                  :en "Route name"}}}
 
-         :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
-                                                     (not (#{4402} type-code))))})}}}})
+        :outdoor-recreation-activities
+        {:field
+         {:type "multi-select"
+          :description {:fi "Valitse reitille soveltuvat kulkutavat"
+                        :se "Välj lämpliga färdsätt för rutten."
+                        :en "Select the appropriate means of travel on the route."}
+          :label {:fi "Kulkutavat"
+                  :se "Färdsätt"
+                  :en "Means of travel"}
+          :opts outdoor-recreation-routes-activities}}
+
+        :duration
+        {:field
+         {:type "duration"
+          :description {:fi "Reitin arvioitu kulkuaika"
+                        :se "Beräknad restid på rutten"
+                        :en "The estimated time of travel on the route"}
+          :label {:fi "Kulkuaika"
+                  :se "Tid för passage"
+                  :en "Travel time"}}}
+
+        :travel-direction
+        {:field
+         {:type "select"
+          :opts {"clockwise"
+                 {:fi "Rengasreitti, suositeltu kulkusuunta myötäpäivään"
+                  :se "Rundslinga, rekommenderad riktning medurs"
+                  :en "Loop trail, recommended direction clockwise"}
+                 "counter-clockwise"
+                 {:fi "Rengasreitti, suositeltu kulkusuunta vastapäivään"
+                  :se "Rundslinga, rekommenderad riktning moturs"
+                  :en "Loop trail, recommended direction counter-clockwise"}
+                 "no-preference"
+                 {:fi "Rengasreitti, ei suositeltua kulkusuuntaa"
+                  :se "Rundslinga, ingen rekommenderad riktning"
+                  :en "Loop trail, no recommended direction"}}
+
+          :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
+                        :se "Välj ruttens gångriktning, medurs/moturs om rutten har en rekommenderad gångriktning."
+                        :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
+          :label {:fi "Kulkusuunta"
+                  :se "Färdriktning"
+                  :en "Travel direction"}}}
+
+        :route-marking
+        {:field
+         {:type "text-field"
+          :description {:fi "Kuvaile tapa, jolla reitti on merkitty maastoon. Esim. syötä reittimerkkien symboli ja väri."
+                        :se "Beskriv hur rutten är markerad i terrängen. T.ex. ange symbol och färg på markeringarna."
+                        :en "Describe the way the route is marked in the terrain, e.g. enter the symbol and colour of the route markings."}
+          :label {:fi "Reittimerkintä"
+                  :se "Vägmarkering"
+                  :en "Route marking"}}}
+
+        :route-length-km
+        {:field
+         {:type "lipas-property"
+          :lipas-property :route-length-km
+          :label {:fi "Reitin pituus (km)"
+                  :se "Ruttens längd (km)"
+                  :en "Route length (km)"}
+          :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
+                        :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
+                        :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
+
+        :surface-material
+        {:field
+         {:type "lipas-property"
+          :lipas-property :surface-material
+          :label {:fi "Pintamateriaali"
+                  :se "Underlag"
+                  :en "Surface material"}
+          :description {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
+                        :se "Välj alla underlag som finns på rutten."
+                        :en "Select all the surface materials on the route"}}}
+
+        #_#_:latest-updates
+          {:schema common-schema/localized-string
+           :field
+           {:type "textarea"
+            :description {:fi "Tähän joku seliteteksti"
+                          :se "Här någon förklarande text"
+                          :en "Some explanatory text here"}
+            :label {:fi "Ajankohtaista"
+                    :se "Aktuellt"
+                    :en "Latest updates"}}}
+
+        :independent-entity
+        {:schema [:boolean {:optional true}]
+         :field
+         {:type "checkbox"
+          :description {:fi "Aktivoi liukukytkin, jos reitti ei kuulu mihinkään alueeseen tai laajempaan kokonaisuuteen (esim. ulkoilualueeseen tai kansallispuistoon).  Aktivoitu kytkin muuttuu punaiseksi."
+                        :se "Aktivera skjutreglaget om rutten inte hör till ett område eller en större helhet (t.ex. ett rekreationsområde eller en nationalpark). När det är aktiverat blir reglaget rött."
+                        :en "Activate the slider if the route is not a part of any region or a broader entity (e.g. recreational area or national park). The activated slider turns red."}
+          :label {:fi "Itsenäinen kohde"
+                  :se "Fristående plats"
+                  :en "Standalone place"}}}
+
+        :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                    (not (#{4402} type-code))))})}}}})
 
 (def outdoor-recreation-routes-schema
   (collect-schema (:props outdoor-recreation-routes)))
@@ -912,42 +912,48 @@
 ;; ITRS (International Trail Rating System) definitions
 
 (def itrs-technical-options
-  {"0" {:label {:fi "T0 - Ei teknisiä haasteita"
-                :se "T0 - Inga tekniska utmaningar"
-                :en "T0 - No technical challenges"}
-        :description {:fi "Tasainen pinta, ei esteitä"
-                      :se "Jämn yta, inga hinder"
-                      :en "Smooth surface, no obstacles"}}
-   "1" {:label {:fi "T1 - Hyvin helppo"
-                :se "T1 - Mycket lätt"
-                :en "T1 - Very easy"}
-        :description {:fi "Lähes tasainen pinta, pieniä esteitä"
-                      :se "Nästan jämn yta, små hinder"
-                      :en "Nearly smooth surface, small obstacles"}}
-   "2" {:label {:fi "T2 - Helppo"
-                :se "T2 - Lätt"
-                :en "T2 - Easy"}
-        :description {:fi "Epätasainen pinta, kiviä ja juuria"
-                      :se "Ojämn yta, stenar och rötter"
-                      :en "Uneven surface, rocks and roots"}}
-   "3" {:label {:fi "T3 - Keskitasoinen"
-                :se "T3 - Medel"
-                :en "T3 - Intermediate"}
-        :description {:fi "Vaativa pinta, isompia kiviä ja esteitä"
-                      :se "Krävande yta, större stenar och hinder"
-                      :en "Challenging surface, larger rocks and obstacles"}}
-   "4" {:label {:fi "T4 - Vaikea"
-                :se "T4 - Svår"
-                :en "T4 - Difficult"}
-        :description {:fi "Erittäin vaativa pinta, jyrkät nousut/laskut"
-                      :se "Mycket krävande yta, branta stigningar/nedförsbackar"
-                      :en "Very challenging surface, steep climbs/descents"}}
-   "5" {:label {:fi "T5 - Erittäin vaikea"
-                :se "T5 - Extremt svår"
-                :en "T5 - Extremely difficult"}
-        :description {:fi "Äärimmäisen tekninen, vaaralliset esteet"
-                      :se "Extremt teknisk, farliga hinder"
-                      :en "Extremely technical, dangerous obstacles"}}})
+  {"1a" {:label {:fi "1a - Siirtymä"
+                 :se "1a - Övergång"
+                 :en "1a - Transition"}
+         :description {:fi "päällystetie"
+                       :se "asfalterad väg"
+                       :en "paved road"}
+         :color "purple"}
+   "1b" {:label {:fi "1b - Erittäin helppo (Beginner)"
+                 :se "1b - Mycket lätt (Beginner)"
+                 :en "1b - Very easy (Beginner)"}
+         :description {:fi "yli 1 metrin levyinen ja pääosin tasainen osuus"
+                       :se "över 1 meter bred och huvudsakligen jämn sektion"
+                       :en "over 1 meter wide and mostly smooth section"}
+         :color "green"}
+   "2" {:label {:fi "2 - Helppo (Intermediate)"
+                :se "2 - Lätt (Intermediate)"
+                :en "2 - Easy (Intermediate)"}
+        :description {:fi "0,6 - 1 metrin levyinen ja/tai yliajettavia epätasaisuuksia sisältävä osuus"
+                      :se "0,6 - 1 meter bred och/eller sektion med körbara ojämnheter"
+                      :en "0.6 - 1 meter wide and/or section containing rideable unevenness"}
+        :color "blue"}
+   "3" {:label {:fi "3 - Keskivaikea (Advanced)"
+                :se "3 - Medel (Advanced)"
+                :en "3 - Intermediate (Advanced)"}
+        :description {:fi "0,3 - 0,6 metrin levyinen ja/tai huomattavia epätasaisuuksia sisältävä osuus"
+                      :se "0,3 - 0,6 meter bred och/eller sektion med betydande ojämnheter"
+                      :en "0.3 - 0.6 meter wide and/or section containing significant unevenness"}
+        :color "red"}
+   "4" {:label {:fi "4 - Vaikea (Expert)"
+                :se "4 - Svår (Expert)"
+                :en "4 - Difficult (Expert)"}
+        :description {:fi "alle 0,3 metrin levyinen ja/tai suuria epätasaisuuksia sisältävä osuus"
+                      :se "under 0,3 meter bred och/eller sektion med stora ojämnheter"
+                      :en "less than 0.3 meter wide and/or section containing large unevenness"}
+        :color "black"}
+   "5" {:label {:fi "5 - Erittäin vaikea (Extreme)"
+                :se "5 - Extremt svår (Extreme)"
+                :en "5 - Extremely difficult (Extreme)"}
+        :description {:fi "alle 0,3 metrin levyinen, erittäin epätasainen ja jyrkkä osuus"
+                      :se "under 0,3 meter bred, mycket ojämn och brant sektion"
+                      :en "less than 0.3 meter wide, very uneven and steep section"}
+        :color "orange"}})
 
 (def itrs-exposure-options
   {"1" {:label {:fi "E1 - Vähäinen altistuminen"
@@ -976,35 +982,35 @@
                       :en "Severe fall risk, life-threatening"}}})
 
 (def itrs-endurance-options
-  {"1" {:fi "Kesto 1 - Erittäin lyhyt"
-        :se "Uthållighet 1 - Mycket kort"
-        :en "Endurance 1 - Very short"}
-   "2" {:fi "Kesto 2 - Lyhyt"
-        :se "Uthållighet 2 - Kort"
-        :en "Endurance 2 - Short"}
-   "3" {:fi "Kesto 3 - Keskipitkä"
-        :se "Uthållighet 3 - Medel"
-        :en "Endurance 3 - Medium"}
-   "4" {:fi "Kesto 4 - Pitkä"
-        :se "Uthållighet 4 - Lång"
-        :en "Endurance 4 - Long"}
-   "5" {:fi "Kesto 5 - Erittäin pitkä"
-        :se "Uthållighet 5 - Mycket lång"
-        :en "Endurance 5 - Very long"}})
+  {"1" {:fi "1 - Normaali liikunnallisuus"
+        :se "1 - Normal fysisk aktivitet"
+        :en "1 - Normal physical activity"}
+   "2" {:fi "2 - Satunnaista liikuntaa ja pyöräilyä"
+        :se "2 - Sporadisk motion och cykling"
+        :en "2 - Occasional exercise and cycling"}
+   "3" {:fi "3 - Säännöllistä pyöräilyä ja muuta urheilua"
+        :se "3 - Regelbunden cykling och annan idrott"
+        :en "3 - Regular cycling and other sports"}
+   "4" {:fi "4 - Aktiivista pyöräilyn lajiharjoittelua"
+        :se "4 - Aktiv cykelträning"
+        :en "4 - Active cycling training"}
+   "5" {:fi "5 - Ammattimaista pyöräilyn lajiharjoittelua"
+        :se "5 - Professionell cykelträning"
+        :en "5 - Professional cycling training"}})
 
 (def itrs-wilderness-options
-  {"1" {:fi "Erämaa 1 - Kaupunkilähellä"
-        :se "Vildmark 1 - Stadsnära"
-        :en "Wilderness 1 - Urban proximity"}
-   "2" {:fi "Erämaa 2 - Maaseutu"
-        :se "Vildmark 2 - Landsbygd"
-        :en "Wilderness 2 - Rural"}
-   "3" {:fi "Erämaa 3 - Syrjäinen"
-        :se "Vildmark 3 - Avlägsen"
-        :en "Wilderness 3 - Remote"}
-   "4" {:fi "Erämaa 4 - Hyvin syrjäinen"
-        :se "Vildmark 4 - Mycket avlägsen"
-        :en "Wilderness 4 - Very remote"}})
+  {"1" {:fi "1 - Palveluiden läheisyydessä"
+        :se "1 - I närheten av tjänster"
+        :en "1 - Near services"}
+   "2" {:fi "2 - Vaatii valmistautumista"
+        :se "2 - Kräver förberedelse"
+        :en "2 - Requires preparation"}
+   "3" {:fi "3 - Vaatii huolellista valmistautumista"
+        :se "3 - Kräver noggrann förberedelse"
+        :en "3 - Requires careful preparation"}
+   "4" {:fi "4 - Vaatii ammattimaista valmistautumista"
+        :se "4 - Kräver professionell förberedelse"
+        :en "4 - Requires professional preparation"}})
 
 (def cycling
   {:label {:fi "Pyöräily"
@@ -1050,33 +1056,33 @@
     :routes
     {:schema [:sequential
               (mu/merge
-                common-route-props-schema
-                [:map
-                 [:id [:string]]
-                 [:fids {:optional true} fids-schema]
-                 [:geometries {:optional true} common-schema/line-string-feature-collection]
-                 [:route-name {:optional true} common-schema/localized-string]
-                 [:cycling-activities {:optional true}
-                  [:sequential (into [:enum] (keys cycling-activities))]]
-                 [:cycling-difficulty {:optional true}
-                  (into [:enum] (keys cycling-difficulty))]
-                 [:cycling-route-difficulty {:optional true} common-schema/localized-string]
-                 [:duration {:optional true} duration-schema]
-                 [:food-and-water {:optional true} common-schema/localized-string]
-                 [:accommodation {:optional true} common-schema/localized-string]
-                 [:good-to-know {:optional true} common-schema/localized-string]
-                 [:route-notes {:optional true} common-schema/localized-string]
-                 [:route-length-km {:optional true} common-schema/number]
-                 [:surface-material {:optional true} surface-material-schema]
-                 [:unpaved-percentage {:optional true} common-schema/percentage]
-                 [:trail-percentage {:optional true} common-schema/percentage]
-                 [:cyclable-percentage {:optional true} common-schema/percentage]
+               common-route-props-schema
+               [:map
+                [:id [:string]]
+                [:fids {:optional true} fids-schema]
+                [:geometries {:optional true} common-schema/line-string-feature-collection]
+                [:route-name {:optional true} common-schema/localized-string]
+                [:cycling-activities {:optional true}
+                 [:sequential (into [:enum] (keys cycling-activities))]]
+                [:cycling-difficulty {:optional true}
+                 (into [:enum] (keys cycling-difficulty))]
+                [:cycling-route-difficulty {:optional true} common-schema/localized-string]
+                [:duration {:optional true} duration-schema]
+                [:food-and-water {:optional true} common-schema/localized-string]
+                [:accommodation {:optional true} common-schema/localized-string]
+                [:good-to-know {:optional true} common-schema/localized-string]
+                [:route-notes {:optional true} common-schema/localized-string]
+                [:route-length-km {:optional true} common-schema/number]
+                [:surface-material {:optional true} surface-material-schema]
+                [:unpaved-percentage {:optional true} common-schema/percentage]
+                [:trail-percentage {:optional true} common-schema/percentage]
+                [:cyclable-percentage {:optional true} common-schema/percentage]
 
-                 [:itrs-endurance {:optional true}
-                  (into [:enum] (keys itrs-endurance-options))]
-                 [:itrs-wilderness {:optional true}
-                  (into [:enum] (keys itrs-wilderness-options))]
-                 pilgrimage-key-schema])]
+                [:itrs-endurance {:optional true}
+                 (into [:enum] (keys itrs-endurance-options))]
+                [:itrs-wilderness {:optional true}
+                 (into [:enum] (keys itrs-wilderness-options))]
+                pilgrimage-key-schema])]
      :field
      {:type "routes"
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -1087,182 +1093,182 @@
               :en "Route type"}
       :props
       (merge
-        (-> (dissoc common-route-props :rules)
-            (update-in [:description-long :field] assoc
-                       :label {:fi "Reittikuvaus"
-                               :se "Ruttbeskrivning"
-                               :en "Route description"}
-                       :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erota vaiheet omiksi kappaleiksi."
-                                     :se "En mer detaljerad beskrivning av leden uppdelad i etapper samt anmärkningar om särskilt krävande sektioner eller farliga platser. Dela upp stegen i egna
+       (-> (dissoc common-route-props :rules)
+           (update-in [:description-long :field] assoc
+                      :label {:fi "Reittikuvaus"
+                              :se "Ruttbeskrivning"
+                              :en "Route description"}
+                      :description {:fi "Reitin tarkempi kuvaus reittiosuuksittain sekä huomautukset erityisen vaativista osuuksista tai vaaranpaikoista. Erota vaiheet omiksi kappaleiksi."
+                                    :se "En mer detaljerad beskrivning av leden uppdelad i etapper samt anmärkningar om särskilt krävande sektioner eller farliga platser. Dela upp stegen i egna
   stycken."
-                                     :en "A more detailed description of the route section by section, including notes on particularly demanding stretches or danger spots. Separate the stages into individual paragraphs."}))
-        {:route-name
-         {:field
-          {:type "text-field"
-           :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
-                         :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
-                         :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
-           :label {:fi "Reitin nimi"
-                   :se "Ruttens namn"
-                   :en "Route name"}}}
-         :cycling-activities
-         {:field
-          {:type "multi-select"
-           :description {:fi "Valitse reitille soveltuvat pyöräilylajit"
-                         :se "Välj de cykelsporter som passar på rutten."
-                         :en "Select the cycling types suitable for the route."}
-           :label {:fi "Alalaji"
-                   :se "Undertyp"
-                   :en "Subtypes"}
-           :opts (dissoc cycling-activities "road-cycling")}}
+                                    :en "A more detailed description of the route section by section, including notes on particularly demanding stretches or danger spots. Separate the stages into individual paragraphs."}))
+       {:route-name
+        {:field
+         {:type "text-field"
+          :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
+                        :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
+                        :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
+          :label {:fi "Reitin nimi"
+                  :se "Ruttens namn"
+                  :en "Route name"}}}
+        :cycling-activities
+        {:field
+         {:type "multi-select"
+          :description {:fi "Valitse reitille soveltuvat pyöräilylajit"
+                        :se "Välj de cykelsporter som passar på rutten."
+                        :en "Select the cycling types suitable for the route."}
+          :label {:fi "Alalaji"
+                  :se "Undertyp"
+                  :en "Subtypes"}
+          :opts (dissoc cycling-activities "road-cycling")}}
 
-         :cycling-difficulty
-         {:field
-          {:type "select"
-           :description {:fi "Haastavuus"
-                         :se "Utmaning"
-                         :en "Difficulty"}
-           :label {:fi "Reitin arvioitu haastavuus"
-                   :se "Uppskattad utmaning för rutten"
-                   :en "Estimated difficulty of the route"}
-           :opts cycling-difficulty}}
+        :cycling-difficulty
+        {:field
+         {:type "select"
+          :description {:fi "Haastavuus"
+                        :se "Utmaning"
+                        :en "Difficulty"}
+          :label {:fi "Reitin arvioitu haastavuus"
+                  :se "Uppskattad utmaning för rutten"
+                  :en "Estimated difficulty of the route"}
+          :opts cycling-difficulty}}
 
-         :cycling-route-difficulty
-         {:field
-          {:type "textarea"
-           :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
-                         :se "Beskriv den totala svårighetsgraden för leden. Ta med faktorer som till exempel ledens beläggning och framkomlighet, rekommenderad utrustning,
+        :cycling-route-difficulty
+        {:field
+         {:type "textarea"
+          :description {:fi "Kuvaile reitin kokonaishaastavuutta. Huomioi kuvauksessa esim. reitin pinnoite ja ajettavuus, suositeltava varustus, reitin liikennemäärät ja mäkisyys."
+                        :se "Beskriv den totala svårighetsgraden för leden. Ta med faktorer som till exempel ledens beläggning och framkomlighet, rekommenderad utrustning,
   trafikintensitet och kuperad terräng."
-                         :en "Describe the overall difficulty level of the route. Consider factors such as the route surface and rideability, recommended equipment, traffic volume, and hilliness."}
-           :label {:fi "Haastavuus"
-                   :se "Utmaning"
-                   :en "Difficulty"}}}
+                        :en "Describe the overall difficulty level of the route. Consider factors such as the route surface and rideability, recommended equipment, traffic volume, and hilliness."}
+          :label {:fi "Haastavuus"
+                  :se "Utmaning"
+                  :en "Difficulty"}}}
 
-         :itrs-endurance
-         {:field
-          {:type "select"
-           :label {:fi "ITRS Kesto"
-                   :se "ITRS Uthållighet"
-                   :en "ITRS Endurance"}
-           :description {:fi "Reitin arvioitu kesto (1-5)"
-                         :se "Ruttens uppskattade uthållighet (1-5)"
-                         :en "Estimated route endurance (1-5)"}
-           :opts itrs-endurance-options}}
+        :itrs-endurance
+        {:field
+         {:type "select"
+          :label {:fi "ITRS Kesto"
+                  :se "ITRS Uthållighet"
+                  :en "ITRS Endurance"}
+          :description {:fi "Reitin arvioitu kesto (1-5)"
+                        :se "Ruttens uppskattade uthållighet (1-5)"
+                        :en "Estimated route endurance (1-5)"}
+          :opts itrs-endurance-options}}
 
-         :itrs-wilderness
-         {:field
-          {:type "select"
-           :label {:fi "ITRS Erämaa"
-                   :se "ITRS Vildmark"
-                   :en "ITRS Wilderness"}
-           :description {:fi "Reitin etäisyys palveluista (1-4)"
-                         :se "Ruttens avstånd till tjänster (1-4)"
-                         :en "Route remoteness from services (1-4)"}
-           :opts itrs-wilderness-options}}
+        :itrs-wilderness
+        {:field
+         {:type "select"
+          :label {:fi "ITRS Erämaa"
+                  :se "ITRS Vildmark"
+                  :en "ITRS Wilderness"}
+          :description {:fi "Reitin etäisyys palveluista (1-4)"
+                        :se "Ruttens avstånd till tjänster (1-4)"
+                        :en "Route remoteness from services (1-4)"}
+          :opts itrs-wilderness-options}}
 
-         :duration
-         {:field
-          {:type "duration"
-           :description {:fi "Kulkuaika"
-                         :se "Tid för passage"
-                         :en "Travel time"}
-           :label {:fi "Reitin arvioitu kulkuaika"
-                   :se "Beräknad restid av rutten"
-                   :en "Estimated time of travel on the route"}}}
+        :duration
+        {:field
+         {:type "duration"
+          :description {:fi "Kulkuaika"
+                        :se "Tid för passage"
+                        :en "Travel time"}
+          :label {:fi "Reitin arvioitu kulkuaika"
+                  :se "Beräknad restid av rutten"
+                  :en "Estimated time of travel on the route"}}}
 
-         :food-and-water
-         {:field
-          {:type "textarea"
-           :description {:fi "Tietoa reitin varrella olevista ruokailu- ja juomapaikoista ja/tai ohjeet omasta ruoka- ja juomahuollosta."
-                         :se "Information om mat- och dryckesställen längs rutten och/eller anvisningar om ditt eget mat- och dryckesförråd."
-                         :en "Information about eating and drinking places along the route and/or instructions for your own food and water supply."}
-           :label {:fi "Ruoka & juoma"
-                   :se "Mat & Dryck"
-                   :en "Food and drink"}}}
+        :food-and-water
+        {:field
+         {:type "textarea"
+          :description {:fi "Tietoa reitin varrella olevista ruokailu- ja juomapaikoista ja/tai ohjeet omasta ruoka- ja juomahuollosta."
+                        :se "Information om mat- och dryckesställen längs rutten och/eller anvisningar om ditt eget mat- och dryckesförråd."
+                        :en "Information about eating and drinking places along the route and/or instructions for your own food and water supply."}
+          :label {:fi "Ruoka & juoma"
+                  :se "Mat & Dryck"
+                  :en "Food and drink"}}}
 
-         :accommodation
-         {:field
-          {:type "textarea"
-           :description {:fi "Tietoa reitin varrella olevista majoitusmahdollisuuksista ja -palveluista."
-                         :se "Information om inkvartering och service längs rutten."
-                         :en "Information about accommodation and services along the route."}
-           :label {:fi "Majoitus"
-                   :se "Inkvartering"
-                   :en "Accommodation"}}}
+        :accommodation
+        {:field
+         {:type "textarea"
+          :description {:fi "Tietoa reitin varrella olevista majoitusmahdollisuuksista ja -palveluista."
+                        :se "Information om inkvartering och service längs rutten."
+                        :en "Information about accommodation and services along the route."}
+          :label {:fi "Majoitus"
+                  :se "Inkvartering"
+                  :en "Accommodation"}}}
 
-         :good-to-know
-         {:field
-          {:type "textarea"
-           :description {:fi "Tietoa reittiin tai reitillä liikkumiseen liittyvistä säännöistä ja ohjeista."
-                         :se "Information om regler och anvisningar för rutten eller navigering av rutten."
-                         :en "Information about the rules and instructions related to the route or navigating the route."}
-           :label {:fi "Hyvä tietää"
-                   :se "Bra att veta"
-                   :en "Good to know"}}}
+        :good-to-know
+        {:field
+         {:type "textarea"
+          :description {:fi "Tietoa reittiin tai reitillä liikkumiseen liittyvistä säännöistä ja ohjeista."
+                        :se "Information om regler och anvisningar för rutten eller navigering av rutten."
+                        :en "Information about the rules and instructions related to the route or navigating the route."}
+          :label {:fi "Hyvä tietää"
+                  :se "Bra att veta"
+                  :en "Good to know"}}}
 
-         :route-notes
-         {:field
-          {:type "textarea"
-           :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista."
-                         :se "En mer omfattande beskrivning av målet och dess egenskaper."
-                         :en "A more comprehensive description of the destination and its characteristics."}
-           :label {:fi "Laajennettu yleiskuvaus"
-                   :se "Utökad översikt"
-                   :en "Extended overview"}}}
+        :route-notes
+        {:field
+         {:type "textarea"
+          :description {:fi "Yleiskuvausta jatkava, laajempi kuvaus kohteesta ja sen ominaisuuksista."
+                        :se "En mer omfattande beskrivning av målet och dess egenskaper."
+                        :en "A more comprehensive description of the destination and its characteristics."}
+          :label {:fi "Laajennettu yleiskuvaus"
+                  :se "Utökad översikt"
+                  :en "Extended overview"}}}
 
-         :unpaved-percentage
-         {:field
-          {:type "percentage"
-           :description {:fi "Kuinka suuri osuus reitistä on päällystämätöntä?"
-                         :se "Hur många procent av rutten är oasfalterad?"
-                         :en "How many per cent of the route is not paved?"}
-           :label {:fi "Päällystämätöntä"
-                   :se "Oasfalterad"
-                   :en "Not paved"}}}
+        :unpaved-percentage
+        {:field
+         {:type "percentage"
+          :description {:fi "Kuinka suuri osuus reitistä on päällystämätöntä?"
+                        :se "Hur många procent av rutten är oasfalterad?"
+                        :en "How many per cent of the route is not paved?"}
+          :label {:fi "Päällystämätöntä"
+                  :se "Oasfalterad"
+                  :en "Not paved"}}}
 
-         :trail-percentage
-         {:field
-          {:type "percentage"
-           :description {:fi "Kuinka suuri osuus reitistä on polkua?"
-                         :se "Hur många procent av rutten är en led?"
-                         :en "How many per cent of the route is a trail?"}
-           :label {:fi "Polkua"
-                   :se "Led"
-                   :en "Trail"}}}
+        :trail-percentage
+        {:field
+         {:type "percentage"
+          :description {:fi "Kuinka suuri osuus reitistä on polkua?"
+                        :se "Hur många procent av rutten är en led?"
+                        :en "How many per cent of the route is a trail?"}
+          :label {:fi "Polkua"
+                  :se "Led"
+                  :en "Trail"}}}
 
-         :cyclable-percentage
-         {:field
-          {:type "percentage"
-           :description {:fi "Kuinka suuri osuus reitistä on pyöräiltävissä?"
-                         :se "Hur många procent av rutten kan man cykla?"
-                         :en "How many per cent of the route is ridable?"}
-           :label {:fi "Pyöräiltävissä"
-                   :se "Kan cyclas"
-                   :en "Is ridable"}}}
+        :cyclable-percentage
+        {:field
+         {:type "percentage"
+          :description {:fi "Kuinka suuri osuus reitistä on pyöräiltävissä?"
+                        :se "Hur många procent av rutten kan man cykla?"
+                        :en "How many per cent of the route is ridable?"}
+          :label {:fi "Pyöräiltävissä"
+                  :se "Kan cyclas"
+                  :en "Is ridable"}}}
 
-         :route-length-km
-         {:field
-          {:type "lipas-property"
-           :lipas-property :route-length-km
-           :label {:fi "Reitin pituus (km)"
-                   :se "Ruttens längd (km)"
-                   :en "Route length (km)"}
-           :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
-                         :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
-                         :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
+        :route-length-km
+        {:field
+         {:type "lipas-property"
+          :lipas-property :route-length-km
+          :label {:fi "Reitin pituus (km)"
+                  :se "Ruttens längd (km)"
+                  :en "Route length (km)"}
+          :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
+                        :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
+                        :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
 
-         :surface-material
-         {:field
-          {:type "lipas-property"
-           :lipas-property :surface-material
-           :label {:fi "Pintamateriaali"
-                   :se "Underlag"
-                   :en "Surface material"}
-           :description {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
-                         :se "Välj alla underlag som finns på rutten."
-                         :en "Select all the surface materials on the route"}}}
+        :surface-material
+        {:field
+         {:type "lipas-property"
+          :lipas-property :surface-material
+          :label {:fi "Pintamateriaali"
+                  :se "Underlag"
+                  :en "Surface material"}
+          :description {:fi "Valitse kaikki pintamateriaalit, joita reitillä kuljetaan"
+                        :se "Välj alla underlag som finns på rutten."
+                        :en "Select all the surface materials on the route"}}}
 
-         :pilgrimage pilgrimage-field})}}}})
+        :pilgrimage pilgrimage-field})}}}})
 
 (def cycling-schema
   (collect-schema (:props cycling)))
@@ -1434,25 +1440,25 @@
            :routes
            {:schema [:sequential
                      (mu/merge
-                       common-route-props-schema
-                       [:map
-                        [:id [:string]]
-                        [:fids {:optional true} fids-schema]
-                        [:geometries {:optional true} common-schema/line-string-feature-collection]
-                        [:route-name {:optional true} common-schema/localized-string]
-                        [:paddling-activities {:optional true}
-                         [:sequential (into [:enum] (keys paddling-activities))]]
-                        [:paddling-route-type {:optional true}
-                         [:sequential (into [:enum] (keys paddling-route-types))]]
-                        [:paddling-properties {:optional true}
-                         [:sequential (into [:enum] (keys paddling-properties))]]
-                        [:paddling-difficulty {:optional true} (into [:enum] (keys paddling-difficulty))]
-                        [:paddling-difficulty-v2 {:optional true} (into [:enum] (keys paddling-difficulty-v2))]
-                        [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
-                        [:safety {:optional true} common-schema/localized-string]
-                        [:good-to-know {:optional true} common-schema/localized-string]
-                        [:duration {:optional true} duration-schema]
-                        pilgrimage-key-schema])]
+                      common-route-props-schema
+                      [:map
+                       [:id [:string]]
+                       [:fids {:optional true} fids-schema]
+                       [:geometries {:optional true} common-schema/line-string-feature-collection]
+                       [:route-name {:optional true} common-schema/localized-string]
+                       [:paddling-activities {:optional true}
+                        [:sequential (into [:enum] (keys paddling-activities))]]
+                       [:paddling-route-type {:optional true}
+                        [:sequential (into [:enum] (keys paddling-route-types))]]
+                       [:paddling-properties {:optional true}
+                        [:sequential (into [:enum] (keys paddling-properties))]]
+                       [:paddling-difficulty {:optional true} (into [:enum] (keys paddling-difficulty))]
+                       [:paddling-difficulty-v2 {:optional true} (into [:enum] (keys paddling-difficulty-v2))]
+                       [:travel-direction {:optional true} [:enum "clockwise" "counter-clockwise"]]
+                       [:safety {:optional true} common-schema/localized-string]
+                       [:good-to-know {:optional true} common-schema/localized-string]
+                       [:duration {:optional true} duration-schema]
+                       pilgrimage-key-schema])]
             :field
             {:type "routes"
              :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
@@ -1464,51 +1470,51 @@
              :props
              (merge
               ;; Otherwise same as others, but without "ohjeet"
-               (assoc-in common-route-props [:rules :field :label] {:fi "Luvat, säännöt"
-                                                                    :se "Tillstånd, regler"
-                                                                    :en "Permits, regulations"})
-               {:route-name
-                {:field
-                 {:type "text-field"
-                  :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
-                                :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
-                                :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
-                  :label {:fi "Reitin nimi"
-                          :se "Ruttens namn"
-                          :en "Route name"}}}
+              (assoc-in common-route-props [:rules :field :label] {:fi "Luvat, säännöt"
+                                                                   :se "Tillstånd, regler"
+                                                                   :en "Permits, regulations"})
+              {:route-name
+               {:field
+                {:type "text-field"
+                 :description {:fi "Anna reitille kuvaava nimi, esim. sen maantieteellisen sijainnin tai reitin päätepisteiden mukaan."
+                               :se "Ange ett beskrivande namn för rutten, t.ex. beroende på dess geografiska läge eller ruttens ändpunkter."
+                               :en "Enter a descriptive name for the route based on its geographical location or its endpoints."}
+                 :label {:fi "Reitin nimi"
+                         :se "Ruttens namn"
+                         :en "Route name"}}}
 
-                :paddling-activities
-                {:field
-                 {:type "multi-select"
-                  :description {:fi "Valitse soveltuvat melontatavat"
-                                :se "Välj lämpliga paddlingsmetoder."
-                                :en "Choose suitable paddling methods."}
-                  :label {:fi "Aktiviteetti"
-                          :se "Aktivitet"
-                          :en "Activity"}
-                  :opts paddling-activities}}
+               :paddling-activities
+               {:field
+                {:type "multi-select"
+                 :description {:fi "Valitse soveltuvat melontatavat"
+                               :se "Välj lämpliga paddlingsmetoder."
+                               :en "Choose suitable paddling methods."}
+                 :label {:fi "Aktiviteetti"
+                         :se "Aktivitet"
+                         :en "Activity"}
+                 :opts paddling-activities}}
 
-                :paddling-route-type
-                {:field
-                 {:type "multi-select"
-                  :description {:fi "Valitse, minkä tyyppinen melontakohde (-reitti) on kyseessä."
-                                :se "Välj vilken typ av paddlingsplats (-rutt) det gäller."
-                                :en "Select the type of paddling destination (-route) in question."}
-                  :label {:fi "Melontakohteen tyyppi"
-                          :se "Typ av paddlingsplats/-rut"
-                          :en "Paddling route type"}
-                  :opts paddling-route-types}}
+               :paddling-route-type
+               {:field
+                {:type "multi-select"
+                 :description {:fi "Valitse, minkä tyyppinen melontakohde (-reitti) on kyseessä."
+                               :se "Välj vilken typ av paddlingsplats (-rutt) det gäller."
+                               :en "Select the type of paddling destination (-route) in question."}
+                 :label {:fi "Melontakohteen tyyppi"
+                         :se "Typ av paddlingsplats/-rut"
+                         :en "Paddling route type"}
+                 :opts paddling-route-types}}
 
-                :paddling-properties
-                {:field
-                 {:type "multi-select"
-                  :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia. HUOM! Tiedot eivät toistaiseksi siirry luontoon.fi-palveluun"
-                                :se "Välj de punkter som beskriver ruttens egenskaper. OBS! Uppgifterna överförs inte till luonto.fi-tjänsten för tillfället."
-                                :en "Select the points that describe the route's features. NOTE! The information is not currently transferred to the luonto.fi service."}
-                  :label {:fi "Ominaisuudet"
-                          :se "Egenskaper"
-                          :en "Characteristics"}
-                  :opts paddling-properties}}
+               :paddling-properties
+               {:field
+                {:type "multi-select"
+                 :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia. HUOM! Tiedot eivät toistaiseksi siirry luontoon.fi-palveluun"
+                               :se "Välj de punkter som beskriver ruttens egenskaper. OBS! Uppgifterna överförs inte till luonto.fi-tjänsten för tillfället."
+                               :en "Select the points that describe the route's features. NOTE! The information is not currently transferred to the luonto.fi service."}
+                 :label {:fi "Ominaisuudet"
+                         :se "Egenskaper"
+                         :en "Characteristics"}
+                 :opts paddling-properties}}
 
                ;; :paddling-difficulty
                ;; {:field
@@ -1521,76 +1527,76 @@
                ;;                 :en "Estimated difficulty of the route"}
                ;;   :opts        paddling-difficulty}}
 
-                :paddling-difficulty-v2
-                {:field
-                 {:type "select"
-                  :description {:fi "Haastavuus"
-                                :se "Svårighetsgrad"
-                                :en "Difficulty"}
-                  :label {:fi "Reitin arvioitu haastavuus."
-                          :se "Uppskattad svårighetsgrad för rutten"
-                          :en "Estimated difficulty of the route"}
-                  :opts paddling-difficulty-v2}}
+               :paddling-difficulty-v2
+               {:field
+                {:type "select"
+                 :description {:fi "Haastavuus"
+                               :se "Svårighetsgrad"
+                               :en "Difficulty"}
+                 :label {:fi "Reitin arvioitu haastavuus."
+                         :se "Uppskattad svårighetsgrad för rutten"
+                         :en "Estimated difficulty of the route"}
+                 :opts paddling-difficulty-v2}}
 
-                :safety
-                {:field
-                 {:type "textarea"
-                  :description {:fi "Lisää reitin turvallisuuteen liittyvää tietoa esim. kuvaile vaativuutta, suositeltavaa osaamistasoa tai kalustoa."
-                                :se "Mer information relaterad till ruttens säkerhet, t.ex. Beskriv komplexiteten, den rekommenderade kompetensnivån eller utrustningen."
-                                :en "More information related to route safety, e.g. Describe the complexity, recommended skill level or equipment."}
-                  :label {:fi "Turvallisuus"
-                          :se "Säkerhet"
-                          :en "Safety"}}}
+               :safety
+               {:field
+                {:type "textarea"
+                 :description {:fi "Lisää reitin turvallisuuteen liittyvää tietoa esim. kuvaile vaativuutta, suositeltavaa osaamistasoa tai kalustoa."
+                               :se "Mer information relaterad till ruttens säkerhet, t.ex. Beskriv komplexiteten, den rekommenderade kompetensnivån eller utrustningen."
+                               :en "More information related to route safety, e.g. Describe the complexity, recommended skill level or equipment."}
+                 :label {:fi "Turvallisuus"
+                         :se "Säkerhet"
+                         :en "Safety"}}}
 
-                :good-to-know
-                {:field
-                 {:type "textarea"
-                  :description {:fi "Syötä tähän asioita, joista vesilläliikkujan on hyvä tietää (esim. matkapuhelimen kuuluvuuden katvealueet)."
-                                :se "Här skriver du in saker som paddlare bör känna till (t.ex. döda vinklar i mobiltäckningen)."
-                                :en "Enter here things that the paddler should know about (e.g. blind spots in mobile phone coverage)."}
-                  :label {:fi "Hyvä tietää"
-                          :se "Bra att veta"
-                          :en "Good to know"}}}
+               :good-to-know
+               {:field
+                {:type "textarea"
+                 :description {:fi "Syötä tähän asioita, joista vesilläliikkujan on hyvä tietää (esim. matkapuhelimen kuuluvuuden katvealueet)."
+                               :se "Här skriver du in saker som paddlare bör känna till (t.ex. döda vinklar i mobiltäckningen)."
+                               :en "Enter here things that the paddler should know about (e.g. blind spots in mobile phone coverage)."}
+                 :label {:fi "Hyvä tietää"
+                         :se "Bra att veta"
+                         :en "Good to know"}}}
 
-                :duration
-                {:field
-                 {:type "duration"
-                  :description {:fi "Reitin arvioitu kulkuaika"
-                                :se "Beräknad restid på rutten"
-                                :en "The estimated time of travel on the route"}
-                  :label {:fi "Kulkuaika"
-                          :se "Tid för passage"
-                          :en "Travel time"}}}
+               :duration
+               {:field
+                {:type "duration"
+                 :description {:fi "Reitin arvioitu kulkuaika"
+                               :se "Beräknad restid på rutten"
+                               :en "The estimated time of travel on the route"}
+                 :label {:fi "Kulkuaika"
+                         :se "Tid för passage"
+                         :en "Travel time"}}}
 
-                :route-length-km
-                {:field
-                 {:type "lipas-property"
-                  :lipas-property :route-length-km
-                  :label {:fi "Reitin pituus (km)"
-                          :se "Ruttens längd (km)"
-                          :en "Route length (km)"}
-                  :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
-                                :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
-                                :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
+               :route-length-km
+               {:field
+                {:type "lipas-property"
+                 :lipas-property :route-length-km
+                 :label {:fi "Reitin pituus (km)"
+                         :se "Ruttens längd (km)"
+                         :en "Route length (km)"}
+                 :description {:fi "Reitin pituus kilometreinä (voit syöttää tiedon käsin tai laskea sen automaattisesti)"
+                               :se "Ruttlängd i kilometer (du kan ange informationen manuellt eller beräkna den automatiskt)."
+                               :en "The length of the route in kilometres (you can enter it manually of have it calculated automatically)"}}}
 
-                :travel-direction
-                {:field
-                 {:type "select"
-                  :opts {"clockwise" {:fi "Myötäpäivään"
-                                      :se "Medurs"
-                                      :en "Clockwise"}
-                         "counter-clockwise" {:fi "Vastapäivään"
-                                              :se "Moturs"
-                                              :en "Counter-clockwise"}}
-                  :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
-                                :se "Välj ruttens gångriktning, medurs/moturs om rutten har en rekommenderad gångriktning."
-                                :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
-                  :label {:fi "Kulkusuunta"
-                          :se "Färdriktning"
-                          :en "Travel direction"}}}
+               :travel-direction
+               {:field
+                {:type "select"
+                 :opts {"clockwise" {:fi "Myötäpäivään"
+                                     :se "Medurs"
+                                     :en "Clockwise"}
+                        "counter-clockwise" {:fi "Vastapäivään"
+                                             :se "Moturs"
+                                             :en "Counter-clockwise"}}
+                 :description {:fi "Valitse reitin kulkusuunta, myötäpäivään/vastapäivään, jos reitillä on suositeltu kulkusuunta."
+                               :se "Välj ruttens gångriktning, medurs/moturs om rutten har en rekommenderad gångriktning."
+                               :en "If the route has a recommended travelling direction (clockwise, counterclockwise), choose it here."}
+                 :label {:fi "Kulkusuunta"
+                         :se "Färdriktning"
+                         :en "Travel direction"}}}
 
-                :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
-                                                            (= 4451 type-code)))})}}})})
+               :pilgrimage (assoc pilgrimage-field :show (fn [{:keys [type-code]}]
+                                                           (= 4451 type-code)))})}}})})
 
 (def paddling-schema
   (collect-schema (:props paddling)))
@@ -1624,63 +1630,63 @@
    :type-codes #{204}
    :props
    (merge
-     common-props
-     {:birdwatching-type
-      {:schema [:sequential (into [:enum] (keys birdwatching-types))]
-       :field
-       {:type "multi-select"
-        :description {:fi "Lintutorni, Muu lintupaikka"
-                      :se "Fågeltorn, Annan fågelplats"
-                      :en "Birdwatching tower, Other birdwatching site"}
-        :label {:fi "Tyyppi"
-                :se "Typ"
-                :en "Type"}
-        :opts birdwatching-types}}
+    common-props
+    {:birdwatching-type
+     {:schema [:sequential (into [:enum] (keys birdwatching-types))]
+      :field
+      {:type "multi-select"
+       :description {:fi "Lintutorni, Muu lintupaikka"
+                     :se "Fågeltorn, Annan fågelplats"
+                     :en "Birdwatching tower, Other birdwatching site"}
+       :label {:fi "Tyyppi"
+               :se "Typ"
+               :en "Type"}
+       :opts birdwatching-types}}
 
-      :birdwatching-habitat
-      {:schema common-schema/localized-string
-       :field
-       {:type "textarea"
-        :description {:fi "Suokohde, …"
-                      :se "Myrmark, ..."
-                      :en "Wetland, ..."}
-        :label {:fi "Elinympäristö"
-                :se "Livsmiljö"
-                :en "Habitat"}}}
+     :birdwatching-habitat
+     {:schema common-schema/localized-string
+      :field
+      {:type "textarea"
+       :description {:fi "Suokohde, …"
+                     :se "Myrmark, ..."
+                     :en "Wetland, ..."}
+       :label {:fi "Elinympäristö"
+               :se "Livsmiljö"
+               :en "Habitat"}}}
 
-      :birdwatching-character
-      {:schema common-schema/localized-string
-       :field
-       {:type "textarea"
-        :description {:fi "Muutonseurantakohde, …"
-                      :se "Plats för flyttfåglar, ..."
-                      :en "Migration monitoring site, ..."}
-        :label {:fi "Luonne"
-                :se "Karaktär"
-                :en "Character"}}}
+     :birdwatching-character
+     {:schema common-schema/localized-string
+      :field
+      {:type "textarea"
+       :description {:fi "Muutonseurantakohde, …"
+                     :se "Plats för flyttfåglar, ..."
+                     :en "Migration monitoring site, ..."}
+       :label {:fi "Luonne"
+               :se "Karaktär"
+               :en "Character"}}}
 
-      :birdwatching-season
-      {:schema [:sequential (into [:enum] (keys birdwatching-seasons))]
-       :field
-       {:type "multi-select"
-        :description {:fi "Kevät, Kesä, Syksy, Talvi"
-                      :se "Vår, Sommar, Höst, Vinter"
-                      :en "Spring, Summer, Autumn, Winter"}
-        :label {:fi "Ajankohta"
-                :se "Säsong"
-                :en "Season"}
-        :opts birdwatching-seasons}}
+     :birdwatching-season
+     {:schema [:sequential (into [:enum] (keys birdwatching-seasons))]
+      :field
+      {:type "multi-select"
+       :description {:fi "Kevät, Kesä, Syksy, Talvi"
+                     :se "Vår, Sommar, Höst, Vinter"
+                     :en "Spring, Summer, Autumn, Winter"}
+       :label {:fi "Ajankohta"
+               :se "Säsong"
+               :en "Season"}
+       :opts birdwatching-seasons}}
 
-      :birdwatching-species
-      {:schema common-schema/localized-string
-       :field
-       {:type "textarea"
-        :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"
-                      :se "Vadare, Sjöfåglar, Rovfåglar, ..."
-                      :en "Waders, Waterfowl, Birds of prey, ..."}
-        :label {:fi "Lajisto"
-                :se "Fågelarter"
-                :en "Bird species"}}}})})
+     :birdwatching-species
+     {:schema common-schema/localized-string
+      :field
+      {:type "textarea"
+       :description {:fi "Kahlaajat, Vesilinnut, Petolinnut, …"
+                     :se "Vadare, Sjöfåglar, Rovfåglar, ..."
+                     :en "Waders, Waterfowl, Birds of prey, ..."}
+       :label {:fi "Lajisto"
+               :se "Fågelarter"
+               :en "Bird species"}}}})})
 
 (def birdwatching-schema (collect-schema (:props birdwatching)))
 
@@ -1883,8 +1889,8 @@
 
 (def fishing-schema
   (mu/merge
-    common-props-schema
-    (collect-schema (:props fishing))))
+   common-props-schema
+   (collect-schema (:props fishing))))
 
 (def outdoor-recreation-facilities
   {:label {:fi "Retkeily ja ulkoilurakenteet"
