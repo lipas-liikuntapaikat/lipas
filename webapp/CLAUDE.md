@@ -6,7 +6,7 @@
 
 ## Large workflow communication
 
-When you're working with large tasks, notify me by using `say` command via bash tool (not the clojure-mcp one) and say "I'm done". If you get stuck, call for help by saying "Please help"
+When you're working with large tasks, notify me by using `say` command via bash tool (not the clojure-mcp one) and say "I'm done". If you get stuck, call for help by saying "Please help".
 
 ### Immediate Development Setup
 
@@ -141,6 +141,8 @@ bb test-var lipas.jobs.handler-test/authorization-test
 bb test-ns lipas.jobs.handler-test
 ```
 
+Run clean tests for all changed namespaces.
+
 ### Development Examples
 ```clojure
 ;; Common development tasks
@@ -178,6 +180,7 @@ bb test-ns lipas.jobs.handler-test
 3. Take fresh snapshot
 
 **Useful for:**
+- End-to-end testing - verifying that feature is **complete** and **works**
 - Visual verification of UI changes
 - Testing interactive flows
 - Debugging frontend issues
@@ -220,45 +223,115 @@ Key Configuration Files:
 - ../.env.sh            # Environment variables (from .env.sample.sh)
 ```
 
-## 💡 Development Workflow for Claude
+## Sports Sites Data Model
 
-### Starting Work
+### Database: Append-Only Event Log
+
+The `sports_site` table implements an **append-only, immutable event log** pattern where every edit creates a new revision. Each revision shares the same `lipas_id` (permanent facility identifier) but gets an `event_date` and a unique `id`.
+
+#### Table Structure
+
+- `lipas_id`: Permanent sports site identifier
+- `id`: UUID for this revision (primary key)
+- `event_date`: When this revision became valid
+- `status`: Publication status of this revision ("published", "draft")
+- `document`: Full sports site data as JSONB
+- `author_id`: User who created this revision
+- `type_code`: Facility type (for indexing)
+- `city_code`: City code (for indexing)
+- `created_at`: Timestamp when row was inserted
+
+**Key SQL queries:** `webapp/resources/sql/sports_site.sql`
+
+#### Current State View
+
+`sports_site_current` is a database view that shows only the latest revision for each `lipas_id`. This view is used throughout the codebase for fetching current data and powers most read operations.
+
+### Elasticsearch: Enriched Search Index
+
+The Elasticsearch index `sports_sites_current` contains **enriched, denormalized sports site documents** optimized for search and read operations. The indexing process transforms raw database documents through an `enrich` function that adds computed fields.
+
+#### Enrichment Process
+
+The enrichment adds:
+- **Search metadata**: Computed fields for filtering and faceting
+- **Resolved references**: Type names, city names, owner names (not just codes)
+- **Geospatial data**: Properly formatted for Elasticsearch geo queries
+- **Denormalized lookups**: Pre-joined data to avoid runtime lookups
+
+**Core functions:** `webapp/src/clj/lipas/backend/core.clj`
+- `index!` - Indexes sports sites to Elasticsearch
+- `enrich` - Transforms raw data for search
+- `search` - Executes search queries
+- `save-sports-site!` - Orchestrates save to DB and index
+
+#### Search Operations
+
+The search index powers most API read operations. For example, searching for facilities with specific field types uses the enriched `search-meta.fields.field-types` data.
+
+### Data Flow
+
+```
+User Edit → sports_site table (new revision)
+         ↓
+sports_site_current view (latest per lipas-id)
+         ↓
+Elasticsearch index (enriched + denormalized)
+         ↓
+API reads & search queries
+```
+
+The database is the **source of truth** with full history, while Elasticsearch serves as a **read-optimized cache** of current revisions with enriched data for fast queries.
+
+### Implementation Notes
+
+- Data consistency is maintained by indexing to Elasticsearch synchronously or asynchronously after database writes
+- The `sync?` parameter controls whether indexing blocks the request or happens in the background
+- Bulk operations use batch indexing for efficiency
+
+### 💡 Development Workflow for Claude
+
+#### Starting Work
+
 1. **Just run** `(user/reset)` - everything will be ready
 2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
 3. **Make changes** using the clojure editing tools
 4. **Test changes** immediately in the REPL
 
-### No Need For:
+#### No Need For:
+
 - ❌ Complex setup scripts
 - ❌ Build commands
 - ❌ Manual dependency management
 - ❌ Figuring out how to start the system
 
-### Code Quality Tools Available
+#### Code Quality Tools Available
 
 The clojure-mcp environment provides:
 - **Integrated Linting**: Built-in clj-kondo analysis with real-time feedback
 - **Syntax Checking**: Automatic validation during editing
-- **Code Analysis**: Static analysis and quality checks
 - **REPL Integration**: Enhanced REPL capabilities
 
-## 📝 Code Style Guidelines
+### 📝 Code Style Guidelines
 
-### Backend (Clojure)
+#### Backend (Clojure)
+
 - **Namespace Aliases**: Use `str` for `clojure.string`, standard aliases
 - **Testing**: Use `clojure.test` with `deftest`, `testing`, and `is`
 
-### Frontend (ClojureScript)
+#### Frontend (ClojureScript)
+
 - **Framework**: Mix of Reagent and UIX (React wrapper)
 - **New Code**: PREFER Reagent + Re-Frame, Use UIX only when React hooks are needed by 3rd party libraries
 - **Styling**: Use explicit MUI requires, avoid legacy `lipas.ui.mui`
 
-### UIX Hooks Rules
+#### UIX Hooks Rules
+
 1. **Always call hooks at component top level** - never in conditions/loops
 2. **List all dependencies** in effect hooks: `[value1 value2]`
 3. **Clean up effects** by returning cleanup functions
 
-## 🎯 Key Points for Efficient Development
+### 🎯 Key Points for Efficient Development
 
 1. **You have immediate REPL access** - no setup required
 2. **Single command startup** - just `(user/reset)`
