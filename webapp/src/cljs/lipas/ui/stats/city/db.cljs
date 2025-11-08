@@ -6,7 +6,7 @@
   {:selected-cities #{179}
    :finance
    {:metrics               reports/stats-metrics
-    :selected-metrics      ["net-costs" "investments"]
+    :selected-metrics      ["net-costs" "investments" "deficit"]
     :city-services         reports/city-services
     :selected-city-service "sports-services"
     :units                 reports/stats-units
