@@ -448,7 +448,7 @@
           [lang-selector {:locale locale}]]
 
          ;; Halper text
-         [mui/grid {:item true :xs 12}
+         #_[mui/grid {:item true :xs 12}
           [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
            [mui/typography description]]]
 
