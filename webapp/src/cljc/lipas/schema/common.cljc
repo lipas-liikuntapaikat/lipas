@@ -134,7 +134,7 @@
    [:type [:enum "LineString"]]
    [:coordinates
     ;; Use the vector generator with min 2, max 10 coordinates for variety
-    [:vector {:min 2 :max 10} #'coordinates]]])
+    [:vector {:min 2} #'coordinates]]])
 
 (def polygon-geometry
   [:map {:description "GeoJSON Polygon geometry. Per RFC 7946, requires linear rings (4+ positions, first = last)."}
@@ -195,19 +195,19 @@
   [:map {:description "GeoJSON FeatureCollection with required Point geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
-    [:sequential {:min 1 :max 1} #'point-feature]]])
+    [:sequential #'point-feature]]])
 
 (def line-string-feature-collection
   [:map {:description "GeoJSON FeatureCollection with required LineString geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
-    [:sequential {:min 1} #'line-string-feature]]])
+    [:sequential #'line-string-feature]]])
 
 (def polygon-feature-collection
   [:map {:description "GeoJSON FeatureCollection with required Polygon geometries."}
    [:type [:enum "FeatureCollection"]]
    [:features
-    [:sequential {:min 1} #'polygon-feature]]])
+    [:sequential #'polygon-feature]]])
 
 (comment
   (require '[malli.core :as m])
