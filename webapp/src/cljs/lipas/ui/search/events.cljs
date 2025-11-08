@@ -135,7 +135,7 @@
                     (add-distance-fields lat lon))
                   (resolve-sort sort locale decay? center)
                   (resolve-pagination pagination decay?)
-                  {:track_total_hits 50000
+                  {:track_total_hits 60000
                    :_source
                    {:includes (if terse?
 

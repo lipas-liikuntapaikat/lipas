@@ -16,7 +16,7 @@
 (def mappings
   {:sports-sites
    {:settings
-    {:max_result_window 50000
+    {:max_result_window 60000
      :index {:mapping {:total_fields {:limit 2000}}}}
     :mappings
     {:properties

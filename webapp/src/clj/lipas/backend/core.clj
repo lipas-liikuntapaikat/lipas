@@ -498,7 +498,7 @@
    {:keys [field-types]}]
   (let [idx-name (get-in indices [:sports-site :search])
         params {:size 1000
-                :track_total_hits 50000
+                :track_total_hits 60000
                 :_source
                 {:excludes ["search-meta.*"]}
                 :query

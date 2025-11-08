@@ -239,7 +239,7 @@
    {:keys [city-codes type-codes owners] :as _criteria}]
   (let [idx-name (get-in indices [:sports-site :search])
         params {:size 5000
-                :track_total_hits 50000
+                :track_total_hits 60000
                 :_source {:excludes ["location.geometries.*"
                                      "search-meta.location.geometries.*"
                                      "search-meta.location.simple-geoms.*"]}

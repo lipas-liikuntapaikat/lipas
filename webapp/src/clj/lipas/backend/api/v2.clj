@@ -76,7 +76,7 @@
          page-size 10}}]
   {:from (* (dec page) page-size)
    :size page-size
-   :track_total_hits 50000
+   :track_total_hits 60000
    :_source {:includes sports-site-keys}
    :query {:bool
            {:must (cond-> []
