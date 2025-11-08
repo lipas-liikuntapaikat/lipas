@@ -8,5 +8,5 @@
  :name "Idrottsanläggningstyp",
  :sports-site-types "Typ av idrottsanläggning",
  :sub-category "Underkategori",
- :sub-cateogires "Uderkategorier",
+ :sub-categories "Uderkategorier",
  :type-code "Typkod"}

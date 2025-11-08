@@ -6,6 +6,7 @@
  :main-categories "Pääryhmät",
  :main-category "Pääryhmä",
  :name "Liikuntapaikkatyyppi",
+ :sports-site-types "Liikuntapaikkatyypit"
  :sub-category "Alaryhmä",
- :sub-cateogires "Alaryhmät",
+ :sub-categories "Alaryhmät",
  :type-code "Tyyppikoodi"}
