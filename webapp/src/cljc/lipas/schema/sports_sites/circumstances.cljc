@@ -1,7 +1,38 @@
 (ns lipas.schema.sports-sites.circumstances
   (:require [lipas.data.floorball :as floorball]
+            [lipas.schema.common :as common]
             [malli.util :as mu]
             [malli.core :as m]))
+
+;; Locker room schema
+(def locker-room
+  [:map
+   {:description "A locker room in the facility"}
+   [:surface-area-m2 {:optional true :description "Surface area of the locker room in square meters"}
+    #'common/number]
+   [:showers-count {:optional true :description "Number of showers"}
+    [:int {:min 0 :max 100}]]
+   [:toilets-count {:optional true :description "Number of toilets"}
+    [:int {:min 0 :max 100}]]])
+
+(def locker-rooms
+  [:vector {:description "Collection of locker rooms in the facility"}
+   #'locker-room])
+
+;; Audit schema
+(def audit
+  [:map
+   {:description "Floorball facility audit record"}
+   [:audit-date {:description "Date of the audit"}
+    [:re #"^\d{4}-\d{2}-\d{2}$"]]
+   [:audit-type {:description "Type of the audit"}
+    [:enum "floorball-circumstances-audit"]]
+   [:audit-performed-by {:description "ID of the person who performed the audit"}
+    :string]])
+
+(def audits
+  [:vector {:description "Collection of audits for the facility"}
+   #'audit])
 
 ;; TODO check fields that are exposed via public API before release
 (def floorball
@@ -31,7 +62,7 @@
    [:car-parking-capacity {:optional true} :int]
    [:broadcast-car-park? {:optional true} :boolean]
    [:press-conference-space? {:optional true} :boolean]
-   [:open-floor-space-length-m {:optional true} number?]
+   [:open-floor-space-length-m {:optional true} #'common/number]
    [:wifi-available? {:optional true} :boolean]
    [:goal-shrinking-elements-count {:optional true} :int]
    [:scoreboard-count {:optional true} :int]
@@ -56,13 +87,13 @@
    [:doping-test-facilities? {:optional true} :boolean]
    [:wireless-microfone-quantity {:optional true} :int]
    [:defibrillator? {:optional true} :boolean]
-   [:open-floor-space-width-m {:optional true} number?]
+   [:open-floor-space-width-m {:optional true} #'common/number]
    [:cafeteria-and-restaurant-capacity-person {:optional true} :int]
    [:speakers-aligned-towards-stands? {:optional true} :boolean]
    [:conference-space-quantity {:optional true} :int]
    [:three-phase-electric-power? {:optional true} :boolean]
    [:roof-trusses-capacity-kg {:optional true} :int]
-   [:open-floor-space-area-m2 {:optional true} number?]
+   [:open-floor-space-area-m2 {:optional true} #'common/number]
    [:detached-tables-quantity {:optional true} :int]
    [:available-goals-count {:optional true} :int]
    [:player-entrance {:optional true}

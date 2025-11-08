@@ -29,6 +29,9 @@
   (let [id (or (:id entity) (next-id db path))]
     (assoc-in db (conj path id) (assoc entity :id id))))
 
+(defn remove-ids [m]
+  (not-empty (map #(dissoc % :id) m)))
+
 (defn ->indexed-map [coll]
   (when coll
     (into {} (map-indexed (fn [idx item]
@@ -37,6 +40,9 @@
                                (assoc item :id idx)
                                item)])
                           coll))))
+
+(defn <-indexed-map [m]
+  (->> m vals remove-ids (remove empty?) (into []) not-empty))
 
 (def index-by utils/index-by)
 
@@ -215,9 +221,6 @@
 (defn join-pretty [coll]
   (str/join ", " coll))
 
-(defn remove-ids [m]
-  (not-empty (map #(dissoc % :id) m)))
-
 (defn ensure-fids
   [fcoll]
   (update fcoll :features (fn [fs]
@@ -241,25 +244,21 @@
       (update-in [:location :geometries :features] vec)
 
       ;; Swimming pools
-      (update-in [:pools]  (comp not-empty remove-ids vals))
-      (update-in [:saunas] (comp not-empty remove-ids vals))
-      (update-in [:slides] (comp not-empty remove-ids vals))
+      (update-in [:pools]  <-indexed-map)
+      (update-in [:saunas] <-indexed-map)
+      (update-in [:slides] <-indexed-map)
 
       ;; Ice stadiums
-      (update-in [:rinks] (comp not-empty remove-ids vals))
-      (update-in [:rinks] (fn [rinks] (remove empty? rinks)))
+      (update-in [:rinks] <-indexed-map)
 
       ;; Fields
-      (update-in [:fields] (comp not-empty remove-ids vals))
-      (update-in [:fields] (fn [fields] (remove empty? fields)))
+      (update-in [:fields] <-indexed-map)
 
       ;; Circumstances -> locker rooms
-      (update-in [:locker-rooms] (comp not-empty remove-ids vals))
-      (update-in [:locker-rooms] (fn [rooms] (remove empty? rooms)))
+      (update-in [:locker-rooms] <-indexed-map)
 
       ;; Circumstances -> audits
-      (update-in [:audits] (comp not-empty remove-ids vals))
-      (update-in [:audits] (fn [rooms] (remove empty? rooms)))
+      (update-in [:audits] <-indexed-map)
 
       ;; Add status=active to each activity key the site has
       ;; The form doesn't currently validate this required key is set, so

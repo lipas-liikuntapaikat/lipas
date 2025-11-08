@@ -31,7 +31,10 @@
    "type"
    "activities"
    "comment"
-   "circumstances"])
+   "circumstances"
+   "fields"
+   "locker-rooms"
+   "audits"])
 
 (defn decode-heisenparam
   "Normalizes query parameters into a collection by handling different input formats:
@@ -122,7 +125,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
               :contact
               {:name "Support, feature requests and bug reports"
-               :url  "https://github.com/lipas-liikuntapaikat/lipas/issues"
+               :url "https://github.com/lipas-liikuntapaikat/lipas/issues"
                :email "lipasinfo@jyu.fi"}
 
               :license
@@ -131,17 +134,16 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                :url "https://creativecommons.org/licenses/by-sa/4.0/"}}
 
        ;; These get merged in a wild way
-       #_#_:tags [{:name        "Sports Sites"
-               :description "The core entities of LIPAS."}
-              {:name        "Sports Site Categories"
-               :description "Hierarchical categorization of sports facilities"}
-              {:name        "Locations of Interest"
-               :description "Additional non-facility entities in LIPAS"}]
+       #_#_:tags [{:name "Sports Sites"
+                   :description "The core entities of LIPAS."}
+                  {:name "Sports Site Categories"
+                   :description "Hierarchical categorization of sports facilities"}
+                  {:name "Locations of Interest"
+                   :description "Additional non-facility entities in LIPAS"}]}
 
-       }
-      ;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
+;; The regular handle is still using swagger-spec, so :openapi :id doesn't hide
       ;; these routes from that.
-      :swagger  {:id :hide-from-default}
+      :swagger {:id :hide-from-default}
       :coercion reitit.coercion.malli/coercion}
 
      [""
@@ -158,7 +160,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
          :handler
          (fn [_req]
            {:status 200
-            :body   (core/get-categories)})
+            :body (core/get-categories)})
 
          :responses {200 {:body [:sequential #'types-schema/type]}}}}]
 
@@ -169,7 +171,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
          (fn [req]
            (let [type-code (-> req :parameters :path :type-code)]
              {:status 200
-              :body   (core/get-category type-code)}))
+              :body (core/get-category type-code)}))
 
          :parameters
          {:path [:map [:type-code {:description (-> types-schema/active-type-code
@@ -187,14 +189,14 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
         {:summary "Get a paginated list of sports sites"
          :handler (fn [req]
                     (tap> (:parameters req))
-                    (let [params  (:query (:parameters req))
-                          query   (->sports-sites-query params)
-                          _       (tap> query)
+                    (let [params (:query (:parameters req))
+                          query (->sports-sites-query params)
+                          _ (tap> query)
                           results (core/search search query)]
                       (tap> results)
                       {:status 200
                        :body
-                       {:items      (-> results :body :hits :hits (->> (keep :_source)))
+                       {:items (-> results :body :hits :hits (->> (keep :_source)))
                         :pagination (let [total-items (-> results :body :hits :total :value)]
                                       (->pagination (assoc params :total-items total-items)))}}))
 
@@ -208,43 +210,43 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                         [:int {:min 1 :max 100 :json-schema/default 10}]]
 
                        [:statuses
-                        {:optional            true
-                         :decode/string       decode-heisenparam
+                        {:optional true
+                         :decode/string decode-heisenparam
                          :json-schema/default #{"active" "out-of-service-temporarily"}}
                         #'common-schema/statuses]
 
                        [:city-codes
-                        {:optional      true
+                        {:optional true
                          :decode/string decode-heisenparam
-                         :description   (-> location-schema/city-codes
+                         :description (-> location-schema/city-codes
                                           second
                                           :description)}
                         #'location-schema/city-codes]
 
                        [:type-codes
-                        {:optional      true
+                        {:optional true
                          :decode/string decode-heisenparam
-                         :description   (-> types-schema/active-type-codes
+                         :description (-> types-schema/active-type-codes
                                           second
                                           :description)}
                         #'types-schema/active-type-codes]
 
                        [:admins
-                        {:optional      true
+                        {:optional true
                          :decode/string decode-heisenparam
-                         :description   (-> sports-sites-schema/admins
+                         :description (-> sports-sites-schema/admins
                                           second
                                           :description)}
                         #'sports-sites-schema/admins]
 
                        [:owners
-                        {:optional      true
+                        {:optional true
                          :decode/string decode-heisenparam}
                         #'sports-sites-schema/owners]
 
                        [:activities
-                        {:optional      true
-                         :description   (-> activities-schema/activities
+                        {:optional true
+                         :description (-> activities-schema/activities
                                           second
                                           :description)
                          :decode/string decode-heisenparam}
@@ -265,7 +267,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                     (tap> (:parameters req))
                     (let [lipas-id (-> req :parameters :path :lipas-id)]
                       {:status 200
-                       :body   (core/get-sports-site2 search lipas-id)}))
+                       :body (core/get-sports-site2 search lipas-id)}))
 
          :parameters {:path [:map
                              [:lipas-id
@@ -275,21 +277,20 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
          :responses {200 {:body #'sports-sites-schema/sports-site}}}}]]
 
      ["/lois"
-      {:tags ["Locations of Interest"]
-       }
+      {:tags ["Locations of Interest"]}
 
       [""
        {:get {:summary "Get a paginated list of Locations of Interest"
               :handler (fn [req]
                          (tap> (:parameters req))
-                         (let [params  (:query (:parameters req))
-                               query   (->lois-query params)
-                               _       (tap> query)
+                         (let [params (:query (:parameters req))
+                               query (->lois-query params)
+                               _ (tap> query)
                                results (core/search-lois* search query)]
                            (tap> results)
                            {:status 200
                             :body
-                            {:items      (-> results :body :hits :hits (->> (keep :_source)))
+                            {:items (-> results :body :hits :hits (->> (keep :_source)))
                              :pagination (let [total-items (-> results :body :hits :total :value)]
                                            (->pagination (assoc params :total-items total-items)))}}))
 
@@ -303,18 +304,18 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                              [:int {:min 1 :max 100 :json-schema/default 10}]]
 
                             [:statuses
-                             {:optional            true
-                              :decode/string       decode-heisenparam
+                             {:optional true
+                              :decode/string decode-heisenparam
                               :json-schema/default #{"active" "out-of-service-temporarily"}}
                              #'common-schema/statuses]
 
                             [:categories
-                             {:optional      true
+                             {:optional true
                               :decode/string decode-heisenparam}
                              #'lois-schema/loi-categories]
 
                             [:types
-                             {:optional      true
+                             {:optional true
                               :decode/string decode-heisenparam}
                              #'lois-schema/loi-types]]}
 
@@ -333,7 +334,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                     (tap> (:parameters req))
                     (let [loi-id (-> req :parameters :path :loi-id)]
                       {:status 200
-                       :body   (doto (core/get-loi search loi-id) tap>)}))
+                       :body (doto (core/get-loi search loi-id) tap>)}))
 
          :parameters {:path [:map
                              [:loi-id
@@ -344,13 +345,13 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
      ["/openapi.json"
       {:get
-       {:no-doc  true
+       {:no-doc true
         :swagger {:info {:title "Lipas-API v2"}}
         :handler (openapi/create-openapi-handler)}}]
 
      ["/swagger-ui"
-      {:get {:no-doc  true
+      {:get {:no-doc true
              :handler ui-handler}}]
      ["/swagger-ui/*"
-      {:get {:no-doc  true
+      {:get {:no-doc true
              :handler ui-handler}}]]))

@@ -6,6 +6,7 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
+            [lipas.schema.sports-sites.fields :as fields-schema]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
@@ -43,10 +44,10 @@
 
 (def name-localized
   [:map {:description "The official name of the sports facility localized."}
-     [:se {:optional true :description "Swedish translation of the official name of the sports facility."}
-      [:string {:min 2 :max 100}]]
-     [:en {:optional true :description "English translation of the official name of the sports facility."}
-      [:string {:min 2 :max 100}]]])
+   [:se {:optional true :description "Swedish translation of the official name of the sports facility."}
+    [:string {:min 2 :max 100}]]
+   [:en {:optional true :description "English translation of the official name of the sports facility."}
+    [:string {:min 2 :max 100}]]])
 
 (def email [:re {:description "Email address of the sports facility."}
             specs/email-regex])
@@ -56,8 +57,8 @@
                    :max 500}])
 
 (def reservations-link [:string {:description "Link to external booking system."
-                                :min 1
-                                :max 500}])
+                                 :min 1
+                                 :max 500}])
 
 (def phone-number [:string {:description "Phone number of the sports facility"
                             :min 1
@@ -113,7 +114,9 @@
         (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
               :let [activity (get activities/by-type-code type-code)
                     activity-key (some-> activity :value keyword)
-                    floorball? (= 2240 type-code)]]
+                    ;; Type-codes that support floorball fields feature
+                    floorball-type-codes #{2240 2150 2210 2220}
+                    floorball? (contains? floorball-type-codes type-code)]]
           [type-code (make-sports-site-schema
                       {:title (str type-code " - " (:en (:name x)))
                        :description (get-in x [:description :en])
@@ -133,9 +136,21 @@
                                                         schema]))])
 
                                         floorball?
-                                        (conj [:circumstances
+                                        (conj [:fields
                                                {:optional true
-                                                :description "Floorball information"}
+                                                :description "Collection of playing fields in the facility"}
+                                               #'fields-schema/fields]
+                                              [:locker-rooms
+                                               {:optional true
+                                                :description "Collection of locker rooms in the facility"}
+                                               #'circumstances-schema/locker-rooms]
+                                              [:audits
+                                               {:optional true
+                                                :description "Collection of facility audits"}
+                                               #'circumstances-schema/audits]
+                                              [:circumstances
+                                               {:optional true
+                                                :description "Floorball facility information"}
                                                #'circumstances-schema/floorball])
 
                                         activity
@@ -163,25 +178,26 @@
   [:or sports-site new-sports-site])
 
 #_(comment
-  (mu/get sports-site 101)
+    (mu/get sports-site 101)
 
-  (require '[malli.error :as me])
-  (me/humanize
-   (m/explain new-or-existing-sports-site
-              {:status "active"
-               ;; :lipas-id 1
-               :event-date "2025-01-01T00:00:00.000Z"
-               :name "foo"
-               :owner "city"
-               :admin "city-sports"
-               :location {:city {:city-code 5}
-                          :address "foo"
-                          :postal-code "00100"
-                          :postal-office "foo"
-                          :geometries {:type "FeatureCollection"
-                                       :features [{:type "Feature"
-                                                   :geometry {:type "Point"
-                                                              :coordinates [0.0 0.0]}}]}}
-               :type {:type-code 1530}})))
+    (require '[malli.error :as me])
+    (me/humanize
+     (m/explain new-or-existing-sports-site
+                {:status "active"
+               ;;:lipas-id 1
+                 :event-date "2025-01-01T00:00:00.000Z"
+                 :name "foo"
+                 :owner "city"
+                 :ptv {:kissa "koira"}
+                 :admin "city-sports"
+                 :location {:city {:city-code 5}
+                            :address "foo"
+                            :postal-code "00100"
+                            :postal-office "foo"
+                            :geometries {:type "FeatureCollection"
+                                         :features [{:type "Feature"
+                                                     :geometry {:type "Point"
+                                                                :coordinates [0.0 0.0]}}]}}
+                 :type {:type-code 1530}})))
 
 (def prop-types prop-types/schemas)
