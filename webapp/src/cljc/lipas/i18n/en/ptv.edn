@@ -1,0 +1,37 @@
+{:description "Description"
+ :descriptions "Descriptions"
+ :keywords "Keywords"
+ :loading-from-ptv "Fetching data from PTV..."
+ :service "Service"
+ :service-channel "Service location"
+ :service-channels "Service locations"
+ :services "Services"
+ :settings "Settings"
+ :sports-sites "Sports sites"
+ :summary "Summary"
+ :tools "Bulk tools"
+ :tooltip "Export to PTV"
+ :wizard "Setup"
+
+ ;; Success modal
+ :success-modal-title "Export successful!"
+ :success-modal-message "Sports sites have been successfully exported to the Service Information Repository."
+ :success-modal-close "Close"
+
+ ;; Success summary details
+ :success-summary-service-locations "{1} service locations created or updated"
+ :success-summary-new-services "{1} new services created"
+ :success-summary-organization "Organization: {1}"
+
+ ;; Wizard - Services step
+ :wizard-services-selection-count "Selected {1}/{2} services"
+ :wizard-all-services-exist-title "All required services are in PTV"
+ :wizard-all-services-exist-message "Great! You can proceed to the next step."
+ :wizard-next-step "Next"
+
+ ;; Wizard - Sports sites step
+ :wizard-descriptions-missing-title "Descriptions missing"
+ :wizard-descriptions-missing-message "Sports site descriptions must be created or filled in before export to the Service Information Repository."
+ :wizard-sports-sites-selection-count "Selected {1} sports sites"
+ :wizard-descriptions-generated-title "Service location descriptions created!"
+ :wizard-descriptions-generated-message "Great! Now you can export the sports sites to the Service Information Repository."}
