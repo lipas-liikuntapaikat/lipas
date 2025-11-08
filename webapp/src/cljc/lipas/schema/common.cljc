@@ -92,7 +92,7 @@
       :gen/gen #?(:clj (gen/double* {:min -1500.0 :max 2000.0 :infinite? false :NaN? false})
                   :cljs nil)}
      number
-     [:fn #(<= -1500.0 % 2000.0)]
+     [:fn #(<= -10000.0 % 2000.0)]
      [:fn #?(:clj #(not (Double/isInfinite %))
              :cljs #(js/isFinite %))]
      [:fn #?(:clj #(not (Double/isNaN %))
