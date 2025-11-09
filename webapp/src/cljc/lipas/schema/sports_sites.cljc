@@ -174,6 +174,103 @@
           sports-site
           (mu/keys sports-site)))
 
+(defn make-sports-site-schema-compat
+  "Like make-sports-site-schema but adds :encode/json identity to enums to prevent
+  json-transformer from converting integers to strings."
+  [{:keys [title type-codes description extras-schema location-schema]}]
+  (mu/merge
+   [:map
+    {:title title
+     :description description
+     :closed false}
+    [:lipas-id #'lipas-id]
+    [:event-date {:description "Timestamp when this information became valid (ISO 8601, UTC time zone)"}
+     #'common/iso8601-timestamp]
+    [:status #'common/status]
+    [:name #'name]
+    [:marketing-name {:optional true} #'marketing-name]
+    [:name-localized {:optional true} #'name-localized]
+    [:owner #'owner]
+    [:admin #'admin]
+    [:email {:optional true} #'email]
+    [:www {:optional true} #'www]
+    [:reservations-link {:optional true} #'reservations-link]
+    [:phone-number {:optional true} #'phone-number]
+    [:comment {:optional true} #'comment]
+    [:construction-year {:optional true} #'construction-year]
+    [:renovation-years {:optional true} #'renovation-years]
+    [:type
+     [:map
+      ;; Add :encode/json identity to prevent conversion to string
+      [:type-code (into [:enum {:encode/json identity}] type-codes)]]]
+    [:location location-schema]]
+   extras-schema))
+
+(def sports-site-compat
+  "Sports site schema with json-transform compatibility.
+  Prevents json-transformer from converting enum integers to strings.
+  Use this for API response coercion."
+  (into [:multi {:description "The core entity of LIPAS. Properties, geometry type and additional attributes vary based on the type of the sports facility."
+                 :dispatch (fn [x]
+                             (-> x :type :type-code))}]
+        (for [[type-code {:keys [geometry-type props] :as x}] (sort-by key types/all)
+              :let [activity (get activities/by-type-code type-code)
+                    activity-key (some-> activity :value keyword)
+                    ;; Type-codes that support floorball fields feature
+                    floorball-type-codes #{2240 2150 2210 2220}
+                    floorball? (contains? floorball-type-codes type-code)]]
+          [type-code (make-sports-site-schema-compat
+                      {:title (str type-code " - " (:en (:name x)))
+                       :description (get-in x [:description :en])
+                       :type-codes #{type-code}
+                       :location-schema (case geometry-type
+                                          "Point" #'location-schema/point-location-compat
+                                          "LineString" #'location-schema/line-string-location-compat
+                                          "Polygon" #'location-schema/polygon-location-compat)
+                       :extras-schema (cond-> [:map]
+                                        (seq props)
+                                        (conj [:properties
+                                               {:optional true}
+                                               (into [:map]
+                                                     (for [[k schema] (select-keys prop-types/schemas (keys props))]
+                                                       [k {:optional true
+                                                           :description (get-in prop-types/all [k :description :en])}
+                                                        schema]))])
+
+                                        floorball?
+                                        (conj [:fields
+                                               {:optional true
+                                                :description "Collection of playing fields in the facility"}
+                                               #'fields-schema/fields]
+                                              [:locker-rooms
+                                               {:optional true
+                                                :description "Collection of locker rooms in the facility"}
+                                               #'circumstances-schema/locker-rooms]
+                                              [:audits
+                                               {:optional true
+                                                :description "Collection of facility audits"}
+                                               #'circumstances-schema/audits]
+                                              [:circumstances
+                                               {:optional true
+                                                :description "Floorball facility information"}
+                                               #'circumstances-schema/floorball])
+
+                                        activity
+                                        (conj [:activities
+                                               {:optional true
+                                                :description "Enriched content for Luontoon.fi service."}
+                                               [:map
+                                                [activity-key
+                                                 {:optional true}
+                                                 (case activity-key
+                                                   :outdoor-recreation-areas #'activities-schema/outdoor-recreation-areas
+                                                   :outdoor-recreation-facilities #'activities-schema/outdoor-recreation-facilities
+                                                   :outdoor-recreation-routes #'activities-schema/outdoor-recreation-routes
+                                                   :cycling #'activities-schema/cycling
+                                                   :paddling #'activities-schema/paddling
+                                                   :birdwatching #'activities-schema/birdwatching
+                                                   :fishing #'activities-schema/fishing)]]]))})])))
+
 (def new-or-existing-sports-site
   [:or sports-site new-sports-site])
 

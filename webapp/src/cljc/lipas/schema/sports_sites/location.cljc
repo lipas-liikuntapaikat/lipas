@@ -28,26 +28,34 @@
   (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
         (sort (keys cities/by-city-code))))
 
+(def city-code-compat
+  (into [:enum {:encode/json identity
+                :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
+        (sort (keys cities/by-city-code))))
+
 (def city-codes
   [:set {:description (-> city-code second :description)}
    city-code])
 
-(defn make-location-schema [feature-schema geom-type]
-  [:map {:description (str "Location of the sports facility with required "
-                           geom-type
-                           " feature.")}
-   [:city
-    [:map
-     [:city-code #'city-code]
-     [:neighborhood {:optional true} #'neighborhood]]]
-   [:address #'address]
-   [:postal-code #'postal-code]
-   [:postal-office {:optional true} #'postal-office]
-   [:geometries
-    [:map
-     [:type [:enum "FeatureCollection"]]
-     [:features
-      [:vector feature-schema]]]]])
+(defn make-location-schema
+  ([feature-schema geom-type]
+   (make-location-schema feature-schema geom-type false))
+  ([feature-schema geom-type compat]
+   [:map {:description (str "Location of the sports facility with required "
+                            geom-type
+                            " feature.")}
+    [:city
+     [:map
+      [:city-code (if compat #'city-code-compat #'city-code)]
+      [:neighborhood {:optional true} #'neighborhood]]]
+    [:address #'address]
+    [:postal-code #'postal-code]
+    [:postal-office {:optional true} #'postal-office]
+    [:geometries
+     [:map
+      [:type [:enum "FeatureCollection"]]
+      [:features
+       [:vector feature-schema]]]]]))
 
 (def line-string-feature-props
   [:map
@@ -60,6 +68,14 @@
 (def line-string-feature
   (mu/assoc common/line-string-feature :properties line-string-feature-props))
 
-(def point-location (make-location-schema common/point-feature "Point"))
-(def line-string-location (make-location-schema line-string-feature "LineString"))
-(def polygon-location (make-location-schema common/polygon-feature "Polygon"))
+(def point-location
+  (make-location-schema common/point-feature "Point"))
+(def point-location-compat
+  (make-location-schema common/point-feature "Point" :compat))
+(def line-string-location
+  (make-location-schema line-string-feature "LineString"))
+(def line-string-location-compat (make-location-schema line-string-feature "LineString" :compat))
+(def polygon-location
+  (make-location-schema common/polygon-feature "Polygon"))
+(def polygon-location-compat
+  (make-location-schema common/polygon-feature "Polygon" :compat))
