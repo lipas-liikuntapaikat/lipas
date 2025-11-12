@@ -31,10 +31,12 @@
    {:gen/gen #?(:clj (gen/double* {:infinite? false :NaN? false})
                 :cljs nil)}
    number?
-   [:fn #?(:clj #(not (Double/isInfinite %))
-           :cljs #(js/isFinite %))]
-   [:fn #?(:clj #(not (Double/isNaN %))
-           :cljs #(not (js/isNaN %)))]])
+   [:fn {:error/message "Value cannot be Infinity"}
+    #?(:clj #(not (Double/isInfinite %))
+       :cljs #(js/isFinite %))]
+   [:fn {:error/message "Value cannot be NaN (Not a Number)"}
+    #?(:clj #(not (Double/isNaN %))
+       :cljs #(not (js/isNaN %)))]])
 
 (def pos-int
   "Positive integer schema for count fields.
@@ -46,7 +48,8 @@
 (def percentage
   [:and
    number?
-   [:fn #(<= 0 % 100)]])
+   [:fn {:error/message "Percentage must be between 0 and 100"}
+    #(<= 0 % 100)]])
 (def -uuid-pattern #"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
 (def uuid [:re {:description "UUID v4 string"} -uuid-pattern])
 
@@ -69,22 +72,28 @@
      :gen/gen #?(:clj (gen/double* {:min 18.0 :max 33.0 :infinite? false :NaN? false})
                  :cljs nil)}
     number
-    [:fn #(<= 18.0 % 33.0)]
-    [:fn #?(:clj #(not (Double/isInfinite %))
-            :cljs #(js/isFinite %))]
-    [:fn #?(:clj #(not (Double/isNaN %))
-            :cljs #(not (js/isNaN %)))]]
+    [:fn {:error/message "Longitude must be between 18.0 and 33.0 degrees (Finland bounds)"}
+     #(<= 18.0 % 33.0)]
+    [:fn {:error/message "Longitude cannot be Infinity"}
+     #?(:clj #(not (Double/isInfinite %))
+        :cljs #(js/isFinite %))]
+    [:fn {:error/message "Longitude cannot be NaN (Not a Number)"}
+     #?(:clj #(not (Double/isNaN %))
+        :cljs #(not (js/isNaN %)))]]
    ;; Latitude (59-71°N)
    [:and
     {:description "Latitude in degrees (59.0-71.0°N)"
      :gen/gen #?(:clj (gen/double* {:min 59.0 :max 71.0 :infinite? false :NaN? false})
                  :cljs nil)}
     number
-    [:fn #(<= 59.0 % 71.0)]
-    [:fn #?(:clj #(not (Double/isInfinite %))
-            :cljs #(js/isFinite %))]
-    [:fn #?(:clj #(not (Double/isNaN %))
-            :cljs #(not (js/isNaN %)))]]
+    [:fn {:error/message "Latitude must be between 59.0 and 71.0 degrees (Finland bounds)"}
+     #(<= 59.0 % 71.0)]
+    [:fn {:error/message "Latitude cannot be Infinity"}
+     #?(:clj #(not (Double/isInfinite %))
+        :cljs #(js/isFinite %))]
+    [:fn {:error/message "Latitude cannot be NaN (Not a Number)"}
+     #?(:clj #(not (Double/isNaN %))
+        :cljs #(not (js/isNaN %)))]]
    ;; Altitude (optional, -1500 to +2000m)
    [:?
     [:and
@@ -92,11 +101,14 @@
       :gen/gen #?(:clj (gen/double* {:min -1500.0 :max 2000.0 :infinite? false :NaN? false})
                   :cljs nil)}
      number
-     [:fn #(<= -10000.0 % 2000.0)]
-     [:fn #?(:clj #(not (Double/isInfinite %))
-             :cljs #(js/isFinite %))]
-     [:fn #?(:clj #(not (Double/isNaN %))
-             :cljs #(not (js/isNaN %)))]]]])
+     [:fn {:error/message "Altitude must be between -10000 and 2000 meters"}
+      #(<= -10000.0 % 2000.0)]
+     [:fn {:error/message "Altitude cannot be Infinity"}
+      #?(:clj #(not (Double/isInfinite %))
+         :cljs #(js/isFinite %))]
+     [:fn {:error/message "Altitude cannot be NaN (Not a Number)"}
+      #?(:clj #(not (Double/isNaN %))
+         :cljs #(not (js/isNaN %)))]]]])
 
 ;; GeoJSON validation helpers
 

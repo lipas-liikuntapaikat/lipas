@@ -58,7 +58,8 @@
   [:map-of
    [:and
     keyword?
-    [:fn {:description "Year keyword (e.g., :2023)"}
+    [:fn {:description "Year keyword (e.g., :2023)"
+          :error/message "Year must be a 4-digit keyword (e.g., :2023)"}
      #(re-matches #"^\d{4}$" (name %))]]
    yearly-stats-schema])
 

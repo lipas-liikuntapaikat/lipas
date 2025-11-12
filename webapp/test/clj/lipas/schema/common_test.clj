@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest testing is]]
             [lipas.schema.common :as common]
             [malli.core :as m]
+            [malli.error :as me]
             [malli.generator :as mg]))
 
 (deftest coordinates-validation-test
@@ -132,6 +133,29 @@
       (is (every? #(Double/isFinite %) samples))
       (is (not-any? #(Double/isNaN %) samples)))))
 
+(deftest number-error-messages-test
+  (testing "Infinity error messages"
+    (let [pos-inf-errors (-> common/number
+                             (m/explain Double/POSITIVE_INFINITY)
+                             me/humanize)
+          neg-inf-errors (-> common/number
+                             (m/explain Double/NEGATIVE_INFINITY)
+                             me/humanize)]
+      (is (some #(= "Value cannot be Infinity" %)
+                (flatten pos-inf-errors))
+          "Should provide clear Infinity error for positive infinity")
+      (is (some #(= "Value cannot be Infinity" %)
+                (flatten neg-inf-errors))
+          "Should provide clear Infinity error for negative infinity")))
+
+  (testing "NaN error message"
+    (let [errors (-> common/number
+                     (m/explain Double/NaN)
+                     me/humanize)]
+      (is (some #(= "Value cannot be NaN (Not a Number)" %)
+                (flatten errors))
+          "Should provide clear NaN error"))))
+
 (deftest pos-int-test
   (testing "Valid positive integers"
     (is (m/validate common/pos-int 0))
@@ -177,6 +201,21 @@
     (let [samples (repeatedly 100 #(* (rand) 100))]
       (is (every? #(m/validate common/percentage %) samples))
       (is (every? #(<= 0 % 100) samples)))))
+
+(deftest percentage-error-messages-test
+  (testing "Out of range error messages"
+    (let [too-low-errors (-> common/percentage
+                             (m/explain -10.0)
+                             me/humanize)
+          too-high-errors (-> common/percentage
+                              (m/explain 150.0)
+                              me/humanize)]
+      (is (some #(= "Percentage must be between 0 and 100" %)
+                (flatten too-low-errors))
+          "Should provide clear range error for negative values")
+      (is (some #(= "Percentage must be between 0 and 100" %)
+                (flatten too-high-errors))
+          "Should provide clear range error for values over 100"))))
 
 (deftest uuid-test
   (testing "Valid UUIDs v4"
@@ -363,6 +402,59 @@
                     (and (number? lon) (number? lat)
                          (or (nil? alt) (number? alt))))
                   samples)))))
+
+(deftest coordinates-error-messages-test
+  (testing "Longitude out of bounds error message"
+    (let [errors (-> common/coordinates
+                     (m/explain [100.0 60.0])
+                     (me/humanize))]
+      (is (some #(= "Longitude must be between 18.0 and 33.0 degrees (Finland bounds)" %)
+                (flatten errors))
+          "Should provide clear longitude bounds error")))
+
+  (testing "Latitude out of bounds error message"
+    (let [errors (-> common/coordinates
+                     (m/explain [25.0 10.0])
+                     (me/humanize))]
+      (is (some #(= "Latitude must be between 59.0 and 71.0 degrees (Finland bounds)" %)
+                (flatten errors))
+          "Should provide clear latitude bounds error")))
+
+  (testing "Altitude out of bounds error message"
+    (let [errors (-> common/coordinates
+                     (m/explain [25.0 60.0 5000.0])
+                     (me/humanize))]
+      (is (some #(= "Altitude must be between -10000 and 2000 meters" %)
+                (flatten errors))
+          "Should provide clear altitude bounds error")))
+
+  (testing "Infinity error messages"
+    (let [lon-inf-errors (-> common/coordinates
+                             (m/explain [Double/POSITIVE_INFINITY 60.0])
+                             (me/humanize))
+          lat-inf-errors (-> common/coordinates
+                             (m/explain [25.0 Double/POSITIVE_INFINITY])
+                             (me/humanize))]
+      (is (some #(= "Longitude cannot be Infinity" %)
+                (flatten lon-inf-errors))
+          "Should provide clear Infinity error for longitude")
+      (is (some #(= "Latitude cannot be Infinity" %)
+                (flatten lat-inf-errors))
+          "Should provide clear Infinity error for latitude")))
+
+  (testing "NaN error messages"
+    (let [lon-nan-errors (-> common/coordinates
+                             (m/explain [Double/NaN 60.0])
+                             (me/humanize))
+          lat-nan-errors (-> common/coordinates
+                             (m/explain [25.0 Double/NaN])
+                             (me/humanize))]
+      (is (some #(= "Longitude cannot be NaN (Not a Number)" %)
+                (flatten lon-nan-errors))
+          "Should provide clear NaN error for longitude")
+      (is (some #(= "Latitude cannot be NaN (Not a Number)" %)
+                (flatten lat-nan-errors))
+          "Should provide clear NaN error for latitude"))))
 
 (comment
   (mg/generate common/coordinates)
