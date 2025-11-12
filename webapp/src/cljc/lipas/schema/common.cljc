@@ -59,56 +59,103 @@
    [:se {:optional true :description "Swedish translation"} [:string]]
    [:en {:optional true :description "English translation"} [:string]]])
 
+(def lon
+  "WGS84 longitude for Finland (18.0-33.0°E).
+   Accepts both integers and doubles. Rejects Infinity and NaN."
+  [:and
+   {:description "Longitude in degrees (18.0-33.0°E)"
+    :gen/gen #?(:clj (gen/double* {:min 18.0 :max 33.0 :infinite? false :NaN? false})
+                :cljs nil)}
+   number
+   [:fn {:error/message "Longitude must be between 18.0 and 33.0 degrees (Finland bounds)"}
+    #(<= 18.0 % 33.0)]
+   [:fn {:error/message "Longitude cannot be Infinity"}
+    #?(:clj #(not (Double/isInfinite %))
+       :cljs #(js/isFinite %))]
+   [:fn {:error/message "Longitude cannot be NaN (Not a Number)"}
+    #?(:clj #(not (Double/isNaN %))
+       :cljs #(not (js/isNaN %)))]])
+
+(def lat
+  "WGS84 latitude for Finland (59.0-71.0°N).
+   Accepts both integers and doubles. Rejects Infinity and NaN."
+  [:and
+   {:description "Latitude in degrees (59.0-71.0°N)"
+    :gen/gen #?(:clj (gen/double* {:min 59.0 :max 71.0 :infinite? false :NaN? false})
+                :cljs nil)}
+   number
+   [:fn {:error/message "Latitude must be between 59.0 and 71.0 degrees (Finland bounds)"}
+    #(<= 59.0 % 71.0)]
+   [:fn {:error/message "Latitude cannot be Infinity"}
+    #?(:clj #(not (Double/isInfinite %))
+       :cljs #(js/isFinite %))]
+   [:fn {:error/message "Latitude cannot be NaN (Not a Number)"}
+    #?(:clj #(not (Double/isNaN %))
+       :cljs #(not (js/isNaN %)))]])
+
+(def altitude
+  "Altitude/elevation in meters.
+   Range: -10,000 to 2,000 meters.
+   
+   Note: The minimum is set to -10,000 to accommodate fallback values (-9999)
+   returned by external APIs when elevation data is unavailable.
+   
+   Realistic Finnish elevations range from approximately -1,444m (Pyhäsalmi mine)
+   to 1,324m (Halti peak), so -1,500 to 2,000 would cover all real locations.
+   
+   Accepts both integers and doubles. Rejects Infinity and NaN."
+  [:and
+   {:description "Altitude in meters (-10,000 to 2,000)"
+    :gen/gen #?(:clj (gen/double* {:min -10000.0 :max 2000.0 :infinite? false :NaN? false})
+                :cljs nil)}
+   number
+   [:fn {:error/message "Altitude must be between -10,000 and 2,000 meters"}
+    #(<= -10000.0 % 2000.0)]
+   [:fn {:error/message "Altitude cannot be Infinity"}
+    #?(:clj #(not (Double/isInfinite %))
+       :cljs #(js/isFinite %))]
+   [:fn {:error/message "Altitude cannot be NaN (Not a Number)"}
+    #?(:clj #(not (Double/isNaN %))
+       :cljs #(not (js/isNaN %)))]])
+
+(def lon-euref
+  "TM35FIN (ETRS-TM35FIN) Easting coordinate for Finland.
+   Range: 40,000 to 770,000 meters (EPSG:3067 bounds with tolerance).
+   Official EPSG bounds: 43,547.79 to 764,796.72 meters.
+   Integer values only (meters from false origin)."
+  [:int {:min 40000
+         :max 770000
+         :description "TM35FIN Easting (E) coordinate in meters (40,000 to 770,000)"
+         :error/message "Easting must be between 40,000 and 770,000 meters (TM35FIN bounds for Finland)"
+         :gen/gen #?(:clj (gen/large-integer* {:min 40000 :max 770000})
+                     :cljs nil)}])
+
+(def lat-euref
+  "TM35FIN (ETRS-TM35FIN) Northing coordinate for Finland.
+   Range: 6,500,000 to 7,800,000 meters (EPSG:3067 bounds with tolerance).
+   Official EPSG bounds: 6,522,236.87 to 7,795,461.19 meters.
+   Integer values only (meters from false origin)."
+  [:int {:min 6500000
+         :max 7800000
+         :description "TM35FIN Northing (N) coordinate in meters (6,500,000 to 7,800,000)"
+         :error/message "Northing must be between 6,500,000 and 7,800,000 meters (TM35FIN bounds for Finland)"
+         :gen/gen #?(:clj (gen/large-integer* {:min 6500000 :max 7800000})
+                     :cljs nil)}])
+
 (def coordinates
   "WGS84 coordinates [longitude, latitude, altitude?] for Finland.
+   Uses the individual lon, lat, and altitude schemas for validation.
    - Longitude: 18.0-33.0°E (Finland bounds with tolerance)
    - Latitude: 59.0-71.0°N (Finland bounds with tolerance)
-   - Altitude: -1500 to +2000 meters (optional, lowest mine to highest peaks)
+   - Altitude: -10,000 to +2,000 meters (optional, see altitude schema for details)
    Accepts both integers and doubles. Rejects Infinity and NaN."
   [:cat {:gen/fmap vec} ;; Convert sequence to vector for generator
-   ;; Longitude (18-33°E)
-   [:and
-    {:description "Longitude in degrees (18.0-33.0°E)"
-     :gen/gen #?(:clj (gen/double* {:min 18.0 :max 33.0 :infinite? false :NaN? false})
-                 :cljs nil)}
-    number
-    [:fn {:error/message "Longitude must be between 18.0 and 33.0 degrees (Finland bounds)"}
-     #(<= 18.0 % 33.0)]
-    [:fn {:error/message "Longitude cannot be Infinity"}
-     #?(:clj #(not (Double/isInfinite %))
-        :cljs #(js/isFinite %))]
-    [:fn {:error/message "Longitude cannot be NaN (Not a Number)"}
-     #?(:clj #(not (Double/isNaN %))
-        :cljs #(not (js/isNaN %)))]]
-   ;; Latitude (59-71°N)
-   [:and
-    {:description "Latitude in degrees (59.0-71.0°N)"
-     :gen/gen #?(:clj (gen/double* {:min 59.0 :max 71.0 :infinite? false :NaN? false})
-                 :cljs nil)}
-    number
-    [:fn {:error/message "Latitude must be between 59.0 and 71.0 degrees (Finland bounds)"}
-     #(<= 59.0 % 71.0)]
-    [:fn {:error/message "Latitude cannot be Infinity"}
-     #?(:clj #(not (Double/isInfinite %))
-        :cljs #(js/isFinite %))]
-    [:fn {:error/message "Latitude cannot be NaN (Not a Number)"}
-     #?(:clj #(not (Double/isNaN %))
-        :cljs #(not (js/isNaN %)))]]
-   ;; Altitude (optional, -1500 to +2000m)
-   [:?
-    [:and
-     {:description "Altitude in meters (-1500 to +2000)"
-      :gen/gen #?(:clj (gen/double* {:min -1500.0 :max 2000.0 :infinite? false :NaN? false})
-                  :cljs nil)}
-     number
-     [:fn {:error/message "Altitude must be between -10000 and 2000 meters"}
-      #(<= -10000.0 % 2000.0)]
-     [:fn {:error/message "Altitude cannot be Infinity"}
-      #?(:clj #(not (Double/isInfinite %))
-         :cljs #(js/isFinite %))]
-     [:fn {:error/message "Altitude cannot be NaN (Not a Number)"}
-      #?(:clj #(not (Double/isNaN %))
-         :cljs #(not (js/isNaN %)))]]]])
+   ;; Longitude - use the lon schema
+   #'lon
+   ;; Latitude - use the lat schema
+   #'lat
+   ;; Altitude - use the altitude schema (optional)
+   [:? #'altitude]])
 
 ;; GeoJSON validation helpers
 

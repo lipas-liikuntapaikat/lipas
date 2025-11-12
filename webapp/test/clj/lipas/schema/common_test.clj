@@ -55,7 +55,7 @@
     (let [samples (mg/sample common/coordinates {:size 100})
           with-altitude (filter #(= 3 (count %)) samples)]
       (doseq [[_ _ alt] with-altitude]
-        (is (<= -1500.0 alt 2000.0) (str "Altitude " alt " out of bounds"))
+        (is (<= -10000.0 alt 2000.0) (str "Altitude " alt " out of bounds"))
         (is (not (Double/isInfinite alt)))
         (is (not (Double/isNaN alt)))))))
 
@@ -424,7 +424,7 @@
     (let [errors (-> common/coordinates
                      (m/explain [25.0 60.0 5000.0])
                      (me/humanize))]
-      (is (some #(= "Altitude must be between -10000 and 2000 meters" %)
+      (is (some #(= "Altitude must be between -10,000 and 2,000 meters" %)
                 (flatten errors))
           "Should provide clear altitude bounds error")))
 
