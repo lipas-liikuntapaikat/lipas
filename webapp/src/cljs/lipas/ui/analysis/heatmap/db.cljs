@@ -1,16 +1,16 @@
 (ns lipas.ui.analysis.heatmap.db)
 
 (def default-db
-  {:dimension :density
-   :weight-by :count
-   :precision nil ; nil means use auto-precision based on zoom
-   :use-bbox-filter? false ; true = current map view, false = whole Finland
+  {:dimension :density ; Locked to facility density
+   :weight-by :count ; Locked to count
+   :precision nil ; nil means use auto-precision based on zoom (locked to auto)
+   :use-bbox-filter? true ; Locked to true - always use current map view
    :filters {:status-codes ["active" "out-of-service-temporarily"]}
    :visual {:radius 20
             :blur 15
             :opacity 0.8
-            :gradient :default
-            :weight-fn :linear
+            :gradient :cool ; Default changed from :default to :cool
+            :weight-fn :linear ; Locked to linear
             :max-intensity nil}
    :loading? false
    :error nil

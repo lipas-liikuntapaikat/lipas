@@ -18,7 +18,8 @@
  :categorization-name "Kategoriseringens namn",
  :calculate-all "Beräkna alla",
  :mean "Medelvärde",
- :heatmap "Värmekarta",
+ :heatmap "Täthetskarta",
+ :heatmap-info-text "Med detta täthetskartevisualiseringsverktyg kan du illustrera den regionala och lokala kvantiteten och tätheten av idrottsplatser (så kallad Heatmap-visualisering). Du kan ändra idrottsplatserna som visas i visualiseringen genom att justera filterinställningarna. Dessutom kan du justera inställningarna för värmekartevisualiseringen för att anpassa värmekartas utseende efter dina behov. Denna värmekartevisualisering fungerar bäst för idrottsplatser som lagras som punkter. Därför behandlas rutter (linjer) som punkter i beräkningen, inte som linjära kartobjekt.",
  :diversity-help2
  "Verktyget använder indelning i postnummerområden som standard. Indelningen kan också göras utifrån annan befintlig områdesindelning genom att importera önskad geometrisk fil (Shapefile, GeoJSON eller KML).",
  :settings-map "Objekt som visas på kartan",
@@ -81,4 +82,48 @@
  :high-school "Gymnasium",
  :download-categories "Ladda ner kategorier",
  :travel-time "Restid",
- :results "Resultat"}
+ :results "Resultat"
+
+ ;; Heatmap specific translations
+ :heatmap-dimension "Dimension"
+ :heatmap-facility-density "Idrottsplatstäthet"
+ :heatmap-total-area-coverage "Total ytarea"
+ :heatmap-capacity-distribution "Kapacitetsfördelning"
+ :heatmap-facility-types "Idrottsplatstyper"
+ :heatmap-year-round-availability "Åretrunt tillgänglighet"
+ :heatmap-facilities-with-lighting "Belysta idrottsplatser"
+ :heatmap-activity-distribution "Aktivitetsfördelning"
+ :heatmap-weight-by "Viktning"
+ :heatmap-count "Antal"
+ :heatmap-area-m2 "Yta (m²)"
+ :heatmap-route-length-km "Ruttlängd (km)"
+ :heatmap-geohash-precision "Geohash-precision"
+ :heatmap-auto-current "Auto (nuvarande: "
+ :heatmap-precision-1 "1 - Mycket grov (~5 000km)"
+ :heatmap-precision-2 "2 - Grov (~1 250km)"
+ :heatmap-precision-3 "3 - (~156km)"
+ :heatmap-precision-4 "4 - (~39km)"
+ :heatmap-precision-5 "5 - (~5km)"
+ :heatmap-precision-6 "6 - (~1,2km)"
+ :heatmap-precision-7 "7 - (~153m)"
+ :heatmap-precision-8 "8 - Fin (~38m)"
+ :heatmap-precision-9 "9 - Mycket fin (~5m)"
+ :heatmap-precision-10 "10 - Ultra fin (~1,2m)"
+ :heatmap-precision-help "Högre precision = mer detaljerad värmekarta men långsammare prestanda"
+ :heatmap-filter-by-map-view "Filtrera efter aktuell kartvy"
+ :heatmap-analyzing-current-bounds "Analyserar data inom aktuella kartgränser"
+ :heatmap-analyzing-whole-finland "Analyserar data för hela Finland"
+ :heatmap-city-filter-todo "Stadsfilter (kommer att implementeras)"
+ :heatmap-year-round-only "Endast åretruntanläggningar"
+ :heatmap-retkikartta-only "Endast Retkikartta-platser"
+ :heatmap-harrastuspassi-only "Endast Harrastuspassi-platser"
+ :heatmap-school-use-only "Endast skolanvändning"
+ :heatmap-visual-settings "Visualisering"
+ :heatmap-radius "Radie: "
+ :heatmap-blur "Oskärpa: "
+ :heatmap-opacity "Opacitet: "
+ :heatmap-color-gradient "Färggradient"
+ :heatmap-gradient-cool "Kall (Lila till Vit)"
+ :heatmap-gradient-warm "Varm (Gul till Röd)"
+ :heatmap-gradient-grayscale "Gråskala"
+ :heatmap-filters "Filter"}

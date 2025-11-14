@@ -10,12 +10,12 @@
             [re-frame.core :as rf]))
 
 (defn wgs84->epsg3067 [wgs84-coords]
-  (let [proj      (proj/get "EPSG:3067")
+  (let [proj (proj/get "EPSG:3067")
         [lon lat] (js->clj (proj/fromLonLat (clj->js wgs84-coords) proj))]
     {:lon lon :lat lat}))
 
 (defn epsg3067->wgs84-fast [wgs84-coords]
-  (let [proj      (proj/get "EPSG:3067")]
+  (let [proj (proj/get "EPSG:3067")]
     (proj/toLonLat wgs84-coords proj)))
 
 (defn top-left [extent]
@@ -31,7 +31,7 @@
 ;; Width and height are in meters when using EPSG:3067 projection
 (rf/reg-event-fx ::set-view
   (fn [{:keys [db]} [_ center lonlat zoom extent width height]]
-    (let [center       {:lat (aget center 1) :lon (aget center 0)}
+    (let [center {:lat (aget center 1) :lon (aget center 0)}
           center-wgs84 {:lat (aget lonlat 1) :lon (aget lonlat 0)}]
       {:db (-> db
                (assoc-in [:map :center] center)
@@ -47,7 +47,9 @@
        ;; causes an extra unncesssary search call.
        :dispatch-n
        [(when (and extent width) [:lipas.ui.search.events/submit-search])
-        (when (and extent width) [:lipas.ui.loi.events/search])]})))
+        (when (and extent width) [:lipas.ui.loi.events/search])
+        ;; Auto-refresh heatmap when map view changes (zoom, pan)
+        (when (and extent width) [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
 
 ;; Map displaying events ;;
 
@@ -57,40 +59,40 @@
 
 (rf/reg-event-fx ::zoom-to-site
   (fn [{:keys [db]} [_ lipas-id width]]
-    (let [latest     (get-in db [:sports-sites lipas-id :latest])
-          rev        (get-in db [:sports-sites lipas-id :history latest])
-          geom       (-> rev :location :geometries :features first :geometry)
+    (let [latest (get-in db [:sports-sites lipas-id :latest])
+          rev (get-in db [:sports-sites lipas-id :history latest])
+          geom (-> rev :location :geometries :features first :geometry)
           wgs-coords (case (:type geom)
-                       "Point"      (-> geom :coordinates)
+                       "Point" (-> geom :coordinates)
                        "LineString" (-> geom :coordinates first)
-                       "Polygon"    (-> geom :coordinates first first))
-          center     (wgs84->epsg3067 wgs-coords)
-          zoom       14]
-      {:db         (-> db
-                       (assoc-in [:map :zoom] zoom)
-                       (assoc-in [:map :center] center))
+                       "Polygon" (-> geom :coordinates first first))
+          center (wgs84->epsg3067 wgs-coords)
+          zoom 14]
+      {:db (-> db
+               (assoc-in [:map :zoom] zoom)
+               (assoc-in [:map :center] center))
        :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
 (rf/reg-event-fx ::zoom-to-loi
   (fn [{:keys [db]} [_ loi width]]
-    (let [geom       (-> loi :geometries :features first :geometry)
+    (let [geom (-> loi :geometries :features first :geometry)
           wgs-coords (case (:type geom)
-                       "Point"      (-> geom :coordinates)
+                       "Point" (-> geom :coordinates)
                        "LineString" (-> geom :coordinates first)
-                       "Polygon"    (-> geom :coordinates first first))
-          center     (wgs84->epsg3067 wgs-coords)
-          zoom       14]
-      {:db         (-> db
-                       (assoc-in [:map :zoom] zoom)
-                       (assoc-in [:map :center] center))
+                       "Polygon" (-> geom :coordinates first first))
+          center (wgs84->epsg3067 wgs-coords)
+          zoom 14]
+      {:db (-> db
+               (assoc-in [:map :zoom] zoom)
+               (assoc-in [:map :center] center))
        :dispatch-n [(case width ("xs" "sm") [::toggle-drawer] nil)]})))
 
 (rf/reg-event-fx ::zoom-to-users-position
   (fn [_ _]
     {:lipas.ui.effects/request-geolocation!
      (fn [position]
-       (let [lon*    (-> position .-coords .-longitude)
-             lat*    (-> position .-coords .-latitude)
+       (let [lon* (-> position .-coords .-longitude)
+             lat* (-> position .-coords .-latitude)
              {:keys [lon lat]} (wgs84->epsg3067 [lon* lat*])]
          (when (and lon lat)
            (==> [::set-center lat lon])
@@ -148,21 +150,21 @@
 
 (rf/reg-event-fx ::start-editing
   (fn [{:keys [db]} [_ lipas-id sub-mode geom-type]]
-    (let [site  (get-latest-rev db lipas-id)
+    (let [site (get-latest-rev db lipas-id)
           geoms (-> site
                     (utils/->feature)
                     (map-utils/strip-z))]
-      {:db         (update-in db [:map :mode] merge {:name      :editing
-                                                     :lipas-id  lipas-id
-                                                     :geoms     geoms
-                                                     :sub-mode  sub-mode
-                                                     :geom-type geom-type})
+      {:db (update-in db [:map :mode] merge {:name :editing
+                                             :lipas-id lipas-id
+                                             :geoms geoms
+                                             :sub-mode sub-mode
+                                             :geom-type geom-type})
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
                     [::show-popup nil]]})))
 
 (rf/reg-event-fx ::continue-editing
   (fn [{:keys [db]} [_ view-only?]]
-    (let [geoms    (-> db :map :mode :geoms)
+    (let [geoms (-> db :map :mode :geoms)
           sub-mode (if view-only? :view-only :editing)]
       {:db (update-in db [:map :mode] merge {:name :editing :sub-mode sub-mode})
        :dispatch-n
@@ -170,48 +172,48 @@
 
 (rf/reg-event-fx ::stop-editing
   (fn [{:keys [db]} [_]]
-    {:db       (assoc-in db [:map :mode :name] :default)
+    {:db (assoc-in db [:map :mode :name] :default)
      :fx [[:dispatch [::clear-undo-redo]]]}))
 
 (rf/reg-event-db ::start-adding-geom
   (fn [db [_ geom-type]]
     (-> db
-        (update-in [:map :mode] merge {:name      :adding
-                                       :temp      {}
+        (update-in [:map :mode] merge {:name :adding
+                                       :temp {}
                                        :geom-type geom-type
-                                       :sub-mode  :drawing}))))
+                                       :sub-mode :drawing}))))
 
 (rf/reg-event-db ::start-deleting-geom
   (fn [db [_ geom-type]]
     (-> db
-        (update-in [:map :mode] merge {:name      :adding
+        (update-in [:map :mode] merge {:name :adding
                                        :geom-type geom-type
-                                       :sub-mode  :deleting}))))
+                                       :sub-mode :deleting}))))
 
 (rf/reg-event-db ::stop-deleting-geom
   (fn [db [_ geom-type]]
     (-> db
-        (update-in [:map :mode] merge {:name      :adding
+        (update-in [:map :mode] merge {:name :adding
                                        :geom-type geom-type
-                                       :sub-mode  :editing}))))
+                                       :sub-mode :editing}))))
 
 (rf/reg-event-db ::start-splitting-geom
   (fn [db [_ geom-type]]
     (-> db
-        (update-in [:map :mode] merge {:name      :adding
+        (update-in [:map :mode] merge {:name :adding
                                        :geom-type geom-type
-                                       :sub-mode  :splitting}))))
+                                       :sub-mode :splitting}))))
 
 (rf/reg-event-db ::stop-splitting-geom
   (fn [db [_ geom-type]]
     (-> db
-        (update-in [:map :mode] merge {:name      :adding
+        (update-in [:map :mode] merge {:name :adding
                                        :geom-type geom-type
-                                       :sub-mode  :editing}))))
+                                       :sub-mode :editing}))))
 
 (rf/reg-event-fx ::undo
   (fn [{:keys [db]} [_ lipas-id]]
-    (let [path       [:map :mode :geoms]
+    (let [path [:map :mode :geoms]
           curr-geoms (get-in db path)
           undo-stack (get-in db [:map :temp lipas-id :undo-stack])]
       {:db (-> db
@@ -224,7 +226,7 @@
 
 (rf/reg-event-fx ::redo
   (fn [{:keys [db]} [_ lipas-id]]
-    (let [path       [:map :mode :geoms]
+    (let [path [:map :mode :geoms]
           curr-geoms (get-in db path)
           redo-stack (get-in db [:map :temp lipas-id :redo-stack])]
       {:db (-> db
@@ -238,12 +240,12 @@
 (rf/reg-event-fx ::undo-done
   (fn [{:keys [db]} [_ lipas-id geoms]]
     (let [path [:sports-sites lipas-id :editing :location :geometries]]
-      {:db         (cond-> db
-                     true     (update-in [:map :mode] merge {:geoms geoms
+      {:db (cond-> db
+             true (update-in [:map :mode] merge {:geoms geoms
                                                              ;; Restore the previous sub-mode
-                                                             :sub-mode (or (-> db :map :mode :prev-sub-mode) :editing)
-                                                             :prev-sub-mode nil})
-                     lipas-id (assoc-in path geoms))
+                                                 :sub-mode (or (-> db :map :mode :prev-sub-mode) :editing)
+                                                 :prev-sub-mode nil})
+             lipas-id (assoc-in path geoms))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (rf/reg-event-db ::clear-undo-redo
@@ -255,7 +257,7 @@
 (rf/reg-event-fx ::update-geometries
   (fn [{:keys [db]} [_ lipas-id geoms]]
 
-    (let [path      [:sports-sites lipas-id :editing :location :geometries]
+    (let [path [:sports-sites lipas-id :editing :location :geometries]
           old-geoms (-> db :map :mode :geoms)
           new-geoms (ensure-fids geoms)]
       {:db (-> db
@@ -268,43 +270,43 @@
 
 (rf/reg-event-fx ::new-geom-drawn
   (fn [{:keys [db]} [_ geoms]]
-    (let [geoms      (ensure-fids geoms)
+    (let [geoms (ensure-fids geoms)
           curr-geoms (-> db :map :mode :geoms)]
       {:db (cond-> db
              curr-geoms (update-in [:map :temp "new" :undo-stack] conj curr-geoms)
-             true       (assoc-in [:map :temp "new" :redo-stack] '())
-             true       (update-in [:map :mode] merge {:name     :adding
-                                                       :geoms    geoms
-                                                       :sub-mode :editing}))
+             true (assoc-in [:map :temp "new" :redo-stack] '())
+             true (update-in [:map :mode] merge {:name :adding
+                                                 :geoms geoms
+                                                 :sub-mode :editing}))
 
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (rf/reg-event-fx ::update-new-geom
   (fn [{:keys [db]} [_ geoms]]
-    (let [geoms      (ensure-fids geoms)
+    (let [geoms (ensure-fids geoms)
           curr-geoms (-> db :map :mode :geoms)]
-      {:db         (-> db
-                       (assoc-in [:map :mode :geoms] geoms)
-                       (assoc-in [:map :temp "new" :redo-stack] '())
-                       (update-in [:map :temp "new" :undo-stack] conj curr-geoms))
+      {:db (-> db
+               (assoc-in [:map :mode :geoms] geoms)
+               (assoc-in [:map :temp "new" :redo-stack] '())
+               (update-in [:map :temp "new" :undo-stack] conj curr-geoms))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]]})))
 
 (rf/reg-event-fx ::confirm-remove-segment
   (fn [{:keys [db]} [_ callback]]
-    (let [tr        (-> db :translator)
+    (let [tr (-> db :translator)
           geom-type (-> db :map :mode :geom-type)]
       {:dispatch
        [:lipas.ui.events/confirm (tr :map/confirm-remove geom-type) callback]})))
 
 (rf/reg-event-fx ::discard-drawing
   (fn [{:keys [db]} _]
-    {:db       (assoc-in db [:map :mode] {:name :default})
+    {:db (assoc-in db [:map :mode] {:name :default})
      :dispatch [:lipas.ui.search.events/submit-search]}))
 
 (rf/reg-event-fx ::finish-adding-geom
   (fn [{:keys [db]} [_ geoms type-code]]
     (let [geoms (ensure-fids geoms)]
-      {:db         (assoc-in db [:map :mode :sub-mode] :finished)
+      {:db (assoc-in db [:map :mode :sub-mode] :finished)
        :dispatch-n [[:lipas.ui.sports-sites.events/init-new-site type-code geoms]]})))
 
 (rf/reg-event-db ::open-more-tools-menu
@@ -319,10 +321,10 @@
 
 (rf/reg-event-fx ::map-clicked
   (fn [{:keys [db]} [_ ^js event]]
-    (let [fids       (atom #{})
-          lmap       (.-map event)
-          opts       #js {:layerFilter  (fn [layer] (= "edits" (.get layer "name")))
-                          :hitTolerance 5}
+    (let [fids (atom #{})
+          lmap (.-map event)
+          opts #js {:layerFilter (fn [layer] (= "edits" (.get layer "name")))
+                    :hitTolerance 5}
           selecting? (= :selecting (-> db :map :mode :sub-mode))
           pixel (.-pixel event)]
       #_(js/console.log event)
@@ -367,7 +369,7 @@
 (rf/reg-event-fx ::show-loi
   (fn [{:keys [db]} [_ loi-id]]
     (let [width (:screen-size db)
-          loi   (get-in db [:lois loi-id])]
+          loi (get-in db [:lois loi-id])]
       {:fx
        [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
         (when loi [:dispatch [:lipas.ui.map.events/zoom-to-loi loi width]])
@@ -444,7 +446,7 @@
 
 (rf/reg-event-fx ::start-adding-new-site
   (fn [{:keys [db]} [_ template opts]]
-    {:db         (assoc-in db [:map :mode] {:name :default}) ;; cleanup
+    {:db (assoc-in db [:map :mode] {:name :default}) ;; cleanup
      :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
                   [:lipas.ui.sports-sites.events/start-adding-new-site template opts]
                   [:lipas.ui.loi.events/start-adding-new-loi]]}))
@@ -480,11 +482,11 @@
 (rf/reg-event-fx ::save-new-site
   (fn [{:keys [db]} [_ data]]
     (let [draft? false
-          type   (get-in db [:sports-sites :types (-> data :type :type-code)])
-          data   (-> data
-                     utils/make-saveable
-                     (assoc :event-date (utils/timestamp))
-                     (update :properties #(select-keys % (-> type :props keys))))]
+          type (get-in db [:sports-sites :types (-> data :type :type-code)])
+          data (-> data
+                   utils/make-saveable
+                   (assoc :event-date (utils/timestamp))
+                   (update :properties #(select-keys % (-> type :props keys))))]
       {:dispatch
        [:lipas.ui.sports-sites.events/commit-rev data draft? on-success-new]})))
 
@@ -503,8 +505,8 @@
 (defn process-imports
   [geoJSON geom-type]
   (let [fcoll (-> geoJSON
-                  (turf-simplify #js {:mutate      true
-                                      :tolerance   (map-utils/simplify-scale 3)
+                  (turf-simplify #js {:mutate true
+                                      :tolerance (map-utils/simplify-scale 3)
                                       :highQuality true})
                   (js->clj :keywordize-keys true))]
     (->> fcoll
@@ -531,16 +533,16 @@
 
 (rf/reg-event-fx ::load-geoms-from-file
   (fn [{:keys [db]} [_ files geom-type]]
-    (let [file   (aget files 0)
-          params {:enc  (-> db :map :import :selected-encoding)
+    (let [file (aget files 0)
+          params {:enc (-> db :map :import :selected-encoding)
                   :file file
-                  :ext  (map-utils/parse-ext file)
-                  :cb   (fn [data] (==> [::set-import-candidates data geom-type]))}]
+                  :ext (map-utils/parse-ext file)
+                  :cb (fn [data] (==> [::set-import-candidates data geom-type]))}]
 
       (if-let [ext (:unknown (map-utils/file->geoJSON params))]
         {:dispatch-n [(let [tr (-> db :translator)]
                         [:lipas.ui.events/set-active-notification
-                         {:message  (tr :map.import/unknown-format ext)
+                         {:message (tr :map.import/unknown-format ext)
                           :success? false}])]}
         {:db (-> db
                  (assoc-in [:map :import :data] nil)
@@ -557,29 +559,29 @@
 
 (rf/reg-event-fx ::import-selected-geoms
   (fn [{:keys [db]} _]
-    (let [ids      (-> db :map :import :selected-items)
+    (let [ids (-> db :map :import :selected-items)
           replace? (-> db :map :import :replace-existing?)
-          data     (select-keys (-> db :map :import :data) ids)
-          fcoll    {:type     "FeatureCollection"
-                    :features (into [] cat
-                                    [(when-not replace?
-                                       (-> db :map :mode :geoms :features))
-                                     (->> data vals (map #(dissoc % :properties)))])}
-          fcoll    (map-utils/strip-z fcoll)]
-      {:db         (-> db
-                       (assoc-in [:map :mode :geoms] fcoll)
-                       (assoc-in [:map :mode :sub-mode] :importing))
+          data (select-keys (-> db :map :import :data) ids)
+          fcoll {:type "FeatureCollection"
+                 :features (into [] cat
+                                 [(when-not replace?
+                                    (-> db :map :mode :geoms :features))
+                                  (->> data vals (map #(dissoc % :properties)))])}
+          fcoll (map-utils/strip-z fcoll)]
+      {:db (-> db
+               (assoc-in [:map :mode :geoms] fcoll)
+               (assoc-in [:map :mode :sub-mode] :importing))
        :dispatch-n [[::toggle-import-dialog]
                     [::select-import-items #{}]]})))
 
 (rf/reg-event-fx ::import-selected-geoms-to-new
   (fn [{:keys [db]} _]
-    (let [ids      (-> db :map :import :selected-items)
-          data     (select-keys (-> db :map :import :data) ids)
-          fcoll    (map-utils/strip-z
-                     {:type     "FeatureCollection"
-                      :features (into [] (->> data vals (map #(dissoc % :properties))))})]
-      {:db         (assoc-in db [:map :mode :geoms] fcoll)
+    (let [ids (-> db :map :import :selected-items)
+          data (select-keys (-> db :map :import :data) ids)
+          fcoll (map-utils/strip-z
+                  {:type "FeatureCollection"
+                   :features (into [] (->> data vals (map #(dissoc % :properties))))})]
+      {:db (assoc-in db [:map :mode :geoms] fcoll)
        :dispatch-n [[::new-geom-drawn fcoll]
                     [::toggle-import-dialog]
                     [::select-import-items #{}]]})))
@@ -587,21 +589,21 @@
 (defn- add-gpx-props [{:keys [locale types cities site]} feature]
   (let [city-code (-> site :location :city :city-code)
         type-code (-> site :type :type-code)
-        props     {:name        (-> site :name)
-                   :type        (get-in types [type-code :name locale])
-                   :city        (get-in cities [city-code :name locale])}]
+        props {:name (-> site :name)
+               :type (get-in types [type-code :name locale])
+               :city (get-in cities [city-code :name locale])}]
     (assoc feature :properties props)))
 
 (rf/reg-event-fx ::download-gpx
   (fn [{:keys [db]} [_ lipas-id]]
-    (let [locale  (-> db :translator (apply []))
-          latest  (get-in db [:sports-sites lipas-id :latest])
-          site    (get-in db [:sports-sites lipas-id :history latest])
-          data    {:site   site
-                   :cities (-> db :cities)
-                   :types  (-> db :types)
-                   :locale locale}
-          fname   (gstring/urlEncode (str (:name site) ".gpx"))
+    (let [locale (-> db :translator (apply []))
+          latest (get-in db [:sports-sites lipas-id :latest])
+          site (get-in db [:sports-sites lipas-id :history latest])
+          data {:site site
+                :cities (-> db :cities)
+                :types (-> db :types)
+                :locale locale}
+          fname (gstring/urlEncode (str (:name site) ".gpx"))
           xml-str (-> site :location :geometries
                       (update :features #(mapv (partial add-gpx-props data) %))
                       clj->js
@@ -658,7 +660,7 @@
 
 (rf/reg-event-fx ::update-address-search-keyword
   (fn [{:keys [db]} [_ s]]
-    {:db         (assoc-in db [:map :address-search :keyword] s)
+    {:db (assoc-in db [:map :address-search :keyword] s)
      :dispatch-n [[::search-address s]]}))
 
 ;; https://www.digitransit.fi/en/developers/apis/2-geocoding-api/autocomplete/
@@ -666,17 +668,17 @@
   (fn [_ [_ s]]
     (if (not-empty s)
       {:http-xhrio
-       {:method          :get
-        :uri             (str "https://"
-                              (utils/domain)
-                              "/digitransit"
-                              "/geocoding/v1"
-                              "/autocomplete?"
-                              "sources=oa,osm"
-                              "&text=" s)
+       {:method :get
+        :uri (str "https://"
+                  (utils/domain)
+                  "/digitransit"
+                  "/geocoding/v1"
+                  "/autocomplete?"
+                  "sources=oa,osm"
+                  "&text=" s)
         :response-format (ajax/json-response-format {:keywords? true})
-        :on-success      [::address-search-success]
-        :on-failure      [::address-search-failure]}}
+        :on-success [::address-search-success]
+        :on-failure [::address-search-failure]}}
       {:dispatch [::clear-address-search-results]})))
 
 (rf/reg-event-fx ::address-search-success
@@ -686,9 +688,9 @@
 (rf/reg-event-fx ::address-search-failure
   (fn [{:keys [db]} [_ error]]
     (let [tr (:translator db)]
-      {:db       (assoc-in db [:errors :address-search (utils/timestamp)] error)
+      {:db (assoc-in db [:errors :address-search (utils/timestamp)] error)
        :dispatch [:lipas.ui.events/set-active-notification
-                  {:message  (tr :notifications/get-failed)
+                  {:message (tr :notifications/get-failed)
                    :success? false}]})))
 
 (rf/reg-event-fx ::show-address
@@ -715,13 +717,13 @@
                 :features
                 (->> (map #(assoc-in % [:properties :name] (tr :map/intersection))))
                 not-empty)]
-    {:type     "FeatureCollection"
+    {:type "FeatureCollection"
      :features (into [] cat [kfs ifs])}))
 
 (rf/reg-event-db ::show-problems
   (fn [db [_ problems]]
     (let [tr (-> db :translator)]
-      (assoc-in db [:map :mode :problems] {:data  (problems->fcoll tr problems)
+      (assoc-in db [:map :mode :problems] {:data (problems->fcoll tr problems)
                                            :show? true}))))
 
 (defn- geom-type [fcoll]
@@ -729,14 +731,14 @@
 
 (rf/reg-event-fx ::duplicate-sports-site
   (fn [{:keys [db]} [_ lipas-id]]
-    (let [ts     (get-in db [:sports-sites lipas-id :latest])
+    (let [ts (get-in db [:sports-sites lipas-id :latest])
           latest (get-in db [:sports-sites lipas-id :history ts])
-          geoms  (get-in latest [:location :geometries])
-          geoms  (if (= "Point" (geom-type geoms))
+          geoms (get-in latest [:location :geometries])
+          geoms (if (= "Point" (geom-type geoms))
                   ;; Shift point by ~11m so it doesn't overlap 1:1
                   ;; with the original point.
-                   (update-in geoms [:features 0 :geometry :coordinates 0] + 0.0001)
-                   geoms)]
+                  (update-in geoms [:features 0 :geometry :coordinates 0] + 0.0001)
+                  geoms)]
       {:dispatch-n
        [[:lipas.ui.map.events/show-sports-site nil]
         [::start-adding-new-site]
@@ -750,7 +752,7 @@
 ;; Takes coll of pairs like [:analysis true] [:population false]
 (rf/reg-event-fx ::set-overlays
   (fn [{:keys [db]} [_ layers]]
-    (let [adds    (->> layers (filter second) (map first))
+    (let [adds (->> layers (filter second) (map first))
           removes (->> layers (filter (complement second)) (map first))]
       {:db (update-in db [:map :selected-overlays]
                       (fn [current-layers]
@@ -805,11 +807,11 @@
 (rf/reg-event-fx ::add-analysis-target
   (fn [_ _]
     (let [template {:status "planning"
-                    :name   "Analyysikohde"
-                    :owner  "unknown"
-                    :admin  "unknown"
+                    :name "Analyysikohde"
+                    :owner "unknown"
+                    :admin "unknown"
                     :location
-                    {:address     "Testikatu 123"
+                    {:address "Testikatu 123"
                      :postal-code "12345"}}]
       {:dispatch-n
        [[::start-adding-new-site template {:adding-planning-site? true}]]})))
@@ -819,8 +821,8 @@
     (let [coords (if (= :epsg3067 crs)
                    (epsg3067->wgs84-fast #js [lat lon])
                    [lon lat])
-          fcoll  {:type     "FeatureCollection"
-                  :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]
+          fcoll {:type "FeatureCollection"
+                 :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]
       {:dispatch-n [[::new-geom-drawn fcoll]]})))
 
 (rf/reg-event-db ::select-sports-site-tab
@@ -867,10 +869,10 @@
                             (fn [fs]
                               (update-feature-properties fs fid (fn [properties]
                                                                   (let [curr-direction (:travel-direction properties)
-                                                                        new-direction  (case curr-direction
-                                                                                         nil            "start-to-end"
-                                                                                         "start-to-end" "end-to-start"
-                                                                                         "end-to-start" nil)]
+                                                                        new-direction (case curr-direction
+                                                                                        nil "start-to-end"
+                                                                                        "start-to-end" "end-to-start"
+                                                                                        "end-to-start" nil)]
                                                                     (assoc properties :travel-direction new-direction)))))))]
       {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
@@ -891,27 +893,27 @@
   (fn [_ [_ {:keys [lat lon on-success]}]]
     (when (and lat lon)
       {:http-xhrio
-       {:method          :get
-        :uri             (str "https://"
-                              (utils/domain)
-                              "/digitransit"
-                              "/geocoding/v1"
-                              "/reverse?"
-                              "point.lat=" lat
-                              "&point.lon=" lon
-                              "&sources=nlsfi,oa,osm"
-                              "&layers=street"
-                              "&size=" 25)
+       {:method :get
+        :uri (str "https://"
+                  (utils/domain)
+                  "/digitransit"
+                  "/geocoding/v1"
+                  "/reverse?"
+                  "point.lat=" lat
+                  "&point.lon=" lon
+                  "&sources=nlsfi,oa,osm"
+                  "&layers=street"
+                  "&size=" 25)
         :response-format (ajax/json-response-format {:keywords? true})
-        :on-success      on-success
-        :on-failure      [::reverse-geocoding-search-failure]}})))
+        :on-success on-success
+        :on-failure [::reverse-geocoding-search-failure]}})))
 
 (rf/reg-event-fx ::reverse-geocoding-search-failure
-  (fn [{:keys [db]} [_  resp]]
+  (fn [{:keys [db]} [_ resp]]
     (let [tr (:translator db)]
       {:db (assoc-in db [:map :address-locator :error] resp)
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
-                        {:message  (tr :notifications/get-failed)
+                        {:message (tr :notifications/get-failed)
                          :success? false}]]]})))
 
 (rf/reg-event-fx ::on-reverse-geocoding-success
@@ -924,16 +926,16 @@
 
 (rf/reg-event-fx ::populate-address-with-reverse-geocoding-results
   (fn [{:keys [db]} [_ lipas-id cities reverse-geocoding-results]]
-    (let [results      (->> reverse-geocoding-results
-                            :features
-                            (map :properties)
-                            (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))
+    (let [results (->> reverse-geocoding-results
+                       :features
+                       (map :properties)
+                       (map #(select-keys % [:name :localadmin :postalcode :locality :label :confidence :distance])))
           first-result (first results)
-          city-match   (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))
-          path->val    {[:location :address]         (:name first-result)
-                        [:location :postal-code]     (:postalcode first-result)
-                        [:location :postal-office]   (:locality first-result)
-                        [:location :city :city-code] (:city-code city-match)}]
+          city-match (first (filter #(= (:localadmin first-result) (get-in % [:name :fi])) cities))
+          path->val {[:location :address] (:name first-result)
+                     [:location :postal-code] (:postalcode first-result)
+                     [:location :postal-office] (:locality first-result)
+                     [:location :city :city-code] (:city-code city-match)}]
       {:db (assoc-in db [:map :address-locator :reverse-geocoding-results] results)
        :fx [[:dispatch [:lipas.ui.map.events/select-address-locator-address first-result]]
             (if lipas-id
