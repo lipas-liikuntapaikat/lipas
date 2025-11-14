@@ -31,7 +31,8 @@
  :elementary-school "Elementary school",
  :filter-types "Filter by type",
  :headline "Analysis Tool (beta)",
- :heatmap "Heatmap",
+ :heatmap "Density Map",
+ :heatmap-info-text "This density map visualization tool allows you to illustrate the regional and local quantity and density of sports facilities (so-called Heatmap visualization). You can modify the sports facilities shown in the visualization by adjusting the filter settings. Additionally, you can adjust the heatmap visualization settings to customize the appearance of the heatmap to suit your needs. This heatmap visualization works best for sports facilities stored as points. Therefore, routes (lines) are processed as points in the calculation, not as linear map features.",
  :high-school "High school",
  :mean "Mean",
  :median "Median",
@@ -50,4 +51,62 @@
  :statistics-center-notice "Statistics Finland population structure 2024",
  :travel-time "Travel time",
  :zone "Zone",
- :zones "Zones"}
+ :zones "Zones"
+
+ ;; Heatmap specific translations
+ :heatmap-dimension "Dimension"
+ :heatmap-facility-density "Facility Density"
+ :heatmap-total-area-coverage "Total Area Coverage"
+ :heatmap-capacity-distribution "Capacity Distribution"
+ :heatmap-facility-types "Facility Types"
+ :heatmap-year-round-availability "Year-round Availability"
+ :heatmap-facilities-with-lighting "Facilities with Lighting"
+ :heatmap-activity-distribution "Activity Distribution"
+ :heatmap-weight-by "Weight By"
+ :heatmap-count "Count"
+ :heatmap-area-m2 "Area (m²)"
+ :heatmap-route-length-km "Route Length (km)"
+ :heatmap-geohash-precision "Geohash Precision"
+ :heatmap-auto-current "Auto (current: "
+ :heatmap-precision-1 "1 - Very Coarse (~5,000km)"
+ :heatmap-precision-2 "2 - Coarse (~1,250km)"
+ :heatmap-precision-3 "3 - (~156km)"
+ :heatmap-precision-4 "4 - (~39km)"
+ :heatmap-precision-5 "5 - (~5km)"
+ :heatmap-precision-6 "6 - (~1.2km)"
+ :heatmap-precision-7 "7 - (~153m)"
+ :heatmap-precision-8 "8 - Fine (~38m)"
+ :heatmap-precision-9 "9 - Very Fine (~5m)"
+ :heatmap-precision-10 "10 - Ultra Fine (~1.2m)"
+ :heatmap-precision-help "Higher precision = more detailed heatmap but slower performance"
+ :heatmap-filter-by-map-view "Filter by current map view"
+ :heatmap-analyzing-current-bounds "Analyzing data within current map bounds"
+ :heatmap-analyzing-whole-finland "Analyzing data for whole Finland"
+ :heatmap-city-filter-todo "City filter (to be implemented)"
+ :heatmap-year-round-only "Year-round facilities only"
+ :heatmap-retkikartta-only "Retkikartta sites only"
+ :heatmap-harrastuspassi-only "Harrastuspassi sites only"
+ :heatmap-school-use-only "School use only"
+ :heatmap-visual-settings "Visualization"
+ :heatmap-radius "Radius: "
+ :heatmap-blur "Blur: "
+ :heatmap-opacity "Opacity: "
+ :heatmap-color-gradient "Color Gradient"
+ :heatmap-gradient-cool "Cool (Purple to White)"
+ :heatmap-gradient-warm "Warm (Yellow to Red)"
+ :heatmap-gradient-grayscale "Grayscale"
+ :heatmap-filters "Filters"
+
+ ;; Heatmap popup translations
+ :heatmap-popup-facility-singular "sports facility"
+ :heatmap-popup-facility-plural "sports facilities"
+ :heatmap-popup-total-area "Total area: "
+ :heatmap-popup-weight "Weight: "
+ :heatmap-popup-density-very-high "Very high density"
+ :heatmap-popup-density-high "High density"
+ :heatmap-popup-density-medium "Medium density"
+ :heatmap-popup-density-low "Low density"
+ :heatmap-popup-density-very-low "Very low density"
+ :heatmap-popup-top-types "TOP-5 Types: (total "
+ :heatmap-popup-type-fallback "Type "
+ :heatmap-popup-activities "Activities:"}

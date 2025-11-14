@@ -625,35 +625,35 @@
       ;; Facility count
       [mui/typography {:variant "body2" :style {:font-weight "bold"}}
        (str (:doc_count data) " " (if (= 1 (:doc_count data))
-                                    "liikuntapaikka"
-                                    "liikuntapaikkaa"))]
+                                    (tr :analysis/heatmap-popup-facility-singular)
+                                    (tr :analysis/heatmap-popup-facility-plural)))]
 
       ;; Weight info
       (when (and weight-by (not= "doc-count" weight-by))
         [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
          (case (keyword weight-by)
-           :area-m2 (str "Pinta-ala yhteensä: "
+           :area-m2 (str (tr :analysis/heatmap-popup-total-area)
                          (utils/round-safe (:weight data) 0) " m²")
-           (str "Paino: " (:weight data) " "))])
+           (str (tr :analysis/heatmap-popup-weight) (:weight data) " "))])
 
       ;; Relative intensity
       (let [intensity (* 100 (:normalized-weight data))]
         [mui/typography {:variant "caption" :color "textSecondary"}
          (cond
-           (> intensity 80) "Erittäin korkea tiheys"
-           (> intensity 60) "Korkea tiheys"
-           (> intensity 40) "Keskitaso"
-           (> intensity 20) "Matala tiheys"
-           :else "Erittäin matala tiheys")])
+           (> intensity 80) (tr :analysis/heatmap-popup-density-very-high)
+           (> intensity 60) (tr :analysis/heatmap-popup-density-high)
+           (> intensity 40) (tr :analysis/heatmap-popup-density-medium)
+           (> intensity 20) (tr :analysis/heatmap-popup-density-low)
+           :else (tr :analysis/heatmap-popup-density-very-low))])
 
       ;; Type distribution for type-distribution dimension
       (when (and (= :type-distribution dimension) (:types data))
         [:<>
          [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
-          (str "TOP-5 Tyypit: (yht. " (count (:types data)) ")")]
+          (str (tr :analysis/heatmap-popup-top-types) (count (:types data)) ")")]
          (into [mui/list {:dense true :style {:padding 0}}]
                (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:types data)))
-                     :let [type-label (get-in types-db [key :name locale] (str "Tyyppi " key))]]
+                     :let [type-label (get-in types-db [key :name locale] (str (tr :analysis/heatmap-popup-type-fallback) key))]]
                  [mui/list-item {:style {:padding "2px 0"}}
                   [mui/typography {:variant "caption"}
                    (str type-label ": " doc_count)]]))])
@@ -662,7 +662,7 @@
       (when (and (= :activities dimension) (:activities data))
         [:<>
          [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
-          "Aktiviteetit:"]
+          (tr :analysis/heatmap-popup-activities)]
          (into [mui/list {:dense true :style {:padding 0}}]
                (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:activities data)))]
                  [mui/list-item {:style {:padding "2px 0"}}

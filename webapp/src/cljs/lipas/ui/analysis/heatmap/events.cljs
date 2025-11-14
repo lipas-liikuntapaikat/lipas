@@ -60,7 +60,7 @@
 ;; Finland's approximate bounding box
 (def finland-bbox
   {:min-x 19.5 ; Western longitude
-   :max-x 31.5 ; Eastern longitude  
+   :max-x 31.5 ; Eastern longitude
    :min-y 59.5 ; Southern latitude
    :max-y 70.5}) ; Northern latitude
 
@@ -139,21 +139,18 @@
     (js/console.error "Failed to load facets:" error)
     db))
 
-;; Combined event to update filters and refresh heatmap
 (rf/reg-event-fx
   ::update-filter-and-refresh
   (fn [{:keys [db]} [_ filter-key value]]
     {:db (heatmap-db/set-filter db filter-key value)
      :dispatch [::create-heatmap]}))
 
-;; Combined event to update precision and refresh heatmap
 (rf/reg-event-fx
   ::update-precision-and-refresh
   (fn [{:keys [db]} [_ precision]]
     {:db (heatmap-db/set-precision db precision)
      :dispatch [::create-heatmap]}))
 
-;; Combined event to update bbox filter and refresh heatmap
 (rf/reg-event-fx
   ::update-bbox-filter-and-refresh
   (fn [{:keys [db]} [_ use-bbox?]]
@@ -161,21 +158,18 @@
      :dispatch-n [[::get-facets]
                   [::create-heatmap]]}))
 
- ;; Combined event to update dimension and refresh heatmap
 (rf/reg-event-fx
   ::update-dimension-and-refresh
   (fn [{:keys [db]} [_ dimension]]
     {:db (heatmap-db/set-dimension db dimension)
      :dispatch [::create-heatmap]}))
 
-;; Combined event to update weight-by and refresh heatmap
 (rf/reg-event-fx
   ::update-weight-by-and-refresh
   (fn [{:keys [db]} [_ weight-by]]
     {:db (heatmap-db/set-weight-by db weight-by)
      :dispatch [::create-heatmap]}))
 
-;; Combined event to update visual param and refresh heatmap layer
 (rf/reg-event-fx
   ::update-visual-param
   (fn [{:keys [db]} [_ param value]]
@@ -200,11 +194,12 @@
                   [::init]]}))
 
 ;; Event triggered when map view changes (zoom/pan)
+;; Auto-refresh heatmap when in heatmap mode
+;; use-bbox-filter? is now always true (locked), so we always refresh
 (rf/reg-event-fx
   ::map-view-changed
   (fn [{:keys [db]} _]
-    (when (and (= (get-in db [:analysis :selected-tool]) "heatmap")
-               (-> db :heatmap :use-bbox-filter?))
+    (when (= (get-in db [:map :mode :sub-mode]) :heatmap)
       {:dispatch-n [[::get-facets]
                     [::create-heatmap]]})))
 

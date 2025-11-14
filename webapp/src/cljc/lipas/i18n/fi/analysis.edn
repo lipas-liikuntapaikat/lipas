@@ -21,7 +21,8 @@
  :categorization-name "Kategorisoinnin nimi",
  :calculate-all "Laske kaikki",
  :mean "Keskiarvo",
- :heatmap "Lämpökartta",
+ :heatmap "Tiheyskartta",
+ :heatmap-info-text "Tällä tiheyskartan visualisointityökalulla voit havainnollistaa liikuntapaikkojen alueellista ja paikallista määrää ja tiheyttä (ns. Heatmap-visualisointi). Voit muuttaa visualisoinnissa esitettyjä liikuntapaikkoja säätämällä suodatusasetuksia. Lisäksi voit säätää tiheyskartan visualisoinnin asetuksia, minkä avulla voit muuttaa tiheyskartan ulkoasua itsellesi sopivaksi. Tämä tiheyskarttavisualisointi (Heatmap) toimii parhaiten pisteinä tallennetuille liikuntapaikoille. Sen takia reitit (viivat) käsitellään laskennassa pisteinä, ei viivamaisina karttakohteina.",
  :diversity-help2
  "Oletuksena työkalussa käytetään postinumeroihin perustuvaa aluejakoa. Jako voidaan tehdä myös muun olemassa olevan aluejaon perusteella tuomalla haluttu geometriatiedosto (Shapefile, GeoJSON tai KML).",
  :settings-map "Kartalla näkyvät kohteet",
@@ -92,4 +93,62 @@
  :men "Miehet",
  :download-categories "Lataa kategoriat",
  :travel-time "Matka-aika",
- :results "Tulokset"}
+ :results "Tulokset"
+
+ ;; Heatmap specific translations
+ :heatmap-dimension "Dimensio"
+ :heatmap-facility-density "Liikuntapaikkojen tiheys"
+ :heatmap-total-area-coverage "Kokonaispinta-ala"
+ :heatmap-capacity-distribution "Kapasiteettijakauma"
+ :heatmap-facility-types "Liikuntapaikkatyypit"
+ :heatmap-year-round-availability "Ympärivuotinen saatavuus"
+ :heatmap-facilities-with-lighting "Valaistut liikuntapaikat"
+ :heatmap-activity-distribution "Aktiviteettijakauma"
+ :heatmap-weight-by "Painotus"
+ :heatmap-count "Lukumäärä"
+ :heatmap-area-m2 "Pinta-ala (m²)"
+ :heatmap-route-length-km "Reitin pituus (km)"
+ :heatmap-geohash-precision "Geohash-tarkkuus"
+ :heatmap-auto-current "Automaattinen (nykyinen: "
+ :heatmap-precision-1 "1 - Erittäin karkea (~5 000km)"
+ :heatmap-precision-2 "2 - Karkea (~1 250km)"
+ :heatmap-precision-3 "3 - (~156km)"
+ :heatmap-precision-4 "4 - (~39km)"
+ :heatmap-precision-5 "5 - (~5km)"
+ :heatmap-precision-6 "6 - (~1,2km)"
+ :heatmap-precision-7 "7 - (~153m)"
+ :heatmap-precision-8 "8 - Hieno (~38m)"
+ :heatmap-precision-9 "9 - Erittäin hieno (~5m)"
+ :heatmap-precision-10 "10 - Ultra hieno (~1,2m)"
+ :heatmap-precision-help "Korkeampi tarkkuus = yksityiskohtaisempi lämpökartta mutta hitaampi suorituskyky"
+ :heatmap-filter-by-map-view "Suodata nykyisen karttanäkymän mukaan"
+ :heatmap-analyzing-current-bounds "Analysoidaan dataa nykyisen kartan rajoissa"
+ :heatmap-analyzing-whole-finland "Analysoidaan dataa koko Suomesta"
+ :heatmap-city-filter-todo "Kaupunkisuodatin (tulossa)"
+ :heatmap-year-round-only "Vain ympärivuotiset liikuntapaikat"
+ :heatmap-retkikartta-only "Vain Retkikartta-kohteet"
+ :heatmap-harrastuspassi-only "Vain Harrastuspassi-kohteet"
+ :heatmap-school-use-only "Vain koulukäyttö"
+ :heatmap-visual-settings "Visualisointi"
+ :heatmap-radius "Säde: "
+ :heatmap-blur "Sumennus: "
+ :heatmap-opacity "Läpinäkyvyys: "
+ :heatmap-color-gradient "Värigradientti"
+ :heatmap-gradient-cool "Viileä (Violetti -> Valkoinen)"
+ :heatmap-gradient-warm "Lämmin (Keltainen -> Punainen)"
+ :heatmap-gradient-grayscale "Harmaasävy"
+ :heatmap-filters "Suodattimet"
+
+ ;; Heatmap popup translations
+ :heatmap-popup-facility-singular "liikuntapaikka"
+ :heatmap-popup-facility-plural "liikuntapaikkaa"
+ :heatmap-popup-total-area "Pinta-ala yhteensä: "
+ :heatmap-popup-weight "Paino: "
+ :heatmap-popup-density-very-high "Erittäin korkea tiheys"
+ :heatmap-popup-density-high "Korkea tiheys"
+ :heatmap-popup-density-medium "Keskitaso"
+ :heatmap-popup-density-low "Matala tiheys"
+ :heatmap-popup-density-very-low "Erittäin matala tiheys"
+ :heatmap-popup-top-types "TOP-5 Tyypit: (yht. "
+ :heatmap-popup-type-fallback "Tyyppi "
+ :heatmap-popup-activities "Aktiviteetit:"}
