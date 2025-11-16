@@ -1,12 +1,12 @@
-# Development Guide for Claude with Clojure-MCP
+# Development Guide for Claude
 
 ## 🚀 Quick Start - You Already Have REPL Access!
 
-**IMPORTANT**: When working with this project through clojure-mcp, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
+**IMPORTANT**: When working with this project through clojure-nrepl-eval command in port 7888, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
 
 ## Large workflow communication
 
-When you're working with large tasks, notify me by using `say` command via bash tool (not the clojure-mcp one) and say "I'm done". If you get stuck, call for help by saying "Please help".
+When you're working with large tasks, notify me by using `say` command via bash tool and say "I'm done". If you get stuck, call for help by saying "Please help".
 
 ### Immediate Development Setup
 
@@ -21,12 +21,6 @@ This single command will:
 - Start the Jetty server
 - Connect to PostgreSQL and Elasticsearch
 - Initialize all system components (db, search, email, PTV, etc.)
-
-### Available User Namespace Functions
-
-The `user` namespace provides development time utilities. Explore what's available in the `user` namespace.
-
-- `(clj-mcp.repl-tools/list-vars 'user)`
 
 ### System Access After Startup
 
@@ -44,24 +38,6 @@ Available components:
 - `:lipas/ptv` - Finnish public service integration
 - `:lipas/mailchimp` - Newsletter integration
 - ...etc
-
-## 🔍 Project Exploration Tools
-
-Use the built-in REPL exploration tools:
-
-```clojure
-;; List all available namespaces
-(clj-mcp.repl-tools/list-ns)
-
-;; Explore specific namespaces
-(clj-mcp.repl-tools/list-vars 'lipas.backend.core)
-
-;; Show documentation for functions
-(clj-mcp.repl-tools/doc-symbol 'map)
-
-;; Find symbols by pattern
-(clj-mcp.repl-tools/find-symbols "search")
-```
 
 ## ClojureScript Development
 
@@ -294,9 +270,8 @@ The database is the **source of truth** with full history, while Elasticsearch s
 #### Starting Work
 
 1. **Just run** `(user/reset)` - everything will be ready
-2. **Explore** the codebase using `clj-mcp.repl-tools/*` functions
-3. **Make changes** using the clojure editing tools
-4. **Test changes** immediately in the REPL
+2. **Make changes** using editing tools
+3. **Test changes** immediately in the REPL
 
 #### No Need For:
 
@@ -306,11 +281,6 @@ The database is the **source of truth** with full history, while Elasticsearch s
 - ❌ Figuring out how to start the system
 
 #### Code Quality Tools Available
-
-The clojure-mcp environment provides:
-- **Integrated Linting**: Built-in clj-kondo analysis with real-time feedback
-- **Syntax Checking**: Automatic validation during editing
-- **REPL Integration**: Enhanced REPL capabilities
 
 ### 📝 Code Style Guidelines
 
@@ -335,8 +305,7 @@ The clojure-mcp environment provides:
 
 1. **You have immediate REPL access** - no setup required
 2. **Single command startup** - just `(user/reset)`
-3. **Rich exploration tools** - use `clj-mcp.repl-tools/*` functions
-4. **Real-time feedback** - integrated linting and syntax checking
-5. **Full system access** - all components available via `integrant.repl.state/system`
+3. **Real-time feedback** - integrated linting and syntax checking
+4. **Full system access** - all components available via `integrant.repl.state/system`
 
 **Remember**: Don't overthink the setup - you already have everything you need to start developing immediately!
