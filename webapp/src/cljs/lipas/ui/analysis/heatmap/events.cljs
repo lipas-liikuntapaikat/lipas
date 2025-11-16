@@ -196,15 +196,30 @@
 ;; Event triggered when map view changes (zoom/pan)
 ;; Auto-refresh heatmap when in heatmap mode
 ;; use-bbox-filter? is now always true (locked), so we always refresh
+;; Debounced to avoid flickering during map movement
 (rf/reg-event-fx
   ::map-view-changed
   (fn [{:keys [db]} _]
     (when (= (get-in db [:map :mode :sub-mode]) :heatmap)
-      {:dispatch-n [[::get-facets]
-                    [::create-heatmap]]})))
+     ;; Use the idiomatic re-frame debounce effect
+     ;; This automatically cancels previous pending updates
+     ;; Note: No need to require lipas.ui.effects - just use the qualified keyword
+      {:lipas.ui.effects/dispatch-debounce [::heatmap-refresh
+                                            [:lipas.ui.analysis.heatmap.events/refresh-heatmap]
+                                            300]})))
+
+;; Internal event that actually triggers the refresh
+;; This is what gets debounced
+(rf/reg-event-fx
+  ::refresh-heatmap
+  (fn [{:keys [db]} _]
+    {:dispatch-n [[::get-facets]
+                  [::create-heatmap]]}))
 
 ;; Cleanup when leaving heatmap mode
-(rf/reg-event-db
+(rf/reg-event-fx
   ::leave-heatmap-mode
-  (fn [db _]
-    (dissoc db :heatmap)))
+  (fn [{:keys [db]} _]
+    {:db (dissoc db :heatmap)
+    ;; Cancel any pending debounced update using the idiomatic effect
+     :lipas.ui.effects/stop-debounce ::heatmap-refresh}))

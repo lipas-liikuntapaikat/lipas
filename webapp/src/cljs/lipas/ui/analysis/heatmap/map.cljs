@@ -41,21 +41,26 @@
 
 (defn create-heatmap-layer [source]
   (let [visual-params (:visual db/default-db)
-        {:keys [radius blur opacity gradient weight-fn]} visual-params]
-    (HeatmapLayer.
-      #js {:source source
-           :visible true
-           :radius (or radius 20)
-           :blur (or blur 15)
-           :opacity (or opacity 0.8)
-           :gradient (get gradients gradient (get gradients :default))
-           :weight (create-weight-fn (or weight-fn :linear))})))
+        {:keys [radius blur opacity gradient weight-fn]} visual-params
+        layer (HeatmapLayer.
+                #js {:source source
+                     :visible true
+                     :radius (or radius 20)
+                     :blur (or blur 15)
+                     :opacity (or opacity 0.8)
+                     :gradient (get gradients gradient (get gradients :default))
+                     :weight (create-weight-fn (or weight-fn :linear))})]
+    ;; Store reference to layer in source for later access during updates
+    (.set source "layer" layer)
+    layer))
 
 (defn update-heatmap-source!
   [^js source heatmap-data]
-  (.clear source)
-  (when-let [features (geojson->features heatmap-data)]
-    (.addFeatures source features)))
+  (when-let [new-features (geojson->features heatmap-data)]
+    ;; Clear old data and add new features
+    ;; Now safe from flickering due to debounced updates
+    (.clear source)
+    (.addFeatures source new-features)))
 
 (defn update-heatmap-layer!
   [^js layer visual-params]

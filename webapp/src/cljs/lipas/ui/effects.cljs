@@ -5,6 +5,29 @@
             [lipas.ui.routes :as routes]
             [re-frame.core :as rf]))
 
+;; Debounce state - maps debounce keys to timeout IDs
+(defonce ^:private debounce-timeouts (atom {}))
+
+(rf/reg-fx ::dispatch-debounce
+  (fn [[id event-vec delay]]
+    ;; Cancel any previous timeout with the same ID
+    (when-let [timeout-id (@debounce-timeouts id)]
+      (js/clearTimeout timeout-id))
+    ;; Schedule new dispatch and track timeout ID
+    (swap! debounce-timeouts assoc id
+           (js/setTimeout
+             (fn []
+               (rf/dispatch event-vec)
+               (swap! debounce-timeouts dissoc id))
+             delay))))
+
+(rf/reg-fx ::stop-debounce
+  (fn [id]
+    ;; Cancel debounced dispatch
+    (when-let [timeout-id (@debounce-timeouts id)]
+      (js/clearTimeout timeout-id)
+      (swap! debounce-timeouts dissoc id))))
+
 (rf/reg-fx ::reset-scroll!
   (fn  [_]
     (js/window.scrollTo 0 0)))
