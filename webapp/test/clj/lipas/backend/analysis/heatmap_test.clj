@@ -24,10 +24,15 @@
   []
   (let [admin-user (tu/gen-user {:db? true :admin? true})
 
-        ;; Helper function to set coordinates consistently
+        ;; Helper function to set coordinates consistently with a valid Point geometry
         set-coordinates (fn [site [lon lat]]
                           (-> site
-                              (assoc-in [:location :geometries :features 0 :geometry :coordinates] [lon lat])))
+                              (assoc-in [:location :geometries]
+                                        {:type "FeatureCollection"
+                                         :features [{:type "Feature"
+                                                     :geometry {:type "Point"
+                                                                :coordinates [lon lat]}
+                                                     :properties {}}]})))
 
         ;; Helper function to clean random properties and set controlled values
         clean-properties (fn [site area-m2 route-length-km]
@@ -742,8 +747,7 @@
   (clojure.test/run-test-var #'create-heatmap-year-round-filter-test)
   (clojure.test/run-test-var #'create-heatmap-with-filters-test)
 
-
-  ;; Run just unit tests
+;; Run just unit tests
   (clojure.test/run-test-var #'zoom-precision-mapping-test)
   (clojure.test/run-test-var #'normalize-weights-test)
   (clojure.test/run-test-var #'malli-schema-validation-test))
