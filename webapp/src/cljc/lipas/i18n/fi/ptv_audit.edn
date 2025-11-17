@@ -1,4 +1,5 @@
 {:audited-sites "Auditoidut kohteet",
+ :characters "merkkiä",
  :completed-tab "Valmiit",
  :description
  "Tässä näkymässä voit auditoida liikuntapaikkojen PTV-kuvauksia ja tiivistelmiä.",
@@ -19,4 +20,5 @@
  :sites-to-audit "Auditoitavat kohteet",
  :status "Tila",
  :tab-label "Auditointi",
- :todo-tab "Odottavat"}
+ :todo-tab "Odottavat",
+ :validation-failed "Validointi epäonnistui"}

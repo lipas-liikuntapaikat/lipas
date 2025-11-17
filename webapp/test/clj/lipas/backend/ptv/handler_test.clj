@@ -20,26 +20,33 @@
 ;;; Helper Functions ;;;
 
 (defn- create-test-site-with-ptv
-  "Creates a test sports site with basic PTV data for testing"
+  "Creates a stable test sports site (yleisurheilukenttä) with basic PTV data for testing"
   [user]
-  (let [site (-> (tu/gen-sports-site)
-                 (assoc :status "active")
-                 (assoc :author user)
-                 (assoc-in [:type :type-code] 1210) ; yleisurheilukenttä
-                 (assoc-in [:location :postal-code] "00100")
-                 (assoc-in [:location :city :city-code] 91)
-                 (assoc :ptv {:org-id "test-org-id"
-                              :sync-enabled true
-                              :summary {:fi "Test summary"
-                                        :se "Test summary"
-                                        :en "Test summary"}
-                              :description {:fi "Test description"
-                                            :se "Test description"
-                                            :en "Test description"}
-                              :service-channel-ids []
-                              :service-ids []}))
-        _ (core/upsert-sports-site!* db user site)]
-    site))
+  (let [site {:status "active"
+              :event-date "2025-01-01T00:00:00.000Z"
+              :name "Test Athletics Training Area"
+              :owner "city"
+              :admin "city-sports"
+              :type {:type-code 1210} ; yleisurheilukenttä
+              :location {:city {:city-code 91} ; Helsinki
+                         :address "Test Street 1"
+                         :postal-code "00100"
+                         :postal-office "Helsinki"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point"
+                                                             :coordinates [24.9384 60.1695]}}]}}
+              :ptv {:org-id "test-org-id"
+                    :sync-enabled true
+                    :summary {:fi "Test summary"
+                              :se "Test summary"
+                              :en "Test summary"}
+                    :description {:fi "Test description"
+                                  :se "Test description"
+                                  :en "Test description"}
+                    :service-channel-ids []
+                    :service-ids []}}]
+    (core/upsert-sports-site!* db user site)))
 
 (defn- gen-ptv-audit-user
   "Generates a user with PTV audit privileges"

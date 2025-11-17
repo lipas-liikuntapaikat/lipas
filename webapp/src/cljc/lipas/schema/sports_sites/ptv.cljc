@@ -34,6 +34,13 @@
    [:summary {:optional true} audit-field]
    [:description {:optional true} audit-field]])
 
+(def audit-data
+  "Schema for audit data sent from frontend (before backend adds timestamp/auditor-id)."
+  [:map
+   {:closed true}
+   [:summary {:optional true} audit-field]
+   [:description {:optional true} audit-field]])
+
 (def ptv-meta
   "Schema for PTV metadata associated with sports sites."
   [:map

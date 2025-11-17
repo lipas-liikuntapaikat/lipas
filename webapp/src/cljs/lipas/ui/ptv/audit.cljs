@@ -81,33 +81,36 @@
                  :label (tr :ptv.audit.status/changes-requested)})))
 
        ;; Feedback field
-       ($ TextField
-          {:fullWidth true
-           :multiline true
-           :InputProps #js{:inputComponent tf/patched-textarea}
-           :rows 3
-           :label (tr :ptv.audit/feedback)
-           :placeholder (tr :ptv.audit/feedback-placeholder)
-           :value (or audit-feedback "")
-           :onChange (fn [e]
-                       (rf/dispatch [:lipas.ui.ptv.events/update-audit-feedback
-                                     lipas-id
-                                     field
-                                     (.. e -target -value)]))}))))
+       (let [feedback-length (count (or audit-feedback ""))
+             max-length 1000
+             chars-remaining (- max-length feedback-length)
+             is-over-limit (> feedback-length max-length)]
+         ($ TextField
+            {:fullWidth true
+             :multiline true
+             :InputProps #js{:inputComponent tf/patched-textarea}
+             :inputProps #js{:maxLength max-length}
+             :rows 3
+             :label (tr :ptv.audit/feedback)
+             :placeholder (tr :ptv.audit/feedback-placeholder)
+             :value (or audit-feedback "")
+             :error is-over-limit
+             :helperText (str feedback-length "/" max-length " "
+                              (tr :ptv.audit/characters))
+             :onChange (fn [e]
+                         (rf/dispatch [:lipas.ui.ptv.events/update-audit-feedback
+                                       lipas-id
+                                       field
+                                       (.. e -target -value)]))})))))
 
-;; Complete audit form for a site with single save button
 ;; Complete audit form for a site with single save button
 (defui site-form
   [{:keys [tr lipas-id site]}]
   (let [has-privilege? (use-subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
         saving? (use-subscribe [:lipas.ui.ptv.subs/saving-audit?])
         site-audit-data (use-subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
-        summary-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :summary])
-        description-status (use-subscribe [:lipas.ui.ptv.subs/site-audit-field-status lipas-id :description])
-        org-id (use-subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
-
-        ;; Check if at least one field has status set for validation
-        any-status? (or summary-status description-status)]
+        audit-valid? (use-subscribe [:lipas.ui.ptv.subs/site-audit-data-valid? lipas-id])
+        org-id (use-subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])]
 
     ($ Paper {:sx #js{:p 3}}
        ($ Typography {:variant "h6"} (:name site))
@@ -153,7 +156,7 @@
                 :color "primary"
                 :fullWidth true
                 :sx #js{:mt 3}
-                :disabled (or saving? (not any-status?))
+                :disabled (or saving? (not audit-valid?))
                 :onClick (fn []
                            (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
                                          lipas-id

@@ -192,9 +192,7 @@
      {:require-privilege :ptv/audit
       :parameters {:body [:map
                           [:lipas-id #'sports-sites-schema/lipas-id]
-                          [:audit [:map {:closed true}
-                                   [:summary {:optional true} #'ptv-schema/audit-field]
-                                   [:description {:optional true} #'ptv-schema/audit-field]]]]}
+                          [:audit #'ptv-schema/audit-data]]}
       :handler
       (fn [req]
         (let [body (-> req :parameters :body)]
