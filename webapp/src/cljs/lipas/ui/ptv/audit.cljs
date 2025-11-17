@@ -12,6 +12,7 @@
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [re-frame.core :as rf]
@@ -83,6 +84,7 @@
        ($ TextField
           {:fullWidth true
            :multiline true
+           :InputProps #js{:inputComponent tf/patched-textarea}
            :rows 3
            :label (tr :ptv.audit/feedback)
            :placeholder (tr :ptv.audit/feedback-placeholder)
