@@ -1,0 +1,24 @@
+{:audited-sites "Granskade objekt",
+ :characters "tecken",
+ :completed-tab "Färdiga",
+ :description
+ "I denna vy kan du granska PTV-beskrivningar och sammanfattningar för idrottsplatser.",
+ :feedback "Feedback",
+ :feedback-placeholder
+ "Skriv eventuell feedback om textinnehållet här...",
+ :headline "Granskning av PTV-texter",
+ :last-audit "Senaste granskning",
+ :no-audited-sites "Inga granskade objekt",
+ :no-sites "Inga objekt",
+ :no-sites-to-audit "Inga objekt att granska",
+ :select-site "Välj idrottsplats att granska",
+ :select-site-label "Idrottsplats",
+ :select-site-placeholder "Skriv idrottsplatsens namn",
+ :select-site-prompt "Välj objekt från listan för att se dess uppgifter",
+ :sites-stats
+ "Totalt %1$s idrottsplatser, varav %2$s granskade och %3$s ogranskade",
+ :sites-to-audit "Objekt att granska",
+ :status "Status",
+ :tab-label "Granskning",
+ :todo-tab "Väntande",
+ :validation-failed "Validering misslyckades"}
