@@ -72,7 +72,8 @@
                               :min 1800
                               :max (+ 10 utils/this-year)}])
 
-(def renovation-years [:sequential {:description "Years of major renovation of the sports facility"}
+(def renovation-years [:sequential {:description "Years of major renovation of the sports facility"
+                                    :distinct true}
                        [:int {:min 1800 :max (+ 10 utils/this-year)}]])
 
 (defn make-sports-site-schema

@@ -415,20 +415,18 @@
 
 (deftest get-sports-sites-by-type-code-test
   (let [user (tu/gen-user {:db? true :admin? true})
-        site (-> (tu/gen-sports-site)
-                 (assoc-in [:type :type-code] 3110)
+        site (-> (tu/gen-sports-site-with-type 3110)
                  (assoc :status "active"))
         _ (core/upsert-sports-site!* db user site)
         resp (app (-> (mock/request :get "/api/sports-sites/type/3110")
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
-    (is (m/validate sports-site-schema/sports-site body))))
+    (is (every? #(m/validate sports-site-schema/sports-site %) body))))
 
 (deftest get-sports-sites-by-type-code-localized-test
   (let [user (tu/gen-user {:db? true :admin? true})
-        site (-> (tu/gen-sports-site)
-                 (assoc-in [:type :type-code] 3110)
+        site (-> (tu/gen-sports-site-with-type 3110)
                  (assoc-in [:admin] "state")
                  (assoc :status "active"))
         _ (core/upsert-sports-site!* db user site)
@@ -463,7 +461,7 @@
 
 (deftest get-sports-site-history-test
   (let [user (tu/gen-user {:db? true :admin? true})
-        rev1 (-> (tu/gen-sports-site)
+        rev1 (-> (tu/gen-sports-site-with-type 3110)
                  (assoc :status "active"))
         rev2 (-> rev1
                  (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
@@ -476,7 +474,8 @@
                       (mock/content-type "application/json")))
         body (<-json (:body resp))]
     (is (= 200 (:status resp)))
-    (is (m/validate sports-site-schema/sports-site body))))
+    (is (sequential? body))
+    (is (every? #(m/validate sports-site-schema/sports-site %) body))))
 
 (deftest search-test
   (let [site (tu/gen-sports-site)
@@ -494,7 +493,9 @@
         sites (map :_source (-> body :hits :hits))]
     (is (= 200 (:status resp)))
     (is (some? (first (filter (comp #{lipas-id} :lipas-id) sites))))
-    (is (m/validate sports-site-schema/sports-site body))))
+    ;; Search response is an ES envelope, not a sports site.
+    ;; (is (m/validate sports-site-schema/sports-site body))
+    ))
 
 (deftest sports-sites-report-test
   (let [site (tu/gen-sports-site)

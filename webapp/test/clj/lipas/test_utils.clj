@@ -14,12 +14,15 @@
             [lipas.backend.system :as sy]
             [lipas.schema.core]
             [lipas.schema.sports-sites :as sports-site-schema]
+            [malli.core :as m]
             [malli.generator :as mg]
             [lipas.utils :as utils]
             [migratus.core :as migratus]
             [ring.mock.request :as mock])
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
+
+(declare gen-user)
 
 #_(defn gen-sports-site
   []
@@ -30,9 +33,70 @@
         (dissoc :ptv))
     (catch Throwable _t (gen-sports-site))))
 
+(defn fix-generated-site [site]
+  (cond-> site
+    (:renovation-years site) (update :renovation-years (fn [years]
+                                                         (->> years
+                                                              distinct
+                                                              (filter #(>= % 1900))
+                                                              vec)))
+    (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
+    (:www site) (update :www #(subs % 0 (min (count %) 200)))
+    (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))
+
 (defn gen-sports-site
   []
-  (mg/generate sports-site-schema/sports-site))
+  (fix-generated-site (mg/generate sports-site-schema/sports-site)))
+
+(defn gen-sports-site-with-type
+  [type-code]
+  (let [child-schemas (m/children sports-site-schema/sports-site)
+        entry (first (filter #(= (first %) type-code) child-schemas))
+        schema (last entry)]
+    (fix-generated-site (mg/generate schema))))
+
+(defn create-test-sites!
+  "Creates test sports sites with optional customizations.
+
+   Options:
+   - :count       - Number of sites to create (default: 3)
+   - :city-codes  - Vector of city codes to assign
+   - :type-codes  - Vector of type codes to assign
+   - :save?       - Save to database (default: true)
+   - :index?      - Index to Elasticsearch (default: true)
+   - :customize-fn - Function to customize each site
+
+   Returns vector of created sites.
+
+   Example:
+   (create-test-sites! db search
+                       :count 5
+                       :city-codes [91 49]
+                       :customize-fn #(assoc % :name \"Test Site\"))"
+  [db search & {:keys [count city-codes type-codes save? index? customize-fn]
+                :or {count 3 save? true index? true}}]
+  (let [admin (gen-user {:db? true :admin? true})
+        sites (for [i (range count)]
+                (let [base-site (if (and type-codes (seq type-codes))
+                                  (gen-sports-site-with-type (nth type-codes (mod i (clojure.core/count type-codes))))
+                                  (gen-sports-site))
+                      site (-> base-site
+                               (assoc :lipas-id (inc i))
+                               (cond->
+                                 city-codes
+                                 (assoc-in [:location :city :city-code]
+                                           (nth city-codes (mod i (clojure.core/count city-codes))))
+
+                                 customize-fn
+                                 customize-fn))]
+                  site))]
+    (when save?
+      (doseq [site sites]
+        (core/upsert-sports-site!* db admin site)))
+    (when index?
+      (doseq [site sites]
+        (core/index! search site :sync)))
+    sites))
 
 (def <-json
   (fn [response-body]

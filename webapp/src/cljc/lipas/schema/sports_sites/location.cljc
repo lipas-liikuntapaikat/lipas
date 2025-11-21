@@ -55,7 +55,7 @@
      [:map
       [:type [:enum "FeatureCollection"]]
       [:features
-       [:vector feature-schema]]]]]))
+       [:vector {:min 1} feature-schema]]]]]))
 
 (def line-string-feature-props
   [:map
