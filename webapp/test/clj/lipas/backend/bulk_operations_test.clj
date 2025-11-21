@@ -11,32 +11,11 @@
 
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  ;; Ensure database is properly initialized
-  (test-utils/ensure-test-database!)
-  ;; Initialize test system using test config (with _test database suffix)
-  (reset! test-system
-          (ig/init (config/->system-config test-utils/config))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
 ;;; Fixtures ;;;
 
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Clean all tables before each test
-    (test-utils/prune-db! test-utils/db)
-    (test-utils/prune-es!)
-    (f)))
+(let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;;; Helper Functions ;;;
 
@@ -49,35 +28,12 @@
 (defn test-search []
   (:lipas/search @test-system))
 
-(defn gen-admin-user []
-  (test-utils/gen-user {:db? true
-                        :admin? true
-                        :permissions {:roles [{:role "admin"}]}}))
 
-(defn gen-city-manager-user [city-code]
-  (test-utils/gen-user {:db? true
-                        :permissions {:roles [{:role "city-manager"
-                                               :city-code [city-code]}]}}))
-
-(defn gen-site-manager-user [lipas-id]
-  (test-utils/gen-user {:db? true
-                        :permissions {:roles [{:role "site-manager"
-                                               :lipas-id [lipas-id]}]}}))
-
-(defn gen-regular-user []
-  (test-utils/gen-user {:db? true
-                        :permissions {:roles [{:role "default"}]}}))
-
-(defn safe-parse-json [resp]
-  (try
-    (test-utils/<-json (:body resp))
-    (catch Exception _
-      nil)))
 
 (defn- create-test-sports-sites
   "Creates test sports sites in database and search index"
   []
-  (let [admin-user (gen-admin-user)
+  (let [admin-user (test-utils/gen-admin-user)
         timestamp (System/currentTimeMillis)
 
         ;; Generate base sites and customize them
@@ -123,7 +79,7 @@
 (deftest mass-update-success-admin-test
   (testing "Admin user can mass update contact info for multiple sites"
 
-    (let [admin-user (gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user)
           token (jwt/create-token admin-user)
           sites (create-test-sports-sites)
           lipas-ids (mapv :lipas-id sites)
@@ -140,7 +96,7 @@
                                (mock/content-type "application/json")
                                (mock/body (test-utils/->json payload))
                                (test-utils/token-header token)))
-          body (safe-parse-json resp)]
+          body (test-utils/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (some? body))
@@ -163,7 +119,7 @@
           tampere-sites (filter #(= 837 (get-in % [:location :city :city-code])) sites)
 
           ;; Create city manager for Helsinki (city-code 91)
-          helsinki-manager (gen-city-manager-user 91)
+          helsinki-manager (test-utils/gen-city-manager-user 91)
           token (jwt/create-token helsinki-manager)
 
           contact-updates {:email "helsinki@city.fi"}]
@@ -176,7 +132,7 @@
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json payload))
                                    (test-utils/token-header token)))
-              body (safe-parse-json resp)]
+              body (test-utils/safe-parse-json resp)]
 
           (is (= 200 (:status resp)))
           (is (= (count helsinki-lipas-ids) (:total-updated body)))))
@@ -213,7 +169,7 @@
           other-sites (rest sites)
 
           ;; Create site manager for one specific site
-          site-manager (gen-site-manager-user (:lipas-id target-site))
+          site-manager (test-utils/gen-site-manager-user (:lipas-id target-site))
           token (jwt/create-token site-manager)
 
           contact-updates {:email "site@manager.fi"}]
@@ -224,7 +180,7 @@
                                  (mock/content-type "application/json")
                                  (mock/body (test-utils/->json payload))
                                  (test-utils/token-header token)))
-            body (safe-parse-json resp)]
+            body (test-utils/safe-parse-json resp)]
 
         (is (= 200 (:status resp)))
         (is (= 1 (:total-updated body)))
@@ -244,7 +200,7 @@
 
 (deftest mass-update-empty-fields-test
   (testing "Mass update can clear fields by setting them to nil"
-    (let [admin-user (gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user)
           token (jwt/create-token admin-user)
           sites (create-test-sports-sites)
           target-site (first sites)
@@ -261,7 +217,7 @@
                                (mock/content-type "application/json")
                                (mock/body (test-utils/->json payload))
                                (test-utils/token-header token)))
-          body (safe-parse-json resp)]
+          body (test-utils/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (= 1 (:total-updated body)))
@@ -288,7 +244,7 @@
 
 (deftest mass-update-invalid-payload-test
   (testing "Mass update validates request payload"
-    (let [admin-user (gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user)
           token (jwt/create-token admin-user)]
 
       ;; Test with invalid lipas-ids (should be integers)
@@ -313,7 +269,7 @@
 
 (deftest get-editable-sites-admin-test
   (testing "Admin user can retrieve all sites"
-    (let [admin-user (gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user)
           token (jwt/create-token admin-user)
           _ (create-test-sports-sites)
 
@@ -321,7 +277,7 @@
           resp ((test-app) (-> (mock/request :get "/api/actions/get-editable-sports-sites")
                                (test-utils/token-header token)))
 
-          body (safe-parse-json resp)]
+          body (test-utils/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -345,14 +301,14 @@
   (testing "City manager can only retrieve sites in their city"
     (let [_ (create-test-sports-sites)
           ;; Create city manager for Helsinki (city-code 91)
-          helsinki-manager (gen-city-manager-user 91)
+          helsinki-manager (test-utils/gen-city-manager-user 91)
           token (jwt/create-token helsinki-manager)
 
           ;; Get editable sites
           resp ((test-app) (-> (mock/request :get "/api/actions/get-editable-sports-sites")
                                (test-utils/token-header token)))
 
-          body (safe-parse-json resp)]
+          body (test-utils/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -377,7 +333,7 @@
   (def xxxx *1)
   (test-utils/prune-es!)
   (test-utils/prune-db!)
-  (def admin (gen-admin-user))
+  (def admin (test-utils/gen-admin-user))
   (actions/get-editable-sites (test-search) admin)
   (require '[lipas.backend.search :as search])
   (search/search (:client (test-search))

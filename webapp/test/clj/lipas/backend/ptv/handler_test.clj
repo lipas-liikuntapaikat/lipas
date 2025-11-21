@@ -3,19 +3,20 @@
             [clojure.test :refer [deftest is use-fixtures testing]]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
-            [lipas.test-utils :refer [<-json ->json app db search] :as tu]
+            [lipas.test-utils :as tu]
             [ring.mock.request :as mock]))
+
+(defonce test-system (atom nil))
 
 ;;; Fixtures ;;;
 
-(use-fixtures :once (fn [f]
-                      (tu/init-db!)
-                      (f)))
+(let [{:keys [once each]} (tu/full-system-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
-(use-fixtures :each (fn [f]
-                      (tu/prune-db!)
-                      (tu/prune-es!)
-                      (f)))
+(defn test-db [] (:lipas/db @test-system))
+(defn test-search [] (:lipas/search @test-system))
+(defn test-app [req] ((:lipas/app @test-system) req))
 
 ;;; Helper Functions ;;;
 
@@ -46,54 +47,30 @@
                                   :en "Test description"}
                     :service-channel-ids []
                     :service-ids []}}]
-    (core/upsert-sports-site!* db user site)))
+    (core/upsert-sports-site!* (test-db) user site)))
 
-(defn- gen-ptv-audit-user
-  "Generates a user with PTV audit privileges"
-  []
-  (let [user (-> (tu/gen-user {:db? false :admin? false})
-                 (assoc :permissions {:roles [{:role :ptv-auditor}]}))]
-    (core/add-user! db user)
-    (core/get-user db (:email user))))
 
-(defn- gen-admin-user
-  "Generates an admin user who can perform PTV audits"
-  []
-  (tu/gen-user {:db? true :admin? true}))
-
-(defn- safe-parse-json
-  "Safely parses JSON response body, handling nil responses"
-  [response]
-  (when-let [body (:body response)]
-    (cond
-      (string? body) (cheshire.core/parse-string body true)
-      (map? body) body ; Already parsed
-      (instance? java.io.InputStream body)
-      (let [body-str (slurp body)]
-        (when-not (empty? body-str)
-          (cheshire.core/parse-string body-str true)))
-      :else body)))
 
 ;;; Tests ;;;
 
 (deftest save-ptv-audit-success-test
   (testing "Successfully saves PTV audit with valid data"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
           audit-data {:status "approved"
                       :feedback "Site information looks good"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary audit-data
                                                     :description audit-data}}))
                         (tu/token-header token)))
 
-          body (safe-parse-json resp)]
+          body (tu/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (some? body))
@@ -105,25 +82,25 @@
 
 (deftest save-ptv-audit-updates-site-test
   (testing "PTV audit is properly saved to sports site and indexed"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
           audit-data {:status "approved"
                       :feedback "Comprehensive review completed"}
 
-          _ (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          _ (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                      (mock/content-type "application/json")
-                     (mock/body (->json {:lipas-id lipas-id
+                     (mock/body (tu/->json {:lipas-id lipas-id
                                          :audit {:summary audit-data}}))
                      (tu/token-header token)))
 
           ;; Verify the site was updated in database
-          updated-site (core/get-sports-site db lipas-id)
+          updated-site (core/get-sports-site (test-db) lipas-id)
 
           ;; Verify the site was updated in Elasticsearch
-          es-site (core/get-sports-site2 search lipas-id)]
+          es-site (core/get-sports-site2 (test-search) lipas-id)]
 
       (is (contains? updated-site :ptv))
       (is (contains? (:ptv updated-site) :audit))
@@ -138,15 +115,15 @@
 (deftest save-ptv-audit-requires-privilege-test
   (testing "Endpoint requires :ptv/audit privilege"
     (let [regular-user (tu/gen-user {:db? true :admin? false})
-          admin-user (gen-admin-user)
+          admin-user (tu/gen-admin-user)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token regular-user)
           audit-data {:status "approved" :feedback "Test"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary audit-data}}))
                         (tu/token-header token)))]
 
@@ -154,37 +131,37 @@
 
 (deftest save-ptv-audit-nonexistent-site-test
   (testing "Returns 404 for non-existent site"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
           nonexistent-id 999999
           audit-data {:status "approved" :feedback "Test"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id nonexistent-id
+                        (mock/body (tu/->json {:lipas-id nonexistent-id
                                             :audit {:summary audit-data}}))
                         (tu/token-header token)))]
       (is (= 404 (:status resp))))))
 
 (deftest save-ptv-audit-empty-audit-data-test
   (testing "Handles empty audit data gracefully"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {}}))
                         (tu/token-header token)))]
       (is (= 200 (:status resp))))))
 
 (deftest save-ptv-audit-schema-compliant-test
   (testing "Saves audit data that complies with closed schema"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
@@ -193,14 +170,14 @@
           valid-description {:status "approved"
                              :feedback "Description is comprehensive and accurate"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary valid-summary
                                                     :description valid-description}}))
                         (tu/token-header token)))
 
-          body (safe-parse-json resp)]
+          body (tu/safe-parse-json resp)]
 
       (is (= 200 (:status resp)))
       (is (= valid-summary (:summary body)))
@@ -210,8 +187,8 @@
 
 (deftest save-ptv-audit-invalid-extra-fields-test
   (testing "Strips extra fields from audit data due to closed schema"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
@@ -219,13 +196,13 @@
                             :feedback "Valid feedback"
                             :extra-field "This should be stripped"} ; Extra field not in schema
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary audit-with-extra}}))
                         (tu/token-header token)))
 
-          body (safe-parse-json resp)]
+          body (tu/safe-parse-json resp)]
 
       ;; Should succeed but strip the extra field
       (is (= 200 (:status resp)))
@@ -240,17 +217,17 @@
 
 (deftest save-ptv-audit-invalid-status-test
   (testing "Rejects audit data with invalid status values"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
           invalid-audit {:status "invalid-status" ; Not in enum
                          :feedback "Valid feedback"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary invalid-audit}}))
                         (tu/token-header token)))]
 
@@ -258,17 +235,17 @@
 
 (deftest save-ptv-audit-feedback-too-long-test
   (testing "Rejects audit data with feedback exceeding max length"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
           invalid-audit {:status "approved"
                          :feedback (apply str (repeat 1001 "x"))} ; Too long (>1000 chars)
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary invalid-audit}}))
                         (tu/token-header token)))]
 
@@ -276,31 +253,31 @@
 
 (deftest save-ptv-audit-overwrites-previous-test
   (testing "New audit data overwrites previous audit data"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
           first-audit {:status "approved" :feedback "First review"}
 
           ;; Save first audit
-          _ (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          _ (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                      (mock/content-type "application/json")
-                     (mock/body (->json {:lipas-id lipas-id
+                     (mock/body (tu/->json {:lipas-id lipas-id
                                          :audit {:summary first-audit}}))
                      (tu/token-header token)))
 
           second-audit {:status "changes-requested" :feedback "Second review"}
 
           ;; Save second audit
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary second-audit}}))
                         (tu/token-header token)))
 
-          body (safe-parse-json resp)
-          updated-site (core/get-sports-site db lipas-id)]
+          body (tu/safe-parse-json resp)
+          updated-site (core/get-sports-site (test-db) lipas-id)]
 
       (is (= 200 (:status resp)))
       (is (= second-audit (:summary body)))
@@ -310,13 +287,13 @@
 
 (deftest save-ptv-audit-invalid-lipas-id-test
   (testing "Validates lipas-id parameter"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
           audit-data {:status "approved" :feedback "Test"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id "not-a-number" ; Invalid
+                        (mock/body (tu/->json {:lipas-id "not-a-number" ; Invalid
                                             :audit {:summary audit-data}}))
                         (tu/token-header token)))]
 
@@ -324,15 +301,15 @@
 
 (deftest save-ptv-audit-invalid-audit-schema-test
   (testing "Validates audit parameter against schema"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit "not-a-map"})) ; Invalid
                         (tu/token-header token)))]
 
@@ -340,22 +317,22 @@
 
 (deftest save-ptv-audit-no-auth-token-test
   (testing "Requires authentication token"
-    (let [admin-user (gen-admin-user)
+    (let [admin-user (tu/gen-admin-user)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           audit-data {:status "approved" :feedback "Test"}
 
-          resp (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:lipas-id lipas-id
+                        (mock/body (tu/->json {:lipas-id lipas-id
                                             :audit {:summary audit-data}}))))]
 
       (is (= 401 (:status resp))))))
 
 (deftest save-ptv-audit-updates-event-date-test
   (testing "Updates the sports site event-date when audit is saved"
-    (let [admin-user (gen-admin-user)
-          ptv-auditor (gen-ptv-audit-user)
+    (let [admin-user (tu/gen-admin-user)
+          ptv-auditor (tu/gen-ptv-auditor)
           site (create-test-site-with-ptv admin-user)
           lipas-id (:lipas-id site)
           original-date (:event-date site)
@@ -365,13 +342,13 @@
           ;; Add small delay to ensure timestamp difference
           _ (Thread/sleep 100)
 
-          _ (app (-> (mock/request :post "/api/actions/save-ptv-audit")
+          _ (test-app (-> (mock/request :post "/api/actions/save-ptv-audit")
                      (mock/content-type "application/json")
-                     (mock/body (->json {:lipas-id lipas-id
+                     (mock/body (tu/->json {:lipas-id lipas-id
                                          :audit {:summary audit-data}}))
                      (tu/token-header token)))
 
-          updated-site (core/get-sports-site db lipas-id)]
+          updated-site (core/get-sports-site (test-db) lipas-id)]
 
       (is (not= original-date (:event-date updated-site))))))
 
@@ -379,12 +356,12 @@
 
 (deftest ptv-audit-can-access-get-ptv-integration-candidates-test
   (testing "Users with :ptv/audit privilege can access get-ptv-integration-candidates"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/get-ptv-integration-candidates")
+          resp (test-app (-> (mock/request :post "/api/actions/get-ptv-integration-candidates")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:city-codes [91]
+                        (mock/body (tu/->json {:city-codes [91]
                                             :owners ["private" "municipal" "other"]}))
                         (tu/token-header token)))]
 
@@ -393,12 +370,12 @@
 
 (deftest ptv-audit-can-access-fetch-ptv-org-test
   (testing "Users with :ptv/audit privilege can access fetch-ptv-org"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-org")
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-org")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:org-id "test-org-id"}))
+                        (mock/body (tu/->json {:org-id "test-org-id"}))
                         (tu/token-header token)))]
 
       (is (not= 403 (:status resp))
@@ -406,12 +383,12 @@
 
 (deftest ptv-audit-can-access-fetch-ptv-services-test
   (testing "Users with :ptv/audit privilege can access fetch-ptv-services"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-services")
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-services")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:org-id "test-org-id"}))
+                        (mock/body (tu/->json {:org-id "test-org-id"}))
                         (tu/token-header token)))]
 
       (is (not= 403 (:status resp))
@@ -419,12 +396,12 @@
 
 (deftest ptv-audit-can-access-fetch-ptv-service-channels-test
   (testing "Users with :ptv/audit privilege can access fetch-ptv-service-channels"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-service-channels")
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-channels")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:org-id "test-org-id"}))
+                        (mock/body (tu/->json {:org-id "test-org-id"}))
                         (tu/token-header token)))]
 
       (is (not= 403 (:status resp))
@@ -432,12 +409,12 @@
 
 (deftest ptv-audit-can-access-fetch-ptv-service-collections-test
   (testing "Users with :ptv/audit privilege can access fetch-ptv-service-collections"
-    (let [ptv-auditor (gen-ptv-audit-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
           token (jwt/create-token ptv-auditor)
 
-          resp (app (-> (mock/request :post "/api/actions/fetch-ptv-service-collections")
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-collections")
                         (mock/content-type "application/json")
-                        (mock/body (->json {:org-id "test-org-id"}))
+                        (mock/body (tu/->json {:org-id "test-org-id"}))
                         (tu/token-header token)))]
 
       (is (not= 403 (:status resp))
@@ -454,12 +431,12 @@
                      "/api/actions/fetch-ptv-service-channels"
                      "/api/actions/fetch-ptv-service-collections"]
 
-          test-body (->json {:org-id "test-org-id"
+          test-body (tu/->json {:org-id "test-org-id"
                              :city-codes [91]
                              :owners ["private"]})]
 
       (doseq [endpoint endpoints]
-        (let [resp (app (-> (mock/request :post endpoint)
+        (let [resp (test-app (-> (mock/request :post endpoint)
                             (mock/content-type "application/json")
                             (mock/body test-body)
                             (tu/token-header token)))]
@@ -468,15 +445,15 @@
 
 (deftest ptv-audit-cannot-modify-ptv-data-test
   (testing "Users with :ptv/audit privilege cannot modify PTV data (write operations)"
-    (let [ptv-auditor (gen-ptv-audit-user)
-          admin-user (gen-admin-user)
+    (let [ptv-auditor (tu/gen-ptv-auditor)
+          admin-user (tu/gen-admin-user)
           site (create-test-site-with-ptv admin-user)
           token (jwt/create-token ptv-auditor)
 
           ;; Test save-ptv-service (should require :ptv/manage)
-          save-service-resp (app (-> (mock/request :post "/api/actions/save-ptv-service")
+          save-service-resp (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
                                      (mock/content-type "application/json")
-                                     (mock/body (->json {:org-id "test-org-id"
+                                     (mock/body (tu/->json {:org-id "test-org-id"
                                                          :city-codes [91]
                                                          :source-id "test-source"
                                                          :sub-category-id 1210
@@ -487,9 +464,9 @@
 
           ;; Test save-ptv-service-location (should require :ptv/manage)
           ;; Provide complete schema-compliant data
-          save-location-resp (app (-> (mock/request :post "/api/actions/save-ptv-service-location")
+          save-location-resp (test-app (-> (mock/request :post "/api/actions/save-ptv-service-location")
                                       (mock/content-type "application/json")
-                                      (mock/body (->json {:lipas-id (:lipas-id site)
+                                      (mock/body (tu/->json {:lipas-id (:lipas-id site)
                                                           :org-id "test-org-id"
                                                           :ptv {:org-id "test-org-id"
                                                                 :sync-enabled true
@@ -501,9 +478,9 @@
 
           ;; Test save-ptv-meta (should require :ptv/manage)
           ;; Provide complete spec-compliant data
-          save-meta-resp (app (-> (mock/request :post "/api/actions/save-ptv-meta")
+          save-meta-resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                                   (mock/content-type "application/json")
-                                  (mock/body (->json {(:lipas-id site) {:org-id "test-org-id"
+                                  (mock/body (tu/->json {(:lipas-id site) {:org-id "test-org-id"
                                                                         :sync-enabled true
                                                                         :service-channel-ids []
                                                                         :service-ids []

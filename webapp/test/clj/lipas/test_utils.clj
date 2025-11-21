@@ -18,7 +18,9 @@
             [malli.generator :as mg]
             [lipas.utils :as utils]
             [migratus.core :as migratus]
-            [ring.mock.request :as mock])
+            [ring.mock.request :as mock]
+            [integrant.core :as ig]
+            [clojure.test :as t])
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
@@ -341,7 +343,7 @@
 (defn gen-user
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
-  ([{:keys [db? admin? status permissions]
+  ([{:keys [db? admin? status permissions db-component]
      :or {admin? false status "active"}}]
    (let [user (-> (gen/generate (s/gen :lipas/user))
                   (assoc :password (str (gensym)) :status status)
@@ -356,9 +358,9 @@
                                                                          (into [] (remove (fn [x] (= :admin (:role x))) roles))))
                                            admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
-       (do
-         (core/add-user! db user)
-         (assoc user :id (:id (core/get-user db (:email user)))))
+       (let [db-conn (or db-component db)]
+         (core/add-user! db-conn user)
+         (assoc user :id (:id (core/get-user db-conn (:email user)))))
        user))))
 
 (defn gen-loi! []
@@ -368,3 +370,147 @@
 
 (comment
   (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site)))
+
+;; ========================================
+;; User Generators
+;; ========================================
+
+(defn gen-admin-user
+  "Generate a user with admin permissions, optionally saved to DB"
+  [& {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? true})))
+
+(defn gen-regular-user
+  "Generate a regular user with default permissions"
+  [& {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? false})))
+
+(defn gen-city-manager-user
+  "Generate a city manager user for specific city"
+  [city-code & {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db?
+                         :permissions {:roles [{:role "city-manager"
+                                                :city-code [city-code]}]}})))
+
+(defn gen-site-manager-user
+  "Generate a site manager user for specific sports site"
+  [lipas-id & {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db?
+                         :permissions {:roles [{:role "site-manager"
+                                                :lipas-id [lipas-id]}]}})))
+
+(defn gen-org-admin-user
+  "Generate an organization admin for specific org"
+  [org-id & {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db?
+                         :permissions {:roles [{:role "org-admin"
+                                                :org-id [(str org-id)]}]}})))
+
+(defn gen-ptv-auditor
+  "Generate a PTV auditor user"
+  [& {:keys [db?] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db?
+                         :permissions {:roles [{:role :ptv-auditor}]}})))
+
+;; ========================================
+;; Response Helpers
+;; ========================================
+
+(defn safe-parse-json
+  "Safely parse JSON response body, returning nil on error"
+  [resp]
+  (try
+    (<-json (:body resp))
+    (catch Exception _ nil)))
+
+(defn assert-response
+  "Assert response status and optionally validate body"
+  [resp expected-status & {:keys [message validator]}]
+  (t/is (= expected-status (:status resp)) (or message (str "Response status should be " expected-status)))
+  (when validator
+    (t/is (validator (safe-parse-json resp)))))
+
+;; ========================================
+;; System Setup
+;; ========================================
+
+(defn with-test-system!
+  "Setup and teardown full Integrant test system.
+   Calls f with the system atom as argument.
+
+   Usage:
+   (with-test-system!
+     (fn [system]
+       (let [db (:lipas/db @system)]
+         ;; ... tests ...
+         )))"
+  [f]
+  (let [test-system (atom nil)]
+    (try
+      (ensure-test-database!)
+      (reset! test-system
+              (ig/init (config/->system-config config)))
+      (f test-system)
+      (finally
+        (when @test-system
+          (ig/halt! @test-system))))))
+
+;; ========================================
+;; Standard Fixture Patterns
+;; ========================================
+
+(defn db-fixture
+  "Initializes test database once, prunes between tests.
+
+   For tests that only need database access.
+
+   Usage:
+   (let [{:keys [once each]} (test-utils/db-fixture)]
+     (use-fixtures :once once)
+     (use-fixtures :each each))"
+  []
+  {:once (fn [f] (init-db!) (f))
+   :each (fn [f] (prune-db!) (f))})
+
+(defn db-and-search-fixture
+  "Initializes DB and Elasticsearch, prunes both between tests.
+
+   For tests that need both database and search.
+
+   Usage:
+   (let [{:keys [once each]} (test-utils/db-and-search-fixture)]
+     (use-fixtures :once once)
+     (use-fixtures :each each))"
+  []
+  {:once (fn [f] (init-db!) (f))
+   :each (fn [f] (prune-db!) (prune-es!) (f))})
+
+(defn full-system-fixture
+  "Starts complete Integrant system, prunes between tests.
+
+   For integration tests that need full system components.
+   Returns a map with :system atom and :once/:each fixtures.
+
+   Usage:
+   (def test-system (atom nil))
+   (let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+     (use-fixtures :once once)
+     (use-fixtures :each each))
+
+   ;; Access components:
+   (def db (:lipas/db @test-system))"
+  [system-atom]
+  {:once (fn [f]
+           (ensure-test-database!)
+           (reset! system-atom (ig/init (config/->system-config config)))
+           (try (f)
+                (finally
+                  (when @system-atom
+                    (ig/halt! @system-atom)
+                    (reset! system-atom nil)))))
+   :each (fn [f]
+           (let [db (:lipas/db @system-atom)
+                 search (:lipas/search @system-atom)]
+             (prune-db! db)
+             (when search (prune-es! search))
+             (f)))})

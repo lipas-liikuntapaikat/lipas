@@ -167,8 +167,9 @@
       ["/sports-sites/history/:lipas-id"
        {:get
         {:no-doc false
+         :coercion reitit.coercion.malli/coercion
          :parameters {:path {:lipas-id int?}}
-         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
+         :responses {200 {:body [:sequential sports-site-schema/sports-site-compat]}}
          :handler
          (fn [{{{:keys [lipas-id]} :path} :parameters}]
            {:status 200

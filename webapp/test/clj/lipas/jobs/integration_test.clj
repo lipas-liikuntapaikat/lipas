@@ -20,30 +20,9 @@
 ;; Test system setup
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  ;; Ensure database is properly initialized with current migrations
-  (test-utils/ensure-test-database!)
-
-  ;; Initialize the test system
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Clean all tables before each test (including jobs table)
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;; Malli schemas for test validation
 
