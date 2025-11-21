@@ -37,7 +37,9 @@
 
 (rf/reg-event-fx ::select-org
                  (fn [{:keys [db]} [_ lipas-org]]
-                   {:db (assoc-in db [:ptv :selected-org] lipas-org)
+                   {:db (-> db
+                            (assoc-in [:ptv :selected-org] lipas-org)
+                            (assoc-in [:ptv :audit :notification-sent?] false))
                     :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
@@ -1002,3 +1004,44 @@
 (rf/reg-event-db ::select-audit-tab
                  (fn [db [_ tab]]
                    (assoc-in db [:ptv :audit :selected-tab] tab)))
+
+(rf/reg-event-fx ::send-audit-notification
+                 (fn [{:keys [db]} [_ org-id stats]]
+                   (let [token (-> db :user :login :token)
+                         ;; Ensure org-id is a UUID
+                         org-id (if (string? org-id) (uuid org-id) org-id)]
+                     {:db (assoc-in db [:ptv :audit :sending-notification?] true)
+                      :fx [[:http-xhrio
+                            {:method :post
+                             :headers {:Authorization (str "Token " token)}
+                             :uri (str (:backend-url db) "/actions/send-audit-notification")
+                             :params {:org-id org-id
+                                      :stats stats}
+                             :format (ajax/transit-request-format)
+                             :response-format (ajax/transit-response-format)
+                             :on-success [::send-notification-success]
+                             :on-failure [::send-notification-failure]}]]})))
+
+(rf/reg-event-fx ::send-notification-success
+                 (fn [{:keys [db]} [_ result]]
+                   (let [sent-count (:sent result)
+                         tr (:translator db)
+                         message (if (pos? sent-count)
+                                   (str/replace (tr :ptv.audit/notification-sent-success) "%1$s" (str sent-count))
+                                   (tr :ptv.audit/no-recipients-found)) ; Assuming this key already exists or will be added
+                         notification {:message message
+                                       :success? (pos? sent-count)}]
+                     {:db (-> db
+                              (assoc-in [:ptv :audit :sending-notification?] false)
+                              (cond-> (pos? sent-count) (assoc-in [:ptv :audit :notification-sent?] true)))
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::send-notification-failure
+                 (fn [{:keys [db]} [_ error]]
+                   (let [tr (:translator db)
+                         notification {:message (tr :notifications/save-failed)
+                                       :success? false}]
+                     {:db (-> db
+                              (assoc-in [:ptv :audit :sending-notification?] false)
+                              (assoc-in [:ptv :errors :send-notification] error))
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))

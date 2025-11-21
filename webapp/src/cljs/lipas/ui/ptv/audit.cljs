@@ -230,12 +230,18 @@
 (defui main-view
   [{:keys [tr]}]
   (let [org-id (use-subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
+        lipas-org-id (use-subscribe [:lipas.ui.ptv.subs/selected-org-id])
         selected-tab (use-subscribe [:lipas.ui.ptv.subs/selected-audit-tab])
         selected-site (use-subscribe [:lipas.ui.ptv.subs/selected-audit-site])
 
         ;; Get filtered sites based on the selected tab
         todo-sites (use-subscribe [:lipas.ui.ptv.subs/auditable-sites org-id :todo])
         completed-sites (use-subscribe [:lipas.ui.ptv.subs/auditable-sites org-id :completed])
+
+        ;; Notification state and stats
+        sending? (use-subscribe [:lipas.ui.ptv.subs/sending-notification?])
+        stats (use-subscribe [:lipas.ui.ptv.subs/audit-stats org-id])
+        completed-count (:total-sites stats)
 
         ;; Display sites based on selected tab
         display-sites (case selected-tab
@@ -262,6 +268,20 @@
              ($ Tab
                 {:value "completed"
                  :label (str (tr :ptv.audit/completed-tab) " (" (count completed-sites) ")")})))
+
+       ;; Send notification button
+       ($ Box {:sx #js {:display "flex" :justifyContent "flex-end" :mb 2}}
+          (let [notification-sent? (use-subscribe [:lipas.ui.ptv.subs/notification-sent?])]
+            ($ Button
+               {:variant "contained"
+                :color "primary"
+                :disabled (or sending? (zero? completed-count) notification-sent?)
+                :onClick #(rf/dispatch [:lipas.ui.ptv.events/send-audit-notification lipas-org-id stats])}
+               (cond
+                 sending? (tr :ptv.audit/sending-notification)
+                 notification-sent? (tr :ptv.audit/notification-sent)
+                 :else (str (tr :ptv.audit/send-notification)
+                            " (" completed-count " " (tr :ptv.audit/audited) ")")))))
 
        ;; Split view: site list and audit panel
        ($ Box

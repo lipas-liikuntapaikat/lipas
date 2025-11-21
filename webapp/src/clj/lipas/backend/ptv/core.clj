@@ -3,7 +3,9 @@
             [clojure.set :as set]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
+            [lipas.backend.email :as email]
             [lipas.backend.gis :as gis]
+            [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.ai :as ai]
             [lipas.backend.ptv.integration :as ptv]
             [lipas.backend.search :as search]
@@ -351,6 +353,47 @@
 
         ;; Return the updated audit data
         (get-in updated-site [:ptv :audit])))))
+
+(defn get-ptv-managers
+  "Returns users who have :ptv/manage privilege for any of the organization's cities."
+  [db org-id]
+  (let [org (backend-org/get-org db org-id)
+        org-city-codes (-> org :ptv-data :city-codes set)
+        org-users (backend-org/get-org-users db org-id)]
+    (filter (fn [user]
+              (some (fn [role]
+                      (and (= :ptv-manager (keyword (:role role)))
+                           (seq (set/intersection org-city-codes (set (:city-code role))))))
+                    (-> user :permissions :roles)))
+            org-users)))
+
+(defn send-audit-notification!
+  "Send email notification to all PTV managers in the organization.
+   Stats are calculated by frontend and passed here."
+  [db emailer org-id stats]
+  (when-let [org (backend-org/get-org db org-id)]
+    (let [managers (get-ptv-managers db org-id)]
+      (if (seq managers)
+        (do
+          (doseq [manager managers]
+            (email/send-ptv-audit-complete-email!
+              emailer
+              (:email manager)
+              {:org-name (:name org)
+               :site-count (str (:total-sites stats))
+               :summary-approved (str (get-in stats [:summary :approved]))
+               :summary-changes (str (get-in stats [:summary :changes-requested]))
+               :desc-approved (str (get-in stats [:description :approved]))
+               :desc-changes (str (get-in stats [:description :changes-requested]))}))
+
+          {:sent (count managers)
+           :recipients (map :email managers)})
+
+        (do
+          (log/warnf "No PTV managers found for organization %s" org-id)
+          {:sent 0
+           :recipients []
+           :warning "No PTV managers found"})))))
 
 (comment
   (generate-ptv-service-descriptions

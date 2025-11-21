@@ -11,6 +11,7 @@ env:
   ADMIN_PASSWORD: ${{ vars.ADMIN_PASSWORD }}
   SMTP_HOST: ${{ vars.SMTP_HOST }}
   SMTP_USER: ${{ vars.SMTP_USER }}
+  SMTP_PORT: ${{ vars.SMTP_PORT }}
   SMTP_FROM: ${{ vars.SMTP_FROM }}
   SMTP_PASS: ${{ vars.SMTP_PASS }}
   SEARCH_HOST: ${{ vars.SEARCH_HOST }}

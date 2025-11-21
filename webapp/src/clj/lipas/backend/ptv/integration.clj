@@ -29,7 +29,10 @@
     {:username "API17@testi.fi"
      :password "KWukVNxPa7@"}
 
-    nil))
+    ;; Default fallback to Org 9 (Liminka) to prevent 500 errors
+    ;; when testing with other organizations.
+    {:username "API15@testi.fi"
+     :password "BadDPphJx4@"}))
 
 (defn make-url [ptv & parts]
   (apply str (:api-url ptv) parts))

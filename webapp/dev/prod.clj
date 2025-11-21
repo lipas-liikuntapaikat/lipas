@@ -15,6 +15,68 @@
   ;; => 2023 is the latest as of 9/2025
   )
 
+;; Fixing invalid activities
+(comment
+  (require '[lipas.schema.sports-sites :as ss-schema])
+  (require '[lipas.schema.sports-sites.location :as loc-schema])
+  (require '[lipas.schema.common :as common-schema])
+  (require '[lipas.data.types :as types])
+
+  (def robot (be/get-user (:lipas/db system) "robot@lipas.fi"))
+
+  (def type-codes [4402 4440 4412 4411 4401 4403 4404 4405 4406])
+  (def type-codes (keys types/all))
+  (def data (reduce (fn [m k]
+                      (assoc m k (be/get-sports-sites-by-type-code (:lipas/db system) k)))
+                    {}
+                    type-codes))
+
+  ;; ALL the invalid ones
+  (def invalid2 (reduce (fn [coll k]
+                      (let [sites (be/get-sports-sites-by-type-code (:lipas/db system) k)]
+                        (into coll (filter (complement (fn [x] (m/validate ss-schema/sports-site x))))
+                              sites)))
+                    []
+                    type-codes))
+
+  (count invalid2)
+  (map #(me/humanize (m/explain ss-schema/sports-site %)) invalid2)
+  (map :event-date invalid2)
+  (map :lipas-id invalid2)
+  (map #(-> % :type :type-code) invalid2)
+  (map #(-> % :location  :geometries :features) invalid2)
+
+  (require '[lipas.utils :as utils])
+
+  (doseq [m invalid2]
+    (println "saving" (:lipas-id m))
+    (be/save-sports-site! (:lipas/db system) (:lipas/search system) nil robot
+                          (assoc m :status "incorrect-data")))
+
+
+  (def invalid
+    (->> data vals (mapcat identity)
+         (filter (complement (fn [x] (m/validate ss-schema/sports-site x))))))
+
+  (first invalid)
+  (m/explain loc-schema/point-location (-> invalid first :location))
+  (me/humanize (m/explain common-schema/coordinates (-> invalid first :location :geometries :features first :geometry :coordinates)))
+  (->> invalid first :type :type-code)
+  (->> invalid first :location :geometries)
+  (count invalid)
+  invalid
+  (require '[malli.error :as me])
+  (me/humanize (m/explain ss-schema/sports-site (first invalid)))
+  (->> invalid first :lipas-id)
+
+  (def site (be/get-sports-site (:lipas/db system) 614506))
+  (def site (be/get-sports-site (:lipas/db system) 617582))
+  (me/humanize (m/explain ss-schema/sports-site site))
+
+  (be/index! (:lipas/search system) site)
+
+  )
+
 ;; Iisalmi manual updates
 (comment
   (require '[clojure.data.csv :as csv])

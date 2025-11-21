@@ -20,8 +20,9 @@
     :dev (= "dev" (env! :environment))}
    :emailer
    {:host (env! :smtp-host)
-    :user (env! :smtp-user)
-    :pass (env! :smtp-pass)
+    :port (some-> (e/env :smtp-port) not-empty Integer/parseInt)
+    :user (e/env :smtp-user) ; Make user/pass optional for local testing
+    :pass (e/env :smtp-pass) ; Make user/pass optional for local testing
     :from (env! :smtp-from)}
    :search
    {:hosts [(env! :search-host)] ; Notice vector!

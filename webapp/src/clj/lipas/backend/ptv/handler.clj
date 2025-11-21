@@ -23,7 +23,7 @@
                       city-code)))
             (get-in user [:permissions :roles])))))
 
-(defn routes [{:keys [db search ptv] :as _ctx}]
+(defn routes [{:keys [db search ptv emailer] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
     #_#_:middleware [mw/token-auth mw/auth]
@@ -198,4 +198,22 @@
         (let [body (-> req :parameters :body)]
           (if-let [result (ptv-core/save-ptv-audit db search (:identity req) body)]
             {:status 200 :body result}
-            {:status 404 :body {:error "Sports site not found"}})))}}]])
+            {:status 404 :body {:error "Sports site not found"}})))}}]
+
+   ["/actions/send-audit-notification"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map
+                          [:org-id :uuid]
+                          [:stats [:map
+                                   [:total-sites :int]
+                                   [:summary [:map [:approved :int] [:changes-requested :int]]]
+                                   [:description [:map [:approved :int] [:changes-requested :int]]]]]]}
+      :handler
+      (fn [req]
+        (let [params (-> req :parameters :body)
+              org-id (:org-id params)
+              stats (:stats params)
+              result (ptv-core/send-audit-notification! db emailer org-id stats)]
+          {:status 200 :body result}))}}]])
+

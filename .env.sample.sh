@@ -10,10 +10,11 @@ export AUTH_KEY=***FILL_THIS***
 export ADMIN_PASSWORD=***FILL_THIS***
 
 # Emailer
-export SMTP_HOST=***FILL_THIS***
-export SMTP_USER=***FILL_THIS***
-export SMTP_PASS=***FILL_THIS***
-export SMTP_FROM=lipas.dev@gmail.com
+export SMTP_HOST=localhost
+export SMTP_PORT=1025 # mailhog
+export SMTP_USER=
+export SMTP_PASS=
+export SMTP_FROM=dev@lipas.fi
 
 # Data migrations
 export ICE_STADIUMS_CSV_URL="https://www.dropbox.com/s/1693i83sn5dz5zy/2018-07-23-jaahalli-utf-8.csv?dl=1"

@@ -1,0 +1,30 @@
+Hyvä LIPAS-käyttäjä!
+
+PTV-tekstien auditointi organisaatiollenne {{org-name}} on valmistunut.
+
+Auditoija: DVV (Digi- ja väestötietovirasto)
+Auditoitujen kohteiden määrä: {{site-count}}
+
+Auditoinnin yhteenveto:
+
+Tiivistelmä (Summary):
+  - Hyväksytty: {{summary-approved}} kpl
+  - Muutospyynnöt: {{summary-changes}} kpl
+
+Kuvaus (Description):
+  - Hyväksytty: {{desc-approved}} kpl
+  - Muutospyynnöt: {{desc-changes}} kpl
+
+Voit tarkastella auditoituja kohteita ja tehdä tarvittavat muutokset osoitteessa:
+https://lipas.fi
+
+Navigoi LIPAS-järjestelmässä PTV-näkymän liikuntapaikat-välilehdelle tarkastellaksesi auditoinnin tuloksia ja tehdaksesi tarvittavat korjaukset.
+
+Jos sinulla on kysyttävää, ota yhteyttä.
+
+Terveisin,
+Lipas-järjestelmä
+
+Jyväskylän yliopisto:
+Tapani Laakso, LIPAS-projekti, puh. 0400 247 980
+s-posti: lipasinfo@jyu.fi

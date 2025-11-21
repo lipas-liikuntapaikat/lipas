@@ -81,11 +81,16 @@
   (let [status (shadow/watch-compile! :app)
         worker (shadow.cljs.devtools.api/get-worker :app)
         build-state (-> worker :state-ref deref :build-state)]
+    (tap> build-state)
     {:build-exit-code status
      :warnings (-> build-state
                    :shadow.build/build-info
                    :sources
-                   (->> (mapcat :warnings)))}))
+                   (->> (mapcat :warnings)))
+     :errors (-> build-state
+                   :shadow.build/build-info
+                   :sources
+                   (->> (mapcat :errors)))}))
 
 (comment
   (go)
@@ -329,5 +334,24 @@
 
   (lipas.backend.core/upsert-sports-site!* (db) (get-robot-user) wat2-fixed)
   (lipas.backend.core/index! (search) wat2-fixed)
+
+  )
+
+;; Population grids
+(comment
+  (require '[lipas.backend.analysis.common :as ac])
+  (def path-1km "/Users/tipo/lipas/aineistot/vaestoruutu_1km_2024/vaestoruutu_1km_2024.csv")
+
+  (ac/seed-population-1km-grid-from-csv! (search) path-1km)
+
+
+  (def path-250m "/Users/tipo/lipas/aineistot/vaestoruutu_250m_2024/vaestoruutu_250m_2024_kp.csv")
+
+  (ac/seed-population-250m-grid-from-csv! (search) path-250m)
+
+  ;; 2025-11-01 19:50 backup prodista
+  (reindex-search!)
+  (require '[lipas.backend.analysis.diversity :as ad])
+  (ad/seed-new-grid-from-csv! (search) path-250m)
 
   )

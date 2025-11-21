@@ -21,4 +21,10 @@
  :status "Tila",
  :tab-label "Auditointi",
  :todo-tab "Odottavat",
- :validation-failed "Validointi epäonnistui"}
+ :validation-failed "Validointi epäonnistui",
+ :send-notification "Lähetä ilmoitus",
+ :sending-notification "Lähetetään ilmoitusta...",
+ :audited "auditoitua",
+ :notification-sent-success "Ilmoitus lähetetty %1$s käyttäjälle",
+ :no-recipients-found "Ei vastaanottajia löytynyt",
+ :notification-sent "Ilmoitus lähetetty"}

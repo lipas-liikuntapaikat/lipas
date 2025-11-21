@@ -53,11 +53,13 @@ services:
       - '80:80'
       - '443:443'
       - '444:444'
+      - '8025:8025'
     links:
       - mapproxy
       - logstash
       - kibana
       - geoserver
+      - mailhog
     volumes:
       - './nginx/proxy_local.conf:/etc/nginx/templates/default.conf.template:z'
 
@@ -108,6 +110,7 @@ services:
       DB_USER:
       DB_PASSWORD:
       SMTP_HOST:
+      SMTP_PORT:
       SMTP_USER:
       SMTP_PASS:
       SMTP_FROM:
@@ -480,6 +483,16 @@ services:
       - "./osrm/foot:/data:z"
     ports:
       - "5003:5000"
+
+  mailhog:
+    image: mailhog/mailhog
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://localhost:5000"
+        tag: "mailhog"
+    ports:
+      - "1025:1025" # smtp server
 
 volumes:
   pgdata: {}

@@ -615,3 +615,25 @@
                 (->> (vals sites)
                      (filter filter-fn)
                      (sort-by :name)))))
+
+(rf/reg-sub ::sending-notification?
+            :<- [::audit]
+            (fn [audit _]
+              (:sending-notification? audit)))
+
+(rf/reg-sub ::notification-sent?
+            :<- [::audit]
+            (fn [audit _]
+              (:notification-sent? audit)))
+
+(rf/reg-sub ::audit-stats
+            (fn [[_ org-id]]
+              (rf/subscribe [::auditable-sites org-id :completed]))
+            (fn [sites _]
+              (let [tally-fn (fn [field status]
+                               (count (filter #(= status (get-in % [:ptv :audit field :status])) sites)))]
+                {:total-sites (count sites)
+                 :summary {:approved (tally-fn :summary "approved")
+                           :changes-requested (tally-fn :summary "changes-requested")}
+                 :description {:approved (tally-fn :description "approved")
+                               :changes-requested (tally-fn :description "changes-requested")}})))

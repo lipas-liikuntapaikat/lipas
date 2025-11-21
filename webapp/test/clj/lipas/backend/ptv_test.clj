@@ -1,7 +1,10 @@
 (ns lipas.backend.ptv-test
   (:require [clojure.test :refer [deftest is use-fixtures] :as t]
+            [clojure.pprint :refer [pprint]]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
+            [lipas.backend.org :as backend-org]
+            [lipas.backend.ptv.core :as ptv-core]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
             [lipas.schema.core]
@@ -17,6 +20,60 @@
                       (tu/prune-db!)
                       (tu/prune-es!)
                       (f)))
+
+(defn create-org! [org]
+  (let [id (java.util.UUID/randomUUID)
+        org (assoc org :id id)]
+    (backend-org/create-org db org)
+    org))
+
+(deftest send-audit-notification-test
+  (t/testing "Sends notification to PTV managers using provided stats"
+    (let [;; Setup: org, users
+          org (create-org! {:name "Test Org"
+                            :ptv-data {:org-id "test-ptv-org"
+                                       :city-codes [91]}})
+          org-id (:id org)
+          ptv-manager (tu/gen-user {:db? true
+                                    :permissions {:roles [{:role :ptv-manager
+                                                           :city-code [91]
+                                                           :org-id [(str org-id)]}]}})
+          auditor (tu/gen-user {:db? true :admin? true
+                                :permissions {:roles [{:role :ptv-auditor}]}})
+          token (jwt/create-token auditor)
+
+          stats {:total-sites 5
+                 :summary {:approved 3
+                           :changes-requested 2}
+                 :description {:approved 4
+                               :changes-requested 1}}]
+
+      ;; Test
+      (let [resp (app (-> (mock/request :post "/api/actions/send-audit-notification")
+                          (mock/json-body {:org-id org-id :stats stats})
+                          (tu/token-header token)))
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= 1 (:sent body)))
+        (is (= (:email ptv-manager) (first (:recipients body)))))))
+
+  (t/testing "Requires :ptv/audit privilege"
+    (let [org (create-org! {:name "Test Org 2"
+                            :ptv-data {:org-id "test-ptv-org-2"
+                                       :city-codes [91]}})
+          org-id (:id org)
+          regular-user (tu/gen-user {:db? true})
+          token (jwt/create-token regular-user)
+          stats {:total-sites 0
+                 :summary {:approved 0
+                           :changes-requested 0}
+                 :description {:approved 0
+                               :changes-requested 0}}]
+
+      (let [resp (app (-> (mock/request :post "/api/actions/send-audit-notification")
+                          (mock/json-body {:org-id org-id :stats stats})
+                          (tu/token-header token)))]
+        (is (= 403 (:status resp)))))))
 
 ;; This test requires PTV training environment to be operational.
 ;; It's up only on weekdays between 8-17 Finnish time...
