@@ -1,5 +1,6 @@
 {:description "Description"
  :descriptions "Descriptions"
+ :not-suitable-for-export "The sports site is not suitable for export to PTV."
  :keywords "Keywords"
  :loading-from-ptv "Fetching data from PTV..."
  :service "Service"

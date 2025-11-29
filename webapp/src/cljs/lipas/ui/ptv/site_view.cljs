@@ -77,26 +77,26 @@
 
           ;; Summary
           (r/as-element
-            [lui/text-field
-             {:disabled (or loading?
-                            read-only?)
-              :multiline true
-              :variant "outlined"
-              :on-change (fn [v])
-              :label "Tiivistelmä"
-              :value (get summary selected-tab)}])
+           [lui/text-field
+            {:disabled (or loading?
+                           read-only?)
+             :multiline true
+             :variant "outlined"
+             :on-change (fn [v])
+             :label "Tiivistelmä"
+             :value (get summary selected-tab)}])
 
           ;; Description
           (r/as-element
-            [lui/text-field
-             {:disabled (or loading?
-                            read-only?)
-              :variant "outlined"
-              :rows 5
-              :multiline true
-              :on-change (fn [v])
-              :label "Kuvaus"
-              :value (get description selected-tab)}])
+           [lui/text-field
+            {:disabled (or loading?
+                           read-only?)
+             :variant "outlined"
+             :rows 5
+             :multiline true
+             :on-change (fn [v])
+             :label "Kuvaus"
+             :value (get description selected-tab)}])
 
           ($ Button
              {:variant "contained"
@@ -232,10 +232,20 @@
     #_(js/console.log missing-services new-service new-service-sub-cat)
     #_(js/console.log "sync enabled" sync-enabled)
 
+    ;; Load user orgs on mount if not already loaded
+    ;; Note: orgs is nil when not loaded, empty vector [] when loaded but user has no orgs
+    (uix/use-effect (fn []
+                      (when (nil? orgs)
+                        (rf/dispatch [:lipas.ui.org.events/get-user-orgs])))
+                    [orgs])
+
+    ;; Fetch PTV org data and services when org-id is selected.
+    ;; The events expect a lipas-org-like structure with [:ptv-data :org-id].
     (uix/use-effect (fn []
                       (when org-id
-                        (rf/dispatch [::events/fetch-ptv-org {:id org-id}])
-                        (rf/dispatch [::events/fetch-ptv-services {:id org-id}])))
+                        (let [lipas-org-stub {:ptv-data {:org-id org-id}}]
+                          (rf/dispatch [::events/fetch-ptv-org lipas-org-stub])
+                          (rf/dispatch [::events/fetch-ptv-services lipas-org-stub]))))
                     [org-id])
 
     ($ Stack
@@ -283,7 +293,25 @@
                              :on-change (fn [_e v]
                                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))})})))
 
+       ;; Progressive disclosure: Show org selector only when sync is enabled
        (when sync-enabled
+         ($ :<> {}
+            ;; Warning for non-candidate sites (doesn't depend on org selection)
+            (when (not candidate-now?)
+              ($ Alert {:severity "warning"} (tr :ptv/not-suitable-for-export)))
+
+            ;; Organization selector - always show when sync is enabled
+            ($ autocomplete2
+               {:options org-options
+                :disabled (or loading?
+                              read-only?)
+                :label "Organisaatio"
+                :value (:org-id (:ptv site))
+                :on-change (fn [_e v]
+                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))})))
+
+       ;; Rest of the form - only show when sync is enabled AND org is selected
+       (when (and sync-enabled org-id)
          ($ :<> {}
             ($ FormControl
                #_($ FormLabel
@@ -311,7 +339,7 @@
                  ($ Alert {:severity "info"} "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä.")
 
                  :else
-                 "-")
+                 nil)
                (when-let [x (first (:service-channel-ids (:ptv site)))]
                  ($ :<>
                     ($ Link
@@ -329,23 +357,6 @@
 
             ;; Audit summary notification - show if there are audit issues
             ($ audit-summary-notification {:lipas-id lipas-id})
-
-            (when (and candidate-now? (not (:org-id (:ptv site))))
-              ($ :<>
-                 ($ Alert {:severity "warning"}
-                    "Valitse organisaatio")))
-
-            (when (not candidate-now?)
-              ($ Alert {:severity "warning"} "Liikuntapaikka ei sovellu PTV:hen vietäväksi."))
-
-            ($ autocomplete2
-               {:options org-options
-                :disabled (or loading?
-                              read-only?)
-                :label "Organisaatio"
-                :value (:org-id (:ptv site))
-                :on-change (fn [_e v]
-                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))})
 
             (when candidate-now?
               ($ FormControl
@@ -402,16 +413,16 @@
 
            ;; Summary
             (r/as-element
-              [lui/text-field
-               {:disabled (or loading?
-                              read-only?)
-                :multiline true
-                :variant "outlined"
-                :on-change (fn [v]
-                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
-                :label "Tiivistelmä"
-                :value (or (get-in edit-data [:ptv :summary selected-tab])
-                           (get-in sports-site [:ptv :summary selected-tab]))}])
+             [lui/text-field
+              {:disabled (or loading?
+                             read-only?)
+               :multiline true
+               :variant "outlined"
+               :on-change (fn [v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
+               :label "Tiivistelmä"
+               :value (or (get-in edit-data [:ptv :summary selected-tab])
+                          (get-in sports-site [:ptv :summary selected-tab]))}])
 
             ;; Summary audit feedback
             ($ audit-feedback-component
@@ -420,17 +431,17 @@
 
            ;; Description
             (r/as-element
-              [lui/text-field
-               {:disabled (or loading?
-                              read-only?)
-                :variant "outlined"
-                :rows 5
-                :multiline true
-                :on-change (fn [v]
-                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
-                :label "Kuvaus"
-                :value (or (get-in edit-data [:ptv :description selected-tab])
-                           (get-in sports-site [:ptv :description selected-tab]))}])
+             [lui/text-field
+              {:disabled (or loading?
+                             read-only?)
+               :variant "outlined"
+               :rows 5
+               :multiline true
+               :on-change (fn [v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
+               :label "Kuvaus"
+               :value (or (get-in edit-data [:ptv :description selected-tab])
+                          (get-in sports-site [:ptv :description selected-tab]))}])
 
             ;; Description audit feedback
             ($ audit-feedback-component

@@ -1,5 +1,6 @@
 {:description "Kuvaus",
  :descriptions "Kuvaukset",
+ :not-suitable-for-export "Liikuntapaikka ei sovellu PTV:hen vietäväksi.",
  :keywords "Avainsanat",
  :loading-from-ptv "Haetaan tietoja PTV:stä...",
  :service "Palvelu",

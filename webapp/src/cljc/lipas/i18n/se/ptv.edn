@@ -1,5 +1,6 @@
 {:description "Beskrivning",
  :descriptions "Beskrivningarna",
+ :not-suitable-for-export "Idrottsanläggningen är inte lämplig för export till PTV.",
  :keywords "Nyckelord",
  :loading-from-ptv "Hämtar information från PTV...",
  :service "Service",
