@@ -96,9 +96,10 @@
               :value     (contains? vs k)
               :disabled  read-only?
               :on-change (fn [_]
+                           ;; Convert set to vec because schema expects sequential
                            (if (contains? vs k)
-                             (on-change (disj vs k))
-                             (on-change (conj vs k))))}]]
+                             (on-change (vec (disj vs k)))
+                             (on-change (vec (conj vs k)))))}]]
            (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
              [mui/grid {:item true :xs 12 :style {:margin-top   "-1.5em"
                                                   :padding-left "2.8em"}}
@@ -449,8 +450,8 @@
 
          ;; Halper text
          #_[mui/grid {:item true :xs 12}
-          [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-           [mui/typography description]]]
+            [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
+             [mui/typography description]]]
 
          (doall
            (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
