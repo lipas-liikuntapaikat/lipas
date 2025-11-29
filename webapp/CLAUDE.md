@@ -139,28 +139,45 @@ Run clean tests for all changed namespaces.
 
 ## 🎭 Browser Testing with Playwright-MCP
 
-**Setup:**
-- LIPAS runs at `https://localhost` (HTTPS, not HTTP)
-- Playwright-MCP is available and configured
-- After `(user/reset)` and ClojureScript compilation, the app is ready to test
+**IMPORTANT: Always delegate browser testing to the `browser-tester` sub-agent** to preserve context and avoid filling the main conversation with Playwright snapshots.
 
-**Basic workflow:**
-1. `browser_navigate` to `https://localhost/liikuntapaikat` (or other route)
-2. `browser_snapshot` to see page structure and get element refs
-3. Interact using `browser_click`, `browser_type`, etc. with refs from snapshot
-4. **Important:** Refs expire after interactions - take new snapshot before each action
+### Browser Testing Workflow
 
-**After code changes:**
-1. Compile: `(user/compile-cljs)`
-2. Reload page: `browser_evaluate(() => location.reload())`
-3. Take fresh snapshot
+**Before delegating to browser-tester, always:**
 
-**Useful for:**
-- End-to-end testing - verifying that feature is **complete** and **works**
-- Visual verification of UI changes
-- Testing interactive flows
-- Debugging frontend issues
-- Checking console errors with `browser_console_messages`
+1. **Compile ClojureScript** - Run `(user/compile-cljs)` in the REPL
+2. **Check for build warnings/errors** - Review the compilation output
+3. **Fix any issues** - Address warnings or errors before testing
+4. **Then delegate** - Once the build is clean, delegate to browser-tester
+
+This ensures the browser-tester agent tests the latest code without wasting time on build issues.
+
+### Delegating to browser-tester Agent
+
+Use the Task tool with `subagent_type='browser-tester'` for all browser testing:
+
+```
+Task: Test the new search filter feature
+- Login as admin
+- Navigate to /liikuntapaikat
+- Test the type filter dropdown
+- Verify results update correctly
+- Check for console errors
+```
+
+The browser-tester agent has full knowledge of:
+- LIPAS URLs, login flow, and credentials
+- How to handle the dev tools overlay (#rdt) that blocks clicks
+- Expected vs. unexpected console errors
+- Finnish UI terminology
+
+### When to Delegate
+
+Delegate to browser-tester when:
+- Verifying a feature works end-to-end after implementation
+- Testing UI interactions and user flows
+- Checking for console errors after changes
+- Validating that frontend changes render correctly
 
 ## 📁 Project Structure
 
