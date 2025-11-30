@@ -4,6 +4,63 @@
 
 **IMPORTANT**: When working with this project through clojure-nrepl-eval command in port 7888, you have **direct access to a running Clojure REPL** with all development utilities pre-loaded in the `user` namespace.
 
+## 🔧 Using clj-nrepl-eval (Port 7888)
+
+The LIPAS REPL runs on **port 7888**. Use `clj-nrepl-eval` to evaluate Clojure code.
+
+### Basic Usage
+
+```bash
+# Simple expression
+clj-nrepl-eval -p 7888 "(+ 1 2 3)"
+
+# Multiple expressions on one line
+clj-nrepl-eval -p 7888 "(def x 10) (+ x 20)"
+```
+
+### Multiline Code with Heredoc
+
+Use heredoc for complex expressions - avoids shell escaping issues:
+
+```bash
+clj-nrepl-eval -p 7888 <<'EOF'
+(require '[lipas.backend.core :as core] :reload)
+(core/get-sports-site db 123456)
+EOF
+```
+
+### Common LIPAS Patterns
+
+```bash
+# Reload system after code changes
+clj-nrepl-eval -p 7888 "(user/reset)"
+
+# Verify a namespace compiles (returns nil if OK)
+clj-nrepl-eval -p 7888 "(require 'lipas.backend.ptv.core :reload)"
+
+# Run tests after changes
+clj-nrepl-eval -p 7888 <<'EOF'
+(require '[lipas.backend.ptv.core-test :as test] :reload)
+(clojure.test/run-tests 'lipas.backend.ptv.core-test)
+EOF
+
+# Access system components
+clj-nrepl-eval -p 7888 "(user/db)"
+clj-nrepl-eval -p 7888 "(user/search)"
+```
+
+### Key Options
+
+- `-p 7888` - LIPAS nREPL port (required)
+- `-t 300000` - Custom timeout for long operations (default: 2 min)
+- `--reset-session` - Clear session state if corrupted
+
+### Important Notes
+
+- **Always use `:reload`** when requiring namespaces to pick up changes
+- **Session persists** between evaluations - defined vars remain available
+- **Heredoc (`<<'EOF'`)** simplifies multiline code and string escaping
+
 ## Large workflow communication
 
 When you're working with large tasks, notify me by using `say` command via bash tool and say "I'm done". If you get stuck, call for help by saying "Please help".
