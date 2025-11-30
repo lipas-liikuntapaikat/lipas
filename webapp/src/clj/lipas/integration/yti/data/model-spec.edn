@@ -1,0 +1,411 @@
+;; LIPAS Data Model Specification for Yhteentoimivuusalusta
+;;
+;; This file defines the complete LIPAS data model structure for creation
+;; in Finland's Tietomallit (Data Models) service.
+;;
+;; Schema: lipas.integration.yti.schema/ModelSpec
+;;
+;; Workflow:
+;; 1. Agent updates this spec based on discoveries
+;; 2. sync-model! reads this spec and creates/updates in YTI
+;; 3. Changes are validated against schema before sync
+;;
+;; Last updated: 2025-11-30
+;; Status: development (use lipasdev prefix for testing)
+;;
+;; lipasdev9 improvements:
+;; 1. Embedded location attributes into LiikuntaPaikka (no separate Sijainti class)
+;;    - Using camelCase prefix: locationAddress, locationCityCode, etc.
+;; 2. Added type code reference to class notes (workaround for skos:exactMatch)
+;;    - API doesn't support skos:exactMatch directly
+
+{:metadata
+ {:version "0.2.0"
+  :status :development
+  :created "2025-11-29"
+  :updated "2025-11-30"
+  :author "LIPAS Team"
+  :notes "lipasdev9 - embedded location attributes, type code in class notes"}
+
+ ;; === MODEL METADATA ===
+ ;; Core properties for the data model library
+
+ :model
+ {:prefix "lipas"
+  :dev-prefix "lipasdev9"  ; Use this for testing
+
+  :label
+  {:fi "LIPAS Liikuntapaikkatietomalli"
+   :en "LIPAS Sports Facility Data Model"
+   :sv "LIPAS Datamodell för idrottsanläggningar"}
+
+  :description
+  {:fi "Suomen liikuntapaikkojen kansallinen tietomalli. Sisältää liikuntapaikkatyypit ja niiden ominaisuudet."
+   :en "National data model for Finnish sports facilities. Contains facility types and their properties."
+   :sv "Nationell datamodell för finländska idrottsanläggningar. Innehåller anläggningstyper och deras egenskaper."}
+
+  :languages ["fi" "en" "sv"]
+  :status "DRAFT"
+
+  ;; Jyväskylän yliopisto organization UUID in YTI
+  :organizations ["4a7795bb-c165-486e-96ff-0e3258527d71"]
+
+  ;; P27 = Liikunta ja ulkoilu (Sports and outdoor activities)
+  :groups ["P27"]
+
+  :contact "lipasinfo@jyu.fi"}
+
+ ;; === EXTERNAL NAMESPACES ===
+ ;; References to external models we import/use
+ ;; NOTE: Commented out for now - namespace-not-external error
+ ;; Need to register these as proper external namespaces with YTI first
+
+ :external-namespaces
+ []
+
+ ;; Future external namespaces (once properly configured):
+ ;; [{:prefix "isa2core"
+ ;;   :namespace "https://iri.suomi.fi/model/isa2core/"
+ ;;   :name {:fi "EU Core Vocabularies"}}
+ ;;  {:prefix "geo"
+ ;;   :namespace "http://www.opengis.net/ont/geosparql#"
+ ;;   :name {:fi "GeoSPARQL"}}]
+
+ ;; === CODE LISTS ===
+ ;; References to Koodistot code lists
+
+ :code-lists
+ {:lipas-types "http://uri.suomi.fi/codelist/educ/lipas-type-codes"
+  :lipas-admins "http://uri.suomi.fi/codelist/educ/lipas-admin-types"
+  :lipas-owners "http://uri.suomi.fi/codelist/educ/lipas-owner-types"
+  :lipas-statuses "http://uri.suomi.fi/codelist/educ/lipas-statuses"
+  :lipas-surfaces "http://uri.suomi.fi/codelist/educ/lipas-surface-materials"
+  :municipalities "http://uri.suomi.fi/codelist/jhs/kunta"
+  :regions "http://uri.suomi.fi/codelist/jhs/maakunta"}
+
+ ;; === TERMINOLOGY MAPPINGS ===
+ ;; Links from LIPAS attributes to Sanastot concepts
+ ;; These become the `subject` field in attributes
+
+ :terminology-subjects
+ {:name "https://iri.suomi.fi/terminology/eucore-fi/c91"           ; nimi
+  :address "https://iri.suomi.fi/terminology/rakymp/concept-3000"  ; osoite
+  :city "https://iri.suomi.fi/terminology/oksa/c1112"              ; kunta
+  :postal-code "https://iri.suomi.fi/terminology/p2p/concept-108"  ; postinumero
+  :location "https://iri.suomi.fi/terminology/geoinfsan/c1"        ; sijainti
+  :geometry "https://iri.suomi.fi/terminology/geoinfsan/c41"       ; geometriatieto
+  :www "https://iri.suomi.fi/terminology/eucore-fi/c53"            ; kotisivu
+  :email "https://iri.suomi.fi/terminology/viestit/concept-31"     ; sähköposti
+  :admin "https://iri.suomi.fi/terminology/tpo/c4"                 ; ylläpitäjä
+  :renovation-years "https://iri.suomi.fi/terminology/rakymp/c26"  ; peruskorjaus
+
+  ;; No standard concepts found - LIPAS-specific
+  :lipas-id nil
+  :marketing-name nil
+  :construction-year nil
+  :owner nil
+  :phone-number nil
+  :status nil}
+
+ ;; === CLASSES ===
+ ;; Class hierarchy for the data model
+
+ :classes
+ [;; Base class - all sports facilities inherit from this
+  ;; Location attributes are embedded directly (no separate Sijainti class)
+  {:identifier "LiikuntaPaikka"
+   :label {:fi "Liikuntapaikka"
+           :en "Sports Facility"
+           :sv "Idrottsanläggning"}
+   :note {:fi "Liikuntaan tai ulkoiluun tarkoitettu paikka, alue tai reitti. Sisältää myös sijaintitiedot."
+          :en "A place, area, or route intended for sports or outdoor recreation. Includes location information."
+          :sv "En plats, ett område eller en led avsedd för idrott eller friluftsliv. Inkluderar platsinformation."}
+   :sub-class-of []
+   :equivalent-class []
+   :core-class? true}
+
+  ;; NOTE: Sijainti class removed in lipasdev9 - location attributes embedded into LiikuntaPaikka
+  ;; This matches the actual LIPAS data structure where location is nested 1:1 under sports-site
+
+  ;; Type hierarchy is generated from lipas.data.types
+  ;; The :generate-from-types flag tells the sync process to expand these
+  ;; Type code is added to class notes as workaround for skos:exactMatch
+  {:generate-from-types true
+   :parent-class "LiikuntaPaikka"
+   :include-type-code-in-note? true  ; Add "Tyyppikoodi: 1310" to class notes
+   :source {:main-categories "lipas.data.types/main-categories"
+            :sub-categories "lipas.data.types/sub-categories"
+            :types "lipas.data.types/all"}}]
+
+ ;; === TYPE-SPECIFIC ATTRIBUTES ===
+ ;; Configuration for generating attributes from lipas.data.prop-types
+ ;; These are assigned to their respective type classes
+
+ :type-specific-attributes
+ {:generate? true
+  :source "lipas.data.prop-types/all"
+  :include-assignments? true}
+
+ ;; === ATTRIBUTES ===
+ ;; Core properties of classes (attributes for all LiikuntaPaikka and Sijainti)
+
+ :attributes
+ [;; === Core attributes on LiikuntaPaikka ===
+
+  {:identifier "lipasId"
+   :label {:fi "LIPAS-tunniste"
+           :en "LIPAS ID"
+           :sv "LIPAS-identifierare"}
+   :note {:fi "Liikuntapaikan yksilöivä LIPAS-tunniste"
+          :en "Unique LIPAS identifier for the sports facility"
+          :sv "Unik LIPAS-identifierare för idrottsanläggningen"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/integer
+   :subject-key :lipas-id}
+
+  {:identifier "name"
+   :label {:fi "Nimi"
+           :en "Name"
+           :sv "Namn"}
+   :note {:fi "Liikuntapaikan nimi (suomeksi)"
+          :en "Name of the sports facility (in Finnish)"
+          :sv "Idrottsanläggningens namn (på finska)"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :name}
+
+  {:identifier "nameSe"
+   :label {:fi "Nimi ruotsiksi"
+           :en "Name in Swedish"
+           :sv "Namn på svenska"}
+   :note {:fi "Liikuntapaikan nimi ruotsiksi"
+          :en "Name of the sports facility in Swedish"
+          :sv "Idrottsanläggningens namn på svenska"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key nil}
+
+  {:identifier "nameEn"
+   :label {:fi "Nimi englanniksi"
+           :en "Name in English"
+           :sv "Namn på engelska"}
+   :note {:fi "Liikuntapaikan nimi englanniksi"
+          :en "Name of the sports facility in English"
+          :sv "Idrottsanläggningens namn på engelska"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key nil}
+
+  {:identifier "marketingName"
+   :label {:fi "Markkinointinimi"
+           :en "Marketing name"
+           :sv "Marknadsföringsnamn"}
+   :note {:fi "Liikuntapaikan markkinointinimi tai yleisesti käytetty kutsumanimi"
+          :en "Marketing name or commonly used name for the facility"
+          :sv "Marknadsföringsnamn eller allmänt använt namn"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :marketing-name}
+
+  {:identifier "constructionYear"
+   :label {:fi "Rakennusvuosi"
+           :en "Construction year"
+           :sv "Byggnadsår"}
+   :note {:fi "Liikuntapaikan rakentamisvuosi"
+          :en "Year the facility was constructed"
+          :sv "Året då anläggningen byggdes"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/integer  ; gYear not supported
+   :subject-key :construction-year}
+
+  {:identifier "renovationYears"
+   :label {:fi "Peruskorjausvuodet"
+           :en "Renovation years"
+           :sv "Renoveringsår"}
+   :note {:fi "Liikuntapaikan peruskorjausvuodet (pilkulla erotettuna)"
+          :en "Major renovation years (comma-separated)"
+          :sv "Renoveringsår (kommaseparerade)"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string  ; Array as comma-separated string
+   :subject-key :renovation-years}
+
+  {:identifier "www"
+   :label {:fi "Verkkosivu"
+           :en "Website"
+           :sv "Webbplats"}
+   :note {:fi "Liikuntapaikan kotisivujen osoite"
+          :en "Website URL for the sports facility"
+          :sv "Webbplatsens URL"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/anyURI
+   :subject-key :www}
+
+  {:identifier "email"
+   :label {:fi "Sähköposti"
+           :en "Email"
+           :sv "E-post"}
+   :note {:fi "Liikuntapaikan sähköpostiosoite"
+          :en "Email address for the sports facility"
+          :sv "E-postadress"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :email}
+
+  {:identifier "phoneNumber"
+   :label {:fi "Puhelinnumero"
+           :en "Phone number"
+           :sv "Telefonnummer"}
+   :note {:fi "Liikuntapaikan puhelinnumero"
+          :en "Phone number for the sports facility"
+          :sv "Telefonnummer"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :phone-number}
+
+  {:identifier "status"
+   :label {:fi "Tila"
+           :en "Status"
+           :sv "Status"}
+   :note {:fi "Liikuntapaikan tila (aktiivinen, suunnitteilla, poistettu käytöstä)"
+          :en "Facility status (active, planned, out of service)"
+          :sv "Anläggningens status"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :code-list-key :lipas-statuses
+   :subject-key :status}
+
+  {:identifier "typeCode"
+   :label {:fi "Tyyppikoodi"
+           :en "Type code"
+           :sv "Typkod"}
+   :note {:fi "Liikuntapaikan tyyppikoodi LIPAS-luokituksesta"
+          :en "Facility type code from LIPAS classification"
+          :sv "Typkod från LIPAS-klassificeringen"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/integer
+   :code-list-key :lipas-types
+   :subject-key nil}
+
+  {:identifier "geometryType"
+   :label {:fi "Geometriatyyppi"
+           :en "Geometry type"
+           :sv "Geometrityp"}
+   :note {:fi "Liikuntapaikan geometriatyyppi: Point (piste), LineString (viiva) tai Polygon (alue)"
+          :en "Geometry type of the facility: Point, LineString, or Polygon"
+          :sv "Geometrityp för anläggningen: Point, LineString eller Polygon"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :geometry}
+
+  {:identifier "ownerType"
+   :label {:fi "Omistaja"
+           :en "Owner"
+           :sv "Ägare"}
+   :note {:fi "Liikuntapaikan omistajan tyyppi"
+          :en "Type of facility owner"
+          :sv "Typ av ägare"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :code-list-key :lipas-owners
+   :subject-key :owner}
+
+  {:identifier "adminType"
+   :label {:fi "Ylläpitäjä"
+           :en "Administrator"
+           :sv "Förvaltare"}
+   :note {:fi "Liikuntapaikan ylläpitäjän tyyppi"
+          :en "Type of facility administrator"
+          :sv "Typ av förvaltare"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :code-list-key :lipas-admins
+   :subject-key :admin}
+
+  ;; === Location attributes embedded in LiikuntaPaikka ===
+  ;; Using camelCase prefix "location" to group location-related attributes
+  ;; This replaces the separate Sijainti class from lipasdev8
+
+  {:identifier "locationAddress"
+   :label {:fi "Sijainti: Katuosoite"
+           :en "Location: Street address"
+           :sv "Plats: Gatuadress"}
+   :note {:fi "Liikuntapaikan katuosoite"
+          :en "Street address of the facility"
+          :sv "Anläggningens gatuadress"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :address}
+
+  {:identifier "locationPostalCode"
+   :label {:fi "Sijainti: Postinumero"
+           :en "Location: Postal code"
+           :sv "Plats: Postnummer"}
+   :note {:fi "Postinumero"
+          :en "Postal code"
+          :sv "Postnummer"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key :postal-code}
+
+  {:identifier "locationPostalOffice"
+   :label {:fi "Sijainti: Postitoimipaikka"
+           :en "Location: City"
+           :sv "Plats: Postanstalt"}
+   :note {:fi "Postitoimipaikan nimi"
+          :en "Post office name"
+          :sv "Postanstaltens namn"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key nil}
+
+  {:identifier "locationCityCode"
+   :label {:fi "Sijainti: Kuntakoodi"
+           :en "Location: Municipality code"
+           :sv "Plats: Kommunkod"}
+   :note {:fi "Kunnan virallinen koodi"
+          :en "Official municipality code"
+          :sv "Officiell kommunkod"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/integer
+   :code-list-key :municipalities
+   :subject-key :city}
+
+  {:identifier "locationNeighborhood"
+   :label {:fi "Sijainti: Kaupunginosa"
+           :en "Location: Neighborhood"
+           :sv "Plats: Stadsdel"}
+   :note {:fi "Kaupunginosan tai alueen nimi"
+          :en "Neighborhood or area name"
+          :sv "Stadsdel eller områdesnamn"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string
+   :subject-key nil}
+
+  {:identifier "locationGeometry"
+   :label {:fi "Sijainti: Geometria"
+           :en "Location: Geometry"
+           :sv "Plats: Geometri"}
+   :note {:fi "Liikuntapaikan sijainti GeoJSON-muodossa"
+          :en "Facility location as GeoJSON geometry"
+          :sv "Anläggningens position som GeoJSON-geometri"}
+   :domain "LiikuntaPaikka"
+   :range :xsd/string  ;; GeoJSON as string for now (GeoSPARQL requires external namespace setup)
+   :subject-key :geometry}]
+
+ ;; === ASSOCIATIONS ===
+ ;; Relationships between classes
+ ;; NOTE: sijainti association removed in lipasdev9 - location is embedded directly
+
+ :associations
+ []
+
+ ;; === SYNC STATUS ===
+ ;; Track what has been synced to YTI
+
+ :sync-status
+ {:last-sync nil
+  :synced-prefix nil
+  :classes-created []
+  :attributes-created []
+  :associations-created []
+  :errors []}}
