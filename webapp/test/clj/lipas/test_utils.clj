@@ -27,13 +27,13 @@
 (declare gen-user)
 
 #_(defn gen-sports-site
-  []
-  (try
+    []
+    (try
     ;; FIXME :ptv generators produce difficult values
-    (-> (s/gen :lipas/sports-site)
-        gen/generate
-        (dissoc :ptv))
-    (catch Throwable _t (gen-sports-site))))
+      (-> (s/gen :lipas/sports-site)
+          gen/generate
+          (dissoc :ptv))
+      (catch Throwable _t (gen-sports-site))))
 
 (defn fix-generated-site [site]
   (cond-> site
@@ -85,7 +85,7 @@
                       site (-> base-site
                                (assoc :lipas-id (inc i))
                                (cond->
-                                 city-codes
+                                city-codes
                                  (assoc-in [:location :city :city-code]
                                            (nth city-codes (mod i (clojure.core/count city-codes))))
 
@@ -322,7 +322,7 @@
   ([search]
    (let [client (:client search)
          mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                   (-> search :indices :legacy-sports-sites :search) (:legacy-sports-sites search/mappings)
+                   (-> search :indices :legacy-sports-site :search) (:legacy-sports-site search/mappings)
                    (-> search :indices :analysis :diversity) diversity/mappings
                    (-> search :indices :lois :search) (:lois search/mappings)}]
 

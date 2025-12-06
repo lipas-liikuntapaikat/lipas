@@ -147,8 +147,8 @@
 ;; TODO remove any type
 (def search-params
   (let [schema [:map
-                [:pageSize [pos-int?]]
-                [:page [pos-int?]]
+                [:pageSize pos-int?]
+                [:page pos-int?]
                 [:fields [:or
                           [:vector (into [:enum] legacy-fields)]
                           (into [:enum] legacy-fields)
@@ -162,10 +162,10 @@
                 [:modifiedAfter [:re date-re]]
                 [:retkikartta :boolean]
                 [:closeToMatch [:enum "start-point" "any-point"]]
-                [:closeToDistanceKm [common/number]]
+                [:closeToDistanceKm common/number]
                 [:harrastuspassi :boolean]
                 [:cityCodes [:or
-                             [:int]
+                             :int
                              #'location-schema/city-codes]]
                 [:searchString [:string {:min 1 :max 2056}]]]]
     (mu/optional-keys schema (mu/keys schema))))

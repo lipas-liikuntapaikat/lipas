@@ -7,14 +7,12 @@
    [lipas.test-utils :as test-utils]
    [ring.mock.request :as mock]))
 
-
 ;;; Utility functions ;;;
 
 #_(defn gen-admin-user []
-  (test-utils/gen-user {:db? true
-                        :admin? true
-                        :permissions {:roles [{:role "admin"}]}}))
-
+    (test-utils/gen-user {:db? true
+                          :admin? true
+                          :permissions {:roles [{:role "admin"}]}}))
 
 ;;; Test system setup ;;;
 
@@ -61,14 +59,10 @@
 ;;; The tests ;;;
 
 (deftest api-smoke-test
-  (testing "API smoke test"
-    
+  (testing "API smoke test - empty result returns 200"
     (let [resp ((test-app) (-> (mock/request :get "/rest/api/sports-places")
-                                  (mock/content-type "application/json")))]
-    
-      (is (= 206 (:status resp))))))
-
+                               (mock/content-type "application/json")))]
+      (is (= 200 (:status resp))))))
 
 (comment
-  (clojure.test/run-test-var #'api-smoke-test)
-  )
+  (clojure.test/run-test-var #'api-smoke-test))

@@ -45,16 +45,16 @@
       geo-params)))
 
 (defn by-id
-  [client id]
+  [client index-name id]
   (try
     (when-not id
       (throw (ex-info "Missing required parameter: id"
                       {:type :invalid-input
                        :parameter :id})))
 
-    (log/debug "Fetching sports place by ID" {:id id})
+    (log/debug "Fetching sports place by ID" {:id id :index index-name})
     (es/request client {:method :get
-                        :url (es-utils/url [:legacy_sports_sites_current :_doc id])})
+                        :url (es-utils/url [index-name :_doc id])})
 
     (catch clojure.lang.ExceptionInfo ex
       (let [error-data (ex-data ex)
@@ -143,14 +143,14 @@
     {:match_all {}}))
 
 (defn fetch-sports-places
-  [client params]
+  [client index-name params]
   (try
     (log/debug "Executing sports places search"
-               {:params (dissoc params :search-string)}) ; Don't log search string
+               {:params (dissoc params :search-string) :index index-name}) ; Don't log search string
 
     (let [query (resolve-query params)
           response (es/request client {:method :get
-                                       :url (es-utils/url [:legacy_sports_sites_current :_search])
+                                       :url (es-utils/url [index-name :_search])
                                        :body
                                        {:query query
                                         :track_total_hits true

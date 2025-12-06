@@ -9,7 +9,6 @@
 
 (def legacy-date-format "yyyy-MM-dd HH:mm:ss.SSS")
 
-
 (defn create-cli
   [{:keys [hosts user password]}]
   (es/client {:hosts       hosts
@@ -40,7 +39,7 @@
       {:type "geo_point"}
       :search-meta.location.geometries
       {:type "geo_shape"}}}}
-   :legacy-sports-sites
+   :legacy-sports-site
    {:mappings
     {:properties
      {:location.coordinates.wgs84 {:type "geo_point"}

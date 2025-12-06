@@ -186,7 +186,7 @@
    (let [idx-name (str mode "-" (search/gen-idx-name))
          mappings (case mode
                     "search" (:sports-sites search/mappings)
-                    "legacy" (:legacy-sports-sites search/mappings))
+                    "legacy" (:legacy-sports-site search/mappings))
          types (keys types/all)
          alias (case mode
                  "search" (get-in indices [:sports-site :search])
@@ -200,7 +200,8 @@
      (case mode
        "search" (index-search-sports-sites! db client idx-name types)
        "analytics" (let [users (get-users db)]
-                     (index-analytics2! db client idx-name types users))          )
+                     (index-analytics2! db client idx-name types users))
+       "legacy" (index-legacy-search-sports-sites! db client idx-name types))
 
      (log/info "Indexing data done!")
      (log/info "Swapping alias" alias "to point to index" idx-name)
@@ -265,5 +266,4 @@
     (search/delete-index! search "test")
     (time (-main)) ;; "Elapsed time: 74175.059697 msecs"
     (search/search search {:idx-name "sports_sites_current"
-                           :search-string "kissa*"}))
-  )
+                           :search-string "kissa*"})))

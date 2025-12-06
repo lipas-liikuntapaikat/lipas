@@ -18,7 +18,8 @@
                 :field-count (count fields)})
 
     (let [start-time (System/currentTimeMillis)
-          data (:body (es/fetch-sports-places (:client search) params))
+          index-name (get-in search [:indices :legacy-sports-site :search])
+          data (:body (es/fetch-sports-places (:client search) index-name params))
           places (map :_source (-> data :hits :hits))
           ;; Only add sportsPlaceId to fields if specific fields are requested
           ;; When fields is empty, we want all fields (handled in filter-and-format)
@@ -64,11 +65,12 @@
   "Fetches single sports-place from search engine index."
   [search locale sports-place-id]
   (try
-    (when-let [response (es/by-id search sports-place-id)]
-      (when-let [source (-> response :body :_source)]
-        (-> source
-            (format-sports-place-es locale)
-            only-non-nil-recur)))
+    (let [index-name (get-in search [:indices :legacy-sports-site :search])]
+      (when-let [response (es/by-id (:client search) index-name sports-place-id)]
+        (when-let [source (-> response :body :_source)]
+          (-> source
+              (format-sports-place-es locale)
+              only-non-nil-recur))))
     (catch clojure.lang.ExceptionInfo ex
       (let [status (-> ex ex-data :status)]
         (cond
@@ -121,7 +123,7 @@
                        :parameter :since-timestamp})))
 
     (let [client (:client search)
-          idx-name (get-in (search) [:indices :sports-site :search])
+          idx-name (get-in search [:indices :sports-site :search])
           formatted-timestamp (format-timestamp-for-es since-timestamp)
           response (elastic/request client
                                     {:method :get
