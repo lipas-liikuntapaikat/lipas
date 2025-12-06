@@ -1,0 +1,515 @@
+;; LIPAS Concept Mappings to Yhteentoimivuusalusta (YTI)
+;;
+;; This file documents mappings between LIPAS data model concepts and
+;; existing national/international standards in Finland's YTI platform.
+;;
+;; IMPORTANT: Only VALID (published) models are referenced here.
+;; Models in DRAFT/SUGGESTED status are noted but not used for mappings.
+;;
+;; Schema: lipas.integration.yti.schema/ConceptMappings
+;;
+;; Status legend:
+;;   :draft      - Initial documentation, not validated
+;;   :review     - Ready for review
+;;   :validated  - Confirmed by domain expert or YTI team
+;;   :published  - In use in production model
+;;
+;; Relationship types:
+;;   :owl/sameAs          - Identical meaning
+;;   :owl/equivalentClass - Same class, different models
+;;   :rdfs/subClassOf     - LIPAS is more specific
+;;   :rdfs/seeAlso        - Related but not equivalent
+;;   :skos/exactMatch     - Exact concept match (vocabularies)
+;;   :skos/closeMatch     - Close but not exact
+;;   :lipas-specific      - No external equivalent exists
+;;
+;; Discovery completed: 2025-11-29
+;; API: Tietomallit (https://tietomallit.suomi.fi/datamodel-api/)
+;; API: Koodistot (https://koodistot.suomi.fi/codelist-api/)
+
+{:metadata
+ {:status :draft
+  :created "2025-11-29"
+  :updated "2025-11-29"
+  :author "LIPAS Team / Claude"
+  :notes "Discovery phase completed. Only VALID models referenced."}
+
+ :external-namespaces
+ {;; === VALID National Code Lists (Koodistot) ===
+  "kunta"
+  {:uri "http://uri.suomi.fi/codelist/jhs/kunta"
+   :source :koodistot
+   :status :valid
+   :description "Finnish municipalities (Kunnat) - yearly versions available"
+   :prefix "kunta"
+   :version "kunta_1_20250101"}
+
+  "maakunta"
+  {:uri "http://uri.suomi.fi/codelist/jhs/maakunta"
+   :source :koodistot
+   :status :valid
+   :description "Finnish regions (Maakunnat)"
+   :prefix "maakunta"}
+
+  "omistajalaji"
+  {:uri "http://uri.suomi.fi/codelist/rytj/Omistajalaji"
+   :source :koodistot
+   :status :valid
+   :description "Owner types (Omistajalajit) - building/property owner classification"
+   :prefix "omistajalaji"}
+
+  "rakennusluokitus"
+  {:uri "http://uri.suomi.fi/codelist/jhs/rakennus_1_20180712"
+   :source :koodistot
+   :status :valid
+   :description "Building classification 2018 (Rakennusluokitus)"
+   :prefix "rakennus"}
+
+  ;; === VALID Data Models (Tietomallit) ===
+  "isa2core"
+  {:uri "https://iri.suomi.fi/model/isa2core/"
+   :source :tietomallit
+   :status :valid
+   :description "EU Core Vocabularies. Contains Address, Location, Organization, Person classes."
+   :prefix "isa2core"
+   :version "1.0.0"}
+
+  "kmr"
+  {:uri "https://iri.suomi.fi/model/kmr/"
+   :source :tietomallit
+   :status :valid
+   :description "Finnish Public Sector Top Level Core Vocabulary. Contains Agent, Participant, Activity."
+   :prefix "kmr"
+   :version "1.0.0"}
+
+  "japy"
+  {:uri "https://iri.suomi.fi/model/japy/"
+   :source :tietomallit
+   :status :valid
+   :description "Pedestrian/Cycling data model. Contains Paikka (Place), Sijainti (Location)."
+   :prefix "japy"
+   :version "1.0.0"}
+
+  "jhs210"
+  {:uri "https://iri.suomi.fi/model/jhs210/"
+   :source :tietomallit
+   :status :valid
+   :description "JHS 210 Spatial data: Buildings. References rak component library."
+   :prefix "jhs210"
+   :version "1.0.2000"}
+
+  "vtjrak"
+  {:uri "https://iri.suomi.fi/model/vtjrak/"
+   :source :tietomallit
+   :status :valid
+   :description "VTJ Building data model. Population register building data."
+   :prefix "vtjrak"
+   :version "1.0.0"}
+
+  ;; === External Standards (always valid) ===
+  "geosparql"
+  {:uri "http://www.opengis.net/ont/geosparql#"
+   :source :external
+   :status :valid
+   :description "OGC GeoSPARQL ontology for spatial data"
+   :prefix "geo"}
+
+  "locn"
+  {:uri "http://www.w3.org/ns/locn#"
+   :source :external
+   :status :valid
+   :description "W3C Location Core Vocabulary"
+   :prefix "locn"}
+
+  "schema"
+  {:uri "http://schema.org/"
+   :source :external
+   :status :valid
+   :description "Schema.org vocabulary"
+   :prefix "schema"}
+
+  ;; === PTV Code Lists ===
+  "ptvjultuottaja"
+  {:uri "http://uri.suomi.fi/codelist/ptv/ptvjultuottaja"
+   :source :koodistot
+   :status :valid
+   :description "Public service producer organization types. Hierarchical: TT1 (public), TT2 (private)."
+   :prefix "ptvjultuottaja"}
+
+  "ptvtuotanto"
+  {:uri "http://uri.suomi.fi/codelist/ptv/ptvtuotanto"
+   :source :koodistot
+   :status :valid
+   :description "Service production types (self-produced, procured, voucher, other)."
+   :prefix "ptvtuotanto"}
+
+  "ptvserclass2"
+  {:uri "http://uri.suomi.fi/codelist/ptv/ptvserclass2"
+   :source :koodistot
+   :status :valid
+   :description "PTV service classification. LIPAS types already mapped via :service-classes in lipas.data.types."
+   :prefix "ptvserclass2"}
+
+  ;; === FINTO Ontologies (used by LIPAS for PTV integration) ===
+  "finto-koko"
+  {:uri "http://www.yso.fi/onto/koko/"
+   :source :external
+   :status :valid
+   :description "FINTO KOKO ontology. LIPAS types already linked via :ontology-urls in lipas.data.types."
+   :prefix "koko"}
+
+  ;; === SUGGESTED Models (not officially published, for reference only) ===
+  "jhs"
+  {:uri "https://iri.suomi.fi/model/jhs/"
+   :source :tietomallit
+   :status :suggested
+   :description "Finnish Public Sector Core Components. Widely referenced but not officially published."
+   :prefix "jhs"
+   :version "0.1.0"}
+
+  "rak"
+  {:uri "https://iri.suomi.fi/model/rak/"
+   :source :tietomallit
+   :status :suggested
+   :description "Built Environment Core Concepts. Used by valid models but not published itself."
+   :prefix "rak"
+   :version "1.0.0"}}
+
+ :mappings
+ [;; ===================================================================
+  ;; HIGH PRIORITY - Location concepts (using VALID models)
+  ;; ===================================================================
+
+  {:lipas-concept :location/municipality
+   :lipas-path [:location :city :city-code]
+   :external-uri "http://uri.suomi.fi/codelist/jhs/kunta"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "LIPAS uses standard Finnish municipality codes (city-code field). Direct code match."}
+
+  {:lipas-concept :location/region
+   :lipas-path [:location :city :province-id]
+   :external-uri "http://uri.suomi.fi/codelist/jhs/maakunta"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "Province/region codes map to national Maakunnat classification."}
+
+  {:lipas-concept :location/address
+   :lipas-path [:location :address]
+   :external-uri "https://iri.suomi.fi/model/isa2core/Address"
+   :relationship :owl/equivalentClass
+   :confidence :medium
+   :notes "EU Core Address class from VALID isa2core model. LIPAS address has street, postal code, city."
+   :field-mappings
+   [{:lipas :address :external "fullAddress" :notes "Street address text"}
+    {:lipas :postal-code :external "postCode"}
+    {:lipas :postal-office :external "postName"}]}
+
+  {:lipas-concept :location/location
+   :lipas-path [:location]
+   :external-uri "https://iri.suomi.fi/model/isa2core/Location"
+   :relationship :rdfs/subClassOf
+   :confidence :medium
+   :notes "LIPAS location is more specific than generic EU Location class."}
+
+  {:lipas-concept :location/geometry
+   :lipas-path [:location :geometries]
+   :external-uri "http://www.opengis.net/ont/geosparql#Geometry"
+   :relationship :rdfs/subClassOf
+   :confidence :medium
+   :notes "LIPAS uses GeoJSON FeatureCollection, maps to GeoSPARQL sf:Geometry."}
+
+  ;; ===================================================================
+  ;; ORGANIZATIONAL CONCEPTS - Owner and Admin types
+  ;; ===================================================================
+  ;;
+  ;; LIPAS Owner types (9): city, registered-association, company-ltd, city-main-owner,
+  ;;   municipal-consortium, foundation, state, other, unknown
+  ;;
+  ;; LIPAS Admin types (11): city-sports, city-education, city-technical-services,
+  ;;   city-other, municipal-consortium, private-association, private-company,
+  ;;   private-foundation, state, other, unknown
+  ;;
+  ;; Discovery findings (2025-11-29):
+  ;; - RYTJ Omistajalaji: 15 building owner types, partial overlap with LIPAS
+  ;; - PTV ptvjultuottaja: 8 service producer types, high-level categories only
+  ;; - isa2core Organization/Agent: abstract classes, not type classifications
+  ;; - kmr Agent/Participant: top-level abstractions only
+  ;; - VTJ Rake_rakentaja: only 2 codes (commercial/other), not useful
+  ;; - No admin/maintainer classification exists in any national code list
+  ;; ===================================================================
+
+  {:lipas-concept :owner
+   :lipas-path [:owner]
+   :external-uri "http://uri.suomi.fi/codelist/rytj/Omistajalaji"
+   :relationship :skos/closeMatch
+   :confidence :medium
+   :notes "RYTJ Omistajalaji has partial overlap but different granularity.
+           RYTJ codes: 01-Yksityinen maatalousyrittäjä, 02-Muu yksityinen, 03-Asunto oy,
+           04-Kiinteistö oy, 05-Yksityinen yritys, 06-Valtio/kuntaenemmistöinen yritys,
+           07-Kunnan liikelaitos, 08-Valtion liikelaitos, 09-Pankki/vakuutus,
+           10-Kunta tai kuntainliitto, 11-Valtio, 12-Sosiaaliturvarahasto,
+           13-Uskonnollinen yhteisö/säätiö/puolue/yhdistys, 14-Muu, 15-Hyvinvointialue.
+           LIPAS is simpler (9 types) and sports-facility focused. Recommend LIPAS-specific."
+   :field-mappings
+   [{:lipas :city :external "10" :notes "Kunta tai kuntainliitto"}
+    {:lipas :state :external "11" :notes "Valtio"}
+    {:lipas :company-ltd :external "05" :notes "Yksityinen yritys"}
+    {:lipas :city-main-owner :external "06" :notes "Valtio/kuntaenemmistöinen yritys"}
+    {:lipas :municipal-consortium :external "10" :notes "Kunta tai kuntainliitto (same as city)"}
+    {:lipas :foundation :external "13" :notes "Säätiö grouped with associations"}
+    {:lipas :registered-association :external "13" :notes "Yhdistys grouped with foundations"}
+    {:lipas :other :external "14" :notes "Muu"}
+    {:lipas :unknown :external nil :notes "No RYTJ equivalent"}]}
+
+  {:lipas-concept :admin
+   :lipas-path [:admin]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "No national equivalent found. LIPAS admin types are unique to sports facilities.
+           Key differentiator: LIPAS distinguishes municipal departments (sports, education,
+           technical, other) which is critical for Finnish sports administration.
+           PTV ptvjultuottaja (TT1.3 Kunta, TT2.1 Yritys, TT2.2 Järjestö) is too coarse.
+           Recommend publishing LIPAS admin types as new Koodistot code list."}
+
+  {:lipas-concept :organization
+   :lipas-path []
+   :external-uri "https://iri.suomi.fi/model/isa2core/Organization"
+   :relationship :rdfs/seeAlso
+   :confidence :low
+   :notes "isa2core Organization and kmr Agent are abstract entity classes.
+           LIPAS owner/admin are type classifications, not organization references.
+           No direct mapping - LIPAS doesn't reference actual organizations by ID."}
+
+  ;; ===================================================================
+  ;; CONTACT INFORMATION (using VALID isa2core model)
+  ;; ===================================================================
+
+  {:lipas-concept :contact-point
+   :lipas-path []
+   :external-uri "https://iri.suomi.fi/model/isa2core/ContactPoint"
+   :relationship :owl/equivalentClass
+   :confidence :high
+   :notes "EU Core ContactPoint class from VALID isa2core model.
+           LIPAS contact info maps directly to this structure."}
+
+  {:lipas-concept :email
+   :lipas-path [:email]
+   :external-uri "https://iri.suomi.fi/model/isa2core/hasEmail"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "Direct mapping to isa2core:hasEmail property."}
+
+  {:lipas-concept :phone-number
+   :lipas-path [:phone-number]
+   :external-uri "https://iri.suomi.fi/model/isa2core/hasTelephone"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "Direct mapping to isa2core:hasTelephone property."}
+
+  {:lipas-concept :www
+   :lipas-path [:www]
+   :external-uri "https://iri.suomi.fi/model/isa2core/homepage"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "Direct mapping to isa2core:homepage property. Website URL."}
+
+  {:lipas-concept :reservations-link
+   :lipas-path [:reservations-link]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Link to external booking system. LIPAS-specific, no standard equivalent."}
+
+  ;; ===================================================================
+  ;; TEMPORAL CONCEPTS - Construction and renovation years
+  ;; ===================================================================
+
+  {:lipas-concept :construction-year
+   :lipas-path [:construction-year]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :medium
+   :notes "Year of construction. No VALID model has this exact concept.
+           rak-draft (SUGGESTED) has valmistumisvuosi but is not published.
+           schema.org has yearBuilt but not in Finnish national models.
+           Recommend defining as LIPAS-specific until rak becomes VALID."}
+
+  {:lipas-concept :renovation-years
+   :lipas-path [:renovation-years]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Array of major renovation years. LIPAS-specific concept.
+           No national model has multi-year renovation tracking.
+           rak-draft has perusparannus/korjausaste but single-value."}
+
+  {:lipas-concept :event-date
+   :lipas-path [:event-date]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Timestamp when sports site data became valid (revision date).
+           LIPAS uses append-only event log pattern.
+           Not a facility lifecycle date but a data versioning timestamp."}
+
+  ;; ===================================================================
+  ;; ADDITIONAL LOCATION CONCEPTS
+  ;; ===================================================================
+
+  {:lipas-concept :location/neighborhood
+   :lipas-path [:location :city :neighborhood]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :medium
+   :notes "Common area name or neighborhood. No national code list exists.
+           isa2core has addressArea but semantics differ."}
+
+  ;; ===================================================================
+  ;; NAMING AND IDENTIFICATION
+  ;; ===================================================================
+
+  {:lipas-concept :name
+   :lipas-path [:name]
+   :external-uri "https://iri.suomi.fi/model/isa2core/name"
+   :relationship :owl/sameAs
+   :confidence :high
+   :notes "Official name of the sports facility. Maps to isa2core:name."}
+
+  {:lipas-concept :marketing-name
+   :lipas-path [:marketing-name]
+   :external-uri "https://iri.suomi.fi/model/isa2core/alternativeName"
+   :relationship :skos/closeMatch
+   :confidence :medium
+   :notes "Marketing or common name. Close to isa2core:alternativeName."}
+
+  {:lipas-concept :lipas-id
+   :lipas-path [:lipas-id]
+   :external-uri "https://iri.suomi.fi/model/isa2core/Identifier"
+   :relationship :rdfs/subClassOf
+   :confidence :medium
+   :notes "Unique LIPAS identifier. Could use isa2core:Identifier class structure."}
+
+  {:lipas-concept :status
+   :lipas-path [:status]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Publication status (active, out-of-service-temporarily, etc.).
+           LIPAS-specific workflow states."}
+
+  {:lipas-concept :comment
+   :lipas-path [:comment]
+   :external-uri "https://iri.suomi.fi/model/isa2core/description"
+   :relationship :skos/closeMatch
+   :confidence :medium
+   :notes "Additional information/comments. Close to isa2core:description."}
+
+  ;; ===================================================================
+  ;; LIPAS-SPECIFIC - Sports domain (no national equivalents)
+  ;; ===================================================================
+
+  {:lipas-concept :sports-site
+   :lipas-path []
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Core LIPAS concept. No existing sports/recreation facility model in YTI.
+           LIPAS will be the FIRST sports facility data model in Finland's national registry."}
+
+  {:lipas-concept :sports-site/type
+   :lipas-path [:type :type-code]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "LIPAS type codes are unique sports facility classification.
+           To be published as new code list in Koodistot.
+           EXISTING LINKAGES in lipas.data.types (main-categories, sub-categories):
+           - :ontology-urls -> FINTO/KOKO (http://www.yso.fi/onto/koko/*)
+           - :service-classes -> PTV ptvserclass2 (http://uri.suomi.fi/codelist/ptv/ptvserclass2/*)
+           These can be included as relations when publishing to Koodistot."}
+
+  {:lipas-concept :sports-site/fields
+   :lipas-path [:fields]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Sports fields within a facility (e.g., football fields in a sports park).
+           LIPAS-specific structure with field types, dimensions."}
+
+  {:lipas-concept :sports-site/properties
+   :lipas-path [:properties]
+   :external-uri nil
+   :relationship :lipas-specific
+   :confidence :high
+   :notes "Type-specific properties (surface materials, lighting, accessibility).
+           Defined per type-code in lipas.data.prop-types."}]
+
+ :discovered-models
+ [;; === VALID Models - Primary references ===
+  {:prefix "isa2core"
+   :name "EU Core Vocabularies (ISA2)"
+   :status :valid
+   :relevance :high
+   :useful-concepts [:Address :Location :Organization :Person :ContactPoint
+                     :hasEmail :hasTelephone :homepage :name :alternativeName
+                     :Identifier :description :OpeningHoursSpecification]
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/isa2core"
+   :notes "Primary source for LIPAS mappings: Address, Location, ContactPoint. Also has OpeningHoursSpecification for future use."}
+
+  {:prefix "kmr"
+   :name "Finnish Public Sector Top Level Core Vocabulary"
+   :status :valid
+   :relevance :medium
+   :useful-concepts [:Agent :Participant :Activity]
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/kmr"
+   :notes "High-level abstractions. Agent could be parent for owner/admin concepts."}
+
+  {:prefix "japy"
+   :name "Jalankulku- ja pyöräilyväylät (JaPy)"
+   :status :valid
+   :relevance :medium
+   :useful-concepts [:Paikka :Sijainti :Tapahtuma]
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/japy"
+   :notes "Mobility data model. Paikka (Place) concept could relate to sports facility locations."}
+
+  {:prefix "jhs210"
+   :name "JHS 210 Paikkatiedon mallintaminen: Rakennukset"
+   :status :valid
+   :relevance :medium
+   :useful-concepts []
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/jhs210"
+   :notes "Building/spatial data. References rak library but is published."}
+
+  {:prefix "vtjrak"
+   :name "VTJ Rakennus tietomalli"
+   :status :valid
+   :relevance :medium
+   :useful-concepts []
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/vtjrak"
+   :notes "Population register buildings. Has owner concepts but building-focused."}
+
+  ;; === SUGGESTED - Component Libraries (widely used but not published) ===
+  {:prefix "jhs"
+   :name "Julkishallinnon tietokomponentit"
+   :status :suggested
+   :relevance :high
+   :useful-concepts [:Osoite :Organisaatio :Henkilo :Toimija]
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/jhs"
+   :notes "Widely referenced but not officially published. Contains rich Address, Organization, Person definitions."}
+
+  {:prefix "rak"
+   :name "Rakennetun ympäristön tietokomponenttikirjasto"
+   :status :suggested
+   :relevance :high
+   :useful-concepts [:Sijainti :Osoite :geometria :Rakennuspaikka :RakennuskohteenOmistaja]
+   :analyzed? true
+   :url "https://tietomallit.suomi.fi/model/rak"
+   :notes "Core building/location concepts. Used by valid models like jhs210, vtjrak but not published itself."}]}
