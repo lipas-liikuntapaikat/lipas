@@ -70,7 +70,7 @@
                  :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"
                             "-Djdk.attach.allowAttachSelf"]}
 
-           :test {:extra-paths ["test/clj"]
+           :test {:extra-paths ["test/clj" "test/resources"]
                   :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
                   :main-opts ["-m" "cognitect.test-runner"]}
 

@@ -1,0 +1,367 @@
+[
+  {
+    "typeCode": 0,
+    "name": "Virkistyskohteet ja palvelut",
+    "subCategories": [
+      {
+        "typeCode": 1,
+        "name": "Virkistys- ja retkeilyalueet",
+        "sportsPlaceTypes": [
+          101,
+          103,
+          104,
+          106,
+          107,
+          108,
+          112,
+          111,
+          110,
+          109,
+          102,
+          113
+        ]
+      },
+      {
+        "typeCode": 2,
+        "name": "Retkeilyn palvelut",
+        "sportsPlaceTypes": [
+          204,
+          205,
+          201,
+          202,
+          203,
+          206,
+          304,
+          301,
+          302,
+          207
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 1000,
+    "name": "Ulkokentät ja liikuntapuistot",
+    "subCategories": [
+      {
+        "typeCode": 1100,
+        "name": "Lähiliikunta ja liikuntapuistot",
+        "sportsPlaceTypes": [
+          1140,
+          1110,
+          1120,
+          1150,
+          1160,
+          1170,
+          1180,
+          1130,
+          1190
+        ]
+      },
+      {
+        "typeCode": 1200,
+        "name": "Yleisurheilukentät ja -paikat",
+        "sportsPlaceTypes": [
+          1210,
+          1220
+        ]
+      },
+      {
+        "typeCode": 1300,
+        "name": "Pallokentät",
+        "sportsPlaceTypes": [
+          1360,
+          1310,
+          1320,
+          1350,
+          1370,
+          1380,
+          1330,
+          1340,
+          1390,
+          1395
+        ]
+      },
+      {
+        "typeCode": 1500,
+        "name": "Jääurheilualueet ja luonnonjäät",
+        "sportsPlaceTypes": [
+          1530,
+          1560,
+          1520,
+          1550,
+          1510,
+          1540
+        ]
+      },
+      {
+        "typeCode": 1600,
+        "name": "Golfkentät",
+        "sportsPlaceTypes": [
+          1620,
+          1640,
+          1610,
+          1630,
+          1650
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 2000,
+    "name": "Sisäliikuntatilat",
+    "subCategories": [
+      {
+        "typeCode": 2100,
+        "name": "Kuntoilukeskukset ja liikuntasalit",
+        "sportsPlaceTypes": [
+          2150,
+          2140,
+          2120,
+          2110,
+          2130
+        ]
+      },
+      {
+        "typeCode": 2200,
+        "name": "Liikuntahallit",
+        "sportsPlaceTypes": [
+          2290,
+          2280,
+          2270,
+          2250,
+          2220,
+          2210,
+          2240,
+          2260,
+          2230,
+          2295,
+          2225
+        ]
+      },
+      {
+        "typeCode": 2300,
+        "name": "Yksittäiset lajikohtaiset sisäliikuntapaikat",
+        "sportsPlaceTypes": [
+          2310,
+          2320,
+          2330,
+          2340,
+          2350,
+          2360,
+          2370,
+          2380
+        ]
+      },
+      {
+        "typeCode": 2500,
+        "name": "Jäähallit",
+        "sportsPlaceTypes": [
+          2510,
+          2530,
+          2520
+        ]
+      },
+      {
+        "typeCode": 2600,
+        "name": "Keilahallit",
+        "sportsPlaceTypes": [
+          2610,
+          2620
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 3000,
+    "name": "Vesiliikuntapaikat",
+    "subCategories": [
+      {
+        "typeCode": 3100,
+        "name": "Uima-altaat, hallit ja kylpylät",
+        "sportsPlaceTypes": [
+          3120,
+          3130,
+          3110
+        ]
+      },
+      {
+        "typeCode": 3200,
+        "name": "Maauimalat ja uimarannat",
+        "sportsPlaceTypes": [
+          3230,
+          3240,
+          3210,
+          3220,
+          3250
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 4000,
+    "name": "Maastoliikuntapaikat",
+    "subCategories": [
+      {
+        "typeCode": 4100,
+        "name": "Laskettelurinteet ja rinnehiihtokeskukset",
+        "sportsPlaceTypes": [
+          4110
+        ]
+      },
+      {
+        "typeCode": 4200,
+        "name": "Katetut talviurheilupaikat",
+        "sportsPlaceTypes": [
+          4210,
+          4230,
+          4240,
+          4220
+        ]
+      },
+      {
+        "typeCode": 4300,
+        "name": "Hyppyrimäet",
+        "sportsPlaceTypes": [
+          4310,
+          4320
+        ]
+      },
+      {
+        "typeCode": 4400,
+        "name": "Liikunta- ja ulkoilureitit",
+        "sportsPlaceTypes": [
+          4403,
+          4404,
+          4405,
+          4412,
+          4430,
+          4421,
+          4402,
+          4401,
+          4440,
+          4451,
+          4422,
+          4452,
+          4411,
+          4441,
+          4407,
+          4406
+        ]
+      },
+      {
+        "typeCode": 4500,
+        "name": "Suunnistusalueet",
+        "sportsPlaceTypes": [
+          4510,
+          4530,
+          4520
+        ]
+      },
+      {
+        "typeCode": 4600,
+        "name": "Maastohiihtokeskukset",
+        "sportsPlaceTypes": [
+          4610,
+          4630,
+          4620,
+          4640
+        ]
+      },
+      {
+        "typeCode": 4700,
+        "name": "Kiipeilypaikat",
+        "sportsPlaceTypes": [
+          4710,
+          4720
+        ]
+      },
+      {
+        "typeCode": 4800,
+        "name": "Ampumaurheilupaikat",
+        "sportsPlaceTypes": [
+          4810,
+          4820,
+          4840,
+          4830
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 5000,
+    "name": "Veneily, ilmailu ja moottoriurheilu",
+    "subCategories": [
+      {
+        "typeCode": 5100,
+        "name": "Veneurheilupaikat",
+        "sportsPlaceTypes": [
+          5110,
+          5140,
+          5120,
+          5130,
+          5150,
+          5160
+        ]
+      },
+      {
+        "typeCode": 5200,
+        "name": "Urheiluilmailualueet",
+        "sportsPlaceTypes": [
+          5210
+        ]
+      },
+      {
+        "typeCode": 5300,
+        "name": "Moottoriurheilualueet",
+        "sportsPlaceTypes": [
+          5310,
+          5320,
+          5330,
+          5340,
+          5360,
+          5370,
+          5350
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 6000,
+    "name": "Eläinurheilualueet",
+    "subCategories": [
+      {
+        "typeCode": 6100,
+        "name": "Hevosurheilu",
+        "sportsPlaceTypes": [
+          6110,
+          6120,
+          6130,
+          6140,
+          6150
+        ]
+      },
+      {
+        "typeCode": 6200,
+        "name": "Koiraurheilu",
+        "sportsPlaceTypes": [
+          6210,
+          6220
+        ]
+      }
+    ]
+  },
+  {
+    "typeCode": 7000,
+    "name": "Huoltorakennukset",
+    "subCategories": [
+      {
+        "typeCode": 7000,
+        "name": "Huoltotilat",
+        "sportsPlaceTypes": [
+          7000
+        ]
+      }
+    ]
+  }
+]
