@@ -24,7 +24,7 @@
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
-(declare gen-user)
+(declare gen-user prune-es!)
 
 #_(defn gen-sports-site
     []
@@ -514,9 +514,9 @@
    (let [{:keys [once each]} (test-utils/db-and-search-fixture)]
      (use-fixtures :once once)
      (use-fixtures :each each))"
-  []
+  [search]
   {:once (fn [f] (init-db!) (f))
-   :each (fn [f] (prune-db!) (prune-es!) (f))})
+   :each (fn [f] (prune-db!) (prune-es! search) (f))})
 
 (defn full-system-fixture
   "Starts complete Integrant system, prunes between tests.

@@ -3,7 +3,8 @@
    [legacy-api.util :refer [only-non-nil-recur]]
    [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
    [lipas.backend.gis :as gis]
-   [lipas.data.cities :as cities]))
+   [lipas.data.cities :as cities]
+   [lipas.utils :as utils]))
 
 (defn start-coord [location]
   (let [geom (-> location :geometries :features first :geometry)]
@@ -26,9 +27,9 @@
     :address (:address location)
     :postalCode (:postalCode location)
     :postalOffice (:postalOffice location)
-    :city {:name (-> (cities/by-city-code (-> location :city :cityCode))
-                     :name)
-           :cityCode (-> location :city :cityCode)}
+    :city (let [city-code (utils/->int (-> location :city :cityCode))]
+            {:name (-> (cities/by-city-code city-code) :name)
+             :cityCode city-code})
     ;; new lipas has only finnish translation
     :neighborhood {:fi (-> location :neighborhood)
                    :en (-> location :neighborhood)

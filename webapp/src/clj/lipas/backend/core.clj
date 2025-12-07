@@ -501,7 +501,8 @@
                           legacy-locations/format-location))
 
          idx-name (get-in indices [:legacy-sports-site :search])]
-     (search/index! client idx-name :lipas-id legacy-data :sync))))
+     ;; Use :sportsPlaceId as the id-fn since the data is in legacy camelCase format
+     (search/index! client idx-name :sportsPlaceId legacy-data sync?))))
 
 (defn search
   [{:keys [indices client]} params]

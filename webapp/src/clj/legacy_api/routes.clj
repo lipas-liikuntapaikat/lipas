@@ -99,7 +99,7 @@ Access to the hierarchical type classification system used for categorizing spor
          (fn [req]
            (let [locale (or (-> req :parameters :query :lang keyword) :fi)
                  sports-place-id (-> req :parameters :path :sports-place-id)
-                 resp (legacy-core/fetch-sports-place-es (:client search) locale sports-place-id)]
+                 resp (legacy-core/fetch-sports-place-es search locale sports-place-id)]
              (if resp
                {:status 200 :body resp}
                {:status 404 :body {:error "Sports place not found"}}))))
