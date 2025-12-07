@@ -8,17 +8,21 @@
    [lipas.backend.jwt :as jwt]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.schema :as schema]
-   [lipas.test-utils :refer [->json <-json app db] :as tu]
+   [lipas.test-utils :refer [->json <-json] :as tu]
    [next.jdbc :as jdbc]
    [ring.mock.request :as mock]))
 
-(use-fixtures :once (fn [f]
-                      (tu/init-db!)
-                      (f)))
+;;; Test system setup ;;;
+(defonce test-system (atom nil))
 
-(use-fixtures :each (fn [f]
-                      (tu/prune-db!)
-                      (f)))
+;;; Fixtures ;;;
+(let [{:keys [once each]} (tu/full-system-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
+
+;;; Accessors ;;;
+(defn test-app [] (:lipas/app @test-system))
+(defn test-db [] (:lipas/db @test-system))
 
 (defn setup-test-scenario!
   "Create a realistic test scenario with varied job states and timing."
@@ -93,13 +97,13 @@
 
 (deftest job-metrics-accuracy-test
   (testing "Job metrics accurately reflect database state"
-    (let [expected (setup-test-scenario! db)
-          admin (tu/gen-user {:db? true :admin? true})
+    (let [expected (setup-test-scenario! (test-db))
+          admin (tu/gen-user {:db? true :admin? true :db-component (test-db)})
           token (jwt/create-token admin)
-          resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                        (mock/content-type "application/json")
-                        (mock/body (->json {}))
-                        (tu/token-header token)))
+          resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {}))
+                               (tu/token-header token)))
           body (<-json (:body resp))]
 
       (is (= 200 (:status resp)))
@@ -151,13 +155,13 @@
 
 (deftest job-health-accuracy-test
   (testing "Job health status accurately reflects current queue state"
-    (let [expected (setup-test-scenario! db)
-          admin (tu/gen-user {:db? true :admin? true})
+    (let [expected (setup-test-scenario! (test-db))
+          admin (tu/gen-user {:db? true :admin? true :db-component (test-db)})
           token (jwt/create-token admin)
-          resp (app (-> (mock/request :post "/api/actions/get-jobs-health-status")
-                        (mock/content-type "application/json")
-                        (mock/body (->json {}))
-                        (tu/token-header token)))
+          resp ((test-app) (-> (mock/request :post "/api/actions/get-jobs-health-status")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {}))
+                               (tu/token-header token)))
           body (<-json (:body resp))]
 
       (is (= 200 (:status resp)))
@@ -185,16 +189,16 @@
 
 (deftest empty-queue-behavior-test
   (testing "Endpoints handle empty queue correctly"
-    (tu/prune-db!) ; Ensure clean state
+    ;; Prune already happens in :each fixture
 
-    (let [admin (tu/gen-user {:db? true :admin? true})
+    (let [admin (tu/gen-user {:db? true :admin? true :db-component (test-db)})
           token (jwt/create-token admin)]
 
       (testing "Metrics report with empty queue"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {}))
-                            (tu/token-header token)))
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {}))
+                                   (tu/token-header token)))
               body (<-json (:body resp))]
 
           (is (= 200 (:status resp)))
@@ -208,10 +212,10 @@
             (is (= 0 (:dead_count health))))))
 
       (testing "Health status with empty queue"
-        (let [resp (app (-> (mock/request :post "/api/actions/get-jobs-health-status")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {}))
-                            (tu/token-header token)))
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/get-jobs-health-status")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {}))
+                                   (tu/token-header token)))
               body (<-json (:body resp))]
 
           (is (= 200 (:status resp)))
@@ -223,31 +227,31 @@
 
 (deftest timeframe-filtering-test
   (testing "Metrics timeframe filtering works correctly"
-    (tu/prune-db!)
+    ;; Prune already happens in :each fixture
 
     ;; Create jobs at different times (simulate with manual updates)
-    (let [old-result (jobs/enqueue-job! db "email" {:to "old@example.com" :subject "Old Email" :body "This is an old email for testing."})
+    (let [old-result (jobs/enqueue-job! (test-db) "email" {:to "old@example.com" :subject "Old Email" :body "This is an old email for testing."})
           old-job (:id old-result)]
       ;; Simulate job processing by setting started_at before completion
-      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" old-job])
-      (jobs/mark-completed! db old-job)
+      (jdbc/execute! (test-db) ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" old-job])
+      (jobs/mark-completed! (test-db) old-job)
       ;; Simulate this job being from 48 hours ago
-      (jdbc/execute! db ["UPDATE jobs SET created_at = now() - interval '48 hours', completed_at = now() - interval '48 hours' WHERE id = ?" old-job]))
+      (jdbc/execute! (test-db) ["UPDATE jobs SET created_at = now() - interval '48 hours', completed_at = now() - interval '48 hours' WHERE id = ?" old-job]))
 
-    (let [recent-result (jobs/enqueue-job! db "email" {:to "recent@example.com" :subject "Recent Email" :body "This is a recent email for testing."})
+    (let [recent-result (jobs/enqueue-job! (test-db) "email" {:to "recent@example.com" :subject "Recent Email" :body "This is a recent email for testing."})
           recent-job (:id recent-result)]
       ;; Simulate job processing by setting started_at before completion
-      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" recent-job])
-      (jobs/mark-completed! db recent-job))
+      (jdbc/execute! (test-db) ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" recent-job])
+      (jobs/mark-completed! (test-db) recent-job))
 
-    (let [admin (tu/gen-user {:db? true :admin? true})
+    (let [admin (tu/gen-user {:db? true :admin? true :db-component (test-db)})
           token (jwt/create-token admin)]
 
       (testing "Last 24 hours should exclude old job"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {:from-hours-ago 24 :to-hours-ago 0}))
-                            (tu/token-header token)))
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {:from-hours-ago 24 :to-hours-ago 0}))
+                                   (tu/token-header token)))
               body (<-json (:body resp))]
 
           (is (= 200 (:status resp)))
@@ -262,10 +266,10 @@
                   "Should only count recent job in 24h window")))))
 
       (testing "Last 72 hours should include both jobs"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {:from-hours-ago 72 :to-hours-ago 0}))
-                            (tu/token-header token)))
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {:from-hours-ago 72 :to-hours-ago 0}))
+                                   (tu/token-header token)))
               body (<-json (:body resp))]
 
           (is (= 200 (:status resp)))
@@ -281,53 +285,53 @@
 
 (deftest authorization-test
   (testing "Endpoints require admin role"
-    (let [regular-user (tu/gen-user {:db? true :admin? false})
+    (let [regular-user (tu/gen-user {:db? true :admin? false :db-component (test-db)})
           token (jwt/create-token regular-user)]
 
       (testing "Non-admin cannot access metrics"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {}))
-                            (tu/token-header token)))]
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {}))
+                                   (tu/token-header token)))]
           (is (= 403 (:status resp)))))
 
       (testing "Non-admin cannot access health"
-        (let [resp (app (-> (mock/request :post "/api/actions/get-jobs-health-status")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {}))
-                            (tu/token-header token)))]
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/get-jobs-health-status")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {}))
+                                   (tu/token-header token)))]
           (is (= 403 (:status resp)))))))
 
   (testing "Endpoints require authentication"
     (testing "Unauthenticated metrics request"
-      (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                          (mock/content-type "application/json")
-                          (mock/body (->json {}))))]
+      (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                 (mock/content-type "application/json")
+                                 (mock/body (->json {}))))]
         (is (= 401 (:status resp)))))
 
     (testing "Unauthenticated health request"
-      (let [resp (app (-> (mock/request :post "/api/actions/get-jobs-health-status")
-                          (mock/content-type "application/json")
-                          (mock/body (->json {}))))]
+      (let [resp ((test-app) (-> (mock/request :post "/api/actions/get-jobs-health-status")
+                                 (mock/content-type "application/json")
+                                 (mock/body (->json {}))))]
         (is (= 401 (:status resp)))))))
 
 (deftest request-validation-test
   (testing "Invalid request parameters are rejected"
-    (let [admin (tu/gen-user {:db? true :admin? true})
+    (let [admin (tu/gen-user {:db? true :admin? true :db-component (test-db)})
           token (jwt/create-token admin)]
 
       (testing "Invalid timeframe parameters"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {:from-hours-ago "invalid"}))
-                            (tu/token-header token)))]
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {:from-hours-ago "invalid"}))
+                                   (tu/token-header token)))]
           (is (= 400 (:status resp)) "Should reject non-integer timeframe")))
 
       (testing "Timeframe out of range"
-        (let [resp (app (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
-                            (mock/content-type "application/json")
-                            (mock/body (->json {:from-hours-ago 200})) ; > 168 hours (1 week)
-                            (tu/token-header token)))]
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/create-jobs-metrics-report")
+                                   (mock/content-type "application/json")
+                                   (mock/body (->json {:from-hours-ago 200})) ; > 168 hours (1 week)
+                                   (tu/token-header token)))]
           (is (= 400 (:status resp)) "Should reject timeframe > 1 week"))))))
 
 (comment

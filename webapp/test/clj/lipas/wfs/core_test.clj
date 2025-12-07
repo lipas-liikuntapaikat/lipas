@@ -6,15 +6,19 @@
             [lipas.wfs.mappings :as wfs-mappings]
             [lipas.utils :as utils]))
 
-;; Test data fixtures
+;;; Test system setup ;;;
+(defonce test-system (atom nil))
 
-(defn with-clean-wfs-db
-  "Test fixture to ensure clean WFS database state"
-  [test-fn]
-  (test-utils/prune-wfs-schema!)
-  (test-fn))
+;;; Fixtures ;;;
+(let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each (fn [f]
+                        ;; Prune WFS schema in addition to regular db/search cleanup
+                        (test-utils/prune-wfs-schema!)
+                        (each f))))
 
-(use-fixtures :each with-clean-wfs-db)
+;;; Accessors ;;;
+(defn test-db [] (:lipas/db @test-system))
 
 (def sample-instant "2023-12-25T10:15:30.123456Z")
 
@@ -236,12 +240,12 @@
   (testing "Multiple LineString features with travel directions"
     (let [multi-line-site (-> sample-linestring-sports-site
                               (assoc-in [:location :geometries :features]
-                                    [{:geometry {:type "LineString"
-                                                 :coordinates [[24.9 60.1] [24.91 60.11]]}
-                                      :properties {:travel-direction "start-to-end"}}
-                                     {:geometry {:type "LineString"
-                                                 :coordinates [[24.92 60.12] [24.93 60.13]]}
-                                      :properties {:travel-direction "end-to-start"}}])
+                                        [{:geometry {:type "LineString"
+                                                     :coordinates [[24.9 60.1] [24.91 60.11]]}
+                                          :properties {:travel-direction "start-to-end"}}
+                                         {:geometry {:type "LineString"
+                                                     :coordinates [[24.92 60.12] [24.93 60.13]]}
+                                          :properties {:travel-direction "end-to-start"}}])
                               (assoc-in [:type :type-code] 4402)) ;; only 4402 has travel direction
           rows (wfs/->wfs-rows multi-line-site)]
 
@@ -401,7 +405,7 @@
 
     ;; Step 1: Generate and insert sports sites with different geometry types
     (let [;; Create test user for database operations
-          test-user (test-utils/gen-user {:db? true})
+          test-user (test-utils/gen-user {:db? true :db-component (test-db)})
 
           ;; Create sports sites with different geometry types using our test data
           point-site (assoc sample-point-sports-site
@@ -421,13 +425,13 @@
       (testing "Step 1: Insert sports sites to the main database"
         ;; Insert the test sites
         (doseq [site test-sites]
-          (let [result (lipas.backend.db.db/upsert-sports-site! test-utils/db test-user site)]
+          (let [result (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site)]
             (is (some? result)
                 (str "Should successfully insert site " (:lipas-id site)))))
 
         ;; Verify sites were inserted
         (doseq [site test-sites]
-          (let [retrieved-site (lipas.backend.db.db/get-sports-site test-utils/db (:lipas-id site))]
+          (let [retrieved-site (lipas.backend.db.db/get-sports-site (test-db) (:lipas-id site))]
             (is (some? retrieved-site)
                 (str "Site " (:lipas-id site) " should exist in database"))
             (is (= (:lipas-id site) (:lipas-id retrieved-site))
@@ -436,12 +440,12 @@
                 "Type code should match"))))
 
       (testing "Step 2: Populate wfs.master table from sports_site table"
-        (is (nil? (wfs/refresh-wfs-master-table! test-utils/db)))
+        (is (nil? (wfs/refresh-wfs-master-table! (test-db))))
 
         ;; Verify all inserted sites exist in wfs.master table
         (doseq [site test-sites]
           (let [wfs-rows (next.jdbc/execute!
-                          test-utils/db
+                          (test-db)
                           (honey.sql/format {:select [:lipas_id :type_code :geom_type :status]
                                              :from [:wfs.master]
                                              :where [:= :lipas_id (:lipas-id site)]}))]
@@ -458,7 +462,7 @@
                     "Status should be active in wfs.master"))))))
 
       (testing "Step 3: Create materialized views"
-        (is (nil? (wfs/create-legacy-mat-views! test-utils/db)))
+        (is (nil? (wfs/create-legacy-mat-views! (test-db))))
 
         ;; Verify sites can be seen in their corresponding materialized views
         (doseq [site test-sites]
@@ -469,7 +473,7 @@
               (doseq [view-name view-names]
                 (let [view-data (try
                                   (next.jdbc/execute!
-                                   test-utils/db
+                                   (test-db)
                                    [(str "SELECT id, tyyppikoodi FROM wfs." view-name
                                          " WHERE id = ?") (:lipas-id site)])
                                   (catch Exception e
@@ -491,7 +495,7 @@
         (let [site-to-remove (assoc point-site
                                     :status "out-of-service-permanently"
                                     :event-date (utils/timestamp))]
-          (lipas.backend.db.db/upsert-sports-site! test-utils/db test-user site-to-remove))
+          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site-to-remove))
 
         ;; Modify one site (change name and properties)
         (let [site-to-modify (assoc linestring-site
@@ -500,7 +504,7 @@
                                     :event-date (utils/timestamp)
                                     :properties (assoc (:properties linestring-site)
                                                        :route-length-km 7.5))]
-          (lipas.backend.db.db/upsert-sports-site! test-utils/db test-user site-to-modify))
+          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site-to-modify))
 
         ;; Add a new site
         (let [new-site (assoc sample-point-sports-site
@@ -508,19 +512,19 @@
                               :name "New Tennis Court"
                               :event-date (utils/timestamp)
                               :type {:type-code 1370})] ; Tennis court
-          (lipas.backend.db.db/upsert-sports-site! test-utils/db test-user new-site)
+          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user new-site)
 
           ;; Verify new site was added
-          (let [retrieved-site (lipas.backend.db.db/get-sports-site test-utils/db 90004)]
+          (let [retrieved-site (lipas.backend.db.db/get-sports-site (test-db) 90004)]
             (is (some? retrieved-site) "New site should exist in database")
             (is (= "New Tennis Court" (:name retrieved-site)) "New site name should match"))))
 
       (testing "Step 5: Modifications should reflect in materialized views after full refresh"
-        (is (nil? (wfs/refresh-all! test-utils/db)))
+        (is (nil? (wfs/refresh-all! (test-db))))
 
         ;; Check that removed site is no longer active in views
         (let [removed-site-data (next.jdbc/execute!
-                                 test-utils/db
+                                 (test-db)
                                  (honey.sql/format {:select [:lipas_id :status]
                                                     :from [:wfs.master]
                                                     :where [:= :lipas_id 90001]}))]
@@ -531,7 +535,7 @@
 
         ;; Check that modified site has updated data
         (let [modified-site-rows (next.jdbc/execute!
-                                  test-utils/db
+                                  (test-db)
                                   (honey.sql/format {:select [:lipas_id :doc]
                                                      :from [:wfs.master]
                                                      :where [:= :lipas_id 90002]}))]
@@ -543,7 +547,7 @@
 
         ;; Check that new site exists in appropriate views
         (let [new-site-data (next.jdbc/execute!
-                             test-utils/db
+                             (test-db)
                              (honey.sql/format {:select [:lipas_id :type_code]
                                                 :from [:wfs.master]
                                                 :where [:= :lipas_id 90004]}))]
@@ -558,7 +562,7 @@
             (doseq [view-name tennis-view-names]
               (let [view-count (try
                                  (next.jdbc/execute-one!
-                                  test-utils/db
+                                  (test-db)
                                   [(str "SELECT COUNT(*) as count FROM wfs." view-name
                                         " WHERE id IN (90001, 90004)")])
                                  (catch Exception e
@@ -570,14 +574,14 @@
                     (str "View " view-name " should contain at least the new tennis court")))))))
 
       (testing "Step 6: Drop materialized views without errors"
-        (is (nil? (wfs/drop-legacy-mat-views! test-utils/db)))
+        (is (nil? (wfs/drop-legacy-mat-views! (test-db))))
 
         ;; Verify views are dropped by trying to query them (should fail)
         (let [tennis-view-names (get wfs-mappings/type-code->view-names 1370)]
           (when (seq tennis-view-names)
             (doseq [view-name tennis-view-names]
               (is (thrown? Exception
-                           (next.jdbc/execute! test-utils/db
+                           (next.jdbc/execute! (test-db)
                                                [(str "SELECT 1 FROM wfs." view-name " LIMIT 1")]))
                   (str "View " view-name " should no longer exist after drop")))))))))
 
