@@ -47,6 +47,10 @@
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "search"))
 
+(defn reindex-lois!
+  []
+  ((requiring-resolve 'lipas.search-indexer/index-search-lois!) (db) (search)))
+
 (defn reindex-analytics!
   []
   ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "analytics"))
@@ -88,9 +92,9 @@
                    :sources
                    (->> (mapcat :warnings)))
      :errors (-> build-state
-                   :shadow.build/build-info
-                   :sources
-                   (->> (mapcat :errors)))}))
+                 :shadow.build/build-info
+                 :sources
+                 (->> (mapcat :errors)))}))
 
 (comment
   (go)
@@ -229,10 +233,8 @@
 
   (m/validate ss/base-schema (-> @all-sites first second))
 
-
   (m/schema [:string {:min 1 :max 200}])
   (m/schema [:string {:min 1 :max 2048}])
-
 
   (require '[lipas.data.prop-types :as prop-types])
 
@@ -257,7 +259,6 @@
 
   (require '[malli.json-schema :as mj])
   (mj/transform ss/base-schema)
-
 
   (require '[lipas.data.types-new :as types-new])
   (require '[lipas.data.types-old :as types-old])
@@ -294,7 +295,6 @@
   (def new-prop-types (set/difference
                        (set (keys prop-types-new/all))
                        (set (keys prop-types-old/all))))
-
 
   (require '[lipas.data.help :as help-data])
   (require '[lipas.backend.core :as core])
@@ -333,9 +333,7 @@
   (def wat2-fixed (assoc-in wat2 [:location :geometries] wat2g))
 
   (lipas.backend.core/upsert-sports-site!* (db) (get-robot-user) wat2-fixed)
-  (lipas.backend.core/index! (search) wat2-fixed)
-
-  )
+  (lipas.backend.core/index! (search) wat2-fixed))
 
 ;; Population grids
 (comment
@@ -343,7 +341,6 @@
   (def path-1km "/Users/tipo/lipas/aineistot/vaestoruutu_1km_2024/vaestoruutu_1km_2024.csv")
 
   (ac/seed-population-1km-grid-from-csv! (search) path-1km)
-
 
   (def path-250m "/Users/tipo/lipas/aineistot/vaestoruutu_250m_2024/vaestoruutu_250m_2024_kp.csv")
 
@@ -353,5 +350,7 @@
   (reindex-search!)
   (require '[lipas.backend.analysis.diversity :as ad])
   (ad/seed-new-grid-from-csv! (search) path-250m)
+
+  (reindex-lois!)
 
   )
