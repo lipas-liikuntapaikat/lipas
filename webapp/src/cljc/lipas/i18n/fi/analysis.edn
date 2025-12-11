@@ -142,13 +142,6 @@
  ;; Heatmap popup translations
  :heatmap-popup-facility-singular "liikuntapaikka"
  :heatmap-popup-facility-plural "liikuntapaikkaa"
- :heatmap-popup-total-area "Pinta-ala yhteensä: "
- :heatmap-popup-weight "Paino: "
- :heatmap-popup-density-very-high "Erittäin korkea tiheys"
- :heatmap-popup-density-high "Korkea tiheys"
- :heatmap-popup-density-medium "Keskitaso"
- :heatmap-popup-density-low "Matala tiheys"
- :heatmap-popup-density-very-low "Erittäin matala tiheys"
  :heatmap-popup-top-types "TOP-5 Tyypit: (yht. "
  :heatmap-popup-type-fallback "Tyyppi "
  :heatmap-popup-activities "Aktiviteetit:"}

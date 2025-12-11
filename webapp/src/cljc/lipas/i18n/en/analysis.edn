@@ -100,13 +100,6 @@
  ;; Heatmap popup translations
  :heatmap-popup-facility-singular "sports facility"
  :heatmap-popup-facility-plural "sports facilities"
- :heatmap-popup-total-area "Total area: "
- :heatmap-popup-weight "Weight: "
- :heatmap-popup-density-very-high "Very high density"
- :heatmap-popup-density-high "High density"
- :heatmap-popup-density-medium "Medium density"
- :heatmap-popup-density-low "Low density"
- :heatmap-popup-density-very-low "Very low density"
  :heatmap-popup-top-types "TOP-5 Types: (total "
  :heatmap-popup-type-fallback "Type "
  :heatmap-popup-activities "Activities:"}

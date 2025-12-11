@@ -131,13 +131,6 @@
  ;; Heatmap popup translations
  :heatmap-popup-facility-singular "idrottsplats"
  :heatmap-popup-facility-plural "idrottsplatser"
- :heatmap-popup-total-area "Total yta: "
- :heatmap-popup-weight "Vikt: "
- :heatmap-popup-density-very-high "Mycket hög täthet"
- :heatmap-popup-density-high "Hög täthet"
- :heatmap-popup-density-medium "Medelnivå"
- :heatmap-popup-density-low "Låg täthet"
- :heatmap-popup-density-very-low "Mycket låg täthet"
  :heatmap-popup-top-types "TOPP-5 Typer: (totalt "
  :heatmap-popup-type-fallback "Typ "
  :heatmap-popup-activities "Aktiviteter:"}

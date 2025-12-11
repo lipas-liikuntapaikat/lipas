@@ -628,24 +628,6 @@
                                     (tr :analysis/heatmap-popup-facility-singular)
                                     (tr :analysis/heatmap-popup-facility-plural)))]
 
-      ;; Weight info
-      (when (and weight-by (not= "doc-count" weight-by))
-        [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
-         (case (keyword weight-by)
-           :area-m2 (str (tr :analysis/heatmap-popup-total-area)
-                         (utils/round-safe (:weight data) 0) " m²")
-           (str (tr :analysis/heatmap-popup-weight) (:weight data) " "))])
-
-      ;; Relative intensity
-      (let [intensity (* 100 (:normalized-weight data))]
-        [mui/typography {:variant "caption" :color "textSecondary"}
-         (cond
-           (> intensity 80) (tr :analysis/heatmap-popup-density-very-high)
-           (> intensity 60) (tr :analysis/heatmap-popup-density-high)
-           (> intensity 40) (tr :analysis/heatmap-popup-density-medium)
-           (> intensity 20) (tr :analysis/heatmap-popup-density-low)
-           :else (tr :analysis/heatmap-popup-density-very-low))])
-
       ;; Type distribution for type-distribution dimension
       (when (and (= :type-distribution dimension) (:types data))
         [:<>
