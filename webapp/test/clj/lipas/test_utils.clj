@@ -24,16 +24,16 @@
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
-(declare gen-user)
+(declare gen-user prune-es!)
 
 #_(defn gen-sports-site
-  []
-  (try
+    []
+    (try
     ;; FIXME :ptv generators produce difficult values
-    (-> (s/gen :lipas/sports-site)
-        gen/generate
-        (dissoc :ptv))
-    (catch Throwable _t (gen-sports-site))))
+      (-> (s/gen :lipas/sports-site)
+          gen/generate
+          (dissoc :ptv))
+      (catch Throwable _t (gen-sports-site))))
 
 (defn fix-generated-site [site]
   (cond-> site
@@ -85,7 +85,7 @@
                       site (-> base-site
                                (assoc :lipas-id (inc i))
                                (cond->
-                                 city-codes
+                                city-codes
                                  (assoc-in [:location :city :city-code]
                                            (nth city-codes (mod i (clojure.core/count city-codes))))
 
@@ -156,7 +156,8 @@
                 (update-in [:search :indices :analysis :population] test-suffix)
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
                 (update-in [:search :indices :analysis :diversity] test-suffix)
-                (update-in [:search :indices :lois :search] test-suffix)))
+                (update-in [:search :indices :lois :search] test-suffix)
+                (update-in [:search :indices :legacy-sports-site :search] test-suffix)))
 
 ;; Enhanced database initialization with migration status checking
 (defn init-db!
@@ -302,45 +303,64 @@
   (jdbc/execute! (:db config) [(str "DROP SCHEMA IF EXISTS wfs CASCADE;"
                                     wfs-up-ddl)]))
 
-;; Likely all test system components are stateless, so maybe ok to start without ever halting this.
-;; But take steps to also stop the system before starting it again on each reload of this ns.
-(defonce system nil)
-
-(alter-var-root #'system (fn [x]
-                           (when x
-                             (sy/stop-system! x))
-                           (sy/start-system! (config/->system-config config))))
-
-;; These need to be redefined after each alter-var-root.
-(def db (:lipas/db system))
-(def app (:lipas/app system))
-(def search (:lipas/search system))
+;; ==========================================================================
+;; DEPRECATED: Global vars removed - use full-system-fixture pattern instead
+;; ==========================================================================
+;;
+;; The global db/app/search vars have been removed because:
+;; 1. They caused StackOverflow on REPL reload (malli schema #'var references become stale)
+;; 2. They created implicit shared state between tests
+;; 3. They required @deref ceremony at every call site
+;;
+;; Instead, use the full-system-fixture pattern:
+;;
+;;   (defonce test-system (atom nil))
+;;   (let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+;;     (use-fixtures :once once)
+;;     (use-fixtures :each each))
+;;
+;;   (defn test-db [] (:lipas/db @test-system))
+;;   (defn test-app [] (:lipas/app @test-system))
+;;   (defn test-search [] (:lipas/search @test-system))
+;;
+;; See lipas.backend.org-test for a complete example.
 
 (defn prune-es!
-  ([] (prune-es! search))
-  ([search]
-   (let [client (:client search)
-         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                   (-> search :indices :analysis :diversity) diversity/mappings
-                   (-> search :indices :lois :search) (:lois search/mappings)}]
+  "Prune all Elasticsearch test indices and recreate them with proper mappings.
+   Requires the search component as an argument."
+  [search]
+  (let [client (:client search)
+        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                  (-> search :indices :legacy-sports-site :search) (:legacy-sports-site search/mappings)
+                  (-> search :indices :analysis :diversity) diversity/mappings
+                  (-> search :indices :lois :search) (:lois search/mappings)}]
 
-     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
-       (try
-         (search/delete-index! client idx-name)
-         (catch Exception ex
-           (when (not= "index_not_found_exception"
-                       (-> ex ex-data :body :error :root_cause first :type))
-             (throw ex))))
-       (when-let [mapping (mappings idx-name)]
-         (search/create-index! client idx-name mapping))))))
+    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+      (try
+        (search/delete-index! client idx-name)
+        (catch Exception ex
+          (when (not= "index_not_found_exception"
+                      (-> ex ex-data :body :error :root_cause first :type))
+            (throw ex))))
+      (when-let [mapping (mappings idx-name)]
+        (search/create-index! client idx-name mapping)))))
 
 (comment
   (init-db!)
-  (prune-es!)
+  ;; prune-es! now requires search component: (prune-es! search)
+  ;; prune-db! can still be called without args if using test config
   (prune-db!)
   (ex-data *e))
 
 (defn gen-user
+  "Generate a test user with optional persistence to database.
+
+   Options:
+   - :db?          - If true, save user to database (requires :db-component)
+   - :admin?       - If true, add admin role
+   - :status       - User status (default: \"active\")
+   - :permissions  - Custom permissions map to merge
+   - :db-component - Required when db? is true. The database component to use."
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
   ([{:keys [db? admin? status permissions db-component]
@@ -358,9 +378,12 @@
                                                                          (into [] (remove (fn [x] (= :admin (:role x))) roles))))
                                            admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
-       (let [db-conn (or db-component db)]
-         (core/add-user! db-conn user)
-         (assoc user :id (:id (core/get-user db-conn (:email user)))))
+       (do
+         (when-not db-component
+           (throw (ex-info "gen-user with db? true requires :db-component option. Use (gen-user {:db? true :db-component (test-db)})"
+                           {:opts {:db? db? :admin? admin?}})))
+         (core/add-user! db-component user)
+         (assoc user :id (:id (core/get-user db-component (:email user)))))
        user))))
 
 (defn gen-loi! []
@@ -376,40 +399,50 @@
 ;; ========================================
 
 (defn gen-admin-user
-  "Generate a user with admin permissions, optionally saved to DB"
-  [& {:keys [db?] :or {db? true} :as opts}]
-  (gen-user (merge opts {:db? db? :admin? true})))
+  "Generate a user with admin permissions, optionally saved to DB.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? true :db-component db-component})))
 
 (defn gen-regular-user
-  "Generate a regular user with default permissions"
-  [& {:keys [db?] :or {db? true} :as opts}]
-  (gen-user (merge opts {:db? db? :admin? false})))
+  "Generate a regular user with default permissions.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? false :db-component db-component})))
 
 (defn gen-city-manager-user
-  "Generate a city manager user for specific city"
-  [city-code & {:keys [db?] :or {db? true} :as opts}]
+  "Generate a city manager user for specific city.
+   When db? is true (default), requires :db-component option."
+  [city-code & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "city-manager"
                                                 :city-code [city-code]}]}})))
 
 (defn gen-site-manager-user
-  "Generate a site manager user for specific sports site"
-  [lipas-id & {:keys [db?] :or {db? true} :as opts}]
+  "Generate a site manager user for specific sports site.
+   When db? is true (default), requires :db-component option."
+  [lipas-id & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "site-manager"
                                                 :lipas-id [lipas-id]}]}})))
 
 (defn gen-org-admin-user
-  "Generate an organization admin for specific org"
-  [org-id & {:keys [db?] :or {db? true} :as opts}]
+  "Generate an organization admin for specific org.
+   When db? is true (default), requires :db-component option."
+  [org-id & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "org-admin"
                                                 :org-id [(str org-id)]}]}})))
 
 (defn gen-ptv-auditor
-  "Generate a PTV auditor user"
-  [& {:keys [db?] :or {db? true} :as opts}]
+  "Generate a PTV auditor user.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role :ptv-auditor}]}})))
 
 ;; ========================================
@@ -481,9 +514,9 @@
    (let [{:keys [once each]} (test-utils/db-and-search-fixture)]
      (use-fixtures :once once)
      (use-fixtures :each each))"
-  []
+  [search]
   {:once (fn [f] (init-db!) (f))
-   :each (fn [f] (prune-db!) (prune-es!) (f))})
+   :each (fn [f] (prune-db!) (prune-es! search) (f))})
 
 (defn full-system-fixture
   "Starts complete Integrant system, prunes between tests.

@@ -7,6 +7,8 @@
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
+(def legacy-date-format "yyyy-MM-dd HH:mm:ss.SSS")
+
 (defn create-cli
   [{:keys [hosts user password]}]
   (es/client {:hosts       hosts
@@ -36,7 +38,14 @@
      {:search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.geometries
-      {:type "geo_shape"}}}}})
+      {:type "geo_shape"}}}}
+   :legacy-sports-site
+   {:mappings
+    {:properties
+     {:location.coordinates.wgs84 {:type "geo_point"}
+      :location.geom-coll         {:type "geo_shape"}
+      :lastModified               {:type   "date"
+                                   :format legacy-date-format}}}}})
 
 (defn gen-idx-name
   "Returns index name generated from current timestamp that is

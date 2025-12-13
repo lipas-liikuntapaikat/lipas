@@ -276,4 +276,17 @@
                      :task (if-let [test-ns-regex (first *command-line-args*)]
                              (shell "clojure" "-M:dev:test" "--namespace-regex" test-ns-regex)
                              (do (println "Usage: bb test-regex <test-ns-regex>")
-                                 (println "Example: bb test-regex '^lipas\\.jobs\\..*'")))}}}
+                                 (println "Example: bb test-regex '^lipas\\.jobs\\..*'")))}
+
+         ;; Code Graph Tasks
+         code-graph-watch {:doc "Start file watcher for code graph knowledge base updates"
+                           :task (shell {:dir (str (System/getProperty "user.home") "/dev/code-graph-rag")}
+                                        (str (System/getProperty "user.home") "/dev/code-graph-rag/.venv/bin/python")
+                                        "realtime_updater.py"
+                                        (str (System/getProperty "user.home") "/lipas/lipas/webapp"))}
+
+         code-graph-reindex {:doc "Full re-index of code graph knowledge base (clean rebuild)"
+                             :task (shell {:dir (str (System/getProperty "user.home") "/dev/code-graph-rag")}
+                                          "uv" "run" "cgr" "start"
+                                          "--repo-path" (str (System/getProperty "user.home") "/lipas/lipas/webapp")
+                                          "--update-graph" "--clean")}}}

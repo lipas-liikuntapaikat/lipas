@@ -7,7 +7,7 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites :as sports-sites]
             [lipas.data.types :as types]
-            [lipas.integration.old-lipas.sports-site :as legacy-utils]
+            [legacy-api.sports-place :as legacy-utils]
             [lipas.schema.sports-sites.circumstances :as circumastances]
             [lipas.wfs.mappings :as wfs]))
 

@@ -10,40 +10,33 @@
             [taoensso.timbre :as log]))
 
 ;;; Test system setup ;;;
-
+;; Note: This test only needs :lipas/search component, not the full system
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  ;; Ensure database is properly initialized
-  (test-utils/ensure-test-database!)
-  ;; Initialize test system using test config (with _test database suffix)
-  (reset! test-system
-          ;; add other system components to select-keys if needed
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/search]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
+;;; Accessors ;;;
+(defn test-search []
+  (:lipas/search @test-system))
 
 ;;; Fixtures ;;;
 
 (use-fixtures :once
   (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
+    ;; Ensure database is properly initialized
+    (test-utils/ensure-test-database!)
+    ;; Initialize test system using test config (only search component)
+    (reset! test-system
+            (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/search])))
+    (try (f)
+         (finally
+           (when @test-system
+             (ig/halt! @test-system)
+             (reset! test-system nil))))))
 
 (use-fixtures :each
   (fn [f]
-    ;; Clean elasticsearch indices before each test
-    (test-utils/prune-es!)
+    ;; Clean elasticsearch indices before each test - pass search explicitly
+    (test-utils/prune-es! (test-search))
     (f)))
-
-;;; Helper functions ;;;
-
-(defn test-search []
-  (:lipas/search @test-system))
 
 ;;; Test data based on real production data ;;;
 

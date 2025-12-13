@@ -22,8 +22,6 @@
 (defn test-db [] (:lipas/db @test-system))
 (defn test-app [req] ((:lipas/app @test-system) req))
 
-
-
 (defn- create-test-orgs
   "Creates multiple test orgs for testing"
   []
@@ -62,7 +60,7 @@
 
 (deftest create-org-success-test
   (testing "Successfully creates organization with valid data"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
           timestamp (System/currentTimeMillis)
           org-data {:name (str "Test Organization " timestamp)
@@ -75,9 +73,9 @@
                                :owners ["city"]
                                :supported-languages ["fi"]}}
           resp (test-app (-> (mock/request :post "/api/orgs")
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json org-data))
-                                   (test-utils/token-header token)))
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json org-data))
+                             (test-utils/token-header token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (some? body))
@@ -88,29 +86,29 @@
 
 (deftest create-org-invalid-data-test
   (testing "Fails gracefully when creating organization with invalid data"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
           invalid-org {:name "" ; Invalid: empty name
                        :data {:primary-contact {:email "invalid-email"}}} ; Invalid: bad email
           resp (test-app (-> (mock/request :post "/api/orgs")
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json invalid-org))
-                                   (test-utils/token-header token)))]
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json invalid-org))
+                             (test-utils/token-header token)))]
       (is (= 400 (:status resp))))))
 
 (deftest add-user-by-email-success-test
   (testing "Successfully adds existing user to organization by email"
-    (let [admin-user (test-utils/gen-admin-user)
-          target-user (test-utils/gen-regular-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
+          target-user (test-utils/gen-regular-user :db-component (test-db))
           [org1 _] (create-test-orgs)
           org-id (:id org1)
           token (jwt/create-token admin-user)
           email (:email target-user)
           user-data {:email email :role "org-user"}
           resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json user-data))
-                                   (test-utils/token-header token)))
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json user-data))
+                             (test-utils/token-header token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (:success? body))
@@ -118,16 +116,16 @@
 
 (deftest add-user-by-email-user-not-found-test
   (testing "Returns helpful error when user email doesn't exist (GDPR-compliant)"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           [org1 _] (create-test-orgs)
           org-id (:id org1)
           token (jwt/create-token admin-user)
           nonexistent-email "nonexistent@example.com"
           user-data {:email nonexistent-email :role "org-user"}
           resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json user-data))
-                                   (test-utils/token-header token)))
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json user-data))
+                             (test-utils/token-header token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 400 (:status resp)))
       (is (false? (:success? body)))
@@ -137,23 +135,23 @@
 
 (deftest add-user-by-email-privilege-test
   (testing "Requires org admin or LIPAS admin privilege"
-    (let [regular-user (test-utils/gen-regular-user)
+    (let [regular-user (test-utils/gen-regular-user :db-component (test-db))
           [org1 _] (create-test-orgs)
           org-id (:id org1)
           token (jwt/create-token regular-user)
           user-data {:email "test@example.com" :role "org-user"}
           resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json user-data))
-                                   (test-utils/token-header token)))]
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json user-data))
+                             (test-utils/token-header token)))]
       (is (= 403 (:status resp))))))
 
 (deftest get-org-users-test
   (testing "Successfully retrieves organization users"
-    (let [target-user (test-utils/gen-regular-user)
+    (let [target-user (test-utils/gen-regular-user :db-component (test-db))
           [org1 _] (create-test-orgs)
           org-id (:id org1)
-          admin-user (test-utils/gen-org-admin-user org-id)
+          admin-user (test-utils/gen-org-admin-user org-id :db-component (test-db))
           token (jwt/create-token admin-user)
 
           ;; First add a user to the org
@@ -163,7 +161,7 @@
                                              :role "org-user"}])
 
           resp (test-app (-> (mock/request :get (str "/api/orgs/" org-id "/users"))
-                                   (test-utils/token-header token)))
+                             (test-utils/token-header token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -186,25 +184,25 @@
           org-b-id (:id org-b)
 
           ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id)
+          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Create a target user to add
-          target-user (test-utils/gen-regular-user)
+          target-user (test-utils/gen-regular-user :db-component (test-db))
           email (:email target-user)
           user-data {:email email :role "org-user"}
 
           ;; Try to add user to org B (should fail)
           resp-org-b (test-app (-> (mock/request :post (str "/api/orgs/" org-b-id "/add-user-by-email"))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json user-data))
-                                         (test-utils/token-header org-a-admin-token)))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json user-data))
+                                   (test-utils/token-header org-a-admin-token)))
 
           ;; Try to add user to org A (should succeed)
           resp-org-a (test-app (-> (mock/request :post (str "/api/orgs/" org-a-id "/add-user-by-email"))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json user-data))
-                                         (test-utils/token-header org-a-admin-token)))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json user-data))
+                                   (test-utils/token-header org-a-admin-token)))
 
           body-org-a (test-utils/safe-parse-json resp-org-a)]
 
@@ -223,27 +221,27 @@
           org-b-id (:id org-b)
 
           ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id)
+          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Create a regular user
-          target-user (test-utils/gen-regular-user)
+          target-user (test-utils/gen-regular-user :db-component (test-db))
 
           ;; Try to update users in org B (should fail)
           resp-org-b (test-app (-> (mock/request :post (str "/api/orgs/" org-b-id "/users"))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
-                                                                                   :change "add"
-                                                                                   :role "org-user"}]}))
-                                         (test-utils/token-header org-a-admin-token)))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
+                                                                             :change "add"
+                                                                             :role "org-user"}]}))
+                                   (test-utils/token-header org-a-admin-token)))
 
           ;; Try to update users in org A (should succeed)
           resp-org-a (test-app (-> (mock/request :post (str "/api/orgs/" org-a-id "/users"))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
-                                                                                   :change "add"
-                                                                                   :role "org-user"}]}))
-                                         (test-utils/token-header org-a-admin-token)))]
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
+                                                                             :change "add"
+                                                                             :role "org-user"}]}))
+                                   (test-utils/token-header org-a-admin-token)))]
 
       ;; Assert org admin cannot update users in org B
       (is (= 403 (:status resp-org-b)) "Org admin should not be able to update users in another org")
@@ -259,7 +257,7 @@
           org-b-id (:id org-b)
 
           ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id)
+          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Updated org data with all required fields
@@ -275,15 +273,15 @@
 
           ;; Try to update org B (should fail)
           resp-org-b (test-app (-> (mock/request :put (str "/api/orgs/" org-b-id))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json updated-data))
-                                         (test-utils/token-header org-a-admin-token)))
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json updated-data))
+                                   (test-utils/token-header org-a-admin-token)))
 
           ;; Try to update org A (should succeed)
           resp-org-a (test-app (-> (mock/request :put (str "/api/orgs/" org-a-id))
-                                         (mock/content-type "application/json")
-                                         (mock/body (test-utils/->json (assoc updated-data :id org-a-id)))
-                                         (test-utils/token-header org-a-admin-token)))]
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json (assoc updated-data :id org-a-id)))
+                                   (test-utils/token-header org-a-admin-token)))]
 
       ;; Assert org admin cannot update org B
       (is (= 403 (:status resp-org-b)) "Org admin should not be able to update another org's data")
@@ -299,16 +297,16 @@
           org-b-id (:id org-b)
 
           ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id)
+          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Try to view users in org B (should fail)
           resp-org-b (test-app (-> (mock/request :get (str "/api/orgs/" org-b-id "/users"))
-                                         (test-utils/token-header org-a-admin-token)))
+                                   (test-utils/token-header org-a-admin-token)))
 
           ;; Try to view users in org A (should succeed)
           resp-org-a (test-app (-> (mock/request :get (str "/api/orgs/" org-a-id "/users"))
-                                         (test-utils/token-header org-a-admin-token)))]
+                                   (test-utils/token-header org-a-admin-token)))]
 
       ;; Assert org admin cannot view users in org B
       (is (= 403 (:status resp-org-b)) "Org admin should not be able to view users in another org")
@@ -320,7 +318,7 @@
   (testing "LIPAS admin can update organization PTV configuration"
     (let [[org-a _org-b] (create-test-orgs)
           org-id (:id org-a)
-          admin-user (test-utils/gen-admin-user)
+          admin-user (test-utils/gen-admin-user :db-component (test-db))
           admin-token (jwt/create-token admin-user)
 
           ptv-config {:org-id #uuid "92374b0f-7d3c-4017-858e-666ee3ca2761"
@@ -333,9 +331,9 @@
                       :sync-enabled true}
 
           resp (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json ptv-config))
-                                   (test-utils/token-header admin-token)))]
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json ptv-config))
+                             (test-utils/token-header admin-token)))]
 
       (is (= 200 (:status resp)) "Admin should be able to update PTV config")
       ;; Verify the config was saved
@@ -355,9 +353,9 @@
   (testing "Non-admin cannot update organization PTV configuration"
     (let [[org-a _org-b] (create-test-orgs)
           org-id (:id org-a)
-          org-admin (test-utils/gen-org-admin-user org-id)
+          org-admin (test-utils/gen-org-admin-user org-id :db-component (test-db))
           org-admin-token (jwt/create-token org-admin)
-          regular-user (test-utils/gen-regular-user)
+          regular-user (test-utils/gen-regular-user :db-component (test-db))
           regular-token (jwt/create-token regular-user)
 
           ptv-config {:org-id #uuid "7b83257d-06ad-4e3b-985d-16a5c9d3fced"
@@ -368,15 +366,15 @@
 
           ;; Try with org admin
           resp-org-admin (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
-                                             (mock/content-type "application/json")
-                                             (mock/body (test-utils/->json ptv-config))
-                                             (test-utils/token-header org-admin-token)))
+                                       (mock/content-type "application/json")
+                                       (mock/body (test-utils/->json ptv-config))
+                                       (test-utils/token-header org-admin-token)))
 
           ;; Try with regular user
           resp-regular (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
-                                           (mock/content-type "application/json")
-                                           (mock/body (test-utils/->json ptv-config))
-                                           (test-utils/token-header regular-token)))]
+                                     (mock/content-type "application/json")
+                                     (mock/body (test-utils/->json ptv-config))
+                                     (test-utils/token-header regular-token)))]
 
       (is (= 403 (:status resp-org-admin)) "Org admin should not be able to update PTV config")
       (is (= 403 (:status resp-regular)) "Regular user should not be able to update PTV config")))
@@ -384,7 +382,7 @@
   (testing "Invalid PTV config data is rejected"
     (let [[org-a _org-b] (create-test-orgs)
           org-id (:id org-a)
-          admin-user (test-utils/gen-admin-user)
+          admin-user (test-utils/gen-admin-user :db-component (test-db))
           admin-token (jwt/create-token admin-user)
 
           ;; Invalid config - missing required fields
@@ -395,19 +393,19 @@
                           :sync-enabled "not-a-boolean"} ; Should be boolean
 
           resp (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json invalid-config))
-                                   (test-utils/token-header admin-token)))]
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json invalid-config))
+                             (test-utils/token-header admin-token)))]
 
       (is (= 400 (:status resp)) "Invalid config should be rejected"))))
 
 (deftest current-user-orgs-test
   (testing "Admin users see all organizations"
     (let [[org-a org-b] (create-test-orgs)
-          admin-user (test-utils/gen-admin-user)
+          admin-user (test-utils/gen-admin-user :db-component (test-db))
           admin-token (jwt/create-token admin-user)
           resp (test-app (-> (mock/request :get "/api/current-user-orgs")
-                                   (test-utils/token-header admin-token)))
+                             (test-utils/token-header admin-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -420,11 +418,12 @@
     (let [[org-a org-b] (create-test-orgs)
           ;; Create user with ptv-auditor role (not namespaced keyword)
           auditor-user (test-utils/gen-user {:db? true
+                                             :db-component (test-db)
                                              :admin? false
                                              :permissions {:roles [{:role :ptv-auditor}]}})
           auditor-token (jwt/create-token auditor-user)
           resp (test-app (-> (mock/request :get "/api/current-user-orgs")
-                                   (test-utils/token-header auditor-token)))
+                             (test-utils/token-header auditor-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -437,10 +436,10 @@
     (let [[org-a org-b] (create-test-orgs)
           org-a-id (:id org-a)
           ;; Create user that's a member of org-a only
-          org-member (test-utils/gen-org-admin-user org-a-id)
+          org-member (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           member-token (jwt/create-token org-member)
           resp (test-app (-> (mock/request :get "/api/current-user-orgs")
-                                   (test-utils/token-header member-token)))
+                             (test-utils/token-header member-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (coll? body))
@@ -450,10 +449,10 @@
 
   (testing "Users with no org memberships see empty list"
     (let [_orgs (create-test-orgs)
-          regular-user (test-utils/gen-regular-user)
+          regular-user (test-utils/gen-regular-user :db-component (test-db))
           regular-token (jwt/create-token regular-user)
           resp (test-app (-> (mock/request :get "/api/current-user-orgs")
-                                   (test-utils/token-header regular-token)))
+                             (test-utils/token-header regular-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
       (is (coll? body))

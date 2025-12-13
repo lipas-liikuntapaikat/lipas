@@ -1,0 +1,69 @@
+{
+  "typeCode": 1120,
+  "name": "Lähiliikuntapaikka",
+  "description": "Lähiliikuntapaikka on tarkoitettu päivittäiseen ulkoiluun ja liikuntaan. Se sijaitsee asutuksen välittömässä läheisyydessä, on pienimuotoinen ja alueelle on vapaa pääsy. Yleensä tarjolla on erilaisia suorituspaikkoja. Lisätietoihin jos on koulun piha, päiväkodin piha,  suorituspaikat jne.",
+  "geometryType": "Point",
+  "subCategory": 1100,
+  "properties": {
+    "ligthing": {
+      "name": "Valaistus",
+      "description": "Onko liikuntapaikka valaistu",
+      "dataType": "boolean"
+    },
+    "fieldsCount": {
+      "name": "Kenttien lkm",
+      "description": "Montako saman tyypin kenttää liikuntapaikassa on",
+      "dataType": "numeric"
+    },
+    "lightingInfo": {
+      "name": "Valaistuksen lisätieto",
+      "description": "Esim. lux-määrä tai muu tarkentava tieto",
+      "dataType": "string"
+    },
+    "surfaceMaterial": {
+      "name": "Pintamateriaali sulana",
+      "description": "Millainen pintamateriaali liikuntapaikalla on. Yleisurheilukentässä keskikentän päällyste. Sulana.",
+      "dataType": "string"
+    },
+    "accessibilityInfo": {
+      "name": "Kohteesta on esteettömyystietoa",
+      "description": "Kohteesta on saatavissa esteettömyystietoa",
+      "dataType": "string"
+    },
+    "surfaceMaterialInfo": {
+      "name": "Pintamateriaali lisätieto",
+      "description": "Pintamateriaalin lisätieto",
+      "dataType": "string"
+    },
+    "infoFi": {
+      "name": "Lisätieto",
+      "description": "Liikuntapaikan lisätiedot, vapaa tekstikenttä",
+      "dataType": "string"
+    },
+    "playground": {
+      "name": "Leikkipuisto",
+      "description": "Onko liikuntapaikassa leikkipuisto",
+      "dataType": "boolean"
+    },
+    "exerciseMachinesCount": {
+      "name": "Kuntoilulaitteet lkm",
+      "description": "Kuntoilulaitteiden lukumäärä",
+      "dataType": "numeric"
+    },
+    "mayBeShownInHarrastuspassiFi": {
+      "name": "Saa julkaista Harrastuspassi.fi-palvelussa",
+      "description": "Kohteen tiedot saa julkaista Harrastuspassi.fi -palvelussa",
+      "dataType": "boolean"
+    },
+    "iceRinksCount": {
+      "name": "Kaukalot lkm",
+      "description": "Montako kaukaloa liikuntapaikalla on",
+      "dataType": "numeric"
+    },
+    "areaM2": {
+      "name": "Pinta-ala m2",
+      "description": "Liikuntapaikan pinta-ala, neliömetrejä",
+      "dataType": "numeric"
+    }
+  }
+}

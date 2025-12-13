@@ -28,12 +28,10 @@
 (defn test-search []
   (:lipas/search @test-system))
 
-
-
 (defn- create-test-sports-sites
   "Creates test sports sites in database and search index"
   []
-  (let [admin-user (test-utils/gen-admin-user)
+  (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
         timestamp (System/currentTimeMillis)
 
         ;; Generate base sites and customize them
@@ -79,7 +77,7 @@
 (deftest mass-update-success-admin-test
   (testing "Admin user can mass update contact info for multiple sites"
 
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
           sites (create-test-sports-sites)
           lipas-ids (mapv :lipas-id sites)
@@ -119,7 +117,7 @@
           tampere-sites (filter #(= 837 (get-in % [:location :city :city-code])) sites)
 
           ;; Create city manager for Helsinki (city-code 91)
-          helsinki-manager (test-utils/gen-city-manager-user 91)
+          helsinki-manager (test-utils/gen-city-manager-user 91 :db-component (test-db))
           token (jwt/create-token helsinki-manager)
 
           contact-updates {:email "helsinki@city.fi"}]
@@ -169,7 +167,7 @@
           other-sites (rest sites)
 
           ;; Create site manager for one specific site
-          site-manager (test-utils/gen-site-manager-user (:lipas-id target-site))
+          site-manager (test-utils/gen-site-manager-user (:lipas-id target-site) :db-component (test-db))
           token (jwt/create-token site-manager)
 
           contact-updates {:email "site@manager.fi"}]
@@ -200,7 +198,7 @@
 
 (deftest mass-update-empty-fields-test
   (testing "Mass update can clear fields by setting them to nil"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
           sites (create-test-sports-sites)
           target-site (first sites)
@@ -244,7 +242,7 @@
 
 (deftest mass-update-invalid-payload-test
   (testing "Mass update validates request payload"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)]
 
       ;; Test with invalid lipas-ids (should be integers)
@@ -269,7 +267,7 @@
 
 (deftest get-editable-sites-admin-test
   (testing "Admin user can retrieve all sites"
-    (let [admin-user (test-utils/gen-admin-user)
+    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
           _ (create-test-sports-sites)
 
@@ -301,7 +299,7 @@
   (testing "City manager can only retrieve sites in their city"
     (let [_ (create-test-sports-sites)
           ;; Create city manager for Helsinki (city-code 91)
-          helsinki-manager (test-utils/gen-city-manager-user 91)
+          helsinki-manager (test-utils/gen-city-manager-user 91 :db-component (test-db))
           token (jwt/create-token helsinki-manager)
 
           ;; Get editable sites
@@ -331,9 +329,9 @@
   (setup-test-system!)
   (create-test-sports-sites)
   (def xxxx *1)
-  (test-utils/prune-es!)
-  (test-utils/prune-db!)
-  (def admin (test-utils/gen-admin-user))
+  (test-utils/prune-es! (test-search))
+  (test-utils/prune-db! (test-db))
+  (def admin (test-utils/gen-admin-user :db-component (test-db)))
   (actions/get-editable-sites (test-search) admin)
   (require '[lipas.backend.search :as search])
   (search/search (:client (test-search))
