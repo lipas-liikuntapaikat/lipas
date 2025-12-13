@@ -494,6 +494,12 @@ services:
     ports:
       - "1025:1025" # smtp server
 
+  memgraph:
+    image: memgraph/memgraph-mage
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+
 volumes:
   pgdata: {}
   esdata: {}
