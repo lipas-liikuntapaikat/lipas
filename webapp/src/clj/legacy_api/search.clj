@@ -155,6 +155,8 @@
                                        :url (es-utils/url [index-name :_search])
                                        :body
                                        {:query query
+                                        :sort [{:sportsPlaceId {:order "asc"
+                                                                :unmapped_type "long"}}]
                                         :track_total_hits true
                                         :size (:limit params)
                                         :from (* (:offset params) (:limit params))}})]

@@ -617,6 +617,42 @@
     (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=101"))]
       (is (= 400 (:status resp))))))
 
+;;; Tests for production behavior compliance ;;;
+
+(deftest sort-by-sports-place-id-test
+  (testing "List results are sorted by sportsPlaceId ascending (production behavior)"
+    ;; Create sites with specific IDs in non-sorted order
+    (doseq [id [10500 10200 10700 10300 10100]]
+      (create-sports-site! (test-utils/make-point-site id :name (str "Sort Test " id))))
+
+    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=100"))
+          body (parse-json-body resp)
+          ids (mapv :sportsPlaceId body)]
+      (is (#{200 206} (:status resp)))
+      ;; Verify IDs are sorted ascending
+      (is (= ids (sort ids))
+          (str "Results should be sorted by sportsPlaceId ascending. Got: " ids)))))
+
+(deftest error-response-format-test
+  (testing "Error response format matches production API"
+
+    (testing "404 Not Found response format"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/999999999"))
+            body (parse-json-body resp)]
+        (is (= 404 (:status resp)))
+        ;; Production format: {"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}
+        (is (map? (:errors body)) "Should have 'errors' key (not 'error')")
+        (is (= "Didn't find such sports place. :("
+               (-> body :errors :sportsPlaceId))
+            "Should have exact production error message")))
+
+    (testing "400 Bad Request - invalid typeCodes format"
+      ;; Production returns: {"errors":{"typeCodes":["(not (#{ ...valid codes... } :invalid))"]}}
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=invalid"))
+            body (parse-json-body resp)]
+        (is (= 400 (:status resp)))
+        (is (map? (:errors body)) "Should have 'errors' key")))))
+
 (comment
   (clojure.test/run-tests 'legacy-api.handler-test)
 

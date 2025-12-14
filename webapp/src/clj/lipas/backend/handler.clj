@@ -66,10 +66,22 @@
        (handler e x)))
 
    :reitit.coercion/request-coercion
-   (let [handler (:reitit.coercion/request-coercion exception/default-handlers)]
-     (fn [e x]
+   (let [default-handler (:reitit.coercion/request-coercion exception/default-handlers)]
+     (fn [e request]
        (log/errorf e "Request coercion error")
-       (handler e x)))})
+       (if (clojure.string/starts-with? (:uri request) "/rest/api")
+         ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
+         (let [errors (-> e ex-data :errors)
+               formatted (->> errors
+                              (group-by #(-> % :in first))
+                              (map (fn [[field-name field-errors]]
+                                     [(or field-name :unknown)
+                                      (mapv #(str (:schema %)) field-errors)]))
+                              (into {}))]
+           {:status 400
+            :body {:errors formatted}})
+         ;; Default format for other APIs
+         (default-handler e request))))})
 
 (def exceptions-mw
   (exception/create-exception-middleware

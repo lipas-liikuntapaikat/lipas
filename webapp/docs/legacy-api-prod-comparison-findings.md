@@ -1,6 +1,6 @@
 # Legacy API Production Comparison Findings
 
-Date: 2025-12-14 (Updated)
+Date: 2025-12-14
 
 ## Overview
 
@@ -8,49 +8,73 @@ Comparison of local Legacy API implementation against production (`api.lipas.fi/
 
 ## Critical Issues (Must Fix)
 
-### 1. Pagination Link Header Bug
+### 1. Missing Sort by sportsPlaceId
 
-**Status:** FIXED ✅
+**Status:** FIXED
 
-**Symptom:** The "next" page link in the Link header was off by one.
+**Symptom:** Local returns results in arbitrary ES document order. Production always returns results sorted by `sportsPlaceId` ascending.
 
-**Root cause:** In `routes.clj`, the code passed `offset` (0-indexed) to `create-page-links`, but the function expected a 1-indexed page number.
+**Evidence:**
+```bash
+# Production first 5 IDs (sorted)
+[72269, 72340, 72348, 72359, 72361]
 
-**Fix:** Changed to pass the original `page` parameter instead of `offset` to `create-page-links`.
+# Local first 5 IDs (unsorted)
+[75100, 75104, 75123, 75995, 76121]
+
+# Verified: local DOES have ID 72269, but it's not first
+curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq '.sportsPlaceId'
+# Returns: 72269
+```
+
+**Impact:**
+- Pagination is inconsistent - same page returns different results
+- Geo queries return different results despite matching the same locations
+- API consumers relying on deterministic ordering will break
+
+**Fix Applied:** Added `:sort [{:sportsPlaceId {:order "asc" :unmapped_type "long"}}]` to the ES query in `search.clj`. The `unmapped_type` handles empty indexes gracefully.
+
+```clojure
+;; In fetch-sports-places function
+{:query query
+ :sort [{:sportsPlaceId {:order "asc"
+                         :unmapped_type "long"}}]  ;; FIXED
+ :track_total_hits true
+ :size (:limit params)
+ :from (* (:offset params) (:limit params))}
+```
 
 **Files changed:**
-- `src/clj/legacy_api/routes.clj` - line 179-180
+- `src/clj/legacy_api/search.clj` - `fetch-sports-places` function
 
-### 2. Fields Parameter Format Mismatch
+### 2. Error Response Format Mismatch
 
-**Status:** FIXED ✅ (Already working)
+**Status:** FIXED
 
-**Symptom:** Production expects separate query params, local accepts comma-separated.
+**Symptom:** Error responses have different structure than production.
 
-**Finding:** Local implementation already supports BOTH formats:
-- Repeated params format: `fields=name&fields=type.typeCode` (production format)
-- Comma-separated format: `fields=name,type.typeCode` (additional convenience)
+| Error Type | Production | Local (Before) | Local (After) |
+|------------|------------|----------------|---------------|
+| 404 Not Found | `{"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}` | `{"error":"Sports place not found"}` | `{"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}` |
+| Invalid param | `{"errors":{"typeCodes":["(not ...)"]}}` | Malli format with `{"value":..., "humanized":...}` | `{"errors":{"typeCodes":["[:enum ...]"]}}` |
 
-This is MORE lenient than production, which provides backwards compatibility without breaking existing clients.
+**Impact:** API consumers parsing error responses will fail.
 
-**No changes needed** - the schema and route handling already support both formats.
+**Fix Applied:**
+1. Updated 404 response in `routes.clj` to return exact production format
+2. Added custom coercion error handler in `handler.clj` that formats errors for `/rest/api/*` routes
 
 ## Medium Priority Issues
 
-### 3. Type Properties - Missing `infoFi`
+### 3. Fields Parameter Format
 
-**Status:** FIXED ✅
+**Status:** Documented (Acceptable)
 
-**Symptom:** The `infoFi` property was present in production's type schema but missing from local.
+**Symptom:** Production only accepts multi-format (`fields=a&fields=b`), local accepts both multi-format AND comma-separated (`fields=a,b`).
 
-**Fix:** Added `infoFi` property definition in `legacy-api/api.clj` that is appended to all type property definitions. This maps to the `comment` field in the new data model.
+**Risk:** Code tested locally with comma-separated format will fail in production.
 
-Note: The sports place DATA already correctly maps `comment` to `infoFi` (done in `transform.clj` line 92). This fix adds the property DEFINITION to the type schema endpoint.
-
-**Files changed:**
-- `src/clj/legacy_api/api.clj` - added `info-fi-property` definition and included it in type properties output
-
-**Impact:** Type properties endpoint now includes `infoFi` property definition matching production.
+**Decision:** Keep current behavior (more lenient). Document that production requires multi-format.
 
 ### 4. Categories - Different sportsPlaceTypes
 
@@ -59,103 +83,120 @@ Note: The sports place DATA already correctly maps `comment` to `infoFi` (done i
 **Symptom:** Local categories have fewer type codes than production.
 
 ```bash
-# Production subCategory 1 has types: [101, 103, 104, 106, 107, 108, 112, 111, 110, 109, 102, 113]
-# Local subCategory 1 has types:      [110, 101, 106, 113, 109, 111, 103, 107, 112]
-# Missing: 104, 108, 102
+# Production subCategory 1 types: [101, 102, 103, 104, 106, 107, 108, 109, 110, 111, 112, 113]
+# Local subCategory 1 types:      [101, 103, 106, 107, 109, 110, 111, 112, 113]
+# Missing: 102, 104, 108
 ```
 
-**Reason:** Local reflects current active types in the database. Production includes historical/deprecated types.
+**Reason:** Local reflects current active types. Production includes historical/deprecated types.
+
+### 5. Type Descriptions Differ
+
+**Status:** Acceptable
+
+**Symptom:** Type descriptions (e.g., for type 1120) have different text.
+
+**Reason:** Descriptions have been updated in the new system. This is intentional improvement.
 
 ## Working Correctly
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Default fields (sportsPlaceId only) | OK | Returns only sportsPlaceId when no fields specified |
-| `typeCodes` filter | OK | Same IDs returned |
+| `typeCodes` filter | OK | Same IDs returned (when sorted) |
 | `cityCodes` filter | OK | Works correctly |
 | `modifiedAfter` filter | OK | Requires full timestamp format `yyyy-MM-dd HH:mm:ss.SSS` |
-| `searchString` filter | OK | Same results returned |
+| `searchString` filter | OK | Exact same results returned |
 | `retkikartta` filter | OK | Works correctly |
 | `harrastuspassi` filter | OK | Works correctly |
-| `lang=fi` | OK | Finnish translations match |
-| `lang=en` | OK | English translations match |
-| `lang=se` | OK | Swedish translations match |
-| Single sports place structure | OK | Identical top-level keys |
+| `lang` parameter (fi/en/se) | OK | Translations work |
+| Single sports place by ID | OK | Identical structure |
 | `location` structure | OK | All keys present |
 | `location.geometries` | OK | FeatureCollection with correct structure |
 | `location.coordinates` | OK | Both wgs84 and tm35fin present |
-| `properties` structure | OK | Values match for same ID |
+| `properties` structure | OK | Values match, types correct |
 | `type` structure | OK | typeCode + name |
 | Pagination status code | OK | 206 Partial Content |
+| Link header format | OK | Correct rel values |
 | X-total-count header | OK | Present and correct |
 | `deleted-sports-places` endpoint | OK | Structure matches |
 | `categories` endpoint | OK | Structure matches |
 | `sports-place-types` endpoint | OK | Structure matches |
 | `sports-place-types/:code` endpoint | OK | Structure matches |
-| Geo proximity filter | OK | Works correctly |
+| Geo proximity filter | OK | Works correctly (results differ due to sort) |
+| Multi-format fields param | OK | `fields=a&fields=b` works |
 
 ## Acceptable Differences
 
-### Coordinate precision
+### Coordinate Precision
 
-TM35FIN coordinates have minor floating-point precision differences. No functional impact.
+TM35FIN coordinates have minor floating-point precision differences:
+- Production: `380848.639900476`
+- Local: `380848.63990043715`
+
+No functional impact.
 
 ### Legacy-only IDs (hardcoded to 0)
 
-Fields like `location.locationId`, `properties.pointId`, `properties.routeId` are hardcoded to `0` since the new database doesn't have these legacy identifiers.
+Fields hardcoded to `0` since the new database doesn't have these legacy identifiers:
+- `location.locationId`
+- `properties.pointId`
+- `properties.routeId`
+- `properties.routeCollectionId`
+- `properties.areaId`
 
-### Different data
+### Different Data Counts
 
-Local dev environment may have different sports places than production, so specific IDs and counts may differ.
+Local dev environment has different sports places than production:
+- Production: ~47,125 sports places
+- Local: ~47,756 sports places
 
-### Link header path prefix
+### Link Header Path Prefix
 
 - **Production**: `/api/sports-places/`
 - **Local**: `/rest/api/sports-places/`
 
-This is expected - production uses nginx URL rewrite rules.
+Expected - production uses nginx URL rewrite rules.
 
-### Type/category ordering
+### Type/Category Ordering
 
-The order of items in arrays (like sportsPlaceTypes in categories) may differ. This is acceptable as JSON object/array ordering is not semantically meaningful.
+Order of items in arrays may differ. JSON array ordering is not semantically meaningful for these endpoints.
 
 ## Test Commands
 
 ```bash
-# Basic list (default fields)
-curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3" | jq '.'
-curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3" | jq '.'
+# Basic list - check sort order
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=5" | jq '[.[].sportsPlaceId]'
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=5" | jq '[.[].sportsPlaceId]'
 
-# With fields parameter (production format)
+# Verify sort: production should be sorted ascending
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=10" | jq '[.[].sportsPlaceId] | sort == .'
+# Returns: true
+
+# With fields parameter (production multi-format)
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2&fields=name&fields=type.typeCode" | jq '.'
 
-# With fields parameter (local comma-separated format)
-curl -s "http://localhost:8091/rest/api/sports-places?pageSize=2&fields=name,type.typeCode" | jq '.'
+# Geo filter - results should match when properly sorted
+curl -s "https://api.lipas.fi/v1/sports-places?closeToLon=24.94&closeToLat=60.17&closeToDistanceKm=1&pageSize=5" | jq '[.[].sportsPlaceId] | sort == .'
 
-# Type filter
-curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3&typeCodes=1120" | jq '.'
-curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3&typeCodes=1120" | jq '.'
+# Compare single item
+curl -s "https://api.lipas.fi/v1/sports-places/72269" | jq 'keys | sort'
+curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq 'keys | sort'
 
-# Geo filter
-curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3&closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1" | jq '.'
-curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3&closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1" | jq '.'
+# Error responses
+curl -s "https://api.lipas.fi/v1/sports-places/999999999"
+curl -s "http://localhost:8091/rest/api/sports-places/999999999"
 
-# Language parameter
-curl -s "https://api.lipas.fi/v1/sports-places/72269?lang=en" | jq '{admin, owner}'
-
-# Pagination headers comparison
-curl -sI "https://api.lipas.fi/v1/sports-places?pageSize=2&page=1" | grep -E "^(Link|X-total)"
-curl -sI "http://localhost:8091/rest/api/sports-places?pageSize=2&page=1" | grep -E "^(Link|X-total)"
-
-# Deleted sports places
-curl -s "https://api.lipas.fi/v1/deleted-sports-places?since=2024-01-01%2000:00:00.000" | jq '.[0:3]'
-curl -s "http://localhost:8091/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000" | jq '.[0:3]'
-
-# Categories
-curl -s "https://api.lipas.fi/v1/categories" | jq '.[0]'
-curl -s "http://localhost:8091/rest/api/categories" | jq '.[0]'
-
-# Type detail
-curl -s "https://api.lipas.fi/v1/sports-place-types/1120" | jq '.'
-curl -s "http://localhost:8091/rest/api/sports-place-types/1120" | jq '.'
+# Pagination headers
+curl -sI "https://api.lipas.fi/v1/sports-places?pageSize=2&page=2" | grep -iE "(link|x-total)"
+curl -sI "http://localhost:8091/rest/api/sports-places?pageSize=2&page=2" | grep -iE "(link|x-total)"
 ```
+
+## Summary
+
+**Fixed (2025-12-14):**
+1. ✅ Sort by `sportsPlaceId` - Added to ES queries with `unmapped_type` for empty index handling
+2. ✅ Error response format - Now matches production for 404s and validation errors
+
+**Monitor:**
+3. Fields parameter format (document multi-format requirement)

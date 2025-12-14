@@ -102,7 +102,7 @@ Access to the hierarchical type classification system used for categorizing spor
                  resp (legacy-core/fetch-sports-place-es search locale sports-place-id)]
              (if resp
                {:status 200 :body resp}
-               {:status 404 :body {:error "Sports place not found"}}))))
+               {:status 404 :body {:errors {:sportsPlaceId "Didn't find such sports place. :("}}}))))
         :responses {200 {:body legacy-schema/legacy-sports-place}}}}]
      ["/sports-places"
       {:parameters {:query legacy-schema/search-params}
