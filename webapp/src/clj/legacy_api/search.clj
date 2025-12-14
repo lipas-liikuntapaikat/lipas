@@ -18,17 +18,18 @@
         (as-> clean (when (and (seq clean) (> (count clean) 0)) clean)))))
 
 (defn validate-geo-params
-  "Validates geographic filter parameters."
+  "Validates geographic filter parameters.
+  Expected structure: {:distance \"1000m\" :field :location.coordinates.wgs84 :point {:lon 24.9 :lat 60.1}}"
   [geo-params]
   (when geo-params
-    (let [{:keys [distance point]} geo-params]
-      (when-not (and distance point)
-        (throw (ex-info "Invalid geo parameters: missing distance or point"
+    (let [{:keys [distance point field]} geo-params]
+      (when-not (and distance point field)
+        (throw (ex-info "Invalid geo parameters: missing distance, field, or point"
                         {:type :invalid-input
                          :geo-params geo-params})))
 
-      (when-not (and (number? distance) (pos? distance))
-        (throw (ex-info "Invalid geo distance: must be a positive number"
+      (when-not (or (string? distance) (and (number? distance) (pos? distance)))
+        (throw (ex-info "Invalid geo distance: must be a positive number or string with unit"
                         {:type :invalid-input
                          :distance distance})))
 
@@ -94,14 +95,15 @@
   (when timestamp {:range {:lastModified {:gt (maybe-truncate timestamp)}}}))
 
 (defn create-geo-filter
-  "Creates geo_distance filter:
-  :geo_distance {:distance ... }
-                 :point {:lon ... :lat ... }}"
+  "Creates geo_distance filter for ES.
+  Input: {:distance \"1000m\" :field :location.coordinates.wgs84 :point {:lon 24.9 :lat 60.1}}
+  Output: {:geo_distance {:distance \"1000m\" :location.coordinates.wgs84 {:lon 24.9 :lat 60.1}}}"
   [geo-params]
   (when geo-params
-    (let [validated-params (validate-geo-params geo-params)]
-      (log/debug "Creating geo filter" {:geo-params validated-params})
-      {:geo_distance validated-params})))
+    (let [{:keys [distance field point]} (validate-geo-params geo-params)]
+      (log/debug "Creating geo filter" {:distance distance :field field :point point})
+      {:geo_distance {:distance distance
+                      field point}})))
 
 (defn create-filter
   [k coll]

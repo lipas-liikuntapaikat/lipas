@@ -545,6 +545,86 @@
             (is (not (re-find #"-" (name k)))
                 (str "Property key should be camelCase: " k))))))))
 
+;;; Tests for production comparison findings ;;;
+
+(deftest geo-proximity-filter-test
+  (testing "GET /rest/api/sports-places with geo proximity filter"
+    ;; Create sites at known coordinates
+    ;; Helsinki center: 60.1699, 24.9384
+    ;; Site 1: Very close to center (should be found within 1km)
+    (let [site1 (-> (test-utils/make-point-site 900001
+                                                :name "Helsinki Center Site"
+                                                :type-code 1120)
+                    (assoc-in [:location :geometries :features 0 :geometry :coordinates]
+                              [24.9385 60.1700]))
+          ;; Site 2: Far from center (Espoo - should NOT be found within 1km of Helsinki center)
+          site2 (-> (test-utils/make-point-site 900002
+                                                :name "Espoo Site"
+                                                :type-code 1120)
+                    (assoc-in [:location :geometries :features 0 :geometry :coordinates]
+                              [24.6559 60.2055]))]
+      (doseq [site [site1 site2]]
+        (save-and-index! site))
+
+      (testing "filters by closeToLon, closeToLat, closeToDistanceKm"
+        (let [{:keys [status body]} (query-legacy-api
+                                     "/rest/api/sports-places?closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1")]
+          (is (#{200 206} status) "Should return 200 or 206, not an error")
+          (is (vector? body) "Response should be a vector")
+          ;; The Helsinki center site should be found (within 1km)
+          (when (seq body)
+            (let [ids (set (map :sportsPlaceId body))]
+              (is (contains? ids 900001) "Should find Helsinki center site within 1km")
+              (is (not (contains? ids 900002)) "Should NOT find Espoo site within 1km of Helsinki"))))))))
+
+(deftest english-translations-test
+  (testing "English translations for admin/owner match production"
+    ;; Create a site with known admin and owner
+    (let [site (test-utils/make-point-site 910001
+                                           :name "Translation Test Site"
+                                           :type-code 1120
+                                           :admin "city-technical-services"
+                                           :owner "city")
+          _ (save-and-index! site)
+          {:keys [status body]} (query-legacy-api "/rest/api/sports-places/910001?lang=en")]
+
+      (is (= 200 status))
+
+      ;; Production uses "Municipality" instead of "City"
+      (testing "admin translation uses 'Municipality' not 'City'"
+        (is (= "Municipality / Technical services" (:admin body))
+            (str "admin should be 'Municipality / Technical services', got: " (:admin body))))
+
+      (testing "owner translation uses 'Municipality' not 'City'"
+        (is (= "Municipality" (:owner body))
+            (str "owner should be 'Municipality', got: " (:owner body)))))))
+
+(deftest link-header-format-test
+  (testing "Link header format matches production"
+    ;; Create enough sites for pagination
+    (doseq [i (range 1 16)]
+      (let [site (test-utils/make-point-site (+ 920000 i) :name (str "Link Format Test " i))]
+        (save-and-index! site)))
+
+    (testing "Link header uses camelCase param names and omits empty values"
+      (let [{:keys [headers]} (query-legacy-api "/rest/api/sports-places?pageSize=3&typeCodes=1120")]
+        (let [link-header (get headers "Link")]
+          (is (some? link-header) "Should have Link header")
+
+          ;; Should use camelCase param names
+          (is (re-find #"pageSize=" link-header)
+              "Should use 'pageSize' (camelCase)")
+          (is (not (re-find #"page-size=" link-header))
+              "Should NOT use 'page-size' (kebab-case)")
+
+          ;; Should NOT include empty params
+          (is (not (re-find #"city-codes=" link-header))
+              "Should NOT include empty city-codes param")
+          (is (not (re-find #"modified-after=" link-header))
+              "Should NOT include empty modified-after param")
+          (is (not (re-find #"search-string=" link-header))
+              "Should NOT include empty search-string param"))))))
+
 (comment
   ;; Run all tests in this namespace
   (clojure.test/run-tests 'legacy-api.integration-test)

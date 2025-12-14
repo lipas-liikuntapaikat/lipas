@@ -2,16 +2,16 @@
 
 (def old
   {"city-sports"             {:fi "Kunta / liikuntatoimi"
-                              :en "City / sports"
+                              :en "Municipality / Sports"
                               :se "Kommun/ idrottsväsende"}
    "city-education"          {:fi "Kunta / opetustoimi"
-                              :en "City / education"
+                              :en "Municipality / Education"
                               :se "Kommun / utbildingsväsende"}
    "city-technical-services" {:fi "Kunta / tekninen toimi"
-                              :en "City / technical services"
+                              :en "Municipality / Technical services"
                               :se "Kommun / teknisk väsende"}
    "city-other"              {:fi "Kunta / muu"
-                              :en "City / other"
+                              :en "Municipality / Other"
                               :se "Kommun / annat"}
    "municipal-consortium"    {:fi "Kuntayhtymä"
                               :en "Municipal consortium"

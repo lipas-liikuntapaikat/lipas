@@ -136,12 +136,12 @@ Access to the hierarchical type classification system used for categorizing spor
                          :type-codes type-codes
                          :city-codes city-codes
                          :close-to (when closeToDistanceKm
-                                     {:distance (* closeToDistanceKm 1000)
-                                      (if (= closeToMatch :start-point)
-                                        :location.coordinates.wgs84
-                                        :location.geom-coll)
-                                      {:lon closeToLon
-                                       :lat closeToLat}})
+                                     {:distance (str (* closeToDistanceKm 1000) "m")
+                                      :field (if (= closeToMatch :start-point)
+                                               :location.coordinates.wgs84
+                                               :location.geom-coll)
+                                      :point {:lon closeToLon
+                                              :lat closeToLat}})
                          :modified-after modifiedAfter
                          :search-string searchString
                          :excursion-map? retkikartta
@@ -161,7 +161,22 @@ Access to the hierarchical type classification system used for categorizing spor
              (if partial?
                (let [base-path (or (legacy-http/extract-base-path req) "/rest/api")
                      path (legacy-http/build-sports-places-path base-path)
-                     links (legacy-http/create-page-links path params (:offset params) (:limit params) total)]
+                     ;; Build link params from original query params (camelCase), filtered of nil/empty values
+                     link-params (->> {:pageSize pageSize
+                                       :typeCodes typeCodes
+                                       :cityCodes cityCodes
+                                       :closeToLon closeToLon
+                                       :closeToLat closeToLat
+                                       :closeToDistanceKm closeToDistanceKm
+                                       :modifiedAfter modifiedAfter
+                                       :searchString searchString
+                                       :retkikartta retkikartta
+                                       :harrastuspassi harrastuspassi
+                                       :lang lang
+                                       :fields (:fields qp)}
+                                      (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
+                                      (into {}))
+                     links (legacy-http/create-page-links path link-params (:offset params) (:limit params) total)]
                  (legacy-http/linked-partial-content results links))
                {:status 200
                 :body results}))))

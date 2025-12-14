@@ -2,7 +2,7 @@
 
 (def all
   {"city"                   {:fi "Kunta"
-                             :en "City"
+                             :en "Municipality"
                              :se "Kommun"}
    "registered-association" {:fi "Rekisteröity yhdistys"
                              :en "Registered association"
@@ -11,7 +11,7 @@
                              :en "Company ltd"
                              :se "Företag"}
    "city-main-owner"        {:fi "Kuntaenemmistöinen yritys"
-                             :en "City main owner"
+                             :en "Municipality main owner"
                              :se "Företag med kommun som majoritetsägare"}
    "municipal-consortium"   {:fi "Kuntayhtymä"
                              :en "Municipal consortium"
