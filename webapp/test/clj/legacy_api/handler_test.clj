@@ -142,14 +142,23 @@
     (doseq [i (range 1 4)]
       (create-sports-site! (test-utils/make-point-site (+ 20000 i) :name (str "Test Site " i))))
 
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
-          body (parse-json-body resp)]
-      (is (#{200 206} (:status resp)))
-      (is (vector? body))
-      (is (= 3 (count body)))
-      (is (every? :sportsPlaceId body))
-      (is (every? :name body))
-      (is (every? :type body)))))
+    (testing "default response contains only sportsPlaceId"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
+            body (parse-json-body resp)]
+        (is (#{200 206} (:status resp)))
+        (is (vector? body))
+        (is (= 3 (count body)))
+        (is (every? :sportsPlaceId body))
+        (is (every? #(= #{:sportsPlaceId} (set (keys %))) body)
+            "Default response should only contain sportsPlaceId")))
+
+    (testing "response with requested fields includes name and type"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name&fields=type.typeCode"))
+            body (parse-json-body resp)]
+        (is (#{200 206} (:status resp)))
+        (is (every? :sportsPlaceId body))
+        (is (every? :name body))
+        (is (every? :type body))))))
 
 (deftest list-sports-places-pagination-test
   (testing "GET /rest/api/sports-places pagination"
@@ -191,13 +200,13 @@
     (create-sports-site! (test-utils/make-point-site 40002 :name "Type 1310 Site" :type-code 1310))
 
     (testing "single typeCode filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120"))
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (every? #(= 1120 (-> % :type :typeCode)) body))))
 
     (testing "multiple typeCodes filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120&typeCodes=1310"))
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120&typeCodes=1310&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (= 2 (count body)))
@@ -209,7 +218,7 @@
     (create-sports-site! (test-utils/make-point-site 50002 :name "Espoo Site" :city-code "49"))
 
     (testing "single cityCode filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?cityCodes=91"))
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?cityCodes=91&fields=location.city.cityCode"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (every? #(= 91 (-> % :location :city :cityCode)) body))))
@@ -234,18 +243,21 @@
   (testing "GET /rest/api/sports-places with fields parameter"
     (create-sports-site! (test-utils/make-point-site 70001 :name "Field Selection Test"))
 
-    ;; Note: Field selection with limited fields can cause response coercion errors
-    ;; because the schema expects all required fields. When selecting only certain
-    ;; fields, the response won't match the full schema. This is expected behavior -
-    ;; the legacy API returns partial data when fields are specified.
-    ;; We test without field selection here to verify the basic functionality works.
-    (testing "returns data with default fields"
+    (testing "default response returns only sportsPlaceId"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
-        (is (every? :name body))
-        (is (every? #(-> % :type :typeCode) body))
-        (is (every? :sportsPlaceId body))))))
+        (is (every? :sportsPlaceId body))
+        (is (every? #(= #{:sportsPlaceId} (set (keys %))) body)
+            "Default response should only contain sportsPlaceId")))
+
+    (testing "selecting specific fields returns those fields"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name&fields=type.typeCode"))
+            body (parse-json-body resp)]
+        (is (#{200 206} (:status resp)))
+        (is (every? :sportsPlaceId body) "sportsPlaceId is always included")
+        (is (every? :name body) "requested field 'name' should be present")
+        (is (every? #(-> % :type :typeCode) body) "requested field 'type.typeCode' should be present")))))
 
 ;;; Tests for GET /rest/api/deleted-sports-places ;;;
 
