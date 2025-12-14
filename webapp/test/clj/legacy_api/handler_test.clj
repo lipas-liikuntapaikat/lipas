@@ -651,7 +651,25 @@
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=invalid"))
             body (parse-json-body resp)]
         (is (= 400 (:status resp)))
-        (is (map? (:errors body)) "Should have 'errors' key")))))
+        (is (map? (:errors body)) "Should have 'errors' key")))
+
+    (testing "400 Bad Request - validation error messages are human-readable"
+      ;; The issue: local was showing raw Malli schema objects like
+      ;; "malli.core$_simple_schema$reify$reify__39032@6f9688bd"
+      ;; instead of human-readable messages
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=abc"))
+            body (parse-json-body resp)]
+        (is (= 400 (:status resp)))
+        (is (map? (:errors body)) "Should have 'errors' key")
+        (let [page-size-errors (get-in body [:errors :pageSize])]
+          (is (some? page-size-errors) "Should have error for pageSize")
+          ;; Verify error messages are human-readable, not raw schema objects
+          (when (sequential? page-size-errors)
+            (doseq [error-msg page-size-errors]
+              (is (not (re-find #"malli\.core\$" (str error-msg)))
+                  (str "Error message should NOT contain raw Malli schema object reference. Got: " error-msg))
+              (is (not (re-find #"@[0-9a-f]+" (str error-msg)))
+                  (str "Error message should NOT contain Java object reference (@hexid). Got: " error-msg)))))))))
 
 (comment
   (clojure.test/run-tests 'legacy-api.handler-test)

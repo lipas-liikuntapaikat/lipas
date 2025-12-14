@@ -18,6 +18,7 @@
             [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.utils :as utils]
             [malli.core :as malli]
+            [malli.error :as me]
             [muuntaja.core :as m]
             [reitit.coercion.malli]
             [reitit.coercion.spec]
@@ -71,13 +72,16 @@
        (log/errorf e "Request coercion error")
        (if (clojure.string/starts-with? (:uri request) "/rest/api")
          ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
-         (let [errors (-> e ex-data :errors)
-               formatted (->> errors
-                              (group-by #(-> % :in first))
-                              (map (fn [[field-name field-errors]]
-                                     [(or field-name :unknown)
-                                      (mapv #(str (:schema %)) field-errors)]))
-                              (into {}))]
+         ;; Use malli.error/humanize to get human-readable messages
+         (let [{:keys [schema value errors]} (ex-data e)
+               humanized (me/humanize {:schema schema :value value :errors errors})
+               ;; humanized is a map like {:pageSize ["should be a positive int"]}
+               ;; Convert to match production format where values are vectors of strings
+               formatted (reduce-kv
+                          (fn [acc k v]
+                            (assoc acc k (if (sequential? v) v [v])))
+                          {}
+                          humanized)]
            {:status 400
             :body {:errors formatted}})
          ;; Default format for other APIs

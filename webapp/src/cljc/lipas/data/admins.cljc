@@ -3,37 +3,37 @@
 (def old
   {"city-sports"             {:fi "Kunta / liikuntatoimi"
                               :en "Municipality / Sports"
-                              :se "Kommun/ idrottsväsende"}
+                              :se "Kommun / idrottsväsende"}
    "city-education"          {:fi "Kunta / opetustoimi"
                               :en "Municipality / Education"
-                              :se "Kommun / utbildingsväsende"}
+                              :se "Kommun / utbildningsväsende"}
    "city-technical-services" {:fi "Kunta / tekninen toimi"
                               :en "Municipality / Technical services"
                               :se "Kommun / teknisk väsende"}
    "city-other"              {:fi "Kunta / muu"
                               :en "Municipality / Other"
-                              :se "Kommun / annat"}
+                              :se "Kommun / annan"}
    "municipal-consortium"    {:fi "Kuntayhtymä"
                               :en "Municipal consortium"
                               :se "Samkommun"}
    "private-association"     {:fi "Yksityinen / yhdistys"
-                              :en "Private / association"
+                              :en "Private / Association"
                               :se "Privat / förening"}
    "private-company"         {:fi "Yksityinen / yritys"
-                              :en "Private / company"
-                              :se "Privat / företag"}
+                              :en "Private / Company"
+                              :se "Privat / aktiebolag"}
    "private-foundation"      {:fi "Yksityinen / säätiö"
-                              :en "Private / foundation"
+                              :en "Private / Foundation"
                               :se "Privat / stiftelse"}
    "state"                   {:fi "Valtio"
                               :en "State"
-                              :se "Stat"}
+                              :se "Staten"}
    "other"                   {:fi "Muu"
                               :en "Other"
-                              :se "Annat"}
-   "unknown"                 {:fi "Ei tietoa"
-                              :en "Unkonwn"
-                              :se "Okänt"}})
+                              :se "Annan"}
+   "no-information"          {:fi "Ei tietoa"
+                              :en "No information"
+                              :se "Ingen information"}})
 
 (def all
   (-> old

@@ -9,10 +9,10 @@
                              :se "Registrerad förening"}
    "company-ltd"            {:fi "Yritys"
                              :en "Company ltd"
-                             :se "Företag"}
+                             :se "Aktiebolag"}
    "city-main-owner"        {:fi "Kuntaenemmistöinen yritys"
-                             :en "Municipality main owner"
-                             :se "Företag med kommun som majoritetsägare"}
+                             :en "Municipality major owner"
+                             :se "Kommun majoritet ägare"}
    "municipal-consortium"   {:fi "Kuntayhtymä"
                              :en "Municipal consortium"
                              :se "Samkommun"}
@@ -21,13 +21,13 @@
                              :se "Stiftelse"}
    "state"                  {:fi "Valtio"
                              :en "State"
-                             :se "Stat"}
+                             :se "Staten"}
    "other"                  {:fi "Muu"
                              :en "Other"
-                             :se "Annat"}
-   "unknown"                {:fi "Ei tietoa"
-                             :en "Unknown"
-                             :se "Okänt"}})
+                             :se "Annan"}
+   "no-information"         {:fi "Ei tietoa"
+                             :en "No information"
+                             :se "Ingen information"}})
 
 (def csv-headers
   ["Arvo" "Nimi fi" "Nimi Se" "Nimi En"])

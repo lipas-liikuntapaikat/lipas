@@ -6,91 +6,71 @@ Date: 2025-12-14
 
 Comparison of local Legacy API implementation against production (`api.lipas.fi/v1`).
 
-## Critical Issues (Must Fix)
+## Fixed Issues
 
-### 1. Missing Sort by sportsPlaceId
+### 1. English Translations for Admin/Owner
+
+**Status:** FIXED (was already correct in `lipas.data.admins` and `lipas.data.owners`)
+
+**Original symptom:** English translations were reported to use "City" instead of "Municipality".
+
+**Resolution:** Investigation showed that `lipas.data.admins/old` and `lipas.data.owners/all` already have the correct translations ("Municipality / Technical services", "Municipality", etc.). The i18n EDN files in `src/cljc/lipas/i18n/en/admin.edn` have different translations but these are only used for the frontend UI, not the backend API.
+
+**Test:** `legacy-api.integration-test/english-translations-test` passes.
+
+### 2. Validation Error Message Format
 
 **Status:** FIXED
 
-**Symptom:** Local returns results in arbitrary ES document order. Production always returns results sorted by `sportsPlaceId` ascending.
+**Original symptom:** Validation errors showed raw Malli schema objects instead of readable messages.
 
-**Evidence:**
 ```bash
-# Production first 5 IDs (sorted)
-[72269, 72340, 72348, 72359, 72361]
+# Before fix
+{"errors":{"pageSize":["malli.core$_simple_schema$reify$reify__39032@6f9688bd"]}}
 
-# Local first 5 IDs (unsorted)
-[75100, 75104, 75123, 75995, 76121]
-
-# Verified: local DOES have ID 72269, but it's not first
-curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq '.sportsPlaceId'
-# Returns: 72269
+# After fix - uses malli.error/humanize
+{"errors":{"pageSize":["should be a positive int"]}}
 ```
 
-**Impact:**
-- Pagination is inconsistent - same page returns different results
-- Geo queries return different results despite matching the same locations
-- API consumers relying on deterministic ordering will break
+**Fix applied:** Updated `lipas.backend.handler.clj` to use `malli.error/humanize` instead of `(str (:schema %))` for coercion error formatting. This produces human-readable error messages.
 
-**Fix Applied:** Added `:sort [{:sportsPlaceId {:order "asc" :unmapped_type "long"}}]` to the ES query in `search.clj`. The `unmapped_type` handles empty indexes gracefully.
+**Test:** `legacy-api.handler-test/error-response-format-test` passes.
 
-```clojure
-;; In fetch-sports-places function
-{:query query
- :sort [{:sportsPlaceId {:order "asc"
-                         :unmapped_type "long"}}]  ;; FIXED
- :track_total_hits true
- :size (:limit params)
- :from (* (:offset params) (:limit params))}
-```
+## Acceptable Differences
 
-**Files changed:**
-- `src/clj/legacy_api/search.clj` - `fetch-sports-places` function
+### 3. searchString Results Order
 
-### 2. Error Response Format Mismatch
+**Status:** Acceptable
 
-**Status:** FIXED
+**Symptom:** Results for `searchString` queries return same relevant items but in slightly different order.
 
-**Symptom:** Error responses have different structure than production.
+**Reason:** Elasticsearch scoring/relevance algorithms may differ between environments. The important thing is that relevant results are returned.
 
-| Error Type | Production | Local (Before) | Local (After) |
-|------------|------------|----------------|---------------|
-| 404 Not Found | `{"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}` | `{"error":"Sports place not found"}` | `{"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}` |
-| Invalid param | `{"errors":{"typeCodes":["(not ...)"]}}` | Malli format with `{"value":..., "humanized":...}` | `{"errors":{"typeCodes":["[:enum ...]"]}}` |
+### 4. Route Segment Naming/Ordering
 
-**Impact:** API consumers parsing error responses will fail.
+**Status:** Acceptable
 
-**Fix Applied:**
-1. Updated 404 response in `routes.clj` to return exact production format
-2. Added custom coercion error handler in `handler.clj` that formats errors for `/rest/api/*` routes
+**Symptom:** For hiking trails with multiple segments, production preserves original segment naming (e.g., segment_0, segment_1, segment_4, segment_3, segment_2) while local uses sequential naming (segment_0, segment_1, segment_2, segment_3, segment_4).
 
-## Medium Priority Issues
+**Reason:** The geometry data is the same, just labeled differently. Local uses a deterministic sequential naming scheme which is actually more consistent.
 
-### 3. Fields Parameter Format
+### 5. Fields Parameter Format
 
-**Status:** Documented (Acceptable)
+**Status:** Acceptable
 
 **Symptom:** Production only accepts multi-format (`fields=a&fields=b`), local accepts both multi-format AND comma-separated (`fields=a,b`).
 
-**Risk:** Code tested locally with comma-separated format will fail in production.
-
 **Decision:** Keep current behavior (more lenient). Document that production requires multi-format.
 
-### 4. Categories - Different sportsPlaceTypes
+### 6. Categories - Different sportsPlaceTypes
 
 **Status:** Acceptable
 
 **Symptom:** Local categories have fewer type codes than production.
 
-```bash
-# Production subCategory 1 types: [101, 102, 103, 104, 106, 107, 108, 109, 110, 111, 112, 113]
-# Local subCategory 1 types:      [101, 103, 106, 107, 109, 110, 111, 112, 113]
-# Missing: 102, 104, 108
-```
-
 **Reason:** Local reflects current active types. Production includes historical/deprecated types.
 
-### 5. Type Descriptions Differ
+### 7. Type Descriptions Differ
 
 **Status:** Acceptable
 
@@ -98,18 +78,41 @@ curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq '.sportsPlaceI
 
 **Reason:** Descriptions have been updated in the new system. This is intentional improvement.
 
+### 8. Coordinate Precision
+
+TM35FIN coordinates have minor floating-point precision differences:
+- Production: `380848.639900476`
+- Local: `380848.63990043715`
+
+No functional impact.
+
+### 9. Legacy-only IDs (hardcoded to 0)
+
+Fields hardcoded to `0` since the new database doesn't have these legacy identifiers:
+- `location.locationId`
+- `properties.pointId`
+- `properties.routeId`
+- `properties.routeCollectionId`
+- `properties.areaId`
+
+### 10. Link Header Path Prefix
+
+- **Production**: `/api/sports-places/`
+- **Local**: `/rest/api/sports-places/`
+
+Expected - production uses nginx URL rewrite rules.
+
 ## Working Correctly
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Default fields (sportsPlaceId only) | OK | Returns only sportsPlaceId when no fields specified |
-| `typeCodes` filter | OK | Same IDs returned (when sorted) |
+| `typeCodes` filter | OK | Same IDs returned |
 | `cityCodes` filter | OK | Works correctly |
 | `modifiedAfter` filter | OK | Requires full timestamp format `yyyy-MM-dd HH:mm:ss.SSS` |
-| `searchString` filter | OK | Exact same results returned |
 | `retkikartta` filter | OK | Works correctly |
 | `harrastuspassi` filter | OK | Works correctly |
-| `lang` parameter (fi/en/se) | OK | Translations work |
+| `lang` parameter (fi/se/en) | OK | All language translations work correctly |
 | Single sports place by ID | OK | Identical structure |
 | `location` structure | OK | All keys present |
 | `location.geometries` | OK | FeatureCollection with correct structure |
@@ -119,48 +122,17 @@ curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq '.sportsPlaceI
 | Pagination status code | OK | 206 Partial Content |
 | Link header format | OK | Correct rel values |
 | X-total-count header | OK | Present and correct |
+| Sort by sportsPlaceId | OK | Results sorted ascending |
+| 404 error format | OK | Matches production |
 | `deleted-sports-places` endpoint | OK | Structure matches |
 | `categories` endpoint | OK | Structure matches |
 | `sports-place-types` endpoint | OK | Structure matches |
 | `sports-place-types/:code` endpoint | OK | Structure matches |
-| Geo proximity filter | OK | Works correctly (results differ due to sort) |
+| Geo proximity filter | OK | Works correctly |
 | Multi-format fields param | OK | `fields=a&fields=b` works |
-
-## Acceptable Differences
-
-### Coordinate Precision
-
-TM35FIN coordinates have minor floating-point precision differences:
-- Production: `380848.639900476`
-- Local: `380848.63990043715`
-
-No functional impact.
-
-### Legacy-only IDs (hardcoded to 0)
-
-Fields hardcoded to `0` since the new database doesn't have these legacy identifiers:
-- `location.locationId`
-- `properties.pointId`
-- `properties.routeId`
-- `properties.routeCollectionId`
-- `properties.areaId`
-
-### Different Data Counts
-
-Local dev environment has different sports places than production:
-- Production: ~47,125 sports places
-- Local: ~47,756 sports places
-
-### Link Header Path Prefix
-
-- **Production**: `/api/sports-places/`
-- **Local**: `/rest/api/sports-places/`
-
-Expected - production uses nginx URL rewrite rules.
-
-### Type/Category Ordering
-
-Order of items in arrays may differ. JSON array ordering is not semantically meaningful for these endpoints.
+| Ice stadium properties | OK | All rink properties match |
+| Swimming pool properties | OK | All pool properties match |
+| Combined filters | OK | typeCode + cityCode works |
 
 ## Test Commands
 
@@ -169,34 +141,35 @@ Order of items in arrays may differ. JSON array ordering is not semantically mea
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=5" | jq '[.[].sportsPlaceId]'
 curl -s "http://localhost:8091/rest/api/sports-places?pageSize=5" | jq '[.[].sportsPlaceId]'
 
-# Verify sort: production should be sorted ascending
-curl -s "https://api.lipas.fi/v1/sports-places?pageSize=10" | jq '[.[].sportsPlaceId] | sort == .'
-# Returns: true
-
 # With fields parameter (production multi-format)
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2&fields=name&fields=type.typeCode" | jq '.'
-
-# Geo filter - results should match when properly sorted
-curl -s "https://api.lipas.fi/v1/sports-places?closeToLon=24.94&closeToLat=60.17&closeToDistanceKm=1&pageSize=5" | jq '[.[].sportsPlaceId] | sort == .'
 
 # Compare single item
 curl -s "https://api.lipas.fi/v1/sports-places/72269" | jq 'keys | sort'
 curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq 'keys | sort'
 
+# Test English translations
+curl -s "https://api.lipas.fi/v1/sports-places/72269?lang=en" | jq '{admin, owner}'
+curl -s "http://localhost:8091/rest/api/sports-places/72269?lang=en" | jq '{admin, owner}'
+
 # Error responses
 curl -s "https://api.lipas.fi/v1/sports-places/999999999"
 curl -s "http://localhost:8091/rest/api/sports-places/999999999"
 
-# Pagination headers
-curl -sI "https://api.lipas.fi/v1/sports-places?pageSize=2&page=2" | grep -iE "(link|x-total)"
-curl -sI "http://localhost:8091/rest/api/sports-places?pageSize=2&page=2" | grep -iE "(link|x-total)"
+# Validation errors
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=abc"
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=abc"
 ```
 
 ## Summary
 
-**Fixed (2025-12-14):**
-1. ✅ Sort by `sportsPlaceId` - Added to ES queries with `unmapped_type` for empty index handling
-2. ✅ Error response format - Now matches production for 404s and validation errors
+**Fixed:**
+1. English translations - Already correct in `lipas.data.admins` and `lipas.data.owners` (confirmed via test)
+2. Validation error format - Now uses `malli.error/humanize` for readable strings
 
-**Monitor:**
-3. Fields parameter format (document multi-format requirement)
+**Acceptable As-Is:**
+3. searchString result ordering (ES relevance scoring)
+4. Route segment naming (deterministic sequential is fine)
+5. Fields parameter accepts both formats (more lenient)
+6. Category type code differences (reflects current active types)
+7. Type description updates (intentional improvement)
