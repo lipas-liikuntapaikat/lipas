@@ -18,14 +18,39 @@
                     "location.postalOffice" "location.neighborhood" "location.city.name" "location.city.cityCode" "location.locationId"
                     "location.sportsPlaces" "properties"])
 
-;; enum, enum-coll new
+;; Properties are simple key-value pairs in legacy API responses
+;; Values can be numbers, booleans, strings, or nil
 (def legacy-sport-place-property
-  [:map-of :keyword
-   [:map
-    [:name :string]
-    [:description {:optional true} :string]
-    [:dataType [:enum "boolean" "string" "interge" "numeric" "enum" "enum-coll"]]
-    [:opts [:map-of :keyword #'common/localized-string]]]])
+  [:map-of :keyword [:or :int :double :boolean :string :nil]])
+
+;; Legacy feature schemas that allow any properties (pointId, routeId, areaId, etc.)
+;; These are separate from common schemas to avoid polluting them.
+(def legacy-feature-properties
+  [:map-of :keyword :any])
+
+(def legacy-point-feature
+  (mu/assoc common/point-feature :properties [:maybe legacy-feature-properties]))
+
+(def legacy-line-string-feature
+  (mu/assoc common/line-string-feature :properties [:maybe legacy-feature-properties]))
+
+(def legacy-polygon-feature
+  (mu/assoc common/polygon-feature :properties [:maybe legacy-feature-properties]))
+
+(def legacy-point-feature-collection
+  [:map {:description "GeoJSON FeatureCollection with Point geometries and legacy properties."}
+   [:type [:enum "FeatureCollection"]]
+   [:features [:sequential legacy-point-feature]]])
+
+(def legacy-line-string-feature-collection
+  [:map {:description "GeoJSON FeatureCollection with LineString geometries and legacy properties."}
+   [:type [:enum "FeatureCollection"]]
+   [:features [:sequential legacy-line-string-feature]]])
+
+(def legacy-polygon-feature-collection
+  [:map {:description "GeoJSON FeatureCollection with Polygon geometries and legacy properties."}
+   [:type [:enum "FeatureCollection"]]
+   [:features [:sequential legacy-polygon-feature]]])
 
 (def location
   [:map
@@ -46,9 +71,9 @@
                    :description "Neighborhood name"
                    :example "Metsämäki"} :string]
    [:geometries [:or
-                 #'common/polygon-feature-collection
-                 #'common/line-string-feature-collection
-                 #'common/point-feature-collection]]
+                 legacy-polygon-feature-collection
+                 legacy-line-string-feature-collection
+                 legacy-point-feature-collection]]
    [:coordinates
     {:optional true
      :description "Simple Point coordinates of the location."
@@ -93,6 +118,15 @@
     [:geometryType :string]
     [:subCategory :int]]])
 
+;; Property type definition for type detail endpoint
+;; Each property has name, dataType, and description
+;; Legacy API only supports: string, numeric, boolean (enum/enum-coll coerced to string)
+(def legacy-property-type-definition
+  [:map
+   [:name :string]
+   [:dataType [:enum "numeric" "boolean" "string"]]
+   [:description :string]])
+
 (def sports-places-by-type-response
   [:map
    [:typeCode :int]
@@ -100,15 +134,10 @@
    [:description :string]
    [:geometryType [:enum "Point" "LineString" "Polygon"]]
    [:subCategory :int]
-   [:props legacy-sport-place-property
-    #_[:map-of
-       :keyword
-       [:map
-        [:name :string]
-        [:dataType [:enum "numeric" "boolean" "enum" "enum-coll" "string"]]
-        [:description :string]
-        [:opts [:map-of :string :string]]]]]])
+   ;; Legacy API uses 'properties' key with property definitions
+   [:properties [:map-of :keyword legacy-property-type-definition]]])
 
+;; Sports place schema for single item endpoint (/:id) - all fields present
 (def legacy-sports-place
   [:map
    [:sportsPlaceId :int]
@@ -132,6 +161,89 @@
                    :example "2012-04-23 18:25:43.511"} :string]
    [:location {:optional true
                :description "Location of the sports place"} #'location]
+   [:properties {:optional true} #'legacy-sport-place-property]
+   [:phoneNumber {:optional true
+                  :example "014 569 4257"} [:maybe :string]]
+   [:www {:optional true
+          :example "www.example.fi/velodrome"} [:maybe :string]]
+   [:reservationsLink {:optional true
+                       :example "www.example.fi/reservations/velodrome"} [:maybe :string]]
+   [:email {:optional true
+            :example "mail@example.fi"} [:maybe :string]]
+   [:owner {:optional true} :string]
+   [:admin {:optional true} :string]])
+
+;; Flexible location schema for list endpoint - all fields optional since field selection
+;; allows requesting only specific nested fields like location.city.cityCode
+(def location-list-item
+  [:map
+   [:locationId {:optional true} :int]
+   [:city {:optional true}
+    [:map
+     [:name {:optional true} :string]
+     [:cityCode {:optional true} :int]]]
+   [:address {:optional true
+              :description "Street address"
+              :example "Lemminkäisenkatu 13"} :string]
+   [:postalCode {:optional true
+                 :description "Postal code"
+                 :example "20520"} :string]
+   [:postalOffice {:optional true
+                   :description "Postal office"
+                   :example "Turku"} :string]
+   [:neighborhood {:optional true
+                   :description "Neighborhood name"
+                   :example "Metsämäki"} :string]
+   [:geometries {:optional true}
+    [:or
+     legacy-polygon-feature-collection
+     legacy-line-string-feature-collection
+     legacy-point-feature-collection]]
+   [:coordinates
+    {:optional true
+     :description "Simple Point coordinates of the location."
+     :example {:wgs84 {:lon 25.718659
+                       :lat 62.6023221}
+               :tm35fin {:lon 434218
+                         :lat 6941935}}}
+    [:map
+     [:wgs84 {:optional true} [:map
+                               [:lon :float]
+                               [:lat :float]]]
+     [:tm35fin {:optional true} [:map
+                                 [:lon :float]
+                                 [:lat :float]]]]]
+   [:sportsPlaces {:optional true
+                   :description "SportsPlaces in this Location"
+                   :example [508207]}
+    [:vector :any]]])
+
+;; Sports place schema for list endpoint - field selection makes most fields optional
+;; Only sportsPlaceId is required, all other fields depend on the 'fields' parameter
+(def legacy-sports-place-list-item
+  [:map
+   [:sportsPlaceId :int]
+   [:name {:optional true :example "Kupittaa Velodrome"} :string]
+   [:marketingName {:optional true
+                    :description "Sports place marketing name"
+                    :example "Microsoft turbo velodrome"} :string]
+   [:type {:optional true}
+    [:map
+     [:typeCode {:optional true} :int]
+     [:name {:optional true} :string]]]
+   [:schoolUse {:optional true
+                :description "Schools use this sports place"} :boolean]
+   [:freeUse {:optional true :description "Sports place is accessible without fees or reservation"} :boolean]
+   [:constructionYear {:optional true
+                       :example 1987} :int]
+   [:renovationYears {:optional true
+                      :description "List of renovation years"
+                      :example [1990 2015]} [:vector int?]]
+   [:lastModified {:optional true
+                   :description "Last modification timestamp in Europe/Helsinki TZ"
+                   :example "2012-04-23 18:25:43.511"} :string]
+   [:location {:optional true
+               :description "Location of the sports place"} #'location-list-item]
    [:properties {:optional true} #'legacy-sport-place-property]
    [:phoneNumber {:optional true
                   :example "014 569 4257"} [:maybe :string]]

@@ -164,7 +164,7 @@ Access to the hierarchical type classification system used for categorizing spor
                  (legacy-http/linked-partial-content results links))
                {:status 200
                 :body results}))))
-        :responses {200 {:body [:vector legacy-schema/legacy-sports-place]}}}}]
+        :responses {200 {:body [:vector legacy-schema/legacy-sports-place-list-item]}}}}]
      ["/deleted-sports-places"
       {:parameters {:query [:map [:since {:optional true
                                           :example "1984-01-01 00:00:00.000"}

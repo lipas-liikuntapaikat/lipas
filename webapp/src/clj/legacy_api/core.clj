@@ -22,10 +22,10 @@
           index-name (get-in search [:indices :legacy-sports-site :search])
           data (:body (es/fetch-sports-places (:client search) index-name params))
           places (map :_source (-> data :hits :hits))
-          ;; Only add sportsPlaceId to fields if specific fields are requested
-          ;; When fields is empty, we want all fields (handled in filter-and-format)
+          ;; Production behavior: when no fields specified, return only sportsPlaceId
+          ;; When fields are specified, always include sportsPlaceId
           fields (if (empty? fields)
-                   fields ; Keep empty to get all fields
+                   [:sportsPlaceId] ; Default to only sportsPlaceId (production behavior)
                    (conj fields :sportsPlaceId)) ; Add sportsPlaceId when specific fields requested
           partial? (es/more? data (:limit params) (:offset params))
           duration (- (System/currentTimeMillis) start-time)
