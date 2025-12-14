@@ -157,8 +157,9 @@
         (is (= true (:playground props))))
 
       (testing "Count properties"
-        (is (= 2 (:fieldsCount props)))
-        (is (= 1 (:iceRinksCount props))))
+        ;; Note: normalize-properties converts integers to doubles for consistent JSON serialization
+        (is (= 2.0 (:fieldsCount props)))
+        (is (= 1.0 (:iceRinksCount props))))
 
       (testing "Surface material localized"
         (is (= "Nurmi" (:surfaceMaterial props)))))))
