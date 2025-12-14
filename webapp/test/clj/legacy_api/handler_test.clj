@@ -160,6 +160,27 @@
         (is (every? :name body))
         (is (every? :type body))))))
 
+(defn parse-link-header
+  "Parse a Link header string into a map of rel->url"
+  [link-header]
+  (when link-header
+    (->> (str/split link-header #",\s*")
+         (map (fn [link]
+                (let [[url rel] (str/split link #";\s*")]
+                  (when (and url rel)
+                    (let [url (-> url (str/replace #"^<" "") (str/replace #">$" ""))
+                          rel (-> rel (str/replace #"rel=\"" "") (str/replace #"\"$" ""))]
+                      [rel url])))))
+         (remove nil?)
+         (into {}))))
+
+(defn extract-page-param
+  "Extract the page parameter from a URL"
+  [url]
+  (when url
+    (when-let [match (re-find #"[?&]page=(\d+)" url)]
+      (Integer/parseInt (second match)))))
+
 (deftest list-sports-places-pagination-test
   (testing "GET /rest/api/sports-places pagination"
     (doseq [i (range 1 16)]
@@ -192,7 +213,17 @@
     (testing "206 Partial Content when more results available"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5"))]
         (is (= 206 (:status resp)) "Should return 206 when pagination is needed")
-        (is (some? (get-in resp [:headers "Link"])))))))
+        (is (some? (get-in resp [:headers "Link"])))))
+
+    (testing "Link header has correct page numbers"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5&page=1"))
+            link-header (get-in resp [:headers "Link"])
+            links (parse-link-header link-header)]
+        (is (some? link-header) "Link header should be present")
+        (is (= 1 (extract-page-param (get links "first"))) "first should be page=1")
+        (is (= 2 (extract-page-param (get links "next"))) "next should be page=2 (not page=1)")
+        (is (= 1 (extract-page-param (get links "prev"))) "prev should be page=1 (can't go below 1)")
+        (is (= 3 (extract-page-param (get links "last"))) "last should be page=3 (15 items / 5 per page)")))))
 
 (deftest list-sports-places-filter-by-type-codes-test
   (testing "GET /rest/api/sports-places filter by typeCodes"
@@ -251,8 +282,16 @@
         (is (every? #(= #{:sportsPlaceId} (set (keys %))) body)
             "Default response should only contain sportsPlaceId")))
 
-    (testing "selecting specific fields returns those fields"
+    (testing "selecting specific fields with repeated params (production format)"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name&fields=type.typeCode"))
+            body (parse-json-body resp)]
+        (is (#{200 206} (:status resp)))
+        (is (every? :sportsPlaceId body) "sportsPlaceId is always included")
+        (is (every? :name body) "requested field 'name' should be present")
+        (is (every? #(-> % :type :typeCode) body) "requested field 'type.typeCode' should be present")))
+
+    (testing "selecting specific fields with comma-separated format (also supported)"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name,type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (every? :sportsPlaceId body) "sportsPlaceId is always included")
@@ -405,6 +444,16 @@
         (is (= "Point" (:geometryType body)))
         (is (integer? (:subCategory body)))
         (is (map? (:properties body)) "Should have properties map (key: 'properties' not 'props')")))
+
+    (testing "type 1120 includes infoFi property"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+            body (parse-json-body resp)
+            info-fi (get-in body [:properties :infoFi])]
+        (is (some? info-fi) "Type 1120 should include infoFi property")
+        (when info-fi
+          (is (string? (:name info-fi)) "infoFi should have name")
+          (is (string? (:description info-fi)) "infoFi should have description")
+          (is (= "string" (:dataType info-fi)) "infoFi dataType should be string"))))
 
     (testing "returns 200 for type code 1310 (Football field)"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1310"))

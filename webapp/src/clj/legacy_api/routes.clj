@@ -176,7 +176,8 @@ Access to the hierarchical type classification system used for categorizing spor
                                        :fields (:fields qp)}
                                       (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
                                       (into {}))
-                     links (legacy-http/create-page-links path link-params (:offset params) (:limit params) total)]
+                     ;; Pass page number (1-indexed), not offset (0-indexed)
+                     links (legacy-http/create-page-links path link-params (or page 1) (:limit params) total)]
                  (legacy-http/linked-partial-content results links))
                {:status 200
                 :body results}))))

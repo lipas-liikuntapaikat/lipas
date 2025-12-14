@@ -1,6 +1,6 @@
 # Legacy API Production Comparison Findings
 
-Date: 2025-12-14
+Date: 2025-12-14 (Updated)
 
 ## Overview
 
@@ -8,74 +8,91 @@ Comparison of local Legacy API implementation against production (`api.lipas.fi/
 
 ## Critical Issues (Must Fix)
 
-### 1. Geo proximity filter broken
+### 1. Pagination Link Header Bug
 
-**Status:** ✅ FIXED
+**Status:** FIXED ✅
 
-**Symptom:** Returns "Internal search error" when using `closeToLon`, `closeToLat`, `closeToDistanceKm` parameters.
+**Symptom:** The "next" page link in the Link header was off by one.
 
-**Root cause:** In `search.clj`, `validate-geo-params` expected a `:point` key, but `routes.clj` passed the ES field name as the key instead.
+**Root cause:** In `routes.clj`, the code passed `offset` (0-indexed) to `create-page-links`, but the function expected a 1-indexed page number.
 
-**Fix:** Updated `routes.clj` to pass geo params with proper structure `{:distance "1000m" :field :location.coordinates.wgs84 :point {:lon ... :lat ...}}` and updated `search.clj` to build the correct ES geo_distance query.
-
-**Files changed:**
-- `src/clj/legacy_api/search.clj` - `validate-geo-params` and `create-geo-filter` functions
-- `src/clj/legacy_api/routes.clj` - lines 138-144
-
-### 2. English translation mismatch
-
-**Status:** ✅ FIXED
-
-**Symptom:** English translations for `admin` and `owner` fields differ from production.
-
-```bash
-# Production (lang=en):
-{"admin": "Municipality / Technical services", "owner": "Municipality"}
-
-# Local (was):
-{"admin": "City / technical services", "owner": "City"}
-```
-
-**Fix:** Updated English translations in `admins.cljc` and `owners.cljc` to use "Municipality" instead of "City".
+**Fix:** Changed to pass the original `page` parameter instead of `offset` to `create-page-links`.
 
 **Files changed:**
-- `src/cljc/lipas/data/admins.cljc` - English translations for city-* admin types
-- `src/cljc/lipas/data/owners.cljc` - English translation for "city" owner type
+- `src/clj/legacy_api/routes.clj` - line 179-180
+
+### 2. Fields Parameter Format Mismatch
+
+**Status:** FIXED ✅ (Already working)
+
+**Symptom:** Production expects separate query params, local accepts comma-separated.
+
+**Finding:** Local implementation already supports BOTH formats:
+- Repeated params format: `fields=name&fields=type.typeCode` (production format)
+- Comma-separated format: `fields=name,type.typeCode` (additional convenience)
+
+This is MORE lenient than production, which provides backwards compatibility without breaking existing clients.
+
+**No changes needed** - the schema and route handling already support both formats.
 
 ## Medium Priority Issues
 
-### 3. Link header format differs
+### 3. Type Properties - Missing `infoFi`
 
-**Status:** ✅ FIXED
+**Status:** FIXED ✅
 
-**Symptom:**
-- Links included all params (even empty/nil ones)
-- Used internal param names (`city-codes` vs `cityCodes`)
+**Symptom:** The `infoFi` property was present in production's type schema but missing from local.
 
-**Fix:** Updated `routes.clj` to build link params from original camelCase query params, filtering out nil/empty values.
+**Fix:** Added `infoFi` property definition in `legacy-api/api.clj` that is appended to all type property definitions. This maps to the `comment` field in the new data model.
+
+Note: The sports place DATA already correctly maps `comment` to `infoFi` (done in `transform.clj` line 92). This fix adds the property DEFINITION to the type schema endpoint.
 
 **Files changed:**
-- `src/clj/legacy_api/routes.clj` - pagination link params construction
+- `src/clj/legacy_api/api.clj` - added `info-fi-property` definition and included it in type properties output
+
+**Impact:** Type properties endpoint now includes `infoFi` property definition matching production.
+
+### 4. Categories - Different sportsPlaceTypes
+
+**Status:** Acceptable
+
+**Symptom:** Local categories have fewer type codes than production.
+
+```bash
+# Production subCategory 1 has types: [101, 103, 104, 106, 107, 108, 112, 111, 110, 109, 102, 113]
+# Local subCategory 1 has types:      [110, 101, 106, 113, 109, 111, 103, 107, 112]
+# Missing: 104, 108, 102
+```
+
+**Reason:** Local reflects current active types in the database. Production includes historical/deprecated types.
 
 ## Working Correctly
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Default fields (sportsPlaceId only) | OK | Fixed in commit 4d7c21ad |
+| Default fields (sportsPlaceId only) | OK | Returns only sportsPlaceId when no fields specified |
 | `typeCodes` filter | OK | Same IDs returned |
 | `cityCodes` filter | OK | Works correctly |
-| `modifiedAfter` filter | OK | Requires full timestamp format |
-| `searchString` filter | OK | Results may vary by data |
+| `modifiedAfter` filter | OK | Requires full timestamp format `yyyy-MM-dd HH:mm:ss.SSS` |
+| `searchString` filter | OK | Same results returned |
 | `retkikartta` filter | OK | Works correctly |
 | `harrastuspassi` filter | OK | Works correctly |
 | `lang=fi` | OK | Finnish translations match |
-| `lang=se` | OK | Swedish translations match exactly |
+| `lang=en` | OK | English translations match |
+| `lang=se` | OK | Swedish translations match |
 | Single sports place structure | OK | Identical top-level keys |
 | `location` structure | OK | All keys present |
+| `location.geometries` | OK | FeatureCollection with correct structure |
+| `location.coordinates` | OK | Both wgs84 and tm35fin present |
 | `properties` structure | OK | Values match for same ID |
-| Pagination headers | OK | 206 status, X-total-count |
+| `type` structure | OK | typeCode + name |
+| Pagination status code | OK | 206 Partial Content |
+| X-total-count header | OK | Present and correct |
 | `deleted-sports-places` endpoint | OK | Structure matches |
-| `fields` parameter | OK | Field selection works |
+| `categories` endpoint | OK | Structure matches |
+| `sports-place-types` endpoint | OK | Structure matches |
+| `sports-place-types/:code` endpoint | OK | Structure matches |
+| Geo proximity filter | OK | Works correctly |
 
 ## Acceptable Differences
 
@@ -91,6 +108,17 @@ Fields like `location.locationId`, `properties.pointId`, `properties.routeId` ar
 
 Local dev environment may have different sports places than production, so specific IDs and counts may differ.
 
+### Link header path prefix
+
+- **Production**: `/api/sports-places/`
+- **Local**: `/rest/api/sports-places/`
+
+This is expected - production uses nginx URL rewrite rules.
+
+### Type/category ordering
+
+The order of items in arrays (like sportsPlaceTypes in categories) may differ. This is acceptable as JSON object/array ordering is not semantically meaningful.
+
 ## Test Commands
 
 ```bash
@@ -98,32 +126,36 @@ Local dev environment may have different sports places than production, so speci
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3" | jq '.'
 curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3" | jq '.'
 
-# With fields parameter
-curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2&fields=name" | jq '.'
-curl -s "http://localhost:8091/rest/api/sports-places?pageSize=2&fields=name" | jq '.'
+# With fields parameter (production format)
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2&fields=name&fields=type.typeCode" | jq '.'
+
+# With fields parameter (local comma-separated format)
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=2&fields=name,type.typeCode" | jq '.'
 
 # Type filter
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3&typeCodes=1120" | jq '.'
 curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3&typeCodes=1120" | jq '.'
 
-# Geo filter (BROKEN locally)
+# Geo filter
 curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3&closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1" | jq '.'
 curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3&closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1" | jq '.'
 
 # Language parameter
 curl -s "https://api.lipas.fi/v1/sports-places/72269?lang=en" | jq '{admin, owner}'
-curl -s "http://localhost:8091/rest/api/sports-places/72269?lang=en" | jq '{admin, owner}'
 
-# Single sports place comparison
-curl -s "https://api.lipas.fi/v1/sports-places/72269" | jq -S . > /tmp/prod.json
-curl -s "http://localhost:8091/rest/api/sports-places/72269" | jq -S . > /tmp/local.json
-diff /tmp/prod.json /tmp/local.json
+# Pagination headers comparison
+curl -sI "https://api.lipas.fi/v1/sports-places?pageSize=2&page=1" | grep -E "^(Link|X-total)"
+curl -sI "http://localhost:8091/rest/api/sports-places?pageSize=2&page=1" | grep -E "^(Link|X-total)"
 
 # Deleted sports places
-curl -s "https://api.lipas.fi/v1/deleted-sports-places?since=2024-01-01%2000:00:00.000&pageSize=3" | jq '.'
+curl -s "https://api.lipas.fi/v1/deleted-sports-places?since=2024-01-01%2000:00:00.000" | jq '.[0:3]'
 curl -s "http://localhost:8091/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000" | jq '.[0:3]'
 
-# Pagination headers
-curl -sD - "https://api.lipas.fi/v1/sports-places?pageSize=3&page=1" | head -15
-curl -sD - "http://localhost:8091/rest/api/sports-places?pageSize=3&page=1" | head -15
+# Categories
+curl -s "https://api.lipas.fi/v1/categories" | jq '.[0]'
+curl -s "http://localhost:8091/rest/api/categories" | jq '.[0]'
+
+# Type detail
+curl -s "https://api.lipas.fi/v1/sports-place-types/1120" | jq '.'
+curl -s "http://localhost:8091/rest/api/sports-place-types/1120" | jq '.'
 ```

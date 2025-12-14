@@ -6,6 +6,13 @@
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
 
+;; The infoFi property is a universal property that maps from the 'comment' field
+;; in the new data model. It's added to all type property definitions in the legacy API.
+(def info-fi-property
+  {:name "Lisätieto"
+   :description "Liikuntapaikan lisätiedot, vapaa tekstikenttä"
+   :dataType "string"})
+
 (defn- strip-question-mark
   "Remove trailing ? from keyword name.
    Legacy API property keys don't have ? suffix (e.g., 'ligthing' not 'ligthing?')."
@@ -60,7 +67,9 @@
       utils/->camel-case-keywords
       ;; Legacy API uses 'properties' key (not 'props') with keys without '?' suffix
       (clojure.set/rename-keys {:props :properties})
-      (update :properties transform-property-keys)))
+      (update :properties transform-property-keys)
+      ;; Add infoFi property (maps from 'comment' field in new data model)
+      (assoc-in [:properties :infoFi] info-fi-property)))
 
 (defn- ->legacy-api [m lang]
   (-> m
