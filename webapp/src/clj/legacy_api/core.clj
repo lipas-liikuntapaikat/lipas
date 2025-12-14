@@ -1,11 +1,12 @@
 (ns legacy-api.core
   (:require
+   [clojure.core.async :as async]
    [legacy-api.search :as es]
    [legacy-api.sports-place :refer [filter-and-format
                                     format-sports-place-es]]
+   [legacy-api.transform :as transform]
    [legacy-api.util :refer [only-non-nil-recur] :as util]
-   [qbits.spandex :as elastic]
-   [qbits.spandex.utils :as es-utils]
+   [lipas.backend.search :as search]
    [taoensso.timbre :as log]))
 
 (defn fetch-sports-places-es
@@ -110,10 +111,10 @@
         timestamp-str))))
 
 (defn fetch-deleted-sports-places-es
-  "Fetches list of deleted sports-places from ElasticSearch backend.
+  "Fetches list of deleted sports-places from ElasticSearch backend using scroll API.
    Returns sports places that were previously published but are now in non-published status
    after the given timestamp."
-  [search since-timestamp]
+  [search-component since-timestamp]
   (try
     (log/debug "Fetching deleted sports places" {:since since-timestamp})
 
@@ -122,22 +123,27 @@
                       {:type :invalid-input
                        :parameter :since-timestamp})))
 
-    (let [client (:client search)
-          idx-name (get-in search [:indices :sports-site :search])
+    (let [client (:client search-component)
+          idx-name (get-in search-component [:indices :sports-site :search])
           formatted-timestamp (format-timestamp-for-es since-timestamp)
-          response (elastic/request client
-                                    {:method :get
-                                     :url (es-utils/url [idx-name :_search])
-                                     :body {:query {:bool {:must [{:range {:event-date {:gte formatted-timestamp}}}
-                                                                  {:terms {:status.keyword ["out-of-service-permanently" "incorrect-data"]}}]}}
-                                            :sort [{:event-date {:order "desc"}}]
-                                            :_source ["sportsPlaceId" "event-date"]}})
-          hits (-> response :body :hits :hits)
-          result (map (fn [hit]
-                        (let [source (:_source hit)]
-                          {:sportsPlaceId (:sportsPlaceId source)
-                           :deletedAt (str (:event-date source))}))
-                      hits)]
+          ;; Use scroll API for large result sets (production has 484K+ deleted places)
+          ;; Only fetch the two fields we need to minimize data transfer
+          scroll-chan (search/scroll client idx-name
+                                     {:query {:bool {:must [{:range {:event-date {:gte formatted-timestamp}}}
+                                                            {:terms {:status.keyword ["out-of-service-permanently" "incorrect-data"]}}]}}
+                                      :sort [{:event-date {:order "desc"}}]
+                                      :_source {:includes ["lipas-id" "event-date"]}})
+          ;; Collect all pages from scroll
+          result (loop [results []]
+                   (if-let [page (async/<!! scroll-chan)]
+                     (let [hits (-> page :body :hits :hits)
+                           transformed (map (fn [hit]
+                                              (let [source (:_source hit)]
+                                                {:sportsPlaceId (:lipas-id source)
+                                                 :deletedAt (transform/UTC->last-modified (:event-date source))}))
+                                            hits)]
+                       (recur (into results transformed)))
+                     results))]
 
       (log/debug "Deleted sports places search completed"
                  {:count (count result) :since since-timestamp})

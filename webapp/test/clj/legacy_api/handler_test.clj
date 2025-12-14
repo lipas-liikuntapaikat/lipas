@@ -7,6 +7,7 @@
    3. Response structure matches the legacy API contract
    4. Query parameters work as expected (filtering, pagination, etc.)"
   (:require
+   [clojure.string :as str]
    [clojure.test :refer [deftest is testing use-fixtures]]
    [lipas.backend.core :as core]
    [lipas.test-utils :as test-utils]
@@ -49,56 +50,6 @@
     (Thread/sleep 100)
     site))
 
-(defn make-point-site
-  "Creates a valid point-type sports site with consistent geometry."
-  [lipas-id & {:keys [type-code city-code name status admin owner]
-               :or {type-code 1120
-                    city-code 91
-                    name "Test Sports Place"
-                    status "active"
-                    admin "city-technical-services"
-                    owner "city"}}]
-  {:lipas-id lipas-id
-   :name name
-   :status status
-   :admin admin
-   :owner owner
-   :event-date (str (java.time.Instant/now))
-   :type {:type-code type-code}
-   :location {:city {:city-code (str city-code)}
-              :address "Testikatu 1"
-              :postal-code "00100"
-              :postal-office "Helsinki"
-              :geometries {:type "FeatureCollection"
-                           :features [{:type "Feature"
-                                       :geometry {:type "Point"
-                                                  :coordinates [25.0 60.0]}}]}}})
-
-(defn make-polygon-site
-  "Creates a valid polygon-type sports site with consistent geometry."
-  [lipas-id & {:keys [type-code city-code name]
-               :or {type-code 1310
-                    city-code 91
-                    name "Test Football Field"}}]
-  {:lipas-id lipas-id
-   :name name
-   :status "active"
-   :admin "city-technical-services"
-   :owner "city"
-   :event-date (str (java.time.Instant/now))
-   :type {:type-code type-code}
-   :location {:city {:city-code (str city-code)}
-              :address "Urheilutie 1"
-              :postal-code "00100"
-              :geometries {:type "FeatureCollection"
-                           :features [{:type "Feature"
-                                       :geometry {:type "Polygon"
-                                                  :coordinates [[[25.0 60.0]
-                                                                 [25.001 60.0]
-                                                                 [25.001 60.001]
-                                                                 [25.0 60.001]
-                                                                 [25.0 60.0]]]}}]}}})
-
 ;;; Response parsing helpers ;;;
 
 (defn parse-json-body [response]
@@ -114,7 +65,7 @@
   (testing "GET /rest/api/sports-places/:id"
 
     (testing "returns 200 for existing sports place"
-      (let [site (make-point-site 12345 :name "Test Lähiliikuntapaikka")
+      (let [site (test-utils/make-point-site 12345 :name "Test Lähiliikuntapaikka")
             _ (create-sports-site! site)
             resp ((test-app) (mock/request :get "/rest/api/sports-places/12345"))
             body (parse-json-body resp)]
@@ -130,7 +81,9 @@
         (is (= 404 (:status resp)))))
 
     (testing "returns correct legacy field format"
-      (let [site (-> (make-polygon-site 12346 :name "Test Football Field")
+      (let [site (-> (test-utils/make-point-site 12346
+                                                 :name "Test Football Field"
+                                                 :type-code 1310)
                      (assoc :construction-year 2010
                             :event-date "2024-06-15T10:30:00.000Z"))
             _ (create-sports-site! site)
@@ -152,7 +105,7 @@
 
 (deftest get-sports-place-with-lang-test
   (testing "GET /rest/api/sports-places/:id with lang parameter"
-    (let [site (make-point-site 12347 :name "Suomenkielinen Nimi")
+    (let [site (test-utils/make-point-site 12347 :name "Suomenkielinen Nimi")
           _ (create-sports-site! site)]
 
       (testing "fi language (default)"
@@ -187,7 +140,7 @@
 (deftest list-sports-places-with-results-test
   (testing "GET /rest/api/sports-places returns results when data exists"
     (doseq [i (range 1 4)]
-      (create-sports-site! (make-point-site (+ 20000 i) :name (str "Test Site " i))))
+      (create-sports-site! (test-utils/make-point-site (+ 20000 i) :name (str "Test Site " i))))
 
     (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
           body (parse-json-body resp)]
@@ -201,7 +154,7 @@
 (deftest list-sports-places-pagination-test
   (testing "GET /rest/api/sports-places pagination"
     (doseq [i (range 1 16)]
-      (create-sports-site! (make-point-site (+ 30000 i) :name (str "Pagination Site " i))))
+      (create-sports-site! (test-utils/make-point-site (+ 30000 i) :name (str "Pagination Site " i))))
 
     (testing "default page size returns up to 10"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
@@ -234,8 +187,8 @@
 
 (deftest list-sports-places-filter-by-type-codes-test
   (testing "GET /rest/api/sports-places filter by typeCodes"
-    (create-sports-site! (make-point-site 40001 :name "Type 1120 Site" :type-code 1120))
-    (create-sports-site! (make-polygon-site 40002 :name "Type 1310 Site" :type-code 1310))
+    (create-sports-site! (test-utils/make-point-site 40001 :name "Type 1120 Site" :type-code 1120))
+    (create-sports-site! (test-utils/make-point-site 40002 :name "Type 1310 Site" :type-code 1310))
 
     (testing "single typeCode filter"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120"))
@@ -252,8 +205,8 @@
 
 (deftest list-sports-places-filter-by-city-codes-test
   (testing "GET /rest/api/sports-places filter by cityCodes"
-    (create-sports-site! (make-point-site 50001 :name "Helsinki Site" :city-code 91))
-    (create-sports-site! (make-point-site 50002 :name "Espoo Site" :city-code 49))
+    (create-sports-site! (test-utils/make-point-site 50001 :name "Helsinki Site" :city-code "91"))
+    (create-sports-site! (test-utils/make-point-site 50002 :name "Espoo Site" :city-code "49"))
 
     (testing "single cityCode filter"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?cityCodes=91"))
@@ -269,7 +222,7 @@
 
 (deftest list-sports-places-search-string-test
   (testing "GET /rest/api/sports-places with searchString"
-    (create-sports-site! (make-point-site 60001 :name "Unique Searchable Name XYZ123"))
+    (create-sports-site! (test-utils/make-point-site 60001 :name "Unique Searchable Name XYZ123"))
 
     (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?searchString=XYZ123"))
           body (parse-json-body resp)]
@@ -279,7 +232,7 @@
 
 (deftest list-sports-places-field-selection-test
   (testing "GET /rest/api/sports-places with fields parameter"
-    (create-sports-site! (make-point-site 70001 :name "Field Selection Test"))
+    (create-sports-site! (test-utils/make-point-site 70001 :name "Field Selection Test"))
 
     ;; Note: Field selection with limited fields can cause response coercion errors
     ;; because the schema expects all required fields. When selecting only certain
@@ -295,16 +248,72 @@
         (is (every? :sportsPlaceId body))))))
 
 ;;; Tests for GET /rest/api/deleted-sports-places ;;;
-;; NOTE: This endpoint has issues with the ES query (wrong index/field names)
-;; For now we just verify it doesn't crash completely
+
+(defn create-deleted-sports-site!
+  "Creates a sports site with 'out-of-service-permanently' status (considered deleted in legacy API)."
+  [site]
+  (let [admin (create-admin-user)
+        deleted-site (assoc site :status "out-of-service-permanently")]
+    (core/upsert-sports-site!* (test-db) admin deleted-site)
+    (core/index! (test-search) deleted-site :sync)
+    ;; Give ES a moment to index
+    (Thread/sleep 100)
+    deleted-site))
 
 (deftest deleted-sports-places-test
   (testing "GET /rest/api/deleted-sports-places"
-    ;; The endpoint is currently broken due to ES field name mismatch
-    ;; Just verify it returns a response (may be error)
-    (let [resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2020-01-01%2000:00:00.000"))]
-      ;; Accept either 200 (if empty) or 500 (current bug)
-      (is (#{200 500} (:status resp)) "Endpoint should respond"))))
+
+    (testing "returns 200 with empty result when no deleted places"
+      ;; Create a regular (published) site first to establish the index mappings
+      ;; This ensures the status.keyword field exists for the query
+      (let [site (test-utils/make-point-site 94999 :name "Published Site")]
+        (create-sports-site! site))
+      (let [resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2020-01-01%2000:00:00.000"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (vector? body))
+        (is (empty? body))))
+
+    (testing "returns deleted sports places with correct format"
+      (let [;; Create a deleted sports site with a recent event date
+            site (-> (test-utils/make-point-site 95001 :name "Deleted Site 1")
+                     (assoc :event-date "2024-06-15T10:30:00.000Z"))
+            _ (create-deleted-sports-site! site)
+            resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (vector? body))
+        (is (= 1 (count body)))
+
+        ;; Verify structure matches schema
+        (let [deleted-item (first body)]
+          (is (integer? (:sportsPlaceId deleted-item))
+              "sportsPlaceId should be an integer")
+          (is (= 95001 (:sportsPlaceId deleted-item))
+              "sportsPlaceId should match the lipas-id")
+          (is (string? (:deletedAt deleted-item))
+              "deletedAt should be a string")
+          ;; Verify date format is legacy format: "2024-06-15 13:30:00.000" (Europe/Helsinki)
+          (is (re-matches #"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}" (:deletedAt deleted-item))
+              "deletedAt should be in legacy format 'yyyy-MM-dd HH:mm:ss.SSS'"))))
+
+    (testing "filters by since parameter"
+      ;; Create two deleted sites with different dates
+      (let [old-site (-> (test-utils/make-point-site 95002 :name "Old Deleted Site")
+                         (assoc :event-date "2023-01-15T10:00:00.000Z"))
+            new-site (-> (test-utils/make-point-site 95003 :name "New Deleted Site")
+                         (assoc :event-date "2024-08-20T15:45:00.000Z"))
+            _ (create-deleted-sports-site! old-site)
+            _ (create-deleted-sports-site! new-site)
+            ;; Query with since=2024-01-01 should only return the new site
+            resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        ;; Should have the new site (95003) and the one from previous test (95001)
+        ;; but NOT the old site (95002) from 2023
+        (let [ids (set (map :sportsPlaceId body))]
+          (is (contains? ids 95003) "Should include new deleted site")
+          (is (not (contains? ids 95002)) "Should NOT include old deleted site (before since)"))))))
 
 ;;; Tests for GET /rest/api/categories ;;;
 
@@ -327,7 +336,22 @@
         (let [resp ((test-app) (mock/request :get (str "/rest/api/categories?lang=" lang)))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
-          (is (vector? body)))))))
+          (is (vector? body)))))
+
+    (testing "subCategories are populated (not empty)"
+      (let [resp ((test-app) (mock/request :get "/rest/api/categories"))
+            body (parse-json-body resp)
+            ;; Find a category that should have subcategories (e.g., typeCode 0 or 1000)
+            category-with-subcats (some #(when (seq (:subCategories %)) %) body)]
+        (is (some? category-with-subcats) "At least one category should have subCategories")
+        (when category-with-subcats
+          (let [subcats (:subCategories category-with-subcats)]
+            (is (pos? (count subcats)) "subCategories should not be empty")
+            (doseq [subcat subcats]
+              (is (integer? (:typeCode subcat)) "subCategory should have integer typeCode")
+              (is (string? (:name subcat)) "subCategory should have string name")
+              (is (vector? (:sportsPlaceTypes subcat)) "subCategory should have sportsPlaceTypes vector")
+              (is (every? integer? (:sportsPlaceTypes subcat)) "sportsPlaceTypes should be integers"))))))))
 
 ;;; Tests for GET /rest/api/sports-place-types ;;;
 
@@ -368,7 +392,7 @@
         (is (string? (:description body)))
         (is (= "Point" (:geometryType body)))
         (is (integer? (:subCategory body)))
-        (is (map? (:props body)) "Should have properties map")))
+        (is (map? (:properties body)) "Should have properties map (key: 'properties' not 'props')")))
 
     (testing "returns 200 for type code 1310 (Football field)"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1310"))
@@ -378,20 +402,60 @@
         ;; Note: Type 1310 is Point in the current LIPAS system (not Polygon as in legacy)
         (is (#{"Point" "LineString" "Polygon"} (:geometryType body)))))
 
-    (testing "returns 200 for type code 4401 (Hiking trail)"
+    (testing "returns 200 for type code 4401 (Jogging track - LineString)"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/4401"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 4401 (:typeCode body)))
         (is (= "LineString" (:geometryType body)))))
 
+    (testing "returns 200 for type code 103 (Outdoor area - Polygon)"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/103"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= 103 (:typeCode body)))
+        (is (= "Polygon" (:geometryType body)))))
+
     (testing "property definitions have required fields"
       (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
             body (parse-json-body resp)]
-        (when-let [props (:props body)]
-          (doseq [[_k prop] props]
+        (is (map? (:properties body)) "Should have properties map")
+        (is (nil? (:props body)) "Should NOT have props key (legacy uses 'properties')")
+        (when-let [props (:properties body)]
+          (is (pos? (count props)) "properties should not be empty")
+          (doseq [[k prop] props]
+            (is (not (re-find #"\?$" (name k)))
+                (str "Property key should not end with '?': " k))
             (is (string? (:name prop)))
-            (is (#{"boolean" "string" "numeric" "enum" "enum-coll" "integer"} (:dataType prop)))))))
+            ;; Legacy API only supports: boolean, string, numeric
+            ;; enum/enum-coll are coerced to string
+            (is (#{"boolean" "string" "numeric"} (:dataType prop))
+                (str "dataType should be boolean/string/numeric, got: " (:dataType prop)))
+            (is (nil? (:opts prop)) "enum opts should be removed in legacy API")))))
+
+    (testing "enum properties are coerced to string dataType"
+      ;; Type 1120 has surfaceMaterial which is enum-coll in the source data
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+            body (parse-json-body resp)
+            surface-material (get-in body [:properties :surfaceMaterial])]
+        (is (some? surface-material) "Type 1120 should have surfaceMaterial property")
+        (when surface-material
+          (is (= "string" (:dataType surface-material))
+              "surfaceMaterial dataType should be coerced from enum-coll to string")
+          (is (nil? (:opts surface-material))
+              "surfaceMaterial should not have opts (enum options removed)"))))
+
+    (testing "properties key uses legacy format without question marks"
+      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/6210"))
+            body (parse-json-body resp)
+            prop-keys (when (:properties body) (keys (:properties body)))]
+        (is (some? prop-keys) "Type 6210 should have properties")
+        ;; Production uses "ligthing" not "ligthing?"
+        (when (seq prop-keys)
+          (is (some #(= "ligthing" (name %)) prop-keys)
+              "Should have 'ligthing' property (not 'ligthing?')")
+          (is (not-any? #(str/ends-with? (name %) "?") prop-keys)
+              "No property keys should end with '?'"))))
 
     (testing "respects lang parameter"
       (doseq [lang ["fi" "en" "se"]]
@@ -400,11 +464,40 @@
           (is (= 200 (:status resp)))
           (is (= 1120 (:typeCode body))))))))
 
+;;; Tests for different geometry types ;;;
+
+(deftest geometry-types-test
+  (testing "Different geometry types are correctly handled"
+
+    (testing "Point geometry site"
+      (let [site (test-utils/make-point-site 80001 :name "Point Site" :type-code 1120)
+            _ (create-sports-site! site)
+            resp ((test-app) (mock/request :get "/rest/api/sports-places/80001"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= "Point" (-> body :location :geometries :features first :geometry :type)))))
+
+    (testing "LineString geometry site (route)"
+      (let [site (test-utils/make-route-site 80002 :name "Route Site" :type-code 4405)
+            _ (create-sports-site! site)
+            resp ((test-app) (mock/request :get "/rest/api/sports-places/80002"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= "LineString" (-> body :location :geometries :features first :geometry :type)))))
+
+    (testing "Polygon geometry site (area)"
+      (let [site (test-utils/make-area-site 80003 :name "Area Site" :type-code 103)
+            _ (create-sports-site! site)
+            resp ((test-app) (mock/request :get "/rest/api/sports-places/80003"))
+            body (parse-json-body resp)]
+        (is (= 200 (:status resp)))
+        (is (= "Polygon" (-> body :location :geometries :features first :geometry :type)))))))
+
 ;;; Tests for response format verification ;;;
 
 (deftest legacy-format-verification-test
   (testing "Verify response format matches legacy API contract"
-    (let [site (-> (make-point-site 90001 :name "Format Verification Site")
+    (let [site (-> (test-utils/make-point-site 90001 :name "Format Verification Site")
                    (assoc :construction-year 2015
                           :www "http://example.com"
                           :email "test@example.com"
@@ -471,4 +564,5 @@
   (clojure.test/run-test-var #'list-sports-places-with-results-test)
   (clojure.test/run-test-var #'categories-endpoint-test)
   (clojure.test/run-test-var #'sports-place-types-list-test)
-  (clojure.test/run-test-var #'sports-place-type-detail-test))
+  (clojure.test/run-test-var #'sports-place-type-detail-test)
+  (clojure.test/run-test-var #'geometry-types-test))
