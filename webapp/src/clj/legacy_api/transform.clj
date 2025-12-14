@@ -36,6 +36,27 @@
         (update :properties dissoc :pool1LengthMm))
     m))
 
+(defn- normalize-number
+  "Converts numeric values to doubles for consistent JSON serialization.
+  Ensures 1 becomes 1.0 in JSON output."
+  [v]
+  (cond
+    (integer? v) (double v)
+    (number? v) v
+    :else v))
+
+(defn- normalize-properties
+  "Normalizes numeric values in properties to doubles."
+  [m]
+  (if-let [props (:properties m)]
+    (assoc m :properties
+           (reduce-kv
+            (fn [acc k v]
+              (assoc acc k (normalize-number v)))
+            {}
+            props))
+    m))
+
 (defn ->old-lipas-sports-site*
   "Transforms new LIPAS sports-site m to old Lipas sports-site."
   ([m]
@@ -77,7 +98,8 @@
          old/adapt-geoms
          utils/clean
          utils/->camel-case-keywords
-         fix-special-case))))
+         fix-special-case
+         normalize-properties))))
 
 (defmulti ->old-lipas-sports-site
   "Transforms New LIPAS sports-site to old Lipas sports-site. Details

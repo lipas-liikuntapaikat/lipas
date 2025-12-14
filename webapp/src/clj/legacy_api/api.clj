@@ -1,9 +1,39 @@
 (ns legacy-api.api
-  (:require [lipas.data.prop-types :as prop-types]
+  (:require [clojure.string :as str]
+            [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.utils :as utils]))
 
 (def keys-vec [:type-code :name :description :geometry-type :sub-category])
+
+(defn- strip-question-mark
+  "Remove trailing ? from keyword name.
+   Legacy API property keys don't have ? suffix (e.g., 'ligthing' not 'ligthing?')."
+  [k]
+  (let [s (name k)]
+    (keyword (if (str/ends-with? s "?")
+               (subs s 0 (dec (count s)))
+               s))))
+
+(defn- coerce-property-datatype
+  "Coerce enum/enum-coll to string and remove opts.
+   Legacy API only supports: string, numeric, boolean."
+  [prop]
+  (let [dtype (:dataType prop)]
+    (if (#{"enum" "enum-coll"} dtype)
+      (-> prop
+          (assoc :dataType "string")
+          (dissoc :opts))
+      prop)))
+
+(defn- transform-property-keys
+  "Transform property keys to legacy format (remove ? suffix)
+   and coerce enum types to string."
+  [props-map]
+  (reduce-kv (fn [m k v]
+               (assoc m (strip-question-mark k) (coerce-property-datatype v)))
+             {}
+             props-map))
 
 (defn fill-properties [m]
   (assoc m :props (select-keys prop-types/all (keys (:props m)))))
@@ -23,10 +53,14 @@
   (-> m
       (fill-properties)
       (select-keys (conj keys-vec :props))
-      (update :props #(-> % (dissoc :schoolUse? :freeUse?)))
+      ;; Remove schoolUse and freeUse (kebab-case before camelCase transform)
+      (update :props #(-> % (dissoc :school-use? :free-use?)))
       (localize-properties lang)
       (localize lang)
-      utils/->camel-case-keywords))
+      utils/->camel-case-keywords
+      ;; Legacy API uses 'properties' key (not 'props') with keys without '?' suffix
+      (clojure.set/rename-keys {:props :properties})
+      (update :properties transform-property-keys)))
 
 (defn- ->legacy-api [m lang]
   (-> m
@@ -46,13 +80,19 @@
   (->> (types/by-sub-category sub-category-type-code)
        (map :type-code)))
 
-(defn- collect-subcategories [type-code locale]
-  (->>
-   (types/by-main-category (str type-code))
-   (map (fn [x]
-          {:typeCode (x :type-code)
-           :name (-> x :name locale)
-           :sportsPlaceTypes (collect-sport-place-types (x :type-code))}))))
+(defn- collect-subcategories
+  "Get sub-categories for a main-category.
+   Main-category type-code is an integer (e.g., 0, 1000), but sub-categories
+   store :main-category as a string (e.g., \"0\", \"1000\")."
+  [type-code locale]
+  (let [main-cat-str (str type-code)]
+    (->> (vals types/sub-categories)
+         (filter #(= main-cat-str (:main-category %)))
+         (map (fn [sub-cat]
+                {:typeCode (:type-code sub-cat)
+                 :name (get-in sub-cat [:name locale])
+                 :sportsPlaceTypes (vec (collect-sport-place-types (:type-code sub-cat)))}))
+         vec)))
 
 (defn categories [locale]
   (mapv (fn [cat] {:name (-> cat :name locale)

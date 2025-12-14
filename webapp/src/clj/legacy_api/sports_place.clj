@@ -120,13 +120,13 @@
    :renovationYears (:renovationYears sports-place)
    :lastModified (-> sports-place :lastModified parse-date)
    :owner (owners/all (-> sports-place :owner))
-   :admin (admins/all (-> sports-place :admin))
+   :admin (admins/old (-> sports-place :admin))
    :phoneNumber (:phoneNumber sports-place)
    :reservationsLink (:reservationsLink sports-place)
    :www (:www sports-place)
    :email (:email sports-place)
    :location (when-let [location (:location sports-place)]
-               (apply location-format-fn [location locale (:sportsPlaceId sports-place)]))
+               (apply location-format-fn [location locale (:id sports-place)]))
    :properties (:properties sports-place)})
 
 (defn update-with-locale
@@ -149,8 +149,8 @@
                           (get-in owners/all [% :en]) ; Fallback to English
                           %)) ; Fallback to original value
       (update :admin #(or (get-in % [locale]) ; Preserve if already localized
-                          (get-in admins/all [% locale]) ; Convert enum key to localized string
-                          (get-in admins/all [% :en]) ; Fallback to English
+                          (get-in admins/old [% locale]) ; Convert enum key to localized string
+                          (get-in admins/old [% :en]) ; Fallback to English
                           %)) ; Fallback to original value
       ;; Handle lastModified field conversion
       (update :lastModified #(or % (convert-iso8601-to-legacy (:event-date sports-place))))
@@ -419,23 +419,54 @@
    "sawdust" "Sahanpuru",
    "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
 
+(defn- strip-z-coordinate
+  "Strips Z-coordinate from coordinates, keeping only [lon lat].
+  Works recursively for nested coordinate arrays (LineString, Polygon)."
+  [coords]
+  (cond
+    ;; Single coordinate [lon lat z] -> [lon lat]
+    (and (vector? coords) (number? (first coords)))
+    (vec (take 2 coords))
+
+    ;; Nested coordinates (LineString, Polygon rings)
+    (and (vector? coords) (vector? (first coords)))
+    (mapv strip-z-coordinate coords)
+
+    :else coords))
+
+(defn- strip-z-from-geometry
+  "Strips Z-coordinates from a GeoJSON geometry."
+  [geom]
+  (update geom :coordinates strip-z-coordinate))
+
 (defn- add-point-props [fs]
   (utils/mapv-indexed
    (fn [idx f]
-     (assoc f :properties {:pointId 123})) fs))
+     (-> f
+         (update :geometry strip-z-from-geometry)
+         (assoc :properties {:pointId 0}))) fs))
 
 (defn- add-route-props [fs]
   (utils/mapv-indexed
    (fn [idx f]
-     (assoc f :properties {:routeCollectionName "routeColl_1"
-                           :routeName "route_1"
-                           :routeSegmentName (str "segment_" idx)})) fs))
+     (-> f
+         (update :geometry strip-z-from-geometry)
+         (assoc :properties {:routeCollectionId 0
+                             :routeCollectionName "routeColl_1"
+                             :routeId 0
+                             :routeName "route_1"
+                             :routeSegmentId 0
+                             :routeSegmentName (str "segment_" idx)}))) fs))
 
 (defn- add-area-props [fs]
   (utils/mapv-indexed
    (fn [idx f]
-     (assoc f :properties {:areaName "area_1"
-                           :areaSegmentName (str "segment_" idx)})) fs))
+     (-> f
+         (update :geometry strip-z-from-geometry)
+         (assoc :properties {:areaId 0
+                             :areaName "area_1"
+                             :areaSegmentId 0
+                             :areaSegmentName (str "segment_" idx)}))) fs))
 
 (defn adapt-geoms [s]
   (let [geom-type (-> s :type :type-code types/all :geometry-type)
@@ -443,78 +474,53 @@
     (case geom-type
       "Point" (update-in s path add-point-props)
       "Polygon" (update-in s path add-area-props)
-      "LineString" (update-in s path add-route-props))))
+      "LineString" (update-in s path add-route-props)
+      ;; Default case - no geometry property additions
+      s)))
 
 (defn add-ice-stadium-props
   "Extracts old Lipas ice stadium props from new LIPAS sport site m and
   merges them into existing :properties of m."
   [m]
-  (->> (:rinks m)
-       (take 3)
-       (map-indexed
-        (fn [idx rink]
-          (let [n (inc idx)
-                length (:length-m rink)
-                width (:width-m rink)]
-            {(keyword (str "field-" n "-length-m")) length
-             (keyword (str "field-" n "-width-m")) width
-             (keyword (str "field-" n "-area-m2")) (when (and length width)
-                                                     (* length width))})))
-       (apply merge)
-       (merge
-        {:ice-rinks-count (-> m :rinks count)
-          ;; These come from 'normal properties' again
-         #_#_:area-m2 (-> m :building :total-surface-area-m2)
-         #_#_:stand-capacity-person (-> m :building :seating-capacity)
-         #_#_:surface-material (-> m :building :envelope :base-floor-structure)})))
+  (let [ice-props (->> (:rinks m)
+                       (take 3)
+                       (map-indexed
+                        (fn [idx rink]
+                          (let [n (inc idx)
+                                length (:length-m rink)
+                                width (:width-m rink)]
+                            {(keyword (str "field-" n "-length-m")) length
+                             (keyword (str "field-" n "-width-m")) width
+                             (keyword (str "field-" n "-area-m2")) (when (and length width)
+                                                                     (* length width))})))
+                       (apply merge)
+                       (merge
+                        {:ice-rinks-count (-> m :rinks count)}))]
+    (update m :properties merge ice-props)))
 
 (defn add-swimming-pool-props
   "Extracts old Lipas swimming pool props from new LIPAS sport site m
   and merges them into existing :properties of m."
   [m]
-  (->> (:pools m)
-       (sort-by :length-m utils/reverse-cmp)
-       (take 5)
-       (map-indexed
-        (fn [idx pool]
-          (let [n (inc idx)
-                 ;; There's a typo in old-lipas pool 1 length prop and
-                 ;; we 'fix' it here. Seriously.
-                length-key (str "-length-m" (when (= 1 n) "-m"))]
-            {(keyword (str "pool-" n length-key)) (:length-m pool)
-             (keyword (str "pool-" n "-width-m")) (:width-m pool)
-             (keyword (str "pool-" n "-temperature-c")) (:temperature-c pool)
-             (keyword (str "pool-" n "-max-depth-m")) (:max-depth-m pool)
-             (keyword (str "pool-" n "-min-depth-m")) (:min-depth-m pool)})))
-       (apply merge)
-       (merge
-        {;; These come from 'normal properties' again
-         #_#_:swimming-pool-count (-> m :pools count)
-         #_#_:pool-water-area-m2 (-> m :building :total-water-area-m2)
-         #_#_:area-m2 (-> m :building :total-surface-area-m2)
-         #_#_:stand-capacity-person (-> m :building :seating-capacity)
-         #_#_:kiosk? (-> m :facilities :kiosk?)
-         #_#_:1m-platforms-count (-> m :facilities :platforms-1m-count)
-         #_#_:3m-platforms-count (-> m :facilities :platforms-3m-count)
-         #_#_:5m-platforms-count (-> m :facilities :platforms-5m-count)
-         #_#_:7m5-platforms-count (-> m :facilities :platforms-7.5m-count)
-         #_#_:10m-platforms-count (-> m :facilities :platforms-10m-count)
-         :water-slides-count (-> m :slides count)
-         :waterslides-total-length-m (->> (:slides m)
-                                          (map :length-m)
-                                          (reduce utils/+safe))})))
+  (let [pool-props (->> (:pools m)
+                        (sort-by :length-m utils/reverse-cmp)
+                        (take 5)
+                        (map-indexed
+                         (fn [idx pool]
+                           (let [n (inc idx)
+                                 ;; There's a typo in old-lipas pool 1 length prop and
+                                 ;; we 'fix' it here. Seriously.
+                                 length-key (str "-length-m" (when (= 1 n) "-m"))]
+                             {(keyword (str "pool-" n length-key)) (:length-m pool)
+                              (keyword (str "pool-" n "-width-m")) (:width-m pool)
+                              (keyword (str "pool-" n "-temperature-c")) (:temperature-c pool)
+                              (keyword (str "pool-" n "-max-depth-m")) (:max-depth-m pool)
+                              (keyword (str "pool-" n "-min-depth-m")) (:min-depth-m pool)})))
+                        (apply merge)
+                        (merge
+                         {:water-slides-count (-> m :slides count)
+                          :waterslides-total-length-m (->> (:slides m)
+                                                           (map :length-m)
+                                                           (reduce utils/+safe))}))]
+    (update m :properties merge pool-props)))
 
-;; Geometry adaptation function (moved from sports-place.clj)
-(defn adapt-geoms [sports-site]
-  ;; Basic geometry adaptation - the actual implementation should be moved here
-  sports-site)
-
-;; Ice stadium specific properties (moved from sports-place.clj)
-(defn add-ice-stadium-props [sports-site]
-  ;; Ice stadium specific property extraction
-  sports-site)
-
-;; Swimming pool specific properties (moved from sports-place.clj)
-(defn add-swimming-pool-props [sports-site]
-  ;; Swimming pool specific property extraction
-  sports-site)

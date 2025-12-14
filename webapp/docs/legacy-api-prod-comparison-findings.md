@@ -10,6 +10,21 @@ Sanity check comparing our local Legacy API implementation against production (`
 
 All known issues have been fixed. The local implementation matches production API behavior.
 
+## Fixed Issues
+
+### Default fields behavior (commit 4d7c21ad)
+
+**Issue:** `/rest/api/sports-places` returned all fields by default, but production returns only `sportsPlaceId`.
+
+**Fix:** When no `fields` param is specified, the list endpoint now returns only `{sportsPlaceId: N}` for each item, matching production behavior.
+
+```bash
+# Both now return only sportsPlaceId by default
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2" | jq '.'
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=2" | jq '.'
+# Output: [{"sportsPlaceId": 12345}, {"sportsPlaceId": 12346}]
+```
+
 ## Acceptable Differences
 
 ### Coordinate precision
@@ -23,6 +38,14 @@ Fields like `location.locationId`, `properties.pointId`, `properties.routeId` et
 ## Test Commands
 
 ```bash
+# Compare list endpoint (default fields)
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=3" | jq '.'
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=3" | jq '.'
+
+# Compare list endpoint with fields
+curl -s "https://api.lipas.fi/v1/sports-places?pageSize=2&fields=name&fields=type.typeCode" | jq '.'
+curl -s "http://localhost:8091/rest/api/sports-places?pageSize=2&fields=name&fields=type.typeCode" | jq '.'
+
 # Compare deleted-sports-places
 curl -s "https://api.lipas.fi/v1/deleted-sports-places" | jq '.[0:2]'
 curl -s "http://localhost:8091/rest/api/deleted-sports-places" | jq '.[0:2]'

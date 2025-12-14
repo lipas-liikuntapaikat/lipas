@@ -21,9 +21,11 @@
    :lat lat})
 
 (defn format-location
-  [location _ _]
+  [location _ sports-place-id]
   (only-non-nil-recur
    (array-map
+    ;; Legacy field - hardcoded to 0 as it doesn't exist in new LIPAS
+    :locationId 0
     :address (:address location)
     :postalCode (:postalCode location)
     :postalOffice (:postalOffice location)
@@ -40,5 +42,6 @@
                                ->coords-map)}
     ;; added :geom-coll
     :geom-coll (feature-coll->geom-coll (-> location :geometries))
-    ;; what is this?
-    :sportsPlaces (:sportPlaceId [1234]))))
+    ;; Legacy field - in old LIPAS, locations could have multiple sports places.
+    ;; In new LIPAS, the mapping is always 1:1, so we return a vector with just the current ID.
+    :sportsPlaces [(utils/->int sports-place-id)])))
