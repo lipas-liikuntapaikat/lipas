@@ -444,6 +444,64 @@
         (is (empty? (clojure.set/intersection ids1 ids2))
             "Pages should have different items")))))
 
+(defn query-legacy-api-with-headers
+  "Queries the legacy API with custom headers and returns parsed response."
+  [path headers]
+  (let [req (-> (mock/request :get path)
+                (assoc :headers headers))
+        resp ((test-app) req)
+        body (test-utils/<-json (:body resp))]
+    {:status (:status resp)
+     :headers (:headers resp)
+     :body (if (sequential? body) (vec body) body)}))
+
+(deftest link-header-base-path-test
+  (testing "Link header uses correct base path based on entry point"
+    ;; Create enough sites to trigger pagination
+    (doseq [i (range 1 16)]
+      (let [site (test-utils/make-point-site (+ 750000 i) :name (str "Link Path Test " i))]
+        (save-and-index! site)))
+
+    (testing "Default base path is /rest/api when no X-Forwarded-Prefix header"
+      (let [{:keys [status headers]} (query-legacy-api "/rest/api/sports-places?pageSize=5")]
+        (is (= 206 status))
+        (let [link-header (get headers "Link")]
+          (is (some? link-header))
+          (is (re-find #"/rest/api/sports-places" link-header)
+              "Link header should use /rest/api prefix"))))
+
+    (testing "Uses /v1 prefix when X-Forwarded-Prefix is /v1 (api.lipas.fi)"
+      (let [{:keys [status headers]} (query-legacy-api-with-headers
+                                      "/rest/api/sports-places?pageSize=5"
+                                      {"x-forwarded-prefix" "/v1"})]
+        (is (= 206 status))
+        (let [link-header (get headers "Link")]
+          (is (some? link-header))
+          (is (re-find #"/v1/sports-places" link-header)
+              "Link header should use /v1 prefix"))))
+
+    (testing "Uses /api prefix when X-Forwarded-Prefix is /api (lipas.cc.jyu.fi)"
+      (let [{:keys [status headers]} (query-legacy-api-with-headers
+                                      "/rest/api/sports-places?pageSize=5"
+                                      {"x-forwarded-prefix" "/api"})]
+        (is (= 206 status))
+        (let [link-header (get headers "Link")]
+          (is (some? link-header))
+          (is (re-find #"/api/sports-places" link-header)
+              "Link header should use /api prefix")
+          (is (not (re-find #"/rest/api" link-header))
+              "Link header should NOT contain /rest/api"))))
+
+    (testing "Uses /rest/api prefix when X-Forwarded-Prefix is /rest/api (lipas.fi)"
+      (let [{:keys [status headers]} (query-legacy-api-with-headers
+                                      "/rest/api/sports-places?pageSize=5"
+                                      {"x-forwarded-prefix" "/rest/api"})]
+        (is (= 206 status))
+        (let [link-header (get headers "Link")]
+          (is (some? link-header))
+          (is (re-find #"/rest/api/sports-places" link-header)
+              "Link header should use /rest/api prefix"))))))
+
 (deftest type-specific-properties-test
   (testing "Type-specific properties are correctly transformed"
 

@@ -110,7 +110,7 @@ Access to the hierarchical type classification system used for categorizing spor
        {:tags ["sport-places"]
         :handler
         (safe-handler
-         (fn [{:keys [parameters]}]
+         (fn [{:keys [parameters] :as req}]
            (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
                          closeToMatch closeToLon closeToLat modifiedAfter
                          searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
@@ -159,7 +159,8 @@ Access to the hierarchical type classification system used for categorizing spor
                  resp (legacy-core/fetch-sports-places-es search locale params fields)
                  {:keys [partial? total results]} resp]
              (if partial?
-               (let [path "/v1/sports-places"
+               (let [base-path (or (legacy-http/extract-base-path req) "/rest/api")
+                     path (legacy-http/build-sports-places-path base-path)
                      links (legacy-http/create-page-links path params (:offset params) (:limit params) total)]
                  (legacy-http/linked-partial-content results links))
                {:status 200
