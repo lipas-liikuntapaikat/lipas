@@ -270,6 +270,41 @@
       (is (= 1 (count body)))
       (is (= 60001 (-> body first :sportsPlaceId))))))
 
+(deftest list-sports-places-search-string-relevance-test
+  (testing "GET /rest/api/sports-places searchString prioritizes name matches (production behavior)"
+    ;; Create a site with "uimahalli" in the name - should rank highest
+    (create-sports-site! (test-utils/make-point-site 61001 :name "Kaupungin uimahalli"))
+
+    ;; Create a site with "uimahalli" NOT in the name but in marketing-name
+    ;; This should rank lower than name matches
+    (let [site-with-marketing (-> (test-utils/make-point-site 61002 :name "Liikuntakeskus")
+                                  (assoc :marketing-name "Uimahallin vieressä"))]
+      (create-sports-site! site-with-marketing))
+
+    ;; Create a site with "uimahalli" in www field (should rank even lower or not match)
+    (let [site-with-www (-> (test-utils/make-point-site 61003 :name "Kuntosali")
+                            (assoc :www "http://uimahalli.example.com"))]
+      (create-sports-site! site-with-www))
+
+    ;; Create a site with completely unrelated name
+    (create-sports-site! (test-utils/make-point-site 61004 :name "Jalkapallokenttä"))
+
+    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?searchString=uimahalli&fields=name"))
+          body (parse-json-body resp)]
+      (is (#{200 206} (:status resp)))
+
+      ;; The site with "uimahalli" in the name should be first
+      (testing "Site with search term in name appears first"
+        (is (= 61001 (-> body first :sportsPlaceId))
+            (str "First result should be site with 'uimahalli' in name. Got IDs: "
+                 (mapv :sportsPlaceId body))))
+
+      ;; Unrelated site should not appear at all
+      (testing "Unrelated sites do not appear in results"
+        (let [ids (set (map :sportsPlaceId body))]
+          (is (not (contains? ids 61004))
+              "Site without 'uimahalli' anywhere should not appear in results"))))))
+
 (deftest list-sports-places-field-selection-test
   (testing "GET /rest/api/sports-places with fields parameter"
     (create-sports-site! (test-utils/make-point-site 70001 :name "Field Selection Test"))
@@ -671,6 +706,44 @@
               (is (not (re-find #"@[0-9a-f]+" (str error-msg)))
                   (str "Error message should NOT contain Java object reference (@hexid). Got: " error-msg)))))))))
 
+;;; Tests for HEAD method support (production behavior) ;;;
+
+(deftest head-method-support-test
+  (testing "HEAD method is supported on list endpoint (production behavior)"
+    ;; Create some sites so pagination kicks in
+    (doseq [i (range 1 6)]
+      (create-sports-site! (test-utils/make-point-site (+ 65000 i) :name (str "HEAD Test Site " i))))
+
+    (testing "HEAD on /sports-places returns 206 with headers but no body"
+      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places?pageSize=3"))]
+        (is (= 206 (:status resp))
+            "HEAD should return 206 Partial Content like GET")
+        (is (some? (get-in resp [:headers "Link"]))
+            "HEAD should return Link header")
+        (is (some? (get-in resp [:headers "X-total-count"]))
+            "HEAD should return X-total-count header")
+        ;; HEAD responses should have empty or nil body
+        (is (or (nil? (:body resp))
+                (empty? (:body resp))
+                (= "" (:body resp)))
+            "HEAD should return empty body")))
+
+    (testing "HEAD on /sports-places returns 200 when no pagination needed"
+      ;; Query for a specific type that has only a few results
+      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places?pageSize=100"))]
+        (is (#{200 206} (:status resp))
+            "HEAD should return valid status")))
+
+    (testing "HEAD on /sports-places/:id returns 200"
+      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places/65001"))]
+        (is (= 200 (:status resp))
+            "HEAD on single item should return 200")))
+
+    (testing "HEAD on /sports-places/:id returns 404 for missing"
+      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places/999999999"))]
+        (is (= 404 (:status resp))
+            "HEAD on missing item should return 404")))))
+
 (comment
   (clojure.test/run-tests 'legacy-api.handler-test)
 
@@ -680,4 +753,6 @@
   (clojure.test/run-test-var #'categories-endpoint-test)
   (clojure.test/run-test-var #'sports-place-types-list-test)
   (clojure.test/run-test-var #'sports-place-type-detail-test)
-  (clojure.test/run-test-var #'geometry-types-test))
+  (clojure.test/run-test-var #'geometry-types-test)
+  (clojure.test/run-test-var #'list-sports-places-search-string-relevance-test)
+  (clojure.test/run-test-var #'head-method-support-test))

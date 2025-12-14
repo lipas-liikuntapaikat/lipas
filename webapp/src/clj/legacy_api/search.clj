@@ -125,14 +125,26 @@
     query-map))
 
 (defn append-search-string
+  "Adds search string to query using multi_match with name field boosting.
+  Production behavior: results with search term in 'name' field rank highest."
   [params query-map]
   (if-let [qs (sanitize-search-string (:search-string params))]
     (do
       (log/debug "Adding search string to query" {:search-string-length (count qs)})
+      ;; Use multi_match with field boosting for better relevance
+      ;; name^10 means matches in name field are 10x more important
+      ;; type.name^5 for type name matches
+      ;; marketingName^3 for marketing name
       (assoc-in query-map [:bool :must]
-                [{:query_string {:query qs
-                                 :default_operator "AND"
-                                 :analyze_wildcard false}}]))
+                [{:multi_match {:query qs
+                                :fields ["name^10"
+                                         "type.name^5"
+                                         "marketingName^3"
+                                         "location.address^2"
+                                         "location.city.name^2"
+                                         "*"]
+                                :type "best_fields"
+                                :operator "and"}}]))
     query-map))
 
 (defn resolve-query
@@ -151,18 +163,25 @@
                {:params (dissoc params :search-string) :index index-name}) ; Don't log search string
 
     (let [query (resolve-query params)
+          ;; Production behavior:
+          ;; - When searchString is provided: use relevance scoring (no explicit sort)
+          ;; - When no searchString: sort by sportsPlaceId ascending
+          has-search? (some? (sanitize-search-string (:search-string params)))
+          sort-config (when-not has-search?
+                        [{:sportsPlaceId {:order "asc"
+                                          :unmapped_type "long"}}])
+          body (cond-> {:query query
+                        :track_total_hits true
+                        :size (:limit params)
+                        :from (* (:offset params) (:limit params))}
+                 sort-config (assoc :sort sort-config))
           response (es/request client {:method :get
                                        :url (es-utils/url [index-name :_search])
-                                       :body
-                                       {:query query
-                                        :sort [{:sportsPlaceId {:order "asc"
-                                                                :unmapped_type "long"}}]
-                                        :track_total_hits true
-                                        :size (:limit params)
-                                        :from (* (:offset params) (:limit params))}})]
+                                       :body body})]
       (log/debug "Sports places search query executed successfully"
                  {:total-hits (-> response :body :hits :total :value)
-                  :returned-hits (count (-> response :body :hits :hits))})
+                  :returned-hits (count (-> response :body :hits :hits))
+                  :has-search? has-search?})
       response)
 
     (catch clojure.lang.ExceptionInfo ex
