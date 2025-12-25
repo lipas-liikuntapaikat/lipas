@@ -253,13 +253,13 @@
          docker-dev {:doc "Start backend in development mode"
                      :task (shell "docker-compose -f ../docker-compose.yml up backend-dev")}
 
-         ;; Test Tasks
+         ;; Test Tasks (using Kaocha - captures output, only shows on failure)
          test {:doc "Run all tests"
                :task (shell "clojure -M:dev:test")}
 
          test-specific {:doc "Run a specific test namespace"
                         :task (if-let [test-ns (first *command-line-args*)]
-                                (shell "clojure" "-M:dev:test" "--namespace" test-ns)
+                                (shell "clojure" "-M:dev:test" "--focus" test-ns)
                                 (do (println "Usage: bb test-specific <test-namespace>")
                                     (println "Example: bb test-specific lipas.gis-test")))}
 
@@ -268,15 +268,15 @@
 
          test-var {:doc "Run a specific test var"
                    :task (if-let [test-var (first *command-line-args*)]
-                           (shell "clojure" "-M:dev:test" "--var" test-var)
+                           (shell "clojure" "-M:dev:test" "--focus" test-var)
                            (do (println "Usage: bb test-var <test-var>")
                                (println "Example: bb test-var lipas.gis-test/test-sequence-features")))}
 
-         test-regex {:doc "Run tests with matching namespace regex"
-                     :task (if-let [test-ns-regex (first *command-line-args*)]
-                             (shell "clojure" "-M:dev:test" "--namespace-regex" test-ns-regex)
-                             (do (println "Usage: bb test-regex <test-ns-regex>")
-                                 (println "Example: bb test-regex '^lipas\\.jobs\\..*'")))}
+         test-watch {:doc "Run tests in watch mode (re-runs on file changes)"
+                     :task (shell "clojure" "-M:dev:test" "--watch")}
+
+         test-verbose {:doc "Run all tests with full output (no capture)"
+                       :task (shell "clojure" "-M:dev:test" "--no-capture-output")}
 
          ;; Code Graph Tasks
          code-graph-watch {:doc "Start file watcher for code graph knowledge base updates"

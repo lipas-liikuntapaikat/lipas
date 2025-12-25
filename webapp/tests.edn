@@ -1,0 +1,18 @@
+#kaocha/v1
+ {:tests [{:id :unit
+           :test-paths ["test/clj"]
+           :source-paths ["src/clj" "src/cljc"]
+           :ns-patterns ["-test$"]}]
+
+ ;; capture-output is enabled by default - captures stdout/stderr
+ ;; and only shows it when tests FAIL
+  :capture-output? true
+
+ ;; Use dots reporter for concise output (. = pass, F = fail, E = error)
+  :reporter kaocha.report/dots
+
+ ;; Randomize test order to catch order-dependent bugs
+  :randomize? true
+
+ ;; Color output
+  :color? true}
