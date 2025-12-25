@@ -366,12 +366,11 @@
           result (transform/->old-lipas-sports-site pool)
           props (:properties result)]
       ;; After transformation, should have pool1LengthMM (not pool1LengthMm)
-      ;; This depends on the fix-special-case function
-      (when (:pool1LengthMm props)
-        (is (contains? props :pool1LengthMM)
-            "pool1LengthMM should have double M")
-        (is (not (contains? props :pool1LengthMm))
-            "pool1LengthMm should be removed")))))
+      ;; The legacy API uses double-M for pool 1 length (a known typo preserved for compatibility)
+      (is (contains? props :pool1LengthMM)
+          "pool1LengthMM should have double M (legacy typo)")
+      (is (not (contains? props :pool1LengthMm))
+          "pool1LengthMm (single M) should not exist"))))
 
 (comment
   ;; Run all tests
