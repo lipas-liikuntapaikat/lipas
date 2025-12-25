@@ -1,0 +1,1045 @@
+[
+  {
+    "typeCode": 2290,
+    "name": "Petanque-halli",
+    "description": "Petanque-peliin tarkoitettu halli. Koko, kenttien määrä ja varustus ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 4210,
+    "name": "Curlingrata",
+    "description": "Pysyvästi lajiin varustettu, katettu curlingrata.",
+    "geometryType": "Point",
+    "subCategory": 4200
+  },
+  {
+    "typeCode": 4230,
+    "name": "Lumilautatunneli",
+    "description": "Lautailuun tarkoitettu tunneli. Lisätietoihin eri käyttömuodot.",
+    "geometryType": "Point",
+    "subCategory": 4200
+  },
+  {
+    "typeCode": 4240,
+    "name": "Lasketteluhalli",
+    "description": "Katettu laskettelurinne. Korkeusero ja pituus ominaisuuksiin.",
+    "geometryType": "Point",
+    "subCategory": 4200
+  },
+  {
+    "typeCode": 4810,
+    "name": "Ampumarata",
+    "description": "Ulkoampumarata yhdelle tai useammalle lajille. ",
+    "geometryType": "Point",
+    "subCategory": 4800
+  },
+  {
+    "typeCode": 4403,
+    "name": "Kävelyreitti/ulkoilureitti",
+    "description": "Jalkaisin tapahtuvaan ulkoiluun tarkoitettu reitti. Suhteellisen leveä ja helppokulkuinen. Mahdollisesti valaistu ja pinnoitettu reitti.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4220,
+    "name": "Hiihtotunneli",
+    "description": "Hiihtoon tarkoitettu katettu tila (tunneli, putki, halli tms.).",
+    "geometryType": "Point",
+    "subCategory": 4200
+  },
+  {
+    "typeCode": 4310,
+    "name": "Harjoitushyppyrimäki",
+    "description": "K-piste, materiaalit, kesä- ja talvikäyttö ominaisuuksiin. Mäkihypyn harjoitteluun tarkoitettu.",
+    "geometryType": "Point",
+    "subCategory": 4300
+  },
+  {
+    "typeCode": 4404,
+    "name": "Luontopolku",
+    "description": "Erityisesti luontoharrastusta varten, reitin varrella opasteita tai infotauluja.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 101,
+    "name": "Lähipuisto",
+    "description": "Taajamissa, asutuksen välittömässä läheisyydessä. Tarkoitettu jokapäiväiseen käyttöön. Leikki-, oleskelu- ja kävelypaikka. Kaavamerkintä VL.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 1140,
+    "name": "Parkour-alue",
+    "description": "Parkouria varten varustettu alue.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 103,
+    "name": "Ulkoilualue",
+    "description": "Taajamien reunoilla tai vyöhykkeittäin taajaman sisällä. 1-10 km päässä asuinalueista. Käytetään esim. kävelyyn, hiihtoon, lenkkeilyyn, uintiin jne. Yleensä yhden kunnan virkistysaluetarpeita palveleva, tarjoaa monipuolisia liikuntamahdollisuuksia. Voi olla metsää, suota, peltoja, luonnonmukaisia alueita ja puistomaisia osia. Kaavamerkintä VR.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 104,
+    "name": "Retkeilyalue",
+    "description": "Sijaitsevat kauempana taajamasta, automatkan päässä. Monipuolinen polku- ja reittiverkosto. Käyttö painottuu viikonloppuihin ja loma-aikoihin. Palvelevat usein useaa kuntaa. Kaavamerkintä VR.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 2280,
+    "name": "Tennishalli",
+    "description": "Kenttien määrä ominaisuuksiin.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 1360,
+    "name": "Pesäpallokenttä",
+    "description": "Pesäpallokenttä, nimeä stadioniksi jos on katsomoita. Vähintään kansallisen tason pelipaikka. Hiekka, hiekkatekonurmi / muu synteettinen päällyste, > 50 x 100 m. ",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 2150,
+    "name": "Liikuntasali",
+    "description": "Muun rakennuksen yhteydessä oleva liikuntatila. Koko ja korkeus lisätiedoissa. Jos on koulun yhteydessä, sekin lisätietoihin.",
+    "geometryType": "Point",
+    "subCategory": 2100
+  },
+  {
+    "typeCode": 3230,
+    "name": "Uimapaikka",
+    "description": "Uimapaikka, jossa esim. pukukopit. Ei valvontaa. Talviuinti tallennetaan omana liikuntapaikkana.",
+    "geometryType": "Point",
+    "subCategory": 3200
+  },
+  {
+    "typeCode": 1530,
+    "name": "Kaukalo",
+    "description": "Luisteluun, jääkiekkoon, kaukalopalloon jne. tarkoitettu kaukalo. Mahdollinen kesäkäyttö ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 106,
+    "name": "Monikäyttöalue, jolla on virkistyspalveluita",
+    "description": "Maa- ja metsätalousalueita, joita käytetään jokamiehenoikeuteen perustuen myös ulkoiluun, voidaan nimittää monikäyttöalueiksi. Monikäyttöalueita ovat erityisesti rakentamattomat rannat ja taajamien läheiset maa- ja metsätalousalueet. Kaavamerkintä MU.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 107,
+    "name": "Matkailupalveluiden alue",
+    "description": "Matkailupalvelujen alueet ovat matkailu- ja lomakeskuksille, lomakylille, lomahotelleille ja muille vastaaville matkailua palveleville toiminnoille varattuja alueita, jotka sisältävät myös sisäiset liikenneväylät ja -alueet, alueen toimintoja varten tarpeelliset palvelut ja virkistysalueet sekä yhdyskuntateknisen huollon alueet. Kaavamerkintä RM.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 108,
+    "name": "Virkistysmetsä",
+    "description": "Metsähallituksen päätöksellä perustettu virkistysmetsä. Metsätaloudessa huomioidaan mm. maisemalliset arvot. Metsähallitus tietolähde.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 112,
+    "name": "Muu luonnonsuojelualue, jolla on virkistyspalveluita",
+    "description": "Muut luonnonsuojelualueet kuin kansallispuistot ja luonnonpuistot. Vain luonnonsuojelualueet, joilla virkistyskäyttö on mahdollista. Esim. kuntien ja yksityisten maille perustetut suojelualueet. Kaavamerkintä S, SL.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 204,
+    "name": "Luontotorni",
+    "description": "Luonnon tarkkailuun tarkoitettu rakennelma. Esim. lintutorni.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 205,
+    "name": "Rantautumispaikka",
+    "description": "Rantautumiseen osoitettu paikka, ei järjestettyjä palveluita.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 111,
+    "name": "Kansallispuisto",
+    "description": "Luonnonsuojelualueita, joiden perustamisesta ja tarkoituksesta on säädetty lailla. Pinta- ala väh. 1000 ha. Metsähallitus tietolähde.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 201,
+    "name": "Kalastusalue/-paikka",
+    "description": "Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 202,
+    "name": "Telttailu ja leiriytyminen",
+    "description": "Telttailualue tai muu leiriytymiseen osoitettu paikka. ",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 1110,
+    "name": "Liikuntapuisto",
+    "description": "Liikuntapuisto on useita liikuntapaikkoja käsittävä liikunta- alue. Liikuntapuistossa voi olla esim. erilaisia kenttiä, uimaranta, kuntorata, monitoimihalli, leikkipuisto jne. koottuna samalle alueelle. Lipakseen tallennetaan sekä tieto liikuntapuistosta että yksittäiset liikuntapaikat joita puisto sisältää. Liikuntapaikat lasketaan omiksi paikoikseen. Haku on mahdollista sekä puiston että yksittäisen paikan kautta. ",
+    "geometryType": "Polygon",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 2270,
+    "name": "Squash-halli",
+    "description": "Squash-kenttiä yksi tai useampi. Kenttien määrä ominaisuustietoihin",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 110,
+    "name": "Erämaa-alue",
+    "description": "Erämaalailla perustetut alueet pohjoisimmassa Lapissa. Metsähallitus tietolähde.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 1560,
+    "name": "Alamäkiluistelurata",
+    "description": "Alamäkiluistelua varten rakennettu pysyvä rata. ",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 1620,
+    "name": "Golfkenttä",
+    "description": "Virallinen golfkenttä. Reikien määrä kysytään ominaisuustiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 1600
+  },
+  {
+    "typeCode": 1120,
+    "name": "Lähiliikuntapaikka",
+    "description": "Lähiliikuntapaikka on tarkoitettu päivittäiseen ulkoiluun ja liikuntaan. Se sijaitsee asutuksen välittömässä läheisyydessä, on pienimuotoinen ja alueelle on vapaa pääsy. Yleensä tarjolla on erilaisia suorituspaikkoja. Lisätietoihin jos on koulun piha, päiväkodin piha,  suorituspaikat jne.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 2250,
+    "name": "Skeittihalli",
+    "description": "Skeittausta, rullaluistelua, bmx- pyöräilyä yms. varten varustettu halli.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 1210,
+    "name": "Yleisurheilun harjoitusalue",
+    "description": "Suorituspaikat ominaisuustietoihin. Myös yksittäiset suorituspaikat.",
+    "geometryType": "Point",
+    "subCategory": 1200
+  },
+  {
+    "typeCode": 1220,
+    "name": "Yleisurheilukenttä",
+    "description": "Kenttä, ratoja ja yleisurheilun suorituspaikkoja. Keskusta, radat, päällysteet, suorituspaikat ominaisuuksiin.",
+    "geometryType": "Point",
+    "subCategory": 1200
+  },
+  {
+    "typeCode": 1150,
+    "name": "Skeitti-/rullaluistelupaikka",
+    "description": "Rullaluistelua, skeittausta, potkulautailua varten varustettu paikka. Ominaisuustietoihin kirjataan, mitä saa harrastaa.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 3240,
+    "name": "Talviuintipaikka",
+    "description": "Vain talviuintipaikka, mahdollisesti avanto.",
+    "geometryType": "Point",
+    "subCategory": 3200
+  },
+  {
+    "typeCode": 203,
+    "name": "Veneilyn palvelupaikka",
+    "description": "Veneilyyn liittyviä palveluita. Tarkennettava palvelut.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 206,
+    "name": "Ruoanlaittopaikka",
+    "description": "Rakennettu tulentekopaikka tai keittokatos.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 304,
+    "name": "Ulkoilumaja/hiihtomaja",
+    "description": "Tavallisen arkiliikunnan taukopaikka, päiväkäyttöön.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 1310,
+    "name": "Koripallokenttä",
+    "description": "Koripalloon varustettu kenttä, kiinteät tai siirrettävät telineet.  Minikenttä ja yhden korin kenttä lisätiedoissa. ",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1320,
+    "name": "Lentopallokenttä",
+    "description": "Lentopalloon varustettu kenttä. Kiinteät lentopallotelineet.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1350,
+    "name": "Jalkapallostadion",
+    "description": "Suuri jalkapallokenttä, katsomoita. Vähintään kansallisen tason pelipaikka.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1370,
+    "name": "Tenniskenttäalue",
+    "description": "Tenniskenttä tai useampi kenttä samalla alueella. Montako kenttää, pintamateriaali yms. ominaisuustietoihin. Myös tieto lyöntiseinästä.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1380,
+    "name": "Rullakiekkokenttä",
+    "description": "Rullakiekon pelaamiseen varustettu kenttä.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1330,
+    "name": "Beachvolleykenttä",
+    "description": "Rantalentopallokenttä, pehmeä alusta. Voi sijaita muuallakin kuin rannalla.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1340,
+    "name": "Pallokenttä",
+    "description": "Palloiluun tarkoitettu kenttä. Hiekka, nurmi, hiekkatekonurmi tms, koko vaihtelee. Yksi tai useampi palloilulaji mahdollista. Kevyt poistettava kate mahdollinen.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 1160,
+    "name": "Pyöräilyalue",
+    "description": "Pyöräilyä ja temppuilua varten, esim. bmx- tai dirt- pyöräilyä varten.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 1170,
+    "name": "Pyöräilyrata",
+    "description": "Ratapyöräilyä varten,ulkona (velodromi).",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 1520,
+    "name": "Luistelukenttä",
+    "description": "Luisteluun tarkoitettu kenttä. Kesäkäyttö ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 1640,
+    "name": "Ratagolf",
+    "description": "Ratagolf- liiton hyväksymät ratagolf /minigolf- radat.",
+    "geometryType": "Point",
+    "subCategory": 1600
+  },
+  {
+    "typeCode": 2220,
+    "name": "Monitoimihalli/areena",
+    "description": "Merkittävä monien lajien kilpailupaikka, >=5000 m2.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 301,
+    "name": "Laavu, kota tai kammi",
+    "description": "Päiväsaikainen levähdyspaikka retkeilijöille.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 4405,
+    "name": "Retkeilyreitti",
+    "description": "Maastossa oleva retkeilyreitti, yleensä kauempana asutuksesta. Reitin varrella retkeilyn palveluita, esim. laavuja. Kesä- ja talvikäyttö ominaisuustietoihin.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 2140,
+    "name": "Kamppailulajien sali",
+    "description": "Sali jossa voi harrastaa itsepuolustuslajeja: esim. paini, nyrkkeily ym. Koko ominaisuustietoihin. ",
+    "geometryType": "Point",
+    "subCategory": 2100
+  },
+  {
+    "typeCode": 2210,
+    "name": "Liikuntahalli",
+    "description": "Useiden lajien liikuntatiloja sisältävä rakennus. Koko ja suorituspaikat ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 2240,
+    "name": "Salibandyhalli",
+    "description": "Ensisijaisesti salibandyyn tarkoitettu halli. Kenttien määrä ja pintamateriaali ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 2260,
+    "name": "Sulkapallohalli",
+    "description": "Ensisijaisesti sulkapalloon tarkoitettu halli",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 2120,
+    "name": "Kuntosali",
+    "description": "Kuntosalilaitteita yms. Koko määritellään ominaisuustiedoissa",
+    "geometryType": "Point",
+    "subCategory": 2100
+  },
+  {
+    "typeCode": 1550,
+    "name": "Luistelureitti",
+    "description": "Rakennetaan talvisin samalle alueelle esim. liikuntapuiston alueelle tai meren jäälle.",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 1610,
+    "name": "Golfin harjoitusalue",
+    "description": "Golfin harjoittelua varten, yksi tai useampia suorituspaikkoja. Ulkona.",
+    "geometryType": "Point",
+    "subCategory": 1600
+  },
+  {
+    "typeCode": 1630,
+    "name": "Golfin harjoitushalli",
+    "description": "Golfia varten rakennettu harjoittelutila. Koko ominaisuustietoihin. Linkki sisäliikuntatiloihin!",
+    "geometryType": "Point",
+    "subCategory": 1600
+  },
+  {
+    "typeCode": 4412,
+    "name": "Pyöräilyreitti",
+    "description": "Pyöräilyreitti, ei maastopyöräilyyn.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 1510,
+    "name": "Tekojääkenttä",
+    "description": "Koneellisesti / keinotekoisesti jäähdytetty ulkokenttä. Kentän koko, varustus, kaukalo, valaistus yms. Ominaisuustietoihin. Tieto yhdistelmäkentästä mukaan.",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 2110,
+    "name": "Kuntokeskus",
+    "description": "Erilaisia liikuntapalveluita ja tiloja, esim. kuntosali, ryhmäliikuntatiloja jne. ",
+    "geometryType": "Point",
+    "subCategory": 2100
+  },
+  {
+    "typeCode": 2130,
+    "name": "Voimailusali",
+    "description": "Painonnostoon ja nyrkkeilyyn varustettu. Koko määritellään ominaisuustiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 2100
+  },
+  {
+    "typeCode": 2310,
+    "name": "Yksittäinen yleisurheilun suorituspaikka",
+    "description": "Yksittäinen, ei yu-hallin yhteydessä. Ominaisuustiedoissa kerrotaan suorituspaikat (alla esimerkit).",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2320,
+    "name": "Telinevoimistelutila",
+    "description": "Pysyvästi telinevoimisteluun varustettu tila.",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2330,
+    "name": "Pöytätennistila",
+    "description": "Pysyvästi pöytätennikseen varustettu tila.",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2340,
+    "name": "Miekkailutila",
+    "description": "Pysyvästi miekkailuun varustettu tila.",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2350,
+    "name": "Tanssitila",
+    "description": "Pysyvästi tanssi- tai ilmaisuliikuntaan varustettu tila.",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 4110,
+    "name": "Laskettelun suorituspaikka",
+    "description": "Laskettelurinteet, lumikourut ym. rinnerakenteet.",
+    "geometryType": "Point",
+    "subCategory": 4100
+  },
+  {
+    "typeCode": 4430,
+    "name": "Hevosreitti",
+    "description": "Ratsastukseen ja/tai kärryillä ajoon tarkoitettu reitti. Käyttötavat ominaisuustiedoissa.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4421,
+    "name": "Moottorikelkkareitti",
+    "description": "Reittitoimituksella hyväksytty, virallinen reitti.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 2230,
+    "name": "Jalkapallohalli",
+    "description": "Jalkapalloiluun tarkoitettu halli. Pintamateriaali, kenttien määrä ja koko ominaisuustietoihin, samoin hallin rakenne.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 109,
+    "name": "Valtion retkeilyalue",
+    "description": "Ulkoilulailla perustettu, retkeilyä ja luonnon virkistyskäyttöä varten. Metsähallitus tietolähde.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 4402,
+    "name": "Latu",
+    "description": "Hiihtoon tarkoitettu reitti. Ei kesäkäyttöä/hoitoa. Hiihtotyylit kerrotaan ominaisuustiedoissa.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4320,
+    "name": "Hyppyrimäki",
+    "description": "Jää-, keramiikka- tai muovilatu. Kesä- ja talvikäyttö ominaisuuksiin, K-piste ym. Vähintään pienmäki, K-piste min 75 m.",
+    "geometryType": "Point",
+    "subCategory": 4300
+  },
+  {
+    "typeCode": 4401,
+    "name": "Kuntorata",
+    "description": "Talvi- ja kesäkäyttötavat kerrotaan ominaisuustiedoissa. Kuntoiluun tarkoitettu reitti asutuksen läheisyydessä.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 5210,
+    "name": "Urheiluilmailualue",
+    "description": null,
+    "geometryType": "Point",
+    "subCategory": 5200
+  },
+  {
+    "typeCode": 2360,
+    "name": "Sisäampumarata",
+    "description": "Pysyvästi käytössä oleva ampumarata sisätiloissa. Huom. Linkki ampumaurheilupaikkoihin.",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2370,
+    "name": "Sisäkiipeilyseinä",
+    "description": "Kiipeilyyn varustettu sisätila. Myös boulderointipaikat. ",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2380,
+    "name": "Parkour-sali",
+    "description": "Parkouria varten varustettu sisätila. ",
+    "geometryType": "Point",
+    "subCategory": 2300
+  },
+  {
+    "typeCode": 2510,
+    "name": "Harjoitusjäähalli",
+    "description": "Kenttien määrä, lämmitys, pukukopit yms. ominaisuustietoihin. ",
+    "geometryType": "Point",
+    "subCategory": 2500
+  },
+  {
+    "typeCode": 4440,
+    "name": "Koirahiihtolatu",
+    "description": "Hiihtolatu, jossa on aina tai tiettyinä aikoina koirahiihto sallittua. Perinteinen tyyli tai vapaa tyyli.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 2530,
+    "name": "Pikaluisteluhalli",
+    "description": "Pikaluisteluun tarkoitettu halli. Koko > 333,3 m.",
+    "geometryType": "Point",
+    "subCategory": 2500
+  },
+  {
+    "typeCode": 3120,
+    "name": "Uima-allas",
+    "description": "Yksittäinen uima-allas, usein muun rakennuksen yhteydessä. Ei uimahallissa. <17 m.",
+    "geometryType": "Point",
+    "subCategory": 3100
+  },
+  {
+    "typeCode": 3130,
+    "name": "Kylpylä",
+    "description": "Monipuolinen uimala kuntoutus-, virkistys- tai hyvinvointipalveluilla. Vesipinta-ala ja allasmäärät/-tyypit ominaisuuksiin.",
+    "geometryType": "Point",
+    "subCategory": 3100
+  },
+  {
+    "typeCode": 3210,
+    "name": "Maauimala",
+    "description": "Vedenpuhdistusjärjestelmä.",
+    "geometryType": "Point",
+    "subCategory": 3200
+  },
+  {
+    "typeCode": 2610,
+    "name": "Keilahalli",
+    "description": "Keilaratoja. Ratojen määrä ja palveluvarustus ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 2600
+  },
+  {
+    "typeCode": 2520,
+    "name": "Kilpajäähalli",
+    "description": "Katsomo on, katsomon koko määritellään ominaisuustiedoissa. Kenttien määrät yms. ominaisuuksiin.",
+    "geometryType": "Point",
+    "subCategory": 2500
+  },
+  {
+    "typeCode": 4451,
+    "name": "Melontareitti",
+    "description": "Erityisesti melontaan, merkitty. Reittiehdotus- tyyppinen, ei navigointiin.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4510,
+    "name": "Suunnistusalue",
+    "description": "Ilmoitettu suunnistusliitolle. Alueesta kartta.",
+    "geometryType": "Polygon",
+    "subCategory": 4500
+  },
+  {
+    "typeCode": 4530,
+    "name": "Pyöräsuunnistusalue",
+    "description": "Alueesta pyöräsuunnistukseen soveltuva kartta.",
+    "geometryType": "Polygon",
+    "subCategory": 4500
+  },
+  {
+    "typeCode": 4610,
+    "name": "Ampumahiihdon harjoittelualue",
+    "description": "Muu ampumahiihdon harjoittelualue. Latu ja ampumapaikka olemassa.",
+    "geometryType": "Point",
+    "subCategory": 4600
+  },
+  {
+    "typeCode": 4630,
+    "name": "Kilpahiihtokeskus",
+    "description": "Lähtö- ja maalialue, huoltotilat. Latuja.",
+    "geometryType": "Point",
+    "subCategory": 4600
+  },
+  {
+    "typeCode": 4710,
+    "name": "Ulkokiipeilyseinä",
+    "description": "Rakennettu kiipeilyseinä ulkona. Korkeus ominaisuustietoihin. Myös boulderointipaikat.",
+    "geometryType": "Point",
+    "subCategory": 4700
+  },
+  {
+    "typeCode": 4720,
+    "name": "Kiipeilykallio",
+    "description": "Merkitty luonnon kallio. Jääkiipeily lisätietoihin. Myös boulderointikalliot.",
+    "geometryType": "Point",
+    "subCategory": 4700
+  },
+  {
+    "typeCode": 4820,
+    "name": "Ampumaurheilukeskus",
+    "description": "Ampumarata jossa myös palveluita. Sm-kisojen järjestäminen mahdollista.",
+    "geometryType": "Point",
+    "subCategory": 4800
+  },
+  {
+    "typeCode": 4840,
+    "name": "Jousiammuntamaastorata",
+    "description": "Maastoon rakennettu jousiammuntarata.",
+    "geometryType": "Point",
+    "subCategory": 4800
+  },
+  {
+    "typeCode": 5110,
+    "name": "Soutustadion",
+    "description": "Rakennettu pysyvästi soudulle. Katsomo ja valmius ratamerkintöihin.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 5140,
+    "name": "Vesihiihtoalue",
+    "description": "Rakennettu pysyvästi vesihiihdolle. Vähintään laituri.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 4422,
+    "name": "Moottorikelkkaura",
+    "description": "Ei reittitoimitusta.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4520,
+    "name": "Hiihtosuunnistusalue",
+    "description": "Alueesta hiihtosuunnistuskartta, ei kesäsuunnistusalue.",
+    "geometryType": "Polygon",
+    "subCategory": 4500
+  },
+  {
+    "typeCode": 4620,
+    "name": "Ampumahiihtokeskus",
+    "description": "Vähintään kansallisen tason kilpailujen järjestämiseen.",
+    "geometryType": "Point",
+    "subCategory": 4600
+  },
+  {
+    "typeCode": 4830,
+    "name": "Jousiammuntarata",
+    "description": "Ulkona tai sisällä. Varustus ja lajit ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 4800
+  },
+  {
+    "typeCode": 3220,
+    "name": "Uimaranta",
+    "description": "Aukioloaikoina valvottu, pukukopit yms. varustelua. Talviuinti omana liikuntapaikkanaan.",
+    "geometryType": "Point",
+    "subCategory": 3200
+  },
+  {
+    "typeCode": 4640,
+    "name": "Hiihtomaa",
+    "description": "Hiihdon harjoittelupaikka, tekniikkahalsteri ym.",
+    "geometryType": "Point",
+    "subCategory": 4600
+  },
+  {
+    "typeCode": 4452,
+    "name": "Vesiretkeilyreitti",
+    "description": "Merkitty vesireitti, ei veneväylä. Reittiehdotus- tyyppinen. Esim. kirkkovenesoutureitti.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 5120,
+    "name": "Purjehdusalue",
+    "description": "Rakennettu pysyvästi purjehdukselle.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 5130,
+    "name": "Moottoriveneurheilualue",
+    "description": "Pysyvä nopeuskilpailujen rata-alue.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 5310,
+    "name": "Moottoriurheilukeskus",
+    "description": "Useiden eri moottoriurheilun lajien suorituspaikkoja, huoltotilat olemassa.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 5320,
+    "name": "Moottoripyöräilyalue",
+    "description": "Pääasiallisesti moottoripyöräilyä varten. Lajityypit mainitaan ominaisuustiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 5330,
+    "name": "Moottorirata",
+    "description": "Suuri rata-autoiluun tarkoitettu moottoriurheilupaikka.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 6110,
+    "name": "Ratsastuskenttä",
+    "description": "Ratsastukseen varattu kenttä. Koko ominasuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 6100
+  },
+  {
+    "typeCode": 6120,
+    "name": "Ratsastusmaneesi",
+    "description": "Kylmä tai lämmin, katettu tila ratsastukseen.",
+    "geometryType": "Point",
+    "subCategory": 6100
+  },
+  {
+    "typeCode": 6210,
+    "name": "Koiraurheilualue",
+    "description": "Koiran koulutukseen, agilityyn tai muuhun harjoittamiseen varattu alue.",
+    "geometryType": "Point",
+    "subCategory": 6200
+  },
+  {
+    "typeCode": 7000,
+    "name": "Huoltorakennukset",
+    "description": "Liikuntapaikkoihin liittyvät huoltorakennukset.",
+    "geometryType": "Point",
+    "subCategory": 7000
+  },
+  {
+    "typeCode": 5340,
+    "name": "Karting-rata",
+    "description": "Pääasiallisesti karting-ajoa varten",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 5360,
+    "name": "Jokamies- ja rallicross-rata",
+    "description": "Pääasiallisesti jokamiesajoa ja/tai rallicrossia varten.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 5370,
+    "name": "Jääspeedway-rata",
+    "description": "Pääasiallisesti jääspeedwayta varten.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 6130,
+    "name": "Esteratsastuskenttä",
+    "description": "Pysyvästi esteratsastukseen varusteltu kenttä. Ulkona.",
+    "geometryType": "Point",
+    "subCategory": 6100
+  },
+  {
+    "typeCode": 6140,
+    "name": "Ravirata",
+    "description": "Raviurheilun harjoitus- tai kilparata.",
+    "geometryType": "Point",
+    "subCategory": 6100
+  },
+  {
+    "typeCode": 6220,
+    "name": "Koiraurheiluhalli",
+    "description": "Erityisesti koiraharrastusta, agilityä, koulutusta tms. varten varustettu halli.",
+    "geometryType": "Point",
+    "subCategory": 6200
+  },
+  {
+    "typeCode": 1180,
+    "name": "Frisbeegolfrata",
+    "description": "Frisbeegolfin pelaamiseen rakennettu rata. ",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 3110,
+    "name": "Uimahalli",
+    "description": "Halli, jossa on yksi tai useampia uima-altaita. Altaiden määrä ja vesipinta-ala kysytään ominaisuustiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 3100
+  },
+  {
+    "typeCode": 5150,
+    "name": "Koskimelontakeskus",
+    "description": "Kilpailujen järjestäminen mahdollista.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 5160,
+    "name": "Soudun ja melonnan sisäharjoittelutila",
+    "description": "Erillinen liikuntapaikka, ei normaali uima-allas.",
+    "geometryType": "Point",
+    "subCategory": 5100
+  },
+  {
+    "typeCode": 1130,
+    "name": "Ulkokuntoilupaikka",
+    "description": "Kuntoilulaitteita, voimailulaitteita yms. ulkokuntosali. Voi olla osa liikuntapuistoa, tai liikuntareitin varrella olevia kuntoilupisteitä.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  },
+  {
+    "typeCode": 4411,
+    "name": "Maastopyöräilyreitti",
+    "description": "Erityisesti maastopyöräilyyn tarkoitettu reitti, merkitty.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 5350,
+    "name": "Kiihdytysrata",
+    "description": "Pääasiallisesti kiihdytysautoilua varten.",
+    "geometryType": "Point",
+    "subCategory": 5300
+  },
+  {
+    "typeCode": 102,
+    "name": "Ulkoilupuisto",
+    "description": "Päivittäin käytettäviä alueita, max 1 km asunnoista. Toimivat kävely-, leikki-, oleskelu-, lenkkeily- ja pyöräilypaikkoina. Kevyt liikenne voi mennä ulkoilupuiston läpi. Voi sisältää puistoa, metsää, peltoa, niittyä, vesialuetta. Kaavamerkintä V tai VL.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 302,
+    "name": "Tupa",
+    "description": "Autiotupa, varaustupa, taukotupa, päivätupa. Yöpymis- ja levähdyspaikka retkeilijöille. Autiotupa avoin, varaustupa lukittu ja maksullinen. Päivätupa päiväkäyttöön.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 207,
+    "name": "Opastuspiste",
+    "description": "Opastuspiste ulkoilureitin, virkistysalueen tai muun liikuntapaikan yhteydessä. Esim. opastustaulu ja kartta. Voi olla laajempikin palvelupiste. Usein reitin lähtöpiste.",
+    "geometryType": "Point",
+    "subCategory": 2
+  },
+  {
+    "typeCode": 1540,
+    "name": "Pikaluistelurata",
+    "description": "Radan koko ja pituus ominaisuustietoihin.",
+    "geometryType": "Point",
+    "subCategory": 1500
+  },
+  {
+    "typeCode": 1390,
+    "name": "Padelkenttäalue",
+    "description": "Yksi tai useampi padel-kenttä ulkona. Pintamateriaali hiekkatekonurmi, mitat 20 x 10 m. Lajivaatimusten mukaiset seinät. Voi olla myös katettu.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 2295,
+    "name": "Padelhalli",
+    "description": "Yksi tai useampi padel-kenttä sisällä. Pintamateriaali tekonurmi (hiekkatekonurmi), mitat 20 x 10 m. Lajivaatimusten mukaiset seinät. Vapaa korkeus ilmoitetaan ominaisuustiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 1395,
+    "name": "Pöytätennisalue",
+    "description": "Yksi tai useampi pöytätennispöytä ulkona. Pöytätennispöydän tulee olla sijoitettu niin, että pelaamiseen on riittävä tila pöydän ympärillä. Pöydän tulee olla pelikäyttöön soveltuva.",
+    "geometryType": "Point",
+    "subCategory": 1300
+  },
+  {
+    "typeCode": 113,
+    "name": "Kalastuskohde (alue)",
+    "description": "Vapaa-ajankalastukseen sopiva alue. Kohteessa voi olla palvelurakenteita.",
+    "geometryType": "Polygon",
+    "subCategory": 1
+  },
+  {
+    "typeCode": 1650,
+    "name": "Golfkenttä (alue)",
+    "description": "Ensisijaisesti golfin pelaamiseen tarkoitettu alue kesäkaudella. Reikien määrä merkitään lisätietoihin.",
+    "geometryType": "Polygon",
+    "subCategory": 1600
+  },
+  {
+    "typeCode": 4441,
+    "name": "Koiravaljakkoreitti",
+    "description": "Koiravaljakoille ylläpidetty reitti.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4407,
+    "name": "Rullahiihtorata",
+    "description": "Asfaltoitu rullahiihtoon lumettomana aikana tarkoitettu reitti. Reitti kulkee maastossa, ja sen käyttöä muilla kulkutavoilla on rajoitettu.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 4406,
+    "name": "Monikäyttöreitti",
+    "description": "Talvisin tai ympärivuotisesti käytössä oleva maastoreitti, joka soveltuu usealle kulkutavalle (esim. jalan, lumikengille, läskipyörälle). Lisätietoihin merkitään, jos reitti on ympärivuotisessa käytössä ja mahdolliset kulkutavat.",
+    "geometryType": "LineString",
+    "subCategory": 4400
+  },
+  {
+    "typeCode": 3250,
+    "name": "Vesiurheilukeskus",
+    "description": "Vesiurheilukeskuksessa on vesistössä sijaitsevia liikuntapalveluita tai palvelukokonaisuus, joka voi muodostua erilaisista veden päällä tai vedessä olevista suorituspaikoista tai -radoista.",
+    "geometryType": "Point",
+    "subCategory": 3200
+  },
+  {
+    "typeCode": 2620,
+    "name": "Biljardisali",
+    "description": "Biljardisali on biljardin pelaamiseen tarkoitettu tila. Biljardipöytien määrä ja tyyppi kuvataan lisätiedoissa.",
+    "geometryType": "Point",
+    "subCategory": 2600
+  },
+  {
+    "typeCode": 2225,
+    "name": "Sisäleikki-/sisäaktiviteettipuisto",
+    "description": "Sisäleikkipuistot ovat yleensä pienille lapsille tarkoitettuja liikunnallisia leikkipaikkoja. Sisäaktiviteettipuistot ovat tyypillisesti lapsille ja nuorille tarkoitettuja liikuntakeskuksia, jotka sisältävät erilaisia liikunnallisia kohteita.",
+    "geometryType": "Point",
+    "subCategory": 2200
+  },
+  {
+    "typeCode": 6150,
+    "name": "Ovaalirata",
+    "description": "Islanninhevosten askellajiratsastukseen varattu rata ulkona.",
+    "geometryType": "Point",
+    "subCategory": 6100
+  },
+  {
+    "typeCode": 1190,
+    "name": "Pulkkamäki",
+    "description": "Yleinen mäenlaskuun esimerkiksi pulkalla tai liukurilla tarkoitettu mäki. Kohde on ylläpidetty ja hoidettu, ja se voi muodostua luonnon mäestä tai rakennetuista kumpareista.",
+    "geometryType": "Point",
+    "subCategory": 1100
+  }
+]

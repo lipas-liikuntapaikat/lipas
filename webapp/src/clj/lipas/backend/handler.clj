@@ -2,6 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
+            [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.core :as core]
@@ -17,6 +18,7 @@
             [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.utils :as utils]
             [malli.core :as malli]
+            [malli.error :as me]
             [muuntaja.core :as m]
             [reitit.coercion.malli]
             [reitit.coercion.spec]
@@ -65,10 +67,25 @@
        (handler e x)))
 
    :reitit.coercion/request-coercion
-   (let [handler (:reitit.coercion/request-coercion exception/default-handlers)]
-     (fn [e x]
+   (let [default-handler (:reitit.coercion/request-coercion exception/default-handlers)]
+     (fn [e request]
        (log/errorf e "Request coercion error")
-       (handler e x)))})
+       (if (clojure.string/starts-with? (:uri request) "/v1")
+         ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
+         ;; Use malli.error/humanize to get human-readable messages
+         (let [{:keys [schema value errors]} (ex-data e)
+               humanized (me/humanize {:schema schema :value value :errors errors})
+               ;; humanized is a map like {:pageSize ["should be a positive int"]}
+               ;; Convert to match production format where values are vectors of strings
+               formatted (reduce-kv
+                          (fn [acc k v]
+                            (assoc acc k (if (sequential? v) v [v])))
+                          {}
+                          humanized)]
+           {:status 400
+            :body {:errors formatted}})
+         ;; Default format for other APIs
+         (default-handler e request))))})
 
 (def exceptions-mw
   (exception/create-exception-middleware
@@ -899,6 +916,7 @@
       (ptv-handler/routes ctx)
       (jobs-handler/routes ctx)]
 
+     (v1/routes ctx)
      (v2/routes ctx)]
 
     {:data

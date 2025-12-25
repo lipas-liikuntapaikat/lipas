@@ -6,11 +6,15 @@
             [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as excel]
+            [lipas.backend.api.v1.locations :as legacy-locations]
+            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+            [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.accessibility :as accessibility]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
+            [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.newsletter :as newsletter]
@@ -29,7 +33,8 @@
             [lipas.roles :as roles]
             [lipas.utils :as utils]
             [taoensso.timbre :as log])
-  (:import [java.io OutputStreamWriter]))
+  (:import
+   [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -372,12 +377,7 @@
                     (assoc :doc-status (:doc-status metadata))))))))
 
 ;; ES doesn't support indexing FeatureCollections
-(defn feature-coll->geom-coll
-  "Transforms GeoJSON FeatureCollection to ElasticSearch
-  geometrycollection."
-  [{:keys [features]}]
-  {:type "geometrycollection"
-   :geometries (mapv :geometry features)})
+;; NOTE: feature-coll->geom-coll moved to lipas.backend.geom-utils to avoid circular dependency
 
 (defn feature-type
   [sports-site]
@@ -488,6 +488,43 @@
          data (enrich sports-site)]
      (search/index! client idx-name :lipas-id data sync?))))
 
+(defn index-legacy-sports-place!
+  "Indexes sports-site to legacy Elasticsearch index with legacy data transformation.
+  This is used by the legacy API to find sports places."
+  ([search sports-site]
+   (index-legacy-sports-place! search sports-site false))
+  ([{:keys [indices client]} sports-site sync?]
+   (let [legacy-data (-> (legacy-transform/->old-lipas-sports-site* sports-site)
+                         (assoc :id (:lipas-id sports-site))
+                         (legacy-sports-place/format-sports-place
+                          :all
+                          legacy-locations/format-location))
+
+         idx-name (get-in indices [:legacy-sports-site :search])]
+     ;; Use :sportsPlaceId as the id-fn since the data is in legacy camelCase format
+     (search/index! client idx-name :sportsPlaceId legacy-data sync?))))
+
+(defn delete-from-legacy-index!
+  "Deletes a sports-site from the legacy Elasticsearch index.
+   Used when a site becomes inactive (out-of-service-permanently or incorrect-data)."
+  [{:keys [indices client]} lipas-id]
+  (let [idx-name (get-in indices [:legacy-sports-site :search])]
+    (try
+      (search/delete! client idx-name lipas-id)
+      (catch Exception e
+        ;; Log but don't fail - document might not exist
+        (log/debug "Could not delete from legacy index" {:lipas-id lipas-id :error (.getMessage e)})))))
+
+(def ^:private legacy-index-statuses
+  "Status values that should be in the legacy index.
+   Matches the filter used in search_indexer.clj for full re-indexing."
+  #{"active" "out-of-service-temporarily"})
+
+(defn- should-be-in-legacy-index?
+  "Returns true if the sports site should be in the legacy index based on its status."
+  [sports-site]
+  (contains? legacy-index-statuses (:status sports-site)))
+
 (defn search
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:sports-site :search])]
@@ -510,11 +547,6 @@
         :hits
         :hits
         (->> (map :_source)))))
-
-(defn add-to-integration-out-queue!
-  "DEPRECATED: Integration system is being phased out."
-  [db sports-site]
-  (db/add-to-integration-out-queue! db (:lipas-id sports-site)))
 
 (defn sync-ptv! [tx search ptv-component user props]
   (let [f (resolve 'lipas.backend.ptv.core/sync-ptv!)]
@@ -545,17 +577,17 @@
                ;; resolved.
                (index! search resp :sync)
 
+               ;; Sync to legacy API index - keep it in sync with the main index
+               (if (should-be-in-legacy-index? resp)
+                 (index-legacy-sports-place! search resp :sync)
+                 ;; Delete from legacy index if status changed to inactive
+                 (delete-from-legacy-index! search (:lipas-id resp)))
+
                (when route?
                  (jobs/enqueue-job! tx "elevation"
                                     {:lipas-id (:lipas-id resp)}
                                     {:correlation-id correlation-id
                                      :priority 70}))
-
-               (when-not route?
-                 ;; Routes will be integrated only after elevation has been
-                 ;; resolved. See `process-elevation-queue!`
-                 ;; NOTE: Integration system is being phased out, keeping for now
-                 (add-to-integration-out-queue! tx resp))
 
                ;; Analysis doesn't require elevation information
                (jobs/enqueue-job! tx "analysis"

@@ -24,16 +24,16 @@
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
-(declare gen-user)
+(declare gen-user prune-es!)
 
 #_(defn gen-sports-site
-  []
-  (try
+    []
+    (try
     ;; FIXME :ptv generators produce difficult values
-    (-> (s/gen :lipas/sports-site)
-        gen/generate
-        (dissoc :ptv))
-    (catch Throwable _t (gen-sports-site))))
+      (-> (s/gen :lipas/sports-site)
+          gen/generate
+          (dissoc :ptv))
+      (catch Throwable _t (gen-sports-site))))
 
 (defn fix-generated-site [site]
   (cond-> site
@@ -85,7 +85,7 @@
                       site (-> base-site
                                (assoc :lipas-id (inc i))
                                (cond->
-                                 city-codes
+                                city-codes
                                  (assoc-in [:location :city :city-code]
                                            (nth city-codes (mod i (clojure.core/count city-codes))))
 
@@ -99,6 +99,341 @@
       (doseq [site sites]
         (core/index! search site :sync)))
     sites))
+
+;; ========================================
+;; Sports Site Factories
+;; ========================================
+;;
+;; These factories create valid sports sites for testing.
+;; All generated sites conform to the malli sports-site schema.
+;;
+;; Naming convention:
+;; - make-*-site: Creates a sports site with specific geometry type
+;; - Type codes determine which geometry type is valid
+;;
+;; Geometry types by type code:
+;; - Point: Most indoor facilities and fields (1120, 2510, 3110, etc.)
+;; - LineString: Routes (4401-4452 - hiking, skiing, cycling routes)
+;; - Polygon: Areas (101, 103, 1110, 1650 - parks, recreation areas, golf)
+
+(defn- current-timestamp []
+  (str (java.time.Instant/now)))
+
+(defn make-point-site
+  "Creates a valid Point geometry sports site.
+
+   Example type codes: 1120 (sports field), 2510 (ice stadium),
+   3110 (swimming pool), 1530 (rink), 4810 (shooting range)
+
+   Options:
+   - :type-code        - Type code (default: 1120)
+   - :city-code        - City code as string or int (default: \"91\" Helsinki)
+   - :name             - Site name (default: \"Test Sports Place\")
+   - :status           - Site status (default: \"active\")
+   - :admin            - Admin entity (default: \"city-technical-services\")
+   - :owner            - Owner entity (default: \"city\")
+   - :event-date       - Event date (default: current timestamp)
+   - :construction-year - Construction year (optional)
+   - :properties       - Type-specific properties map (optional)
+   - :coordinates      - [lon lat] coordinates (default: [25.0 60.2])"
+  [lipas-id & {:keys [type-code city-code name status admin owner
+                      event-date construction-year properties coordinates]
+               :or {type-code 1120
+                    city-code "91"
+                    name "Test Sports Place"
+                    status "active"
+                    admin "city-technical-services"
+                    owner "city"
+                    coordinates [25.0 60.2]}}]
+  (cond-> {:lipas-id lipas-id
+           :name name
+           :status status
+           :admin admin
+           :owner owner
+           :event-date (or event-date (current-timestamp))
+           :type {:type-code type-code}
+           :location {:city {:city-code (str city-code)}
+                      :address "Testikatu 1"
+                      :postal-code "00100"
+                      :postal-office "Helsinki"
+                      :geometries {:type "FeatureCollection"
+                                   :features [{:type "Feature"
+                                               :geometry {:type "Point"
+                                                          :coordinates coordinates}}]}}}
+    construction-year (assoc :construction-year construction-year)
+    properties (assoc :properties properties)))
+
+(defn make-route-site
+  "Creates a valid LineString geometry sports site (route).
+
+   Example type codes: 4401 (jogging track), 4402 (ski track),
+   4405 (hiking route), 4411 (MTB route), 4451 (canoe route)
+
+   Options:
+   - :type-code        - Type code (default: 4401 jogging track)
+   - :city-code        - City code as string or int (default: \"91\" Helsinki)
+   - :name             - Site name (default: \"Test Route\")
+   - :status           - Site status (default: \"active\")
+   - :admin            - Admin entity (default: \"city-technical-services\")
+   - :owner            - Owner entity (default: \"city\")
+   - :event-date       - Event date (default: current timestamp)
+   - :construction-year - Construction year (optional)
+   - :properties       - Type-specific properties map (optional)
+   - :segments         - Vector of coordinate vectors for multi-segment routes
+                         Each segment is [[lon lat] [lon lat] ...]
+                         (default: single segment route)"
+  [lipas-id & {:keys [type-code city-code name status admin owner
+                      event-date construction-year properties segments]
+               :or {type-code 4401
+                    city-code "91"
+                    name "Test Route"
+                    status "active"
+                    admin "city-technical-services"
+                    owner "city"}}]
+  (let [default-segment [[25.0 60.2] [25.01 60.21] [25.02 60.22] [25.03 60.23]]
+        route-segments (or segments [default-segment])
+        features (mapv (fn [coords]
+                         {:type "Feature"
+                          :geometry {:type "LineString"
+                                     :coordinates coords}
+                          :properties {}})
+                       route-segments)]
+    (cond-> {:lipas-id lipas-id
+             :name name
+             :status status
+             :admin admin
+             :owner owner
+             :event-date (or event-date (current-timestamp))
+             :type {:type-code type-code}
+             :location {:city {:city-code (str city-code)}
+                        :address "Reittikatu 1"
+                        :postal-code "00100"
+                        :postal-office "Helsinki"
+                        :geometries {:type "FeatureCollection"
+                                     :features features}}}
+      construction-year (assoc :construction-year construction-year)
+      properties (assoc :properties properties))))
+
+(defn make-area-site
+  "Creates a valid Polygon geometry sports site (area).
+
+   Example type codes: 101 (neighbourhood park), 103 (outdoor area),
+   1110 (sports park), 1650 (golf course), 4510 (orienteering area)
+
+   Options:
+   - :type-code        - Type code (default: 103 outdoor area)
+   - :city-code        - City code as string or int (default: \"91\" Helsinki)
+   - :name             - Site name (default: \"Test Area\")
+   - :status           - Site status (default: \"active\")
+   - :admin            - Admin entity (default: \"city-technical-services\")
+   - :owner            - Owner entity (default: \"city\")
+   - :event-date       - Event date (default: current timestamp)
+   - :construction-year - Construction year (optional)
+   - :properties       - Type-specific properties map (optional)
+   - :polygons         - Vector of polygon ring vectors for multi-polygon areas
+                         Each polygon is [[[lon lat] [lon lat] ... [first point]]]
+                         (default: single polygon area)"
+  [lipas-id & {:keys [type-code city-code name status admin owner
+                      event-date construction-year properties polygons]
+               :or {type-code 103
+                    city-code "91"
+                    name "Test Area"
+                    status "active"
+                    admin "city-technical-services"
+                    owner "city"}}]
+  (let [;; Default polygon - a simple rectangle (must close: first = last)
+        default-polygon [[[25.0 60.2]
+                          [25.01 60.2]
+                          [25.01 60.21]
+                          [25.0 60.21]
+                          [25.0 60.2]]]
+        area-polygons (or polygons [default-polygon])
+        features (mapv (fn [rings]
+                         {:type "Feature"
+                          :geometry {:type "Polygon"
+                                     :coordinates rings}})
+                       area-polygons)]
+    (cond-> {:lipas-id lipas-id
+             :name name
+             :status status
+             :admin admin
+             :owner owner
+             :event-date (or event-date (current-timestamp))
+             :type {:type-code type-code}
+             :location {:city {:city-code (str city-code)}
+                        :address "Puistotie 1"
+                        :postal-code "00100"
+                        :postal-office "Helsinki"
+                        :geometries {:type "FeatureCollection"
+                                     :features features}}}
+      construction-year (assoc :construction-year construction-year)
+      properties (assoc :properties properties))))
+
+;; ========================================
+;; Type-Specific Site Factories
+;; ========================================
+
+(defn make-swimming-pool-site
+  "Creates a swimming pool site (type 3110) with pool-specific properties."
+  [lipas-id & {:keys [city-code name pool-length-m pool-tracks-count
+                      pool-width-m pool-min-depth-m pool-max-depth-m]
+               :or {city-code "91"
+                    name "Test Swimming Pool"
+                    pool-length-m 25
+                    pool-tracks-count 6}}]
+  (make-point-site lipas-id
+                   :type-code 3110
+                   :city-code city-code
+                   :name name
+                   :properties (cond-> {:pool-length-m pool-length-m
+                                        :pool-tracks-count pool-tracks-count}
+                                 pool-width-m (assoc :pool-width-m pool-width-m)
+                                 pool-min-depth-m (assoc :pool-min-depth-m pool-min-depth-m)
+                                 pool-max-depth-m (assoc :pool-max-depth-m pool-max-depth-m))))
+
+(defn make-ice-stadium-site
+  "Creates an ice stadium site (type 2510) with ice-specific properties."
+  [lipas-id & {:keys [city-code name ice-rinks-count field-length-m field-width-m]
+               :or {city-code "91"
+                    name "Test Ice Stadium"
+                    ice-rinks-count 1
+                    field-length-m 60
+                    field-width-m 30}}]
+  (make-point-site lipas-id
+                   :type-code 2510
+                   :city-code city-code
+                   :name name
+                   :properties {:ice-rinks-count ice-rinks-count
+                                :field-length-m field-length-m
+                                :field-width-m field-width-m}))
+
+(defn make-ski-track-site
+  "Creates a ski track site (type 4402) with route-specific properties."
+  [lipas-id & {:keys [city-code name route-length-km lit-route-length-km
+                      surface-material skiing-technique segments]
+               :or {city-code "91"
+                    name "Test Ski Track"
+                    route-length-km 5.0
+                    lit-route-length-km 3.0
+                    surface-material ["natural-surface"]
+                    skiing-technique "classic-and-free-style"}}]
+  (make-route-site lipas-id
+                   :type-code 4402
+                   :city-code city-code
+                   :name name
+                   :segments segments
+                   :properties {:route-length-km route-length-km
+                                :lit-route-length-km lit-route-length-km
+                                :surface-material surface-material
+                                :skiing-technique skiing-technique}))
+
+(defn make-hiking-route-site
+  "Creates a hiking route site (type 4405) with route-specific properties."
+  [lipas-id & {:keys [city-code name route-length-km surface-material segments]
+               :or {city-code "91"
+                    name "Test Hiking Route"
+                    route-length-km 8.5
+                    surface-material ["natural-surface"]}}]
+  (make-route-site lipas-id
+                   :type-code 4405
+                   :city-code city-code
+                   :name name
+                   :segments segments
+                   :properties {:route-length-km route-length-km
+                                :surface-material surface-material}))
+
+(defn make-golf-course-site
+  "Creates a golf course site (type 1650) with golf-specific properties."
+  [lipas-id & {:keys [city-code name holes-count range? polygons]
+               :or {city-code "91"
+                    name "Test Golf Course"
+                    holes-count 18
+                    range? true}}]
+  (make-area-site lipas-id
+                  :type-code 1650
+                  :city-code city-code
+                  :name name
+                  :polygons polygons
+                  :properties {:holes-count holes-count
+                               :range? range?}))
+
+(defn make-sports-park-site
+  "Creates a sports park site (type 1110) with area-specific properties."
+  [lipas-id & {:keys [city-code name area-km2 playground? ligthing? polygons]
+               :or {city-code "91"
+                    name "Test Sports Park"
+                    playground? true
+                    ligthing? true}}]
+  (make-area-site lipas-id
+                  :type-code 1110
+                  :city-code city-code
+                  :name name
+                  :polygons polygons
+                  :properties (cond-> {:playground? playground?
+                                       :ligthing? ligthing?}
+                                area-km2 (assoc :area-km2 area-km2))))
+
+(defn make-outdoor-recreation-area-site
+  "Creates an outdoor/recreation area site (type 103) with area properties."
+  [lipas-id & {:keys [city-code name area-km2 free-use? polygons]
+               :or {city-code "91"
+                    name "Test Recreation Area"
+                    free-use? true}}]
+  (make-area-site lipas-id
+                  :type-code 103
+                  :city-code city-code
+                  :name name
+                  :polygons polygons
+                  :properties (cond-> {:free-use? free-use?}
+                                area-km2 (assoc :area-km2 area-km2))))
+
+;; ========================================
+;; Multi-Segment Geometry Helpers
+;; ========================================
+
+(defn make-multi-segment-route
+  "Creates a route with multiple distinct segments.
+   Useful for testing routes that span multiple trail sections."
+  [lipas-id segment-count & {:keys [type-code city-code name properties]
+                             :or {type-code 4405
+                                  city-code "91"
+                                  name "Multi-Segment Route"}}]
+  (let [segments (for [i (range segment-count)]
+                   (let [base-lon (+ 25.0 (* i 0.05))
+                         base-lat (+ 60.2 (* i 0.02))]
+                     [[base-lon base-lat]
+                      [(+ base-lon 0.01) (+ base-lat 0.01)]
+                      [(+ base-lon 0.02) (+ base-lat 0.015)]
+                      [(+ base-lon 0.03) (+ base-lat 0.02)]]))]
+    (make-route-site lipas-id
+                     :type-code type-code
+                     :city-code city-code
+                     :name name
+                     :segments (vec segments)
+                     :properties properties)))
+
+(defn make-multi-polygon-area
+  "Creates an area with multiple distinct polygon features.
+   Useful for testing areas that span multiple separate regions."
+  [lipas-id polygon-count & {:keys [type-code city-code name properties]
+                             :or {type-code 103
+                                  city-code "91"
+                                  name "Multi-Polygon Area"}}]
+  (let [polygons (for [i (range polygon-count)]
+                   (let [base-lon (+ 25.0 (* i 0.1))
+                         base-lat (+ 60.2 (* i 0.05))]
+                     ;; Each polygon is a closed ring
+                     [[[base-lon base-lat]
+                       [(+ base-lon 0.02) base-lat]
+                       [(+ base-lon 0.02) (+ base-lat 0.02)]
+                       [base-lon (+ base-lat 0.02)]
+                       [base-lon base-lat]]]))]
+    (make-area-site lipas-id
+                    :type-code type-code
+                    :city-code city-code
+                    :name name
+                    :polygons (vec polygons)
+                    :properties properties)))
 
 (def <-json
   (fn [response-body]
@@ -156,7 +491,8 @@
                 (update-in [:search :indices :analysis :population] test-suffix)
                 (update-in [:search :indices :analysis :population-high-def] test-suffix)
                 (update-in [:search :indices :analysis :diversity] test-suffix)
-                (update-in [:search :indices :lois :search] test-suffix)))
+                (update-in [:search :indices :lois :search] test-suffix)
+                (update-in [:search :indices :legacy-sports-site :search] test-suffix)))
 
 ;; Enhanced database initialization with migration status checking
 (defn init-db!
@@ -302,45 +638,64 @@
   (jdbc/execute! (:db config) [(str "DROP SCHEMA IF EXISTS wfs CASCADE;"
                                     wfs-up-ddl)]))
 
-;; Likely all test system components are stateless, so maybe ok to start without ever halting this.
-;; But take steps to also stop the system before starting it again on each reload of this ns.
-(defonce system nil)
-
-(alter-var-root #'system (fn [x]
-                           (when x
-                             (sy/stop-system! x))
-                           (sy/start-system! (config/->system-config config))))
-
-;; These need to be redefined after each alter-var-root.
-(def db (:lipas/db system))
-(def app (:lipas/app system))
-(def search (:lipas/search system))
+;; ==========================================================================
+;; DEPRECATED: Global vars removed - use full-system-fixture pattern instead
+;; ==========================================================================
+;;
+;; The global db/app/search vars have been removed because:
+;; 1. They caused StackOverflow on REPL reload (malli schema #'var references become stale)
+;; 2. They created implicit shared state between tests
+;; 3. They required @deref ceremony at every call site
+;;
+;; Instead, use the full-system-fixture pattern:
+;;
+;;   (defonce test-system (atom nil))
+;;   (let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
+;;     (use-fixtures :once once)
+;;     (use-fixtures :each each))
+;;
+;;   (defn test-db [] (:lipas/db @test-system))
+;;   (defn test-app [] (:lipas/app @test-system))
+;;   (defn test-search [] (:lipas/search @test-system))
+;;
+;; See lipas.backend.org-test for a complete example.
 
 (defn prune-es!
-  ([] (prune-es! search))
-  ([search]
-   (let [client (:client search)
-         mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
-                   (-> search :indices :analysis :diversity) diversity/mappings
-                   (-> search :indices :lois :search) (:lois search/mappings)}]
+  "Prune all Elasticsearch test indices and recreate them with proper mappings.
+   Requires the search component as an argument."
+  [search]
+  (let [client (:client search)
+        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+                  (-> search :indices :legacy-sports-site :search) (:legacy-sports-site search/mappings)
+                  (-> search :indices :analysis :diversity) diversity/mappings
+                  (-> search :indices :lois :search) (:lois search/mappings)}]
 
-     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
-       (try
-         (search/delete-index! client idx-name)
-         (catch Exception ex
-           (when (not= "index_not_found_exception"
-                       (-> ex ex-data :body :error :root_cause first :type))
-             (throw ex))))
-       (when-let [mapping (mappings idx-name)]
-         (search/create-index! client idx-name mapping))))))
+    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+      (try
+        (search/delete-index! client idx-name)
+        (catch Exception ex
+          (when (not= "index_not_found_exception"
+                      (-> ex ex-data :body :error :root_cause first :type))
+            (throw ex))))
+      (when-let [mapping (mappings idx-name)]
+        (search/create-index! client idx-name mapping)))))
 
 (comment
   (init-db!)
-  (prune-es!)
+  ;; prune-es! now requires search component: (prune-es! search)
+  ;; prune-db! can still be called without args if using test config
   (prune-db!)
   (ex-data *e))
 
 (defn gen-user
+  "Generate a test user with optional persistence to database.
+
+   Options:
+   - :db?          - If true, save user to database (requires :db-component)
+   - :admin?       - If true, add admin role
+   - :status       - User status (default: \"active\")
+   - :permissions  - Custom permissions map to merge
+   - :db-component - Required when db? is true. The database component to use."
   ([]
    (gen-user {:db? false :admin? false :status "active"}))
   ([{:keys [db? admin? status permissions db-component]
@@ -358,9 +713,12 @@
                                                                          (into [] (remove (fn [x] (= :admin (:role x))) roles))))
                                            admin? (update :roles (fnil conj []) {:role :admin})))))]
      (if db?
-       (let [db-conn (or db-component db)]
-         (core/add-user! db-conn user)
-         (assoc user :id (:id (core/get-user db-conn (:email user)))))
+       (do
+         (when-not db-component
+           (throw (ex-info "gen-user with db? true requires :db-component option. Use (gen-user {:db? true :db-component (test-db)})"
+                           {:opts {:db? db? :admin? admin?}})))
+         (core/add-user! db-component user)
+         (assoc user :id (:id (core/get-user db-component (:email user)))))
        user))))
 
 (defn gen-loi! []
@@ -376,40 +734,50 @@
 ;; ========================================
 
 (defn gen-admin-user
-  "Generate a user with admin permissions, optionally saved to DB"
-  [& {:keys [db?] :or {db? true} :as opts}]
-  (gen-user (merge opts {:db? db? :admin? true})))
+  "Generate a user with admin permissions, optionally saved to DB.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? true :db-component db-component})))
 
 (defn gen-regular-user
-  "Generate a regular user with default permissions"
-  [& {:keys [db?] :or {db? true} :as opts}]
-  (gen-user (merge opts {:db? db? :admin? false})))
+  "Generate a regular user with default permissions.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
+  (gen-user (merge opts {:db? db? :admin? false :db-component db-component})))
 
 (defn gen-city-manager-user
-  "Generate a city manager user for specific city"
-  [city-code & {:keys [db?] :or {db? true} :as opts}]
+  "Generate a city manager user for specific city.
+   When db? is true (default), requires :db-component option."
+  [city-code & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "city-manager"
                                                 :city-code [city-code]}]}})))
 
 (defn gen-site-manager-user
-  "Generate a site manager user for specific sports site"
-  [lipas-id & {:keys [db?] :or {db? true} :as opts}]
+  "Generate a site manager user for specific sports site.
+   When db? is true (default), requires :db-component option."
+  [lipas-id & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "site-manager"
                                                 :lipas-id [lipas-id]}]}})))
 
 (defn gen-org-admin-user
-  "Generate an organization admin for specific org"
-  [org-id & {:keys [db?] :or {db? true} :as opts}]
+  "Generate an organization admin for specific org.
+   When db? is true (default), requires :db-component option."
+  [org-id & {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role "org-admin"
                                                 :org-id [(str org-id)]}]}})))
 
 (defn gen-ptv-auditor
-  "Generate a PTV auditor user"
-  [& {:keys [db?] :or {db? true} :as opts}]
+  "Generate a PTV auditor user.
+   When db? is true (default), requires :db-component option."
+  [& {:keys [db? db-component] :or {db? true} :as opts}]
   (gen-user (merge opts {:db? db?
+                         :db-component db-component
                          :permissions {:roles [{:role :ptv-auditor}]}})))
 
 ;; ========================================
@@ -481,9 +849,9 @@
    (let [{:keys [once each]} (test-utils/db-and-search-fixture)]
      (use-fixtures :once once)
      (use-fixtures :each each))"
-  []
+  [search]
   {:once (fn [f] (init-db!) (f))
-   :each (fn [f] (prune-db!) (prune-es!) (f))})
+   :each (fn [f] (prune-db!) (prune-es! search) (f))})
 
 (defn full-system-fixture
   "Starts complete Integrant system, prunes between tests.
