@@ -26,7 +26,6 @@ services:
       - backend
       - logstash
       - kibana
-      - legacy-api
       - geoserver
     volumes:
       - './nginx/proxy.conf:/etc/nginx/templates/default.conf.template:z'
@@ -41,7 +40,6 @@ services:
       #- backend
       - logstash
       - kibana
-      - legacy-api
       - geoserver
     volumes:
       - './nginx/proxy_dev.conf:/etc/nginx/templates/default.conf.template:z'
@@ -380,43 +378,6 @@ services:
       - elasticsearch
     volumes:
       - "./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:z"
-
-  legacy-api-base:
-    image: openjdk:23
-    logging:
-      driver: "gelf"
-      options:
-        gelf-address: "udp://localhost:5000"
-        tag: "legacy-api"
-    environment:
-      SEARCH_HOST:
-      SEARCH_USER:
-      SEARCH_PASS:
-      LEGACY_DB_URL:
-      LEGACY_DB_USER:
-      LEGACY_DB_PASS:
-
-  legacy-api:
-    extends:
-      service: legacy-api-base
-    command: java -jar /lipas-api.jar 9999
-    ports:
-      - "9999:9999"
-    links:
-      - elasticsearch
-      - postgres
-    volumes:
-      - "./legacy-api.jar:/lipas-api.jar:z"
-
-  legacy-api-worker:
-    extends:
-      service: legacy-api-base
-    command: java -jar /worker.jar
-    links:
-      - elasticsearch
-      - postgres
-    volumes:
-      - "./legacy-api-worker.jar:/worker.jar:z"
 
   geoserver:
     image: docker.osgeo.org/geoserver:2.26.2
