@@ -504,6 +504,27 @@
      ;; Use :sportsPlaceId as the id-fn since the data is in legacy camelCase format
      (search/index! client idx-name :sportsPlaceId legacy-data sync?))))
 
+(defn delete-from-legacy-index!
+  "Deletes a sports-site from the legacy Elasticsearch index.
+   Used when a site becomes inactive (out-of-service-permanently or incorrect-data)."
+  [{:keys [indices client]} lipas-id]
+  (let [idx-name (get-in indices [:legacy-sports-site :search])]
+    (try
+      (search/delete! client idx-name lipas-id)
+      (catch Exception e
+        ;; Log but don't fail - document might not exist
+        (log/debug "Could not delete from legacy index" {:lipas-id lipas-id :error (.getMessage e)})))))
+
+(def ^:private legacy-index-statuses
+  "Status values that should be in the legacy index.
+   Matches the filter used in search_indexer.clj for full re-indexing."
+  #{"active" "out-of-service-temporarily"})
+
+(defn- should-be-in-legacy-index?
+  "Returns true if the sports site should be in the legacy index based on its status."
+  [sports-site]
+  (contains? legacy-index-statuses (:status sports-site)))
+
 (defn search
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:sports-site :search])]
@@ -555,6 +576,12 @@
                ;; NOTE: routes will be re-indexed after elevation has been
                ;; resolved.
                (index! search resp :sync)
+
+               ;; Sync to legacy API index - keep it in sync with the main index
+               (if (should-be-in-legacy-index? resp)
+                 (index-legacy-sports-place! search resp :sync)
+                 ;; Delete from legacy index if status changed to inactive
+                 (delete-from-legacy-index! search (:lipas-id resp)))
 
                (when route?
                  (jobs/enqueue-job! tx "elevation"
