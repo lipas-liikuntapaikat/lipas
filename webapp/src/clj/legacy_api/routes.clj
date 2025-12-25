@@ -6,6 +6,7 @@
             [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli :as malli]
             [reitit.openapi :as openapi]
+            [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [taoensso.timbre :as log]))
 
@@ -68,8 +69,20 @@
 
 (defn routes [{:keys [search db]}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                    {:url "/rest/api/openapi.json"})]
-    ["/rest/api"
+                    {:url "/v1/openapi.json"})
+
+        ;; Named handlers for reuse with HEAD method
+        get-sports-place-by-id
+        (safe-handler
+         (fn [req]
+           (let [locale (or (-> req :parameters :query :lang keyword) :fi)
+                 sports-place-id (-> req :parameters :path :sports-place-id)
+                 resp (legacy-core/fetch-sports-place-es search locale sports-place-id)]
+             (if resp
+               {:status 200 :body resp}
+               {:status 404 :body {:errors {:sportsPlaceId "Didn't find such sports place. :("}}}))))]
+
+    ["/v1"
      {:openapi
       {:id :api-v1
 
@@ -102,94 +115,95 @@ Access to the hierarchical type classification system used for categorizing spor
                     :path [:map [:sports-place-id :int]]}
        :get
        {:tags ["sport-places"]
-        :handler
-        (safe-handler
-         (fn [req]
-           (let [locale (or (-> req :parameters :query :lang keyword) :fi)
-                 sports-place-id (-> req :parameters :path :sports-place-id)
-                 resp (legacy-core/fetch-sports-place-es search locale sports-place-id)]
-             (if resp
-               {:status 200 :body resp}
-               {:status 404 :body {:errors {:sportsPlaceId "Didn't find such sports place. :("}}}))))
-        :responses {200 {:body legacy-schema/legacy-sports-place}}}}]
-     ["/sports-places"
-      {:parameters {:query legacy-schema/search-params}
-       :get
+        :handler get-sports-place-by-id
+        :responses {200 {:body legacy-schema/legacy-sports-place}}}
+       :head
        {:tags ["sport-places"]
-        :handler
-        (safe-handler
-         (fn [{:keys [parameters] :as req}]
-           (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
-                         closeToMatch closeToLon closeToLat modifiedAfter
-                         searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
+        :no-doc true
+        :handler (head-handler get-sports-place-by-id)}}]
+     ["/sports-places"
+      (let [list-sports-places
+            (safe-handler
+             (fn [{:keys [parameters] :as req}]
+               (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
+                             closeToMatch closeToLon closeToLat modifiedAfter
+                             searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
 
-                 pageSize (or pageSize 10)
-                 ;; Validate page size
-                 _ (when (or (< pageSize 1) (> pageSize 100))
-                     (throw (ex-info "Invalid page size: must be between 1 and 100"
-                                     {:type :invalid-input
-                                      :parameter :pageSize
-                                      :value pageSize})))
+                     pageSize (or pageSize 10)
+                     ;; Validate page size
+                     _ (when (or (< pageSize 1) (> pageSize 100))
+                         (throw (ex-info "Invalid page size: must be between 1 and 100"
+                                         {:type :invalid-input
+                                          :parameter :pageSize
+                                          :value pageSize})))
 
-                 ;; Ensure typeCodes and cityCodes are always collections
-                 type-codes (cond (nil? typeCodes) nil
-                                  (coll? typeCodes) typeCodes
-                                  :else [typeCodes])
-                 city-codes (cond (nil? cityCodes) nil
-                                  (coll? cityCodes) cityCodes
-                                  :else [cityCodes])
+                     ;; Ensure typeCodes and cityCodes are always collections
+                     type-codes (cond (nil? typeCodes) nil
+                                      (coll? typeCodes) typeCodes
+                                      :else [typeCodes])
+                     city-codes (cond (nil? cityCodes) nil
+                                      (coll? cityCodes) cityCodes
+                                      :else [cityCodes])
 
-                 params {:limit pageSize
-                         :offset (dec (or page 1))
-                         :type-codes type-codes
-                         :city-codes city-codes
-                         :close-to (when closeToDistanceKm
-                                     {:distance (str (* closeToDistanceKm 1000) "m")
-                                      :field (if (= closeToMatch :start-point)
-                                               :location.coordinates.wgs84
-                                               :location.geom-coll)
-                                      :point {:lon closeToLon
-                                              :lat closeToLat}})
-                         :modified-after modifiedAfter
-                         :search-string searchString
-                         :excursion-map? retkikartta
-                         :harrastuspassi? harrastuspassi}
-                 fields (let [fields-value (:fields qp)]
-                          (cond
-                            (nil? fields-value) []
-                            (string? fields-value)
-                            ;; Handle comma-separated string by splitting
-                            (if (re-find #"," fields-value)
-                              (mapv clojure.string/trim (clojure.string/split fields-value #","))
-                              [fields-value])
-                            :else fields-value))
-                 locale (or (keyword lang) :fi)
-                 resp (legacy-core/fetch-sports-places-es search locale params fields)
-                 {:keys [partial? total results]} resp]
-             (if partial?
-               (let [base-path (or (legacy-http/extract-base-path req) "/rest/api")
-                     path (legacy-http/build-sports-places-path base-path)
-                     ;; Build link params from original query params (camelCase), filtered of nil/empty values
-                     link-params (->> {:pageSize pageSize
-                                       :typeCodes typeCodes
-                                       :cityCodes cityCodes
-                                       :closeToLon closeToLon
-                                       :closeToLat closeToLat
-                                       :closeToDistanceKm closeToDistanceKm
-                                       :modifiedAfter modifiedAfter
-                                       :searchString searchString
-                                       :retkikartta retkikartta
-                                       :harrastuspassi harrastuspassi
-                                       :lang lang
-                                       :fields (:fields qp)}
-                                      (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
-                                      (into {}))
-                     ;; Pass page number (1-indexed), not offset (0-indexed)
-                     links (legacy-http/create-page-links path link-params (or page 1) (:limit params) total)]
-                 (legacy-http/linked-partial-content results links))
-               {:status 200
-                :body results}))))
-        :responses {200 {:body [:vector legacy-schema/legacy-sports-place-list-item]}}}}]
+                     params {:limit pageSize
+                             :offset (dec (or page 1))
+                             :type-codes type-codes
+                             :city-codes city-codes
+                             :close-to (when closeToDistanceKm
+                                         {:distance (str (* closeToDistanceKm 1000) "m")
+                                          :field (if (= closeToMatch :start-point)
+                                                   :location.coordinates.wgs84
+                                                   :location.geom-coll)
+                                          :point {:lon closeToLon
+                                                  :lat closeToLat}})
+                             :modified-after modifiedAfter
+                             :search-string searchString
+                             :excursion-map? retkikartta
+                             :harrastuspassi? harrastuspassi}
+                     fields (let [fields-value (:fields qp)]
+                              (cond
+                                (nil? fields-value) []
+                                (string? fields-value)
+                                ;; Handle comma-separated string by splitting
+                                (if (re-find #"," fields-value)
+                                  (mapv clojure.string/trim (clojure.string/split fields-value #","))
+                                  [fields-value])
+                                :else fields-value))
+                     locale (or (keyword lang) :fi)
+                     resp (legacy-core/fetch-sports-places-es search locale params fields)
+                     {:keys [partial? total results]} resp]
+                 (if partial?
+                   (let [base-path (or (legacy-http/extract-base-path req) "/v1")
+                         path (legacy-http/build-sports-places-path base-path)
+                         ;; Build link params from original query params (camelCase), filtered of nil/empty values
+                         link-params (->> {:pageSize pageSize
+                                           :typeCodes typeCodes
+                                           :cityCodes cityCodes
+                                           :closeToLon closeToLon
+                                           :closeToLat closeToLat
+                                           :closeToDistanceKm closeToDistanceKm
+                                           :modifiedAfter modifiedAfter
+                                           :searchString searchString
+                                           :retkikartta retkikartta
+                                           :harrastuspassi harrastuspassi
+                                           :lang lang
+                                           :fields (:fields qp)}
+                                          (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
+                                          (into {}))
+                         ;; Pass page number (1-indexed), not offset (0-indexed)
+                         links (legacy-http/create-page-links path link-params (or page 1) (:limit params) total)]
+                     (legacy-http/linked-partial-content results links))
+                   {:status 200
+                    :body results}))))]
+        {:parameters {:query legacy-schema/search-params}
+         :get
+         {:tags ["sport-places"]
+          :handler list-sports-places
+          :responses {200 {:body [:vector legacy-schema/legacy-sports-place-list-item]}}}
+         :head
+         {:tags ["sport-places"]
+          :no-doc true
+          :handler (head-handler list-sports-places)}})]
      ["/deleted-sports-places"
       {:parameters {:query [:map [:since {:optional true
                                           :example "1984-01-01 00:00:00.000"}
@@ -241,10 +255,15 @@ Access to the hierarchical type classification system used for categorizing spor
              {:status 200
               :body (legacy-api/sports-place-by-type-code locale type-code)})))
         :responses {200 {:body #'legacy-schema/sports-places-by-type-response}}}}]
+     ["/swagger.json"
+      {:get
+       {:no-doc true
+        :swagger {:info {:title "Lipas-API v1"}}
+        :handler (swagger/create-swagger-handler)}}]
      ["/openapi.json"
       {:get
        {:no-doc true
-        :swagger {:info {:title "Lipas-API (legacy) v1"}}
+        :swagger {:info {:title "Lipas-API v1"}}
         :tags [{:name "sport-places"
                 :description "Sport places"}
                {:name "sport-place-types"

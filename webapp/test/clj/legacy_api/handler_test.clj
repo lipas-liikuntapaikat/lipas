@@ -59,15 +59,15 @@
       (sequential? body) (vec body)
       :else body)))
 
-;;; Tests for GET /rest/api/sports-places/:id ;;;
+;;; Tests for GET /v1/sports-places/:id ;;;
 
 (deftest get-single-sports-place-test
-  (testing "GET /rest/api/sports-places/:id"
+  (testing "GET /v1/sports-places/:id"
 
     (testing "returns 200 for existing sports place"
       (let [site (test-utils/make-point-site 12345 :name "Test Lähiliikuntapaikka")
             _ (create-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/sports-places/12345"))
+            resp ((test-app) (mock/request :get "/v1/sports-places/12345"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 12345 (:sportsPlaceId body)))
@@ -77,7 +77,7 @@
         (is (map? (:location body)))))
 
     (testing "returns 404 for non-existing sports place"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/999999"))]
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places/999999"))]
         (is (= 404 (:status resp)))))
 
     (testing "returns correct legacy field format"
@@ -87,7 +87,7 @@
                      (assoc :construction-year 2010
                             :event-date "2024-06-15T10:30:00.000Z"))
             _ (create-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/sports-places/12346"))
+            resp ((test-app) (mock/request :get "/v1/sports-places/12346"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (integer? (:sportsPlaceId body)))
@@ -104,33 +104,33 @@
           (is (integer? (:cityCode city))))))))
 
 (deftest get-sports-place-with-lang-test
-  (testing "GET /rest/api/sports-places/:id with lang parameter"
+  (testing "GET /v1/sports-places/:id with lang parameter"
     (let [site (test-utils/make-point-site 12347 :name "Suomenkielinen Nimi")
           _ (create-sports-site! site)]
 
       (testing "fi language (default)"
-        (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/12347?lang=fi"))
+        (let [resp ((test-app) (mock/request :get "/v1/sports-places/12347?lang=fi"))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (string? (:name body)))))
 
       (testing "en language"
-        (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/12347?lang=en"))
+        (let [resp ((test-app) (mock/request :get "/v1/sports-places/12347?lang=en"))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (some? body))))
 
       (testing "se language"
-        (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/12347?lang=se"))
+        (let [resp ((test-app) (mock/request :get "/v1/sports-places/12347?lang=se"))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (some? body)))))))
 
-;;; Tests for GET /rest/api/sports-places (list) ;;;
+;;; Tests for GET /v1/sports-places (list) ;;;
 
 (deftest list-sports-places-empty-test
-  (testing "GET /rest/api/sports-places returns 200 with empty result"
-    (let [resp ((test-app) (-> (mock/request :get "/rest/api/sports-places")
+  (testing "GET /v1/sports-places returns 200 with empty result"
+    (let [resp ((test-app) (-> (mock/request :get "/v1/sports-places")
                                (mock/content-type "application/json")))]
       (is (= 200 (:status resp)))
       (let [body (parse-json-body resp)]
@@ -138,12 +138,12 @@
         (is (empty? body))))))
 
 (deftest list-sports-places-with-results-test
-  (testing "GET /rest/api/sports-places returns results when data exists"
+  (testing "GET /v1/sports-places returns results when data exists"
     (doseq [i (range 1 4)]
       (create-sports-site! (test-utils/make-point-site (+ 20000 i) :name (str "Test Site " i))))
 
     (testing "default response contains only sportsPlaceId"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (vector? body))
@@ -153,7 +153,7 @@
             "Default response should only contain sportsPlaceId")))
 
     (testing "response with requested fields includes name and type"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name&fields=type.typeCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?fields=name&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (every? :sportsPlaceId body))
@@ -182,25 +182,25 @@
       (Integer/parseInt (second match)))))
 
 (deftest list-sports-places-pagination-test
-  (testing "GET /rest/api/sports-places pagination"
+  (testing "GET /v1/sports-places pagination"
     (doseq [i (range 1 16)]
       (create-sports-site! (test-utils/make-point-site (+ 30000 i) :name (str "Pagination Site " i))))
 
     (testing "default page size returns up to 10"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (<= (count body) 10))))
 
     (testing "custom pageSize"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=5"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (= 5 (count body)))))
 
     (testing "page parameter"
-      (let [resp1 ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5&page=1"))
-            resp2 ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5&page=2"))
+      (let [resp1 ((test-app) (mock/request :get "/v1/sports-places?pageSize=5&page=1"))
+            resp2 ((test-app) (mock/request :get "/v1/sports-places?pageSize=5&page=2"))
             body1 (parse-json-body resp1)
             body2 (parse-json-body resp2)]
         (is (#{200 206} (:status resp1)))
@@ -211,12 +211,12 @@
               "Page 1 and 2 should have different items"))))
 
     (testing "206 Partial Content when more results available"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5"))]
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=5"))]
         (is (= 206 (:status resp)) "Should return 206 when pagination is needed")
         (is (some? (get-in resp [:headers "Link"])))))
 
     (testing "Link header has correct page numbers"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=5&page=1"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=5&page=1"))
             link-header (get-in resp [:headers "Link"])
             links (parse-link-header link-header)]
         (is (some? link-header) "Link header should be present")
@@ -226,52 +226,52 @@
         (is (= 3 (extract-page-param (get links "last"))) "last should be page=3 (15 items / 5 per page)")))))
 
 (deftest list-sports-places-filter-by-type-codes-test
-  (testing "GET /rest/api/sports-places filter by typeCodes"
+  (testing "GET /v1/sports-places filter by typeCodes"
     (create-sports-site! (test-utils/make-point-site 40001 :name "Type 1120 Site" :type-code 1120))
     (create-sports-site! (test-utils/make-point-site 40002 :name "Type 1310 Site" :type-code 1310))
 
     (testing "single typeCode filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120&fields=type.typeCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?typeCodes=1120&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (every? #(= 1120 (-> % :type :typeCode)) body))))
 
     (testing "multiple typeCodes filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=1120&typeCodes=1310&fields=type.typeCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?typeCodes=1120&typeCodes=1310&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (= 2 (count body)))
         (is (= #{1120 1310} (set (map #(-> % :type :typeCode) body))))))))
 
 (deftest list-sports-places-filter-by-city-codes-test
-  (testing "GET /rest/api/sports-places filter by cityCodes"
+  (testing "GET /v1/sports-places filter by cityCodes"
     (create-sports-site! (test-utils/make-point-site 50001 :name "Helsinki Site" :city-code "91"))
     (create-sports-site! (test-utils/make-point-site 50002 :name "Espoo Site" :city-code "49"))
 
     (testing "single cityCode filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?cityCodes=91&fields=location.city.cityCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?cityCodes=91&fields=location.city.cityCode"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (every? #(= 91 (-> % :location :city :cityCode)) body))))
 
     (testing "multiple cityCodes filter"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?cityCodes=91&cityCodes=49"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?cityCodes=91&cityCodes=49"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (= 2 (count body)))))))
 
 (deftest list-sports-places-search-string-test
-  (testing "GET /rest/api/sports-places with searchString"
+  (testing "GET /v1/sports-places with searchString"
     (create-sports-site! (test-utils/make-point-site 60001 :name "Unique Searchable Name XYZ123"))
 
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?searchString=XYZ123"))
+    (let [resp ((test-app) (mock/request :get "/v1/sports-places?searchString=XYZ123"))
           body (parse-json-body resp)]
       (is (#{200 206} (:status resp)))
       (is (= 1 (count body)))
       (is (= 60001 (-> body first :sportsPlaceId))))))
 
 (deftest list-sports-places-search-string-relevance-test
-  (testing "GET /rest/api/sports-places searchString prioritizes name matches (production behavior)"
+  (testing "GET /v1/sports-places searchString prioritizes name matches (production behavior)"
     ;; Create a site with "uimahalli" in the name - should rank highest
     (create-sports-site! (test-utils/make-point-site 61001 :name "Kaupungin uimahalli"))
 
@@ -289,7 +289,7 @@
     ;; Create a site with completely unrelated name
     (create-sports-site! (test-utils/make-point-site 61004 :name "Jalkapallokenttä"))
 
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?searchString=uimahalli&fields=name"))
+    (let [resp ((test-app) (mock/request :get "/v1/sports-places?searchString=uimahalli&fields=name"))
           body (parse-json-body resp)]
       (is (#{200 206} (:status resp)))
 
@@ -306,11 +306,11 @@
               "Site without 'uimahalli' anywhere should not appear in results"))))))
 
 (deftest list-sports-places-field-selection-test
-  (testing "GET /rest/api/sports-places with fields parameter"
+  (testing "GET /v1/sports-places with fields parameter"
     (create-sports-site! (test-utils/make-point-site 70001 :name "Field Selection Test"))
 
     (testing "default response returns only sportsPlaceId"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (every? :sportsPlaceId body))
@@ -318,7 +318,7 @@
             "Default response should only contain sportsPlaceId")))
 
     (testing "selecting specific fields with repeated params (production format)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name&fields=type.typeCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?fields=name&fields=type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (every? :sportsPlaceId body) "sportsPlaceId is always included")
@@ -326,14 +326,14 @@
         (is (every? #(-> % :type :typeCode) body) "requested field 'type.typeCode' should be present")))
 
     (testing "selecting specific fields with comma-separated format (also supported)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?fields=name,type.typeCode"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?fields=name,type.typeCode"))
             body (parse-json-body resp)]
         (is (#{200 206} (:status resp)))
         (is (every? :sportsPlaceId body) "sportsPlaceId is always included")
         (is (every? :name body) "requested field 'name' should be present")
         (is (every? #(-> % :type :typeCode) body) "requested field 'type.typeCode' should be present")))))
 
-;;; Tests for GET /rest/api/deleted-sports-places ;;;
+;;; Tests for GET /v1/deleted-sports-places ;;;
 
 (defn create-deleted-sports-site!
   "Creates a sports site with 'out-of-service-permanently' status (considered deleted in legacy API)."
@@ -347,14 +347,14 @@
     deleted-site))
 
 (deftest deleted-sports-places-test
-  (testing "GET /rest/api/deleted-sports-places"
+  (testing "GET /v1/deleted-sports-places"
 
     (testing "returns 200 with empty result when no deleted places"
       ;; Create a regular (published) site first to establish the index mappings
       ;; This ensures the status.keyword field exists for the query
       (let [site (test-utils/make-point-site 94999 :name "Published Site")]
         (create-sports-site! site))
-      (let [resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2020-01-01%2000:00:00.000"))
+      (let [resp ((test-app) (mock/request :get "/v1/deleted-sports-places?since=2020-01-01%2000:00:00.000"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (vector? body))
@@ -365,7 +365,7 @@
             site (-> (test-utils/make-point-site 95001 :name "Deleted Site 1")
                      (assoc :event-date "2024-06-15T10:30:00.000Z"))
             _ (create-deleted-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
+            resp ((test-app) (mock/request :get "/v1/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (vector? body))
@@ -392,7 +392,7 @@
             _ (create-deleted-sports-site! old-site)
             _ (create-deleted-sports-site! new-site)
             ;; Query with since=2024-01-01 should only return the new site
-            resp ((test-app) (mock/request :get "/rest/api/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
+            resp ((test-app) (mock/request :get "/v1/deleted-sports-places?since=2024-01-01%2000:00:00.000"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         ;; Should have the new site (95003) and the one from previous test (95001)
@@ -401,13 +401,13 @@
           (is (contains? ids 95003) "Should include new deleted site")
           (is (not (contains? ids 95002)) "Should NOT include old deleted site (before since)"))))))
 
-;;; Tests for GET /rest/api/categories ;;;
+;;; Tests for GET /v1/categories ;;;
 
 (deftest categories-endpoint-test
-  (testing "GET /rest/api/categories"
+  (testing "GET /v1/categories"
 
     (testing "returns 200 with categories"
-      (let [resp ((test-app) (mock/request :get "/rest/api/categories"))
+      (let [resp ((test-app) (mock/request :get "/v1/categories"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (vector? body))
@@ -419,13 +419,13 @@
 
     (testing "respects lang parameter"
       (doseq [lang ["fi" "en" "se"]]
-        (let [resp ((test-app) (mock/request :get (str "/rest/api/categories?lang=" lang)))
+        (let [resp ((test-app) (mock/request :get (str "/v1/categories?lang=" lang)))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (vector? body)))))
 
     (testing "subCategories are populated (not empty)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/categories"))
+      (let [resp ((test-app) (mock/request :get "/v1/categories"))
             body (parse-json-body resp)
             ;; Find a category that should have subcategories (e.g., typeCode 0 or 1000)
             category-with-subcats (some #(when (seq (:subCategories %)) %) body)]
@@ -439,13 +439,13 @@
               (is (vector? (:sportsPlaceTypes subcat)) "subCategory should have sportsPlaceTypes vector")
               (is (every? integer? (:sportsPlaceTypes subcat)) "sportsPlaceTypes should be integers"))))))))
 
-;;; Tests for GET /rest/api/sports-place-types ;;;
+;;; Tests for GET /v1/sports-place-types ;;;
 
 (deftest sports-place-types-list-test
-  (testing "GET /rest/api/sports-place-types"
+  (testing "GET /v1/sports-place-types"
 
     (testing "returns 200 with all types"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (vector? body))
@@ -459,18 +459,18 @@
 
     (testing "respects lang parameter"
       (doseq [lang ["fi" "en" "se"]]
-        (let [resp ((test-app) (mock/request :get (str "/rest/api/sports-place-types?lang=" lang)))
+        (let [resp ((test-app) (mock/request :get (str "/v1/sports-place-types?lang=" lang)))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (vector? body)))))))
 
-;;; Tests for GET /rest/api/sports-place-types/:code ;;;
+;;; Tests for GET /v1/sports-place-types/:code ;;;
 
 (deftest sports-place-type-detail-test
-  (testing "GET /rest/api/sports-place-types/:code"
+  (testing "GET /v1/sports-place-types/:code"
 
     (testing "returns 200 for valid type code 1120 (Lähiliikuntapaikka)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/1120"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 1120 (:typeCode body)))
@@ -481,7 +481,7 @@
         (is (map? (:properties body)) "Should have properties map (key: 'properties' not 'props')")))
 
     (testing "type 1120 includes infoFi property"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/1120"))
             body (parse-json-body resp)
             info-fi (get-in body [:properties :infoFi])]
         (is (some? info-fi) "Type 1120 should include infoFi property")
@@ -491,7 +491,7 @@
           (is (= "string" (:dataType info-fi)) "infoFi dataType should be string"))))
 
     (testing "returns 200 for type code 1310 (Football field)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1310"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/1310"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 1310 (:typeCode body)))
@@ -499,21 +499,21 @@
         (is (#{"Point" "LineString" "Polygon"} (:geometryType body)))))
 
     (testing "returns 200 for type code 4401 (Jogging track - LineString)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/4401"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/4401"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 4401 (:typeCode body)))
         (is (= "LineString" (:geometryType body)))))
 
     (testing "returns 200 for type code 103 (Outdoor area - Polygon)"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/103"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/103"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= 103 (:typeCode body)))
         (is (= "Polygon" (:geometryType body)))))
 
     (testing "property definitions have required fields"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/1120"))
             body (parse-json-body resp)]
         (is (map? (:properties body)) "Should have properties map")
         (is (nil? (:props body)) "Should NOT have props key (legacy uses 'properties')")
@@ -531,7 +531,7 @@
 
     (testing "enum properties are coerced to string dataType"
       ;; Type 1120 has surfaceMaterial which is enum-coll in the source data
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/1120"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/1120"))
             body (parse-json-body resp)
             surface-material (get-in body [:properties :surfaceMaterial])]
         (is (some? surface-material) "Type 1120 should have surfaceMaterial property")
@@ -542,7 +542,7 @@
               "surfaceMaterial should not have opts (enum options removed)"))))
 
     (testing "properties key uses legacy format without question marks"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-place-types/6210"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-place-types/6210"))
             body (parse-json-body resp)
             prop-keys (when (:properties body) (keys (:properties body)))]
         (is (some? prop-keys) "Type 6210 should have properties")
@@ -555,7 +555,7 @@
 
     (testing "respects lang parameter"
       (doseq [lang ["fi" "en" "se"]]
-        (let [resp ((test-app) (mock/request :get (str "/rest/api/sports-place-types/1120?lang=" lang)))
+        (let [resp ((test-app) (mock/request :get (str "/v1/sports-place-types/1120?lang=" lang)))
               body (parse-json-body resp)]
           (is (= 200 (:status resp)))
           (is (= 1120 (:typeCode body))))))))
@@ -568,7 +568,7 @@
     (testing "Point geometry site"
       (let [site (test-utils/make-point-site 80001 :name "Point Site" :type-code 1120)
             _ (create-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/sports-places/80001"))
+            resp ((test-app) (mock/request :get "/v1/sports-places/80001"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= "Point" (-> body :location :geometries :features first :geometry :type)))))
@@ -576,7 +576,7 @@
     (testing "LineString geometry site (route)"
       (let [site (test-utils/make-route-site 80002 :name "Route Site" :type-code 4405)
             _ (create-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/sports-places/80002"))
+            resp ((test-app) (mock/request :get "/v1/sports-places/80002"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= "LineString" (-> body :location :geometries :features first :geometry :type)))))
@@ -584,7 +584,7 @@
     (testing "Polygon geometry site (area)"
       (let [site (test-utils/make-area-site 80003 :name "Area Site" :type-code 103)
             _ (create-sports-site! site)
-            resp ((test-app) (mock/request :get "/rest/api/sports-places/80003"))
+            resp ((test-app) (mock/request :get "/v1/sports-places/80003"))
             body (parse-json-body resp)]
         (is (= 200 (:status resp)))
         (is (= "Polygon" (-> body :location :geometries :features first :geometry :type)))))))
@@ -601,7 +601,7 @@
                           :event-date "2024-01-15T12:30:45.123Z")
                    (assoc-in [:properties :ligthing?] true))
           _ (create-sports-site! site)
-          resp ((test-app) (mock/request :get "/rest/api/sports-places/90001"))
+          resp ((test-app) (mock/request :get "/v1/sports-places/90001"))
           body (parse-json-body resp)]
       (is (= 200 (:status resp)))
 
@@ -646,10 +646,10 @@
 
 (deftest invalid-page-size-test
   (testing "Invalid pageSize returns 400"
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=0"))]
+    (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=0"))]
       (is (= 400 (:status resp))))
 
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=101"))]
+    (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=101"))]
       (is (= 400 (:status resp))))))
 
 ;;; Tests for production behavior compliance ;;;
@@ -660,7 +660,7 @@
     (doseq [id [10500 10200 10700 10300 10100]]
       (create-sports-site! (test-utils/make-point-site id :name (str "Sort Test " id))))
 
-    (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=100"))
+    (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=100"))
           body (parse-json-body resp)
           ids (mapv :sportsPlaceId body)]
       (is (#{200 206} (:status resp)))
@@ -672,7 +672,7 @@
   (testing "Error response format matches production API"
 
     (testing "404 Not Found response format"
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places/999999999"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places/999999999"))
             body (parse-json-body resp)]
         (is (= 404 (:status resp)))
         ;; Production format: {"errors":{"sportsPlaceId":"Didn't find such sports place. :("}}
@@ -683,7 +683,7 @@
 
     (testing "400 Bad Request - invalid typeCodes format"
       ;; Production returns: {"errors":{"typeCodes":["(not (#{ ...valid codes... } :invalid))"]}}
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?typeCodes=invalid"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?typeCodes=invalid"))
             body (parse-json-body resp)]
         (is (= 400 (:status resp)))
         (is (map? (:errors body)) "Should have 'errors' key")))
@@ -692,7 +692,7 @@
       ;; The issue: local was showing raw Malli schema objects like
       ;; "malli.core$_simple_schema$reify$reify__39032@6f9688bd"
       ;; instead of human-readable messages
-      (let [resp ((test-app) (mock/request :get "/rest/api/sports-places?pageSize=abc"))
+      (let [resp ((test-app) (mock/request :get "/v1/sports-places?pageSize=abc"))
             body (parse-json-body resp)]
         (is (= 400 (:status resp)))
         (is (map? (:errors body)) "Should have 'errors' key")
@@ -715,7 +715,7 @@
       (create-sports-site! (test-utils/make-point-site (+ 65000 i) :name (str "HEAD Test Site " i))))
 
     (testing "HEAD on /sports-places returns 206 with headers but no body"
-      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places?pageSize=3"))]
+      (let [resp ((test-app) (mock/request :head "/v1/sports-places?pageSize=3"))]
         (is (= 206 (:status resp))
             "HEAD should return 206 Partial Content like GET")
         (is (some? (get-in resp [:headers "Link"]))
@@ -730,17 +730,17 @@
 
     (testing "HEAD on /sports-places returns 200 when no pagination needed"
       ;; Query for a specific type that has only a few results
-      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places?pageSize=100"))]
+      (let [resp ((test-app) (mock/request :head "/v1/sports-places?pageSize=100"))]
         (is (#{200 206} (:status resp))
             "HEAD should return valid status")))
 
     (testing "HEAD on /sports-places/:id returns 200"
-      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places/65001"))]
+      (let [resp ((test-app) (mock/request :head "/v1/sports-places/65001"))]
         (is (= 200 (:status resp))
             "HEAD on single item should return 200")))
 
     (testing "HEAD on /sports-places/:id returns 404 for missing"
-      (let [resp ((test-app) (mock/request :head "/rest/api/sports-places/999999999"))]
+      (let [resp ((test-app) (mock/request :head "/v1/sports-places/999999999"))]
         (is (= 404 (:status resp))
             "HEAD on missing item should return 404")))))
 

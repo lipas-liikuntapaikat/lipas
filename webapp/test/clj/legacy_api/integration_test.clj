@@ -80,7 +80,7 @@
                                              :properties {:ligthing? true
                                                           :surface-material ["artificial-turf"]})
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/100001")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/100001")]
 
         ;; Verify HTTP success
         (is (= 200 status))
@@ -111,7 +111,7 @@
                                                      :pool-length-m 50
                                                      :pool-tracks-count 8)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/100002")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/100002")]
 
         (is (= 200 status))
         (is (= 3110 (-> body :type :typeCode)))
@@ -128,7 +128,7 @@
                                                    :field-length-m 60
                                                    :field-width-m 30)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/100003")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/100003")]
 
         (is (= 200 status))
         (is (= 2510 (-> body :type :typeCode)))))))
@@ -141,7 +141,7 @@
                                                     :name "Retkeilyreitti"
                                                     :route-length-km 8.5)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/200001")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/200001")]
 
         (is (= 200 status))
         (is (= 4405 (-> body :type :typeCode)))
@@ -158,7 +158,7 @@
                                                  :route-length-km 15.0
                                                  :lit-route-length-km 5.0)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/200002")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/200002")]
 
         (is (= 200 status))
         (is (= 4402 (-> body :type :typeCode)))))
@@ -169,7 +169,7 @@
                                                       :name "Moniosainen reitti"
                                                       :properties {:route-length-km 12.0})
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/200003")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/200003")]
 
         (is (= 200 status))
         (is (= 4405 (-> body :type :typeCode)))
@@ -190,7 +190,7 @@
                                                    :playground? true
                                                    :ligthing? true)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/300001")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/300001")]
 
         (is (= 200 status))
         (is (= 1110 (-> body :type :typeCode)))
@@ -209,7 +209,7 @@
                                                    :playground? false
                                                    :ligthing? true)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/300002")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/300002")]
 
         (is (= 200 status))
         (is (= 1110 (-> body :type :typeCode)))))
@@ -219,7 +219,7 @@
                                                                :name "Ulkoilualue"
                                                                :free-use? true)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/300003")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/300003")]
 
         (is (= 200 status))
         (is (= 103 (-> body :type :typeCode)))))
@@ -230,7 +230,7 @@
                                                      :name "Moniosainen alue"
                                                      :properties {:free-use? true})
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/300004")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/300004")]
 
         (is (= 200 status))
         (is (= 103 (-> body :type :typeCode)))
@@ -292,7 +292,7 @@
                                            :type-code 1120
                                            :city-code "91")
           _ (save-and-index! site)
-          {:keys [status body]} (query-legacy-api "/rest/api/sports-places")]
+          {:keys [status body]} (query-legacy-api "/v1/sports-places")]
 
       (is (#{200 206} status))
       (is (vector? body) "List response must be a vector")
@@ -308,7 +308,7 @@
                                            :type-code 1120
                                            :city-code "91")
           _ (save-and-index! site)
-          {:keys [status body]} (query-legacy-api "/rest/api/sports-places?fields=name&fields=type.typeCode")]
+          {:keys [status body]} (query-legacy-api "/v1/sports-places?fields=name&fields=type.typeCode")]
 
       (is (#{200 206} status))
       (when-let [item (first (filter #(= 450002 (:sportsPlaceId %)) body))]
@@ -325,7 +325,7 @@
     (testing "/sports-places/:id response structure"
       (let [site (test-utils/make-point-site 500001)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/500001")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/500001")]
 
         (is (= 200 status))
 
@@ -347,7 +347,7 @@
       (let [site (test-utils/make-point-site 500002)
             _ (save-and-index! site)
             ;; Use valid field names from legacy-fields list
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places?fields=name&fields=type.typeCode&fields=type.name&fields=location.city.cityCode")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places?fields=name&fields=type.typeCode&fields=type.name&fields=location.city.cityCode")]
 
         (is (#{200 206} status))
         (is (vector? body) "List response must be a vector")
@@ -357,7 +357,7 @@
             (is (string? (:name item)))))))
 
     (testing "/categories response structure"
-      (let [{:keys [status body]} (query-legacy-api "/rest/api/categories")]
+      (let [{:keys [status body]} (query-legacy-api "/v1/categories")]
         (is (= 200 status))
         (is (vector? body))
         (when (seq body)
@@ -367,7 +367,7 @@
             (is (vector? (:subCategories cat)))))))
 
     (testing "/sports-place-types response structure"
-      (let [{:keys [status body]} (query-legacy-api "/rest/api/sports-place-types")]
+      (let [{:keys [status body]} (query-legacy-api "/v1/sports-place-types")]
         (is (= 200 status))
         (is (vector? body))
         (is (> (count body) 100) "Should have many types")
@@ -379,17 +379,17 @@
 
     (testing "/sports-place-types/:code response structure for different geometry types"
       ;; Point type
-      (let [{:keys [status body]} (query-legacy-api "/rest/api/sports-place-types/1120")]
+      (let [{:keys [status body]} (query-legacy-api "/v1/sports-place-types/1120")]
         (is (= 200 status))
         (is (= "Point" (:geometryType body))))
 
       ;; LineString type (route)
-      (let [{:keys [status body]} (query-legacy-api "/rest/api/sports-place-types/4405")]
+      (let [{:keys [status body]} (query-legacy-api "/v1/sports-place-types/4405")]
         (is (= 200 status))
         (is (= "LineString" (:geometryType body))))
 
       ;; Polygon type (area)
-      (let [{:keys [status body]} (query-legacy-api "/rest/api/sports-place-types/103")]
+      (let [{:keys [status body]} (query-legacy-api "/v1/sports-place-types/103")]
         (is (= 200 status))
         (is (= "Polygon" (:geometryType body)))))))
 
@@ -407,19 +407,19 @@
 
       ;; Filter by type code - routes only (need to request type.typeCode field)
       (testing "Filter by route type code"
-        (let [{:keys [body]} (query-legacy-api "/rest/api/sports-places?typeCodes=4405&fields=type.typeCode")]
+        (let [{:keys [body]} (query-legacy-api "/v1/sports-places?typeCodes=4405&fields=type.typeCode")]
           (is (every? #(= 4405 (-> % :type :typeCode)) body)
               "Should only return routes")))
 
       ;; Filter by city code (need to request location.city.cityCode field)
       (testing "Filter by city code"
-        (let [{:keys [body]} (query-legacy-api "/rest/api/sports-places?cityCodes=91&fields=location.city.cityCode")]
+        (let [{:keys [body]} (query-legacy-api "/v1/sports-places?cityCodes=91&fields=location.city.cityCode")]
           (is (every? #(= 91 (-> % :location :city :cityCode)) body)
               "Should only return Helsinki sites")))
 
       ;; Filter by multiple type codes (need to request type.typeCode field)
       (testing "Filter by multiple type codes"
-        (let [{:keys [body]} (query-legacy-api "/rest/api/sports-places?typeCodes=1120&typeCodes=103&fields=type.typeCode")]
+        (let [{:keys [body]} (query-legacy-api "/v1/sports-places?typeCodes=1120&typeCodes=103&fields=type.typeCode")]
           (is (every? #(#{1120 103} (-> % :type :typeCode)) body)
               "Should return point and polygon types"))))))
 
@@ -431,14 +431,14 @@
         (save-and-index! site)))
 
     (testing "206 Partial Content when paginated"
-      (let [{:keys [status headers]} (query-legacy-api "/rest/api/sports-places?pageSize=5")]
+      (let [{:keys [status headers]} (query-legacy-api "/v1/sports-places?pageSize=5")]
         (is (= 206 status) "Should return 206 when more results available")
         (is (some? (get headers "Link")) "Should have Link header")
         (is (some? (get headers "X-total-count")) "Should have X-total-count header")))
 
     (testing "Page parameter works"
-      (let [page1 (query-legacy-api "/rest/api/sports-places?pageSize=5&page=1")
-            page2 (query-legacy-api "/rest/api/sports-places?pageSize=5&page=2")
+      (let [page1 (query-legacy-api "/v1/sports-places?pageSize=5&page=1")
+            page2 (query-legacy-api "/v1/sports-places?pageSize=5&page=2")
             ids1 (set (map :sportsPlaceId (:body page1)))
             ids2 (set (map :sportsPlaceId (:body page2)))]
         (is (empty? (clojure.set/intersection ids1 ids2))
@@ -462,17 +462,17 @@
       (let [site (test-utils/make-point-site (+ 750000 i) :name (str "Link Path Test " i))]
         (save-and-index! site)))
 
-    (testing "Default base path is /rest/api when no X-Forwarded-Prefix header"
-      (let [{:keys [status headers]} (query-legacy-api "/rest/api/sports-places?pageSize=5")]
+    (testing "Default base path is /v1 when no X-Forwarded-Prefix header"
+      (let [{:keys [status headers]} (query-legacy-api "/v1/sports-places?pageSize=5")]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
-          (is (re-find #"/rest/api/sports-places" link-header)
-              "Link header should use /rest/api prefix"))))
+          (is (re-find #"/v1/sports-places" link-header)
+              "Link header should use /v1 prefix"))))
 
     (testing "Uses /v1 prefix when X-Forwarded-Prefix is /v1 (api.lipas.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/rest/api/sports-places?pageSize=5"
+                                      "/v1/sports-places?pageSize=5"
                                       {"x-forwarded-prefix" "/v1"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
@@ -482,25 +482,25 @@
 
     (testing "Uses /api prefix when X-Forwarded-Prefix is /api (lipas.cc.jyu.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/rest/api/sports-places?pageSize=5"
+                                      "/v1/sports-places?pageSize=5"
                                       {"x-forwarded-prefix" "/api"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
           (is (re-find #"/api/sports-places" link-header)
               "Link header should use /api prefix")
-          (is (not (re-find #"/rest/api" link-header))
-              "Link header should NOT contain /rest/api"))))
+          (is (not (re-find #"/v1" link-header))
+              "Link header should NOT contain /v1"))))
 
-    (testing "Uses /rest/api prefix when X-Forwarded-Prefix is /rest/api (lipas.fi)"
+    (testing "Uses /v1 prefix when X-Forwarded-Prefix is /v1 (lipas.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/rest/api/sports-places?pageSize=5"
-                                      {"x-forwarded-prefix" "/rest/api"})]
+                                      "/v1/sports-places?pageSize=5"
+                                      {"x-forwarded-prefix" "/v1"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
-          (is (re-find #"/rest/api/sports-places" link-header)
-              "Link header should use /rest/api prefix"))))))
+          (is (re-find #"/v1/sports-places" link-header)
+              "Link header should use /v1 prefix"))))))
 
 (deftest type-specific-properties-test
   (testing "Type-specific properties are correctly transformed"
@@ -510,7 +510,7 @@
                                                  :route-length-km 10.5
                                                  :lit-route-length-km 3.5)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/800001")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/800001")]
         (is (= 200 status))
         ;; Properties should be camelCase if present
         (when-let [props (:properties body)]
@@ -524,7 +524,7 @@
                                                      :pool-tracks-count 10
                                                      :pool-width-m 25)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/800002")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/800002")]
         (is (= 200 status))
         (when-let [props (:properties body)]
           (doseq [k (keys props)]
@@ -538,7 +538,7 @@
                                                    :playground? true
                                                    :ligthing? true)
             _ (save-and-index! site)
-            {:keys [status body]} (query-legacy-api "/rest/api/sports-places/800003")]
+            {:keys [status body]} (query-legacy-api "/v1/sports-places/800003")]
         (is (= 200 status))
         (when-let [props (:properties body)]
           (doseq [k (keys props)]
@@ -548,7 +548,7 @@
 ;;; Tests for production comparison findings ;;;
 
 (deftest geo-proximity-filter-test
-  (testing "GET /rest/api/sports-places with geo proximity filter"
+  (testing "GET /v1/sports-places with geo proximity filter"
     ;; Create sites at known coordinates
     ;; Helsinki center: 60.1699, 24.9384
     ;; Site 1: Very close to center (should be found within 1km)
@@ -568,7 +568,7 @@
 
       (testing "filters by closeToLon, closeToLat, closeToDistanceKm"
         (let [{:keys [status body]} (query-legacy-api
-                                     "/rest/api/sports-places?closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1")]
+                                     "/v1/sports-places?closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1")]
           (is (#{200 206} status) "Should return 200 or 206, not an error")
           (is (vector? body) "Response should be a vector")
           ;; The Helsinki center site should be found (within 1km)
@@ -586,7 +586,7 @@
                                            :admin "city-technical-services"
                                            :owner "city")
           _ (save-and-index! site)
-          {:keys [status body]} (query-legacy-api "/rest/api/sports-places/910001?lang=en")]
+          {:keys [status body]} (query-legacy-api "/v1/sports-places/910001?lang=en")]
 
       (is (= 200 status))
 
@@ -607,7 +607,7 @@
         (save-and-index! site)))
 
     (testing "Link header uses camelCase param names and omits empty values"
-      (let [{:keys [headers]} (query-legacy-api "/rest/api/sports-places?pageSize=3&typeCodes=1120")]
+      (let [{:keys [headers]} (query-legacy-api "/v1/sports-places?pageSize=3&typeCodes=1120")]
         (let [link-header (get headers "Link")]
           (is (some? link-header) "Should have Link header")
 

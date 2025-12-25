@@ -70,7 +70,7 @@
    (let [default-handler (:reitit.coercion/request-coercion exception/default-handlers)]
      (fn [e request]
        (log/errorf e "Request coercion error")
-       (if (clojure.string/starts-with? (:uri request) "/rest/api")
+       (if (clojure.string/starts-with? (:uri request) "/v1")
          ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
          ;; Use malli.error/humanize to get human-readable messages
          (let [{:keys [schema value errors]} (ex-data e)

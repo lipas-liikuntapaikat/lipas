@@ -77,13 +77,13 @@
              (http/extract-base-path {:headers {"x-forwarded-prefix" "/api"}}))))
 
     (testing "falls back to extracting from request URI when no header"
-      ;; Request URI: /rest/api/sports-places -> base path: /rest/api
-      (is (= "/rest/api"
-             (http/extract-base-path {:uri "/rest/api/sports-places"
+      ;; Request URI: /v1/sports-places -> base path: /v1
+      (is (= "/v1"
+             (http/extract-base-path {:uri "/v1/sports-places"
                                       :headers {}})))
-      ;; Request URI: /rest/api/sports-places/123 -> base path: /rest/api
-      (is (= "/rest/api"
-             (http/extract-base-path {:uri "/rest/api/sports-places/123"
+      ;; Request URI: /v1/sports-places/123 -> base path: /v1
+      (is (= "/v1"
+             (http/extract-base-path {:uri "/v1/sports-places/123"
                                       :headers {}}))))
 
     (testing "handles case-insensitive header names"
