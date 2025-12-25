@@ -110,6 +110,10 @@ Access to the hierarchical type classification system used for categorizing spor
            ;; these routes from that.
       :swagger {:id :hide-from-default}
       :coercion malli/coercion}
+     [""
+      {:no-doc true :get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
+     ["/"
+      {:no-doc true :get {:handler (fn [_] {:status 200 :body {:status "healthy"}})}}]
      ["/sports-places/:sports-place-id"
       {:parameters {:query [:map [:lang {:optional true} #'v1-schema/lang]]
                     :path [:map [:sports-place-id :int]]}
