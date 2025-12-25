@@ -12,8 +12,13 @@ nginx is configured to use the certs.
 **NEVER PUSH CERTIFICATES INTO VERSION CONTROL**. This should be
 handled by `.gitignore` in project root.
 
-Instructions for generating self-signed ssl-certificate can be found
-[here](https://devcenter.heroku.com/articles/ssl-certificate-self).
+## Generating Self-Signed Certificate (Development)
+
+```bash
+openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+    -subj "/C=FI/ST=Dev/L=Local/O=LIPAS/CN=localhost" \
+    -keyout certs/server.key -out certs/server.crt
+```
 
 ## Certificate Structure
 
