@@ -1,4 +1,4 @@
-(ns legacy-api.handler-test
+(ns lipas.backend.api.v1.handler-test
   "Integration tests for the Legacy API (V1).
 
    These tests verify that:
@@ -745,7 +745,7 @@
             "HEAD on missing item should return 404")))))
 
 (comment
-  (clojure.test/run-tests 'legacy-api.handler-test)
+  (clojure.test/run-tests 'lipas.backend.api.v1.handler-test)
 
   (clojure.test/run-test-var #'get-single-sports-place-test)
   (clojure.test/run-test-var #'list-sports-places-empty-test)

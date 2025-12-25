@@ -1,4 +1,4 @@
-(ns legacy-api.integration-test
+(ns lipas.backend.api.v1.integration-test
   "End-to-end integration tests for the Legacy API reindexing pipeline.
 
    These tests verify the complete data flow:
@@ -18,7 +18,7 @@
    - Type-specific properties (pools, rinks, route lengths, etc.)"
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [legacy-api.transform :as legacy-transform]
+   [lipas.backend.api.v1.transform :as legacy-transform]
    [lipas.backend.core :as core]
    [lipas.test-utils :as test-utils]
    [ring.mock.request :as mock]))
@@ -627,7 +627,7 @@
 
 (comment
   ;; Run all tests in this namespace
-  (clojure.test/run-tests 'legacy-api.integration-test)
+  (clojure.test/run-tests 'lipas.backend.api.v1.integration-test)
 
   ;; Run specific tests
   (clojure.test/run-test-var #'point-geometry-pipeline-test)

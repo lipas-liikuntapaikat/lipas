@@ -1,8 +1,8 @@
-(ns legacy-api.sports-place
+(ns lipas.backend.api.v1.sports-place
   (:require
    [clojure.set :as set]
    [clojure.string :as str]
-   [legacy-api.util :refer [parse-path parse-year select-paths]]
+   [lipas.backend.api.v1.util :refer [parse-path parse-year select-paths]]
    [lipas.data.admins :as admins]
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
@@ -523,4 +523,3 @@
                                                            (map :length-m)
                                                            (reduce utils/+safe))}))]
     (update m :properties merge pool-props)))
-

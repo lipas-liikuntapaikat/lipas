@@ -1,4 +1,4 @@
-(ns legacy-api.api
+(ns lipas.backend.api.v1.handlers
   (:require [clojure.string :as str]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]

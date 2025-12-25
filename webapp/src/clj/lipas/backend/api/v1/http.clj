@@ -1,4 +1,4 @@
-(ns legacy-api.http
+(ns lipas.backend.api.v1.http
   (:require [clojure.string :as str]
             [ring.util.codec :refer [form-encode]]))
 
@@ -45,20 +45,19 @@
    Different entry points set different prefixes:
    - api.lipas.fi/v1/...              -> /v1
    - lipas.fi/rest/api/...            -> /rest/api
-   - lipas.cc.jyu.fi/api/...          -> /api
-   - lipas.fi/legacy-api/...          -> /legacy-api"
+   - lipas.cc.jyu.fi/api/...          -> /api"
   [req]
   (let [headers (:headers req)
         forwarded-prefix (get-header headers "x-forwarded-prefix")]
     (if forwarded-prefix
       forwarded-prefix
       ;; Fallback: extract from URI
-      ;; URI looks like: /rest/api/sports-places or /rest/api/sports-places/123
-      ;; We want to extract: /rest/api
+      ;; URI looks like: /v1/sports-places or /v1/sports-places/123
+      ;; We want to extract: /v1
       (let [uri (:uri req)]
         (when uri
           (let [;; Match known patterns (order matters - more specific first)
-                patterns [#"^(/rest/api)" #"^(/legacy-api)" #"^(/api)" #"^(/v1)"]
+                patterns [#"^(/rest/api)" #"^(/api)" #"^(/v1)"]
                 match (some #(re-find % uri) patterns)]
             (when match
               (second match))))))))

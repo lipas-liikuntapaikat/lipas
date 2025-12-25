@@ -7,7 +7,7 @@
             [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites :as sports-sites]
             [lipas.data.types :as types]
-            [legacy-api.sports-place :as legacy-utils]
+            [lipas.backend.api.v1.sports-place :as legacy-utils]
             [lipas.schema.sports-sites.circumstances :as circumastances]
             [lipas.wfs.mappings :as wfs]))
 
@@ -58,16 +58,16 @@
 (defn create-excel
   [os]
   (excel/save-workbook-into-stream! os
-   (excel/create-workbook
-    "Liikuntapaikka" sports-sites/csv-data
-    "Liikuntapaikkatyypit" types/csv-data
-    "Ominaisuudet" prop-types/csv-data
-    "Luokitellut ominaisuudet" prop-types/enum-csv-data
-    "Tyypit+Ominaisuudet" types/csv-data-with-props
-    "Omistajaluokat" owners/csv-data
-    "Ylläpitäjäluokat" admins/csv-data
-    "Aktiviteetit (UTP)" activities/csv-data
-    "Muut kohteet" loi/csv-data
-    "Salibandyn olosuhdetiedot" (circumastances/schema->csv-data)
-    "WFS-tasot" wfs/csv-data
-    "Tekniset mäppäykset" legacy-mappings-csv)))
+                                    (excel/create-workbook
+                                     "Liikuntapaikka" sports-sites/csv-data
+                                     "Liikuntapaikkatyypit" types/csv-data
+                                     "Ominaisuudet" prop-types/csv-data
+                                     "Luokitellut ominaisuudet" prop-types/enum-csv-data
+                                     "Tyypit+Ominaisuudet" types/csv-data-with-props
+                                     "Omistajaluokat" owners/csv-data
+                                     "Ylläpitäjäluokat" admins/csv-data
+                                     "Aktiviteetit (UTP)" activities/csv-data
+                                     "Muut kohteet" loi/csv-data
+                                     "Salibandyn olosuhdetiedot" (circumastances/schema->csv-data)
+                                     "WFS-tasot" wfs/csv-data
+                                     "Tekniset mäppäykset" legacy-mappings-csv)))

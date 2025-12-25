@@ -1,12 +1,12 @@
-(ns legacy-api.http-test
-  "Unit tests for legacy-api.http namespace.
+(ns lipas.backend.api.v1.http-test
+  "Unit tests for lipas.backend.api.v1.http namespace.
 
    These tests verify:
    1. Pagination link generation
    2. Dynamic base path support for different entry points"
   (:require
    [clojure.test :refer [deftest is testing]]
-   [legacy-api.http :as http]))
+   [lipas.backend.api.v1.http :as http]))
 
 ;;; Tests for create-page-links ;;;
 
@@ -106,6 +106,6 @@
              (http/build-sports-places-path "/api"))))))
 
 (comment
-  (clojure.test/run-tests 'legacy-api.http-test)
+  (clojure.test/run-tests 'lipas.backend.api.v1.http-test)
   (clojure.test/run-test-var #'create-page-links-test)
   (clojure.test/run-test-var #'extract-base-path-test))

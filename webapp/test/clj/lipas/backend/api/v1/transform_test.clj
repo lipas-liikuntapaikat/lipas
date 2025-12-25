@@ -1,4 +1,4 @@
-(ns legacy-api.transform-test
+(ns lipas.backend.api.v1.transform-test
   "Unit tests for the legacy API transformation logic.
 
    These tests verify that ->old-lipas-sports-site correctly transforms
@@ -11,8 +11,8 @@
    - Type-specific transformations (ice stadiums, swimming pools, golf)"
   (:require
    [clojure.test :refer [deftest testing is]]
-   [legacy-api.transform :as transform]
-   [legacy-api.sports-place :as legacy-sports-place]
+   [lipas.backend.api.v1.transform :as transform]
+   [lipas.backend.api.v1.sports-place :as legacy-sports-place]
    [clojure.set :as set]))
 
 ;;; Test data - representative examples of new LIPAS format
@@ -375,7 +375,7 @@
 
 (comment
   ;; Run all tests
-  (clojure.test/run-tests 'legacy-api.transform-test)
+  (clojure.test/run-tests 'lipas.backend.api.v1.transform-test)
 
   ;; Run specific test
   (clojure.test/run-test-var #'UTC->last-modified-test)

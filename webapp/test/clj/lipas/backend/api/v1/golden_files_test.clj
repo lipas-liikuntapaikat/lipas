@@ -1,4 +1,4 @@
-(ns legacy-api.golden-files-test
+(ns lipas.backend.api.v1.golden-files-test
   "Golden file tests verify that our transformation produces output
    matching the production legacy API format.
 
@@ -17,8 +17,8 @@
    [clojure.java.io :as io]
    [clojure.set :as set]
    [clojure.test :refer [deftest is testing]]
-   [legacy-api.sports-place :as legacy-sports-place]
-   [legacy-api.transform :as transform]))
+   [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+   [lipas.backend.api.v1.transform :as transform]))
 
 ;;; Fixture loading helpers
 
@@ -302,4 +302,4 @@
 
 (comment
   ;; Run tests
-  (clojure.test/run-tests 'legacy-api.golden-files-test))
+  (clojure.test/run-tests 'lipas.backend.api.v1.golden-files-test))

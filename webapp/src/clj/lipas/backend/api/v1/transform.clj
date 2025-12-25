@@ -1,8 +1,8 @@
-(ns legacy-api.transform
+(ns lipas.backend.api.v1.transform
   (:require
    [clojure.set :as set]
    [lipas.data.types :as types]
-   [legacy-api.sports-place :as old]
+   [lipas.backend.api.v1.sports-place :as old]
    [lipas.utils :as utils]
    [clojure.string :as str]
    [lipas.backend.gis :as gis]))

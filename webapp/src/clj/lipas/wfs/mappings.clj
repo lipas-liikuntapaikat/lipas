@@ -6,7 +6,7 @@
             [lipas.data.owners :as owners]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
-            [legacy-api.sports-place :as legacy-utils]))
+            [lipas.backend.api.v1.sports-place :as legacy-utils]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 

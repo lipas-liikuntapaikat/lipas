@@ -1,4 +1,4 @@
-(ns legacy-api.search
+(ns lipas.backend.api.v1.search
   (:require [qbits.spandex :as es]
             [qbits.spandex.utils :as es-utils]
             [clojure.string :as str]

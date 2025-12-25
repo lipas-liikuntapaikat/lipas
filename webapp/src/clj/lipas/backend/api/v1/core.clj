@@ -1,11 +1,11 @@
-(ns legacy-api.core
+(ns lipas.backend.api.v1.core
   (:require
    [clojure.core.async :as async]
-   [legacy-api.search :as es]
-   [legacy-api.sports-place :refer [filter-and-format
-                                    format-sports-place-es]]
-   [legacy-api.transform :as transform]
-   [legacy-api.util :refer [only-non-nil-recur] :as util]
+   [lipas.backend.api.v1.search :as es]
+   [lipas.backend.api.v1.sports-place :refer [filter-and-format
+                                              format-sports-place-es]]
+   [lipas.backend.api.v1.transform :as transform]
+   [lipas.backend.api.v1.util :refer [only-non-nil-recur] :as util]
    [lipas.backend.search :as search]
    [taoensso.timbre :as log]))
 

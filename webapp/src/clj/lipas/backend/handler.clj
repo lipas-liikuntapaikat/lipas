@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
-            [legacy-api.routes :as legacy]
+            [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.core :as core]
@@ -916,7 +916,7 @@
       (ptv-handler/routes ctx)
       (jobs-handler/routes ctx)]
 
-     (legacy/routes ctx)
+     (v1/routes ctx)
      (v2/routes ctx)]
 
     {:data
