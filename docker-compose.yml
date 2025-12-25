@@ -54,6 +54,7 @@ services:
       - '443:443'
       - '444:444'
       - '8025:8025'
+      - '8082:8082'  # Test port for lipas.cc.jyu.fi /api/* pattern
     links:
       - mapproxy
       - logstash

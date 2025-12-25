@@ -70,6 +70,22 @@ Common property `infoFi` is added to all types.
    - 206 Partial Content for paginated results
    - Link headers and X-total-count headers work
 
+### Nginx Routing Verified Locally
+
+All three production entry points have been verified locally via `proxy_local.conf`:
+
+| Production Entry Point | Local Test URL | X-Forwarded-Prefix | Status |
+|------------------------|----------------|-------------------|--------|
+| `lipas.fi/rest/api/*` | `https://localhost/rest/api/*` | `/rest/api` | ✅ Verified |
+| `api.lipas.fi/v1/*` | `https://localhost/v1/*` | `/v1` | ✅ Verified |
+| `lipas.cc.jyu.fi/api/*` | `http://localhost:8082/api/*` | `/api` | ✅ Verified |
+
+**What was verified:**
+- URL path rewriting (`/rest/api/*` → `/v1/*`, `/api/*` → `/v1/*`)
+- `X-Forwarded-Prefix` header passed to backend for Link header generation
+- Query string preservation (`$is_args$args`)
+- Link headers use correct prefix based on entry point
+
 ### Known Limitations
 
 1. **Field selection**: Tests for field selection (`?fields=name,type`) are commented out because sparse responses don't match the full schema
