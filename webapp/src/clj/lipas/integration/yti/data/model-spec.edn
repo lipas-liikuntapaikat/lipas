@@ -10,8 +10,13 @@
 ;; 2. sync-model! reads this spec and creates/updates in YTI
 ;; 3. Changes are validated against schema before sync
 ;;
-;; Last updated: 2025-11-30
+;; Last updated: 2025-12-17
 ;; Status: development (use lipasdev prefix for testing)
+;;
+;; lipasdev10 changes:
+;; 1. Code lists moved from 'educ' registry to 'LIIULK' (Liikunta ja ulkoilu)
+;;    - Registry URL: https://koodistot.suomi.fi/registry;registryCode=LIIULK
+;;    - Updated all code list URIs to use LIIULK registry
 ;;
 ;; lipasdev9 improvements:
 ;; 1. Embedded location attributes into LiikuntaPaikka (no separate Sijainti class)
@@ -20,24 +25,24 @@
 ;;    - API doesn't support skos:exactMatch directly
 
 {:metadata
- {:version "0.2.0"
+ {:version "0.3.0"
   :status :development
   :created "2025-11-29"
-  :updated "2025-11-30"
+  :updated "2025-12-17"
   :author "LIPAS Team"
-  :notes "lipasdev9 - embedded location attributes, type code in class notes"}
+  :notes "lipasdev10 - code lists moved to LIIULK registry (Liikunta ja ulkoilu)"}
 
  ;; === MODEL METADATA ===
  ;; Core properties for the data model library
 
  :model
- {:prefix "lipas"
-  :dev-prefix "lipasdev9"  ; Use this for testing
+ {:prefix "lipas-liikuntapaikat"
+  :dev-prefix "lipas-liikuntapaikat"  ; Using production name now
 
   :label
-  {:fi "LIPAS Liikuntapaikkatietomalli"
-   :en "LIPAS Sports Facility Data Model"
-   :sv "LIPAS Datamodell för idrottsanläggningar"}
+  {:fi "LIPAS liikuntapaikat"
+   :en "LIPAS Sports Facilities"
+   :sv "LIPAS idrottsanläggningar"}
 
   :description
   {:fi "Suomen liikuntapaikkojen kansallinen tietomalli. Sisältää liikuntapaikkatyypit ja niiden ominaisuudet."
@@ -74,12 +79,14 @@
  ;; === CODE LISTS ===
  ;; References to Koodistot code lists
 
+ ;; Code lists in the LIIULK (Liikunta ja ulkoilu) registry
+ ;; https://koodistot.suomi.fi/registry;registryCode=LIIULK
  :code-lists
- {:lipas-types "http://uri.suomi.fi/codelist/educ/lipas-type-codes"
-  :lipas-admins "http://uri.suomi.fi/codelist/educ/lipas-admin-types"
-  :lipas-owners "http://uri.suomi.fi/codelist/educ/lipas-owner-types"
-  :lipas-statuses "http://uri.suomi.fi/codelist/educ/lipas-statuses"
-  :lipas-surfaces "http://uri.suomi.fi/codelist/educ/lipas-surface-materials"
+ {:lipas-types "http://uri.suomi.fi/codelist/LIIULK/lipas-type-codes"
+  :lipas-admins "http://uri.suomi.fi/codelist/LIIULK/lipas-admin-types"
+  :lipas-owners "http://uri.suomi.fi/codelist/LIIULK/lipas-owner-types"
+  :lipas-statuses "http://uri.suomi.fi/codelist/LIIULK/lipas-statuses"
+  :lipas-surfaces "http://uri.suomi.fi/codelist/LIIULK/lipas-surface-materials"
   :municipalities "http://uri.suomi.fi/codelist/jhs/kunta"
   :regions "http://uri.suomi.fi/codelist/jhs/maakunta"}
 

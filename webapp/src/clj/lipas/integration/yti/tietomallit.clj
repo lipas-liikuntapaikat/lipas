@@ -253,12 +253,14 @@
    :terminologies []})
 
 ;; Code lists to reference (added after model creation via PUT)
+;; Code lists are in the LIIULK (Liikunta ja ulkoilu) registry
+;; https://koodistot.suomi.fi/registry;registryCode=LIIULK
 (def code-list-uris
-  ["http://uri.suomi.fi/codelist/educ/lipas-type-codes"
-   "http://uri.suomi.fi/codelist/educ/lipas-admin-types"
-   "http://uri.suomi.fi/codelist/educ/lipas-owner-types"
-   "http://uri.suomi.fi/codelist/educ/lipas-statuses"
-   "http://uri.suomi.fi/codelist/educ/lipas-surface-materials"
+  ["http://uri.suomi.fi/codelist/LIIULK/lipas-type-codes"
+   "http://uri.suomi.fi/codelist/LIIULK/lipas-admin-types"
+   "http://uri.suomi.fi/codelist/LIIULK/lipas-owner-types"
+   "http://uri.suomi.fi/codelist/LIIULK/lipas-statuses"
+   "http://uri.suomi.fi/codelist/LIIULK/lipas-surface-materials"
    "http://uri.suomi.fi/codelist/jhs/kunta"])
 
 ;;; Class Name Generation
@@ -1413,10 +1415,11 @@
                                      (str note-fi "\n\nGeometriatyyppi: " geometry-type)
                                      note-fi)
                 ;; Add type code reference for semantic linking (skos:exactMatch workaround)
+                ;; Code list is in LIIULK (Liikunta ja ulkoilu) registry
                 note-with-code (if include-type-code-in-note?
                                  (str note-with-geometry
                                       "\n\nTyyppikoodi: " code
-                                      "\nKoodistolinkki: http://uri.suomi.fi/codelist/educ/lipas-type-codes/code/" code)
+                                      "\nKoodistolinkki: http://uri.suomi.fi/codelist/LIIULK/lipas-type-codes/code/" code)
                                  note-with-geometry)]
             (assoc-in base-dto [:note :fi] note-with-code)))
         types/all))

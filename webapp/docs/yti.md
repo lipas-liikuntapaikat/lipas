@@ -18,21 +18,23 @@ The YTI platform, maintained by DVV (Digital and Population Data Services Agency
 
 ### Published Code Lists (DRAFT)
 
-All code lists are in the `educ` (Education) registry as proof-of-concept. They should be moved to a Sports/Recreation registry for production use.
+Code lists are published in the `LIIULK` (Liikunta ja ulkoilu / Sports and Recreation) registry.
+
+Registry URL: https://koodistot.suomi.fi/registry;registryCode=LIIULK
 
 | Code List | URL | Codes | Status |
 |-----------|-----|-------|--------|
-| LIPAS Liikuntapaikkatyypit | [lipas-type-codes](https://koodistot.suomi.fi/codescheme;registryCode=educ;schemeCode=lipas-type-codes) | 177 | DRAFT |
-| LIPAS Ylläpitäjätyypit | [lipas-admin-types](https://koodistot.suomi.fi/codescheme;registryCode=educ;schemeCode=lipas-admin-types) | 11 | DRAFT |
-| LIPAS Omistajatyypit | [lipas-owner-types](https://koodistot.suomi.fi/codescheme;registryCode=educ;schemeCode=lipas-owner-types) | 9 | DRAFT |
-| LIPAS Liikuntapaikan tilat | [lipas-statuses](https://koodistot.suomi.fi/codescheme;registryCode=educ;schemeCode=lipas-statuses) | 6 | DRAFT |
-| LIPAS Pintamateriaalit | [lipas-surface-materials](https://koodistot.suomi.fi/codescheme;registryCode=educ;schemeCode=lipas-surface-materials) | 24 | DRAFT |
+| LIPAS Liikuntapaikkatyypit | [lipas-type-codes](https://koodistot.suomi.fi/codescheme;registryCode=LIIULK;schemeCode=lipas-type-codes) | 177 | DRAFT |
+| LIPAS Ylläpitäjätyypit | [lipas-admin-types](https://koodistot.suomi.fi/codescheme;registryCode=LIIULK;schemeCode=lipas-admin-types) | 11 | DRAFT |
+| LIPAS Omistajatyypit | [lipas-owner-types](https://koodistot.suomi.fi/codescheme;registryCode=LIIULK;schemeCode=lipas-owner-types) | 9 | DRAFT |
+| LIPAS Liikuntapaikan tilat | [lipas-statuses](https://koodistot.suomi.fi/codescheme;registryCode=LIIULK;schemeCode=lipas-statuses) | 6 | DRAFT |
+| LIPAS Pintamateriaalit | [lipas-surface-materials](https://koodistot.suomi.fi/codescheme;registryCode=LIIULK;schemeCode=lipas-surface-materials) | 24 | DRAFT |
 
 **Total: 227 codes across 5 code lists**
 
 ### Published Data Model (DRAFT)
 
-**URL**: https://tietomallit.suomi.fi/model/lipasdev9
+**URL**: https://tietomallit.suomi.fi/model/lipas-liikuntapaikat
 
 | Component | Count | Description |
 |-----------|-------|-------------|
@@ -43,9 +45,10 @@ All code lists are in the `educ` (Education) registry as proof-of-concept. They 
 
 ### Pending
 
-- [ ] Move code lists to correct registry (Sports/Recreation instead of Education)
+- [x] Move code lists to correct registry (Sports/Recreation instead of Education) - **Done: moved to LIIULK**
+- [x] Sync data model with new code list URIs - **Done: synced as `lipas-liikuntapaikat`**
 - [ ] Change status from DRAFT to VALID (requires DVV approval)
-- [ ] Get DVV approval for production prefix `lipas`
+- [ ] Get DVV approval for shorter prefix (e.g., `lipas`)
 
 ## Data Model Design
 
