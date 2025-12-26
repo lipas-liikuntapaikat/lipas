@@ -35,7 +35,7 @@ Programmatic access to all LIPAS data.
 
 ```bash
 # Example: Get all swimming halls in Helsinki
-curl "https://api.lipas.fi/v2/sports-places?typeCode=3110&cityCode=91"
+curl "https://api.lipas.fi/v2/sports-sites?type-codes=3110&city-codes=91"
 ```
 
 ### GeoServer (WFS/WMS)
