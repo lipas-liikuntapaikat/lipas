@@ -133,40 +133,40 @@ Benefits:
 
 ### Backend (Clojure)
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Language | Clojure 1.12 | JVM-based functional programming |
-| HTTP Server | Jetty + Ring | Web server and middleware |
-| Routing | Reitit | Data-driven routing with OpenAPI |
-| Validation | Malli | Schema definition and validation |
-| Database | PostgreSQL + PostGIS | Relational storage with spatial |
-| Search | Elasticsearch 7.x | Full-text search and analytics |
-| DI/Lifecycle | Integrant | Component management |
-| SQL | HugSQL | SQL-first database access |
-| Migrations | Migratus | Database schema migrations |
+| Component    | Technology           | Purpose                          |
+|--------------|----------------------|----------------------------------|
+| Language     | Clojure 1.12         | JVM-based functional programming |
+| HTTP Server  | Jetty + Ring         | Web server and middleware        |
+| Routing      | Reitit               | Data-driven routing with OpenAPI |
+| Validation   | Malli                | Schema definition and validation |
+| Database     | PostgreSQL + PostGIS | Relational storage with spatial  |
+| Search       | Elasticsearch 7.x    | Full-text search and analytics   |
+| DI/Lifecycle | Integrant            | Component management             |
+| SQL          | HugSQL               | SQL-first database access        |
+| Migrations   | Migratus             | Database schema migrations       |
 
 ### Frontend (ClojureScript)
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Language | ClojureScript | Clojure on JavaScript |
-| Build | Shadow-cljs | Modern CLJS compilation |
-| State | Re-frame | Unidirectional data flow |
-| UI | Reagent | React wrapper |
-| Components | Material-UI v7 | Design system |
-| Maps | OpenLayers | GIS visualization |
-| Charts | Recharts | Data visualization |
+| Component  | Technology     | Purpose                  |
+|------------|----------------|--------------------------|
+| Language   | ClojureScript  | Clojure on JavaScript    |
+| Build      | Shadow-cljs    | Modern CLJS compilation  |
+| State      | Re-frame       | Unidirectional data flow |
+| UI         | Reagent        | React wrapper            |
+| Components | Material-UI v7 | Design system            |
+| Maps       | OpenLayers     | GIS visualization        |
+| Charts     | Recharts       | Data visualization       |
 
 ### Infrastructure
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Containers | Docker Compose | Service orchestration |
-| Reverse Proxy | Nginx | SSL termination, routing |
-| Map Tiles | MapProxy | Tile caching and serving |
-| Routing | OSRM | Distance/travel time calculations |
-| Map Publishing | GeoServer | WFS/WMS services |
-| Logging | Logstash + Kibana | Centralized logging |
+| Component      | Technology        | Purpose                           |
+|----------------|-------------------|-----------------------------------|
+| Containers     | Docker Compose    | Service orchestration             |
+| Reverse Proxy  | Nginx             | SSL termination, routing          |
+| Map Tiles      | MapProxy          | Tile caching and serving          |
+| Routing        | OSRM              | Distance/travel time calculations |
+| Map Publishing | GeoServer         | WFS/WMS services                  |
+| Logging        | Logstash + Kibana | Centralized logging               |
 
 ---
 
@@ -308,14 +308,12 @@ HTTP Request
 ├── /health                    Health check
 ├── /swagger.json              OpenAPI spec
 │
-├── /sports-sites              Sports facility CRUD
-│   ├── GET    /               Search facilities
-│   ├── POST   /               Create facility
+├── /sports-sites              Sports facility
+│   ├── POST   /               Upsert facility
 │   ├── GET    /:id            Get facility
-│   ├── PUT    /:id            Update facility
 │   └── GET    /:id/history    Revision history
 │
-├── /actions                   User actions
+├── /actions                   CQRS endpoints
 │   ├── POST   /login          Authenticate
 │   ├── POST   /register       Create account
 │   └── POST   /magic-link     Passwordless login
@@ -621,8 +619,7 @@ Travel time and distance calculations:
 
 Used for:
 - Reachability analysis
-- Population coverage calculations
-- Accessibility reporting
+- Diversity analysis
 
 ### GeoServer
 
@@ -632,9 +629,9 @@ WFS/WMS publishing for external consumers:
 - **WMS (Web Map Service):** Rendered map tiles
 - Enables third-party GIS tools to access LIPAS data
 
-### UTP (Urban Transport Planning)
+### UTP (Luontoon.fi service)
 
-Webhook-based integration for tourism/transport planning systems.
+Webhook-based integration for data synchronization. LIPAS acts as an CMS for Luontoon.fi.
 
 ---
 
@@ -758,27 +755,15 @@ Avoid:
 
 ## Key Architectural Decisions Log
 
-| Decision | Rationale | Trade-offs |
-|----------|-----------|------------|
-| **Append-only data** | Full audit trail, safe concurrent access | Storage growth, complex queries for current state |
-| **Elasticsearch for reads** | Fast search, geo queries, faceted filtering | Eventual consistency, index maintenance overhead |
-| **Integrant for lifecycle** | Explicit dependencies, testable components | Learning curve, boilerplate |
-| **Re-frame for frontend** | Predictable state, time-travel debugging | Verbose for simple cases |
-| **PostgreSQL job queue** | Transactional consistency, no extra infrastructure | Limited throughput vs dedicated queue |
-| **SSH deployment** | Simple, direct control | Manual process, no rollback automation |
-| **Shared cljc schemas** | Single source of truth, frontend/backend alignment | Build complexity, version synchronization |
-
----
-
-## Future Considerations
-
-Areas that may evolve:
-
-1. **CI/CD Pipeline:** Move from SSH deployment to automated pipelines
-2. **Container Orchestration:** Consider Kubernetes for scaling
-3. **Event Streaming:** Kafka/similar for real-time integrations
-4. **GraphQL:** Alternative API for complex client queries
-5. **Micro-frontends:** Split large map module for performance
+| Decision                    | Rationale                                          | Trade-offs                                        |
+|-----------------------------|----------------------------------------------------|---------------------------------------------------|
+| **Append-only data**        | Full audit trail, safe concurrent access           | Storage growth, complex queries for current state |
+| **Elasticsearch for reads** | Fast search, geo queries, faceted filtering        | Eventual consistency, index maintenance overhead  |
+| **Integrant for lifecycle** | Explicit dependencies, testable components         | Learning curve, boilerplate                       |
+| **Re-frame for frontend**   | Predictable state, time-travel debugging           | Verbose for simple cases                          |
+| **PostgreSQL job queue**    | Transactional consistency, no extra infrastructure | Limited throughput vs dedicated queue             |
+| **SSH deployment**          | Simple, direct control                             | Manual process, no rollback automation            |
+| **Shared cljc schemas**     | Single source of truth, frontend/backend alignment | Version synchronization                           |
 
 ---
 
