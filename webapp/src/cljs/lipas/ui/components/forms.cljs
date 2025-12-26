@@ -8,7 +8,7 @@
     [text-fields/text-field
      (merge {:label      label
              :multiline  multiline?
-             :min-rows   rows
+             :rows       rows
              :value      value
              :disabled   true
              :read-only? true}
@@ -49,8 +49,8 @@
     (cond
       (nil? (first d))  nil
       (= (first d) :<>) (into
-                          [:<>]
-                          (map (partial ->field read-only?) (rest d)))
+                         [:<>]
+                         (map (partial ->field read-only?) (rest d)))
       (vector? d)       d
 
       read-only? (if link?
@@ -60,11 +60,11 @@
 
 (defn form [{:keys [read-only?]} & data]
   (into
-    [mui/grid {:container true :spacing 2}]
-    (for [elem  data
-          :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
-          m     ms
-          :when (some? m)]
-      [mui/grid {:item true :xs 12}
-       [mui/form-control {:full-width true}
-        (->field read-only? m)]])))
+   [mui/grid {:container true :spacing 2}]
+   (for [elem  data
+         :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
+         m     ms
+         :when (some? m)]
+     [mui/grid {:item true :xs 12}
+      [mui/form-control {:full-width true}
+       (->field read-only? m)]])))
