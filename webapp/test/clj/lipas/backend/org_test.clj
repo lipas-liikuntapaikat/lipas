@@ -146,6 +146,17 @@
                              (test-utils/token-header token)))]
       (is (= 403 (:status resp))))))
 
+(deftest lipas-admin-can-view-org-users-test
+  (testing "LIPAS admin can view users of any organization"
+    (let [[org1 _] (create-test-orgs)
+          org-id (:id org1)
+          ;; LIPAS admin - not a member of this org
+          admin-user (test-utils/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin-user)
+          resp (test-app (-> (mock/request :get (str "/api/orgs/" org-id "/users"))
+                             (test-utils/token-header token)))]
+      (is (= 200 (:status resp)) "LIPAS admin should be able to view org users"))))
+
 (deftest get-org-users-test
   (testing "Successfully retrieves organization users"
     (let [target-user (test-utils/gen-regular-user :db-component (test-db))
