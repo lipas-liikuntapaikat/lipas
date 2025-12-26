@@ -5,7 +5,8 @@
    [shadow.cljs.devtools.api :as shadow]
    [integrant.repl :refer [reset-all halt go]]
    [integrant.repl.state]
-   [migratus.core :as migratus]))
+   [migratus.core :as migratus]
+   [lipas.wfs.core :as wfs]))
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
@@ -20,6 +21,9 @@
 
 (defn assert-running-system []
   (assert (current-system) "System is not running. Start the system first."))
+
+(defn current-config []
+  integrant.repl.state/config)
 
 (defn db
   "Returns the :lipas/db key of the currently running system. Useful for
@@ -47,10 +51,6 @@
 (defn reindex-lois!
   []
   ((requiring-resolve 'lipas.search-indexer/index-search-lois!) (db) (search)))
-
-(defn reindex-legacy-search!
-  []
-  ((requiring-resolve 'lipas.search-indexer/main) (db) (search) "legacy"))
 
 (defn reindex-analytics!
   []
@@ -102,8 +102,6 @@
   (reset)
   (reindex-search!)
   (reindex-analytics!)
-  (reindex-legacy-search!)
-
   (reset-admin-password! "kissa13")
   (reset-password! "valtteri.harmainen@gmail.com" "kissa13")
 
@@ -355,5 +353,10 @@
   (ad/seed-new-grid-from-csv! (search) path-250m)
 
   (reindex-lois!)
+
+  (require '[lipas.wfs.core :as wfs])
+  (wfs/drop-legacy-mat-views! (db))
+  (wfs/create-legacy-mat-views! (db))
+  (wfs/refresh-all! (db))
 
   )

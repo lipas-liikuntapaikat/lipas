@@ -522,6 +522,25 @@
                            (str "CREATE EXTENSION IF NOT EXISTS citext")
                            (str "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")])
 
+     ;; Install PostGIS legacy function shims (st_force_2d -> st_force2d, etc.)
+     ;; PostGIS 3.x renamed these functions without underscores
+     (jdbc/db-do-commands db-config
+                          false
+                          ["CREATE OR REPLACE FUNCTION public.st_force_2d(geom public.geometry)
+                            RETURNS public.geometry AS $$
+                            BEGIN
+                              RETURN public.st_force2d(geom);
+                            END;
+                            $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
+                            SET search_path = public"
+                           "CREATE OR REPLACE FUNCTION public.st_force_3d(geom public.geometry)
+                            RETURNS public.geometry AS $$
+                            BEGIN
+                              RETURN public.st_force3d(geom);
+                            END;
+                            $$ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
+                            SET search_path = public"])
+
      ;; Initialize and run migrations
      (try
        (migratus/init migratus-opts)
