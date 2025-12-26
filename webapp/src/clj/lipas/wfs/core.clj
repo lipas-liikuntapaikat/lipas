@@ -28,7 +28,6 @@
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))
 
-
 (defn ->wfs-row [sports-site idx feature]
   (let [type-code (-> sports-site :type :type-code)
         #_#_geom-type (-> type-code types/all :geometry-type)
@@ -59,7 +58,9 @@
      [view-name
       {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
        :select (into
-                [[(if (str/ends-with? view-name "_3d")
+                ;; Include fid (feature ID) for unique index (enables stable paging in GeoServer)
+                [[:id :fid]
+                 [(if (str/ends-with? view-name "_3d")
                     [:cast [:st_force_3d :the_geom] (mappings/resolve-geom-field-type type-code :z)]
                     [:cast [:st_force_2d :the_geom] (mappings/resolve-geom-field-type type-code nil)]) :the_geom]]
                 (for [field (sort-by mappings/field-sorter utils/reverse-cmp
@@ -82,35 +83,37 @@
                     ("lipas_kaikki_reitit" "retkikartta_reitit") "LineString"
                     ("lipas_kaikki_alueet" "retkikartta_alueet") "Polygon")]
     {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
-     :select (for [[k data-type] fields]
-               (case k
-                 :the_geom [[[:cast [:st_force_2d k]
-                              (case geom-type
-                                "Point" (keyword "geometry(Point,3067)")
-                                "LineString" (keyword "geometry(LineString,3067)")
-                                "Polygon" (keyword "geometry(Polygon,3067)"))]] k]
-                 :x [[:st_x [:st_centroid :the_geom]] k]
-                 :y [[:st_y [:st_centroid :the_geom]] k]
+     ;; Include fid (feature ID) for unique index (enables stable paging in GeoServer)
+     :select (cons [:id :fid]
+                   (for [[k data-type] fields]
+                     (case k
+                       :the_geom [[[:cast [:st_force_2d k]
+                                    (case geom-type
+                                      "Point" (keyword "geometry(Point,3067)")
+                                      "LineString" (keyword "geometry(LineString,3067)")
+                                      "Polygon" (keyword "geometry(Polygon,3067)"))]] k]
+                       :x [[:st_x [:st_centroid :the_geom]] k]
+                       :y [[:st_y [:st_centroid :the_geom]] k]
 
-                 (:osa_alue_json :reittiosa_json :piste_json) [[:st_asgeojson :the_geom] k]
+                       (:osa_alue_json :reittiosa_json :piste_json) [[:st_asgeojson :the_geom] k]
 
-                 ;; Retkikartta specific
-                 :category_id [:type_code k]
-                 :name_fi [[:cast [:->> :doc [:inline "nimi_fi"]] (keyword data-type)] k]
-                 :name_se [[:cast [:->> :doc [:inline "nimi_se"]] (keyword data-type)] k]
-                 :name_en [[:cast [:->> :doc [:inline "nimi_en"]] (keyword data-type)] k]
-                 :ext_link [[:cast [:->> :doc [:inline "www"]] (keyword data-type)] k]
-                 :admin [[:cast [:->> :doc [:inline "yllapitaja"]] (keyword data-type)] k]
-                 :geometry [:the_geom k]
-                 :info_fi [[:cast [:->> :doc [:inline "lisatieto_fi"]] (keyword data-type)] k]
-                 (:alue_id :osa_alue_id) [[:cast [:->> :doc [:inline "alue_id"]] (keyword data-type)] k]
+                       ;; Retkikartta specific
+                       :category_id [:type_code k]
+                       :name_fi [[:cast [:->> :doc [:inline "nimi_fi"]] (keyword data-type)] k]
+                       :name_se [[:cast [:->> :doc [:inline "nimi_se"]] (keyword data-type)] k]
+                       :name_en [[:cast [:->> :doc [:inline "nimi_en"]] (keyword data-type)] k]
+                       :ext_link [[:cast [:->> :doc [:inline "www"]] (keyword data-type)] k]
+                       :admin [[:cast [:->> :doc [:inline "yllapitaja"]] (keyword data-type)] k]
+                       :geometry [:the_geom k]
+                       :info_fi [[:cast [:->> :doc [:inline "lisatieto_fi"]] (keyword data-type)] k]
+                       (:alue_id :osa_alue_id) [[:cast [:->> :doc [:inline "alue_id"]] (keyword data-type)] k]
 
-                 (:reitti_id :reittiosa_id) [[:cast [:->> :doc [:inline "reitti_id"]] (keyword data-type)] k]
+                       (:reitti_id :reittiosa_id) [[:cast [:->> :doc [:inline "reitti_id"]] (keyword data-type)] k]
 
-                 :reitisto_id [:lipas_id k]
+                       :reitisto_id [:lipas_id k]
 
-                 ;; Default
-                 [[:cast [:->> :doc [:inline (name k)]] (keyword data-type)] k]))
+                       ;; Default
+                       [[:cast [:->> :doc [:inline (name k)]] (keyword data-type)] k])))
      :from [:wfs.master]
      :where [:and
              [:= :geom_type [:inline geom-type]]
@@ -124,8 +127,6 @@
                 [:in :type_code [:inline [4403, 4402, 4401, 4404, 4405, 4411, 4412, 4451, 4452, 4421, 4422]]])
               (when (= view-name "retkikartta_pisteet")
                 [:in :type_code [:inline [207, 302, 202, 301, 206, 304, 204, 205, 203, 1180, 4720, 4460, 3230, 3220, 1550]]])]]}))
-
-
 
 (def coll-layer-mat-views
   (->> mappings/coll-layer-mat-view-specs
@@ -156,23 +157,41 @@
                                  coll-layer-mat-views)]
     (log/info "Creating mat-view" (str "wfs." view-name))
     (jdbc/execute! db (sql/format ddl))
-    (let [idx-name (str "idx_" view-name "_the_geom")
-          query (str "CREATE INDEX IF NOT EXISTS "
-                     idx-name
-                     " ON wfs." view-name
-                     (if (str/starts-with? view-name "retkikartta_")
-                       " USING GIST(geometry)"
-                       " USING GIST(the_geom)"))]
-      (jdbc/execute! db [query])))
+
+    ;; Spatial index for geometry queries
+    (let [geom-idx-name (str "idx_" view-name "_the_geom")
+          geom-query (str "CREATE INDEX IF NOT EXISTS "
+                          geom-idx-name
+                          " ON wfs." view-name
+                          (if (str/starts-with? view-name "retkikartta_")
+                            " USING GIST(geometry)"
+                            " USING GIST(the_geom)"))]
+      (jdbc/execute! db [geom-query]))
+
+    ;; Unique index on fid for stable paging in GeoServer and REFRESH CONCURRENTLY
+    (let [unique-idx-name (str "idx_" view-name "_fid_unique")
+          unique-query (str "CREATE UNIQUE INDEX IF NOT EXISTS "
+                            unique-idx-name
+                            " ON wfs." view-name "(fid)")]
+      (jdbc/execute! db [unique-query])))
+
   (log/info "All Legacy mat-views created."))
 
 (defn refresh-legacy-mat-views!
-  [db]
-  (doseq [view-names (into (vals mappings/type-code->view-names)
-                           (map vector (keys coll-layer-mat-views)))
-          view-name view-names]
-    (log/info "Refreshing mat-view" (str "wfs." view-name))
-    (jdbc/execute! db (sql/format {:refresh-materialized-view (str "wfs." view-name)}))))
+  "Refreshes all legacy WFS materialized views.
+
+  Uses CONCURRENTLY by default (requires unique index on id), which allows
+  read operations to continue during refresh. Set concurrent? to false for
+  the initial refresh after creating empty views."
+  ([db] (refresh-legacy-mat-views! db true))
+  ([db concurrent?]
+   (doseq [view-names (into (vals mappings/type-code->view-names)
+                            (map vector (keys coll-layer-mat-views)))
+           view-name view-names]
+     (log/info "Refreshing mat-view" (str "wfs." view-name) (when concurrent? "(concurrently)"))
+     (jdbc/execute! db [(str "REFRESH MATERIALIZED VIEW "
+                             (when concurrent? "CONCURRENTLY ")
+                             "wfs." view-name)]))))
 
 (defn refresh-wfs-master-table!
   [db]
