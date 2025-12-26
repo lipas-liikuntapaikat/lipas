@@ -343,11 +343,13 @@
         ["/users"
          {:get
           {;; Both org-admins and org-members can view users
-           :require-privilege [(fn [req]
-                                 (let [user (:identity req)]
-                                   {:org-id (if (roles/check-role user :admin)
-                                              ::roles/any
-                                              (str (-> req :parameters :path :org-id)))})) :org/member]
+           :require-privilege (fn [req]
+                                (let [user (:identity req)]
+                                  ;; Allow if user is admin OR has org/member privilege
+                                  (or (roles/check-role user :admin)
+                                      (roles/check-privilege user 
+                                                             {:org-id (str (-> req :parameters :path :org-id))}
+                                                             :org/member))))
            :handler (fn [req]
                       {:status 200
                        :body (org/get-org-users db (-> req :parameters :path :org-id))})}
