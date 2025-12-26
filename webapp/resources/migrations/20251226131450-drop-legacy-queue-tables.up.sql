@@ -7,3 +7,4 @@ DROP TABLE IF EXISTS elevation_queue;
 DROP TABLE IF EXISTS elevation_queue_backup;
 DROP TABLE IF EXISTS email_out_queue;
 DROP TABLE IF EXISTS email_out_queue_backup;
+DROP TABLE IF EXISTS webhook_queue;

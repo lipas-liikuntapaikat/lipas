@@ -35,3 +35,10 @@ CREATE TABLE email_out_queue_backup (
     message JSONB NOT NULL,
     id UUID NOT NULL DEFAULT uuid_generate_v4()
 );
+
+CREATE TABLE webhook_queue (
+    id UUID NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+    added_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'pending',
+    batch_data JSONB NOT NULL DEFAULT '{}'
+);

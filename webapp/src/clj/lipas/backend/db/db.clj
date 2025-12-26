@@ -4,7 +4,6 @@
    [clojure.java.jdbc :as jdbc]
    [hikari-cp.core :as hikari]
    [lipas.backend.db.city :as city]
-   [lipas.backend.db.email :as email]
    [lipas.backend.db.loi :as loi]
    [lipas.backend.db.reminder :as reminder]
    [lipas.backend.db.sports-site :as sports-site]
@@ -224,18 +223,6 @@
        utils/->snake-case-keywords
        (reminder/get-by-user-and-status db-spec)
        (map reminder/unmarshall)))
-
-;; Scheduled emails queue ;;
-
-(defn get-email-out-queue! [db-spec]
-  (->> (email/get-out-queue db-spec)
-       (map email/unmarshall)))
-
-(defn add-email-to-out-queue! [db-spec params]
-  (email/add-to-out-queue! db-spec params))
-
-(defn delete-email-from-out-queue! [db-spec params]
-  (email/delete-from-out-queue! db-spec params))
 
 ;; Loi's ;;
 

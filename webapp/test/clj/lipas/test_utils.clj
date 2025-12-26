@@ -536,12 +536,7 @@
 
 (def tables
   ["account"
-   "analysis_queue"
    "city"
-   "elevation_queue"
-   "email_out_queue"
-   "integration_log"
-   "integration_out_queue"
    "jobs"
    "org"
    "job_metrics"

@@ -20,8 +20,7 @@ LIPAS uses PostgreSQL with extensive JSONB document storage. The schema follows 
 │  org                       │  dead_letter_jobs             │
 │  city                      │  circuit_breakers             │
 │  subsidy                   │  job_metrics                  │
-│  reminder                  │  webhook_queue                │
-│  email_out_queue           │                               │
+│  reminder                  │                               │
 │  versioned_data            │                               │
 └─────────────────────────────────────────────────────────────┘
 ```
