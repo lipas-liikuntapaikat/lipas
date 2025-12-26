@@ -16,6 +16,12 @@ LIPAS data is **freely available** to everyone. The database contains:
 
 All data is available through multiple access methods with no registration required.
 
+### Data License
+
+LIPAS data is licensed under **[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)** (Creative Commons Attribution 4.0 International). You are free to use, copy, distribute, and modify the data for any purpose, including commercial use, provided you give appropriate attribution:
+
+> Sports facilities: Lipas.fi, University of Jyväskylä, [sampling date]
+
 ## Data Access
 
 ### REST API
@@ -86,4 +92,6 @@ LIPAS is developed and maintained by the **University of Jyväskylä**, Faculty 
 
 ## License
 
-[MIT License](LICENSE)
+**Source code**: [MIT License](LICENSE)
+
+**Data**: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — Attribution required
