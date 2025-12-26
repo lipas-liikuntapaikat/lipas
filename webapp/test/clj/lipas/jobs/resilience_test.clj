@@ -210,7 +210,7 @@
 (deftest system-recovery-failed-jobs-test
   (testing "Failed jobs can be processed after system recovery"
     (let [db (test-db)
-          job-result (jobs/enqueue-job! db "integration" {:lipas-id 456})
+          job-result (jobs/enqueue-job! db "analysis" {:lipas-id 456})
           job-id (:id job-result)]
 
       ;; Fail the job initially

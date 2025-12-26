@@ -8,7 +8,7 @@
   (testing "Job duration classification"
     (is (jobs/fast-job? "email") "Email should be fast")
     (is (jobs/fast-job? "produce-reminders") "Reminders should be fast")
-    (is (jobs/fast-job? "integration") "Integration should be fast")
+    (is (jobs/fast-job? "webhook") "Webhook should be fast")
     (is (not (jobs/fast-job? "analysis")) "Analysis should be slow")
     (is (not (jobs/fast-job? "elevation")) "Elevation should be slow")))
 

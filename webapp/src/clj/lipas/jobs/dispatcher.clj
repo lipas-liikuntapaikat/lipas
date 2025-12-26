@@ -77,17 +77,6 @@
       (email/send! emailer payload)))
   (log/debug "Email sent successfully"))
 
-;; Integration between lipas and legacy-lipas db can be removed
-;; soon. Let's not waste time making it work with the new Jobs system.
-
-#_(defmethod handle-job "integration"
-    [_system {:keys [id payload]}]
-    (let [{:keys [lipas-id]} payload]
-      (log/info "Processing integration for lipas-id" lipas-id)
-    ;; Integration logic would go here - delegating to existing integration system
-    ;; For now, just log as the actual integration might be handled elsewhere
-      (log/debug "Integration job processed for lipas-id" lipas-id)))
-
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload correlation-id]}]
   (let [config (get-in lipas.backend.config/default-config [:app :utp])

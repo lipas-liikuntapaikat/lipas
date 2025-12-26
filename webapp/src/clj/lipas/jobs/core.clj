@@ -1,9 +1,8 @@
 (ns lipas.jobs.core
   "Unified job queue system for LIPAS background processing.
 
-  Replaces the existing separate queue tables (analysis_queue, elevation_queue,
-  email_out_queue, integration_out_queue, webhook_queue) with a single
-  unified jobs table and smart concurrency control."
+  Provides a single unified jobs table with smart concurrency control
+  for all background tasks (analysis, elevation, email, webhooks, etc.)."
   (:require
    [cheshire.core]
    [lipas.backend.db.utils :refer [->kebab-case-keywords]]
@@ -17,7 +16,7 @@
 ;; Job type specifications
 
 (def job-type-schema
-  [:enum "analysis" "elevation" "email" "integration" "webhook"
+  [:enum "analysis" "elevation" "email" "webhook"
    "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
 
 (def job-status-schema
@@ -27,7 +26,7 @@
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "integration" "webhook" "monitor-queue-health"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook" "monitor-queue-health"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?

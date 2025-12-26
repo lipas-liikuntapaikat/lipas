@@ -34,10 +34,6 @@
     [:subject :string]
     [:body :string]]])
 
-(def integration-payload-schema
-  [:map
-   [:lipas-id pos-int?]])
-
 (def webhook-payload-schema
   [:map
    [:lipas-ids {:optional true} [:vector pos-int?]]
@@ -68,9 +64,6 @@
    ["email" [:map
              [:type [:= "email"]]
              [:payload email-payload-schema]]]
-   ["integration" [:map
-                   [:type [:= "integration"]]
-                   [:payload integration-payload-schema]]]
    ["webhook" [:map
                [:type [:= "webhook"]]
                [:payload webhook-payload-schema]]]
@@ -84,7 +77,6 @@
                             [:type [:= "monitor-queue-health"]]
                             [:payload monitor-queue-health-payload-schema]]]])
 
-
 (defn validate-payload-for-type
   "Validate just a payload for a specific job type.
    Returns {:valid? boolean :errors [...] :value ...}"
@@ -93,7 +85,6 @@
                  "analysis" analysis-payload-schema
                  "elevation" elevation-payload-schema
                  "email" email-payload-schema
-                 "integration" integration-payload-schema
                  "webhook" webhook-payload-schema
                  "produce-reminders" produce-reminders-payload-schema
                  "cleanup-jobs" cleanup-jobs-payload-schema
@@ -117,7 +108,6 @@
                  "analysis" analysis-payload-schema
                  "elevation" elevation-payload-schema
                  "email" email-payload-schema
-                 "integration" integration-payload-schema
                  "webhook" webhook-payload-schema
                  "produce-reminders" produce-reminders-payload-schema
                  "cleanup-jobs" cleanup-jobs-payload-schema
@@ -164,7 +154,6 @@
    :email-general {:to "admin@example.com"
                    :subject "System Alert"
                    :body "Database backup completed successfully."}
-   :integration {:lipas-id 11111}
    :webhook {:lipas-ids [1 2 3]
              :loi-ids [4 5]
              :operation-type "bulk-import"

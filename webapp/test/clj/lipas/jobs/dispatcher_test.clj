@@ -113,19 +113,6 @@
         (let [result (dispatcher/dispatch-job system job)]
           (is (= :success (:status result))))))))
 
-;; Integration between lipas and legacy-lipas db can be removed
-;; soon. Let's not waste time making it work with the new Jobs system.
-
-#_(deftest integration-job-handler-test
-    (testing "Integration job handler processes sports site sync"
-      (let [system {:db (test-db) :search (create-mock-search)}
-            job {:id 1 :type "integration" :payload {:lipas-id 12345}}]
-
-      ;; Should not throw - handler should complete
-      ;; Should return success status
-        (let [result (dispatcher/dispatch-job system job)]
-          (is (= :success (:status result)))))))
-
 (deftest webhook-job-handler-test
   (testing "Webhook job handler processes lipas and loi IDs"
     (let [system {:db (test-db) :search (create-mock-search)}
