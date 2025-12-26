@@ -1,4 +1,148 @@
-# Operations manual
+# Operations Manual
+
+## Infrastructure
+
+### Environments
+
+| Environment | Hostname | URL | Purpose |
+|-------------|----------|-----|---------|
+| Production | `lipas-prod.cc.jyu.fi` | https://lipas.fi | Live service |
+| Development | `lipas-dev.cc.jyu.fi` | https://lipas-dev.cc.jyu.fi | Staging/testing |
+
+Both environments are identical in configuration.
+
+### Server Specifications (Production)
+
+- **OS:** RHEL 9.7 (Plow)
+- **CPU:** 4× Intel Xeon Gold 6240 @ 2.60GHz
+- **RAM:** 30 GB
+- **Storage:** ~300 GB on `/var` (primary application data)
+- **Network:** Ports 80/443 open, SSH via VPN
+
+### Docker Services
+
+```
+lipas-proxy-1           Nginx reverse proxy (80/443)
+lipas-backend-1         Clojure web server (8091, nREPL 7888)
+lipas-worker-1          Background job processor
+lipas-postgres-1        PostGIS database (5432)
+lipas-elasticsearch-1   Search engine (9200)
+lipas-geoserver-1       WFS/WMS publishing (8888)
+lipas-mapproxy-1        Tile caching
+lipas-osrm-car-1        Car routing (5001)
+lipas-osrm-bicycle-1    Bicycle routing (5002)
+lipas-osrm-foot-1       Pedestrian routing (5003)
+lipas-logstash-1        Log aggregation
+lipas-kibana-1          Log visualization (5601)
+```
+
+### Responsibility Split
+
+**JYU IT Services (digipalvelut)** - Infrastructure:
+- Server infrastructure and virtualization
+- Network and firewall configuration
+- DNS and domain management
+- SSL certificate management
+- OS-level security updates
+- VM-level backups
+- Infrastructure monitoring and alerts
+- Application-level backups (databases)
+- Contact: https://help.jyu.fi/
+
+**Norppandalotti Software Ky** - Application:
+- LIPAS application development and updates
+- Docker container management
+- Database maintenance (PostGIS, Elasticsearch)
+- External integrations (PTV, UTP CMS)
+- Container and application level Deployments
+- Application monitoring and troubleshooting
+
+### Backup Strategy
+
+**Infrastructure (JYU IT):**
+- Daily incremental VM snapshots
+- Daily PostgreSQL dumps (30-day retention)
+- Monthly PostgreSQL dumps (180-day retention)
+- Backup location: NFS mount at `/autodbbackup/backup`
+
+**Application (Norppandalotti):**
+- Source code in public GitHub repository
+- Elasticsearch indices backed up as needed
+
+### Access Requirements
+
+1. **VPN:** JYU VPN with `appdevel` or `affiliate` profile
+2. **SSH:** Key-based authentication to `lipas-dev` / `lipas-prod` hosts
+3. Configure SSH host aliases in `~/.ssh/config`:
+   ```
+   Host lipas-dev
+       HostName lipas-dev.cc.jyu.fi
+       User your_username
+
+   Host lipas-prod
+       HostName lipas-prod.cc.jyu.fi
+       User your_username
+   ```
+
+---
+
+## Deployment
+
+### Babashka Tasks
+
+Deployment is automated via Babashka tasks defined in `webapp/bb.edn`:
+
+```bash
+# Full deployment (backend + frontend)
+bb deploy-dev          # Deploy to lipas-dev
+bb deploy-prod         # Deploy to lipas.fi
+
+# Partial deployments
+bb deploy-backend-dev  # Backend only to dev
+bb deploy-backend-prod # Backend only to prod
+bb deploy-frontend-dev # Frontend only to dev
+bb deploy-frontend-prod # Frontend only to prod
+```
+
+### What Deployment Does
+
+1. **Build:** Compiles uberjar (`bb uberjar`) and/or frontend (`npm run build`)
+2. **Upload:** SCPs artifacts to target server `/tmp/`
+3. **Deploy:** Copies to `/var/lipas/webapp/` and restarts containers
+4. **Verify:** Runs health check against `/api/health`
+
+### Static Assets from Git
+
+Some files are served directly from the git repository via Docker volume mounts. After updating these, a `git pull` is required on the target server:
+
+| Path | Purpose |
+|------|---------|
+| `webapp/resources/public/` | Static files (HTML, images, etc.) |
+| `nginx/*.conf` | Nginx configuration |
+| `mapproxy/` | MapProxy configuration |
+| `geoserver/data_dir/` | GeoServer workspaces/styles |
+| `certs/` | SSL certificates |
+
+**Manual update procedure:**
+```bash
+ssh lipas-prod
+cd /var/lipas
+sudo git pull
+sudo docker compose restart proxy  # or relevant service
+```
+
+### CI/CD Pipeline
+
+- **Repository:** GitHub
+- **CI:** GitHub Actions runs tests and builds on push
+- **Release cadence:** Weekly updates (typical)
+
+### Monitoring
+
+- **Infrastructure:** JYU IT monitors server health and availability
+- **Application:** External healthcheck service (custom) monitors all key service availability from the Internet
+
+---
 
 ## Database
 
