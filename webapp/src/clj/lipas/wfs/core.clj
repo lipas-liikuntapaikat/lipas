@@ -177,6 +177,35 @@
 
   (log/info "All Legacy mat-views created."))
 
+(defn populate-pk-metadata!
+  "Populates wfs.gt_pk_metadata table for GeoServer primary key discovery.
+  This enables stable feature IDs and WFS pagination for materialized views.
+  Follows cleanup & recreate pattern - truncates and re-inserts all rows."
+  [db]
+  (log/info "Truncating table wfs.gt_pk_metadata")
+  (jdbc/execute! db (sql/format {:truncate :wfs.gt_pk_metadata}))
+
+  (let [all-view-names (concat
+                        ;; Type layer views
+                        (->> mappings/type-code->view-names
+                             vals
+                             (mapcat identity))
+                        ;; Collection layer views
+                        (->> mappings/coll-layer-mat-view-specs
+                             keys
+                             (map name)))
+        rows (for [view-name all-view-names]
+               {:table_schema "wfs"
+                :table_name view-name
+                :pk_column "fid"
+                :pk_policy "assigned"})]
+
+    (log/info "Inserting" (count rows) "rows into wfs.gt_pk_metadata")
+    (jdbc/execute! db (sql/format {:insert-into :wfs.gt_pk_metadata
+                                   :values rows})))
+
+  (log/info "wfs.gt_pk_metadata populated."))
+
 (defn refresh-legacy-mat-views!
   "Refreshes all legacy WFS materialized views.
 
@@ -243,6 +272,44 @@
                  (get (System/getenv) "GEOSERVER_ADMIN_PASSWORD")]
     :accept :json
     :as :json}})
+
+(defn get-datastore
+  "Gets the current datastore configuration from GeoServer."
+  []
+  (let [url (str (:root-url geoserver-config) "/workspaces/"
+                 (:workspace-name geoserver-config) "/datastores/"
+                 (:datastore-name geoserver-config))]
+    (-> (http/get url (:default-http-opts geoserver-config))
+        :body)))
+
+(defn configure-datastore-pk-metadata!
+  "Configures the GeoServer datastore to use the wfs.gt_pk_metadata table
+  for primary key discovery. This enables stable feature IDs and WFS pagination
+  for materialized views.
+
+  The pk-metadata-table parameter should be schema-qualified, e.g. 'wfs.gt_pk_metadata'."
+  ([] (configure-datastore-pk-metadata! "wfs.gt_pk_metadata"))
+  ([pk-metadata-table]
+   (log/info "Configuring GeoServer datastore primary key metadata table:" pk-metadata-table)
+   (let [url (str (:root-url geoserver-config) "/workspaces/"
+                  (:workspace-name geoserver-config) "/datastores/"
+                  (:datastore-name geoserver-config))
+         current-config (get-datastore)
+         current-entries (get-in current-config [:dataStore :connectionParameters :entry])
+         ;; Remove existing pk metadata entry if present
+         filtered-entries (remove #(= (get % (keyword "@key")) "Primary key metadata table")
+                                  current-entries)
+         ;; Add new pk metadata entry
+         new-entries (conj (vec filtered-entries)
+                           {"@key" "Primary key metadata table"
+                            "$" pk-metadata-table})
+         updated-config (assoc-in current-config
+                                  [:dataStore :connectionParameters :entry]
+                                  new-entries)]
+     (http/put url (merge (:default-http-opts geoserver-config)
+                          {:body (json/generate-string updated-config)
+                           :content-type "application/json"}))
+     (log/info "GeoServer datastore primary key metadata table configured."))))
 
 (defn get-all-layers
   []
@@ -469,9 +536,13 @@
   (log/info "All layergroups rebuilt!"))
 
 (defn migrate-fron-legacy-db
+  "Full migration: recreates all materialized views, PK metadata, layers and layer groups.
+  Note: GeoServer may need a restart to pick up the PK metadata table configuration."
   [db]
   (drop-legacy-mat-views! db)
   (create-legacy-mat-views! db)
+  (populate-pk-metadata! db)
+  (configure-datastore-pk-metadata!)
   (rebuild-all-legacy-layers)
   (rebuild-all-legacy-layer-groups))
 
