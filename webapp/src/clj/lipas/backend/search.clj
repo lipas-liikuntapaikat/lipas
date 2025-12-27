@@ -33,14 +33,19 @@
     {:max_result_window 60000
      :index {:mapping {:total_fields {:limit 2000}}}}
     :mappings
-    {;; Dynamic templates to handle ES 8.x stricter type inference
+    {;; Disable automatic date detection to prevent ES 8.x from inferring
+     ;; date types from random test data strings
+     :date_detection false
+     ;; Dynamic templates to handle ES 8.x stricter type inference
      ;; Forces all integers to be doubles to avoid long vs float conflicts
      :dynamic_templates
      [{:integers_as_doubles
        {:match_mapping_type "long"
         :mapping {:type "double"}}}]
      :properties
-     {:search-meta.location.wgs84-point
+     {;; Explicit date mapping since date_detection is disabled
+      :event-date {:type "date"}
+      :search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.wgs84-center
       {:type "geo_point"}
@@ -62,8 +67,10 @@
    {:settings
     {:max_result_window 50000}
     :mappings
-    {:properties
-     {:search-meta.location.wgs84-point
+    {:date_detection false
+     :properties
+     {:event-date {:type "date"}
+      :search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.geometries
       {:type "geo_shape"}}}}

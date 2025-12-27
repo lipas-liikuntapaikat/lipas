@@ -270,7 +270,6 @@
                             "properties.loudspeakers?"
                             "properties.finish-line-camera?"]))
 
-
 (def fields
   (merge
    basic-fields
@@ -441,7 +440,8 @@
 (defn calculate-stats-by-city [aggs-data pop-data]
   (reduce
    (fn [res m]
-     (let [city-code  (:key m)
+     ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
+     (let [city-code  (int (:key m))
            population (pop-data city-code)
 
            m2-sum          (-> m :area_m2_stats :sum)
@@ -473,7 +473,8 @@
 (defn calculate-stats-by-type [aggs-data pop-data city-codes]
   (reduce
    (fn [res m]
-     (let [type-code       (:key m)
+     ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
+     (let [type-code       (int (:key m))
            populations     (if (empty? city-codes)
                              pop-data ;; all
                              (select-keys pop-data city-codes))

@@ -315,8 +315,9 @@
   "Transform ES facet results to UI-friendly format"
   [es-result]
   (let [aggs (get-in es-result [:body :aggregations])]
+    ;; ES 8.x returns numeric aggregation keys as floats, so we need to convert to int
     {:type-codes (mapv (fn [bucket]
-                         {:value (:key bucket)
+                         {:value (int (:key bucket))
                           :count (:doc_count bucket)})
                        (get-in aggs [:type-codes :buckets] []))
      :owners (mapv (fn [bucket]
