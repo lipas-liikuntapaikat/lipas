@@ -15,13 +15,31 @@
               :http-client {:basic-auth {:user     user
                                          :password password}}}))
 
+;; ES 8.x auto-detects float arrays as dense_vector, breaking GeoJSON coordinates.
+;; We explicitly disable indexing for raw GeoJSON structures since we use
+;; search-meta.location.geometries (geo_shape) for spatial queries.
+(def geojson-coordinates-mapping
+  "Mapping to prevent ES 8.x from inferring dense_vector for GeoJSON coordinates"
+  {:properties
+   {:features
+    {:properties
+     {:geometry
+      {:properties
+       {:coordinates {:enabled false}}}}}}})
+
 (def mappings
   {:sports-sites
    {:settings
     {:max_result_window 60000
      :index {:mapping {:total_fields {:limit 2000}}}}
     :mappings
-    {:properties
+    {;; Dynamic templates to handle ES 8.x stricter type inference
+     ;; Forces all integers to be doubles to avoid long vs float conflicts
+     :dynamic_templates
+     [{:integers_as_doubles
+       {:match_mapping_type "long"
+        :mapping {:type "double"}}}]
+     :properties
      {:search-meta.location.wgs84-point
       {:type "geo_point"}
       :search-meta.location.wgs84-center
@@ -29,7 +47,17 @@
       :search-meta.location.wgs84-end
       {:type "geo_point"}
       :search-meta.location.geometries
-      {:type "geo_shape"}}}}
+      {:type "geo_shape"}
+      ;; Prevent ES 8.x dense_vector inference for GeoJSON
+      :location.geometries geojson-coordinates-mapping
+      :search-meta.location.simple-geoms geojson-coordinates-mapping
+      ;; All activity types with routes that have geometries
+      :activities.cycling.routes.geometries geojson-coordinates-mapping
+      :activities.paddling.routes.geometries geojson-coordinates-mapping
+      :activities.fishing.routes.geometries geojson-coordinates-mapping
+      :activities.outdoor-recreation-routes.routes.geometries geojson-coordinates-mapping
+      :activities.outdoor-recreation-areas.routes.geometries geojson-coordinates-mapping
+      :activities.outdoor-recreation-facilities.routes.geometries geojson-coordinates-mapping}}}
    :lois
    {:settings
     {:max_result_window 50000}

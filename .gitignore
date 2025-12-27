@@ -44,3 +44,4 @@ webapp/.eca/
 # IDE and development files
 .claude/
 .git-rewrite/
+data/

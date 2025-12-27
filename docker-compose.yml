@@ -341,24 +341,38 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.9
     ports:
       - '9200:9200'
       - '9300:9300'
     environment:
-      - transport.host=127.0.0.1
+      - discovery.type=single-node
       - xpack.security.enabled=false
-      - xpack.monitoring.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - xpack.monitoring.collection.enabled=false
       - xpack.ml.enabled=false
       - xpack.graph.enabled=false
       - xpack.watcher.enabled=false
-      - discovery.type=single-node
       - "ES_JAVA_OPTS=${ES_JAVA_OPTS}"
     volumes:
       - esdata:/usr/share/elasticsearch/data
 
+  # One-shot container to apply Elasticsearch configuration (ILM policies, etc.)
+  elasticsearch-setup:
+    image: curlimages/curl:8.11.1
+    depends_on:
+      - elasticsearch
+    volumes:
+      - "./elasticsearch/setup:/setup:z"
+    environment:
+      - ES_HOST=elasticsearch:9200
+    entrypoint: ["/bin/sh", "/setup/init.sh"]
+    restart: "no"
+
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.12.0
+    image: docker.elastic.co/logstash/logstash:8.19.9
     ports:
       - "5000:5000/udp"
     environment:
@@ -369,7 +383,7 @@ services:
       - "./logstash/pipeline:/usr/share/logstash/pipeline:z"
 
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.12.0
+    image: docker.elastic.co/kibana/kibana:8.19.9
     ports:
       - "5601:5601"
     environment:
