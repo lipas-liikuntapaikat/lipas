@@ -115,19 +115,23 @@
 
   Returns a map with :settings and :mappings keys suitable for create-index!."
   []
-  (let [;; Static core fields
+  (let [;; Core fields that ARE QUERIED
         core-fields
         {:lipas-id {:type "integer"}
-         :status {:type "keyword"}
-         :event-date {:type "date"}
-         :type.type-code {:type "integer"}
-         :location.city.city-code {:type "integer"}
-         :construction-year {:type "integer"}
-         :admin {:type "keyword"}
-         :owner {:type "keyword"}
-         :name {:type "text" :fields {:keyword {:type "keyword"}}}
+         :status {:type "keyword"}  ; queried by V2 API filter
+         :event-date {:type "date"}  ; might be used for sorting
+         :type.type-code {:type "integer"}  ; queried by V2 API filter
+         :construction-year {:type "integer"}  ; might be used for range queries
+         :admin {:type "keyword"}  ; queried by V2 API filter
+         :owner {:type "keyword"}  ; queried by V2 API filter
+         :name {:type "text" :fields {:keyword {:type "keyword"}}}  ; full-text search
          :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
-         :comment {:type "text" :fields {:keyword {:type "keyword"}}}}
+         :comment {:type "text" :fields {:keyword {:type "keyword"}}}
+         ;; Location fields that ARE QUERIED
+         :location.city.city-code {:type "integer"}  ; queried by V2 API filter
+         :location.address {:type "text" :fields {:keyword {:type "keyword"}}}  ; might be searched
+         :location.postal-code {:type "keyword"}
+         :location.postal-office {:type "text" :fields {:keyword {:type "keyword"}}}}
 
         ;; Geographic fields
         geo-fields
@@ -172,11 +176,22 @@
          ;; NEW: Activity keys array for filtering
          :search-meta.activities {:type "keyword"}}
 
-        ;; Disabled fields to prevent index bloat
+        ;; Disabled fields - stored in _source but not indexed (display-only)
         disabled-fields
-        {:activities {:enabled false}
-         :location.geometries {:enabled false}
-         :search-meta.location.simple-geoms {:enabled false}}
+        {:activities {:enabled false}  ; indexed via search-meta.activities instead
+         :location.geometries {:enabled false}  ; indexed via search-meta.location.geometries instead
+         :search-meta.location.simple-geoms {:enabled false}
+         ;; Display-only fields (never queried, only retrieved)
+         :phone-number {:enabled false}
+         :email {:enabled false}
+         :www {:enabled false}
+         :reservations-link {:enabled false}
+         :renovation-years {:enabled false}
+         :name-localized {:enabled false}
+         :fields {:enabled false}
+         :locker-rooms {:enabled false}
+         :circumstances {:enabled false}
+         :audits {:enabled false}}
 
         ;; Programmatically generated property mappings
         property-mappings (generate-property-mappings)
