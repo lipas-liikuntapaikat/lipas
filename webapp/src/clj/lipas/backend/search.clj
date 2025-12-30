@@ -157,7 +157,10 @@
          :search-meta.type.name.fi {:type "keyword"}
          :search-meta.type.name.se {:type "keyword"}
          :search-meta.type.name.en {:type "keyword"}
-         :search-meta.type.tags {:type "keyword"}
+         ;; Tags are multilingual arrays
+         :search-meta.type.tags.fi {:type "keyword"}
+         :search-meta.type.tags.se {:type "keyword"}
+         :search-meta.type.tags.en {:type "keyword"}
          :search-meta.type.main-category.name.fi {:type "keyword"}
          :search-meta.type.main-category.name.se {:type "keyword"}
          :search-meta.type.main-category.name.en {:type "keyword"}

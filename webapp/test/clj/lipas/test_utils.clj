@@ -679,7 +679,8 @@
    Requires the search component as an argument."
   [search]
   (let [client (:client search)
-        mappings {(-> search :indices :sports-site :search) (:sports-sites search/mappings)
+        ;; Use programmatically generated explicit mapping for sports-site search index
+        mappings {(-> search :indices :sports-site :search) (search/generate-explicit-mapping)
                   (-> search :indices :legacy-sports-site :search) (:legacy-sports-site search/mappings)
                   (-> search :indices :analysis :diversity) diversity/mappings
                   (-> search :indices :lois :search) (:lois search/mappings)}]
