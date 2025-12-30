@@ -185,7 +185,8 @@
   ([_system db {:keys [indices client]} mode]
    (let [idx-name (str mode "-" (search/gen-idx-name))
          mappings (case mode
-                    "search" (:sports-sites search/mappings)
+                    ;; Use programmatically generated explicit mapping for search index
+                    "search" (search/generate-explicit-mapping)
                     "legacy" (:legacy-sports-site search/mappings))
          types (keys types/all)
          alias (case mode
@@ -193,6 +194,7 @@
                  "analytics" (get-in indices [:sports-site :analytics])
                  "legacy" (get-in indices [:legacy-sports-site :search]))]
      (log/info "Starting to re-index types" types)
+     (log/info "Using mapping:" (if (= mode "search") "explicit-generated" "static"))
      (search/create-index! client idx-name mappings)
      (log/info "Created index" idx-name)
      (log/info "Starting to index data...")

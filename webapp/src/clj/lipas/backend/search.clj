@@ -2,6 +2,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.string :as str]
+   [lipas.data.prop-types :as prop-types]
    [qbits.spandex :as es]
    [qbits.spandex.utils :as es-utils]))
 
@@ -81,6 +82,116 @@
       :location.geom-coll         {:type "geo_shape"}
       :lastModified               {:type   "date"
                                    :format legacy-date-format}}}}})
+
+(defn- prop-type->es-mapping
+  "Converts a property type definition to an Elasticsearch field mapping."
+  [data-type]
+  (case data-type
+    "numeric"   {:type "double"}
+    "boolean"   {:type "boolean"}
+    "string"    {:type "text" :fields {:keyword {:type "keyword"}}}
+    "enum"      {:type "keyword"}
+    "enum-coll" {:type "keyword"}
+    ;; fallback
+    {:type "keyword"}))
+
+(defn- generate-property-mappings
+  "Generates ES mappings for all property fields from prop-types/all."
+  []
+  (reduce-kv
+   (fn [acc prop-key prop-def]
+     (let [field-name (keyword (str "properties." (name prop-key)))
+           data-type (:data-type prop-def)
+           mapping (prop-type->es-mapping data-type)]
+       (assoc acc field-name mapping)))
+   {}
+   prop-types/all))
+
+(defn generate-explicit-mapping
+  "Generates explicit Elasticsearch mapping for sports_sites_current index.
+
+  Uses strict dynamic mode to prevent index bloat from nested activity structures.
+  Programmatically generates mappings for all 181 property fields from prop-types.
+
+  Returns a map with :settings and :mappings keys suitable for create-index!."
+  []
+  (let [;; Static core fields
+        core-fields
+        {:lipas-id {:type "integer"}
+         :status {:type "keyword"}
+         :event-date {:type "date"}
+         :type.type-code {:type "integer"}
+         :location.city.city-code {:type "integer"}
+         :construction-year {:type "integer"}
+         :admin {:type "keyword"}
+         :owner {:type "keyword"}
+         :name {:type "text" :fields {:keyword {:type "keyword"}}}
+         :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
+         :comment {:type "text" :fields {:keyword {:type "keyword"}}}}
+
+        ;; Geographic fields
+        geo-fields
+        {:search-meta.location.wgs84-point {:type "geo_point"}
+         :search-meta.location.wgs84-center {:type "geo_point"}
+         :search-meta.location.wgs84-end {:type "geo_point"}
+         :search-meta.location.geometries {:type "geo_shape"}}
+
+        ;; Search-meta enrichment fields (multilingual and computed)
+        search-meta-fields
+        {:search-meta.name {:type "keyword"}
+         :search-meta.admin.name.fi {:type "keyword"}
+         :search-meta.admin.name.se {:type "keyword"}
+         :search-meta.admin.name.en {:type "keyword"}
+         :search-meta.owner.name.fi {:type "keyword"}
+         :search-meta.owner.name.se {:type "keyword"}
+         :search-meta.owner.name.en {:type "keyword"}
+         :search-meta.location.city.name.fi {:type "keyword"}
+         :search-meta.location.city.name.se {:type "keyword"}
+         :search-meta.location.city.name.en {:type "keyword"}
+         :search-meta.location.province.name.fi {:type "keyword"}
+         :search-meta.location.province.name.se {:type "keyword"}
+         :search-meta.location.province.name.en {:type "keyword"}
+         :search-meta.location.avi-area.name.fi {:type "keyword"}
+         :search-meta.location.avi-area.name.se {:type "keyword"}
+         :search-meta.location.avi-area.name.en {:type "keyword"}
+         :search-meta.type.name.fi {:type "keyword"}
+         :search-meta.type.name.se {:type "keyword"}
+         :search-meta.type.name.en {:type "keyword"}
+         :search-meta.type.tags {:type "keyword"}
+         :search-meta.type.main-category.name.fi {:type "keyword"}
+         :search-meta.type.main-category.name.se {:type "keyword"}
+         :search-meta.type.main-category.name.en {:type "keyword"}
+         :search-meta.type.sub-category.name.fi {:type "keyword"}
+         :search-meta.type.sub-category.name.se {:type "keyword"}
+         :search-meta.type.sub-category.name.en {:type "keyword"}
+         :search-meta.fields.field-types {:type "keyword"}
+         :search-meta.audits.latest-audit-date {:type "date"}
+         ;; NEW: Activity keys array for filtering
+         :search-meta.activities {:type "keyword"}}
+
+        ;; Disabled fields to prevent index bloat
+        disabled-fields
+        {:activities {:enabled false}
+         :location.geometries {:enabled false}
+         :search-meta.location.simple-geoms {:enabled false}}
+
+        ;; Programmatically generated property mappings
+        property-mappings (generate-property-mappings)
+
+        ;; Combine all mappings
+        all-properties (merge core-fields
+                              geo-fields
+                              search-meta-fields
+                              property-mappings
+                              disabled-fields)]
+
+    {:settings
+     {:max_result_window 60000
+      :index {:mapping {:total_fields {:limit 300}}}}
+     :mappings
+     {:dynamic "strict"
+      :date_detection false
+      :properties all-properties}}))
 
 (defn gen-idx-name
   "Returns index name generated from current timestamp that is

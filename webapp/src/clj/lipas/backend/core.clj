@@ -429,6 +429,10 @@
                              (->> (sort-by :audit-date utils/reverse-cmp))
                              first
                              :audit-date)
+        ;; Extract activity keys for search filtering
+        activity-keys (when-let [activities (:activities sports-site)]
+                        (when (seq activities)
+                          (vec (keys activities))))
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
                      :owner {:name (-> sports-site :owner owners)}
@@ -448,7 +452,8 @@
                       :main-category {:name (:name main-category)}
                       :sub-category {:name (:name sub-category)}}
                      :fields
-                     {:field-types field-types}}]
+                     {:field-types field-types}
+                     :activities activity-keys}]
     (assoc sports-site :search-meta search-meta)))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
