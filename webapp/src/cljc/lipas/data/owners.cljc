@@ -25,9 +25,9 @@
    "other"                  {:fi "Muu"
                              :en "Other"
                              :se "Annan"}
-   "no-information"         {:fi "Ei tietoa"
-                             :en "No information"
-                             :se "Ingen information"}})
+   "unknown"                {:fi "Ei tietoa"
+                             :en "Unknown"
+                             :se "Okänt"}})
 
 (def csv-headers
   ["Arvo" "Nimi fi" "Nimi Se" "Nimi En"])
