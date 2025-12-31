@@ -6,7 +6,7 @@
 
 (deftest generate-explicit-mapping-test
   (testing "Mapping generation produces correct structure"
-    (let [mapping (search/generate-explicit-mapping)]
+    (let [mapping (:sports-site search/mappings)]
 
       (testing "Has strict dynamic mode"
         (is (= "strict" (:dynamic (:mappings mapping)))))
@@ -21,7 +21,7 @@
         (is (map? (get-in mapping [:mappings :properties]))))))
 
   (testing "All property fields from prop-types are mapped"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])
           prop-type-keys (set (keys prop-types/all))]
 
@@ -34,7 +34,7 @@
               (str "Missing mapping for property: " prop-key))))))
 
   (testing "Property types are correctly mapped to ES types"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]
 
       (testing "Numeric properties map to double"
@@ -69,7 +69,7 @@
           (is (= "keyword" (:type (get properties sample-key))))))))
 
   (testing "Geographic fields have correct types"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]
 
       (is (= "geo_point" (:type (get properties :search-meta.location.wgs84-point))))
@@ -78,7 +78,7 @@
       (is (= "geo_shape" (:type (get properties :search-meta.location.geometries))))))
 
   (testing "Activities field restructuring"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]
 
       (testing "Activities field is disabled for indexing"
@@ -88,7 +88,7 @@
         (is (= "keyword" (:type (get properties :search-meta.activities)))))))
 
   (testing "Core fields are mapped"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]
 
       (is (= "integer" (:type (get properties :lipas-id))))
@@ -99,7 +99,7 @@
       (is (= "integer" (:type (get properties :construction-year))))))
 
   (testing "Disabled fields prevent index bloat"
-    (let [mapping (search/generate-explicit-mapping)
+    (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]
 
       (is (false? (:enabled (get properties :location.geometries))))
