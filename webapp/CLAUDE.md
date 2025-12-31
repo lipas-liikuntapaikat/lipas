@@ -425,6 +425,13 @@ The database is the **source of truth** with full history, while Elasticsearch s
 - The `sync?` parameter controls whether indexing blocks the request or happens in the background
 - Bulk operations use batch indexing for efficiency
 
+### Schema Changes
+
+- LIPAS has long history - **never make breaking changes to schemas**
+- Don't rename or remove enum values (e.g., `lipas.data.owners`, `lipas.data.admins`)
+- Additive changes (new values) are fine
+- When in doubt, query the database to check if a value is in use
+
 ### 💡 Development Workflow for Claude
 
 #### Starting Work
