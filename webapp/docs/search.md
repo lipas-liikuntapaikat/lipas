@@ -27,7 +27,7 @@ All index names are configured in `src/clj/lipas/backend/config.clj`:
 
 | Index Alias                   | Purpose                               | Mapping Key           |
 |-------------------------------|---------------------------------------|-----------------------|
-| `sports_sites_current`        | Main sports site search               | `:sports-sites`       |
+| `sports_sites_current`        | Main sports site search               | `:sports-site`        |
 | `legacy_sports_sites_current` | V1 API compatibility format           | `:legacy-sports-site` |
 | `analytics`                   | All revisions for analytics           | `:sports-sites`       |
 | `lois`                        | Locations of Interest                 | `:lois`               |
@@ -50,21 +50,39 @@ Indexes use aliases for zero-downtime reindexing:
 
 Mappings are defined in `src/clj/lipas/backend/search.clj`:
 
-### Sports Sites Mapping
+### Sports Sites Mapping (Explicit)
 
-```clojure
-{:settings
- {:max_result_window 60000
-  :index {:mapping {:total_fields {:limit 2000}}}}
- :mappings
- {:properties
-  {:search-meta.location.wgs84-point  {:type "geo_point"}
-   :search-meta.location.wgs84-center {:type "geo_point"}
-   :search-meta.location.wgs84-end    {:type "geo_point"}
-   :search-meta.location.geometries   {:type "geo_shape"}}}}
-```
+The sports sites index uses **explicit mapping with strict mode** to prevent index bloat and ensure type safety.
 
-Key fields are explicitly mapped; others use dynamic mapping (keyword/text).
+**Key characteristics:**
+- `dynamic: "strict"` - rejects queries on unmapped fields
+- `total_fields.limit: 300` - reduced from 2000
+- All ~260 fields explicitly mapped
+
+**Mapping generation** (`search/generate-explicit-mapping`):
+- Core fields: `lipas-id`, `status`, `event-date`, `type.type-code`, etc.
+- Geographic fields: `geo_point` and `geo_shape` types
+- Search-meta fields: Multilingual names, resolved lookups
+- Property fields: **181 fields** generated from `lipas.data.prop-types/all`
+
+**Property type mapping rules:**
+| Data Type   | ES Type   | Count |
+|-------------|-----------|-------|
+| `numeric`   | `double`  | 97    |
+| `boolean`   | `boolean` | 67    |
+| `string`    | `text` + `keyword` | 11 |
+| `enum`      | `keyword` | 3     |
+| `enum-coll` | `keyword` | 3     |
+
+**Disabled fields** (stored in `_source` but not indexed):
+- `activities` - prevents bloat from nested geo structures
+- `location.geometries` - raw GeoJSON (use `search-meta.location.geometries` instead)
+- Display-only fields: `phone-number`, `email`, `www`, `fields`, `audits`, etc.
+
+**Activities restructuring:**
+- The `activities` object is disabled for indexing to prevent 140+ nested fields
+- Activity keys are extracted to `search-meta.activities` keyword array during enrichment
+- Filter using: `{:terms {:search-meta.activities ["cycling" "swimming"]}}`
 
 ### Legacy Sports Sites Mapping
 
@@ -115,7 +133,8 @@ The `enrich*` function adds a `:search-meta` key with:
    :main-category {:name "Jääurheilupaikat"}
    :sub-category  {:name "..."}}
   :fields
-  {:field-types ["jääkiekkokaukalo"]}}} ; Distinct field types
+  {:field-types ["jääkiekkokaukalo"]}   ; Distinct field types
+  :activities ["cycling" "swimming"]}}  ; Activity keys for filtering
 ```
 
 ### Type-Specific Enrichment
