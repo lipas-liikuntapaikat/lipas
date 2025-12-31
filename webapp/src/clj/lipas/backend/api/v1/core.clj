@@ -130,7 +130,7 @@
           ;; Only fetch the two fields we need to minimize data transfer
           scroll-chan (search/scroll client idx-name
                                      {:query {:bool {:must [{:range {:event-date {:gte formatted-timestamp}}}
-                                                            {:terms {:status.keyword ["out-of-service-permanently" "incorrect-data"]}}]}}
+                                                            {:terms {:status ["out-of-service-permanently" "incorrect-data"]}}]}}
                                       :sort [{:event-date {:order "desc"}}]
                                       :_source {:includes ["lipas-id" "event-date"]}})
           ;; Collect all pages from scroll

@@ -611,7 +611,7 @@
                                            [{:query_string
                                              {:query "*"}}]}}
                                          :sort
-                                         [{:search-meta.name.keyword
+                                         [{:search-meta.name
                                            {:order :asc}}]}))
                      test-app)
         actual-sites (-> response

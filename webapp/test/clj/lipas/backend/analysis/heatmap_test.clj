@@ -74,7 +74,7 @@
                   (set-coordinates [24.9500 60.1800])
                   (clean-properties 2000 0.0) ; No route
                   (assoc-in [:properties :year-round-use?] true)
-                  (assoc-in [:properties :lighting?] true)
+                  (assoc-in [:properties :heating?] true)
                   (assoc :construction-year 2020)
                   (assoc :owner "city")
                   (assoc :admin "city-sports"))
@@ -125,9 +125,9 @@
     (let [params (valid-heatmap-params)
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))
           features (:data body)
@@ -177,9 +177,9 @@
     (let [params (valid-heatmap-params {:dimension :density :weight-by :count})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))
           features (:data body)]
@@ -197,9 +197,9 @@
     (let [params (valid-heatmap-params {:dimension :area})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))
           features (:data body)]
@@ -216,9 +216,9 @@
     (let [params (valid-heatmap-params {:filters {:type-codes [3110]}})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))
           features (:data body)]
@@ -230,9 +230,9 @@
     (let [params (valid-heatmap-params {:filters {:city-codes [91]}})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -243,9 +243,9 @@
     (let [params (valid-heatmap-params {:filters {:status-codes ["active"]}})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -258,9 +258,9 @@
     (let [params (valid-heatmap-params {:filters {:year-round-only true}})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -273,9 +273,9 @@
     (let [params (valid-heatmap-params {:dimension :year-round})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -288,9 +288,9 @@
     (let [params (valid-heatmap-params {:zoom :kissa})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
 
@@ -298,9 +298,9 @@
     (let [params (valid-heatmap-params {:dimension :invalid})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
 
@@ -308,9 +308,9 @@
     (let [params (dissoc (valid-heatmap-params) :bbox)
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
 
@@ -318,9 +318,9 @@
     (let [params (valid-heatmap-params {:bbox {:min-x "invalid" :max-x 25.1 :min-y 60.1 :max-y 60.3}})
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))))
 
@@ -330,9 +330,9 @@
     (let [params {:bbox (valid-bbox)}
 
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -370,9 +370,9 @@
                   :filters {:status-codes ["active"]}}
 
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -406,9 +406,9 @@
     (let [params {}
 
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
 
@@ -416,9 +416,9 @@
     (let [params {:bbox {:invalid "structure"}}
 
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))]
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))))
 
@@ -428,9 +428,9 @@
     (let [params (valid-heatmap-params)
 
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                        (mock/content-type "application/transit+json")
-                        (mock/header "Accept" "application/transit+json")
-                        (mock/body (->transit params))))
+                             (mock/content-type "application/transit+json")
+                             (mock/header "Accept" "application/transit+json")
+                             (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
 
@@ -449,9 +449,9 @@
             params (valid-heatmap-params {:bbox helsinki-bbox})
 
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                          (mock/content-type "application/transit+json")
-                          (mock/header "Accept" "application/transit+json")
-                          (mock/body (->transit params))))
+                               (mock/content-type "application/transit+json")
+                               (mock/header "Accept" "application/transit+json")
+                               (mock/body (->transit params))))
 
             body (<-transit (:body resp))
             features (:data body)]
@@ -478,9 +478,9 @@
             params (valid-heatmap-params {:bbox espoo-bbox})
 
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                          (mock/content-type "application/transit+json")
-                          (mock/header "Accept" "application/transit+json")
-                          (mock/body (->transit params))))
+                               (mock/content-type "application/transit+json")
+                               (mock/header "Accept" "application/transit+json")
+                               (mock/body (->transit params))))
 
             body (<-transit (:body resp))
             features (:data body)]
@@ -505,9 +505,9 @@
             params (valid-heatmap-params {:bbox empty-bbox})
 
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                          (mock/content-type "application/transit+json")
-                          (mock/header "Accept" "application/transit+json")
-                          (mock/body (->transit params))))
+                               (mock/content-type "application/transit+json")
+                               (mock/header "Accept" "application/transit+json")
+                               (mock/body (->transit params))))
 
             body (<-transit (:body resp))
             features (:data body)]
@@ -521,9 +521,9 @@
             params (valid-heatmap-params {:bbox large-bbox})
 
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                          (mock/content-type "application/transit+json")
-                          (mock/header "Accept" "application/transit+json")
-                          (mock/body (->transit params))))
+                               (mock/content-type "application/transit+json")
+                               (mock/header "Accept" "application/transit+json")
+                               (mock/body (->transit params))))
 
             body (<-transit (:body resp))
             features (:data body)]
@@ -551,9 +551,9 @@
     ;; Test low zoom (coarse aggregation) - should group nearby sites together
     (let [low-zoom-params (valid-heatmap-params {:zoom 5})
           low-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                                 (mock/content-type "application/transit+json")
-                                 (mock/header "Accept" "application/transit+json")
-                                 (mock/body (->transit low-zoom-params))))
+                                      (mock/content-type "application/transit+json")
+                                      (mock/header "Accept" "application/transit+json")
+                                      (mock/body (->transit low-zoom-params))))
           low-zoom-body (<-transit (:body low-zoom-resp))
           low-zoom-features (:data low-zoom-body)]
 
@@ -568,9 +568,9 @@
     ;; Test medium zoom
     (let [medium-zoom-params (valid-heatmap-params {:zoom 10})
           medium-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                                    (mock/content-type "application/transit+json")
-                                    (mock/header "Accept" "application/transit+json")
-                                    (mock/body (->transit medium-zoom-params))))
+                                         (mock/content-type "application/transit+json")
+                                         (mock/header "Accept" "application/transit+json")
+                                         (mock/body (->transit medium-zoom-params))))
           medium-zoom-body (<-transit (:body medium-zoom-resp))
           medium-zoom-features (:data medium-zoom-body)]
 
@@ -584,9 +584,9 @@
     ;; Test high zoom (fine aggregation) - should have separate cells for each site
     (let [high-zoom-params (valid-heatmap-params {:zoom 15})
           high-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                                  (mock/content-type "application/transit+json")
-                                  (mock/header "Accept" "application/transit+json")
-                                  (mock/body (->transit high-zoom-params))))
+                                       (mock/content-type "application/transit+json")
+                                       (mock/header "Accept" "application/transit+json")
+                                       (mock/body (->transit high-zoom-params))))
           high-zoom-body (<-transit (:body high-zoom-resp))
           high-zoom-features (:data high-zoom-body)]
 
@@ -679,9 +679,9 @@
     ;; Test count-based weighting (baseline)
     (let [count-params (valid-heatmap-params {:dimension :density :weight-by :count})
           count-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                              (mock/content-type "application/transit+json")
-                              (mock/header "Accept" "application/transit+json")
-                              (mock/body (->transit count-params))))
+                                   (mock/content-type "application/transit+json")
+                                   (mock/header "Accept" "application/transit+json")
+                                   (mock/body (->transit count-params))))
           count-features (:data (<-transit (:body count-resp)))]
 
       (is (= 200 (:status count-resp)))
@@ -695,9 +695,9 @@
     ;; Test area-based weighting
     (let [area-params (valid-heatmap-params {:dimension :density :weight-by :area-m2})
           area-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                             (mock/content-type "application/transit+json")
-                             (mock/header "Accept" "application/transit+json")
-                             (mock/body (->transit area-params))))
+                                  (mock/content-type "application/transit+json")
+                                  (mock/header "Accept" "application/transit+json")
+                                  (mock/body (->transit area-params))))
           area-features (:data (<-transit (:body area-resp)))]
 
       (is (= 200 (:status area-resp))
@@ -713,9 +713,9 @@
     ;; Test route-length weighting with known controlled values
     (let [route-params (valid-heatmap-params {:dimension :density :weight-by :route-length-km})
           route-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
-                              (mock/content-type "application/transit+json")
-                              (mock/header "Accept" "application/transit+json")
-                              (mock/body (->transit route-params))))
+                                   (mock/content-type "application/transit+json")
+                                   (mock/header "Accept" "application/transit+json")
+                                   (mock/body (->transit route-params))))
           route-features (:data (<-transit (:body route-resp)))]
 
       (is (= 200 (:status route-resp))
@@ -724,7 +724,7 @@
 
       ;; Route weights should match our controlled test data: two sites with 0.0, one with 1.2, one with 2.5
       (let [weights (set (map #(get-in % [:properties :weight]) route-features))
-            expected-routes #{0.0 1.2000000476837158 2.5}] ; From our controlled test data
+            expected-routes #{0.0 1.2 2.5}] ; Explicit double mapping returns clean values
         (is (= expected-routes weights)
             (str "Route-length weights should match controlled test data. Got: " weights " Expected: " expected-routes))))))
 (comment

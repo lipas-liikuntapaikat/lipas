@@ -80,11 +80,11 @@
    :_source {:includes sports-site-keys}
    :query {:bool
            {:filter (cond-> []
-                      statuses (conj {:terms {:status.keyword statuses}})
+                      statuses (conj {:terms {:status statuses}})
                       type-codes (conj {:terms {:type.type-code type-codes}})
                       city-codes (conj {:terms {:location.city.city-code city-codes}})
-                      admins (conj {:terms {:admin.keyword admins}})
-                      owners (conj {:terms {:owner.keyword owners}})
+                      admins (conj {:terms {:admin admins}})
+                      owners (conj {:terms {:owner owners}})
                       ;; NEW: Use search-meta.activities keyword array for filtering
                       ;; instead of existence checks on individual activity fields
                       (seq activities) (conj {:terms {:search-meta.activities activities}}))}}})

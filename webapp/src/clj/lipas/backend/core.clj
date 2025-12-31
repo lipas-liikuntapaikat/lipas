@@ -545,8 +545,8 @@
                 {:excludes ["search-meta.*"]}
                 :query
                 {:bool
-                 {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
-                         {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
+                 {:must [{:terms {:status ["active" "out-of-service-temporarily"]}}
+                         {:terms {:search-meta.fields.field-types field-types}}]}}}]
     (-> (search/search client idx-name params)
         :body
         :hits
@@ -765,7 +765,7 @@
                {:bool
                 {:filter
                  (into [] (remove nil?)
-                       [{:terms {:status.keyword statuses}}
+                       [{:terms {:status statuses}}
                         (when (not-empty type-codes)
                           {:terms {:type.type-code type-codes}})
                         (when (not-empty city-codes)
@@ -835,7 +835,7 @@
                :query
                {:bool
                 {:must [{:match_phrase {:name.keyword name}}
-                        {:terms {:status.keyword ["active" "out-of-service-temporarily"]}}]
+                        {:terms {:status ["active" "out-of-service-temporarily"]}}]
                  :must_not {:term {:lipas-id lipas-id}}}}}
         resp (search search-cli query)]
     (merge
@@ -1029,7 +1029,7 @@
                {:bool
                 {:filter
                  (into [] (remove nil?)
-                       [{:terms {:status.keyword statuses}}
+                       [{:terms {:status statuses}}
                         (when (not-empty type-codes)
                           {:terms {:type.type-code type-codes}})
                         (when (not-empty city-codes)

@@ -347,7 +347,7 @@
                                 (let [user (:identity req)]
                                   ;; Allow if user is admin OR has org/member privilege
                                   (or (roles/check-role user :admin)
-                                      (roles/check-privilege user 
+                                      (roles/check-privilege user
                                                              {:org-id (str (-> req :parameters :path :org-id))}
                                                              :org/member))))
            :handler (fn [req]

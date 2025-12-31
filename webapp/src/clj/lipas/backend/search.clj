@@ -129,6 +129,7 @@
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
          ;; Location fields that ARE QUERIED
          :location.city.city-code {:type "integer"}  ; queried by V2 API filter
+         :location.city.neighborhood {:type "text" :fields {:keyword {:type "keyword"}}}
          :location.address {:type "text" :fields {:keyword {:type "keyword"}}}  ; might be searched
          :location.postal-code {:type "keyword"}
          :location.postal-office {:type "text" :fields {:keyword {:type "keyword"}}}}
@@ -191,7 +192,8 @@
          :fields {:enabled false}
          :locker-rooms {:enabled false}
          :circumstances {:enabled false}
-         :audits {:enabled false}}
+         :audits {:enabled false}
+         :ptv {:enabled false}}
 
         ;; Programmatically generated property mappings
         property-mappings (generate-property-mappings)
