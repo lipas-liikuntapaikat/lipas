@@ -16,7 +16,7 @@
 (defn ->sort-key [k locale]
   (case k
     (:lipas-id) :lipas-id
-    (:name) :search-meta.name.keyword
+    (:name) :search-meta.name
     (:location.city.name
       :type.name
       :admin.name
@@ -195,8 +195,8 @@
                              "search-meta.type.sub-category.name.*"
                              "search-meta.location.province.name.*"
                              "search-meta.location.avi-area.name.*"
-                             "admin.keyword"
-                             "owner.keyword"
+                             "admin"
+                             "owner"
                              "comment"
                              "email"
                              "phone-number"
@@ -245,13 +245,13 @@
 
        (cond-> params
          bbox? (add-filter (->geo-intersects-filter bbox))
-         statuses (add-filter {:terms {:status.keyword statuses}})
+         statuses (add-filter {:terms {:status statuses}})
          type-codes (add-filter {:terms {:type.type-code type-codes}})
          city-codes (add-filter {:terms {:location.city.city-code city-codes}})
          year-min (add-filter {:range {:construction-year {:gte year-min}}})
          year-max (add-filter {:range {:construction-year {:lte year-max}}})
-         admins (add-filter {:terms {:admin.keyword admins}})
-         owners (add-filter {:terms {:owner.keyword owners}})
+         admins (add-filter {:terms {:admin admins}})
+         owners (add-filter {:terms {:owner owners}})
 
          ;; Apply property filters
          properties-filters

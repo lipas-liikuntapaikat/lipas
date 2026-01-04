@@ -1,6 +1,7 @@
 (ns user
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
+   [clojure.core.async :as async]
    [clojure.tools.namespace.repl]
    [shadow.cljs.devtools.api :as shadow]
    [integrant.repl :refer [reset-all halt go]]
@@ -43,6 +44,75 @@
   []
   (assert-running-system)
   (:lipas/ptv (current-system)))
+
+(defn ptv-lookup-org
+  "Look up a PTV organization by ID or search by name.
+
+   Usage:
+     (ptv-lookup-org \"7eca397e-7a0e-4f79-bf1b-6248560a7268\")  ; lookup by ID
+     (ptv-lookup-org \"Vaala\")                                  ; search by name
+     (ptv-lookup-org \"328aabaf-59a6-4813-b826-f7f30f101398\")  ; check if ID exists
+
+   Returns organization details if found, or search results if searching by name.
+   Useful for verifying organization IDs received from DVV.
+
+   Options:
+     :env - :prod (default) or :test"
+  ([query] (ptv-lookup-org query {}))
+  ([query {:keys [env] :or {env :prod}}]
+   (let [client (requiring-resolve 'clj-http.client/request)
+         base-url (case env
+                    :prod "https://api.palvelutietovaranto.suomi.fi/api"
+                    :test "https://api.palvelutietovaranto.trn.suomi.fi/api")
+         uuid-pattern #"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+         uuid? (re-matches uuid-pattern (str query))]
+     (if uuid?
+       ;; Direct lookup by ID
+       (let [resp (client {:url (str base-url "/v11/Organization/" query)
+                           :method :get
+                           :as :json
+                           :throw-exceptions false})]
+         (if (= 200 (:status resp))
+           (let [org (:body resp)]
+             {:found? true
+              :id (:id org)
+              :name (some #(when (= "fi" (:language %)) (:value %)) (:organizationNames org))
+              :type (:organizationType org)
+              :names (:organizationNames org)})
+           {:found? false
+            :id query
+            :message (str "Not a valid PTV organization ID. "
+                          "This might be an internal auth ID (prod-org-id).")}))
+       ;; Search by name
+       (let [results (atom [])
+             fetch-page (fn [page]
+                          (-> (client {:url (str base-url "/v11/Organization")
+                                       :method :get
+                                       :as :json
+                                       :query-params {:page page :status "Published"}})
+                              :body))]
+         ;; Fetch all pages and search
+         (loop [page 1]
+           (let [resp (fetch-page page)
+                 ;; List endpoint returns :name directly, not :organizationNames
+                 matches (->> (:itemList resp)
+                              (filter (fn [org]
+                                        (re-find (re-pattern (str "(?i)" query))
+                                                 (or (:name org) "")))))]
+             (swap! results concat matches)
+             (when (< page (:pageCount resp))
+               (recur (inc page)))))
+         ;; Format results
+         (if (seq @results)
+           {:found? true
+            :count (count @results)
+            :results (mapv (fn [org]
+                             {:id (:id org)
+                              :name (:name org)})
+                           @results)}
+           {:found? false
+            :query query
+            :message "No organizations found matching that name."}))))))
 
 (defn reindex-search!
   []
@@ -96,6 +166,59 @@
                  :shadow.build/build-info
                  :sources
                  (->> (mapcat :errors)))}))
+
+(defn validate-sports-sites
+  "Scrolls through all sports sites in Elasticsearch and validates them against
+   the Malli schema. Returns a map with :total, :valid, :invalid counts and
+   :errors (a seq of {:lipas-id, :error} maps for invalid documents).
+
+   Options:
+     :limit    - Stop after processing this many documents (nil = all)
+     :verbose? - Print progress every 1000 documents (default: true)"
+  ([] (validate-sports-sites {}))
+  ([{:keys [limit verbose?] :or {verbose? true}}]
+   (assert-running-system)
+   (let [search-comp (search)
+         scroll-fn (requiring-resolve 'lipas.backend.search/scroll)
+         schema @(requiring-resolve 'lipas.schema.sports-sites/sports-site)
+         m-validate (requiring-resolve 'malli.core/validate)
+         m-explain (requiring-resolve 'malli.core/explain)
+         me-humanize (requiring-resolve 'malli.error/humanize)
+
+         idx-name (get-in search-comp [:indices :sports-site :search])
+         scroll-chan (scroll-fn (:client search-comp) idx-name
+                                {:query {:match_all {}} :size 500})
+
+         ;; Channel -> lazy seq of docs
+         all-docs (cond->> (->> (repeatedly #(async/<!! scroll-chan))
+                                (take-while some?)
+                                (mapcat #(-> % :body :hits :hits))
+                                (map :_source))
+                    limit (take limit))
+
+         ;; Validate with progress reporting
+         results (reduce
+                  (fn [{:keys [total valid errors] :as acc} doc]
+                    (when (and verbose? (pos? total) (zero? (mod total 1000)))
+                      (println (format "Processed %d documents..." total)))
+                    (if (m-validate schema doc)
+                      (-> acc (update :total inc) (update :valid inc))
+                      (-> acc
+                          (update :total inc)
+                          (update :errors conj
+                                  {:lipas-id (:lipas-id doc)
+                                   :type-code (-> doc :type :type-code)
+                                   :error (me-humanize (m-explain schema doc))}))))
+                  {:total 0 :valid 0 :errors []}
+                  all-docs)
+
+         results (assoc results :invalid (count (:errors results)))]
+
+     (when verbose?
+       (println (format "\n=== Validation Complete ==="))
+       (println (format "Total: %d | Valid: %d | Invalid: %d"
+                        (:total results) (:valid results) (:invalid results))))
+     results)))
 
 (comment
   (go)
@@ -357,6 +480,4 @@
   (require '[lipas.wfs.core :as wfs])
   (wfs/drop-legacy-mat-views! (db))
   (wfs/create-legacy-mat-views! (db))
-  (wfs/refresh-all! (db))
-
-  )
+  (wfs/refresh-all! (db)))

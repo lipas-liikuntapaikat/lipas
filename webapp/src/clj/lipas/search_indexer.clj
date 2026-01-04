@@ -185,7 +185,7 @@
   ([_system db {:keys [indices client]} mode]
    (let [idx-name (str mode "-" (search/gen-idx-name))
          mappings (case mode
-                    "search" (:sports-sites search/mappings)
+                    "search" (:sports-site search/mappings)
                     "legacy" (:legacy-sports-site search/mappings))
          types (keys types/all)
          alias (case mode

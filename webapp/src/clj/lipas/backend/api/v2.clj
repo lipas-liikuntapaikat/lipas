@@ -79,14 +79,15 @@
    :track_total_hits 60000
    :_source {:includes sports-site-keys}
    :query {:bool
-           {:must (cond-> []
-                    statuses (conj {:terms {:status.keyword statuses}})
-                    type-codes (conj {:terms {:type.type-code type-codes}})
-                    city-codes (conj {:terms {:location.city.city-code city-codes}})
-                    admins (conj {:terms {:admin.keyword admins}})
-                    owners (conj {:terms {:owner.keyword owners}})
-                    activities (into (for [a activities]
-                                       {:exists {:field (str "activities." a)}})))}}})
+           {:filter (cond-> []
+                      statuses (conj {:terms {:status statuses}})
+                      type-codes (conj {:terms {:type.type-code type-codes}})
+                      city-codes (conj {:terms {:location.city.city-code city-codes}})
+                      admins (conj {:terms {:admin admins}})
+                      owners (conj {:terms {:owner owners}})
+                      ;; NEW: Use search-meta.activities keyword array for filtering
+                      ;; instead of existence checks on individual activity fields
+                      (seq activities) (conj {:terms {:search-meta.activities activities}}))}}})
 
 (defn ->lois-query
   [{:keys [page page-size statuses types categories]

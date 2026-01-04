@@ -138,7 +138,7 @@
                       :bottom_right {:lat min-y :lon max-x}}}}
 
         status-filter (when-let [statuses (:status-codes filters)]
-                        {:terms {:status.keyword (vec statuses)}})
+                        {:terms {:status (vec statuses)}})
 
         type-filter (when-let [types (:type-codes filters)]
                       {:terms {:type.type-code types}})
@@ -150,10 +150,10 @@
                       {:range {:construction-year {:gte min-year :lte max-year}}})
 
         admins-filter (when-let [admins (:admins filters)]
-                        {:terms {:admin.keyword admins}})
+                        {:terms {:admin admins}})
 
         owners-filter (when-let [owners (:owners filters)]
-                        {:terms {:owner.keyword owners}})
+                        {:terms {:owner owners}})
 
         materials-filter (when-let [materials (:surface-materials filters)]
                            {:terms {:properties.surface-material.keyword materials}})
@@ -306,10 +306,10 @@
   {:size 0
    :query {:bool {:filter (build-filters bbox (dissoc filters :type-codes :owners :admins))}}
    :aggs {:type-codes {:terms {:field "type.type-code" :size 200}}
-          :owners {:terms {:field "owner.keyword" :size 100}}
-          :admins {:terms {:field "admin.keyword" :size 100}}
+          :owners {:terms {:field "owner" :size 100}}
+          :admins {:terms {:field "admin" :size 100}}
           :year-range {:stats {:field "construction-year"}}
-          :statuses {:terms {:field "status.keyword" :size 10}}}})
+          :statuses {:terms {:field "status" :size 10}}}})
 
 (defn transform-facets
   "Transform ES facet results to UI-friendly format"
