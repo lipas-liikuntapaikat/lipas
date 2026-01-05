@@ -254,7 +254,7 @@
                   :must_not [{:terms {:type.type-code [207 7000]}}]
                   :must
                   (remove nil?
-                          [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
+                          [{:terms {:status ["active" "out-of-service-temporarily"]}}
                            (when city-codes
                              {:terms {:location.city.city-code city-codes}})
                            (when owners

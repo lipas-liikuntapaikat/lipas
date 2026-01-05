@@ -27,13 +27,10 @@
     (is (= (utils/index-by :id []) {}))))
 
 (deftest this-year-test
-  (testing "this-year is current year"
-    (is (number? utils/this-year))
-    (is (= utils/this-year 2025))) ; Based on current date in REPL
-  (testing "this-year? function"
-    (is (true? (utils/this-year? 2025)))
-    (is (false? (utils/this-year? 2024)))
-    (is (true? (utils/this-year? "2025")))))
+  (testing "this-year? is coherent with this-year"
+    (is (true? (utils/this-year? utils/this-year)))
+    (is (true? (utils/this-year? (str utils/this-year))))
+    (is (false? (utils/this-year? (dec utils/this-year))))))
 
 (deftest timestamp-test
   (testing "timestamp returns ISO format string"

@@ -429,6 +429,10 @@
                              (->> (sort-by :audit-date utils/reverse-cmp))
                              first
                              :audit-date)
+        ;; Extract activity keys for search filtering
+        activity-keys (when-let [activities (:activities sports-site)]
+                        (when (seq activities)
+                          (vec (keys activities))))
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
                      :owner {:name (-> sports-site :owner owners)}
@@ -448,7 +452,8 @@
                       :main-category {:name (:name main-category)}
                       :sub-category {:name (:name sub-category)}}
                      :fields
-                     {:field-types field-types}}]
+                     {:field-types field-types}
+                     :activities activity-keys}]
     (assoc sports-site :search-meta search-meta)))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
@@ -540,8 +545,8 @@
                 {:excludes ["search-meta.*"]}
                 :query
                 {:bool
-                 {:must [{:terms {:status.keyword ["active" "out-of-service-temporarily"]}}
-                         {:terms {:search-meta.fields.field-types.keyword field-types}}]}}}]
+                 {:must [{:terms {:status ["active" "out-of-service-temporarily"]}}
+                         {:terms {:search-meta.fields.field-types field-types}}]}}}]
     (-> (search/search client idx-name params)
         :body
         :hits
@@ -760,7 +765,7 @@
                {:bool
                 {:filter
                  (into [] (remove nil?)
-                       [{:terms {:status.keyword statuses}}
+                       [{:terms {:status statuses}}
                         (when (not-empty type-codes)
                           {:terms {:type.type-code type-codes}})
                         (when (not-empty city-codes)
@@ -830,7 +835,7 @@
                :query
                {:bool
                 {:must [{:match_phrase {:name.keyword name}}
-                        {:terms {:status.keyword ["active" "out-of-service-temporarily"]}}]
+                        {:terms {:status ["active" "out-of-service-temporarily"]}}]
                  :must_not {:term {:lipas-id lipas-id}}}}}
         resp (search search-cli query)]
     (merge
@@ -1024,7 +1029,7 @@
                {:bool
                 {:filter
                  (into [] (remove nil?)
-                       [{:terms {:status.keyword statuses}}
+                       [{:terms {:status statuses}}
                         (when (not-empty type-codes)
                           {:terms {:type.type-code type-codes}})
                         (when (not-empty city-codes)
