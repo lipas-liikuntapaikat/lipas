@@ -240,7 +240,7 @@
 
 (defn shift-likely-overlapping!
   [type-code ^js style resolution ^js f]
-  (when (#{4402 4440} type-code)
+  (when (#{4402 4440 4441} type-code)
     (let [delta (* resolution 4)
           copy (-> f .getGeometry .clone)]
       (doto style
