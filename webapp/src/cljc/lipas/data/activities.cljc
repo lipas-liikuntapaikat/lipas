@@ -614,7 +614,7 @@
                    (mu/dissoc :latest-updates)
                    (mu/dissoc :rules))
                [:map
-                [:id [:string]]
+                [:id {:optional true} [:string]]
                 [:fids {:optional true} fids-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:accessibility-categorized {:optional true}
@@ -1058,7 +1058,7 @@
               (mu/merge
                common-route-props-schema
                [:map
-                [:id [:string]]
+                [:id {:optional true} [:string]]
                 [:fids {:optional true} fids-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:route-name {:optional true} common-schema/localized-string]
@@ -1442,7 +1442,7 @@
                      (mu/merge
                       common-route-props-schema
                       [:map
-                       [:id [:string]]
+                       [:id {:optional true} [:string]]
                        [:fids {:optional true} fids-schema]
                        [:geometries {:optional true} common-schema/line-string-feature-collection]
                        [:route-name {:optional true} common-schema/localized-string]
