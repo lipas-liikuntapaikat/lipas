@@ -1,0 +1,4 @@
+{:ns lipas.migrations.add-route-ids
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}

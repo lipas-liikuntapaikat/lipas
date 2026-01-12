@@ -9,9 +9,8 @@
    #?(:cljs [goog.string :as gstring])
    #?(:cljs [goog.string.format])))
 
-
 (defn ->sortable-name [s]
-  (if (nil? s)  
+  (if (nil? s)
     ""
     (-> s
         (str/lower-case)
@@ -220,3 +219,17 @@
      (assoc res (keyword (str prefix (name k))) v))
    {}
    m))
+
+(defn regenerate-route-ids
+  "Regenerates :id for all routes in activities map.
+  Used when copying/duplicating sports sites to ensure unique route IDs."
+  [activities]
+  (when activities
+    (reduce-kv
+     (fn [acc activity-k activity-v]
+       (if-let [routes (:routes activity-v)]
+         (assoc-in acc [activity-k :routes]
+                   (mapv #(assoc % :id (str (gen-uuid))) routes))
+         (assoc acc activity-k activity-v)))
+     {}
+     activities)))

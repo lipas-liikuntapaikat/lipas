@@ -179,7 +179,6 @@
     :description {:fi "Muista myös koirankakkapussi ja korjaa jätökset pois.", :en "Also remember the dog poop bag and remove the droppings.", :se "Glöm inte att packa hundbajs och ta bort spillning."},
     :value       "keep-pets-leashed-poop-not-ok"}})
 
-
 (def rules-structured-schema
   [:map
    [:common-rules [:sequential (into [:enum] (keys common-rules))]]
@@ -434,7 +433,6 @@
                    :se "Höjdpunkter"
                    :en "Highlights"}}}})
 
-
 (def common-route-props
   (-> common-props
       (dissoc :status)
@@ -506,15 +504,15 @@
     (-> common-props
         (dissoc :rules))
     {#_#_:everymans-rights
-     {:schema [:boolean {:optional true}]
-      :field
-      {:type        "checkbox"
-       :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"
-                     :se "Är allemansrätten i kraft. Ja/Nej"
-                     :en "Are everyman's rights in force. Yes/No"}
-       :label       {:fi "Jokamiehenoikeudet"
-                     :se "Allemansrätt"
-                     :en "Everyman's rights"}}}
+       {:schema [:boolean {:optional true}]
+        :field
+        {:type        "checkbox"
+         :description {:fi "Onko jokaisen oikeudet voimassa. Kyllä/Ei"
+                       :se "Är allemansrätten i kraft. Ja/Nej"
+                       :en "Are everyman's rights in force. Yes/No"}
+         :label       {:fi "Jokamiehenoikeudet"
+                       :se "Allemansrätt"
+                       :en "Everyman's rights"}}}
      :geo-park
      {:schema [:boolean {:optional true}]
       :field
@@ -560,7 +558,6 @@
                          :se "Skidåkning"
                          :en "Skiing"}})
 
-
 (def accessibility-classification
   {"accessible"          {:fi "Esteetön"
                           :se "Tillgänglig"
@@ -574,7 +571,6 @@
    "unknown"             {:fi "Ei tietoa"
                           :se "Okänd"
                           :en "Unknown"}})
-
 
 (def outdoor-recreation-routes
   {:label       {:fi "Retkeily ja ulkoilureitit"
@@ -618,7 +614,7 @@
                    (mu/dissoc :latest-updates)
                    (mu/dissoc :rules))
                [:map
-                [:id {:optional true} [:string]]
+                [:id #'common-schema/uuid]
                 [:fids {:optional true} fids-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:accessibility-categorized {:optional true}
@@ -815,15 +811,15 @@
                            :en "Select all the surface materials on the route"}}}
 
         #_#_:latest-updates
-        {:schema common-schema/localized-string
-         :field
-         {:type        "textarea"
-          :description {:fi "Tähän joku seliteteksti"
-                        :se "Här någon förklarande text"
-                        :en "Some explanatory text here"}
-          :label       {:fi "Ajankohtaista"
-                        :se "Aktuellt"
-                        :en "Latest updates"}}}
+          {:schema common-schema/localized-string
+           :field
+           {:type        "textarea"
+            :description {:fi "Tähän joku seliteteksti"
+                          :se "Här någon förklarande text"
+                          :en "Some explanatory text here"}
+            :label       {:fi "Ajankohtaista"
+                          :se "Aktuellt"
+                          :en "Latest updates"}}}
 
         :independent-entity
         {:schema [:boolean {:optional true}]
@@ -921,30 +917,30 @@
    :description {:fi ""}
    :type-codes  #{4411 4412}
    :sort-order  [:status
-                :route-name
-                :description-short
-                :route-notes
-                :description-long
-                :highlights
-                :cycling-activities
-                :route-length-km
-                :duration
-                :cycling-difficulty
-                :cycling-route-difficulty
-                :surface-material
-                :unpaved-percentage
-                :trail-percentage
-                :cyclable-percentage
-                :arrival
-                :accommodation
-                :food-and-water
-                :good-to-know
-                :accessibility
-                :pilgrimage
-                :contacts
-                :additional-info-link
-                :images
-                :videos]
+                 :route-name
+                 :description-short
+                 :route-notes
+                 :description-long
+                 :highlights
+                 :cycling-activities
+                 :route-length-km
+                 :duration
+                 :cycling-difficulty
+                 :cycling-route-difficulty
+                 :surface-material
+                 :unpaved-percentage
+                 :trail-percentage
+                 :cyclable-percentage
+                 :arrival
+                 :accommodation
+                 :food-and-water
+                 :good-to-know
+                 :accessibility
+                 :pilgrimage
+                 :contacts
+                 :additional-info-link
+                 :images
+                 :videos]
    :props
    {:status (:status common-props)
 
@@ -957,7 +953,7 @@
               (mu/merge
                common-route-props-schema
                [:map
-                [:id {:optional true} [:string]]
+                [:id #'common-schema/uuid]
                 [:fids {:optional true} fids-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:route-name {:optional true} common-schema/localized-string]
@@ -1314,7 +1310,7 @@
                      (mu/merge
                       common-route-props-schema
                       [:map
-                       [:id {:optional true} [:string]]
+                       [:id #'common-schema/uuid]
                        [:fids {:optional true} fids-schema]
                        [:geometries {:optional true} common-schema/line-string-feature-collection]
                        [:route-name {:optional true} common-schema/localized-string]
@@ -1495,7 +1491,6 @@
              :se "Vinter"
              :en "Winter"}})
 
-
 (def birdwatching
   {:label       {:fi "Lintujen tarkkailu"}
    :value       "birdwatching"
@@ -1628,138 +1623,137 @@
                 :videos]
    :props
    (merge common-props
-    {:fishing-type
-     {:schema [:sequential (into [:enum] (keys fishing-types))]
-      :field
-      {:type        "multi-select"
-       :description {:fi "Valitse, mistä kohteessa voi kalastaa"
-                     :se "Välj var du vill fiska."
-                     :en "Choose where to fish."}
-       :label       {:fi "Kohdetyyppi"
-                     :se "Typ av platsen"
-                     :en "Type of place"}
-       :opts        fishing-types}}
+          {:fishing-type
+           {:schema [:sequential (into [:enum] (keys fishing-types))]
+            :field
+            {:type        "multi-select"
+             :description {:fi "Valitse, mistä kohteessa voi kalastaa"
+                           :se "Välj var du vill fiska."
+                           :en "Choose where to fish."}
+             :label       {:fi "Kohdetyyppi"
+                           :se "Typ av platsen"
+                           :en "Type of place"}
+             :opts        fishing-types}}
 
-     :fishing-activities
-     {:schema [:sequential (into [:enum] (keys fishing-activities))]
-      :field
-      {:type        "multi-select"
-       :description {:fi "Valitse soveltuvat kalastusmuodot"
-                     :se "Välj lämpliga fiskeformer."
-                     :en "Choose suitable forms of fishing."}
-       :label       {:fi "Hyvin soveltuvat kalastusmuodot"
-                     :se "Lämpliga fiskeformer"
-                     :en "Suitable forms of fishing"}
-       :opts        fishing-activities}}
+           :fishing-activities
+           {:schema [:sequential (into [:enum] (keys fishing-activities))]
+            :field
+            {:type        "multi-select"
+             :description {:fi "Valitse soveltuvat kalastusmuodot"
+                           :se "Välj lämpliga fiskeformer."
+                           :en "Choose suitable forms of fishing."}
+             :label       {:fi "Hyvin soveltuvat kalastusmuodot"
+                           :se "Lämpliga fiskeformer"
+                           :en "Suitable forms of fishing"}
+             :opts        fishing-activities}}
 
-     :fishing-waters
-     {:schema (into [:enum] (keys fishing-waters))
-      :field
-      {:type        "select"
-       :description {:fi "Valitse vesistön tyyppi"
-                     :se "Välj typ av vattendrag."
-                     :en "Choose the type of the water system."}
-       :label       {:fi "Vesistö"
-                     :se "Vattendrag"
-                     :en "Water system"}
-       :opts        fishing-waters}}
+           :fishing-waters
+           {:schema (into [:enum] (keys fishing-waters))
+            :field
+            {:type        "select"
+             :description {:fi "Valitse vesistön tyyppi"
+                           :se "Välj typ av vattendrag."
+                           :en "Choose the type of the water system."}
+             :label       {:fi "Vesistö"
+                           :se "Vattendrag"
+                           :en "Water system"}
+             :opts        fishing-waters}}
 
-     :fishing-species
-     {:schema [:sequential (into [:enum] (keys fishing-species))]
-      :field
-      {:type        "multi-select"
-       :description {:fi "Kohteessa kalastamisen kannalta keskeisimmät kalalajit, esim. ahven, taimen, kirjolohi tms."
-                     :se "Välj de viktigaste fiskarterna för fiske på platsen, t.ex. abborre, öring, regnbåge m.m."
-                     :en "Choose the main types of fish present in the water system, e.g. perch, trout, rainbow trout, etc."}
-       :label       {:fi "Keskeiset kalalajit"
-                     :se "Viktiga fiskarter"
-                     :en "Main types of fish"}
-       :opts        fishing-species}}
+           :fishing-species
+           {:schema [:sequential (into [:enum] (keys fishing-species))]
+            :field
+            {:type        "multi-select"
+             :description {:fi "Kohteessa kalastamisen kannalta keskeisimmät kalalajit, esim. ahven, taimen, kirjolohi tms."
+                           :se "Välj de viktigaste fiskarterna för fiske på platsen, t.ex. abborre, öring, regnbåge m.m."
+                           :en "Choose the main types of fish present in the water system, e.g. perch, trout, rainbow trout, etc."}
+             :label       {:fi "Keskeiset kalalajit"
+                           :se "Viktiga fiskarter"
+                           :en "Main types of fish"}
+             :opts        fishing-species}}
 
-     :fish-population
-     {:schema common-schema/localized-string
-      :field
-      {:type        "textarea"
-       :description {:fi "Kirjoita tähän kuvaus kohteen vesistössä esiintyvästä kalastosta."
-                     :se "Ange här en beskrivning av fiskbeståndet i vattendragen på platsen."
-                     :en "Write a description of the fish population in the water system of the place here."}
-       :label       {:fi "Kalasto"
-                     :se "Fiskbestånd"
-                     :en "Fish population"}}}
+           :fish-population
+           {:schema common-schema/localized-string
+            :field
+            {:type        "textarea"
+             :description {:fi "Kirjoita tähän kuvaus kohteen vesistössä esiintyvästä kalastosta."
+                           :se "Ange här en beskrivning av fiskbeståndet i vattendragen på platsen."
+                           :en "Write a description of the fish population in the water system of the place here."}
+             :label       {:fi "Kalasto"
+                           :se "Fiskbestånd"
+                           :en "Fish population"}}}
 
+           :fishing-methods
+           {:schema common-schema/localized-string
+            :field
+            {:type        "textarea"
+             :description {:fi "Tietoa mm. kohteessa kalastukseen vaikuttavista erityispiirteistä, toimivista välinevalinnoista yms."
+                           :se "Information om t.ex. särskilda egenskaper som påverkar fisket på platsen, val av funktionell utrustning etc."
+                           :en "Information on e.g. special characteristics affecting fishing at the site, functional equipment choices, etc."}
+             :label       {:fi "Vinkkejä kohteessa kalastamiseen"
+                           :se "Tips för fiske på platsen"
+                           :en "Fishing tips"}}}
 
-     :fishing-methods
-     {:schema common-schema/localized-string
-      :field
-      {:type        "textarea"
-       :description {:fi "Tietoa mm. kohteessa kalastukseen vaikuttavista erityispiirteistä, toimivista välinevalinnoista yms."
-                     :se "Information om t.ex. särskilda egenskaper som påverkar fisket på platsen, val av funktionell utrustning etc."
-                     :en "Information on e.g. special characteristics affecting fishing at the site, functional equipment choices, etc."}
-       :label       {:fi "Vinkkejä kohteessa kalastamiseen"
-                     :se "Tips för fiske på platsen"
-                     :en "Fishing tips"}}}
+           :fishing-permit
+           {:schema [:sequential (into [:enum] (keys fishing-permit-opts))]
+            :field
+            {:type        "checkboxes"
+             :label       {:fi "Kalastuslupatarve"
+                           :se "Fiskelicensbehov"
+                           :en "Fishing permit requirement"}
+             :description {:fi "Valitse kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."
+                           :se "Välj fisketillståndskrav för platsen när du fiskar med ett spö. OBS! Om du fiskar med mer än ett spö behöver du alltid ett lokalt tillstånd."
+                           :en "Select the fishing permit requirement for the destination when fishing with one rod. N.B. Fishing with more than one rod always requires a local permit."}
+             :opts        fishing-permit-opts}}
 
-     :fishing-permit
-     {:schema [:sequential (into [:enum] (keys fishing-permit-opts))]
-      :field
-      {:type        "checkboxes"
-       :label       {:fi "Kalastuslupatarve"
-                     :se "Fiskelicensbehov"
-                     :en "Fishing permit requirement"}
-       :description {:fi "Valitse kohteen kalastuslupatarve yhdellä vavalla kalastettaessa. Huom. useammalla vavalla kalastaminen vaatii aina paikallisen luvan."
-                     :se "Välj fisketillståndskrav för platsen när du fiskar med ett spö. OBS! Om du fiskar med mer än ett spö behöver du alltid ett lokalt tillstånd."
-                     :en "Select the fishing permit requirement for the destination when fishing with one rod. N.B. Fishing with more than one rod always requires a local permit."}
-       :opts        fishing-permit-opts}}
+           :fishing-permit-additional-info
+           {:schema common-schema/localized-string
+            :field
+            {:type        "textarea"
+             :description {:fi "Syötä tähän tarvittaessa lisätietoa kalastuslupia koskevista muista asioista"
+                           :se "Ange vid behov mer information om andra frågor som gäller fisketillstånd här."
+                           :en "If necessary, enter additional information about other matters concerning fishing permits here."}
+             :label       {:fi "Kalastuslupatarpeen lisätiedot"
+                           :se "Ytterligare information om fisketillstånd"
+                           :en "Additional information about fishing permits"}}}
 
-     :fishing-permit-additional-info
-     {:schema common-schema/localized-string
-      :field
-      {:type        "textarea"
-       :description {:fi "Syötä tähän tarvittaessa lisätietoa kalastuslupia koskevista muista asioista"
-                     :se "Ange vid behov mer information om andra frågor som gäller fisketillstånd här."
-                     :en "If necessary, enter additional information about other matters concerning fishing permits here."}
-       :label       {:fi "Kalastuslupatarpeen lisätiedot"
-                     :se "Ytterligare information om fisketillstånd"
-                     :en "Additional information about fishing permits"}}}
+           :accessibility-classification
+           {:schema (into [:enum] (keys accessibility-classification))
+            :field
+            {:type        "select"
+             :label       {:fi "Esteettömyysluokittelu"
+                           :se "Klassificering av tillgänglighet"
+                           :en "Accessibility classification"}
+             :description {:fi "Valitse onko kohde esteellinen tai esteetön."
+                           :se "Välj om platsen är inte tillgänglig eller tillgänglig."
+                           :en "Select if the place is not accessible or is accessible."}
+             :opts        (dissoc accessibility-classification "advanced-accessible")}}
 
-     :accessibility-classification
-     {:schema (into [:enum] (keys accessibility-classification))
-      :field
-      {:type        "select"
-       :label       {:fi "Esteettömyysluokittelu"
-                     :se "Klassificering av tillgänglighet"
-                     :en "Accessibility classification"}
-       :description {:fi "Valitse onko kohde esteellinen tai esteetön."
-                     :se "Välj om platsen är inte tillgänglig eller tillgänglig."
-                     :en "Select if the place is not accessible or is accessible."}
-       :opts        (dissoc accessibility-classification "advanced-accessible")}}
+           :accessibility-categorized
+           {:schema [:map
+                     [:mobility-impaired {:optional true} common-schema/localized-string]
+                     [:hearing-impaired {:optional true} common-schema/localized-string]
+                     [:visually-impaired {:optional true} common-schema/localized-string]
+                     [:developmentally-disabled {:optional true} common-schema/localized-string]]
 
-     :accessibility-categorized
-     {:schema [:map
-               [:mobility-impaired {:optional true} common-schema/localized-string]
-               [:hearing-impaired {:optional true} common-schema/localized-string]
-               [:visually-impaired {:optional true} common-schema/localized-string]
-               [:developmentally-disabled {:optional true} common-schema/localized-string]]
-
-      :field
-      {:type        "accessibility"
-       :label       {:fi "Esteettömyys"
-                     :se "Tillgänglighet"
-                     :en "Accessibility"}
-       :description {:fi "Yleistä tietoa kohteen esteettömyydestä"
-                     :se "Allmän information om platsens tillgänglighet."
-                     :en "General information about the accessibility of the place."}
-       :props
-       {:mobility-impaired
-        {:value "mobility-impaired"
-         :field
-         {:type        "textarea"
-          :description {:fi "Aihekohtainen tekstikuvaus"
-                        :se "Ämnesspecifik textbeskrivning"
-                        :en "Subject-specific text description"}
-          :label       {:fi "Liikuntavammaiset"
-                        :se "Rörelsehindrade"
-                        :en "Mobility impaired"}}}}}}})})
+            :field
+            {:type        "accessibility"
+             :label       {:fi "Esteettömyys"
+                           :se "Tillgänglighet"
+                           :en "Accessibility"}
+             :description {:fi "Yleistä tietoa kohteen esteettömyydestä"
+                           :se "Allmän information om platsens tillgänglighet."
+                           :en "General information about the accessibility of the place."}
+             :props
+             {:mobility-impaired
+              {:value "mobility-impaired"
+               :field
+               {:type        "textarea"
+                :description {:fi "Aihekohtainen tekstikuvaus"
+                              :se "Ämnesspecifik textbeskrivning"
+                              :en "Subject-specific text description"}
+                :label       {:fi "Liikuntavammaiset"
+                              :se "Rörelsehindrade"
+                              :en "Mobility impaired"}}}}}}})})
 
 (def fishing-schema
   (mu/merge
@@ -1792,9 +1786,7 @@
                     (assoc-in [:arrival :field :description :en] "Information about how to get to the destination with different means of transport, e.g. parking areas and public transport. N.B! Fill in the field only if there are any special comments about arriving at the destination.")
                     (assoc-in [:accessibility :field :description :fi] "Yleistä tietoa kohteen esteettömyydestä  tai kuljettavuudesta")
                     (assoc-in [:accessibility :field :description :se] "Allmän information om platsens tillgänglighet eller farbarhet")
-                    (assoc-in [:accessibility :field :description :en] "General information about the accessibility or passability of the place."))
-})
-
+                    (assoc-in [:accessibility :field :description :en] "General information about the accessibility or passability of the place."))})
 
 (def outdoor-recreation-facilities-schema
   (collect-schema (:props outdoor-recreation-facilities)))
@@ -1819,15 +1811,13 @@
 
   (require '[cheshire.core :as json])
 
-  (println (-> activities-schema json-schema/transform json/encode))
-
-  )
+  (println (-> activities-schema json-schema/transform json/encode)))
 
 (defn gen-json-schema
   []
   (-> activities-schema
       json-schema/transform
-      #?(:clj(json/encode {:pretty true})
+      #?(:clj (json/encode {:pretty true})
          :cljs clj->js)
       println))
 
@@ -1904,6 +1894,4 @@
 (comment
 
   (json-schema/transform birdwatching-schema)
-  (json-schema/transform activities-schema)
-
-  )
+  (json-schema/transform activities-schema))

@@ -278,5 +278,45 @@
     (is (= (:csv utils/content-type) "text/csv"))
     (is (= (:json utils/content-type) "application/json"))))
 
+(deftest regenerate-route-ids-test
+  (testing "regenerates IDs for all routes in activities"
+    (let [activities {:outdoor-recreation-routes
+                      {:routes [{:id "old-id-1" :route-name "Route 1"}
+                                {:id "old-id-2" :route-name "Route 2"}]}
+                      :cycling
+                      {:routes [{:id "old-cycling" :route-name "Cycling route"}]}}
+          result (utils/regenerate-route-ids activities)]
+      ;; All routes should have new IDs
+      (is (not= "old-id-1" (get-in result [:outdoor-recreation-routes :routes 0 :id])))
+      (is (not= "old-id-2" (get-in result [:outdoor-recreation-routes :routes 1 :id])))
+      (is (not= "old-cycling" (get-in result [:cycling :routes 0 :id])))
+      ;; IDs should be valid UUID strings
+      (is (uuid? (utils/->uuid-safe (get-in result [:outdoor-recreation-routes :routes 0 :id]))))
+      (is (uuid? (utils/->uuid-safe (get-in result [:outdoor-recreation-routes :routes 1 :id]))))
+      (is (uuid? (utils/->uuid-safe (get-in result [:cycling :routes 0 :id]))))
+      ;; Other route data should be preserved
+      (is (= "Route 1" (get-in result [:outdoor-recreation-routes :routes 0 :route-name])))
+      (is (= "Route 2" (get-in result [:outdoor-recreation-routes :routes 1 :route-name])))))
+
+  (testing "preserves activities without routes"
+    (let [activities {:fishing {:some-prop "value" :no-routes-here true}
+                      :outdoor-recreation-routes {:routes [{:id "old" :name "test"}]}}
+          result (utils/regenerate-route-ids activities)]
+      (is (= {:some-prop "value" :no-routes-here true} (:fishing result)))))
+
+  (testing "handles nil activities"
+    (is (nil? (utils/regenerate-route-ids nil))))
+
+  (testing "handles empty activities map"
+    (is (= {} (utils/regenerate-route-ids {}))))
+
+  (testing "generates unique IDs for each route"
+    (let [activities {:outdoor-recreation-routes
+                      {:routes [{:id "same"} {:id "same"} {:id "same"}]}}
+          result (utils/regenerate-route-ids activities)
+          ids (map :id (get-in result [:outdoor-recreation-routes :routes]))]
+      ;; All IDs should be different from each other
+      (is (= 3 (count (set ids)))))))
+
 (comment
   (run-tests *ns*))
