@@ -10,9 +10,9 @@ LIPAS data is **freely available** to everyone. The database contains:
 
 - **48,000+** sports facilities
 - **Location data** with precise coordinates
-- **Facility details** — types, properties, accessibility information
+- **Facility details** — types, properties, infrastructure
 - **Administrative data** — ownership, operators, contact information
-- **Recreational routes** — trails, tracks, skiing routes
+- **Recreational routes and areas** — trails, tracks, skiing routes, outdoor recreation areas
 
 All data is available through multiple access methods with no registration required.
 
@@ -49,7 +49,7 @@ Available at [lipas.cc.jyu.fi/geoserver](http://lipas.cc.jyu.fi/geoserver)
 
 ### Web Application
 
-Interactive map interface at [lipas.fi](https://www.lipas.fi) for browsing, searching, and analyzing facilities. Registered users can manage facility data and generate reports.
+Interactive map interface at [lipas.fi](https://www.lipas.fi) for browsing, searching, and generating reports. Registered users can manage facility data and access analysis tools.
 
 ## Technical Overview
 
@@ -69,6 +69,10 @@ LIPAS integrates with Finnish national infrastructure:
 
 - **PTV** (Palvelutietovaranto) — Service registry synchronization
 - **YTI** (Yhteentoimivuusalusta) — Terminology services
+
+### Data Users
+
+LIPAS data powers dozens of services across Finland, including [Luontoon.fi](https://www.luontoon.fi/), [Trailmap.fi](https://trailmap.fi), [Retkikartta.fi](https://www.retkikartta.fi/), and various municipal map services like [palvelukartta.hel.fi](https://palvelukartta.hel.fi/) and [kuopio.fi](https://www.kuopio.fi/liikunta-ja-ulkoilukartat).
 
 ## For Developers
 
