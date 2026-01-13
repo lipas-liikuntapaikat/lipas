@@ -11,8 +11,8 @@
       (testing "Has strict dynamic mode"
         (is (= "strict" (:dynamic (:mappings mapping)))))
 
-      (testing "Has field limit of 300"
-        (is (= 300 (get-in mapping [:settings :index :mapping :total_fields :limit]))))
+      (testing "Has field limit of 350"
+        (is (= 350 (get-in mapping [:settings :index :mapping :total_fields :limit]))))
 
       (testing "Has max_result_window of 60000"
         (is (= 60000 (get-in mapping [:settings :max_result_window]))))

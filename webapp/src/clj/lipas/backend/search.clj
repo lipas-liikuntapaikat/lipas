@@ -77,36 +77,39 @@
          :search-meta.location.geometries {:type "geo_shape"}}
 
         ;; Search-meta enrichment fields (multilingual and computed)
+        ;; Name fields use text for case-insensitive search + keyword subfield for sorting
+        text-with-keyword {:type "text" :fields {:keyword {:type "keyword"}}}
+
         search-meta-fields
-        {:search-meta.name {:type "keyword"}
-         :search-meta.admin.name.fi {:type "keyword"}
-         :search-meta.admin.name.se {:type "keyword"}
-         :search-meta.admin.name.en {:type "keyword"}
-         :search-meta.owner.name.fi {:type "keyword"}
-         :search-meta.owner.name.se {:type "keyword"}
-         :search-meta.owner.name.en {:type "keyword"}
-         :search-meta.location.city.name.fi {:type "keyword"}
-         :search-meta.location.city.name.se {:type "keyword"}
-         :search-meta.location.city.name.en {:type "keyword"}
-         :search-meta.location.province.name.fi {:type "keyword"}
-         :search-meta.location.province.name.se {:type "keyword"}
-         :search-meta.location.province.name.en {:type "keyword"}
-         :search-meta.location.avi-area.name.fi {:type "keyword"}
-         :search-meta.location.avi-area.name.se {:type "keyword"}
-         :search-meta.location.avi-area.name.en {:type "keyword"}
-         :search-meta.type.name.fi {:type "keyword"}
-         :search-meta.type.name.se {:type "keyword"}
-         :search-meta.type.name.en {:type "keyword"}
-         ;; Tags are multilingual arrays
+        {:search-meta.name text-with-keyword
+         :search-meta.admin.name.fi text-with-keyword
+         :search-meta.admin.name.se text-with-keyword
+         :search-meta.admin.name.en text-with-keyword
+         :search-meta.owner.name.fi text-with-keyword
+         :search-meta.owner.name.se text-with-keyword
+         :search-meta.owner.name.en text-with-keyword
+         :search-meta.location.city.name.fi text-with-keyword
+         :search-meta.location.city.name.se text-with-keyword
+         :search-meta.location.city.name.en text-with-keyword
+         :search-meta.location.province.name.fi text-with-keyword
+         :search-meta.location.province.name.se text-with-keyword
+         :search-meta.location.province.name.en text-with-keyword
+         :search-meta.location.avi-area.name.fi text-with-keyword
+         :search-meta.location.avi-area.name.se text-with-keyword
+         :search-meta.location.avi-area.name.en text-with-keyword
+         :search-meta.type.name.fi text-with-keyword
+         :search-meta.type.name.se text-with-keyword
+         :search-meta.type.name.en text-with-keyword
+         ;; Tags are multilingual arrays - keep as keyword for exact matching
          :search-meta.type.tags.fi {:type "keyword"}
          :search-meta.type.tags.se {:type "keyword"}
          :search-meta.type.tags.en {:type "keyword"}
-         :search-meta.type.main-category.name.fi {:type "keyword"}
-         :search-meta.type.main-category.name.se {:type "keyword"}
-         :search-meta.type.main-category.name.en {:type "keyword"}
-         :search-meta.type.sub-category.name.fi {:type "keyword"}
-         :search-meta.type.sub-category.name.se {:type "keyword"}
-         :search-meta.type.sub-category.name.en {:type "keyword"}
+         :search-meta.type.main-category.name.fi text-with-keyword
+         :search-meta.type.main-category.name.se text-with-keyword
+         :search-meta.type.main-category.name.en text-with-keyword
+         :search-meta.type.sub-category.name.fi text-with-keyword
+         :search-meta.type.sub-category.name.se text-with-keyword
+         :search-meta.type.sub-category.name.en text-with-keyword
          :search-meta.fields.field-types {:type "keyword"}
          :search-meta.audits.latest-audit-date {:type "date"}
          ;; NEW: Activity keys array for filtering
@@ -142,7 +145,7 @@
 
     {:settings
      {:max_result_window 60000
-      :index {:mapping {:total_fields {:limit 300}}}}
+      :index {:mapping {:total_fields {:limit 350}}}}
      :mappings
      {:dynamic "strict"
       :date_detection false
