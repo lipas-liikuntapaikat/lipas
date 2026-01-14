@@ -26,8 +26,8 @@
   [props children]
   [mui/grid {:container true :spacing 4}
    (doall
-     (for [[idx child] (map vector (range) children)]
-       [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+    (for [[idx child] (map vector (range) children)]
+      [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -121,21 +121,21 @@
       [mui/grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
       (doall
-        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-          [mui/grid
-           {:key prop-k
-            :item true
-            :xs 12}
-           [make-field
-            {:field        field
-             :prop-k       prop-k
-             :edit-data    (:data @dialog-state)
-             :display-data (:data @dialog-state)
-             :locale       locale
-             :set-field    (fn [& args]
-                             (let [path (into [:data] (butlast args))
-                                   v (last args)]
-                               (swap! dialog-state assoc-in path v)))}]]))]]))
+       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+         [mui/grid
+          {:key prop-k
+           :item true
+           :xs 12}
+          [make-field
+           {:field        field
+            :prop-k       prop-k
+            :edit-data    (:data @dialog-state)
+            :display-data (:data @dialog-state)
+            :locale       locale
+            :set-field    (fn [& args]
+                            (let [path (into [:data] (butlast args))
+                                  v (last args)]
+                              (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field
@@ -188,8 +188,8 @@
                                  (map #(assoc % :_role (->> %
                                                             :role
                                                             (map
-                                                              (fn [role]
-                                                                (get-in contact-props [:role :field :opts role locale])))
+                                                             (fn [role]
+                                                               (get-in contact-props [:role :field :opts role locale])))
                                                             (str/join ", ")))))
           :on-add           (fn []
                               (reset! dialog-state {:open? true
@@ -454,43 +454,43 @@
              [mui/typography description]]]
 
          (doall
-           (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
-             ^{:key k}
-             [:<>
-              [mui/grid {:item true :xs 12}
-               [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
+          (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
+            ^{:key k}
+            [:<>
+             [mui/grid {:item true :xs 12}
+              [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-              [mui/grid {:item true :xs 12}
-               [lui/text-field
-                {:fullWidth       true
-                 :required        true
-                 #_#_:helper-text description
-                 :value           (-> @dialog-state :data (get k) :label locale)
-                 :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
-                 :label           (tr :general/headline)
-                 :variant         "outlined"}]]
+             [mui/grid {:item true :xs 12}
+              [lui/text-field
+               {:fullWidth       true
+                :required        true
+                #_#_:helper-text description
+                :value           (-> @dialog-state :data (get k) :label locale)
+                :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
+                :label           (tr :general/headline)
+                :variant         "outlined"}]]
 
              ;; Description
-              [mui/grid {:item true :xs 12}
-               [lui/text-field
-                {:fullWidth       true
-                 :required        true
-                 #_#_:helper-text description
-                 :value           (-> @dialog-state :data (get k) :description locale)
-                 :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
-                 :label           (tr :general/description)
-                 :variant         "outlined"}]]
+             [mui/grid {:item true :xs 12}
+              [lui/text-field
+               {:fullWidth       true
+                :required        true
+                #_#_:helper-text description
+                :value           (-> @dialog-state :data (get k) :description locale)
+                :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
+                :label           (tr :general/description)
+                :variant         "outlined"}]]
 
              ;; Delete btn
-              [mui/grid {:item true :style {:text-align "right"}}
-               [lui-btn/confirming-delete-button
-                {:tooltip         (tr :actions/delete)
-                 :confirm-tooltip (tr :confirm/delete-confirm)
-                 :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
+             [mui/grid {:item true :style {:text-align "right"}}
+              [lui-btn/confirming-delete-button
+               {:tooltip         (tr :actions/delete)
+                :confirm-tooltip (tr :confirm/delete-confirm)
+                :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-              [mui/grid {:item true :xs 12}
-               [mui/divider]]]))
+             [mui/grid {:item true :xs 12}
+              [mui/divider]]]))
 
          ;; Add / edit btn
          [mui/grid {:item true :xs 12}
@@ -873,32 +873,35 @@
   [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
-     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
-           :when (or (nil? show)
-                     (show {:type-code type-code}))]
-       (when-not (and
-                   (contains? route-props :independent-entity)
-                   (not (:independent-entity @state))
-                   (contains? independent-entity-ks prop-k))
-         [make-field
-          {:read-only?   read-only?
-           :key          prop-k
-           :field        field
-           :prop-k       prop-k
-           :edit-data    @state
-           :display-data @state
-           :locale       locale
-           :set-field    (fn [& args]
-                           (let [path (butlast args)
-                                 v (last args)]
-                             (swap! state assoc-in path v)))
-           :lipas-id     lipas-id}])))])
+    (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
+          :when (or (nil? show)
+                    (show {:type-code type-code}))]
+      (when-not (and
+                 (contains? route-props :independent-entity)
+                 (not (:independent-entity @state))
+                 (contains? independent-entity-ks prop-k))
+        [make-field
+         {:read-only?   read-only?
+          :key          prop-k
+          :field        field
+          :prop-k       prop-k
+          :edit-data    @state
+          :display-data @state
+          :locale       locale
+          :set-field    (fn [& args]
+                          (let [path (butlast args)
+                                v (last args)]
+                            (swap! state assoc-in path v)))
+          :lipas-id     lipas-id}])))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
            locale _label _description _set-field set-field]
     :as   props}]
-  (r/with-let [route-form-state (r/atom route)
+  ;; Ensure route has an :id - required by schema since commit 63af05df
+  (r/with-let [route-form-state (r/atom (if (:id route)
+                                          route
+                                          (assoc route :id (str (random-uuid)))))
                _ (add-watch route-form-state :lol
                             (fn [_key _atom _old-state new-state]
                               (set-field [new-state])))]
@@ -1154,17 +1157,17 @@
 
     "percentage" [lui/text-field
                   (merge
-                    {:type        "number"
-                     :adornment   "%"
-                     :disabled    read-only?
-                     :label       (get-in field [:label locale])
-                     :helper-text (get-in field [:description locale])
-                     :fullWidth   true
-                     :spec        [:or
-                                   [:int {:min 0 :max 100}]
-                                   [:double {:min 0.0 :max 100.0}]]
-                     :on-change   #(set-field prop-k %)
-                     :value       (get-in edit-data [prop-k])})]
+                   {:type        "number"
+                    :adornment   "%"
+                    :disabled    read-only?
+                    :label       (get-in field [:label locale])
+                    :helper-text (get-in field [:description locale])
+                    :fullWidth   true
+                    :spec        [:or
+                                  [:int {:min 0 :max 100}]
+                                  [:double {:min 0.0 :max 100.0}]]
+                    :on-change   #(set-field prop-k %)
+                    :value       (get-in edit-data [prop-k])})]
 
     ;; FIXME: MUI-v5, outlined input is missing x-padding
     "textarea" [lui-tf/expandable-text-area
