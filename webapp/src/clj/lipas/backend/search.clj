@@ -131,7 +131,24 @@
          :locker-rooms {:enabled false}
          :circumstances {:enabled false}
          :audits {:enabled false}
-         :ptv {:enabled false}}
+         :ptv {:enabled false}
+         ;; Swimming pool specific fields (type 3110, 3130)
+         :building {:enabled false}
+         :conditions {:enabled false}
+         :energy-saving {:enabled false}
+         :facilities {:enabled false}
+         :pools {:enabled false}
+         :saunas {:enabled false}
+         :slides {:enabled false}
+         :water-treatment {:enabled false}
+         ;; Ice stadium specific fields (type 2510, 2520)
+         :envelope {:enabled false}
+         :refrigeration {:enabled false}
+         :rinks {:enabled false}
+         :ventilation {:enabled false}
+         ;; Other fields
+         :energy-consumption {:enabled false}
+         :hall-id {:enabled false}}
 
         ;; Programmatically generated property mappings
         property-mappings (generate-property-mappings)
