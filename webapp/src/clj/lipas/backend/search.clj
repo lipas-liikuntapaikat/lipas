@@ -56,6 +56,7 @@
          :status {:type "keyword"}  ; queried by V2 API filter
          :event-date {:type "date"}  ; might be used for sorting
          :type.type-code {:type "integer"}  ; queried by V2 API filter
+         :type.size-category {:type "keyword"}  ; ice halls have size category (small/competition/large)
          :construction-year {:type "integer"}  ; might be used for range queries
          :admin {:type "keyword"}  ; queried by V2 API filter
          :owner {:type "keyword"}  ; queried by V2 API filter
@@ -150,6 +151,32 @@
          :energy-consumption {:enabled false}
          :hall-id {:enabled false}}
 
+        ;; Legacy properties that exist in DB but are not in prop-types/all
+        ;; Stored in _source but not indexed (display-only)
+        legacy-property-mappings
+        {:properties.accessible? {:enabled false}
+         :properties.adp-readiness? {:enabled false}
+         :properties.platforms-1m-count {:enabled false}
+         :properties.platforms-3m-count {:enabled false}
+         :properties.platforms-5m-count {:enabled false}
+         :properties.platforms-7.5m-count {:enabled false}
+         :properties.platforms-10m-count {:enabled false}
+         :properties.pool-2-length-m {:enabled false}
+         :properties.pool-2-width-m {:enabled false}
+         :properties.pool-2-min-depth-m {:enabled false}
+         :properties.pool-2-max-depth-m {:enabled false}
+         :properties.pool-2-temperature-c {:enabled false}
+         :properties.pool-2-tracks-count {:enabled false}
+         :properties.pool-3-length-m {:enabled false}
+         :properties.pool-3-width-m {:enabled false}
+         :properties.pool-3-min-depth-m {:enabled false}
+         :properties.pool-3-max-depth-m {:enabled false}
+         :properties.pool-3-temperature-c {:enabled false}
+         :properties.pool-4-temperature-c {:enabled false}
+         :properties.radio-and-tv-capabilities? {:enabled false}
+         :properties.water-slides-count {:enabled false}
+         :properties.waterslides-total-length-m {:enabled false}}
+
         ;; Programmatically generated property mappings
         property-mappings (generate-property-mappings)
 
@@ -158,6 +185,7 @@
                               geo-fields
                               search-meta-fields
                               property-mappings
+                              legacy-property-mappings
                               disabled-fields)]
 
     {:settings
