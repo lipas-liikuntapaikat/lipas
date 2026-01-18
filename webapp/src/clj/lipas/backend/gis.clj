@@ -173,7 +173,6 @@
        gio/to-geojson-feature-collection
        (json/decode keyword))))
 
-
 (defn simplify-safe
   "Returns simplified version of `m` where `m` is a map representing
   GeoJSON FeatureCollection."
@@ -250,7 +249,46 @@
                (update-in f [:geometry :coordinates] #(map dedupe %)))
              fs))))
 
-
+(defn repair-self-intersecting-polygon
+  "Repairs a self-intersecting polygon using the buffer(0) technique.
+   If the result is a MultiPolygon, decomposes it into multiple Polygon features.
+   Returns the input unchanged if the polygon is already valid or not a Polygon."
+  [fcoll]
+  (let [features (:features fcoll)
+        repaired-features
+        (mapcat
+         (fn [feature]
+           (let [geom-type (get-in feature [:geometry :type])]
+             (if (= "Polygon" geom-type)
+               (let [jts-geom (->jts-geom {:type "FeatureCollection" :features [feature]})]
+                 (if (.isValid jts-geom)
+                   [feature]  ; Already valid, keep as-is
+                   (let [geom-srid (.getSRID jts-geom)
+                         fixed-jts (doto (.buffer jts-geom 0.0)
+                                     (.setSRID geom-srid))
+                         fixed-type (.getGeometryType fixed-jts)]
+                     (log/info "Repaired self-intersecting polygon, result type:" fixed-type
+                               "lipas-id:" (:lipas-id (:properties feature)))
+                     (if (= "MultiPolygon" fixed-type)
+                       ;; Decompose MultiPolygon into multiple Polygon features
+                       (for [i (range (.getNumGeometries fixed-jts))]
+                         (let [poly (.getGeometryN fixed-jts i)
+                               _ (.setSRID poly geom-srid)
+                               poly-geom (-> (gio/to-geojson poly)
+                                             (json/parse-string true))]
+                           {:type "Feature"
+                            :id (str (:id feature) "-" i)
+                            :geometry poly-geom
+                            :properties (:properties feature)}))
+                       ;; Single Polygon result
+                       [{:type "Feature"
+                         :id (:id feature)
+                         :geometry (-> (gio/to-geojson fixed-jts)
+                                       (json/parse-string true))
+                         :properties (:properties feature)}]))))
+               [feature])))  ; Not a Polygon, keep as-is
+         features)]
+    (assoc fcoll :features (vec repaired-features))))
 
 (defn ->fcoll [features]
   {:type     "FeatureCollection"
@@ -539,7 +577,6 @@
   (def convex (.getConvexHull (ConvexHull. mp)))
 
   (.getSRID convex)
-
 
   (.setDistanceFnForCoordinate hull-tool)
   (.getDistanceFnForCoordinate hull-tool)

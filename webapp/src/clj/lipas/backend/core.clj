@@ -384,13 +384,15 @@
   (-> sports-site :location :geometries :features first :geometry :type))
 
 ;; Elasticsearch doesn't like Polygons with consequent duplicate
-;; coordinates so we fix them here. Multimethod was added because
-;; there probably will be similar issues with LineStrings once we find
-;; them out.
+;; coordinates or self-intersecting polygons so we fix them here.
+;; Multimethod was added because there probably will be similar issues
+;; with LineStrings once we find them out.
 (defmulti fix-geoms feature-type)
 (defmethod fix-geoms :default [sports-site] sports-site)
 (defmethod fix-geoms "Polygon" [sports-site]
-  (update-in sports-site [:location :geometries] gis/dedupe-polygon-coords))
+  (update-in sports-site [:location :geometries]
+             (comp gis/repair-self-intersecting-polygon
+                   gis/dedupe-polygon-coords)))
 
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
