@@ -11,9 +11,9 @@
   [{:keys [tr] :as props}]
   [lui/year-selector
    (merge
-     props
-     {:label (tr :actions/select-year)
-      :style common/select-style})])
+    props
+    {:label (tr :actions/select-year)
+     :style common/select-style})])
 
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -135,7 +135,7 @@
        [mui/grid {:item true}
         [year-selector
          {:tr        tr
-          :years     (range 2000 (inc 2023))
+          :years     (range 2000 (inc 2024))
           :value     year
           :on-change #(==> [::events/select-year %])}]]
 

@@ -5,7 +5,8 @@
             [lipas.utils :as utils]
             [malli.core :as m]
             [lipas.wfs.mappings :as wfs-mappings]
-            [lipas.wfs.core :as wfs]))
+            [lipas.wfs.core :as wfs]
+            [lipas.maintenance :as maintenance]))
 
 ;; exploring
 (comment
@@ -189,4 +190,18 @@
   ;; Drop specific materialized views if issues arise
   ;; (wfs/drop-legacy-mat-view! db "lipas_1190_pulkkamaki")
   ;; (wfs/unpublish-layer "lipas_1190_pulkkamaki")
+
+
+  ;; Taloustiedot ingest
+  (require '[lipas.maintenance :as maintenance])
+
+  (def system (ig/init (select-keys config/system-config [:lipas/search :lipas/db])))
+
+  (def s1 {:db (:lipas/db system)
+           :search (:lipas/search system)})
+  (def csv-path "/tmp/taloustiedot_2024.csv")
+
+  (maintenance/add-city-stats-from-csv! s1 csv-path 2024)
+
+
   )

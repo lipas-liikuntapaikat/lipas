@@ -4,7 +4,7 @@
 (def default-db
   {:selected-view           "chart"
    :selected-cities         [] ; whole country
-   :selected-year           #_(dec utils/this-year) 2023
+   :selected-year           #_(dec utils/this-year) 2024
    :units                   reports/stats-units
    :selected-unit           "euros-per-capita"
    :city-services           reports/city-services
