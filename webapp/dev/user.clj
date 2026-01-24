@@ -147,6 +147,13 @@
 (defn reset []
   (integrant.repl/reset))
 
+(defn refresh-all
+  "Performs a full refresh of all namespaces using tools.namespace.
+   Unlike the incremental refresh, this reloads everything from scratch.
+   Useful when incremental refresh gets into a bad state."
+  []
+  (clojure.tools.namespace.repl/refresh-all))
+
 (defn browser-repl
   []
   (shadow/repl :app))
