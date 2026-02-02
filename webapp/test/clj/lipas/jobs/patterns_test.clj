@@ -81,49 +81,6 @@
         (catch TimeoutException e
           (is (re-find #"50ms" (.getMessage e))))))))
 
-(deftest retry-test
-  (testing "with-retry macro"
-    (testing "returns result on success"
-      (is (= 42 (patterns/with-retry {:max-attempts 3}
-                  42))))
-
-    (testing "retries on failure"
-      (let [counter (atom 0)
-            result (patterns/with-retry {:max-attempts 3}
-                     (if (< (swap! counter inc) 3)
-                       (throw (Exception. "fail"))
-                       "success"))]
-        (is (= "success" result))
-        (is (= 3 @counter))))
-
-    (testing "respects max attempts"
-      (let [counter (atom 0)]
-        (is (thrown? Exception
-                     (patterns/with-retry {:max-attempts 2}
-                       (swap! counter inc)
-                       (throw (Exception. "always fails")))))
-        (is (= 2 @counter))))
-
-    (testing "retry-on predicate filters exceptions"
-      (let [counter (atom 0)]
-        (is (thrown? IllegalArgumentException
-                     (patterns/with-retry {:max-attempts 5
-                                           :retry-on #(instance? java.io.IOException %)}
-                       (swap! counter inc)
-                       (throw (IllegalArgumentException. "not retryable")))))
-        (is (= 1 @counter))))
-
-    (testing "on-retry callback is called"
-      (let [retry-calls (atom [])]
-        (try
-          (patterns/with-retry {:max-attempts 3
-                                :on-retry #(swap! retry-calls conj %)}
-            (throw (Exception. "fail")))
-          (catch Exception _))
-        (is (= 2 (count @retry-calls)))
-        (is (every? #(contains? % :attempt) @retry-calls))
-        (is (every? #(contains? % :delay-ms) @retry-calls))))))
-
 ;; Circuit Breaker Tests using real database
 
 (deftest circuit-breaker-state-test
@@ -342,5 +299,4 @@
   (clojure.test/run-test-var #'circuit-breaker-state-test)
   (clojure.test/run-test-var #'circuit-breaker-test)
   (clojure.test/run-test-var #'circuit-breaker-concurrency-test)
-  (clojure.test/run-test-var #'circuit-breaker-reset-test)
-  )
+  (clojure.test/run-test-var #'circuit-breaker-reset-test))

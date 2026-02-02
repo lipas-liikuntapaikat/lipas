@@ -49,52 +49,6 @@
          (throw (TimeoutException. (str "Operation timed out after " ~timeout-ms "ms"))))
        result#)))
 
-(defn with-retry*
-  "Execute function with automatic retry on failure.
-  
-  Options:
-  :max-attempts - maximum number of attempts (default 3)
-  :retry-on - predicate to determine if exception should trigger retry
-  :on-retry - callback function called with {:attempt :exception :delay-ms}
-  :backoff-opts - options passed to exponential-backoff-ms
-  
-  Example:
-  (with-retry* {:max-attempts 5
-                :retry-on #(instance? IOException %)
-                :on-retry #(log/warn \"Retrying\" %)}
-               #(http/get \"https://api.example.com/data\"))"
-  [{:keys [max-attempts retry-on on-retry backoff-opts]
-    :or {max-attempts 3
-         retry-on (constantly true)
-         on-retry (fn [_])
-         backoff-opts {}}} f]
-  (loop [attempt 0]
-    (let [result (try
-                   {:success true :value (f)}
-                   (catch Exception e
-                     {:success false :exception e}))]
-      (if (:success result)
-        (:value result)
-        (let [e (:exception result)]
-          (if (and (< (inc attempt) max-attempts)
-                   (retry-on e))
-            (let [delay-ms (apply exponential-backoff-ms attempt (mapcat identity backoff-opts))]
-              (on-retry {:attempt attempt
-                         :exception e
-                         :delay-ms delay-ms})
-              (Thread/sleep delay-ms)
-              (recur (inc attempt)))
-            (throw e)))))))
-
-(defmacro with-retry
-  "Macro version of with-retry* for inline code.
-  
-  Example:
-  (with-retry {:max-attempts 5}
-    (http/get \"https://api.example.com/data\"))"
-  [opts & body]
-  `(with-retry* ~opts (fn [] ~@body)))
-
 (defn get-circuit-breaker
   "Get current state of a circuit breaker from database."
   [db service-name]

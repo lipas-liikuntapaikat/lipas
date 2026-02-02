@@ -28,11 +28,6 @@
   [_ {:keys [db search emailer config]}]
   (log/info "Starting unified job worker")
 
-  ;; Reset any jobs stuck in processing state from previous crashes
-  (log/info "Checking for stuck jobs from previous worker crashes")
-  (let [timeout-minutes (get config :stuck-job-timeout-minutes 60)]
-    (jobs/reset-stuck-jobs! db timeout-minutes))
-
   ;; Log memory status at startup
   (let [runtime (Runtime/getRuntime)
         max-memory (/ (.maxMemory runtime) 1024 1024)
@@ -56,14 +51,14 @@
 (defmethod ig/init-key :lipas.jobs/health-monitor
   [_ {:keys [db config]}]
   (log/info "Starting job health monitor")
-  (require '[lipas.jobs.health :as health])
-  ((resolve 'lipas.jobs.health/start-health-monitor!) db config))
+  (require '[lipas.jobs.monitoring :as monitoring])
+  ((resolve 'lipas.jobs.monitoring/start-health-monitor!) db config))
 
 (defmethod ig/halt-key! :lipas.jobs/health-monitor
   [_ _]
   (log/info "Stopping job health monitor")
-  (require '[lipas.jobs.health :as health])
-  ((resolve 'lipas.jobs.health/stop-health-monitor!)))
+  (require '[lipas.jobs.monitoring :as monitoring])
+  ((resolve 'lipas.jobs.monitoring/stop-health-monitor!)))
 
 ;; Configuration can be overridden from environment variables
 (defn get-worker-config

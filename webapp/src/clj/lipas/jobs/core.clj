@@ -17,7 +17,7 @@
 
 (def job-type-schema
   [:enum "analysis" "elevation" "email" "webhook"
-   "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
+   "produce-reminders" "cleanup-jobs"])
 
 (def job-status-schema
   [:enum "pending" "processing" "completed" "failed" "dead"])
@@ -26,7 +26,7 @@
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook" "monitor-queue-health"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?
@@ -115,15 +115,6 @@
   [db job-id]
   (log/debug "Marking job completed" {:id job-id})
   (jobs-db/mark-job-completed! db {:id job-id}))
-
-(defn mark-failed!
-  "DEPRECATED - DO NOT USE. Use fail-job! instead.
-   This function will be removed in the next version."
-  [db job-id error-message]
-  (throw (ex-info "mark-failed! is deprecated and has been removed. Use fail-job! instead."
-                  {:job-id job-id
-                   :error-message error-message
-                   :suggestion "Use (fail-job! db job-id error-message {:current-attempt attempts :max-attempts max-attempts})"})))
 
 (defn move-to-dead-letter!
   "Move a permanently failed job to the dead letter queue.
@@ -486,7 +477,3 @@
       (log/warn "Reset stuck jobs on startup" {:count result :timeout-minutes timeout-minutes}))
     result))
 
-(defn example-job-payloads
-  "Get example payloads for all job types for documentation/testing."
-  []
-  (payload-schema/example-payloads))

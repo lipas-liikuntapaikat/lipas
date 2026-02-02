@@ -109,24 +109,6 @@
     (log/info "Cleaning up jobs older than" days-old "days")
     (jobs/cleanup-old-jobs! db days-old)))
 
-(defmethod handle-job "monitor-queue-health"
-  [{:keys [db]} {:keys [id payload correlation-id]}]
-  (log/info "Running queue health monitor" {:correlation-id correlation-id})
-  (let [alert-fn (fn [alert]
-                   ;; In production, this could send emails or post to monitoring service
-                   (log/warn "QUEUE ALERT" alert)
-                   ;; Could also enqueue email alerts
-                   (when (= (:type alert) :circuit-breaker-open)
-                     (jobs/enqueue-job! db "email"
-                                        {:to "admin@lipas.fi"
-                                         :subject (str "Circuit breaker open: " (:service alert))
-                                         :body (str "Service " (:service alert)
-                                                    " circuit breaker opened at "
-                                                    (:timestamp alert))}
-                                        {:priority 100})))
-        result (monitoring/monitor-and-alert! db {:alert-fn alert-fn})]
-    (log/debug "Health monitor completed" result)))
-
 (defmethod handle-job :default
   [_system job]
   (log/error "Unknown job type" {:job job})

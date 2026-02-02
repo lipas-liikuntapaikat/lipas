@@ -49,8 +49,14 @@
   [:map
    [:days-old {:optional true :default 7} pos-int?]])
 
-(def monitor-queue-health-payload-schema
-  [:map])
+;; Single source of truth for job type to schema mapping
+(def schemas-by-type
+  {"analysis" analysis-payload-schema
+   "elevation" elevation-payload-schema
+   "email" email-payload-schema
+   "webhook" webhook-payload-schema
+   "produce-reminders" produce-reminders-payload-schema
+   "cleanup-jobs" cleanup-jobs-payload-schema})
 
 ;; Multi-schema dispatched on job type
 (def job-payload-schema
@@ -72,24 +78,13 @@
                          [:payload produce-reminders-payload-schema]]]
    ["cleanup-jobs" [:map
                     [:type [:= "cleanup-jobs"]]
-                    [:payload cleanup-jobs-payload-schema]]]
-   ["monitor-queue-health" [:map
-                            [:type [:= "monitor-queue-health"]]
-                            [:payload monitor-queue-health-payload-schema]]]])
+                    [:payload cleanup-jobs-payload-schema]]]])
 
 (defn validate-payload-for-type
   "Validate just a payload for a specific job type.
    Returns {:valid? boolean :errors [...] :value ...}"
   [job-type payload]
-  (let [schema (case job-type
-                 "analysis" analysis-payload-schema
-                 "elevation" elevation-payload-schema
-                 "email" email-payload-schema
-                 "webhook" webhook-payload-schema
-                 "produce-reminders" produce-reminders-payload-schema
-                 "cleanup-jobs" cleanup-jobs-payload-schema
-                 "monitor-queue-health" monitor-queue-health-payload-schema
-                 (throw (ex-info "Unknown job type" {:job-type job-type})))]
+  (if-let [schema (get schemas-by-type job-type)]
     (try
       (if (m/validate schema payload)
         {:valid? true :value payload}
@@ -99,22 +94,16 @@
                      (me/humanize))})
       (catch Exception e
         {:valid? false
-         :errors {:exception (.getMessage e)}}))))
+         :errors {:exception (.getMessage e)}}))
+    (throw (ex-info "Unknown job type" {:job-type job-type}))))
 
 (defn transform-payload
   "Apply default values and transformations to a payload."
   [job-type payload]
-  (let [schema (case job-type
-                 "analysis" analysis-payload-schema
-                 "elevation" elevation-payload-schema
-                 "email" email-payload-schema
-                 "webhook" webhook-payload-schema
-                 "produce-reminders" produce-reminders-payload-schema
-                 "cleanup-jobs" cleanup-jobs-payload-schema
-                 "monitor-queue-health" monitor-queue-health-payload-schema
-                 (throw (ex-info "Unknown job type" {:job-type job-type})))
-        transformer (mt/transformer mt/default-value-transformer)]
-    (m/decode schema payload transformer)))
+  (if-let [schema (get schemas-by-type job-type)]
+    (let [transformer (mt/transformer mt/default-value-transformer)]
+      (m/decode schema payload transformer))
+    (throw (ex-info "Unknown job type" {:job-type job-type}))))
 
 (defn explain-job-schema
   "Get human-readable explanation of job schema for documentation."
@@ -160,5 +149,4 @@
              :initiated-by "admin"}
    :webhook-single {:lipas-ids [123]}
    :produce-reminders {}
-   :cleanup-jobs {:days-old 30}
-   :monitor-queue-health {}})
+   :cleanup-jobs {:days-old 30}})
