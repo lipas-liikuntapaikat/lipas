@@ -2,12 +2,14 @@
   "Resilience and error handling tests for the unified job queue system.
 
   Tests job retry logic, exponential backoff, dead letter queue behavior,
-  database connection failures, malformed payloads, and system recovery.
+  database connection failures, malformed payloads, system recovery,
+  and dead letter queue management (querying, filtering, reprocessing).
 
   These tests focus on the error handling and resilience aspects of the
   job queue system, ensuring that jobs are properly retried, failed jobs
   are moved to dead letter queue, and the system can recover from crashes."
   (:require
+   [cheshire.core :as json]
    [clojure.test :refer [deftest testing is use-fixtures]]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.db :as jobs-db]
@@ -26,6 +28,40 @@
 
 (defn get-job-by-id [db id]
   (first (jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" id])))
+
+(defn create-dead-letter-job!
+  "Create a dead letter job directly for testing dead letter management."
+  [db & [{:keys [job-type error-message acknowledged-by]
+          :or {job-type "email"
+               error-message "SMTP connection failed"}}]]
+  (let [correlation-id (java.util.UUID/randomUUID)
+        original-job {:id 999
+                      :type job-type
+                      :payload {:to "test@example.com" :template "welcome"}
+                      :status "failed"
+                      :priority 100
+                      :attempts 3
+                      :max_attempts 3
+                      :scheduled_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :run_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :created_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :updated_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :correlation_id correlation-id}
+        dlj (jobs-db/insert-dead-letter!
+             db
+             {:original_job (json/generate-string original-job)
+              :error_message error-message
+              :error_details nil
+              :correlation_id correlation-id})]
+    (if acknowledged-by
+      (do
+        (jobs-db/acknowledge-dead-letter!
+         db
+         {:id (:id dlj)
+          :acknowledged_by acknowledged-by})
+        ;; Return the updated job
+        (jobs-db/get-dead-letter-by-id db {:id (:id dlj)}))
+      dlj)))
 
 (deftest job-retry-logic-test
   (testing "Job retry logic with progressive backoff"
@@ -297,3 +333,91 @@
 
         ;; The cleanup function should execute without error
         (is true "Cleanup function executes without error")))))
+
+;; =============================================================================
+;; Dead Letter Queue Management Tests
+;; (Consolidated from dead_letter_core_test.clj)
+;; =============================================================================
+
+(deftest get-dead-letter-jobs-test
+  (testing "Get unacknowledged dead letter jobs"
+    (let [db (test-db)]
+      ;; Create some dead letter jobs
+      (create-dead-letter-job! db)
+      (create-dead-letter-job! db {:job-type "analysis"})
+
+      ;; Get all unacknowledged
+      (let [jobs (jobs/get-dead-letter-jobs db {:acknowledged false})]
+        (is (= 2 (count jobs)))
+        (is (every? #(false? (:acknowledged %)) jobs))
+        (is (every? #(contains? % :original-job) jobs))
+        ;; Check that original job was parsed
+        (is (map? (:original-job (first jobs))))))))
+
+(deftest dead-letter-job-filter-test
+  (testing "Filter by acknowledgment status"
+    (let [db (test-db)]
+      ;; Create one unacknowledged and one acknowledged
+      (let [unack-job (create-dead-letter-job! db)
+            ack-job (create-dead-letter-job! db {:acknowledged-by "admin@test.com"})]
+
+        ;; Check filters work
+        (let [unack-jobs (jobs/get-dead-letter-jobs db {:acknowledged false})
+              ack-jobs (jobs/get-dead-letter-jobs db {:acknowledged true})
+              all-jobs (jobs/get-dead-letter-jobs db {})]
+
+          (is (= 1 (count unack-jobs)))
+          (is (= 1 (count ack-jobs)))
+          (is (= 2 (count all-jobs))))))))
+
+(deftest reprocess-dead-letter-job-test
+  (testing "Successfully reprocess a dead letter job"
+    (let [db (test-db)
+          dlj (create-dead-letter-job! db)
+          new-job (jobs/reprocess-dead-letter-job! db (:id dlj) "admin@test.com")]
+
+      ;; Check new job was created
+      (is (some? new-job))
+      (is (= "email" (:type new-job)))
+      (is (map? (:payload new-job)))
+      (is (= "pending" (:status new-job)))
+      (is (= 3 (:max-attempts new-job)))
+
+      ;; Check original was acknowledged
+      (let [acknowledged (jobs-db/get-dead-letter-by-id db {:id (:id dlj)})]
+        (is (true? (:acknowledged acknowledged)))
+        (is (= "admin@test.com" (:acknowledged_by acknowledged))))))
+
+  (testing "Error when dead letter job not found"
+    (let [db (test-db)]
+      (is (thrown-with-msg? Exception #"Dead letter job not found"
+                            (jobs/reprocess-dead-letter-job! db 999999 "admin@test.com"))))))
+
+(deftest reprocess-dead-letter-jobs-bulk-test
+  (testing "Bulk reprocess multiple jobs"
+    (let [db (test-db)
+          dlj1 (create-dead-letter-job! db)
+          dlj2 (create-dead-letter-job! db)
+
+          result (jobs/reprocess-dead-letter-jobs!
+                  db
+                  [(:id dlj1) (:id dlj2) 999999] ; 999999 doesn't exist
+                  "admin@test.com")]
+
+      ;; Check results
+      (is (= 2 (count (:succeeded result))))
+      (is (= 1 (count (:failed result))))
+
+      ;; Check succeeded jobs have new IDs
+      (is (every? #(contains? % :new-job-id) (:succeeded result)))
+      (is (every? #(pos? (:new-job-id %)) (:succeeded result)))
+
+      ;; Check failed job has error
+      (is (= 999999 (-> result :failed first :dead-letter-id)))
+      (is (string? (-> result :failed first :error)))))
+
+  (testing "Empty list handling"
+    (let [db (test-db)
+          result (jobs/reprocess-dead-letter-jobs! db [] "admin@test.com")]
+      (is (= 0 (count (:succeeded result))))
+      (is (= 0 (count (:failed result)))))))

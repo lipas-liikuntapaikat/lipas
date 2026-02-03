@@ -13,8 +13,10 @@
   "Schema for get-jobs-health-status request"
   [:map])
 
-;; Job type schemas
+;; Job type schemas - canonical definitions for the jobs system
+
 (def job-type-schema
+  "Canonical job type enum. All valid job types must be listed here."
   [:enum "analysis" "elevation" "email" "webhook"
    "produce-reminders" "cleanup-jobs"])
 

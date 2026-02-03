@@ -9,15 +9,14 @@
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
    [lipas.jobs.payload-schema :as payload-schema]
+   [lipas.jobs.schema :as schema]
    [malli.core :as m]
    [next.jdbc :as jdbc]
    [taoensso.timbre :as log]))
 
-;; Job type specifications
+;; Job type specifications - canonical definition in lipas.jobs.schema
 
-(def job-type-schema
-  [:enum "analysis" "elevation" "email" "webhook"
-   "produce-reminders" "cleanup-jobs"])
+(def job-type-schema schema/job-type-schema)
 
 (def job-status-schema
   [:enum "pending" "processing" "completed" "failed" "dead"])
