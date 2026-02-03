@@ -896,3 +896,31 @@
              (prune-db! db)
              (when search (prune-es! search))
              (f)))})
+
+(defn db-only-fixture
+  "Starts database-only Integrant system, prunes between tests.
+
+   For tests that only need database access (no search, no app).
+   More efficient than full-system-fixture for job system tests.
+
+   Usage:
+   (defonce test-system (atom nil))
+   (let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+     (use-fixtures :once once)
+     (use-fixtures :each each))
+
+   ;; Access db:
+   (defn test-db [] (:lipas/db @test-system))"
+  [system-atom]
+  {:once (fn [f]
+           (ensure-test-database!)
+           (reset! system-atom
+                   (ig/init (select-keys (config/->system-config config) [:lipas/db])))
+           (try (f)
+                (finally
+                  (when @system-atom
+                    (ig/halt! @system-atom)
+                    (reset! system-atom nil)))))
+   :each (fn [f]
+           (prune-db! (:lipas/db @system-atom))
+           (f))})

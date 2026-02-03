@@ -2,39 +2,16 @@
   "Tests for correlation ID tracking throughout the job system"
   (:require
    [clojure.test :refer [deftest is testing use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.monitoring :as monitoring]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+   [lipas.test-utils :as test-utils]))
 
-;; Test system setup
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  ;; Ensure database is properly initialized
-  (test-utils/ensure-test-database!)
-  ;; Initialize test system using test config (with _test database suffix)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Prune test database before each test
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 (deftest test-correlation-id-propagation
   (testing "Correlation IDs are properly tracked through job lifecycle"

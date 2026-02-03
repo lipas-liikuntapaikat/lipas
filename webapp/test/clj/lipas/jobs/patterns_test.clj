@@ -1,40 +1,24 @@
 (ns lipas.jobs.patterns-test
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.patterns :as patterns]
-   [lipas.jobs.db :as jobs-db]
    [lipas.test-utils :as test-utils]
    [next.jdbc :as jdbc])
   (:import
    [java.util.concurrent TimeoutException]))
 
-;; Test system setup - following the pattern from correlation-test
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  (test-utils/ensure-test-database!)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Clean up circuit breakers table before each test
-    (let [db (:lipas/db @test-system)]
-      (jdbc/execute! db ["DELETE FROM circuit_breakers"])
-      (f))))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  ;; Custom :each to also clean circuit breakers specifically
+  (use-fixtures :each
+    (fn [f]
+      (let [db (:lipas/db @test-system)]
+        (test-utils/prune-db! db)
+        (jdbc/execute! db ["DELETE FROM circuit_breakers"])
+        (f)))))
 
 (deftest exponential-backoff-test
   (testing "Exponential backoff calculation"

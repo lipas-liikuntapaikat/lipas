@@ -2,38 +2,17 @@
   "Core tests for dead letter queue functionality."
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.db :as jobs-db]
    [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]
    [cheshire.core :as json]))
 
-;; Test system setup
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  (test-utils/ensure-test-database!)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config)
-                                [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;; Test helpers
 (defn create-dead-letter-job!
