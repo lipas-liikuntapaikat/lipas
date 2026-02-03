@@ -29,15 +29,6 @@ SET status = 'completed',
     error_message = NULL
 WHERE id = :id;
 
--- :name mark-job-failed! :! :n
--- :doc Mark a job as failed (for retry)
-UPDATE jobs
-SET status = 'failed',
-    error_message = :error_message,
-    last_error = :error_message,
-    last_error_at = now()
-WHERE id = :id;
-
 -- :name get-job-stats :? :*
 -- :doc Get queue statistics
 SELECT

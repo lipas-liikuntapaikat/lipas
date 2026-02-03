@@ -42,9 +42,12 @@
 
 (defn health-check
   "Perform comprehensive health check of the job queue.
-  
+
+  Options:
+  - :check-timeouts? - when true, also check for timeout patterns (default: false)
+
   Returns a map with :status (:healthy/:warning/:critical) and :issues"
-  [db]
+  [db & [{:keys [check-timeouts?] :or {check-timeouts? false}}]]
   (let [health (jobs/get-queue-health db)
         issues (atom [])]
 
@@ -73,7 +76,7 @@
                           :message (str (:dead_count health)
                                         " jobs in dead letter queue")}))
 
-    ;; Check for high failure rate
+    ;; Check for high failure rate (overall)
     (let [total (+ (:pending_count health 0)
                    (:processing_count health 0)
                    (:failed_count health 0)
@@ -88,6 +91,41 @@
                             :severity :warning
                             :message (str (int (* failure-rate 100))
                                           "% failure rate")})))
+
+    ;; Check per-type failure rates (absorbed from check-job-health)
+    (try
+      (let [stats (jobs/get-job-stats-by-type db)]
+        (doseq [{:keys [type failed total]} stats]
+          (when (and (> total 10) ; Only check if we have enough samples
+                     (> (/ failed total) 0.5)) ; More than 50% failure rate
+            (swap! issues conj {:type :high-type-failure-rate
+                                :severity :warning
+                                :job-type type
+                                :message (str "High failure rate for " type
+                                              ": " (int (* 100 (/ failed total))) "%"
+                                              " (" failed "/" total ")")}))))
+      (catch Exception e
+        (log/debug "Error checking per-type failure rates" {:error (.getMessage e)})))
+
+    ;; Check timeout patterns (optional, absorbed from check-timeout-patterns)
+    (when check-timeouts?
+      (try
+        (let [recent-timeouts (jobs-db/query-jobs
+                               db
+                               {:error_message "Job execution timed out"
+                                :created_after (-> (java.time.Instant/now)
+                                                   (.minus 1 java.time.temporal.ChronoUnit/HOURS)
+                                                   (.toString))})
+              by-type (group-by :type recent-timeouts)]
+          (doseq [[job-type timeout-jobs] by-type]
+            (when (>= (count timeout-jobs) 3) ; 3 or more timeouts in an hour
+              (swap! issues conj {:type :timeout-pattern
+                                  :severity :warning
+                                  :job-type job-type
+                                  :message (str (count timeout-jobs) " timeouts for " job-type
+                                                " in last hour - consider increasing timeout")}))))
+        (catch Exception e
+          (log/debug "Error checking timeout patterns" {:error (.getMessage e)}))))
 
     {:status (cond
                (some #(= (:severity %) :critical) @issues) :critical
@@ -111,37 +149,6 @@
                   :last-failure (:last_failure_at breaker)
                   :opened-at (:opened_at breaker)}]))
          (into {}))))
-
-(defn monitor-and-alert!
-  "Run monitoring checks and log alerts for issues.
-
-  This function is designed to be called by a scheduled job."
-  [db]
-  (let [health-result (health-check db)
-        circuit-breakers (check-circuit-breakers db)]
-
-    ;; Log health status
-    (case (:status health-result)
-      :critical (log/error "Queue health CRITICAL" health-result)
-      :warning (log/warn "Queue health WARNING" health-result)
-      :healthy (log/debug "Queue health OK" health-result))
-
-    ;; Log critical issues
-    (doseq [issue (:issues health-result)]
-      (when (= (:severity issue) :critical)
-        (log/error "ALERT: Queue health issue"
-                   {:type :queue-health
-                    :issue issue})))
-
-    ;; Log open circuit breakers
-    (doseq [[service breaker] circuit-breakers]
-      (when (= (:state breaker) "open")
-        (log/error "ALERT: Circuit breaker open"
-                   {:service service
-                    :breaker breaker})))
-
-    {:health health-result
-     :circuit-breakers circuit-breakers}))
 
 ;; =============================================================================
 ;; Background Health Monitor
@@ -173,55 +180,40 @@
 
       :else true)))
 
-(defn check-job-health
-  "Check for stuck jobs and job failure patterns."
+(defn- log-health-issues
+  "Log health check results at appropriate severity levels."
+  [health-result]
+  ;; Log health status
+  (case (:status health-result)
+    :critical (log/error "Queue health CRITICAL" health-result)
+    :warning (log/warn "Queue health WARNING" health-result)
+    :healthy (log/debug "Queue health OK" health-result))
+
+  ;; Log critical issues individually
+  (doseq [issue (:issues health-result)]
+    (when (= (:severity issue) :critical)
+      (log/error "ALERT: Queue health issue"
+                 {:type :queue-health
+                  :issue issue}))))
+
+(defn- log-circuit-breaker-alerts
+  "Log alerts for open circuit breakers."
   [db]
-  (try
-    ;; Check for jobs stuck in processing
-    (let [stuck-jobs (jobs-db/find-stuck-jobs db {:minutes 60})]
-      (when (seq stuck-jobs)
-        (log/warn "Found stuck jobs"
-                  {:count (count stuck-jobs)
-                   :job-ids (map :id stuck-jobs)})))
-
-    ;; Check failure rates by job type
-    (let [stats (jobs/get-job-stats-by-type db)]
-      (doseq [{:keys [type failed total]} stats]
-        (when (and (> total 10) ; Only check if we have enough samples
-                   (> (/ failed total) 0.5)) ; More than 50% failure rate
-          (log/error "High failure rate detected"
-                     {:job-type type
-                      :failed failed
-                      :total total
-                      :failure-rate (float (/ failed total))}))))
-
-    (catch Exception e
-      (log/error e "Error checking job health"))))
-
-(defn check-timeout-patterns
-  "Analyze timeout patterns to suggest configuration changes."
-  [db]
-  (try
-    (let [recent-timeouts (jobs-db/query-jobs
-                           db
-                           {:error_message "Job execution timed out"
-                            :created_after (-> (java.time.Instant/now)
-                                               (.minus 1 java.time.temporal.ChronoUnit/HOURS)
-                                               (.toString))})
-          by-type (group-by :type recent-timeouts)]
-
-      (doseq [[job-type jobs] by-type]
-        (when (>= (count jobs) 3) ; 3 or more timeouts in an hour
-          (log/warn "Multiple timeouts detected for job type"
-                    {:job-type job-type
-                     :count (count jobs)
-                     :suggestion (str "Consider increasing timeout for " job-type " jobs")}))))
-
-    (catch Exception e
-      (log/error e "Error checking timeout patterns"))))
+  (let [breakers (check-circuit-breakers db)]
+    (doseq [[service breaker] breakers]
+      (when (= (:state breaker) "open")
+        (log/error "ALERT: Circuit breaker open"
+                   {:service service
+                    :breaker breaker})))))
 
 (defn start-health-monitor!
-  "Start the health monitoring background thread."
+  "Start the health monitoring background thread.
+
+  Runs periodic checks for:
+  - Memory usage (with configurable threshold)
+  - Job queue health (stuck jobs, failure rates, dead letters)
+  - Circuit breaker states
+  - Timeout patterns (optional)"
   [db config]
   (let [scheduler (Executors/newScheduledThreadPool 1)
         interval-ms (:memory-check-interval-ms config 60000)
@@ -235,9 +227,16 @@
     (.scheduleWithFixedDelay scheduler
                              (fn []
                                (try
+                                 ;; Check memory (JVM concern, separate from DB)
                                  (check-memory-health threshold-percent)
-                                 (check-job-health db)
-                                 (check-timeout-patterns db)
+
+                                 ;; Consolidated job queue health check
+                                 (let [health-result (health-check db {:check-timeouts? true})]
+                                   (log-health-issues health-result))
+
+                                 ;; Check circuit breakers
+                                 (log-circuit-breaker-alerts db)
+
                                  (catch Exception e
                                    (log/error e "Error in health monitor"))))
                              0

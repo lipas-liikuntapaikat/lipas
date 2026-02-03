@@ -80,7 +80,7 @@
      :batch-size (env-config :batch-size 10)
      :poll-interval-ms (env-config :poll-interval-ms 3000)
      :fast-timeout-minutes (env-config :fast-timeout-minutes 2)
-     :slow-timeout-minutes (env-config :slow-timeout-minutes 20)
+     :slow-timeout-minutes (env-config :slow-timeout-minutes 30)
      :stuck-job-timeout-minutes (env-config :stuck-job-timeout-minutes 60)
 
      ;; New configuration for memory management

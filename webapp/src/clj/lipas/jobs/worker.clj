@@ -51,7 +51,7 @@
         ;; Use configuration values instead of hardcoded timeouts
         base-timeout-ms (case lane-type
                           :fast (* 60000 (:fast-timeout-minutes config 2))
-                          :general (* 60000 (:slow-timeout-minutes config 20)))
+                          :general (* 60000 (:slow-timeout-minutes config 30)))
         job-type-timeouts (:job-type-timeouts config {})]
 
     (doseq [job jobs]

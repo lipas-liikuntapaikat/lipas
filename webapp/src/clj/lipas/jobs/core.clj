@@ -299,16 +299,11 @@
   (when-not (jobs-db/get-dead-letter-by-id db {:id dead-letter-id})
     (throw (ex-info "Dead letter job not found" {:id dead-letter-id})))
 
-  ;; Requeue the job
+  ;; Requeue the job (SQL query also sets acknowledged = true)
   (let [new-job (jobs-db/requeue-dead-letter-job! db
                                                   {:id dead-letter-id
                                                    :max_attempts max-attempts
                                                    :reprocessed_by user-email})]
-
-    ;; Mark as acknowledged
-    (jobs-db/acknowledge-dead-letter! db
-                                      {:id dead-letter-id
-                                       :acknowledged_by user-email})
 
     (log/info "Reprocessed dead letter job"
               {:dead-letter-id dead-letter-id

@@ -2,6 +2,7 @@
   "Job dispatcher with multimethod handlers for each job type."
   (:require
    [lipas.backend.analysis.diversity :as diversity]
+   [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.elevation :as elevation]
    [lipas.backend.email :as email]
@@ -79,7 +80,7 @@
 
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload correlation-id]}]
-  (let [config (get-in lipas.backend.config/default-config [:app :utp])
+  (let [utp-config (get-in config/default-config [:app :utp])
         webhook-payload (assoc payload :correlation-id correlation-id)]
 
     (log/info "Processing webhook job"
@@ -90,7 +91,7 @@
                :correlation-id correlation-id})
 
     (patterns/with-circuit-breaker db "webhook-service" {}
-      (utp-webhook/process-v2! db config webhook-payload))
+      (utp-webhook/process-v2! db utp-config webhook-payload))
 
     (log/debug "Webhook job processed successfully" {:job-id id})))
 
