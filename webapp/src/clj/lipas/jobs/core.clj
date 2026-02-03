@@ -274,26 +274,6 @@
   [db correlation-id]
   (jobs-db/get-correlation-trace db {:correlation_id correlation-id}))
 
-(defn create-job-chain
-  "Create a chain of related jobs with the same correlation ID.
-
-  This is useful for creating complex workflows where multiple jobs
-  need to be tracked together.
-
-  Parameters:
-  - db: Database connection
-  - jobs: Vector of job specs [{:type \"...\", :payload {...}, :opts {...}}]
-  - correlation-id: Optional correlation ID (auto-generated if not provided)
-
-  Returns: Vector of job results with shared correlation ID"
-  [db jobs & [correlation-id]]
-  (let [correlation-id (or correlation-id (java.util.UUID/randomUUID))]
-    (mapv (fn [{:keys [type payload opts]}]
-            (enqueue-job!
-             db type payload
-             (assoc opts :correlation-id correlation-id)))
-          jobs)))
-
 (defn get-dead-letter-jobs
   "Get dead letter jobs with optional acknowledgment filter.
   

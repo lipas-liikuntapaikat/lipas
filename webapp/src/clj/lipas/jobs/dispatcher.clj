@@ -37,7 +37,7 @@
         (log/info "Processing analysis for lipas-id" lipas-id)
         (diversity/recalc-grid! search fcoll)
         (log/info "Analysis completed for lipas-id" lipas-id))
-      (log/info "Skpping analysis for lipas-id" lipas-id "due to" status "status"))))
+      (log/info "Skipping analysis for lipas-id" lipas-id "due to" status "status"))))
 
 (defmethod handle-job "elevation"
   [{:keys [db search]} {:keys [id payload]}]
@@ -95,7 +95,7 @@
     (log/debug "Webhook job processed successfully" {:job-id id})))
 
 (defmethod handle-job "produce-reminders"
-  [{:keys [db]} _paylopad]
+  [{:keys [db]} _payload]
   (log/info "Producing reminder emails")
   (let [overdue-reminders (reminders/get-overdue db)]
     (doseq [reminder overdue-reminders]

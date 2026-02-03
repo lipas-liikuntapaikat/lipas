@@ -15,7 +15,7 @@
 
 ;; Job type schemas
 (def job-type-schema
-  [:enum "analysis" "elevation" "email" "integration" "webhook"
+  [:enum "analysis" "elevation" "email" "webhook"
    "produce-reminders" "cleanup-jobs"])
 
 (def job-status-schema
