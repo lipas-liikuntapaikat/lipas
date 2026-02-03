@@ -34,6 +34,19 @@
   [job-type]
   (contains? (:fast job-duration-types) job-type))
 
+;; Validate that all job types are classified at load time
+(let [all-types (set (rest job-type-schema)) ; Extract types from [:enum "type1" "type2" ...]
+      classified (into #{} (concat (:fast job-duration-types)
+                                   (:slow job-duration-types)))]
+  (when-not (= all-types classified)
+    (let [unclassified (clojure.set/difference all-types classified)
+          extra (clojure.set/difference classified all-types)]
+      (throw (ex-info "Job type duration classification mismatch"
+                      {:unclassified unclassified
+                       :extra extra
+                       :all-types all-types
+                       :classified classified})))))
+
 (defn enqueue-job!
   "Enqueue a job for processing with payload validation.
 
