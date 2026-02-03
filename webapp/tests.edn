@@ -8,8 +8,8 @@
  ;; and only shows it when tests FAIL
   :capture-output? true
 
- ;; Use dots reporter for concise output (. = pass, F = fail, E = error)
-  :reporter kaocha.report/dots
+ ;; Use documentation reporter to show each test name as it runs
+  :reporter kaocha.report/documentation
 
  ;; Randomize test order to catch order-dependent bugs
   :randomize? true
