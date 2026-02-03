@@ -279,8 +279,59 @@
         (is (= 0 (:failure_count breaker)))
         (is (= 0 (:success_count breaker)))))))
 
+;; Timeout utilities tests
+
+(deftest deref-with-timeout-test
+  (testing "returns result when future completes within timeout"
+    (let [f (future (Thread/sleep 50) "success")]
+      (is (= "success" (patterns/deref-with-timeout f 1000 "test-op")))))
+
+  (testing "throws TimeoutException when future exceeds timeout"
+    (let [f (future (Thread/sleep 5000) "slow")]
+      (is (thrown-with-msg? TimeoutException #"timed out.*test-op"
+                            (patterns/deref-with-timeout f 100 "test-op")))))
+
+  (testing "includes timeout duration in exception message"
+    (let [f (future (Thread/sleep 5000) "slow")]
+      (try
+        (patterns/deref-with-timeout f 100 "test-op")
+        (catch TimeoutException e
+          (is (re-find #"100ms" (.getMessage e)))))))
+
+  (testing "cancels the future on timeout"
+    (let [executed (atom false)
+          f (future (Thread/sleep 500) (reset! executed true))]
+      (try
+        (patterns/deref-with-timeout f 50 "test-op")
+        (catch TimeoutException _))
+      (Thread/sleep 600)
+      (is (false? @executed)))))
+
+(deftest pmap-with-timeout-test
+  (testing "processes all items in parallel within timeout"
+    (let [results (patterns/pmap-with-timeout 1000 #(* % 2) [1 2 3 4 5])]
+      (is (= [2 4 6 8 10] results))))
+
+  (testing "runs items in parallel (not sequentially)"
+    (let [start (System/currentTimeMillis)
+          ;; Each sleep is 100ms, but running 5 in parallel should be ~100ms total
+          results (patterns/pmap-with-timeout 2000 #(do (Thread/sleep 100) %) [1 2 3 4 5])
+          elapsed (- (System/currentTimeMillis) start)]
+      (is (= [1 2 3 4 5] results))
+      ;; Should complete in less than 500ms (if sequential would be 500ms)
+      (is (< elapsed 300))))
+
+  (testing "throws on first timeout"
+    (is (thrown? TimeoutException
+                 (patterns/pmap-with-timeout 50 #(do (Thread/sleep (* % 100)) %) [1 2 3]))))
+
+  (testing "returns empty vector for empty collection"
+    (is (= [] (patterns/pmap-with-timeout 1000 identity [])))))
+
 (comment
   (clojure.test/run-test-var #'circuit-breaker-state-test)
   (clojure.test/run-test-var #'circuit-breaker-test)
   (clojure.test/run-test-var #'circuit-breaker-concurrency-test)
-  (clojure.test/run-test-var #'circuit-breaker-reset-test))
+  (clojure.test/run-test-var #'circuit-breaker-reset-test)
+  (clojure.test/run-test-var #'deref-with-timeout-test)
+  (clojure.test/run-test-var #'pmap-with-timeout-test))

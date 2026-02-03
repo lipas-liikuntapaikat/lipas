@@ -33,10 +33,10 @@
 
 (defmacro with-timeout
   "Execute body with timeout. Returns result or throws TimeoutException.
-  
+
   timeout-ms: timeout in milliseconds
   body: expressions to execute
-  
+
   Example:
   (with-timeout 5000
     (fetch-external-data))"
@@ -48,6 +48,39 @@
          (future-cancel future#)
          (throw (TimeoutException. (str "Operation timed out after " ~timeout-ms "ms"))))
        result#)))
+
+(defn deref-with-timeout
+  "Deref a future with timeout. Returns result or throws TimeoutException.
+
+  f: the future to deref
+  timeout-ms: timeout in milliseconds
+  error-context: descriptive string for error message (e.g., 'elevation chunk 5')
+
+  Example:
+  (let [f (future (fetch-data))]
+    (deref-with-timeout f 5000 \"fetch data\"))"
+  [f timeout-ms error-context]
+  (let [result (deref f timeout-ms ::timeout)]
+    (if (= result ::timeout)
+      (do
+        (future-cancel f)
+        (throw (TimeoutException.
+                (str "Operation timed out after " timeout-ms "ms: " error-context))))
+      result)))
+
+(defn pmap-with-timeout
+  "Parallel map with per-item timeout. Launches all futures, then collects with timeout.
+
+  timeout-ms: timeout per item in milliseconds
+  f: function to apply to each item
+  coll: collection of items
+
+  Example:
+  (pmap-with-timeout 5000 fetch-data urls)"
+  [timeout-ms f coll]
+  (let [futures (mapv #(future (f %)) coll)]
+    (mapv #(deref-with-timeout %1 timeout-ms (str "item " %2))
+          futures (range))))
 
 (defn get-circuit-breaker
   "Get current state of a circuit breaker from database."

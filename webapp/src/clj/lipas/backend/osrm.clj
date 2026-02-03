@@ -6,7 +6,9 @@
    [clojure.string :as str]
    [environ.core :refer [env]]
    [lipas.backend.gis :as gis]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log])
+  (:import
+   [java.util.concurrent TimeoutException]))
 
 (def profiles
   {:car {:url (:osrm-car-url env)}
@@ -17,6 +19,11 @@
 (defonce osrm-cache
   (atom (cache/ttl-cache-factory {}
                                  :ttl (* 5 60 1000)))) ; 5 minutes in milliseconds
+
+(def osrm-parallel-timeout-ms
+  "Timeout for parallel OSRM profile requests (45 seconds).
+  This allows buffer for 3 profiles x socket-timeout."
+  45000)
 
 ;; Cache statistics
 (defonce cache-stats
@@ -99,12 +106,29 @@
               :else nil)))))))
 
 (defn get-distances-and-travel-times
+  "Fetch distances and travel times for multiple profiles in parallel.
+  Returns partial results if some profiles timeout (logs warning instead of throwing)."
   [{:keys [profiles]
     :or {profiles [:car :bicycle :foot]}
     :as m}]
-  (->> profiles
-       (mapv (fn [p] (vector p (future (get-data (assoc m :profile p))))))
-       (reduce (fn [res [p f]] (assoc res p (deref f))) {})))
+  (let [futures (->> profiles
+                     (mapv (fn [p] [p (future (get-data (assoc m :profile p)))])))]
+    (reduce (fn [res [profile f]]
+              (let [result (deref f osrm-parallel-timeout-ms ::timeout)]
+                (cond
+                  (= result ::timeout)
+                  (do
+                    (future-cancel f)
+                    (log/warn "OSRM request timed out for profile" profile)
+                    res)
+
+                  (nil? result)
+                  res
+
+                  :else
+                  (assoc res profile result))))
+            {}
+            futures)))
 
 (defn cache-info
   "Get cache statistics"

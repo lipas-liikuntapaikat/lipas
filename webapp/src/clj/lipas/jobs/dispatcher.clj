@@ -46,7 +46,15 @@
         user (core/get-user! db "robot@lipas.fi")
         orig (core/get-sports-site db lipas-id)
         _ (when-not orig (throw (ex-info "Sports site not found" {:lipas-id lipas-id})))
-        fcoll (-> orig :location :geometries elevation/enrich-elevation)
+
+        ;; Use circuit breaker to protect against MML API failures
+        fcoll (patterns/with-circuit-breaker db "mml-elevation-service"
+                {:failure-threshold 5
+                 :open-duration-ms 120000  ;; 2 minutes before retry
+                 :on-open (fn [{:keys [service failure-count]}]
+                            (log/error "Circuit breaker opened for" service
+                                       "after" failure-count "failures"))}
+                (-> orig :location :geometries elevation/enrich-elevation))
 
         ;; Check if site was updated while processing elevation
         current (core/get-sports-site db lipas-id)

@@ -254,6 +254,11 @@
 
 (def all-type-codes (keys types/all))
 
+(def osrm-site-timeout-ms
+  "Timeout for OSRM request per site (60 seconds).
+  Conservative to handle complex routes with multiple destinations."
+  60000)
+
 (defn resolve-dests [site on-error]
   (try
     (-> site
@@ -284,8 +289,9 @@
    {}
    m))
 
-(defn- process-sites-chunk
-  "Process a chunk of sites to control memory usage"
+(defn process-sites-chunk
+  "Process a chunk of sites to control memory usage.
+  Uses timeout-protected deref to prevent stuck jobs."
   [sites coords on-error]
   (mapv (fn [site]
           (let [dests (resolve-dests site on-error)]
@@ -302,18 +308,29 @@
                                            :sources [(str/join "," coords)]
                                            :destinations dests}))])
                                   [:car :bicycle :foot])
-                    ;; Collect results immediately to free memory
+                    ;; Collect results with timeout to prevent stuck jobs
                     osrm-results (reduce (fn [res [p f]]
-                                           (if-let [data (deref f)]
-                                             (assoc res p data)
-                                             res))
+                                           (let [result (deref f osrm-site-timeout-ms ::timeout)]
+                                             (cond
+                                               (= result ::timeout)
+                                               (do
+                                                 (future-cancel f)
+                                                 (log/warn "OSRM request timed out for profile" p
+                                                           "site" (:_id site))
+                                                 res)
+
+                                               (nil? result)
+                                               res
+
+                                               :else
+                                               (assoc res p result))))
                                          {}
                                          futures)]
                 {:id (:_id site)
                  :type-code (-> site :_source :type :type-code)
                  :status (-> site :_source :status)
-                 :osrm (some-> osrm-results
-                               apply-mins)}))))
+                 :osrm (when (seq osrm-results)
+                         (apply-mins osrm-results))}))))
         sites))
 
 (defn process-grid-item
