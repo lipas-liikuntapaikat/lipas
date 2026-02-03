@@ -113,10 +113,10 @@
          (into {}))))
 
 (defn monitor-and-alert!
-  "Run monitoring checks and trigger alerts if needed.
-  
+  "Run monitoring checks and log alerts for issues.
+
   This function is designed to be called by a scheduled job."
-  [db {:keys [alert-fn] :or {alert-fn (fn [alert] (log/warn "ALERT:" alert))}}]
+  [db]
   (let [health-result (health-check db)
         circuit-breakers (check-circuit-breakers db)]
 
@@ -126,20 +126,19 @@
       :warning (log/warn "Queue health WARNING" health-result)
       :healthy (log/debug "Queue health OK" health-result))
 
-    ;; Alert on critical issues
+    ;; Log critical issues
     (doseq [issue (:issues health-result)]
       (when (= (:severity issue) :critical)
-        (alert-fn {:type :queue-health
-                   :issue issue
-                   :timestamp (java.time.Instant/now)})))
+        (log/error "ALERT: Queue health issue"
+                   {:type :queue-health
+                    :issue issue})))
 
-    ;; Alert on open circuit breakers
+    ;; Log open circuit breakers
     (doseq [[service breaker] circuit-breakers]
       (when (= (:state breaker) "open")
-        (alert-fn {:type :circuit-breaker-open
-                   :service service
-                   :breaker breaker
-                   :timestamp (java.time.Instant/now)})))
+        (log/error "ALERT: Circuit breaker open"
+                   {:service service
+                    :breaker breaker})))
 
     {:health health-result
      :circuit-breakers circuit-breakers}))
