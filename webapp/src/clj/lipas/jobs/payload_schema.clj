@@ -3,8 +3,7 @@
   (:require
    [malli.core :as m]
    [malli.error :as me]
-   [malli.transform :as mt]
-   [taoensso.timbre :as log]))
+   [malli.transform :as mt]))
 
 ;; Individual job payload schemas
 (def analysis-payload-schema
@@ -58,28 +57,6 @@
    "produce-reminders" produce-reminders-payload-schema
    "cleanup-jobs" cleanup-jobs-payload-schema})
 
-;; Multi-schema dispatched on job type
-(def job-payload-schema
-  [:multi {:dispatch (fn [job] (:type job))}
-   ["analysis" [:map
-                [:type [:= "analysis"]]
-                [:payload analysis-payload-schema]]]
-   ["elevation" [:map
-                 [:type [:= "elevation"]]
-                 [:payload elevation-payload-schema]]]
-   ["email" [:map
-             [:type [:= "email"]]
-             [:payload email-payload-schema]]]
-   ["webhook" [:map
-               [:type [:= "webhook"]]
-               [:payload webhook-payload-schema]]]
-   ["produce-reminders" [:map
-                         [:type [:= "produce-reminders"]]
-                         [:payload produce-reminders-payload-schema]]]
-   ["cleanup-jobs" [:map
-                    [:type [:= "cleanup-jobs"]]
-                    [:payload cleanup-jobs-payload-schema]]]])
-
 (defn validate-payload-for-type
   "Validate just a payload for a specific job type.
    Returns {:valid? boolean :errors [...] :value ...}"
@@ -104,49 +81,3 @@
     (let [transformer (mt/transformer mt/default-value-transformer)]
       (m/decode schema payload transformer))
     (throw (ex-info "Unknown job type" {:job-type job-type}))))
-
-(defn explain-job-schema
-  "Get human-readable explanation of job schema for documentation."
-  []
-  (->> job-payload-schema
-       (m/schema)
-       (m/form)))
-
-;; Validation middleware
-(defn validate-enqueue-job!
-  "Middleware to validate job payloads before enqueueing."
-  [enqueue-fn]
-  (fn [db job-type payload & [opts]]
-    (let [validation (validate-payload-for-type job-type payload)]
-      (if (:valid? validation)
-        (let [transformed-payload (transform-payload job-type payload)]
-          (enqueue-fn db job-type transformed-payload opts))
-        (do
-          (log/error "Invalid job payload"
-                     {:job-type job-type
-                      :payload payload
-                      :errors (:errors validation)})
-          (throw (ex-info "Invalid job payload"
-                          {:job-type job-type
-                           :payload payload
-                           :errors (:errors validation)})))))))
-
-(defn example-payloads
-  "Generate example payloads for each job type for documentation/testing."
-  []
-  {:analysis {:lipas-id 12345}
-   :elevation {:lipas-id 67890}
-   :email-reminder {:type "reminder"
-                    :email "user@example.com"
-                    :link "https://example.com/reminder"
-                    :body "Don't forget to update your profile!"}
-   :email-general {:to "admin@example.com"
-                   :subject "System Alert"
-                   :body "Database backup completed successfully."}
-   :webhook {:lipas-ids [1 2 3]
-             :loi-ids [4 5]
-             :operation-type "bulk-import"
-             :initiated-by "admin"}
-   :webhook-single {:lipas-ids [123]}
-   :produce-reminders {}
-   :cleanup-jobs {:days-old 30}})
