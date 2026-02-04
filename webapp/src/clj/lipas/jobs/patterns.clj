@@ -33,10 +33,10 @@
 
 (defmacro with-timeout
   "Execute body with timeout. Returns result or throws TimeoutException.
-  
+
   timeout-ms: timeout in milliseconds
   body: expressions to execute
-  
+
   Example:
   (with-timeout 5000
     (fetch-external-data))"
@@ -49,51 +49,38 @@
          (throw (TimeoutException. (str "Operation timed out after " ~timeout-ms "ms"))))
        result#)))
 
-(defn with-retry*
-  "Execute function with automatic retry on failure.
-  
-  Options:
-  :max-attempts - maximum number of attempts (default 3)
-  :retry-on - predicate to determine if exception should trigger retry
-  :on-retry - callback function called with {:attempt :exception :delay-ms}
-  :backoff-opts - options passed to exponential-backoff-ms
-  
-  Example:
-  (with-retry* {:max-attempts 5
-                :retry-on #(instance? IOException %)
-                :on-retry #(log/warn \"Retrying\" %)}
-               #(http/get \"https://api.example.com/data\"))"
-  [{:keys [max-attempts retry-on on-retry backoff-opts]
-    :or {max-attempts 3
-         retry-on (constantly true)
-         on-retry (fn [_])
-         backoff-opts {}}} f]
-  (loop [attempt 0]
-    (let [result (try
-                   {:success true :value (f)}
-                   (catch Exception e
-                     {:success false :exception e}))]
-      (if (:success result)
-        (:value result)
-        (let [e (:exception result)]
-          (if (and (< (inc attempt) max-attempts)
-                   (retry-on e))
-            (let [delay-ms (apply exponential-backoff-ms attempt (mapcat identity backoff-opts))]
-              (on-retry {:attempt attempt
-                         :exception e
-                         :delay-ms delay-ms})
-              (Thread/sleep delay-ms)
-              (recur (inc attempt)))
-            (throw e)))))))
+(defn deref-with-timeout
+  "Deref a future with timeout. Returns result or throws TimeoutException.
 
-(defmacro with-retry
-  "Macro version of with-retry* for inline code.
-  
+  f: the future to deref
+  timeout-ms: timeout in milliseconds
+  error-context: descriptive string for error message (e.g., 'elevation chunk 5')
+
   Example:
-  (with-retry {:max-attempts 5}
-    (http/get \"https://api.example.com/data\"))"
-  [opts & body]
-  `(with-retry* ~opts (fn [] ~@body)))
+  (let [f (future (fetch-data))]
+    (deref-with-timeout f 5000 \"fetch data\"))"
+  [f timeout-ms error-context]
+  (let [result (deref f timeout-ms ::timeout)]
+    (if (= result ::timeout)
+      (do
+        (future-cancel f)
+        (throw (TimeoutException.
+                (str "Operation timed out after " timeout-ms "ms: " error-context))))
+      result)))
+
+(defn pmap-with-timeout
+  "Parallel map with per-item timeout. Launches all futures, then collects with timeout.
+
+  timeout-ms: timeout per item in milliseconds
+  f: function to apply to each item
+  coll: collection of items
+
+  Example:
+  (pmap-with-timeout 5000 fetch-data urls)"
+  [timeout-ms f coll]
+  (let [futures (mapv #(future (f %)) coll)]
+    (mapv #(deref-with-timeout %1 timeout-ms (str "item " %2))
+          futures (range))))
 
 (defn get-circuit-breaker
   "Get current state of a circuit breaker from database."

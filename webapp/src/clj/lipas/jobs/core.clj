@@ -9,30 +9,40 @@
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
    [lipas.jobs.payload-schema :as payload-schema]
+   [lipas.jobs.schema :as schema]
    [malli.core :as m]
    [next.jdbc :as jdbc]
    [taoensso.timbre :as log]))
 
-;; Job type specifications
+;; Job type specifications - canonical definition in lipas.jobs.schema
 
-(def job-type-schema
-  [:enum "analysis" "elevation" "email" "webhook"
-   "produce-reminders" "cleanup-jobs" "monitor-queue-health"])
-
-(def job-status-schema
-  [:enum "pending" "processing" "completed" "failed" "dead"])
+(def job-type-schema schema/job-type-schema)
+(def job-status-schema schema/job-status-schema)
 
 ;; Job duration classifications for smart concurrency
 (def job-duration-types
   "Classification of job types by expected duration.
   Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook" "monitor-queue-health"}
+  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook"}
    :slow #{"analysis" "elevation"}})
 
 (defn fast-job?
   "Check if a job type is classified as fast."
   [job-type]
   (contains? (:fast job-duration-types) job-type))
+
+;; Validate that all job types are classified at load time
+(let [all-types (set (rest job-type-schema)) ; Extract types from [:enum "type1" "type2" ...]
+      classified (into #{} (concat (:fast job-duration-types)
+                                   (:slow job-duration-types)))]
+  (when-not (= all-types classified)
+    (let [unclassified (clojure.set/difference all-types classified)
+          extra (clojure.set/difference classified all-types)]
+      (throw (ex-info "Job type duration classification mismatch"
+                      {:unclassified unclassified
+                       :extra extra
+                       :all-types all-types
+                       :classified classified})))))
 
 (defn enqueue-job!
   "Enqueue a job for processing with payload validation.
@@ -115,15 +125,6 @@
   [db job-id]
   (log/debug "Marking job completed" {:id job-id})
   (jobs-db/mark-job-completed! db {:id job-id}))
-
-(defn mark-failed!
-  "DEPRECATED - DO NOT USE. Use fail-job! instead.
-   This function will be removed in the next version."
-  [db job-id error-message]
-  (throw (ex-info "mark-failed! is deprecated and has been removed. Use fail-job! instead."
-                  {:job-id job-id
-                   :error-message error-message
-                   :suggestion "Use (fail-job! db job-id error-message {:current-attempt attempts :max-attempts max-attempts})"})))
 
 (defn move-to-dead-letter!
   "Move a permanently failed job to the dead letter queue.
@@ -270,26 +271,6 @@
   [db correlation-id]
   (jobs-db/get-correlation-trace db {:correlation_id correlation-id}))
 
-(defn create-job-chain
-  "Create a chain of related jobs with the same correlation ID.
-
-  This is useful for creating complex workflows where multiple jobs
-  need to be tracked together.
-
-  Parameters:
-  - db: Database connection
-  - jobs: Vector of job specs [{:type \"...\", :payload {...}, :opts {...}}]
-  - correlation-id: Optional correlation ID (auto-generated if not provided)
-
-  Returns: Vector of job results with shared correlation ID"
-  [db jobs & [correlation-id]]
-  (let [correlation-id (or correlation-id (java.util.UUID/randomUUID))]
-    (mapv (fn [{:keys [type payload opts]}]
-            (enqueue-job!
-             db type payload
-             (assoc opts :correlation-id correlation-id)))
-          jobs)))
-
 (defn get-dead-letter-jobs
   "Get dead letter jobs with optional acknowledgment filter.
   
@@ -315,16 +296,11 @@
   (when-not (jobs-db/get-dead-letter-by-id db {:id dead-letter-id})
     (throw (ex-info "Dead letter job not found" {:id dead-letter-id})))
 
-  ;; Requeue the job
+  ;; Requeue the job (SQL query also sets acknowledged = true)
   (let [new-job (jobs-db/requeue-dead-letter-job! db
                                                   {:id dead-letter-id
                                                    :max_attempts max-attempts
                                                    :reprocessed_by user-email})]
-
-    ;; Mark as acknowledged
-    (jobs-db/acknowledge-dead-letter! db
-                                      {:id dead-letter-id
-                                       :acknowledged_by user-email})
 
     (log/info "Reprocessed dead letter job"
               {:dead-letter-id dead-letter-id
@@ -405,72 +381,6 @@
   (log/with-context {:correlation-id correlation-id}
     (f)))
 
-(defn migrate-orphaned-dead-jobs!
-  "Migrate any jobs with status 'dead' that aren't in dead_letter_jobs table.
-   This handles legacy dead jobs that were marked dead before the proper
-   dead letter queue mechanism was implemented.
-   
-   Returns the number of jobs migrated."
-  [db]
-  (try
-    (let [orphaned-dead-jobs (jdbc/execute! db
-                                            ["SELECT j.* FROM jobs j
-                                LEFT JOIN dead_letter_jobs dlj ON dlj.original_job->>'id' = j.id::text
-                                WHERE j.status = 'dead' AND dlj.id IS NULL"])
-          count (count orphaned-dead-jobs)]
-
-      (when (pos? count)
-        (log/warn "Found orphaned dead jobs that need migration to dead_letter_jobs"
-                  {:count count})
-
-        (doseq [job orphaned-dead-jobs]
-          (let [job-id (:jobs/id job)
-                error-msg (or (:jobs/error_message job)
-                              (:jobs/last_error job)
-                              "Legacy dead job - no error message recorded")
-                ;; Convert job data to JSON-safe format
-                job-data {:id job-id
-                          :type (:jobs/type job)
-                          :payload (:jobs/payload job)
-                          :status (:jobs/status job)
-                          :priority (:jobs/priority job)
-                          :attempts (:jobs/attempts job)
-                          :max_attempts (:jobs/max_attempts job)
-                          :created_at (str (:jobs/created_at job))
-                          :started_at (when (:jobs/started_at job) (str (:jobs/started_at job)))
-                          :completed_at (when (:jobs/completed_at job) (str (:jobs/completed_at job)))
-                          :error_message error-msg
-                          :last_error (:jobs/last_error job)
-                          :correlation_id (when (:jobs/correlation_id job) (str (:jobs/correlation_id job)))
-                          :dedup_key (:jobs/dedup_key job)}]
-            (try
-              ;; Insert into dead_letter_jobs
-              (jdbc/execute! db
-                             ["INSERT INTO dead_letter_jobs (original_job, error_message, correlation_id)
-                  VALUES (?::jsonb, ?, ?)
-                  ON CONFLICT DO NOTHING"
-                              (cheshire.core/generate-string job-data)
-                              error-msg
-                              (:jobs/correlation_id job)])
-
-              (log/info "Migrated orphaned dead job to dead_letter_jobs"
-                        {:job-id job-id
-                         :job-type (:jobs/type job)
-                         :error error-msg})
-
-              (catch Exception e
-                (log/error e "Failed to migrate dead job"
-                           {:job-id job-id})))))
-
-        (log/info "Completed migration of orphaned dead jobs"
-                  {:migrated count}))
-
-      count)
-
-    (catch Exception e
-      (log/error e "Error checking for orphaned dead jobs")
-      0)))
-
 (defn cleanup-old-jobs!
   "Remove completed and dead jobs older than specified days."
   [db days]
@@ -486,7 +396,3 @@
       (log/warn "Reset stuck jobs on startup" {:count result :timeout-minutes timeout-minutes}))
     result))
 
-(defn example-job-payloads
-  "Get example payloads for all job types for documentation/testing."
-  []
-  (payload-schema/example-payloads))

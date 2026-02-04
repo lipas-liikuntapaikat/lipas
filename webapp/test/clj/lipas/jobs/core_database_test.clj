@@ -2,48 +2,18 @@
   "Unit tests for core database operations in the unified job queue system."
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.core :as jobs]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]
-   [taoensso.timbre :as log]))
+   [lipas.test-utils :as test-utils]))
 
-;; Test system setup
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  ;; Ensure database is properly initialized
-  (test-utils/ensure-test-database!)
-  ;; Initialize test system using test config (with _test database suffix)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Clean all tables before each test
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;; Helper functions
 (defn test-db [] (:lipas/db @test-system))
-
-(defn get-job-by-id [db id]
-  (first (jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" id])))
-
-(defn get-all-jobs [db]
-  (jdbc/execute! db ["SELECT * FROM jobs ORDER BY created_at"]))
 
 ;; =============================================================================
 ;; Core Database Operation Tests
@@ -58,7 +28,7 @@
         (let [job-result (jobs/enqueue-job! db "email" {:to "test@example.com" :subject "Test Email" :body "This is a test email"})
               job-id (:id job-result)]
           (is (pos-int? job-id))
-          (let [job (get-job-by-id db job-id)]
+          (let [job (test-utils/get-job-by-id db job-id)]
             (is (= "email" (:jobs/type job)))
             (is (= {:to "test@example.com" :subject "Test Email" :body "This is a test email"} (:jobs/payload job)))
             (is (= 100 (:jobs/priority job))) ; default priority
@@ -69,7 +39,7 @@
         (let [job-result (jobs/enqueue-job! db "analysis" {:lipas-id 123} {:priority 50})
               job-id (:id job-result)]
           (is (pos-int? job-id))
-          (let [job (get-job-by-id db job-id)]
+          (let [job (test-utils/get-job-by-id db job-id)]
             (is (= 50 (:jobs/priority job))))))
 
       ;; Test with custom max-attempts
@@ -77,7 +47,7 @@
         (let [job-result (jobs/enqueue-job! db "webhook" {} {:max-attempts 5})
               job-id (:id job-result)]
           (is (pos-int? job-id))
-          (let [job (get-job-by-id db job-id)]
+          (let [job (test-utils/get-job-by-id db job-id)]
             (is (= 5 (:jobs/max_attempts job))))))
 
       ;; Test with future run-at
@@ -86,7 +56,7 @@
               job-result (jobs/enqueue-job! db "cleanup-jobs" {} {:run-at future-time})
               job-id (:id job-result)]
           (is (pos-int? job-id))
-          (let [job (get-job-by-id db job-id)]
+          (let [job (test-utils/get-job-by-id db job-id)]
             ;; Should be scheduled for future
             (is (= future-time (:jobs/run_at job)))))))))
 
@@ -133,7 +103,7 @@
             ;; jobs don't include status (that's only in the database)
             (is (= 1 (:attempts (first jobs))))
             ;; Verify the job is actually marked as processing in database
-            (let [job-in-db (get-job-by-id db (:id (first jobs)))]
+            (let [job-in-db (test-utils/get-job-by-id db (:id (first jobs)))]
               (is (= "processing" (:jobs/status job-in-db))))))))))
 
 (deftest job-status-transitions-test
@@ -149,12 +119,12 @@
                 job (first jobs)]
             ;; Verify job was fetched and status updated in database
             (is (= 1 (count jobs)))
-            (let [job-in-db (get-job-by-id db (:id job))]
+            (let [job-in-db (test-utils/get-job-by-id db (:id job))]
               (is (= "processing" (:jobs/status job-in-db)))))
 
           ;; Mark completed
           (jobs/mark-completed! db job-id)
-          (let [completed-job (get-job-by-id db job-id)]
+          (let [completed-job (test-utils/get-job-by-id db job-id)]
             (is (= "completed" (:jobs/status completed-job)))
             (is (inst? (:jobs/completed_at completed-job)))
             (is (nil? (:jobs/error_message completed-job))))))
@@ -167,11 +137,11 @@
           (let [fetched-jobs (jobs/fetch-next-jobs db {:limit 1})
                 job (first fetched-jobs)]
             ;; Use fail-job! with proper attempt tracking
-            (jobs/fail-job! db job-id "Test error message" 
-                           {:current-attempt (:attempts job)
-                            :max-attempts (:max_attempts job)}))
+            (jobs/fail-job! db job-id "Test error message"
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
-          (let [failed-job (get-job-by-id db job-id)]
+          (let [failed-job (test-utils/get-job-by-id db job-id)]
             (is (= "pending" (:jobs/status failed-job)))
             (is (= 1 (:jobs/attempts failed-job)))
             (is (= "Test error message" (:jobs/error_message failed-job)))
@@ -187,10 +157,10 @@
                 job (first fetched-jobs)]
             ;; Use fail-job! - with max-attempts=1 and current-attempt=1, should go to dead letter
             (jobs/fail-job! db job-id "Final failure"
-                           {:current-attempt (:attempts job)
-                            :max-attempts (:max_attempts job)}))
+                            {:current-attempt (:attempts job)
+                             :max-attempts (:max_attempts job)}))
 
-          (let [dead-job (get-job-by-id db job-id)]
+          (let [dead-job (test-utils/get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))
             (is (= 1 (:jobs/attempts dead-job)))
             (is (= "Final failure" (:jobs/error_message dead-job)))))))))

@@ -20,7 +20,8 @@
             [migratus.core :as migratus]
             [ring.mock.request :as mock]
             [integrant.core :as ig]
-            [clojure.test :as t])
+            [clojure.test :as t]
+            [next.jdbc :as next-jdbc])
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
@@ -896,3 +897,119 @@
              (prune-db! db)
              (when search (prune-es! search))
              (f)))})
+
+(defn db-only-fixture
+  "Starts database-only Integrant system, prunes between tests.
+
+   For tests that only need database access (no search, no app).
+   More efficient than full-system-fixture for job system tests.
+
+   Usage:
+   (defonce test-system (atom nil))
+   (let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+     (use-fixtures :once once)
+     (use-fixtures :each each))
+
+   ;; Access db:
+   (defn test-db [] (:lipas/db @test-system))"
+  [system-atom]
+  {:once (fn [f]
+           (ensure-test-database!)
+           (reset! system-atom
+                   (ig/init (select-keys (config/->system-config config) [:lipas/db])))
+           (try (f)
+                (finally
+                  (when @system-atom
+                    (ig/halt! @system-atom)
+                    (reset! system-atom nil)))))
+   :each (fn [f]
+           (prune-db! (:lipas/db @system-atom))
+           (f))})
+
+;; ========================================
+;; Job System Test Helpers
+;; ========================================
+
+(defn get-job-by-id
+  "Fetch a job by ID from the database.
+   Returns a map with namespaced keys (e.g., :jobs/id, :jobs/status)."
+  [db id]
+  (first (next-jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" id])))
+
+(defn get-all-jobs
+  "Fetch all jobs from the database ordered by created_at.
+   Returns a vector of maps with namespaced keys (e.g., :jobs/id, :jobs/status)."
+  [db]
+  (next-jdbc/execute! db ["SELECT * FROM jobs ORDER BY created_at"]))
+
+(defn wait-for-condition
+  "Wait up to timeout-ms for condition-fn to return truthy value.
+   Polls every 100ms. Returns true if condition was met, false if timed out."
+  [condition-fn timeout-ms]
+  (let [start-time (System/currentTimeMillis)
+        end-time (+ start-time timeout-ms)]
+    (loop []
+      (if (condition-fn)
+        true
+        (if (< (System/currentTimeMillis) end-time)
+          (do (Thread/sleep 100)
+              (recur))
+          false)))))
+
+;; Test emailer that records sent emails
+(defrecord TestEmailer [sent-emails]
+  email/Emailer
+  (send! [_ msg]
+    (swap! sent-emails conj msg)
+    {:status :sent :message-id (str "test-" (System/currentTimeMillis))}))
+
+(defn create-test-emailer
+  "Create a test emailer that records all sent emails.
+   Access sent emails via (:sent-emails emailer) - returns an atom of messages."
+  []
+  (->TestEmailer (atom [])))
+
+(defn create-test-dead-letter-job!
+  "Create a dead letter job directly for testing dead letter management.
+
+   Options:
+   - :job-type       - Type of job (default: \"email\")
+   - :payload        - Job payload (default: {:to \"test@example.com\" :template \"welcome\"})
+   - :error-message  - Error message (default: \"SMTP connection failed\")
+   - :acknowledged   - Boolean, if true marks as acknowledged by \"system\"
+   - :acknowledged-by - If provided, marks the job as acknowledged by this user
+
+   Returns the created dead letter job record."
+  [db & [{:keys [job-type payload error-message acknowledged acknowledged-by]
+          :or {job-type "email"
+               payload {:to "test@example.com" :template "welcome"}
+               error-message "SMTP connection failed"}}]]
+  ;; Require jobs-db dynamically to avoid circular dependency
+  (let [jobs-db (requiring-resolve 'lipas.jobs.db/insert-dead-letter!)
+        ack-fn (requiring-resolve 'lipas.jobs.db/acknowledge-dead-letter!)
+        get-fn (requiring-resolve 'lipas.jobs.db/get-dead-letter-by-id)
+        correlation-id (java.util.UUID/randomUUID)
+        original-job {:id 999
+                      :type job-type
+                      :payload payload
+                      :status "failed"
+                      :priority 100
+                      :attempts 3
+                      :max_attempts 3
+                      :scheduled_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :run_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :created_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :updated_at (java.sql.Timestamp/from (java.time.Instant/now))
+                      :correlation_id correlation-id}
+        dlj (jobs-db db
+                     {:original_job (j/generate-string original-job)
+                      :error_message error-message
+                      :error_details nil
+                      :correlation_id correlation-id})
+        ;; Support both :acknowledged (boolean) and :acknowledged-by (string)
+        ack-user (or acknowledged-by (when acknowledged "system"))]
+    (if ack-user
+      (do
+        (ack-fn db {:id (:id dlj) :acknowledged_by ack-user})
+        (get-fn db {:id (:id dlj)}))
+      dlj)))

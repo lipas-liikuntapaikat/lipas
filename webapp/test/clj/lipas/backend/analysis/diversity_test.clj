@@ -313,7 +313,44 @@
             (is (seq result))
             (is (every? #(or (contains? % :index) (contains? % :grd_id)) result))))))))
 
+;;; Timeout handling tests ;;;
+
+(deftest osrm-site-timeout-test
+  (testing "site timeout constant is defined and positive"
+    (is (pos? diversity/osrm-site-timeout-ms))
+    ;; Should be at least 30 seconds
+    (is (>= diversity/osrm-site-timeout-ms 30000))))
+
+(deftest process-sites-chunk-timeout-handling-test
+  (testing "handles OSRM timeout gracefully by returning nil for osrm field"
+    (let [;; Mock that simulates a timeout by sleeping longer than the timeout
+          slow-mock (fn [_params]
+                      (Thread/sleep 200) ; Simulate slow response
+                      {:distances [[100]] :durations [[10]]})]
+
+      (with-redefs [osrm/get-data slow-mock
+                    ;; Use very short timeout to trigger timeout behavior
+                    diversity/osrm-site-timeout-ms 50]
+        (let [test-site {:_id "test-site"
+                         :_source {:status "active"
+                                   :type {:type-code 1520}
+                                   :search-meta
+                                   {:location
+                                    {:simple-geoms
+                                     {:features
+                                      [{:geometry {:coordinates [24.948 60.168]
+                                                   :type "Point"}}]}}}}}
+              coords [24.9477 60.1678]
+              result (diversity/process-sites-chunk [test-site] coords prn)]
+          ;; Should return a result even if OSRM times out
+          (is (seq result))
+          (is (= "test-site" (:id (first result))))
+          ;; OSRM field should be nil due to timeout
+          (is (nil? (:osrm (first result)))))))))
+
 (comment
   (setup-test-system!)
   (clojure.test/run-test-var #'process-grid-item-test)
+  (clojure.test/run-test-var #'osrm-site-timeout-test)
+  (clojure.test/run-test-var #'process-sites-chunk-timeout-handling-test)
   (seed-test-data! (:lipas/search @test-system)))

@@ -47,6 +47,10 @@ Final clean-state verification with babashka:
 ```bash
 bb test-var lipas.jobs.handler-test/authorization-test
 bb test-ns lipas.jobs.handler-test
+
+# Multiple namespaces or vars can be specified
+bb test-ns lipas.backend.org-test lipas.roles-test
+bb test-var lipas.roles-test/site-roles-context lipas.roles-test/check-privilege-test
 ```
 
 ### Testing Philosophy

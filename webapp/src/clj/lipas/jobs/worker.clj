@@ -51,7 +51,7 @@
         ;; Use configuration values instead of hardcoded timeouts
         base-timeout-ms (case lane-type
                           :fast (* 60000 (:fast-timeout-minutes config 2))
-                          :general (* 60000 (:slow-timeout-minutes config 20)))
+                          :general (* 60000 (:slow-timeout-minutes config 30)))
         job-type-timeouts (:job-type-timeouts config {})]
 
     (doseq [job jobs]
@@ -67,23 +67,6 @@
                                     (* 60000 job-timeout)
                                     base-timeout-ms)]
                    (try
-                     ;; Check memory before processing
-                     (let [runtime (Runtime/getRuntime)
-                           used-memory (- (.totalMemory runtime) (.freeMemory runtime))
-                           max-memory (.maxMemory runtime)
-                           memory-percent (long (* 100 (/ used-memory max-memory)))]
-
-                       (when (> memory-percent (:memory-threshold-percent config 85))
-                         (log/warn "High memory usage before job processing"
-                                   {:job-id job-id
-                                    :job-type job-type
-                                    :memory-percent memory-percent
-                                    :used-mb (/ used-memory 1024 1024)
-                                    :max-mb (/ max-memory 1024 1024)})
-                         ;; Force garbage collection if memory is critically high
-                         (when (> memory-percent 90)
-                           (System/gc))))
-
                      ;; Add correlation ID to logging context
                      (log/with-context {:correlation-id correlation-id
                                         :job-id job-id
@@ -131,18 +114,7 @@
                                         :max-attempts (:max_attempts job)
                                         :correlation-id correlation-id})
                        (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job) correlation-id))
-
-                     (finally
-                       ;; Log memory usage after job completion
-                       (let [runtime (Runtime/getRuntime)
-                             used-memory (- (.totalMemory runtime) (.freeMemory runtime))
-                             max-memory (.maxMemory runtime)]
-                         (log/debug "Memory usage after job"
-                                    {:job-id job-id
-                                     :job-type job-type
-                                     :used-mb (/ used-memory 1024 1024)
-                                     :max-mb (/ max-memory 1024 1024)}))))))))))
+                                                      started-at (:created_at job) correlation-id)))))))))
 
 (defn fetch-and-process-jobs
   "Fetch jobs and route them to appropriate thread pools.
@@ -231,16 +203,7 @@
 
     (log/info "Starting mixed-duration worker" merged-config)
 
-    ;; Check for and migrate any orphaned dead jobs on startup
-    (try
-      (let [migrated-count (jobs/migrate-orphaned-dead-jobs! db)]
-        (when (pos? migrated-count)
-          (log/info "Migrated orphaned dead jobs on worker startup"
-                    {:count migrated-count})))
-      (catch Exception e
-        (log/error e "Failed to migrate orphaned dead jobs during startup")))
-
-    ;; Also reset any stuck jobs from previous run
+    ;; Reset any stuck jobs from previous run
     (try
       (jobs/reset-stuck-jobs! db (:stuck-job-timeout-minutes merged-config 30))
       (log/info "Reset stuck jobs from previous run")

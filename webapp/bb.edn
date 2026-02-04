@@ -257,20 +257,26 @@
          test {:doc "Run all tests"
                :task (shell "clojure -M:dev:test")}
 
-         test-specific {:doc "Run a specific test namespace"
-                        :task (if-let [test-ns (first *command-line-args*)]
-                                (shell "clojure" "-M:dev:test" "--focus" test-ns)
-                                (do (println "Usage: bb test-specific <test-namespace>")
-                                    (println "Example: bb test-specific lipas.gis-test")))}
+         test-specific {:doc "Run one or more test namespaces"
+                        :task (let [namespaces *command-line-args*]
+                                (if (seq namespaces)
+                                  (apply shell "clojure" "-M:dev:test"
+                                         (mapcat (fn [ns] ["--focus" ns]) namespaces))
+                                  (do (println "Usage: bb test-specific <ns> [<ns> ...]")
+                                      (println "Example: bb test-specific lipas.gis-test")
+                                      (println "Example: bb test-specific lipas.gis-test lipas.backend.core-test"))))}
 
          test-ns {:doc "Alias to test-specific"
                   :task (run 'test-specific)}
 
-         test-var {:doc "Run a specific test var"
-                   :task (if-let [test-var (first *command-line-args*)]
-                           (shell "clojure" "-M:dev:test" "--focus" test-var)
-                           (do (println "Usage: bb test-var <test-var>")
-                               (println "Example: bb test-var lipas.gis-test/test-sequence-features")))}
+         test-var {:doc "Run one or more test vars"
+                   :task (let [vars *command-line-args*]
+                           (if (seq vars)
+                             (apply shell "clojure" "-M:dev:test"
+                                    (mapcat (fn [v] ["--focus" v]) vars))
+                             (do (println "Usage: bb test-var <var> [<var> ...]")
+                                 (println "Example: bb test-var lipas.gis-test/test-sequence-features")
+                                 (println "Example: bb test-var lipas.gis-test/test-sequence-features lipas.roles-test/admin-test"))))}
 
          test-watch {:doc "Run tests in watch mode (re-runs on file changes)"
                      :task (shell "clojure" "-M:dev:test" "--watch")}

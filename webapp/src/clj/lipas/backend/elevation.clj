@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [lipas.backend.config :as config]
             [lipas.backend.gis :as gis]
+            [lipas.jobs.patterns :as patterns]
             [taoensso.timbre :as log]))
 
 ;; MML elevation coverage model consists of 2x2m squares that contain
@@ -15,7 +16,7 @@
 ;; https://www.maanmittauslaitos.fi/ortokuvien-ja-korkeusmallien-kyselypalvelu/tekninen-kuvaus
 ;; https://en.wikipedia.org/wiki/Esri_grid
 
-(def mml-api-key (get-in config/default-config [:app :mml-api :api-key] ))
+(def mml-api-key (get-in config/default-config [:app :mml-api :api-key]))
 (def mml-coverage-url (get-in config/default-config [:app :mml-api :coverage-url]))
 
 (def default-query-params
@@ -40,6 +41,18 @@
   "250x250m was selected as the grid size because of good perf/coverage
   ratio with MML api."
   250)
+
+(def mml-http-options
+  "HTTP options for MML API requests with timeouts."
+  {:connection-timeout 5000     ;; 5 seconds to establish connection
+   :socket-timeout 120000       ;; 2 minutes for response (large grids take time)
+   :throw-exceptions false      ;; Handle errors explicitly
+   :decompress-body true})
+
+(def elevation-chunk-timeout-ms
+  "Timeout for fetching a single elevation grid chunk (3 minutes).
+  This is higher than socket-timeout to account for retry logic."
+  180000)
 
 (defn describe-coverage
   []
@@ -154,13 +167,25 @@
 
 (defn get-elevation-coverage
   [envelope]
-  (let [opts {:query-params (make-query-params envelope)
-              :basic-auth   (str mml-api-key ":")
-              #_#_:as       :stream}]
+  (let [opts (merge mml-http-options
+                    {:query-params (make-query-params envelope)
+                     :basic-auth   (str mml-api-key ":")})]
     (log/info "Getting coverage with envelope" envelope)
-    (-> (client/get mml-coverage-url opts)
-        :body
-        (parse-ascii-grid))))
+    (let [response (client/get mml-coverage-url opts)]
+      (cond
+        (= 200 (:status response))
+        (parse-ascii-grid (:body response))
+
+        (>= (:status response) 400)
+        (throw (ex-info "MML API error"
+                        {:status (:status response)
+                         :body (:body response)
+                         :envelope envelope}))
+
+        :else
+        (throw (ex-info "Unexpected MML API response"
+                        {:status (:status response)
+                         :envelope envelope}))))))
 
 (defn enrich-elevation
   [fcoll]
@@ -172,9 +197,9 @@
                       (fit-to-coverage coverage-info)
                       (gis/chunk-envelope query-envelope-size-m)
                       (->> (filter #(gis/intersects-envelope? % fcoll-jts))))]
+    (log/info "Fetching elevation data for" (count envelopes) "grid chunks")
     (->> envelopes
-         (map (fn [envelope] (future (get-elevation-coverage envelope))))
-         (map deref)
+         (patterns/pmap-with-timeout elevation-chunk-timeout-ms get-elevation-coverage)
          (append-elevations fcoll))))
 
 (comment
@@ -219,7 +244,7 @@
      :data (list (list 152.55 152.34) (list 152.39 152.3))})
 
   (resolve-elevation [25.720539797408946,
-              62.62057217751676] lol)
+                      62.62057217751676] lol)
   ;; => 152.34
 
   (-> (list (list 152.55 152.34) (list 152.39 152.3)) (nth 1) (nth 1))
@@ -329,7 +354,4 @@
   (- (:max-x lolx) (:min-x lolx))
 
   (get-elevation-coverage test-route)
-  (enrich-elevation test-route)
-
-
-  )
+  (enrich-elevation test-route))

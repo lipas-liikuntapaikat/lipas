@@ -18,5 +18,4 @@
     (is (m/validate jobs/job-type-schema "analysis") "Valid job type should pass")
     (is (not (m/validate jobs/job-type-schema "invalid")) "Invalid job type should fail")))
 
-;; TODO: Add database integration tests once test fixtures are fixed
-;; (deftest enqueue-and-fetch-job-test ...)
+;; NOTE: Database integration tests are in lipas.jobs.core-database-test

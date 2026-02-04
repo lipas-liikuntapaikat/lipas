@@ -2,49 +2,28 @@
   "Resilience and error handling tests for the unified job queue system.
 
   Tests job retry logic, exponential backoff, dead letter queue behavior,
-  database connection failures, malformed payloads, and system recovery.
+  database connection failures, malformed payloads, system recovery,
+  and dead letter queue management (querying, filtering, reprocessing).
 
   These tests focus on the error handling and resilience aspects of the
   job queue system, ensuring that jobs are properly retried, failed jobs
   are moved to dead letter queue, and the system can recover from crashes."
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.db :as jobs-db]
    [lipas.test-utils :as test-utils]
    [next.jdbc :as jdbc]))
 
-;; Test system setup
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  (test-utils/ensure-test-database!)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;; Helper functions
 (defn test-db [] (:lipas/db @test-system))
-
-(defn get-job-by-id [db id]
-  (first (jdbc/execute! db ["SELECT * FROM jobs WHERE id = ?" id])))
 
 (deftest job-retry-logic-test
   (testing "Job retry logic with progressive backoff"
@@ -62,7 +41,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (let [job-after-first-failure (get-job-by-id db job-id)]
+          (let [job-after-first-failure (test-utils/get-job-by-id db job-id)]
             (is (= "pending" (:jobs/status job-after-first-failure)))
             (is (= 1 (:jobs/attempts job-after-first-failure)))
             (is (= "First failure" (:jobs/error_message job-after-first-failure)))
@@ -78,7 +57,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (let [job-after-second-failure (get-job-by-id db job-id)]
+          (let [job-after-second-failure (test-utils/get-job-by-id db job-id)]
             (is (= "pending" (:jobs/status job-after-second-failure)))
             (is (= 2 (:jobs/attempts job-after-second-failure)))
             (is (= "Second failure" (:jobs/error_message job-after-second-failure)))
@@ -94,7 +73,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (let [job-after-final-failure (get-job-by-id db job-id)]
+          (let [job-after-final-failure (test-utils/get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status job-after-final-failure)))
             (is (= 3 (:jobs/attempts job-after-final-failure)))
             (is (= "Final failure" (:jobs/error_message job-after-final-failure))))))
@@ -109,7 +88,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (let [dead-job (get-job-by-id db job-id)]
+          (let [dead-job (test-utils/get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))
             (is (= 1 (:jobs/attempts dead-job)))))))))
 
@@ -164,8 +143,8 @@
       (jobs/fetch-next-jobs db {:limit 2})
 
       ;; Verify jobs are processing
-      (let [stuck-job (get-job-by-id db stuck-job-id)
-            normal-job (get-job-by-id db normal-job-id)]
+      (let [stuck-job (test-utils/get-job-by-id db stuck-job-id)
+            normal-job (test-utils/get-job-by-id db normal-job-id)]
         (is (= "processing" (:jobs/status stuck-job)))
         (is (= "processing" (:jobs/status normal-job))))
 
@@ -173,8 +152,8 @@
       (jobs-db/reset-stuck-jobs! db {:timeout_minutes -1})
 
       ;; Check that stuck jobs are marked as failed
-      (let [recovered-stuck (get-job-by-id db stuck-job-id)
-            recovered-normal (get-job-by-id db normal-job-id)]
+      (let [recovered-stuck (test-utils/get-job-by-id db stuck-job-id)
+            recovered-normal (test-utils/get-job-by-id db normal-job-id)]
         (is (= "failed" (:jobs/status recovered-stuck)))
         (is (= "failed" (:jobs/status recovered-normal)))
         (is (.contains (:jobs/error_message recovered-stuck) "stuck in processing"))
@@ -221,7 +200,7 @@
                         {:current-attempt (:attempts job)
                          :max-attempts (:max_attempts job)}))
 
-      (let [failed-job (get-job-by-id db job-id)]
+      (let [failed-job (test-utils/get-job-by-id db job-id)]
         (is (= "pending" (:jobs/status failed-job))) ; Changed from "failed" to "pending"
         (is (= 1 (:jobs/attempts failed-job))))
 
@@ -236,7 +215,7 @@
         ;; This time job succeeds
         (jobs/mark-completed! db job-id)
 
-        (let [completed-job (get-job-by-id db job-id)]
+        (let [completed-job (test-utils/get-job-by-id db job-id)]
           (is (= "completed" (:jobs/status completed-job)))
           (is (= 2 (:jobs/attempts completed-job))) ; Should show it was retried
           (is (inst? (:jobs/completed_at completed-job))))))))
@@ -256,7 +235,7 @@
             (jobs/fail-job! db job-id "HTTP 500 error"
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
-          (let [job1 (get-job-by-id db job-id)]
+          (let [job1 (test-utils/get-job-by-id db job-id)]
             (is (= "pending" (:jobs/status job1)))
             (is (= 1 (:jobs/attempts job1))))
 
@@ -269,7 +248,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (let [dead-job (get-job-by-id db job-id)]
+          (let [dead-job (test-utils/get-job-by-id db job-id)]
             (is (= "dead" (:jobs/status dead-job)))
             (is (= 2 (:jobs/attempts dead-job)))
             (is (= "HTTP 500 error - final attempt" (:jobs/error_message dead-job))))))
@@ -285,7 +264,7 @@
                             {:current-attempt (:attempts job)
                              :max-attempts (:max_attempts job)}))
 
-          (is (= "dead" (:jobs/status (get-job-by-id db dead-job-id)))))
+          (is (= "dead" (:jobs/status (test-utils/get-job-by-id db dead-job-id)))))
 
         ;; Create normal jobs - should still be processable
         (let [normal-job-result (jobs/enqueue-job! db "email" {:to "normal@example.com" :subject "Normal" :body "Normal message"})
@@ -316,3 +295,91 @@
 
         ;; The cleanup function should execute without error
         (is true "Cleanup function executes without error")))))
+
+;; =============================================================================
+;; Dead Letter Queue Management Tests
+;; (Consolidated from dead_letter_core_test.clj)
+;; =============================================================================
+
+(deftest get-dead-letter-jobs-test
+  (testing "Get unacknowledged dead letter jobs"
+    (let [db (test-db)]
+      ;; Create some dead letter jobs
+      (test-utils/create-test-dead-letter-job! db)
+      (test-utils/create-test-dead-letter-job! db {:job-type "analysis"})
+
+      ;; Get all unacknowledged
+      (let [jobs (jobs/get-dead-letter-jobs db {:acknowledged false})]
+        (is (= 2 (count jobs)))
+        (is (every? #(false? (:acknowledged %)) jobs))
+        (is (every? #(contains? % :original-job) jobs))
+        ;; Check that original job was parsed
+        (is (map? (:original-job (first jobs))))))))
+
+(deftest dead-letter-job-filter-test
+  (testing "Filter by acknowledgment status"
+    (let [db (test-db)]
+      ;; Create one unacknowledged and one acknowledged
+      (let [unack-job (test-utils/create-test-dead-letter-job! db)
+            ack-job (test-utils/create-test-dead-letter-job! db {:acknowledged-by "admin@test.com"})]
+
+        ;; Check filters work
+        (let [unack-jobs (jobs/get-dead-letter-jobs db {:acknowledged false})
+              ack-jobs (jobs/get-dead-letter-jobs db {:acknowledged true})
+              all-jobs (jobs/get-dead-letter-jobs db {})]
+
+          (is (= 1 (count unack-jobs)))
+          (is (= 1 (count ack-jobs)))
+          (is (= 2 (count all-jobs))))))))
+
+(deftest reprocess-dead-letter-job-test
+  (testing "Successfully reprocess a dead letter job"
+    (let [db (test-db)
+          dlj (test-utils/create-test-dead-letter-job! db)
+          new-job (jobs/reprocess-dead-letter-job! db (:id dlj) "admin@test.com")]
+
+      ;; Check new job was created
+      (is (some? new-job))
+      (is (= "email" (:type new-job)))
+      (is (map? (:payload new-job)))
+      (is (= "pending" (:status new-job)))
+      (is (= 3 (:max-attempts new-job)))
+
+      ;; Check original was acknowledged
+      (let [acknowledged (jobs-db/get-dead-letter-by-id db {:id (:id dlj)})]
+        (is (true? (:acknowledged acknowledged)))
+        (is (= "admin@test.com" (:acknowledged_by acknowledged))))))
+
+  (testing "Error when dead letter job not found"
+    (let [db (test-db)]
+      (is (thrown-with-msg? Exception #"Dead letter job not found"
+                            (jobs/reprocess-dead-letter-job! db 999999 "admin@test.com"))))))
+
+(deftest reprocess-dead-letter-jobs-bulk-test
+  (testing "Bulk reprocess multiple jobs"
+    (let [db (test-db)
+          dlj1 (test-utils/create-test-dead-letter-job! db)
+          dlj2 (test-utils/create-test-dead-letter-job! db)
+
+          result (jobs/reprocess-dead-letter-jobs!
+                  db
+                  [(:id dlj1) (:id dlj2) 999999] ; 999999 doesn't exist
+                  "admin@test.com")]
+
+      ;; Check results
+      (is (= 2 (count (:succeeded result))))
+      (is (= 1 (count (:failed result))))
+
+      ;; Check succeeded jobs have new IDs
+      (is (every? #(contains? % :new-job-id) (:succeeded result)))
+      (is (every? #(pos? (:new-job-id %)) (:succeeded result)))
+
+      ;; Check failed job has error
+      (is (= 999999 (-> result :failed first :dead-letter-id)))
+      (is (string? (-> result :failed first :error)))))
+
+  (testing "Empty list handling"
+    (let [db (test-db)
+          result (jobs/reprocess-dead-letter-jobs! db [] "admin@test.com")]
+      (is (= 0 (count (:succeeded result))))
+      (is (= 0 (count (:failed result)))))))

@@ -1,9 +1,7 @@
 (ns lipas.jobs.dispatcher-test
   "Unit tests for job dispatcher handlers."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures] :as t]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
+   [clojure.test :refer [deftest testing is use-fixtures]]
    [lipas.backend.core :as core]
    [lipas.backend.db.db :as db]
    [lipas.backend.email :as email]
@@ -13,42 +11,15 @@
    [next.jdbc :as jdbc]
    [taoensso.timbre :as log]))
 
-;; Test system setup
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  (test-utils/ensure-test-database!)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    (test-utils/prune-db! (:lipas/db @test-system))
-    (f)))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
 
 ;; Test utilities
 (defn test-db [] (:lipas/db @test-system))
-
-;; Mock emailer that records sent emails
-(defrecord TestEmailer [sent-emails]
-  email/Emailer
-  (send! [_ msg]
-    (swap! sent-emails conj msg)
-    {:status :sent :message-id (str "test-" (System/currentTimeMillis))}))
-
-(defn create-test-emailer []
-  (->TestEmailer (atom [])))
 
 ;; Mock search client
 (defn create-mock-search []
@@ -60,7 +31,7 @@
 
 (deftest email-job-handler-test
   (testing "Email job handler processes different email types"
-    (let [test-emailer (create-test-emailer)
+    (let [test-emailer (test-utils/create-test-emailer)
           system {:db (test-db) :emailer test-emailer :search (create-mock-search)}]
 
       ;; Test basic email
@@ -243,7 +214,7 @@
 
 (deftest malformed-payload-handling-test
   (testing "Handlers validate job payloads appropriately"
-    (let [system {:db (test-db) :emailer (create-test-emailer) :search (create-mock-search)}]
+    (let [system {:db (test-db) :emailer (test-utils/create-test-emailer) :search (create-mock-search)}]
 
       ;; Email job with missing required fields
       (testing "Email job with missing 'to' field"

@@ -2,6 +2,7 @@
   "Job dispatcher with multimethod handlers for each job type."
   (:require
    [lipas.backend.analysis.diversity :as diversity]
+   [lipas.backend.config :as config]
    [lipas.backend.core :as core]
    [lipas.backend.elevation :as elevation]
    [lipas.backend.email :as email]
@@ -37,7 +38,7 @@
         (log/info "Processing analysis for lipas-id" lipas-id)
         (diversity/recalc-grid! search fcoll)
         (log/info "Analysis completed for lipas-id" lipas-id))
-      (log/info "Skpping analysis for lipas-id" lipas-id "due to" status "status"))))
+      (log/info "Skipping analysis for lipas-id" lipas-id "due to" status "status"))))
 
 (defmethod handle-job "elevation"
   [{:keys [db search]} {:keys [id payload]}]
@@ -45,7 +46,15 @@
         user (core/get-user! db "robot@lipas.fi")
         orig (core/get-sports-site db lipas-id)
         _ (when-not orig (throw (ex-info "Sports site not found" {:lipas-id lipas-id})))
-        fcoll (-> orig :location :geometries elevation/enrich-elevation)
+
+        ;; Use circuit breaker to protect against MML API failures
+        fcoll (patterns/with-circuit-breaker db "mml-elevation-service"
+                {:failure-threshold 5
+                 :open-duration-ms 120000  ;; 2 minutes before retry
+                 :on-open (fn [{:keys [service failure-count]}]
+                            (log/error "Circuit breaker opened for" service
+                                       "after" failure-count "failures"))}
+                (-> orig :location :geometries elevation/enrich-elevation))
 
         ;; Check if site was updated while processing elevation
         current (core/get-sports-site db lipas-id)
@@ -79,7 +88,7 @@
 
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload correlation-id]}]
-  (let [config (get-in lipas.backend.config/default-config [:app :utp])
+  (let [utp-config (get-in config/default-config [:app :utp])
         webhook-payload (assoc payload :correlation-id correlation-id)]
 
     (log/info "Processing webhook job"
@@ -90,12 +99,12 @@
                :correlation-id correlation-id})
 
     (patterns/with-circuit-breaker db "webhook-service" {}
-      (utp-webhook/process-v2! db config webhook-payload))
+      (utp-webhook/process-v2! db utp-config webhook-payload))
 
     (log/debug "Webhook job processed successfully" {:job-id id})))
 
 (defmethod handle-job "produce-reminders"
-  [{:keys [db]} _paylopad]
+  [{:keys [db]} _payload]
   (log/info "Producing reminder emails")
   (let [overdue-reminders (reminders/get-overdue db)]
     (doseq [reminder overdue-reminders]
@@ -108,24 +117,6 @@
   (let [days-old (get payload :days-old 7)]
     (log/info "Cleaning up jobs older than" days-old "days")
     (jobs/cleanup-old-jobs! db days-old)))
-
-(defmethod handle-job "monitor-queue-health"
-  [{:keys [db]} {:keys [id payload correlation-id]}]
-  (log/info "Running queue health monitor" {:correlation-id correlation-id})
-  (let [alert-fn (fn [alert]
-                   ;; In production, this could send emails or post to monitoring service
-                   (log/warn "QUEUE ALERT" alert)
-                   ;; Could also enqueue email alerts
-                   (when (= (:type alert) :circuit-breaker-open)
-                     (jobs/enqueue-job! db "email"
-                                        {:to "admin@lipas.fi"
-                                         :subject (str "Circuit breaker open: " (:service alert))
-                                         :body (str "Service " (:service alert)
-                                                    " circuit breaker opened at "
-                                                    (:timestamp alert))}
-                                        {:priority 100})))
-        result (monitoring/monitor-and-alert! db {:alert-fn alert-fn})]
-    (log/debug "Health monitor completed" result)))
 
 (defmethod handle-job :default
   [_system job]

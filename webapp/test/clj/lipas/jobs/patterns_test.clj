@@ -1,40 +1,24 @@
 (ns lipas.jobs.patterns-test
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
    [lipas.jobs.patterns :as patterns]
-   [lipas.jobs.db :as jobs-db]
    [lipas.test-utils :as test-utils]
    [next.jdbc :as jdbc])
   (:import
    [java.util.concurrent TimeoutException]))
 
-;; Test system setup - following the pattern from correlation-test
+;; Test system setup using shared fixture
 (defonce test-system (atom nil))
 
-(defn setup-test-system! []
-  (test-utils/ensure-test-database!)
-  (reset! test-system
-          (ig/init (select-keys (config/->system-config test-utils/config) [:lipas/db]))))
-
-(defn teardown-test-system! []
-  (when @test-system
-    (ig/halt! @test-system)
-    (reset! test-system nil)))
-
-(use-fixtures :once
-  (fn [f]
-    (setup-test-system!)
-    (f)
-    (teardown-test-system!)))
-
-(use-fixtures :each
-  (fn [f]
-    ;; Clean up circuit breakers table before each test
-    (let [db (:lipas/db @test-system)]
-      (jdbc/execute! db ["DELETE FROM circuit_breakers"])
-      (f))))
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  ;; Custom :each to also clean circuit breakers specifically
+  (use-fixtures :each
+    (fn [f]
+      (let [db (:lipas/db @test-system)]
+        (test-utils/prune-db! db)
+        (jdbc/execute! db ["DELETE FROM circuit_breakers"])
+        (f)))))
 
 (deftest exponential-backoff-test
   (testing "Exponential backoff calculation"
@@ -80,49 +64,6 @@
           42)
         (catch TimeoutException e
           (is (re-find #"50ms" (.getMessage e))))))))
-
-(deftest retry-test
-  (testing "with-retry macro"
-    (testing "returns result on success"
-      (is (= 42 (patterns/with-retry {:max-attempts 3}
-                  42))))
-
-    (testing "retries on failure"
-      (let [counter (atom 0)
-            result (patterns/with-retry {:max-attempts 3}
-                     (if (< (swap! counter inc) 3)
-                       (throw (Exception. "fail"))
-                       "success"))]
-        (is (= "success" result))
-        (is (= 3 @counter))))
-
-    (testing "respects max attempts"
-      (let [counter (atom 0)]
-        (is (thrown? Exception
-                     (patterns/with-retry {:max-attempts 2}
-                       (swap! counter inc)
-                       (throw (Exception. "always fails")))))
-        (is (= 2 @counter))))
-
-    (testing "retry-on predicate filters exceptions"
-      (let [counter (atom 0)]
-        (is (thrown? IllegalArgumentException
-                     (patterns/with-retry {:max-attempts 5
-                                           :retry-on #(instance? java.io.IOException %)}
-                       (swap! counter inc)
-                       (throw (IllegalArgumentException. "not retryable")))))
-        (is (= 1 @counter))))
-
-    (testing "on-retry callback is called"
-      (let [retry-calls (atom [])]
-        (try
-          (patterns/with-retry {:max-attempts 3
-                                :on-retry #(swap! retry-calls conj %)}
-            (throw (Exception. "fail")))
-          (catch Exception _))
-        (is (= 2 (count @retry-calls)))
-        (is (every? #(contains? % :attempt) @retry-calls))
-        (is (every? #(contains? % :delay-ms) @retry-calls))))))
 
 ;; Circuit Breaker Tests using real database
 
@@ -338,9 +279,59 @@
         (is (= 0 (:failure_count breaker)))
         (is (= 0 (:success_count breaker)))))))
 
+;; Timeout utilities tests
+
+(deftest deref-with-timeout-test
+  (testing "returns result when future completes within timeout"
+    (let [f (future (Thread/sleep 50) "success")]
+      (is (= "success" (patterns/deref-with-timeout f 1000 "test-op")))))
+
+  (testing "throws TimeoutException when future exceeds timeout"
+    (let [f (future (Thread/sleep 5000) "slow")]
+      (is (thrown-with-msg? TimeoutException #"timed out.*test-op"
+                            (patterns/deref-with-timeout f 100 "test-op")))))
+
+  (testing "includes timeout duration in exception message"
+    (let [f (future (Thread/sleep 5000) "slow")]
+      (try
+        (patterns/deref-with-timeout f 100 "test-op")
+        (catch TimeoutException e
+          (is (re-find #"100ms" (.getMessage e)))))))
+
+  (testing "cancels the future on timeout"
+    (let [executed (atom false)
+          f (future (Thread/sleep 500) (reset! executed true))]
+      (try
+        (patterns/deref-with-timeout f 50 "test-op")
+        (catch TimeoutException _))
+      (Thread/sleep 600)
+      (is (false? @executed)))))
+
+(deftest pmap-with-timeout-test
+  (testing "processes all items in parallel within timeout"
+    (let [results (patterns/pmap-with-timeout 1000 #(* % 2) [1 2 3 4 5])]
+      (is (= [2 4 6 8 10] results))))
+
+  (testing "runs items in parallel (not sequentially)"
+    (let [start (System/currentTimeMillis)
+          ;; Each sleep is 100ms, but running 5 in parallel should be ~100ms total
+          results (patterns/pmap-with-timeout 2000 #(do (Thread/sleep 100) %) [1 2 3 4 5])
+          elapsed (- (System/currentTimeMillis) start)]
+      (is (= [1 2 3 4 5] results))
+      ;; Should complete in less than 500ms (if sequential would be 500ms)
+      (is (< elapsed 300))))
+
+  (testing "throws on first timeout"
+    (is (thrown? TimeoutException
+                 (patterns/pmap-with-timeout 50 #(do (Thread/sleep (* % 100)) %) [1 2 3]))))
+
+  (testing "returns empty vector for empty collection"
+    (is (= [] (patterns/pmap-with-timeout 1000 identity [])))))
+
 (comment
   (clojure.test/run-test-var #'circuit-breaker-state-test)
   (clojure.test/run-test-var #'circuit-breaker-test)
   (clojure.test/run-test-var #'circuit-breaker-concurrency-test)
   (clojure.test/run-test-var #'circuit-breaker-reset-test)
-  )
+  (clojure.test/run-test-var #'deref-with-timeout-test)
+  (clojure.test/run-test-var #'pmap-with-timeout-test))

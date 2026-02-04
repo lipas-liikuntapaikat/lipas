@@ -29,15 +29,6 @@ SET status = 'completed',
     error_message = NULL
 WHERE id = :id;
 
--- :name mark-job-failed! :! :n
--- :doc Mark a job as failed (for retry)
-UPDATE jobs
-SET status = 'failed',
-    error_message = :error_message,
-    last_error = :error_message,
-    last_error_at = now()
-WHERE id = :id;
-
 -- :name get-job-stats :? :*
 -- :doc Get queue statistics
 SELECT
@@ -198,15 +189,6 @@ INSERT INTO dead_letter_jobs (original_job, error_message, error_details, correl
 VALUES (:original_job::jsonb, :error_message, :error_details::jsonb, :correlation_id)
 RETURNING *;
 
--- :name get-dead-letters :? :*
--- :doc Get unacknowledged dead letter jobs
-SELECT id, original_job, error_message, error_details, died_at
-FROM dead_letter_jobs
-WHERE acknowledged = false
-ORDER BY died_at DESC
-LIMIT :limit
-OFFSET :offset;
-
 -- :name acknowledge-dead-letter! :! :n
 -- :doc Acknowledge a dead letter job
 UPDATE dead_letter_jobs
@@ -214,43 +196,6 @@ SET acknowledged = true,
     acknowledged_by = :acknowledged_by,
     acknowledged_at = now()
 WHERE id = :id;
-
--- :name get-dead-letter-jobs-admin :? :*
--- :doc Get dead letter jobs for admin view with optional filters
-SELECT 
-  dlj.id,
-  dlj.original_job,
-  dlj.error_message,
-  dlj.error_details,
-  dlj.died_at,
-  dlj.acknowledged,
-  dlj.acknowledged_by,
-  dlj.acknowledged_at,
-  dlj.correlation_id,
-  dlj.original_job->>'type' as job_type,
-  dlj.original_job->>'status' as original_status,
-  (dlj.original_job->>'attempts')::int as attempts
-FROM dead_letter_jobs dlj
-WHERE (:acknowledged::boolean IS NULL OR dlj.acknowledged = :acknowledged)
-  AND (:job_type::text IS NULL OR dlj.original_job->>'type' = :job_type)
-ORDER BY dlj.died_at DESC
-LIMIT :limit
-OFFSET :offset;
-
--- :name get-dead-letter-job-by-id :? :1
--- :doc Get a single dead letter job by ID
-SELECT 
-  dlj.id,
-  dlj.original_job,
-  dlj.error_message,
-  dlj.error_details,
-  dlj.died_at,
-  dlj.acknowledged,
-  dlj.acknowledged_by,
-  dlj.acknowledged_at,
-  dlj.correlation_id
-FROM dead_letter_jobs dlj
-WHERE dlj.id = :id;
 
 -- :name requeue-dead-letter-job! :<! :1
 -- :doc Requeue a dead letter job back to main queue and mark as acknowledged
@@ -325,29 +270,6 @@ SELECT
   acknowledged_at
 FROM dead_letter_jobs
 WHERE id = :id;
-
--- :name requeue-dead-letter-job! :<! :1
--- :doc Requeue a dead letter job back to main queue
-WITH dlj AS (
-  SELECT * FROM dead_letter_jobs WHERE id = :id
-)
-INSERT INTO jobs (
-  type, 
-  payload, 
-  priority, 
-  max_attempts,
-  correlation_id,
-  created_by
-)
-SELECT 
-  (original_job->>'type')::text,
-  original_job->'payload',
-  COALESCE((original_job->>'priority')::int, 100),
-  :max_attempts,
-  COALESCE(correlation_id, uuid_generate_v4()),
-  :reprocessed_by
-FROM dlj
-RETURNING *;
 
 -- Job Metrics Queries
 
@@ -451,30 +373,7 @@ UNION ALL
 SELECT * FROM metric_data
 ORDER BY timestamp;
 
--- :name get-performance-metrics-by-correlation :? :*
--- :doc Get detailed performance metrics for a specific correlation ID
-SELECT 
-    type,
-    status,
-    count(*) as job_count,
-    round(avg(extract(epoch from (coalesce(completed_at, now()) - started_at)))) as avg_duration_seconds,
-    round(percentile_cont(0.5) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p50_duration_seconds,
-    round(percentile_cont(0.95) within group (order by extract(epoch from (coalesce(completed_at, now()) - started_at)))) as p95_duration_seconds,
-    round(avg(attempts)) as avg_attempts,
-    min(created_at) as earliest_job,
-    max(created_at) as latest_job
-FROM jobs 
-WHERE correlation_id = :correlation_id
-  AND started_at IS NOT NULL
-GROUP BY type, status
-ORDER BY type, status;
-
 -- Monitoring Queries
-
--- :name get-queue-health-detailed :? :*
--- :doc Get detailed health metrics by job type
-SELECT * FROM job_queue_health
-ORDER BY type, status;
 
 -- :name find-stuck-jobs :? :*
 -- :doc Find jobs that have been processing for too long

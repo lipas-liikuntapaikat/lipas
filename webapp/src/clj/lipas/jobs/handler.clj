@@ -3,7 +3,6 @@
   (:require
    [lipas.backend.core :as backend-core]
    [lipas.jobs.core :as core]
-   [lipas.backend.middleware :as mw]
    [lipas.jobs.schema :as schema]
    [reitit.coercion.malli]))
 
@@ -12,7 +11,6 @@
   [{:keys [db] :as _ctx}]
   [""
    {:coercion reitit.coercion.malli/coercion
-    #_#_:middleware [mw/token-auth mw/auth]
     :tags ["admin-jobs"]
     :no-doc false}
 
