@@ -1,4 +1,5 @@
 (ns lipas.i18n.core
+  (:refer-clojure :exclude [read-string])
   (:require
    #?(:cljs [clojure.reader :refer [read-string]]
       :clj [clojure.edn :refer [read-string]])
@@ -92,8 +93,7 @@
       utils/clean))
 
 (def localizations
-  [
-   ;; Sports site
+  [   ;; Sports site
    {:path         [:admin]
     :translations admins/all}
    {:path         [:owner]
@@ -217,23 +217,22 @@
    (fn [sports-site {:keys [path translations many? translate-fn]}]
      (if-let [value (get-in sports-site path)]
        (assoc-in sports-site path
-                  (cond
-                    translations (if many?
-                                   (map #(get-in translations [% locale]) value)
-                                   (get-in translations [value locale]))
-                    translate-fn (apply translate-fn [locale value])
-                    :else        (throw
-                                  (ex-info "Invalid localization definition."
-                                           {:missing-either
-                                            [:translations :translate-fn]}))))
+                 (cond
+                   translations (if many?
+                                  (map #(get-in translations [% locale]) value)
+                                  (get-in translations [value locale]))
+                   translate-fn (apply translate-fn [locale value])
+                   :else        (throw
+                                 (ex-info "Invalid localization definition."
+                                          {:missing-either
+                                           [:translations :translate-fn]}))))
        sports-site))
    sports-site
    localizations))
 
 (def localizations2
   (->>
-   [
-    ;; Admin
+   [    ;; Admin
     {:path         [:admin]
      :target-path  [:admin-localized]
      :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
@@ -248,8 +247,7 @@
      :target-path  [:type :name-localized]
      :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
 
-
-    ;; Location
+;; Location
     {:path         [:location :city :city-code]
      :target-path  [:location :city :name-localized]
      :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
@@ -347,16 +345,16 @@
    csv-data))
 
 (defn ->flat [locale m]
-    (reduce-kv
-     (fn [res k v]
-       (reduce-kv
-        (fn [res2 k2 v]
-          (let [kw (keyword (name k) (name k2))]
-            (assoc-in res2 [kw locale] v)))
-        res
-        v))
-     {}
-     m))
+  (reduce-kv
+   (fn [res k v]
+     (reduce-kv
+      (fn [res2 k2 v]
+        (let [kw (keyword (name k) (name k2))]
+          (assoc-in res2 [kw locale] v)))
+      res
+      v))
+   {}
+   m))
 
 (defn remove-extra-spaces [s]
   (if (string? s)
@@ -364,25 +362,25 @@
     s))
 
 (defn fix [locale k v]
-    (cond
-      (string? v) (remove-extra-spaces v)
-      (ifn? v)    (condp = (-> k name keyword)
-                    :name-localized    (v locale)
-                    :details-in-portal "Uimahalliportaalissa / jäähalliportaalissa"
-                    :new-site          "Uusi liikuntapaikka"
-                    :draw              "Piirrä reittiosa / Piirrä alue / Lisää kartalle"
-                    :modify            "Muokkaa reittiä / Muokkaa aluetta / Voit raahata pistettä kartalle"
-                    :confirm-remove    "Haluatko varmasti poistaa valitun reittiosan / alueen / kohteen"
-                    :supported-formats "Tuetut tiedostomuodot ovat"
-                    "")
+  (cond
+    (string? v) (remove-extra-spaces v)
+    (ifn? v)    (condp = (-> k name keyword)
+                  :name-localized    (v locale)
+                  :details-in-portal "Uimahalliportaalissa / jäähalliportaalissa"
+                  :new-site          "Uusi liikuntapaikka"
+                  :draw              "Piirrä reittiosa / Piirrä alue / Lisää kartalle"
+                  :modify            "Muokkaa reittiä / Muokkaa aluetta / Voit raahata pistettä kartalle"
+                  :confirm-remove    "Haluatko varmasti poistaa valitun reittiosan / alueen / kohteen"
+                  :supported-formats "Tuetut tiedostomuodot ovat"
+                  "")
 
-      :else v))
+    :else v))
 
 (defn csv-row-reducer [res k v]
-    (let [fi (-> v :fi ((partial fix :fi k)))
-          se (-> v :se ((partial fix :se k)))
-          en (-> v :en ((partial fix :en k)))]
-      (conj res [k fi se en])))
+  (let [fi (-> v :fi ((partial fix :fi k)))
+        se (-> v :se ((partial fix :se k)))
+        en (-> v :en ((partial fix :en k)))]
+    (conj res [k fi se en])))
 
 (defn dicts->csv-data
   [{:keys [fi se en] :as _dicts}]

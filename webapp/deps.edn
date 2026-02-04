@@ -56,7 +56,7 @@
                       org.locationtech.geowave/geowave-adapter-raster
                       org.locationtech.geowave/geowave-adapter-vector]}}
 
- :aliases {:dev {:extra-paths ["dev" "test/clj"]
+ :aliases {:dev {:extra-paths ["dev" "test/clj" "test/resources"]
                  :extra-deps {binaryage/devtools {:mvn/version "1.0.7"}
                               day8.re-frame/re-frame-10x {:mvn/version "1.9.9"}
                               metosin/reagent-dev-tools {:mvn/version "1.0.3"}
@@ -68,13 +68,12 @@
                               org.clojure/test.check {:mvn/version "1.1.1"}
                               com.gfredericks/test.chuck {:mvn/version "0.2.14"}
                               etaoin/etaoin {:mvn/version "1.1.43"}
-                              org.clojure/tools.namespace {:mvn/version "1.5.0"}}
+                              org.clojure/tools.namespace {:mvn/version "1.5.0"}
+                              lambdaisland/kaocha {:mvn/version "1.91.1392"}}
                  :jvm-opts ["-Duser.timezone=UTC" "-Xmx4g"
                             "-Djdk.attach.allowAttachSelf"]}
 
-           :test {:extra-paths ["test/clj" "test/resources"]
-                  :extra-deps {lambdaisland/kaocha {:mvn/version "1.91.1392"}}
-                  :main-opts ["-m" "kaocha.runner"]}
+           :test {:main-opts ["-m" "kaocha.runner"]}
 
            :migrate {:main-opts ["-m" "lipas.migrate-db"]}
 

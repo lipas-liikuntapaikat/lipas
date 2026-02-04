@@ -1,4 +1,5 @@
 (ns lipas.schema.sports-sites.types
+  (:refer-clojure :exclude [type])
   (:require [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.schema.common :as common]
@@ -61,5 +62,4 @@
 
 (comment
   (require '[malli.core :as m])
-  (m/schema type)
-  )
+  (m/schema type))

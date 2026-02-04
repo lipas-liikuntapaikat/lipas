@@ -1,4 +1,5 @@
 (ns lipas.backend.db.sports-site
+  (:refer-clojure :exclude [get])
   (:require
    [hugsql.core :as hugsql]
    [lipas.backend.db.utils :as utils]))
