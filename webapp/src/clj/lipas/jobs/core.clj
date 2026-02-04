@@ -17,9 +17,7 @@
 ;; Job type specifications - canonical definition in lipas.jobs.schema
 
 (def job-type-schema schema/job-type-schema)
-
-(def job-status-schema
-  [:enum "pending" "processing" "completed" "failed" "dead"])
+(def job-status-schema schema/job-status-schema)
 
 ;; Job duration classifications for smart concurrency
 (def job-duration-types

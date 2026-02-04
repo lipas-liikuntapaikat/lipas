@@ -21,16 +21,6 @@
 ;; Test utilities
 (defn test-db [] (:lipas/db @test-system))
 
-;; Mock emailer that records sent emails
-(defrecord TestEmailer [sent-emails]
-  email/Emailer
-  (send! [_ msg]
-    (swap! sent-emails conj msg)
-    {:status :sent :message-id (str "test-" (System/currentTimeMillis))}))
-
-(defn create-test-emailer []
-  (->TestEmailer (atom [])))
-
 ;; Mock search client
 (defn create-mock-search []
   {:client {:host "mock"} :indices {}})
@@ -41,7 +31,7 @@
 
 (deftest email-job-handler-test
   (testing "Email job handler processes different email types"
-    (let [test-emailer (create-test-emailer)
+    (let [test-emailer (test-utils/create-test-emailer)
           system {:db (test-db) :emailer test-emailer :search (create-mock-search)}]
 
       ;; Test basic email
@@ -224,7 +214,7 @@
 
 (deftest malformed-payload-handling-test
   (testing "Handlers validate job payloads appropriately"
-    (let [system {:db (test-db) :emailer (create-test-emailer) :search (create-mock-search)}]
+    (let [system {:db (test-db) :emailer (test-utils/create-test-emailer) :search (create-mock-search)}]
 
       ;; Email job with missing required fields
       (testing "Email job with missing 'to' field"
