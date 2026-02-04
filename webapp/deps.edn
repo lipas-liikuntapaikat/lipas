@@ -23,6 +23,9 @@
         metosin/ring-http-response {:mvn/version "0.9.0"},
         cheshire/cheshire {:mvn/version "5.13.0"},
         buddy/buddy {:mvn/version "2.0.0"},
+        ;; Override transitive deps to fix Clojure 1.11+ shadowing warnings
+        org.clojure/math.numeric-tower {:mvn/version "0.1.0"},
+        funcool/cuerdas {:mvn/version "2022.06.16-403"},
         ;; Legacy
         org.clojure/java.jdbc {:mvn/version "0.7.12"}
         ;; Migrating ^ to this, gradually
