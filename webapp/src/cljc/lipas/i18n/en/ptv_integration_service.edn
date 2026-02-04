@@ -1,0 +1,5 @@
+{:lipas-managed "LIPAS manages services (recommended)",
+ :lipas-managed-helper
+ "LIPAS creates the necessary services in PTV according to DVV recommendations and automatically connects service locations (sports sites) to them.",
+ :manual-helper
+ "Sports sites are connected to existing Service Information Repository services manually in this tool. The connection must be made once for each sports site."}

@@ -1,0 +1,7 @@
+{:addresses "Nearest addresses",
+ :choose-address "Select address",
+ :helper-text1
+ "The tool fetches the nearest addresses based on the sports site geometry.",
+ :helper-text2
+ "Select the street address to the best of your knowledge. You can complete the street number after pressing OK.",
+ :tooltip "Resolve address automatically"}

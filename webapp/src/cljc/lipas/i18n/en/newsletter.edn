@@ -1,0 +1,5 @@
+{:subscribe "Subscribe to newsletter",
+ :subscribe-short "Subscribe",
+ :subscription-failed
+ "Newsletter subscription failed. Please try again.",
+ :subscription-success "Newsletter subscribed!"}

@@ -1,0 +1,6 @@
+{:daily "Automatically once a day",
+ :headline "Export to Service Information Repository",
+ :immediate
+ "Automatically when changes are saved in LIPAS (recommended)",
+ :label "When changes are exported to Service Information Repository",
+ :manual "Manually only"}

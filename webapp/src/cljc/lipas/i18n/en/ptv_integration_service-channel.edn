@@ -1,0 +1,5 @@
+{:lipas-managed "LIPAS manages service locations (recommended)",
+ :lipas-managed-helper
+ "LIPAS creates a service location in PTV for each sports site and automatically connects the sports site information to them.",
+ :manual-helper
+ "The sports site is connected to an existing service location manually in this tool. The connection must be made once for each sports site."}

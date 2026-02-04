@@ -1,0 +1,9 @@
+{:export "Export",
+ :export-disclaimer
+ "I have read the descriptions and want this site to be exported to PTV.",
+ :generate-with-ai "Generate descriptions with AI",
+ :select-integration "Select integration method",
+ :select-languages "Select languages",
+ :select-org "Select organization",
+ :select-service "Select service",
+ :select-service-channel "Select service location"}

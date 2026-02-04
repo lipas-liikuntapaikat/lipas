@@ -1,0 +1,19 @@
+{:all-services-exist
+ "All required services exist in PTV. Great!",
+ :assign-services-to-sports-sites "Connect sports sites to services",
+ :attach-to-conflicting-service-channel "Connect to this service location",
+ :export-service-locations-to-ptv "Export to Service Information Repository",
+ :export-services-to-ptv "Export to Service Information Repository",
+ :generate-descriptions "Create descriptions",
+ :generate-descriptions-helper1
+ "Services can be created in PTV when they have at least a Finnish description and summary. LIPAS automatically fills in the service classification, keywords and other metadata.",
+ :generate-descriptions-helper2
+ "Press the \"Create descriptions\" button to automatically create descriptions using AI. Descriptions are created based on sports sites saved in LIPAS.",
+ :generate-descriptions-helper3
+ "Service locations can be created in PTV when they have at least a Finnish description and summary. LIPAS automatically fills in the service classification, keywords and other metadata.",
+ :integrate-service-locations "Create service locations from sports sites",
+ :service-channel-name-conflict
+ "A service location with the name {1} already exists in PTV.",
+ :services-to-add "Services to create",
+ :unselect-helper
+ "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."}

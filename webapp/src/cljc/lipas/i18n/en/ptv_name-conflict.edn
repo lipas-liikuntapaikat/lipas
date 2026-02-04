@@ -1,0 +1,7 @@
+{:do-one-of-these "Do one of these",
+ :opt1
+ "Connect the sports site to an existing service location by pressing the \"Connect to this service location\" button (recommended)",
+ :opt2 "Select the desired service location from the selector below",
+ :opt3
+ "Turn off the toggle switch to exclude this site from PTV integration.",
+ :opt4 "Archive the service location from PTV."}

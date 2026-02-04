@@ -1,0 +1,9 @@
+{:lipas-managed-comment-field "Use sports site additional info field",
+ :lipas-managed-comment-field-helper
+ "The service location description is maintained in the sports site additional info field. The summary is the first paragraph separated by an enter key.",
+ :lipas-managed-ptv-fields "Use separate description",
+ :lipas-managed-ptv-fields-helper
+ "Description and summary are maintained separately from the sports site in this tool. Description suggestions can be generated automatically using AI.",
+ :ptv-managed "Do not update descriptions",
+ :ptv-managed-helper
+ "Description and summary are maintained in PTV. LIPAS does not modify or update descriptions."}

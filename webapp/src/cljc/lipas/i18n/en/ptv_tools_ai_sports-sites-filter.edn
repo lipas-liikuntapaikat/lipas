@@ -1,0 +1,6 @@
+{:all "All",
+ :label "Select sports sites",
+ :no-existing-description "All without description",
+ :sync-enabled "Selected for export",
+ :sync-enabled-no-existing-description
+ "Selected for export without description"}
