@@ -8,8 +8,9 @@
  ;; and only shows it when tests FAIL
   :capture-output? true
 
- ;; Use documentation reporter to show each test name as it runs
-  :reporter kaocha.report/documentation
+ ;; Custom reporter: namespace names + dots for each test
+ ;; Options: kaocha.report/documentation, kaocha.report/dots, lipas.kaocha-reporter/docs-and-dots
+  :reporter lipas.kaocha-reporter/docs-and-dots
 
  ;; Randomize test order to catch order-dependent bugs
   :randomize? true
