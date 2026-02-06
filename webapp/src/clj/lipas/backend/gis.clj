@@ -22,6 +22,7 @@
 (def srid 4326) ;; WGS84
 (def tm35fin-srid 3067)
 (def wgs84->tm35fin-xform (crs/create-transform srid tm35fin-srid))
+(def tm35fin->wgs84-xform (crs/create-transform tm35fin-srid srid))
 (def default-simplify-tolerance 0.001) ; ~111m
 
 (def hull-tool
@@ -69,11 +70,11 @@
       (json/decode keyword)))
 
 (defn wgs84->tm35fin [[lon lat]]
-  (let [transformed (jts/transform-geom (jts/point lat lon) srid tm35fin-srid)]
+  (let [transformed (jts/transform-geom (jts/point lat lon) wgs84->tm35fin-xform)]
     {:easting (.getX transformed) :northing (.getY transformed)}))
 
 (defn wgs84->tm35fin-no-wrap [[lon lat]]
-  (let [transformed (jts/transform-geom (jts/point lat lon) srid tm35fin-srid)]
+  (let [transformed (jts/transform-geom (jts/point lat lon) wgs84->tm35fin-xform)]
     [(.getX transformed) (.getY transformed)]))
 
 (defn epsg3067-point->envelope [[e n] delta]
@@ -82,7 +83,7 @@
 (defn epsg3067-point->wgs84-envelope [coords delta]
   (let [envelope (epsg3067-point->envelope coords delta)]
     (mapv (fn [[lon lat]]
-            (let [transformed (jts/transform-geom (jts/point lat lon) tm35fin-srid srid)]
+            (let [transformed (jts/transform-geom (jts/point lat lon) tm35fin->wgs84-xform)]
               [(.getX transformed) (.getY transformed)]))
           envelope)))
 
@@ -212,10 +213,10 @@
 (defn calc-buffer [fcoll distance-m]
   (-> fcoll
       (->jts-geom)
-      (jts/transform-geom srid tm35fin-srid)
+      (jts/transform-geom wgs84->tm35fin-xform)
       (BufferOp.)
       (.getResultGeometry distance-m)
-      (jts/transform-geom tm35fin-srid srid)
+      (jts/transform-geom tm35fin->wgs84-xform)
       gio/to-geojson
       (json/decode keyword)))
 
@@ -306,7 +307,7 @@
    (let [envelope (-> fcoll
                       ->jts-geom
                       .getEnvelope
-                      (jts/transform-geom srid tm35fin-srid)
+                      (jts/transform-geom wgs84->tm35fin-xform)
                       jts/get-envelope-internal
                       (doto (.expandBy buff-m)))]
      {:max-x (.getMaxX envelope)
