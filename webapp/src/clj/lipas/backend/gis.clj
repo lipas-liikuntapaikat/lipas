@@ -2,6 +2,7 @@
   (:require
    [cheshire.core :as json]
    [clojure.string :as str]
+   [geo.crs :as crs]
    [geo.io :as gio]
    [geo.jts :as jts]
    [geo.spatial :as geo]
@@ -20,6 +21,7 @@
 
 (def srid 4326) ;; WGS84
 (def tm35fin-srid 3067)
+(def wgs84->tm35fin-xform (crs/create-transform srid tm35fin-srid))
 (def default-simplify-tolerance 0.001) ; ~111m
 
 (def hull-tool
@@ -98,10 +100,10 @@
 (defn wgs84wkt->tm35fin-geom [s]
   (-> s
       gio/read-wkt
-      (jts/transform-geom srid tm35fin-srid)))
+      (jts/transform-geom wgs84->tm35fin-xform)))
 
 (defn transform-crs
-  ([geom] (transform-crs geom srid tm35fin-srid))
+  ([geom] (jts/transform-geom geom wgs84->tm35fin-xform))
   ([geom from-crs to-crs]
    (jts/transform-geom geom from-crs to-crs)))
 
