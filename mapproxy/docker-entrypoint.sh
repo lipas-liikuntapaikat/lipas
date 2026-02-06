@@ -22,6 +22,5 @@ exec su mapproxy -c "/usr/local/bin/uwsgi \
   --master \
   --socket 0.0.0.0:8080 \
   --wsgi-file /mapproxy/app.py \
-  --pyargv /mapproxy/config/mapproxy.yaml \
   --processes 4 \
   --threads 10"
