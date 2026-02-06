@@ -6,4 +6,4 @@ set -e
 
 cd /var/lipas
 source .env.sh
-docker compose exec mapproxy /lipas/purge.sh
+docker compose exec mapproxy /mapproxy/config/purge.sh

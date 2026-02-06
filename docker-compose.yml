@@ -69,7 +69,8 @@ services:
       dockerfile: Dockerfile
 
   mapproxy:
-    image: vharmain/mapproxy
+    image: ghcr.io/mapproxy/mapproxy/mapproxy:1.16.0-nginx
+    platform: linux/amd64  # Official image only supports amd64
     hostname: mapproxy
     logging:
       driver: "gelf"
@@ -77,22 +78,15 @@ services:
         gelf-address: "udp://localhost:5000"
         tag: "mapproxy"
     environment:
-      PRODUCTION: 'true'
-      PROCESSES: 4
-      THREADS: 10
-      MAPPROXY_USER_ID: 1000
-      MAPPROXY_GROUP_ID: 1000
       TZ: Europe/Helsinki
       MML_AUTH:
-    entrypoint: ["/bin/bash", "/start.sh"]
-    command: /start.sh
+    entrypoint: ["/bin/bash", "/mapproxy/config/docker-entrypoint.sh"]
     volumes:
-      - './mapproxy:/lipas:z'
-      - './mapproxy/start.sh:/start.sh:z'
-      - 'mapproxy_cache:/mapproxy/cache_data'
-      # No need to expose
-      #ports:
-      #  - '8080:8080'
+      - './mapproxy/mapproxy_template.yaml:/mapproxy/config/mapproxy_template.yaml:ro,z'
+      - './mapproxy/docker-entrypoint.sh:/mapproxy/config/docker-entrypoint.sh:ro,z'
+      - './mapproxy/mml_cleanup.yaml:/mapproxy/config/mml_cleanup.yaml:ro,z'
+      - './mapproxy/purge.sh:/mapproxy/config/purge.sh:ro,z'
+      - 'mapproxy_cache:/mapproxy/config/cache_data'
 
   backend-base:
     image: clojure:temurin-21-tools-deps

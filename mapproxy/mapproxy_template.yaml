@@ -45,7 +45,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/maastokartta/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
   mml_taustakartta:
     type: tile
@@ -53,7 +53,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/taustakartta/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
   mml_ortokuva:
     type: tile
@@ -61,7 +61,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/maasto/wmts/1.0.0/ortokuva/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.jpg
   mml_kiinteisto:
     type: tile
@@ -71,7 +71,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/kiinteisto/wmts/1.0.0/kiinteistojaotus/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
   mml_kiinteistotunnukset:
     type: tile
@@ -81,7 +81,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/kiinteisto/wmts/1.0.0/kiinteistotunnukset/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
   mml_kuntarajat:
     type: tile
@@ -89,7 +89,7 @@ sources:
     http:
       ssl_no_cert_checks: true
       headers:
-        Authorization: Basic {MML_AUTH}
+        Authorization: Basic ${MML_AUTH}
     url: https://karttakuva.maanmittauslaitos.fi/teema/wmts/1.0.0/kuntarajat/default/ETRS-TM35FIN/%(z)s/%(y)s/%(x)s.png
 
 caches:
