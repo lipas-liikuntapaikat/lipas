@@ -192,7 +192,7 @@
   (let [;; Add some tolerance because otherwise grid queries might
         ;; break near the edges. 8 meters was found via experimentation.
         buff-m    8
-        fcoll-jts (-> fcoll gis/->jts-geom (gis/transform-crs gis/srid gis/tm35fin-srid))
+        fcoll-jts (-> fcoll gis/->jts-geom gis/transform-crs)
         envelopes (-> (gis/get-envelope fcoll-jts buff-m)
                       (fit-to-coverage coverage-info)
                       (gis/chunk-envelope query-envelope-size-m)
