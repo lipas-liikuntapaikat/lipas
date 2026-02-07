@@ -37,12 +37,12 @@
       :multiple  true
       :label     label
       :value     (to-array value)
-      :on-change (fn [_e v]
-                   (on-change (vec (map (fn [x]
-                                          (if (map? x)
-                                            (:value x)
-                                            x))
-                                        v))))}]))
+      :onChange (fn [_e v]
+                  (on-change (vec (map (fn [x]
+                                         (if (map? x)
+                                           (:value x)
+                                           x))
+                                       v))))}]))
 
 (r/defc lang-selector [{:keys [value on-change enabled-languages]}]
   [:> Tabs

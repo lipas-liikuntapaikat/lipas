@@ -97,8 +97,8 @@
       :multiple false
       :label label
       :value (first value)
-      :on-change (fn [_e v]
-                   (on-change [(:value v)]))}]))
+      :onChange (fn [_e v]
+                  (on-change [(:value v)]))}]))
 
 (defn audit-feedback-component
   "Displays audit feedback for a specific field (summary or description)"
@@ -438,12 +438,12 @@
        :multiple true
        :label "Valitse ryhmät"
        :value (to-array value)
-       :on-change (fn [_e v]
-                    (on-change (vec (map (fn [x]
-                                           (if (map? x)
-                                             (:value x)
-                                             x))
-                                         v))))}]
+       :onChange (fn [_e v]
+                   (on-change (vec (map (fn [x]
+                                          (if (map? x)
+                                            (:value x)
+                                            x))
+                                        v))))}]
 
      [:> Button
       {:onClick (fn [_e]
@@ -539,7 +539,7 @@
             :tooltip "Alueen tyyppi on aina \"Kunta\"."})
 
       (row {:label "Alueen koodit"
-            :value (-> preview :areas first :areaCodes)
+            :value (join (-> preview :areas first :areaCodes))
             :tooltip "Alueen koodi on integraation käyttöön ottaneen organisaation (kunnan) kuntanumero."})
 
       (row {:label "Tiivistelmä suomeksi"

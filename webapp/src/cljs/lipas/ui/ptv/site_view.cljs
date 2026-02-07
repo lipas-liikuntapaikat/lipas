@@ -296,8 +296,8 @@
                         read-only?)
           :label "Organisaatio"
           :value (:org-id (:ptv site))
-          :on-change (fn [_e v]
-                       (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}]])
+          :onChange (fn [_e v]
+                      (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}]])
 
      ;; Rest of the form - only show when sync is enabled AND org is selected
      (when (and sync-enabled org-id)
