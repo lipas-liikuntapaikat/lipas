@@ -255,13 +255,13 @@ Update this section as each tier is completed. Copy this to `UIX_MIGRATION_PLAN.
 - **Notes**: Zero regressions in all three areas (admin panel, help dialog, help management). Found and fixed critical bug in `autocomplete2` (Tier 2 file): Reagent's `[:>` interop doesn't handle raw JS objects as props — it checks `(map? props)` and treats non-maps as children. Changed `[:> Autocomplete (merge-props ...)]` to `(r/create-element Autocomplete (merge-props ...))` to bypass hiccup processing. Also fixed metadata keys `^{:key idx}` on `[:> MenuItem ...]` in manage.cljs — moved to prop-based keys `{:key idx}` for consistency with `:>` interop. All `defui` → `r/defc`, `$` → hiccup, hooks → `reagent.hooks`. `r/as-element` wrapping applied to MUI prop values (`:title`, `:action`, `:startIcon`, `:expandIcon`). Removed `r/as-element` from admin select components (no longer needed since caller and callee are both Reagent).
 
 ### Tier 4: PTV module
-- [ ] BEFORE: Playwright baseline captured
-- [ ] MIGRATE: Files rewritten
-- [ ] COMPILE: Shadow-CLJS clean build
-- [ ] AFTER: Playwright verification passed
-- [ ] COMMIT: Changes committed
-- **Status**: NOT STARTED
-- **Notes**: _(verification results, issues found, etc.)_
+- [x] BEFORE: Playwright baseline captured
+- [x] MIGRATE: Files rewritten
+- [x] COMPILE: Shadow-CLJS clean build
+- [x] AFTER: Playwright verification passed
+- [x] COMMIT: Changes committed
+- **Status**: DONE
+- **Notes**: Zero regressions. All 5 PTV files migrated: 24 `defui` → `r/defc`, 252 `$` → hiccup. Complex `views.cljs` had mixed `defn`/`defui` patterns — `defn` functions with `$` calls converted to hiccup, `integrate-service-locations` converted from `defn` (called via `[:f>]`) to `r/defc` since it uses hooks. `r/as-element` kept for MUI prop values (`:control` for Radio/Switch, `:expandIcon` for Accordion) and for `[mui/stack ...]` children of `[:> AccordionDetails]`. Row helper functions using `uix/fn` converted to plain `fn` called directly as `(row {...})`. Browser testing confirmed all 4 PTV dialog tabs (wizard, services, sports sites, audit) work correctly. Minor pre-existing React warning about `on-change` prop naming (standard Reagent behavior). External call site in `map/views.cljs` (`$ ptv-site/site-view`) deferred to Tier 5.
 
 ### Tier 5: Call-site updates
 - [ ] BEFORE: Playwright baseline captured

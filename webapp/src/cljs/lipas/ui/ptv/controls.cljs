@@ -11,59 +11,57 @@
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
-            [lipas.ui.uix.hooks :refer [use-subscribe]]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]))
+            [reagent.hooks :as hooks]))
 
-(defui info-text [{:keys [children]}]
-  ($ Typography
-     {:variant "body1"}
-     children))
+(r/defc info-text [{:keys [children]}]
+  [:> Typography
+   {:variant "body1"}
+   children])
 
-(defui services-selector
+(r/defc services-selector
   [{:keys [disabled options value on-change label value-fn]
     :or   {value-fn identity
            label    ""}}]
-  (let [options* (uix/use-memo (fn []
-                                 (->> options
-                                      (map (fn [x]
-                                             {:value (value-fn x)
-                                              :label (:label x)}))
-                                      (sort-by :label)))
-                               [options value-fn])]
-    (r/as-element
-     [autocomplete2
-      {:disabled  disabled
-       :options   options*
-       :multiple  true
-       :label     label
-       :value     (to-array value)
-       :on-change (fn [_e v]
-                    (on-change (vec (map (fn [x]
-                                           (if (map? x)
-                                             (:value x)
-                                             x))
-                                         v))))}])))
+  (let [options* (hooks/use-memo (fn []
+                                   (->> options
+                                        (map (fn [x]
+                                               {:value (value-fn x)
+                                                :label (:label x)}))
+                                        (sort-by :label)))
+                                 [options value-fn])]
+    [autocomplete2
+     {:disabled  disabled
+      :options   options*
+      :multiple  true
+      :label     label
+      :value     (to-array value)
+      :on-change (fn [_e v]
+                   (on-change (vec (map (fn [x]
+                                          (if (map? x)
+                                            (:value x)
+                                            x))
+                                        v))))}]))
 
-(defui lang-selector [{:keys [value on-change enabled-languages]}]
-  ($ Tabs
-     {:value     value
-      :on-change (fn [_e v] (on-change (keyword v)))}
-     (when (or (nil? enabled-languages) (contains? enabled-languages "fi"))
-       ($ Tab {:value "fi" :label "FI"}))
-     (when (or (nil? enabled-languages) (contains? enabled-languages "se"))
-       ($ Tab {:value "se" :label "SE"}))
-     (when (or (nil? enabled-languages) (contains? enabled-languages "en"))
-       ($ Tab {:value "en" :label "EN"}))))
+(r/defc lang-selector [{:keys [value on-change enabled-languages]}]
+  [:> Tabs
+   {:value     value
+    :on-change (fn [_e v] (on-change (keyword v)))}
+   (when (or (nil? enabled-languages) (contains? enabled-languages "fi"))
+     [:> Tab {:value "fi" :label "FI"}])
+   (when (or (nil? enabled-languages) (contains? enabled-languages "se"))
+     [:> Tab {:value "se" :label "SE"}])
+   (when (or (nil? enabled-languages) (contains? enabled-languages "en"))
+     [:> Tab {:value "en" :label "EN"}])])
 
-(defui audit-panel
+(r/defc audit-panel
   [{:keys [tr field content lipas-id]}]
-  (let [has-privilege? (use-subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
-        audit-feedback (use-subscribe [:lipas.ui.ptv.subs/audit-feedback field])
-        audit-status (use-subscribe [:lipas.ui.ptv.subs/audit-status field])
-        saving? (use-subscribe [:lipas.ui.ptv.subs/saving-audit?])
-        site-audit-data (use-subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
+  (let [has-privilege? @(rf/subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
+        audit-feedback @(rf/subscribe [:lipas.ui.ptv.subs/audit-feedback field])
+        audit-status @(rf/subscribe [:lipas.ui.ptv.subs/audit-status field])
+        saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
+        site-audit-data @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
 
         ;; Get existing audit data for this field
         field-audit (get site-audit-data field)
@@ -80,65 +78,64 @@
         ;; If the user doesn't have audit privilege, just show previous audit info
         show-controls? has-privilege?]
 
-    ($ Box {:key field}
-       ($ Typography {:variant "h6" :sx #js{:mt 3 :mb 1}}
-          (tr (case field
-                :summary :ptv/summary
-                :description :ptv/description)))
+    [:> Box {:key field}
+     [:> Typography {:variant "h6" :sx #js{:mt 3 :mb 1}}
+      (tr (case field
+            :summary :ptv/summary
+            :description :ptv/description))]
 
-       ;; Content display (existing text to audit)
-       #_($ Paper {:sx #js{:p 2 :mt 1 :mb 1}})
-       ($ Box {:sx #js {:mb 2 :border "1px solid #eee" :p 2}}
-          ($ Typography {:variant "body1" :whiteSpace "pre-wrap"}
-             content))
+     ;; Content display (existing text to audit)
+     [:> Box {:sx #js {:mb 2 :border "1px solid #eee" :p 2}}
+      [:> Typography {:variant "body1" :whiteSpace "pre-wrap"}
+       content]]
 
-       ;; Previous audit info display
-       (when last-audit-info
-         ($ Typography {:variant "caption" :color "text.secondary" :sx #js{:mb 2}}
-            last-audit-info))
+     ;; Previous audit info display
+     (when last-audit-info
+       [:> Typography {:variant "caption" :color "text.secondary" :sx #js{:mb 2}}
+        last-audit-info])
 
-       ;; Audit controls (only for users with audit privilege)
-       (when show-controls?
-         ($ Box
-            ;; Status selection
-            ($ FormControl {:component "fieldset" :sx #js{:mb 2}}
-               ($ FormLabel {:component "legend"} (tr :ptv.audit/status))
-               ($ RadioGroup
-                  {:row true
-                   :value (or audit-status "")
-                   :onChange (fn [e]
-                               (rf/dispatch [:lipas.ui.ptv.events/update-audit-status
-                                             field
-                                             (.. e -target -value)]))}
-                  ($ FormControlLabel
-                     {:value "approved"
-                      :control ($ Radio)
-                      :label (tr :ptv.audit.status/approved)})
-                  ($ FormControlLabel
-                     {:value "changes-requested"
-                      :control ($ Radio)
-                      :label (tr :ptv.audit.status/changes-requested)})))
+     ;; Audit controls (only for users with audit privilege)
+     (when show-controls?
+       [:> Box
+        ;; Status selection
+        [:> FormControl {:component "fieldset" :sx #js{:mb 2}}
+         [:> FormLabel {:component "legend"} (tr :ptv.audit/status)]
+         [:> RadioGroup
+          {:row true
+           :value (or audit-status "")
+           :onChange (fn [e]
+                       (rf/dispatch [:lipas.ui.ptv.events/update-audit-status
+                                     field
+                                     (.. e -target -value)]))}
+          [:> FormControlLabel
+           {:value "approved"
+            :control (r/as-element [:> Radio])
+            :label (tr :ptv.audit.status/approved)}]
+          [:> FormControlLabel
+           {:value "changes-requested"
+            :control (r/as-element [:> Radio])
+            :label (tr :ptv.audit.status/changes-requested)}]]]
 
-            ;; Feedback field
-            ($ TextField
-               {:fullWidth true
-                :multiline true
-                :rows 3
-                :label (tr :ptv.audit/feedback)
-                :placeholder (tr :ptv.audit/feedback-placeholder)
-                :value (or audit-feedback "")
-                :onChange (fn [e]
-                            (rf/dispatch [:lipas.ui.ptv.events/update-audit-feedback
-                                          field
-                                          (.. e -target -value)]))})
+        ;; Feedback field
+        [:> TextField
+         {:fullWidth true
+          :multiline true
+          :rows 3
+          :label (tr :ptv.audit/feedback)
+          :placeholder (tr :ptv.audit/feedback-placeholder)
+          :value (or audit-feedback "")
+          :onChange (fn [e]
+                      (rf/dispatch [:lipas.ui.ptv.events/update-audit-feedback
+                                    field
+                                    (.. e -target -value)]))}]
 
-            ;; Save button
-            ($ Button
-               {:variant "contained"
-                :color "primary"
-                :sx #js{:mt 2}
-                :disabled (or saving? (not audit-status))
-                :onClick (fn []
-                           (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
-                                         lipas-id]))}
-               (tr :actions/save)))))))
+        ;; Save button
+        [:> Button
+         {:variant "contained"
+          :color "primary"
+          :sx #js{:mt 2}
+          :disabled (or saving? (not audit-status))
+          :onClick (fn []
+                     (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
+                                   lipas-id]))}
+         (tr :actions/save)]])]))
