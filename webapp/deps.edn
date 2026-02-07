@@ -18,7 +18,6 @@
         re-frame/re-frame {:mvn/version "1.4.3"},
         tongue/tongue {:mvn/version "0.4.4"},
         day8.re-frame/http-fx {:mvn/version "0.2.4"},
-        com.pitch/uix.core {:mvn/version "1.1.1"},
         cljs-bean/cljs-bean {:mvn/version "1.9.0"},
         metosin/ring-http-response {:mvn/version "0.9.0"},
         cheshire/cheshire {:mvn/version "5.13.0"},

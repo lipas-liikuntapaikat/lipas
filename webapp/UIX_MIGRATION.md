@@ -273,13 +273,13 @@ Update this section as each tier is completed. Copy this to `UIX_MIGRATION_PLAN.
 - **Notes**: Zero regressions. 5 files migrated: map/views.cljs (most complex — `defui route-part-difficulty` → `r/defc`, `popup` and `map-view` converted from `defn` with UIX hooks to `r/defc` with `reagent.hooks`, `$ ptv-site/site-view` → `[ptv-site/site-view]`, `[:f> popup]` and `[:f> map-view]` → standard hiccup calls), org/views.cljs (`$ Checkbox` → `r/as-element [:> Checkbox]` for `:control` prop), navbar.cljs (`$ help/view` → `[help/view]`), search/views.cljs and bulk_operations/views.cljs (just removed unused `uix.core` imports). After this tier, zero `$` calls, zero `defui`, and zero `uix.core` imports remain in any consumer file. Only the UIX source files themselves (`uix/hooks.cljs`, `uix/utils.cljs`) remain — Tier 6 cleanup.
 
 ### Tier 6: Cleanup
-- [ ] UIX files deleted
-- [ ] Dependencies removed from deps.edn and package.json
-- [ ] COMPILE: Shadow-CLJS clean build
-- [ ] AFTER: Full app smoke test passed
-- [ ] COMMIT: Final cleanup committed
-- **Status**: NOT STARTED
-- **Notes**: _(verification results, issues found, etc.)_
+- [x] UIX files deleted
+- [x] Dependencies removed from deps.edn and package.json
+- [x] COMPILE: Shadow-CLJS clean build
+- [x] AFTER: Full app smoke test passed
+- [x] COMMIT: Final cleanup committed
+- **Status**: DONE
+- **Notes**: Deleted `src/cljs/lipas/ui/uix/hooks.cljs`, `utils.clj`, `utils.cljs` and the `uix/` directory. Removed `com.pitch/uix.core` from `deps.edn` and `use-sync-external-store` from `package.json`. Clean compilation with zero warnings/errors. Grep confirms zero UIX references remain in the entire `src/` tree — no `uix.core`, no `lipas.ui.uix`, no `defui`, no `($` calls.
 
 ---
 
