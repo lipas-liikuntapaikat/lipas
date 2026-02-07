@@ -9,11 +9,7 @@
                   :hosts {:dev "lipas-dev"
                           :prod "lipas-prod"}
                   :urls {:dev "https://lipas-dev.cc.jyu.fi"
-                         :prod "https://lipas.fi"}
-                  :health-endpoints {:dev "/api/health"
-                                     :prod "/api/health"}
-                  :curl-opts {:dev "curl -f -k --connect-timeout 10" ; -k for self-signed certs
-                              :prod "curl -f --connect-timeout 10"}})
+                         :prod "https://lipas.fi"}})
 
          nuke-cc {:doc "Remove and reinstall Claude Code globally"
                   :task (do
@@ -106,21 +102,6 @@
                                    all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
 
                                (shell (str "ssh " host " 'set -e && " all-commands "'")))
-
-                             ;; Health check only if backend was deployed
-                             (when deploy-backend?
-                               (println "🏥 Checking service health...")
-                               (Thread/sleep 3000) ; Give service time to start
-
-                               (try
-                                 (let [base-url (get-in deploy-config [:urls env-key])
-                                       health-endpoint (get-in deploy-config [:health-endpoints env-key])
-                                       health-url (str base-url health-endpoint)
-                                       curl-opts (get-in deploy-config [:curl-opts env-key])]
-                                   (shell (str curl-opts " " health-url " > /dev/null 2>&1"))
-                                   (println "✅ Service is healthy and responding"))
-                                 (catch Exception _
-                                   (println "⚠️  Health check failed or timed out - please verify manually"))))
 
                              (println (str "✅ " (str/capitalize type-str) " deployment to " env " completed successfully!"))
                              (println (str "🌐 " (get-in deploy-config [:urls env-key]))))}
