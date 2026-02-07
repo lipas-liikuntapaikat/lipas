@@ -213,13 +213,13 @@ Update this section as each tier is completed. Copy this to `UIX_MIGRATION_PLAN.
 - **Notes**: Zero regressions. All pages (login, register, profile) render identically. No new console errors. Tab switching, form inputs, login/logout all work correctly. `r/as-element` wrappers removed from Reagent component children (no longer needed in hiccup context), kept only for prop values (e.g. CardHeader `:action`).
 
 ### Tier 2: Shared components
-- [ ] BEFORE: Playwright baseline captured
-- [ ] MIGRATE: Files rewritten
-- [ ] COMPILE: Shadow-CLJS clean build
-- [ ] AFTER: Playwright verification passed
-- [ ] COMMIT: Changes committed
-- **Status**: NOT STARTED
-- **Notes**: _(verification results, issues found, etc.)_
+- [x] BEFORE: Playwright baseline captured
+- [x] MIGRATE: Files rewritten
+- [x] COMPILE: Shadow-CLJS clean build
+- [x] AFTER: Playwright verification passed
+- [x] COMMIT: Changes committed
+- **Status**: DONE
+- **Notes**: Zero regressions. `spread-props` macro replaced with `merge-props` utility using `Object.assign`. `autocomplete2` uses `hooks/use-memo` for memoization. `virtualized-list` external hooks (`useMeasure`, `react-window`) work correctly in `r/defc`. Call sites in 7 downstream files updated to use `(r/as-element [component ...])` wrapping for UIX→Reagent boundary.
 
 ### Tier 3: Feature views
 - [ ] BEFORE: Playwright baseline captured

@@ -5,24 +5,24 @@
             ["@mui/material/Stack$default" :as Stack]
             ["react-use/lib/useMeasure$default" :as useMeasure]
             ["react-window" :refer [FixedSizeList]]
-            [uix.core :refer [$ defui]]))
+            [reagent.core :as r]))
 
-(defui row-item
+(r/defc row-item
   [{:keys [style item list-props]}]
   (let [{:keys [on-item-click label-fn label2-fn]} list-props]
-    ($ Stack {:style style}
-       ($ (if (some? item) ListItemButton ListItem)
-          {:divider (some? item)
-           :on-click (fn [_e]
-                       (when item
-                         (on-item-click item)))}
-          ($ ListItemText
-             {:primary                    (label-fn item)
-              :secondary                  (label2-fn item)
-              :primary-typography-props   #js {:noWrap true}
-              :secondary-typography-props #js {:noWrap true}})))))
+    [:> Stack {:style style}
+     [:> (if (some? item) ListItemButton ListItem)
+      {:divider (some? item)
+       :on-click (fn [_e]
+                   (when item
+                     (on-item-click item)))}
+      [:> ListItemText
+       {:primary                    (label-fn item)
+        :secondary                  (label2-fn item)
+        :primary-typography-props   #js {:noWrap true}
+        :secondary-typography-props #js {:noWrap true}}]]]))
 
-(defui virtualized-list [{:keys [items key-fn landing-bay?] :as list-props}]
+(r/defc virtualized-list [{:keys [items key-fn landing-bay?] :as list-props}]
   (let [;; Measure just the available content height for the list.
         ;; We don't need to care about the width.
         [measure-ref measure] (useMeasure)
@@ -47,30 +47,31 @@
         ;; search results which is also confusing.
         min-height (* 5 item-height)
         container-height (max (.-height measure) min-height)]
-    ($ :<>
-       ($ :div
-          {:style {:position "absolute"
-                   :top -1000
-                   :left -1000
-                   :opacity 0
-                   :pointers-events "none"}
-           :ref measure-item-ref}
-          ($ ListItem
-             ($ ListItemText
-                {:primary "measure"
-                 :secondary "measure"})))
-       ($ :div
-          {:ref measure-ref
-           :style {:flex "1 1 auto"}}
-          ($ FixedSizeList
-             {:height       container-height
-              :itemSize     item-height
-              :itemCount    (cond-> (count items)
-                              landing-bay? inc)}
-             (fn [^js props]
-               (let [item (get items (.-index props))]
-                 ($ row-item
-                    {:key (key-fn item)
-                     :style (.-style props)
-                     :item item
-                     :list-props list-props}))))))))
+    [:<>
+     [:div
+      {:style {:position "absolute"
+               :top -1000
+               :left -1000
+               :opacity 0
+               :pointers-events "none"}
+       :ref measure-item-ref}
+      [:> ListItem
+       [:> ListItemText
+        {:primary "measure"
+         :secondary "measure"}]]]
+     [:div
+      {:ref measure-ref
+       :style {:flex "1 1 auto"}}
+      [:> FixedSizeList
+       {:height       container-height
+        :itemSize     item-height
+        :itemCount    (cond-> (count items)
+                        landing-bay? inc)}
+       (fn [^js props]
+         (let [item (get items (.-index props))]
+           (r/as-element
+            [row-item
+             {:key (key-fn item)
+              :style (.-style props)
+              :item item
+              :list-props list-props}])))]]]))

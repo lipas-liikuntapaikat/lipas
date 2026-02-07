@@ -25,6 +25,7 @@
             [lipas.ui.org.subs :as subs]
             [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]
+            [reagent.core :as r]
             [reitit.frontend.easy :as rfe]
             [uix.core :refer [$]]))
 
@@ -165,12 +166,13 @@
            :gap 1
            :align-items "center"}}
      ;; User autocomplete dropdown
-     ($ ac/autocomplete2
-        {:sx #js {:minWidth 250}
-         :label (tr :lipas.user/email)
-         :options all-users
-         :value (:user-id add-form)
-         :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))})
+     (r/as-element
+      [ac/autocomplete2
+       {:sx #js {:minWidth 250}
+        :label (tr :lipas.user/email)
+        :options all-users
+        :value (:user-id add-form)
+        :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))}])
      ;; Role selector
      [:> FormControl
       {:sx {:min-width 120}}

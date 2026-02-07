@@ -75,77 +75,82 @@
 
 (defui site-select [{:keys [tr required data]}]
   (let [sites (use-subscribe [::subs/sites-list])]
-    ($ ac/autocomplete2
-       {:options sites
-        :label (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-                    (when required
-                      " *"))
-        :value (to-array (or (:lipas-id data) []))
-        :onChange (fn [_e v]
-                    (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
-        :multiple true
-        :selectOnFocus true
-        :clearOnBlue true
-        :handleHomeEndKeys true
-        :freeSolo true
-        :filterOptions (fn [options params]
+    (r/as-element
+     [ac/autocomplete2
+      {:options sites
+       :label (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
+                   (when required
+                     " *"))
+       :value (to-array (or (:lipas-id data) []))
+       :onChange (fn [_e v]
+                   (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
+       :multiple true
+       :selectOnFocus true
+       :clearOnBlue true
+       :handleHomeEndKeys true
+       :freeSolo true
+       :filterOptions (fn [options params]
                             ;; The options only contains some x first sites in the system,
                             ;; so the autocomplete doesn't work that well.
                             ;; Allow inputting paikka-id numbers directly, show "Add x" option when
                             ;; the input value doesn't match any options.
-                         (let [filtered (filter-ac options params)
-                               input-value (js/parseInt (.-inputValue params))
-                               input-value (when (pos? input-value)
-                                             input-value)
-                               is-existing (.some options (fn [x] (= input-value (:value x))))]
-                           (when (and input-value (not is-existing))
-                             (.push filtered {:value input-value
-                                              :label (str "Paikka-id \"" input-value "\"")}))
-                           filtered))})))
+                        (let [filtered (filter-ac options params)
+                              input-value (js/parseInt (.-inputValue params))
+                              input-value (when (pos? input-value)
+                                            input-value)
+                              is-existing (.some options (fn [x] (= input-value (:value x))))]
+                          (when (and input-value (not is-existing))
+                            (.push filtered {:value input-value
+                                             :label (str "Paikka-id \"" input-value "\"")}))
+                          filtered))}])))
 
 (defui type-code-select [{:keys [tr required data]}]
   (let [types (use-subscribe [::subs/types-list (tr)])]
-    ($ ac/autocomplete2
-       {:options types
-        :label (str (tr :lipas.user.permissions/types)
-                    (when required
-                      " *"))
-        :value (to-array (or (:type-code data) []))
-        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
-        :multiple true})))
+    (r/as-element
+     [ac/autocomplete2
+      {:options types
+       :label (str (tr :lipas.user.permissions/types)
+                   (when required
+                     " *"))
+       :value (to-array (or (:type-code data) []))
+       :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
+       :multiple true}])))
 
 (defui city-code-select [{:keys [tr required data]}]
   (let [cities (use-subscribe [::subs/cities-list (tr)])]
-    ($ ac/autocomplete2
-       {:options cities
-        :label (str (tr :lipas.user.permissions/cities)
-                    (when required
-                      " *"))
-        :value (to-array (or (:city-code data) []))
-        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
-        :multiple true})))
+    (r/as-element
+     [ac/autocomplete2
+      {:options cities
+       :label (str (tr :lipas.user.permissions/cities)
+                   (when required
+                     " *"))
+       :value (to-array (or (:city-code data) []))
+       :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
+       :multiple true}])))
 
 (defui activity-select [{:keys [tr required data]}]
   (let [activities (use-subscribe [::subs/activities-list (tr)])]
-    ($ ac/autocomplete2
-       {:options activities
-        :label (str (tr :lipas.user.permissions/activities)
-                    (when required
-                      " *"))
-        :value (to-array (or (:activity data) []))
-        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
-        :multiple true})))
+    (r/as-element
+     [ac/autocomplete2
+      {:options activities
+       :label (str (tr :lipas.user.permissions/activities)
+                   (when required
+                     " *"))
+       :value (to-array (or (:activity data) []))
+       :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
+       :multiple true}])))
 
 (defui org-select [{:keys [tr required data]}]
   (let [orgs (use-subscribe [::subs/orgs-options])]
-    ($ ac/autocomplete2
-       {:options orgs
-        :label (str (tr :lipas.user.permissions/orgs)
-                    (when required
-                      " *"))
-        :value (to-array (or (:org-id data) []))
-        :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :org-id (mapv ac/safe-value v)]))
-        :multiple true})))
+    (r/as-element
+     [ac/autocomplete2
+      {:options orgs
+       :label (str (tr :lipas.user.permissions/orgs)
+                   (when required
+                     " *"))
+       :value (to-array (or (:org-id data) []))
+       :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :org-id (mapv ac/safe-value v)]))
+       :multiple true}])))
 
 (defui context-key-edit [{:keys [k] :as props}]
   (case k
@@ -180,15 +185,16 @@
             (tr :lipas.user.permissions.roles.edit-role/edit-header)
             (tr :lipas.user.permissions.roles.edit-role/new-header)))
 
-       ($ ac/autocomplete2
-          {:options (for [[k {:keys [assignable]}] roles/roles
-                          :when assignable]
-                      {:value k
-                       :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
-           :readOnly editing?
-           :label (tr :lipas.user.permissions.roles/role)
-           :value (:role data)
-           :onChange (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))})
+       (r/as-element
+        [ac/autocomplete2
+         {:options (for [[k {:keys [assignable]}] roles/roles
+                         :when assignable]
+                     {:value k
+                      :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
+          :readOnly editing?
+          :label (tr :lipas.user.permissions.roles/role)
+          :value (:role data)
+          :onChange (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))}])
 
        (when-not (:role data)
          ($ Typography
@@ -497,62 +503,62 @@
         [mui/table-cell "New-stroke"]]]
 
       (into
-        [mui/table-body]
-        (for [[type-code type] (sort-by first types)
-              :let [shape (-> type-code types :geometry-type)
-                    fill (-> type-code styles/symbols :fill :color)
-                    stroke (-> type-code styles/symbols :stroke :color)]]
-          [mui/table-row
-           [mui/table-cell type-code]
-           [mui/table-cell (-> type :name :fi)]
-           [mui/table-cell shape]
+       [mui/table-body]
+       (for [[type-code type] (sort-by first types)
+             :let [shape (-> type-code types :geometry-type)
+                   fill (-> type-code styles/symbols :fill :color)
+                   stroke (-> type-code styles/symbols :stroke :color)]]
+         [mui/table-row
+          [mui/table-cell type-code]
+          [mui/table-cell (-> type :name :fi)]
+          [mui/table-cell shape]
 
            ;; Old symbol
-           [mui/table-cell (condp = shape
-                             "Point" "Circle"
-                             shape)]
+          [mui/table-cell (condp = shape
+                            "Point" "Circle"
+                            shape)]
 
            ;; New symbol
-           [mui/table-cell (condp = shape
-                             "Point" [lui/select
-                                      {:items [{:label "Circle" :value "circle"}
-                                               {:label "Square" :value "square"}]
-                                       :value (or (-> type-code new-colors :symbol)
-                                                  "circle")
-                                       :on-change (partial pick-color type-code :symbol)}]
-                             shape)]
+          [mui/table-cell (condp = shape
+                            "Point" [lui/select
+                                     {:items [{:label "Circle" :value "circle"}
+                                              {:label "Square" :value "square"}]
+                                      :value (or (-> type-code new-colors :symbol)
+                                                 "circle")
+                                      :on-change (partial pick-color type-code :symbol)}]
+                            shape)]
 
            ;; Old fill
-           [mui/table-cell
-            [color-picker {:value fill :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value fill :on-change #()}]]
 
            ;; New fill
-           [mui/table-cell
-            [mui/grid {:container true :wrap "nowrap"}
-             [mui/grid {:item true}
-              [color-picker
-               {:value (-> (new-colors type-code) :fill)
-                :on-change (partial pick-color type-code :fill)}]]
-             [mui/grid {:item true}
-              [mui/button
-               {:size :small :on-click #(pick-color type-code :fill fill)}
-               "reset"]]]]
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value (-> (new-colors type-code) :fill)
+               :on-change (partial pick-color type-code :fill)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :fill fill)}
+              "reset"]]]]
 
            ;; Old stroke
-           [mui/table-cell
-            [color-picker {:value stroke :on-change #()}]]
+          [mui/table-cell
+           [color-picker {:value stroke :on-change #()}]]
 
            ;; New stroke
-           [mui/table-cell
-            [mui/grid {:container true :wrap "nowrap"}
-             [mui/grid {:item true}
-              [color-picker
-               {:value (-> (new-colors type-code) :stroke)
-                :on-change (partial pick-color type-code :stroke)}]]
-             [mui/grid {:item true}
-              [mui/button
-               {:size :small :on-click #(pick-color type-code :stroke stroke)}
-               "reset"]]]]]))]
+          [mui/table-cell
+           [mui/grid {:container true :wrap "nowrap"}
+            [mui/grid {:item true}
+             [color-picker
+              {:value (-> (new-colors type-code) :stroke)
+               :on-change (partial pick-color type-code :stroke)}]]
+            [mui/grid {:item true}
+             [mui/button
+              {:size :small :on-click #(pick-color type-code :stroke stroke)}
+              "reset"]]]]]))]
      [mui/fab
       {:style {:position "sticky" :bottom "1em" :left "1em"}
        :variant "extended"
@@ -702,10 +708,10 @@
         [lui/text-field
          {:label (tr :lipas.org/phone)
           :value (:phone (:data org))
-          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]
+          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]]
 
        ;; TODO: Ptv data fields
-       ]
+
       [lui/form-card {:title (tr :org.form/users)
                       :xs 12
                       :md 12

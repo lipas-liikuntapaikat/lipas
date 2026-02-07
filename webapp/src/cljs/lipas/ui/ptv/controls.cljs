@@ -13,6 +13,7 @@
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.uix.hooks :refer [use-subscribe]]
             [re-frame.core :as rf]
+            [reagent.core :as r]
             [uix.core :as uix :refer [$ defui]]))
 
 (defui info-text [{:keys [children]}]
@@ -31,18 +32,19 @@
                                               :label (:label x)}))
                                       (sort-by :label)))
                                [options value-fn])]
-    ($ autocomplete2
-       {:disabled  disabled
-        :options   options*
-        :multiple  true
-        :label     label
-        :value     (to-array value)
-        :on-change (fn [_e v]
-                     (on-change (vec (map (fn [x]
-                                            (if (map? x)
-                                              (:value x)
-                                              x))
-                                          v))))})))
+    (r/as-element
+     [autocomplete2
+      {:disabled  disabled
+       :options   options*
+       :multiple  true
+       :label     label
+       :value     (to-array value)
+       :on-change (fn [_e v]
+                    (on-change (vec (map (fn [x]
+                                           (if (map? x)
+                                             (:value x)
+                                             x))
+                                         v))))}])))
 
 (defui lang-selector [{:keys [value on-change enabled-languages]}]
   ($ Tabs

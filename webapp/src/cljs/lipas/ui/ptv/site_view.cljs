@@ -301,14 +301,15 @@
               ($ Alert {:severity "warning"} (tr :ptv/not-suitable-for-export)))
 
             ;; Organization selector - always show when sync is enabled
-            ($ autocomplete2
-               {:options org-options
-                :disabled (or loading?
-                              read-only?)
-                :label "Organisaatio"
-                :value (:org-id (:ptv site))
-                :on-change (fn [_e v]
-                             (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))})))
+            (r/as-element
+             [autocomplete2
+              {:options org-options
+               :disabled (or loading?
+                             read-only?)
+               :label "Organisaatio"
+               :value (:org-id (:ptv site))
+               :on-change (fn [_e v]
+                            (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :org-id] (:value v)]))}])))
 
        ;; Rest of the form - only show when sync is enabled AND org is selected
        (when (and sync-enabled org-id)

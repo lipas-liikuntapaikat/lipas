@@ -93,25 +93,28 @@
            :on-change #(rf/dispatch [::events/set-sites-filter :search-text %])}]]
 
         [mui/grid {:item true :xs 12 :md 2}
-         ($ ac/type-selector
-            {:value (:type-code filters)
-             :label (tr :type/name)
-             :onChange (fn [_ {:keys [value]}]
-                         (rf/dispatch [::events/set-sites-filter :type-code value]))})]
+         (r/as-element
+          [ac/type-selector
+           {:value (:type-code filters)
+            :label (tr :type/name)
+            :onChange (fn [_ {:keys [value]}]
+                        (rf/dispatch [::events/set-sites-filter :type-code value]))}])]
 
         [mui/grid {:item true :xs 12 :md 3}
-         ($ ac/admin-selector
-            {:value (:admin filters)
-             :label (tr :lipas.sports-site/admin)
-             :onChange (fn [_ {:keys [value]}]
-                         (rf/dispatch [::events/set-sites-filter :admin value]))})]
+         (r/as-element
+          [ac/admin-selector
+           {:value (:admin filters)
+            :label (tr :lipas.sports-site/admin)
+            :onChange (fn [_ {:keys [value]}]
+                        (rf/dispatch [::events/set-sites-filter :admin value]))}])]
 
         [mui/grid {:item true :xs 12 :md 3}
-         ($ ac/owner-selector
-            {:value (:owner filters)
-             :label (tr :lipas.sports-site/owner)
-             :onChange (fn [_ {:keys [value]}]
-                         (rf/dispatch [::events/set-sites-filter :owner value]))})]]]]
+         (r/as-element
+          [ac/owner-selector
+           {:value (:owner filters)
+            :label (tr :lipas.sports-site/owner)
+            :onChange (fn [_ {:keys [value]}]
+                        (rf/dispatch [::events/set-sites-filter :owner value]))}])]]]]
 
      ;; Table container with its own horizontal scroll
      [:> TableContainer {:sx {:overflow-x "auto" :width "100%"}}
