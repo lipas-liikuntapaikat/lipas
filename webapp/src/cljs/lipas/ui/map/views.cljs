@@ -605,69 +605,69 @@
 (defmethod popup-body :route-part-difficulty [popup]
   [route-part-difficulty {:data (:data popup)}])
 
-(defui itrs-segment [{:keys [data]}]
+(r/defc itrs-segment [{:keys [data]}]
   (let [{:keys [lipas-id fid]} data
-        tr (use-subscribe [:lipas.ui.subs/translator])
+        tr @(rf/subscribe [:lipas.ui.subs/translator])
         locale (tr)
-        properties (use-subscribe [::subs/edit-geom-properties fid])
+        properties @(rf/subscribe [::subs/edit-geom-properties fid])
         technical-value (:itrs-technical properties)
         exposure-value (:itrs-exposure properties)]
-    ($ Paper
-       {:sx
-        #js {:padding 2
-             :width "350px"}}
-       ($ TextField
-          {:label (tr :map/itrs-technical)
-           :select true
-           :fullWidth true
-           :value (or technical-value "")
-           :onChange (fn [e]
-                       (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))
-           :sx #js {:marginBottom 2}}
-          ($ MenuItem
-             {:key "empty"
-              :value ""}
-             "-")
-          (for [[k {:keys [label description]}] activities-data/itrs-technical-options]
-            ($ MenuItem
-               {:key k
-                :value k
-                :sx #js {:flexDirection "column"
-                         :alignItems "flex-start"
-                         :maxWidth "350px"}}
-               ($ Typography
-                  (get label locale))
-               ($ Typography
-                  {:sx #js {:fontSize "body2.fontSize"
-                            :whiteSpace "normal"}}
-                  (get description locale)))))
-       ($ TextField
-          {:label (tr :map/itrs-exposure)
-           :select true
-           :fullWidth true
-           :value (or exposure-value "")
-           :onChange (fn [e]
-                       (rf/dispatch [::events/set-itrs-exposure lipas-id fid (.. e -target -value)]))}
-          ($ MenuItem
-             {:key "empty"
-              :value ""}
-             "-")
-          (for [[k {:keys [label description]}] activities-data/itrs-exposure-options]
-            ($ MenuItem
-               {:key k
-                :value k
-                :sx #js {:flexDirection "column"
-                         :alignItems "flex-start"
-                         :maxWidth "350px"}}
-               ($ Typography
-                  (get label locale))
-               ($ Typography
-                  {:sx #js {:fontSize "body2.fontSize"
-                            :whiteSpace "normal"}}
-                  (get description locale))))))))
+    [:> Paper
+     {:sx
+      #js {:padding 2
+           :width "350px"}}
+     [:> TextField
+      {:label (tr :map/itrs-technical)
+       :select true
+       :fullWidth true
+       :value (or technical-value "")
+       :onChange (fn [e]
+                   (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))
+       :sx #js {:marginBottom 2}}
+      [:> MenuItem
+       {:key "empty"
+        :value ""}
+       "-"]
+      (for [[k {:keys [label description]}] activities-data/itrs-technical-options]
+        [:> MenuItem
+         {:key k
+          :value k
+          :sx #js {:flexDirection "column"
+                   :alignItems "flex-start"
+                   :maxWidth "350px"}}
+         [:> Typography
+          (get label locale)]
+         [:> Typography
+          {:sx #js {:fontSize "body2.fontSize"
+                    :whiteSpace "normal"}}
+          (get description locale)]])]
+     [:> TextField
+      {:label (tr :map/itrs-exposure)
+       :select true
+       :fullWidth true
+       :value (or exposure-value "")
+       :onChange (fn [e]
+                   (rf/dispatch [::events/set-itrs-exposure lipas-id fid (.. e -target -value)]))}
+      [:> MenuItem
+       {:key "empty"
+        :value ""}
+       "-"]
+      (for [[k {:keys [label description]}] activities-data/itrs-exposure-options]
+        [:> MenuItem
+         {:key k
+          :value k
+          :sx #js {:flexDirection "column"
+                   :alignItems "flex-start"
+                   :maxWidth "350px"}}
+         [:> Typography
+          (get label locale)]
+         [:> Typography
+          {:sx #js {:fontSize "body2.fontSize"
+                    :whiteSpace "normal"}}
+          (get description locale)]])]]))
 
 (defmethod popup-body :itrs-segment [popup]
-  ($ itrs-segment {:data (:data popup)}))
+  [itrs-segment {:data (:data popup)}])
 
 (defmethod popup-body :heatmap [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
