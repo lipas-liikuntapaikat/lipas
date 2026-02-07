@@ -1,6 +1,0 @@
-(ns etaoin.hooks-util
-  (:require [clj-kondo.hooks-api :as api]))
-
-(defn symbol-node? [node]
-  (and (api/token-node? node)
-       (symbol? (api/sexpr node))))

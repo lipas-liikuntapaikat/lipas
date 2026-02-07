@@ -302,22 +302,6 @@ services:
       service: backend-base
     command: clojure -M:dev -m shadow.cljs.devtools.cli release app
 
-  headless-chrome:
-    image: robcherry/docker-chromedriver
-    privileged: true
-    environment:
-      CHROMEDRIVER_WHITELISTED_IPS: '' # Allow any source
-    ports:
-      - '4444:4444'
-
-  integration-tests:
-    extends:
-      service: backend-base
-    command: clojure -M:dev:test-integration
-    links:
-      - headless-chrome
-      - proxy
-
   postgres:
     image: postgis/postgis:17-3.5
     environment:

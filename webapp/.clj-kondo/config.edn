@@ -1,7 +1,6 @@
 {:skip-comments true
  :lint-as
- {reagent.core/with-let clojure.core/let
-  etaoin.api/doto-wait clojure.core/doto}
+ {reagent.core/with-let clojure.core/let}
  :linters {:unsorted-required-namespaces {:level :warning
                                           :sort :case-sensitive}
            :consistent-alias {:aliases {clojure.string str
