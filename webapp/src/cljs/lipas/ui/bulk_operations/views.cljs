@@ -17,8 +17,7 @@
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [re-frame.core :as rf]
-            [reagent.core :as r]
-            [uix.core :refer [$]]))
+            [reagent.core :as r]))
 
 ;; Navigation buttons component
 (defn navigation-buttons [tr current-step selected-count selected-fields-count on-cancel]

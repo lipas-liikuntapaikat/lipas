@@ -264,13 +264,13 @@ Update this section as each tier is completed. Copy this to `UIX_MIGRATION_PLAN.
 - **Notes**: Zero regressions. All 5 PTV files migrated: 24 `defui` → `r/defc`, 252 `$` → hiccup. Complex `views.cljs` had mixed `defn`/`defui` patterns — `defn` functions with `$` calls converted to hiccup, `integrate-service-locations` converted from `defn` (called via `[:f>]`) to `r/defc` since it uses hooks. `r/as-element` kept for MUI prop values (`:control` for Radio/Switch, `:expandIcon` for Accordion) and for `[mui/stack ...]` children of `[:> AccordionDetails]`. Row helper functions using `uix/fn` converted to plain `fn` called directly as `(row {...})`. Browser testing confirmed all 4 PTV dialog tabs (wizard, services, sports sites, audit) work correctly. Minor pre-existing React warning about `on-change` prop naming (standard Reagent behavior). External call site in `map/views.cljs` (`$ ptv-site/site-view`) deferred to Tier 5.
 
 ### Tier 5: Call-site updates
-- [ ] BEFORE: Playwright baseline captured
-- [ ] MIGRATE: Files rewritten
-- [ ] COMPILE: Shadow-CLJS clean build
-- [ ] AFTER: Playwright verification passed
-- [ ] COMMIT: Changes committed
-- **Status**: NOT STARTED
-- **Notes**: _(verification results, issues found, etc.)_
+- [x] BEFORE: Playwright baseline captured
+- [x] MIGRATE: Files rewritten
+- [x] COMPILE: Shadow-CLJS clean build
+- [x] AFTER: Playwright verification passed
+- [x] COMMIT: Changes committed
+- **Status**: DONE
+- **Notes**: Zero regressions. 5 files migrated: map/views.cljs (most complex — `defui route-part-difficulty` → `r/defc`, `popup` and `map-view` converted from `defn` with UIX hooks to `r/defc` with `reagent.hooks`, `$ ptv-site/site-view` → `[ptv-site/site-view]`, `[:f> popup]` and `[:f> map-view]` → standard hiccup calls), org/views.cljs (`$ Checkbox` → `r/as-element [:> Checkbox]` for `:control` prop), navbar.cljs (`$ help/view` → `[help/view]`), search/views.cljs and bulk_operations/views.cljs (just removed unused `uix.core` imports). After this tier, zero `$` calls, zero `defui`, and zero `uix.core` imports remain in any consumer file. Only the UIX source files themselves (`uix/hooks.cljs`, `uix/utils.cljs`) remain — Tier 6 cleanup.
 
 ### Tier 6: Cleanup
 - [ ] UIX files deleted

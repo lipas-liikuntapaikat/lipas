@@ -26,8 +26,7 @@
             [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [reitit.frontend.easy :as rfe]
-            [uix.core :refer [$]]))
+            [reitit.frontend.easy :as rfe]))
 
 (defn ptv-tab []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
@@ -131,13 +130,14 @@
 
       ;; Sync enabled
       [mui/form-control-label
-       {:control ($ Checkbox
-                    {:checked (boolean (:sync-enabled ptv-config))
-                     :disabled (not is-lipas-admin?)
-                     :onChange (fn [e]
-                                 (rf/dispatch [::events/edit-org
-                                               [:ptv-data :sync-enabled]
-                                               (.-checked (.-target e))]))})
+       {:control (r/as-element
+                  [:> Checkbox
+                   {:checked (boolean (:sync-enabled ptv-config))
+                    :disabled (not is-lipas-admin?)
+                    :onChange (fn [e]
+                                (rf/dispatch [::events/edit-org
+                                              [:ptv-data :sync-enabled]
+                                              (.-checked (.-target e))]))}])
         :label (tr :lipas.org.ptv/sync-enabled-label)
         :sx {:mt 2}}]
 

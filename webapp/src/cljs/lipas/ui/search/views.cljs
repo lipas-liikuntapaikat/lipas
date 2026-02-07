@@ -10,8 +10,7 @@
             [lipas.ui.search.events :as events]
             [lipas.ui.search.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [reagent.core :as r]
-            [uix.core :refer [$]]))
+            [reagent.core :as r]))
 
 (defn- filter-layout
   [{:keys [size] :as _props} & children]
