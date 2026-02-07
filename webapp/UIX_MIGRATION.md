@@ -31,6 +31,15 @@ Reagent 2.0 (already in `deps.edn`) provides:
 
 Use `:>` with direct imports everywhere. Each file imports MUI components directly (as they already do for UIX) and uses `[:> Component ...]`. No `mui.cljs` wrapper layer needed for migrated code.
 
+**PITFALL: `[:>` requires Clojure map props.** Reagent's `[:>` interop checks `(map? props)` — if props is a raw JS object (e.g. from `merge-props`/`Object.assign`), it is treated as a **child element**, not props. The component receives `null` props. Use `(r/create-element Component js-props-obj)` when you need to pass a pre-built JS object as props.
+
+**`r/as-element` wrapping rules:**
+- Required when hiccup is passed as a **prop value** to MUI (`:title`, `:action`, `:startIcon`, `:expandIcon`, etc.)
+- NOT needed for children in hiccup context
+- NOT needed for return values when both caller and callee are Reagent components
+
+**Key handling in `[:>` elements:** Use prop-based keys `{:key x}` not metadata `^{:key x}`.
+
 ## `spread-props` Replacement
 
 A small utility to replace the UIX macro, needed only in `autocompletes.cljs` and similar JS-interop-heavy places:
@@ -69,6 +78,21 @@ Progress is tracked in `UIX_MIGRATION.md` at the repo root. Each tier follows a 
 
 For **each** tier, the sequence is:
 
+#### Artifacts & Documentation Convention
+
+All tier artifacts go under `screenshots/tier-N/` with this structure:
+```
+screenshots/tier-N/
+├── before/          # Baseline screenshots (Step 1)
+├── after/           # Post-migration screenshots (Step 4)
+└── reports/         # Test reports, findings, notes (markdown)
+```
+
+- **Screenshots**: Save directly into `before/` or `after/` with descriptive filenames (e.g. `admin-panel.png`, `help-dialog-open.png`)
+- **Test reports**: Save as markdown in `reports/` (e.g. `TIER-N-TEST-REPORT.md`, `before-testing-notes.md`)
+- **Do NOT** place screenshots or reports in the webapp root directory
+- **Summary notes** go in the Progress Tracking section of this file under the tier's `**Notes**` field
+
 #### Step 1: BEFORE — Capture current behavior via Playwright MCP
 - Navigate to each affected page/route
 - Take **baseline screenshots** (saved to `screenshots/tier-N/before/`)
@@ -79,7 +103,7 @@ For **each** tier, the sequence is:
   - Check that state changes are reflected (e.g., form values update, selections stick)
   - Take accessibility snapshots to capture DOM structure
 - Check **console messages** for any pre-existing errors (document them)
-- Record findings in `UIX_MIGRATION.md` under the tier section
+- Write detailed findings to `screenshots/tier-N/reports/` and record a summary in this file under the tier section
 
 #### Step 2: MIGRATE — Apply translation rules to all files in the tier
 - Rewrite `defui` → `r/defc`, `$` → hiccup, hooks → `reagent.hooks`, etc.
@@ -105,7 +129,7 @@ For **each** tier, the sequence is:
 
 #### Step 6: STOP if regression detected
 - If any functional difference is found, fix before proceeding
-- Document the issue and resolution in `UIX_MIGRATION.md`
+- Document the issue and resolution in `screenshots/tier-N/reports/` and summarize in this file
 
 ---
 
