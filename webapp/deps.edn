@@ -14,7 +14,7 @@
         metosin/malli {:mvn/version "0.17.0"},
         thheller/shadow-cljs {:mvn/version "2.28.16"},
         org.clojure/clojurescript {:mvn/version "1.11.132"},
-        reagent/reagent {:mvn/version "2.0.0"},
+        reagent/reagent {:mvn/version "2.0.1"},
         re-frame/re-frame {:mvn/version "1.4.3"},
         tongue/tongue {:mvn/version "0.4.4"},
         day8.re-frame/http-fx {:mvn/version "0.2.4"},
