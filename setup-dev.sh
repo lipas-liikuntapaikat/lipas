@@ -26,12 +26,13 @@ docker compose run htpasswd admin $ADMIN_PASSWORD > nginx/htpasswd
 ### Frontend ###
 
 printf "\n *** Fetching npm dependencies *** \n\n"
-docker compose run frontend-npm-deps
+npm install
 
 ### Start services ###
 
 printf "\n *** Starting backend services *** \n\n"
-docker compose up -d proxy-dev
+docker compose up -d proxy-local
 
-printf "\n *** Starting shadow-cljs *** \n\n"
-npm run watch
+printf "\n *** Setup complete! *** \n\n"
+echo "To start the frontend dev server, run:"
+echo "  npx shadow-cljs watch app"
