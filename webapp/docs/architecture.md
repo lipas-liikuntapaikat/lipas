@@ -503,19 +503,22 @@ The map is the central UI element, supporting:
 - Storage: WGS84 (EPSG:4326)
 - Automatic transformation
 
-### UIX/React Hooks Integration
+### React Hooks Integration
 
-For cases requiring React hooks (third-party libraries), UIX components can use Re-frame subscriptions:
+Reagent 2.0's `r/defc` creates functional components that support both React hooks and ratoms. Re-frame subscriptions work directly:
 
 ```clojure
-(defn use-subscribe [query]
-  "Bridge Re-frame subscriptions to React hooks"
-  (let [sub (rf/subscribe query)]
-    (use-reaction sub)))
+(r/defc my-component []
+  (let [data @(rf/subscribe [::subs/my-data])]
+    [:> mui/Box data]))
+```
 
-(defui my-component []
-  (let [data (use-subscribe [::subs/my-data])]
-    ($ mui/Box data)))
+For React hooks (e.g. third-party libraries), use `reagent.hooks`:
+
+```clojure
+(r/defc my-hook-component []
+  (let [[state set-state] (hooks/use-state nil)]
+    [:> mui/Box state]))
 ```
 
 ---

@@ -76,10 +76,9 @@ Delegate browser testing to `browser-tester` sub-agent to preserve context.
 
 ### Frontend (ClojureScript)
 
-- Prefer Reagent + Re-Frame for new code
-- Use UIX only when React hooks are needed by 3rd party libraries
+- Use Reagent 2.0 + Re-Frame (`r/defc` for functional components, `reagent.hooks` for React hooks)
 - Use explicit MUI requires, avoid legacy `lipas.ui.mui`
-- UIX hooks: call at top level only, list all dependencies in effects
+- Hooks: call at top level only, list all dependencies in effects
 
 ## Project Structure
 

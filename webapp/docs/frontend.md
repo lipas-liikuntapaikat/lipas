@@ -475,22 +475,6 @@ When refactoring code that uses Spec:
    [:re #"^[^\s@]+@[^\s@]+\.[^\s@]+$"]])
 ```
 
-### Moving from UIx to Reagent
-
-When refactoring UIx components:
-
-```clojure
-;; UIx approach (avoid for new code)
-(defn uix-component []
-  (let [data (use-subscribe [:data])]
-    [:div data]))
-
-;; Reagent approach (preferred)
-(defn reagent-component []
-  (let [data (<== [:data])]
-    [:div data]))
-```
-
 ### Moving from MUI Wrapper to Direct Imports
 
 The `lipas.ui.mui` wrapper is legacy. For new code, import MUI components directly:
