@@ -39,12 +39,11 @@
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.floorball.views :as floorball]
             [lipas.ui.sports-sites.views :as sports-sites]
-            [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [uix.core :as uix :refer [$ defui]]))
+            [reagent.hooks :as hooks]))
 
 ;; TODO: Juho later This pattern makes development inconvenient as
 ;; the component might crash and shadow-cljs reloads don't update it.
@@ -569,43 +568,43 @@
         [mui/typography {:paragraph true :variant "caption"}
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
-(defui route-part-difficulty [{:keys [data]}]
+(r/defc route-part-difficulty [{:keys [data]}]
   (let [{:keys [lipas-id fid]} data
-        tr (use-subscribe [:lipas.ui.subs/translator])
+        tr @(rf/subscribe [:lipas.ui.subs/translator])
         locale (tr)
-        properties (use-subscribe [::subs/edit-geom-properties fid])
+        properties @(rf/subscribe [::subs/edit-geom-properties fid])
         value (:route-part-difficulty properties)]
-    ($ Paper
-       {:sx
-        #js {:padding 2
-             :width "350px"}}
-       ($ TextField
-          {:label (tr :map/route-part-difficulty)
-           :select true
-           :fullWidth true
-           :value (or value "")
-           :onChange (fn [e]
-                       (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
-          ($ MenuItem
-             {:key "empty"
-              :value ""}
-             "-")
-          (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
-            ($ MenuItem
-               {:key k
-                :value k
-                :sx #js {:flexDirection "column"
-                         :alignItems "flex-start"
-                         :maxWidth "350px"}}
-               ($ Typography
-                  (get label locale))
-               ($ Typography
-                  {:sx #js {:fontSize "body2.fontSize"
-                            :whiteSpace "normal"}}
-                  (get description locale))))))))
+    [:> Paper
+     {:sx
+      #js {:padding 2
+           :width "350px"}}
+     [:> TextField
+      {:label (tr :map/route-part-difficulty)
+       :select true
+       :fullWidth true
+       :value (or value "")
+       :onChange (fn [e]
+                   (rf/dispatch [::events/set-route-part-difficulty lipas-id fid (.. e -target -value)]))}
+      [:> MenuItem
+       {:key "empty"
+        :value ""}
+       "-"]
+      (for [[k {:keys [label description]}] activities-data/cycling-route-part-difficulty]
+        [:> MenuItem
+         {:key k
+          :value k
+          :sx #js {:flexDirection "column"
+                   :alignItems "flex-start"
+                   :maxWidth "350px"}}
+         [:> Typography
+          (get label locale)]
+         [:> Typography
+          {:sx #js {:fontSize "body2.fontSize"
+                    :whiteSpace "normal"}}
+          (get description locale)]])]]))
 
 (defmethod popup-body :route-part-difficulty [popup]
-  ($ route-part-difficulty {:data (:data popup)}))
+  [route-part-difficulty {:data (:data popup)}])
 
 (defmethod popup-body :heatmap [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -655,11 +654,11 @@
      #_[mui/typography {:variant "caption" :color "textSecondary" :style {:margin-top "0.5em"}}
         (str "Grid: " (:grid_key data))]]))
 
-(defn popup [{:keys [popup-ref]}]
+(r/defc popup [{:keys [popup-ref]}]
   (let [{:keys [data placement]
          :as popup'} (<== [::subs/popup])
         tr (<== [:lipas.ui.subs/translator])
-        [anchor-el set-anchor-el] (uix/use-state nil)]
+        [anchor-el set-anchor-el] (hooks/use-state nil)]
     [:<>
      [:div {:ref (fn [el]
                    (set-anchor-el el)
@@ -1149,13 +1148,13 @@
               :can-edit? edit-activities?}]]
 
          6 [mui/grid {:item true :xs 12}
-            ($ ptv-site/site-view
-               {:tr tr
-                :lipas-id lipas-id
-                :type-code type-code
-                ; :display-data display-data
-                :edit-data edit-data
-                :can-edit? can-publish?})])]
+            [ptv-site/site-view
+             {:tr tr
+              :lipas-id lipas-id
+              :type-code type-code
+              ; :display-data display-data
+              :edit-data edit-data
+              :can-edit? can-publish?}]])]
 
 ;; "Landing bay" for floating tools
       [mui/grid {:item true :xs 12 :style {:height "3em"}}]
@@ -2013,13 +2012,13 @@
         {:sx {:px 1}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
-(defn map-view []
+(r/defc map-view [_props]
   (let [tr (<== [:lipas.ui.subs/translator])
         logged-in? (<== [:lipas.ui.subs/logged-in?])
         drawer-open? (<== [::subs/drawer-open?])
         width (mui/use-width)
         drawer-width (<== [::subs/drawer-width width])
-        popup-ref (uix/use-ref nil)]
+        popup-ref (hooks/use-ref nil)]
 
     [mui/grid {:container true :style {:height "100%" :width "100%"}}
 
@@ -2109,7 +2108,7 @@
            :padding-left "0.5em" :padding-right "0.5em"}}
          [layer-switcher {:tr tr}]]]]]
 
-     [:f> popup
+     [popup
       {:popup-ref popup-ref}]
 
      ;; The map
@@ -2117,4 +2116,4 @@
       {:popup-ref popup-ref}]]))
 
 (defn main []
-  [:f> map-view])
+  [map-view])

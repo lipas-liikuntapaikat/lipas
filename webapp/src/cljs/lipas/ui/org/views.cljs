@@ -25,8 +25,8 @@
             [lipas.ui.org.subs :as subs]
             [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]
-            [reitit.frontend.easy :as rfe]
-            [uix.core :refer [$]]))
+            [reagent.core :as r]
+            [reitit.frontend.easy :as rfe]))
 
 (defn ptv-tab []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
@@ -130,13 +130,14 @@
 
       ;; Sync enabled
       [mui/form-control-label
-       {:control ($ Checkbox
-                    {:checked (boolean (:sync-enabled ptv-config))
-                     :disabled (not is-lipas-admin?)
-                     :onChange (fn [e]
-                                 (rf/dispatch [::events/edit-org
-                                               [:ptv-data :sync-enabled]
-                                               (.-checked (.-target e))]))})
+       {:control (r/as-element
+                  [:> Checkbox
+                   {:checked (boolean (:sync-enabled ptv-config))
+                    :disabled (not is-lipas-admin?)
+                    :onChange (fn [e]
+                                (rf/dispatch [::events/edit-org
+                                              [:ptv-data :sync-enabled]
+                                              (.-checked (.-target e))]))}])
         :label (tr :lipas.org.ptv/sync-enabled-label)
         :sx {:mt 2}}]
 
@@ -165,12 +166,13 @@
            :gap 1
            :align-items "center"}}
      ;; User autocomplete dropdown
-     ($ ac/autocomplete2
-        {:sx #js {:minWidth 250}
-         :label (tr :lipas.user/email)
-         :options all-users
-         :value (:user-id add-form)
-         :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))})
+     (r/as-element
+      [ac/autocomplete2
+       {:sx #js {:minWidth 250}
+        :label (tr :lipas.user/email)
+        :options all-users
+        :value (:user-id add-form)
+        :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))}])
      ;; Role selector
      [:> FormControl
       {:sx {:min-width 120}}
