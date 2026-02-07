@@ -222,13 +222,13 @@ Update this section as each tier is completed. Copy this to `UIX_MIGRATION_PLAN.
 - **Notes**: Zero regressions. `spread-props` macro replaced with `merge-props` utility using `Object.assign`. `autocomplete2` uses `hooks/use-memo` for memoization. `virtualized-list` external hooks (`useMeasure`, `react-window`) work correctly in `r/defc`. Call sites in 7 downstream files updated to use `(r/as-element [component ...])` wrapping for UIX→Reagent boundary.
 
 ### Tier 3: Feature views
-- [ ] BEFORE: Playwright baseline captured
-- [ ] MIGRATE: Files rewritten
-- [ ] COMPILE: Shadow-CLJS clean build
-- [ ] AFTER: Playwright verification passed
-- [ ] COMMIT: Changes committed
-- **Status**: NOT STARTED
-- **Notes**: _(verification results, issues found, etc.)_
+- [x] BEFORE: Playwright baseline captured
+- [x] MIGRATE: Files rewritten
+- [x] COMPILE: Shadow-CLJS clean build
+- [x] AFTER: Playwright verification passed
+- [x] COMMIT: Changes committed
+- **Status**: DONE
+- **Notes**: Zero regressions in all three areas (admin panel, help dialog, help management). Found and fixed critical bug in `autocomplete2` (Tier 2 file): Reagent's `[:>` interop doesn't handle raw JS objects as props — it checks `(map? props)` and treats non-maps as children. Changed `[:> Autocomplete (merge-props ...)]` to `(r/create-element Autocomplete (merge-props ...))` to bypass hiccup processing. Also fixed metadata keys `^{:key idx}` on `[:> MenuItem ...]` in manage.cljs — moved to prop-based keys `{:key idx}` for consistency with `:>` interop. All `defui` → `r/defc`, `$` → hiccup, hooks → `reagent.hooks`. `r/as-element` wrapping applied to MUI prop values (`:title`, `:action`, `:startIcon`, `:expandIcon`). Removed `r/as-element` from admin select components (no longer needed since caller and callee are both Reagent).
 
 ### Tier 4: PTV module
 - [ ] BEFORE: Playwright baseline captured

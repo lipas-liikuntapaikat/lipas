@@ -109,25 +109,25 @@
                                      [options])
         js-options (hooks/use-memo (fn [] (to-array options))
                                    [options])]
-    [:> Autocomplete
-     (merge-props {:options js-options
-                   :renderInput (fn [^js props]
-                                  (r/create-element TextField
-                                                    (merge-props #js {:label label
-                                                                      :variant "standard"}
-                                                                 props
-                                                                 (clj->js input-props))))
-                   :getOptionKey (fn [item] (:value item))
-                   :getOptionLabel (fn [item]
-                                    ;; This fn is called for both :value and :options
-                                     (if (map? item)
-                                       (:label item)
-                                       (or (get value->label item)
-                                           (str item))))
-                   :isOptionEqualToValue (fn [option value]
-                                           (= (safe-name (:value option))
-                                              value))}
-                  (clj->js (dissoc props :input-props :label :options)))]))
+    (r/create-element Autocomplete
+                      (merge-props {:options js-options
+                                    :renderInput (fn [^js props]
+                                                   (r/create-element TextField
+                                                                     (merge-props #js {:label label
+                                                                                       :variant "standard"}
+                                                                                  props
+                                                                                  (clj->js input-props))))
+                                    :getOptionKey (fn [item] (:value item))
+                                    :getOptionLabel (fn [item]
+                                     ;; This fn is called for both :value and :options
+                                                      (if (map? item)
+                                                        (:label item)
+                                                        (or (get value->label item)
+                                                            (str item))))
+                                    :isOptionEqualToValue (fn [option value]
+                                                            (= (safe-name (:value option))
+                                                               value))}
+                                   (clj->js (dissoc props :input-props :label :options))))))
 
 (r/defc type-selector
   "Type selector using autocomplete2 with all active types"
