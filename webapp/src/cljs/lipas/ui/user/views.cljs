@@ -7,13 +7,12 @@
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
             [lipas.ui.org.subs :as org-subs]
-            [lipas.ui.uix.hooks :refer [use-subscribe]]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
             [lipas.ui.utils :refer [<== ==> navigate!]]
             [re-frame.core :as rf]
-            [reitit.frontend.easy :as rfe]
-            [uix.core :as uix :refer [$ defui]]))
+            [reagent.core :as r]
+            [reitit.frontend.easy :as rfe]))
 
 (defn user-form [tr data]
   [mui/form-group
@@ -64,8 +63,8 @@
        ;; View basic info button
        [mui/list-item-button
         {:on-click (comp
-                     close
-                     #(==> [:lipas.ui.events/display lipas-id]))}
+                    close
+                    #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
@@ -74,8 +73,8 @@
        ;; Report energy consumption button
        [mui/list-item
         {:on-click (comp
-                     close
-                     #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
+                    close
+                    #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
@@ -89,82 +88,82 @@
                         1380 1510, 1520, 1530, 1550 2120 2150, 2210, 2220, 2230, 2240 3110,
                         3130, 3210 4401, 4402, 4403, 4404, 4405})
 
-(defui role-context [{:keys [tr k v]}]
+(r/defc role-context [{:keys [tr k v]}]
   (let [locale (tr)
-        localized (use-subscribe [::subs/context-value-name k v locale])
+        localized @(rf/subscribe [::subs/context-value-name k v locale])
         link? (= :lipas-id k)]
-    ($ Typography
-       {:key k
-        :component (if link?
-                     "a"
-                     "span")
-        :sx #js [#js {:mr 1}
-                 (when link?
-                   #js {:cursor "pointer"
-                        :textDecoration "underline"})]
-        :onClick (when link?
-                   (fn [_e]
-                     (rf/dispatch [::events/select-sports-site {:lipas-id v}])))}
-       ;; Role context key name
-       (tr (keyword :lipas.user.permissions.roles.context-keys k))
-       ": "
-       (if (= :all v)
-         ($ :i (tr :lipas.user.permissions.roles/context-value-all))
-         localized))))
+    [:> Typography
+     {:key k
+      :component (if link?
+                   "a"
+                   "span")
+      :sx #js [#js {:mr 1}
+               (when link?
+                 #js {:cursor "pointer"
+                      :textDecoration "underline"})]
+      :onClick (when link?
+                 (fn [_e]
+                   (rf/dispatch [::events/select-sports-site {:lipas-id v}])))}
+     ;; Role context key name
+     (tr (keyword :lipas.user.permissions.roles.context-keys k))
+     ": "
+     (if (= :all v)
+       [:i (tr :lipas.user.permissions.roles/context-value-all)]
+       localized)]))
 
-(defui explain-roles [{:keys [tr]}]
-  (let [roles (use-subscribe [::subs/roles])
+(r/defc explain-roles [{:keys [tr]}]
+  (let [roles @(rf/subscribe [::subs/roles])
         roles (sort-by roles/role-sort-fn roles)]
     (if (empty? roles)
-      ($ Stack
-         {:direction "row"
-          :sx #js {:alignItems "center"
-                   :p 1}}
-         ($ Icon "lock")
-         ($ Typography
+      [:> Stack
+       {:direction "row"
+        :sx #js {:alignItems "center"
+                 :p 1}}
+       [:> Icon "lock"]
+       [:> Typography
+        {:variant "body2"
+         :sx #js {:ml 1
+                  :mr 2}}
+        (tr :lipas.user/no-permissions)]]
+      [:<>
+       (for [[i {:keys [role] :as x}] (map-indexed vector roles)]
+         [:<>
+          {:key i}
+          [:> Stack
+           {:direction "row"
+            :sx #js {:alignItems "center"
+                     :p 1}}
+           [:> Icon "lock_open"]
+           [:> Typography
             {:variant "body2"
              :sx #js {:ml 1
                       :mr 2}}
-            (tr :lipas.user/no-permissions)))
-      ($ :<>
-         (for [[i {:keys [role] :as x}] (map-indexed vector roles)]
-           ($ :<>
-              {:key i}
-              ($ Stack
-                 {:direction "row"
-                  :sx #js {:alignItems "center"
-                           :p 1}}
-                 ($ Icon "lock_open")
-                 ($ Typography
-                    {:variant "body2"
-                     :sx #js {:ml 1
-                              :mr 2}}
-                    (tr (keyword :lipas.user.permissions.roles.role-names role)))
-                 (for [[k vs] (dissoc x :role)]
-                   ($ :<>
-                      {:key k}
-                      (for [v vs]
-                        ($ role-context
-                           {:key v
-                            :k k
-                            :v v
-                            :tr tr})))))))))))
+            (tr (keyword :lipas.user.permissions.roles.role-names role))]
+           (for [[k vs] (dissoc x :role)]
+             [:<>
+              {:key k}
+              (for [v vs]
+                [role-context
+                 {:key v
+                  :k k
+                  :v v
+                  :tr tr}])])]])])))
 
-(defui explain-orgs []
-  (let [orgs (use-subscribe [::org-subs/user-orgs])]
-    ($ :<>
-       (for [{:keys [id name]} orgs]
-         ($ :<>
-            {:key id}
-            ($ Stack
-               {:direction "row"
-                :sx #js {:alignItems "center"
-                         :p 1}}
-               ($ Link
-                  {:variant "body2"
-                   :href (rfe/href :lipas.ui.routes/org
-                                   {:org-id id})}
-                  (or name "-"))))))))
+(r/defc explain-orgs []
+  (let [orgs @(rf/subscribe [::org-subs/user-orgs])]
+    [:<>
+     (for [{:keys [id name]} orgs]
+       [:<>
+        {:key id}
+        [:> Stack
+         {:direction "row"
+          :sx #js {:alignItems "center"
+                   :p 1}}
+         [:> Link
+          {:variant "body2"
+           :href (rfe/href :lipas.ui.routes/org
+                           {:org-id id})}
+          (or name "-")]]])]))
 
 (defn user-panel [tr user]
   (let [card-props {:square true}
@@ -223,8 +222,8 @@
          [mui/card-header {:title (tr :lipas.user/permissions)}]
          [mui/card-content
 
-          ($ explain-roles
-             {:tr tr})]
+          [explain-roles
+           {:tr tr}]]
 
          [mui/card-actions
           [mui/button {:href  "/liikuntapaikat"
@@ -246,7 +245,7 @@
          [mui/card-header {:title (tr :lipas.user/organizations)}]
          [mui/card-content
 
-          ($ explain-orgs)]]]
+          [explain-orgs]]]]
 
 ;; Promo card
        [mui/grid {:item true :xs 12}
