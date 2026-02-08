@@ -1,6 +1,5 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
@@ -12,16 +11,21 @@
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
-            [lipas.schema.core]
+            [lipas.schema.diversity :as diversity-schema]
+            [lipas.schema.feedback :as feedback-schema]
+            [lipas.schema.handler :as handler-schema]
             [lipas.schema.help :as help-schema]
+            [lipas.schema.lois :as loi-schema]
             [lipas.schema.org :as org-schema]
+            [lipas.schema.reminders :as reminders-schema]
             [lipas.schema.sports-sites :as sports-site-schema]
+            [lipas.schema.sports-sites.types :as types-schema]
+            [lipas.schema.users :as users-schema]
             [lipas.utils :as utils]
             [malli.core :as malli]
             [malli.error :as me]
             [muuntaja.core :as m]
             [reitit.coercion.malli]
-            [reitit.coercion.spec]
             [reitit.ring :as ring]
             [reitit.ring.coercion :as coercion]
             [reitit.ring.middleware.exception :as exception]
@@ -146,7 +150,7 @@
          :middleware [mw/token-auth mw/auth]
            ;; NOTE: privilege checked in the core code
          :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
-                     400 {:body map?}}
+                     400 {:body [:map {:closed false}]}}
          :parameters
          {:query [:map [:draft {:optional true} :boolean]]
           :body #'sports-site-schema/new-or-existing-sports-site}
@@ -171,7 +175,7 @@
          ;; city-codes as Long's. The default malli json transformer
          ;; turns them into strings (V2 API model).
          :responses {200 {:body sports-site-schema/sports-site-compat}
-                     404 {:body [:map]}}
+                     404 {:body [:map {:closed false}]}}
          :handler
          (fn [req]
            (let [lipas-id (-> req :parameters :path :lipas-id)
@@ -195,10 +199,10 @@
       ["/sports-sites/type/:type-code"
        {:get
         {:no-doc false
-         :responses {200 {:body (s/coll-of map?)}}
+         :responses {200 {:body [:sequential [:map {:closed false}]]}}
          :parameters
-         {:path {:type-code :lipas.sports-site.type/type-code}
-          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         {:path {:type-code #'types-schema/type-code-with-legacy}
+          :query handler-schema/sports-sites-query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :path :type-code)
@@ -215,7 +219,7 @@
       ["/lois"
        {:get
         {:no-doc false
-         :responses {200 {:body :lipas.loi/documents}}
+         :responses {200 {:body loi-schema/loi-documents}}
          :parameters {}
          :handler
          (fn []
@@ -226,8 +230,8 @@
       ["/lois/:loi-id"
        {:get
         {:no-doc false
-         :responses {200 {:body :lipas.loi/document}}
-         :parameters {:path {:loi-id :lipas.loi/id}}
+         :responses {200 {:body loi-schema/loi-document}}
+         :parameters {:path {:loi-id #'loi-schema/loi-id}}
          :handler
          (fn [{:keys [parameters]}]
            {:status 200
@@ -236,10 +240,10 @@
       ["/lois/type/:loi-type"
        {:get
         {:no-doc false
-         :responses {200 {:body :lipas.loi/documents}}
+         :responses {200 {:body loi-schema/loi-documents}}
          :parameters
-         {:path {:loi-type :lipas.loi/loi-type}
-          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         {:path {:loi-type #'loi-schema/loi-type}
+          :query handler-schema/sports-sites-query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-type (-> parameters :path :loi-type)
@@ -250,10 +254,10 @@
       ["/lois/category/:loi-category"
        {:get
         {:no-doc false
-         :responses {200 {:body :lipas.loi/documents}}
+         :responses {200 {:body loi-schema/loi-documents}}
          :parameters
-         {:path {:loi-category :lipas.loi/loi-category}
-          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         {:path {:loi-category #'loi-schema/loi-category}
+          :query handler-schema/sports-sites-query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-category (-> parameters :path :loi-category)
@@ -264,10 +268,10 @@
       ["/lois/status/:status"
        {:get
         {:no-doc false
-         :responses {200 {:body :lipas.loi/documents}}
+         :responses {200 {:body loi-schema/loi-documents}}
          :parameters
-         {:path {:status :lipas.loi/status}
-          :query :lipas.api.get-sports-sites-by-type-code/query-params}
+         {:path {:status #'loi-schema/loi-status}
+          :query handler-schema/sports-sites-query-params}
          :handler
          (fn [{:keys [parameters]}]
            (let [loi-status (-> parameters :path :status)
@@ -412,8 +416,8 @@
       ["/actions/find-fields"
        {:post
         {:no-doc false
-         :parameters {:body :lipas.api.find-fields/payload}
-         :responses {200 {:body (s/coll-of :lipas/sports-site)}}
+         :parameters {:body handler-schema/find-fields-payload}
+         :responses {200 {:body [:sequential [:map {:closed false}]]}}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -481,8 +485,8 @@
          :parameters
          {:body
           {:id string?
-           :login-url :lipas.magic-link/login-url
-           :permissions :lipas.user/permissions}}
+           :login-url handler-schema/magic-link-login-url
+           :permissions users-schema/permissions-schema}}
          :handler
          (fn [req]
            (let [params (-> req :parameters :body)
@@ -497,7 +501,7 @@
          :parameters
          {:body
           {:id string?
-           :status :lipas.user/status}}
+           :status users-schema/user-status}}
          :handler
          (fn [req]
            {:status 200
@@ -508,7 +512,7 @@
         {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters
-         {:body :lipas.user/user-data}
+         {:body users-schema/user-data-schema}
          :handler
          (fn [req]
            (let [user-data (-> req :parameters :body)
@@ -521,9 +525,9 @@
         {:no-doc true
          :parameters
          {:body
-          {:email :lipas/email
-           :login-url :lipas.magic-link/login-url
-           :variant :lipas.magic-link/email-variant}}
+          {:email users-schema/email-schema
+           :login-url handler-schema/magic-link-login-url
+           :variant handler-schema/email-variant}}
          :handler
          (fn [req]
            (let [email (-> req :parameters :body :email)
@@ -542,8 +546,8 @@
          :parameters
          {:body
           {:login-url string?
-           :variant :lipas.magic-link/email-variant
-           :user :lipas/new-user}}
+           :variant handler-schema/email-variant
+           :user users-schema/new-user-schema}}
          :handler
          (fn [req]
            (let [user (-> req :parameters :body :user)
@@ -561,7 +565,7 @@
         {:no-doc true
          :middleware [mw/token-auth mw/auth]
          :parameters
-         {:body :lipas/new-reminder}
+         {:body reminders-schema/new-reminder}
          :handler
          (fn [{:keys [identity parameters]}]
            (let [reminder (:body parameters)]
@@ -575,7 +579,7 @@
          :parameters
          {:body
           {:id uuid?
-           :status :lipas.reminder/status}}
+           :status reminders-schema/reminder-status}}
          :handler
          (fn [{:keys [identity parameters]}]
            (let [params (:body parameters)]
@@ -595,7 +599,7 @@
        {:post
         {:no-doc true
          :parameters
-         {:body :lipas.api.energy-report/req}
+         {:body handler-schema/energy-report-req}
          :handler
          (fn [{:keys [parameters]}]
            (let [type-code (-> parameters :body :type-code)
@@ -607,7 +611,7 @@
        {:post
         {:no-doc false
          :parameters
-         {:body :lipas.api.sports-site-report/req}
+         {:body handler-schema/sports-site-report-req}
          :handler
          (fn [{:keys [parameters]}]
            (let [query (-> parameters :body :search-query)
@@ -646,7 +650,7 @@
        {:post
         {:no-doc true
          :parameters
-         {:body :lipas.api.finance-report/req}
+         {:body handler-schema/finance-report-req}
          :handler
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
@@ -680,7 +684,7 @@
       ["/actions/calculate-stats"
        {:post
         {:no-doc true
-         :parameters {:body :lipas.api.calculate-stats/payload}
+         :parameters {:body handler-schema/calculate-stats-payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -764,7 +768,7 @@
         {:no-doc false
          :parameters
          {:body
-          {:email :lipas/email}}
+          {:email users-schema/email-schema}}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -774,22 +778,22 @@
       ["/actions/calc-diversity-indices"
        {:post
         {:no-doc true
-         :parameters {:body map?} ;; TODO proper spec
+         :parameters {:body map?}
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
-             (if (s/valid? :lipas.api.diversity-indices/req body)
+             (if (malli/validate diversity-schema/diversity-indices-req body)
                {:status 200
                 :body (core/calc-diversity-indices search body)}
                {:status 400
-                :body {:error (s/explain-data :lipas.api.diversity-indices/req body)}})))}}]
+                :body {:error (malli/explain diversity-schema/diversity-indices-req body)}})))}}]
 
       ;; Send feedback
       ["/actions/send-feedback"
        {:post
         {:no-doc false
          :parameters
-         {:body :lipas.feedback/payload}
+         {:body feedback-schema/feedback-payload}
          :handler
          (fn [{:keys [body-params]}]
            (core/send-feedback! emailer body-params)
@@ -801,7 +805,7 @@
        {:post
         {:no-doc true
          :parameters
-         {:body :lipas.api.check-sports-site-name/payload}
+         {:body handler-schema/check-sports-site-name-payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -813,7 +817,7 @@
          ;; TODO: role, :activity/edit?
          :middleware [mw/token-auth mw/auth]
          :parameters
-         {:body :lipas.api.create-upload-url/payload}
+         {:body handler-schema/create-upload-url-payload}
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
@@ -824,7 +828,11 @@
         {:no-doc false
          ;; TODO: role, :activity/edit?
          :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
-         :parameters {:multipart {:file multipart/temp-file-part}}
+         :parameters {:multipart {:file [:map
+                                         [:filename :string]
+                                         [:content-type :string]
+                                         [:tempfile :any]
+                                         [:size :int]]}}
          :handler
          (fn [{:keys [parameters multipart-params identity]}]
            (let [params {:lipas-id (get multipart-params "lipas-id")
@@ -842,7 +850,7 @@
                               :activity ::roles/any}
                              :loi/create-edit]
          :parameters
-         {:body :lipas.loi/document}
+         {:body loi-schema/loi-document}
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
@@ -856,7 +864,7 @@
                                         ;                      :city-code ::roles/any
                                         ;                      :activity ::roles/any}
                                         ;                     :loi/view]
-         :parameters {:body :lipas.api.search-lois/payload}
+         :parameters {:body handler-schema/search-lois-payload}
          :handler
          (fn [{:keys [body-params]}]
            {:status 200
@@ -922,7 +930,7 @@
      (v2/routes ctx)]
 
     {:data
-     {:coercion reitit.coercion.spec/coercion
+     {:coercion reitit.coercion.malli/coercion
       :muuntaja m/instance
       :middleware [;; query-params & form-params
                    params/wrap-params

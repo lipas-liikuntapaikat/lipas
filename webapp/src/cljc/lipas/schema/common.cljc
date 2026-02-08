@@ -3,6 +3,10 @@
   (:require [lipas.data.status :as status]
             #?(:clj [clojure.test.check.generators :as gen])))
 
+;;; Regexes (moved from schema/core.cljc) ;;;
+(def email-regex #"^[a-zA-Z0-9åÅäÄöÖ._%+-]+@[a-zA-Z0-9åÅäÄöÖ.-]+\.[a-zA-Z]{2,63}$")
+(def postal-code-regex #"[0-9]{5}")
+
 (def -iso8601-pattern #"^(?:[1-9]\d{3}-(?:(?:0[1-9]|1[0-2])-(?:0[1-9]|1\d|2[0-8])|(?:0[13-9]|1[0-2])-(?:29|30)|(?:0[13578]|1[02])-31)|(?:[1-9]\d(?:0[48]|[2468][048]|[13579][26])|(?:[2468][048]|[13579][26])00)-02-29)T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?Z$")
 
 (def iso8601-timestamp
@@ -267,6 +271,20 @@
    [:type [:enum "FeatureCollection"]]
    [:features
     [:sequential #'polygon-feature]]])
+
+;; Map view bounds (wider than Finland for zoomed-out views)
+(def map-wgs84-bounds-lat
+  [:and number [:fn #(<= 32.88 % 84.73)]])
+
+(def map-wgs84-bounds-lon
+  [:and number [:fn #(<= 16.1 % 40.18)]])
+
+;; Finland coordinate bounds (tighter, for data validation)
+(def finland-bounds-lat
+  [:and number [:fn #(<= 59.846373196 % 70.1641930203)]])
+
+(def finland-bounds-lon
+  [:and number [:fn #(<= 20.6455928891 % 31.5160921567)]])
 
 (comment
   (require '[malli.core :as m])

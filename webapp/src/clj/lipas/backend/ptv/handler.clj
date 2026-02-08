@@ -1,12 +1,10 @@
 (ns lipas.backend.ptv.handler
-  (:require [clojure.spec.alpha :as s]
-            [lipas.backend.middleware :as mw]
+  (:require [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
-            [reitit.coercion.malli]
-            [reitit.coercion.spec]))
+            [reitit.coercion.malli]))
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
 
@@ -57,8 +55,7 @@
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
-      :coercion reitit.coercion.spec/coercion
-      :parameters {:body :lipas/new-or-existing-sports-site}
+      :parameters {:body #'sports-sites-schema/new-or-existing-sports-site}
       :handler
       (fn [req]
         {:status 200
@@ -180,8 +177,7 @@
    ["/actions/save-ptv-meta"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
-      :coercion reitit.coercion.spec/coercion
-      :parameters {:body (s/map-of int? :lipas.sports-site/ptv)}
+      :parameters {:body [:map-of :int #'ptv-schema/ptv-meta]}
       :handler
       (fn [req]
         {:status 200

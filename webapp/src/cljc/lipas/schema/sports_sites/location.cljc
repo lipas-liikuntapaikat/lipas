@@ -1,6 +1,5 @@
 (ns lipas.schema.sports-sites.location
-  (:require [lipas.schema.core :as specs]
-            [lipas.data.cities :as cities]
+  (:require [lipas.data.cities :as cities]
             [lipas.schema.common :as common]
             [malli.util :as mu]))
 
@@ -11,7 +10,7 @@
 
 (def postal-code
   [:re {:description "Postal code of the address of the sports facility."}
-   specs/postal-code-regex])
+   common/postal-code-regex])
 
 (def postal-office
   [:string {:description "Postal office of the address of the sports facility."
@@ -22,7 +21,6 @@
   [:string {:description "Neighborhood or common name for the area of the location."
             :min 1
             :max 100}])
-
 
 (def city-code
   (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]

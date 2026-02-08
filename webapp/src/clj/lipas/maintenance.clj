@@ -5,7 +5,6 @@
    [clojure.edn :as edn]
    [clojure.java.jdbc :as jdbc]
    [clojure.set :as set]
-   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.walk :as walk]
    [lipas.backend.config :as config]
@@ -18,7 +17,6 @@
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
    [lipas.data.types-old :as old-types]
-   [lipas.schema.core]
    [lipas.schema.sports-sites :as sports-site-schema]
    [lipas.schema.sports-sites.types :as types-schema]
    [lipas.schema.sports-sites.location :as location-schema]
@@ -67,21 +65,21 @@
 
 (defn upsert-all!
   ([db user sports-sites]
-   (upsert-all! db user :lipas/sports-site sports-sites))
-  ([db user spec sports-sites]
+   (upsert-all! db user sports-site-schema/new-or-existing-sports-site sports-sites))
+  ([db user schema sports-sites]
    (if (empty? sports-sites)
      (log/info "Collection contains 0 sports sites. Nothing to do!")
-     (if (utils/all-valid? spec sports-sites)
+     (if (utils/all-valid? schema sports-sites)
        (do
          (log/info "Inserting sports sites" (mapv :lipas-id sports-sites))
          (db/upsert-sports-sites! db user sports-sites)
          (log/info "Done inserting data!"))
        (log/error "Invalid data, check messages in STDOUT.")))))
 
-(defn filter-valid-in [path spec coll]
+(defn filter-valid-in [path schema coll]
   (->> coll
        (filter (comp some? #(get-in % path)))
-       (remove (comp (partial s/valid? spec) #(get-in % path)))))
+       (remove (comp (partial m/validate schema) #(get-in % path)))))
 
 (defn- calc-per-capita [m population]
   (reduce-kv

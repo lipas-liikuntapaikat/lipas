@@ -1,6 +1,7 @@
 (ns lipas.ui.analysis.diversity.subs
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.diversity :as diversity-schema]
             [lipas.ui.utils :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::diversity
@@ -162,4 +163,4 @@
 (rf/reg-sub ::new-preset-name-valid?
   :<- [::new-preset-name]
   (fn [s _]
-    (and (s/valid? :lipas.diversity.settings.categories/name s))))
+    (and (m/validate diversity-schema/category-name s))))

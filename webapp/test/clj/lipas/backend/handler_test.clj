@@ -1,18 +1,19 @@
 (ns lipas.backend.handler-test
-  (:require [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
-            [clojure.test :refer [deftest is use-fixtures] :as t]
+  (:require [clojure.test :refer [deftest is use-fixtures] :as t]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.data.loi :as loi]
             [lipas.data.status :as status]
-            [lipas.schema.core]
+            [lipas.schema.common :as common-schema]
+            [lipas.schema.reminders :as reminders-schema]
             [lipas.schema.sports-sites :as sports-site-schema]
+            [lipas.schema.users :as users-schema]
             [lipas.seed :as seed]
             [lipas.test-utils :refer [->transit <-transit <-json ->json] :as tu]
             [lipas.utils :as utils]
             [malli.core :as m]
+            [malli.generator :as mg]
             [ring.mock.request :as mock]))
 
 (defonce test-system (atom nil))
@@ -314,7 +315,7 @@
 (deftest update-user-data-test
   (let [user (tu/gen-regular-user :db-component (test-db))
         token (jwt/create-token user :terse? true)
-        user-data (gen/generate (s/gen :lipas.user/user-data))
+        user-data (mg/generate users-schema/user-data-schema)
         resp (test-app (-> (mock/request :post "/api/actions/update-user-data")
                            (mock/content-type "application/json")
                            (mock/body (->json user-data))
@@ -465,7 +466,7 @@
         rev1 (-> (tu/gen-sports-site-with-type 3110)
                  (assoc :status "active"))
         rev2 (-> rev1
-                 (assoc :event-date (gen/generate (s/gen :lipas/timestamp)))
+                 (assoc :event-date (mg/generate common-schema/iso8601-timestamp))
                  (assoc :name "Kissalan kuulahalli"))
         _ (core/upsert-sports-site!* (test-db) user rev1)
         _ (core/upsert-sports-site!* (test-db) user rev2)
@@ -562,7 +563,7 @@
 (deftest add-reminder-test
   (let [user (tu/gen-regular-user :db-component (test-db))
         token (jwt/create-token user :terse? true)
-        reminder (gen/generate (s/gen :lipas/new-reminder))
+        reminder (mg/generate reminders-schema/new-reminder)
         resp (test-app (-> (mock/request :post "/api/actions/add-reminder")
                            (mock/content-type "application/json")
                            (mock/body (->json reminder))
@@ -574,7 +575,7 @@
 (deftest update-reminder-status-test
   (let [user (tu/gen-regular-user :db-component (test-db))
         token (jwt/create-token user :terse? true)
-        reminder (gen/generate (s/gen :lipas/new-reminder))
+        reminder (mg/generate reminders-schema/new-reminder)
         resp1 (test-app (-> (mock/request :post "/api/actions/add-reminder")
                             (mock/content-type "application/json")
                             (mock/body (->json reminder))

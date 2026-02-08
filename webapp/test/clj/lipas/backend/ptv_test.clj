@@ -7,7 +7,6 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.schema.core]
             [lipas.test-utils :refer [<-json] :as tu]
             [lipas.utils :as utils]
             [ring.mock.request :as mock]))

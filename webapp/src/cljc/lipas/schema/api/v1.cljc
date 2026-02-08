@@ -1,7 +1,5 @@
 (ns lipas.schema.api.v1
-  (:require [clojure.spec.alpha :as s]
-            [lipas.schema.common :as common]
-            [lipas.schema.core]
+  (:require [lipas.schema.common :as common]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.sports-sites.types :as types-schema]
             [malli.core :as m]

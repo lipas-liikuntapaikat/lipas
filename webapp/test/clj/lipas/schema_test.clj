@@ -1,26 +1,25 @@
 (ns lipas.schema-test
-  (:require [clojure.spec.alpha :refer [valid?]]
-            [clojure.test :refer [deftest is testing]]
-            [lipas.schema.core]
+  (:require [clojure.test :refer [deftest is testing]]
             [lipas.schema.common :as common]
+            [lipas.schema.users :as users]
             [malli.core :as m]
             [malli.generator :as mg]))
 
 (deftest email-validity-test
   (testing "valid emails"
-    (is (valid? :lipas/email "a@b.co"))
-    (is (valid? :lipas/email "ääkkö@set.com")))
+    (is (m/validate users/email-schema "a@b.co"))
+    (is (m/validate users/email-schema "ääkkö@set.com")))
   (testing "invalid emails"
-    (is (not (valid? :lipas/email "a..b@.com")))
-    (is (not (valid? :lipas/email "ab@..com")))
-    (is (not (valid? :lipas/email "ab@...com")))
-    (is (not (valid? :lipas/email "ab@...........................com")))
-    (is (not (valid? :lipas/email "@.com")))
-    (is (not (valid? :lipas/email "a@")))
-    (is (not (valid? :lipas/email "a@b")))
-    (is (not (valid? :lipas/email "@b")))
-    (is (not (valid? :lipas/email "@")))
-    (is (not (valid? :lipas/email "a.b.com")))))
+    (is (not (m/validate users/email-schema "a..b@.com")))
+    (is (not (m/validate users/email-schema "ab@..com")))
+    (is (not (m/validate users/email-schema "ab@...com")))
+    (is (not (m/validate users/email-schema "ab@...........................com")))
+    (is (not (m/validate users/email-schema "@.com")))
+    (is (not (m/validate users/email-schema "a@")))
+    (is (not (m/validate users/email-schema "a@b")))
+    (is (not (m/validate users/email-schema "@b")))
+    (is (not (m/validate users/email-schema "@")))
+    (is (not (m/validate users/email-schema "a.b.com")))))
 
 (deftest polygon-schema-test
   (testing "valid Polygon geometries"

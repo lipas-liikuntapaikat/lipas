@@ -1,5 +1,7 @@
 (ns lipas.ui.search.subs
   (:require [lipas.roles :as roles]
+            [lipas.schema.sports-sites :as sports-sites-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
             [lipas.ui.components :as lui]
             [lipas.ui.search.db :as db]
             [lipas.ui.utils :as utils]
@@ -205,16 +207,16 @@
 
 (rf/reg-sub ::results-table-specs
   (fn [_]
-    {:email {:spec :lipas.sports-site/email}
-     :phone-number {:spec :lipas.sports-site/phone-number}
-     :www {:spec :lipas.sports-site/www}
-     :construction-year {:spec :lipas.sports-site/construction-year}
-     :renovation-years {:spec :lipas.sports-site/renovation-years}
-     :name {:spec :lipas.sports-site/name :required? true}
-     :location.postal-office {:spec :lipas.location/postal-office}
-     :location.postal-code {:spec :lipas.location/postal-code :required? true}
-     :marketing-name {:spec :lipas.sports-site/marketing-name}
-     :location.address {:spec :lipas.location/address :required? true}}))
+    {:email {:spec sports-sites-schema/email}
+     :phone-number {:spec sports-sites-schema/phone-number}
+     :www {:spec sports-sites-schema/www}
+     :construction-year {:spec sports-sites-schema/construction-year}
+     :renovation-years {:spec sports-sites-schema/renovation-years}
+     :name {:spec sports-sites-schema/name :required? true}
+     :location.postal-office {:spec location-schema/postal-office}
+     :location.postal-code {:spec location-schema/postal-code :required? true}
+     :marketing-name {:spec sports-sites-schema/marketing-name}
+     :location.address {:spec location-schema/address :required? true}}))
 
 (rf/reg-sub ::results-table-headers
   :<- [:lipas.ui.subs/translator]

@@ -25,8 +25,9 @@
             ["shpjs" :as shp]
             [lipas.ui.map.projection] ;; Loaded for side-effects
             [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
+            [lipas.schema.common :as common-schema]
             [clojure.string :as str]
+            [malli.core :as m]
             [goog.array :as garray]
             [goog.object :as gobj]
             [goog.string.path :as gpath]
@@ -67,8 +68,8 @@
 (defn every-coord-in-wgs84-finland-bounds?
   [js-fcoll]
   (every? (fn [[lon lat]]
-            (and (s/valid? :lipas.location.coordinates/map-wgs84-bounds-lon lon)
-                 (s/valid? :lipas.location.coordinates/map-wgs84-bounds-lat lat)))
+            (and (m/validate common-schema/map-wgs84-bounds-lon lon)
+                 (m/validate common-schema/map-wgs84-bounds-lat lat)))
           (turf-meta/coordAll js-fcoll)))
 
 (defn parse-dom [text]

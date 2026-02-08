@@ -1,7 +1,6 @@
 (ns lipas.ui.components.text-fields
   (:require ["react" :as react]
             [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [lipas.ui.mui :as mui]
             [malli.core :as m]
@@ -9,9 +8,7 @@
 
 (defn error? [spec value required]
   (if (and spec (or value required))
-    (if (vector? spec)
-      ((complement m/validate) spec value)
-      ((complement s/valid?) spec value))
+    (not (m/validate spec value))
     false))
 
 (defn ->adornment [s]

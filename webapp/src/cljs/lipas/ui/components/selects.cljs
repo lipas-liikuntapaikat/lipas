@@ -1,7 +1,6 @@
 (ns lipas.ui.components.selects
   (:require ["@mui/material/Typography$default" :as Typography]
             [clojure.reader :refer [read-string]]
-            [clojure.spec.alpha :as s]
             [clojure.string :as string]
             [lipas.data.cities :as cities]
             [lipas.data.types :as types]
@@ -9,13 +8,14 @@
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :refer [<==] :as utils]
             [lipas.utils :as cutils]
+            [malli.core :as m]
             [reagent.core :as r]))
 
 (def select-style {:min-width "170px"})
 
 (defn error? [spec value required]
   (if (and spec (or value required))
-    ((complement s/valid?) spec value)
+    (not (m/validate spec value))
     false))
 
 (defn select

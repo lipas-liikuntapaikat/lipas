@@ -2,9 +2,9 @@
   (:require
    [camel-snake-kebab.core :as csk]
    [camel-snake-kebab.extras :as csk-extras]
-   [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.walk :as walk]
+   [malli.core :as m]
    #?(:cljs [cljs.reader :refer [read-string]])
    #?(:cljs [goog.string :as gstring])
    #?(:cljs [goog.string.format])))
@@ -145,12 +145,13 @@
    :median (median coll)
    :mode   (mode coll)})
 
-(defn validate-noisy [spec data]
-  (s/explain spec data)
-  (s/valid? spec data))
+(defn validate-noisy [schema data]
+  (when-not (m/validate schema data)
+    (println (m/explain schema data)))
+  (m/validate schema data))
 
-(defn all-valid? [spec data]
-  (every? true? (map (partial validate-noisy spec) data)))
+(defn all-valid? [schema data]
+  (every? true? (map (partial validate-noisy schema) data)))
 
 ;; From Stackoverflow https://bit.ly/2wslBqY
 (defn deep-merge [a b]

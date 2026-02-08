@@ -1,9 +1,9 @@
 (ns lipas.ui.admin.events
   (:require [ajax.core :as ajax]
-            [clojure.spec.alpha :as s]
             [cognitect.transit :as t]
             [lipas.roles :as roles]
-            [lipas.schema.core]
+            [lipas.schema.users :as users-schema]
+            [malli.core :as m]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [reitit.frontend.easy :as rfe]))
@@ -87,7 +87,7 @@
 (rf/reg-event-db ::add-new-role
   (fn [db _]
     (let [role (:new-role (:admin db))]
-      (if (s/valid? :lipas.user.permissions.roles/role role)
+      (if (m/validate users-schema/role-schema role)
         (-> db
             (update-in [:admin :editing-user :permissions :roles] conj role)
             (update-in [:admin] dissoc :new-role))

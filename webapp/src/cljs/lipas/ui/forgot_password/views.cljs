@@ -1,6 +1,7 @@
 (ns lipas.ui.forgot-password.views
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.users :as users-schema]
             [lipas.ui.components :as lui]
+            [malli.core :as m]
             [lipas.ui.forgot-password.events :as events]
             [lipas.ui.forgot-password.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -15,7 +16,7 @@
      [lui/text-field
       {:label     (tr :lipas.user/email)
        :value     @email
-       :spec      :lipas.user/email
+       :spec      users-schema/email-schema
        :on-change #(reset! email %)}]
 
      ;; Submit
@@ -24,7 +25,7 @@
        :variant  "contained"
        :color    "secondary"
        :style    {:margin-top "1em"}
-       :disabled (not (s/valid? :lipas.user/email @email))}
+       :disabled (not (m/validate users-schema/email-schema @email))}
       (tr :actions/submit)]]))
 
 (defn panel [{:keys [tr title helper-text form form-props]}]
@@ -78,7 +79,7 @@
       {:label     (tr :lipas.user/password)
        :type      :password
        :value     @password
-       :spec      :lipas.user/password
+       :spec      users-schema/password-schema
        :on-change #(reset! password %)}]
 
      ;; Submit
@@ -87,7 +88,7 @@
        :variant  "contained"
        :color    "secondary"
        :style    {:margin-top "1em"}
-       :disabled (not (s/valid? :lipas.user/password @password))}
+       :disabled (not (m/validate users-schema/password-schema @password))}
       (tr :actions/submit)]]))
 
 (defn main []

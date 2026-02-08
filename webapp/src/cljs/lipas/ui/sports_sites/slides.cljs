@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.slides
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components :as lui]
+            [malli.core :as m]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>]]))
@@ -16,14 +17,14 @@
        :adornment (tr :physical-units/m)
        :type      "number"
        :value     (:length-m data)
-       :spec      :lipas.swimming-pool.slide/length-m
+       :spec      [:and number? [:fn #(<= 0 % 200)]]
        :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
   (let [data    (<== [::hall/slide-form])
         close   #(==> [::hall/toggle-dialog :slide])
         reset   #(==> [::hall/reset-dialog :slide])
-        valid?  (s/valid? :lipas.swimming-pool/slide data)
+        valid?  (m/validate pool-schema/slide-schema data)
         title   (if (:id data)
                   (tr :lipas.swimming-pool.slides/edit-slide)
                   (tr :lipas.swimming-pool.slides/add-slide))

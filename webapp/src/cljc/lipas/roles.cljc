@@ -244,9 +244,6 @@
                (= role (:role x))))))
 
 (defn conform-roles [roles]
-  ;; Doesn't seem to work due to multi-spec?
-  ;; :type is conformed, but coll-of :into #{} doesn't work
-  ;; (st/conform! :lipas.user.permissions/roles roles st/json-transformer)
   (mapv (fn [role]
           (cond-> (update role :role keyword)
             (:type-code role) (update :type-code set)

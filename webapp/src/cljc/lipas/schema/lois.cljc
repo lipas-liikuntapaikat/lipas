@@ -41,10 +41,27 @@
             (for [[prop-k prop-v] (:props type-v)]
               [prop-k {:optional true} (:schema prop-v)]))])))
 
+(def loi-status common/status)
+
+(def loi-document
+  "An LOI document with required fields."
+  [:map
+   [:event-date common/iso8601-timestamp]
+   [:status loi-status]
+   [:loi-category loi-category]
+   [:loi-type loi-type]
+   [:geometries [:or
+                 #'common/point-feature-collection
+                 #'common/line-string-feature-collection
+                 #'common/polygon-feature-collection]]
+   [:id {:optional true} loi-id]])
+
+(def loi-documents
+  [:sequential loi-document])
+
 (comment
   (require '[malli.core :as m])
-  (m/schema loi)
-  )
+  (m/schema loi))
 
 #?(:clj
    (cheshire.generate/add-encoder java.util.regex.Pattern
@@ -55,7 +72,7 @@
   []
   (-> loi
       json-schema/transform
-      #?(:clj(json/encode {:pretty true})
+      #?(:clj (json/encode {:pretty true})
          :cljs clj->js)
       println))
 
@@ -73,9 +90,7 @@
   ;;     :items [{:type "number"} {:type "number"}],
   ;;     :additionalItems false}
 
-
-  (gen-csv)
-  )
+  (gen-csv))
 
 (defn -main [& args]
   (if (= "csv" (first args))
