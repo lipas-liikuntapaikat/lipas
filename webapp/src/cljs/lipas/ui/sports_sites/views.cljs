@@ -11,14 +11,13 @@
             [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.energy.views :as energy]
-            [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
             [lipas.ui.sports-sites.subs :as subs]
-            [lipas.ui.swimming-pools.pools :as pools]
-            [lipas.ui.swimming-pools.slides :as slides]
+            [lipas.ui.sports-sites.hall-equipment :as hall]
+            [lipas.ui.sports-sites.pools :as pools]
+            [lipas.ui.sports-sites.slides :as slides]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -32,17 +31,17 @@
   views."
   [tr display-data]
   (or
-   true
-   (= (:status display-data) (tr (keyword :status "out-of-service-temporarily")))))
+    true
+    (= (:status display-data) (tr (keyword :status "out-of-service-temporarily")))))
 
 ;; FIXME: Strange check. Would be simpler if display-data was still a
 ;; status value, not localized string?
 (defn- show-status? [tr display-data]
   (or
-   (= (:status display-data) (tr (keyword :status "incorrect-data")))
-   (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))
-   (= (:status display-data) (tr (keyword :status "planned")))
-   (= (:status display-data) (tr (keyword :status "planning")))))
+    (= (:status display-data) (tr (keyword :status "incorrect-data")))
+    (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))
+    (= (:status display-data) (tr (keyword :status "planned")))
+    (= (:status display-data) (tr (keyword :status "planning")))))
 
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins
@@ -123,16 +122,16 @@
 
      ;; Localized name(s)
      (into
-      [:<>]
-      (for [l extra-locales]
-        {:label (tr (keyword
-                     "lipas.sports-site"
-                     (str "name-localized-" (name l))))
-         :value (-> display-data :name-localized l)
-         :form-field [lui/text-field
-                      {:spec :lipas.sports-site/name
-                       :value (-> edit-data :name-localized l)
-                       :on-change #(on-change :name-localized l %)}]}))
+       [:<>]
+       (for [l extra-locales]
+         {:label (tr (keyword
+                       "lipas.sports-site"
+                       (str "name-localized-" (name l))))
+          :value (-> display-data :name-localized l)
+          :form-field [lui/text-field
+                       {:spec :lipas.sports-site/name
+                        :value (-> edit-data :name-localized l)
+                        :on-change #(on-change :name-localized l %)}]}))
 
      ;; Marketing name
      {:label (tr :lipas.sports-site/marketing-name)
@@ -422,13 +421,9 @@
 (defn show-area-calc? [k geom-type]
   (and (= :area-km2 k) (#{"Polygon"} geom-type)))
 
-(defn special-case? [type-code]
-  ;; Uimahalli / jäähalli
-  (#{3110 3130 2510 2520} type-code))
-
 (defn pools-field
   [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.swimming-pools.subs/dialogs])
+  (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
                {:edit-data add-data}
@@ -454,7 +449,7 @@
 
 (defn slides-field
   [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.swimming-pools.subs/dialogs])
+  (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
                {:edit-data add-data}
@@ -476,32 +471,6 @@
          :add-btn-size "small"
          :items (-> data :edit-data :slides)
          :max-width max-width
-         :lipas-id (-> data :edit-data :lipas-id)}])]))
-
-(defn rinks-field
-  [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.ice-stadiums.subs/dialogs])
-        add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
-        data (if add-data
-               {:edit-data add-data}
-               (<== [:lipas.ui.map.subs/selected-sports-site]))
-        max-width (<== [:lipas.ui.map.subs/drawer-width width])
-        lipas-id (-> data :edit-data :lipas-id)]
-    [:<>
-     (when (-> dialogs :rink :open?)
-       [rinks/dialog {:tr tr :lipas-id lipas-id}])
-
-     (if read-only?
-       [:<>
-        [rinks/read-only-table
-         {:tr tr
-          :items (-> data :display-data :rinks)}]
-        [:span {:style {:margin-top "1em"}}]]
-       [rinks/table
-        {:tr tr
-         :add-btn-size "small"
-         :max-width max-width
-         :items (-> data :edit-data :rinks)
          :lipas-id (-> data :edit-data :lipas-id)}])]))
 
 (defn space-divisible-field
@@ -635,524 +604,370 @@
   [{:keys [tr edit-data editing? display-data type-code on-change read-only?
            key geoms geom-type problems? width pools]}]
   (let [locale (tr)
-        types-props (<== [::subs/types-props type-code])
-        types-props (if false #_(special-case? type-code)
-                        (select-keys types-props [:may-be-shown-in-harrastuspassi-fi?])
-                        types-props)]
+        types-props (<== [::subs/types-props type-code])]
     (into
-     [lui/form
-      {:key key
-       :read-only? read-only?}
+      [lui/form
+       {:key key
+        :read-only? read-only?}
 
-      (when (and editing? read-only?)
-        [:> Alert
-         {:severity "info"}
-         (tr :lipas.sports-site/no-permission-tab)])
+       (when (and editing? read-only?)
+         [:> Alert
+          {:severity "info"}
+          (tr :lipas.sports-site/no-permission-tab)])
 
       ;; Swimming halls
-      (when (#{3110 3130} type-code)
-        [:<>
+       (when (#{3110 3130} type-code)
+         [:<>
 
          ;; Pools
-         [mui/typography {:variant "body2"}
-          (tr :lipas.swimming-pool.pools/headline)]
-         [pools-field
-          {:tr tr
-           :width width
-           :read-only? read-only?}]
+          [mui/typography {:variant "body2"}
+           (tr :lipas.swimming-pool.pools/headline)]
+          [pools-field
+           {:tr tr
+            :width width
+            :read-only? read-only?}]
 
          ;; Slides
-         [mui/typography {:variant "body2"}
-          (tr :lipas.swimming-pool.slides/headline)]
-         [slides-field
-          {:tr tr
-           :width width
-           :read-only? read-only?}]])
+          [mui/typography {:variant "body2"}
+           (tr :lipas.swimming-pool.slides/headline)]
+          [slides-field
+           {:tr tr
+            :width width
+            :read-only? read-only?}]])]
 
-      ;; Ice stadiums
-      #_(when (#{2510 2520} type-code)
-          [:<>
+      (sort-by
+        (juxt :disabled? (comp - :priority) #(or (:sort %) (:label %)))
 
-         ;; Rinks
-           [mui/typography {:variant "body2"}
-            (tr :lipas.ice-stadium.rinks/headline)]
-           [rinks-field
-            {:tr tr
-             :width width
-             :read-only? read-only?}]])]
-
-     (sort-by
-      (juxt :disabled? (comp - :priority) #(or (:sort %) (:label %)))
-
-      (into
-       (for [[k v] types-props
-             :let [label (-> types-props k :name locale)
-                   helper-text (-> types-props k :helper-text locale)
-                   data-type (:data-type v)
-                   tooltip (if (:derived? v)
-                             "Lasketaan automaattisesti olosuhdetiedoista"
-                             (-> v :description locale))
-                   spec (keyword :lipas.sports-site.properties k)
-                   value (-> edit-data k)
-                   on-change #(on-change k %)
-                   disabled? (:derived? v)]]
-         {:label label
-          :value (-> display-data k)
-          :disabled? disabled?
-          :priority (:priority v)
+        (into
+          (for [[k v] types-props
+                :let [label (-> types-props k :name locale)
+                      helper-text (-> types-props k :helper-text locale)
+                      data-type (:data-type v)
+                      tooltip (if (:derived? v)
+                                "Lasketaan automaattisesti olosuhdetiedoista"
+                                (-> v :description locale))
+                      spec (keyword :lipas.sports-site.properties k)
+                      value (-> edit-data k)
+                      on-change #(on-change k %)
+                      disabled? (:derived? v)]]
+            {:label label
+             :value (-> display-data k)
+             :disabled? disabled?
+             :priority (:priority v)
           ;; TODO Could be nicer with a multi-method
-          :form-field
-          (cond
-            (material-field? k) [surface-material-selector
-                                 {:tr tr
-                                  :multi? (= :surface-material k)
-                                  :disabled disabled?
-                                  :tooltip tooltip
-                                  :spec spec
-                                  :label label
-                                  :value value
-                                  :on-change on-change}]
-            (retkikartta? k) [retkikartta-field
-                              {:tr tr
-                               :value value
-                               :on-change on-change
-                               :tooltip tooltip
-                               :problems? problems?}]
-            (harrastuspassi? k) [harrastuspassi-field
+             :form-field
+             (cond
+               (material-field? k) [surface-material-selector
+                                    {:tr tr
+                                     :multi? (= :surface-material k)
+                                     :disabled disabled?
+                                     :tooltip tooltip
+                                     :spec spec
+                                     :label label
+                                     :value value
+                                     :on-change on-change}]
+               (retkikartta? k) [retkikartta-field
                                  {:tr tr
                                   :value value
                                   :on-change on-change
-                                  :tooltip tooltip}]
-
-            (show-calc? k geom-type) [route-length-km-field
-                                      {:tr tr
-                                       :value value
-                                       :type "number"
-                                       :spec spec
-                                       :label label
-                                       :tooltip tooltip
-                                       :geoms geoms
-                                       :on-change on-change}]
-            (show-area-calc? k geom-type) [area-km2-field
-                                           {:tr tr
-                                            :value value
-                                            :type "number"
-                                            :spec spec
-                                            :label label
-                                            :tooltip tooltip
-                                            :geoms geoms
-                                            :on-change on-change}]
-
-            (= :space-divisible k) [space-divisible-field
+                                  :tooltip tooltip
+                                  :problems? problems?}]
+               (harrastuspassi? k) [harrastuspassi-field
                                     {:tr tr
                                      :value value
-                                     :type "number"
-                                     :helper-text helper-text
-                                     :spec spec
-                                     :label label
-                                     :tooltip tooltip
-                                     :geoms geoms
-                                     :on-change on-change}]
+                                     :on-change on-change
+                                     :tooltip tooltip}]
 
-            (= "boolean" data-type) [lui/checkbox
-                                     {:value value
-                                      :tooltip tooltip
-                                      :disabled disabled?
-                                      :on-change on-change}]
+               (show-calc? k geom-type) [route-length-km-field
+                                         {:tr tr
+                                          :value value
+                                          :type "number"
+                                          :spec spec
+                                          :label label
+                                          :tooltip tooltip
+                                          :geoms geoms
+                                          :on-change on-change}]
+               (show-area-calc? k geom-type) [area-km2-field
+                                              {:tr tr
+                                               :value value
+                                               :type "number"
+                                               :spec spec
+                                               :label label
+                                               :tooltip tooltip
+                                               :geoms geoms
+                                               :on-change on-change}]
 
-            (= "enum" data-type) [lui/select
-                                  {:items (:opts v)
-                                   :deselect? true
-                                   :value value
-                                   :helper-text tooltip
-                                   :label label
-                                   :on-change on-change
-                                   :disabled disabled?
-                                   :value-fn first
-                                   :label-fn (comp locale :label second)}]
-
-            (= "enum-coll" data-type) [lui/autocomplete
-                                       {:multi? true
-                                        :items (:opts v)
-                                        :deselect? true
+               (= :space-divisible k) [space-divisible-field
+                                       {:tr tr
                                         :value value
-                                        :helper-text tooltip
-                                        :on-change on-change
+                                        :type "number"
+                                        :helper-text helper-text
+                                        :spec spec
                                         :label label
-                                        :disabled disabled?
-                                        :value-fn first
-                                        :label-fn (comp locale :label second)}]
-            :else
-            (let [el [lui/text-field
-                      {;; form ->field adds the :label, but that doesn't work
+                                        :tooltip tooltip
+                                        :geoms geoms
+                                        :on-change on-change}]
+
+               (= "boolean" data-type) [lui/checkbox
+                                        {:value value
+                                         :tooltip tooltip
+                                         :disabled disabled?
+                                         :on-change on-change}]
+
+               (= "enum" data-type) [lui/select
+                                     {:items (:opts v)
+                                      :deselect? true
+                                      :value value
+                                      :helper-text tooltip
+                                      :label label
+                                      :on-change on-change
+                                      :disabled disabled?
+                                      :value-fn first
+                                      :label-fn (comp locale :label second)}]
+
+               (= "enum-coll" data-type) [lui/autocomplete
+                                          {:multi? true
+                                           :items (:opts v)
+                                           :deselect? true
+                                           :value value
+                                           :helper-text tooltip
+                                           :on-change on-change
+                                           :label label
+                                           :disabled disabled?
+                                           :value-fn first
+                                           :label-fn (comp locale :label second)}]
+               :else
+               (let [el [lui/text-field
+                         {;; form ->field adds the :label, but that doesn't work
                           ;; for text-field wrapped inside calculate-field.
                           ;; just add it directly here.
-                       :label label
-                       :value value
-                       :disabled disabled?
-                       :tooltip tooltip
-                       :spec spec
-                       :type (when (#{"numeric" "integer"} data-type)
-                               "number")
-                       :on-change on-change}]]
+                          :label label
+                          :value value
+                          :disabled disabled?
+                          :tooltip tooltip
+                          :spec spec
+                          :type (when (#{"numeric" "integer"} data-type)
+                                  "number")
+                          :on-change on-change}]]
                  ;; Add (wrap the text field) the calculator button for specified cases
-              (cond
-                (and (#{3110 3130} type-code)
-                     (#{:swimming-pool-count :pool-water-area-m2} k))
-                [calculate-field
-                 {:on-change on-change
-                  :calculate-label (case k
-                                     :swimming-pool-count (tr :map/calculate-count)
-                                     :pool-water-area-m2 (tr :map/calculate-area))
-                  :calculate-fn (case k
-                                  :swimming-pool-count
-                                  (fn []
-                                    (count pools))
-                                  :pool-water-area-m2
-                                  (fn []
-                                    (->> pools
-                                         vals
-                                         (map :area-m2)
-                                         (reduce + 0))))}
-                 el]
+                 (cond
+                   (and (#{3110 3130} type-code)
+                        (#{:swimming-pool-count :pool-water-area-m2} k))
+                   [calculate-field
+                    {:on-change on-change
+                     :calculate-label (case k
+                                        :swimming-pool-count (tr :map/calculate-count)
+                                        :pool-water-area-m2 (tr :map/calculate-area))
+                     :calculate-fn (case k
+                                     :swimming-pool-count
+                                     (fn []
+                                       (count pools))
+                                     :pool-water-area-m2
+                                     (fn []
+                                       (->> pools
+                                            vals
+                                            (map :area-m2)
+                                            (reduce + 0))))}
+                    el]
 
-                :else el)))})
+                   :else el)))})
 
-       (concat
+          (concat
         ;; Ice stadium special props
-        (when (#{2510 2520} type-code)
-          (let [data (<== [:lipas.ui.map.subs/selected-sports-site])
-                lipas-id (-> data :display-data :lipas-id)
-                on-change (fn [n k v] (if lipas-id
+            (when (#{2510 2520} type-code)
+              (let [data (<== [:lipas.ui.map.subs/selected-sports-site])
+                    lipas-id (-> data :display-data :lipas-id)
+                    on-change (fn [n k v] (if lipas-id
                                            ;; Existing site
-                                        (==> [::events/edit-field lipas-id [:rinks n k] v])
-                                        (==> [::events/edit-new-site-field [:rinks n k] v])))
-                edit-data (or (-> data :edit-data)
-                              (<== [:lipas.ui.sports-sites.subs/new-site-data]))
-                display-data (-> data :display-data)]
+                                            (==> [::events/edit-field lipas-id [:rinks n k] v])
+                                            (==> [::events/edit-new-site-field [:rinks n k] v])))
+                    edit-data (or (-> data :edit-data)
+                                  (<== [:lipas.ui.sports-sites.subs/new-site-data]))
+                    display-data (-> data :display-data)]
 
-            [;; Rink 1 width
-             {:label (tr :lipas.ice-stadium.rinks/rink1-width)
-              #_#_:sort "1A"
-              :priority 89
-              :value (get-in display-data [:rinks 0 :width-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 0 :width-m])
-                :spec :lipas.ice-stadium.rink/width-m
-                :on-change #(on-change 0 :width-m %)}]}
+                [;; Rink 1 width
+                 {:label (tr :lipas.ice-stadium.rinks/rink1-width)
+                  #_#_:sort "1A"
+                  :priority 89
+                  :value (get-in display-data [:rinks 0 :width-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 0 :width-m])
+                    :spec :lipas.ice-stadium.rink/width-m
+                    :on-change #(on-change 0 :width-m %)}]}
 
              ;; Rink 1 length
-             {:label (tr :lipas.ice-stadium.rinks/rink1-length)
-              #_#_:sort "1B"
-              :priority 89
-              :value (get-in display-data [:rinks 0 :length-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 0 :length-m])
-                :spec :lipas.ice-stadium.rink/length-m
-                :on-change #(on-change 0 :length-m %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink1-length)
+                  #_#_:sort "1B"
+                  :priority 89
+                  :value (get-in display-data [:rinks 0 :length-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 0 :length-m])
+                    :spec :lipas.ice-stadium.rink/length-m
+                    :on-change #(on-change 0 :length-m %)}]}
 
              ;; Rink 1 area m2
-             {:label (tr :lipas.ice-stadium.rinks/rink1-area-m2)
-              #_#_:sort "1C"
-              :priority 88
-              :value (get-in display-data [:rinks 0 :area-m2])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 0 :area-m2])
-                :spec :lipas.ice-stadium.rink/area-m2
-                :on-change #(on-change 0 :area-m2 %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink1-area-m2)
+                  #_#_:sort "1C"
+                  :priority 88
+                  :value (get-in display-data [:rinks 0 :area-m2])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 0 :area-m2])
+                    :spec :lipas.ice-stadium.rink/area-m2
+                    :on-change #(on-change 0 :area-m2 %)}]}
 
              ;; Rink 2 width
-             {:label (tr :lipas.ice-stadium.rinks/rink2-width)
-              #_#_:sort "2A"
-              :priority 87
-              :value (get-in display-data [:rinks 1 :width-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 1 :width-m])
-                :spec :lipas.ice-stadium.rink/width-m
-                :on-change #(on-change 1 :width-m %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink2-width)
+                  #_#_:sort "2A"
+                  :priority 87
+                  :value (get-in display-data [:rinks 1 :width-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 1 :width-m])
+                    :spec :lipas.ice-stadium.rink/width-m
+                    :on-change #(on-change 1 :width-m %)}]}
 
              ;; Rink 2 length
-             {:label (tr :lipas.ice-stadium.rinks/rink2-length)
-              #_#_:sort "2B"
-              :priority 87
-              :value (get-in display-data [:rinks 1 :length-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 1 :length-m])
-                :spec :lipas.ice-stadium.rink/length-m
-                :on-change #(on-change 1 :length-m %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink2-length)
+                  #_#_:sort "2B"
+                  :priority 87
+                  :value (get-in display-data [:rinks 1 :length-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 1 :length-m])
+                    :spec :lipas.ice-stadium.rink/length-m
+                    :on-change #(on-change 1 :length-m %)}]}
 
              ;; Rink 2 area m2
-             {:label (tr :lipas.ice-stadium.rinks/rink2-area-m2)
-              #_#_:sort "2C"
-              :priority 86
-              :value (get-in display-data [:rinks 1 :area-m2])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 1 :area-m2])
-                :spec :lipas.ice-stadium.rink/area-m2
-                :on-change #(on-change 1 :area-m2 %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink2-area-m2)
+                  #_#_:sort "2C"
+                  :priority 86
+                  :value (get-in display-data [:rinks 1 :area-m2])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 1 :area-m2])
+                    :spec :lipas.ice-stadium.rink/area-m2
+                    :on-change #(on-change 1 :area-m2 %)}]}
 
              ;; Rink 3 width
-             {:label (tr :lipas.ice-stadium.rinks/rink3-width)
-              #_#_:sort "3A"
-              :priority 84
-              :value (get-in display-data [:rinks 2 :width-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 2 :width-m])
-                :spec :lipas.ice-stadium.rink/width-m
-                :on-change #(on-change 2 :width-m %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink3-width)
+                  #_#_:sort "3A"
+                  :priority 84
+                  :value (get-in display-data [:rinks 2 :width-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 2 :width-m])
+                    :spec :lipas.ice-stadium.rink/width-m
+                    :on-change #(on-change 2 :width-m %)}]}
 
 ;; Rink 3 length
-             {:label (tr :lipas.ice-stadium.rinks/rink3-length)
-              #_#_:sort "3B"
-              :priority 84
-              :value (get-in display-data [:rinks 2 :length-m])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 2 :length-m])
-                :spec :lipas.ice-stadium.rink/length-m
-                :on-change #(on-change 2 :length-m %)}]}
+                 {:label (tr :lipas.ice-stadium.rinks/rink3-length)
+                  #_#_:sort "3B"
+                  :priority 84
+                  :value (get-in display-data [:rinks 2 :length-m])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 2 :length-m])
+                    :spec :lipas.ice-stadium.rink/length-m
+                    :on-change #(on-change 2 :length-m %)}]}
 
              ;; Rink 3 area m2
-             {:label (tr :lipas.ice-stadium.rinks/rink3-area-m2)
-              #_#_:sort "3C"
-              :priority 83
-              :value (get-in display-data [:rinks 2 :area-m2])
-              :form-field
-              [lui/text-field
-               {:adornment "m"
-                :type "number"
-                :value (get-in edit-data [:rinks 2 :area-m2])
-                :spec :lipas.ice-stadium.rink/area-m2
-                :on-change #(on-change 2 :area-m2 %)}]}]))
+                 {:label (tr :lipas.ice-stadium.rinks/rink3-area-m2)
+                  #_#_:sort "3C"
+                  :priority 83
+                  :value (get-in display-data [:rinks 2 :area-m2])
+                  :form-field
+                  [lui/text-field
+                   {:adornment "m"
+                    :type "number"
+                    :value (get-in edit-data [:rinks 2 :area-m2])
+                    :spec :lipas.ice-stadium.rink/area-m2
+                    :on-change #(on-change 2 :area-m2 %)}]}]))
 
 ;; Swimming pool special props
-        (when (#{3110 3130} type-code)
+            (when (#{3110 3130} type-code)
           ;; Platforms
-          (let [data (<== [:lipas.ui.map.subs/selected-sports-site])
-                lipas-id (-> data :display-data :lipas-id)
-                on-change (fn [k v] (==> [::events/edit-field lipas-id [:facilities k] v]))
-                edit-data (-> data :edit-data :facilities)
-                display-data (-> data :display-data :facilities)]
-            [;; Platforms 1m count
-             {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
-              :sort "1"
-              :value (-> display-data :platforms-1m-count)
-              :form-field
-              [lui/text-field
-               {:adornment (tr :units/pcs)
-                :type "number"
-                :value (-> edit-data :platforms-1m-count)
-                :spec :lipas.swimming-pool.facilities/platforms-1m-count
-                :on-change #(on-change :platforms-1m-count %)}]}
+              (let [data (<== [:lipas.ui.map.subs/selected-sports-site])
+                    lipas-id (-> data :display-data :lipas-id)
+                    on-change (fn [k v] (==> [::events/edit-field lipas-id [:facilities k] v]))
+                    edit-data (-> data :edit-data :facilities)
+                    display-data (-> data :display-data :facilities)]
+                [;; Platforms 1m count
+                 {:label (tr :lipas.swimming-pool.facilities/platforms-1m-count)
+                  :sort "1"
+                  :value (-> display-data :platforms-1m-count)
+                  :form-field
+                  [lui/text-field
+                   {:adornment (tr :units/pcs)
+                    :type "number"
+                    :value (-> edit-data :platforms-1m-count)
+                    :spec :lipas.swimming-pool.facilities/platforms-1m-count
+                    :on-change #(on-change :platforms-1m-count %)}]}
              ;; Platforms 3m count
-             {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
-              :sort "2"
-              :value (-> display-data :platforms-3m-count)
-              :form-field
-              [lui/text-field
-               {:adornment (tr :units/pcs)
-                :type "number"
-                :value (-> edit-data :platforms-3m-count)
-                :spec :lipas.swimming-pool.facilities/platforms-3m-count
-                :on-change #(on-change :platforms-3m-count %)}]}
+                 {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
+                  :sort "2"
+                  :value (-> display-data :platforms-3m-count)
+                  :form-field
+                  [lui/text-field
+                   {:adornment (tr :units/pcs)
+                    :type "number"
+                    :value (-> edit-data :platforms-3m-count)
+                    :spec :lipas.swimming-pool.facilities/platforms-3m-count
+                    :on-change #(on-change :platforms-3m-count %)}]}
 
              ;; Platforms 5m count
-             {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
-              :value (-> display-data :platforms-5m-count)
-              :sort "3"
-              :form-field
-              [lui/text-field
-               {:adornment (tr :units/pcs)
-                :type "number"
-                :value (-> edit-data :platforms-5m-count)
-                :spec :lipas.swimming-pool.facilities/platforms-5m-count
-                :on-change #(on-change :platforms-5m-count %)}]}
+                 {:label (tr :lipas.swimming-pool.facilities/platforms-5m-count)
+                  :value (-> display-data :platforms-5m-count)
+                  :sort "3"
+                  :form-field
+                  [lui/text-field
+                   {:adornment (tr :units/pcs)
+                    :type "number"
+                    :value (-> edit-data :platforms-5m-count)
+                    :spec :lipas.swimming-pool.facilities/platforms-5m-count
+                    :on-change #(on-change :platforms-5m-count %)}]}
 
              ;; Platforms 7.5m count
-             {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
-              :value (-> display-data :platforms-7.5m-count)
-              :sort "4"
-              :form-field
-              [lui/text-field
-               {:adornment (tr :units/pcs)
-                :type "number"
-                :value (-> edit-data :platforms-7.5m-count)
-                :spec :lipas.swimming-pool.facilities/platforms-7.5m-count
-                :on-change #(on-change :platforms-7.5m-count %)}]}
+                 {:label (tr :lipas.swimming-pool.facilities/platforms-7.5m-count)
+                  :value (-> display-data :platforms-7.5m-count)
+                  :sort "4"
+                  :form-field
+                  [lui/text-field
+                   {:adornment (tr :units/pcs)
+                    :type "number"
+                    :value (-> edit-data :platforms-7.5m-count)
+                    :spec :lipas.swimming-pool.facilities/platforms-7.5m-count
+                    :on-change #(on-change :platforms-7.5m-count %)}]}
 
              ;; Platforms 10m count
-             {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
-              :value (-> display-data :platforms-10m-count)
-              :sort "5"
-              :form-field
-              [lui/text-field
-               {:adornment (tr :units/pcs)
-                :type "number"
-                :value (-> edit-data :platforms-10m-count)
-                :spec :lipas.swimming-pool.facilities/platforms-10m-count
-                :on-change #(on-change :platforms-10m-count %)}]}]))))))))
-
-(defn report-readings-button [{:keys [tr lipas-id close]}]
-  [mui/button
-   {:style {:margin-top "1em"}
-    :on-click #(==> [:lipas.ui.events/confirm
-                     (tr :confirm/save-basic-data?)
-                     (fn []
-                       (==> [::events/save-edits lipas-id])
-                       (close)
-                       (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                     (fn []
-                       (==> [::events/discard-edits lipas-id])
-                       (close)
-                       (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-   [mui/icon "add"]
-   (tr :lipas.user/report-energy-and-visitors)])
-
-(defn energy-consumption-view [{:keys [tr display-data lipas-id
-                                       editing? close cold? user-can-publish?]
-                                :or {cold? false}}]
-  (r/with-let [selected-year (r/atom {})
-               selected-tab (r/atom 0)]
-
-    ;; Chart/Table tabs
-    (if (empty? (:energy-consumption display-data))
-      [mui/typography (tr :lipas.energy-consumption/not-reported)]
-      [:div
-       [mui/tabs {:value @selected-tab
-                  :on-change #(reset! selected-tab %2)
-                  :indicator-color "secondary"
-                  :text-color "inherit"}
-        [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
-        [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
-
-       (case @selected-tab
-
-         ;; Chart tab
-         0 [:div {:style {:margin-top "2em"}}
-            [charts/yearly-chart
-             {:data (-> display-data :energy-consumption)
-              :labels (merge
-                       {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
-                        :heat-mwh (tr :lipas.energy-stats/heat-mwh)
-                        :cold-mwh (tr :lipas.energy-stats/cold-mwh)
-                        :water-m3 (tr :lipas.energy-stats/water-m3)}
-                       (utils/year-labels-map 2000 utils/this-year))
-              :on-click (fn [^js e]
-                          (let [year (.-activeLabel e)]
-                            (reset! selected-year {lipas-id year})))}]]
-
-         ;; Table tab
-         1 [energy/table
-            {:read-only? true
-             :cold? cold?
-             :tr tr
-             :on-select #(reset! selected-year {lipas-id (:year %)})
-             :items (-> display-data :energy-consumption)}])
-
-       ;; Monthly chart
-       (when-let [year (get @selected-year lipas-id)]
-         [energy/monthly-chart
-          {:lipas-id lipas-id
-           :year year
-           :tr tr}])
-
-       ;; Report readings button
-       ;; (when (and editing? user-can-publish?)
-       ;;   [report-readings-button
-       ;;    {:tr       tr
-       ;;     :lipas-id lipas-id
-       ;;     :close    close}])
-       ])))
-
-(defn- make-headers [tr spectators?]
-  (remove nil?
-          [[:year (tr :time/year)]
-           [:total-count (tr :lipas.visitors/total-count)]
-           (when spectators?
-             [:spectators-count (tr :lipas.visitors/spectators-count)])]))
-
-(defn visitors-view
-  [{:keys [tr display-data lipas-id editing? close spectators?
-           user-can-publish?]
-    :or {spectators? false}}]
-  (r/with-let [selected-year (r/atom {})
-               selected-tab (r/atom 0)]
-
-    ;; Chart/Table tabs
-    (if (empty? (:visitors-history display-data))
-      [mui/typography (tr :lipas.visitors/not-reported)]
-
-      [:div
-       [mui/tabs
-        {:value @selected-tab
-         :on-change #(reset! selected-tab %2)
-         :indicator-color "secondary"
-         :text-color "inherit"}
-        [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
-        [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
-
-       (case @selected-tab
-
-         ;; Chart tab
-         0 [:div {:style {:margin-top "2em"}}
-            [charts/yearly-chart
-             {:data (-> display-data :visitors-history)
-              :labels (merge
-                       {:total-count (tr :lipas.visitors/total-count)
-                        :spectators-count (tr :lipas.visitors/spectators-count)}
-                       (utils/year-labels-map 2000 utils/this-year))
-              :on-click (fn [^js e]
-                          (let [year (.-activeLabel e)]
-                            (reset! selected-year {lipas-id year})))}]]
-
-         ;; Table tab
-         1 [lui/table
-            {:headers (make-headers tr spectators?)
-             :items (-> display-data :visitors-history)
-             :on-select #(reset! selected-year {lipas-id (:year %)})
-             :key-fn :year
-             :sort-fn :year
-             :sort-asc? true
-             :hide-action-btn? true
-             :read-only? true}])
-
-       ;; Monthly chart
-       (when-let [year (get @selected-year lipas-id)]
-         [energy/monthly-visitors-chart
-          {:lipas-id lipas-id
-           :year year
-           :tr tr}])
-
-       ;; Report readings button
-       ;; (when (and editing? user-can-publish?)
-       ;;   [report-readings-button
-       ;;    {:tr       tr
-       ;;     :lipas-id lipas-id
-       ;;     :close    close}])
-       ])))
+                 {:label (tr :lipas.swimming-pool.facilities/platforms-10m-count)
+                  :value (-> display-data :platforms-10m-count)
+                  :sort "5"
+                  :form-field
+                  [lui/text-field
+                   {:adornment (tr :units/pcs)
+                    :type "number"
+                    :value (-> edit-data :platforms-10m-count)
+                    :spec :lipas.swimming-pool.facilities/platforms-10m-count
+                    :on-change #(on-change :platforms-10m-count %)}]}]))))))))
 
 (defn contacts-report [{:keys [tr types]}]
   (let [locale (tr)
@@ -1246,18 +1061,18 @@
 
      ;; Contents
      (into
-      [mui/grid {:item true :xs 12 :style {:padding 8}}]
-      contents)
+       [mui/grid {:item true :xs 12 :style {:padding 8}}]
+       contents)
 
      ;; Floating actions
      [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}
       (into
-       [mui/grid
-        {:container true :align-items "center" :spacing 1}]
-       (for [c bottom-actions
-             :when (some? c)]
-         [mui/grid {:item true}
-          c]))]
+        [mui/grid
+         {:container true :align-items "center" :spacing 1}]
+        (for [c bottom-actions
+              :when (some? c)]
+          [mui/grid {:item true}
+           c]))]
 
      ;; Small footer on top of which floating container may scroll
      [mui/grid
@@ -1323,11 +1138,11 @@
           [:> Tooltip
            {:content (fn [^js props]
                        (charts/labeled-tooltip
-                        labels
-                        :label
-                        :hide-header
-                        #(utils/round-safe % 2)
-                        props))}]
+                         labels
+                         :label
+                         :hide-header
+                         #(utils/round-safe % 2)
+                         props))}]
           [:> XAxis
            {:dataKey "distance-km" :tick true :unit "km"
             :domain #js ["dataMin" "dataMax"]

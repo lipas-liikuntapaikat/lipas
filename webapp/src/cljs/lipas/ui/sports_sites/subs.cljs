@@ -304,12 +304,12 @@
      (rf/subscribe [:lipas.ui.sports-sites.subs/admins])
      (rf/subscribe [:lipas.ui.sports-sites.subs/owners])
      (rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
-     (rf/subscribe [:lipas.ui.ice-stadiums.subs/size-categories])
+     (rf/subscribe [:lipas.ui.sports-sites.hall-equipment/size-categories])
      (rf/subscribe [:lipas.ui.sports-sites.subs/materials])
      (rf/subscribe [:lipas.ui.sports-sites.subs/statuses])
      (rf/subscribe [:lipas.ui.subs/translator])
-     (rf/subscribe [:lipas.ui.swimming-pools.subs/pool-types])
-     (rf/subscribe [:lipas.ui.swimming-pools.subs/accessibility])
+     (rf/subscribe [:lipas.ui.sports-sites.hall-equipment/pool-types])
+     (rf/subscribe [:lipas.ui.sports-sites.hall-equipment/accessibility])
      (rf/subscribe [:lipas.ui.sports-sites.floorball.subs/type-codes])
      (rf/subscribe [:lipas.ui.sports-sites.floorball.subs/floor-elasticity])
      (rf/subscribe [:lipas.ui.sports-sites.floorball.subs/player-entrance])
@@ -470,7 +470,7 @@
   :<- [::admins]
   :<- [::owners]
   :<- [::active-types]
-  :<- [:lipas.ui.ice-stadiums.subs/size-categories]
+  :<- [:lipas.ui.sports-sites.hall-equipment/size-categories]
   (fn [[sites cities admins owners types size-categories]
        [_ locale type-codes sites-filter]]
     (let [data {:locale          locale
@@ -518,8 +518,8 @@
           data (-> new-sports-site :data utils/make-saveable)
           valid? (m/validate schema data)]
       (when-not valid?
-      (tap> {:data data
-             :error (me/humanize (m/explain schema data))}))
+        (tap> {:data data
+               :error (me/humanize (m/explain schema data))}))
       valid?)))
 
 (rf/reg-sub ::statuses

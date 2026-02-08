@@ -1,19 +1,16 @@
-(ns lipas.ui.swimming-pools.pools
+(ns lipas.ui.sports-sites.pools
   (:require [clojure.spec.alpha :as s]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
-            [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn set-field [dialog field value]
-  (#(==> [::events/set-dialog-field dialog field value])))
+  (#(==> [::hall/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
   (let [set-field       (partial set-field :pool)
-        pool-types      (<== [::subs/pool-types])
-        pool-structures (<== [::subs/pool-structures])
-        accessibility   (<== [::subs/accessibility])
+        pool-types      (<== [::hall/pool-types])
         locale          (tr)]
     [mui/form-group
 
@@ -116,20 +113,20 @@
          :on-change #(set-field :accessibility %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
-  (let [data   (<== [::subs/pool-form])
-        reset  #(==> [::events/reset-dialog :pool])
-        close  #(==> [::events/toggle-dialog :pool])
+  (let [data   (<== [::hall/pool-form])
+        reset  #(==> [::hall/reset-dialog :pool])
+        close  #(==> [::hall/toggle-dialog :pool])
         valid? (s/valid? :lipas.swimming-pool/pool data)]
     [lui/dialog {:title         (if (:id data)
                                   (tr :lipas.swimming-pool.pools/edit-pool)
                                   (tr :lipas.swimming-pool.pools/add-pool))
                  :save-label    (tr :actions/save)
                  :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::events/toggle-dialog :pool])
+                 :on-close      #(==> [::hall/toggle-dialog :pool])
                  :save-enabled? valid?
                  :on-save       (comp reset
                                       close
-                                      #(==> [::events/save-pool lipas-id data]))}
+                                      #(==> [::hall/save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -165,9 +162,9 @@
       :edit-tooltip    (tr :actions/edit)
       :delete-tooltip  (tr :actions/delete)
       :confirm-tooltip (tr :confirm/delete-confirm)
-      :on-add          #(==> [::events/toggle-dialog :pool {}])
-      :on-edit         #(==> [::events/toggle-dialog :pool (get items (:id %))])
-      :on-delete       #(==> [::events/remove-pool lipas-id %])}]))
+      :on-add          #(==> [::hall/toggle-dialog :pool {}])
+      :on-edit         #(==> [::hall/toggle-dialog :pool (get items (:id %))])
+      :on-delete       #(==> [::hall/remove-pool lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

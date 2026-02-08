@@ -177,20 +177,6 @@
         [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
-      ;; Ice stadiums
-      ;; [mui/list-item {:button   true
-      ;;                 :on-click #(hide-and-navigate! "/jaahalliportaali")}
-      ;;  [mui/list-item-icon
-      ;;   [mui/icon "ac_unit"]]
-      ;;  [mui/list-item-text {:primary (tr :ice/headline)}]]
-
-      ;; Swiming pools
-      ;; [mui/list-item {:button   true
-      ;;                 :on-click #(hide-and-navigate! "/uimahalliportaali")}
-      ;;  [mui/list-item-icon
-      ;;   [mui/icon "pool"]]
-      ;;  [mui/list-item-text {:primary (tr :swim/headline)}]]
-
       ;; Stats
       [mui/list-item-button {:on-click #(hide-and-navigate! "/tilastot")}
        [mui/list-item-icon
@@ -293,13 +279,13 @@
          :href "https://www.jyu.fi"
          :sx
          (merge
-          mui/headline-aleo
-          {:font-size "1em"
-           :color "#ffffff"
-           :text-transform "none"
-           :text-decoration "none"
-           :display {:xs "none"
-                     :md "inline"}})}
+           mui/headline-aleo
+           {:font-size "1em"
+            :color "#ffffff"
+            :text-transform "none"
+            :text-decoration "none"
+            :display {:xs "none"
+                      :md "inline"}})}
         (tr :menu/jyu)]
 
        [separator
@@ -313,12 +299,12 @@
          :href "/etusivu"
          :style
          (merge
-          mui/headline-aleo
-          {:display "inline"
-           :font-size "1em"
-           :color "#ffffff"
-           :text-transform "none"
-           :text-decoration "none"})}
+           mui/headline-aleo
+           {:display "inline"
+            :font-size "1em"
+            :color "#ffffff"
+            :text-transform "none"
+            :text-decoration "none"})}
         (tr :menu/headline)]
 
        [separator]
@@ -331,12 +317,12 @@
            :href (:href sub-page)
            :style
            (merge
-            mui/headline-aleo
-            {:display "inline"
-             :font-size "1em"
-             :color "#ffffff"
-             :text-transform "none"
-             :text-decoration "none"})}
+             mui/headline-aleo
+             {:display "inline"
+              :font-size "1em"
+              :color "#ffffff"
+              :text-transform "none"
+              :text-decoration "none"})}
           (:text sub-page)])]
 
       ;; Lang selector

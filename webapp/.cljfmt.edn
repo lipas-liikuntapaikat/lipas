@@ -1,0 +1,2 @@
+{:extra-indents {#re "^reg-" [[:inner 0]]}
+ :function-arguments-indentation :cursive}

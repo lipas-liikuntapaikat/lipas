@@ -8,6 +8,7 @@
             [lipas.ui.sports-sites.activities.db :as activities]
             [lipas.ui.sports-sites.floorball.db :as floorball]
             [lipas.ui.sports-sites.football.db :as football]
+            [lipas.ui.sports-sites.hall-equipment :as hall-equipment]
             [lipas.ui.utils :as utils]))
 
 ;; FIXME: What is the benefit of moving static data to re-frame app-db?
@@ -37,6 +38,7 @@
     :selected-status nil
     :selected-year   utils/this-year}
 
-   :football   football/default-db
-   :floorball  floorball/default-db
-   :activities activities/default-db})
+   :football       football/default-db
+   :floorball      floorball/default-db
+   :activities     activities/default-db
+   :hall-equipment hall-equipment/default-db})

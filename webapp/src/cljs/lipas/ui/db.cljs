@@ -4,11 +4,9 @@
             [lipas.ui.admin.db :as admin]
             [lipas.ui.analysis.db :as analysis]
             [lipas.ui.bulk-operations.db :as bulk-ops]
-            [lipas.ui.energy.db :as energy]
             [lipas.ui.feedback.db :as feedback]
             [lipas.ui.front-page.db :as front-page]
             [lipas.ui.help.db :as help]
-            [lipas.ui.ice-stadiums.db :as ice-stadiums]
             [lipas.ui.loi.db :as loi]
             [lipas.ui.map.db :as map]
             [lipas.ui.ptv.db :as ptv]
@@ -17,7 +15,6 @@
             [lipas.ui.search.db :as search]
             [lipas.ui.sports-sites.db :as sports-sites]
             [lipas.ui.stats.db :as stats]
-            [lipas.ui.swimming-pools.db :as swimming-pools]
             [lipas.ui.user.db :as user]))
 
 (def default-db
@@ -43,23 +40,14 @@
    :avi-areas             cities/avi-areas
    :abolished-cities      cities/abolished-by-city-code
 
-   ;; Energy
-   :energy energy/default-db
-
    ;; Front page
    :front-page front-page/default-db
-
-   ;; Ice stadiums
-   :ice-stadiums ice-stadiums/default-db
 
    ;; Map
    :map map/default-db
 
    ;; Sports sites
    :sports-sites sports-sites/default-db
-
-   ;; Swimming pools
-   :swimming-pools swimming-pools/default-db
 
    ;; User
    :user user/default-db

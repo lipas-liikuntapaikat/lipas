@@ -1,13 +1,12 @@
-(ns lipas.ui.swimming-pools.slides
+(ns lipas.ui.sports-sites.slides
   (:require [clojure.spec.alpha :as s]
             [lipas.ui.components :as lui]
             [lipas.ui.mui :as mui]
-            [lipas.ui.swimming-pools.events :as events]
-            [lipas.ui.swimming-pools.subs :as subs]
+            [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>]]))
 
 (defn set-field [dialog field value]
-  (#(==> [::events/set-dialog-field dialog field value])))
+  (#(==> [::hall/set-dialog-field dialog field value])))
 
 (defn form [{:keys [tr data]}]
   (let [set-field  (partial set-field :slide)]
@@ -21,18 +20,18 @@
        :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]
-  (let [data    (<== [::subs/slide-form])
-        close   #(==> [::events/toggle-dialog :slide])
-        reset   #(==> [::events/reset-dialog :slide])
+  (let [data    (<== [::hall/slide-form])
+        close   #(==> [::hall/toggle-dialog :slide])
+        reset   #(==> [::hall/reset-dialog :slide])
         valid?  (s/valid? :lipas.swimming-pool/slide data)
         title   (if (:id data)
                   (tr :lipas.swimming-pool.slides/edit-slide)
                   (tr :lipas.swimming-pool.slides/add-slide))
-        on-save (comp reset close #(==> [::events/save-slide lipas-id data]))]
+        on-save (comp reset close #(==> [::hall/save-slide lipas-id data]))]
     [lui/dialog {:title         title
                  :save-label    (tr :actions/save)
                  :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::events/toggle-dialog :slide])
+                 :on-close      #(==> [::hall/toggle-dialog :slide])
                  :save-enabled? valid?
                  :on-save       on-save}
      [form {:tr tr :data data}]]))
@@ -50,9 +49,9 @@
     :edit-tooltip    (tr :actions/edit)
     :delete-tooltip  (tr :actions/delete)
     :confirm-tooltip (tr :confirm/delete-confirm)
-    :on-add          #(==> [::events/toggle-dialog :slide {}])
-    :on-edit         #(==> [::events/toggle-dialog :slide (get items (:id %))])
-    :on-delete       #(==> [::events/remove-slide lipas-id %])}])
+    :on-add          #(==> [::hall/toggle-dialog :slide {}])
+    :on-edit         #(==> [::hall/toggle-dialog :slide (get items (:id %))])
+    :on-delete       #(==> [::hall/remove-slide lipas-id %])}])
 
 (defn read-only-table [{:keys [tr items]}]
   [lui/table {:headers (make-headers tr)

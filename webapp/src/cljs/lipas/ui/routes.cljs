@@ -3,7 +3,6 @@
             [lipas.ui.admin.routes :as admin]
             [lipas.ui.forgot-password.routes :as forgot-password]
             [lipas.ui.front-page.routes :as front-page]
-            [lipas.ui.ice-stadiums.routes :as ice-stadiums]
             [lipas.ui.login.routes :as login]
             [lipas.ui.map.routes :as lmap]
             [lipas.ui.register.routes :as register]
@@ -41,9 +40,7 @@
      register/routes
      lmap/routes
      admin/routes
-     stats/routes
-     ice-stadiums/routes
-     #_swimming-pools/routes]
+     stats/routes]
     {:data {:coercion rcm/coercion}}))
 
 (defn match-by-path [path]
@@ -76,16 +73,6 @@
       (string/starts-with? current-path "/#")
       (set! js/window.location.href (-> (utils/current-path) (subs 2)))
 
-      ;; Fix deprecated /uimahalliportaali/... paths
-      (string/includes? current-path "uimahalliportaali")
-      (set! js/window.location.href
-            (string/replace current-path "uimahalliportaali" "uimahallit"))
-
-      ;; Fix deprecated /jaahalliportaali/... paths
-      (string/includes? current-path "jaahalliportaali")
-      (set! js/window.location.href
-            (string/replace current-path "jaahalliportaali" "jaahallit"))
-
       :else (==> [:lipas.ui.events/navigated new-match]))))
 
 (defn init! []
@@ -96,5 +83,4 @@
 
 (comment
   (require '[reitit.core :as reitit])
-  (navigate! :lipas.ui.routes.ice-stadiums/front-page)
   (reitit/route-names routes))
