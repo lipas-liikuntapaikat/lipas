@@ -19,6 +19,11 @@
             [lipas.ui.sports-sites.pools :as pools]
             [lipas.ui.sports-sites.slides :as slides]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [lipas.schema.sports-sites :as sites-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
+            [lipas.schema.ice-stadiums :as ice-schema]
+            [lipas.schema.swimming-pools :as pools-schema]
+            [lipas.data.prop-types :as prop-types]
             [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
@@ -108,7 +113,7 @@
      {:label (tr :lipas.sports-site/name)
       :value (-> display-data :name)
       :form-field [lui/text-field
-                   {:spec :lipas.sports-site/name
+                   {:spec sites-schema/name
                     :required true
                     :value (-> edit-data :name)
                     :on-change #(on-change :name %)
@@ -129,7 +134,7 @@
                        (str "name-localized-" (name l))))
           :value (-> display-data :name-localized l)
           :form-field [lui/text-field
-                       {:spec :lipas.sports-site/name
+                       {:spec sites-schema/name
                         :value (-> edit-data :name-localized l)
                         :on-change #(on-change :name-localized l %)}]}))
 
@@ -137,7 +142,7 @@
      {:label (tr :lipas.sports-site/marketing-name)
       :value (-> display-data :marketing-name)
       :form-field [lui/text-field
-                   {:spec :lipas.sports-site/marketing-name
+                   {:spec sites-schema/marketing-name
                     :value (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
 
@@ -164,7 +169,7 @@
       :value (-> display-data :comment)
       :form-field
       [lui/text-field
-       {:spec :lipas.sports-site/comment
+       {:spec sites-schema/comment
         :rows 5
         :value (-> edit-data :comment)
         :multiline true
@@ -181,7 +186,7 @@
       :value (-> display-data :email)
       :form-field [lui/text-field
                    {:value (-> edit-data :email)
-                    :spec :lipas.sports-site/email
+                    :spec sites-schema/email
                     :on-change #(on-change :email %)}]}
 
      ;; Phone number
@@ -189,7 +194,7 @@
       :value (-> display-data :phone-number)
       :form-field [lui/text-field
                    {:value (-> edit-data :phone-number)
-                    :spec :lipas.sports-site/phone-number
+                    :spec sites-schema/phone-number
                     :on-change #(on-change :phone-number %)}]}
 
      ;; WWW
@@ -198,7 +203,7 @@
       :type :link
       :form-field [lui/text-field
                    {:value (-> edit-data :www)
-                    :spec :lipas.sports-site/www
+                    :spec sites-schema/www
                     :on-change #(on-change :www %)}]}
 
      ;; Reservations-link
@@ -207,7 +212,7 @@
       :type :link
       :form-field [lui/text-field
                    {:value (-> edit-data :reservations-link)
-                    :spec :lipas.sports-site/reservations-link
+                    :spec sites-schema/reservations-link
                     :on-change #(on-change :reservations-link %)}]}
 
      (when sub-headings?
@@ -220,7 +225,7 @@
                    {:value (-> edit-data :owner)
                     :required true
                     :helper-text (tr :lipas.sports-site/owner-helper-text)
-                    :spec :lipas.sports-site/owner
+                    :spec sites-schema/owner
                     :items owners
                     :value-fn first
                     :label-fn (comp locale second)
@@ -233,7 +238,7 @@
                    {:value (-> edit-data :admin)
                     :required true
                     :helper-text (tr :lipas.sports-site/admin-helper-text)
-                    :spec :lipas.sports-site/admin
+                    :spec sites-schema/admin
                     :items admins
                     :value-fn first
                     :label-fn (comp locale second)
@@ -280,7 +285,7 @@
         :value (-> display-data :address)
         :form-field [lui/text-field
                      {:value (-> edit-data :address)
-                      :spec :lipas.location/address
+                      :spec location-schema/address
                       :disabled @no-address?
                       :required (not @no-address?)
                       :on-change #(on-change :address %)}]}
@@ -291,7 +296,7 @@
         :form-field [lui/text-field
                      {:value (-> edit-data :postal-code)
                       :required true
-                      :spec :lipas.location/postal-code
+                      :spec location-schema/postal-code
                       :on-change #(on-change :postal-code %)}]}
 
        ;; Postal office
@@ -299,7 +304,7 @@
         :value (-> display-data :postal-office)
         :form-field [lui/text-field
                      {:value (-> edit-data :postal-office)
-                      :spec :lipas.location/postal-office
+                      :spec location-schema/postal-office
                       :on-change #(on-change :postal-office %)}]}
 
        ;; City
@@ -308,7 +313,7 @@
         :form-field [autocompletes/autocomplete
                      {:value (-> edit-data :city :city-code)
                       :required true
-                      :spec :lipas.location.city/city-code
+                      :spec location-schema/city-code
                       :items cities
                       :label-fn (comp locale :name)
                       :value-fn :city-code
@@ -319,7 +324,7 @@
         :value (-> display-data :city :neighborhood)
         :form-field [lui/text-field
                      {:value (-> edit-data :city :neighborhood)
-                      :spec :lipas.location.city/neighborhood
+                      :spec location-schema/neighborhood
                       :on-change #(on-change :city :neighborhood %)}]}])))
 
 (defn surface-material-selector
@@ -499,7 +504,7 @@
            problems? geom-type geoms]}]
   (let [locale (tr)
         prop-type (<== [::subs/prop-type prop-k])
-        spec (keyword :lipas.sports-site.properties prop-k)
+        spec (get prop-types/schemas prop-k)
         disabled? read-only?
         label (or label (get-in prop-type [:name locale]))
         helper-text (get-in prop-type [:helper-text locale])
@@ -646,7 +651,7 @@
                       tooltip (if (:derived? v)
                                 "Lasketaan automaattisesti olosuhdetiedoista"
                                 (-> v :description locale))
-                      spec (keyword :lipas.sports-site.properties k)
+                      spec (get prop-types/schemas k)
                       value (-> edit-data k)
                       on-change #(on-change k %)
                       disabled? (:derived? v)]]
@@ -795,7 +800,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :width-m])
-                    :spec :lipas.ice-stadium.rink/width-m
+                    :spec ice-schema/rink-width-m
                     :on-change #(on-change 0 :width-m %)}]}
 
              ;; Rink 1 length
@@ -808,7 +813,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :length-m])
-                    :spec :lipas.ice-stadium.rink/length-m
+                    :spec ice-schema/rink-length-m
                     :on-change #(on-change 0 :length-m %)}]}
 
              ;; Rink 1 area m2
@@ -821,7 +826,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :area-m2])
-                    :spec :lipas.ice-stadium.rink/area-m2
+                    :spec ice-schema/rink-area-m2
                     :on-change #(on-change 0 :area-m2 %)}]}
 
              ;; Rink 2 width
@@ -834,7 +839,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :width-m])
-                    :spec :lipas.ice-stadium.rink/width-m
+                    :spec ice-schema/rink-width-m
                     :on-change #(on-change 1 :width-m %)}]}
 
              ;; Rink 2 length
@@ -847,7 +852,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :length-m])
-                    :spec :lipas.ice-stadium.rink/length-m
+                    :spec ice-schema/rink-length-m
                     :on-change #(on-change 1 :length-m %)}]}
 
              ;; Rink 2 area m2
@@ -860,7 +865,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :area-m2])
-                    :spec :lipas.ice-stadium.rink/area-m2
+                    :spec ice-schema/rink-area-m2
                     :on-change #(on-change 1 :area-m2 %)}]}
 
              ;; Rink 3 width
@@ -873,7 +878,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :width-m])
-                    :spec :lipas.ice-stadium.rink/width-m
+                    :spec ice-schema/rink-width-m
                     :on-change #(on-change 2 :width-m %)}]}
 
 ;; Rink 3 length
@@ -886,7 +891,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :length-m])
-                    :spec :lipas.ice-stadium.rink/length-m
+                    :spec ice-schema/rink-length-m
                     :on-change #(on-change 2 :length-m %)}]}
 
              ;; Rink 3 area m2
@@ -899,7 +904,7 @@
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :area-m2])
-                    :spec :lipas.ice-stadium.rink/area-m2
+                    :spec ice-schema/rink-area-m2
                     :on-change #(on-change 2 :area-m2 %)}]}]))
 
 ;; Swimming pool special props
@@ -919,7 +924,7 @@
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-1m-count)
-                    :spec :lipas.swimming-pool.facilities/platforms-1m-count
+                    :spec pools-schema/platforms-count
                     :on-change #(on-change :platforms-1m-count %)}]}
              ;; Platforms 3m count
                  {:label (tr :lipas.swimming-pool.facilities/platforms-3m-count)
@@ -930,7 +935,7 @@
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-3m-count)
-                    :spec :lipas.swimming-pool.facilities/platforms-3m-count
+                    :spec pools-schema/platforms-count
                     :on-change #(on-change :platforms-3m-count %)}]}
 
              ;; Platforms 5m count
@@ -942,7 +947,7 @@
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-5m-count)
-                    :spec :lipas.swimming-pool.facilities/platforms-5m-count
+                    :spec pools-schema/platforms-count
                     :on-change #(on-change :platforms-5m-count %)}]}
 
              ;; Platforms 7.5m count
@@ -954,7 +959,7 @@
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-7.5m-count)
-                    :spec :lipas.swimming-pool.facilities/platforms-7.5m-count
+                    :spec pools-schema/platforms-count
                     :on-change #(on-change :platforms-7.5m-count %)}]}
 
              ;; Platforms 10m count
@@ -966,7 +971,7 @@
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-10m-count)
-                    :spec :lipas.swimming-pool.facilities/platforms-10m-count
+                    :spec pools-schema/platforms-count
                     :on-change #(on-change :platforms-10m-count %)}]}]))))))))
 
 (defn contacts-report [{:keys [tr types]}]

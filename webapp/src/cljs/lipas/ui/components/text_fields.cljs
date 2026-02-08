@@ -6,9 +6,17 @@
             [malli.core :as m]
             [reagent.core :as r]))
 
+(defonce warned-keywords (atom #{}))
+
 (defn error? [spec value required]
   (if (and spec (or value required))
-    (not (m/validate spec value))
+    (if (keyword? spec)
+      (do
+        (when-not (@warned-keywords spec)
+          (swap! warned-keywords conj spec)
+          (js/console.warn "[spec->malli] keyword spec not migrated:" (pr-str spec)))
+        false)
+      (not (m/validate spec value)))
     false))
 
 (defn ->adornment [s]

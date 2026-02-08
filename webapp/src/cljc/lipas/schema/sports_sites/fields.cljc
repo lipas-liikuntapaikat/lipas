@@ -10,6 +10,15 @@
             [lipas.schema.common :as common]
             [malli.util :as mu]))
 
+;; Standalone schemas for frontend form validation
+(def field-name [:string {:min 2 :max 100}])
+(def lighting-lux [:int {:min 0 :max 10000}])
+(def capacity-person [:int {:min 0 :max 100000}])
+(def field-length-m [:and common/number [:fn #(<= 0 % 200)]])
+(def field-width-m [:and common/number [:fn #(<= 0 % 200)]])
+(def field-surface-area-m2 [:and common/number [:fn #(<= 0 % 20000)]])
+(def safety-area-m [:and common/number [:fn #(<= 0 % 10)]])
+
 ;; Generic field attributes applicable to all field types
 ;; These attributes enable meaningful cross-sport analysis such as:
 ;; - Total field surface area in a facility

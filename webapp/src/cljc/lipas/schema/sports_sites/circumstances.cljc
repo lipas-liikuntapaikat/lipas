@@ -5,6 +5,50 @@
             [malli.core :as m]
             #?(:clj [clojure.test.check.generators])))
 
+;; Standalone schemas for frontend form validation
+;; Constraints match original clojure.spec definitions from schema/core.cljc
+
+;; Locker room fields — (number-in :min 0 :max (inc 2000)), (s/int-in 0 100)
+(def locker-room-surface-area-m2 [:and common/number [:fn #(<= 0 % 2000)]])
+(def showers-count [:int {:min 0 :max 99}])
+(def toilets-count [:int {:min 0 :max 99}])
+
+;; String fields — (str-in min max), both inclusive ✓
+(def teams-using [:string {:min 0 :max 1024}])
+(def general-information [:string {:min 2 :max 1000}])
+(def storage-capacity-comment [:string {:min 0 :max 2048}])
+(def locker-room-quality-comment [:string {:min 2 :max 2048}])
+(def first-aid-comment [:string {:min 2 :max 2048}])
+(def vip-area-comment [:string {:min 2 :max 2048}])
+(def restaurateur-contact-info [:string {:min 2 :max 2048}])
+(def ticket-sales-operator [:string {:min 2 :max 100}])
+
+;; Int fields — (s/int-in 0 N) exclusive upper bound → :max (dec N)
+(def locker-rooms-count [:int {:min 0 :max 999}])
+(def scoreboard-count [:int {:min 0 :max 99}])
+(def audience-toilets-count [:int {:min 0 :max 999}])
+(def detached-chair-quantity [:int {:min 0 :max 999}])
+(def detached-tables-quantity [:int {:min 0 :max 999}])
+(def cafeteria-and-restaurant-capacity-person [:int {:min 0 :max 9999}])
+(def conference-space-quantity [:int {:min 0 :max 99}])
+(def conference-space-total-capacity-person [:int {:min 0 :max 9999}])
+(def roof-trusses-capacity-kg [:int {:min 0 :max 9999}])
+(def microfone-quantity [:int {:min 0 :max 199}])
+(def saunas-count [:int {:min 0 :max 99}])
+
+;; Floorball-specific int fields — (s/int-in 0 N)
+(def available-goals-count [:int {:min 0 :max 199}])
+(def goal-shrinking-elements-count [:int {:min 0 :max 99}])
+(def corner-pieces-count [:int {:min 0 :max 99}])
+
+;; Number fields — (number-in :min M :max N) uses (<= M % (dec N))
+;; Those with (inc N) in original cancel out: (<= 0 % (dec (inc N))) = (<= 0 % N)
+(def car-parking-capacity [:and common/number [:fn #(<= 0 % 9999)]])    ;; (number-in :min 0 :max 10000)
+(def bus-park-capacity [:and common/number [:fn #(<= 0 % 1000)]])       ;; (number-in :min 0 :max (inc 1000))
+(def open-floor-space-length-m [:and common/number [:fn #(<= 0 % 200)]]);; (number-in :min 0 :max (inc 200))
+(def open-floor-space-width-m [:and common/number [:fn #(<= 0 % 200)]]) ;; (number-in :min 0 :max (inc 200))
+(def open-floor-space-area-m2 [:and common/number [:fn #(<= 0 % 10000)]]);; (number-in :min 0 :max (inc 10000))
+
 ;; Locker room schema
 (def locker-room
   [:map

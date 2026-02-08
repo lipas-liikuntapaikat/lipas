@@ -20,6 +20,13 @@
    [:depth-max-m {:optional true} [:and common/number [:fn #(<= 0 % 10)]]]
    [:accessibility {:optional true} [:vector {:distinct true} accessibility-feature]]])
 
+;; Standalone schemas for pool fields — (number-in :min 0 :max N) uses (<= 0 % (dec N))
+(def depth-min-m [:and common/number [:fn #(<= 0 % 9)]])
+(def volume-m3 [:and common/number [:fn #(<= 0 % 4999)]])
+
+;; Facility platform counts — (int-in 0 100) exclusive upper
+(def platforms-count [:int {:min 0 :max 99}])
+
 (def slide-structure (into [:enum] (keys materials/slide-structures)))
 
 (def slide-schema

@@ -10,7 +10,8 @@
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
-            [lipas.utils :as utils]))
+            [lipas.utils :as utils]
+            [malli.core :as m]))
 
 (def lipas-id
   [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}])

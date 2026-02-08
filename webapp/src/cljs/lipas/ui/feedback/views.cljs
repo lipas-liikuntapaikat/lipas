@@ -3,7 +3,8 @@
             [lipas.ui.feedback.events :as events]
             [lipas.ui.feedback.subs :as subs]
             [lipas.ui.mui :as mui]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>]]
+            [lipas.schema.users :as users-schema]))
 
 (defn feedback-btn []
   (let [tr          (<== [:lipas.ui.subs/translator])
@@ -38,7 +39,7 @@
         [lui/text-field
          {:label     "Sähköpostiosoite (ei pakollinen)"
           :fullWidth true
-          :spec      :lipas.feedback/sender
+          :spec      users-schema/email-schema
           :value     (:lipas.feedback/sender form-state)
           :on-change #(==> [::events/set-sender-email %])}]]
 
