@@ -146,7 +146,6 @@
       ["/sports-sites"
        {:post
         {:no-doc false
-         :coercion reitit.coercion.malli/coercion
          :middleware [mw/token-auth mw/auth]
            ;; NOTE: privilege checked in the core code
          :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
@@ -168,7 +167,6 @@
       ["/sports-sites/:lipas-id"
        {:get
         {:no-doc false
-         :coercion reitit.coercion.malli/coercion
          :parameters {:path {:lipas-id int?}
                       :query [:map [:lang {:optional true} [:enum "fi" "en" "se" "all"]]]}
          ;; Use compatibility schema to coerce type-codes and
@@ -188,7 +186,6 @@
       ["/sports-sites/history/:lipas-id"
        {:get
         {:no-doc false
-         :coercion reitit.coercion.malli/coercion
          :parameters {:path {:lipas-id int?}}
          :responses {200 {:body [:sequential sports-site-schema/sports-site-compat]}}
          :handler
@@ -291,8 +288,7 @@
         ;; FIXME: Where should this be?
       ["/current-user-orgs"
        {:get
-        {:coercion reitit.coercion.malli/coercion
-         :no-doc false
+        {:no-doc false
            ;; Doesn't require privileges, no :org/member just means no orgs.
          :require-privilege nil
            ;; Need to mount the auth manually when no :require-privilege enabled
@@ -314,8 +310,7 @@
                                (org/user-orgs db (parse-uuid (:id user))))}))}}]
 
       ["/orgs"
-       {:no-doc false
-        :coercion reitit.coercion.malli/coercion}
+       {:no-doc false}
        [""
         {;; Only admin users
          :require-privilege :org/admin
@@ -662,7 +657,7 @@
        {:post
         {:no-doc true
          :parameters
-         {:body map?}
+         {:body [:map {:closed false}]}
          :handler
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
@@ -674,7 +669,7 @@
        {:post
         {:no-doc true
          :parameters
-         {:body map?}
+         {:body [:map {:closed false}]}
          :handler
          (fn [{:keys [parameters]}]
            (let [params (:body parameters)]
@@ -778,7 +773,7 @@
       ["/actions/calc-diversity-indices"
        {:post
         {:no-doc true
-         :parameters {:body map?}
+         :parameters {:body [:map {:closed false}]}
          :handler
          (fn [{:keys [parameters]}]
            (let [body (:body parameters)]
@@ -874,7 +869,6 @@
        {:post
         {:no-doc true
          :require-privilege :help/manage
-         :coercion reitit.coercion.malli/coercion
          :parameters {:body help-schema/HelpData}
          :handler
          (fn [{:keys [body-params]}]
@@ -884,7 +878,6 @@
       ["/actions/get-help-data"
        {:post
         {:no-doc true
-         :coercion reitit.coercion.malli/coercion
          :responses {200 {:body help-schema/HelpData}}
          :handler
          (fn [_]
@@ -896,7 +889,6 @@
        {:post
         {:no-doc false
          #_#_:require-privilege :analysis-tool/experimental
-         :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/HeatmapParams}
          :responses {200 {:body heatmap/CreateHeatmapResponse}}
          :handler
@@ -913,7 +905,6 @@
        {:post
         {:no-doc false
          #_#_:require-privilege :analysis-tool/experimental
-         :coercion reitit.coercion.malli/coercion
          :parameters {:body heatmap/FacetParams}
          :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
          :handler

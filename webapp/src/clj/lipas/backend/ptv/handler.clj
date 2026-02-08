@@ -3,8 +3,7 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
-            [lipas.schema.sports-sites.ptv :as ptv-schema]
-            [reitit.coercion.malli]))
+            [lipas.schema.sports-sites.ptv :as ptv-schema]))
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
 
@@ -13,18 +12,17 @@
   (let [user (:identity req)]
     (or
       ;; Global audit privilege
-      (roles/check-privilege user {} :ptv/audit)
+     (roles/check-privilege user {} :ptv/audit)
       ;; Context-specific manage privilege (check with any city-code the user has)
-      (some (fn [permission]
-              (when-let [city-code (:city-code permission)]
-                (some #(roles/check-privilege user {:city-code %} :ptv/manage)
-                      city-code)))
-            (get-in user [:permissions :roles])))))
+     (some (fn [permission]
+             (when-let [city-code (:city-code permission)]
+               (some #(roles/check-privilege user {:city-code %} :ptv/manage)
+                     city-code)))
+           (get-in user [:permissions :roles])))))
 
 (defn routes [{:keys [db search ptv emailer] :as _ctx}]
   [""
-   {:coercion reitit.coercion.malli/coercion
-    #_#_:middleware [mw/token-auth mw/auth]
+   {#_#_:middleware [mw/token-auth mw/auth]
     :tags ["ptv"]
     :no-doc false}
 
@@ -49,8 +47,8 @@
       (fn [req]
         {:status 200
          :body (ptv-core/generate-ptv-descriptions
-                 search
-                 (-> req :parameters :body :lipas-id))})}}]
+                search
+                (-> req :parameters :body :lipas-id))})}}]
 
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
@@ -60,7 +58,7 @@
       (fn [req]
         {:status 200
          :body (ptv-core/generate-ptv-descriptions-from-data
-                 (-> req :parameters :body))})}}]
+                (-> req :parameters :body))})}}]
 
    ["/actions/translate-to-other-langs"
     {:post
@@ -74,7 +72,7 @@
       (fn [req]
         {:status 200
          :body (ptv-core/translate-to-other-langs
-                 (-> req :parameters :body))})}}]
+                (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-service-descriptions"
     {:post
