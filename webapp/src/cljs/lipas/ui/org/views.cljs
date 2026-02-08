@@ -15,6 +15,7 @@
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             [clojure.string :as str]
+            [lipas.schema.org :as org-schema]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
             [lipas.ui.components.autocompletes :as ac]
@@ -264,7 +265,7 @@
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/name)
            :value (:name org)
-           :spec [:string {:min 1 :max 128}]
+           :spec org-schema/org-name
            :required true
            :disabled (not (or is-lipas-admin? is-org-admin? is-new?))
            :on-change #(rf/dispatch [::events/edit-org [:name] %])}]

@@ -17,7 +17,7 @@
        :adornment (tr :physical-units/m)
        :type      "number"
        :value     (:length-m data)
-       :spec      [:and number? [:fn #(<= 0 % 200)]]
+       :spec      pool-schema/pool-length-m
        :on-change #(set-field :length-m %)}]]))
 
 (defn dialog [{:keys [tr lipas-id]}]

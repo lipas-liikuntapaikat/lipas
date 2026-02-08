@@ -47,7 +47,7 @@
        :label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
        :value     (:length-m data)
-       :spec      [:and number? [:fn #(<= 0 % 200)]]
+       :spec      pool-schema/pool-length-m
        :on-change #(set-field :length-m %)}]
 
      ;; Width m
@@ -56,7 +56,7 @@
        :label     (tr :dimensions/width-m)
        :adornment (tr :physical-units/m)
        :value     (:width-m data)
-       :spec      [:and number? [:fn #(<= 0 % 100)]]
+       :spec      pool-schema/pool-width-m
        :on-change #(set-field :width-m %)}]
 
      ;; Area m2
@@ -65,7 +65,7 @@
        :label     (tr :dimensions/area-m2)
        :adornment (tr :physical-units/m2)
        :value     (:area-m2 data)
-       :spec      [:and number? [:fn #(<= 0 % 2000)]]
+       :spec      pool-schema/pool-area-m2
        :on-change #(set-field :area-m2 %)}]
 
      ;; Depth min m
@@ -74,7 +74,7 @@
        :label     (tr :dimensions/depth-min-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-min-m data)
-       :spec      [:and number? [:fn #(<= 0 % 10)]]
+       :spec      pool-schema/pool-depth-m
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
@@ -83,7 +83,7 @@
        :label     (tr :dimensions/depth-max-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-max-m data)
-       :spec      [:and number? [:fn #(<= 0 % 10)]]
+       :spec      pool-schema/pool-depth-m
        :on-change #(set-field :depth-max-m %)}]
 
      ;; Temperature c
@@ -92,7 +92,7 @@
        :label     (tr :physical-units/temperature-c)
        :adornment (tr :physical-units/celsius)
        :value     (:temperature-c data)
-       :spec      [:and number? [:fn #(<= 0 % 50)]]
+       :spec      pool-schema/pool-temperature-c
        :on-change #(set-field :temperature-c %)}]
 
      ;; Volume m3

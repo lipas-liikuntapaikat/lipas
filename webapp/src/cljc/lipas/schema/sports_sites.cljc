@@ -14,65 +14,65 @@
             [malli.core :as m]))
 
 (def lipas-id
-  [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}])
+  (m/schema [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}]))
 
 (def owner
-  (into [:enum {:description "Owner entity of the sports facility."}]
-        (keys owners/all)))
+  (m/schema (into [:enum {:description "Owner entity of the sports facility."}]
+                  (keys owners/all))))
 
 (def owners
-  [:set {:description (-> owner second :description)}
-   #'owner])
+  (m/schema [:set {:description (:description (m/properties owner))}
+             #'owner]))
 
 (def admin
-  (into [:enum {:description "Administrative entity of the sports facility."}]
-        (keys admins/all)))
+  (m/schema (into [:enum {:description "Administrative entity of the sports facility."}]
+                  (keys admins/all))))
 
 (def admins
-  [:set {:description (-> admin second :description)}
-   #'admin])
+  (m/schema [:set {:description (:description (m/properties admin))}
+             #'admin]))
 
-(def name [:string {:description "The official name of the sports facility"
-                    :min 2
-                    :max 100}])
+(def name (m/schema [:string {:description "The official name of the sports facility"
+                              :min 2
+                              :max 100}]))
 
-(def marketing-name [:string {:min 2
-                              :max 100
-                              :description "Marketing name or common name of the sports facility."}])
+(def marketing-name (m/schema [:string {:min 2
+                                        :max 100
+                                        :description "Marketing name or common name of the sports facility."}]))
 
 (def name-localized
-  [:map {:description "The official name of the sports facility localized."}
-   [:se {:optional true :description "Swedish translation of the official name of the sports facility."}
-    [:string {:min 2 :max 100}]]
-   [:en {:optional true :description "English translation of the official name of the sports facility."}
-    [:string {:min 2 :max 100}]]])
+  (m/schema [:map {:description "The official name of the sports facility localized."}
+             [:se {:optional true :description "Swedish translation of the official name of the sports facility."}
+              [:string {:min 2 :max 100}]]
+             [:en {:optional true :description "English translation of the official name of the sports facility."}
+              [:string {:min 2 :max 100}]]]))
 
-(def email [:re {:description "Email address of the sports facility."}
-            common/email-regex])
+(def email (m/schema [:re {:description "Email address of the sports facility."}
+                      common/email-regex]))
 
-(def www [:string {:description "Website of the sports facility."
-                   :min 1
-                   :max 500}])
+(def www (m/schema [:string {:description "Website of the sports facility."
+                             :min 1
+                             :max 500}]))
 
-(def reservations-link [:string {:description "Link to external booking system."
+(def reservations-link (m/schema [:string {:description "Link to external booking system."
+                                           :min 1
+                                           :max 500}]))
+
+(def phone-number (m/schema [:string {:description "Phone number of the sports facility"
+                                      :min 1
+                                      :max 50}]))
+
+(def comment (m/schema [:string {:description "Additional information."
                                  :min 1
-                                 :max 500}])
+                                 :max 2048}]))
 
-(def phone-number [:string {:description "Phone number of the sports facility"
-                            :min 1
-                            :max 50}])
+(def construction-year (m/schema [:int {:description "Year of construction of the sports facility"
+                                        :min 1800
+                                        :max (+ 10 utils/this-year)}]))
 
-(def comment [:string {:description "Additional information."
-                       :min 1
-                       :max 2048}])
-
-(def construction-year [:int {:description "Year of construction of the sports facility"
-                              :min 1800
-                              :max (+ 10 utils/this-year)}])
-
-(def renovation-years [:sequential {:description "Years of major renovation of the sports facility"
-                                    :distinct true}
-                       [:int {:min 1800 :max (+ 10 utils/this-year)}]])
+(def renovation-years (m/schema [:sequential {:description "Years of major renovation of the sports facility"
+                                              :distinct true}
+                                 [:int {:min 1800 :max (+ 10 utils/this-year)}]]))
 
 (defn make-sports-site-schema
   "Creates a sports site schema. When compat is true, adds :encode/json identity
@@ -205,19 +205,19 @@
                        include-lipas-id?)]))))
 
 (def sports-site
-  (make-sports-site-multi-schema false))
+  (m/schema (make-sports-site-multi-schema false)))
 
 (def new-sports-site
-  (make-sports-site-multi-schema false false))
+  (m/schema (make-sports-site-multi-schema false false)))
 
 (def sports-site-compat
   "Sports site schema with json-transform compatibility.
   Prevents json-transformer from converting enum integers to strings.
   Use this for API response coercion."
-  (make-sports-site-multi-schema true))
+  (m/schema (make-sports-site-multi-schema true)))
 
 (def new-or-existing-sports-site
-  [:or sports-site new-sports-site])
+  (m/schema [:or sports-site new-sports-site]))
 
 #_(comment
     (mu/get sports-site 101)
