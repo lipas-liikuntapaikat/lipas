@@ -15,7 +15,6 @@
             [lipas.ui.search.db :as search]
             [lipas.ui.sports-sites.db :as sports-sites]
             [lipas.ui.stats.db :as stats]
-            [lipas.ui.sports-sites.hall-equipment :as hall-equipment]
             [lipas.ui.user.db :as user]))
 
 (def default-db
@@ -43,9 +42,6 @@
 
    ;; Front page
    :front-page front-page/default-db
-
-   ;; Hall equipment (pools, slides, size-categories)
-   :hall-equipment hall-equipment/default-db
 
    ;; Map
    :map map/default-db

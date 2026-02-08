@@ -15,14 +15,14 @@
 
 (rf/reg-event-db ::toggle-dialog
                  (fn [db [_ dialog data]]
-                   (let [data (or data (-> db :hall-equipment :dialogs dialog :data))]
+                   (let [data (or data (-> db :sports-sites :hall-equipment :dialogs dialog :data))]
                      (-> db
-                         (update-in [:hall-equipment :dialogs dialog :open?] not)
-                         (assoc-in [:hall-equipment :dialogs dialog :data] data)))))
+                         (update-in [:sports-sites :hall-equipment :dialogs dialog :open?] not)
+                         (assoc-in [:sports-sites :hall-equipment :dialogs dialog :data] data)))))
 
 (rf/reg-event-db ::set-dialog-field
                  (fn [db [_ dialog field value]]
-                   (let [path [:hall-equipment :dialogs dialog :data field]]
+                   (let [path [:sports-sites :hall-equipment :dialogs dialog :data field]]
                      (utils/set-field db path value))))
 
 (rf/reg-event-db ::save-pool
@@ -55,30 +55,42 @@
 
 (rf/reg-event-db ::reset-dialog
                  (fn [db [_ dialog]]
-                   (assoc-in db [:hall-equipment :dialogs dialog] {})))
+                   (assoc-in db [:sports-sites :hall-equipment :dialogs dialog] {})))
 
-;; Subs
+;; Subs — Layer 1
+
+(rf/reg-sub ::hall-equipment
+            (fn [db _]
+              (-> db :sports-sites :hall-equipment)))
+
+;; Subs — Layer 2
 
 (rf/reg-sub ::dialogs
-            (fn [db _]
-              (-> db :hall-equipment :dialogs)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (:dialogs hall-equipment)))
 
 (rf/reg-sub ::pool-form
-            (fn [db _]
-              (-> db :hall-equipment :dialogs :pool :data)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (-> hall-equipment :dialogs :pool :data)))
 
 (rf/reg-sub ::slide-form
-            (fn [db _]
-              (-> db :hall-equipment :dialogs :slide :data)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (-> hall-equipment :dialogs :slide :data)))
 
 (rf/reg-sub ::pool-types
-            (fn [db _]
-              (-> db :hall-equipment :pool-types)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (:pool-types hall-equipment)))
 
 (rf/reg-sub ::accessibility
-            (fn [db _]
-              (-> db :hall-equipment :accessibility)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (:accessibility hall-equipment)))
 
 (rf/reg-sub ::size-categories
-            (fn [db _ _]
-              (-> db :hall-equipment :size-categories)))
+            :<- [::hall-equipment]
+            (fn [hall-equipment _]
+              (:size-categories hall-equipment)))
