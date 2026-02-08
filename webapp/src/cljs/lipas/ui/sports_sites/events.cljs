@@ -97,10 +97,7 @@
    ;; `on-success` is a function that returns vector of events to be
    ;; dispatched.
                    (let [tr              (-> db :translator)
-                         #_#_status      (-> result :status)
-                         type            (-> result :type :type-code)
                          lipas-id        (-> result :lipas-id)
-                         year            (dec utils/this-year)
                          dispatch-extras (when on-success (on-success result))]
                      {:db             (-> db
                                           (utils/add-to-db result)
@@ -109,9 +106,7 @@
                       :dispatch-n     (into
                                        [[:lipas.ui.events/set-active-notification
                                          {:message  (tr :notifications/save-success)
-                                          :success? true}]
-                                        (when (#{2510 2520 3110 3130} type)
-                                          [:lipas.ui.energy.events/fetch-energy-report year type])]
+                                          :success? true}]]
                                        dispatch-extras)
                       :tracker/event! ["sports-site" "save" "lipas-id" lipas-id]})))
 

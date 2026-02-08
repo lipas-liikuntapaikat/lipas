@@ -11,14 +11,13 @@
             [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.energy.views :as energy]
-            [lipas.ui.ice-stadiums.rinks :as rinks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
             [lipas.ui.sports-sites.subs :as subs]
-            [lipas.ui.swimming-pools.pools :as pools]
-            [lipas.ui.swimming-pools.slides :as slides]
+            [lipas.ui.sports-sites.hall-equipment :as hall]
+            [lipas.ui.sports-sites.pools :as pools]
+            [lipas.ui.sports-sites.slides :as slides]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -422,13 +421,9 @@
 (defn show-area-calc? [k geom-type]
   (and (= :area-km2 k) (#{"Polygon"} geom-type)))
 
-(defn special-case? [type-code]
-  ;; Uimahalli / jäähalli
-  (#{3110 3130 2510 2520} type-code))
-
 (defn pools-field
   [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.swimming-pools.subs/dialogs])
+  (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
                {:edit-data add-data}
@@ -454,7 +449,7 @@
 
 (defn slides-field
   [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.swimming-pools.subs/dialogs])
+  (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
                {:edit-data add-data}
@@ -476,32 +471,6 @@
          :add-btn-size "small"
          :items (-> data :edit-data :slides)
          :max-width max-width
-         :lipas-id (-> data :edit-data :lipas-id)}])]))
-
-(defn rinks-field
-  [{:keys [tr read-only? width] :as props}]
-  (let [dialogs (<== [:lipas.ui.ice-stadiums.subs/dialogs])
-        add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
-        data (if add-data
-               {:edit-data add-data}
-               (<== [:lipas.ui.map.subs/selected-sports-site]))
-        max-width (<== [:lipas.ui.map.subs/drawer-width width])
-        lipas-id (-> data :edit-data :lipas-id)]
-    [:<>
-     (when (-> dialogs :rink :open?)
-       [rinks/dialog {:tr tr :lipas-id lipas-id}])
-
-     (if read-only?
-       [:<>
-        [rinks/read-only-table
-         {:tr tr
-          :items (-> data :display-data :rinks)}]
-        [:span {:style {:margin-top "1em"}}]]
-       [rinks/table
-        {:tr tr
-         :add-btn-size "small"
-         :max-width max-width
-         :items (-> data :edit-data :rinks)
          :lipas-id (-> data :edit-data :lipas-id)}])]))
 
 (defn space-divisible-field
@@ -635,10 +604,7 @@
   [{:keys [tr edit-data editing? display-data type-code on-change read-only?
            key geoms geom-type problems? width pools]}]
   (let [locale (tr)
-        types-props (<== [::subs/types-props type-code])
-        types-props (if false #_(special-case? type-code)
-                        (select-keys types-props [:may-be-shown-in-harrastuspassi-fi?])
-                        types-props)]
+        types-props (<== [::subs/types-props type-code])]
     (into
      [lui/form
       {:key key
@@ -667,19 +633,7 @@
          [slides-field
           {:tr tr
            :width width
-           :read-only? read-only?}]])
-
-      ;; Ice stadiums
-      #_(when (#{2510 2520} type-code)
-          [:<>
-
-         ;; Rinks
-           [mui/typography {:variant "body2"}
-            (tr :lipas.ice-stadium.rinks/headline)]
-           [rinks-field
-            {:tr tr
-             :width width
-             :read-only? read-only?}]])]
+           :read-only? read-only?}]])]
 
      (sort-by
       (juxt :disabled? (comp - :priority) #(or (:sort %) (:label %)))
@@ -1014,145 +968,6 @@
                 :value (-> edit-data :platforms-10m-count)
                 :spec :lipas.swimming-pool.facilities/platforms-10m-count
                 :on-change #(on-change :platforms-10m-count %)}]}]))))))))
-
-(defn report-readings-button [{:keys [tr lipas-id close]}]
-  [mui/button
-   {:style {:margin-top "1em"}
-    :on-click #(==> [:lipas.ui.events/confirm
-                     (tr :confirm/save-basic-data?)
-                     (fn []
-                       (==> [::events/save-edits lipas-id])
-                       (close)
-                       (==> [:lipas.ui.events/report-energy-consumption lipas-id]))
-                     (fn []
-                       (==> [::events/discard-edits lipas-id])
-                       (close)
-                       (==> [:lipas.ui.events/report-energy-consumption lipas-id]))])}
-   [mui/icon "add"]
-   (tr :lipas.user/report-energy-and-visitors)])
-
-(defn energy-consumption-view [{:keys [tr display-data lipas-id
-                                       editing? close cold? user-can-publish?]
-                                :or {cold? false}}]
-  (r/with-let [selected-year (r/atom {})
-               selected-tab (r/atom 0)]
-
-    ;; Chart/Table tabs
-    (if (empty? (:energy-consumption display-data))
-      [mui/typography (tr :lipas.energy-consumption/not-reported)]
-      [:div
-       [mui/tabs {:value @selected-tab
-                  :on-change #(reset! selected-tab %2)
-                  :indicator-color "secondary"
-                  :text-color "inherit"}
-        [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
-        [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
-
-       (case @selected-tab
-
-         ;; Chart tab
-         0 [:div {:style {:margin-top "2em"}}
-            [charts/yearly-chart
-             {:data (-> display-data :energy-consumption)
-              :labels (merge
-                       {:electricity-mwh (tr :lipas.energy-stats/electricity-mwh)
-                        :heat-mwh (tr :lipas.energy-stats/heat-mwh)
-                        :cold-mwh (tr :lipas.energy-stats/cold-mwh)
-                        :water-m3 (tr :lipas.energy-stats/water-m3)}
-                       (utils/year-labels-map 2000 utils/this-year))
-              :on-click (fn [^js e]
-                          (let [year (.-activeLabel e)]
-                            (reset! selected-year {lipas-id year})))}]]
-
-         ;; Table tab
-         1 [energy/table
-            {:read-only? true
-             :cold? cold?
-             :tr tr
-             :on-select #(reset! selected-year {lipas-id (:year %)})
-             :items (-> display-data :energy-consumption)}])
-
-       ;; Monthly chart
-       (when-let [year (get @selected-year lipas-id)]
-         [energy/monthly-chart
-          {:lipas-id lipas-id
-           :year year
-           :tr tr}])
-
-       ;; Report readings button
-       ;; (when (and editing? user-can-publish?)
-       ;;   [report-readings-button
-       ;;    {:tr       tr
-       ;;     :lipas-id lipas-id
-       ;;     :close    close}])
-       ])))
-
-(defn- make-headers [tr spectators?]
-  (remove nil?
-          [[:year (tr :time/year)]
-           [:total-count (tr :lipas.visitors/total-count)]
-           (when spectators?
-             [:spectators-count (tr :lipas.visitors/spectators-count)])]))
-
-(defn visitors-view
-  [{:keys [tr display-data lipas-id editing? close spectators?
-           user-can-publish?]
-    :or {spectators? false}}]
-  (r/with-let [selected-year (r/atom {})
-               selected-tab (r/atom 0)]
-
-    ;; Chart/Table tabs
-    (if (empty? (:visitors-history display-data))
-      [mui/typography (tr :lipas.visitors/not-reported)]
-
-      [:div
-       [mui/tabs
-        {:value @selected-tab
-         :on-change #(reset! selected-tab %2)
-         :indicator-color "secondary"
-         :text-color "inherit"}
-        [mui/tab {:icon (r/as-element [mui/icon "bar_chart"])}]
-        [mui/tab {:icon (r/as-element [mui/icon "table_chart"])}]]
-
-       (case @selected-tab
-
-         ;; Chart tab
-         0 [:div {:style {:margin-top "2em"}}
-            [charts/yearly-chart
-             {:data (-> display-data :visitors-history)
-              :labels (merge
-                       {:total-count (tr :lipas.visitors/total-count)
-                        :spectators-count (tr :lipas.visitors/spectators-count)}
-                       (utils/year-labels-map 2000 utils/this-year))
-              :on-click (fn [^js e]
-                          (let [year (.-activeLabel e)]
-                            (reset! selected-year {lipas-id year})))}]]
-
-         ;; Table tab
-         1 [lui/table
-            {:headers (make-headers tr spectators?)
-             :items (-> display-data :visitors-history)
-             :on-select #(reset! selected-year {lipas-id (:year %)})
-             :key-fn :year
-             :sort-fn :year
-             :sort-asc? true
-             :hide-action-btn? true
-             :read-only? true}])
-
-       ;; Monthly chart
-       (when-let [year (get @selected-year lipas-id)]
-         [energy/monthly-visitors-chart
-          {:lipas-id lipas-id
-           :year year
-           :tr tr}])
-
-       ;; Report readings button
-       ;; (when (and editing? user-can-publish?)
-       ;;   [report-readings-button
-       ;;    {:tr       tr
-       ;;     :lipas-id lipas-id
-       ;;     :close    close}])
-       ])))
 
 (defn contacts-report [{:keys [tr types]}]
   (let [locale (tr)

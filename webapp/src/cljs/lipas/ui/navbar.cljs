@@ -177,20 +177,6 @@
         [mui/icon "place"]]
        [mui/list-item-text {:primary (tr :sport/headline)}]]
 
-      ;; Ice stadiums
-      ;; [mui/list-item {:button   true
-      ;;                 :on-click #(hide-and-navigate! "/jaahalliportaali")}
-      ;;  [mui/list-item-icon
-      ;;   [mui/icon "ac_unit"]]
-      ;;  [mui/list-item-text {:primary (tr :ice/headline)}]]
-
-      ;; Swiming pools
-      ;; [mui/list-item {:button   true
-      ;;                 :on-click #(hide-and-navigate! "/uimahalliportaali")}
-      ;;  [mui/list-item-icon
-      ;;   [mui/icon "pool"]]
-      ;;  [mui/list-item-text {:primary (tr :swim/headline)}]]
-
       ;; Stats
       [mui/list-item-button {:on-click #(hide-and-navigate! "/tilastot")}
        [mui/list-item-icon

@@ -68,17 +68,7 @@
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
-         (tr :lipas.user/view-basic-info)]]
-
-       ;; Report energy consumption button
-       [mui/list-item
-        {:on-click (comp
-                    close
-                    #(==> [:lipas.ui.events/report-energy-consumption lipas-id]))}
-        [mui/list-item-icon
-         [mui/icon "keyboard_arrow_right"]]
-        [mui/typography {:variant "body2"}
-         (tr :lipas.user/report-energy-and-visitors)]]]]
+         (tr :lipas.user/view-basic-info)]]]]
 
      [mui/dialog-actions
       [mui/button {:on-click close}
