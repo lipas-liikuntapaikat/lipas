@@ -24,24 +24,24 @@
     [{:start
       (fn [& params]
         (navigate-async!
-         (if (= "liikuntapaikat.lipas.fi" (utils/domain))
-           :lipas.ui.routes.map/map
-           :lipas.ui.routes/front-page)))}]}])
+          (if (= "liikuntapaikat.lipas.fi" (utils/domain))
+            :lipas.ui.routes.map/map
+            :lipas.ui.routes/front-page)))}]}])
 
 (def routes
   (rf/router
-   ["/"
-    root-route
-    front-page/routes
-    login/routes
-    user/routes
-    org/routes
-    forgot-password/routes
-    register/routes
-    lmap/routes
-    admin/routes
-    stats/routes]
-   {:data {:coercion rcm/coercion}}))
+    ["/"
+     root-route
+     front-page/routes
+     login/routes
+     user/routes
+     org/routes
+     forgot-password/routes
+     register/routes
+     lmap/routes
+     admin/routes
+     stats/routes]
+    {:data {:coercion rcm/coercion}}))
 
 (defn match-by-path [path]
   (let [path (string/replace path #"/#" "")]
@@ -77,9 +77,9 @@
 
 (defn init! []
   (rfe/start!
-   routes
-   on-navigate
-   {:use-fragment false}))
+    routes
+    on-navigate
+    {:use-fragment false}))
 
 (comment
   (require '[reitit.core :as reitit])

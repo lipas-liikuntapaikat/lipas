@@ -279,13 +279,13 @@
          :href "https://www.jyu.fi"
          :sx
          (merge
-          mui/headline-aleo
-          {:font-size "1em"
-           :color "#ffffff"
-           :text-transform "none"
-           :text-decoration "none"
-           :display {:xs "none"
-                     :md "inline"}})}
+           mui/headline-aleo
+           {:font-size "1em"
+            :color "#ffffff"
+            :text-transform "none"
+            :text-decoration "none"
+            :display {:xs "none"
+                      :md "inline"}})}
         (tr :menu/jyu)]
 
        [separator
@@ -299,12 +299,12 @@
          :href "/etusivu"
          :style
          (merge
-          mui/headline-aleo
-          {:display "inline"
-           :font-size "1em"
-           :color "#ffffff"
-           :text-transform "none"
-           :text-decoration "none"})}
+           mui/headline-aleo
+           {:display "inline"
+            :font-size "1em"
+            :color "#ffffff"
+            :text-transform "none"
+            :text-decoration "none"})}
         (tr :menu/headline)]
 
        [separator]
@@ -317,12 +317,12 @@
            :href (:href sub-page)
            :style
            (merge
-            mui/headline-aleo
-            {:display "inline"
-             :font-size "1em"
-             :color "#ffffff"
-             :text-transform "none"
-             :text-decoration "none"})}
+             mui/headline-aleo
+             {:display "inline"
+              :font-size "1em"
+              :color "#ffffff"
+              :text-transform "none"
+              :text-decoration "none"})}
           (:text sub-page)])]
 
       ;; Lang selector

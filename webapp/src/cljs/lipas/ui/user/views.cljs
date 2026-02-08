@@ -63,8 +63,8 @@
        ;; View basic info button
        [mui/list-item-button
         {:on-click (comp
-                    close
-                    #(==> [:lipas.ui.events/display lipas-id]))}
+                     close
+                     #(==> [:lipas.ui.events/display lipas-id]))}
         [mui/list-item-icon
          [mui/icon "keyboard_arrow_right"]]
         [mui/typography {:variant "body2"}
