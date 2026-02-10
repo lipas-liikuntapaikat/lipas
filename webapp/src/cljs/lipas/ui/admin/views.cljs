@@ -238,7 +238,8 @@
 (r/defc roles-card [{:keys [tr]}]
   (let [user @(rf/subscribe [::subs/editing-user])
         data @(rf/subscribe [::subs/edit-role])
-        editing? (:editing? data)]
+        editing? (:editing? data)
+        permissions-request (-> user :user-data :permissions-request)]
     ;; TODO: replace the container grid
     [:> Grid
      {:item true
@@ -250,9 +251,12 @@
        {:title "Roolit"}]
       [:> CardContent
        [:> FormGroup
-        [permissions-request-card
-         {:permissions-request (-> user :user-data :permissions-request)
-          :tr tr}]
+
+        ;; Only show permissions request when there's an actual request
+        (when (not-empty permissions-request)
+          [permissions-request-card
+           {:permissions-request permissions-request
+            :tr tr}])
 
         [:> List
          (for [[i {:keys [role] :as x}]
@@ -289,8 +293,11 @@
                :disabled editing?}
               [:> Icon "delete"]]]])]
 
-        [role-form
-         {:tr tr}]]]]]))
+        [mui/paper
+         {:variant "outlined"
+          :sx #js {:p 2 :mt 1}}
+         [role-form
+          {:tr tr}]]]]]]))
 
 (defn user-dialog [tr]
   (let [locale (tr)
