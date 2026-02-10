@@ -66,8 +66,8 @@
 (rf/reg-event-db ::set-new-role
   (fn [db [_ role]]
     (let [allowed-keys (set (concat [:role]
-                                    (:required-context-keys (get roles/roles (:value role)))
-                                    (:optional-context-keys (get roles/roles (:value role)))))]
+                                    (:required-context-keys (get roles/roles role))
+                                    (:optional-context-keys (get roles/roles role))))]
       (update-in db [:admin :new-role] (fn [x]
                                          (-> (if role
                                                (assoc x :role role)
@@ -81,7 +81,7 @@
                  [:admin :editing-user :permissions :roles idx]
                  [:admin :new-role])]
       (if (seq value)
-        (update-in db path assoc k value)
+        (update-in db path assoc k (set value))
         (update-in db path dissoc k)))))
 
 (rf/reg-event-db ::add-new-role
