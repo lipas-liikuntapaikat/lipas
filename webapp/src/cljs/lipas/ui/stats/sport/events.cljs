@@ -70,8 +70,8 @@
   (cond-> {}
     year       (assoc :year year)
     grouping   (assoc :grouping grouping)
-    city-codes (assoc :city-codes city-codes)
-    type-codes (assoc :type-codes type-codes)))
+    city-codes (assoc :city-codes (vec city-codes))
+    type-codes (assoc :type-codes (vec type-codes))))
 
 (rf/reg-event-fx ::create-report*
   (fn [{:keys [db]} [_ city-codes type-codes grouping year]]

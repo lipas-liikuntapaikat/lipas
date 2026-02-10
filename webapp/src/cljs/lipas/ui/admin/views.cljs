@@ -15,10 +15,11 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             ["react" :as react]
-            [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
+            [lipas.schema.users :as users-schema]
+            [malli.core :as m]
             [lipas.ui.admin.events :as events]
             [lipas.ui.admin.subs :as subs]
             [lipas.ui.components :as lui]
@@ -237,7 +238,8 @@
 (r/defc roles-card [{:keys [tr]}]
   (let [user @(rf/subscribe [::subs/editing-user])
         data @(rf/subscribe [::subs/edit-role])
-        editing? (:editing? data)]
+        editing? (:editing? data)
+        permissions-request (-> user :user-data :permissions-request)]
     ;; TODO: replace the container grid
     [:> Grid
      {:item true
@@ -249,9 +251,12 @@
        {:title "Roolit"}]
       [:> CardContent
        [:> FormGroup
-        [permissions-request-card
-         {:permissions-request (-> user :user-data :permissions-request)
-          :tr tr}]
+
+        ;; Only show permissions request when there's an actual request
+        (when (not-empty permissions-request)
+          [permissions-request-card
+           {:permissions-request permissions-request
+            :tr tr}])
 
         [:> List
          (for [[i {:keys [role] :as x}]
@@ -288,8 +293,11 @@
                :disabled editing?}
               [:> Icon "delete"]]]])]
 
-        [role-form
-         {:tr tr}]]]]]))
+        [mui/paper
+         {:variant "outlined"
+          :sx #js {:p 2 :mt 1}}
+         [role-form
+          {:tr tr}]]]]]]))
 
 (defn user-dialog [tr]
   (let [locale (tr)
@@ -339,7 +347,7 @@
        ;; Send magic link button
        [lui/email-button
         {:label (tr :lipas.admin/magic-link)
-         :disabled (not (s/valid? :lipas/new-user user))
+         :disabled (not (m/validate users-schema/new-user-schema user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
 
        ;; Save button

@@ -12,8 +12,9 @@
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
-            [clojure.spec.alpha :as s]
+            [lipas.schema.users :as users-schema]
             [lipas.ui.components :as lui]
+            [malli.core :as m]
             [lipas.ui.login.events :as events]
             [lipas.ui.login.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -73,7 +74,7 @@
        [lui/text-field
         {:id "magic-link-login-email-input"
          :label (tr :lipas.user/email)
-         :spec :lipas.user/email
+         :spec users-schema/email-schema
          :auto-focus true
          :value (:email form-data)
          :on-change (comp clear-errors #(set-field :email %))
@@ -86,7 +87,7 @@
          :color "secondary"
          :disabled (or link-ordered?
                        (some? error)
-                       (not (s/valid? :lipas.user/email (:email form-data))))
+                       (not (m/validate users-schema/email-schema (:email form-data))))
          :style {:margin-top "1em"}
          :full-width true
          :size "large"

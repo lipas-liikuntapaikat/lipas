@@ -4,6 +4,10 @@
             [lipas.ui.sports-sites.football.events]
             [lipas.ui.sports-sites.football.subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [lipas.schema.common :as common-schema]
+            [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
+            [lipas.schema.swimming-pools :as pools-schema]
             [re-frame.core :as rf]))
 
 (rf/reg-event-db ::save-pool
@@ -105,7 +109,7 @@
        :label     "Varoalue 2"
        :adornment (tr :physical-units/m)
        :value     (:depth-min-m data)
-       :spec      :lipas.swimming-pool.pool/depth-min-m
+       :spec      pools-schema/depth-min-m
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
@@ -240,7 +244,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          :lipas.football.circumstances/teams-using
+      :spec          circumstances-schema/teams-using
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :teams-using)
       :on-change     #(on-change :teams-using %)}]}
@@ -262,7 +266,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/field-length-m
       #_#_:adornment "m"
       :value         (-> edit-data :field-length-m)
       :on-change     #(on-change :field-length-m %)}]}
@@ -273,7 +277,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/field-width-m
       #_#_:adornment "m"
       :value         (-> edit-data :field-width-m)
       :on-change     #(on-change :field-width-m %)}]}
@@ -284,7 +288,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          common-schema/number
       #_#_:adornment "m"
       :value         (-> edit-data :field-minimum-height-m)
       :on-change     #(on-change :field-minimum-height-m %)}]}
@@ -316,7 +320,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          fields-schema/field-name
       #_#_:adornment (tr :units/hours-per-day)
       :value         (-> edit-data :field-surface-material-brand)
       :on-change     #(on-change :field-surface-material-brand %)}]}
@@ -327,7 +331,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-corner-1-1-lux)
       :on-change     #(on-change :lighting-corner-1-1-lux %)}]}
@@ -338,7 +342,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-corner-1-2-lux)
       :on-change     #(on-change :lighting-corner-1-2-lux %)}]}
@@ -349,7 +353,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-goal-1-lux)
       :on-change     #(on-change :lighting-goal-1-lux %)}]}
@@ -360,7 +364,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-center-point-lux)
       :on-change     #(on-change :lighting-center-point-lux %)}]}
@@ -371,7 +375,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-corner-2-1-lux)
       :on-change     #(on-change :lighting-corner-2-1-lux %)}]}
@@ -382,7 +386,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-corner-2-2-lux)
       :on-change     #(on-change :lighting-corner-2-2-lux %)}]}
@@ -393,7 +397,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
       :value         (-> edit-data :lighting-goal-2-lux)
       :on-change     #(on-change :lighting-goal-2-lux %)}]}
@@ -404,7 +408,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          circumstances-schema/locker-rooms-count
       #_#_:adornment "m"
       :value         (-> edit-data :dressing-rooms-count)
       :on-change     #(on-change :dressing-rooms-count %)}]}
@@ -415,7 +419,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/locker-room-surface-area-m2
       #_#_:adornment "m"
       :value         (-> edit-data :dressing-rooms-surface-area-m2)
       :on-change     #(on-change :dressing-rooms-surface-area-m2 %)}]}
@@ -426,7 +430,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          circumstances-schema/showers-count
       #_#_:adornment "m"
       :value         (-> edit-data :dressing-room-showers-count)
       :on-change     #(on-change :dressing-room-showers-count %)}]}
@@ -437,7 +441,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          circumstances-schema/toilets-count
       #_#_:adornment "m"
       :value         (-> edit-data :dressing-room-toilets-count)
       :on-change     #(on-change :dressing-room-toilets-count %)}]}
@@ -448,7 +452,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          circumstances-schema/saunas-count
       #_#_:adornment "m"
       :value         (-> edit-data :saunas-count)
       :on-change     #(on-change :saunas-count %)}]}
@@ -468,7 +472,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          circumstances-schema/locker-room-quality-comment
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :dressing-room-quality-info)
       :on-change     #(on-change :dressing-room-quality-info %)}]}
@@ -497,7 +501,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          circumstances-schema/first-aid-comment
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :first-aid-info)
       :on-change     #(on-change :first-aid-info %)}]}
@@ -508,7 +512,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          int?
+      :spec          circumstances-schema/scoreboard-count
       #_#_:adornment "m"
       :value         (-> edit-data :scoreboard-count)
       :on-change     #(on-change :scoreboard-count %)}]}
@@ -555,7 +559,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/audience-toilets-count
       #_#_:adornment "m"
       :value         (-> edit-data :audience-toilets-count)
       :on-change     #(on-change :audience-toilets-count %)}]}
@@ -575,7 +579,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          circumstances-schema/vip-area-comment
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :vip-area-info)
       :on-change     #(on-change :vip-area-info %)}]}
@@ -586,7 +590,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          fields-schema/capacity-person
       #_#_:adornment "m"
       :value         (-> edit-data :stand-capacity-person)
       :on-change     #(on-change :stand-capacity-person %)}]}
@@ -597,7 +601,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          fields-schema/capacity-person
       #_#_:adornment "m"
       :value         (-> edit-data :seat-capacity-person)
       :on-change     #(on-change :seat-capacity-person %)}]}
@@ -608,7 +612,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          fields-schema/capacity-person
       #_#_:adornment "m"
       :value         (-> edit-data :stand-capacity-person)
       :on-change     #(on-change :stand-capacity-person %)}]}
@@ -620,7 +624,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          fields-schema/capacity-person
       #_#_:adornment "m"
       :value         (-> edit-data :disability-capacity-person)
       :on-change     #(on-change :disability-capacity-person %)}]}
@@ -634,7 +638,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/cafeteria-and-restaurant-capacity-person
       #_#_:adornment "m"
       :value         (-> edit-data :cafe-and-restaurant-capacity-person)
       :on-change     #(on-change :cafe-and-restaurant-capacity-person %)}]}
@@ -645,7 +649,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          circumstances-schema/restaurateur-contact-info
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :restaurant-contact-info)
       :on-change     #(on-change :restaurant-contact-info %)}]}
@@ -665,7 +669,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/conference-space-quantity
       #_#_:adornment "m"
       :value         (-> edit-data :conference-space-quantity)
       :on-change     #(on-change :conference-space-quantity %)}]}
@@ -685,7 +689,7 @@
     :form-field
     [lui/text-field
      {:type          "text"
-      :spec          string?
+      :spec          circumstances-schema/ticket-sales-operator
       #_#_:adornment (tr :duration/month)
       :value         (-> edit-data :ticket-sales-operatoor)
       :on-change     #(on-change :ticket-sales-operatoor %)}]}
@@ -696,7 +700,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/car-parking-capacity
       #_#_:adornment "m"
       :value         (-> edit-data :car-park-capacity)
       :on-change     #(on-change :car-park-capacity %)}]}
@@ -707,7 +711,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          number?
+      :spec          circumstances-schema/bus-park-capacity
       #_#_:adornment "m"
       :value         (-> edit-data :bus-park-capacity)
       :on-change     #(on-change :bus-park-capacity %)}]}

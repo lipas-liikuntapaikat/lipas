@@ -1,5 +1,6 @@
 (ns lipas.ui.reminders.subs
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.reminders :as reminders-schema]
+            [malli.core :as m]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::reminders
@@ -16,7 +17,7 @@
   (fn [reminders _]
     (let [data (:form reminders)]
       {:data   data
-       :valid? (s/valid? :lipas/new-reminder data)})))
+       :valid? (m/validate reminders-schema/new-reminder data)})))
 
 (rf/reg-sub ::upcoming-reminders
   :<- [::reminders]

@@ -3,15 +3,13 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.0"},
         org.clojure/core.cache {:mvn/version "1.1.234"},
         camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.0"},
-        hiposfer/geojson.specs {:mvn/version "0.2.0"},
         com.taoensso/timbre {:mvn/version "6.8.0"},
         com.taoensso/timbre-slf4j {:mvn/version "6.8.0"}, ; Routes Java SLF4J logs through Timbre
         org.slf4j/slf4j-api {:mvn/version "2.0.16"},      ; Force SLF4J 2.x (required by timbre-slf4j)
         com.cemerick/url {:mvn/version "0.1.1"},
         metosin/reitit {:mvn/version "0.7.1"},
         metosin/ring-swagger-ui {:mvn/version "5.18.2"},
-        metosin/spec-tools {:mvn/version "0.10.7"},
-        metosin/malli {:mvn/version "0.17.0"},
+        metosin/malli {:mvn/version "0.20.0"},
         thheller/shadow-cljs {:mvn/version "2.28.16"},
         org.clojure/clojurescript {:mvn/version "1.11.132"},
         reagent/reagent {:mvn/version "2.0.1"},

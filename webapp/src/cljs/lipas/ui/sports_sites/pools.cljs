@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.pools
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components :as lui]
+            [malli.core :as m]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
@@ -46,7 +47,7 @@
        :label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
        :value     (:length-m data)
-       :spec      :lipas.swimming-pool.pool/length-m
+       :spec      pool-schema/pool-length-m
        :on-change #(set-field :length-m %)}]
 
      ;; Width m
@@ -55,7 +56,7 @@
        :label     (tr :dimensions/width-m)
        :adornment (tr :physical-units/m)
        :value     (:width-m data)
-       :spec      :lipas.swimming-pool.pool/width-m
+       :spec      pool-schema/pool-width-m
        :on-change #(set-field :width-m %)}]
 
      ;; Area m2
@@ -64,7 +65,7 @@
        :label     (tr :dimensions/area-m2)
        :adornment (tr :physical-units/m2)
        :value     (:area-m2 data)
-       :spec      :lipas.swimming-pool.pool/area-m2
+       :spec      pool-schema/pool-area-m2
        :on-change #(set-field :area-m2 %)}]
 
      ;; Depth min m
@@ -73,7 +74,7 @@
        :label     (tr :dimensions/depth-min-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-min-m data)
-       :spec      :lipas.swimming-pool.pool/depth-min-m
+       :spec      pool-schema/pool-depth-m
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
@@ -82,7 +83,7 @@
        :label     (tr :dimensions/depth-max-m)
        :adornment (tr :physical-units/m)
        :value     (:depth-max-m data)
-       :spec      :lipas.swimming-pool.pool/depth-max-m
+       :spec      pool-schema/pool-depth-m
        :on-change #(set-field :depth-max-m %)}]
 
      ;; Temperature c
@@ -91,7 +92,7 @@
        :label     (tr :physical-units/temperature-c)
        :adornment (tr :physical-units/celsius)
        :value     (:temperature-c data)
-       :spec      :lipas.swimming-pool.pool/temperature-c
+       :spec      pool-schema/pool-temperature-c
        :on-change #(set-field :temperature-c %)}]
 
      ;; Volume m3
@@ -100,7 +101,7 @@
          :label     (tr :dimensions/volume-m3)
          :adornment (tr :physical-units/m3)
          :value     (:volume-m3 data)
-         :spec      :lipas.swimming-pool.pool/volume-m3
+         :spec      [:and number? [:fn #(<= 0 % 5000)]]
          :on-change #(set-field :volume-m3 %)}]
 
      ;; Accessibility features
@@ -116,7 +117,7 @@
   (let [data   (<== [::hall/pool-form])
         reset  #(==> [::hall/reset-dialog :pool])
         close  #(==> [::hall/toggle-dialog :pool])
-        valid? (s/valid? :lipas.swimming-pool/pool data)]
+        valid? (m/validate pool-schema/pool-schema data)]
     [lui/dialog {:title         (if (:id data)
                                   (tr :lipas.swimming-pool.pools/edit-pool)
                                   (tr :lipas.swimming-pool.pools/add-pool))

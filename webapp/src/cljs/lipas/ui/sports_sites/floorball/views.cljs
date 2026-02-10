@@ -8,6 +8,9 @@
             [lipas.ui.sports-sites.floorball.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils :refer [<== ==>]]
+            [lipas.schema.common :as common-schema]
+            [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 
@@ -58,7 +61,7 @@
       :form-field
       [lui/text-field
        {:type      "text"
-        :spec      :lipas.sports-site.fields.field/name
+        :spec      fields-schema/field-name
         :value     (-> edit-data :name)
         :on-change #(on-change :name %)}]}
 
@@ -68,7 +71,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.field/length-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :length-m)
         :on-change #(on-change :length-m %)}]}
@@ -79,7 +82,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.field/width-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :width-m)
         :on-change #(on-change :width-m %)}]}
@@ -90,7 +93,7 @@
       :form-field
       [surface-area-field
        {:type          "number"
-        :spec          :lipas.sports-site.fields.field/surface-area-m2
+        :spec          common-schema/number
         #_#_:adornment "m²"
         :value         (-> edit-data :surface-area-m2)
         :width         (-> edit-data :width-m)
@@ -103,7 +106,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/minimum-height-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :minimum-height-m)
         :on-change #(on-change :minimum-height-m %)}]}
@@ -137,7 +140,7 @@
       :form-field
       [lui/text-field
        {:type      "text"
-        :spec      :lipas.sports-site.fields.floorball/surface-material-product
+        :spec      fields-schema/field-name
         :value     (-> edit-data :surface-material-product)
         :on-change #(on-change :surface-material-product %)}]}
 
@@ -147,7 +150,7 @@
       :form-field
       [lui/text-field
        {:type      "text"
-        :spec      :lipas.sports-site.fields.floorball/surface-material-color
+        :spec      fields-schema/field-name
         :value     (-> edit-data :surface-material-color)
         :on-change #(on-change :surface-material-color %)}]}
 
@@ -158,7 +161,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :value     (-> edit-data :lighting-corner-1-1-lux)
           :on-change #(on-change :lighting-corner-1-1-lux %)}]})
 
@@ -169,7 +172,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-corner-1-2-lux)
           :on-change #(on-change :lighting-corner-1-2-lux %)}]})
@@ -181,7 +184,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-goal-1-lux)
           :on-change #(on-change :lighting-goal-1-lux %)}]})
@@ -193,7 +196,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-center-point-lux)
           :on-change #(on-change :lighting-center-point-lux %)}]})
@@ -205,7 +208,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-corner-2-1-lux)
           :on-change #(on-change :lighting-corner-2-1-lux %)}]})
@@ -217,7 +220,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-corner-2-2-lux)
           :on-change #(on-change :lighting-corner-2-2-lux %)}]})
@@ -229,7 +232,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.properties/lighting-lux
+          :spec      fields-schema/lighting-lux
           :adornment "lux"
           :value     (-> edit-data :lighting-goal-2-lux)
           :on-change #(on-change :lighting-goal-2-lux %)}]})
@@ -240,7 +243,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.properties/lighting-lux
+        :spec      fields-schema/lighting-lux
         :adornment "lux"
         :value     (-> edit-data :lighting-average-lux)
         :on-change #(on-change :lighting-average-lux %)}]}
@@ -251,7 +254,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/safety-area-end-1-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :safety-area-end-1-m)
         :on-change #(on-change :safety-area-end-1-m %)}]}
@@ -262,7 +265,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/safety-area-end-2-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :safety-area-end-2-m)
         :on-change #(on-change :safety-area-end-2-m %)}]}
@@ -273,7 +276,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/safety-area-side-1-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :safety-area-side-1-m)
         :on-change #(on-change :safety-area-side-1-m %)}]}
@@ -284,7 +287,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/safety-area-side-2-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :safety-area-side-2-m)
         :on-change #(on-change :safety-area-side-2-m %)}]}
@@ -295,7 +298,7 @@
       :form-field
       [lui/text-field
        {:type      "text"
-        :spec      :lipas.sports-site.fields.floorball/rink-product
+        :spec      fields-schema/field-name
         :value     (-> edit-data :rink-product)
         :on-change #(on-change :rink-product %)}]}
 
@@ -305,7 +308,7 @@
       :form-field
       [lui/text-field
        {:type          "text"
-        :spec          string?
+        :spec          fields-schema/field-name
         #_#_:adornment (tr :units/hours-per-day)
         :value         (-> edit-data :rink-color)
         :on-change     #(on-change :rink-color %)}]}
@@ -316,7 +319,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/stands-total-capacity-person
+        :spec      fields-schema/capacity-person
         :value     (-> edit-data :stands-total-capacity-person)
         :on-change #(on-change :stands-total-capacity-person %)}]}
 
@@ -326,7 +329,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/seating-area-capacity-person
+        :spec      fields-schema/capacity-person
         :value     (-> edit-data :seating-area-capacity-person)
         :on-change #(on-change :seating-area-capacity-person %)}]}
 
@@ -336,7 +339,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/standing-area-capacity-person
+        :spec      fields-schema/capacity-person
         :value     (-> edit-data :standing-area-capacity-person)
         :on-change #(on-change :standing-area-capacity-person %)}]}
 
@@ -346,7 +349,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.fields.floorball/accessible-seating-capacity-person
+        :spec      fields-schema/capacity-person
         :value     (-> edit-data :accessible-seating-capacity-person)
         :on-change #(on-change :accessible-seating-capacity-person %)}]}
 
@@ -484,7 +487,7 @@
     :form-field
     [lui/text-field
      {:type      "text"
-      :spec      :lipas.sports-site.circumstances/locker-room-quality-comment
+      :spec      circumstances-schema/locker-room-quality-comment
       :value     (-> edit-data :locker-room-quality-comment)
       :on-change #(on-change :locker-room-quality-comment %)}]}
 
@@ -493,7 +496,7 @@
     :form-field
     [lui/text-field
      {:type      "number"
-      :spec      :lipas.sports-site.circumstances/locker-rooms-count
+      :spec      circumstances-schema/locker-rooms-count
       :value     (-> edit-data :locker-rooms-count)
       :on-change #(on-change :locker-rooms-count %)}]}])
 
@@ -507,7 +510,7 @@
     :form-field
     [lui/text-field
      {:type      "number"
-      :spec      :lipas.sports-site.locker-room/surface-area-m2
+      :spec      common-schema/number
       :adornment "m²"
       :value     (-> edit-data :surface-area-m2)
       :on-change #(on-change :surface-area-m2 %)}]}
@@ -518,7 +521,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          :lipas.sports-site.locker-room/showers-count
+      :spec          circumstances-schema/showers-count
       :value         (-> edit-data :showers-count)
       :on-change     #(on-change :showers-count %)}]}
 
@@ -528,7 +531,7 @@
     :form-field
     [lui/text-field
      {:type          "number"
-      :spec          :lipas.sports-site.locker-room/toilets-count
+      :spec          circumstances-schema/toilets-count
       :value         (-> edit-data :toilets-count)
       :on-change     #(on-change :toilets-count %)}]}])
 
@@ -676,7 +679,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/teams-using
+          :spec      circumstances-schema/teams-using
           :value     (-> edit-data :teams-using)
           :on-change #(on-change :teams-using %)}]})
 
@@ -687,7 +690,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/general-information
+          :spec      circumstances-schema/general-information
           :value     (-> edit-data :general-information)
           :on-change #(on-change :general-information %)
           :multiline true
@@ -700,7 +703,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/storage-capacity-comment
+          :spec      circumstances-schema/storage-capacity-comment
           :value     (-> edit-data :storage-capacity)
           :on-change #(on-change :storage-capacity %)}]})
 
@@ -710,7 +713,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/open-floor-space-length-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :open-floor-space-length-m)
         :on-change #(on-change :open-floor-space-length-m %)}]}
@@ -721,7 +724,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/open-floor-space-width-m
+        :spec      common-schema/number
         :adornment "m"
         :value     (-> edit-data :open-floor-space-width-m)
         :on-change #(on-change :open-floor-space-width-m %)}]}
@@ -732,7 +735,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/open-floor-space-area-m2
+        :spec      common-schema/number
         :adornment "m²"
         :value     (-> edit-data :open-floor-space-area-m2)
         :on-change #(on-change :open-floor-space-area-m2 %)}]}
@@ -744,7 +747,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances.floorball/available-goals-count
+          :spec      circumstances-schema/available-goals-count
           :value     (-> edit-data :available-goals-count)
           :on-change #(on-change :available-goals-count %)}]})
 
@@ -764,7 +767,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances.floorball/goal-shrinking-elements-count
+          :spec      circumstances-schema/goal-shrinking-elements-count
           :value     (-> edit-data :goal-shrinking-elements-count)
           :on-change #(on-change :goal-shrinking-elements-count %)}]})
 
@@ -784,7 +787,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances.floorball/corner-pieces-count
+          :spec      circumstances-schema/corner-pieces-count
           :value     (-> edit-data :corner-pieces-count)
           :on-change #(on-change :corner-pieces-count %)}]})
 
@@ -797,7 +800,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/locker-rooms-count
+          :spec      circumstances-schema/locker-rooms-count
           :value     (-> edit-data :locker-rooms-count)
           :on-change #(on-change :locker-rooms-count %)}]})
 
@@ -808,7 +811,7 @@
         :form-field
         [lui/text-field
          {:type          "number"
-          :spec          :lipas.sports-site.circumstances/saunas-count
+          :spec          circumstances-schema/saunas-count
           #_#_:adornment "m"
           :value         (-> edit-data :saunas-count)
           :on-change     #(on-change :saunas-count %)}]})
@@ -837,7 +840,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/first-aid-comment
+          :spec      circumstances-schema/first-aid-comment
           :value     (-> edit-data :first-aid-comment)
           :on-change #(on-change :first-aid-comment %)}]})
 
@@ -847,7 +850,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/scoreboard-count
+        :spec      circumstances-schema/scoreboard-count
         :value     (-> edit-data :scoreboard-count)
         :on-change #(on-change :scoreboard-count %)}]}
 
@@ -885,7 +888,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/audience-toilets-count
+        :spec      circumstances-schema/audience-toilets-count
         :value     (-> edit-data :audience-toilets-count)
         :on-change #(on-change :audience-toilets-count %)}]}
 
@@ -905,7 +908,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/vip-area-comment
+          :spec      circumstances-schema/vip-area-comment
           :value     (-> edit-data :vip-area-comment)
           :on-change #(on-change :vip-area-comment %)}]})
 
@@ -934,7 +937,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/detached-chairs-quantity
+          :spec      circumstances-schema/detached-chair-quantity
           :value     (-> edit-data :detached-chair-quantity)
           :on-change #(on-change :detached-chair-quantity %)}]})
 
@@ -945,7 +948,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/detached-tables-quantity
+          :spec      circumstances-schema/detached-tables-quantity
           :value     (-> edit-data :detached-tables-quantity)
           :on-change #(on-change :detached-tables-quantity %)}]})
 
@@ -956,7 +959,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/cafeteria-and-restaurant-capacity-person
+          :spec      circumstances-schema/cafeteria-and-restaurant-capacity-person
           :value     (-> edit-data :cafeteria-and-restaurant-capacity-person)
           :on-change #(on-change :cafeteria-and-restaurant-capacity-person %)}]})
 
@@ -967,7 +970,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/restaurateur-contact-info
+          :spec      circumstances-schema/restaurateur-contact-info
           :value     (-> edit-data :restaurateur-contact-info)
           :on-change #(on-change :restaurateur-contact-info %)}]})
 
@@ -987,7 +990,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/conference-space-quantity
+          :spec      circumstances-schema/conference-space-quantity
           :value     (-> edit-data :conference-space-quantity)
           :on-change #(on-change :conference-space-quantity %)}]})
 
@@ -998,7 +1001,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/conference-space-total-capacity-person
+          :spec      circumstances-schema/conference-space-total-capacity-person
           :value     (-> edit-data :conference-space-total-capacity-person)
           :on-change #(on-change :conference-space-total-capacity-person %)}]})
 
@@ -1018,7 +1021,7 @@
         :form-field
         [lui/text-field
          {:type      "text"
-          :spec      :lipas.sports-site.circumstances/ticket-sales-operator
+          :spec      circumstances-schema/ticket-sales-operator
           :value     (-> edit-data :ticket-sales-operator)
           :on-change #(on-change :ticket-sales-operator %)}]})
 
@@ -1028,7 +1031,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/car-parking-capacity
+        :spec      circumstances-schema/car-parking-capacity
         :value     (-> edit-data :car-parking-capacity)
         :on-change #(on-change :car-parking-capacity %)}]}
 
@@ -1038,7 +1041,7 @@
       :form-field
       [lui/text-field
        {:type      "number"
-        :spec      :lipas.sports-site.circumstances/bus-parking-capacity
+        :spec      circumstances-schema/bus-park-capacity
         :value     (-> edit-data :bus-park-capacity)
         :on-change #(on-change :bus-park-capacity %)}]}
 
@@ -1069,7 +1072,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/roof-trusses-capacity-kg
+          :spec      circumstances-schema/roof-trusses-capacity-kg
           :adornment "kg"
           :value     (-> edit-data :roof-trusses-capacity-kg)
           :on-change #(on-change :roof-trusses-capacity-kg %)}]})
@@ -1110,7 +1113,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/wireless-microphone-quantity
+          :spec      circumstances-schema/microfone-quantity
           :value     (-> edit-data :wireless-microfone-quantity)
           :on-change #(on-change :wireless-microfone-quantity %)}]})
 
@@ -1121,7 +1124,7 @@
         :form-field
         [lui/text-field
          {:type      "number"
-          :spec      :lipas.sports-site.circumstances/wired-microphone-quantity
+          :spec      circumstances-schema/microfone-quantity
           :value     (-> edit-data :wired-microfone-quantity)
           :on-change #(on-change :wired-microfone-quantity %)}]})
 

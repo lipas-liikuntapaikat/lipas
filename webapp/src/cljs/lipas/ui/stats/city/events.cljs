@@ -55,7 +55,7 @@
       {:http-xhrio
        {:method          :post
         :uri             url
-        :params          {:city-codes city-codes}
+        :params          {:city-codes (vec city-codes)}
         :format          (ajax/transit-request-format)
         :response-format (ajax/transit-response-format)
         :on-success      [::finance-report-success]

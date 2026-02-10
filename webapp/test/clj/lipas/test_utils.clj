@@ -2,8 +2,6 @@
   (:require [cheshire.core :as j]
             [clojure.java.jdbc :as jdbc]
             [clojure.java.io :as io]
-            [clojure.spec.alpha :as s]
-            [clojure.spec.gen.alpha :as gen]
             [clojure.string :as str]
             [cognitect.transit :as transit]
             [lipas.backend.analysis.diversity :as diversity]
@@ -12,8 +10,9 @@
             [lipas.backend.email :as email]
             [lipas.backend.search :as search]
             [lipas.backend.system :as sy]
-            [lipas.schema.core]
+            [lipas.schema.lois :as loi-schema]
             [lipas.schema.sports-sites :as sports-site-schema]
+            [lipas.schema.users :as users-schema]
             [malli.core :as m]
             [malli.generator :as mg]
             [lipas.utils :as utils]
@@ -26,15 +25,6 @@
            java.util.Base64))
 
 (declare gen-user prune-es!)
-
-#_(defn gen-sports-site
-    []
-    (try
-    ;; FIXME :ptv generators produce difficult values
-      (-> (s/gen :lipas/sports-site)
-          gen/generate
-          (dissoc :ptv))
-      (catch Throwable _t (gen-sports-site))))
 
 (defn fix-generated-site [site]
   (cond-> site
@@ -715,10 +705,10 @@
    (gen-user {:db? false :admin? false :status "active"}))
   ([{:keys [db? admin? status permissions db-component]
      :or {admin? false status "active"}}]
-   (let [user (-> (gen/generate (s/gen :lipas/user))
+   (let [user (-> (mg/generate users-schema/user-schema)
                   (assoc :password (str (gensym)) :status status)
-                  ;; Ensure :permissions is a map always, generate doesn't always add the key because it it is optional in
-                  ;; the :lipas/user spec but required e.g. update-user-permissions endpoint.
+                  ;; Ensure :permissions is a map always, generate doesn't always add the key because it is optional in
+                  ;; the user schema but required e.g. update-user-permissions endpoint.
                   (update :permissions (fn [generated-permissions]
                                          (cond-> (or generated-permissions {})
                                            ;; If custom permissions provided, use them instead of generated ones
@@ -737,12 +727,16 @@
        user))))
 
 (defn gen-loi! []
-  (-> (gen/generate (s/gen :lipas.loi/document))
+  (-> (mg/generate loi-schema/loi-document)
       (assoc :status "active")
-      (assoc :id (str (java.util.UUID/randomUUID)))))
+      (assoc :id (str (java.util.UUID/randomUUID)))
+      (assoc :geometries {:type "FeatureCollection"
+                          :features [{:type "Feature"
+                                      :geometry {:type "Point"
+                                                 :coordinates [25.0 65.0]}}]})))
 
 (comment
-  (every? #(s/valid? :lipas/sports-site %) (repeatedly 100 gen-sports-site)))
+  (every? #(m/validate sports-site-schema/sports-site %) (repeatedly 100 gen-sports-site)))
 
 ;; ========================================
 ;; User Generators

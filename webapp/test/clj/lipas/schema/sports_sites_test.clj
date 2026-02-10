@@ -579,28 +579,28 @@
 
 (deftest sports-site-multi-schema-structure-test
   (testing "sports-site is a multi-schema with dispatch on type-code"
-    (is (= :multi (first sports-sites/sports-site)))
-    (let [opts (second sports-sites/sports-site)]
+    (is (= :multi (m/type sports-sites/sports-site)))
+    (let [opts (m/properties sports-sites/sports-site)]
       (is (map? opts))
       (is (fn? (:dispatch opts)))
       (is (string? (:description opts)))))
 
   (testing "sports-site-compat is a multi-schema with same structure"
-    (is (= :multi (first sports-sites/sports-site-compat)))
-    (let [opts (second sports-sites/sports-site-compat)]
+    (is (= :multi (m/type sports-sites/sports-site-compat)))
+    (let [opts (m/properties sports-sites/sports-site-compat)]
       (is (map? opts))
       (is (fn? (:dispatch opts)))
       (is (string? (:description opts)))))
 
   (testing "Both multi-schemas have the same type codes"
-    (let [normal-codes (set (map first (drop 2 sports-sites/sports-site)))
-          compat-codes (set (map first (drop 2 sports-sites/sports-site-compat)))]
+    (let [normal-codes (set (map first (m/children sports-sites/sports-site)))
+          compat-codes (set (map first (m/children sports-sites/sports-site-compat)))]
       (is (= normal-codes compat-codes))
       (is (> (count normal-codes) 0)))))
 
 (deftest sports-site-dispatch-test
   (testing "Dispatch function works correctly"
-    (let [dispatch-fn (-> sports-sites/sports-site second :dispatch)]
+    (let [dispatch-fn (:dispatch (m/properties sports-sites/sports-site))]
       (is (= 1530 (dispatch-fn {:type {:type-code 1530}})))
       (is (= 2000 (dispatch-fn {:type {:type-code 2000}})))
       (is (= 101 (dispatch-fn {:type {:type-code 101}}))))))

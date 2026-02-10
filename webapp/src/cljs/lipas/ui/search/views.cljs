@@ -1,6 +1,5 @@
 (ns lipas.ui.search.views
-  (:require [clojure.spec.alpha :as s]
-            [lipas.data.prop-types :as prop-types]
+  (:require [lipas.data.prop-types :as prop-types]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
@@ -10,6 +9,7 @@
             [lipas.ui.search.events :as events]
             [lipas.ui.search.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]
             [reagent.core :as r]))
 
 (defn- filter-layout
@@ -432,7 +432,7 @@
                                  (if-let [spec (and (or (-> k specs :required?)
                                                         (some? v))
                                                     (-> k specs :spec))]
-                                   (conj res (s/valid? spec v))
+                                   (conj res (m/validate spec v))
                                    (conj res true)))
                                [])
                               (every? true?)))

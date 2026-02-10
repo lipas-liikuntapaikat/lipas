@@ -1,5 +1,6 @@
 (ns lipas.ui.feedback.subs
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.feedback :as feedback-schema]
+            [malli.core :as m]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::feedback
@@ -30,4 +31,4 @@
 (rf/reg-sub ::form-valid?
   :<- [::form]
   (fn [form _]
-    (s/valid? :lipas.feedback/payload form)))
+    (m/validate feedback-schema/feedback-payload form)))

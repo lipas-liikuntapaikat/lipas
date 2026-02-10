@@ -1,6 +1,7 @@
 (ns lipas.ui.front-page.views
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.users :as users-schema]
             [lipas.ui.components :as lui]
+            [malli.core :as m]
             [lipas.ui.front-page.events :as events]
             [lipas.ui.front-page.subs :as subs]
             [lipas.ui.mui :as mui]
@@ -260,7 +261,7 @@
             {:value @email
              :full-width true
              :label (tr :lipas.user/email)
-             :spec :lipas/email
+             :spec users-schema/email-schema
              :on-change #(reset! email %)}]]
 
           ;; Privacy policy
@@ -277,7 +278,7 @@
           (tr :actions/cancel)]
          [mui/button
           {:color "secondary"
-           :disabled (not (s/valid? :lipas/email @email))
+           :disabled (not (m/validate users-schema/email-schema @email))
            :on-click
            (fn []
              (==> [::events/subscribe-newsletter {:email @email}])

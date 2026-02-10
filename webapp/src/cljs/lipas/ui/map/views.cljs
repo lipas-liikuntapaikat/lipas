@@ -10,7 +10,6 @@
             ["mdi-material-ui/FileUpload$default" :as FileUpload]
             ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
             ["react" :as react]
-            [clojure.spec.alpha :as s]
             [clojure.string :as str]
             [lipas.data.activities :as activities-data]
             [lipas.schema.common :as common-schema]

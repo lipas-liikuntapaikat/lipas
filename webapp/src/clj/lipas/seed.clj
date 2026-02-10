@@ -1,15 +1,15 @@
 (ns lipas.seed
   (:require
-   [clojure.spec.alpha :as s]
-   [clojure.spec.gen.alpha :as gen]
-   [environ.core :refer [env]]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.system :as backend]
-   [lipas.maintenance :as maintenance]
-   [lipas.schema.core]
-   [taoensso.timbre :as log]))
+    [environ.core :refer [env]]
+    [lipas.backend.config :as config]
+    [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]
+    [lipas.backend.system :as backend]
+    [lipas.maintenance :as maintenance]
+    [lipas.schema.lois :as loi-schema]
+    [lipas.schema.sports-sites :as sports-site-schema]
+    [malli.generator :as mg]
+    [taoensso.timbre :as log]))
 
 (def jh-demo
   {:email    "jh@lipas.fi"
@@ -178,29 +178,26 @@
 (defn gen-sports-site
   []
   (try
-    (gen/generate (s/gen :lipas/sports-site))
+    (mg/generate sports-site-schema/new-or-existing-sports-site)
     (catch Throwable _t (gen-sports-site))))
 
 (defn gen-loi []
   (try
-    (->
-     (gen/generate (s/gen :lipas.loi/document))
-     (assoc :id (java.util.UUID/randomUUID)))
+    (-> (mg/generate loi-schema/loi-document)
+        (assoc :id (java.util.UUID/randomUUID)))
     (catch Throwable _ (gen-loi))))
 
-(defn seed-lois! [db search user spec n]
-  (log/info "Seeding " n "generated " spec)
+(defn seed-lois! [db search user n]
+  (log/info "Seeding" n "generated LOIs")
   (doseq [x (range n)]
-
     (let [loi (gen-loi)]
       (core/upsert-loi! db search user loi)
       (log/info loi))
-    (log/info "Generated " x " of " n))
+    (log/info "Generated" x "of" n))
   (log/info "Seeding done!"))
 
-
-(defn seed-sports-sites! [db user spec n]
-  (log/info "Seeding" n "generated" spec)
+(defn seed-sports-sites! [db user n]
+  (log/info "Seeding" n "generated sports sites")
   (doseq [_ (range n)]
     (core/upsert-sports-site!* db user (gen-sports-site)))
   (log/info "Seeding done!"))
@@ -222,6 +219,6 @@
       (seed-demo-users! db)
       (seed-city-data! db search)
       (let [user (core/get-user db (:email admin))]
-        (seed-sports-sites! db user :lipas/sports-site 10)
-        (seed-lois! db search user :lipas.loi/document 10))
+        (seed-sports-sites! db user 10)
+        (seed-lois! db search user 10))
       (finally (backend/stop-system! system)))))

@@ -1,6 +1,7 @@
 (ns lipas.ui.loi.subs
-  (:require [clojure.spec.alpha :as s]
+  (:require [lipas.schema.lois :as lois-schema]
             [lipas.ui.utils :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::loi
@@ -43,7 +44,7 @@
                    (assoc :event-date (utils/timestamp)))]
       (boolean
         (and geoms
-             (s/valid? :lipas.loi/document data))))))
+             (m/validate lois-schema/loi data))))))
 
 (rf/reg-sub ::loi-categories
   :<- [::loi]

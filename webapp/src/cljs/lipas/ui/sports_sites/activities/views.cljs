@@ -2,6 +2,7 @@
   (:require ["@mui/material/Alert$default" :as Alert]
             [clojure.pprint :as pprint]
             [clojure.string :as str]
+            [lipas.schema.common :as common-schema]
             [lipas.ui.components :as lui]
             [lipas.ui.components.buttons :as lui-btn]
             [lipas.ui.components.forms :refer [->display-tf]]
@@ -1163,9 +1164,7 @@
                     :label       (get-in field [:label locale])
                     :helper-text (get-in field [:description locale])
                     :fullWidth   true
-                    :spec        [:or
-                                  [:int {:min 0 :max 100}]
-                                  [:double {:min 0.0 :max 100.0}]]
+                    :spec        common-schema/percentage
                     :on-change   #(set-field prop-k %)
                     :value       (get-in edit-data [prop-k])})]
 

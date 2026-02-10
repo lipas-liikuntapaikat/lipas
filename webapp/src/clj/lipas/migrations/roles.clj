@@ -1,10 +1,10 @@
 (ns lipas.migrations.roles
-  (:require [clojure.spec.alpha :as s]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [lipas.backend.db.db :refer [get-users]]
             [lipas.backend.db.user :as user]
-            [lipas.schema.core]
+            [lipas.schema.users :as users-schema]
+            [malli.core :as m]
             [taoensso.timbre :as log]))
 
 (defn floorball-user?
@@ -137,12 +137,12 @@
       (println roles)
       (println)
 
-      (when-let [err (s/explain-data :lipas.user.permissions/roles roles)]
+      (when-not (m/validate users-schema/roles-schema roles)
         (throw (ex-info "Bad roles" {:roles roles
-                                     :err err})))
+                                     :err (m/explain users-schema/roles-schema roles)})))
 
       (user/update-user-permissions! db {:id (:id user)
-                                    :permissions (assoc (:permissions user) :roles roles)}))))
+                                         :permissions (assoc (:permissions user) :roles roles)}))))
 
 (defn migrate-down [{:keys [db] :as _config}]
   (let [users (get-users db)]

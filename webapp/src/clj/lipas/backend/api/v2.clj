@@ -7,6 +7,7 @@
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.sports-sites.types :as types-schema]
+            [malli.core :as m]
             [reitit.coercion.malli]
             [reitit.openapi :as openapi]
             [reitit.swagger-ui :as swagger-ui]))
@@ -174,9 +175,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
               :body (core/get-category type-code)}))
 
          :parameters
-         {:path [:map [:type-code {:description (-> types-schema/active-type-code
-                                                    second
-                                                    :description)}
+         {:path [:map [:type-code {:description (:description (m/properties types-schema/active-type-code))}
                        #'types-schema/active-type-code]]}
 
          :responses {200 {:body #'types-schema/type}}}}]]
@@ -218,25 +217,19 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
                        [:city-codes
                         {:optional true
                          :decode/string decode-heisenparam
-                         :description (-> location-schema/city-codes
-                                          second
-                                          :description)}
+                         :description (:description (m/properties location-schema/city-codes))}
                         #'location-schema/city-codes]
 
                        [:type-codes
                         {:optional true
                          :decode/string decode-heisenparam
-                         :description (-> types-schema/active-type-codes
-                                          second
-                                          :description)}
+                         :description (:description (m/properties types-schema/active-type-codes))}
                         #'types-schema/active-type-codes]
 
                        [:admins
                         {:optional true
                          :decode/string decode-heisenparam
-                         :description (-> sports-sites-schema/admins
-                                          second
-                                          :description)}
+                         :description (:description (m/properties sports-sites-schema/admins))}
                         #'sports-sites-schema/admins]
 
                        [:owners
@@ -246,9 +239,7 @@ Additional non-facility entities in LIPAS, that complement the sports facility d
 
                        [:activities
                         {:optional true
-                         :description (-> activities-schema/activities
-                                          second
-                                          :description)
+                         :description (:description (m/properties activities-schema/activities))
                          :decode/string decode-heisenparam}
                         #'activities-schema/activities]]}
 
