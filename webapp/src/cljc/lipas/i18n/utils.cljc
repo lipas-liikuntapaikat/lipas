@@ -34,6 +34,7 @@
    :ice-form
    :ice-resurfacer-fuels
    :ice-rinks
+   :lipas-in-numbers
    :lipas.admin
    :lipas.building
    :lipas.bulk-operations

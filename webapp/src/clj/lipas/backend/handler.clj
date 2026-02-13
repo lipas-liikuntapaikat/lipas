@@ -748,6 +748,15 @@
              (fn [out]
                (core/create-analysis-report body-params out)))})}}]
 
+      ;; Front page stats
+      ["/actions/get-front-page-stats"
+       {:post
+        {:no-doc true
+         :handler
+         (fn [_]
+           {:status 200
+            :body (core/get-front-page-stats search)})}}]
+
       ;; Get newsletter
       ["/actions/get-newsletter"
        {:post
