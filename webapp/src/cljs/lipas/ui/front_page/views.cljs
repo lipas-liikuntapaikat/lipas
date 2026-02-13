@@ -1,7 +1,7 @@
 (ns lipas.ui.front-page.views
-  (:require [lipas.schema.users :as users-schema]
-            [lipas.ui.components.misc :as misc]
-            [lipas.ui.components.text-fields :as text-fields]
+  (:require [clojure.string :as str]
+            [lipas.schema.users :as users-schema]
+            [lipas.ui.components :as lui]
             [malli.core :as m]
             [lipas.ui.front-page.events :as events]
             [lipas.ui.front-page.subs :as subs]
@@ -355,6 +355,91 @@
           :target "_blank"}
          (tr :help/privacy-policy)]]]]]))
 
+(defn- format-number [n]
+  (when n
+    (->> (str n)
+         reverse
+         (partition-all 3)
+         (map #(apply str (reverse %)))
+         reverse
+         (str/join "\u00A0"))))
+
+(defn- days-since [date-str]
+  (when date-str
+    (let [date-part (first (str/split date-str #"T"))
+          then (.getTime (js/Date. date-part))
+          now (.getTime (js/Date.))
+          diff-ms (- now then)]
+      (Math/floor (/ diff-ms (* 1000 60 60 24))))))
+
+(defn- stat-item [{:keys [value label]}]
+  [mui/grid {:item true :xs 6 :sm 6 :md "auto"
+             :style {:text-align "center" :padding "1em 2em"}}
+   [mui/typography {:variant "h3"
+                    :component "div"
+                    :style {:font-weight 700
+                            :color mui/secondary
+                            :line-height 1.2}}
+    value]
+   [mui/typography {:variant "body1"
+                    :component "div"
+                    :style {:opacity 0.85
+                            :margin-top "0.25em"
+                            :color "white"}}
+    label]])
+
+(defn lipas-in-numbers [tr]
+  (let [stats-data (<== [::subs/stats-data])
+        in-progress? (<== [::subs/stats-in-progress?])]
+    (when (or stats-data in-progress?)
+      [mui/grid
+       {:container true
+        :style {:background-color mui/primary
+                :color "white"
+                :padding "2em 1em"}}
+
+       ;; Heading
+       [mui/grid {:item true :xs 12
+                  :style {:text-align "center" :margin-bottom "1em"}}
+        [mui/typography {:variant "h4"
+                         :component "h2"
+                         :style {:font-weight 600
+                                 :color "white"}}
+         (tr :lipas-in-numbers/headline)]]
+
+       (if in-progress?
+         ;; Loading
+         [mui/grid {:item true :xs 12 :style {:text-align "center"}}
+          [mui/circular-progress {:style {:color "white"}}]]
+
+         ;; Stats
+         (when stats-data
+           [:<>
+            [mui/grid {:item true :xs 12}
+             [mui/grid {:container true
+                        :justify-content "center"
+                        :align-items "flex-start"}
+              [stat-item {:value (format-number (:total-count stats-data))
+                          :label (tr :lipas-in-numbers/sports-facilities)}]
+              [stat-item {:value (format-number (:city-count stats-data))
+                          :label (tr :lipas-in-numbers/municipalities)}]
+              [stat-item {:value (format-number (:updated-last-year stats-data))
+                          :label (tr :lipas-in-numbers/updated-last-year)}]
+              [stat-item {:value (format-number (:route-length-km stats-data))
+                          :label (tr :lipas-in-numbers/km-of-routes)}]]]
+
+            ;; Last updated line
+            (when-let [d (days-since (:last-updated stats-data))]
+              [mui/grid {:item true :xs 12
+                         :style {:text-align "center" :margin-top "1em"}}
+               [mui/typography {:variant "body2"
+                                :style {:opacity 0.7 :color "white"}}
+                (str (tr :lipas-in-numbers/last-updated) " "
+                     (case d
+                       0 (tr :lipas-in-numbers/today)
+                       1 (tr :lipas-in-numbers/yesterday)
+                       (str/replace (tr :lipas-in-numbers/days-ago) "{1}" (str d))))]])]))])))
+
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
     (let [newsletter-data (<== [::subs/newsletter-data])]
@@ -545,6 +630,9 @@
                 :subject (tr :data-users/email-subject)
                 :body (tr :data-users/email-body)})}
             (tr :data-users/tell-us)]]]]]
+
+       ;; LIPAS in numbers
+       [lipas-in-numbers tr]
 
        ;;Partner logos
        [footer {:title (tr :partners/headline)

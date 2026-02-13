@@ -783,6 +783,31 @@
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
 
+(defn get-front-page-stats
+  [search*]
+  (let [cache-key :front-page-stats
+        cached    (get @cache cache-key)
+        now       (System/currentTimeMillis)]
+    (if (and cached (< (- now (:timestamp cached)) (* 5 60 1000)))
+      (:data cached)
+      (let [query {:size 0
+                   :track_total_hits true
+                   :query {:bool {:filter [{:terms {:status ["active" "out-of-service-temporarily"]}}]}}
+                   :aggs {:cities {:cardinality {:field :location.city.city-code}}
+                          :route-length {:sum {:field :properties.route-length-km}}
+                          :latest {:max {:field :event-date}}
+                          :updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}}}}
+            result (-> (search search* query) :body)
+            total  (get-in result [:hits :total :value])
+            aggs   (:aggregations result)
+            data   {:total-count       total
+                    :city-count        (get-in aggs [:cities :value])
+                    :updated-last-year (get-in aggs [:updated-last-year :doc_count])
+                    :route-length-km   (Math/round (double (or (get-in aggs [:route-length :value]) 0)))
+                    :last-updated      (get-in aggs [:latest :value_as_string])}]
+        (swap! cache assoc cache-key {:data data :timestamp now})
+        data))))
+
 (defn data-model-report
   [out]
   (data-model-export/create-excel out))
