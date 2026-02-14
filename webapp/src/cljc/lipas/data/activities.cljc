@@ -32,6 +32,14 @@
 (def fids-schema
   [:sequential [:string]])
 
+(def segment-schema
+  [:map
+   [:fid :string]
+   [:reversed? {:optional true :default false} :boolean]])
+
+(def segments-schema
+  [:sequential segment-schema])
+
 (def contact-roles
   {"admin"            {:fi "Ylläpitäjä"
                        :se "Administratör"
@@ -616,6 +624,7 @@
                [:map
                 [:id #'common-schema/uuid]
                 [:fids {:optional true} fids-schema]
+                [:segments {:optional true} segments-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:accessibility-categorized {:optional true}
                  [:map
@@ -955,6 +964,7 @@
                [:map
                 [:id #'common-schema/uuid]
                 [:fids {:optional true} fids-schema]
+                [:segments {:optional true} segments-schema]
                 [:geometries {:optional true} common-schema/line-string-feature-collection]
                 [:route-name {:optional true} common-schema/localized-string]
                 [:cycling-activities {:optional true}
@@ -1312,6 +1322,7 @@
                       [:map
                        [:id #'common-schema/uuid]
                        [:fids {:optional true} fids-schema]
+                       [:segments {:optional true} segments-schema]
                        [:geometries {:optional true} common-schema/line-string-feature-collection]
                        [:route-name {:optional true} common-schema/localized-string]
                        [:paddling-activities {:optional true}

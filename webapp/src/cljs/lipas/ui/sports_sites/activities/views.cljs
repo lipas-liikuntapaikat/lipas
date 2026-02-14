@@ -47,8 +47,8 @@
   [props children]
   [:> Grid {:container true :spacing 4}
    (doall
-    (for [[idx child] (map vector (range) children)]
-      [:> Grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+     (for [[idx child] (map vector (range) children)]
+       [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -142,21 +142,21 @@
       [:> Grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
       (doall
-       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-         [:> Grid
-          {:key prop-k
-           :item true
-           :xs 12}
-          [make-field
-           {:field        field
-            :prop-k       prop-k
-            :edit-data    (:data @dialog-state)
-            :display-data (:data @dialog-state)
-            :locale       locale
-            :set-field    (fn [& args]
-                            (let [path (into [:data] (butlast args))
-                                  v (last args)]
-                              (swap! dialog-state assoc-in path v)))}]]))]]))
+        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+          [mui/grid
+           {:key prop-k
+            :item true
+            :xs 12}
+           [make-field
+            {:field        field
+             :prop-k       prop-k
+             :edit-data    (:data @dialog-state)
+             :display-data (:data @dialog-state)
+             :locale       locale
+             :set-field    (fn [& args]
+                             (let [path (into [:data] (butlast args))
+                                   v (last args)]
+                               (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field
@@ -209,8 +209,8 @@
                                  (map #(assoc % :_role (->> %
                                                             :role
                                                             (map
-                                                             (fn [role]
-                                                               (get-in contact-props [:role :field :opts role locale])))
+                                                              (fn [role]
+                                                                (get-in contact-props [:role :field :opts role locale])))
                                                             (str/join ", ")))))
           :on-add           (fn []
                               (reset! dialog-state {:open? true
@@ -475,43 +475,43 @@
              [:> Typography description]]]
 
          (doall
-          (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
-            ^{:key k}
-            [:<>
-             [:> Grid {:item true :xs 12}
-              [:> Typography (str (tr :utp/custom-rule) " " (inc idx))]]
+           (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
+             ^{:key k}
+             [:<>
+              [mui/grid {:item true :xs 12}
+               [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-             [:> Grid {:item true :xs 12}
-              [lui-tf/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :label locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
-                :label           (tr :general/headline)
-                :variant         "outlined"}]]
+              [mui/grid {:item true :xs 12}
+               [lui/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :label locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
+                 :label           (tr :general/headline)
+                 :variant         "outlined"}]]
 
              ;; Description
-             [:> Grid {:item true :xs 12}
-              [lui-tf/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :description locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
-                :label           (tr :general/description)
-                :variant         "outlined"}]]
+              [mui/grid {:item true :xs 12}
+               [lui/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :description locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
+                 :label           (tr :general/description)
+                 :variant         "outlined"}]]
 
              ;; Delete btn
-             [:> Grid {:item true :style {:text-align "right"}}
-              [lui-btn/confirming-delete-button
-               {:tooltip         (tr :actions/delete)
-                :confirm-tooltip (tr :confirm/delete-confirm)
-                :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
+              [mui/grid {:item true :style {:text-align "right"}}
+               [lui-btn/confirming-delete-button
+                {:tooltip         (tr :actions/delete)
+                 :confirm-tooltip (tr :confirm/delete-confirm)
+                 :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-             [:> Grid {:item true :xs 12}
-              [:> Divider]]]))
+              [mui/grid {:item true :xs 12}
+               [mui/divider]]]))
 
          ;; Add / edit btn
          [:> Grid {:item true :xs 12}
@@ -894,26 +894,103 @@
   [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
-    (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
-          :when (or (nil? show)
-                    (show {:type-code type-code}))]
-      (when-not (and
-                 (contains? route-props :independent-entity)
-                 (not (:independent-entity @state))
-                 (contains? independent-entity-ks prop-k))
-        [make-field
-         {:read-only?   read-only?
-          :key          prop-k
-          :field        field
-          :prop-k       prop-k
-          :edit-data    @state
-          :display-data @state
-          :locale       locale
-          :set-field    (fn [& args]
-                          (let [path (butlast args)
-                                v (last args)]
-                            (swap! state assoc-in path v)))
-          :lipas-id     lipas-id}])))])
+     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
+           :when (or (nil? show)
+                     (show {:type-code type-code}))]
+       (when-not (and
+                   (contains? route-props :independent-entity)
+                   (not (:independent-entity @state))
+                   (contains? independent-entity-ks prop-k))
+         [make-field
+          {:read-only?   read-only?
+           :key          prop-k
+           :field        field
+           :prop-k       prop-k
+           :edit-data    @state
+           :display-data @state
+           :locale       locale
+           :set-field    (fn [& args]
+                           (let [path (butlast args)
+                                 v (last args)]
+                             (swap! state assoc-in path v)))
+           :lipas-id     lipas-id}])))])
+
+(defn segment-builder
+  [{:keys [lipas-id activity-k route-id segments segment-details read-only?]}]
+  (let [tr    (<== [:lipas.ui.subs/translator])
+        n     (count segments)
+        move! (fn [from to]
+                (==> [::events/reorder-segments lipas-id activity-k route-id from to]))]
+    (when (and (seq segments) (> n 1))
+      [mui/grid {:item true :xs 12 :style {:margin-top "0.5em" :margin-bottom "0.5em"}}
+       [mui/typography {:variant "subtitle2" :style {:margin-bottom "0.5em"}}
+        (tr :utp/segments)]
+
+       [mui/paper {:variant "outlined" :style {:padding "4px"}}
+        (doall
+          (for [[idx segment] (map-indexed vector segments)]
+            (let [detail (nth segment-details idx nil)
+                  fid    (:fid segment)]
+              ^{:key fid}
+              [mui/stack
+               {:direction   "row"
+                :align-items "center"
+                :spacing     0.5
+                :style       (merge {:padding        "4px 8px"
+                                     :border-bottom  "1px solid #eee"}
+                                    (when (and detail (not (:connected-to-next? detail)))
+                                      {:border-bottom "2px solid #f0ad4e"}))}
+
+              ;; Move up / move down
+               (when-not read-only?
+                 [mui/stack {:direction "column" :style {:margin-right "4px"}}
+                  [mui/icon-button
+                   {:size     "small"
+                    :disabled (zero? idx)
+                    :on-click #(move! idx (dec idx))}
+                   [mui/icon {:style {:font-size "18px"}} "arrow_upward"]]
+                  [mui/icon-button
+                   {:size     "small"
+                    :disabled (= idx (dec n))
+                    :on-click #(move! idx (inc idx))}
+                   [mui/icon {:style {:font-size "18px"}} "arrow_downward"]]])
+
+              ;; Segment label with number and length
+               [mui/typography
+                {:variant "body2"
+                 :style   {:flex 1}
+                 :on-mouse-enter #(==> [:lipas.ui.map.events/highlight-features #{fid}])
+                 :on-mouse-leave #(==> [:lipas.ui.map.events/highlight-features #{}])}
+                (str (tr :utp/segment) " " (inc idx)
+                     (when-let [len (:length-km detail)]
+                       (str " (" len " km)")))]
+
+              ;; Connectivity indicator
+               (when (and detail (not= idx (dec n)))
+                 [mui/tooltip
+                  {:title (if (:connected-to-next? detail) "Connected" "Gap")}
+                  [mui/icon
+                   {:style {:font-size "12px"
+                            :color     (if (:connected-to-next? detail) "#5cb85c" "#f0ad4e")}}
+                   "circle"]])
+
+              ;; Reverse button
+               (when-not read-only?
+                 [mui/tooltip {:title (tr :utp/reverse-segment)}
+                  [mui/icon-button
+                   {:size     "small"
+                    :color    (if (:reversed? segment) "primary" "default")
+                    :on-click #(==> [::events/toggle-segment-direction
+                                     lipas-id activity-k route-id idx])}
+                   [mui/icon {:style {:font-size "18px"}} "swap_horiz"]]])
+
+              ;; Remove button
+               (when-not read-only?
+                 [mui/icon-button
+                  {:size     "small"
+                   :on-click #(==> [::events/remove-segment
+                                    lipas-id activity-k route-id idx])}
+                  [mui/icon {:style {:font-size "18px"}} "close"]])])))]])))
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
@@ -930,15 +1007,24 @@
     (let [tr           (<== [:lipas.ui.subs/translator])
           field-sorter (<== [::subs/field-sorter activity-k])]
 
-      [route-form
-       {:locale       locale
-        :tr           tr
-        :field-sorter field-sorter
-        :lipas-id     lipas-id
-        :type-code    type-code
-        :read-only?   read-only?
-        :route-props  route-props
-        :state        route-form-state}])
+      [:<>
+       [segment-builder
+        {:lipas-id        lipas-id
+         :activity-k      activity-k
+         :route-id        (:id route)
+         :segments        (:segments route)
+         :segment-details (:segment-details route)
+         :read-only?      read-only?}]
+
+       [route-form
+        {:locale       locale
+         :tr           tr
+         :field-sorter field-sorter
+         :lipas-id     lipas-id
+         :type-code    type-code
+         :read-only?   read-only?
+         :route-props  route-props
+         :state        route-form-state}]])
 
     (finally
       (remove-watch route-form-state :lol))))
@@ -1008,50 +1094,59 @@
             (tr :utp/add-subroute-ok)]]])
 
        (when (and editing? (= :route-details mode))
-         [:<>
+         (let [selected-route (first (filter #(= selected-route-id (:id %)) routes))]
+           [:<>
 
-          [route-form
-           {:locale       locale
-            :tr           tr
-            :field-sorter field-sorter
-            :lipas-id     lipas-id
-            :type-code    type-code
-            :read-only?   read-only?
-            :route-props  route-props
-            :state        route-form-state}]
+            [segment-builder
+             {:lipas-id        lipas-id
+              :activity-k      activity-k
+              :route-id        selected-route-id
+              :segments        (:segments selected-route)
+              :segment-details (:segment-details selected-route)
+              :read-only?      false}]
 
-          ;; Buttons
-          [:> Grid {:container true :spacing 1}
+            [route-form
+             {:locale       locale
+              :tr           tr
+              :field-sorter field-sorter
+              :lipas-id     lipas-id
+              :type-code    type-code
+              :read-only?   read-only?
+              :route-props  route-props
+              :state        route-form-state}]
 
-           ;; Done
-           [:> Grid {:item true}
-            [:> Button
-             {:variant  "contained"
-              :color    "secondary"
-              :on-click #(==> [::events/finish-route-details
-                               {:fids       fids
-                                :activity-k activity-k
-                                :id         selected-route-id
-                                :route      @route-form-state
-                                :lipas-id   lipas-id}])}
-             (tr :utp/finish-route-details)]]
+            ;; Buttons
+            [mui/grid {:container true :spacing 1}
 
-           ;; Delete
-           [:> Grid {:item true}
-            [:> Button
-             {:variant  "contained"
-              :on-click #(==> [:lipas.ui.events/confirm
-                               (tr :utp/delete-route-prompt)
-                               (fn []
-                                 (==> [::events/delete-route lipas-id activity-k selected-route-id]))])}
-             (tr :actions/delete)]]
+             ;; Done
+             [mui/grid {:item true}
+              [mui/button
+               {:variant  "contained"
+                :color    "secondary"
+                :on-click #(==> [::events/finish-route-details
+                                 {:fids       fids
+                                  :activity-k activity-k
+                                  :id         selected-route-id
+                                  :route      @route-form-state
+                                  :lipas-id   lipas-id}])}
+               (tr :utp/finish-route-details)]]
 
-           ;; Cancel
-           [:> Grid {:item true}
-            [:> Button
-             {:variant  "contained"
-              :on-click #(==> [::events/cancel-route-details])}
-             (tr :actions/cancel)]]]])
+             ;; Delete
+             [mui/grid {:item true}
+              [mui/button
+               {:variant  "contained"
+                :on-click #(==> [:lipas.ui.events/confirm
+                                 (tr :utp/delete-route-prompt)
+                                 (fn []
+                                   (==> [::events/delete-route lipas-id activity-k selected-route-id]))])}
+               (tr :actions/delete)]]
+
+             ;; Cancel
+             [mui/grid {:item true}
+              [mui/button
+               {:variant  "contained"
+                :on-click #(==> [::events/cancel-route-details])}
+               (tr :actions/cancel)]]]]))
 
        (when config/debug?
          [:> Grid {:item true :xs 12}
@@ -1066,32 +1161,38 @@
   (let [tr     (<== [:lipas.ui.subs/translator])
         routes (if read-only?
                  value
-                 (<== [::subs/routes lipas-id activity-k]))
-        default-route-view (if (> (count routes) 1)
-                             :multi
-                             :single)
-        selected-route-view (<== [::subs/route-view])
-        route-view (if read-only?
-                     default-route-view
-                     (or selected-route-view
-                         default-route-view))
-        route-count (count routes)]
+                 (<== [::subs/routes lipas-id activity-k]))]
 
-    [:> Grid {:container true :spacing 2 :style {:margin-top "1em"}}
+    ;; Initialize routes in db if they don't exist yet, and set travel directions
+    (when (not read-only?)
+      (==> [::events/init-routes lipas-id activity-k]))
 
-     ;; Hidden until UTP can support multi-tiered routes
+    (when (seq routes)
+      (let [default-route-view (if (> (count routes) 1)
+                                 :multi
+                                 :single)
+            selected-route-view (<== [::subs/route-view])
+            route-view (if read-only?
+                         default-route-view
+                         (or selected-route-view
+                             default-route-view))
+            route-count (count routes)]
 
-     (when-not read-only?
-       [:> Grid {:item true :xs 12}
-        [checkboxes/switch {:label     (tr :utp/route-is-made-of-subroutes)
-                     :value     (= :multi route-view)
-                     :disabled  (> route-count 1)
-                     :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
+        [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
 
-     [:> Grid {:item true :xs 12}
-      (case route-view
-        :single [single-route (assoc props :route (first routes))]
-        :multi  [multiple-routes (assoc props :routes routes)])]]))
+         ;; Hidden until UTP can support multi-tiered routes
+
+         (when-not read-only?
+           [mui/grid {:item true :xs 12}
+            [lui/switch {:label     (tr :utp/route-is-made-of-subroutes)
+                         :value     (= :multi route-view)
+                         :disabled  (> route-count 1)
+                         :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
+
+         [mui/grid {:item true :xs 12}
+          (case route-view
+            :single [single-route (assoc props :route (first routes))]
+            :multi  [multiple-routes (assoc props :routes routes)])]]))))
 
 (defn lipas-property
   [{:keys [read-only? lipas-id lipas-prop-k label description]}]
@@ -1178,15 +1279,15 @@
 
     "percentage" [lui-tf/text-field
                   (merge
-                   {:type        "number"
-                    :adornment   "%"
-                    :disabled    read-only?
-                    :label       (get-in field [:label locale])
-                    :helper-text (get-in field [:description locale])
-                    :fullWidth   true
-                    :spec        common-schema/percentage
-                    :on-change   #(set-field prop-k %)
-                    :value       (get-in edit-data [prop-k])})]
+                    {:type        "number"
+                     :adornment   "%"
+                     :disabled    read-only?
+                     :label       (get-in field [:label locale])
+                     :helper-text (get-in field [:description locale])
+                     :fullWidth   true
+                     :spec        common-schema/percentage
+                     :on-change   #(set-field prop-k %)
+                     :value       (get-in edit-data [prop-k])})]
 
     ;; FIXME: MUI-v5, outlined input is missing x-padding
     "textarea" [lui-tf/expandable-text-area

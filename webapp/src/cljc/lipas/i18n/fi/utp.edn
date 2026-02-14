@@ -1,6 +1,7 @@
 {:add-contact "Lisää yhteystieto",
  :add-highlight "Lisää kohokohta",
  :add-photo "Lisää valokuva",
+ :add-segment "Lisää osuus",
  :add-subroute "Lisää osareitti",
  :add-subroute-ok "OK",
  :add-video "Lisää video",
@@ -15,8 +16,11 @@
  :photo "Valokuva",
  :read-only-disclaimer
  "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan.",
+ :reverse-segment "Käännä osuuden suunta",
  :route-is-made-of-subroutes
  "Reitti koostuu monesta erillisestä osuudesta",
+ :segment "Osuus",
+ :segments "Osuudet",
  :select-route-parts-on-map "Valitse reitin osat kartalta",
  :unit "yksikkö",
  :video "Video"}

@@ -1,6 +1,7 @@
 {:add-contact "Lägg till kontaktuppgift",
  :add-highlight "Lägg till höjdpunkt",
  :add-photo "Lägg till foto",
+ :add-segment "Lägg till sektion",
  :add-subroute "Lägg till delrutt",
  :add-subroute-ok "OK",
  :add-video "Lägg till video",
@@ -16,8 +17,11 @@
  :photo "Foto",
  :read-only-disclaimer
  "Det finns för närvarande endast en redigeringsvy för aktiviteter. Logga in och gå till redigeringsläget från pennsymbolen.",
+ :reverse-segment "Vänd sektionens riktning",
  :route-is-made-of-subroutes
  "Rutten består av flera separata sektioner",
+ :segment "Sektion",
+ :segments "Sektioner",
  :select-route-parts-on-map "Välj ruttdelar på kartan",
  :unit "enhet",
  :video "Video"}

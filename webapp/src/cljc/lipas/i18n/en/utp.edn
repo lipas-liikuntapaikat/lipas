@@ -1,6 +1,7 @@
 {:add-contact "Add contact information",
  :add-highlight "Add highlight",
  :add-photo "Add photograph",
+ :add-segment "Add segment",
  :add-subroute "Add sub-route",
  :add-subroute-ok "OK",
  :add-video "Add video",
@@ -14,8 +15,11 @@
  :photo "Photograph",
  :read-only-disclaimer
  "There is currently only an editing view for activities. Log in and go to the editing mode from the pen symbol.",
+ :reverse-segment "Reverse segment direction",
  :route-is-made-of-subroutes
  "The route consists of multiple separate sections",
+ :segment "Segment",
+ :segments "Segments",
  :select-route-parts-on-map "Select route parts on the map",
  :unit "unit",
  :video "Video"}

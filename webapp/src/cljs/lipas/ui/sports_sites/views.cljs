@@ -1105,95 +1105,90 @@
 
 (defn elevation-profile
   [{:keys [lipas-id]}]
-  (r/with-let [selected-segment (r/atom 0)]
-    (let [tr (<== [:lipas.ui.subs/translator])
-          elevation (<== [::subs/elevation lipas-id])
-          stats (<== [::subs/elevation-stats lipas-id])
-          curr-stats (nth stats @selected-segment)
-          labels {:distance-m (tr :sports-site.elevation-profile/distance-from-start-m)
-                  :distance-km (tr :sports-site.elevation-profile/distance-from-start-km)
-                  :elevation-m (tr :sports-site.elevation-profile/height-from-sea-level-m)}
-          data (nth elevation @selected-segment)]
-      [:> Grid {:container true :spacing 2}
-       [:> Grid {:item true :xs 12}
-        [:> Grid
-         {:container true
-          :wrap "nowrap"
-          :spacing 2
-          :justify-content "flex-end"
-          :align-items "center"}
-         [:> Grid {:item true}
-          [selects/select
-           {:items (range 0 (count elevation))
-            :style {:min-width "120px"}
-            :value @selected-segment
-            :value-fn identity
-            :label-fn (fn [n] (str "Osa " (inc n)))
-            :sort-fn identity
-            :on-change (fn [i] (reset! selected-segment i))}]]
-         [:> Grid {:item true}
-          [:> IconButton
-           {:disabled (= 0 @selected-segment)
-            :on-click #(swap! selected-segment (fn [n] (max 0 (dec n))))}
-           [:> Icon "navigate_before"]]
-          [:> IconButton
-           {:disabled (= @selected-segment (dec (count elevation)))
-            :on-click #(swap! selected-segment (fn [n] (min (dec (count elevation)) (inc n))))}
-           [:> Icon "navigate_next"]]]]]
+  (let [tr (<== [:lipas.ui.subs/translator])
+        elevation (<== [::subs/elevation lipas-id])
+        stats (<== [::subs/elevation-stats lipas-id])
+        ;; Concatenate all segments into one continuous series
+        data (when (seq elevation)
+               (loop [segments elevation
+                      offset   0
+                      result   []]
+                 (if-let [seg (first segments)]
+                   (let [seg-max-dist (or (:distance-km (last seg)) 0)
+                         offset-seg  (mapv (fn [point]
+                                             (-> point
+                                                 (update :distance-km + offset)
+                                                 (update :distance-m + (* 1000 offset))))
+                                           seg)]
+                     (recur (rest segments)
+                            (+ offset seg-max-dist)
+                            (into result offset-seg)))
+                   result)))
+        combined-stats (when (seq stats)
+                         (reduce (fn [acc s]
+                                   {:ascend-m  (+ (:ascend-m acc) (:ascend-m s 0))
+                                    :descend-m (+ (:descend-m acc) (:descend-m s 0))})
+                                 {:ascend-m 0 :descend-m 0}
+                                 stats))
+        labels {:distance-m (tr :sports-site.elevation-profile/distance-from-start-m)
+                :distance-km (tr :sports-site.elevation-profile/distance-from-start-km)
+                :elevation-m (tr :sports-site.elevation-profile/height-from-sea-level-m)}]
+    [mui/grid {:container true :spacing 2}
 
-       [:> Grid {:item true :xs 12}
-        [:> ResponsiveContainer {:width "100%" :height 300}
-         [:> AreaChart
-          {:data data
-           :layout "horizontal"
-           :baseValue "dataMin"
-           :onMouseMove (fn [^js state]
-                          (when (and state (.-isTooltipActive state))
-                            (let [active-index (parse-long (.-activeIndex state))
-                                  segment-data (nth data active-index)]
-                              (when segment-data
-                                (==> [:lipas.ui.map.events/show-elevation-marker (clj->js segment-data)])))))
-           :onMouseLeave (fn [_]
-                           (==> [:lipas.ui.map.events/hide-elevation-marker]))}
-          [:defs
-           [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
-            [:stop {:stopColor (:elevation-m charts/colors) :offset "5%" :stopOpacity "0.8"}]
-            [:stop {:stopColor (:elevation-m charts/colors) :offset "95%" :stopOpacity "0"}]]]
-          [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
-          [:> Tooltip
-           {:content (fn [^js props]
-                       (charts/labeled-tooltip
-                         labels
-                         :label
-                         :hide-header
-                         #(utils/round-safe % 2)
-                         props))}]
-          [:> XAxis
-           {:dataKey "distance-km" :tick true :unit "km"
-            :domain #js ["dataMin" "dataMax"]
-            :type "number"
-            :tickFormatter (fn [x] (utils/round-safe x 1))}]
-          [:> YAxis
-           {:tick charts/font-styles
-            :dataKey :elevation-m
-            :unit "m"
-            :domain #js ["dataMin" "dataMax"]
-            :tickFormatter (fn [x] (utils/round-safe x 0))}]
-          [:> Area
-           {:dataKey :elevation-m
-            :fill "url(#color-elevation)"
-            :stroke (:elevation-m charts/colors)}]]]]
+     [mui/grid {:item true :xs 12}
+      [:> ResponsiveContainer {:width "100%" :height 300}
+       [:> AreaChart
+        {:data data
+         :layout "horizontal"
+         :baseValue "dataMin"
+         :onMouseMove (fn [^js state]
+                        (when (and state (.-isTooltipActive state))
+                          (let [active-index (parse-long (.-activeIndex state))
+                                segment-data (nth data active-index)]
+                            (when segment-data
+                              (==> [:lipas.ui.map.events/show-elevation-marker (clj->js segment-data)])))))
+         :onMouseLeave (fn [_]
+                         (==> [:lipas.ui.map.events/hide-elevation-marker]))}
+        [:defs
+         [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
+          [:stop {:stopColor (:elevation-m charts/colors) :offset "5%" :stopOpacity "0.8"}]
+          [:stop {:stopColor (:elevation-m charts/colors) :offset "95%" :stopOpacity "0"}]]]
+        [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
+        [:> Tooltip
+         {:content (fn [^js props]
+                     (charts/labeled-tooltip
+                       labels
+                       :label
+                       :hide-header
+                       #(utils/round-safe % 2)
+                       props))}]
+        [:> XAxis
+         {:dataKey "distance-km" :tick true :unit "km"
+          :domain #js ["dataMin" "dataMax"]
+          :type "number"
+          :tickFormatter (fn [x] (utils/round-safe x 1))}]
+        [:> YAxis
+         {:tick charts/font-styles
+          :dataKey :elevation-m
+          :unit "m"
+          :domain #js ["dataMin" "dataMax"]
+          :tickFormatter (fn [x] (utils/round-safe x 0))}]
+        [:> Area
+         {:dataKey :elevation-m
+          :fill "url(#color-elevation)"
+          :stroke (:elevation-m charts/colors)}]]]]
 
-       ;; Total ascend / descend
-       [:> Grid {:item true :xs 12}
-        [:> Table {:size "medium"}
-         [:> TableBody
-          [:> TableRow
-           [:> TableCell (tr :sports-site.elevation-profile/total-ascend)]
-           [:> TableCell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
-          [:> TableRow
-           [:> TableCell (tr :sports-site.elevation-profile/total-descend)]
-           [:> TableCell (str (-> curr-stats :descend-m utils/round-safe) "m")]]]]]
+     ;; Total ascend / descend
+     (when combined-stats
+       [mui/grid {:item true :xs 12}
+        [mui/table {:size "medium"}
+         [mui/table-body
+          [mui/table-row
+           [mui/table-cell (tr :sports-site.elevation-profile/total-ascend)]
+           [mui/table-cell (str (-> combined-stats :ascend-m utils/round-safe) "m")]]
+          [mui/table-row
+           [mui/table-cell (tr :sports-site.elevation-profile/total-descend)]
+           [mui/table-cell (str (-> combined-stats :descend-m utils/round-safe) "m")]]]]])
 
-       ;; landing bay for fabs
-       [:> Grid {:item true :xs 12 :style {:height "3em"}}]])))
+     ;; landing bay for fabs
+     [mui/grid {:item true :xs 12 :style {:height "3em"}}]]))

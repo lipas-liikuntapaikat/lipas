@@ -286,13 +286,12 @@
            (svg/->arrow-str)
            js/encodeURIComponent)))
 
-(defn line-direction-style-fn
-  [^js feature resolution]
-  (let [styles #js [edit-style]
-        ^js geometry (.getGeometry feature)
+(defn- direction-arrows
+  "Append arrow icons along the line based on travel-direction property."
+  [styles ^js feature resolution]
+  (let [^js geometry (.getGeometry feature)
         travel-direction (.get feature "travel-direction")
         icon-scale (min 0.75 (/ 1 (min 3 resolution)))]
-
     (when (and geometry travel-direction)
       (.forEachSegment geometry
                        (fn [start end]
@@ -309,9 +308,18 @@
                                                                          :src arrow-icon
                                                                          :anchor #js [0.75 0.5]
                                                                          :rotation rot})})))
-                         ;; Iteration stops on truthy vals but we want
-                         ;; to keep going
-                         false)))
+                         false)))))
+
+(defn line-direction-style-fn
+  [^js feature resolution]
+  (let [styles #js [edit-style]]
+    (direction-arrows styles feature resolution)
+    styles))
+
+(defn line-direction-highlight-style-fn
+  [^js feature resolution]
+  (let [styles #js [highlight-style edit-style]]
+    (direction-arrows styles feature resolution)
     styles))
 
 (defn line-direction-hover-style-fn
