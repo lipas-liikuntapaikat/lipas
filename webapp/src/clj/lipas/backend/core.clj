@@ -250,14 +250,28 @@
 
 (defn- deref-fids
   [sports-site route]
-  (let [fids (-> route :fids set)
-        geoms (when (seq fids)
-                {:type "FeatureCollection"
-                 :features (->> (get-in sports-site [:location :geometries :features])
-                                (filterv #(contains? fids (:id %))))})]
-    (if geoms
-      (assoc route :geometries geoms)
-      route)))
+  (let [all-features (get-in sports-site [:location :geometries :features])
+        features-by-id (into {} (map (juxt :id identity)) all-features)]
+    (if-let [segments (seq (:segments route))]
+      ;; New path: ordered segments with direction
+      (let [ordered-features
+            (->> segments
+                 (keep (fn [{:keys [fid reversed?]}]
+                         (when-let [f (get features-by-id fid)]
+                           (if reversed?
+                             (update-in f [:geometry :coordinates] #(vec (reverse %)))
+                             f)))))]
+        (assoc route :geometries
+               {:type "FeatureCollection"
+                :features (vec ordered-features)}))
+      ;; Legacy path: unordered fids set
+      (let [fids (-> route :fids set)
+            geoms (when (seq fids)
+                    {:type "FeatureCollection"
+                     :features (filterv #(contains? fids (:id %)) all-features)})]
+        (if geoms
+          (assoc route :geometries geoms)
+          route)))))
 
 (defn enrich-activities
   [sports-site]

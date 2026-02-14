@@ -6,9 +6,61 @@
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 
+(defn- segments->direction-map
+  "Convert segments to a map of fid -> travel direction string."
+  [segments]
+  (into {} (map (fn [{:keys [fid reversed?]}]
+                  [fid (if reversed? "end-to-start" "start-to-end")]))
+        segments))
+
+(defn- ensure-route-segments
+  "Ensure a route has :segments derived from :fids if not already present."
+  [route all-features]
+  (if (seq (:segments route))
+    route
+    (let [fids     (set (:fids route))
+          segments (->> all-features
+                        (filter #(contains? fids (:id %)))
+                        (mapv (fn [f] {:fid (:id f) :reversed? false})))]
+      (assoc route :segments segments))))
+
+(defn- get-routes-with-segments
+  "Get routes from db with segments ensured from fids."
+  [db lipas-id activity-k]
+  (let [all-features (get-in db [:sports-sites lipas-id :editing :location :geometries :features] [])
+        routes       (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])]
+    (mapv #(ensure-route-segments % all-features) routes)))
+
 (rf/reg-event-fx ::init-edit-view
   (fn [{:keys [db]} [_ lipas-id edit-data]]
     {}))
+
+(rf/reg-event-fx ::init-routes
+  (fn [{:keys [db]} [_ lipas-id activity-k]]
+    (let [routes (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
+          edit-data (get-in db [:sports-sites lipas-id :editing])]
+      (if (seq routes)
+        ;; Routes already exist - set travel directions for the first route
+        (let [all-features (get-in edit-data [:location :geometries :features] [])
+              first-route  (ensure-route-segments (first routes) all-features)
+              segments     (:segments first-route)]
+          (when (seq segments)
+            {:fx [[:dispatch [:lipas.ui.map.events/set-segment-directions
+                              (segments->direction-map segments)]]]}))
+        ;; No routes - create initial route
+        (let [all-features (get-in edit-data [:location :geometries :features] [])
+              all-fids     (set (map :id all-features))
+              segments     (mapv (fn [f] {:fid (:id f) :reversed? false}) all-features)
+              initial-route {:id       (str (random-uuid))
+                             :route-name {:fi (:name edit-data)
+                                          :se (get-in edit-data [:name-localized :se])
+                                          :en (:name edit-data)}
+                             :fids     all-fids
+                             :segments segments}]
+          {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id
+                            [:activities activity-k :routes] [initial-route]]]
+                [:dispatch [:lipas.ui.map.events/set-segment-directions
+                            (segments->direction-map segments)]]]})))))
 
 (rf/reg-event-fx ::add-route
   (fn [{:keys [db]} [_ lipas-id]]
@@ -36,12 +88,22 @@
           current-routes       (get-in edits [:activities activity-k :routes] [])
           current-routes-by-id (utils/index-by :id current-routes)
 
-          mode       (if (get current-routes-by-id id) :update :add)
+          existing-route (get current-routes-by-id id)
+          mode           (if existing-route :update :add)
+
+          ;; Build segments from fids, preserving existing segments
+          existing-segments (or (:segments existing-route) (:segments route))
+          existing-fid-set  (set (map :fid existing-segments))
+          new-fids          (remove existing-fid-set fids)
+          segments          (vec (concat (or existing-segments [])
+                                         (map (fn [fid] {:fid fid :reversed? false}) new-fids)))
+
+          route-with-segments (assoc route :fids fids :id id :segments segments)
+
           new-routes (condp = mode
-                       :add    (conj current-routes
-                                     (assoc route :fids fids :id id))
+                       :add    (conj current-routes route-with-segments)
                        :update (-> current-routes-by-id
-                                   (assoc id (assoc route :fids fids))
+                                   (assoc id route-with-segments)
                                    vals
                                    vec))]
       {:db (-> db
@@ -49,20 +111,25 @@
                (assoc-in [:sports-sites :activities :selected-route-id] nil))
        :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
-                        new-routes]]]})))
+                        new-routes]]
+            [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]})))
 
 (rf/reg-event-fx ::cancel-route-details
   (fn [{:keys [db]} _]
     {:db (assoc-in db [:sports-sites :activities :mode] :default)
-     :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]]}))
+     :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
+          [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]}))
 
 (rf/reg-event-fx ::select-route
-  (fn [{:keys [db]} [_ lipas-id {:keys [fids id] :as route}]]
+  (fn [{:keys [db]} [_ lipas-id {:keys [fids id segments] :as route}]]
     {:db (-> db
              (assoc-in [:sports-sites :activities :mode] :route-details)
              (assoc-in [:sports-sites :activities :selected-route-id] id))
      :fx [[:dispatch [:lipas.ui.map.events/highlight-features (set fids)]]
-          [:dispatch [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]]}))
+          [:dispatch [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]
+          (when (seq segments)
+            [:dispatch [:lipas.ui.map.events/set-segment-directions
+                        (segments->direction-map segments)]])]}))
 
 (rf/reg-event-fx ::delete-route
   (fn [{:keys [db]} [_ lipas-id activity-k route-id]]
@@ -74,7 +141,60 @@
        :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
             [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                         new-routes]]
-            [:dispatch [:lipas.ui.map.events/clear-highlight]]]})))
+            [:dispatch [:lipas.ui.map.events/clear-highlight]]
+            [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]})))
+
+(rf/reg-event-fx ::reorder-segments
+  (fn [{:keys [db]} [_ lipas-id activity-k route-id source-idx target-idx]]
+    (let [routes (get-routes-with-segments db lipas-id activity-k)
+          route    (first (filter #(= route-id (:id %)) routes))
+          segments (vec (:segments route))
+          item     (nth segments source-idx)
+          spliced  (into (subvec segments 0 source-idx)
+                         (subvec segments (inc source-idx)))
+          reordered (vec (concat (subvec spliced 0 target-idx)
+                                 [item]
+                                 (subvec spliced target-idx)))
+          new-routes (mapv (fn [r] (if (= route-id (:id r))
+                                     (assoc r :segments reordered)
+                                     r))
+                           routes)]
+      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
+                        new-routes]]
+            [:dispatch [:lipas.ui.map.events/set-segment-directions
+                        (segments->direction-map reordered)]]]})))
+
+(rf/reg-event-fx ::toggle-segment-direction
+  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
+    (let [routes (get-routes-with-segments db lipas-id activity-k)
+          new-routes (mapv (fn [r]
+                             (if (= route-id (:id r))
+                               (update-in r [:segments segment-idx :reversed?] not)
+                               r))
+                           routes)
+          active-route (first (filter #(= route-id (:id %)) new-routes))]
+      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
+                        new-routes]]
+            [:dispatch [:lipas.ui.map.events/set-segment-directions
+                        (segments->direction-map (:segments active-route))]]]})))
+
+(rf/reg-event-fx ::remove-segment
+  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
+    (let [routes (get-routes-with-segments db lipas-id activity-k)
+          new-routes (mapv (fn [r]
+                             (if (= route-id (:id r))
+                               (let [segments (vec (:segments r))
+                                     new-segs (into (subvec segments 0 segment-idx)
+                                                    (subvec segments (inc segment-idx)))]
+                                 (assoc r :segments new-segs
+                                        :fids (vec (distinct (map :fid new-segs)))))
+                               r))
+                           routes)
+          active-route (first (filter #(= route-id (:id %)) new-routes))]
+      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
+                        new-routes]]
+            [:dispatch [:lipas.ui.map.events/set-segment-directions
+                        (segments->direction-map (:segments active-route))]]]})))
 
 (defn parse-ext [file]
   (-> file
