@@ -67,7 +67,8 @@
    {:label "LIVERTTI" :href "https://activehealthylife.webnode.fi/"}
    {:label "Kuutoskaupunkivertailu" :href "https://kuutoskaupunkivertailu.fi/"}
    {:label "Toimio" :href "https://toimio.com/"}
-   {:label "Olympiakomitea" :href "https://www.olympiakomitea.fi/"}])
+   {:label "Olympiakomitea" :href "https://www.olympiakomitea.fi/"}
+   {:label "Sitowise" :href "https://www.sitowise.com/fi/teknologia-ja-design/tuoteratkaisut/routa-infran-kunnossapitojarjestelma"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
