@@ -111,13 +111,24 @@ Physical segments:
   C: Lake viewpoint → Summit
   D: Forest junction → River bridge
 
-Short route (3 km):  A → B          (parking to lake)
-Long route (8 km):   A → B → C      (parking to summit)
-River route (5 km):  A → D          (parking to river)
-Loop route (6 km):   A → D → D̃ → A̅  (out and back via river)
+Short route (3 km):  A → B              (parking to lake)
+Long route (8 km):   A → B → C          (parking to summit)
+River route (5 km):  A → D              (parking to river)
+Loop route (6 km):   A → D → D̃ → A̅    (out and back via river)
 ```
 
 Each route is independent — reordering segments in one route does not affect other routes.
+
+### Duplicate Segments (Out-and-Back)
+
+A route can reference the same physical segment twice — once forward and once reversed — to model out-and-back sections. For example, a trail that goes out to a viewpoint and returns along the same path:
+
+```clojure
+[{:fid "segment-A" :reversed? false}   ;; Outbound
+ {:fid "segment-A" :reversed? true}]   ;; Return
+```
+
+The "Duplicate segment (reversed)" button in the UI creates this pattern. On the map, such segments show **bidirectional arrows** (arrows in both directions) since the same physical feature is traversed both ways. When hovering a specific segment in the list, the map shows only that segment's travel direction.
 
 ---
 
