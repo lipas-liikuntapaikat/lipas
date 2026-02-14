@@ -794,7 +794,7 @@
                           :lat (second first-point)
                           :on-success [:lipas.ui.map.events/on-reverse-geocoding-success]}]))}]]))
 
-(defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? editing? can-edit-map? geom-type]}]
+(defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? edit-itrs? editing? can-edit-map? geom-type]}]
   (->> [;; Import geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
           [mui/menu-item {:on-click #(do
@@ -911,7 +911,7 @@
 
         ;; ITRS segment
         (when (and editing?
-                   edit-activities?
+                   edit-itrs?
                    (#{"LineString"} geom-type)
                    (= "cycling" activity-value))
           [mui/menu-item
@@ -978,6 +978,7 @@
         activity-value (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
         view-activities? (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
         edit-activities? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
+        edit-itrs? (<== [::user-subs/check-privilege role-site-ctx :itrs/edit])
 
         floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
         floorball-type? (contains? floorball-types type-code)
@@ -1013,6 +1014,7 @@
                                               :sub-mode sub-mode
                                               :activity-value activity-value
                                               :edit-activities? edit-activities?
+                                              :edit-itrs? edit-itrs?
                                               :editing? editing?
                                               :can-edit-map? can-edit-map?
                                               :geom-type geom-type}))
@@ -1224,7 +1226,8 @@
               :type-code type-code
               :display-data display-data
               :edit-data edit-data
-              :can-edit? edit-activities?}]]
+              :can-edit? edit-activities?
+              :edit-itrs? edit-itrs?}]]
 
          6 [mui/grid {:item true :xs 12}
             [ptv-site/site-view

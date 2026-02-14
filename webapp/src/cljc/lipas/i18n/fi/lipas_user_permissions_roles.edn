@@ -22,6 +22,7 @@
   :ptv-auditor "PTV-auditoija",
   :org-admin "Organisaation pääkäyttäjä",
   :type-manager "Tyyppikäyttäjä",
+  :itrs-assessor "ITRS-arvioija",
   :floorball-manager "Salibandymuokkaaja",
   :site-manager "Paikkakäyttäjä",
   :city-manager "Kuntakäyttäjä",

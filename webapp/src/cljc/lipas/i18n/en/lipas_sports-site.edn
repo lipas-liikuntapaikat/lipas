@@ -25,6 +25,7 @@
  :new-site-of-type "New {1}",
  :no-permission-tab
  "You do not have permission to edit the information on this tab",
+ :itrs-edit-requires-role "Editing ITRS classification requires the ITRS Assessor role",
  :owner "Owner",
  :ownership "Ownership",
  :phone-number "Phone number",
