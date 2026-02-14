@@ -7,4 +7,4 @@
    :metrics           reports/sports-stats-metrics
    :selected-metric   "sites-count"
    :selected-view     "chart"
-   :population-year   2023})
+   :population-year   2024})
