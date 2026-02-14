@@ -115,9 +115,20 @@
   "Apply travel direction arrow styles to OL features, with highlight for selected features."
   [{:keys [layers] :as map-ctx} {:keys [segment-directions selected-features]}]
   (when layers
-    (let [^js edits-layer (-> layers :overlays :edits)
-          edits-source    (.getSource edits-layer)
-          selected?       (or selected-features #{})]
+    (let [^js edits-layer      (-> layers :overlays :edits)
+          edits-source          (.getSource edits-layer)
+          ^js highlights-layer (-> layers :overlays :highlights)
+          highlights-source     (.getSource highlights-layer)
+          selected?             (or selected-features #{})]
+
+      ;; Clear highlights layer when direction styling is active.
+      ;; Cloned features don't preserve OL ids, and the edits layer already
+      ;; renders the full highlight (buffer + arrows) via
+      ;; line-direction-highlight-style-fn. Without this, stale clones show
+      ;; bidirectional arrows that obscure the single-direction highlight.
+      (when (seq segment-directions)
+        (.clear highlights-source))
+
       (doseq [^js f (.getFeatures edits-source)]
         (let [fid        (.getId f)
               highlight? (contains? selected? fid)
@@ -292,7 +303,7 @@
                                    (fn [f] (==> [::events/new-geom-drawn f])))
       :editing     (-> map-ctx
                        (cond->
-                         (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
+                        (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                        (start-editing! geoms on-modify))
       :deleting    (enable-delete! map-ctx on-modify)
       :splitting   (enable-splitting! map-ctx geoms on-modify)
@@ -442,10 +453,10 @@
                           map-utils/enable-marker-hover!)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
-                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
+                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)))]
                           ;; Switch back to editing normal :editing mode
                           ;;(==> [::events/continue-editing lipas-id :editing geom-type])
-                          ))]
+
      (-> (case sub-mode
            :view-only             (set-view-only-edit-mode! map-ctx mode)
            :drawing               (start-drawing! map-ctx geom-type on-modifyend)

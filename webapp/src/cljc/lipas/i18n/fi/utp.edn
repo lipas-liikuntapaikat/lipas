@@ -2,6 +2,7 @@
  :add-highlight "Lisää kohokohta",
  :add-photo "Lisää valokuva",
  :add-segment "Lisää osuus",
+ :duplicate-segment "Kopioi osuus (käänteinen)",
  :add-subroute "Lisää osareitti",
  :add-subroute-ok "OK",
  :add-video "Lisää video",
