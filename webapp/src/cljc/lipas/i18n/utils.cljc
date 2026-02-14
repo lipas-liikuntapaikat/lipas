@@ -1,4 +1,4 @@
-(ns lipas.i18n.utils
+(ns ^:dev/always lipas.i18n.utils
   (:require
    #?(:clj [clojure.java.io :as io])
    [clojure.edn :as edn]
