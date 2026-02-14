@@ -890,8 +890,11 @@
 (def independent-entity-ks
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
+(def ^:private itrs-field-ks
+  #{:itrs-endurance :itrs-wilderness})
+
 (defn route-form
-  [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
+  [{:keys [tr locale lipas-id type-code route-props state read-only? edit-itrs? field-sorter]}]
   [nice-form {:read-only? read-only?}
    (doall
     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
@@ -901,23 +904,32 @@
                  (contains? route-props :independent-entity)
                  (not (:independent-entity @state))
                  (contains? independent-entity-ks prop-k))
-        [make-field
-         {:read-only?   read-only?
-          :key          prop-k
-          :field        field
-          :prop-k       prop-k
-          :edit-data    @state
-          :display-data @state
-          :locale       locale
-          :set-field    (fn [& args]
-                          (let [path (butlast args)
-                                v (last args)]
-                            (swap! state assoc-in path v)))
-          :lipas-id     lipas-id}])))])
+        (let [itrs-field?      (contains? itrs-field-ks prop-k)
+              itrs-locked?     (and itrs-field? (not read-only?) (not edit-itrs?))
+              field-read-only? (if itrs-field?
+                                 (or read-only? (not edit-itrs?))
+                                 read-only?)
+              field-component  [make-field
+                                {:read-only?   field-read-only?
+                                 :key          prop-k
+                                 :field        field
+                                 :prop-k       prop-k
+                                 :edit-data    @state
+                                 :display-data @state
+                                 :locale       locale
+                                 :set-field    (fn [& args]
+                                                 (let [path (butlast args)
+                                                       v (last args)]
+                                                   (swap! state assoc-in path v)))
+                                 :lipas-id     lipas-id}]]
+          (if itrs-locked?
+            [mui/tooltip {:title (tr :lipas.sports-site/itrs-edit-requires-role)}
+             [:span field-component]]
+            field-component)))))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
-           locale _label _description _set-field set-field]
+           locale _label _description _set-field set-field edit-itrs?]
     :as   props}]
   ;; Ensure route has an :id - required by schema since commit 63af05df
   (r/with-let [route-form-state (r/atom (if (:id route)
@@ -937,6 +949,7 @@
         :lipas-id     lipas-id
         :type-code    type-code
         :read-only?   read-only?
+        :edit-itrs?   edit-itrs?
         :route-props  route-props
         :state        route-form-state}])
 
@@ -945,7 +958,7 @@
 
 (defn multiple-routes
   [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
-           locale label _description _set-field activity-k routes]
+           locale label _description _set-field activity-k routes edit-itrs?]
     :as   props}]
   (r/with-let [route-form-state (r/atom {})]
     (let [tr     (<== [:lipas.ui.subs/translator])
@@ -1017,6 +1030,7 @@
             :lipas-id     lipas-id
             :type-code    type-code
             :read-only?   read-only?
+            :edit-itrs?   edit-itrs?
             :route-props  route-props
             :state        route-form-state}]
 
@@ -1128,7 +1142,7 @@
        [:> FormHelperText description])]))
 
 (defn make-field
-  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code]}]
+  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code edit-itrs?]}]
   (case (:type field)
 
     "select" [selects/select
@@ -1239,6 +1253,7 @@
 
     "routes" [routes
               {:read-only?  read-only?
+               :edit-itrs?  edit-itrs?
                :lipas-id    lipas-id
                :locale      locale
                :label       (get-in field [:label locale])
@@ -1307,7 +1322,7 @@
     (println (str "Unknown field type: " (:type field)))))
 
 (defn view
-  [{:keys [type-code display-data edit-data tr lipas-id can-edit?]}]
+  [{:keys [type-code display-data edit-data tr lipas-id can-edit? edit-itrs?]}]
   (let [activity     (<== [::subs/activity-for-type-code type-code])
         activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
@@ -1350,6 +1365,7 @@
            :prop-k       prop-k
            :edit-data    (get-in edit-data [:activities activity-k])
            :read-only?   read-only?
+           :edit-itrs?   edit-itrs?
            :display-data (get-in display-data [:activities activity-k])
            :locale       locale
            :activity-k   activity-k
