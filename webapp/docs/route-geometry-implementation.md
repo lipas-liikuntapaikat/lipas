@@ -151,7 +151,8 @@ Key behaviors:
 
 ```clojure
 (defn- segments->direction-map [segments])
-;; Returns {fid -> "start-to-end"|"end-to-start"} for map arrow rendering
+;; Returns {fid -> "start-to-end"|"end-to-start"|"bidirectional"}
+;; When the same fid appears with different directions, the value is "bidirectional"
 
 (defn- ensure-route-segments [route all-features])
 ;; Auto-migrates legacy routes: generates :segments from :fids if missing
@@ -168,6 +169,8 @@ Key behaviors:
 | `::reorder-segments` | Drag/arrow reorder: splices segment at `source-idx` to `target-idx`, updates map arrows |
 | `::toggle-segment-direction` | Toggles `:reversed?` on a segment, updates map arrows |
 | `::remove-segment` | Removes a segment from the route, updates `:fids` accordingly |
+| `::duplicate-segment` | Duplicates a segment with reversed direction (for out-and-back routes) |
+| `::highlight-segment` | Hover highlight: overrides direction map for one segment, restores on mouse leave |
 | `::finish-route-details` | Saves route: merges new fids into existing segments, clears map arrows |
 | `::select-route` | Opens route for editing: highlights features on map, sets travel directions |
 | `::delete-route` | Removes route, clears map highlight and arrows |
@@ -251,11 +254,12 @@ The segment builder renders when a route has more than one segment. Each row sho
 | Label | "Osuus N (X.X km)" — auto-numbered with individual length |
 | Connectivity dot | Green (connected) or orange (gap) between adjacent segments |
 | Reverse button | `swap_horiz` icon, highlighted blue when `:reversed?` is true |
+| Duplicate button | `content_copy` icon, creates reversed copy via `::duplicate-segment` |
 | Remove button | `close` icon, dispatches `::remove-segment` |
 
 The entire row has:
 - **Hover highlight**: CSS `&:hover` background via MUI `:sx`
-- **Map highlight**: `on-mouse-enter`/`on-mouse-leave` dispatch `::highlight-features` with the segment's feature ID
+- **Direction-aware map highlight**: `on-mouse-enter`/`on-mouse-leave` dispatch `::highlight-segment` which overrides the direction map for the hovered segment's fid, showing only that segment's specific travel direction (not the combined bidirectional arrows)
 
 The component is used in both `single-route` (one-route sites) and `multiple-routes` (multi-route sites with route selection).
 
@@ -269,7 +273,7 @@ Direction arrows are rendered on the OpenLayers map to show travel direction alo
 
 ```
 ::init-routes / ::select-route / ::reorder-segments / ::toggle-segment-direction
-  → dispatch ::set-segment-directions {fid → "start-to-end"|"end-to-start"}
+  → dispatch ::set-segment-directions {fid → "start-to-end"|"end-to-start"|"bidirectional"}
     → stored in [:map :mode :segment-directions]
       → map-inner detects mode change
         → editing/update-editing-mode!
@@ -297,16 +301,21 @@ Direction data is stored separately from the geometries — it is display-only a
 
 **File**: `src/cljs/lipas/ui/map/styles.cljs`
 
-The `direction-arrows` function iterates over each line segment of a feature's geometry, placing arrow icons:
+The `direction-arrows` function iterates over each line segment of a feature's geometry, placing arrow icons. It supports three direction modes:
 
-- Arrow position: at the endpoint of each line segment (for `start-to-end`) or start point (for `end-to-start`)
+- **`"start-to-end"`**: forward arrows at each line segment's endpoint
+- **`"end-to-start"`**: backward arrows at each line segment's start point
+- **`"bidirectional"`**: both forward and backward arrows (X-pattern)
+
+Arrow properties:
 - Arrow rotation: calculated via `atan2` from the segment's direction vector
 - Arrow scale: inversely proportional to map resolution (arrows shrink when zoomed out)
-- Icon: SVG arrow loaded as a data URI
+- Icon: SVG arrow loaded as a data URI, configurable via `:icon` parameter
 
-Two style functions use `direction-arrows`:
-- `line-direction-style-fn` — normal: blue edit stroke + arrows
-- `line-direction-highlight-style-fn` — highlighted: red highlight stroke + blue edit stroke + arrows
+Three style functions use `direction-arrows`:
+- `line-direction-style-fn` — normal: blue edit stroke + dark arrows
+- `line-direction-highlight-style-fn` — highlighted: amber buffer `rgba(255,171,0,0.45)` + blue edit stroke + dark teal `#004D40` arrows
+- `line-direction-hover-style-fn` — on-map hover: hover stroke + red arrows
 
 ### Style Application
 
