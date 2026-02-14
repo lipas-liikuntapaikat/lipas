@@ -2,6 +2,7 @@
  :add-highlight "Add highlight",
  :add-photo "Add photograph",
  :add-segment "Add segment",
+ :duplicate-segment "Duplicate segment (reversed)",
  :add-subroute "Add sub-route",
  :add-subroute-ok "OK",
  :add-video "Add video",

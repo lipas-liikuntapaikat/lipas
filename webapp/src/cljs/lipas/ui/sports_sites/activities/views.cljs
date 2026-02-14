@@ -931,13 +931,13 @@
          (for [[idx segment] (map-indexed vector segments)]
            (let [detail (nth segment-details idx nil)
                  fid    (:fid segment)]
-             ^{:key fid}
+             ^{:key (str idx "-" fid)}
              [mui/stack
               {:direction       "row"
                :align-items     "center"
                :spacing         0.5
-               :on-mouse-enter  #(==> [:lipas.ui.map.events/highlight-features #{fid}])
-               :on-mouse-leave  #(==> [:lipas.ui.map.events/highlight-features #{}])
+               :on-mouse-enter  #(==> [::events/highlight-segment lipas-id activity-k route-id idx])
+               :on-mouse-leave  #(==> [::events/highlight-segment lipas-id activity-k route-id nil])
                :sx              (merge {:padding       "4px 8px"
                                         :border-bottom "1px solid #eee"
                                         :cursor        "default"
@@ -985,6 +985,15 @@
                    :on-click #(==> [::events/toggle-segment-direction
                                     lipas-id activity-k route-id idx])}
                   [mui/icon {:style {:font-size "18px"}} "swap_horiz"]]])
+
+              ;; Duplicate button (out-and-back)
+              (when-not read-only?
+                [mui/tooltip {:title (tr :utp/duplicate-segment)}
+                 [mui/icon-button
+                  {:size     "small"
+                   :on-click #(==> [::events/duplicate-segment
+                                    lipas-id activity-k route-id idx])}
+                  [mui/icon {:style {:font-size "18px"}} "content_copy"]]])
 
               ;; Remove button
               (when-not read-only?

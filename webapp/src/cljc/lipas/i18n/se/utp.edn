@@ -2,6 +2,7 @@
  :add-highlight "Lägg till höjdpunkt",
  :add-photo "Lägg till foto",
  :add-segment "Lägg till sektion",
+ :duplicate-segment "Duplicera sektion (omvänd)",
  :add-subroute "Lägg till delrutt",
  :add-subroute-ok "OK",
  :add-video "Lägg till video",
