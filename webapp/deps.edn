@@ -7,7 +7,7 @@
         com.taoensso/timbre-slf4j {:mvn/version "6.8.0"}, ; Routes Java SLF4J logs through Timbre
         org.slf4j/slf4j-api {:mvn/version "2.0.16"},      ; Force SLF4J 2.x (required by timbre-slf4j)
         com.cemerick/url {:mvn/version "0.1.1"},
-        metosin/reitit {:mvn/version "0.7.1"},
+        metosin/reitit {:mvn/version "0.9.2-rc1"},
         metosin/ring-swagger-ui {:mvn/version "5.18.2"},
         metosin/malli {:mvn/version "0.20.0"},
         thheller/shadow-cljs {:mvn/version "2.28.16"},
