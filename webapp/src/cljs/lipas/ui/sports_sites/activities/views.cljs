@@ -12,6 +12,7 @@
             [lipas.ui.components.buttons :as lui-btn]
             [lipas.ui.components.forms :refer [->display-tf]]
             [lipas.ui.components.text-fields :as lui-tf]
+            [lipas.data.activities :as activities-data]
             [lipas.ui.config :as config]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
@@ -891,10 +892,11 @@
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
 (def ^:private itrs-field-ks
-  #{:itrs-endurance :itrs-wilderness})
+  #{:itrs-endurance :itrs-wilderness :itrs-technical-route})
 
 (defn route-form
-  [{:keys [tr locale lipas-id type-code route-props state read-only? edit-itrs? field-sorter]}]
+  [{:keys [tr locale lipas-id type-code route-props state read-only? edit-itrs? field-sorter
+           compute-itrs-technical]}]
   [nice-form {:read-only? read-only?}
    (doall
     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
@@ -909,6 +911,10 @@
               field-read-only? (if itrs-field?
                                  (or read-only? (not edit-itrs?))
                                  read-only?)
+              set-field        (fn [& args]
+                                 (let [path (butlast args)
+                                       v (last args)]
+                                   (swap! state assoc-in path v)))
               field-component  [make-field
                                 {:read-only?   field-read-only?
                                  :key          prop-k
@@ -917,14 +923,27 @@
                                  :edit-data    @state
                                  :display-data @state
                                  :locale       locale
-                                 :set-field    (fn [& args]
-                                                 (let [path (butlast args)
-                                                       v (last args)]
-                                                   (swap! state assoc-in path v)))
+                                 :set-field    set-field
                                  :lipas-id     lipas-id}]]
-          (if itrs-locked?
+          (cond
+            itrs-locked?
             [mui/tooltip {:title (tr :lipas.sports-site/itrs-edit-requires-role)}
              [:span field-component]]
+
+            (and (= :itrs-technical-route prop-k) edit-itrs? (not read-only?) compute-itrs-technical)
+            [mui/grid {:container true :alignItems "center" :spacing 1 :wrap "nowrap"}
+             [mui/grid {:item true :xs true}
+              field-component]
+             [mui/grid {:item true}
+              [mui/tooltip {:title (tr :map/compute-itrs-technical)}
+               [mui/icon-button
+                {:size     "small"
+                 :on-click (fn []
+                             (when-let [v (compute-itrs-technical)]
+                               (set-field :itrs-technical-route v)))}
+                [mui/icon "calculate"]]]]]
+
+            :else
             field-component)))))])
 
 (defn single-route
@@ -940,7 +959,8 @@
                               (set-field [new-state])))]
 
     (let [tr           (<== [:lipas.ui.subs/translator])
-          field-sorter (<== [::subs/field-sorter activity-k])]
+          field-sorter (<== [::subs/field-sorter activity-k])
+          geoms        (<== [::subs/geoms read-only?])]
 
       [route-form
        {:locale       locale
@@ -951,7 +971,15 @@
         :read-only?   read-only?
         :edit-itrs?   edit-itrs?
         :route-props  route-props
-        :state        route-form-state}])
+        :state        route-form-state
+        :compute-itrs-technical
+        (fn []
+          (let [fids     (set (:fids @route-form-state))
+                features (:features geoms)
+                values   (->> features
+                              (filter #(contains? fids (:id %)))
+                              (map #(get-in % [:properties :itrs-technical])))]
+            (activities-data/itrs-technical-max values)))}])
 
     (finally
       (remove-watch route-form-state :lol))))
@@ -968,6 +996,7 @@
           selected-route-id (<== [::subs/selected-route-id])
 
           field-sorter (<== [::subs/field-sorter activity-k])
+          geoms        (<== [::subs/geoms read-only?])
 
           editing? (not read-only?)]
 
@@ -1032,7 +1061,15 @@
             :read-only?   read-only?
             :edit-itrs?   edit-itrs?
             :route-props  route-props
-            :state        route-form-state}]
+            :state        route-form-state
+            :compute-itrs-technical
+            (fn []
+              (let [route-fids (set (:fids @route-form-state))
+                    features   (:features geoms)
+                    values     (->> features
+                                    (filter #(contains? route-fids (:id %)))
+                                    (map #(get-in % [:properties :itrs-technical])))]
+                (activities-data/itrs-technical-max values)))}]
 
           ;; Buttons
           [:> Grid {:container true :spacing 1}

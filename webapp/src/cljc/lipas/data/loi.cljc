@@ -186,8 +186,8 @@
      {:label {:fi "Infotaulu" :se "Informationsstavla" :en "Information board"}
       :value "information-board"
       :props (merge
-              common-props
-              accessibility-props)}
+               common-props
+               accessibility-props)}
 
      :parking-spot
      {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
@@ -409,6 +409,28 @@
       :value "bridge"
       :props (merge common-props)}}}
 
+   "trail-conditions"
+   {:label {:fi "Reittiolosuhteet" :se "Ruttförhållanden" :en "Trail conditions"}
+    :types
+    {:fall-hazard
+     {:label {:fi "Putoamisvaara" :se "Fallrisk" :en "Fall hazard"}
+      :value "fall-hazard"
+      :props (merge common-props
+                    {:itrs-exposure
+                     {:schema (into [:enum] ["1" "2" "3" "4"])
+                      :field
+                      {:type "select"
+                       :label {:fi "ITRS Putoamisvaara"
+                               :se "ITRS Fallrisk"
+                               :en "ITRS Exposure"}
+                       :description {:fi "Putoamisvaaran luokitus (E1-E4)"
+                                     :se "Klassificering av fallrisk (E1-E4)"
+                                     :en "Fall risk classification (E1-E4)"}
+                       :opts {"1" {:fi "E1 - Vähäinen" :se "E1 - Låg" :en "E1 - Low"}
+                              "2" {:fi "E2 - Kohtalainen" :se "E2 - Måttlig" :en "E2 - Moderate"}
+                              "3" {:fi "E3 - Korkea" :se "E3 - Hög" :en "E3 - High"}
+                              "4" {:fi "E4 - Äärimmäinen" :se "E4 - Extrem" :en "E4 - Extreme"}}}}})}}}
+
    "natural-attractions-and-geo-objects"
    {:label {:fi "Luonnonnähtävyydet / geokohteet" :se "Natursevärdheter / Geologiska platser" :en "Natural Attractions / Geological sites"}
     :types
@@ -494,27 +516,27 @@
 (def csv-data
   (into [csv-headers]
         (for [[category-code category] categories
-            [_ type] (:types category)
-            [prop-k prop] (:props type)]
-        [category-code
-         (get-in category [:label :fi])
-         (get-in category [:label :se])
-         (get-in category [:label :en])
-         (get-in category [:description :fi])
-         (get-in category [:description :se])
-         (get-in category [:description :en])
-         (:value type)
-         (:value type)
-         (get-in type [:label :fi])
-         (get-in type [:label :se])
-         (get-in type [:label :en])
-         (get-in type [:description :fi])
-         (get-in type [:description :se])
-         (get-in type [:description :en])
-         (name prop-k)
-         (get-in prop [:field :label :fi])
-         (get-in prop [:field :label :se])
-         (get-in prop [:field :label :en])
-         (get-in prop [:field :description :fi])
-         (get-in prop [:field :description :se])
-         (get-in prop [:field :description :en])])))
+              [_ type] (:types category)
+              [prop-k prop] (:props type)]
+          [category-code
+           (get-in category [:label :fi])
+           (get-in category [:label :se])
+           (get-in category [:label :en])
+           (get-in category [:description :fi])
+           (get-in category [:description :se])
+           (get-in category [:description :en])
+           (:value type)
+           (:value type)
+           (get-in type [:label :fi])
+           (get-in type [:label :se])
+           (get-in type [:label :en])
+           (get-in type [:description :fi])
+           (get-in type [:description :se])
+           (get-in type [:description :en])
+           (name prop-k)
+           (get-in prop [:field :label :fi])
+           (get-in prop [:field :label :se])
+           (get-in prop [:field :label :en])
+           (get-in prop [:field :description :fi])
+           (get-in prop [:field :description :se])
+           (get-in prop [:field :description :en])])))

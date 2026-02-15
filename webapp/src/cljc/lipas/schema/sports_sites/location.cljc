@@ -71,8 +71,7 @@
      [:type-code {:optional true} :int]
      [:route-part-difficulty {:optional true} :string]
      [:travel-direction {:optional true} :string]
-     [:itrs-technical {:optional true} :string]
-     [:itrs-exposure {:optional true} :string]]))
+     [:itrs-technical {:optional true} :string]]))
 
 (def line-string-feature
   (m/schema
