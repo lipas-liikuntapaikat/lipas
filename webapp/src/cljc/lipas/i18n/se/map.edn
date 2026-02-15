@@ -29,6 +29,7 @@
  :itrs-segment "ITRS-klassificering",
  :itrs-technical "ITRS Teknisk",
  :itrs-exposure "ITRS Exponering",
+ :compute-itrs-technical "Beräkna från ruttsektioner",
  :split-linestring "Klippa ruttdel",
  :travel-direction "Bestäm riktningen",
  :zoom-closer "Zooma in",

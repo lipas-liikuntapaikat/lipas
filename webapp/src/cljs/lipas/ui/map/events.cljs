@@ -899,17 +899,6 @@
                                                (update-feature-properties fs fid dissoc :itrs-technical)))))]
                      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
-(rf/reg-event-fx ::set-itrs-exposure
-                 (fn [{:keys [db]} [_ lipas-id fid v]]
-                   (let [geoms (-> db
-                                   (get-in [:map :mode :geoms])
-                                   (update :features
-                                           (fn [fs]
-                                             (if (seq v)
-                                               (update-feature-properties fs fid assoc :itrs-exposure v)
-                                               (update-feature-properties fs fid dissoc :itrs-exposure)))))]
-                     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
-
 ;; Reverse geocoding
 
 (rf/reg-event-fx ::resolve-address

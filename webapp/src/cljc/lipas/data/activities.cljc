@@ -953,6 +953,20 @@
                       :en "less than 0.3 meter wide, very uneven and steep section"}
         :color "orange"}})
 
+(def itrs-technical-order
+  {"1a" 0, "1b" 1, "2" 2, "3" 3, "4" 4, "5" 5})
+
+(defn itrs-technical-max
+  "Returns the highest ITRS technical value from a seq of values."
+  [values]
+  (->> values
+       (filter some?)
+       (sort-by itrs-technical-order)
+       last))
+
+(def itrs-technical-route-options
+  (into {} (map (fn [[k v]] [k (:label v)]) itrs-technical-options)))
+
 (def itrs-exposure-options
   {"1" {:label {:fi "E1 - Vähäinen altistuminen"
                 :se "E1 - Låg exponering"
@@ -1030,6 +1044,7 @@
                  :cycling-route-difficulty
                  :itrs-endurance
                  :itrs-wilderness
+                 :itrs-technical-route
                  :surface-material
                  :unpaved-percentage
                  :trail-percentage
@@ -1079,6 +1094,8 @@
                  (into [:enum] (keys itrs-endurance-options))]
                 [:itrs-wilderness {:optional true}
                  (into [:enum] (keys itrs-wilderness-options))]
+                [:itrs-technical-route {:optional true}
+                 (into [:enum] (keys itrs-technical-options))]
                 pilgrimage-key-schema])]
      :field
      {:type        "routes"
@@ -1162,6 +1179,17 @@
                         :se "Ruttens avstånd till tjänster (1-4)"
                         :en "Route remoteness from services (1-4)"}
           :opts        itrs-wilderness-options}}
+
+        :itrs-technical-route
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Reitin tekninen luokitus"
+                        :se "ITRS Ruttens tekniska klassificering"
+                        :en "ITRS Route technical classification"}
+          :description {:fi "Reitin vaativin tekninen osuus (lasketaan automaattisesti reittiosista)"
+                        :se "Ruttens mest tekniskt krävande avsnitt (beräknas automatiskt från ruttsektioner)"
+                        :en "Most technically demanding section of the route (auto-computed from segments)"}
+          :opts        itrs-technical-route-options}}
 
         :duration
         {:field

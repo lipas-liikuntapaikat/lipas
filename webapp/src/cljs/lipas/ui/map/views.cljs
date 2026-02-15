@@ -610,8 +610,7 @@
         tr @(rf/subscribe [:lipas.ui.subs/translator])
         locale (tr)
         properties @(rf/subscribe [::subs/edit-geom-properties fid])
-        technical-value (:itrs-technical properties)
-        exposure-value (:itrs-exposure properties)]
+        technical-value (:itrs-technical properties)]
     [:> Paper
      {:sx
       #js {:padding 2
@@ -622,37 +621,12 @@
        :fullWidth true
        :value (or technical-value "")
        :onChange (fn [e]
-                   (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))
-       :sx #js {:marginBottom 2}}
+                   (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))}
       [:> MenuItem
        {:key "empty"
         :value ""}
        "-"]
       (for [[k {:keys [label description]}] activities-data/itrs-technical-options]
-        [:> MenuItem
-         {:key k
-          :value k
-          :sx #js {:flexDirection "column"
-                   :alignItems "flex-start"
-                   :maxWidth "350px"}}
-         [:> Typography
-          (get label locale)]
-         [:> Typography
-          {:sx #js {:fontSize "body2.fontSize"
-                    :whiteSpace "normal"}}
-          (get description locale)]])]
-     [:> TextField
-      {:label (tr :map/itrs-exposure)
-       :select true
-       :fullWidth true
-       :value (or exposure-value "")
-       :onChange (fn [e]
-                   (rf/dispatch [::events/set-itrs-exposure lipas-id fid (.. e -target -value)]))}
-      [:> MenuItem
-       {:key "empty"
-        :value ""}
-       "-"]
-      (for [[k {:keys [label description]}] activities-data/itrs-exposure-options]
         [:> MenuItem
          {:key k
           :value k

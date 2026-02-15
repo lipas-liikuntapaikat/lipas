@@ -30,6 +30,7 @@
  :itrs-segment "ITRS classification",
  :itrs-technical "ITRS Technical",
  :itrs-exposure "ITRS Exposure",
+ :compute-itrs-technical "Compute from segments",
  :split-linestring "Split",
  :travel-direction "Define travel direction",
  :zoom-closer "Please zoom closer",

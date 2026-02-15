@@ -370,15 +370,11 @@
          label-style]))
 
 (defn itrs-segment-style-fn
-  [feature tr hover? _selected?]
-  (let [locale (tr)
-        technical (if-let [x (.get feature "itrs-technical")]
+  [feature _tr hover? _selected?]
+  (let [technical (if-let [x (.get feature "itrs-technical")]
                     (str "T" x)
                     "-")
-        exposure (if-let [x (.get feature "itrs-exposure")]
-                   (str "E" x)
-                   "-")
-        label (str "ITRS: " technical " / " exposure)
+        label (str "ITRS: " technical)
         label-style (.clone route-part-label-style)
         _ (.. label-style
               (getText)

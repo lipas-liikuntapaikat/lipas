@@ -30,6 +30,7 @@
  :itrs-segment "ITRS-luokitus",
  :itrs-technical "ITRS Teknisyys",
  :itrs-exposure "ITRS Altistuminen",
+ :compute-itrs-technical "Laske reittiosista",
  :split-linestring "Katkaise reittiosa",
  :travel-direction "Määritä kulkusuunta",
  :zoom-closer "Kartta täytyy zoomata lähemmäs",
