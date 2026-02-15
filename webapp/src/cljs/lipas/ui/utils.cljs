@@ -233,9 +233,13 @@
     (seq (:routes activity))
     (update :routes (fn [routes]
                       (map (fn [route]
-                             (-> route
-                                 (dissoc :geometries)
-                                 (update :fids #(keep identity %))))
+                             (let [route (dissoc route :geometries
+                                                 :route-length
+                                                 :elevation-stats
+                                                 :segment-details)]
+                               (if (seq (:segments route))
+                                 (assoc route :fids (vec (distinct (map :fid (:segments route)))))
+                                 (update route :fids #(vec (keep identity %))))))
                            routes)))))
 
 (defn make-saveable [sports-site]
