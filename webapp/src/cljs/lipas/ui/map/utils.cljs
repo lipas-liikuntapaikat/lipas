@@ -52,7 +52,13 @@
 (defn ->clj [x]
   (js->clj x :keywordize-keys true))
 
-(def ->geoJSON-clj (comp ->clj ->geoJSON))
+(defn- strip-nil-properties [feature]
+  (cond-> feature
+    (nil? (:properties feature)) (dissoc :properties)))
+
+(defn ->geoJSON-clj [ol-features]
+  (-> (->clj (->geoJSON ol-features))
+      (update :features #(mapv strip-nil-properties %))))
 
 (defn ->wkt [ol-feature]
   (.writeFeature wkt ol-feature))
