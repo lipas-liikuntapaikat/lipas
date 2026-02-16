@@ -909,6 +909,121 @@
                                           :se "Avsnittets svårighetsgrad"
                                           :en "Section difficulty"})
 
+(def itrs-technical-options
+  {"1a" {:label {:fi "1a - Siirtymä"
+                 :se "1a - Övergång"
+                 :en "1a - Transition"}
+         :description {:fi "päällystetie"
+                       :se "asfalterad väg"
+                       :en "paved road"}
+         :color "purple"}
+   "1b" {:label {:fi "1b - Erittäin helppo (Beginner)"
+                 :se "1b - Mycket lätt (Beginner)"
+                 :en "1b - Very easy (Beginner)"}
+         :description {:fi "yli 1 metrin levyinen ja pääosin tasainen osuus"
+                       :se "över 1 meter bred och huvudsakligen jämn sektion"
+                       :en "over 1 meter wide and mostly smooth section"}
+         :color "green"}
+   "2" {:label {:fi "2 - Helppo (Intermediate)"
+                :se "2 - Lätt (Intermediate)"
+                :en "2 - Easy (Intermediate)"}
+        :description {:fi "0,6 - 1 metrin levyinen ja/tai yliajettavia epätasaisuuksia sisältävä osuus"
+                      :se "0,6 - 1 meter bred och/eller sektion med körbara ojämnheter"
+                      :en "0.6 - 1 meter wide and/or section containing rideable unevenness"}
+        :color "blue"}
+   "3" {:label {:fi "3 - Keskivaikea (Advanced)"
+                :se "3 - Medel (Advanced)"
+                :en "3 - Intermediate (Advanced)"}
+        :description {:fi "0,3 - 0,6 metrin levyinen ja/tai huomattavia epätasaisuuksia sisältävä osuus"
+                      :se "0,3 - 0,6 meter bred och/eller sektion med betydande ojämnheter"
+                      :en "0.3 - 0.6 meter wide and/or section containing significant unevenness"}
+        :color "red"}
+   "4" {:label {:fi "4 - Vaikea (Expert)"
+                :se "4 - Svår (Expert)"
+                :en "4 - Difficult (Expert)"}
+        :description {:fi "alle 0,3 metrin levyinen ja/tai suuria epätasaisuuksia sisältävä osuus"
+                      :se "under 0,3 meter bred och/eller sektion med stora ojämnheter"
+                      :en "less than 0.3 meter wide and/or section containing large unevenness"}
+        :color "black"}
+   "5" {:label {:fi "5 - Erittäin vaikea (Extreme)"
+                :se "5 - Extremt svår (Extreme)"
+                :en "5 - Extremely difficult (Extreme)"}
+        :description {:fi "alle 0,3 metrin levyinen, erittäin epätasainen ja jyrkkä osuus"
+                      :se "under 0,3 meter bred, mycket ojämn och brant sektion"
+                      :en "less than 0.3 meter wide, very uneven and steep section"}
+        :color "orange"}})
+
+(def itrs-technical-order
+  {"1a" 0, "1b" 1, "2" 2, "3" 3, "4" 4, "5" 5})
+
+(defn itrs-technical-max
+  "Returns the highest ITRS technical value from a seq of values."
+  [values]
+  (->> values
+       (filter some?)
+       (sort-by itrs-technical-order)
+       last))
+
+(def itrs-technical-route-options
+  (into {} (map (fn [[k v]] [k (:label v)]) itrs-technical-options)))
+
+(def itrs-exposure-options
+  {"1" {:label {:fi "E1 - Vähäinen altistuminen"
+                :se "E1 - Låg exponering"
+                :en "E1 - Low exposure"}
+        :description {:fi "Vähän tai ei riskiä putoamisesta"
+                      :se "Liten eller ingen fallrisk"
+                      :en "Little to no fall risk"}}
+   "2" {:label {:fi "E2 - Kohtalainen altistuminen"
+                :se "E2 - Måttlig exponering"
+                :en "E2 - Moderate exposure"}
+        :description {:fi "Jonkin verran putoamisriskiä, mahdollisia vammoja"
+                      :se "Viss fallrisk, möjliga skador"
+                      :en "Some fall risk, possible injuries"}}
+   "3" {:label {:fi "E3 - Korkea altistuminen"
+                :se "E3 - Hög exponering"
+                :en "E3 - High exposure"}
+        :description {:fi "Merkittävä putoamisriski, vakavat vammat mahdollisia"
+                      :se "Betydande fallrisk, allvarliga skador möjliga"
+                      :en "Significant fall risk, serious injuries possible"}}
+   "4" {:label {:fi "E4 - Äärimmäinen altistuminen"
+                :se "E4 - Extrem exponering"
+                :en "E4 - Extreme exposure"}
+        :description {:fi "Vakava putoamisriski, hengenvaarallinen"
+                      :se "Allvarlig fallrisk, livsfarlig"
+                      :en "Severe fall risk, life-threatening"}}})
+
+(def itrs-endurance-options
+  {"1" {:fi "1 - Normaali liikunnallisuus"
+        :se "1 - Normal fysisk aktivitet"
+        :en "1 - Normal physical activity"}
+   "2" {:fi "2 - Satunnaista liikuntaa ja pyöräilyä"
+        :se "2 - Sporadisk motion och cykling"
+        :en "2 - Occasional exercise and cycling"}
+   "3" {:fi "3 - Säännöllistä pyöräilyä ja muuta urheilua"
+        :se "3 - Regelbunden cykling och annan idrott"
+        :en "3 - Regular cycling and other sports"}
+   "4" {:fi "4 - Aktiivista pyöräilyn lajiharjoittelua"
+        :se "4 - Aktiv cykelträning"
+        :en "4 - Active cycling training"}
+   "5" {:fi "5 - Ammattimaista pyöräilyn lajiharjoittelua"
+        :se "5 - Professionell cykelträning"
+        :en "5 - Professional cycling training"}})
+
+(def itrs-wilderness-options
+  {"1" {:fi "1 - Palveluiden läheisyydessä"
+        :se "1 - I närheten av tjänster"
+        :en "1 - Near services"}
+   "2" {:fi "2 - Vaatii valmistautumista"
+        :se "2 - Kräver förberedelse"
+        :en "2 - Requires preparation"}
+   "3" {:fi "3 - Vaatii huolellista valmistautumista"
+        :se "3 - Kräver noggrann förberedelse"
+        :en "3 - Requires careful preparation"}
+   "4" {:fi "4 - Vaatii ammattimaista valmistautumista"
+        :se "4 - Kräver professionell förberedelse"
+        :en "4 - Requires professional preparation"}})
+
 (def cycling
   {:label       {:fi "Pyöräily"
                  :se "Cykling"
@@ -927,6 +1042,9 @@
                  :duration
                  :cycling-difficulty
                  :cycling-route-difficulty
+                 :itrs-endurance
+                 :itrs-wilderness
+                 :itrs-technical-route
                  :surface-material
                  :unpaved-percentage
                  :trail-percentage
@@ -972,6 +1090,12 @@
                 [:unpaved-percentage {:optional true} common-schema/percentage]
                 [:trail-percentage {:optional true} common-schema/percentage]
                 [:cyclable-percentage {:optional true} common-schema/percentage]
+                [:itrs-endurance {:optional true}
+                 (into [:enum] (keys itrs-endurance-options))]
+                [:itrs-wilderness {:optional true}
+                 (into [:enum] (keys itrs-wilderness-options))]
+                [:itrs-technical-route {:optional true}
+                 (into [:enum] (keys itrs-technical-options))]
                 pilgrimage-key-schema])]
      :field
      {:type        "routes"
@@ -1033,6 +1157,39 @@
           :label       {:fi "Haastavuus"
                         :se "Utmaning"
                         :en "Difficulty"}}}
+
+        :itrs-endurance
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Kesto"
+                        :se "ITRS Uthållighet"
+                        :en "ITRS Endurance"}
+          :description {:fi "Reitin arvioitu kesto (1-5)"
+                        :se "Ruttens uppskattade uthållighet (1-5)"
+                        :en "Estimated route endurance (1-5)"}
+          :opts        itrs-endurance-options}}
+
+        :itrs-wilderness
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Erämaa"
+                        :se "ITRS Vildmark"
+                        :en "ITRS Wilderness"}
+          :description {:fi "Reitin etäisyys palveluista (1-4)"
+                        :se "Ruttens avstånd till tjänster (1-4)"
+                        :en "Route remoteness from services (1-4)"}
+          :opts        itrs-wilderness-options}}
+
+        :itrs-technical-route
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Reitin tekninen luokitus"
+                        :se "ITRS Ruttens tekniska klassificering"
+                        :en "ITRS Route technical classification"}
+          :description {:fi "Reitin vaativin tekninen osuus (lasketaan automaattisesti reittiosista)"
+                        :se "Ruttens mest tekniskt krävande avsnitt (beräknas automatiskt från ruttsektioner)"
+                        :en "Most technically demanding section of the route (auto-computed from segments)"}
+          :opts        itrs-technical-route-options}}
 
         :duration
         {:field

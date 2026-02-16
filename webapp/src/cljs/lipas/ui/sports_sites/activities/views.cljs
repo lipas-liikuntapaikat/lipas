@@ -7,6 +7,7 @@
             [lipas.ui.components.buttons :as lui-btn]
             [lipas.ui.components.forms :refer [->display-tf]]
             [lipas.ui.components.text-fields :as lui-tf]
+            [lipas.data.activities :as activities-data]
             [lipas.ui.config :as config]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
@@ -870,8 +871,12 @@
 (def independent-entity-ks
   #{:arrival :rules :rules-structured :permits-rules-guidelines :highlights})
 
+(def ^:private itrs-field-ks
+  #{:itrs-endurance :itrs-wilderness :itrs-technical-route})
+
 (defn route-form
-  [{:keys [locale lipas-id type-code route-props state read-only? field-sorter]}]
+  [{:keys [tr locale lipas-id type-code route-props state read-only? edit-itrs? field-sorter
+           compute-itrs-technical]}]
   [nice-form {:read-only? read-only?}
    (doall
     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
@@ -881,23 +886,49 @@
                  (contains? route-props :independent-entity)
                  (not (:independent-entity @state))
                  (contains? independent-entity-ks prop-k))
-        [make-field
-         {:read-only?   read-only?
-          :key          prop-k
-          :field        field
-          :prop-k       prop-k
-          :edit-data    @state
-          :display-data @state
-          :locale       locale
-          :set-field    (fn [& args]
-                          (let [path (butlast args)
-                                v (last args)]
-                            (swap! state assoc-in path v)))
-          :lipas-id     lipas-id}])))])
+        (let [itrs-field?      (contains? itrs-field-ks prop-k)
+              itrs-locked?     (and itrs-field? (not read-only?) (not edit-itrs?))
+              field-read-only? (if itrs-field?
+                                 (or read-only? (not edit-itrs?))
+                                 read-only?)
+              set-field        (fn [& args]
+                                 (let [path (butlast args)
+                                       v (last args)]
+                                   (swap! state assoc-in path v)))
+              field-component  [make-field
+                                {:read-only?   field-read-only?
+                                 :key          prop-k
+                                 :field        field
+                                 :prop-k       prop-k
+                                 :edit-data    @state
+                                 :display-data @state
+                                 :locale       locale
+                                 :set-field    set-field
+                                 :lipas-id     lipas-id}]]
+          (cond
+            itrs-locked?
+            [mui/tooltip {:title (tr :lipas.sports-site/itrs-edit-requires-role)}
+             [:span field-component]]
+
+            (and (= :itrs-technical-route prop-k) edit-itrs? (not read-only?) compute-itrs-technical)
+            [mui/grid {:container true :alignItems "center" :spacing 1 :wrap "nowrap"}
+             [mui/grid {:item true :xs true}
+              field-component]
+             [mui/grid {:item true}
+              [mui/tooltip {:title (tr :map/compute-itrs-technical)}
+               [mui/icon-button
+                {:size     "small"
+                 :on-click (fn []
+                             (when-let [v (compute-itrs-technical)]
+                               (set-field :itrs-technical-route v)))}
+                [mui/icon "calculate"]]]]]
+
+            :else
+            field-component)))))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
-           locale _label _description _set-field set-field]
+           locale _label _description _set-field set-field edit-itrs?]
     :as   props}]
   ;; Ensure route has an :id - required by schema since commit 63af05df
   (r/with-let [route-form-state (r/atom (if (:id route)
@@ -908,7 +939,8 @@
                               (set-field [new-state])))]
 
     (let [tr           (<== [:lipas.ui.subs/translator])
-          field-sorter (<== [::subs/field-sorter activity-k])]
+          field-sorter (<== [::subs/field-sorter activity-k])
+          geoms        (<== [::subs/geoms read-only?])]
 
       [route-form
        {:locale       locale
@@ -917,15 +949,24 @@
         :lipas-id     lipas-id
         :type-code    type-code
         :read-only?   read-only?
+        :edit-itrs?   edit-itrs?
         :route-props  route-props
-        :state        route-form-state}])
+        :state        route-form-state
+        :compute-itrs-technical
+        (fn []
+          (let [fids     (set (:fids @route-form-state))
+                features (:features geoms)
+                values   (->> features
+                              (filter #(contains? fids (:id %)))
+                              (map #(get-in % [:properties :itrs-technical])))]
+            (activities-data/itrs-technical-max values)))}])
 
     (finally
       (remove-watch route-form-state :lol))))
 
 (defn multiple-routes
   [{:keys [read-only? route-props lipas-id type-code _display-data _edit-data
-           locale label _description _set-field activity-k routes]
+           locale label _description _set-field activity-k routes edit-itrs?]
     :as   props}]
   (r/with-let [route-form-state (r/atom {})]
     (let [tr     (<== [:lipas.ui.subs/translator])
@@ -935,6 +976,7 @@
           selected-route-id (<== [::subs/selected-route-id])
 
           field-sorter (<== [::subs/field-sorter activity-k])
+          geoms        (<== [::subs/geoms read-only?])
 
           editing? (not read-only?)]
 
@@ -997,8 +1039,17 @@
             :lipas-id     lipas-id
             :type-code    type-code
             :read-only?   read-only?
+            :edit-itrs?   edit-itrs?
             :route-props  route-props
-            :state        route-form-state}]
+            :state        route-form-state
+            :compute-itrs-technical
+            (fn []
+              (let [route-fids (set (:fids @route-form-state))
+                    features   (:features geoms)
+                    values     (->> features
+                                    (filter #(contains? route-fids (:id %)))
+                                    (map #(get-in % [:properties :itrs-technical])))]
+                (activities-data/itrs-technical-max values)))}]
 
           ;; Buttons
           [mui/grid {:container true :spacing 1}
@@ -1108,7 +1159,7 @@
        [mui/form-helper-text description])]))
 
 (defn make-field
-  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code]}]
+  [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code edit-itrs?]}]
   (case (:type field)
 
     "select" [lui/select
@@ -1219,6 +1270,7 @@
 
     "routes" [routes
               {:read-only?  read-only?
+               :edit-itrs?  edit-itrs?
                :lipas-id    lipas-id
                :locale      locale
                :label       (get-in field [:label locale])
@@ -1287,7 +1339,7 @@
     (println (str "Unknown field type: " (:type field)))))
 
 (defn view
-  [{:keys [type-code display-data edit-data tr lipas-id can-edit?]}]
+  [{:keys [type-code display-data edit-data tr lipas-id can-edit? edit-itrs?]}]
   (let [activity     (<== [::subs/activity-for-type-code type-code])
         activity-k   (-> activity :value keyword)
         field-sorter (<== [::subs/field-sorter activity-k])
@@ -1330,6 +1382,7 @@
            :prop-k       prop-k
            :edit-data    (get-in edit-data [:activities activity-k])
            :read-only?   read-only?
+           :edit-itrs?   edit-itrs?
            :display-data (get-in display-data [:activities activity-k])
            :locale       locale
            :activity-k   activity-k

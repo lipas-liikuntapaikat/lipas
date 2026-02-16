@@ -27,6 +27,10 @@
  :retkikartta-problems-warning
  "Please fix problems displayed on the map in case this route should be visible also in Retkikartta.fi",
  :route-part-difficulty "Set route section difficulty",
+ :itrs-segment "ITRS classification",
+ :itrs-technical "ITRS Technical",
+ :itrs-exposure "ITRS Exposure",
+ :compute-itrs-technical "Compute from segments",
  :split-linestring "Split",
  :travel-direction "Define travel direction",
  :zoom-closer "Please zoom closer",

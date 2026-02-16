@@ -89,12 +89,12 @@
 
                   ;; Single route, assume no sub-routes
                   ;; (all segments belong to this route)
-                   #_#_1 (assoc-in routes [0 :fids] (-> edit-data
-                                                        :location
-                                                        :geometries
-                                                        :features
-                                                        (->> (map :id))
-                                                        set))
+                   1 (assoc-in routes [0 :fids] (-> edit-data
+                                                    :location
+                                                    :geometries
+                                                    :features
+                                                    (->> (map :id))
+                                                    set))
 
                   ;; Multiple routes, don't assume anything about sub-routes,
                   ;; let the user decide

@@ -111,7 +111,44 @@
                      :type-code 101
                      :city-code 837
                      :activity nil}
-                    :site/save-api))))))
+                    :site/save-api)))))
+
+  (testing "itrs-assessor role"
+    ;; Basic privilege check
+    (is (true? (sut/check-privilege
+                 {:permissions {:roles [{:role :itrs-assessor}]}}
+                 {}
+                 :itrs/edit)))
+
+    ;; With city-code context
+    (is (true? (sut/check-privilege
+                 {:permissions {:roles [{:role :itrs-assessor :city-code #{837}}]}}
+                 {:city-code 837}
+                 :itrs/edit)))
+
+    ;; Wrong city-code
+    (is (false? (sut/check-privilege
+                  {:permissions {:roles [{:role :itrs-assessor :city-code #{837}}]}}
+                  {:city-code 91}
+                  :itrs/edit)))
+
+    ;; Activities-manager does NOT get itrs/edit
+    (is (false? (sut/check-privilege
+                  {:permissions {:roles [{:role :activities-manager :activity #{"cycling"}}]}}
+                  {:activity #{"cycling"}}
+                  :itrs/edit)))
+
+    ;; Admin gets itrs/edit
+    (is (true? (sut/check-privilege
+                 {:permissions {:roles [{:role :admin}]}}
+                 {}
+                 :itrs/edit)))
+
+    ;; itrs-assessor also gets site/save-api
+    (is (true? (sut/check-privilege
+                 {:permissions {:roles [{:role :itrs-assessor}]}}
+                 {}
+                 :site/save-api)))))
 
 (deftest roles-conform-test
   (is (= [{:role :city-manager

@@ -40,7 +40,9 @@
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
 
    :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}
-   :jobs/manage {:doc "Oikeus hallita taustaprosesseja"}})
+   :jobs/manage {:doc "Oikeus hallita taustaprosesseja"}
+
+   :itrs/edit {:doc "Oikeus muokata ITRS-luokitustietoja"}})
 
 (def basic #{:site/create-edit
              :site/save-api
@@ -105,6 +107,13 @@
                   :loi/view ;; Temporarily only enabled here
                   :loi/create-edit}
     :required-context-keys [:activity]
+    :optional-context-keys [:city-code :type-code]}
+
+   :itrs-assessor
+   {:sort 25
+    :assignable true
+    :privileges #{:itrs/edit :site/save-api}
+    :required-context-keys []
     :optional-context-keys [:city-code :type-code]}
 
    :floorball-manager

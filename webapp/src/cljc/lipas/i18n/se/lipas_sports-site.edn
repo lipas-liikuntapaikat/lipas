@@ -30,6 +30,7 @@
  :new-site-of-type "Ny {1}",
  :no-permission-tab
  "Du har inte behörighet att redigera informationen på denna flik",
+ :itrs-edit-requires-role "Redigering av ITRS-klassificering kräver rollen ITRS-bedömare",
  :owner "Ägare",
  :owner-helper-text "Ägare av strukturer eller tjänster i objektet",
  :ownership "Ägare",

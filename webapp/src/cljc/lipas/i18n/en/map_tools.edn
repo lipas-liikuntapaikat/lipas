@@ -6,6 +6,7 @@
  :importing-tooltip "Import tool selected",
  :route-part-difficulty-tooltip
  "Route section difficulty tool selected",
+ :itrs-segment-tooltip "ITRS classification tool selected",
  :selecting "Select tool selected",
  :simplify "Simplify",
  :simplifying "Simplify tool selected",

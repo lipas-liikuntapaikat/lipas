@@ -605,6 +605,44 @@
 (defmethod popup-body :route-part-difficulty [popup]
   [route-part-difficulty {:data (:data popup)}])
 
+(r/defc itrs-segment [{:keys [data]}]
+  (let [{:keys [lipas-id fid]} data
+        tr @(rf/subscribe [:lipas.ui.subs/translator])
+        locale (tr)
+        properties @(rf/subscribe [::subs/edit-geom-properties fid])
+        technical-value (:itrs-technical properties)]
+    [:> Paper
+     {:sx
+      #js {:padding 2
+           :width "350px"}}
+     [:> TextField
+      {:label (tr :map/itrs-technical)
+       :select true
+       :fullWidth true
+       :value (or technical-value "")
+       :onChange (fn [e]
+                   (rf/dispatch [::events/set-itrs-technical lipas-id fid (.. e -target -value)]))}
+      [:> MenuItem
+       {:key "empty"
+        :value ""}
+       "-"]
+      (for [[k {:keys [label description]}] activities-data/itrs-technical-options]
+        [:> MenuItem
+         {:key k
+          :value k
+          :sx #js {:flexDirection "column"
+                   :alignItems "flex-start"
+                   :maxWidth "350px"}}
+         [:> Typography
+          (get label locale)]
+         [:> Typography
+          {:sx #js {:fontSize "body2.fontSize"
+                    :whiteSpace "normal"}}
+          (get description locale)]])]]))
+
+(defmethod popup-body :itrs-segment [popup]
+  [itrs-segment {:data (:data popup)}])
+
 (defmethod popup-body :heatmap [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
         locale (tr)
@@ -730,7 +768,7 @@
                           :lat (second first-point)
                           :on-success [:lipas.ui.map.events/on-reverse-geocoding-success]}]))}]]))
 
-(defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? editing? can-edit-map? geom-type]}]
+(defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? edit-itrs? editing? can-edit-map? geom-type]}]
   (->> [;; Import geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
           [mui/menu-item {:on-click #(do
@@ -845,6 +883,22 @@
              "warning"]]
            [mui/list-item-text (tr :map/route-part-difficulty)]])
 
+        ;; ITRS segment
+        (when (and editing?
+                   edit-itrs?
+                   (#{"LineString"} geom-type)
+                   (= "cycling" activity-value))
+          [mui/menu-item
+           {:on-click
+            #(do
+               (==> [::events/close-more-tools-menu])
+               (==> [::events/start-editing lipas-id :itrs-segment geom-type]))}
+           [mui/list-item-icon
+            [mui/icon
+             {:color (if (= sub-mode :itrs-segment) "secondary" "inherit")}
+             "terrain"]]
+           [mui/list-item-text (tr :map/itrs-segment)]])
+
         ;; Download backup
         (when editing?
           [mui/menu-item
@@ -898,6 +952,7 @@
         activity-value (<== [:lipas.ui.sports-sites.activities.subs/activity-value-for-type-code type-code])
         view-activities? (<== [:lipas.ui.sports-sites.activities.subs/show-activities? activity-value role-site-ctx])
         edit-activities? (<== [:lipas.ui.sports-sites.activities.subs/edit-activities? activity-value role-site-ctx])
+        edit-itrs? (<== [::user-subs/check-privilege role-site-ctx :itrs/edit])
 
         floorball-types (<== [:lipas.ui.sports-sites.floorball.subs/type-codes])
         floorball-type? (contains? floorball-types type-code)
@@ -933,6 +988,7 @@
                                               :sub-mode sub-mode
                                               :activity-value activity-value
                                               :edit-activities? edit-activities?
+                                              :edit-itrs? edit-itrs?
                                               :editing? editing?
                                               :can-edit-map? can-edit-map?
                                               :geom-type geom-type}))
@@ -1144,7 +1200,8 @@
               :type-code type-code
               :display-data display-data
               :edit-data edit-data
-              :can-edit? edit-activities?}]]
+              :can-edit? edit-activities?
+              :edit-itrs? edit-itrs?}]]
 
          6 [mui/grid {:item true :xs 12}
             [ptv-site/site-view
@@ -1207,6 +1264,7 @@
                   :selecting (tr :map.tools/selecting-tooltip)
                   :travel-direction (tr :map.tools/travel-direction-tooltip)
                   :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                  :itrs-segment (tr :map.tools/itrs-segment-tooltip)
                   :view-only "-")}
                [mui/fab
                 {:size "small"
@@ -1227,6 +1285,7 @@
                     :selecting [mui/icon props "handshake"]
                     :travel-direction [mui/icon props "turn_slight_right"]
                     :route-part-difficulty [mui/icon props "warning"]
+                    :itrs-segment [mui/icon props "terrain"]
                     :view-only [mui/icon props "dash"]))]])
 
            ;; Tool select button
