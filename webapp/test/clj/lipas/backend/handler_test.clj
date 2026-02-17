@@ -187,9 +187,9 @@
     (core/index-loi! (test-search) loi-a :sync)
     (core/index-loi! (test-search) loi-b :sync)
     (let [response (<-json (:body
-                            (test-app (-> (mock/request :post (str "/api/actions/search-lois"))
-                                          (mock/content-type "application/json")
-                                          (mock/body (->json body-params))))))
+                             (test-app (-> (mock/request :post (str "/api/actions/search-lois"))
+                                           (mock/content-type "application/json")
+                                           (mock/body (->json body-params))))))
           sorted-lois (sort-by :_score > response)]
       (is (> (:_score (first sorted-lois))
              (:_score (second sorted-lois)))))))
@@ -525,31 +525,117 @@
     ;; (is (m/validate sports-site-schema/sports-site body))
     ))
 
+(defn- report-request
+  "Build a report request. content-type can be :json or :transit."
+  [path query fields locale content-type]
+  (case content-type
+    :json (-> (mock/request :post path)
+              (mock/content-type "application/json")
+              (mock/body (->json {:search-query query
+                                  :fields       fields
+                                  :locale       locale})))
+    :transit (-> (mock/request :post path)
+                 (mock/content-type "application/transit+json")
+                 (mock/body (->transit {:search-query query
+                                        :fields       fields
+                                        :locale       locale})))))
+
+(defn- read-report-lipas-ids
+  "Parse Excel report body and return set of lipas-id values from first column."
+  [body]
+  (->> (excel/load-workbook body)
+       (excel/select-sheet "lipas")
+       (excel/select-columns {:A :lipas-id})
+       rest ;; skip header row
+       (map :lipas-id)
+       (map long)
+       set))
+
 (deftest sports-sites-report-test
   (let [site (tu/gen-sports-site)
         _ (core/index! (test-search) site :sync)
         path "/api/actions/create-sports-sites-report"
-        resp (test-app (-> (mock/request :post path)
-                           (mock/content-type "application/json")
-                           (mock/body (->json
-                                       {:search-query
-                                        {:query
-                                         {:bool
-                                          {:must
-                                           [{:query_string
-                                             {:query "*"}}]}}}
-                                        :fields ["lipas-id"
-                                                 "name"
-                                                 "location.city.city-code"]
-                                        :locale :fi}))))
+        resp (test-app (report-request path
+                                       {:query {:bool {:must [{:query_string {:query "*"}}]}}}
+                                       ["lipas-id" "name" "location.city.city-code"]
+                                       :fi :json))
         body (:body resp)
         wb (excel/load-workbook body)
         header-1 (excel/read-cell
-                  (->> wb
-                       (excel/select-sheet "lipas")
-                       (excel/select-cell "A1")))]
+                   (->> wb
+                        (excel/select-sheet "lipas")
+                        (excel/select-cell "A1")))]
     (is (= 200 (:status resp)))
     (is (= "Lipas-id" header-1))))
+
+(deftest sports-sites-report-respects-filters-test
+  (let [;; Create sites with distinct type-codes
+        site-a1 (tu/make-point-site 100001 :type-code 1120 :name "Matching A1")
+        site-a2 (tu/make-point-site 100002 :type-code 1120 :name "Matching A2")
+        site-b  (tu/make-point-site 100003 :type-code 2510 :name "Non-matching B")
+        _ (doseq [s [site-a1 site-a2 site-b]]
+            (core/index! (test-search) s :sync))
+        path "/api/actions/create-sports-sites-report"]
+
+    (testing "type-code filter returns only matching sites"
+      (let [resp (test-app
+                   (report-request path
+                                   {:query {:bool {:must   {:match_all {}}
+                                                   :filter [{:terms {:type.type-code [1120]}}]}}}
+                                   ["lipas-id" "name"]
+                                   :fi :json))
+            ids (read-report-lipas-ids (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (contains? ids 100001))
+        (is (contains? ids 100002))
+        (is (not (contains? ids 100003)))))
+
+    (testing "type-code filter via transit encoding"
+      (let [resp (test-app
+                   (report-request path
+                                   {:query {:bool {:must   {:match_all {}}
+                                                   :filter [{:terms {:type.type-code [1120]}}]}}}
+                                   ["lipas-id" "name"]
+                                   :fi :transit))
+            ids (read-report-lipas-ids (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (contains? ids 100001))
+        (is (contains? ids 100002))
+        (is (not (contains? ids 100003)))))
+
+    (testing "status filter returns only matching sites"
+      (let [site-active  (tu/make-point-site 100004 :type-code 1120 :status "active")
+            site-planned (tu/make-point-site 100005 :type-code 1120 :status "planned")
+            _ (doseq [s [site-active site-planned]]
+                (core/index! (test-search) s :sync))
+            resp (test-app
+                   (report-request path
+                                   {:query {:bool {:must   {:match_all {}}
+                                                   :filter [{:terms {:status ["active"]}}]}}}
+                                   ["lipas-id" "name"]
+                                   :fi :json))
+            ids (read-report-lipas-ids (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (contains? ids 100004))
+        (is (not (contains? ids 100005)))))
+
+    (testing "function_score query with filters (matches frontend report flow)"
+      (let [resp (test-app
+                   (report-request path
+                                   {:query {:function_score
+                                            {:score_mode "max"
+                                             :query {:bool {:must   [{:simple_query_string
+                                                                      {:query "*"
+                                                                       :default_operator "AND"}}]
+                                                            :filter [{:terms {:type.type-code [2510]}}]}}
+                                             :functions []}}
+                                    :size 1000}
+                                   ["lipas-id" "name"]
+                                   :fi :transit))
+            ids (read-report-lipas-ids (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (contains? ids 100003) "Should include the type-2510 site")
+        (is (not (contains? ids 100001)) "Should exclude type-1120 sites")))))
 
 (deftest finance-report-test
   (let [_ (seed/seed-city-data! (test-db) (test-search))
@@ -625,9 +711,9 @@
                                 "bantis beachvolleykenttä (1)"
                                 "!antis"])]
     (core/index! (test-search) (doto
-                                (-> (tu/gen-sports-site)
-                                    (assoc :lipas-id (inc idx))
-                                    (assoc :name site-name))
+                                 (-> (tu/gen-sports-site)
+                                     (assoc :lipas-id (inc idx))
+                                     (assoc :name site-name))
                                  prn)
                  :sync))
   (let [response (-> (mock/request :post "/api/actions/search")

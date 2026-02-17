@@ -51,7 +51,7 @@
 (def sports-site-report-req
   (m/schema
    [:map
-    [:search-query [:map]]
+    [:search-query [:map {:closed false}]]
     [:fields [:vector {:distinct true} report-field]]
     [:locale [:enum :fi :se :en]]
     [:format {:optional true} [:enum "xlsx" "geojson" "csv"]]]))
