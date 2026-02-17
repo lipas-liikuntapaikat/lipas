@@ -54,6 +54,7 @@
 (deftest search-loi-by-category
   (let [loi-category "outdoor-recreation-facilities"
         loi (-> (tu/gen-loi!)
+                (assoc :loi-type "fishing-pier")
                 (assoc :loi-category loi-category))
         _ (core/index-loi! (test-search) loi :sync)
         resp (test-app (-> (mock/request :get (str "/api/lois/category/" loi-category))
@@ -62,11 +63,16 @@
     (is (= loi-category (:loi-category response-loi)))))
 
 (deftest get-loi-by-id
-  (let [{:keys [id] :as loi} (tu/gen-loi!)
+  (let [{:keys [id] :as loi} (-> (tu/gen-loi!)
+                                 (assoc :loi-type "fishing-pier")
+                                 (assoc :loi-category "outdoor-recreation-facilities")
+                                 (select-keys [:id :event-date :geometries :status
+                                               :loi-type :loi-category]))
         _ (core/index-loi! (test-search) loi :sync)
         resp (test-app (-> (mock/request :get (str "/api/lois/" id))
                            (mock/content-type "application/json")))
         response-loi (<-json (:body resp))]
+    (is (= 200 (:status resp)))
     (is (= loi response-loi))))
 
 (deftest loi-api-returns-all-fields
