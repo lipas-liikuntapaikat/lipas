@@ -183,7 +183,7 @@
 
 (defn gen-loi []
   (try
-    (-> (mg/generate loi-schema/loi-document)
+    (-> (mg/generate loi-schema/loi)
         (assoc :id (java.util.UUID/randomUUID)))
     (catch Throwable _ (gen-loi))))
 

@@ -727,7 +727,7 @@
        user))))
 
 (defn gen-loi! []
-  (-> (mg/generate loi-schema/loi-document)
+  (-> (mg/generate loi-schema/loi)
       (assoc :status "active")
       (assoc :id (str (java.util.UUID/randomUUID)))
       (assoc :geometries {:type "FeatureCollection"

@@ -45,23 +45,6 @@
 
 (def loi-status (m/schema common/status))
 
-(def loi-document
-  "An LOI document with required fields."
-  (m/schema
-   [:map
-    [:event-date common/iso8601-timestamp]
-    [:status loi-status]
-    [:loi-category loi-category]
-    [:loi-type loi-type]
-    [:geometries [:or
-                  #'common/point-feature-collection
-                  #'common/line-string-feature-collection
-                  #'common/polygon-feature-collection]]
-    [:id {:optional true} loi-id]]))
-
-(def loi-documents
-  (m/schema [:sequential loi-document]))
-
 (comment
   (require '[malli.core :as m])
   (m/schema loi))

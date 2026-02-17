@@ -1,5 +1,5 @@
 (ns lipas.backend.handler-test
-  (:require [clojure.test :refer [deftest is use-fixtures] :as t]
+  (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
@@ -68,6 +68,32 @@
                            (mock/content-type "application/json")))
         response-loi (<-json (:body resp))]
     (is (= loi response-loi))))
+
+(deftest loi-api-returns-all-fields
+  (let [loi (-> (tu/gen-loi!)
+                (assoc :name {:fi "Testikohde" :en "Test location"})
+                (assoc :description {:fi "Kuvaus" :en "Description"})
+                (assoc :loi-type "hazard")
+                (assoc :loi-category "water-conditions"))
+        _ (core/index-loi! (test-search) loi :sync)]
+
+    (testing "Single LOI endpoint includes name and description"
+      (let [resp (test-app (-> (mock/request :get (str "/api/lois/" (:id loi)))
+                               (mock/content-type "application/json")))
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= {:fi "Testikohde" :en "Test location"} (:name body)))
+        (is (= {:fi "Kuvaus" :en "Description"} (:description body)))))
+
+    (testing "LOI list endpoint includes name and description"
+      (let [resp (test-app (-> (mock/request :get "/api/lois/type/hazard")
+                               (mock/content-type "application/json")))
+            body (<-json (:body resp))
+            found (first (filter #(= (:id loi) (:id %)) body))]
+        (is (= 200 (:status resp)))
+        (is (some? found) "LOI should be found in results")
+        (is (= {:fi "Testikohde" :en "Test location"} (:name found)))
+        (is (= {:fi "Kuvaus" :en "Description"} (:description found)))))))
 
 (deftest search-loi-by-invalid-category
   (let [loi-category "kekkonen-666-category"

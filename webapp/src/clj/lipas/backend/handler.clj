@@ -216,7 +216,7 @@
       ["/lois"
        {:get
         {:no-doc false
-         :responses {200 {:body loi-schema/loi-documents}}
+         :responses {200 {:body [:sequential loi-schema/loi]}}
          :parameters {}
          :handler
          (fn []
@@ -227,7 +227,7 @@
       ["/lois/:loi-id"
        {:get
         {:no-doc false
-         :responses {200 {:body loi-schema/loi-document}}
+         :responses {200 {:body loi-schema/loi}}
          :parameters {:path {:loi-id #'loi-schema/loi-id}}
          :handler
          (fn [{:keys [parameters]}]
@@ -237,7 +237,7 @@
       ["/lois/type/:loi-type"
        {:get
         {:no-doc false
-         :responses {200 {:body loi-schema/loi-documents}}
+         :responses {200 {:body [:sequential loi-schema/loi]}}
          :parameters
          {:path {:loi-type #'loi-schema/loi-type}
           :query handler-schema/sports-sites-query-params}
@@ -251,7 +251,7 @@
       ["/lois/category/:loi-category"
        {:get
         {:no-doc false
-         :responses {200 {:body loi-schema/loi-documents}}
+         :responses {200 {:body [:sequential loi-schema/loi]}}
          :parameters
          {:path {:loi-category #'loi-schema/loi-category}
           :query handler-schema/sports-sites-query-params}
@@ -265,7 +265,7 @@
       ["/lois/status/:status"
        {:get
         {:no-doc false
-         :responses {200 {:body loi-schema/loi-documents}}
+         :responses {200 {:body [:sequential loi-schema/loi]}}
          :parameters
          {:path {:status #'loi-schema/loi-status}
           :query handler-schema/sports-sites-query-params}
@@ -845,7 +845,7 @@
                               :activity ::roles/any}
                              :loi/create-edit]
          :parameters
-         {:body loi-schema/loi-document}
+         {:body loi-schema/loi}
          :handler
          (fn [{:keys [body-params identity]}]
            {:status 200
