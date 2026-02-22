@@ -13,10 +13,11 @@ Technical reference for the route segment ordering system. For concepts and data
 5. [Frontend: Re-frame Events](#frontend-re-frame-events)
 6. [Frontend: Subscriptions](#frontend-subscriptions)
 7. [Frontend: Segment Builder UI](#frontend-segment-builder-ui)
-8. [Map Integration: Direction Arrows](#map-integration-direction-arrows)
-9. [Map Integration: Segment Highlighting](#map-integration-segment-highlighting)
-10. [Elevation Profile](#elevation-profile)
-11. [Key Files Reference](#key-files-reference)
+8. [Map Integration: Segment Selection Mode](#map-integration-segment-selection-mode)
+9. [Map Integration: Direction Arrows](#map-integration-direction-arrows)
+10. [Map Integration: Segment Highlighting](#map-integration-segment-highlighting)
+11. [Elevation Profile](#elevation-profile)
+12. [Key Files Reference](#key-files-reference)
 
 ---
 
@@ -40,7 +41,8 @@ Technical reference for the route segment ordering system. For concepts and data
 │                                                   │             │
 │   ┌───────────────────────┐  ┌────────────────────┤             │
 │   │ views.cljs            │  │ map/editing.cljs   │             │
-│   │ segment-builder UI    │  │ direction arrows   │             │
+│   │ segment-builder UI    │  │ selecting mode     │             │
+│   │ route detail tabs     │  │ direction arrows   │             │
 │   │ hover → highlight     │  │ highlight styles   │             │
 │   └───────────────────────┘  └────────────────────┘             │
 │                                                                 │
@@ -165,16 +167,19 @@ Key behaviors:
 
 | Event | Purpose |
 |-------|---------|
-| `::init-routes` | On UTP tab open: creates initial route if none exist, sets travel directions on map |
+| `::init-routes` | On UTP tab open: creates initial route if none exist, sets travel directions on map. Skips mode reset if already in `:selecting` mode. |
+| `::add-route` | Enters segment selection mode for a new route: clears stale mode data (`:segment-directions`, `:segment-labels`), dispatches `start-editing` with `:selecting` sub-mode |
+| `::add-segments-to-route` | Enters segment selection mode for an existing route: pre-populates `selected-features` with the route's existing segment fids so they appear highlighted |
+| `::finish-route` | Collects selected features into a route: detects new vs existing route, dispatches `::finish-route-details` with `return-to-route?` flag for existing routes |
 | `::reorder-segments` | Drag/arrow reorder: splices segment at `source-idx` to `target-idx`, updates map arrows |
 | `::toggle-segment-direction` | Toggles `:reversed?` on a segment, updates map arrows |
 | `::remove-segment` | Removes a segment from the route, updates `:fids` accordingly |
 | `::duplicate-segment` | Duplicates a segment with reversed direction (for out-and-back routes) |
 | `::highlight-segment` | Hover highlight: overrides direction map for one segment, restores on mouse leave |
-| `::finish-route-details` | Saves route: merges new fids into existing segments, clears map arrows |
-| `::select-route` | Opens route for editing: highlights features on map, sets travel directions |
+| `::finish-route-details` | Saves route: merges new fids into existing segments, clears map arrows. Accepts `return-to-route?` flag to re-open route details after adding segments to an existing route. |
+| `::select-route` | Opens route detail view: highlights features on map, sets travel directions. Uses `:view-only` map sub-mode (not `:selecting`) to preserve direction arrows. |
 | `::delete-route` | Removes route, clears map highlight and arrows |
-| `::cancel-route-details` | Cancels editing, clears map state |
+| `::cancel-route-details` | Cancels editing, clears map state including `selected-features` |
 
 All segment-mutating events follow the pattern:
 1. Read current routes via `get-routes-with-segments` (ensures migration)
@@ -246,7 +251,9 @@ The subscription returns routes with these additional computed fields:
 
 **File**: `src/cljs/lipas/ui/sports_sites/activities/views.cljs` — `segment-builder`
 
-The segment builder renders when a route has more than one segment. Each row shows:
+The segment builder renders for all routes (including single-segment routes). It has a header row with the "Osuudet" subtitle and an "Add segments" button that dispatches `::add-segments-to-route` to enter segment selection mode for the existing route.
+
+Each segment row shows:
 
 | Element | Description |
 |---------|-------------|
@@ -261,7 +268,59 @@ The entire row has:
 - **Hover highlight**: CSS `&:hover` background via MUI `:sx`
 - **Direction-aware map highlight**: `on-mouse-enter`/`on-mouse-leave` dispatch `::highlight-segment` which overrides the direction map for the hovered segment's fid, showing only that segment's specific travel direction (not the combined bidirectional arrows)
 
-The component is used in both `single-route` (one-route sites) and `multiple-routes` (multi-route sites with route selection).
+### Route Detail View
+
+The route detail view (`route-detail-view`) uses a tabbed layout with two tabs:
+1. **Tiedot (Details)** — route name, description, and metadata fields
+2. **Osuudet (Segments)** — the segment builder table
+
+The segment builder is used in both `single-route` (one-route sites) and `multiple-routes` (multi-route sites with route selection).
+
+### Segment Selection Counter
+
+During segment selection mode (`:add-route`), the `routes` component displays a counter showing how many segments are currently selected (e.g., "3 osuutta valittu" / "3 segment(s) selected").
+
+---
+
+## Map Integration: Segment Selection Mode
+
+When creating a new route or adding segments to an existing route, the map enters a `:selecting` sub-mode that allows the user to click segments on the map to select/deselect them.
+
+### Architecture
+
+The selecting mode deliberately avoids using OpenLayers Select interactions. OL Select takes rendering ownership of selected features, which conflicts with custom highlight and direction-arrow styles. Instead, click detection is handled by the existing `::map-clicked` event in `map/events.cljs`, which uses `forEachFeatureAtPixel` to identify clicked features.
+
+**File**: `src/cljs/lipas/ui/map/editing.cljs`
+
+Key functions:
+
+- **`set-selecting-mode!`** — Loads geometries onto the edits layer, applies selection styles, but adds no OL interactions. Click handling is delegated to `::map-clicked`.
+- **`selecting-mode-style!`** — Applies visual styles based on selection state: selected features get `[highlight-style, edit-style]`, unselected features get `edit-style` only.
+
+### Mode Transitions
+
+```
+::add-route or ::add-segments-to-route
+  → dispatches start-editing with :selecting sub-mode
+    → set-editing-mode! calls set-selecting-mode!
+      → features drawn on edits layer with selection styles
+
+User clicks segment on map
+  → ::map-clicked fires (forEachFeatureAtPixel)
+    → toggles feature ID in [:map :mode :selected-features]
+      → update-editing-mode! detects change
+        → selecting-mode-style! re-applies styles (no interaction rebuild)
+
+"OK" button clicked
+  → ::finish-route collects selected feature IDs into a route
+    → transitions to route-details mode
+```
+
+### Style Isolation
+
+When in `:selecting` sub-mode:
+- `apply-travel-direction-styles!` is **skipped** (via `cond->` guard in `set-editing-mode!`) because direction arrows are irrelevant during segment picking
+- `update-editing-mode!` preserves existing interactions when the sub-mode stays `:selecting` — only `selecting-mode-style!` is re-applied to reflect updated selections
 
 ---
 
@@ -321,7 +380,7 @@ Three style functions use `direction-arrows`:
 
 **File**: `src/cljs/lipas/ui/map/editing.cljs` — `apply-travel-direction-styles!`
 
-Called at the end of both `set-editing-mode!` and `update-editing-mode!`. For each feature on the edits layer:
+Called at the end of both `set-editing-mode!` and `update-editing-mode!` (but skipped when sub-mode is `:selecting`). For each feature on the edits layer:
 
 | Has direction? | Highlighted? | Applied style |
 |---------------|-------------|---------------|
@@ -358,7 +417,7 @@ The profile displays:
 | `src/cljs/lipas/ui/sports_sites/activities/subs.cljs` | `::routes` sub: auto-migration, connectivity, lengths |
 | `src/cljs/lipas/ui/sports_sites/activities/views.cljs` | `segment-builder` UI component |
 | `src/cljs/lipas/ui/map/events.cljs` | `::set-segment-directions`, `::clear-segment-directions` |
-| `src/cljs/lipas/ui/map/editing.cljs` | `apply-travel-direction-styles!`: OL feature styling |
+| `src/cljs/lipas/ui/map/editing.cljs` | `set-selecting-mode!`, `selecting-mode-style!`, `apply-travel-direction-styles!` |
 | `src/cljs/lipas/ui/map/styles.cljs` | `direction-arrows`, `line-direction-style-fn`, `line-direction-highlight-style-fn` |
 | `src/cljs/lipas/ui/sports_sites/views.cljs` | Concatenated elevation profile |
-| `src/cljc/lipas/i18n/{fi,en,se}/utp.edn` | Translations: `:utp/segment`, `:utp/segments`, etc. |
+| `src/cljc/lipas/i18n/{fi,en,se}/utp.edn` | Translations: `:utp/segment`, `:utp/segments`, `:utp/segments-selected`, `:utp/add-segments`, etc. |

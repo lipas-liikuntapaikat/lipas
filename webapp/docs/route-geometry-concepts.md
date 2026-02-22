@@ -21,7 +21,7 @@ This document describes how LIPAS models route geometries — the relationship b
 
 LIPAS route-type sports sites (ski trails, hiking routes, cycling routes, paddling routes) store their geometry as a GeoJSON FeatureCollection containing one or more LineString features. Each feature represents a physical segment of infrastructure — a stretch of trail, road, or waterway.
 
-A **route** is a logical traversal of these physical segments in a specific order and direction. The same physical segments can be shared across multiple routes, each defining its own sequence.
+A **route** is a logical traversal of these physical segments in a specific order and direction. The same physical segments can be shared across multiple routes, each defining its own sequence. Routes are created by selecting segments on the map and then arranging them in order using the segment builder UI.
 
 ```
 Physical segments (FeatureCollection)     Virtual routes
