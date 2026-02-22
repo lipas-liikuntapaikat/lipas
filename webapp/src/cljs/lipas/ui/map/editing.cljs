@@ -111,6 +111,58 @@
     (-> map-ctx
         #_(map-utils/enable-edits-hover!))))
 
+(defn- apply-travel-direction-styles!
+  "Apply travel direction arrow styles to OL features, with highlight for selected features."
+  [{:keys [layers] :as map-ctx} {:keys [segment-directions segment-labels selected-features]}]
+  (when layers
+    (let [^js edits-layer      (-> layers :overlays :edits)
+          edits-source          (.getSource edits-layer)
+          ^js highlights-layer (-> layers :overlays :highlights)
+          highlights-source     (.getSource highlights-layer)
+          selected?             (or selected-features #{})]
+
+      ;; Clear highlights layer when direction styling is active.
+      ;; Cloned features don't preserve OL ids, and the edits layer already
+      ;; renders the full highlight (buffer + arrows) via
+      ;; line-direction-highlight-style-fn. Without this, stale clones show
+      ;; bidirectional arrows that obscure the single-direction highlight.
+      (when (seq segment-directions)
+        (.clear highlights-source))
+
+      (doseq [^js f (.getFeatures edits-source)]
+        (let [fid        (.getId f)
+              highlight? (contains? selected? fid)
+              dir        (get segment-directions fid)
+              lbl        (get segment-labels fid)]
+
+          ;; Set or clear segment label property
+          (if lbl
+            (.set f "segment-label" lbl)
+            (when (.get f "segment-label") (.unset f "segment-label")))
+
+          (cond
+            ;; Has direction + highlighted: combined style
+            (and dir highlight?)
+            (do (.set f "travel-direction" dir)
+                (.setStyle f styles/line-direction-highlight-style-fn))
+
+            ;; Has direction, not highlighted: arrows only
+            dir
+            (do (.set f "travel-direction" dir)
+                (.setStyle f styles/line-direction-style-fn))
+
+            ;; No direction, highlighted: highlight style
+            highlight?
+            (do (when (.get f "travel-direction") (.unset f "travel-direction"))
+                (.setStyle f #js [styles/highlight-style styles/edit-style]))
+
+            ;; Neither: clear custom style
+            :else
+            (do
+              (when (.get f "travel-direction") (.unset f "travel-direction"))
+              (.setStyle f nil)))))))
+  map-ctx)
+
 (defn start-drawing-hole!
   [{:keys [^js lmap layers] :as map-ctx} on-modifyend]
   (let [^js layer (-> layers :overlays :edits)
@@ -315,6 +367,34 @@
 
     map-ctx))
 
+(defn- selecting-mode-style!
+  "Apply styles to edits layer features based on selection state."
+  [map-ctx selected-features]
+  (let [^js edits-layer (-> map-ctx :layers :overlays :edits)
+        edits-source    (.getSource edits-layer)
+        selected?       (or selected-features #{})]
+    (doseq [^js f (.getFeatures edits-source)]
+      (if (contains? selected? (.getId f))
+        (.setStyle f #js [styles/highlight-style styles/edit-style])
+        (.setStyle f styles/edit-style)))))
+
+(defn set-selecting-mode!
+  "Enable click-to-select/deselect features for route segment picking.
+   Click detection is handled by ::map-clicked (forEachFeatureAtPixel),
+   not by an OL Select interaction, to avoid style ownership conflicts."
+  [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms selected-features]}]
+  (let [^js layer (-> layers :overlays :edits)
+        source    (.getSource layer)
+        _         (.clear source)
+        features  (-> geoms clj->js map-utils/->ol-features)]
+
+    (doseq [^js f features]
+      (.setStyle f styles/edit-style))
+    (.addFeatures source features)
+
+    (selecting-mode-style! map-ctx selected-features)
+    map-ctx))
+
 (defn set-travel-direction-edit-mode!
   [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms]}]
   (let [^js layer (-> layers :overlays :edits)
@@ -408,40 +488,42 @@
                           map-utils/enable-marker-hover!)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
-                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
+                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)))]
                           ;; Switch back to editing normal :editing mode
                           ;;(==> [::events/continue-editing lipas-id :editing geom-type])
-                          ))]
-     (case sub-mode
-       :view-only             (set-view-only-edit-mode! map-ctx mode)
-       :drawing               (start-drawing! map-ctx geom-type on-modifyend)
-       :drawing-hole          (start-drawing-hole! map-ctx on-modifyend) ; For polygons
-       :editing               (if continue?
-                                (-> map-ctx
-                                    (continue-editing! on-modifyend)
-                                    (map-utils/show-problems! problems)
-                                    (enable-highlighting! mode))
-                                (-> map-ctx
-                                    (start-editing-site! lipas-id geoms on-modifyend)
-                                    (map-utils/show-problems! problems)
-                                    (enable-highlighting! mode)))
-       :deleting              (-> map-ctx
-                         ;;(continue-editing! on-modifyend)
-                                  (enable-delete! on-modifyend))
-       :splitting             (-> map-ctx
-                                  (enable-splitting! geoms on-modifyend))
-       :undo                  (undo-edits! map-ctx mode)
-       :importing             (refresh-edits! map-ctx mode)
-       :simplifying           (simplify-edits! map-ctx mode)
-       :selecting             (-> map-ctx
-                                  (enable-highlighting! mode))
-       :travel-direction      (-> map-ctx
-                                  (set-travel-direction-edit-mode! mode))
-       :route-part-difficulty (-> map-ctx
-                                  (set-route-part-difficulty-edit-mode mode))
-       (do
-         (js/console.warn "Unknown sub-mode: " sub-mode)
-         map-ctx)))))
+
+     (cond-> (case sub-mode
+               :view-only             (set-view-only-edit-mode! map-ctx mode)
+               :drawing               (start-drawing! map-ctx geom-type on-modifyend)
+               :drawing-hole          (start-drawing-hole! map-ctx on-modifyend) ; For polygons
+               :editing               (if continue?
+                                        (-> map-ctx
+                                            (continue-editing! on-modifyend)
+                                            (map-utils/show-problems! problems)
+                                            (enable-highlighting! mode))
+                                        (-> map-ctx
+                                            (start-editing-site! lipas-id geoms on-modifyend)
+                                            (map-utils/show-problems! problems)
+                                            (enable-highlighting! mode)))
+               :deleting              (-> map-ctx
+                                 ;;(continue-editing! on-modifyend)
+                                          (enable-delete! on-modifyend))
+               :splitting             (-> map-ctx
+                                          (enable-splitting! geoms on-modifyend))
+               :undo                  (undo-edits! map-ctx mode)
+               :importing             (refresh-edits! map-ctx mode)
+               :simplifying           (simplify-edits! map-ctx mode)
+               :selecting             (-> map-ctx
+                                          (set-selecting-mode! mode))
+               :travel-direction      (-> map-ctx
+                                          (set-travel-direction-edit-mode! mode))
+               :route-part-difficulty (-> map-ctx
+                                          (set-route-part-difficulty-edit-mode mode))
+               (do
+                 (js/console.warn "Unknown sub-mode: " sub-mode)
+                 map-ctx))
+       ;; Selecting mode handles its own feature styles
+       (not= :selecting sub-mode) (apply-travel-direction-styles! mode)))))
 
 (defn update-editing-mode!
   [map-ctx {:keys [problems] :as mode}]
@@ -453,28 +535,35 @@
                      (map-utils/show-problems! problems))]
     #_(println "mode" (:name mode))
     #_(println "submode" (:sub-mode mode))
-    (cond
-      (= :simplifying (:sub-mode mode))
-      (simplify-edits! map-ctx mode)
+    (-> (cond
+          (= :simplifying (:sub-mode mode))
+          (simplify-edits! map-ctx mode)
 
-      (= :selecting (:sub-mode mode))
-      (-> map-ctx
-          (set-editing-mode! mode))
+          (= :selecting (:sub-mode mode))
+          (if (= :selecting (:sub-mode old-mode))
+            ;; Sub-mode didn't change; just update feature styles, preserve interactions
+            (do (selecting-mode-style! map-ctx (:selected-features mode))
+                map-ctx)
+            ;; Sub-mode changed to :selecting; full rebuild
+            (-> map-ctx
+                (set-editing-mode! mode)))
 
-      (= :simplifying (:sub-mode old-mode))
-      (-> map-ctx
-          (refresh-edits! mode)
-          (set-editing-mode! mode :continue))
+          (= :simplifying (:sub-mode old-mode))
+          (-> map-ctx
+              (refresh-edits! mode)
+              (set-editing-mode! mode :continue))
 
-      (= :travel-direction (:sub-mode mode))
-      (set-editing-mode! map-ctx mode)
+          (= :travel-direction (:sub-mode mode))
+          (set-editing-mode! map-ctx mode)
 
-      (= :route-part-difficulty (:sub-mode mode))
-      (-> map-ctx
-          (set-editing-mode! mode))
+          (= :route-part-difficulty (:sub-mode mode))
+          (-> map-ctx
+              (set-editing-mode! mode))
 
-      (= (:sub-mode mode) (:sub-mode old-mode))
-      map-ctx
+          (= (:sub-mode mode) (:sub-mode old-mode))
+          map-ctx
 
-      :else
-      (set-editing-mode! map-ctx mode :continue))))
+          :else
+          (set-editing-mode! map-ctx mode :continue))
+        (cond-> (not= :selecting (:sub-mode mode))
+          (apply-travel-direction-styles! mode)))))

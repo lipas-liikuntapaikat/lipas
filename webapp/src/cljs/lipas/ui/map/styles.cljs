@@ -67,7 +67,7 @@
 
 (def highlight-style
   (Style. #js {:stroke (Stroke. #js {:width 15
-                                     :color "rgba(235,61,52,0.8)"})
+                                     :color "rgba(255,171,0,0.45)"})
                :fill default-fill}))
 
 (def heatmap-highlight-style
@@ -286,32 +286,72 @@
            (svg/->arrow-str)
            js/encodeURIComponent)))
 
-(defn line-direction-style-fn
-  [^js feature resolution]
-  (let [styles #js [edit-style]
-        ^js geometry (.getGeometry feature)
+(def arrow-highlight-icon
+  (str "data:image/svg+xml;charset=utf-8,"
+       (-> {:color "#004D40"}
+           (svg/->arrow-str)
+           js/encodeURIComponent)))
+
+(defn- direction-arrows
+  "Append arrow icons along the line based on travel-direction property.
+   Supports \"start-to-end\", \"end-to-start\", and \"bidirectional\"."
+  [styles ^js feature resolution & {:keys [icon] :or {icon arrow-icon}}]
+  (let [^js geometry (.getGeometry feature)
         travel-direction (.get feature "travel-direction")
         icon-scale (min 0.75 (/ 1 (min 3 resolution)))]
-
     (when (and geometry travel-direction)
       (.forEachSegment geometry
                        (fn [start end]
                          (let [dx (- (first end) (first start))
                                dy (- (second end) (second start))
-                               rot (Math/atan2 dy dx)
-                               rot (case travel-direction
-                                     "start-to-end" (- rot)
-                                     "end-to-start" (+ (- rot) Math/PI))]
-                           (.push styles (Style. #js {:geometry (Point. (case travel-direction
-                                                                          "start-to-end" end
-                                                                          "end-to-start" start))
-                                                      :image (Icon. #js {:scale icon-scale
-                                                                         :src arrow-icon
-                                                                         :anchor #js [0.75 0.5]
-                                                                         :rotation rot})})))
-                         ;; Iteration stops on truthy vals but we want
-                         ;; to keep going
-                         false)))
+                               base-rot (Math/atan2 dy dx)]
+                           (when (#{"start-to-end" "bidirectional"} travel-direction)
+                             (.push styles (Style. #js {:geometry (Point. end)
+                                                        :image (Icon. #js {:scale icon-scale
+                                                                           :src icon
+                                                                           :anchor #js [0.75 0.5]
+                                                                           :rotation (- base-rot)})})))
+                           (when (#{"end-to-start" "bidirectional"} travel-direction)
+                             (.push styles (Style. #js {:geometry (Point. start)
+                                                        :image (Icon. #js {:scale icon-scale
+                                                                           :src icon
+                                                                           :anchor #js [0.75 0.5]
+                                                                           :rotation (+ (- base-rot) Math/PI)})}))))
+                         false)))))
+
+(defn- segment-number-label
+  "Create a Text Style at the line midpoint showing the segment number label.
+   Returns nil if no segment-label property is set."
+  [^js feature resolution]
+  (when-let [label (.get feature "segment-label")]
+    (let [geometry (.getGeometry feature)
+          icon-scale (/ 1 (min 3 resolution))]
+      (when (> icon-scale 0.15)
+        (let [midpoint (.getCoordinateAt geometry 0.5)]
+          (Style. #js {:geometry (Point. (clj->js midpoint))
+                       :text (Text.
+                              #js {:text (str label)
+                                   :font "bold 13px sans-serif"
+                                   :fill (Fill. #js {:color "#fff"})
+                                   :backgroundFill (Fill. #js {:color "#1976d2"})
+                                   :backgroundStroke (Stroke. #js {:color "#1565c0" :width 1})
+                                   :padding #js [3 5 3 5]
+                                   :offsetY -14})}))))))
+
+(defn line-direction-style-fn
+  [^js feature resolution]
+  (let [styles #js [edit-style]]
+    (direction-arrows styles feature resolution)
+    (when-let [lbl (segment-number-label feature resolution)]
+      (.push styles lbl))
+    styles))
+
+(defn line-direction-highlight-style-fn
+  [^js feature resolution]
+  (let [styles #js [highlight-style edit-style]]
+    (direction-arrows styles feature resolution :icon arrow-highlight-icon)
+    (when-let [lbl (segment-number-label feature resolution)]
+      (.push styles lbl))
     styles))
 
 (defn line-direction-hover-style-fn
@@ -344,13 +384,13 @@
 
 (def route-part-label-style
   (Style.
-    #js {:text (Text.
-                 #js {:font "16px sans-serif"
-                      :fill (Fill. #js {:color "#000"})
-                      :backgroundFill (Fill. #js {:color "#fff"})
-                      :backgroundStroke (Stroke. #js {:color "blue"
-                                                      :width 4})
-                      :padding #js [5 5 5 5]})}))
+   #js {:text (Text.
+               #js {:font "16px sans-serif"
+                    :fill (Fill. #js {:color "#000"})
+                    :backgroundFill (Fill. #js {:color "#fff"})
+                    :backgroundStroke (Stroke. #js {:color "blue"
+                                                    :width 4})
+                    :padding #js [5 5 5 5]})}))
 
 (defn route-part-difficulty-style-fn
   [feature tr hover? _selected?]

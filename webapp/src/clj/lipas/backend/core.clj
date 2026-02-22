@@ -250,14 +250,28 @@
 
 (defn- deref-fids
   [sports-site route]
-  (let [fids (-> route :fids set)
-        geoms (when (seq fids)
-                {:type "FeatureCollection"
-                 :features (->> (get-in sports-site [:location :geometries :features])
-                                (filterv #(contains? fids (:id %))))})]
-    (if geoms
-      (assoc route :geometries geoms)
-      route)))
+  (let [all-features (get-in sports-site [:location :geometries :features])
+        features-by-id (into {} (map (juxt :id identity)) all-features)]
+    (if-let [segments (seq (:segments route))]
+      ;; New path: ordered segments with direction
+      (let [ordered-features
+            (->> segments
+                 (keep (fn [{:keys [fid reversed?]}]
+                         (when-let [f (get features-by-id fid)]
+                           (if reversed?
+                             (update-in f [:geometry :coordinates] #(vec (reverse %)))
+                             f)))))]
+        (assoc route :geometries
+               {:type "FeatureCollection"
+                :features (vec ordered-features)}))
+      ;; Legacy path: unordered fids set
+      (let [fids (-> route :fids set)
+            geoms (when (seq fids)
+                    {:type "FeatureCollection"
+                     :features (filterv #(contains? fids (:id %)) all-features)})]
+        (if geoms
+          (assoc route :geometries geoms)
+          route)))))
 
 (defn enrich-activities
   [sports-site]
@@ -782,6 +796,31 @@
     (if (= "location.city.city-code" grouping)
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
+
+(defn get-front-page-stats
+  [search*]
+  (let [cache-key :front-page-stats
+        cached    (get @cache cache-key)
+        now       (System/currentTimeMillis)]
+    (if (and cached (< (- now (:timestamp cached)) (* 5 60 1000)))
+      (:data cached)
+      (let [query {:size 0
+                   :track_total_hits true
+                   :query {:bool {:filter [{:terms {:status ["active" "out-of-service-temporarily"]}}]}}
+                   :aggs {:cities {:cardinality {:field :location.city.city-code}}
+                          :route-length {:sum {:field :properties.route-length-km}}
+                          :latest {:max {:field :event-date}}
+                          :updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}}}}
+            result (-> (search search* query) :body)
+            total  (get-in result [:hits :total :value])
+            aggs   (:aggregations result)
+            data   {:total-count       total
+                    :city-count        (get-in aggs [:cities :value])
+                    :updated-last-year (get-in aggs [:updated-last-year :doc_count])
+                    :route-length-km   (Math/round (double (or (get-in aggs [:route-length :value]) 0)))
+                    :last-updated      (get-in aggs [:latest :value_as_string])}]
+        (swap! cache assoc cache-key {:data data :timestamp now})
+        data))))
 
 (defn data-model-report
   [out]

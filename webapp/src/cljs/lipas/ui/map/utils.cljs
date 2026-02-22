@@ -505,10 +505,17 @@
           (gobj/getValueByKeys "features" 0)))))
 
 (defn- split-by-features [f kinks]
-  (let [splitter (->splitter kinks)
-        splitted (turf-line-split f splitter)]
-    (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (random-uuid)))))
+  (let [original-id (gobj/get f "id")
+        splitter    (->splitter kinks)
+        splitted    (turf-line-split f splitter)
+        features    (gobj/get splitted "features")]
+    (garray/forEach features
+                    (fn [frag idx]
+                      ;; Preserve original feature ID on first fragment for best-effort
+                      ;; route segment reference continuity
+                      (gobj/set frag "id" (if (and (zero? idx) original-id)
+                                            original-id
+                                            (str (random-uuid))))))
     splitted))
 
 (defn split-at-coords [ol-feature coords]

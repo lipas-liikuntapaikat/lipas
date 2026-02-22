@@ -255,6 +255,7 @@
   (m/schema
    [:map {:description "GeoJSON Feature with required Point geometry."}
     [:type [:enum "Feature"]]
+    [:id {:optional true} :string]
     [:geometry #'point-geometry]
     [:properties {:optional true} [:map]]]))
 
@@ -262,6 +263,7 @@
   (m/schema
    [:map {:description "GeoJSON Feature with required LineString geometry."}
     [:type [:enum "Feature"]]
+    [:id {:optional true} :string]
     [:geometry #'line-string-geometry]
     [:properties {:optional true} [:map]]]))
 
@@ -269,6 +271,7 @@
   (m/schema
    [:map {:description "GeoJSON Feature with required Polygon geometry."}
     [:type [:enum "Feature"]]
+    [:id {:optional true} :string]
     [:geometry #'polygon-geometry]
     [:properties {:optional true} [:map]]]))
 

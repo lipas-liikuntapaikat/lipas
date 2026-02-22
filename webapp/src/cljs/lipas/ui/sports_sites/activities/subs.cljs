@@ -60,55 +60,116 @@
   (fn [activities _]
     (:route-view activities)))
 
+(defn- ensure-segments
+  "Auto-migrate: if route has fids but no segments, generate segments in feature-array order.
+   Also validates that segment fids reference existing features, dropping any
+   stale references (e.g. when geometry was redrawn with new feature IDs)."
+  [route all-features]
+  (let [valid-fids (set (map :id all-features))]
+    (if (seq (:segments route))
+      ;; Validate existing segments against actual features
+      (let [segments    (:segments route)
+            valid-segs  (filterv #(contains? valid-fids (:fid %)) segments)]
+        (if (= (count valid-segs) (count segments))
+          route
+          (assoc route :segments valid-segs)))
+      ;; Legacy migration: generate segments from :fids
+      (let [fids     (set (:fids route))
+            segments (->> all-features
+                          (filter #(contains? fids (:id %)))
+                          (mapv (fn [f] {:fid (:id f) :reversed? false})))]
+        (assoc route :segments segments)))))
+
+(defn- resolve-segments
+  "Resolve segments to ordered features, respecting reversed? flag."
+  [segments features-by-id]
+  (->> segments
+       (keep (fn [{:keys [fid reversed?]}]
+               (when-let [f (get features-by-id fid)]
+                 (if reversed?
+                   (update-in f [:geometry :coordinates] #(vec (reverse %)))
+                   f))))
+       vec))
+
+(defn- coords-close?
+  "Check if two coordinate points are approximately equal (within ~1m)."
+  [[x1 y1] [x2 y2]]
+  (when (and x1 y1 x2 y2)
+    (let [threshold 0.00001] ;; ~1m at equator
+      (and (< (abs (- x1 x2)) threshold)
+           (< (abs (- y1 y2)) threshold)))))
+
+(defn- bearing->compass
+  "Convert bearing in degrees (0-360) to 8-direction compass abbreviation."
+  [bearing]
+  (let [dirs ["N" "NE" "E" "SE" "S" "SW" "W" "NW"]
+        idx  (Math/round (/ (mod bearing 360) 45))]
+    (nth dirs (mod idx 8))))
+
+(defn- compute-compass-direction
+  "Compute compass direction from first-coord to last-coord.
+   Coordinates are WGS84 [lon, lat]."
+  [[lon1 lat1] [lon2 lat2]]
+  (when (and lon1 lat1 lon2 lat2)
+    (let [dx (- lon2 lon1)
+          dy (- lat2 lat1)
+          bearing (mod (- 90 (/ (* (Math/atan2 dy dx) 180) Math/PI)) 360)]
+      (bearing->compass bearing))))
+
+(defn- compute-segment-details
+  "Compute per-segment details: length, connectivity, compass direction."
+  [segments features-by-id]
+  (let [resolved (resolve-segments segments features-by-id)
+        details  (mapv (fn [idx {:keys [fid reversed?]} feature]
+                         (let [coords (get-in feature [:geometry :coordinates])
+                               fcoll  {:type "FeatureCollection" :features [feature]}
+                               length (map-utils/calculate-length-km fcoll)
+                               first-c (first coords)
+                               last-c  (last coords)]
+                           {:fid              fid
+                            :reversed?        (boolean reversed?)
+                            :length-km        length
+                            :first-coord      first-c
+                            :last-coord       last-c
+                            :compass-direction (compute-compass-direction first-c last-c)}))
+                       (range) segments resolved)]
+    ;; Add connectivity and fix-suggestion info
+    (mapv (fn [idx detail]
+            (let [next-detail (get details (inc idx))]
+              (if next-detail
+                (let [connected? (boolean (coords-close? (:last-coord detail) (:first-coord next-detail)))]
+                  (cond-> (assoc detail :connected-to-next? connected?)
+                    ;; When disconnected, check if reversing current or next segment fixes it
+                    (not connected?)
+                    (assoc :fix-suggestion
+                           (cond
+                             ;; Reversing current segment: its first-coord connects to next's first-coord
+                             (coords-close? (:first-coord detail) (:first-coord next-detail))
+                             {:action :reverse :target-idx idx}
+                             ;; Reversing next segment: current's last-coord connects to next's last-coord
+                             (coords-close? (:last-coord detail) (:last-coord next-detail))
+                             {:action :reverse :target-idx (inc idx)}
+                             :else nil))))
+                (assoc detail :connected-to-next? true))))
+          (range) details)))
+
 (rf/reg-sub ::routes
   (fn [[_ lipas-id _]]
-    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
-     #_(re-frame/subscribe [:lipas.ui.sports-sites.subs/display-site lipas-id])])
-  (fn [[edit-data #_display-data] [_ _lipas-id activity-k]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])])
+  (fn [[edit-data] [_ _lipas-id activity-k]]
+    (let [all-features (get-in edit-data [:location :geometries :features] [])
+          features-by-id (into {} (map (juxt :id identity)) all-features)
+          routes (get-in edit-data [:activities activity-k :routes] [])]
 
-   ;; Apply logic to allow "easy first entry" of data
-
-    (let [routes (get-in edit-data [:activities activity-k :routes] [])
-          routes (condp = (count routes)
-
-                  ;; No routes (yet).
-                  ;; Generate first empty "route", assume no sub-routes
-                  ;; (all segments belong to this route)
-                   0 [{:id (str (random-uuid))
-
-                       :route-name {:fi (:name edit-data)
-                                    :se (get-in edit-data [:name-localized :se])
-                                    :en (:name edit-data)}
-
-                       :fids (-> edit-data
-                                 :location
-                                 :geometries
-                                 :features
-                                 (->> (map :id))
-                                 set)}]
-
-                  ;; Single route, assume no sub-routes
-                  ;; (all segments belong to this route)
-                   #_#_1 (assoc-in routes [0 :fids] (-> edit-data
-                                                        :location
-                                                        :geometries
-                                                        :features
-                                                        (->> (map :id))
-                                                        set))
-
-                  ;; Multiple routes, don't assume anything about sub-routes,
-                  ;; let the user decide
-                   routes)]
-
-     ;; Calc route/sub-route lengths from segments
-      (for [{:keys [fids] :as route} routes]
-        (let [fids  (set fids)
-              fcoll (-> edit-data
-                        :location
-                        :geometries
-                        (update :features (fn [fs]
-                                            (filterv #(contains? fids (:id %)) fs))))]
+     ;; Enrich routes with segment details, lengths, and elevation stats
+      (for [route routes]
+        (let [route    (ensure-segments route all-features)
+              segments (:segments route)
+              details  (compute-segment-details segments features-by-id)
+              ordered-features (resolve-segments segments features-by-id)
+              fcoll    {:type "FeatureCollection" :features ordered-features}]
           (-> route
+              (assoc :segment-details details)
               (assoc :route-length (map-utils/calculate-length-km fcoll))
               (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
 
