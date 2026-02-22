@@ -113,7 +113,7 @@
 
 (defn- apply-travel-direction-styles!
   "Apply travel direction arrow styles to OL features, with highlight for selected features."
-  [{:keys [layers] :as map-ctx} {:keys [segment-directions selected-features]}]
+  [{:keys [layers] :as map-ctx} {:keys [segment-directions segment-labels selected-features]}]
   (when layers
     (let [^js edits-layer      (-> layers :overlays :edits)
           edits-source          (.getSource edits-layer)
@@ -132,7 +132,14 @@
       (doseq [^js f (.getFeatures edits-source)]
         (let [fid        (.getId f)
               highlight? (contains? selected? fid)
-              dir        (get segment-directions fid)]
+              dir        (get segment-directions fid)
+              lbl        (get segment-labels fid)]
+
+          ;; Set or clear segment label property
+          (if lbl
+            (.set f "segment-label" lbl)
+            (when (.get f "segment-label") (.unset f "segment-label")))
+
           (cond
             ;; Has direction + highlighted: combined style
             (and dir highlight?)
@@ -151,8 +158,8 @@
 
             ;; Neither: clear custom style
             :else
-            (when (.get f "travel-direction")
-              (.unset f "travel-direction")
+            (do
+              (when (.get f "travel-direction") (.unset f "travel-direction"))
               (.setStyle f nil)))))))
   map-ctx)
 

@@ -988,9 +988,9 @@
       :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
                     :se "Ruttens helhet, dagsträcka, svårighetsgraden på sträckan"
                     :en "Route entity, daily leg, degree of difficulty of the leg"}
-      :label       {:fi "Reittityyppi"
-                    :se "Ruttyp"
-                    :en "Route type"}
+      :label       {:fi "Reitit"
+                    :se "Rutter"
+                    :en "Routes"}
       :props
       (merge
        (-> (dissoc common-route-props :rules)
@@ -1343,9 +1343,9 @@
              :description {:fi "Reittikokonaisuus, päiväetappi, vaativuusosuus"
                            :se "Ruttens helhet, dagsträcka, svårighetsgraden på sträckan"
                            :en "Route entity, daily leg, degree of difficulty of the leg"}
-             :label       {:fi "Reittityyppi"
-                           :se "Ruttyp"
-                           :en "Route type"}
+             :label       {:fi "Reitit"
+                           :se "Rutter"
+                           :en "Routes"}
              :props
              (merge
               ;; Otherwise same as others, but without "ohjeet"

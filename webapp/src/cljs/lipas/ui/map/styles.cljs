@@ -319,16 +319,39 @@
                                                                            :rotation (+ (- base-rot) Math/PI)})}))))
                          false)))))
 
+(defn- segment-number-label
+  "Create a Text Style at the line midpoint showing the segment number label.
+   Returns nil if no segment-label property is set."
+  [^js feature resolution]
+  (when-let [label (.get feature "segment-label")]
+    (let [geometry (.getGeometry feature)
+          icon-scale (/ 1 (min 3 resolution))]
+      (when (> icon-scale 0.15)
+        (let [midpoint (.getCoordinateAt geometry 0.5)]
+          (Style. #js {:geometry (Point. (clj->js midpoint))
+                       :text (Text.
+                              #js {:text (str label)
+                                   :font "bold 13px sans-serif"
+                                   :fill (Fill. #js {:color "#fff"})
+                                   :backgroundFill (Fill. #js {:color "#1976d2"})
+                                   :backgroundStroke (Stroke. #js {:color "#1565c0" :width 1})
+                                   :padding #js [3 5 3 5]
+                                   :offsetY -14})}))))))
+
 (defn line-direction-style-fn
   [^js feature resolution]
   (let [styles #js [edit-style]]
     (direction-arrows styles feature resolution)
+    (when-let [lbl (segment-number-label feature resolution)]
+      (.push styles lbl))
     styles))
 
 (defn line-direction-highlight-style-fn
   [^js feature resolution]
   (let [styles #js [highlight-style edit-style]]
     (direction-arrows styles feature resolution :icon arrow-highlight-icon)
+    (when-let [lbl (segment-number-label feature resolution)]
+      (.push styles lbl))
     styles))
 
 (defn line-direction-hover-style-fn

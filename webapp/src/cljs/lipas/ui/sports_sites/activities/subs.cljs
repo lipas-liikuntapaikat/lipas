@@ -90,27 +90,58 @@
       (and (< (abs (- x1 x2)) threshold)
            (< (abs (- y1 y2)) threshold)))))
 
+(defn- bearing->compass
+  "Convert bearing in degrees (0-360) to 8-direction compass abbreviation."
+  [bearing]
+  (let [dirs ["N" "NE" "E" "SE" "S" "SW" "W" "NW"]
+        idx  (Math/round (/ (mod bearing 360) 45))]
+    (nth dirs (mod idx 8))))
+
+(defn- compute-compass-direction
+  "Compute compass direction from first-coord to last-coord.
+   Coordinates are WGS84 [lon, lat]."
+  [[lon1 lat1] [lon2 lat2]]
+  (when (and lon1 lat1 lon2 lat2)
+    (let [dx (- lon2 lon1)
+          dy (- lat2 lat1)
+          bearing (mod (- 90 (/ (* (Math/atan2 dy dx) 180) Math/PI)) 360)]
+      (bearing->compass bearing))))
+
 (defn- compute-segment-details
-  "Compute per-segment details: length, connectivity."
+  "Compute per-segment details: length, connectivity, compass direction."
   [segments features-by-id]
   (let [resolved (resolve-segments segments features-by-id)
         details  (mapv (fn [idx {:keys [fid reversed?]} feature]
                          (let [coords (get-in feature [:geometry :coordinates])
                                fcoll  {:type "FeatureCollection" :features [feature]}
-                               length (map-utils/calculate-length-km fcoll)]
-                           {:fid       fid
-                            :reversed? (boolean reversed?)
-                            :length-km length
-                            :first-coord (first coords)
-                            :last-coord  (last coords)}))
+                               length (map-utils/calculate-length-km fcoll)
+                               first-c (first coords)
+                               last-c  (last coords)]
+                           {:fid              fid
+                            :reversed?        (boolean reversed?)
+                            :length-km        length
+                            :first-coord      first-c
+                            :last-coord       last-c
+                            :compass-direction (compute-compass-direction first-c last-c)}))
                        (range) segments resolved)]
-    ;; Add connectivity info
+    ;; Add connectivity and fix-suggestion info
     (mapv (fn [idx detail]
             (let [next-detail (get details (inc idx))]
-              (assoc detail :connected-to-next?
-                     (if next-detail
-                       (boolean (coords-close? (:last-coord detail) (:first-coord next-detail)))
-                       true))))
+              (if next-detail
+                (let [connected? (boolean (coords-close? (:last-coord detail) (:first-coord next-detail)))]
+                  (cond-> (assoc detail :connected-to-next? connected?)
+                    ;; When disconnected, check if reversing current or next segment fixes it
+                    (not connected?)
+                    (assoc :fix-suggestion
+                           (cond
+                             ;; Reversing current segment: its first-coord connects to next's first-coord
+                             (coords-close? (:first-coord detail) (:first-coord next-detail))
+                             {:action :reverse :target-idx idx}
+                             ;; Reversing next segment: current's last-coord connects to next's last-coord
+                             (coords-close? (:last-coord detail) (:last-coord next-detail))
+                             {:action :reverse :target-idx (inc idx)}
+                             :else nil))))
+                (assoc detail :connected-to-next? true))))
           (range) details)))
 
 (rf/reg-sub ::routes

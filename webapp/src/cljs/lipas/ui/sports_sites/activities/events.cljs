@@ -20,6 +20,15 @@
                 :else                    (assoc m fid "bidirectional"))))
           {} segments))
 
+(defn- segments->label-map
+  "Convert segments to a map of fid -> position label string.
+   When the same fid appears multiple times, the label shows all positions (e.g. \"1, 3\")."
+  [segments]
+  (reduce (fn [m [idx {:keys [fid]}]]
+            (let [label (str (inc idx))]
+              (update m fid #(if % (str % ", " label) label))))
+          {} (map-indexed vector segments)))
+
 (defn- ensure-route-segments
   "Ensure a route has :segments derived from :fids if not already present."
   [route all-features]
@@ -52,8 +61,11 @@
                              first-route  (ensure-route-segments (first routes) all-features)
                              segments     (:segments first-route)]
                          (when (seq segments)
-                           {:fx [[:dispatch [:lipas.ui.map.events/set-segment-directions
-                                             (segments->direction-map segments)]]]}))
+                           {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
+                                 [:dispatch [:lipas.ui.map.events/set-segment-directions
+                                             (segments->direction-map segments)]]
+                                 [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                             (segments->label-map segments)]]]}))
         ;; No routes - create initial route
                        (let [all-features (get-in edit-data [:location :geometries :features] [])
                              all-fids     (set (map :id all-features))
@@ -64,10 +76,13 @@
                                                          :en (:name edit-data)}
                                             :fids     all-fids
                                             :segments segments}]
-                         {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id
+                         {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
+                               [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id
                                            [:activities activity-k :routes] [initial-route]]]
                                [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                           (segments->direction-map segments)]]]})))))
+                                           (segments->direction-map segments)]]
+                               [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                           (segments->label-map segments)]]]})))))
 
 (rf/reg-event-fx ::add-route
                  (fn [{:keys [db]} [_ lipas-id]]
@@ -119,13 +134,15 @@
                       :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
                            [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
-                           [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]})))
+                           [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
+                           [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]})))
 
 (rf/reg-event-fx ::cancel-route-details
                  (fn [{:keys [db]} _]
                    {:db (assoc-in db [:sports-sites :activities :mode] :default)
-                    :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
-                         [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]}))
+                    :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
+                         [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
+                         [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]}))
 
 (rf/reg-event-fx ::select-route
                  (fn [{:keys [db]} [_ lipas-id {:keys [fids id segments] :as route}]]
@@ -136,7 +153,10 @@
                          [:dispatch [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]
                          (when (seq segments)
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                       (segments->direction-map segments)]])]}))
+                                       (segments->direction-map segments)]])
+                         (when (seq segments)
+                           [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                       (segments->label-map segments)]])]}))
 
 (rf/reg-event-fx ::delete-route
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id]]
@@ -145,11 +165,12 @@
                          new-routes           (-> (dissoc current-routes-by-id route-id) vals vec)]
                      {:db (-> db
                               (assoc-in [:sports-sites :activities :mode] :default))
-                      :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]
+                      :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
                            [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
                            [:dispatch [:lipas.ui.map.events/clear-highlight]]
-                           [:dispatch [:lipas.ui.map.events/clear-segment-directions]]]})))
+                           [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
+                           [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]})))
 
 (rf/reg-event-fx ::reorder-segments
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id source-idx target-idx]]
@@ -169,7 +190,9 @@
                      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                       (segments->direction-map reordered)]]]})))
+                                       (segments->direction-map reordered)]]
+                           [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                       (segments->label-map reordered)]]]})))
 
 (rf/reg-event-fx ::toggle-segment-direction
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
@@ -183,7 +206,9 @@
                      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                       (segments->direction-map (:segments active-route))]]]})))
+                                       (segments->direction-map (:segments active-route))]]
+                           [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                       (segments->label-map (:segments active-route))]]]})))
 
 (rf/reg-event-fx ::remove-segment
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
@@ -201,7 +226,9 @@
                      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                       (segments->direction-map (:segments active-route))]]]})))
+                                       (segments->direction-map (:segments active-route))]]
+                           [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                       (segments->label-map (:segments active-route))]]]})))
 
 (rf/reg-event-fx ::duplicate-segment
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
@@ -221,24 +248,30 @@
                      {:fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                       (segments->direction-map (:segments active-route))]]]})))
+                                       (segments->direction-map (:segments active-route))]]
+                           [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                       (segments->label-map (:segments active-route))]]]})))
 
 (rf/reg-event-fx ::highlight-segment
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
-                   (let [routes   (get-routes-with-segments db lipas-id activity-k)
-                         route    (first (filter #(= route-id (:id %)) routes))
-                         segments (:segments route)
-                         full-map (segments->direction-map segments)]
+                   (let [routes    (get-routes-with-segments db lipas-id activity-k)
+                         route     (first (filter #(= route-id (:id %)) routes))
+                         segments  (:segments route)
+                         full-dir  (segments->direction-map segments)
+                         full-lbl  (segments->label-map segments)]
                      (if-let [segment (when segment-idx (nth segments segment-idx nil))]
         ;; Hovering a specific segment: show only its direction for that fid
                        (let [{:keys [fid reversed?]} segment
                              dir (if reversed? "end-to-start" "start-to-end")]
                          {:fx [[:dispatch [:lipas.ui.map.events/highlight-features #{fid}]]
                                [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                           (assoc full-map fid dir)]]]})
-        ;; Mouse left: restore full direction map
+                                           (assoc full-dir fid dir)]]
+                               [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                           (assoc full-lbl fid (str (inc segment-idx)))]]]})
+        ;; Mouse left: restore full direction and label maps
                        {:fx [[:dispatch [:lipas.ui.map.events/highlight-features #{}]]
-                             [:dispatch [:lipas.ui.map.events/set-segment-directions full-map]]]}))))
+                             [:dispatch [:lipas.ui.map.events/set-segment-directions full-dir]]
+                             [:dispatch [:lipas.ui.map.events/set-segment-labels full-lbl]]]}))))
 
 (defn parse-ext [file]
   (-> file

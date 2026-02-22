@@ -828,9 +828,15 @@
                  :features [{:type "Feature" :geometry {:type "Point" :coordinates coords}}]}]
       {:dispatch-n [[::new-geom-drawn fcoll]]})))
 
-(rf/reg-event-db ::select-sports-site-tab
-  (fn [db [_ tab]]
-    (assoc-in db [:map :selected-sports-site-tab] tab)))
+(rf/reg-event-fx ::select-sports-site-tab
+  (fn [{:keys [db]} [_ tab]]
+    (let [prev-tab (get-in db [:map :selected-sports-site-tab])]
+      (cond-> {:db (assoc-in db [:map :selected-sports-site-tab] tab)}
+        ;; Leaving UTP tab: restore edit mode, clear route visuals
+        (and (= prev-tab 5) (not= tab 5))
+        (assoc :fx [[:dispatch [::continue-editing]]
+                    [:dispatch [::clear-segment-directions]]
+                    [:dispatch [::clear-segment-labels]]])))))
 
 (rf/reg-event-db ::select-new-sports-site-tab
   (fn [db [_ tab]]
@@ -846,7 +852,7 @@
 
 (rf/reg-event-db ::highlight-features
   (fn [db [_ fids]]
-    (assoc-in db [:map :mode :selected-features] fids)))
+    (assoc-in db [:map :mode :selected-features] (set fids))))
 
 (rf/reg-event-db ::clear-highlight
   (fn [db _]
@@ -886,6 +892,14 @@
 (rf/reg-event-db ::clear-segment-directions
   (fn [db _]
     (update-in db [:map :mode] dissoc :segment-directions)))
+
+(rf/reg-event-db ::set-segment-labels
+  (fn [db [_ label-by-fid]]
+    (assoc-in db [:map :mode :segment-labels] label-by-fid)))
+
+(rf/reg-event-db ::clear-segment-labels
+  (fn [db _]
+    (update-in db [:map :mode] dissoc :segment-labels)))
 
 (rf/reg-event-fx ::set-route-part-difficulty
   (fn [{:keys [db]} [_ lipas-id fid v]]
