@@ -31,6 +31,10 @@
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/MenuItem$default" :as MenuItem]
+            ["@mui/material/Select$default" :as Select]
+            ["@mui/material/Stack$default" :as Stack]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
             [lipas.ui.sports-sites.activities.subs :as subs]
@@ -51,7 +55,7 @@
   [:> Grid {:container true :spacing 4}
    (doall
      (for [[idx child] (map vector (range) children)]
-       [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+       [:> Grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -60,14 +64,14 @@
 
 (defn lang-selector
   [{:keys [locale]}]
-  [mui/select
+  [:> Select
    {:value     (name locale)
     :size      "small"
     :variant   "outlined"
     :on-change #(==> [:lipas.ui.events/set-translator (keyword (.. % -target -value))])}
-   [mui/menu-item {:value "fi"} "Suomi"]
-   [mui/menu-item {:value "se"} "Svenska"]
-   [mui/menu-item {:value "en"} "English"]])
+   [:> MenuItem {:value "fi"} "Suomi"]
+   [:> MenuItem {:value "se"} "Svenska"]
+   [:> MenuItem {:value "en"} "English"]])
 
 (defn checkbox
   [{:keys [read-only? label helper-text on-change value
@@ -126,7 +130,7 @@
                              (on-change (vec (conj vs k)))))}]]
            (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
              [:> Grid {:item true :xs 12 :style {:margin-top   "-1.5em"
-                                                  :padding-left "2.8em"}}
+                                                 :padding-left "2.8em"}}
               [:> Typography {:variant "caption"} caption]])]))]]))
 
 (defn contact-dialog
@@ -146,7 +150,7 @@
        [lang-selector {:locale locale}]]
       (doall
         (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-          [mui/grid
+          [:> Grid
            {:key prop-k
             :item true
             :xs 12}
@@ -481,12 +485,12 @@
            (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
              ^{:key k}
              [:<>
-              [mui/grid {:item true :xs 12}
-               [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
+              [:> Grid {:item true :xs 12}
+               [:> Typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-              [mui/grid {:item true :xs 12}
-               [lui/text-field
+              [:> Grid {:item true :xs 12}
+               [lui-tf/text-field
                 {:fullWidth       true
                  :required        true
                  #_#_:helper-text description
@@ -496,8 +500,8 @@
                  :variant         "outlined"}]]
 
              ;; Description
-              [mui/grid {:item true :xs 12}
-               [lui/text-field
+              [:> Grid {:item true :xs 12}
+               [lui-tf/text-field
                 {:fullWidth       true
                  :required        true
                  #_#_:helper-text description
@@ -507,14 +511,14 @@
                  :variant         "outlined"}]]
 
              ;; Delete btn
-              [mui/grid {:item true :style {:text-align "right"}}
+              [:> Grid {:item true :style {:text-align "right"}}
                [lui-btn/confirming-delete-button
                 {:tooltip         (tr :actions/delete)
                  :confirm-tooltip (tr :confirm/delete-confirm)
                  :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-              [mui/grid {:item true :xs 12}
-               [mui/divider]]]))
+              [:> Grid {:item true :xs 12}
+               [:> Divider]]]))
 
          ;; Add / edit btn
          [:> Grid {:item true :xs 12}
@@ -580,9 +584,9 @@
            :style      {:text-align "right"}
            :class-name :no-print}
           [:> Tooltip {:title     (if (seq (:custom-rules @state))
-                                     (tr :actions/edit)
-                                     (tr :actions/add))
-                        :placement "left"}
+                                    (tr :actions/edit)
+                                    (tr :actions/add))
+                       :placement "left"}
            [:> Fab
             {:style    {:margin-top "1em"}
              :on-click (fn []
@@ -592,8 +596,8 @@
              :size     "small"
              :color    "secondary"}
             [:> Icon (if (seq (:custom-rules @state))
-                        "edit"
-                        "add")]]]])])))
+                       "edit"
+                       "add")]]]])])))
 
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
@@ -925,7 +929,7 @@
         drag-props (when provided
                      (merge (js->clj (.-draggableProps provided))
                             (js->clj (.-dragHandleProps provided))))]
-    [mui/stack
+    [:> Stack
      (merge
        {:direction       "row"
         :align-items     "center"
@@ -943,25 +947,25 @@
 
      ;; Drag handle
      (when-not read-only?
-       [mui/icon {:style {:font-size "20px" :color "#999" :cursor "grab"}}
+       [:> Icon {:style {:font-size "20px" :color "#999" :cursor "grab"}}
         "drag_indicator"])
 
      ;; Move up / move down
      (when-not read-only?
-       [mui/stack {:direction "column" :style {:margin-right "4px"}}
-        [mui/icon-button
+       [:> Stack {:direction "column" :style {:margin-right "4px"}}
+        [:> IconButton
          {:size     "small"
           :disabled (zero? idx)
           :on-click #(move! idx (dec idx))}
-         [mui/icon {:style {:font-size "18px"}} "arrow_upward"]]
-        [mui/icon-button
+         [:> Icon {:style {:font-size "18px"}} "arrow_upward"]]
+        [:> IconButton
          {:size     "small"
           :disabled (= idx (dec n))
           :on-click #(move! idx (inc idx))}
-         [mui/icon {:style {:font-size "18px"}} "arrow_downward"]]])
+         [:> Icon {:style {:font-size "18px"}} "arrow_downward"]]])
 
      ;; Segment label with number, compass direction, and length
-     [mui/typography
+     [:> Typography
       {:variant "body2"
        :style   {:flex 1}}
       (str (tr :utp/segment) " " (inc idx)
@@ -976,48 +980,48 @@
                 (:fix-suggestion detail)
                 (not read-only?))
          ;; Gap with fix suggestion
-         [mui/tooltip {:title (tr :utp/fix-gap)}
-          [mui/icon-button
+         [:> Tooltip {:title (tr :utp/fix-gap)}
+          [:> IconButton
            {:size     "small"
             :color    "warning"
             :on-click #(let [{:keys [target-idx]} (:fix-suggestion detail)]
                          (==> [::events/toggle-segment-direction
                                lipas-id activity-k route-id target-idx]))}
-           [mui/icon {:style {:font-size "18px"}} "auto_fix_high"]]]
+           [:> Icon {:style {:font-size "18px"}} "auto_fix_high"]]]
          ;; Normal connectivity indicator
-         [mui/tooltip
+         [:> Tooltip
           {:title (if (:connected-to-next? detail) "Connected" "Gap")}
-          [mui/icon
+          [:> Icon
            {:style {:font-size "12px"
                     :color     (if (:connected-to-next? detail) "#5cb85c" "#f0ad4e")}}
            "circle"]]))
 
      ;; Reverse button
      (when-not read-only?
-       [mui/tooltip {:title (tr :utp/reverse-segment)}
-        [mui/icon-button
+       [:> Tooltip {:title (tr :utp/reverse-segment)}
+        [:> IconButton
          {:size     "small"
           :color    (if (:reversed? segment) "primary" "default")
           :on-click #(==> [::events/toggle-segment-direction
                            lipas-id activity-k route-id idx])}
-         [mui/icon {:style {:font-size "18px"}} "swap_horiz"]]])
+         [:> Icon {:style {:font-size "18px"}} "swap_horiz"]]])
 
      ;; Duplicate button (out-and-back)
      (when-not read-only?
-       [mui/tooltip {:title (tr :utp/duplicate-segment)}
-        [mui/icon-button
+       [:> Tooltip {:title (tr :utp/duplicate-segment)}
+        [:> IconButton
          {:size     "small"
           :on-click #(==> [::events/duplicate-segment
                            lipas-id activity-k route-id idx])}
-         [mui/icon {:style {:font-size "18px"}} "content_copy"]]])
+         [:> Icon {:style {:font-size "18px"}} "content_copy"]]])
 
      ;; Remove button
      (when-not read-only?
-       [mui/icon-button
+       [:> IconButton
         {:size     "small"
          :on-click #(==> [::events/remove-segment
                           lipas-id activity-k route-id idx])}
-        [mui/icon {:style {:font-size "18px"}} "close"]])]))
+        [:> Icon {:style {:font-size "18px"}} "close"]])]))
 
 (defn segment-builder
   [{:keys [lipas-id activity-k route-id segments segment-details read-only?]}]
@@ -1026,29 +1030,29 @@
         move! (fn [from to]
                 (==> [::events/reorder-segments lipas-id activity-k route-id from to]))]
     (when (seq segments)
-      [mui/grid {:item true :xs 12 :style {:margin-top "0.5em" :margin-bottom "0.5em"}}
+      [:> Grid {:item true :xs 12 :style {:margin-top "0.5em" :margin-bottom "0.5em"}}
 
        ;; Header row: title + add button
-       [mui/grid {:container true :align-items "center" :justify-content "space-between"
-                  :style {:margin-bottom "0.5em"}}
-        [mui/grid {:item true}
-         [mui/typography {:variant "subtitle2"} (tr :utp/segments)]]
+       [:> Grid {:container true :align-items "center" :justify-content "space-between"
+                 :style {:margin-bottom "0.5em"}}
+        [:> Grid {:item true}
+         [:> Typography {:variant "subtitle2"} (tr :utp/segments)]]
         (when-not read-only?
-          [mui/grid {:item true}
-           [mui/button
+          [:> Grid {:item true}
+           [:> Button
             {:size     "small"
              :on-click #(==> [::events/add-segments-to-route lipas-id activity-k route-id])}
             (tr :utp/add-segments)]])]
 
        ;; Help text
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label            (tr :utp/segment-builder-help-title)
          :default-expanded false
          :style            {:margin-top "0" :margin-bottom "0.5em"}}
-        [mui/typography {:variant "body2"}
+        [:> Typography {:variant "body2"}
          (tr :utp/segment-builder-help-text)]]
 
-       [mui/paper {:variant "outlined" :style {:padding "4px"}}
+       [:> Paper {:variant "outlined" :style {:padding "4px"}}
         (if read-only?
           ;; Read-only: no DnD
           (doall
@@ -1149,11 +1153,11 @@
 
       [:<>
        ;; Tabs: Details | Segments
-       [mui/tabs {:value     @detail-tab
-                  :on-change #(reset! detail-tab %2)
-                  :style     {:margin-bottom "0.5em"}}
-        [mui/tab {:label (tr :utp/route-details-tab)}]
-        [mui/tab {:label (tr :utp/segments)}]]
+       [:> Tabs {:value     @detail-tab
+                 :on-change #(reset! detail-tab %2)
+                 :style     {:margin-bottom "0.5em"}}
+        [:> Tab {:label (tr :utp/route-details-tab)}]
+        [:> Tab {:label (tr :utp/segments)}]]
 
        ;; Tab content
        (case (int @detail-tab)
@@ -1176,11 +1180,11 @@
              :read-only?      false}])
 
        ;; Buttons — always visible
-       [mui/grid {:container true :spacing 1 :style {:margin-top "1em"}}
+       [:> Grid {:container true :spacing 1 :style {:margin-top "1em"}}
 
         ;; Done
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:variant  "contained"
            :color    "secondary"
            :on-click #(==> [::events/finish-route-details
@@ -1192,8 +1196,8 @@
           (tr :utp/finish-route-details)]]
 
         ;; Delete
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:variant  "contained"
            :on-click #(==> [:lipas.ui.events/confirm
                             (tr :utp/delete-route-prompt)
@@ -1202,8 +1206,8 @@
           (tr :actions/delete)]]
 
         ;; Cancel
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:variant  "contained"
            :on-click #(==> [::events/cancel-route-details])}
           (tr :actions/cancel)]]]])))
@@ -1226,9 +1230,9 @@
      (when-not (#{:route-details :add-route} mode)
        [:<>
         (when (seq routes)
-          [mui/grid {:item true :xs 12}
+          [:> Grid {:item true :xs 12}
            [form-label {:label label}]
-           [lui/table
+           [tables/table
             {:headers
              [[:_route-name (tr :general/name)]
               [:route-length (tr :utp/length-km)]]
@@ -1244,8 +1248,8 @@
                           (==> [::events/select-route lipas-id (dissoc route :_route-name)]))}]])
 
         (when-not read-only?
-          [mui/grid {:item true :xs 12}
-           [mui/button
+          [:> Grid {:item true :xs 12}
+           [:> Button
             {:variant  "contained"
              :color    "secondary"
              :style    {:margin-top "0.5em" :margin-bottom "0.5em"}
@@ -1258,25 +1262,25 @@
              n                 (count selected-features)]
          [:<>
 
-          [mui/grid {:item true :xs 12}
-           [mui/typography
+          [:> Grid {:item true :xs 12}
+           [:> Typography
             {:variant "body2"}
             (tr :utp/select-route-parts-on-map)]
            (when (pos? n)
-             [mui/typography
+             [:> Typography
               {:variant "body2" :color "primary"
                :style {:margin-top "0.25em" :font-weight 500}}
               (str n " " (tr :utp/segments-selected))])]
 
-          [mui/grid {:item true :xs 12
-                     :style {:display "flex" :gap "0.5em" :margin-top "0.5em"}}
-           [mui/button
+          [:> Grid {:item true :xs 12
+                    :style {:display "flex" :gap "0.5em" :margin-top "0.5em"}}
+           [:> Button
             {:variant  "contained"
              :color    "secondary"
              :disabled (empty? selected-features)
              :on-click #(==> [::events/finish-route lipas-id activity-k])}
             (tr :utp/add-subroute-ok)]
-           [mui/button
+           [:> Button
             {:variant  "outlined"
              :on-click #(==> [::events/cancel-route-details])}
             (tr :actions/cancel)]]]))
@@ -1297,9 +1301,9 @@
            :read-only?   read-only?}]))
 
      (when config/debug?
-       [mui/grid {:item true :xs 12}
-        [lui/expansion-panel {:label "debug route props"}
-         [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
+        [layouts/expansion-panel {:label "debug route props"}
+         [:> Grid {:item true :xs 12}
           [:pre (with-out-str (pprint/pprint props))]]]])]))
 
 (defn routes
@@ -1314,8 +1318,8 @@
     (when (not read-only?)
       (==> [::events/init-routes lipas-id activity-k]))
 
-    [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
-     [mui/grid {:item true :xs 12}
+    [:> Grid {:container true :spacing 2 :style {:margin-top "1em"}}
+     [:> Grid {:item true :xs 12}
       [multiple-routes (assoc props :routes routes)]]]))
 
 (defn lipas-property
@@ -1568,10 +1572,10 @@
         (tr :lipas.sports-site/no-permission-tab)])
 
      ;; Top bar: breadcrumb + lang selector on same row
-     [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
-      [mui/grid {:container true :align-items "center" :justify-content "space-between" :wrap "nowrap"}
-       [mui/grid {:item true :style {:display "flex" :align-items "center"}}
-        [mui/typography {:color "text.secondary" :style {:margin-right "0.25em"}} "›"]
+     [:> Grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
+      [:> Grid {:container true :align-items "center" :justify-content "space-between" :wrap "nowrap"}
+       [:> Grid {:item true :style {:display "flex" :align-items "center"}}
+        [:> Typography {:color "text.secondary" :style {:margin-right "0.25em"}} "›"]
         [:> Breadcrumbs {:aria-label "breadcrumb"}
          (if route-detail?
            [:> Link {:component "button"
@@ -1579,7 +1583,7 @@
                      :color     "inherit"
                      :on-click  #(==> [::events/cancel-route-details])}
             activity-label]
-           [mui/typography {:color "text.primary"} activity-label])
+           [:> Typography {:color "text.primary"} activity-label])
          (when route-detail?
            (if (= :route-details mode)
              [:> Link {:component "button"
@@ -1587,16 +1591,16 @@
                        :color     "inherit"
                        :on-click  #(==> [::events/cancel-route-details])}
               (tr :utp/routes-breadcrumb)]
-             [mui/typography {:color "text.primary"}
+             [:> Typography {:color "text.primary"}
               (tr :utp/routes-breadcrumb)]))
          (when (= :route-details mode)
-           [mui/typography {:color "text.primary"}
+           [:> Typography {:color "text.primary"}
             (or route-name (tr :utp/segment))])]]
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [lang-selector {:locale locale}]]]]
 
      ;; Form — when in route detail mode, only show the routes field
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [nice-form {}
        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)
              :when (or (not route-detail?) (= "routes" (:type field)))]

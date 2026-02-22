@@ -1133,9 +1133,9 @@
         labels {:distance-m (tr :sports-site.elevation-profile/distance-from-start-m)
                 :distance-km (tr :sports-site.elevation-profile/distance-from-start-km)
                 :elevation-m (tr :sports-site.elevation-profile/height-from-sea-level-m)}]
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [:> ResponsiveContainer {:width "100%" :height 300}
        [:> AreaChart
         {:data data
@@ -1180,15 +1180,15 @@
 
      ;; Total ascend / descend
      (when combined-stats
-       [mui/grid {:item true :xs 12}
-        [mui/table {:size "medium"}
-         [mui/table-body
-          [mui/table-row
-           [mui/table-cell (tr :sports-site.elevation-profile/total-ascend)]
-           [mui/table-cell (str (-> combined-stats :ascend-m utils/round-safe) "m")]]
-          [mui/table-row
-           [mui/table-cell (tr :sports-site.elevation-profile/total-descend)]
-           [mui/table-cell (str (-> combined-stats :descend-m utils/round-safe) "m")]]]]])
+       [:> Grid {:item true :xs 12}
+        [:> Table {:size "medium"}
+         [:> TableBody
+          [:> TableRow
+           [:> TableCell (tr :sports-site.elevation-profile/total-ascend)]
+           [:> TableCell (str (-> combined-stats :ascend-m utils/round-safe) "m")]]
+          [:> TableRow
+           [:> TableCell (tr :sports-site.elevation-profile/total-descend)]
+           [:> TableCell (str (-> combined-stats :descend-m utils/round-safe) "m")]]]]])
 
      ;; landing bay for fabs
-     [mui/grid {:item true :xs 12 :style {:height "3em"}}]]))
+     [:> Grid {:item true :xs 12 :style {:height "3em"}}]]))

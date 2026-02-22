@@ -1,7 +1,8 @@
 (ns lipas.ui.front-page.views
   (:require [clojure.string :as str]
             [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.front-page.events :as events]
             [lipas.ui.front-page.subs :as subs]
@@ -187,15 +188,15 @@
     :or {xs 12 md 6 lg 6 xl 6}} & children]
   [:> Grid {:item true :xs xs :md md :lg lg :xl xl}
    [:> Paper {:square true
-               :style
-               (merge
-                 {:background-color "rgb(250, 250, 250)"
-                  :font-size "1.25em"
-                  :height "360px"
-                  :opacity 0.95
-                  :margin "8px"
-                  :padding "16px 10px 0 16px"}
-                 style)}
+              :style
+              (merge
+                {:background-color "rgb(250, 250, 250)"
+                 :font-size "1.25em"
+                 :height "360px"
+                 :opacity 0.95
+                 :margin "8px"
+                 :padding "16px 10px 0 16px"}
+                style)}
 
     [:> Grid
      {:container true
@@ -373,52 +374,52 @@
       (Math/floor (/ diff-ms (* 1000 60 60 24))))))
 
 (defn- stat-item [{:keys [value label]}]
-  [mui/grid {:item true :xs 6 :sm 6 :md "auto"
-             :style {:text-align "center" :padding "1em 2em"}}
-   [mui/typography {:variant "h3"
-                    :component "div"
-                    :style {:font-weight 700
-                            :color mui/secondary
-                            :line-height 1.2}}
+  [:> Grid {:item true :xs 6 :sm 6 :md "auto"
+            :style {:text-align "center" :padding "1em 2em"}}
+   [:> Typography {:variant "h3"
+                   :component "div"
+                   :style {:font-weight 700
+                           :color mui/secondary
+                           :line-height 1.2}}
     value]
-   [mui/typography {:variant "body1"
-                    :component "div"
-                    :style {:opacity 0.85
-                            :margin-top "0.25em"
-                            :color "white"}}
+   [:> Typography {:variant "body1"
+                   :component "div"
+                   :style {:opacity 0.85
+                           :margin-top "0.25em"
+                           :color "white"}}
     label]])
 
 (defn lipas-in-numbers [tr]
   (let [stats-data (<== [::subs/stats-data])
         in-progress? (<== [::subs/stats-in-progress?])]
     (when (or stats-data in-progress?)
-      [mui/grid
+      [:> Grid
        {:container true
         :style {:background-color mui/primary
                 :color "white"
                 :padding "2em 1em"}}
 
        ;; Heading
-       [mui/grid {:item true :xs 12
-                  :style {:text-align "center" :margin-bottom "1em"}}
-        [mui/typography {:variant "h4"
-                         :component "h2"
-                         :style {:font-weight 600
-                                 :color "white"}}
+       [:> Grid {:item true :xs 12
+                 :style {:text-align "center" :margin-bottom "1em"}}
+        [:> Typography {:variant "h4"
+                        :component "h2"
+                        :style {:font-weight 600
+                                :color "white"}}
          (tr :lipas-in-numbers/headline)]]
 
        (if in-progress?
          ;; Loading
-         [mui/grid {:item true :xs 12 :style {:text-align "center"}}
-          [mui/circular-progress {:style {:color "white"}}]]
+         [:> Grid {:item true :xs 12 :style {:text-align "center"}}
+          [:> CircularProgress {:style {:color "white"}}]]
 
          ;; Stats
          (when stats-data
            [:<>
-            [mui/grid {:item true :xs 12}
-             [mui/grid {:container true
-                        :justify-content "center"
-                        :align-items "flex-start"}
+            [:> Grid {:item true :xs 12}
+             [:> Grid {:container true
+                       :justify-content "center"
+                       :align-items "flex-start"}
               [stat-item {:value (format-number (:total-count stats-data))
                           :label (tr :lipas-in-numbers/sports-facilities)}]
               [stat-item {:value (format-number (:city-count stats-data))
@@ -430,10 +431,10 @@
 
             ;; Last updated line
             (when-let [d (days-since (:last-updated stats-data))]
-              [mui/grid {:item true :xs 12
-                         :style {:text-align "center" :margin-top "1em"}}
-               [mui/typography {:variant "body2"
-                                :style {:opacity 0.7 :color "white"}}
+              [:> Grid {:item true :xs 12
+                        :style {:text-align "center" :margin-top "1em"}}
+               [:> Typography {:variant "body2"
+                               :style {:opacity 0.7 :color "white"}}
                 (str (tr :lipas-in-numbers/last-updated) " "
                      (case d
                        0 (tr :lipas-in-numbers/today)
