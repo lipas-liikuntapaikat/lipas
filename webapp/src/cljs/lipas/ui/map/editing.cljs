@@ -310,7 +310,7 @@
                                    (fn [f] (==> [::events/new-geom-drawn f])))
       :editing     (-> map-ctx
                        (cond->
-                        (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
+                         (nil? old-sm) (map-utils/fit-to-fcoll! geoms))
                        (start-editing! geoms on-modify))
       :deleting    (enable-delete! map-ctx on-modify)
       :splitting   (enable-splitting! map-ctx geoms on-modify)

@@ -1227,9 +1227,9 @@
                                   (mapv (fn [m]
                                           (assoc m :_route-name (get-in m [:route-name locale])))))
              :on-mouse-enter (fn [item]
-                               (==> [:lipas.ui.map.events/highlight-features (:fids item)]))
+                               (==> [::events/highlight-route lipas-id activity-k (:id item)]))
              :on-mouse-leave (fn [_]
-                               (==> [:lipas.ui.map.events/highlight-features #{}]))
+                               (==> [::events/highlight-route lipas-id activity-k nil]))
 
              :on-select (fn [route]
                           (==> [::events/select-route lipas-id (dissoc route :_route-name)]))}]])

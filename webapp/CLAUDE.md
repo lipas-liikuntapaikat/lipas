@@ -63,7 +63,7 @@ bb test-var lipas.roles-test/site-roles-context lipas.roles-test/check-privilege
 
 ## Browser Testing
 
-Delegate browser testing to `browser-tester` sub-agent to preserve context.
+Delegate browser testing to `browser-tester-v2` sub-agent to preserve context.
 
 **Before delegating**: Run `(user/compile-cljs)` and fix any build errors.
 

@@ -61,15 +61,24 @@
     (:route-view activities)))
 
 (defn- ensure-segments
-  "Auto-migrate: if route has fids but no segments, generate segments in feature-array order."
+  "Auto-migrate: if route has fids but no segments, generate segments in feature-array order.
+   Also validates that segment fids reference existing features, dropping any
+   stale references (e.g. when geometry was redrawn with new feature IDs)."
   [route all-features]
-  (if (seq (:segments route))
-    route
-    (let [fids     (set (:fids route))
-          segments (->> all-features
-                        (filter #(contains? fids (:id %)))
-                        (mapv (fn [f] {:fid (:id f) :reversed? false})))]
-      (assoc route :segments segments))))
+  (let [valid-fids (set (map :id all-features))]
+    (if (seq (:segments route))
+      ;; Validate existing segments against actual features
+      (let [segments    (:segments route)
+            valid-segs  (filterv #(contains? valid-fids (:fid %)) segments)]
+        (if (= (count valid-segs) (count segments))
+          route
+          (assoc route :segments valid-segs)))
+      ;; Legacy migration: generate segments from :fids
+      (let [fids     (set (:fids route))
+            segments (->> all-features
+                          (filter #(contains? fids (:id %)))
+                          (mapv (fn [f] {:fid (:id f) :reversed? false})))]
+        (assoc route :segments segments)))))
 
 (defn- resolve-segments
   "Resolve segments to ordered features, respecting reversed? flag."

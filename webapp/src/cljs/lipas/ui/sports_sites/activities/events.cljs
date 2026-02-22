@@ -30,15 +30,24 @@
           {} (map-indexed vector segments)))
 
 (defn- ensure-route-segments
-  "Ensure a route has :segments derived from :fids if not already present."
+  "Ensure a route has :segments derived from :fids if not already present.
+   Also validates that segment fids reference existing features, dropping any
+   stale references (e.g. when geometry was redrawn with new feature IDs)."
   [route all-features]
-  (if (seq (:segments route))
-    route
-    (let [fids     (set (:fids route))
-          segments (->> all-features
-                        (filter #(contains? fids (:id %)))
-                        (mapv (fn [f] {:fid (:id f) :reversed? false})))]
-      (assoc route :segments segments))))
+  (let [valid-fids (set (map :id all-features))]
+    (if (seq (:segments route))
+      ;; Validate existing segments against actual features
+      (let [segments    (:segments route)
+            valid-segs  (filterv #(contains? valid-fids (:fid %)) segments)]
+        (if (= (count valid-segs) (count segments))
+          route
+          (assoc route :segments valid-segs)))
+      ;; Legacy migration: generate segments from :fids
+      (let [fids     (set (:fids route))
+            segments (->> all-features
+                          (filter #(contains? fids (:id %)))
+                          (mapv (fn [f] {:fid (:id f) :reversed? false})))]
+        (assoc route :segments segments)))))
 
 (defn- get-routes-with-segments
   "Get routes from db with segments ensured from fids."
@@ -251,6 +260,22 @@
                                        (segments->direction-map (:segments active-route))]]
                            [:dispatch [:lipas.ui.map.events/set-segment-labels
                                        (segments->label-map (:segments active-route))]]]})))
+
+(rf/reg-event-fx ::highlight-route
+                 (fn [{:keys [db]} [_ lipas-id activity-k route-id]]
+                   (if route-id
+                     (let [routes   (get-routes-with-segments db lipas-id activity-k)
+                           route    (first (filter #(= route-id (:id %)) routes))
+                           segments (:segments route)]
+                       {:fx [[:dispatch [:lipas.ui.map.events/highlight-features
+                                         (set (map :fid segments))]]
+                             [:dispatch [:lipas.ui.map.events/set-segment-directions
+                                         (segments->direction-map segments)]]
+                             [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                         (segments->label-map segments)]]]})
+                     {:fx [[:dispatch [:lipas.ui.map.events/highlight-features #{}]]
+                           [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
+                           [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]})))
 
 (rf/reg-event-fx ::highlight-segment
                  (fn [{:keys [db]} [_ lipas-id activity-k route-id segment-idx]]
