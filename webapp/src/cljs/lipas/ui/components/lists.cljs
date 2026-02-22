@@ -4,23 +4,32 @@
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["react-use/lib/useMeasure$default" :as useMeasure]
-            ["react-window" :refer [FixedSizeList]]
+            ["react-window" :refer [List]]
             [reagent.core :as r]))
 
-(r/defc row-item
-  [{:keys [style item list-props]}]
-  (let [{:keys [on-item-click label-fn label2-fn]} list-props]
-    [:> Stack {:style style}
-     [:> (if (some? item) ListItemButton ListItem)
-      {:divider (some? item)
-       :on-click (fn [_e]
-                   (when item
-                     (on-item-click item)))}
-      [:> ListItemText
-       {:primary                    (label-fn item)
-        :secondary                  (label2-fn item)
-        :primary-typography-props   #js {:noWrap true}
-        :secondary-typography-props #js {:noWrap true}}]]]))
+(defn list-row-component
+  "Row component for react-window v2 List.
+  Receives index and style from List, plus items/key-fn/list-props via rowProps."
+  [^js props]
+  (let [index      (.-index props)
+        style      (.-style props)
+        items      (.-items props)
+        key-fn     (.-keyFn props)
+        list-props (.-listProps props)
+        item       (get items index)
+        {:keys [on-item-click label-fn label2-fn]} (js->clj list-props :keywordize-keys true)]
+    (r/as-element
+      [:> Stack {:style style :key (key-fn item)}
+       [:> (if (some? item) ListItemButton ListItem)
+        {:divider (some? item)
+         :on-click (fn [_e]
+                     (when item
+                       (on-item-click item)))}
+        [:> ListItemText
+         {:primary                    (label-fn item)
+          :secondary                  (label2-fn item)
+          :primary-typography-props   #js {:noWrap true}
+          :secondary-typography-props #js {:noWrap true}}]]])))
 
 (r/defc virtualized-list [{:keys [items key-fn landing-bay?] :as list-props}]
   (let [;; Measure just the available content height for the list.
@@ -62,16 +71,14 @@
      [:div
       {:ref measure-ref
        :style {:flex "1 1 auto"}}
-      [:> FixedSizeList
-       {:height       container-height
-        :itemSize     item-height
-        :itemCount    (cond-> (count items)
-                        landing-bay? inc)}
-       (fn [^js props]
-         (let [item (get items (.-index props))]
-           (r/as-element
-            [row-item
-             {:key (key-fn item)
-              :style (.-style props)
-              :item item
-              :list-props list-props}])))]]]))
+      (r/create-element List
+                        #js {:style        #js {:height container-height}
+                             :rowHeight    item-height
+                             :rowCount     (cond-> (count items)
+                                             landing-bay? inc)
+                             :rowComponent list-row-component
+                             :rowProps     #js {:items     items
+                                                :keyFn     key-fn
+                                                :listProps #js {:on-item-click (:on-item-click list-props)
+                                                                :label-fn      (:label-fn list-props)
+                                                                :label2-fn     (:label2-fn list-props)}}})]]))

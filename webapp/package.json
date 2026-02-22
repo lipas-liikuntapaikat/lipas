@@ -45,7 +45,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-use": "^17.6.0",
-    "react-window": "^1.8.11",
+    "react-window": "^2.2.7",
     "recharts": "^3.0.0",
     "shpjs": "^6.1.0",
     "togpx": "^0.5.4",
