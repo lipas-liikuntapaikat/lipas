@@ -2,7 +2,8 @@
   (:require [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.location :as location-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.search.db :as db]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
@@ -228,47 +229,47 @@
     (->>
       [[:score {:label "score"}]
        [:name {:label (tr :lipas.sports-site/name)
-               :form {:component lui/text-field}}]
+               :form {:component text-fields/text-field}}]
        [:marketing-name {:label (tr :lipas.sports-site/marketing-name)
-                         :form {:component lui/text-field}}]
+                         :form {:component text-fields/text-field}}]
        [:type.name {:label (tr :type/name)
                     :form
-                    {:component lui/type-selector-single
+                    {:component selects/type-selector-single
                      :value-key :type.type-code
                      :props {:types types}}}]
        [:type.main-category {:label (tr :type/main-category)}]
        [:type.sub-category {:label (tr :type/sub-category)}]
        [:owner.name {:label (tr :lipas.sports-site/owner)
                      :form
-                     {:component lui/owner-selector-single
+                     {:component selects/owner-selector-single
                       :value-key :owner}}]
        [:admin.name {:label (tr :lipas.sports-site/admin)
                      :form
-                     {:component lui/admin-selector-single
+                     {:component selects/admin-selector-single
                       :value-key :admin}}]
        [:construction-year {:label (tr :lipas.sports-site/construction-year)
-                            :form {:component lui/year-selector}}]
+                            :form {:component selects/year-selector}}]
        [:renovation-years {:label (tr :lipas.sports-site/renovation-years)
                            :form
-                           {:component lui/year-selector
+                           {:component selects/year-selector
                             :props {:multi? true}}}]
        [:location.city.name {:label (tr :lipas.location/city)
                              :form
-                             {:component lui/city-selector-single
+                             {:component selects/city-selector-single
                               :props {:cities cities}
                               :value-key :location.city.city-code}}]
        [:location.address {:label (tr :lipas.location/address)
-                           :form {:component lui/text-field}}]
+                           :form {:component text-fields/text-field}}]
        [:location.postal-code {:label (tr :lipas.location/postal-code)
-                               :form {:component lui/text-field}}]
+                               :form {:component text-fields/text-field}}]
        [:location.postal-office {:label (tr :lipas.location/postal-office)
-                                 :form {:component lui/text-field}}]
+                                 :form {:component text-fields/text-field}}]
        [:www {:label (tr :lipas.sports-site/www)
-              :form {:component lui/text-field}}]
+              :form {:component text-fields/text-field}}]
        [:email {:label (tr :lipas.sports-site/email-public)
-                :form {:component lui/text-field}}]
+                :form {:component text-fields/text-field}}]
        [:phone-number {:label (tr :lipas.sports-site/phone-number)
-                       :form {:component lui/text-field}}]
+                       :form {:component text-fields/text-field}}]
        [:event-date {:label (tr :lipas.sports-site/event-date)}]
        [:lipas-id {:label "Lipas-id"}]]
       (reduce

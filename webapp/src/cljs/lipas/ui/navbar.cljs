@@ -2,6 +2,24 @@
   (:require [clojure.string :as string]
             [lipas.ui.feedback.views :as feedback]
             [lipas.ui.help.views :as help]
+            ["@mui/material/AppBar$default" :as AppBar]
+            ["@mui/material/Avatar$default" :as Avatar]
+            ["@mui/material/Divider$default" :as Divider]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemButton$default" :as ListItemButton]
+            ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+            ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Menu$default" :as Menu]
+            ["@mui/material/MenuItem$default" :as MenuItem]
+            ["@mui/material/SvgIcon$default" :as SvgIcon]
+            ["@mui/material/SwipeableDrawer$default" :as SwipeableDrawer]
+            ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.subs :as subs]
             [lipas.ui.svg :as svg]
@@ -18,18 +36,18 @@
 
 (defn avatar []
   (let [initials (<== [::subs/user-initials])]
-    [mui/avatar {:style {:font-size "0.65em" :color "#fff"}}
+    [:> Avatar {:style {:font-size "0.65em" :color "#fff"}}
      initials]))
 
 (defn account-menu-button
   [{:keys [tr logged-in?]}]
-  [mui/icon-button
+  [:> IconButton
    {:on-click #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
     :id "account-btn"
     :aria-label (tr :actions/open-account-menu)}
    (if logged-in?
      [avatar]
-     [mui/icon "account_circle"])])
+     [:> Icon "account_circle"])])
 
 (defn account-menu
   [{:keys [tr logged-in?]}]
@@ -38,77 +56,77 @@
         admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
         org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
 
-    [mui/menu {:anchor-el anchor
+    [:> Menu {:anchor-el anchor
                :open (some? anchor)
                :on-close close}
 
      ;; Login
      (when (not logged-in?)
-       [mui/menu-item
+       [:> MenuItem
         {:id "account-menu-item-login"
          :on-click (comp close #(navigate! "/kirjaudu" :comeback? true))}
-        [mui/list-item-icon
-         [mui/icon "lock"]]
-        [mui/list-item-text {:primary (tr :login/headline)}]])
+        [:> ListItemIcon
+         [:> Icon "lock"]]
+        [:> ListItemText {:primary (tr :login/headline)}]])
 
      ;; Register
      (when (not logged-in?)
-       [mui/menu-item {:id "account-menu-item-register"
+       [:> MenuItem {:id "account-menu-item-register"
                        :on-click (comp close #(navigate! "/rekisteroidy"))}
-        [mui/list-item-icon
-         [mui/icon "group_add"]]
-        [mui/list-item-text {:primary (tr :register/headline)}]])
+        [:> ListItemIcon
+         [:> Icon "group_add"]]
+        [:> ListItemText {:primary (tr :register/headline)}]])
 
      ;; Profile
      (when logged-in?
-       [mui/menu-item {:id "account-menu-item-profile"
+       [:> MenuItem {:id "account-menu-item-profile"
                        :on-click (comp close #(navigate! "/profiili"))}
-        [mui/list-item-icon
-         [mui/icon "account_circle"]]
-        [mui/list-item-text {:primary (tr :user/headline)}]])
+        [:> ListItemIcon
+         [:> Icon "account_circle"]]
+        [:> ListItemText {:primary (tr :user/headline)}]])
 
      ;; Organizations
      (when (and logged-in?
                 (or admin?
                     org?))
-       [mui/menu-item {:id "account-menu-item-organizations"
+       [:> MenuItem {:id "account-menu-item-organizations"
                        :on-click (comp close #(navigate! "/organisaatiot"))}
-        [mui/list-item-icon
-         [mui/icon "corporate_fare"]]
-        [mui/list-item-text {:primary (tr :lipas.admin/organizations)}]])
+        [:> ListItemIcon
+         [:> Icon "corporate_fare"]]
+        [:> ListItemText {:primary (tr :lipas.admin/organizations)}]])
 
      ;; Admin
      (when admin?
-       [mui/menu-item {:id "account-menu-item-admin"
+       [:> MenuItem {:id "account-menu-item-admin"
                        :on-click (comp close #(navigate! "/admin"))}
-        [mui/list-item-icon
-         [mui/icon "settings"]]
-        [mui/list-item-text {:primary (tr :lipas.admin/headline)}]])
+        [:> ListItemIcon
+         [:> Icon "settings"]]
+        [:> ListItemText {:primary (tr :lipas.admin/headline)}]])
 
      ;; Help
-     [mui/menu-item {:id "account-menu-item-help"
+     [:> MenuItem {:id "account-menu-item-help"
                      :on-click (comp close #(navigate! (:help links)))}
-      [mui/list-item-icon
-       [mui/icon "help"]]
-      [mui/list-item-text {:primary (tr :help/headline)}]]
+      [:> ListItemIcon
+       [:> Icon "help"]]
+      [:> ListItemText {:primary (tr :help/headline)}]]
 
      ;; Privacy policy
-     [mui/menu-item {:id "account-menu-item-privacy-policy"
+     [:> MenuItem {:id "account-menu-item-privacy-policy"
                      :on-click (comp close #(navigate! (:privacy-policy links)))}
-      [mui/list-item-icon
-       [mui/icon "privacy_tip"]]
-      [mui/list-item-text {:primary (tr :help/privacy-policy)}]]
+      [:> ListItemIcon
+       [:> Icon "privacy_tip"]]
+      [:> ListItemText {:primary (tr :help/privacy-policy)}]]
 
      ;; Logout
      (when logged-in?
-       [mui/menu-item {:id "account-menu-item-logout"
+       [:> MenuItem {:id "account-menu-item-logout"
                        :on-click (comp close logout!)}
-        [mui/list-item-icon
-         [mui/icon "exit_to_app"]]
-        [mui/list-item-text {:primary (tr :login/logout)}]])]))
+        [:> ListItemIcon
+         [:> Icon "exit_to_app"]]
+        [:> ListItemText {:primary (tr :login/logout)}]])]))
 
 (defn separator [props]
-  [mui/typography
+  [:> Typography
    (merge {:component "span"
            :color "secondary"
            :variant "h6"
@@ -122,14 +140,14 @@
    "|"])
 
 (defn lang-btn [locale]
-  [mui/icon-button
+  [:> IconButton
    {:style {:font-size "1em"}
     :on-click #(==> [:lipas.ui.events/set-translator locale])}
-   [mui/typography {:variant "body2"}
+   [:> Typography {:variant "body2"}
     (-> locale name string/upper-case)]])
 
 (defn lang-selector [props]
-  [mui/grid
+  [:> Grid
    (merge {:item true :style {:margin "1em"}}
           props)
    [lang-btn :fi]
@@ -144,89 +162,89 @@
 (defn drawer [{:keys [tr logged-in?]}]
   (let [open? (<== [::subs/drawer-open?])
         hide-and-navigate! (comp close-drawer navigate!)]
-    [mui/swipeable-drawer {:open open?
+    [:> SwipeableDrawer {:open open?
                            :anchor :top
                            :on-open #(==> [:lipas.ui.events/open-drawer])
                            :on-close close-drawer}
 
-     [mui/list
+     [:> List
 
       ;; Close btn
-      [mui/list-item-button {:on-click close-drawer}
-       [mui/typography {:variant "h6"}
+      [:> ListItemButton {:on-click close-drawer}
+       [:> Typography {:variant "h6"}
         (tr :menu/headline)]
-       [mui/list-item-secondary-action
-        [mui/icon-button {:on-click close-drawer}
-         [mui/icon {:color "secondary"} "close"]]]]
+       [:> ListItemSecondaryAction
+        [:> IconButton {:on-click close-drawer}
+         [:> Icon {:color "secondary"} "close"]]]]
 
       ;; Lang-selector
-      [mui/list-item
+      [:> ListItem
        [lang-selector]]
 
       ;; Home
-      [mui/list-item-button {:on-click #(hide-and-navigate! "/etusivu")}
-       [mui/list-item-icon
-        [mui/icon "home"]]
-       [mui/list-item-text {:primary (tr :menu/frontpage)}]]
+      [:> ListItemButton {:on-click #(hide-and-navigate! "/etusivu")}
+       [:> ListItemIcon
+        [:> Icon "home"]]
+       [:> ListItemText {:primary (tr :menu/frontpage)}]]
 
-      [mui/divider]
+      [:> Divider]
 
       ;; Sports sites
-      [mui/list-item-button {:on-click #(hide-and-navigate! "/liikuntapaikat")}
-       [mui/list-item-icon
-        [mui/icon "place"]]
-       [mui/list-item-text {:primary (tr :sport/headline)}]]
+      [:> ListItemButton {:on-click #(hide-and-navigate! "/liikuntapaikat")}
+       [:> ListItemIcon
+        [:> Icon "place"]]
+       [:> ListItemText {:primary (tr :sport/headline)}]]
 
       ;; Stats
-      [mui/list-item-button {:on-click #(hide-and-navigate! "/tilastot")}
-       [mui/list-item-icon
-        [mui/icon "insert_chart_outlined"]]
-       [mui/list-item-text {:primary (tr :stats/headline)}]]
+      [:> ListItemButton {:on-click #(hide-and-navigate! "/tilastot")}
+       [:> ListItemIcon
+        [:> Icon "insert_chart_outlined"]]
+       [:> ListItemText {:primary (tr :stats/headline)}]]
 
-      [mui/divider]
+      [:> Divider]
 
       ;; Admin
       (when @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
-        [mui/list-item-button {:on-click #(hide-and-navigate! "/admin")}
-         [mui/list-item-icon
-          [mui/icon "settings"]]
-         [mui/list-item-text {:primary (tr :lipas.admin/headline)}]])
+        [:> ListItemButton {:on-click #(hide-and-navigate! "/admin")}
+         [:> ListItemIcon
+          [:> Icon "settings"]]
+         [:> ListItemText {:primary (tr :lipas.admin/headline)}]])
 
       ;; Help
-      [mui/list-item-button {:on-click #(hide-and-navigate! (:help links))}
-       [mui/list-item-icon
-        [mui/icon "help"]]
-       [mui/list-item-text {:primary (tr :help/headline)}]]
+      [:> ListItemButton {:on-click #(hide-and-navigate! (:help links))}
+       [:> ListItemIcon
+        [:> Icon "help"]]
+       [:> ListItemText {:primary (tr :help/headline)}]]
 
-      [mui/divider]
+      [:> Divider]
 
       ;; Profile
       (when logged-in?
-        [mui/list-item-button {:on-click #(hide-and-navigate! "/profiili")}
-         [mui/list-item-icon
-          [mui/icon "account_circle"]]
-         [mui/list-item-text {:primary (tr :user/headline)}]])
+        [:> ListItemButton {:on-click #(hide-and-navigate! "/profiili")}
+         [:> ListItemIcon
+          [:> Icon "account_circle"]]
+         [:> ListItemText {:primary (tr :user/headline)}]])
 
       ;; Logout
       (when logged-in?
-        [mui/list-item-button {:on-click logout!}
-         [mui/list-item-icon
-          [mui/icon "exit_to_app"]]
-         [mui/list-item-text {:primary (tr :login/logout)}]])
+        [:> ListItemButton {:on-click logout!}
+         [:> ListItemIcon
+          [:> Icon "exit_to_app"]]
+         [:> ListItemText {:primary (tr :login/logout)}]])
 
       ;; Login
       (when (not logged-in?)
-        [mui/list-item-button {:on-click #(hide-and-navigate! "/kirjaudu")}
-         [mui/list-item-icon
-          [mui/icon "lock"]]
-         [mui/list-item-text {:primary (tr :login/headline)}]])
+        [:> ListItemButton {:on-click #(hide-and-navigate! "/kirjaudu")}
+         [:> ListItemIcon
+          [:> Icon "lock"]]
+         [:> ListItemText {:primary (tr :login/headline)}]])
 
       ;; Register
       (when (not logged-in?)
-        [mui/list-item-button {:on-click #(hide-and-navigate! "/rekisteroidy")}
-         [mui/list-item-icon
-          [mui/icon "group_add"]]
-         [mui/list-item-text {:primary (tr :register/headline)}]])]]))
+        [:> ListItemButton {:on-click #(hide-and-navigate! "/rekisteroidy")}
+         [:> ListItemIcon
+          [:> Icon "group_add"]]
+         [:> ListItemText {:primary (tr :register/headline)}]])]]))
 
 (defn get-sub-page [route tr]
   (let [name (-> route :data :name)
@@ -237,17 +255,17 @@
                (rfe/href name))})))
 
 (defn menu-button [{:keys [tr]}]
-  [mui/icon-button
+  [:> IconButton
    {:id "main-menu-btn"
     :aria-label (tr :actions/open-main-menu)
     :on-click #(==> [:lipas.ui.events/open-drawer])}
-   [mui/icon
+   [:> Icon
     {:color "secondary"
      :style {:font-weight :bold}} "menu"]])
 
 (defn nav [{:keys [tr logged-in?]}]
   (let [current-route (<== [:lipas.ui.subs/current-route])]
-    [mui/app-bar
+    [:> AppBar
      {:position "static"
       :color "primary"
       :sx {:border-box "1px solid black"
@@ -255,17 +273,17 @@
       :enableColorOnDark true
       :class-name :no-print}
 
-     [mui/tool-bar {:disable-gutters true}
+     [:> Toolbar {:disable-gutters true}
 
       ;;; JYU logo
       [:a {:href "https://www.jyu.fi"}
-       [mui/svg-icon
+       [:> SvgIcon
         {:view-box "0 0 132.54 301.95"
          :style {:height "2em" :margin "0.45em"}}
         [svg/jyu-logo]]]
 
       ;;; Header text
-      [mui/typography
+      [:> Typography
        {:variant "h6"
         :style
         {:flex 1
@@ -273,7 +291,7 @@
          :font-weight "bold"}}
 
        ;; University of Jyväskylä
-       [mui/typography
+       [:> Typography
         {:component "a"
          :variant "h6"
          :href "https://www.jyu.fi"
@@ -293,7 +311,7 @@
                         :md "inline"}}}]
 
        ;; LIPAS
-       [mui/typography
+       [:> Typography
         {:component "a"
          :variant "h6"
          :href "/etusivu"
@@ -311,7 +329,7 @@
 
        ;; Sub page header
        (let [sub-page (get-sub-page current-route tr)]
-         [mui/typography
+         [:> Typography
           {:component "a"
            :variant "h6"
            :href (:href sub-page)
@@ -337,7 +355,7 @@
       [menu-button {:tr tr}]]]))
 
 (defn mini-nav [{:keys [tr logged-in?]}]
-  [mui/tool-bar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
+  [:> Toolbar {:disable-gutters true :style {:padding "0px 8px 0px 0px"}}
    [help/view]
    [feedback/feedback-btn]
    [account-menu-button {:tr tr :logged-in? logged-in?}]

@@ -1,34 +1,48 @@
 (ns lipas.ui.loi.views
   (:require [clojure.string :as str]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.loi.events :as events]
             [lipas.ui.loi.subs :as subs]
             [lipas.ui.map.events :as map-events]
             [lipas.ui.map.import :as import]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/FormLabel$default" :as FormLabel]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Popper$default" :as Popper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
 (defn lang-selector
   [{:keys [locale]}]
-  [mui/tabs
+  [:> Tabs
    {:value          (name locale)
     :indicator-color "primary"
     :text-color "inherit"
     :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
-   [mui/tab {:value "fi" :label "Suomi"}]
-   [mui/tab {:value "se" :label "Svenska"}]
-   [mui/tab {:value "en" :label "English"}]])
+   [:> Tab {:value "fi" :label "Suomi"}]
+   [:> Tab {:value "se" :label "Svenska"}]
+   [:> Tab {:value "en" :label "English"}]])
 
 (defn form-label
   [{:keys [label]}]
-  [mui/form-label {:style {:color "gray"}}
+  [:> FormLabel {:style {:color "gray"}}
    label])
 
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id helper-text image-props]}]
-  [lui/dialog
+  [dialogs/dialog
    {:title         (if (-> @dialog-state :data :url)
                      (tr :utp/photo)
                      (tr :utp/photo))
@@ -39,15 +53,15 @@
                         (-> @dialog-state :data :description seq))
     :save-label    "Ok"
     :cancel-label  (tr :actions/cancel)}
-   [mui/grid {:container true :spacing 2}
+   [:> Grid {:container true :spacing 2}
 
-    [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
 
-    [mui/grid {:item true :xs 12}
-     [mui/typography {:variant "caption"} helper-text]]
+    [:> Grid {:item true :xs 12}
+     [:> Typography {:variant "caption"} helper-text]]
 
-    [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
 
      [:input
       {:type      "file"
@@ -62,22 +76,22 @@
                                                        (assoc-in [:data :url] url)
                                                        (assoc-in [:data :cms] cms-meta))))))])}]
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       (when-let [url (-> @dialog-state :data :url)]
         [:img
          {:style {:max-width "100%"}
           :src   url}])]
 
      ;; For debug
-     #_[lui/text-field
+     #_[text-fields/text-field
         {:value     (-> @dialog-state :data :url)
          :fullWidth true
          :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
          :label     "Url"}]]
 
     ;; Description
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
+    [:> Grid {:item true :xs 12}
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :description locale)
@@ -89,8 +103,8 @@
        :variant     "outlined"}]]
 
     ;; Alt text
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
+    [:> Grid {:item true :xs 12}
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :alt-text locale)
@@ -102,8 +116,8 @@
        :variant     "outlined"}]]
 
     ;; Copyright
-    [mui/grid {:item true :xs 12}
-     [lui/text-field
+    [:> Grid {:item true :xs 12}
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :copyright locale)
@@ -126,7 +140,7 @@
                popper-state (r/atom {:open? false})]
 
     (let [tr (<== [:lipas.ui.subs/translator])]
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Dialog
        [image-dialog
@@ -145,7 +159,7 @@
                          (reset! dialog-state dialog-init-state))}]
 
        ;; Image Preview Popper
-       [mui/popper
+       [:> Popper
         {:open           (:open? @popper-state)
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
@@ -157,12 +171,12 @@
           :src   (:url @popper-state)}]]
 
        ;; Label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]]
 
        ;; Table
-       [mui/grid {:item true :xs 12}
-        [lui/form-table
+       [:> Grid {:item true :xs 12}
+        [tables/form-table
          {:key        (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
@@ -220,7 +234,7 @@
         loi-props    (<== [::subs/props loi-cat loi-type])
         form-data    (if read-only? display-data edit-data)]
 
-    [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
+    [:> Grid {:container true :spacing 2 :style {:padding "1em"}}
 
      ;; Import
      [import/import-geoms-view
@@ -232,31 +246,31 @@
        :show-replace? (= :editing view-mode)}]
 
      ;; Header
-     [mui/grid {:item true :xs 12}
-      [mui/grid
+     [:> Grid {:item true :xs 12}
+      [:> Grid
        {:container   true
         :style       {:flex-wrap "nowrap"}
         :align-items :center}
 
        ;; Headline
-       [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
-        [mui/typography {:variant "h6"}
+       [:> Grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
+        [:> Typography {:variant "h6"}
          (condp = view-mode
            :editing "Muokkaa kohdetta"
            :adding  "Lisää muu kohde"
            (get-in form-data [:name locale] "Ei nimeä"))]]
 
        ;; Close button
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         (when (not editing?)
-          [mui/icon-button
+          [:> IconButton
            {:style    {:margin-left "-0.25em"}
             :on-click #(==> [:lipas.ui.map.events/unselected])}
-           [mui/icon "close"]])]]]
+           [:> Icon "close"]])]]]
 
      ;; Status
-     [mui/grid {:item true :xs 12}
-      [lui/select
+     [:> Grid {:item true :xs 12}
+      [selects/select
        {:items     statuses
         :disabled  read-only?
         :label     (tr :loi/status)
@@ -266,8 +280,8 @@
         :value     (:status form-data)}]]
 
      ;; Loi category
-     [mui/grid {:item true :xs 12}
-      [lui/select
+     [:> Grid {:item true :xs 12}
+      [selects/select
        {:items     loi-cats
         :disabled  read-only?
         :label     (tr :loi/category)
@@ -277,8 +291,8 @@
         :value     loi-cat}]]
 
      ;; Loi type
-     [mui/grid {:item true :xs 12}
-      [lui/autocomplete
+     [:> Grid {:item true :xs 12}
+      [autocompletes/autocomplete
        {:items     (vals (get-in loi-cats [loi-cat :types]))
         :disabled  read-only?
         :label     (tr :loi/type)
@@ -289,31 +303,31 @@
 
      ;; Zoom helper text
      (when (and editing? (not zoomed?))
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2" :color :error}
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "body2" :color :error}
          (tr :map/zoom-closer)]])
 
      ;; Loi type & category helper text
      (when (and editing? (or (not loi-cat) (not loi-type)))
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2" :color :error}
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "body2" :color :error}
          (tr :loi/type-and-category-disclaimer)]])
 
      ;; Add to map button
      (when (and editing? (not geoms))
        (let [disabled? (or (not loi-cat) (not loi-type) (not zoomed?))]
-         [mui/grid {:item true}
-          [mui/button
+         [:> Grid {:item true}
+          [:> Button
            {:disabled disabled?
             :color    "secondary"
             :variant  "contained"
             :on-click #(==> [:lipas.ui.map.events/start-adding-geom geom-type])}
-           [mui/icon "add_location"]
+           [:> Icon "add_location"]
            (tr :map/add-to-map)]]))
 
      (when (and editing? (not geoms) (#{"Polygon"} geom-type))
-       [mui/grid {:item true}
-        [mui/button
+       [:> Grid {:item true}
+        [:> Button
          {:color    "secondary"
           :variant  "contained"
           :on-click #(==> [::map-events/toggle-import-dialog])}
@@ -324,16 +338,16 @@
        (into [:<>]
              (for [[k {:keys [field] :as v}] loi-props]
                (let [field-type (-> v :field :type)]
-                 [mui/grid {:item true :xs 12}
+                 [:> Grid {:item true :xs 12}
                   (condp = field-type
-                    "checkbox" [lui/checkbox
+                    "checkbox" [checkboxes/checkbox
                                 {:disabled  read-only?
                                  :tooltip   (get-in field [:description locale])
                                  :value     (get form-data k)
                                  :label     (get-in v [:field :label locale])
                                  :on-change #(==> [::events/edit-loi-field k %])}]
 
-                    "textarea" [lui/text-field
+                    "textarea" [text-fields/text-field
                                 {:fullWidth   true
                                  :multiline   true
                                  :disabled    read-only?
@@ -353,7 +367,7 @@
                                :on-change   #(==> [::events/edit-loi-field k %])
                                :value       (->> (get-in form-data [k]))}]
 
-                    "select" [lui/select
+                    "select" [selects/select
                               {:disabled    read-only?
                                :deselect?   true
                                :items       (:opts field)
@@ -365,7 +379,7 @@
                                :value       (get-in form-data [k])}]
 
                     ;; Fallback
-                    [lui/text-field
+                    [text-fields/text-field
                      {:fullWidth   true
                       :disabled    read-only?
                       :value       (get-in form-data [k locale])
@@ -374,7 +388,7 @@
                       :label       (get-in v [:field :label locale])}])]))))
 
      ;; Landing bay for floating controls
-     [mui/grid {:item true :xs 12 :style {:height "4em"}}]]))
+     [:> Grid {:item true :xs 12 :style {:height "4em"}}]]))
 
 (defn delete-dialog
   [{:keys [tr loi on-close]}]
@@ -384,7 +398,7 @@
           data     loi
           statuses (<== [::subs/delete-statuses])]
 
-      [lui/dialog
+      [dialogs/dialog
        {:title         (tr :lipas.sports-site/delete (get-in data [:name locale]))
         :cancel-label  (tr :actions/cancel)
         :on-close      on-close
@@ -394,9 +408,9 @@
                          (on-close))
         :save-label    (tr :actions/delete)}
 
-       [mui/grid {:container true :spacing 2}
-        [mui/grid {:item true :xs 12}
-         [lui/select
+       [:> Grid {:container true :spacing 2}
+        [:> Grid {:item true :xs 12}
+         [selects/select
           {:label     (tr :lipas.sports-site/delete-reason)
            :required  true
            :value     @status
@@ -406,8 +420,8 @@
            :label-fn  (comp locale second)}]]
 
         (when (= "out-of-service-permanently" @status)
-          [mui/grid {:item true :xs 12}
-           [lui/year-selector
+          [:> Grid {:item true :xs 12}
+           [selects/year-selector
             {:label     (tr :time/year)
              :value     @year
              :on-change #(reset! year %)}]])]])))
@@ -424,15 +438,15 @@
           geoms        (<== [::subs/geoms])]
       [:<>
 
-       [mui/tabs
+       [:> Tabs
         {:style          {:margin-top "0.5em"}
          :value          (name locale)
          :indicator-color "primary"
          :text-color     "inherit"
          :on-change      #(==> [:lipas.ui.events/set-translator (keyword %2)])}
-        [mui/tab {:value "fi" :label "Suomi"}]
-        [mui/tab {:value "se" :label "Svenska"}]
-        [mui/tab {:value "en" :label "English"}]]
+        [:> Tab {:value "fi" :label "Suomi"}]
+        [:> Tab {:value "se" :label "Svenska"}]
+        [:> Tab {:value "en" :label "English"}]]
 
        [form
         {:tr         tr
@@ -446,12 +460,12 @@
            :loi      edit-data
            :on-close #(reset! delete-dialog-open? false)}])
 
-       [lui/floating-container
+       [layouts/floating-container
         {:bottom 0 :background-color "transparent"}
-        [mui/grid {:container true :spacing 1 :align-items "center" :style {:padding "0.5em"}}
+        [:> Grid {:container true :spacing 1 :align-items "center" :style {:padding "0.5em"}}
 
          (when (and logged-in? (= :display view-mode))
-           [mui/grid {:item true}
+           [:> Grid {:item true}
             [buttons/edit-button
              {:color    "secondary"
               :disabled false
@@ -460,7 +474,7 @@
               :tooltip  (tr :actions/edit)}]])
 
          (when (and  logged-in? (#{:editing :adding} view-mode))
-           [mui/grid {:item true}
+           [:> Grid {:item true}
             [buttons/save-button
              {:color    "secondary"
               :disabled (not edits-valid?)
@@ -468,13 +482,13 @@
               :tooltip  (tr :actions/save)}]])
 
          (when (and logged-in? (#{:editing :adding} view-mode))
-           [mui/grid {:item true}
+           [:> Grid {:item true}
             [buttons/discard-button
              {:disabled false
               :on-click #(==> [::events/discard-edits])}]])
 
          (when (and logged-in? (#{:display} view-mode))
-           [mui/grid {:item true}
+           [:> Grid {:item true}
             [buttons/delete-button
              {:disabled false
               :on-click #(reset! delete-dialog-open? true)

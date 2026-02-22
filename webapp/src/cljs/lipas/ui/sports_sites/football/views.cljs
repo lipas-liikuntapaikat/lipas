@@ -1,6 +1,11 @@
 (ns lipas.ui.sports-sites.football.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+  (:require [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.forms :as forms]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.football.events]
             [lipas.ui.sports-sites.football.subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -47,9 +52,9 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :pool)
         locale    (tr)]
-    [mui/form-group
+    [:> FormGroup
      ;; Pool type
-     [lui/select
+     [selects/select
       {:deselect? true
        :label     (tr :general/type)
        :value     (:type data)
@@ -61,7 +66,7 @@
        :on-change #(set-field :type %)}]
 
      ;; Structure
-     #_[lui/select
+     #_[selects/select
         {:label     (tr :general/structure)
          :deselect? true
          :value     (:structure data)
@@ -71,13 +76,13 @@
          :on-change #(set-field :structure %)}]
 
      ;; Outdoor pool?
-     #_[lui/checkbox
+     #_[checkboxes/checkbox
         {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
          :value     (:outdoor-pool? data)
          :on-change #(set-field :outdoor-pool? %)}]
 
      ;; Length m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
@@ -86,7 +91,7 @@
        :on-change #(set-field :length-m %)}]
 
      ;; Width m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/width-m)
        :adornment (tr :physical-units/m)
@@ -95,7 +100,7 @@
        :on-change #(set-field :width-m %)}]
 
      ;; Area m2
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     "Varoalue 1"
        #_#_:adornment (tr :physical-units/m2)
@@ -104,7 +109,7 @@
        :on-change #(set-field :area-m2 %)}]
 
      ;; Depth min m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     "Varoalue 2"
        :adornment (tr :physical-units/m)
@@ -113,7 +118,7 @@
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     "Varoalue 3"
        :adornment (tr :physical-units/m)
@@ -122,7 +127,7 @@
        :on-change #(set-field :depth-max-m %)}]
 
      ;; Temperature c
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     "Varoalue 4"
        #_#_:adornment (tr :physical-units/celsius)
@@ -131,7 +136,7 @@
        :on-change #(set-field :temperature-c %)}]
 
      ;; Volume m3
-     #_[lui/text-field
+     #_[text-fields/text-field
         {:type      "number"
          :label     (tr :dimensions/volume-m3)
          :adornment (tr :physical-units/m3)
@@ -140,7 +145,7 @@
          :on-change #(set-field :volume-m3 %)}]
 
      ;; Accessibility features
-     #_[lui/multi-select
+     #_[selects/multi-select
         {:label     (tr :lipas.swimming-pool.pool/accessibility)
          :items     accessibility
          :value     (:accessibility data)
@@ -153,7 +158,7 @@
         reset  #(==> [::reset-dialog :pool])
         close  #(==> [::toggle-dialog :pool])
         valid? (constantly true)]
-    [lui/dialog {:title         (if (:id data)
+    [dialogs/dialog {:title         (if (:id data)
                                   "Muokkaa"
                                   "Lisää")
                  :save-label    (tr :actions/save)
@@ -184,7 +189,7 @@
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   (let [localize (partial utils/localize-field tr)]
-    [lui/form-table
+    [tables/form-table
      {:headers         (make-headers tr)
       :items
       (->> (vals items)
@@ -203,7 +208,7 @@
       :on-delete       #(==> [::remove-pool lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
-  [lui/table {:headers (make-headers tr)
+  [tables/table {:headers (make-headers tr)
               :items   (sort-by :length-m utils/reverse-cmp items)
               :key-fn  #(gensym)}])
 
@@ -235,14 +240,14 @@
 
 (defn circumstances-form
   [{:keys [tr read-only? on-change display-data edit-data]}]
-  [lui/form
+  [forms/form
    {:read-only? read-only?}
 
    ;; National league teams who use the facility
    {:label "Seura"
     :value (-> display-data :teams-using)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/teams-using
       #_#_:adornment (tr :duration/month)
@@ -264,7 +269,7 @@
    {:label "Kentän pituus (m)"
     :value (-> display-data :field-length-m)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/field-length-m
       #_#_:adornment "m"
@@ -275,7 +280,7 @@
    {:label "Kentän leveys (m)"
     :value (-> display-data :field-width-m)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/field-width-m
       #_#_:adornment "m"
@@ -286,7 +291,7 @@
    {:label "Kentän minimikorkeus (m)"
     :value (-> display-data :field-minimum-height-m)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          common-schema/number
       #_#_:adornment "m"
@@ -297,7 +302,7 @@
    {:label "Pintamateriaali"
     :value (-> display-data :field-minimum-height-m)
     :form-field
-    [lui/select
+    [selects/select
      {:items     [{:label "Tekonurmi" :value "parquet"}
                   {:label "Hiekka" :value "carpet"}
                   {:label "Jotain muuta" :value "clay"}]
@@ -307,7 +312,7 @@
    {:label "Päällysteen asennusvuosi"
     :value (-> display-data :field-surface-material-bounce-properties)
     :form-field
-    [lui/select
+    [selects/select
      {:items     (range 1900 2024)
       :label-fn  identity
       :value-fn  identity
@@ -318,7 +323,7 @@
    {:label "Pintamateriaalin merkki"
     :value (-> display-data :field-surface-material-brand)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          fields-schema/field-name
       #_#_:adornment (tr :units/hours-per-day)
@@ -329,7 +334,7 @@
    {:label "Valaistus, kulma 1/1 (lux)"
     :value (-> display-data :lighting-corner-1-1-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -340,7 +345,7 @@
    {:label "Valaistus, kulma 1/2 (lux)"
     :value (-> display-data :lighting-corner-1-2-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -351,7 +356,7 @@
    {:label "Valaistus, maali 1 (lux)"
     :value (-> display-data :lighting-goal-1-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -362,7 +367,7 @@
    {:label "Valaistus, keskipiste (lux)"
     :value (-> display-data :lighting-center-point-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -373,7 +378,7 @@
    {:label "Valaistus, kulma 2/1 (lux)"
     :value (-> display-data :lighting-corner-2-1-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -384,7 +389,7 @@
    {:label "Valaistus, kulma 2/2 (lux)"
     :value (-> display-data :lighting-corner-2-2-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -395,7 +400,7 @@
    {:label "Valaistus, maali 2 (lux)"
     :value (-> display-data :lighting-goal-2-lux)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/lighting-lux
       #_#_:adornment "m"
@@ -406,7 +411,7 @@
    {:label "Pukuhuoneiden määrä"
     :value (-> display-data :dressing-rooms-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/locker-rooms-count
       #_#_:adornment "m"
@@ -417,7 +422,7 @@
    {:label "Pukuhuoneiden pinta-ala (m²)"
     :value (-> display-data :dressing-rooms-surface-area-m2)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/locker-room-surface-area-m2
       #_#_:adornment "m"
@@ -428,7 +433,7 @@
    {:label "Suihkujen määrä pukuhuoneissa"
     :value (-> display-data :dressing-room-showers-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/showers-count
       #_#_:adornment "m"
@@ -439,7 +444,7 @@
    {:label "Vessojen määrä pukuhuoneissa"
     :value (-> display-data :dressing-room-toilets-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/toilets-count
       #_#_:adornment "m"
@@ -450,7 +455,7 @@
    {:label "Saunojen lukumäärä"
     :value (-> display-data :saunas-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/saunas-count
       #_#_:adornment "m"
@@ -461,7 +466,7 @@
    {:label "Erotuomareille oma lukittava suihkullinen pukuhuone"
     :value (-> display-data :referee-dressing-room?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :referee-dressing-room?)
       :on-change     #(on-change :referee-dressing-room? %)}]}
@@ -470,7 +475,7 @@
    {:label "Erityiset huomiot pukuhuoneiden laadusta"
     :value (-> display-data :dressing-room-quality-info)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/locker-room-quality-comment
       #_#_:adornment (tr :duration/month)
@@ -481,7 +486,7 @@
    {:label "Defibrillaattori"
     :value (-> display-data :defibrillator?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :defibrillator?)
       :on-change     #(on-change :defibrillator? %)}]}
@@ -490,7 +495,7 @@
    {:label "Paarit"
     :value (-> display-data :stretcher?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :stretcher?)
       :on-change     #(on-change :stretcher? %)}]}
@@ -499,7 +504,7 @@
    {:label "Muita huomioita ensiapuvalmiudesta"
     :value (-> display-data :first-aid-info)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/first-aid-comment
       #_#_:adornment (tr :duration/month)
@@ -510,7 +515,7 @@
    {:label "Tulostaulujen määrä"
     :value (-> display-data :scoreboard-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/scoreboard-count
       #_#_:adornment "m"
@@ -521,7 +526,7 @@
    {:label "Tulostaulu näkyy vaihtopenkeille"
     :value (-> display-data :scoreboard-visible-to-benches?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :scoreboard-visible-to-benches?)
       :on-change     #(on-change :scoreboard-visible-to-benches? %)}]}
@@ -530,7 +535,7 @@
    {:label "Tulostaulu näkyy toimitsijapöydälle"
     :value (-> display-data :scoreboard-visible-to-officials?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :scoreboard-visible-to-officials?)
       :on-change     #(on-change :scoreboard-visible-to-officials? %)}]}
@@ -539,7 +544,7 @@
    {:label "Oheisharjoittelu / sisälämmittelytila"
     :value (-> display-data :side-training-space?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :side-training-space?)
       :on-change     #(on-change :side-training-space? %)}]}
@@ -548,7 +553,7 @@
    {:label "Kuntosali"
     :value (-> display-data :gym?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :gym?)
       :on-change     #(on-change :gym? %)}]}
@@ -557,7 +562,7 @@
    {:label "Yleisön WC-tilojen määrä"
     :value (-> display-data :audience-toilets-count)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/audience-toilets-count
       #_#_:adornment "m"
@@ -568,7 +573,7 @@
    {:label "VIP-tilat"
     :value (-> display-data :vip-area?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :vip-area?)
       :on-change     #(on-change :vip-area? %)}]}
@@ -577,7 +582,7 @@
    {:label "Lisätietoja VIP-tiloista"
     :value (-> display-data :vip-area-info)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/vip-area-comment
       #_#_:adornment (tr :duration/month)
@@ -588,7 +593,7 @@
    {:label "Katsomokapasiteetti yhteensä"
     :value (-> display-data :stand-capacity-person)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/capacity-person
       #_#_:adornment "m"
@@ -599,7 +604,7 @@
    {:label "Istumapaikkojen lukumäärä"
     :value (-> display-data :seat-capacity-person)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/capacity-person
       #_#_:adornment "m"
@@ -610,7 +615,7 @@
    {:label "Seisomapaikkojen lukumäärä"
     :value (-> display-data :stand-capacity-person)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/capacity-person
       #_#_:adornment "m"
@@ -622,7 +627,7 @@
    {:label "Invapaikat lukumäärä"
     :value (-> display-data :disability-capacity-person)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          fields-schema/capacity-person
       #_#_:adornment "m"
@@ -636,7 +641,7 @@
    {:label "Kahvio-/ravintolatilojen asiakaspaikat"
     :value (-> display-data :cafe-and-restaurant-capacity-person)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/cafeteria-and-restaurant-capacity-person
       #_#_:adornment "m"
@@ -647,7 +652,7 @@
    {:label "Ravintoloitsijan yhteystiedot"
     :value (-> display-data :restaurant-contact-info)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/restaurateur-contact-info
       #_#_:adornment (tr :duration/month)
@@ -658,7 +663,7 @@
    {:label "Onko kahviossa/ravintolassa yksinoikeudet eri tuotteille"
     :value (-> display-data :cafe-or-restaurant-has-exclusive-rights-for-products?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :cafe-or-restaurant-has-exclusive-rights-for-products?)
       :on-change     #(on-change :cafe-or-restaurant-has-exclusive-rights-for-products? %)}]}
@@ -667,7 +672,7 @@
    {:label "Kokoustilojen määrä"
     :value (-> display-data :conference-space-quantity)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/conference-space-quantity
       #_#_:adornment "m"
@@ -678,7 +683,7 @@
    {:label "Tila lehdistötilaisuudelle"
     :value (-> display-data :press-conference-space?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :press-conference-space?)
       :on-change     #(on-change :press-conference-space? %)}]}
@@ -687,7 +692,7 @@
    {:label "Lipunmyyntioperaattori (yksinoikeus)"
     :value (-> display-data :ticket-sales-operatoor)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "text"
       :spec          circumstances-schema/ticket-sales-operator
       #_#_:adornment (tr :duration/month)
@@ -698,7 +703,7 @@
    {:label "Pysäköintipaikkojen määrä hallin pihassa"
     :value (-> display-data :car-park-capacity)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/car-parking-capacity
       #_#_:adornment "m"
@@ -709,7 +714,7 @@
    {:label "Bussille varattujen pysäköintipaikkojen määrä"
     :value (-> display-data :bus-park-capacity)
     :form-field
-    [lui/text-field
+    [text-fields/text-field
      {:type          "number"
       :spec          circumstances-schema/bus-park-capacity
       #_#_:adornment "m"
@@ -720,7 +725,7 @@
    {:label "Pysäköinti on..."
     :value (-> display-data :car-park-economics-model)
     :form-field
-    [lui/select
+    [selects/select
      {:items     [{:label "Maksullinen" :value "paid"}
                   {:label "Maksuton" :value "free"}]
       :value     (-> edit-data :car-park-economics-model)
@@ -730,7 +735,7 @@
    {:label "Kamerat"
     :value (-> display-data :fixed-cameras?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :fixed-cameras?)
       :on-change     #(on-change :fixed-cameras? %)}]}
@@ -739,7 +744,7 @@
    {:label "Onko lähetysautolle paikka"
     :value (-> display-data :broadcast-car-park?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :broadcast-car-park?)
       :on-change     #(on-change :broadcast-car-park? %)}]}
@@ -748,7 +753,7 @@
    {:label "WiFi"
     :value (-> display-data :wifi-available?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :wifi-available?)
       :on-change     #(on-change :wifi-available? %)}]}
@@ -757,7 +762,7 @@
    {:label "LED-pintoja mainoksille"
     :value (-> display-data :led-screens-or-surfaces-for-ads?)
     :form-field
-    [lui/checkbox
+    [checkboxes/checkbox
      {#_#_:adornment "m"
       :value         (-> edit-data :led-screens-or-surfaces-for-ads?)
       :on-change     #(on-change :led-screens-or-surfaces-for-ads? %)}]}

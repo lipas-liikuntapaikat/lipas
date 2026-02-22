@@ -1,7 +1,9 @@
 (ns lipas.ui.stats.city.views
   (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.stats.city.events :as events]
             [lipas.ui.stats.city.subs :as subs]
             [lipas.ui.stats.common :as common]
@@ -10,7 +12,7 @@
 (defn finance-metrics-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/finance-metrics])]
-    [lui/multi-select
+    [selects/multi-select
      {:items        metrics
       :value        value
       :style        common/select-style
@@ -22,7 +24,7 @@
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         units  (<== [::subs/finance-units])]
-    [lui/select
+    [selects/select
      {:items     units
       :value     value
       :style     common/select-style
@@ -34,7 +36,7 @@
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/finance-city-services])]
-    [lui/select
+    [selects/select
      {:items     services
       :value     value
       :style     common/select-style
@@ -44,13 +46,13 @@
       :on-change on-change}]))
 
 (defn years-selector [props]
-  [lui/years-selector (merge props {:style common/select-style})])
+  [selects/years-selector (merge props {:style common/select-style})])
 
 (defn city-selector
   "Includes also abolished cities."
   [props]
   (let [cities (<== [:lipas.ui.stats.subs/cities])]
-    [lui/city-selector-single (assoc props :cities cities)]))
+    [selects/city-selector-single (assoc props :cities cities)]))
 
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])
@@ -64,78 +66,78 @@
         labels       (<== [::subs/finance-labels])
         headers      (<== [::subs/finance-headers])]
 
-    [mui/grid {:container true :spacing 4}
+    [:> Grid {:container true :spacing 4}
 
-     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h4"}
+     [:> Grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
+      [:> Typography {:variant "h4"}
        (tr :stats/city-stats)]]
 
      ;; City selector
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [city-selector
        {:tr        tr
         :value     (first cities)
         :on-change #(==> [::events/select-cities [%]])}]]
 
      ;; Headline
-     [mui/grid {:item true :xs 12 :style {:margin-top "1em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h5"}
+     [:> Grid {:item true :xs 12 :style {:margin-top "1em" :margin-bottom "1em"}}
+      [:> Typography {:variant "h5"}
        (tr :stats/finance-stats)]]
 
      ;; Disclaimers
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [common/disclaimer
        {:label (tr :stats/disclaimer-headline)
         :texts [(tr :stats/finance-disclaimer)]}]]
 
      ;; Selectors
-     [mui/grid {:item true}
-      [mui/grid {:container true :spacing 4}
+     [:> Grid {:item true}
+      [:> Grid {:container true :spacing 4}
 
        ;; Unit selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [unit-selector
          {:tr tr :value unit :on-change #(==> [::events/select-finance-unit %])}]]
 
        ;; Metrics selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [finance-metrics-selector
          {:tr        tr
           :value     metrics
           :on-change #(==> [::events/select-finance-metrics %])}]]
 
        ;; City service selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [service-selector
          {:tr        tr
           :value     service
           :on-change #(==> [::events/select-finance-city-service %])}]]
 
        ;; Years selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [years-selector
          {:tr        tr
           :years     (range 2000 utils/this-year)
           :value     years
           :on-change #(==> [::events/select-finance-years %])}]]]]
 
-     [mui/grid {:container true :item true :xs 12 :spacing 4}
+     [:> Grid {:container true :item true :xs 12 :spacing 4}
 
       ;; Tabs for choosing between chart/table views
-      [mui/grid {:item true}
+      [:> Grid {:item true}
        [common/view-tabs
         {:value     view
          :on-change #(==> [::events/select-finance-view %2])}]]
 
       ;; Download Excel button
-      [mui/grid {:item true}
+      [:> Grid {:item true}
        [common/download-excel-button
         {:tr       tr
          :on-click #(==> [::events/download-finance-excel finance-data headers])}]]]
 
      ;; Chart
      (when (= view "chart")
-       [mui/grid {:item true
+       [:> Grid {:item true
                   :xs 12
                   :sx {:width 0}}
         [charts/city-finance-chart
@@ -143,6 +145,6 @@
 
      ;; Table
      (when (= view "table")
-       [mui/grid {:item true :xs 12}
-        [lui/table
+       [:> Grid {:item true :xs 12}
+        [tables/table
          {:headers headers :items finance-data}]])]))

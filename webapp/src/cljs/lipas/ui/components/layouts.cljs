@@ -1,5 +1,14 @@
 (ns lipas.ui.components.layouts
-  (:require [lipas.ui.mui :as mui]
+  (:require ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.mui :as mui]
             [reagent-dev-tools.state :as dev-state]
             [reagent.core :as r]))
 
@@ -28,20 +37,20 @@
 
 (defn card
   [{:keys [title xs md lg] :or {xs 12 md 6}} & content]
-  [mui/grid {:item true :xs xs :md md :lg lg}
-   [mui/card {:square true :style {:height "100%"}}
-    [mui/card-header {:title title}]
-    (into [mui/card-content] content)]])
+  [:> Grid {:item true :xs xs :md md :lg lg}
+   [:> Card {:square true :style {:height "100%"}}
+    [:> CardHeader {:title title}]
+    (into [:> CardContent] content)]])
 
 (defn expansion-panel
   [{:keys [label label-icon label-color default-expanded style disabled]
     :or   {label-color "inherit" style {:margin-top "1em"} disabled false}}
    & children]
-  [mui/expansion-panel
+  [:> Accordion
    {:default-expanded default-expanded :style style :disabled disabled}
-   [mui/expansion-panel-summary
-    {:expand-icon (r/as-element [mui/icon "expand_more"])}
+   [:> AccordionSummary
+    {:expand-icon (r/as-element [:> Icon "expand_more"])}
     (when label-icon
       [:span {:style {:margin-right "12px"}} label-icon])
-    [mui/typography {:color label-color :variant "button"} label]]
-   (into [mui/expansion-panel-details] children)])
+    [:> Typography {:color label-color :variant "button"} label]]
+   (into [:> AccordionDetails] children)])

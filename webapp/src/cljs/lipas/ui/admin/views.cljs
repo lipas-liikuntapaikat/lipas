@@ -22,8 +22,37 @@
             [malli.core :as m]
             [lipas.ui.admin.events :as events]
             [lipas.ui.admin.subs :as subs]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :as ac]
+            ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/Grid$default" :as Grid2]
+            ["@mui/material/LinearProgress$default" :as LinearProgress]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/ToggleButton$default" :as ToggleButton]
+            ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
+            ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.mui :as mui]
             [lipas.ui.subs :as ui-subs]
             [lipas.ui.user.subs :as user-subs]
@@ -39,21 +68,21 @@
         variant (<== [::subs/selected-magic-link-variant])
         user (<== [::subs/editing-user])]
 
-    [mui/dialog {:open open?}
-     [mui/dialog-title
+    [:> Dialog {:open open?}
+     [:> DialogTitle
       (tr :lipas.admin/send-magic-link (:email user))]
-     [mui/dialog-content
-      [mui/form-group
-       [lui/select
+     [:> DialogContent
+      [:> FormGroup
+       [selects/select
         {:label (tr :lipas.admin/select-magic-link-template)
          :items variants
          :value variant
          :on-change #(==> [::events/select-magic-link-variant %])}]
-       [mui/button
+       [:> Button
         {:style {:margin-top "1em"}
          :on-click #(==> [::events/send-magic-link user variant])}
         (tr :actions/submit)]
-       [mui/button
+       [:> Button
         {:style {:margin-top "1em"}
          :on-click #(==> [::events/close-magic-link-dialog])}
         (tr :actions/cancel)]]]]))
@@ -293,7 +322,7 @@
                :disabled editing?}
               [:> Icon "delete"]]]])]
 
-        [mui/paper
+        [:> Paper
          {:variant "outlined"
           :sx #js {:p 2 :mt 1}}
          [role-form
@@ -309,14 +338,14 @@
         history (<== [::subs/user-history])
         existing? (some? (:id user))]
 
-    [lui/full-screen-dialog
+    [dialogs/full-screen-dialog
      {:open? (boolean (seq user))
       :title (or (:username user) (:email user))
       :close-label (tr :actions/close)
       :on-close #(==> [::events/set-user-to-edit nil])
       :bottom-actions
       [;; GDPR remove button
-       [mui/button
+       [:> Button
         {:variant "contained"
          :color "secondary"
          :on-click (fn []
@@ -324,72 +353,72 @@
                            "Haluatko varmasti GDPR-poistaa tämän käyttäjän?"
                            (fn []
                              (==> [::events/gdpr-remove-user user]))]))}
-        [mui/icon {:sx #js{:mr 1}} "gpp_bad"]
+        [:> Icon {:sx #js{:mr 1}} "gpp_bad"]
         "GDPR-poista"]
        ;; Archive button
        (when (= "active" (:status user))
-         [mui/button
+         [:> Button
           {:variant "contained"
            :color "secondary"
            :on-click #(==> [::events/update-user-status user "archived"])}
-          [mui/icon {:sx #js{:mr 1}} "archive"]
+          [:> Icon {:sx #js{:mr 1}} "archive"]
           "Arkistoi"])
 
        ;; Restore button
        (when (= "archived" (:status user))
-         [mui/button
+         [:> Button
           {:variant "contained"
            :color "secondary"
            :on-click #(==> [::events/update-user-status user "active"])}
-          [mui/icon {:sx #js{:mr 1}} "restore"]
+          [:> Icon {:sx #js{:mr 1}} "restore"]
           "Palauta"])
 
        ;; Send magic link button
-       [lui/email-button
+       [buttons/email-button
         {:label (tr :lipas.admin/magic-link)
          :disabled (not (m/validate users-schema/new-user-schema user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
 
        ;; Save button
        (when existing?
-         [mui/button
+         [:> Button
           {:variant "contained"
            :color "secondary"
            :on-click #(==> [::events/save-user user])}
-          [mui/icon {:sx #js{:mr 1}} "save"]
+          [:> Icon {:sx #js{:mr 1}} "save"]
           (tr :actions/save)])]}
 
-     [mui/grid {:container true :spacing 1}
+     [:> Grid {:container true :spacing 1}
 
       [magic-link-dialog {:tr tr}]
 
       ;;; Contact info
-      [lui/form-card {:title (tr :lipas.user/contact-info)}
-       [mui/form-group
+      [layouts/card {:title (tr :lipas.user/contact-info)}
+       [:> FormGroup
 
         ;; Email
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/email)
           :value (:email user)
           :on-change #(==> [::events/edit-user [:email] %])
           :disabled existing?}]
 
         ;; Username
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/username)
           :value (:username user)
           :on-change #(==> [::events/edit-user [:username] %])
           :disabled existing?}]
 
         ;; Firstname
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/firstname)
           :value (-> user :user-data :firstname)
           :on-change #(==> [::events/edit-user [:user-data :firstname] %])
           :disabled existing?}]
 
         ;; Lastname
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/lastname)
           :value (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
@@ -400,37 +429,37 @@
 
       ;;; Permissions
       ;; TODO: Replace this with roles management
-      [lui/form-card {:title (str (tr :lipas.user/permissions)
+      [layouts/card {:title (str (tr :lipas.user/permissions)
                                   " " (tr :lipas.user.permissions.roles/permissions-old))}
-       [mui/form-group
+       [:> FormGroup
 
         [permissions-request-card
          {:permissions-request (-> user :user-data :permissions-request)
           :tr tr}]
 
         ;; Admin?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/admin?)
           :value (-> user :permissions :admin?)
           :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
 
         ;; Permission to all types?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/all-types?)
           :value (-> user :permissions :all-types?)
           :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
 
         ;; Permission to all cities?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/all-cities?)
           :value (-> user :permissions :all-cities?)
           :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
 
         ;; Permission to individual spoorts-sites
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items sites
           :label (tr :lipas.user.permissions/sports-sites)
@@ -439,7 +468,7 @@
           :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
 
         ;; Permission to individual types
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items types
           :label (tr :lipas.user.permissions/types)
@@ -448,7 +477,7 @@
           :on-change #(==> [::events/edit-user [:permissions :types] %])}]
 
         ;; Permission to individual cities
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items cities
           :label (tr :lipas.user.permissions/cities)
@@ -457,7 +486,7 @@
           :on-change #(==> [::events/edit-user [:permissions :cities] %])}]
 
         ;; Permission to activities
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items activities
           :label (tr :lipas.user.permissions/activities)
@@ -465,15 +494,15 @@
           :multi? true
           :on-change #(==> [::events/edit-user [:permissions :activities] %])}]
 
-        [mui/button
+        [:> Button
          {:disabled true
           :on-click #(==> [::events/grant-access-to-activity-types
                            (-> user :permissions :activities)])}
          "Anna oikeus aktiviteettien tyyppeihin"]]]
 
       ;;; History
-      [lui/form-card {:title (tr :lipas.user/history)}
-       [lui/table-v2
+      [layouts/card {:title (tr :lipas.user/history)}
+       [tables/table-v2
         {:items history
          :headers
          {:event {:label (tr :general/event)}
@@ -490,38 +519,38 @@
         pick-color (fn [k1 k2 v] (==> [::events/select-color k1 k2 v]))
         types (<== [:lipas.ui.sports-sites.subs/active-types])]
     [:<>
-     [mui/table
-      [mui/table-head
-       [mui/table-row
-        [mui/table-cell "Type-code"]
-        [mui/table-cell "Type-name"]
-        [mui/table-cell "Geometry"]
-        [mui/table-cell "Old symbol"]
-        [mui/table-cell "New symbol"]
-        [mui/table-cell "Old-fill"]
-        [mui/table-cell "New-fill"]
-        [mui/table-cell "Old-stroke"]
-        [mui/table-cell "New-stroke"]]]
+     [:> Table
+      [:> TableHead
+       [:> TableRow
+        [:> TableCell "Type-code"]
+        [:> TableCell "Type-name"]
+        [:> TableCell "Geometry"]
+        [:> TableCell "Old symbol"]
+        [:> TableCell "New symbol"]
+        [:> TableCell "Old-fill"]
+        [:> TableCell "New-fill"]
+        [:> TableCell "Old-stroke"]
+        [:> TableCell "New-stroke"]]]
 
       (into
-       [mui/table-body]
+       [:> TableBody]
        (for [[type-code type] (sort-by first types)
              :let [shape (-> type-code types :geometry-type)
                    fill (-> type-code styles/symbols :fill :color)
                    stroke (-> type-code styles/symbols :stroke :color)]]
-         [mui/table-row
-          [mui/table-cell type-code]
-          [mui/table-cell (-> type :name :fi)]
-          [mui/table-cell shape]
+         [:> TableRow
+          [:> TableCell type-code]
+          [:> TableCell (-> type :name :fi)]
+          [:> TableCell shape]
 
            ;; Old symbol
-          [mui/table-cell (condp = shape
+          [:> TableCell (condp = shape
                             "Point" "Circle"
                             shape)]
 
            ;; New symbol
-          [mui/table-cell (condp = shape
-                            "Point" [lui/select
+          [:> TableCell (condp = shape
+                            "Point" [selects/select
                                      {:items [{:label "Circle" :value "circle"}
                                               {:label "Square" :value "square"}]
                                       :value (or (-> type-code new-colors :symbol)
@@ -530,51 +559,51 @@
                             shape)]
 
            ;; Old fill
-          [mui/table-cell
+          [:> TableCell
            [color-picker {:value fill :on-change #()}]]
 
            ;; New fill
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
+          [:> TableCell
+           [:> Grid {:container true :wrap "nowrap"}
+            [:> Grid {:item true}
              [color-picker
               {:value (-> (new-colors type-code) :fill)
                :on-change (partial pick-color type-code :fill)}]]
-            [mui/grid {:item true}
-             [mui/button
+            [:> Grid {:item true}
+             [:> Button
               {:size :small :on-click #(pick-color type-code :fill fill)}
               "reset"]]]]
 
            ;; Old stroke
-          [mui/table-cell
+          [:> TableCell
            [color-picker {:value stroke :on-change #()}]]
 
            ;; New stroke
-          [mui/table-cell
-           [mui/grid {:container true :wrap "nowrap"}
-            [mui/grid {:item true}
+          [:> TableCell
+           [:> Grid {:container true :wrap "nowrap"}
+            [:> Grid {:item true}
              [color-picker
               {:value (-> (new-colors type-code) :stroke)
                :on-change (partial pick-color type-code :stroke)}]]
-            [mui/grid {:item true}
-             [mui/button
+            [:> Grid {:item true}
+             [:> Button
               {:size :small :on-click #(pick-color type-code :stroke stroke)}
               "reset"]]]]]))]
-     [mui/fab
+     [:> Fab
       {:style {:position "sticky" :bottom "1em" :left "1em"}
        :variant "extended"
        :color "secondary"
        :on-click #(==> [::events/download-new-colors-excel])}
-      [mui/icon "save"]
+      [:> Icon "save"]
       "Lataa"]]))
 
 (defn type-codes-view []
   (let [types (<== [:lipas.ui.sports-sites.subs/type-table])]
-    [mui/card {:square true}
-     [mui/card-content
-      [mui/typography {:variant "h5"}
+    [:> Card {:square true}
+     [:> CardContent
+      [:> Typography {:variant "h5"}
        "Tyyppikoodit"]
-      [lui/table
+      [tables/table
        {:hide-action-btn? true
         :headers
         [[:type-code "Tyyppikoodi"]
@@ -592,28 +621,28 @@
         status (<== [::subs/users-status])
         users (<== [::subs/users-list])
         users-filter (<== [::subs/users-filter])]
-    [mui/card {:square true}
-     [mui/card-content
-      [mui/typography {:variant "h5"}
+    [:> Card {:square true}
+     [:> CardContent
+      [:> Typography {:variant "h5"}
        (tr :lipas.admin/users)]
 
       ;; Full-screen user dialog
       [user-dialog tr]
 
-      [mui/grid {:container true :spacing 4}
+      [:> Grid {:container true :spacing 4}
 
        ;; Add user button
-       [mui/grid {:item true :style {:flex-grow 1}}
-        [mui/fab
+       [:> Grid {:item true :style {:flex-grow 1}}
+        [:> Fab
          {:color "secondary"
           :size "small"
           :style {:margin-top "1em"}
           :on-click #(==> [::events/edit-user [:email] "fix@me.com"])}
-         [mui/icon "add"]]]
+         [:> Icon "add"]]]
 
        ;; Status selector
-       [mui/grid {:item true}
-        [lui/select
+       [:> Grid {:item true}
+        [selects/select
          {:style {:width "150px"}
           :label "Status"
           :value status
@@ -623,14 +652,14 @@
           :on-change #(==> [::events/select-status %])}]]
 
        ;; Users filter
-       [mui/grid {:item true}
-        [lui/text-field
+       [:> Grid {:item true}
+        [text-fields/text-field
          {:label (tr :search/search)
           :on-change #(==> [::events/filter-users %])
           :value users-filter}]]]
 
       ;; Users table
-      [lui/table
+      [tables/table
        {:headers
         [[:email (tr :lipas.user/email)]
          [:firstname (tr :lipas.user/firstname)]
@@ -645,7 +674,7 @@
         org-id @(rf/subscribe [::subs/add-user-to-org-dialog-org-id])
         email @(rf/subscribe [::subs/add-user-to-org-email])
         role @(rf/subscribe [::subs/add-user-to-org-role])]
-    [lui/dialog
+    [dialogs/dialog
      {:open? open?
       :title (tr :org.form/add-user)
       :on-close #(rf/dispatch [::events/close-add-user-to-org-dialog])
@@ -654,13 +683,13 @@
       :cancel-label (tr :actions/cancel)
       :on-save #(rf/dispatch [::events/add-user-to-org email role org-id])}
 
-     [mui/form-group
-      [lui/text-field
+     [:> FormGroup
+      [text-fields/text-field
        {:label (tr :lipas.user/email)
         :value email
         :required true
         :on-change #(rf/dispatch [::events/set-add-user-to-org-email %])}]
-      [lui/select
+      [selects/select
        {:label (tr :lipas.org/org-role)
         :value role
         :required true
@@ -679,47 +708,47 @@
                        (fn []
                          (rf/dispatch [::events/set-org-to-edit nil])))
                      #js [edit-id])
-    [lui/full-screen-dialog
+    [dialogs/full-screen-dialog
      {:open? (boolean edit-id)
       :title (or (:name org)
                  "-")
       :close-label (tr :actions/close)
       :on-close (fn [] (rfe/set-query #(dissoc % :edit-id)))
       :bottom-actions
-      [[mui/button
+      [[:> Button
         {:variant "contained"
          :color "secondary"
          :on-click #(rf/dispatch [::events/save-org org])}
-        [mui/icon {:sx {:mr 1}} "save"]
+        [:> Icon {:sx {:mr 1}} "save"]
         (tr :actions/save)]]}
 
      [add-user-to-org-dialog tr]
 
      ;; Reuse lipas.ui.org.views
-     [mui/grid {:container true :spacing 1}
-      [lui/form-card {:title (tr :org.form/details)
+     [:> Grid {:container true :spacing 1}
+      [layouts/card {:title (tr :org.form/details)
                       :xs 12
                       :md 12
                       :lg 12}
-       [mui/form-group
-        [lui/text-field
+       [:> FormGroup
+        [text-fields/text-field
          {:label (tr :lipas.org/name)
           :value (:name org)
           :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.org/phone)
           :value (:phone (:data org))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]]
 
        ;; TODO: Ptv data fields
 
-      [lui/form-card {:title (tr :org.form/users)
+      [layouts/card {:title (tr :org.form/users)
                       :xs 12
                       :md 12
                       :lg 12}
-       [mui/grid {:container true :spacing 2 :align-items "flex-end"}
-        [mui/grid {:item true :xs true}
-         [lui/table
+       [:> Grid {:container true :spacing 2 :align-items "flex-end"}
+        [:> Grid {:item true :xs true}
+         [tables/table
           {:headers
            [[:email (tr :lipas.user/email)]
             [:username (tr :lipas.user/username)]
@@ -727,80 +756,80 @@
            :sort-fn :email
            :items org-users
            :hide-action-btn? true}]]
-        [mui/grid {:item true}
-         [mui/fab
+        [:> Grid {:item true}
+         [:> Fab
           {:color "secondary"
            :size "small"
            :on-click #(rf/dispatch [::events/open-add-user-to-org-dialog edit-id])}
-          [mui/icon "person_add"]]]]]]]))
+          [:> Icon "person_add"]]]]]]]))
 
 (defn job-details-dialog [tr]
   (let [open? (<== [::subs/job-details-dialog-open?])
         job-id (<== [::subs/selected-job-id])
         job (<== [::subs/selected-job-details job-id])
         reprocessing? (<== [::subs/reprocessing?])]
-    [mui/dialog
+    [:> Dialog
      {:open open?
       :on-close #(==> [::events/close-job-details-dialog])
       :max-width "md"
       :full-width true}
-     [mui/dialog-title "Job Details"
-      [mui/icon-button
+     [:> DialogTitle "Job Details"
+      [:> IconButton
        {:on-click #(==> [::events/close-job-details-dialog])
         :sx #js{:position "absolute" :right 8 :top 8}}
-       [mui/icon "close"]]]
+       [:> Icon "close"]]]
 
      (when job
-       [mui/dialog-content
+       [:> DialogContent
         ;; Basic info
-        [mui/typography {:variant "h6" :gutterBottom true} "Basic Information"]
-        [mui/grid2 {:container true :spacing 2 :sx #js{:mb 3}}
-         [mui/grid2 {:size 6}
-          [mui/typography {:color "textSecondary"} "ID"]
-          [mui/typography (str (:id job))]]
-         [mui/grid2 {:size 6}
-          [mui/typography {:color "textSecondary"} "Job Type"]
-          [mui/typography (get-in job [:original-job :type] "Unknown")]]
-         [mui/grid2 {:size 6}
-          [mui/typography {:color "textSecondary"} "Failed At"]
-          [mui/typography (let [died-at (:died-at job)]
+        [:> Typography {:variant "h6" :gutterBottom true} "Basic Information"]
+        [:> Grid2 {:container true :spacing 2 :sx #js{:mb 3}}
+         [:> Grid2 {:size 6}
+          [:> Typography {:color "textSecondary"} "ID"]
+          [:> Typography (str (:id job))]]
+         [:> Grid2 {:size 6}
+          [:> Typography {:color "textSecondary"} "Job Type"]
+          [:> Typography (get-in job [:original-job :type] "Unknown")]]
+         [:> Grid2 {:size 6}
+          [:> Typography {:color "textSecondary"} "Failed At"]
+          [:> Typography (let [died-at (:died-at job)]
                             (cond
                               (inst? died-at) (.toLocaleString died-at)
                               (string? died-at) died-at
                               :else (str died-at)))]]
-         [mui/grid2 {:size 6}
-          [mui/typography {:color "textSecondary"} "Status"]
-          [mui/chip {:label (if (:acknowledged job) "Acknowledged" "Unacknowledged")
+         [:> Grid2 {:size 6}
+          [:> Typography {:color "textSecondary"} "Status"]
+          [:> Chip {:label (if (:acknowledged job) "Acknowledged" "Unacknowledged")
                      :color (if (:acknowledged job) "default" "warning")
                      :size "small"}]]]
 
         ;; Error details
-        [mui/typography {:variant "h6" :gutterBottom true} "Error Details"]
-        [mui/paper {:sx #js{:p 2 :mb 3 :bgcolor "#f5f5f5"}}
-         [mui/typography {:variant "body2" :component "pre" :sx #js{:whiteSpace "pre-wrap" :fontFamily "monospace"}}
+        [:> Typography {:variant "h6" :gutterBottom true} "Error Details"]
+        [:> Paper {:sx #js{:p 2 :mb 3 :bgcolor "#f5f5f5"}}
+         [:> Typography {:variant "body2" :component "pre" :sx #js{:whiteSpace "pre-wrap" :fontFamily "monospace"}}
           (:error-message job)]]
 
         ;; Job payload
-        [mui/typography {:variant "h6" :gutterBottom true} "Job Payload"]
-        [mui/paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :overflow "auto"}}
-         [mui/typography {:variant "body2" :component "pre" :sx #js{:fontFamily "monospace"}}
+        [:> Typography {:variant "h6" :gutterBottom true} "Job Payload"]
+        [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5" :overflow "auto"}}
+         [:> Typography {:variant "body2" :component "pre" :sx #js{:fontFamily "monospace"}}
           (js/JSON.stringify (clj->js (:original-job job)) nil 2)]]])
 
-     [mui/dialog-actions
-      [mui/button
+     [:> DialogActions
+      [:> Button
        {:on-click #(==> [::events/close-job-details-dialog])}
        "Close"]
       (when (not (:acknowledged job))
-        [mui/button
+        [:> Button
          {:variant "outlined"
           :on-click #(when (js/confirm "Mark this job as acknowledged?")
                        (==> [::events/acknowledge-single-job (:id job)]))}
          "Acknowledge"])
-      [mui/button
+      [:> Button
        {:variant "contained"
         :color "primary"
         :disabled reprocessing?
-        :start-icon (when reprocessing? (r/as-element [mui/circular-progress {:size 16}]))
+        :start-icon (when reprocessing? (r/as-element [:> CircularProgress {:size 16}]))
         :on-click #(when (js/confirm "Are you sure you want to reprocess this job?")
                      (==> [::events/reprocess-single-job (:id job)]))}
        (if reprocessing? "Reprocessing..." "Reprocess")]]]))
@@ -815,51 +844,51 @@
     [:<>
      ;; Error display
      (when error
-       [mui/alert {:severity "error" :sx #js{:mb 2}}
+       [:> Alert {:severity "error" :sx #js{:mb 2}}
         error])
 
      ;; Loading indicator
      (when loading?
-       [mui/linear-progress {:sx #js{:mb 2}}])
+       [:> LinearProgress {:sx #js{:mb 2}}])
 
      ;; Health Overview Card
      (when health-data
-       [mui/card {:sx #js{:mb 2}}
-        [mui/card-header {:title "Queue Health"}]
-        [mui/card-content
-         [mui/grid2 {:container true :spacing 2}
+       [:> Card {:sx #js{:mb 2}}
+        [:> CardHeader {:title "Queue Health"}]
+        [:> CardContent
+         [:> Grid2 {:container true :spacing 2}
           ;; Pending jobs
-          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-           [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:pending_count health-data) 0) 100) "#ffebee" "#f5f5f5")}}
-            [mui/typography {:variant "h4"} (str (or (:pending_count health-data) 0))]
-            [mui/typography {:color "textSecondary"} "Pending Jobs"]
+          [:> Grid2 {:size 12 :size/sm 6 :size/md 3}
+           [:> Paper {:sx #js{:p 2 :bgcolor (if (> (or (:pending_count health-data) 0) 100) "#ffebee" "#f5f5f5")}}
+            [:> Typography {:variant "h4"} (str (or (:pending_count health-data) 0))]
+            [:> Typography {:color "textSecondary"} "Pending Jobs"]
             (when-let [oldest (:oldest_pending_minutes health-data)]
-              [mui/typography {:variant "caption" :color "textSecondary"}
+              [:> Typography {:variant "caption" :color "textSecondary"}
                (str "Oldest: " oldest " min")])]]
 
           ;; Processing jobs
-          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-           [mui/paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
-            [mui/typography {:variant "h4"} (str (or (:processing_count health-data) 0))]
-            [mui/typography {:color "textSecondary"} "Processing"]
+          [:> Grid2 {:size 12 :size/sm 6 :size/md 3}
+           [:> Paper {:sx #js{:p 2 :bgcolor "#f5f5f5"}}
+            [:> Typography {:variant "h4"} (str (or (:processing_count health-data) 0))]
+            [:> Typography {:color "textSecondary"} "Processing"]
             (when-let [longest (:longest_processing_minutes health-data)]
-              [mui/typography {:variant "caption" :color "textSecondary"}
+              [:> Typography {:variant "caption" :color "textSecondary"}
                (str "Longest: " longest " min")])]]
 
           ;; Failed jobs
-          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
-           [mui/paper {:sx #js{:p 2 :bgcolor (if (> (or (:failed_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
-            [mui/typography {:variant "h4"} (str (or (:failed_count health-data) 0))]
-            [mui/typography {:color "textSecondary"} "Failed"]]]
+          [:> Grid2 {:size 12 :size/sm 6 :size/md 3}
+           [:> Paper {:sx #js{:p 2 :bgcolor (if (> (or (:failed_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
+            [:> Typography {:variant "h4"} (str (or (:failed_count health-data) 0))]
+            [:> Typography {:color "textSecondary"} "Failed"]]]
 
           ;; Dead letter jobs
-          [mui/grid2 {:size 12 :size/sm 6 :size/md 3}
+          [:> Grid2 {:size 12 :size/sm 6 :size/md 3}
            (let [dlq-stats (<== [::subs/dead-letter-stats])
                  unacknowledged (:unacknowledged dlq-stats 0)]
-             [mui/paper {:sx #js{:p 2 :bgcolor (if (> unacknowledged 0) "#ffebee" "#f5f5f5")}}
-              [mui/typography {:variant "h4"} (str unacknowledged)]
-              [mui/typography {:color "textSecondary"} "Unacknowledged DLQ"]
-              [mui/button
+             [:> Paper {:sx #js{:p 2 :bgcolor (if (> unacknowledged 0) "#ffebee" "#f5f5f5")}}
+              [:> Typography {:variant "h4"} (str unacknowledged)]
+              [:> Typography {:color "textSecondary"} "Unacknowledged DLQ"]
+              [:> Button
                {:size "small"
                 :sx #js{:mt 1}
                 :on-click #(==> [::events/select-jobs-sub-tab 1])}
@@ -867,10 +896,10 @@
 
      ;; Performance Metrics
      (when-let [metrics-table-data (<== [::subs/jobs-metrics-table-data])]
-       [mui/card {:sx #js{:mb 2}}
-        [mui/card-header {:title "Performance Metrics"}]
-        [mui/card-content
-         [lui/table
+       [:> Card {:sx #js{:mb 2}}
+        [:> CardHeader {:title "Performance Metrics"}]
+        [:> CardContent
+         [tables/table
           {:headers [[:type "Job Type"]
                      [:status "Status"]
                      [:job_count "Count"]
@@ -882,41 +911,41 @@
 
      ;; Current Stats by Status
      (when-let [current-stats (:current-stats metrics-data)]
-       [mui/card {:sx #js{:mb 2}}
-        [mui/card-header {:title "Current Queue Status"}]
-        [mui/card-content
-         [mui/grid2 {:container true :spacing 2}
+       [:> Card {:sx #js{:mb 2}}
+        [:> CardHeader {:title "Current Queue Status"}]
+        [:> CardContent
+         [:> Grid2 {:container true :spacing 2}
           (for [[status data] current-stats
                 :when data]
-            [mui/grid2 {:key status :size 12 :size/sm 6 :size/md 4}
-             [mui/paper {:sx #js{:p 2}}
-              [mui/typography {:variant "h6"} (if (keyword? status) (name status) (str status))]
-              [mui/typography (str "Count: " (:count data))]
+            [:> Grid2 {:key status :size 12 :size/sm 6 :size/md 4}
+             [:> Paper {:sx #js{:p 2}}
+              [:> Typography {:variant "h6"} (if (keyword? status) (name status) (str status))]
+              [:> Typography (str "Count: " (:count data))]
               (when-let [oldest (:oldest_created_at data)]
-                [mui/typography {:variant "caption" :display "block"}
+                [:> Typography {:variant "caption" :display "block"}
                  (str "Oldest: " oldest)])
               (when-let [oldest-min (:oldest_minutes data)]
-                [mui/typography {:variant "caption"}
+                [:> Typography {:variant "caption"}
                  (str oldest-min " minutes ago")])]])]]])
 
      ;; Job Types Configuration
      (when metrics-data
-       [mui/card
-        [mui/card-header {:title "Job Types Configuration"}]
-        [mui/card-content
-         [mui/grid2 {:container true :spacing 2}
-          [mui/grid2 {:size 12 :size/md 6}
-           [mui/typography {:variant "subtitle1"} "Fast Lane Jobs"]
-           [mui/list {:dense true}
+       [:> Card
+        [:> CardHeader {:title "Job Types Configuration"}]
+        [:> CardContent
+         [:> Grid2 {:container true :spacing 2}
+          [:> Grid2 {:size 12 :size/md 6}
+           [:> Typography {:variant "subtitle1"} "Fast Lane Jobs"]
+           [:> List {:dense true}
             (for [job-type (:fast-job-types metrics-data)]
-              [mui/list-item {:key job-type}
-               [mui/list-item-text job-type]])]]
-          [mui/grid2 {:size 12 :size/md 6}
-           [mui/typography {:variant "subtitle1"} "Slow Lane Jobs"]
-           [mui/list {:dense true}
+              [:> ListItem {:key job-type}
+               [:> ListItemText job-type]])]]
+          [:> Grid2 {:size 12 :size/md 6}
+           [:> Typography {:variant "subtitle1"} "Slow Lane Jobs"]
+           [:> List {:dense true}
             (for [job-type (:slow-job-types metrics-data)]
-              [mui/list-item {:key job-type}
-               [mui/list-item-text job-type]])]]]]])]))
+              [:> ListItem {:key job-type}
+               [:> ListItemText job-type]])]]]]])]))
 
 ;; Dead Letter Queue tab content
 (defn dead-letter-queue-tab []
@@ -937,7 +966,7 @@
      [job-details-dialog tr]
 
      ;; Filter buttons
-     [mui/toggle-button-group
+     [:> ToggleButtonGroup
       {:value filter-value
        :exclusive true
        :on-change (fn [_ new-value]
@@ -950,38 +979,38 @@
                                              :unacknowledged false
                                              :acknowledged true)}])))
        :sx #js{:mb 2}}
-      [mui/toggle-button {:value :unacknowledged} "Unacknowledged"]
-      [mui/toggle-button {:value :acknowledged} "Acknowledged"]
-      [mui/toggle-button {:value :all} "All"]]
+      [:> ToggleButton {:value :unacknowledged} "Unacknowledged"]
+      [:> ToggleButton {:value :acknowledged} "Acknowledged"]
+      [:> ToggleButton {:value :all} "All"]]
 
      ;; Error display
      (when error
-       [mui/alert {:severity "error" :sx #js{:mb 2}} error])
+       [:> Alert {:severity "error" :sx #js{:mb 2}} error])
 
      ;; Bulk actions toolbar
      (when some-selected?
-       [mui/paper {:sx #js{:p 2 :mb 2 :bgcolor "action.hover"}}
-        [mui/stack {:direction "row" :spacing 2 :alignItems "center"}
-         [mui/typography (str (count selected-ids) " selected")]
-         [mui/button
+       [:> Paper {:sx #js{:p 2 :mb 2 :bgcolor "action.hover"}}
+        [:> Stack {:direction "row" :spacing 2 :alignItems "center"}
+         [:> Typography (str (count selected-ids) " selected")]
+         [:> Button
           {:variant "contained"
            :size "small"
            :disabled bulk-reprocessing?
            :start-icon (when bulk-reprocessing?
-                         (r/as-element [mui/circular-progress {:size 16}]))
+                         (r/as-element [:> CircularProgress {:size 16}]))
            :on-click #(when (js/confirm (str "Reprocess " (count selected-ids) " selected job(s)?"))
                         (==> [::events/reprocess-selected-jobs]))}
           (if bulk-reprocessing? "Reprocessing..." "Reprocess Selected")]
-         [mui/button
+         [:> Button
           {:variant "outlined"
            :size "small"
            :disabled bulk-acknowledging?
            :start-icon (when bulk-acknowledging?
-                         (r/as-element [mui/circular-progress {:size 16}]))
+                         (r/as-element [:> CircularProgress {:size 16}]))
            :on-click #(when (js/confirm (str "Acknowledge " (count selected-ids) " selected job(s)?"))
                         (==> [::events/acknowledge-selected-jobs]))}
           (if bulk-acknowledging? "Acknowledging..." "Acknowledge Selected")]
-         [mui/button
+         [:> Button
           {:variant "outlined"
            :size "small"
            :on-click #(==> [::events/clear-job-selection])}
@@ -989,43 +1018,43 @@
 
      ;; Loading indicator
      (when loading?
-       [mui/linear-progress {:sx #js{:mb 2}}])
+       [:> LinearProgress {:sx #js{:mb 2}}])
 
      ;; Jobs table
      (if (empty? dlq-jobs)
-       [mui/typography {:color "textSecondary"} "No jobs in the selected filter"]
-       [mui/table {:sx #js{:minWidth 650}}
-        [mui/table-head
-         [mui/table-row
-          [mui/table-cell {:padding "checkbox"}
-           [mui/checkbox
+       [:> Typography {:color "textSecondary"} "No jobs in the selected filter"]
+       [:> Table {:sx #js{:minWidth 650}}
+        [:> TableHead
+         [:> TableRow
+          [:> TableCell {:padding "checkbox"}
+           [:> Checkbox
             {:checked all-selected?
              :indeterminate (and some-selected? (not all-selected?))
              :on-change #(if all-selected?
                            (==> [::events/clear-job-selection])
                            (==> [::events/select-all-jobs all-job-ids]))}]]
-          [mui/table-cell "ID"]
-          [mui/table-cell "Job Type"]
-          [mui/table-cell "Error Message"]
-          [mui/table-cell "Failed At"]
-          [mui/table-cell "Status"]
-          [mui/table-cell {:align "right"} "Actions"]]]
+          [:> TableCell "ID"]
+          [:> TableCell "Job Type"]
+          [:> TableCell "Error Message"]
+          [:> TableCell "Failed At"]
+          [:> TableCell "Status"]
+          [:> TableCell {:align "right"} "Actions"]]]
 
-        [mui/table-body
+        [:> TableBody
          (for [job (sort-by :died-at #(compare %2 %1) dlq-jobs)]
-           [mui/table-row {:key (:id job)
+           [:> TableRow {:key (:id job)
                            :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}
                            :selected (contains? selected-ids (:id job))}
-            [mui/table-cell {:padding "checkbox"}
-             [mui/checkbox
+            [:> TableCell {:padding "checkbox"}
+             [:> Checkbox
               {:checked (contains? selected-ids (:id job))
                :on-change #(==> [::events/toggle-job-selection (:id job)])}]]
-            [mui/table-cell (:id job)]
-            [mui/table-cell (get-in job [:original-job :type] "Unknown")]
-            [mui/table-cell
+            [:> TableCell (:id job)]
+            [:> TableCell (get-in job [:original-job :type] "Unknown")]
+            [:> TableCell
              (let [msg (:error-message job)]
-               [mui/tooltip {:title msg}
-                [mui/typography {:variant "body2"
+               [:> Tooltip {:title msg}
+                [:> Typography {:variant "body2"
                                  :sx #js{:cursor "help"
                                          :maxWidth 300
                                          :overflow "hidden"
@@ -1034,7 +1063,7 @@
                  (if (> (count msg) 50)
                    (str (subs msg 0 47) "...")
                    msg)]])]
-            [mui/table-cell (let [died-at (:died-at job)]
+            [:> TableCell (let [died-at (:died-at job)]
                               (cond
                                 (inst? died-at) (.toLocaleString died-at)
                                 (string? died-at) (-> died-at
@@ -1042,28 +1071,28 @@
                                                       (str/split ".")
                                                       first)
                                 :else (str died-at)))]
-            [mui/table-cell
+            [:> TableCell
              (if (:acknowledged job)
-               [mui/chip {:label "Acknowledged"
+               [:> Chip {:label "Acknowledged"
                           :size "small"
                           :color "default"}]
-               [mui/chip {:label "Unacknowledged"
+               [:> Chip {:label "Unacknowledged"
                           :size "small"
                           :color "warning"}])]
-            [mui/table-cell {:align "right"}
-             [mui/stack {:direction "row" :spacing 1 :justifyContent "flex-end"}
-              [mui/button
+            [:> TableCell {:align "right"}
+             [:> Stack {:direction "row" :spacing 1 :justifyContent "flex-end"}
+              [:> Button
                {:size "small"
                 :on-click #(==> [::events/open-job-details-dialog (:id job)])}
                "View"]
-              [mui/button
+              [:> Button
                {:size "small"
                 :color "primary"
                 :on-click #(when (js/confirm "Reprocess this job?")
                              (==> [::events/reprocess-single-job (:id job)]))}
                "Reprocess"]
               (when (not (:acknowledged job))
-                [mui/button
+                [:> Button
                  {:size "small"
                   :on-click #(when (js/confirm "Acknowledge this job?")
                                (==> [::events/acknowledge-single-job (:id job)]))}
@@ -1071,12 +1100,12 @@
 
 (defn jobs-monitor-view []
   (let [selected-sub-tab (<== [::subs/jobs-selected-sub-tab])]
-    [mui/card {:square true}
-     [mui/card-content
-      [mui/typography {:variant "h5"} "Jobs Queue Monitor"]
+    [:> Card {:square true}
+     [:> CardContent
+      [:> Typography {:variant "h5"} "Jobs Queue Monitor"]
 
       ;; Refresh button
-      [mui/button
+      [:> Button
        {:variant "contained"
         :color "primary"
         :on-click #(do
@@ -1084,16 +1113,16 @@
                      (==> [::events/fetch-jobs-metrics])
                      (==> [::events/fetch-dead-letter-jobs {:acknowledged false}]))
         :style {:margin-bottom "1em"}}
-       [mui/icon {:sx #js{:mr 1}} "refresh"]
+       [:> Icon {:sx #js{:mr 1}} "refresh"]
        "Refresh"]
 
       ;; Sub-tabs
-      [mui/tabs
+      [:> Tabs
        {:value selected-sub-tab
         :on-change #(==> [::events/select-jobs-sub-tab %2])
         :sx #js{:borderBottom 1 :borderColor "divider" :mb 2}}
-       [mui/tab {:label "Monitoring"}]
-       [mui/tab {:label "Dead Letter Queue"}]]
+       [:> Tab {:label "Monitoring"}]
+       [:> Tab {:label "Dead Letter Queue"}]]
 
       ;; Tab content
       (case selected-sub-tab
@@ -1128,13 +1157,13 @@
         search-id-str (str (or search-id ""))
         valid-id? (and (not-empty search-id-str)
                        (re-matches #"^\d+$" search-id-str))]
-    [mui/card {:sx #js{:mb 2}}
-     [mui/card-content
-      [mui/typography {:variant "h6" :gutterBottom true}
+    [:> Card {:sx #js{:mb 2}}
+     [:> CardContent
+      [:> Typography {:variant "h6" :gutterBottom true}
        "Hae historia Lipas ID:llä"]
-      [mui/grid2 {:container true :spacing 2 :alignItems "flex-end"}
-       [mui/grid2 {:size 8}
-        [lui/text-field
+      [:> Grid2 {:container true :spacing 2 :alignItems "flex-end"}
+       [:> Grid2 {:size 8}
+        [text-fields/text-field
          {:label "LIPAS ID"
           :value search-id-str
           :type "number"
@@ -1144,8 +1173,8 @@
                          (when (= "Enter" (.-key e))
                            (when valid-id?
                              (==> [::events/search-site-history (js/parseInt search-id-str)]))))}]]
-       [mui/grid2 {:size 4}
-        [mui/button
+       [:> Grid2 {:size 4}
+        [:> Button
          {:variant "contained"
           :disabled (or loading? (not valid-id?))
           :on-click #(when valid-id?
@@ -1161,19 +1190,19 @@
     [:<>
      ;; Error display
      (when error
-       [mui/alert {:severity "error" :sx #js{:mb 2}}
+       [:> Alert {:severity "error" :sx #js{:mb 2}}
         error])
 
      ;; Loading indicator
      (when loading?
-       [mui/linear-progress {:sx #js{:mb 2}}])
+       [:> LinearProgress {:sx #js{:mb 2}}])
 
      ;; Results
      (when (and results (seq results))
-       [mui/card
-        [mui/card-header {:title (str "Hukutulokset (" (count results) " versiota)")}]
-        [mui/card-content
-         [lui/table-v2
+       [:> Card
+        [:> CardHeader {:title (str "Hukutulokset (" (count results) " versiota)")}]
+        [:> CardContent
+         [tables/table-v2
           {:items (map-indexed (fn [idx revision]
                                  (-> revision
                                      (assoc :index (+ idx 1))
@@ -1191,13 +1220,13 @@
 
      ;; No results message
      (when (and results (empty? results))
-       [mui/alert {:severity "info"}
+       [:> Alert {:severity "info"}
         "No history found for this LIPAS ID"])]))
 
 (defn site-history-tab []
-  [mui/card {:square true}
-   [mui/card-content
-    [mui/typography {:variant "h5"}
+  [:> Card {:square true}
+   [:> CardContent
+    [:> Typography {:variant "h5"}
      "Liikuntapaikan historia"]
     [site-history-search]
     [site-history-results]]])
@@ -1205,25 +1234,25 @@
 (defn admin-panel []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         selected-tab @(rf/subscribe [::ui-subs/query-param :tab :users])]
-    [mui/paper
-     [mui/grid {:container true}
-      [mui/grid {:item true :xs 12}
-       [mui/tool-bar
-        [mui/tabs
+    [:> Paper
+     [:> Grid {:container true}
+      [:> Grid {:item true :xs 12}
+       [:> Toolbar
+        [:> Tabs
          {:value selected-tab
           :on-change (fn [_e x]
                        (rfe/set-query {:tab x}))
           :indicator-color "secondary"
           :text-color "inherit"}
-         [mui/tab {:label (tr :lipas.admin/users)
+         [:> Tab {:label (tr :lipas.admin/users)
                    :value "users"}]
-         [mui/tab {:label "Historia"
+         [:> Tab {:label "Historia"
                    :value "site-history"}]
-         [mui/tab {:label "Symbolityökalu"
+         [:> Tab {:label "Symbolityökalu"
                    :value "symbol"}]
-         [mui/tab {:label "Tyyppikoodit"
+         [:> Tab {:label "Tyyppikoodit"
                    :value "types"}]
-         [mui/tab {:label "Jobs Monitoring"
+         [:> Tab {:label "Jobs Monitoring"
                    :value "jobs"}]]]
 
        (case selected-tab

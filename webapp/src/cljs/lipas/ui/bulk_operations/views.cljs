@@ -15,7 +15,20 @@
             [lipas.ui.bulk-operations.subs :as subs]
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Step$default" :as Step]
+            ["@mui/material/StepLabel$default" :as StepLabel]
+            ["@mui/material/Stepper$default" :as Stepper]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 
@@ -66,7 +79,7 @@
       [navigation-buttons tr 0 selected-count 0 on-cancel]]
 
      [:> Box {:sx {:mb 2 :display "flex" :justify-content "space-between" :align-items "center"}}
-      [mui/typography {:variant "h6"}
+      [:> Typography {:variant "h6"}
        (if (pos? selected-count)
          (str (tr :lipas.bulk-operations/n-sites-selected selected-count))
          (tr :lipas.bulk-operations/select-sites-to-update))]
@@ -79,19 +92,19 @@
                    :on-click #(rf/dispatch [::events/deselect-all-sites])}
         (tr :actions/deselect-all)]]]
 
-     [mui/expansion-panel {:sx {:mb 2}}
-      [mui/expansion-panel-summary
-       {:expandIcon (r/as-element [mui/icon "expand_more"])}
-       [mui/typography (tr :actions/filter)]]
-      [mui/expansion-panel-details
-       [mui/grid {:container true :spacing 2}
-        [mui/grid {:item true :xs 12 :md 4}
+     [:> Accordion {:sx {:mb 2}}
+      [:> AccordionSummary
+       {:expandIcon (r/as-element [:> Icon "expand_more"])}
+       [:> Typography (tr :actions/filter)]]
+      [:> AccordionDetails
+       [:> Grid {:container true :spacing 2}
+        [:> Grid {:item true :xs 12 :md 4}
          [text-fields/text-field-controlled
           {:label (tr :search/search)
            :value (:search-text filters)
            :on-change #(rf/dispatch [::events/set-sites-filter :search-text %])}]]
 
-        [mui/grid {:item true :xs 12 :md 2}
+        [:> Grid {:item true :xs 12 :md 2}
          (r/as-element
           [ac/type-selector
            {:value (:type-code filters)
@@ -99,7 +112,7 @@
             :onChange (fn [_ {:keys [value]}]
                         (rf/dispatch [::events/set-sites-filter :type-code value]))}])]
 
-        [mui/grid {:item true :xs 12 :md 3}
+        [:> Grid {:item true :xs 12 :md 3}
          (r/as-element
           [ac/admin-selector
            {:value (:admin filters)
@@ -107,7 +120,7 @@
             :onChange (fn [_ {:keys [value]}]
                         (rf/dispatch [::events/set-sites-filter :admin value]))}])]
 
-        [mui/grid {:item true :xs 12 :md 3}
+        [:> Grid {:item true :xs 12 :md 3}
          (r/as-element
           [ac/owner-selector
            {:value (:owner filters)
@@ -168,7 +181,7 @@
 
      ;; Header with select all/none buttons
      [:> Box {:sx {:display "flex" :justify-content "space-between" :align-items "center" :mb 2}}
-      [mui/typography {:variant "body1"}
+      [:> Typography {:variant "body1"}
        (tr :lipas.bulk-operations/select-fields-to-update)]
       [:> Box {:sx {:display "flex" :gap 1}}
        [:> Button {:variant "text"
@@ -180,14 +193,14 @@
                    :on-click #(rf/dispatch [::events/set-selected-fields #{}])}
         (tr :actions/deselect-all)]]]
 
-     [mui/grid {:container true :spacing 2}
-      [mui/grid {:item true :xs 12 :md 6}
-       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :email) 2 1)
+     [:> Grid {:container true :spacing 2}
+      [:> Grid {:item true :xs 12 :md 6}
+       [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :email) 2 1)
                         :border-color (if (contains? selected-fields :email) "primary.main" "divider")
                         :background-color (when-not (contains? selected-fields :email) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
-          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+          [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
            [:> Checkbox {:checked (contains? selected-fields :email)
                          :color "primary"
                          :on-change #(rf/dispatch [::events/toggle-field-selection :email])}]]]
@@ -204,13 +217,13 @@
                            (tr :lipas.bulk-operations/field-will-not-change))
             :on-change #(rf/dispatch [::events/set-bulk-update-field :email %])}]]]]]
 
-      [mui/grid {:item true :xs 12 :md 6}
-       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :phone-number) 2 1)
+      [:> Grid {:item true :xs 12 :md 6}
+       [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :phone-number) 2 1)
                         :border-color (if (contains? selected-fields :phone-number) "primary.main" "divider")
                         :background-color (when-not (contains? selected-fields :phone-number) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
-          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+          [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
            [:> Checkbox {:checked (contains? selected-fields :phone-number)
                          :color "primary"
                          :on-change #(rf/dispatch [::events/toggle-field-selection :phone-number])}]]]
@@ -227,13 +240,13 @@
                            (tr :lipas.bulk-operations/field-will-not-change))
             :on-change #(rf/dispatch [::events/set-bulk-update-field :phone-number %])}]]]]]
 
-      [mui/grid {:item true :xs 12 :md 6}
-       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :www) 2 1)
+      [:> Grid {:item true :xs 12 :md 6}
+       [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :www) 2 1)
                         :border-color (if (contains? selected-fields :www) "primary.main" "divider")
                         :background-color (when-not (contains? selected-fields :www) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
-          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+          [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
            [:> Checkbox {:checked (contains? selected-fields :www)
                          :color "primary"
                          :on-change #(rf/dispatch [::events/toggle-field-selection :www])}]]]
@@ -250,13 +263,13 @@
                            (tr :lipas.bulk-operations/field-will-not-change))
             :on-change #(rf/dispatch [::events/set-bulk-update-field :www %])}]]]]]
 
-      [mui/grid {:item true :xs 12 :md 6}
-       [mui/paper {:sx {:p 2 :border (if (contains? selected-fields :reservations-link) 2 1)
+      [:> Grid {:item true :xs 12 :md 6}
+       [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :reservations-link) 2 1)
                         :border-color (if (contains? selected-fields :reservations-link) "primary.main" "divider")
                         :background-color (when-not (contains? selected-fields :reservations-link) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
-          [mui/tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
+          [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
            [:> Checkbox {:checked (contains? selected-fields :reservations-link)
                          :color "primary"
                          :on-change #(rf/dispatch [::events/toggle-field-selection :reservations-link])}]]]
@@ -274,7 +287,7 @@
             :on-change #(rf/dispatch [::events/set-bulk-update-field :reservations-link %])}]]]]]]
 
      [:> Box {:sx {:mt 3}}
-      [mui/typography {:variant "body2" :color "text.secondary"}
+      [:> Typography {:variant "body2" :color "text.secondary"}
        (str (tr :lipas.bulk-operations/will-update-n-sites selected-count) " "
             (tr :lipas.bulk-operations/selected-fields-count (count selected-fields)))]]
 
@@ -293,43 +306,43 @@
      [:> Alert {:severity "success" :sx {:mb 3}}
       (tr :lipas.bulk-operations/update-completed)]
 
-     [mui/typography {:variant "h6" :sx {:mb 2}}
+     [:> Typography {:variant "h6" :sx {:mb 2}}
       (tr :lipas.bulk-operations/updated-fields)]
 
-     [mui/list
+     [:> List
       (when (and (contains? selected-fields :email) (:email update-form))
-        [mui/list-item
-         [mui/list-item-text
+        [:> ListItem
+         [:> ListItemText
           {:primary (tr :lipas.sports-site/email-public)
            :secondary (:email update-form)}]])
 
       (when (and (contains? selected-fields :phone-number) (:phone-number update-form))
-        [mui/list-item
-         [mui/list-item-text
+        [:> ListItem
+         [:> ListItemText
           {:primary (tr :lipas.sports-site/phone-number)
            :secondary (:phone-number update-form)}]])
 
       (when (and (contains? selected-fields :www) (:www update-form))
-        [mui/list-item
-         [mui/list-item-text
+        [:> ListItem
+         [:> ListItemText
           {:primary (tr :lipas.sports-site/www)
            :secondary (:www update-form)}]])
 
       (when (and (contains? selected-fields :reservations-link) (:reservations-link update-form))
-        [mui/list-item
-         [mui/list-item-text
+        [:> ListItem
+         [:> ListItemText
           {:primary (tr :lipas.sports-site/reservations-link)
            :secondary (:reservations-link update-form)}]])]
 
      ;; Updated sites list
-     [mui/typography {:variant "h6" :sx {:mt 3 :mb 2}}
+     [:> Typography {:variant "h6" :sx {:mt 3 :mb 2}}
       (str (tr :lipas.bulk-operations/updated-sites-list) " (" (:total-updated update-results) ")")]
 
      [:> Box {:sx {:max-height 300 :overflow-y "auto" :border 1 :border-color "divider" :border-radius 1 :p 2}}
-      [mui/list {:dense true}
+      [:> List {:dense true}
        (for [site updated-sites]
-         [mui/list-item {:key (:lipas-id site)}
-          [mui/list-item-text
+         [:> ListItem {:key (:lipas-id site)}
+          [:> ListItemText
            {:primary (:name site)
             :secondary (str "ID: " (:lipas-id site))}]])]]
 
@@ -351,31 +364,31 @@
         loading? @(rf/subscribe [::subs/loading?])
         error @(rf/subscribe [::subs/error])]
 
-    [mui/grid {:container true :spacing 2 :sx {:p 1}}
+    [:> Grid {:container true :spacing 2 :sx {:p 1}}
      ;; Header
-     [mui/grid {:item true :xs 12}
-      [mui/paper {:sx {:p 2}}
-       [mui/typography {:variant "h5" :sx {:mb 2}}
+     [:> Grid {:item true :xs 12}
+      [:> Paper {:sx {:p 2}}
+       [:> Typography {:variant "h5" :sx {:mb 2}}
         (or title (tr :lipas.org/bulk-operations))]
-       [mui/typography {:variant "body1"}
+       [:> Typography {:variant "body1"}
         (or description (tr :lipas.org/bulk-operations-description))]]]
 
      ;; Error display
      (when error
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [:> Alert {:severity "error"}
          (str "Error: " (or (:status-text error) "Failed to load data"))]])
 
      ;; Stepper
-     [mui/grid {:item true :xs 12}
-      [mui/paper {:sx {:p 3}}
-       [mui/stepper {:active-step current-step :sx {:mb 3}}
-        [mui/step
-         [mui/step-label (tr :lipas.bulk-operations/step-select-sites)]]
-        [mui/step
-         [mui/step-label (tr :lipas.bulk-operations/step-enter-info)]]
-        [mui/step
-         [mui/step-label (tr :lipas.bulk-operations/step-summary)]]]
+     [:> Grid {:item true :xs 12}
+      [:> Paper {:sx {:p 3}}
+       [:> Stepper {:active-step current-step :sx {:mb 3}}
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-select-sites)]]
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]]
 
        ;; Step content
        (if loading?

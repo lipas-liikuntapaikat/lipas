@@ -1,7 +1,7 @@
 (ns lipas.ui.components.autocompletes
   (:require ["@mui/material/Autocomplete$default" :as Autocomplete]
             ["@mui/material/TextField$default" :as TextField]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormHelperText$default" :as FormHelperText]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -31,7 +31,7 @@
   (let [items-by-vals (utils/index-by (comp pr-str value-fn) items)]
     (r/with-let [state (r/atom "")]
       [:<>
-       [mui/autocomplete
+       [:> Autocomplete
         (merge
          {:multiple multi?
           :value (if multi?
@@ -74,7 +74,7 @@
            {:getOptionKey (fn [opt]
                             (-> opt items-by-vals key-fn))}))]
        (when helper-text
-         [mui/form-helper-text helper-text])])))
+         [:> FormHelperText helper-text])])))
 
 (defn year-selector [{:keys [label value on-change required years]
                       :as props}]

@@ -1,15 +1,23 @@
 (ns lipas.ui.reminders.views
-  (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+  (:require [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/FormHelperText$default" :as FormHelperText]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.reminders.events :as events]
             [lipas.ui.reminders.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn add-button [{:keys [message]}]
   (let [tr (<== [:lipas.ui.subs/translator])]
-    [mui/tooltip {:title (tr :reminders/title)}
-     [mui/fab {:on-click #(==> [::events/add message]) :size "small"}
-      [mui/icon "alarm_add"]]]))
+    [:> Tooltip {:title (tr :reminders/title)}
+     [:> Fab {:on-click #(==> [::events/add message]) :size "small"}
+      [:> Icon "alarm_add"]]]))
 
 (def preselect-opts
   [[:tomorrow         (utils/now+ (* 24 60 60 1000))]
@@ -24,7 +32,7 @@
         form   (<== [::subs/form])
         toggle (fn [] (==> [::events/toggle-dialog]))]
 
-    [lui/dialog
+    [dialogs/dialog
      {:open?         open?
       :title         (tr :reminders/title)
       :on-close      toggle
@@ -33,27 +41,27 @@
       :save-label    (tr :actions/save)
       :cancel-label  (tr :actions/close)}
 
-     [mui/grid {:container true :spacing 2}
+     [:> Grid {:container true :spacing 2}
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
 
        (into
-         [mui/grid {:container true :spacing 1}]
+         [:> Grid {:container true :spacing 1}]
          (for [[k v] preselect-opts]
-           [mui/grid {:item true}
-            [mui/button
+           [:> Grid {:item true}
+            [:> Button
              {:variant  "outlined"
               :on-click #(==> [::events/select-option v])}
              (tr (keyword :reminders k))]]))]
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
 
-       [mui/form-group
+       [:> FormGroup
 
-        [mui/grid {:container true :spacing 2}
+        [:> Grid {:container true :spacing 2}
 
-         [mui/grid {:item true :xs 12}
-          [lui/date-picker
+         [:> Grid {:item true :xs 12}
+          [selects/date-picker
            {:type      "date"
             :fullWidth true
             :label     (tr :reminders/select-date)
@@ -61,8 +69,8 @@
             :value     (-> form :data :date)
             :on-change #(==> [::events/set-date %])}]]
 
-         [mui/grid {:item true :xs 12}
-          [lui/text-field
+         [:> Grid {:item true :xs 12}
+          [text-fields/text-field
            {:label     (tr :reminders/message)
             :multiline true
             :fullWidth true
@@ -70,4 +78,4 @@
             :value     (-> form :data :body :message)
             :on-change #(==> [::events/set-message %])}]]]]
 
-       [mui/form-helper-text (tr :reminders/description)]]]]))
+       [:> FormHelperText (tr :reminders/description)]]]]))

@@ -1,16 +1,21 @@
 (ns lipas.ui.components.checkboxes
-  (:require [lipas.ui.mui :as mui]
+  (:require ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/Switch$default" :as Switch]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [reagent.core :as r]))
 
 (defn checkbox
   [{:keys [label value on-change disabled style icon checked-icon tooltip]
     :or   {tooltip ""}}]
-  [mui/tooltip {:title tooltip}
-   [mui/form-control-label
-    {:label   (r/as-element [mui/typography {:variant "body1"} label])
+  [:> Tooltip {:title tooltip}
+   [:> FormControlLabel
+    {:label   (r/as-element [:> Typography {:variant "body1"} label])
      :style   (merge {:width :fit-content} style)
      :control (r/as-element
-                [mui/checkbox
+                [:> Checkbox
                  (merge
                    {:value     (str (boolean value))
                     :checked   (boolean value)
@@ -25,12 +30,12 @@
 
 (defn switch
   [{:keys [label value on-change] :as props}]
-  [mui/form-group
-   [mui/form-control-label
+  [:> FormGroup
+   [:> FormControlLabel
     {:label label
      :control
      (r/as-element
-       [mui/switch
+       [:> Switch
         (merge
           {:value     value
            :checked   value

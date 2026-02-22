@@ -2,7 +2,21 @@
   (:require ["@hello-pangea/dnd" :refer [DragDropContext Draggable Droppable] :as dnd]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/TableSortLabel$default" :as TableSortLabel]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
 
@@ -22,22 +36,22 @@
                on-sort-change* #(on-sort-change {:sort-fn @sort-fn*
                                                  :asc?    @sort-asc?})]
 
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
+    [:> Grid {:container true}
+     [:> Grid {:item true :xs 12}
       [:div {:style {:overflow-x "auto"}} ; Fixes overflow outside screen
 
-       [mui/table
+       [:> Table
 
         ;; Head
-        [mui/table-head
-         (into [mui/table-row (when (and on-select (not hide-action-btn?))
-                                [mui/table-cell ""])]
+        [:> TableHead
+         (into [:> TableRow (when (and on-select (not hide-action-btn?))
+                                [:> TableCell ""])]
                (doall
                  (for [[key header hidden?] headers]
-                   [mui/table-cell {:style    (when hidden? {:display :none})
+                   [:> TableCell {:style    (when hidden? {:display :none})
                                     :on-click #(do (reset! sort-fn* key)
                                                    (on-sort-change*))}
-                    [mui/table-sort-label
+                    [:> TableSortLabel
                      {:active    (= key @sort-fn*)
                       :direction (if @sort-asc? "asc" "desc")
                       :on-click  #(swap! sort-asc? not)}
@@ -45,7 +59,7 @@
 
         ;; Body
         (when-not in-progress?
-          [mui/table-body
+          [:> TableBody
 
            ;; Rows
            (doall
@@ -56,7 +70,7 @@
                                    items)
                           items)
                    :let [id (or (key-fn* item) (:id item) (:lipas-id item) (gensym))]]
-               [mui/table-row
+               [:> TableRow
                 {:key            id
                  :on-click       (when on-select #(on-select item))
                  :hover          true
@@ -65,26 +79,26 @@
                  :on-mouse-leave (when on-mouse-leave #(on-mouse-leave item))}
 
                 (when (and on-select (not hide-action-btn?))
-                  [mui/table-cell {:padding "checkbox"}
-                   [mui/icon-button {:on-click #(on-select item)}
-                    [mui/icon {:color "primary"} action-icon]]])
+                  [:> TableCell {:padding "checkbox"}
+                   [:> IconButton {:on-click #(on-select item)}
+                    [:> Icon {:color "primary"} action-icon]]])
 
                ;; Cells
                 (doall
                   (for [[k _ hidden?] headers
                         :let          [v (get item k)]]
-                    [mui/table-cell
+                    [:> TableCell
                      {:style (when hidden? {:display :none})
                       :key   (str id k)}
-                     [mui/typography
+                     [:> Typography
                       {:style   {:font-size "1em"}
                        :variant "body1" :no-wrap false}
                       (utils/display-value v)]]))]))])]
 
        (when in-progress?
-         [mui/grid {:container true :direction "column" :align-items "center"}
-          [mui/grid {:item true}
-           [mui/circular-progress {:style {:margin-top "1em"}}]]])]]]))
+         [:> Grid {:container true :direction "column" :align-items "center"}
+          [:> Grid {:item true}
+           [:> CircularProgress {:style {:margin-top "1em"}}]]])]]]))
 
 (defn- resolve-key [key-fn item]
   (or (key-fn item) (:id item) (:lipas-id item) (gensym)))
@@ -119,7 +133,7 @@
 
     (let [any-editable? (some allow-editing? items)]
 
-      [mui/paper
+      [:> Paper
        {:style
         {:width "100%" :overflow-x "scroll" :margin-top "0.5em" :margin-bottom "1em"}}
 
@@ -128,19 +142,19 @@
           {:style
            {:position         "absolute" :width "100%" :height "100%"
             :background-color "rgba(0, 0, 0, 0.2)"}}
-          [mui/circular-progress
+          [:> CircularProgress
            {:size  "120px"
             :style {:display "block" :margin-left "auto" :margin-right "auto"}}]])
 
-       [mui/table
+       [:> Table
 
         ;; Head
-        [mui/table-head
-         (into [mui/table-row
+        [:> TableHead
+         (into [:> TableRow
 
                 ;; "Select all" checkbox
                 (when (or (and on-select (not hide-action-btn?)) any-editable?)
-                  [mui/table-cell {:padding "checkbox"}
+                  [:> TableCell {:padding "checkbox"}
                    (if multi-select?
                      [checkboxes/checkbox
                       {:value     (= (count items) (count (->> @selected vals (filter true?))))
@@ -155,17 +169,17 @@
                      "")])]
 
                (for [[key {:keys [label hidden?]}] headers]
-                 [mui/table-cell {:style    (when hidden? {:display :none})
+                 [:> TableCell {:style    (when hidden? {:display :none})
                                   :on-click #(do (reset! sort-fn* key)
                                                  (on-sort-change*))}
-                  [mui/table-sort-label
+                  [:> TableSortLabel
                    {:active    (= key @sort-fn*)
                     :direction (if @sort-asc? "asc" "desc")
                     :on-click  #(swap! sort-asc? not)}
                    label]]))]
 
         ;; Body
-        [mui/table-body
+        [:> TableBody
 
          ;; Rows
          (doall
@@ -178,33 +192,33 @@
                  :let [id (resolve-key key-fn* item)
                        editing-this? (contains? @editing? id)]]
 
-             [mui/table-row
+             [:> TableRow
               {:key id :hover true :style (when on-select {:cursor "pointer"})}
 
              ;; First cell
               (when (or (and on-select (not hide-action-btn?)) any-editable?)
-                [mui/table-cell {:padding "checkbox"}
+                [:> TableCell {:padding "checkbox"}
                  (if editing-this?
-                   [mui/grid {:container true :align-items "center" :wrap "nowrap"}
+                   [:> Grid {:container true :align-items "center" :wrap "nowrap"}
 
-                    [mui/grid {:item true}
-                     [mui/tooltip {:title save-label}
-                      [mui/icon-button {:disabled (not (allow-saving? (@editing? id)))
+                    [:> Grid {:item true}
+                     [:> Tooltip {:title save-label}
+                      [:> IconButton {:disabled (not (allow-saving? (@editing? id)))
                                         :on-click (fn []
                                                     (on-item-save (@editing? id))
                                                     (swap! editing? dissoc id))}
-                       [mui/icon "save"]]]]
+                       [:> Icon "save"]]]]
 
-                    [mui/grid {:item true}
-                     [mui/tooltip {:title discard-label}
-                      [mui/icon-button {:on-click #(swap! editing? dissoc id)}
-                       [mui/icon "undo"]]]]]
+                    [:> Grid {:item true}
+                     [:> Tooltip {:title discard-label}
+                      [:> IconButton {:on-click #(swap! editing? dissoc id)}
+                       [:> Icon "undo"]]]]]
 
-                   [mui/grid {:container true :wrap "nowrap"}
+                   [:> Grid {:container true :wrap "nowrap"}
 
                     (if multi-select?
 
-                      [mui/grid {:item true}
+                      [:> Grid {:item true}
                        [checkboxes/checkbox
                         {:value     (@selected id)
                          :on-change (fn []
@@ -216,28 +230,28 @@
                                                      vs))))}]]
 
                       (when (and on-select (not hide-action-btn?))
-                        [mui/grid {:item true}
-                         [mui/tooltip {:title action-label}
-                          [mui/icon-button
+                        [:> Grid {:item true}
+                         [:> Tooltip {:title action-label}
+                          [:> IconButton
                            {:on-click #(on-select item)}
-                           [mui/icon action-icon]]]]))
+                           [:> Icon action-icon]]]]))
 
                     (when (allow-editing? item)
-                      [mui/grid {:item true}
-                       [mui/tooltip {:title edit-label}
-                        [mui/icon-button
+                      [:> Grid {:item true}
+                       [:> Tooltip {:title edit-label}
+                        [:> IconButton
                          {:on-click (fn []
                                       (when on-edit-start
                                         (on-edit-start item))
                                       (swap! editing? assoc id item))}
-                         [mui/icon "edit"]]]])])])
+                         [:> Icon "edit"]]]])])])
 
              ;; Remaining Cells
               (doall
                 (for [[k {:keys [hidden? form]}] headers
                       :let                       [v (get item k)]]
 
-                  [mui/table-cell
+                  [:> TableCell
                    {:style    (when hidden? {:display :none})
                     :on-click #(when (and on-select (not editing-this?))
                                  (on-select item))
@@ -248,8 +262,8 @@
                    ;; form field
                      (let [value-key (or (:value-key form) k)
                            path      [id value-key]]
-                       [mui/grid {:container true :align-items "center" :wrap "nowrap"}
-                        [mui/grid {:item true}
+                       [:> Grid {:container true :align-items "center" :wrap "nowrap"}
+                        [:> Grid {:item true}
                          [(:component form)
                           (-> form
                               :props
@@ -257,9 +271,9 @@
                                      :on-change #(swap! editing? assoc-in path %)))]]])
 
                    ;; display value
-                     [mui/grid {:container true :align-items "center" :wrap "nowrap"}
-                      [mui/grid {:item true}
-                       [mui/typography
+                     [:> Grid {:container true :align-items "center" :wrap "nowrap"}
+                      [:> Grid {:item true}
+                       [:> Typography
                         {:style {:font-size "1em"} :variant "body1" :no-wrap false}
                         (utils/display-value v)]]])]))]))]]])))
 
@@ -276,7 +290,7 @@
 
     ;; Normal read-only table
     (if (empty? items)
-      [mui/typography (or empty-label "-")]
+      [:> Typography (or empty-label "-")]
       [table props])
 
     ;; Table with 'edit' 'delete' and 'add'
@@ -285,7 +299,7 @@
     ;; contents when the items update (at least after new items etc.)
     (r/with-let [idx->item (r/atom (into {} (map-indexed vector items)))
                  key-fn (or key-fn (constantly nil))]
-      [mui/grid
+      [:> Grid
        {:container       true
         :spacing         1
         :justify-content "flex-end"
@@ -293,7 +307,7 @@
 
        ;; Table
        (when-not (empty? (vals @idx->item))
-         [mui/grid {:item  true :xs 12
+         [:> Grid {:item  true :xs 12
                     :style (merge {} (when max-width
                                        ;; Hacky place to do this here
                                        ;; TODO: move to smarter place
@@ -318,17 +332,17 @@
                                                    (into {} (map-indexed vector) a))))
                               (when on-user-sort
                                 (on-user-sort (vals @idx->item))))))}
-            [mui/table
+            [:> Table
 
              ;; Headear row
              (when-not hide-header-row?
-               [mui/table-head
-                [mui/table-row {:hover true}
-                 [mui/table-cell ""]
+               [:> TableHead
+                [:> TableRow {:hover true}
+                 [:> TableCell ""]
                  (for [[k header] headers]
                    ^{:key k}
-                   [mui/table-cell header])
-                 [mui/table-cell ""]]])
+                   [:> TableCell header])
+                 [:> TableCell ""]]])
 
              ;; Body
              [:> Droppable
@@ -338,7 +352,7 @@
                       _       (set! (.-ref t-props) (.-innerRef provided))]
 
                   (r/as-element
-                    [mui/table-body (js->clj t-props)
+                    [:> TableBody (js->clj t-props)
 
                      ;; Rows
                      (doall
@@ -361,38 +375,38 @@
                                              :on-mouse-leave (when on-custom-hover-out
                                                                #(on-custom-hover-out % item))}]
                                 (r/as-element
-                                  [mui/table-row (merge r-props
+                                  [:> TableRow (merge r-props
                                                         (js->clj (.-draggableProps provided))
                                                         (js->clj (.-dragHandleProps provided)))
 
-                                   [mui/table-cell
+                                   [:> TableCell
                                     {:padding "checkbox"}
-                                    [mui/stack
+                                    [:> Stack
                                      {:direction "row"
                                       :align-items "center"}
-                                     [mui/icon "drag_indicator"]]]
+                                     [:> Icon "drag_indicator"]]]
 
                                    ;; Cells
                                    (doall
                                      (for [[k _] headers
                                            :let  [v (get item k)]]
-                                       [mui/table-cell
+                                       [:> TableCell
                                         {:key k
                                          :padding "normal"}
                                         (utils/display-value v)]))
 
-                                   [mui/table-cell
+                                   [:> TableCell
                                     {:padding "checkbox"
                                      :class-name :no-print}
-                                    [mui/stack
+                                    [:> Stack
                                      {:direction "row"
                                       :align-items "center"}
-                                     [mui/tooltip
+                                     [:> Tooltip
                                       {:title (or edit-tooltip "")
                                        :placement "top"}
-                                      [mui/icon-button
+                                      [:> IconButton
                                        {:on-click #(on-edit item)}
-                                       [mui/icon "edit"]]]
+                                       [:> Icon "edit"]]]
                                      [buttons/confirming-delete-button
                                       {:tooltip         delete-tooltip
                                        :confirm-tooltip confirm-tooltip
@@ -401,16 +415,16 @@
                      (.-placeholder provided)])))]]]]])
 
        ;; Add button
-       [mui/grid
+       [:> Grid
         {:item       true :xs 2
          :style      {:text-align "right"}
          :class-name :no-print}
-        [mui/tooltip
+        [:> Tooltip
          {:title (or add-tooltip "")
           :placement "left"}
-         [mui/fab
+         [:> Fab
           {:style    {:margin-top "1em"}
            :on-click on-add
            :size     add-btn-size
            :color    "secondary"}
-          [mui/icon "add"]]]]])))
+          [:> Icon "add"]]]]])))

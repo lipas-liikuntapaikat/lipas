@@ -1,9 +1,32 @@
 (ns lipas.ui.front-page.views
   (:require [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.front-page.events :as events]
             [lipas.ui.front-page.subs :as subs]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardActions$default" :as CardActions]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Link$default" :as Link]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItemButton$default" :as ListItemButton]
+            ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Snackbar$default" :as Snackbar]
+            ["@mui/material/SvgIcon$default" :as SvgIcon]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -71,7 +94,7 @@
    {:label "Sitowise" :href "https://www.sitowise.com/fi/teknologia-ja-design/tuoteratkaisut/routa-infran-kunnossapitojarjestelma"}])
 
 (defn ->logo [{:keys [img full-height?]}]
-  [mui/grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
+  [:> Grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
    [:img
     {:style
      (merge
@@ -81,8 +104,8 @@
      :src img}]])
 
 (defn ->link [{:keys [label href color] :or {color "primary"}}]
-  [mui/grid {:item true :xs 12 :md 6 :lg 3 :style {:text-align "center"}}
-   [mui/link {:href href :variant "h6" :color color}
+  [:> Grid {:item true :xs 12 :md 6 :lg 3 :style {:text-align "center"}}
+   [:> Link {:href href :variant "h6" :color color}
     label]])
 
 (defn footer
@@ -91,39 +114,39 @@
          title-style {:opacity 0.7}}}
    & contents]
 
-  [mui/grid
+  [:> Grid
    {:container true
     :style
     {:background-color bg-color
      :padding "1em 2em 1em 2em"}}
 
    ;; Title
-   [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+   [:> Grid {:item true :xs 12 :style {:margin-bottom "1em"}}
     ;; smUp
-    [mui/typography
+    [:> Typography
      {:variant "h5" :style title-style
       :sx {:display {:xs "block"
                      :sm "none"}}}
      title]
     ;; xsDown
-    [mui/typography
+    [:> Typography
      {:variant "h4" :style title-style
       :sx {:display {:xs "none"
                      :sm "block"}}}
      title]]
 
    ;; Content
-   [mui/grid {:item true :xs 12}
+   [:> Grid {:item true :xs 12}
     (into
-      [mui/grid
+      [:> Grid
        {:container true}]
       contents)]])
 
 (defn grid-card
   [{:keys [title style link link-text xs md lg xl]
     :or {xs 12 md 6 lg 6 xl 6}} & children]
-  [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
-   [mui/card
+  [:> Grid {:item true :xs xs :md md :lg lg :xl xl}
+   [:> Card
     {:square true
      :style
      (merge
@@ -134,15 +157,15 @@
        style)}
 
     ;; Header
-    [mui/card-header
+    [:> CardHeader
      (merge
        {:title title
         :action (when link
                   (r/as-element
-                    [mui/icon-button
+                    [:> IconButton
                      {:href link
                       :color "secondary"}
-                     [mui/icon "arrow_forward_ios"]]))}
+                     [:> Icon "arrow_forward_ios"]]))}
        (when link
          {:titleTypographyProps
           {:component "a"
@@ -151,19 +174,19 @@
                    :text-decoration "none"}}}))]
 
     ;; Content
-    (into [mui/card-content] children)
+    (into [:> CardContent] children)
 
     ;; Actions
     (when link-text
-      [mui/card-actions
-       [mui/button {:variant :text :color "secondary" :href link}
+      [:> CardActions
+       [:> Button {:variant :text :color "secondary" :href link}
         (str "> " link-text)]])]])
 
 (defn grid-card-2
   [{:keys [title style link link-text xs md lg xl]
     :or {xs 12 md 6 lg 6 xl 6}} & children]
-  [mui/grid {:item true :xs xs :md md :lg lg :xl xl}
-   [mui/paper {:square true
+  [:> Grid {:item true :xs xs :md md :lg lg :xl xl}
+   [:> Paper {:square true
                :style
                (merge
                  {:background-color "rgb(250, 250, 250)"
@@ -174,17 +197,17 @@
                   :padding "16px 10px 0 16px"}
                  style)}
 
-    [mui/grid
+    [:> Grid
      {:container true
       :spacing 2
       :justify-content "space-between"
       :style {:height "100%"}}
 
      ;; Header
-     [mui/grid {:item true :xs 12}
-      [mui/grid {:container true :justify-content "space-between"}
-       [mui/grid {:item true :xs 11}
-        [mui/typography
+     [:> Grid {:item true :xs 12}
+      [:> Grid {:container true :justify-content "space-between"}
+       [:> Grid {:item true :xs 11}
+        [:> Typography
          (merge {:variant "h4"
                  :color "secondary"
                  :style {:font-weight 600
@@ -194,24 +217,24 @@
                   {:component "a"
                    :href link}))
          title]]
-       [mui/grid {:item true :xs 1}
+       [:> Grid {:item true :xs 1}
         (when link
-          [mui/icon-button {:href link :color "secondary"}
-           [mui/icon "arrow_forward_ios"]])]]]
+          [:> IconButton {:href link :color "secondary"}
+           [:> Icon "arrow_forward_ios"]])]]]
 
      ;; Content
-     (into [mui/grid {:item true :xs 12}] children)
+     (into [:> Grid {:item true :xs 12}] children)
 
      ;; Actions
      (when link-text
-       [mui/grid {:item true :xs 12}
-        [mui/grid
+       [:> Grid {:item true :xs 12}
+        [:> Grid
          {:container true
           :direction "row"
           :style {:height "100%"}
           :align-content "flex-end"}
-         [mui/grid {:item true :xs 12}
-          [mui/button
+         [:> Grid {:item true :xs 12}
+          [:> Button
            {:variant "text"
             :style {:margin-bottom "-8px"}
             :color "secondary"
@@ -225,8 +248,8 @@
        (js/FB.XFBML.parse))
      :reagent-render
      (fn []
-       [mui/grid {:container true :justify-content "center"}
-        [mui/grid {:item true}
+       [:> Grid {:container true :justify-content "center"}
+        [:> Grid {:item true}
          [:div
           {:class "fb-page"
            :data-href "https://www.facebook.com/LIPASLiikuntapaikat"
@@ -246,19 +269,19 @@
       [:<>
 
        ;; Signup modal
-       [mui/dialog
+       [:> Dialog
         {:open @open?
          :full-width true
          :on-close #(reset! open? false)
          :max-width "sm"}
-        [mui/dialog-title
+        [:> DialogTitle
          (tr :newsletter/subscribe)]
-        [mui/dialog-content
+        [:> DialogContent
 
-         [mui/grid {:container true :spacing 2}
+         [:> Grid {:container true :spacing 2}
           ;; Email
-          [mui/grid {:item true :xs 12}
-           [lui/text-field
+          [:> Grid {:item true :xs 12}
+           [text-fields/text-field
             {:value @email
              :full-width true
              :label (tr :lipas.user/email)
@@ -266,18 +289,18 @@
              :on-change #(reset! email %)}]]
 
           ;; Privacy policy
-          [mui/grid {:item true :xs 12}
-           [mui/link
+          [:> Grid {:item true :xs 12}
+           [:> Link
             {:color "primary"
              :style {:margin-top "1em"}
              :href "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
              :target "_blank"}
             (tr :help/privacy-policy)]]]]
 
-        [mui/dialog-actions
-         [mui/button {:on-click #(reset! open? false)}
+        [:> DialogActions
+         [:> Button {:on-click #(reset! open? false)}
           (tr :actions/cancel)]
-         [mui/button
+         [:> Button
           {:color "secondary"
            :disabled (not (m/validate users-schema/email-schema @email))
            :on-click
@@ -287,7 +310,7 @@
           (tr :newsletter/subscribe-short)]]]
 
        ;; Signup btn
-       [mui/button
+       [:> Button
         {:color "secondary"
          :on-click #(reset! open? true)}
         (tr :newsletter/subscribe)]])))
@@ -297,35 +320,35 @@
         newsletter-data (<== [::subs/newsletter-data])
         newsletter-error (<== [::subs/newsletter-error])
         newsletter-in-progress? (<== [::subs/newsletter-in-progress?])]
-    [mui/grid {:container true :spacing 2}
-     [mui/grid {:item true :xs 12}
+    [:> Grid {:container true :spacing 2}
+     [:> Grid {:item true :xs 12}
       (when newsletter-in-progress?
-        [mui/circular-progress])
+        [:> CircularProgress])
 
       (when (and (not newsletter-in-progress?)
                  (not (seq newsletter-data))
                  newsletter-error)
-        [mui/typography "Unable to retrieve newsletter."])
+        [:> Typography "Unable to retrieve newsletter."])
 
       (when (and (not newsletter-in-progress?) newsletter-data)
         (into
-          [mui/list]
+          [:> List]
           (for [m newsletter-data]
-            [mui/list-item-button {:component "a" :href (:url m) :target "_blank"}
-             [mui/list-item-icon
-              [mui/icon "mail_outline"]]
-             [mui/list-item-text
+            [:> ListItemButton {:component "a" :href (:url m) :target "_blank"}
+             [:> ListItemIcon
+              [:> Icon "mail_outline"]]
+             [:> ListItemText
               {:primary (str (:send-time m) " | " (:title m))
                :secondary (:preview-text m)}]])))]
 
-     [mui/grid {:item true :xs 12}
-      [mui/grid {:container true :justify-content "space-between" :align-items "center"}
+     [:> Grid {:item true :xs 12}
+      [:> Grid {:container true :justify-content "space-between" :align-items "center"}
 
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [newsletter-signup]]
 
-       [mui/grid {:item true}
-        [mui/link
+       [:> Grid {:item true}
+        [:> Link
          {:color "primary"
           :style {:margin-right "1em"}
           :href "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
@@ -335,11 +358,11 @@
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
     (let [newsletter-data (<== [::subs/newsletter-data])]
-      [mui/grid {:container true}
+      [:> Grid {:container true}
 
        ;; Ephmeral snackbar
        (when (utils/ie?)
-         [mui/snackbar
+         [:> Snackbar
           {:open @snack-open?
            :ContentProps
            {:style
@@ -348,15 +371,15 @@
            :anchorOrigin {:horizontal "right" :vertical "bottom"}
            :message
            (r/as-element
-             [mui/typography {:style {:color "white"}}
+             [:> Typography {:style {:color "white"}}
               (tr :notifications/ie)])
            :action
            (r/as-element
-             [mui/icon-button {:on-click #(reset! snack-open? false)}
-              [mui/icon {:color "secondary"} "close"]])}])
+             [:> IconButton {:on-click #(reset! snack-open? false)}
+              [:> Icon {:color "secondary"} "close"]])}])
 
        ;; Main section with background image
-       [mui/grid
+       [:> Grid
         {:container true
          :justify-content "flex-start"
          ;;:align-items ""
@@ -369,130 +392,130 @@
           :background-repeat "no-repeat"}}
 
         ;; Sports sites
-        [mui/grid {:item true :xs 12 :md 12 :lg 8}
-         [mui/grid {:container true}
+        [:> Grid {:item true :xs 12 :md 12 :lg 8}
+         [:> Grid {:container true}
           [grid-card-2
            {:title (tr :sport/headline)
             :link "/liikuntapaikat"
             :link-text (tr :actions/browse-to-map)}
-           [mui/typography {:variant "body1" :style {:height "1.65em"}}
+           [:> Typography {:variant "body1" :style {:height "1.65em"}}
             (tr :sport/description)]
            [:ul
-            [lui/li (tr :sport/up-to-date-information)]
-            [lui/li (tr :sport/updating-tools)]
-            [lui/li (tr :sport/analysis-tools)]
-            [lui/li (tr :sport/open-interfaces)]]]
+            [misc/li (tr :sport/up-to-date-information)]
+            [misc/li (tr :sport/updating-tools)]
+            [misc/li (tr :sport/analysis-tools)]
+            [misc/li (tr :sport/open-interfaces)]]]
 
           ;; Ice stadiums portal
           ;; [grid-card
           ;;  {:title     (tr :ice/headline)
           ;;   :link      "/jaahalliportaali"
           ;;   :link-text (tr :actions/browse-to-portal)}
-          ;;  [mui/typography {:variant "body1"}
+          ;;  [:> Typography {:variant "body1"}
           ;;   (tr :ice/description)]
           ;;  [:ul
-          ;;   [lui/li (tr :ice/basic-data-of-halls)]
-          ;;   [lui/li (tr :ice/entering-energy-data)]
-          ;;   [lui/li (tr :ice/updating-basic-data)]]]
+          ;;   [misc/li (tr :ice/basic-data-of-halls)]
+          ;;   [misc/li (tr :ice/entering-energy-data)]
+          ;;   [misc/li (tr :ice/updating-basic-data)]]]
 
           ;; Swimming pools portal
           ;; [grid-card
           ;;  {:title     (tr :swim/headline)
           ;;   :link      "/uimahalliportaali"
           ;;   :link-text (tr :actions/browse-to-portal)}
-          ;;  [mui/typography {:variant "body1"}
+          ;;  [:> Typography {:variant "body1"}
           ;;   (tr :swim/description)]
           ;;  [:ul
-          ;;   [lui/li (tr :swim/basic-data-of-halls)]
-          ;;   [lui/li (tr :swim/entering-energy-data)]
-          ;;   [lui/li (tr :swim/updating-basic-data)]]]
+          ;;   [misc/li (tr :swim/basic-data-of-halls)]
+          ;;   [misc/li (tr :swim/entering-energy-data)]
+          ;;   [misc/li (tr :swim/updating-basic-data)]]]
 
           ;; Reports
           [grid-card-2
            {:title (tr :stats/headline)
             :link "/tilastot"
             :link-text (tr :stats/browse-to)}
-           [mui/typography {:variant "body1" :style {:height "4em"}}
+           [:> Typography {:variant "body1" :style {:height "4em"}}
             (tr :stats/description)]
            [:ul
-            [lui/li (tr :stats/bullet2)]
-            [lui/li (tr :stats/bullet4)]
-            [lui/li (tr :stats/bullet1)]
-            [lui/li (tr :stats/bullet3)]]]
+            [misc/li (tr :stats/bullet2)]
+            [misc/li (tr :stats/bullet4)]
+            [misc/li (tr :stats/bullet1)]
+            [misc/li (tr :stats/bullet3)]]]
 
           ;; Open Data
           [grid-card-2 {:title (tr :open-data/headline)}
-           [mui/list
+           [:> List
 
             ;; info
-            [mui/list-item-button {:component "a" :href (:open-data links)}
-             [mui/list-item-icon
-              [mui/icon "info"]]
-             [mui/list-item-text {:primary "Info"}]]
+            [:> ListItemButton {:component "a" :href (:open-data links)}
+             [:> ListItemIcon
+              [:> Icon "info"]]
+             [:> ListItemText {:primary "Info"}]]
 
             ;; Lipas-API
-            [mui/list-item-button {:component "a" :href (:lipas-api links)}
-             [mui/list-item-icon
+            [:> ListItemButton {:component "a" :href (:lipas-api links)}
+             [:> ListItemIcon
               [:img
                {:style {:height "24px" :width "24px"}
                 :src "/img/swagger_logo.svg"}]]
-             [mui/list-item-text {:primary "Lipas API"}]]
+             [:> ListItemText {:primary "Lipas API"}]]
 
             ;; Geoserver
-            [mui/list-item-button {:component "a" :href (:geoserver links)}
-             [mui/list-item-icon
+            [:> ListItemButton {:component "a" :href (:geoserver links)}
+             [:> ListItemIcon
               [:img
                {:style {:height "24px" :width "24px"}
                 :src "/img/geoserver_logo.svg"}]]
-             [mui/list-item-text "Geoserver"]]
+             [:> ListItemText "Geoserver"]]
 
             ;; Github
-            [mui/list-item-button {:component "a" :href (:github links)}
-             [mui/list-item-icon
-              [mui/svg-icon
+            [:> ListItemButton {:component "a" :href (:github links)}
+             [:> ListItemIcon
+              [:> SvgIcon
                [svg/github-icon]]]
-             [mui/list-item-text {:primary "GitHub"}]]
+             [:> ListItemText {:primary "GitHub"}]]
 
             ;; Creative commons
-            [mui/list-item-button {:component "a" :href (:cc4.0 links)}
-             [mui/list-item-icon
-              [mui/icon "copyright"]]
-             [mui/list-item-text {:primary "CC 4.0"}]]]]
+            [:> ListItemButton {:component "a" :href (:cc4.0 links)}
+             [:> ListItemIcon
+              [:> Icon "copyright"]]
+             [:> ListItemText {:primary "CC 4.0"}]]]]
 
           ;; Help
           [grid-card-2 {:title (tr :help/headline)}
 
-           [mui/list
+           [:> List
 
             ;; Lipasinfo
-            [mui/list-item-button {:component "a" :href (:lipasinfo links)}
-             [mui/list-item-icon
-              [mui/icon "library_books"]]
-             [mui/list-item-text "lipasinfo.fi"]]
+            [:> ListItemButton {:component "a" :href (:lipasinfo links)}
+             [:> ListItemIcon
+              [:> Icon "library_books"]]
+             [:> ListItemText "lipasinfo.fi"]]
 
             ;; Youtube
-            [mui/list-item-button {:component "a" :href (:youtube links)}
-             [mui/list-item-icon
-              [mui/icon "video_library"]]
-             [mui/list-item-text "Youtube"]]
+            [:> ListItemButton {:component "a" :href (:youtube links)}
+             [:> ListItemIcon
+              [:> Icon "video_library"]]
+             [:> ListItemText "Youtube"]]
 
             ;; Email
-            [mui/list-item-button {:component "a" :href "mailto:lipasinfo@jyu.fi"}
-             [mui/list-item-icon
-              [mui/icon "email"]]
-             [mui/list-item-text "lipasinfo@jyu.fi"]]
+            [:> ListItemButton {:component "a" :href "mailto:lipasinfo@jyu.fi"}
+             [:> ListItemIcon
+              [:> Icon "email"]]
+             [:> ListItemText "lipasinfo@jyu.fi"]]
 
             ;; Phone
-            [mui/list-item-button {:component "a" :href "tel:+358400247980"}
-             [mui/list-item-icon
-              [mui/icon "phone"]]
-             [mui/list-item-text "0400 247 980"]]
+            [:> ListItemButton {:component "a" :href "tel:+358400247980"}
+             [:> ListItemIcon
+              [:> Icon "phone"]]
+             [:> ListItemText "0400 247 980"]]
 
             ;; Register
-            [mui/list-item-button {:component "a" :href "/rekisteroidy"}
-             [mui/list-item-icon
-              [mui/icon "group_add"]]
-             [mui/list-item-text (tr :register/link)]]]]]]
+            [:> ListItemButton {:component "a" :href "/rekisteroidy"}
+             [:> ListItemIcon
+              [:> Icon "group_add"]]
+             [:> ListItemText (tr :register/link)]]]]]]
 
         ;; [grid-card {:md 6 :lg 4}
         ;;  [fb-plugin]]
@@ -505,14 +528,14 @@
         ;; Known LIPAS users
         [grid-card {:xs 12 :md 12 :lg 12 :xl 8 :title (tr :data-users/headline)}
          (into
-           [mui/grid {:container true :spacing 2}]
+           [:> Grid {:container true :spacing 2}]
            (map ->link known-users))
-         [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
-          [mui/grid {:item true}
-           [mui/typography {:variant "h6" :color "primary"}
+         [:> Grid {:container true :spacing 2 :style {:margin-top "1em"}}
+          [:> Grid {:item true}
+           [:> Typography {:variant "h6" :color "primary"}
             (tr :data-users/data-user?)]]
-          [mui/grid {:item true}
-           [mui/link
+          [:> Grid {:item true}
+           [:> Link
             {:underline "always"
              :variant "h6"
              :color "secondary"
@@ -528,7 +551,7 @@
                 :title-style {:color mui/secondary}
                 :bg-color mui/gray2}
         (into
-          [mui/grid {:container true :align-items "center" :spacing 4}]
+          [:> Grid {:container true :align-items "center" :spacing 4}]
           (map ->logo logos))]])))
 
 (defn main []

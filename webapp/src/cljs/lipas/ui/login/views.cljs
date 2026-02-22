@@ -13,7 +13,7 @@
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.login.events :as events]
             [lipas.ui.login.subs :as subs]
@@ -71,7 +71,7 @@
        {}
 
        ;; Email
-       [lui/text-field
+       [text-fields/text-field
         {:id "magic-link-login-email-input"
          :label (tr :lipas.user/email)
          :spec users-schema/email-schema
@@ -129,7 +129,7 @@
        {}
 
        ;; Username
-       [lui/text-field
+       [text-fields/text-field
         {:id "login-username-input"
          :label (tr :login/username)
          :auto-focus true
@@ -139,7 +139,7 @@
          :placeholder (tr :login/username-example)}]
 
        ;; Password
-       [lui/text-field
+       [text-fields/text-field
         {:id "login-password-input"
          :label (tr :login/password)
          :type "password"

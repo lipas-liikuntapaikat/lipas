@@ -2,7 +2,16 @@
   (:require ["react" :as react]
             [clojure.reader :refer [read-string]]
             [clojure.string :as string]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/InputAdornment$default" :as InputAdornment]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/TextField$default" :as TextField]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [malli.core :as m]
             [reagent.core :as r]))
 
@@ -22,7 +31,7 @@
 (defn ->adornment [s]
   {:endAdornment
    (r/as-element
-     [mui/input-adornment s])})
+     [:> InputAdornment s])})
 
 ;; TODO maybe one magic regexp needed here?
 (defn coerce [type s]
@@ -81,8 +90,8 @@
                          :on-change (fn [e]
                                       (on-change (->> e .-target .-value (coerce type))))))]
 
-    [mui/tooltip {:title tooltip}
-     (into [mui/text-field (merge {:variant "standard"}
+    [:> Tooltip {:title tooltip}
+     (into [:> TextField (merge {:variant "standard"}
                                   props)]
            children)]))
 
@@ -93,24 +102,24 @@
   (r/with-let [state (r/atom {:dialog-open? false})]
     [:<>
 
-     [mui/dialog
+     [:> Dialog
       {:open      (:dialog-open? @state)
        :fullWidth true
        :maxWidth  "lg"
        :on-close  #(swap! state assoc :dialog-open? false)}
-      [mui/dialog-content
-       #_[mui/icon-button
+      [:> DialogContent
+       #_[:> IconButton
           {:on-click #(swap! state assoc :dialog-open? false)}
-          [mui/icon "open_in_full"]]
+          [:> Icon "open_in_full"]]
        [text-field (assoc props :rows 15) children]]
-      [mui/dialog-actions
-       [mui/button {:on-click #(swap! state assoc :dialog-open? false)}
+      [:> DialogActions
+       [:> Button {:on-click #(swap! state assoc :dialog-open? false)}
         "OK"]]]
 
-     [mui/stack {:align-items "flex-end"}
-      [mui/icon-button
+     [:> Stack {:align-items "flex-end"}
+      [:> IconButton
        {:size "small"
         :style {:margin-bottom "-35px" :z-index "1"}
         :on-click #(swap! state assoc :dialog-open? true)}
-       [mui/icon "open_in_full"]]
+       [:> Icon "open_in_full"]]
       [text-field props children]]]))
