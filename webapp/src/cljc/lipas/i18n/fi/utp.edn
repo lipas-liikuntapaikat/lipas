@@ -23,6 +23,8 @@
  :segment "Osuus",
  :segments "Osuudet",
  :select-route-parts-on-map "Valitse reitin osat kartalta",
+ :segments-selected "osuutta valittu",
+ :add-segments "Lisää osuuksia",
  :fix-gap "Korjaa aukko kääntämällä",
  :segment-builder-help-title "Ohjeet",
  :segment-builder-help-text "Järjestä reitin osuudet oikeaan järjestykseen vetämällä tai nuolipainikkeilla. Vihreä pallo tarkoittaa, että osuudet liittyvät toisiinsa. Oranssi pallo tarkoittaa aukkoa. Voit kääntää osuuden suunnan ⇄-painikkeella tai käyttää automaattista korjausta ✦-painikkeella.",

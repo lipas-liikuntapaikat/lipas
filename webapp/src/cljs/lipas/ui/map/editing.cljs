@@ -367,41 +367,33 @@
 
     map-ctx))
 
+(defn- selecting-mode-style!
+  "Apply styles to edits layer features based on selection state."
+  [map-ctx selected-features]
+  (let [^js edits-layer (-> map-ctx :layers :overlays :edits)
+        edits-source    (.getSource edits-layer)
+        selected?       (or selected-features #{})]
+    (doseq [^js f (.getFeatures edits-source)]
+      (if (contains? selected? (.getId f))
+        (.setStyle f #js [styles/highlight-style styles/edit-style])
+        (.setStyle f styles/edit-style)))))
+
 (defn set-selecting-mode!
-  "Enable click-to-select/deselect features for route segment picking."
+  "Enable click-to-select/deselect features for route segment picking.
+   Click detection is handled by ::map-clicked (forEachFeatureAtPixel),
+   not by an OL Select interaction, to avoid style ownership conflicts."
   [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms selected-features]}]
   (let [^js layer (-> layers :overlays :edits)
         source    (.getSource layer)
         _         (.clear source)
-        features  (-> geoms clj->js map-utils/->ol-features)
-        selected? (or selected-features #{})
-        hover     (Select. #js {:layers    #js [layer]
-                                :condition events-condition/pointerMove
-                                :style     styles/hover-style})
-        select    (Select. #js {:layers #js [layer]
-                                :style  styles/hover-style})]
+        features  (-> geoms clj->js map-utils/->ol-features)]
 
-    (.on select "select" (fn [^js e]
-                           (let [selected (.-selected e)]
-                             (when (not-empty selected)
-                               (let [^js f (first selected)
-                                     fid   (.getId f)]
-                                 (==> [::events/toggle-selected-feature-id fid]))))))
-
-    (.addInteraction lmap hover)
-    (.addInteraction lmap select)
-
-    ;; Set per-feature styles: selected segments get highlight style
     (doseq [^js f features]
-      (if (contains? selected? (.getId f))
-        (.setStyle f #js [styles/highlight-style styles/edit-style])
-        (.setStyle f styles/edit-style)))
-
+      (.setStyle f styles/edit-style))
     (.addFeatures source features)
 
-    (-> map-ctx
-        (assoc-in [:interactions :selecting-hover] hover)
-        (assoc-in [:interactions :selecting-select] select))))
+    (selecting-mode-style! map-ctx selected-features)
+    map-ctx))
 
 (defn set-travel-direction-edit-mode!
   [{:keys [layers ^js lmap] :as map-ctx} {:keys [geoms]}]
@@ -550,15 +542,8 @@
           (= :selecting (:sub-mode mode))
           (if (= :selecting (:sub-mode old-mode))
             ;; Sub-mode didn't change; just update feature styles, preserve interactions
-            (do
-              (let [^js edits-layer (-> map-ctx :layers :overlays :edits)
-                    edits-source    (.getSource edits-layer)
-                    selected?       (or (:selected-features mode) #{})]
-                (doseq [^js f (.getFeatures edits-source)]
-                  (if (contains? selected? (.getId f))
-                    (.setStyle f #js [styles/highlight-style styles/edit-style])
-                    (.setStyle f styles/edit-style))))
-              map-ctx)
+            (do (selecting-mode-style! map-ctx (:selected-features mode))
+                map-ctx)
             ;; Sub-mode changed to :selecting; full rebuild
             (-> map-ctx
                 (set-editing-mode! mode)))

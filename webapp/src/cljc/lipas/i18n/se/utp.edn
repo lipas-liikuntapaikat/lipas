@@ -24,6 +24,8 @@
  :segment "Sektion",
  :segments "Sektioner",
  :select-route-parts-on-map "Välj ruttdelar på kartan",
+ :segments-selected "sektion(er) valda",
+ :add-segments "Lägg till sektioner",
  :fix-gap "Fixa luckan genom att vända",
  :segment-builder-help-title "Instruktioner",
  :segment-builder-help-text "Ordna ruttsektionerna i rätt ordning genom att dra eller använda pilknapparna. En grön prick betyder att sektionerna är sammankopplade. En orange prick betyder att det finns en lucka. Du kan vända en sektions riktning med ⇄-knappen eller använda autofix ✦-knappen.",

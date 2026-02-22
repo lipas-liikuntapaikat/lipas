@@ -1025,8 +1025,20 @@
         n     (count segments)
         move! (fn [from to]
                 (==> [::events/reorder-segments lipas-id activity-k route-id from to]))]
-    (when (and (seq segments) (> n 1))
+    (when (seq segments)
       [mui/grid {:item true :xs 12 :style {:margin-top "0.5em" :margin-bottom "0.5em"}}
+
+       ;; Header row: title + add button
+       [mui/grid {:container true :align-items "center" :justify-content "space-between"
+                  :style {:margin-bottom "0.5em"}}
+        [mui/grid {:item true}
+         [mui/typography {:variant "subtitle2"} (tr :utp/segments)]]
+        (when-not read-only?
+          [mui/grid {:item true}
+           [mui/button
+            {:size     "small"
+             :on-click #(==> [::events/add-segments-to-route lipas-id activity-k route-id])}
+            (tr :utp/add-segments)]])]
 
        ;; Help text
        [lui/expansion-panel
@@ -1035,9 +1047,6 @@
          :style            {:margin-top "0" :margin-bottom "0.5em"}}
         [mui/typography {:variant "body2"}
          (tr :utp/segment-builder-help-text)]]
-
-       [mui/typography {:variant "subtitle2" :style {:margin-bottom "0.5em"}}
-        (tr :utp/segments)]
 
        [mui/paper {:variant "outlined" :style {:padding "4px"}}
         (if read-only?
@@ -1245,13 +1254,19 @@
             (tr :utp/add-subroute)]])])
 
      (when (and editing? (= :add-route mode))
-       (let [selected-features (<== [::subs/selected-features])]
+       (let [selected-features (<== [::subs/selected-features])
+             n                 (count selected-features)]
          [:<>
 
           [mui/grid {:item true :xs 12}
            [mui/typography
             {:variant "body2"}
-            (tr :utp/select-route-parts-on-map)]]
+            (tr :utp/select-route-parts-on-map)]
+           (when (pos? n)
+             [mui/typography
+              {:variant "body2" :color "primary"
+               :style {:margin-top "0.25em" :font-weight 500}}
+              (str n " " (tr :utp/segments-selected))])]
 
           [mui/grid {:item true :xs 12
                      :style {:display "flex" :gap "0.5em" :margin-top "0.5em"}}

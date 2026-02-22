@@ -107,16 +107,35 @@
                     :fx [[:dispatch
                           [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]]}))
 
+(rf/reg-event-fx ::add-segments-to-route
+                 (fn [{:keys [db]} [_ lipas-id activity-k route-id]]
+                   (let [routes    (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
+                         route     (some #(when (= route-id (:id %)) %) routes)
+                         fids      (set (map :fid (:segments route)))]
+                     {:db (-> db
+                              (assoc-in [:sports-sites :activities :mode] :add-route)
+                              (assoc-in [:sports-sites :activities :selected-route-id] route-id)
+                              (update-in [:map :mode] dissoc
+                                         :segment-directions :segment-labels)
+                              ;; Pre-select existing route segments so they show as highlighted
+                              (assoc-in [:map :mode :selected-features] fids))
+                      :fx [[:dispatch
+                            [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]]})))
+
 (rf/reg-event-fx ::finish-route
                  (fn [{:keys [db]} [_ lipas-id activity-k]]
                    (let [selected-fids (get-in db [:map :mode :selected-features])
-                         route-id      (get-in db [:sports-sites :activities :selected-route-id])]
+                         route-id      (get-in db [:sports-sites :activities :selected-route-id])
+                         ;; Check if this is adding segments to an existing route
+                         existing-routes (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
+                         existing?       (some #(= route-id (:id %)) existing-routes)]
                      {:fx [[:dispatch [::finish-route-details
-                                       {:fids       (vec selected-fids)
-                                        :route      {}
-                                        :id         route-id
-                                        :lipas-id   lipas-id
-                                        :activity-k activity-k}]]]})))
+                                       {:fids             (vec selected-fids)
+                                        :route            {}
+                                        :id               route-id
+                                        :lipas-id         lipas-id
+                                        :activity-k       activity-k
+                                        :return-to-route? existing?}]]]})))
 
 (rf/reg-event-fx ::clear
                  (fn [{:keys [db]} _]
@@ -126,7 +145,7 @@
                             (assoc-in [:sports-sites :activities :route-view] nil))}))
 
 (rf/reg-event-fx ::finish-route-details
-                 (fn [{:keys [db]} [_ {:keys [fids route id lipas-id activity-k]}]]
+                 (fn [{:keys [db]} [_ {:keys [fids route id lipas-id activity-k return-to-route?]}]]
                    (let [edits                (get-in db [:sports-sites lipas-id :editing])
                          current-routes       (get-in edits [:activities activity-k :routes] [])
                          current-routes-by-id (utils/index-by :id current-routes)
@@ -140,8 +159,9 @@
                          new-fids          (remove existing-fid-set fids)
                          segments          (vec (concat (or existing-segments [])
                                                         (map (fn [fid] {:fid fid :reversed? false}) new-fids)))
+                         all-fids          (set (map :fid segments))
 
-                         route-with-segments (assoc route :fids fids :id id :segments segments)
+                         route-with-segments (assoc route :fids all-fids :id id :segments segments)
 
                          new-routes (condp = mode
                                       :add    (conj current-routes route-with-segments)
@@ -152,15 +172,21 @@
                      {:db (-> db
                               (assoc-in [:sports-sites :activities :mode] :default)
                               (assoc-in [:sports-sites :activities :selected-route-id] nil))
-                      :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
-                           [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
+                      :fx [[:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:activities activity-k :routes]
                                        new-routes]]
+                           [:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
                            [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
-                           [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]})))
+                           [:dispatch [:lipas.ui.map.events/clear-segment-labels]]
+                           (when return-to-route?
+                             [:dispatch [::select-route lipas-id
+                                         (assoc route-with-segments
+                                                :segments segments)]])]})))
 
 (rf/reg-event-fx ::cancel-route-details
                  (fn [{:keys [db]} _]
-                   {:db (assoc-in db [:sports-sites :activities :mode] :default)
+                   {:db (-> db
+                            (assoc-in [:sports-sites :activities :mode] :default)
+                            (assoc-in [:map :mode :selected-features] nil))
                     :fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
                          [:dispatch [:lipas.ui.map.events/clear-segment-directions]]
                          [:dispatch [:lipas.ui.map.events/clear-segment-labels]]]}))
@@ -171,7 +197,7 @@
                             (assoc-in [:sports-sites :activities :mode] :route-details)
                             (assoc-in [:sports-sites :activities :selected-route-id] id))
                     :fx [[:dispatch [:lipas.ui.map.events/highlight-features (set fids)]]
-                         [:dispatch [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]
+                         [:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
                          (when (seq segments)
                            [:dispatch [:lipas.ui.map.events/set-segment-directions
                                        (segments->direction-map segments)]])

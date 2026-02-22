@@ -22,6 +22,8 @@
  :segment "Segment",
  :segments "Segments",
  :select-route-parts-on-map "Select route parts on the map",
+ :segments-selected "segment(s) selected",
+ :add-segments "Add segments",
  :fix-gap "Fix gap by reversing",
  :segment-builder-help-title "Instructions",
  :segment-builder-help-text "Arrange route segments in the correct order by dragging or using the arrow buttons. A green dot means the segments are connected. An orange dot means there is a gap. You can reverse a segment's direction with the ⇄ button or use the auto-fix ✦ button.",
