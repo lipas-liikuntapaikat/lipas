@@ -5,7 +5,13 @@
             [lipas.data.cities :as cities]
             [lipas.data.types :as types]
             [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/FormHelperText$default" :as FormHelperText]
+            ["@mui/material/InputLabel$default" :as InputLabel]
+            ["@mui/material/MenuItem$default" :as MenuItem]
+            ["@mui/material/Select$default" :as Select]
+            ["@mui/material/TextField$default" :as TextField]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.utils :refer [<==] :as utils]
             [lipas.utils :as cutils]
             [malli.core :as m]
@@ -51,25 +57,25 @@
                       (assoc :value (if value (pr-str value) ""))
                       (assoc :on-change on-change))
         sort-fn   (or sort-fn label-fn)]
-    [mui/tooltip {:title tooltip}
-     [mui/form-control
+    [:> Tooltip {:title tooltip}
+     [:> FormControl
       {:required  required
        :fullWidth fullWidth
        :error     (error? spec value required)
        :variant   "standard"}
-      (when label [mui/input-label label])
-      (into [mui/select props
+      (when label [:> InputLabel label])
+      (into [:> Select props
              (when deselect?
-               [mui/menu-item {:key   "deselect"
+               [:> MenuItem {:key   "deselect"
                                :value nil}
                 "-"])]
             (for [i (sort-by sort-fn sort-cmp items)]
               (let [value (value-fn i)
                     label (label-fn i)]
-                [mui/menu-item {:key   (pr-str value)
+                [:> MenuItem {:key   (pr-str value)
                                 :value (pr-str value)}
                  label])))
-      (when helper-text [mui/form-helper-text helper-text])]]))
+      (when helper-text [:> FormHelperText helper-text])]]))
 
 (defn multi-select
   [{:keys [label value items on-change value-fn label-fn sort-fn
@@ -82,13 +88,13 @@
            required  false}
     :as   props}]
   (let [sort-fn (or sort-fn label-fn)]
-    [mui/tooltip {:title tooltip}
-     [mui/form-control {:fullWidth fullWidth
+    [:> Tooltip {:title tooltip}
+     [:> FormControl {:fullWidth fullWidth
                         :required  required
                         :error     (error? spec value required)
                         :variant   "standard"}
-      (when label [mui/input-label label])
-      [mui/select
+      (when label [:> InputLabel label])
+      [:> Select
        (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
               {:multiple  true
                :value     (map pr-str value)
@@ -98,11 +104,11 @@
                                            (map read-string)
                                            not-empty))})
        (for [i (sort-by sort-fn sort-cmp items)]
-         [mui/menu-item
+         [:> MenuItem
           {:key   (pr-str (value-fn i))
            :value (pr-str (value-fn i))}
           (label-fn i)])]
-      (when helper-text [mui/form-helper-text helper-text])]]))
+      (when helper-text [:> FormHelperText helper-text])]]))
 
 (defn year-selector [{:keys [label value on-change required years multi?]
                       :as   props}]
@@ -149,7 +155,7 @@
   [{:keys [value on-change type required]
     :or   {type "date"}
     :as   props}]
-  [mui/text-field
+  [:> TextField
    (merge
      props
      {:type      type

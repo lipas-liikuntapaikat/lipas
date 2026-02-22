@@ -1,6 +1,8 @@
 (ns lipas.ui.components.misc
   (:require [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.mui :as mui]))
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Typography$default" :as Typography]))
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
@@ -44,45 +46,45 @@
        :tooltip  discard-tooltip}])])
 
 (defn icon-text [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
-   [mui/grid {:item true}
-    [mui/icon {:color (or icon-color "inherit")}
+  [:> Grid {:container true :align-items "center" :style {:padding "0.5em"}}
+   [:> Grid {:item true}
+    [:> Icon {:color (or icon-color "inherit")}
      icon]]
-   [mui/grid {:item true}
-    [mui/typography
+   [:> Grid {:item true}
+    [:> Typography
      {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
      text]]])
 
 (defn icon-text2 [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items "center" :style {:padding "0.5em"}}
-   [mui/grid {:item true}
-    [mui/icon {:style {:color icon-color}}
+  [:> Grid {:container true :align-items "center" :style {:padding "0.5em"}}
+   [:> Grid {:item true}
+    [:> Icon {:style {:color icon-color}}
      icon]]
-   [mui/grid {:item true}
-    [mui/typography
+   [:> Grid {:item true}
+    [:> Typography
      {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
      text]]])
 
 (defn icon-text3 [{:keys [icon text icon-color]}]
-  [mui/grid {:container true :align-items "center"
+  [:> Grid {:container true :align-items "center"
              :style {:padding-right "0.5em" :padding-left "0.5em"}}
-   [mui/grid {:item true}
-    [mui/icon {:style {:color icon-color :display "inline"}}
+   [:> Grid {:item true}
+    [:> Icon {:style {:color icon-color :display "inline"}}
      icon]]
-   [mui/grid {:item true}
-    [mui/typography
+   [:> Grid {:item true}
+    [:> Typography
      {:variant "body2" :style {:margin-left "0.5em" :display "inline"}}
      text]]])
 
 (defn li [text & children]
   (into
     [:li
-     [mui/typography {:variant "body2" :color "inherit"}
+     [:> Typography {:variant "body2" :color "inherit"}
       text]]
     children))
 
 (defn sub-heading [{:keys [label]}]
-  [mui/typography
+  [:> Typography
    {:variant "subtitle1"
     :style
     {:margin-top    "1.5em"

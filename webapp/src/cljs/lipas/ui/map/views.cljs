@@ -27,6 +27,37 @@
             [lipas.ui.map.import :as import]
             [lipas.ui.map.map :as ol-map]
             [lipas.ui.map.subs :as subs]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/Drawer$default" :as Drawer]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/Grid$default" :as Grid2]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemButton$default" :as ListItemButton]
+            ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Menu$default" :as Menu]
+            ["@mui/material/Popper$default" :as Popper]
+            ["@mui/material/Slide$default" :as Slide]
+            ["@mui/material/Slider$default" :as Slider]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Step$default" :as Step]
+            ["@mui/material/StepLabel$default" :as StepLabel]
+            ["@mui/material/Stepper$default" :as Stepper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableContainer$default" :as TableContainer]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.ptv.site-view :as ptv-site]
@@ -68,8 +99,8 @@
       :on-close toggle
       :save-enabled? false
       :cancel-label (tr :actions/close)}
-     [mui/grid {:container true}
-      [mui/grid {:item true :xs 12}
+     [:> Grid {:container true}
+      [:> Grid {:item true :xs 12}
        [lui/text-field
         {:auto-focus true
          :fullWidth true
@@ -77,12 +108,12 @@
          :label (tr :search/search)
          :value value
          :on-change #(==> [::events/update-address-search-keyword %])}]]
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        (into
-        [mui/list]
+        [:> List]
         (for [m results]
-          [mui/list-item-button {:on-click #(==> [::events/show-address m])}
-           [mui/list-item-text
+          [:> ListItemButton {:on-click #(==> [::events/show-address m])}
+           [:> ListItemText
             (:label m)]]))]]]))
 
 (defn restore-site-backup-dialog []
@@ -96,9 +127,9 @@
       :on-close #(==> [::events/close-restore-site-backup-dialog])
       :save-enabled? false
       :cancel-label (tr :actions/close)}
-     [mui/grid {:container true}
-      [mui/grid {:item true :xs 12}
-       [mui/grid {:item true}
+     [:> Grid {:container true}
+      [:> Grid {:item true :xs 12}
+       [:> Grid {:item true}
         [:input
          {:type "file"
           :accept ".json"
@@ -106,14 +137,14 @@
                             (-> % .-target .-files)
                             lipas-id])}]]]
       (when error
-        [mui/grid {:item true :xs 12}
-         [mui/typography {:variant "h6"} "Error"]
+        [:> Grid {:item true :xs 12}
+         [:> Typography {:variant "h6"} "Error"]
          (pr-str error)])]]))
 
 (defn simplify-tool-container
   []
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
-    [mui/slide {:direction "up" :in open?}
+    [:> Slide {:direction "up" :in open?}
      [:r> (react/forwardRef
            (fn [_props ref]
              (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
@@ -123,25 +154,25 @@
   [{:keys [tr on-change on-close]
     :or {on-close #(==> [::events/close-simplify-tool])}}]
   (let [tolerance (<== [::subs/simplify-tolerance])]
-    [mui/paper {:style {:padding "1em"} :elevation 5}
-     [mui/grid {:container true}
+    [:> Paper {:style {:padding "1em"} :elevation 5}
+     [:> Grid {:container true}
 
       ;; Header
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [:h4 (tr :map.tools.simplify/headline)]]
 
       ;; Slider
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
 
-       [mui/grid {:container true :spacing 2}
+       [:> Grid {:container true :spacing 2}
 
         ;; Less
-        [mui/grid {:item true}
-         [mui/typography (tr :general/less)]]
+        [:> Grid {:item true}
+         [:> Typography (tr :general/less)]]
 
         ;; The Slider
-        [mui/grid {:item true :xs true}
-         [mui/slider
+        [:> Grid {:item true :xs true}
+         [:> Slider
           {:size "small"
            :on-change #(==> [::events/set-simplify-tolerance %2])
            :value tolerance
@@ -151,24 +182,24 @@
            :max 10}]]
 
         ;; More
-        [mui/grid {:item true}
-         [mui/typography (tr :general/more)]]]]
+        [:> Grid {:item true}
+         [:> Typography (tr :general/more)]]]]
 
       ;; Buttons
-      [mui/grid {:item true :xs 12}
-       [mui/grid {:container true :spacing 1}
+      [:> Grid {:item true :xs 12}
+       [:> Grid {:container true :spacing 1}
 
         ;; OK
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:variant "contained"
            :color "secondary"
            :on-click #(on-change tolerance)}
           "OK"]]
 
         ;; Cancel
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:variant "outlined"
            :on-click on-close}
           (tr :actions/cancel)]]]]]]))
@@ -178,16 +209,16 @@
                   :maastokartta (tr :map.basemap/maastokartta)
                   :ortokuva (tr :map.basemap/ortokuva)}
         basemap (<== [::subs/basemap])]
-    [mui/grid {:container true :direction "column"}
-     [mui/grid {:item true}
+    [:> Grid {:container true :direction "column"}
+     [:> Grid {:item true}
       [lui/select
        {:items basemaps
         :value (:layer basemap)
         :label-fn second
         :value-fn first
         :on-change #(==> [::events/select-basemap %])}]]
-     [mui/grid {:item true}
-      [mui/typography {:variant "caption"}
+     [:> Grid {:item true}
+      [:> Typography {:variant "caption"}
        (tr :map.basemap/copyright)]]]))
 
 (defn overlay-selector
@@ -196,36 +227,36 @@
     (let [overlays {:light-traffic
                     {:label (tr :map.overlay/light-traffic)
                      :label2 "© Väylävirasto"
-                     :icon [mui/icon "timeline"]}
+                     :icon [:> Icon "timeline"]}
                     :retkikartta-snowmobile-tracks
                     {:label (str (tr :map.overlay/retkikartta-snowmobile-tracks) " 2025")
                      :label2 "© Metsähallitus"
-                     :icon [mui/icon
+                     :icon [:> Icon
                             {:style {:color "#0000FF"}}
                             "timeline"]}
                     :mml-kiinteisto
                     {:label (tr :map.overlay/mml-kiinteisto)
                      :label2 "© Maanmittauslaitos"
-                     :icon [mui/icon
+                     :icon [:> Icon
                             {:style {:color "red"}}
                             "timeline"]}
                     :mml-kiinteistotunnukset
                     {:label (tr :map.overlay/mml-property-identifiers)
                      :label2 "© Maanmittauslaitos"
-                     :icon [mui/icon
+                     :icon [:> Icon
                             {:style {:color "black"}}
                             "text_format"]}
                     :mml-kuntarajat
                     {:label (tr :map.overlay/municipal-boundaries)
                      :label2 "© Maanmittauslaitos"
-                     :icon [mui/icon
+                     :icon [:> Icon
                             {:style {:color "#6222BC"}}
                             "timeline"]}}
           selected-overlays (<== [::subs/selected-overlays])]
       [:<>
        (into
 
-        [mui/menu
+        [:> Menu
          {:open (boolean @anchor-el)
           :anchorEl @anchor-el
           :anchorOrigin {:vertical "top" :horizontal "left"}
@@ -234,41 +265,41 @@
 
         (for [[k {:keys [label label2 icon]}] overlays
               :let [v (contains? selected-overlays k)]]
-          [mui/menu-item
+          [:> MenuItem
            {:on-click #(==> [::events/toggle-overlay k])}
-           [mui/list-item-icon
-            [mui/checkbox
+           [:> ListItemIcon
+            [:> Checkbox
              {:checked (boolean v)
               :size "medium"
               :value (str v)
               :color "secondary"
               :on-change #()}]]
-           [mui/list-item-text
+           [:> ListItemText
             {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
              :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
              :primary label :secondary label2}]
-           [mui/list-item-icon
+           [:> ListItemIcon
             icon]]))
 
-       [mui/grid {:item true}
-        [mui/tooltip {:title (tr :map.overlay/tooltip)}
-         [mui/icon-button
+       [:> Grid {:item true}
+        [:> Tooltip {:title (tr :map.overlay/tooltip)}
+         [:> IconButton
           {:color (if @anchor-el "secondary" "default")
            :on-click
            (fn [evt] (reset! anchor-el (if @anchor-el nil (.-currentTarget evt))))}
-          [mui/icon "layers"]]]]])))
+          [:> Icon "layers"]]]]])))
 
 (defn basemap-transparency-selector
   [{:keys [tr]}]
   (r/with-let [anchor-el (r/atom nil)]
     (let [opacity (<== [::subs/basemap-opacity])]
       [:<>
-       [mui/popper
+       [:> Popper
         {:id "basemap-transparency-selector"
          :placement "top"
          :open (some? @anchor-el)
          :anchorEl @anchor-el}
-        [mui/paper
+        [:> Paper
          {:style
           {:width "200px"
            :padding-right "2em"
@@ -276,8 +307,8 @@
            :padding-top "0.5em"
            :padding-bottom "0.5em"
            :margin-bottom "1em"}}
-         #_[mui/typography {:variant "caption"} (tr :map.basemap/transparency)]
-         [mui/slider
+         #_[:> Typography {:variant "caption"} (tr :map.basemap/transparency)]
+         [:> Slider
           {:size "small"
            :value (- 1 opacity)
            :on-change #(==> [::events/set-basemap-opacity (- 1 %2)])
@@ -286,17 +317,17 @@
            :step 0.05
            :min 0.0
            :max 1.0}]]]
-       [mui/tooltip {:title (tr :map.basemap/transparency)}
-        [mui/icon-button
+       [:> Tooltip {:title (tr :map.basemap/transparency)}
+        [:> IconButton
          {:on-click (fn [evt]
                       (reset! anchor-el (if @anchor-el nil (.-currentTarget evt))))}
-         [mui/icon {:color (if @anchor-el "secondary" "default")} "opacity"]]]])))
+         [:> Icon {:color (if @anchor-el "secondary" "default")} "opacity"]]]])))
 
 (defn user-location-btn
   [{:keys [tr]}]
-  [mui/tooltip {:title (tr :map/zoom-to-user)}
-   [mui/icon-button {:on-click #(==> [::events/zoom-to-users-position])}
-    [mui/icon {:color "inherit" :font-size "medium"}
+  [:> Tooltip {:title (tr :map/zoom-to-user)}
+   [:> IconButton {:on-click #(==> [::events/zoom-to-users-position])}
+    [:> Icon {:color "inherit" :font-size "medium"}
      "my_location"]]])
 
 (defn filter-by-term [term table-data]
@@ -312,28 +343,28 @@
                table-data (<== [:lipas.ui.sports-sites.subs/type-table types])]
     (let [filtered-table-data (filter-by-term @search-term table-data)
           sorted-and-filtered-table-data (sort-by :name filtered-table-data)]
-      [mui/grid {:container true}
-       [mui/grid {:item true :xs 12}
-        [mui/text-field {:label (tr :search/search)
+      [:> Grid {:container true}
+       [:> Grid {:item true :xs 12}
+        [:> TextField {:label (tr :search/search)
                          :xs 3
                          :on-change #(reset! search-term (-> % .-target .-value))
                          :placeholder nil
                          :variant "standard"}]]
-       [mui/grid {:item true :xs 12}
-        [mui/table-container
-         [mui/table
-          [mui/table-head
-           [mui/table-row
-            [mui/table-cell (tr :type/name)]
-            [mui/table-cell (tr :type/geometry)]
-            [mui/table-cell (tr :general/description)]]]
+       [:> Grid {:item true :xs 12}
+        [:> TableContainer
+         [:> Table
+          [:> TableHead
+           [:> TableRow
+            [:> TableCell (tr :type/name)]
+            [:> TableCell (tr :type/geometry)]
+            [:> TableCell (tr :general/description)]]]
           (into
-           [mui/table-body {:component "th" :scope "row"}]
+           [:> TableBody {:component "th" :scope "row"}]
            (for [row sorted-and-filtered-table-data]
-             [mui/table-row {:on-click #(on-select (row :type-code))}
-              [mui/table-cell (row :name)]
-              [mui/table-cell (->> row :geometry-type (keyword :type) tr)]
-              [mui/table-cell (row :description)]]))]]]])))
+             [:> TableRow {:on-click #(on-select (row :type-code))}
+              [:> TableCell (row :name)]
+              [:> TableCell (->> row :geometry-type (keyword :type) tr)]
+              [:> TableCell (row :description)]]))]]]])))
 
 (defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)
@@ -355,10 +386,10 @@
                             :on-select (fn [element]
                                          (swap! geom-help-open? not)
                                          (reset! selected-type element))}]]
-       [mui/grid {:container true}
+       [:> Grid {:container true}
 
         ;; Autocomplete
-        [mui/grid {:item true :xs 11}
+        [:> Grid {:item true :xs 11}
          [lui/autocomplete
           {:multi? false
            :items (vals types)
@@ -369,19 +400,19 @@
            :on-change #(reset! selected-type %)}]]
 
         ;; Apu ankka button
-        [mui/grid {:item true :xs 1}
-         [mui/icon-button
+        [:> Grid {:item true :xs 1}
+         [:> IconButton
           {:xs 1
            :type "button"
            :on-click #(swap! geom-help-open? not)}
-          [mui/icon "help"]]]
+          [:> Icon "help"]]]
 
         ;; Description + OK button
         (when @selected-type
-          [mui/grid {:item true :xs 12}
-           [mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+          [:> Grid {:item true :xs 12}
+           [:> Typography {:style {:margin-top "1em" :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
-           [mui/button {:on-click #(on-change @selected-type)
+           [:> Button {:on-click #(on-change @selected-type)
                         :auto-focus true
                         :variant "contained"
                         :color "secondary"}
@@ -394,14 +425,14 @@
         status (-> popup :data :features first :properties :status)
         tr (-> popup :tr)
         locale (tr)]
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"
        :width (when (< 100 (count name')) "150px")}}
-     [mui/typography {:variant "body2"}
+     [:> Typography {:variant "body2"}
       name']
      (when-not (#{"active"} status)
-       [mui/typography {:variant "body2" :color "error"}
+       [:> Typography {:variant "body2" :color "error"}
         (get-in ss/statuses [status locale])])]))
 
 (defmethod popup-body :loi [popup]
@@ -409,13 +440,13 @@
         loi-category (-> popup :data :features first :properties :loi-category)
         #_#_tr (-> popup :tr)
         texts (<== [:lipas.ui.loi.subs/popup-localized loi-type loi-category])]
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"
        :width (when (< 100 (count loi-type)) "150px")}}
-     [mui/typography {:variant "body2"}
+     [:> Typography {:variant "body2"}
       (:loi-type texts)]
-     [mui/typography {:variant "caption"}
+     [:> Typography {:variant "caption"}
       (:loi-category texts)]]))
 
 (defmethod popup-body :population [popup]
@@ -424,147 +455,147 @@
         metric (<== [:lipas.ui.analysis.reachability.subs/selected-travel-metric])
         data (-> popup :data :features first :properties)
         zone-id (keyword (:zone data))]
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"}}
-     [mui/table {:padding "normal" :size "small"}
-      [mui/table-body
+     [:> Table {:padding "normal" :size "small"}
+      [:> TableBody
 
        ;; Population
-       [mui/table-row {:style {:height "24px"}}
-        [mui/table-cell
-         [mui/typography {:variant "caption" :noWrap true}
+       [:> TableRow {:style {:height "24px"}}
+        [:> TableCell
+         [:> Typography {:variant "caption" :noWrap true}
           (tr :analysis/population)]]
-        [mui/table-cell
-         [mui/typography {:variant "caption" :no-wrap true}
+        [:> TableCell
+         [:> Typography {:variant "caption" :no-wrap true}
           (if-let [v (:vaesto data)] v "<10")]]]
 
        ;; Profile / Zone / Metric
-       [mui/table-row {:style {:height "24px"}}
-        [mui/table-cell
-         [mui/typography {:variant "caption" :noWrap true}
+       [:> TableRow {:style {:height "24px"}}
+        [:> TableCell
+         [:> Typography {:variant "caption" :noWrap true}
           (if (= metric :travel-time)
             (tr :analysis/travel-time)
             (tr :analysis/distance))]]
-        [mui/table-cell
-         [mui/typography {:variant "caption" :no-wrap true}
+        [:> TableCell
+         [:> Typography {:variant "caption" :no-wrap true}
           (get-in zone-labels [[metric zone-id]])]]]]]]))
 
 (defmethod popup-body :school [popup]
   (let [data (-> popup :data :features first :properties)]
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"}}
-     [mui/typography {:variant "body2"}
+     [:> Typography {:variant "body2"}
       (:name data)]
-     [mui/typography {:variant "caption"}
+     [:> Typography {:variant "caption"}
       (:type data)]]))
 
 (defmethod popup-body :diversity-grid [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
-    [mui/paper
+    [:> Paper
      {:style {:padding "0.5em"}}
-     [mui/table {:padding "normal" :size "small"}
-      [mui/table-body
+     [:> Table {:padding "normal" :size "small"}
+      [:> TableBody
 
        ;; Diversity index
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography {:variant "caption"} (tr :analysis/diversity-idx)]]
-        [mui/table-cell
-         [mui/typography {:variant "caption" :no-wrap true}
+       [:> TableRow
+        [:> TableCell
+         [:> Typography {:variant "caption"} (tr :analysis/diversity-idx)]]
+        [:> TableCell
+         [:> Typography {:variant "caption" :no-wrap true}
           (:diversity_idx data)]]]
 
        ;; Population
-       [mui/table-row
-        [mui/table-cell
-         [mui/typography {:variant "caption"} (tr :analysis/population)]]
-        [mui/table-cell
-         [mui/typography {:variant "caption" :no-wrap true}
+       [:> TableRow
+        [:> TableCell
+         [:> Typography {:variant "caption"} (tr :analysis/population)]]
+        [:> TableCell
+         [:> Typography {:variant "caption" :no-wrap true}
           (or (:population data) "<10")]]]]]]))
 
 (defmethod popup-body :diversity-area [popup]
   (let [tr (<== [:lipas.ui.subs/translator])
         data (-> popup :data :features first :properties)]
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"}}
 
      (if (or (:population-weighted-mean data) (:population data))
        ;; Results table
-       [mui/table {:padding "normal" :size "small"}
-        [mui/table-body
+       [:> Table {:padding "normal" :size "small"}
+        [:> TableBody
 
          ;; Area name
          (when-let [s (:nimi data)]
-           [mui/table-row
-            [mui/table-cell
-             [mui/typography {:variant "caption"}
+           [:> TableRow
+            [:> TableCell
+             [:> Typography {:variant "caption"}
               "Alue"]]
-            [mui/table-cell
-             [mui/typography {:variant "caption" :no-wrap true}
+            [:> TableCell
+             [:> Typography {:variant "caption" :no-wrap true}
               s]]])
 
          ;; Postal code
          (when-let [s (:posti_alue data)]
-           [mui/table-row
-            [mui/table-cell
-             [mui/typography {:variant "caption"}
+           [:> TableRow
+            [:> TableCell
+             [:> Typography {:variant "caption"}
               "Postinumero"]]
-            [mui/table-cell
-             [mui/typography {:variant "caption" :no-wrap true}
+            [:> TableCell
+             [:> Typography {:variant "caption" :no-wrap true}
               s]]])
 
          ;; Population weighted mean
-         [mui/table-row
-          [mui/table-cell
-           [mui/typography {:variant "caption"}
+         [:> TableRow
+          [:> TableCell
+           [:> Typography {:variant "caption"}
             (tr :analysis/population-weighted-mean)]]
-          [mui/table-cell
-           [mui/typography {:variant "caption" :no-wrap true}
+          [:> TableCell
+           [:> Typography {:variant "caption" :no-wrap true}
             (utils/round-safe
              (:population-weighted-mean data))]]]
 
          ;; Population
-         [mui/table-row
-          [mui/table-cell
-           [mui/typography {:variant "caption"}
+         [:> TableRow
+          [:> TableCell
+           [:> Typography {:variant "caption"}
             (tr :analysis/population)]]
-          [mui/table-cell
-           [mui/typography {:variant "caption" :no-wrap true}
+          [:> TableCell
+           [:> Typography {:variant "caption" :no-wrap true}
             (let [n (:population data 0)]
               (if (< n 10) "<10" n))]]]
 
          ;; Mean
-         #_[mui/table-row
-            [mui/table-cell
-             [mui/typography (tr :analysis/mean)]]
-            [mui/table-cell
+         #_[:> TableRow
+            [:> TableCell
+             [:> Typography (tr :analysis/mean)]]
+            [:> TableCell
              (:diversity-idx-mean data)]]
 
          ;; Median
-         #_[mui/table-row
-            [mui/table-cell
-             [mui/typography (tr :analysis/median)]]
-            [mui/table-cell
+         #_[:> TableRow
+            [:> TableCell
+             [:> Typography (tr :analysis/median)]]
+            [:> TableCell
              (:diversity-idx-median data)]]
 
          ;; Mode
-         #_[mui/table-row
-            [mui/table-cell
-             [mui/typography (tr :analysis/mode)]]
-            [mui/table-cell
+         #_[:> TableRow
+            [:> TableCell
+             [:> Typography (tr :analysis/mode)]]
+            [:> TableCell
              (when (seq (:diversity-idx-mode data))
                (str/join "," (:diversity-idx-mode data)))]]]]
 
        ;; No data available
        [:div {:style {:width "200px" :padding "0.5em 0.5em 0em 0.5em"}}
-        [mui/typography {:paragraph true}
+        [:> Typography {:paragraph true}
          (str (:nimi data) " " (:posti_alue data))]
-        [mui/typography {:paragraph true :variant "caption"}
+        [:> Typography {:paragraph true :variant "caption"}
          "Analyysiä ei ole tehty"]
-        [mui/typography {:paragraph true :variant "caption"}
+        [:> Typography {:paragraph true :variant "caption"}
          "Klikkaa aluetta hiirellä tai valitse alue taulukosta."]])]))
 
 (r/defc route-part-difficulty [{:keys [data]}]
@@ -614,14 +645,14 @@
         ;; Get type labels for type-distribution dimension
         types-db (<== [:lipas.ui.sports-sites.subs/all-types])]
 
-    [mui/paper
+    [:> Paper
      {:style
       {:padding "0.5em"
        :min-width "200px"}}
 
-     [mui/stack {:direction "column"}
+     [:> Stack {:direction "column"}
       ;; Facility count
-      [mui/typography {:variant "body2" :style {:font-weight "bold"}}
+      [:> Typography {:variant "body2" :style {:font-weight "bold"}}
        (str (:doc_count data) " " (if (= 1 (:doc_count data))
                                     (tr :analysis/heatmap-popup-facility-singular)
                                     (tr :analysis/heatmap-popup-facility-plural)))]
@@ -629,28 +660,28 @@
       ;; Type distribution for type-distribution dimension
       (when (and (= :type-distribution dimension) (:types data))
         [:<>
-         [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
+         [:> Typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
           (str (tr :analysis/heatmap-popup-top-types) (count (:types data)) ")")]
-         (into [mui/list {:dense true :style {:padding 0}}]
+         (into [:> List {:dense true :style {:padding 0}}]
                (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:types data)))
                      :let [type-label (get-in types-db [key :name locale] (str (tr :analysis/heatmap-popup-type-fallback) key))]]
-                 [mui/list-item {:style {:padding "2px 0"}}
-                  [mui/typography {:variant "caption"}
+                 [:> ListItem {:style {:padding "2px 0"}}
+                  [:> Typography {:variant "caption"}
                    (str type-label ": " doc_count)]]))])
 
       ;; Activities for activities dimension
       (when (and (= :activities dimension) (:activities data))
         [:<>
-         [mui/typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
+         [:> Typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
           (tr :analysis/heatmap-popup-activities)]
-         (into [mui/list {:dense true :style {:padding 0}}]
+         (into [:> List {:dense true :style {:padding 0}}]
                (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:activities data)))]
-                 [mui/list-item {:style {:padding "2px 0"}}
-                  [mui/typography {:variant "caption"}
+                 [:> ListItem {:style {:padding "2px 0"}}
+                  [:> Typography {:variant "caption"}
                    (str key ": " doc_count)]]))])]
 
      ;; Grid reference (optional, for debugging)
-     #_[mui/typography {:variant "caption" :color "textSecondary" :style {:margin-top "0.5em"}}
+     #_[:> Typography {:variant "caption" :color "textSecondary" :style {:margin-top "0.5em"}}
         (str "Grid: " (:grid_key data))]]))
 
 (r/defc popup [{:keys [popup-ref]}]
@@ -663,7 +694,7 @@
                    (set-anchor-el el)
                    (set! (.-current popup-ref) el))}]
      (when (seq data)
-       [mui/popper
+       [:> Popper
         {:open (boolean (seq data))
          :placement (or placement "top-end")
          ;; FIXME:
@@ -698,18 +729,18 @@
                   (==> [::events/close-address-locator-dialog])
                   (==> [::events/populate-address-with-reverse-geocoding-results lipas-id cities {:features [{:properties selected-address}]}]))}
 
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Helper text 1
-       [mui/grid {:item true :xs 12}
-        [mui/typography (tr :map.resolve-address/helper-text1)]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography (tr :map.resolve-address/helper-text1)]]
 
        ;; Helper text 2
-       [mui/grid {:item true :xs 12}
-        [mui/typography (tr :map.resolve-address/helper-text2)]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography (tr :map.resolve-address/helper-text2)]]
 
        ;; Address selector
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/autocomplete
          {:label (tr :map.resolve-address/addresses)
           :items addresses
@@ -733,80 +764,80 @@
 (defn get-map-tool-items [{:keys [tr lipas-id type-code sub-mode activity-value edit-activities? editing? can-edit-map? geom-type]}]
   (->> [;; Import geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
-          [mui/menu-item {:on-click #(do
+          [:> MenuItem {:on-click #(do
                                        (==> [::events/close-more-tools-menu])
                                        (==> [::events/toggle-import-dialog]))}
-           [mui/list-item-icon
+           [:> ListItemIcon
             [:> FileUpload]]
-           [mui/list-item-text (tr :map.import/tooltip)]])
+           [:> ListItemText (tr :map.import/tooltip)]])
 
         ;; Simplify
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
-          [mui/menu-item {:on-click #(do
+          [:> MenuItem {:on-click #(do
                                        (==> [::events/close-more-tools-menu])
                                        (==> [::events/open-simplify-tool]))}
-           [mui/list-item-icon
-            [mui/icon "auto_fix_high"]]
-           [mui/list-item-text (tr :map.tools/simplify)]])
+           [:> ListItemIcon
+            [:> Icon "auto_fix_high"]]
+           [:> ListItemText (tr :map.tools/simplify)]])
 
         ;; Draw hole
         (when (and editing? can-edit-map? (#{"Polygon"} geom-type))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :drawing-hole geom-type]))}
-           [mui/list-item-icon
-            [mui/icon
+           [:> ListItemIcon
+            [:> Icon
              {:color (if (= sub-mode :drawing-hole) "secondary" "inherit")}
              "vignette"]]
-           [mui/list-item-text (tr :map/draw-hole)]])
+           [:> ListItemText (tr :map/draw-hole)]])
 
         ;; Add new geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
 
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :drawing geom-type]))}
-           [mui/list-item-icon
+           [:> ListItemIcon
             (if (= geom-type "LineString")
-              [mui/icon
+              [:> Icon
                {:color (if (= sub-mode :drawing)
                          "secondary"
                          "inherit")} "timeline"]
-              [mui/icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
+              [:> Icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
                "change_history"])]
-           [mui/list-item-text (case geom-type
+           [:> ListItemText (case geom-type
                                  "LineString" (tr :map/draw-linestring)
                                  "Polygon" (tr :map/draw-polygon))]])
 
         ;; Delete geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :deleting geom-type]))}
-           [mui/list-item-icon
+           [:> ListItemIcon
             [:> Eraser
              {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
-           [mui/list-item-text (case geom-type
+           [:> ListItemText (case geom-type
                                  "LineString" (tr :map/remove-linestring)
                                  "Polygon" (tr :map/remove-polygon))]])
 
         ;; Split linestring
         (when (and editing? can-edit-map? (#{"LineString"} geom-type))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :splitting geom-type]))}
-           [mui/list-item-icon
+           [:> ListItemIcon
             [:> ContentCut
              {:color (if (= sub-mode :splitting) "secondary" "inherit")}]]
-           [mui/list-item-text (tr :map/split-linestring)]])
+           [:> ListItemText (tr :map/split-linestring)]])
 
         ;; Travel direction
         (when (and editing?
@@ -818,67 +849,67 @@
                       4451 4452
                       ;; ski routes
                       4402 4440} type-code))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :travel-direction geom-type]))}
-           [mui/list-item-icon
-            [mui/icon
+           [:> ListItemIcon
+            [:> Icon
              {:color (if (= sub-mode :travel-direction) "secondary" "inherit")}
              "turn_slight_right"]]
-           [mui/list-item-text (tr :map/travel-direction)]])
+           [:> ListItemText (tr :map/travel-direction)]])
 
         ;; Route part difficulty
         (when (and editing?
                    edit-activities?
                    (#{"LineString"} geom-type)
                    (= "cycling" activity-value))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :route-part-difficulty geom-type]))}
-           [mui/list-item-icon
-            [mui/icon
+           [:> ListItemIcon
+            [:> Icon
              {:color (if (= sub-mode :route-part-difficulty) "secondary" "inherit")}
              "warning"]]
-           [mui/list-item-text (tr :map/route-part-difficulty)]])
+           [:> ListItemText (tr :map/route-part-difficulty)]])
 
         ;; Download backup
         (when editing?
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/download-site-backup lipas-id])
                (==> [::events/close-more-tools-menu]))}
-           [mui/list-item-icon
-            [mui/icon {:color "inherit"} "cloud_download"]]
-           [mui/list-item-text (tr :map.tools/download-backup-tooltip)]])
+           [:> ListItemIcon
+            [:> Icon {:color "inherit"} "cloud_download"]]
+           [:> ListItemText (tr :map.tools/download-backup-tooltip)]])
 
         ;; Restore backup
         (when editing?
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/open-restore-site-backup-dialog lipas-id])
                (==> [::events/close-more-tools-menu]))}
-           [mui/list-item-icon
-            [mui/icon {:color "inherit"} "cloud_upload"]]
-           [mui/list-item-text (tr :map.tools/restore-backup-tooltip)]])
+           [:> ListItemIcon
+            [:> Icon {:color "inherit"} "cloud_upload"]]
+           [:> ListItemText (tr :map.tools/restore-backup-tooltip)]])
 
         ;; Edit tool
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :editing geom-type]))}
-           [mui/list-item-icon
-            [mui/icon
+           [:> ListItemIcon
+            [:> Icon
              {:color (if (= sub-mode :editing) "secondary" "inherit")}
              "edit"]]
-           [mui/list-item-text (tr :map.tools/edit-tool)]])]
+           [:> ListItemText (tr :map.tools/edit-tool)]])]
        (keep identity)))
 
 ;; Works as both display and edit views
@@ -947,7 +978,7 @@
 
         set-field (partial set-field lipas-id)]
 
-    [mui/grid
+    [:> Grid
      {:container true
       :style (merge {:padding "1em"} (when (utils/ie?) {:width "420px"}))}
 
@@ -959,16 +990,16 @@
      (when editing?
        [restore-site-backup-dialog])
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
 
       ;; Headline
-      [mui/grid
+      [:> Grid
        {:container true
         :style {:flex-wrap "nowrap"}
         :align-items :center}
 
-       [mui/grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
-        [mui/typography {:variant "h5"}
+       [:> Grid {:item true :style {:margin-top "0.5em" :flex-grow 1}}
+        [:> Typography {:variant "h5"}
          (:name display-data)]]
 
        (when editing?
@@ -979,18 +1010,18 @@
                                    (==> [::events/simplify lipas-id geoms tolerance])))
                     :tr tr}]))
 
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         ;; Close button
-        [mui/grid {:item true}
+        [:> Grid {:item true}
          (when (not editing?)
-           [mui/icon-button
+           [:> IconButton
             {:style {:margin-left "-0.25em"}
              :on-click #(==> [::events/show-sports-site nil])}
-            [mui/icon "close"]])]]]
+            [:> Icon "close"]])]]]
 
       ;; Tabs
-      [mui/grid {:item true :xs 12}
-       [mui/tabs
+      [:> Grid {:item true :xs 12}
+       [:> Tabs
         {:value selected-tab
          :on-change #(==> [::events/select-sports-site-tab %2])
          :variant (if view-activities?
@@ -1001,43 +1032,43 @@
          :style {:margin-bottom "1em"}
          :indicator-color "secondary"
          :text-color "secondary"}
-        [mui/tab
+        [:> Tab
          {:style {:min-width 0}
           :value 0
           :label (tr :lipas.sports-site/basic-data)}]
 
-        [mui/tab
+        [:> Tab
          {:style {:min-width 0}
           :value 1
           :label (tr :lipas.sports-site/properties)}]
 
        ;; Disabled in prod until this can be released
         (when (and (not (utils/prod?)) accessibility-type?)
-          [mui/tab
+          [:> Tab
            {:style {:min-width 0}
             :value 2
             :label (tr :lipas.sports-site/accessibility)}])
 
         (when view-floorball?
-          [mui/tab
+          [:> Tab
            {:style {:min-width 0}
             :value 3
             :label (tr :lipas.floorball/headline)}])
 
         (when view-activities?
-          [mui/tab
+          [:> Tab
            {:style {:min-width 0}
             :value 5
             :label (tr :utp/headline)}])
 
         (when (#{"LineString"} geom-type)
-          [mui/tab
+          [:> Tab
            {:style {:min-width 0}
             :value 4
             :label (tr :sports-site.elevation-profile/headline)}])
 
         (when view-ptv?
-          [mui/tab
+          [:> Tab
            {:style {:min-width 0}
             :value 6
             :label "PTV"}])]
@@ -1051,9 +1082,9 @@
        (case selected-tab
 
          ;; Basic info tab
-         0 [mui/grid {:container true}
+         0 [:> Grid {:container true}
 
-            [mui/grid {:item true :xs 12}
+            [:> Grid {:item true :xs 12}
 
              (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
                         (not can-publish?))
@@ -1110,8 +1141,8 @@
          3 (cond
              floorball-type?
              [:<>
-              [mui/tabs {:value "floorball" :variant "standard"}
-               [mui/tab {:value "floorball" :label "Salibandy"}]]
+              [:> Tabs {:value "floorball" :variant "standard"}
+               [:> Tab {:value "floorball" :label "Salibandy"}]]
               [floorball/form
                {:tr tr
                 :lipas-id lipas-id
@@ -1134,10 +1165,10 @@
                  :key (-> edit-data :type :type-code)}])
 
          4 (when (#{"LineString"} geom-type)
-             [mui/grid {:item true :xs 12 :style {:margin-top "0.5em"}}
+             [:> Grid {:item true :xs 12 :style {:margin-top "0.5em"}}
               [sports-sites/elevation-profile {:lipas-id lipas-id}]])
 
-         5 [mui/grid {:item true :xs 12}
+         5 [:> Grid {:item true :xs 12}
             [activities/view
              {:tr tr
               :lipas-id lipas-id
@@ -1146,7 +1177,7 @@
               :edit-data edit-data
               :can-edit? edit-activities?}]]
 
-         6 [mui/grid {:item true :xs 12}
+         6 [:> Grid {:item true :xs 12}
             [ptv-site/site-view
              {:tr tr
               :lipas-id lipas-id
@@ -1156,14 +1187,14 @@
               :can-edit? can-publish?}]])]
 
 ;; "Landing bay" for floating tools
-      [mui/grid {:item true :xs 12 :style {:height "3em"}}]
+      [:> Grid {:item true :xs 12 :style {:height "3em"}}]
 
      ;; Actions
       (when-not hide-actions?
         [lui/floating-container
          {:bottom 0 :background-color "transparent"}
          (into
-          [mui/grid
+          [:> Grid
            {:container true
             :align-items "center"
             :align-content "flex-start"
@@ -1174,27 +1205,27 @@
               ;; TODO: Undo/redo are only for map edits, so not useful if
               ;; you only have floorball or activity privileges (if current activity doesn't have map tools)
             (when editing?
-              [mui/tooltip {:title (tr :actions/undo)}
+              [:> Tooltip {:title (tr :actions/undo)}
                [:span
-                [mui/fab
+                [:> Fab
                  {:disabled (not undo)
                   :size "small"
                   :on-click #(==> [::events/undo lipas-id])}
-                 [mui/icon "undo"]]]])
+                 [:> Icon "undo"]]]])
 
            ;; Redo
             (when editing?
-              [mui/tooltip {:title (tr :actions/redo)}
+              [:> Tooltip {:title (tr :actions/redo)}
                [:span
-                [mui/fab
+                [:> Fab
                  {:disabled (not redo)
                   :size "small"
                   :on-click #(==> [::events/redo lipas-id])}
-                 [mui/icon "redo"]]]])
+                 [:> Icon "redo"]]]])
 
             ;; Active editing tool
             (when (and editing? (seq map-tool-items))
-              [mui/tooltip
+              [:> Tooltip
                {:title
                 (case sub-mode
                   :drawing (tr :map.tools/drawing-tooltip)
@@ -1208,39 +1239,39 @@
                   :travel-direction (tr :map.tools/travel-direction-tooltip)
                   :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
                   :view-only "-")}
-               [mui/fab
+               [:> Fab
                 {:size "small"
                  :on-click #() ; noop
                  :color "inherit"}
                 (let [props {:color "secondary"}]
                   (case sub-mode
                     :drawing (case geom-type
-                               "Point" [mui/icon props "edit"]
-                               "LineString" [mui/icon props "timeline"]
-                               "Polygon" [mui/icon props "change_history"])
-                    :drawing-hole [mui/icon props "vignette"]
-                    (:editing :undo) [mui/icon props "edit"]
+                               "Point" [:> Icon props "edit"]
+                               "LineString" [:> Icon props "timeline"]
+                               "Polygon" [:> Icon props "change_history"])
+                    :drawing-hole [:> Icon props "vignette"]
+                    (:editing :undo) [:> Icon props "edit"]
                     :importing [:> FileUpload props]
                     :deleting [:> Eraser props]
                     :splitting [:> ContentCut props]
-                    :simplifying [mui/icon props "auto_fix_high"]
-                    :selecting [mui/icon props "handshake"]
-                    :travel-direction [mui/icon props "turn_slight_right"]
-                    :route-part-difficulty [mui/icon props "warning"]
-                    :view-only [mui/icon props "dash"]))]])
+                    :simplifying [:> Icon props "auto_fix_high"]
+                    :selecting [:> Icon props "handshake"]
+                    :travel-direction [:> Icon props "turn_slight_right"]
+                    :route-part-difficulty [:> Icon props "warning"]
+                    :view-only [:> Icon props "dash"]))]])
 
            ;; Tool select button
             (when editing?
               (when (seq map-tool-items)
                 [:<>
-                 [mui/tooltip {:title (tr :actions/select-tool)}
-                  [mui/fab
+                 [:> Tooltip {:title (tr :actions/select-tool)}
+                  [:> Fab
                    {:size "medium"
                     :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
                     :color "secondary"}
-                   [mui/icon "more_horiz"]]]
+                   [:> Icon "more_horiz"]]]
 
-                 (into [mui/menu
+                 (into [:> Menu
                         {:variant "menu"
                          :auto-focus false
                          :anchor-el more-tools-menu-anchor
@@ -1250,21 +1281,21 @@
 
            ;; Download GPX
             (when (and (not editing?) (#{"LineString"} geom-type))
-              [mui/tooltip {:title (tr :map/download-gpx)}
-               [mui/fab
+              [:> Tooltip {:title (tr :map/download-gpx)}
+               [:> Fab
                 {:size "small"
                  :on-click #(==> [::events/download-gpx lipas-id])
                  :color "inherit"}
-                [mui/icon "save_alt"]]])
+                [:> Icon "save_alt"]]])
 
            ;; Zoom to site
             (when-not editing?
-              [mui/tooltip {:title (tr :map/zoom-to-site)}
-               [mui/fab
+              [:> Tooltip {:title (tr :map/zoom-to-site)}
+               [:> Fab
                 {:size "small"
                  :on-click #(==> [::events/zoom-to-site lipas-id width])
                  :color "inherit"}
-                [mui/icon {:color "inherit"}
+                [:> Icon {:color "inherit"}
                  "place"]]])
 
            ;; Add reminder
@@ -1276,35 +1307,35 @@
 
            ;; Copy sports site
             (when (and logged-in? (not editing?))
-              [mui/tooltip {:title (tr :actions/duplicate)}
-               [mui/fab
+              [:> Tooltip {:title (tr :actions/duplicate)}
+               [:> Fab
                 {:size "small"
                  :on-click #(==> [::events/duplicate-sports-site lipas-id])}
                 [:> ContentDuplicate]]])
 
            ;; Resurrect button
             (when (and dead? logged-in? can-publish? editing-allowed?)
-              [mui/tooltip {:title (tr :actions/resurrect)}
-               [mui/fab
+              [:> Tooltip {:title (tr :actions/resurrect)}
+               [:> Fab
                 {:size "small"
                  :on-click #(==> [::events/resurrect lipas-id])}
-                [mui/icon "360"]]])
+                [:> Icon "360"]]])
 
            ;; Analysis
             (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
                                        (roles/site-roles-context display-data)
                                        :analysis-tool/use])
                        (not editing?))
-              [mui/tooltip {:title (tr :map.demographics/tooltip)}
-               [mui/fab
+              [:> Tooltip {:title (tr :map.demographics/tooltip)}
+               [:> Fab
                 {:size "small"
                  :on-click #(==> [::events/show-analysis lipas-id])}
-                [mui/icon "insights"]]])
+                [:> Icon "insights"]]])
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
-           ;;   [mui/tooltip {:title (tr :map.import/tooltip)}
-           ;;    [mui/fab
+           ;;   [:> Tooltip {:title (tr :map.import/tooltip)}
+           ;;    [:> Fab
            ;;     {:size     "small"
            ;;      :on-click #(==> [::events/toggle-import-dialog])
            ;;      :color    "inherit"}
@@ -1312,8 +1343,8 @@
 
            ;; ;; Draw hole
            ;; (when (and editing? (#{"Polygon"} geom-type))
-           ;;   [mui/tooltip {:title (tr :map/draw-hole)}
-           ;;    [mui/fab
+           ;;   [:> Tooltip {:title (tr :map/draw-hole)}
+           ;;    [:> Fab
            ;;     {:size     "small"
            ;;      :on-click #(if (= sub-mode :drawing-hole)
            ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
@@ -1321,14 +1352,14 @@
            ;;      :style    (when (= sub-mode :drawing-hole)
            ;;                  {:border (str "5px solid " mui/secondary)})
            ;;      :color    "inherit"}
-           ;;     [mui/icon "vignette"]]])
+           ;;     [:> Icon "vignette"]]])
 
            ;; ;; Add new geom
            ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-           ;;   [mui/tooltip {:title (case geom-type
+           ;;   [:> Tooltip {:title (case geom-type
            ;;                          "LineString" (tr :map/draw-linestring)
            ;;                          "Polygon"    (tr :map/draw-polygon))}
-           ;;    [mui/fab
+           ;;    [:> Fab
            ;;     {:size     "small"
            ;;      :on-click #(if (= sub-mode :drawing)
            ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
@@ -1337,15 +1368,15 @@
            ;;                  {:border (str "5px solid " mui/secondary)})
            ;;      :color    "inherit"}
            ;;     (if (= geom-type "LineString")
-           ;;       [mui/icon "timeline"]
-           ;;       [mui/icon "change_history"])]])
+           ;;       [:> Icon "timeline"]
+           ;;       [:> Icon "change_history"])]])
 
            ;; ;; Delete geom
            ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-           ;;   [mui/tooltip {:title (case geom-type
+           ;;   [:> Tooltip {:title (case geom-type
            ;;                          "LineString" (tr :map/remove-linestring)
            ;;                          "Polygon"    (tr :map/remove-polygon))}
-           ;;    [mui/fab
+           ;;    [:> Fab
            ;;     {:size     "small"
            ;;      :on-click #(if (= sub-mode :deleting)
            ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
@@ -1357,8 +1388,8 @@
 
            ;; ;; Split linestring
            ;; (when (and editing? (#{"LineString"} geom-type))
-           ;;   [mui/tooltip {:title (tr :map/split-linestring)}
-           ;;    [mui/fab
+           ;;   [:> Tooltip {:title (tr :map/split-linestring)}
+           ;;    [:> Fab
            ;;     {:size     "small"
            ;;      :on-click #(if (= sub-mode :splitting)
            ;;                   (==> [::events/start-editing lipas-id :editing geom-type])
@@ -1370,8 +1401,8 @@
 
            ;; Helper text
            ;; (when (and editing? (#{"LineString" "Polygon"} geom-type))
-           ;;   [mui/tooltip {:title (tr :map/delete-vertices-hint)}
-           ;;    [mui/typography
+           ;;   [:> Tooltip {:title (tr :map/delete-vertices-hint)}
+           ;;    [:> Typography
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
@@ -1399,14 +1430,14 @@
               :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 
            (remove nil?)
-           (map (fn [tool] [mui/grid {:item true} tool]))))])]]))
+           (map (fn [tool] [:> Grid {:item true} tool]))))])]]))
 
 (defn add-btn [{:keys [tr]}]
-  [mui/tooltip {:title (tr :lipas.sports-site/add-new)}
-   [mui/fab
+  [:> Tooltip {:title (tr :lipas.sports-site/add-new)}
+   [:> Fab
     {:color "secondary"
      :on-click #(==> [::events/start-adding-new-site])}
-    [mui/icon "add"]]])
+    [:> Icon "add"]]])
 
 (defn set-new-site-field [& args]
   (==> [::sports-site-events/edit-new-site-field (butlast args) (last args)]))
@@ -1439,9 +1470,9 @@
           set-field set-new-site-field
           geom-type (:geometry-type type)]
 
-      [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
+      [:> Grid {:container true :spacing 2 :style {:padding "1em"}}
 
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
 
         [import/import-geoms-view
          {:geom-type geom-type
@@ -1456,20 +1487,20 @@
                    :on-change (fn [tolerance] (==> [::events/simplify-new geom tolerance]))
                    :tr tr}])
 
-        [mui/typography {:variant "h6" :style {:margin-left "8px"}}
+        [:> Typography {:variant "h6" :style {:margin-left "8px"}}
          (if-let [type-name (get-in type [:name locale])]
            (tr :lipas.sports-site/new-site-of-type type-name)
            (tr :lipas.sports-site/new-site {:type type :locale locale}))]]
 
        ;; Steps
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         (when is-planning?
           [:> Alert
            {:severity "info"
             :sx #js {:mb 2}}
            (tr :lipas.sports-site/creating-planning-site)])
 
-        [mui/stepper
+        [:> Stepper
          {:active-step active-step
           :alternativeLabel true
           :style {:margin-left "-18px"}
@@ -1478,23 +1509,23 @@
                 #js {".Mui-active" #js {:fill (.. theme -palette -secondary -main)}})}
 
          ;; Step 1 - Select type
-         [mui/step {:active (= (dec 1) active-step)}
-          [mui/step-label (tr :actions/select-type)]]
+         [:> Step {:active (= (dec 1) active-step)}
+          [:> StepLabel (tr :actions/select-type)]]
 
          ;; Step 2 - Add to map
-         [mui/step {:active (= (dec 2) active-step)}
-          [mui/step-label (tr :map/draw)]]
+         [:> Step {:active (= (dec 2) active-step)}
+          [:> StepLabel (tr :map/draw)]]
 
          ;; Step 3 - Fill data
-         [mui/step {:active (= (dec 3) active-step)}
-          [mui/step-label (tr :actions/fill-data)]]]]
+         [:> Step {:active (= (dec 3) active-step)}
+          [:> StepLabel (tr :actions/fill-data)]]]]
 
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
 
         ;; Step 1 type
         (when (= active-step (dec 1))
-          [mui/grid {:container true}
-           [mui/grid {:item true :xs 12}
+          [:> Grid {:container true}
+           [:> Grid {:item true :xs 12}
             [type-selector-single
              {:value (when type [(:type-code type)])
               :tr tr
@@ -1507,45 +1538,45 @@
             (if-not geom
 
               ;; Draw new geom
-              [mui/grid {:container true :spacing 2}
+              [:> Grid {:container true :spacing 2}
 
                ;; Tabs for selecting btw drawing and importing geoms
                #_(when (#{"LineString" "Polygon"} geom-type))
-               [mui/grid {:item true :xs 12}
+               [:> Grid {:item true :xs 12}
 
-                [mui/tabs {:value @geom-tab
+                [:> Tabs {:value @geom-tab
                            :on-change #(reset! geom-tab %2)
                            :variant "fullWidth"
                            :indicator-color "secondary"
                            :text-color "secondary"}
-                 [mui/tab {:value "draw" :label (tr :map/draw-geoms)}]
+                 [:> Tab {:value "draw" :label (tr :map/draw-geoms)}]
                  (when (#{"LineString" "Polygon"} geom-type)
-                   [mui/tab {:value "import" :label (tr :map.import/tab-header)}])
+                   [:> Tab {:value "import" :label (tr :map.import/tab-header)}])
                  (when (#{"Point"} geom-type)
-                   [mui/tab {:value "coords" :label "Syötä koordinaatit"}])]]
+                   [:> Tab {:value "coords" :label "Syötä koordinaatit"}])]]
 
                ;; Draw
                (when (= "draw" @geom-tab)
                  [:<>
                   ;; Helper text
-                  [mui/grid {:item true :xs 12}
-                   [mui/typography {:variant "body2"}
+                  [:> Grid {:item true :xs 12}
+                   [:> Typography {:variant "body2"}
                     (tr :map/zoom-to-site)]]
 
                   ;; Zoom closer info text
                   (when (not zoomed?)
-                    [mui/grid {:item true :xs 12}
-                     [mui/typography {:variant "body2" :color :error}
+                    [:> Grid {:item true :xs 12}
+                     [:> Typography {:variant "body2" :color :error}
                       (tr :map/zoom-closer)]])
 
                   ;; Add initial geom button
-                  [mui/grid {:item true}
-                   [mui/button
+                  [:> Grid {:item true}
+                   [:> Button
                     {:disabled (not zoomed?)
                      :color "secondary"
                      :variant "contained"
                      :on-click #(==> [::events/start-adding-geom geom-type])}
-                    [mui/icon "add_location"]
+                    [:> Icon "add_location"]
                     (tr :map/add-to-map)]]])
 
                ;; Enter coordinates
@@ -1562,7 +1593,7 @@
                                      (m/validate lon-spec (:lon @state))
                                      (m/validate lat-spec (:lat @state)))]
                      [:<>
-                      [mui/grid {:item true :xs 12}
+                      [:> Grid {:item true :xs 12}
                        [lui/select
                         {:style {:min-width "150px"}
                          :label "CRS"
@@ -1570,7 +1601,7 @@
                                  {:value :epsg4326 :label "WGS84"}]
                          :value (:crs @state)
                          :on-change #(swap! state assoc :crs %1)}]]
-                      [mui/grid {:item true :xs 6}
+                      [:> Grid {:item true :xs 6}
                        [lui/text-field
                         {:label (condp = (:crs @state)
                                   :epsg4326 "Lon"
@@ -1579,7 +1610,7 @@
                          :spec lon-spec
                          :value (:lon @state)
                          :on-change #(swap! state assoc :lon %1)}]]
-                      [mui/grid {:item true :xs 6}
+                      [:> Grid {:item true :xs 6}
                        [lui/text-field
                         {:label (condp = (:crs @state)
                                   :epsg4326 "Lat"
@@ -1588,13 +1619,13 @@
                          :spec lat-spec
                          :value (:lat @state)
                          :on-change #(swap! state assoc :lat %1)}]]
-                      [mui/grid {:item true}
-                       [mui/button
+                      [:> Grid {:item true}
+                       [:> Button
                         {:color "secondary"
                          :disabled (not valid?)
                          :variant "contained"
                          :on-click #(==> [::events/add-point-from-coords @state])}
-                        [mui/icon "add_location"]
+                        [:> Icon "add_location"]
                         (tr :map/add-to-map)]]])))
 
                ;; Import geoms
@@ -1602,39 +1633,39 @@
                  (when (#{"LineString" "Polygon"} geom-type)
                    [:<>
                     ;; Supported formats helper text
-                    [mui/grid {:item true :xs 12}
-                     [mui/typography {:variant "body2"}
+                    [:> Grid {:item true :xs 12}
+                     [:> Typography {:variant "body2"}
                       (tr :map.import/supported-formats import/import-formats-str)]]
 
                     ;; Open import dialog button
-                    [mui/grid {:item true}
-                     [mui/button
+                    [:> Grid {:item true}
+                     [:> Button
                       {:color "secondary"
                        :variant "contained"
                        :on-click #(==> [::events/toggle-import-dialog])}
                       (tr :map.import/tooltip)]]]))]
 
               ;; Modify new geom
-              [mui/grid {:container true :spacing 1}
+              [:> Grid {:container true :spacing 1}
 
-               [mui/grid {:item true}
+               [:> Grid {:item true}
                 (when (not zoomed?)
-                  [mui/typography {:variant "body2" :color "error"}
+                  [:> Typography {:variant "body2" :color "error"}
                    (tr :map/zoom-closer)])]
 
-               [mui/grid {:item true :xs 12}
-                [mui/typography {:variant "body2"}
+               [:> Grid {:item true :xs 12}
+                [:> Typography {:variant "body2"}
                  (case geom-type
                    "LineString" (tr :map/modify-linestring)
                    "Polygon" (tr :map/modify-polygon)
                    (tr :map/modify))]
-                [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+                [:> Typography {:variant "caption" :style {:margin-top "0.5em"}}
                  (tr :map/edit-later-hint)]]
 
                ;; Add additional geom button
                (when (#{"LineString" "Polygon"} geom-type)
-                 [mui/grid {:item true}
-                  [mui/button
+                 [:> Grid {:item true}
+                  [:> Button
                    {:on-click #(==> [::events/start-adding-geom geom-type])
                     :variant "contained"
                     :color "secondary"}
@@ -1645,14 +1676,14 @@
 
                ;; Delete geom
                (when (#{"LineString" "Polygon"} geom-type)
-                 [mui/grid {:item true}
-                  [mui/tooltip
+                 [:> Grid {:item true}
+                  [:> Tooltip
                    {:title (case geom-type
                              "LineString" (tr :map/remove-linestring)
                              "Polygon" (tr :map/remove-polygon)
                              (tr :map/remove))}
                    [:span
-                    [mui/button
+                    [:> Button
                      {:on-click #(if (= sub-mode :deleting)
                                    (==> [::events/stop-deleting-geom geom-type])
                                    (==> [::events/start-deleting-geom geom-type]))
@@ -1665,10 +1696,10 @@
 
                ;; Split
                (when (#{"LineString"} geom-type)
-                 [mui/grid {:item true}
-                  [mui/tooltip {:title (tr :map/split-linestring)}
+                 [:> Grid {:item true}
+                  [:> Tooltip {:title (tr :map/split-linestring)}
                    [:span
-                    [mui/button
+                    [:> Button
                      {:on-click #(if (= sub-mode :splitting)
                                    (==> [::events/stop-splitting-geom geom-type])
                                    (==> [::events/start-splitting-geom geom-type]))
@@ -1681,10 +1712,10 @@
 
                ;; Simplify
                (when (#{"LineString" "Polygon"} geom-type)
-                 [mui/grid {:item true}
-                  [mui/tooltip {:title (tr :map.tools/simplify)}
+                 [:> Grid {:item true}
+                  [:> Tooltip {:title (tr :map.tools/simplify)}
                    [:span
-                    [mui/button
+                    [:> Button
                      {:on-click #(==> [::events/open-simplify-tool])
                       :disabled (or (-> geom :features empty?)
                                     (= sub-mode :simplifying))
@@ -1692,58 +1723,58 @@
                                {:outline (str "2px solid " mui/secondary)})
                       :variant "contained"
                       :color "gray1"}
-                     [mui/icon "auto_fix_high"]]]]])
+                     [:> Icon "auto_fix_high"]]]]])
 
                ;; Delete vertices helper text
                (when (#{"LineString" "Polygon"} geom-type)
-                 [mui/grid {:item true :xs 12}
-                  [mui/typography {:variant "caption" :style {:margin-top "0.5em"}}
+                 [:> Grid {:item true :xs 12}
+                  [:> Typography {:variant "caption" :style {:margin-top "0.5em"}}
                    (tr :map/delete-vertices-hint)]])
 
                ;; Done button and undo / redo
-               [mui/grid {:item true :xs 12}
-                [mui/grid
+               [:> Grid {:item true :xs 12}
+                [:> Grid
                  {:container true
                   :justify-content "flex-start"
                   :align-items "center"
                   :spacing 1}
 
                  ;; Ready button
-                 [mui/grid {:item true}
-                  [mui/button
+                 [:> Grid {:item true}
+                  [:> Button
                    {:on-click #(==> [::events/finish-adding-geom geom type-code])
                     :variant "contained"
                     :disabled (-> geom :features empty?)
                     :color "secondary"}
                    (tr :general/done)]]
-                 [mui/grid {:item true}
-                  [mui/grid {:item true}
+                 [:> Grid {:item true}
+                  [:> Grid {:item true}
 
                    ;; Undo & Redo
-                   [mui/grid {:container true}
+                   [:> Grid {:container true}
 
                     ;; Undo
-                    [mui/grid {:item true}
-                     [mui/tooltip {:title "Undo"}
+                    [:> Grid {:item true}
+                     [:> Tooltip {:title "Undo"}
                       [:span
-                       [mui/icon-button
+                       [:> IconButton
                         {:disabled (not undo)
                          :on-click #(==> [::events/undo "new"])}
-                        [mui/icon "undo"]]]]]
+                        [:> Icon "undo"]]]]]
 
                     ;; Redo
-                    [mui/grid {:item true}
-                     [mui/tooltip {:title "Redo"}
+                    [:> Grid {:item true}
+                     [:> Tooltip {:title "Redo"}
                       [:span
-                       [mui/icon-button
+                       [:> IconButton
                         {:disabled (not redo)
                          :on-click #(==> [::events/redo "new"])}
-                        [mui/icon "redo"]]]]]]]]]]
+                        [:> Icon "redo"]]]]]]]]]]
 
                ;; Retkikartta Problems
                (when (and (#{"LineString"} geom-type) problems?)
-                 [mui/grid {:item true}
-                  [mui/tooltip
+                 [:> Grid {:item true}
+                  [:> Tooltip
                    {:placement "right"
                     :title (str
                             (tr :map/retkikartta-problems-warning)
@@ -1756,29 +1787,29 @@
 
         ;; Step3 content
         (when (= active-step (dec 3))
-          [mui/grid {:container true :style {:flex-direction "column"}}
+          [:> Grid {:container true :style {:flex-direction "column"}}
 
            ;; Tabs
-           [mui/grid {:item true}
-            [mui/tabs
+           [:> Grid {:item true}
+            [:> Tabs
              {:value selected-tab
               :on-change #(==> [::events/select-new-sports-site-tab %2])
               :variant "fullWidth"
               :indicator-color "secondary"
               :text-color "inherit"
               :style {:margin-bottom "1em" :margin-top "1em"}}
-             [mui/tab {:label (tr :lipas.sports-site/basic-data)}]
-             [mui/tab {:label (tr :lipas.sports-site/properties)}]
+             [:> Tab {:label (tr :lipas.sports-site/basic-data)}]
+             [:> Tab {:label (tr :lipas.sports-site/properties)}]
              ;; TODO: This could be view-floorball? but right not it is not useful to
              ;; show the tab in create-site if user can't edit the data
              (when edit-floorball?
-               [mui/tab {:label "Olosuhteet"}])]
+               [:> Tab {:label "Olosuhteet"}])]
 
             (case selected-tab
 
               ;; Basic info tab
-              0 [mui/grid {:container true}
-                 [mui/grid {:item true :xs 12}
+              0 [:> Grid {:container true}
+                 [:> Grid {:item true :xs 12}
 
                   [sports-sites/form
                    {:tr tr
@@ -1820,12 +1851,12 @@
                   ;; Floorball specific
                   floorball-type?
                   [:<>
-                   [mui/tabs
+                   [:> Tabs
                     {:value "floorball"
                      :variant "standard"
                      :indicator-color "secondary"
                      :text-color "inherit"}
-                    [mui/tab {:value "floorball" :label "Salibandy"}]]
+                    [:> Tab {:value "floorball" :label "Salibandy"}]]
                    [floorball/form
                     {:tr tr
                      :lipas-id nil
@@ -1848,10 +1879,10 @@
                       :key (-> edit-data :type :type-code)}]))]])]
 
        ;; Actions
-       [mui/grid {:container true :align-items "flex-end"}
-        [mui/grid {:item true :xs 12 :style {:height "50px"}}
+       [:> Grid {:container true :align-items "flex-end"}
+        [:> Grid {:item true :xs 12 :style {:height "50px"}}
          [lui/floating-container {:bottom 0 :background-color "transparent"}
-          [mui/grid
+          [:> Grid
            {:container true
             :align-items "center"
             :spacing 1
@@ -1861,14 +1892,14 @@
 
            ;; Save
            (when data
-             [mui/grid {:item true}
+             [:> Grid {:item true}
               [lui/save-button
                {:tooltip (tr :actions/save)
                 :disabled-tooltip (tr :actions/fill-required-fields)
                 :disabled (not save-enabled?)
                 :on-click #(==> [::events/save-new-site data])}]])
 
-           [mui/grid {:item true}
+           [:> Grid {:item true}
 
             ;; Discard
             [lui/discard-button
@@ -1876,9 +1907,9 @@
               :tooltip (tr :actions/discard)}]]
 
            ;; Address search button
-           [mui/tooltip {:title (tr :map.address-search/tooltip)}
-            [mui/grid {:item true}
-             [mui/fab
+           [:> Tooltip {:title (tr :map.address-search/tooltip)}
+            [:> Grid {:item true}
+             [:> Fab
               {:size "small"
                :on-click #(==> [::events/toggle-address-search-dialog])}
               [:> MapSearchOutline]]]]]]]]])))
@@ -1903,7 +1934,7 @@
 
      ;; Floating container
      [lui/floating-container {:bottom 0 :background-color "transparent"}
-      [mui/grid
+      [:> Grid
        {:container true
         :align-items "center"
         :spacing 1
@@ -1911,29 +1942,29 @@
 
        ;; Create sports site btn
        (when show-create-button?
-         [mui/grid {:item true}
+         [:> Grid {:item true}
           [add-btn {:tr tr}]])
 
        (when (= :analysis mode-name)
-         [mui/grid {:item true}
-          [mui/tooltip {:title (tr :lipas.sports-site/add-new-planning)}
-           [mui/fab
+         [:> Grid {:item true}
+          [:> Tooltip {:title (tr :lipas.sports-site/add-new-planning)}
+           [:> Fab
             {:color "secondary"
              :variant "extended"
              :on-click #(==> [::events/add-analysis-target])}
-            [mui/icon "add"]
+            [:> Icon "add"]
             (tr :lipas.sports-site/planning-site)]]])
 
        ;; Address search btn
-       [mui/tooltip {:title (tr :map.address-search/tooltip)}
-        [mui/grid {:item true}
-         [mui/fab
+       [:> Tooltip {:title (tr :map.address-search/tooltip)}
+        [:> Grid {:item true}
+         [:> Fab
           {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
           [:> MapSearchOutline]]]]
 
        ;; Create Excel report btn
        (when (= :list result-view)
-         [mui/grid {:item true}
+         [:> Grid {:item true}
           [reports/dialog {:tr tr :btn-variant :fab}]])
 
        ;; Analysis tool btn
@@ -1944,27 +1975,27 @@
                                   :analysis-tool/use])
                   ;; logged-in?
                   (= :list result-view))
-         [mui/tooltip {:title (tr :map.demographics/tooltip)}
-          [mui/grid {:item true}
-           [mui/fab
+         [:> Tooltip {:title (tr :map.demographics/tooltip)}
+          [:> Grid {:item true}
+           [:> Fab
             {:size "small"
              :style (when (= mode-name :analysis)
                       {:border (str "5px solid " mui/secondary)})
              :on-click #(==> (if (= mode-name :analysis)
                                [::events/hide-analysis]
                                [::events/show-analysis]))}
-            [mui/icon "insights"]]]])
+            [:> Icon "insights"]]]])
 
        ;; PTV button
        (when ptv-privilege
-         [mui/tooltip {:title (tr :ptv/tooltip)}
-          [mui/grid {:item true}
-           [mui/fab
+         [:> Tooltip {:title (tr :ptv/tooltip)}
+          [:> Grid {:item true}
+           [:> Fab
             {:size "small"
              :on-click #(==> (if ptv-dialog-open?
                                [:lipas.ui.ptv.events/close-dialog]
                                [:lipas.ui.ptv.events/open-dialog]))}
-            [mui/icon "ios_share"]]]])]]]))
+            [:> Icon "ios_share"]]]])]]]))
 
 (defn add-view
   [{:keys [tr width]}]
@@ -1973,14 +2004,14 @@
         can-add-lois? (<== [:lipas.ui.user.subs/can-add-lois?])]
     [:<>
      (when (and can-add-sports-sites? can-add-lois?)
-       [mui/tabs
+       [:> Tabs
         {:value add-mode
          :on-change #(==> [::events/select-add-mode %2])
          :variant "fullWidth"
          :indicator-color "secondary"
          :text-color "inherit"}
-        [mui/tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
-        [mui/tab {:value "loi" :label (tr :loi/headline)}]])
+        [:> Tab {:value "sports-site" :label (tr :lipas.sports-site/headline)}]
+        [:> Tab {:value "loi" :label (tr :loi/headline)}]])
 
      (case add-mode
        "sports-site" [add-sports-site-view {:tr tr :width width}]
@@ -2007,7 +2038,7 @@
 
      ;; Floating bottom toolbar
      (when show-tools?
-       [mui/stack
+       [:> Stack
         {:sx {:px 1}}
         [default-tools {:tr tr :logged-in? logged-in?}]])]))
 
@@ -2019,14 +2050,14 @@
         drawer-width (<== [::subs/drawer-width width])
         popup-ref (hooks/use-ref nil)]
 
-    [mui/grid {:container true :style {:height "100%" :width "100%"}}
+    [:> Grid {:container true :style {:height "100%" :width "100%"}}
 
      ;; Mini-nav
      [lui/floating-container
       {:right 0 :background-color "transparent"}
-      [mui/grid
+      [:> Grid
        {:container true :direction "column" :align-items "flex-end" :spacing 2}
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [nav/mini-nav {:tr tr :logged-in? logged-in?}]]]]
 
      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
@@ -2037,27 +2068,27 @@
       (when-not drawer-open?
         ;; Open Drawer Button
         [lui/floating-container {:background-color "transparent"}
-         [mui/tool-bar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
-          [mui/fab
+         [:> Toolbar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
+          [:> Fab
            {:size (if (utils/mobile? width) "small" "medium")
             :on-click #(==> [::events/toggle-drawer])
             :color "secondary"}
-           [mui/icon "search"]]]])
+           [:> Icon "search"]]]])
 
       ;; Closable left sidebar drawer
-      [mui/drawer
+      [:> Drawer
        {:variant "persistent"
         :PaperProps {:style {:width drawer-width}}
         :SlideProps {:direction "down"}
         :open drawer-open?}
 
        ;; Close button
-       [mui/button
+       [:> Button
         {:on-click #(==> [::events/toggle-drawer])
          :style {:min-height "36px" :margin-bottom "1em"}
          :variant "outlined"
          :color "inherit"}
-        [mui/icon "expand_less"]]
+        [:> Icon "expand_less"]]
 
        ;; Content
        [map-contents-view {:tr tr :logged-in? logged-in? :width width}]]]
@@ -2068,7 +2099,7 @@
        :right "3.5em"
        :background-color "transparent"}
 
-      [mui/grid2
+      [:> Grid2
        {:container true
         :spacing 1
         :sx #js {:bgcolor mui/gray2
@@ -2079,28 +2110,28 @@
         :wrap "nowrap"}
 
        ;; Feedback btn
-       #_[mui/grid
-          [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+       #_[:> Grid
+          [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
            [feedback/feedback-btn]]]
 
        ;; Zoom to users location btn
-       [mui/grid
-        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+       [:> Grid
+        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [user-location-btn {:tr tr}]]]
 
        ;; Overlay selector
-       [mui/grid
-        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+       [:> Grid
+        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [overlay-selector {:tr tr}]]]
 
        ;; Basemap opacity selector
-       [mui/grid
-        [mui/paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+       [:> Grid
+        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
          [basemap-transparency-selector {:tr tr}]]]
 
        ;; Basemap switcher
-       [mui/grid
-        [mui/paper
+       [:> Grid
+        [:> Paper
          {:elevation 1
           :style
           {:background-color "rgba(255,255,255,0.9)"

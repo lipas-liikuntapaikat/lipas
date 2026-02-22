@@ -1,6 +1,6 @@
 (ns lipas.ui.sports-sites.football.views
   (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.football.events]
             [lipas.ui.sports-sites.football.subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -47,7 +47,7 @@
 (defn form [{:keys [tr data]}]
   (let [set-field (partial set-field :pool)
         locale    (tr)]
-    [mui/form-group
+    [:> FormGroup
      ;; Pool type
      [lui/select
       {:deselect? true

@@ -1,7 +1,12 @@
 (ns lipas.ui.stats.subsidies.views
   (:require [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.stats.common :as common]
             [lipas.ui.stats.subsidies.events :as events]
             [lipas.ui.stats.subsidies.subs :as subs]
@@ -57,42 +62,42 @@
         issuers      (<== [::subs/selected-issuers])
         view         (<== [::subs/selected-view])]
 
-    [mui/grid {:container true :spacing 4}
+    [:> Grid {:container true :spacing 4}
 
      ;; Headline
-     [mui/grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
-      [mui/typography {:variant "h4"}
+     [:> Grid {:item true :xs 12 :style {:margin-top "1.5em" :margin-bottom "1em"}}
+      [:> Typography {:variant "h4"}
        (tr :stats/subsidies)]]
 
      ;; Disclaimers
-     [mui/grid {:item true}
+     [:> Grid {:item true}
       [common/disclaimer
        {:label (tr :stats/disclaimer-headline)
         :texts [(tr :stats/general-disclaimer-1)
                 (tr :stats/general-disclaimer-2)
                 (tr :stats/general-disclaimer-3)]}]]
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
 
-      [mui/grid {:container true :spacing 4}
+      [:> Grid {:container true :spacing 4}
 
        ;; Region filter
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :stats/filter-cities)]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "body2"} (tr :stats/filter-cities)]
         [region-selector
          {:value     cities
           :on-change #(==> [::events/select-cities %])}]]
 
        ;; Type filter
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "body2"} (tr :stats/filter-types)]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "body2"} (tr :stats/filter-types)]
         [lui/type-category-selector
          {:tr        tr
           :value     types
           :on-change #(==> [::events/select-types %])}]]
 
        ;; Years selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [years-selector
          {:tr        tr
           :years     (range 2002 (inc 2024))
@@ -100,50 +105,50 @@
           :on-change #(==> [::events/select-years %])}]]
 
        ;; Issuer selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [issuer-selector
          {:tr        tr
           :value     issuers
           :on-change #(==> [::events/select-issuers %])}]]
 
        ;; Grouping selector
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [grouping-selector
          {:tr        tr
           :value     grouping
           :on-change #(==> [::events/select-grouping %])}]]
 
        ;; Chart type selector
-       [mui/grid {:item true}
-        [mui/tooltip
+       [:> Grid {:item true}
+        [:> Tooltip
          {:title
           (if (= "ranking" chart-type)
             (tr :stats/show-comparison)
             (tr :stats/show-ranking))}
-         [mui/icon-button {:on-click #(==> [::events/toggle-chart-type])}
-          [mui/icon {:font-size "large" :color (if (= "ranking" chart-type)
+         [:> IconButton {:on-click #(==> [::events/toggle-chart-type])}
+          [:> Icon {:font-size "large" :color (if (= "ranking" chart-type)
                                                  "secondary"
                                                  "inherit")}
            "sort"]]]]
 
        ;; Clear filters button
        (when (or (not-empty cities) (not-empty types))
-         [mui/grid {:item true :xs 12}
-          [mui/button
+         [:> Grid {:item true :xs 12}
+          [:> Button
            {:color    "secondary"
             :on-click #(==> [::events/clear-filters])}
            (tr :search/clear-filters)]])]]
 
      ;; Tabs for choosing between chart/table views
-     [mui/grid {:container true :item true :xs 12}
+     [:> Grid {:container true :item true :xs 12}
 
-      [mui/grid {:item true}
+      [:> Grid {:item true}
        [common/view-tabs
         {:value     view
          :on-change #(==> [::events/select-view %2])}]]
 
       ;; Download Excel button
-      [mui/grid {:item true}
+      [:> Grid {:item true}
        [common/download-excel-button
         {:tr       tr
          :on-click #(==> [::events/download-excel data headers])}]]]
@@ -165,6 +170,6 @@
 
      ;; Table
      (when (= "table" view)
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/table
          {:headers headers :items data}]])]))

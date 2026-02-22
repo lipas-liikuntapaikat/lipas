@@ -12,6 +12,18 @@
             [lipas.ui.components :as lui]
             [lipas.ui.components.autocompletes :as autocompletes]
             [lipas.ui.map.utils :as map-utils]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
             [lipas.ui.sports-sites.subs :as subs]
@@ -58,7 +70,7 @@
     [lui/form {:read-only? read-only?}
 
      (when (show-status? tr display-data)
-       [mui/typography {:variant "h6" :color "error"}
+       [:> Typography {:variant "h6" :color "error"}
         (:status display-data)])
 
      (when sub-headings?
@@ -118,7 +130,7 @@
                     :value (-> edit-data :name)
                     :on-change #(on-change :name %)
                     :adornment (when name-conflict?
-                                 (r/as-element [mui/icon {:color "secondary"} "warning"]))
+                                 (r/as-element [:> Icon {:color "secondary"} "warning"]))
                     :helper-text (when name-conflict?
                                    "Nimi on jo käytössä toisella
                                    liikuntapaikalla. Keksi
@@ -179,7 +191,7 @@
        [:<>
         [lui/sub-heading {:label (tr :lipas.sports-site/contact)}]
         (when-not read-only?
-          [mui/typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)])])
+          [:> Typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)])])
 
      ;; Email
      {:label (tr :lipas.sports-site/email-public)
@@ -257,7 +269,7 @@
       [lui/form
        {:read-only? read-only?}
        (when sub-headings?
-         [mui/grid
+         [:> Grid
           {:item true
            :container true
            :align-items "center"
@@ -365,7 +377,7 @@
     [:<>
      [lui/checkbox (assoc props :on-change on-change*)]
      (when problems?
-       [mui/typography {:color "error"}
+       [:> Typography {:color "error"}
         (tr :map/retkikartta-problems-warning)])]))
 
 (defn harrastuspassi-field
@@ -380,25 +392,25 @@
 
 (defn route-length-km-field
   [{:keys [tr geoms on-change] :as props}]
-  [mui/grid {:container true :wrap "nowrap"}
-   [mui/grid {:item true :style {:flex-grow 1}}
-    [mui/form-group
+  [:> Grid {:container true :wrap "nowrap"}
+   [:> Grid {:item true :style {:flex-grow 1}}
+    [:> FormGroup
      [lui/text-field (dissoc props :geoms :tr)]]]
-   [mui/grid {:item true}
-    [mui/tooltip {:title (tr :map/calculate-route-length)}
-     [mui/icon-button
+   [:> Grid {:item true}
+    [:> Tooltip {:title (tr :map/calculate-route-length)}
+     [:> IconButton
       {:on-click #(-> geoms map-utils/calculate-length-km on-change)}
       [:> Calculator]]]]])
 
 (defn area-km2-field
   [{:keys [tr geoms on-change] :as props}]
-  [mui/grid {:container true :wrap "nowrap"}
-   [mui/grid {:item true :style {:flex-grow 1}}
-    [mui/form-group
+  [:> Grid {:container true :wrap "nowrap"}
+   [:> Grid {:item true :style {:flex-grow 1}}
+    [:> FormGroup
      [lui/text-field (dissoc props :geoms)]]]
-   [mui/grid {:item true}
-    [mui/tooltip {:title (tr :map/calculate-area)}
-     [mui/icon-button
+   [:> Grid {:item true}
+    [:> Tooltip {:title (tr :map/calculate-area)}
+     [:> IconButton
       {:on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
       [:> Calculator]]]]])
 
@@ -406,16 +418,16 @@
 (defn calculate-field
   [{:keys [on-change calculate-fn calculate-label]}
    children]
-  [mui/grid
+  [:> Grid
    {:container true
     :wrap "nowrap"}
-   [mui/form-group
+   [:> FormGroup
     {:sx {:flexGrow 1
           :justify-content "center"}}
     children]
-   [mui/grid {:item true}
-    [mui/tooltip {:title calculate-label}
-     [mui/icon-button
+   [:> Grid {:item true}
+    [:> Tooltip {:title calculate-label}
+     [:> IconButton
       {:on-click (fn [_e]
                    (on-change (calculate-fn)))}
       [:> Calculator]]]]])
@@ -625,7 +637,7 @@
          [:<>
 
          ;; Pools
-          [mui/typography {:variant "body2"}
+          [:> Typography {:variant "body2"}
            (tr :lipas.swimming-pool.pools/headline)]
           [pools-field
            {:tr tr
@@ -633,7 +645,7 @@
             :read-only? read-only?}]
 
          ;; Slides
-          [mui/typography {:variant "body2"}
+          [:> Typography {:variant "body2"}
            (tr :lipas.swimming-pool.slides/headline)]
           [slides-field
            {:tr tr
@@ -986,16 +998,16 @@
                  [:email (tr :lipas.sports-site/email-public)]
                  [:phone-number (tr :lipas.sports-site/phone-number)]
                  [:www (tr :lipas.sports-site/www)]]]
-    [mui/grid {:container true}
-     [mui/grid {:item true :xs 12}
-      [mui/paper
-       [mui/typography {:color "secondary" :style {:padding "1em"} :variant "h5"}
+    [:> Grid {:container true}
+     [:> Grid {:item true :xs 12}
+      [:> Paper
+       [:> Typography {:color "secondary" :style {:padding "1em"} :variant "h5"}
         (tr :reports/contacts)]
        [lui/download-button
         {:style {:margin-left "1.5em"}
          :on-click #(==> [::events/download-contacts-report sites headers])
          :label (tr :actions/download)}]
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [lui/table
          {:headers headers
           :sort-fn :city
@@ -1020,7 +1032,7 @@
                  (on-close))
       :save-label (tr :actions/delete)}
 
-     [mui/form-group
+     [:> FormGroup
       [lui/select
        {:label (tr :lipas.sports-site/delete-reason)
         :required true
@@ -1041,8 +1053,8 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         delete-dialog-open? (<== [::subs/delete-dialog-open?])]
 
-    [mui/grid {:container true :style {:background-color mui/gray1}}
-     [mui/grid {:item true :xs 12 :style {:padding "8px 8px 0px 8px"}}
+    [:> Grid {:container true :style {:background-color mui/gray1}}
+     [:> Grid {:item true :xs 12 :style {:padding "8px 8px 0px 8px"}}
 
       (when delete-dialog-open?
         [delete-dialog
@@ -1050,37 +1062,37 @@
           :lipas-id lipas-id
           :on-close #(==> [::events/toggle-delete-dialog])}])
 
-      [mui/paper {:style {:background-color "#fff"}}
+      [:> Paper {:style {:background-color "#fff"}}
 
        ;; Site name
-       [mui/tool-bar {:disable-gutters true}
-        [mui/tooltip {:title (or close-label "")}
-         [mui/icon-button
+       [:> Toolbar {:disable-gutters true}
+        [:> Tooltip {:title (or close-label "")}
+         [:> IconButton
           {:on-click on-close :style {:margin-left "0.5em" :margin-right "0.4em"}}
 
           ;; "back to listing" button
-          [mui/icon {:color :primary}
+          [:> Icon {:color :primary}
            "arrow_back_ios"]]]
-        [mui/typography {:style {:color mui/primary} :variant "h4"}
+        [:> Typography {:style {:color mui/primary} :variant "h4"}
          title]]]]
 
      ;; Contents
      (into
-       [mui/grid {:item true :xs 12 :style {:padding 8}}]
+       [:> Grid {:item true :xs 12 :style {:padding 8}}]
        contents)
 
      ;; Floating actions
      [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}
       (into
-        [mui/grid
+        [:> Grid
          {:container true :align-items "center" :spacing 1}]
         (for [c bottom-actions
               :when (some? c)]
-          [mui/grid {:item true}
+          [:> Grid {:item true}
            c]))]
 
      ;; Small footer on top of which floating container may scroll
-     [mui/grid
+     [:> Grid
       {:item true :xs 12 :style {:height "5em" :background-color mui/gray1}}]]))
 
 (defn elevation-profile
@@ -1094,15 +1106,15 @@
                   :distance-km (tr :sports-site.elevation-profile/distance-from-start-km)
                   :elevation-m (tr :sports-site.elevation-profile/height-from-sea-level-m)}
           data (nth elevation @selected-segment)]
-      [mui/grid {:container true :spacing 2}
-       [mui/grid {:item true :xs 12}
-        [mui/grid
+      [:> Grid {:container true :spacing 2}
+       [:> Grid {:item true :xs 12}
+        [:> Grid
          {:container true
           :wrap "nowrap"
           :spacing 2
           :justify-content "flex-end"
           :align-items "center"}
-         [mui/grid {:item true}
+         [:> Grid {:item true}
           [lui/select
            {:items (range 0 (count elevation))
             :style {:min-width "120px"}
@@ -1111,17 +1123,17 @@
             :label-fn (fn [n] (str "Osa " (inc n)))
             :sort-fn identity
             :on-change (fn [i] (reset! selected-segment i))}]]
-         [mui/grid {:item true}
-          [mui/icon-button
+         [:> Grid {:item true}
+          [:> IconButton
            {:disabled (= 0 @selected-segment)
             :on-click #(swap! selected-segment (fn [n] (max 0 (dec n))))}
-           [mui/icon "navigate_before"]]
-          [mui/icon-button
+           [:> Icon "navigate_before"]]
+          [:> IconButton
            {:disabled (= @selected-segment (dec (count elevation)))
             :on-click #(swap! selected-segment (fn [n] (min (dec (count elevation)) (inc n))))}
-           [mui/icon "navigate_next"]]]]]
+           [:> Icon "navigate_next"]]]]]
 
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [:> ResponsiveContainer {:width "100%" :height 300}
          [:> AreaChart
           {:data data
@@ -1165,15 +1177,15 @@
             :stroke (:elevation-m charts/colors)}]]]]
 
        ;; Total ascend / descend
-       [mui/grid {:item true :xs 12}
-        [mui/table {:size "medium"}
-         [mui/table-body
-          [mui/table-row
-           [mui/table-cell (tr :sports-site.elevation-profile/total-ascend)]
-           [mui/table-cell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
-          [mui/table-row
-           [mui/table-cell (tr :sports-site.elevation-profile/total-descend)]
-           [mui/table-cell (str (-> curr-stats :descend-m utils/round-safe) "m")]]]]]
+       [:> Grid {:item true :xs 12}
+        [:> Table {:size "medium"}
+         [:> TableBody
+          [:> TableRow
+           [:> TableCell (tr :sports-site.elevation-profile/total-ascend)]
+           [:> TableCell (str (-> curr-stats :ascend-m utils/round-safe) "m")]]
+          [:> TableRow
+           [:> TableCell (tr :sports-site.elevation-profile/total-descend)]
+           [:> TableCell (str (-> curr-stats :descend-m utils/round-safe) "m")]]]]]
 
        ;; landing bay for fabs
-       [mui/grid {:item true :xs 12 :style {:height "3em"}}]])))
+       [:> Grid {:item true :xs 12 :style {:height "3em"}}]])))

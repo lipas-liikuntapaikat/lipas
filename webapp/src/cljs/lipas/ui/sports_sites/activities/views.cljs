@@ -8,6 +8,21 @@
             [lipas.ui.components.forms :refer [->display-tf]]
             [lipas.ui.components.text-fields :as lui-tf]
             [lipas.ui.config :as config]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/Divider$default" :as Divider]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/FormHelperText$default" :as FormHelperText]
+            ["@mui/material/FormLabel$default" :as FormLabel]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Popper$default" :as Popper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.activities.events :as events]
             [lipas.ui.sports-sites.activities.subs :as subs]
@@ -25,43 +40,43 @@
 
 (defn nice-form
   [props children]
-  [mui/grid {:container true :spacing 4}
+  [:> Grid {:container true :spacing 4}
    (doall
     (for [[idx child] (map vector (range) children)]
-      [mui/grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+      [:> Grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
-  [mui/form-label {:style {:color "gray"}}
+  [:> FormLabel {:style {:color "gray"}}
    label])
 
 (defn lang-selector
   [{:keys [locale]}]
-  [mui/tabs
+  [:> Tabs
    {:value           (name locale)
     :indicator-color "primary"
     :text-color      "inherit"
     :on-change       #(==> [:lipas.ui.events/set-translator (keyword %2)])}
-   [mui/tab {:value "fi" :label "Suomi"}]
-   [mui/tab {:value "se" :label "Svenska"}]
-   [mui/tab {:value "en" :label "English"}]])
+   [:> Tab {:value "fi" :label "Suomi"}]
+   [:> Tab {:value "se" :label "Svenska"}]
+   [:> Tab {:value "en" :label "English"}]])
 
 (defn checkbox
   [{:keys [read-only? label helper-text on-change value
            component]
     :or   {component lui/checkbox}}]
-  [mui/grid {:container true :spacing 2}
+  [:> Grid {:container true :spacing 2}
 
    ;; Label
-   [mui/grid {:item true :xs 12}
+   [:> Grid {:item true :xs 12}
     [form-label {:label label}]]
 
    ;; Helper text
-   [mui/grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
-    [mui/form-helper-text helper-text]]
+   [:> Grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
+    [:> FormHelperText helper-text]]
 
    ;; Chekbox
-   [mui/grid {:item true :xs 12}
+   [:> Grid {:item true :xs 12}
     [component
      {:label     label
       :value     value
@@ -74,16 +89,16 @@
     :or   {value-fn  identity
            component lui/switch}}]
   (let [vs (set value)]
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
      ;; Label
      (when label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]])
 
      ;; Helper text
-     [mui/grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
-      [mui/form-helper-text helper-text]]
+     [:> Grid {:item true :xs 12 :style {:margin-top "-0.5em"}}
+      [:> FormHelperText helper-text]]
 
      ;; Chekboxes
      [:<>
@@ -91,7 +106,7 @@
         (let [[k _] item]
           ^{:key k}
           [:<>
-           [mui/grid {:item true :xs 12 :key k}
+           [:> Grid {:item true :xs 12 :key k}
             [component
              {:label     (label-fn item)
               :value     (contains? vs k)
@@ -102,9 +117,9 @@
                              (on-change (vec (disj vs k)))
                              (on-change (vec (conj vs k)))))}]]
            (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
-             [mui/grid {:item true :xs 12 :style {:margin-top   "-1.5em"
+             [:> Grid {:item true :xs 12 :style {:margin-top   "-1.5em"
                                                   :padding-left "2.8em"}}
-              [mui/typography {:variant "caption"} caption]])]))]]))
+              [:> Typography {:variant "caption"} caption]])]))]]))
 
 (defn contact-dialog
   [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
@@ -118,12 +133,12 @@
       :save-label    "Ok"
       :cancel-label  (tr :actions/cancel)}
 
-     [mui/grid {:container true :spacing 2}
-      [mui/grid {:item true :xs 12}
+     [:> Grid {:container true :spacing 2}
+      [:> Grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
       (doall
        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-         [mui/grid
+         [:> Grid
           {:key prop-k
            :item true
            :xs 12}
@@ -151,7 +166,7 @@
     (let [tr (<== [:lipas.ui.subs/translator])]
 
       ;; Dialog
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
        [contact-dialog
         {:tr            tr
          :locale        locale
@@ -168,15 +183,15 @@
                           (reset! dialog-state dialog-init-state))}]
 
        ;; Label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]]
 
        ;; Description
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "caption"} description]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "caption"} description]]
 
        ;; Table
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/form-table
          {:key              (str (count (vals @state)))
           :headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
@@ -213,7 +228,7 @@
 
        ;; Debug
        (when config/debug?
-         [mui/grid {:item true :xs 12}
+         [:> Grid {:item true :xs 12}
           [lui/expansion-panel {:label "debug"}
            [:pre (with-out-str (pprint/pprint contact-props))]]])])))
 
@@ -221,19 +236,19 @@
   [{:keys [read-only? lipas-id locale label description set-field
            value accessibility-props]}]
 
-  [mui/grid {:container true}
+  [:> Grid {:container true}
 
    ;; Label
-   [mui/grid {:item true :xs 12}
+   [:> Grid {:item true :xs 12}
     [form-label {:label label}]]
 
    ;; Description
-   [mui/grid {:item true :xs 12}
-    [mui/typography {:variant "caption"} description]]
+   [:> Grid {:item true :xs 12}
+    [:> Typography {:variant "caption"} description]]
 
    ;; Expansion panels for each accessibility category
    (for [[prop-k {:keys [field]}] accessibility-props]
-     [mui/grid
+     [:> Grid
       {:key prop-k
        :item true :xs 12}
       [lui/expansion-panel
@@ -258,15 +273,15 @@
 (defn duration
   [{:keys [read-only? locale label description set-field value]}]
   (let [tr (<== [:lipas.ui.subs/translator])]
-    [mui/form-control {:focused true}
+    [:> FormControl {:focused true}
      [form-label {:label label}]
 
-     [mui/grid {:container true :spacing 2}
+     [:> Grid {:container true :spacing 2}
 
-      [mui/grid {:item true :xs 12}
-       [mui/typography {:variant "caption"} description]]
+      [:> Grid {:item true :xs 12}
+       [:> Typography {:variant "caption"} description]]
 
-      [mui/grid {:item true :xs 3}
+      [:> Grid {:item true :xs 3}
        [lui/text-field
         {:type      "number"
          :value     (:min value)
@@ -274,7 +289,7 @@
          :on-change #(set-field :min %)
          :disabled read-only?}]]
 
-      [mui/grid {:item true :xs 3}
+      [:> Grid {:item true :xs 3}
        [lui/text-field
         {:type      "number"
          :value     (:max value)
@@ -282,7 +297,7 @@
          :on-change #(set-field :max %)
          :disabled read-only?}]]
 
-      [mui/grid {:item true :xs 6}
+      [:> Grid {:item true :xs 6}
        [lui/select
         {:disabled read-only?
          :items     [{:label {:fi "minuuttia" :se "minuter" :en "minutes"}
@@ -312,16 +327,16 @@
     :save-label    "OK"
     :cancel-label  (tr :actions/cancel)}
 
-   [mui/grid {:container true :spacing 2}
-    [mui/grid {:item true :xs 12}
+   [:> Grid {:container true :spacing 2}
+    [:> Grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
 
-    #_[mui/grid {:item true :xs 12}
-       [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-        [mui/typography description]]]
+    #_[:> Grid {:item true :xs 12}
+       [:> Paper {:style {:padding "0.5em" :background-color mui/gray3}}
+        [:> Typography description]]]
 
-    [mui/grid {:item true :xs 12}
-     [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       ;; FIXME: MUI-v5 input height or paddings are wrong
       [lui/text-field
        {:fullWidth   true
@@ -344,7 +359,7 @@
     (let [tr (<== [:lipas.ui.subs/translator])]
 
       ;; Dialog
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
        [textlist-dialog
         {:tr           tr
          :locale       locale
@@ -360,15 +375,15 @@
                          (reset! dialog-state dialog-init-state))}]
 
        ;; Label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]]
 
        ;; Description
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "caption"}] description]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "caption"}] description]
 
        ;; Table
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/form-table
          {:key              @state
           :headers          [[locale label]]
@@ -418,7 +433,7 @@
     (let [tr (<== [:lipas.ui.subs/translator])]
 
       ;; Dialog
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
        [lui/dialog
         {:title   label
          :open?   (:open? @dialog-state)
@@ -443,26 +458,26 @@
          :save-label    "OK"
          :cancel-label  (tr :actions/cancel)}
 
-        [mui/grid {:container true :spacing 2}
+        [:> Grid {:container true :spacing 2}
 
          ;; Lang selector
-         [mui/grid {:item true :xs 12}
+         [:> Grid {:item true :xs 12}
           [lang-selector {:locale locale}]]
 
          ;; Halper text
-         #_[mui/grid {:item true :xs 12}
-            [mui/paper {:style {:padding "0.5em" :background-color mui/gray3}}
-             [mui/typography description]]]
+         #_[:> Grid {:item true :xs 12}
+            [:> Paper {:style {:padding "0.5em" :background-color mui/gray3}}
+             [:> Typography description]]]
 
          (doall
           (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
             ^{:key k}
             [:<>
-             [mui/grid {:item true :xs 12}
-              [mui/typography (str (tr :utp/custom-rule) " " (inc idx))]]
+             [:> Grid {:item true :xs 12}
+              [:> Typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-             [mui/grid {:item true :xs 12}
+             [:> Grid {:item true :xs 12}
               [lui/text-field
                {:fullWidth       true
                 :required        true
@@ -473,7 +488,7 @@
                 :variant         "outlined"}]]
 
              ;; Description
-             [mui/grid {:item true :xs 12}
+             [:> Grid {:item true :xs 12}
               [lui/text-field
                {:fullWidth       true
                 :required        true
@@ -484,34 +499,34 @@
                 :variant         "outlined"}]]
 
              ;; Delete btn
-             [mui/grid {:item true :style {:text-align "right"}}
+             [:> Grid {:item true :style {:text-align "right"}}
               [lui-btn/confirming-delete-button
                {:tooltip         (tr :actions/delete)
                 :confirm-tooltip (tr :confirm/delete-confirm)
                 :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-             [mui/grid {:item true :xs 12}
-              [mui/divider]]]))
+             [:> Grid {:item true :xs 12}
+              [:> Divider]]]))
 
          ;; Add / edit btn
-         [mui/grid {:item true :xs 12}
-          [mui/grid {:container true :justify-content "flex-end" :align-items "center"}
-           [mui/grid {:item true}
-            [mui/tooltip {:title (tr :actions/add) :placement "right"}
-             [mui/fab
+         [:> Grid {:item true :xs 12}
+          [:> Grid {:container true :justify-content "flex-end" :align-items "center"}
+           [:> Grid {:item true}
+            [:> Tooltip {:title (tr :actions/add) :placement "right"}
+             [:> Fab
               {:on-click (fn []
                            (let [id (str (random-uuid))]
                              (swap! dialog-state assoc-in [:data id] {:value id})))
                :size     "small"
                :color    "secondary"}
-              [mui/icon "add"]]]]]]]]
+              [:> Icon "add"]]]]]]]]
 
        ;; ;; Label
-       ;; [mui/grid {:item true :xs 12}
+       ;; [:> Grid {:item true :xs 12}
        ;;  [form-label {:label label}]]
 
        ;; Common rules checkboxes
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [checkboxes
          {:read-only?  read-only?
           :label       label
@@ -526,13 +541,13 @@
                          (swap! state assoc :common-rules vs)
                          (set-field :common-rules vs))}]]
 
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "subtitle2"} (tr :utp/custom-rules)]
-        #_[mui/divider
-           [mui/chip {:size "small" :label "Omat säännöt"}]]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "subtitle2"} (tr :utp/custom-rules)]
+        #_[:> Divider
+           [:> Chip {:size "small" :label "Omat säännöt"}]]]
 
        ;; Custom rules
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [checkboxes
          {:read-only?      read-only?
           :label           nil
@@ -551,16 +566,16 @@
                                                           vals)))}]]
        ;; Add / modify custom rules btn
        (when-not read-only?
-         [mui/grid
+         [:> Grid
           {:item       true
            :xs         12
            :style      {:text-align "right"}
            :class-name :no-print}
-          [mui/tooltip {:title     (if (seq (:custom-rules @state))
+          [:> Tooltip {:title     (if (seq (:custom-rules @state))
                                      (tr :actions/edit)
                                      (tr :actions/add))
                         :placement "left"}
-           [mui/fab
+           [:> Fab
             {:style    {:margin-top "1em"}
              :on-click (fn []
                          (reset! dialog-state {:open? true
@@ -568,7 +583,7 @@
                                                :data  (:custom-rules @state)}))
              :size     "small"
              :color    "secondary"}
-            [mui/icon (if (seq (:custom-rules @state))
+            [:> Icon (if (seq (:custom-rules @state))
                         "edit"
                         "add")]]]])])))
 
@@ -587,16 +602,16 @@
                           (not description-length-error))
       :save-label    "Ok"
       :cancel-label  (tr :actions/cancel)}
-     [mui/grid {:container true :spacing 2}
+     [:> Grid {:container true :spacing 2}
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
 
       ;; Description
-      [mui/grid {:item true :xs 12}
-       [mui/typography {:variant "caption"} helper-text]]
+      [:> Grid {:item true :xs 12}
+       [:> Typography {:variant "caption"} helper-text]]
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
 
        [:input
         {:type      "file"
@@ -618,14 +633,14 @@
            :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
            :label     "Url"}]]
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        (when-let [url (-> @dialog-state :data :url)]
          [:img
           {:style {:max-width "100%"}
            :src   url}])]
 
       ;; Description
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/text-field
         {:fullWidth   true
          :required    true
@@ -639,7 +654,7 @@
          :error       (boolean description-length-error)}]]
 
       ;; Alt-text
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/text-field
         {:fullWidth   true
          :required    true
@@ -652,7 +667,7 @@
          :variant     "outlined"}]]
 
       ;; Copyright
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/text-field
         {:fullWidth   true
          :required    true
@@ -676,7 +691,7 @@
                popper-state (r/atom {:open? false})]
 
     (let [tr (<== [:lipas.ui.subs/translator])]
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Dialog
        [image-dialog
@@ -695,7 +710,7 @@
                          (reset! dialog-state dialog-init-state))}]
 
        ;; Image Preview Popper
-       [mui/popper
+       [:> Popper
         {:open           (:open? @popper-state)
          :placement      "right"
          :anchor-el      (:anchor-el @popper-state)
@@ -707,15 +722,15 @@
           :src   (:url @popper-state)}]]
 
        ;; Label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]]
 
        ;; Description
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "caption"} helper-text]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "caption"} helper-text]]
 
        ;; Table
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/form-table
          {:key (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
@@ -771,22 +786,22 @@
                         (-> @dialog-state :data :description seq))
     :save-label    "Ok"
     :cancel-label  (tr :actions/cancel)}
-   [mui/grid {:container true :spacing 2}
+   [:> Grid {:container true :spacing 2}
 
-    [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
      [lang-selector {:locale locale}]]
 
-    [mui/grid {:item true :xs 12}
-     [mui/typography {:variant "caption"} helper-text]]
+    [:> Grid {:item true :xs 12}
+     [:> Typography {:variant "caption"} helper-text]]
 
-    [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
      [lui/text-field
       {:value     (-> @dialog-state :data :url)
        :fullWidth true
        :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
        :label     "Url"}]]
 
-    [mui/grid {:item true :xs 12}
+    [:> Grid {:item true :xs 12}
      [lui/text-field
       {:fullWidth true
        :value     (-> @dialog-state :data :description locale)
@@ -807,7 +822,7 @@
                dialog-state (r/atom dialog-init-state)]
 
     (let [tr (<== [:lipas.ui.subs/translator])]
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Dialog
        [video-dialog
@@ -825,15 +840,15 @@
                          (reset! dialog-state dialog-init-state))}]
 
        ;; Label
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [form-label {:label label}]]
 
        ;; Description
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "caption"} helper-text]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "caption"} helper-text]]
 
        ;; Table
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/form-table
          {:key             (str (count (vals @state)))
           :headers         [[:url (tr :utp/link)]
@@ -943,7 +958,7 @@
        (when (= :default mode)
          [:<>
           (when (seq routes)
-            [mui/grid {:item true :xs 12}
+            [:> Grid {:item true :xs 12}
              [form-label {:label label}]
              [lui/table
               {:headers
@@ -962,8 +977,8 @@
                             (reset! route-form-state (dissoc route :fids)))}]])
 
           (when-not read-only?
-            [mui/grid {:item true :xs 12}
-             [mui/button
+            [:> Grid {:item true :xs 12}
+             [:> Button
               {:variant  "contained"
                :color    "secondary"
                :style    {:margin-top "0.5em" :margin-bottom "0.5em"}
@@ -975,13 +990,13 @@
        (when (and editing? (= :add-route mode))
          [:<>
 
-          [mui/grid {:item true :xs 12}
-           [mui/typography
+          [:> Grid {:item true :xs 12}
+           [:> Typography
             {:variant "body2"}
             (tr :utp/select-route-parts-on-map)]]
 
-          [mui/grid {:item true :xs 12}
-           [mui/button
+          [:> Grid {:item true :xs 12}
+           [:> Button
             {:variant  "contained"
              :color    "secondary"
              :on-click #(==> [::events/finish-route])}
@@ -1001,11 +1016,11 @@
             :state        route-form-state}]
 
           ;; Buttons
-          [mui/grid {:container true :spacing 1}
+          [:> Grid {:container true :spacing 1}
 
            ;; Done
-           [mui/grid {:item true}
-            [mui/button
+           [:> Grid {:item true}
+            [:> Button
              {:variant  "contained"
               :color    "secondary"
               :on-click #(==> [::events/finish-route-details
@@ -1017,8 +1032,8 @@
              (tr :utp/finish-route-details)]]
 
            ;; Delete
-           [mui/grid {:item true}
-            [mui/button
+           [:> Grid {:item true}
+            [:> Button
              {:variant  "contained"
               :on-click #(==> [:lipas.ui.events/confirm
                                (tr :utp/delete-route-prompt)
@@ -1027,16 +1042,16 @@
              (tr :actions/delete)]]
 
            ;; Cancel
-           [mui/grid {:item true}
-            [mui/button
+           [:> Grid {:item true}
+            [:> Button
              {:variant  "contained"
               :on-click #(==> [::events/cancel-route-details])}
              (tr :actions/cancel)]]]])
 
        (when config/debug?
-         [mui/grid {:item true :xs 12}
+         [:> Grid {:item true :xs 12}
           [lui/expansion-panel {:label "debug route props"}
-           [mui/grid {:item true :xs 12}
+           [:> Grid {:item true :xs 12}
             [:pre (with-out-str (pprint/pprint props))]]]])])))
 
 (defn routes
@@ -1057,18 +1072,18 @@
                          default-route-view))
         route-count (count routes)]
 
-    [mui/grid {:container true :spacing 2 :style {:margin-top "1em"}}
+    [:> Grid {:container true :spacing 2 :style {:margin-top "1em"}}
 
      ;; Hidden until UTP can support multi-tiered routes
 
      (when-not read-only?
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/switch {:label     (tr :utp/route-is-made-of-subroutes)
                      :value     (= :multi route-view)
                      :disabled  (> route-count 1)
                      :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       (case route-view
         :single [single-route (assoc props :route (first routes))]
         :multi  [multiple-routes (assoc props :routes routes)])]]))
@@ -1105,7 +1120,7 @@
                 ;; material-field already displays the helper-text, but the read-only field doesn't
                 (or read-only?
                     (not (sports-sites-views/material-field? lipas-prop-k))))
-       [mui/form-helper-text description])]))
+       [:> FormHelperText description])]))
 
 (defn make-field
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code]}]
@@ -1136,7 +1151,7 @@
                       :value-fn        first
                       :on-change       #(set-field prop-k %)
                       :value           (get-in edit-data [prop-k])}]
-                    [mui/form-helper-text (get-in field [:description locale])]]
+                    [:> FormHelperText (get-in field [:description locale])]]
 
     "text-field" [lui/text-field
                   {:disabled    read-only?
@@ -1312,16 +1327,16 @@
         (tr :lipas.sports-site/no-permission-tab)])
 
      ;; Header
-     #_[mui/grid {:item true :xs 12}
-        [mui/typography {:variant "h6"}
+     #_[:> Grid {:item true :xs 12}
+        [:> Typography {:variant "h6"}
          (get-in activities [:label locale])]]
 
      ;; Locale selector
-     [mui/grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
+     [:> Grid {:item true :xs 12 :style {:padding-top "0.5em" :padding-bottom "0.5em"}}
       [lang-selector {:locale locale}]]
 
      ;; Form
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [nice-form {}
        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp props)]
          [make-field
@@ -1339,7 +1354,7 @@
 
      ;; Debug
      (when config/debug?
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/expansion-panel {:label "debug"}
          [:pre (with-out-str (pprint/pprint activity))]]])]))
 

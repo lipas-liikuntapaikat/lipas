@@ -2,7 +2,10 @@
   (:require [lipas.ui.components :as lui]
             [lipas.ui.feedback.events :as events]
             [lipas.ui.feedback.subs :as subs]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.utils :refer [<== ==>]]
             [lipas.schema.users :as users-schema]))
 
@@ -22,10 +25,10 @@
        :cancel-label  (tr :actions/cancel)
        :on-save       #(==> [::events/send form-state])}
 
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Feedback type
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/autocomplete
          {:label     "Palautteen aihe"
           :required  true
@@ -35,7 +38,7 @@
           :items     types}]]
 
        ;; Sender email
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/text-field
          {:label     "Sähköpostiosoite (ei pakollinen)"
           :fullWidth true
@@ -44,7 +47,7 @@
           :on-change #(==> [::events/set-sender-email %])}]]
 
        ;; Feedback text
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
         [lui/text-field
          {:label           "Palaute"
           :fullWidth       true
@@ -56,8 +59,8 @@
           :on-change       #(==> [::events/set-text %])}]]]]
 
      ;; The button
-     [mui/tooltip {:title "Anna palautetta"}
-      [mui/icon-button
+     [:> Tooltip {:title "Anna palautetta"}
+      [:> IconButton
        {:size     "large"
         :on-click #(==> [::events/open-modal])}
-       [mui/icon "feedback"]]]]))
+       [:> Icon "feedback"]]]]))

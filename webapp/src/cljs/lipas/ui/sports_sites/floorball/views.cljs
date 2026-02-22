@@ -3,7 +3,11 @@
             ["mdi-material-ui/Calculator$default" :as Calculator]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/InputAdornment$default" :as InputAdornment]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.sports-sites.floorball.events :as events]
             [lipas.ui.sports-sites.floorball.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
@@ -17,21 +21,21 @@
 (defn surface-area-field
   [{:keys [on-change value] :as props}]
   (let [{:keys [width-m length-m]} (<== [::subs/dialog-data :field])]
-    [mui/form-group
+    [:> FormGroup
      [lui/text-field
       (merge props
              {:InputLabelProps {:shrink (number? value)}
               :InputProps
               {:endAdornment
                (r/as-element
-                 [mui/input-adornment
+                 [:> InputAdornment
                   {:position "end"}
-                  [mui/tooltip {:title "Laske pituudesta ja leveydestä"}
-                   [mui/icon-button
+                  [:> Tooltip {:title "Laske pituudesta ja leveydestä"}
+                   [:> IconButton
                     {:disabled (not (and (number? width-m) (number? length-m)))
                      :on-click #(on-change (* width-m length-m))}
                     [:> Calculator]]]
-                  [mui/typography {:variant "body1" :color "textSecondary"}
+                  [:> Typography {:variant "body1" :color "textSecondary"}
                    "m²"]])}})]]))
 
 (defn field-form
@@ -438,7 +442,7 @@
         headers (map (juxt first (comp locale second)) fields-table-headers)]
     (if read-only?
       (if (empty? display-data)
-        [mui/typography "Ei tietoa kentistä"]
+        [:> Typography "Ei tietoa kentistä"]
         [lui/table
          {:headers          headers
           :on-select        #(==> [::events/toggle-dialog :field %])
@@ -575,7 +579,7 @@
         [lui/table
          {:headers headers
           :items   display-data}]
-        [mui/typography {:style {:margin-bottom "1em"}} "Ei tietoa pukuhuoneista"])
+        [:> Typography {:style {:margin-bottom "1em"}} "Ei tietoa pukuhuoneista"])
       [lui/form-table
        {:key             (str (count (vals edit-data)))
         :read-only?      read-only?
@@ -604,7 +608,7 @@
         [lui/table
          {:headers headers
           :items   display-data}]
-        [mui/typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
+        [:> Typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
       [lui/form-table
        {:key             (str (count (vals edit-data)))
         :read-only?      read-only?

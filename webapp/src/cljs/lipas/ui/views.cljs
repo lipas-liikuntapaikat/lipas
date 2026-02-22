@@ -1,6 +1,14 @@
 (ns lipas.ui.views
   (:require [lipas.ui.components :as lui]
             [lipas.ui.events :as events]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/CssBaseline$default" :as CssBaseline]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.reminders.views :as reminders]
@@ -29,9 +37,9 @@
     (==> [::events/set-screen-size width])
 
     [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
-     [mui/css-baseline]
+     [:> CssBaseline]
 
-     [mui/grid
+     [:> Grid
       {:container true
        :style     (merge {:flex-direction "column" :background-color mui/gray3}
                          (when-not show-nav? {:height "100%"}))}
@@ -44,25 +52,25 @@
 
       ;; Navbar
       (when show-nav?
-        [mui/grid {:item true :xs 12 :style {:flex "0 1 auto"}}
+        [:> Grid {:item true :xs 12 :style {:flex "0 1 auto"}}
 
          [nav/nav {:tr tr :logged-in? logged-in?}]
 
          ;; Dev-env disclaimer
          (when disclaimer
-           [mui/grid {:item true :xs 12 :md 12 :lg 12}
-            [mui/card {:square true
+           [:> Grid {:item true :xs 12 :md 12 :lg 12}
+            [:> Card {:square true
                        :style  {:background-color mui/secondary
                                 :border-bottom    "2px solid white"}}
-             [mui/card-header
+             [:> CardHeader
               {:style  {:padding-bottom 0}
                :title  (tr :disclaimer/headline)
                :action (r/as-element
-                         [mui/icon-button
+                         [:> IconButton
                           {:on-click #(==> [::events/set-active-disclaimer nil])}
-                          [mui/icon "close"]])}]
-             [mui/card-content
-              [mui/typography {:variant "body2"}
+                          [:> Icon "close"]])}]
+             [:> CardContent
+              [:> Typography {:variant "body2"}
                disclaimer]]]])])
 
       [mui/mui-theme-provider {:theme mui/jyu-theme-light}

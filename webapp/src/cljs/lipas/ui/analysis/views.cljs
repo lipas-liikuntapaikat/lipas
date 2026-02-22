@@ -6,40 +6,44 @@
             [lipas.ui.analysis.reachability.views :as reachability]
             [lipas.ui.analysis.subs :as subs]
             [lipas.ui.map.events :as map-events]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn view [{:keys [tr]}]
   (let [selected-tool (<== [::subs/selected-tool])
         #_#_experimental? (<== [::subs/privilege-to-experimental-tools?])]
-    [mui/grid
+    [:> Grid
      {:container true
       :spacing 2
       :style {:padding "1em"}}
 
      ;; Header and close button
-     [mui/grid
+     [:> Grid
       {:item true
        :container true
        :justify-content "space-between"}
-      [mui/grid {:item true :xs 10}
-       [mui/tabs
+      [:> Grid {:item true :xs 10}
+       [:> Tabs
         {:value selected-tool
          :on-change #(==> [::events/select-tool %2])
          :variant "fullWidth"
          :centered true
          :text-color "secondary"
          :indicator-color "secondary"}
-        [mui/tab {:value "reachability" :label (tr :analysis/reachability)}]
-        [mui/tab {:value "diversity" :label (tr :analysis/diversity)}]
-        [mui/tab {:value "heatmap" :label (tr :analysis/heatmap)}]]]
-      [mui/grid {:item true}
+        [:> Tab {:value "reachability" :label (tr :analysis/reachability)}]
+        [:> Tab {:value "diversity" :label (tr :analysis/diversity)}]
+        [:> Tab {:value "heatmap" :label (tr :analysis/heatmap)}]]]
+      [:> Grid {:item true}
        [:> Tooltip
         {:title (tr :analysis/close)}
-        [mui/icon-button {:on-click #(==> [::map-events/hide-analysis])}
-         [mui/icon "close"]]]]]
+        [:> IconButton {:on-click #(==> [::map-events/hide-analysis])}
+         [:> Icon "close"]]]]]
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       (condp = selected-tool
         "reachability" [reachability/analysis-view]
         "diversity" [diversity/view]

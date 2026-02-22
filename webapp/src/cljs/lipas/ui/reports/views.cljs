@@ -1,6 +1,17 @@
 (ns lipas.ui.reports.views
   (:require [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.reports.events :as events]
             [lipas.ui.reports.subs :as subs]
             [lipas.ui.search.events :as search-events]
@@ -43,16 +54,16 @@
   (r/with-let [name' (r/atom nil)]
     (let [tr        (<== [:lipas.ui.subs/translator])
           open?     (<== [::subs/save-dialog-open?])]
-      [mui/dialog {:open open?}
-       [mui/dialog-content
+      [:> Dialog {:open open?}
+       [:> DialogContent
         [lui/text-field
          {:label     (tr :general/name)
           :value     @name'
           :on-change #(reset! name' %)}]]
-       [mui/dialog-actions
-        [mui/button {:on-click #(==> [::events/toggle-save-dialog])}
+       [:> DialogActions
+        [:> Button {:on-click #(==> [::events/toggle-save-dialog])}
          (tr :actions/cancel)]
-        [mui/button
+        [:> Button
          {:disabled (empty? @name')
           :on-click #(==> [::events/save-current-report @name'])}
          (tr :actions/save)]]])))
@@ -72,38 +83,38 @@
     [:<>
      ;; Open Dialog button
      (when (< 0 results-count)
-       [mui/tooltip {:title (tr :reports/tooltip)}
+       [:> Tooltip {:title (tr :reports/tooltip)}
         (if (= btn-variant :fab)
-          [mui/fab
+          [:> Fab
            {:variant "circular"
             :on-click toggle
             :size "small"}
-           [mui/icon "list_alt"]]
-          [mui/button {:variant "contained" :color "secondary" :on-click toggle}
+           [:> Icon "list_alt"]]
+          [:> Button {:variant "contained" :color "secondary" :on-click toggle}
            (tr :reports/download-as-excel)])])
 
      ;; Save for later use dialog
      [save-dialog]
 
      ;; Dialog
-     [mui/dialog {:open open? :full-width true :on-close toggle :max-width "md"}
-      [mui/dialog-title
-       [mui/grid
+     [:> Dialog {:open open? :full-width true :on-close toggle :max-width "md"}
+      [:> DialogTitle
+       [:> Grid
         {:container       true
          :justify-content "space-between"
          :align-items     "baseline"}
-        [mui/grid {:item true}
+        [:> Grid {:item true}
          (tr :reports/select-fields)]
-        [mui/grid {:item true}
-         [mui/icon-button {:on-click toggle}
-          [mui/icon "close"]]]]]
+        [:> Grid {:item true}
+         [:> IconButton {:on-click toggle}
+          [:> Icon "close"]]]]]
 
-      [mui/dialog-content
-       [mui/grid {:container true :spacing 1 :align-items "center"}
+      [:> DialogContent
+       [:> Grid {:container true :spacing 1 :align-items "center"}
 
         ;; Saved reports
         (when saved-reports
-          [mui/grid {:item true}
+          [:> Grid {:item true}
            [lui/select
             {:label     (tr :lipas.user/saved-reports)
              :style     {:width "210px"}
@@ -114,82 +125,82 @@
 
         ;; Save template for later use btn
         (when logged-in?
-          [mui/tooltip {:title (tr :lipas.user/save-report)}
-           [mui/grid {:item true}
-            [mui/icon-button
+          [:> Tooltip {:title (tr :lipas.user/save-report)}
+           [:> Grid {:item true}
+            [:> IconButton
              {:style {:margin-bottom "-0.5em"}
               :on-click #(==> [::events/toggle-save-dialog])}
-             [mui/icon "save"]]]])
+             [:> Icon "save"]]]])
 
         ;; Quick selects
-        [mui/grid {:item true :xs 12}
-         [mui/typography {:variant "body2" :style {:margin-top "1em"}}
+        [:> Grid {:item true :xs 12}
+         [:> Typography {:variant "body2" :style {:margin-top "1em"}}
           (tr :reports/shortcuts)]]
 
         (into
           [:<>]
           (for [{:keys [fields label]} quick-selects]
-            [mui/grid {:item true}
-             [mui/button
+            [:> Grid {:item true}
+             [:> Button
               {:variant  "outlined"
                :on-click #(==> [::events/set-selected-fields fields :append])}
               label]]))
 
         ;; Fields autocomplete selector
-        [mui/grid {:item true :xs 12}
+        [:> Grid {:item true :xs 12}
          [fields-selector
           {:tr        tr
            :on-change #(==> [::events/set-selected-fields %])
            :value     selected-fields}]]
 
         ;; Clear selections
-        [mui/grid {:item true :xs 12}
-         [mui/button
+        [:> Grid {:item true :xs 12}
+         [:> Button
           {:style    {:margin-top "1em"}
            :variant  "outlined"
            :size     "small"
            :disabled (empty? selected-fields)
            :on-click #(==> [::events/set-selected-fields []])}
-          [mui/icon "clear"]
+          [:> Icon "clear"]
           (tr :actions/clear-selections)]]]]
 
       ;; Cancel / download buttons
-      [mui/dialog-actions
-       [mui/grid {:container true :spacing 2 :align-items "center" :justify-content "flex-end"}
-        [mui/grid {:item true}
+      [:> DialogActions
+       [:> Grid {:container true :spacing 2 :align-items "center" :justify-content "flex-end"}
+        [:> Grid {:item true}
          (when limits-exceeded?
-           [mui/typography
+           [:> Typography
             {:variant "caption"
              :color   "error"}
             (tr :reports/excel-limit-exceeded)])]
 
         ;; Result count
-        [mui/grid {:item true}
-         [mui/typography
+        [:> Grid {:item true}
+         [:> Typography
           {:color   (if limits-exceeded? "error" "initial")}
           (tr :search/results-count results-count)]]
 
         [:span {:style {:width "12px"}}]
 
         ;; Format selector
-        [mui/grid {:item true}
+        [:> Grid {:item true}
          [format-selector
           {:tr        tr
            :value     selected-format
            :on-change #(==> [::events/set-selected-format %])}]]
 
-        [mui/grid {:item true}
+        [:> Grid {:item true}
          (when downloading?
-           [mui/circular-progress])]
+           [:> CircularProgress])]
 
         ;; Cancel button
-        [mui/grid {:item true}
-         [mui/button {:on-click toggle :disabled downloading?}
+        [:> Grid {:item true}
+         [:> Button {:on-click toggle :disabled downloading?}
           (tr :actions/cancel)]]
 
         ;; Download button
-        [mui/grid {:item true}
-         [mui/button
+        [:> Grid {:item true}
+         [:> Button
           {:disabled (or downloading? (empty? selected-fields) limits-exceeded?)
            :color    "secondary"
            :on-click #(==> [::search-events/create-report-from-current-search selected-format])}

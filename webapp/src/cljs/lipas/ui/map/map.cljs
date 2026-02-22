@@ -26,7 +26,7 @@
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.analysis.heatmap.map :as heatmap]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/GridLegacy$default" :as Grid]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]))
@@ -721,7 +721,7 @@
     (r/create-class
 
       {:reagent-render
-       (fn [] [mui/grid {:id "map"
+       (fn [] [:> Grid {:id "map"
                         ;; Keyboard navigation requires that this element has a tabIndex
                         ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
                          :tabIndex -1

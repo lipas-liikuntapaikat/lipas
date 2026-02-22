@@ -2,7 +2,7 @@
   (:require [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components :as lui]
             [malli.core :as m]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
@@ -13,7 +13,7 @@
   (let [set-field       (partial set-field :pool)
         pool-types      (<== [::hall/pool-types])
         locale          (tr)]
-    [mui/form-group
+    [:> FormGroup
 
      ;; Pool type
      [lui/select

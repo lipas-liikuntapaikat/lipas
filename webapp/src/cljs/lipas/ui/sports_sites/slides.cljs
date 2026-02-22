@@ -2,7 +2,7 @@
   (:require [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components :as lui]
             [malli.core :as m]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>]]))
 
@@ -11,7 +11,7 @@
 
 (defn form [{:keys [tr data]}]
   (let [set-field  (partial set-field :slide)]
-    [mui/form-group
+    [:> FormGroup
      [lui/text-field
       {:label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)

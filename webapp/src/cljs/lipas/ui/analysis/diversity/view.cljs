@@ -17,6 +17,22 @@
             [lipas.ui.charts :as charts]
             [lipas.ui.components :as lui]
             [lipas.ui.components.misc :as misc]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Link$default" :as Link]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
@@ -25,8 +41,8 @@
 (def geom-type "Polygon")
 
 (defn helper [{:keys [label tooltip]}]
-  [mui/tooltip {:title tooltip}
-   [mui/link
+  [:> Tooltip {:title tooltip}
+   [:> Link
     {:style {:font-family "Lato" :font-size "0.9em" :margin "0.5em"}
      :underline "always"}
     label]])
@@ -37,56 +53,56 @@
         headers (<== [::subs/analysis-candidates-table-headers])
         loading? (<== [::subs/loading?])]
 
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [lui/expansion-panel {:label "Info"
                             :default-expanded false}
-       [mui/paper
+       [:> Paper
         {:style
          {:padding "1em" :background-color "#f5e642"}}
-        [mui/typography {:variant "body1" :paragraph true}
+        [:> Typography {:variant "body1" :paragraph true}
          (tr :analysis/diversity-help1)]
-        [mui/typography {:variant "body1" :paragraph true}
+        [:> Typography {:variant "body1" :paragraph true}
          (tr :analysis/diversity-help2)]
-        [mui/typography {:variant "body1" :paragraph true}
+        [:> Typography {:variant "body1" :paragraph true}
          (tr :analysis/description3)]
-        [mui/typography {:variant "body1" :paragraph true}
+        [:> Typography {:variant "body1" :paragraph true}
          (tr :analysis/diversity-help3)]]]]
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
 
       [lui/expansion-panel {:label (tr :analysis/use-postal-code-areas)
                             :default-expanded true}
-       [mui/grid {:container true}
-        [mui/grid {:item true :xs 12}
+       [:> Grid {:container true}
+        [:> Grid {:item true :xs 12}
          [lui/city-selector-single
           {:on-change #(==> [::events/fetch-postal-code-areas %])}]]]]
 
       [lui/expansion-panel {:label (tr :analysis/import-own-areas)
                             :default-expanded false}
        [:<>
-        [mui/grid {:item true :xs 12}
-         [mui/typography {:variant "body2"}
+        [:> Grid {:item true :xs 12}
+         [:> Typography {:variant "body2"}
           (str (tr :map.import/headline) " (polygon)")]]
-        [mui/grid {:item true}
+        [:> Grid {:item true}
          [:input
           {:type "file"
            :accept (str/join "," import-formats)
            :on-change #(==> [::events/load-geoms-from-file
                              (-> % .-target .-files)
                              geom-type])}]]
-        [mui/grid {:item true}
-         [mui/typography {:display "inline"} (str (tr :help/headline) ":")]
+        [:> Grid {:item true}
+         [:> Typography {:display "inline"} (str (tr :help/headline) ":")]
          [helper {:label "Shapefile" :tooltip (tr :map.import/shapefile)}]
          [helper {:label "GeoJSON" :tooltip (tr :map.import/geoJSON)}]
          [helper {:label "KML" :tooltip (tr :map.import/kml)}]]]]
 
       (when (seq candidates)
         [:<>
-         [mui/grid {:item true :xs 12 :style {:margin-top "0.5em"}}
-          [mui/button {:on-click #(==> [::events/calc-all-diversity-indices])}
-           [mui/icon {:style {:margin-right "0.25em"}} "refresh"]
+         [:> Grid {:item true :xs 12 :style {:margin-top "0.5em"}}
+          [:> Button {:on-click #(==> [::events/calc-all-diversity-indices])}
+           [:> Icon {:style {:margin-right "0.25em"}} "refresh"]
            (tr :analysis/calculate-all)]]
          [lui/table-v2
           {:headers headers
@@ -104,17 +120,17 @@
 (defn category-builder []
   (let [tr (<== [:lipas.ui.subs/translator])
         categories (<== [::subs/categories])]
-    [mui/table
-     [mui/table-head
-      [mui/table-row
-       [mui/table-cell (tr :loi/category)]
-       [mui/table-cell (tr :type/sports-site-types)]]]
-     (into [mui/table-body {:key (count categories)}]
+    [:> Table
+     [:> TableHead
+      [:> TableRow
+       [:> TableCell (tr :loi/category)]
+       [:> TableCell (tr :type/sports-site-types)]]]
+     (into [:> TableBody {:key (count categories)}]
            (for [[idx category] (seq-indexed categories)]
-             [mui/table-row {}
+             [:> TableRow {}
 
               ;; Category name
-              [mui/table-cell {:style {:width "40%"}}
+              [:> TableCell {:style {:width "40%"}}
                [lui/text-field
                 {:full-width true
                  :value (:name category)
@@ -122,17 +138,17 @@
                  :on-change #(==> [::events/set-category-name idx %])}]]
 
               ;; Types + delete
-              [mui/table-cell {:style {:width "60%"}}
-               [mui/grid {:container true :align-items "center" :spacing 2}
+              [:> TableCell {:style {:width "60%"}}
+               [:> Grid {:container true :align-items "center" :spacing 2}
 
                 ;; Type selector
-                [mui/grid {:item true :xs 8}
+                [:> Grid {:item true :xs 8}
                  [lui/type-selector
                   {:value (:type-codes category)
                    :on-change #(==> [::events/set-category-type-codes idx %])}]]
 
                 ;; Factor selector
-                [mui/grid {:item true :xs 2}
+                [:> Grid {:item true :xs 2}
                  [lui/select
                   {:label (tr :analysis/factor)
                    :items (map (fn [n] {:label n :value n}) [0 1 2 3 4 5])
@@ -140,35 +156,35 @@
                    :value (:factor category)}]]
 
                 ;; Delete category button
-                [mui/grid {:item true :xs 2}
-                 [mui/tooltip {:title (tr :analysis/delete-category)}
-                  [mui/icon-button
+                [:> Grid {:item true :xs 2}
+                 [:> Tooltip {:title (tr :analysis/delete-category)}
+                  [:> IconButton
                    {:on-click #(==> [::events/delete-category idx])}
-                   [mui/icon "delete"]]]]]]]))]))
+                   [:> Icon "delete"]]]]]]]))]))
 
 (defn overlay-switches []
   (let [tr (<== [:lipas.ui.subs/translator])
         show-diversity-area? (<== [:lipas.ui.map.subs/overlay-visible? :diversity-area])
         show-diversity-grid? (<== [:lipas.ui.map.subs/overlay-visible? :diversity-grid])
         show-sports-sites? (<== [:lipas.ui.map.subs/overlay-visible? :vectors])]
-    [mui/grid {:container true :style {:padding "1em"}}
+    [:> Grid {:container true :style {:padding "1em"}}
 
      ;; Sports facilities
-     [mui/grid {:item true}
+     [:> Grid {:item true}
       [lui/switch
        {:label (tr :sport/headline)
         :value show-sports-sites?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :vectors])}]]
 
      ;; Diversity area
-     [mui/grid {:item true}
+     [:> Grid {:item true}
       [lui/switch
        {:label (tr :analysis/analysis-areas)
         :value show-diversity-area?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-area])}]]
 
      ;; Diversity grid
-     [mui/grid {:item true}
+     [:> Grid {:item true}
       [lui/switch
        {:label (tr :analysis/diversity-grid)
         :value show-diversity-grid?
@@ -185,17 +201,17 @@
         new-preset-name (<== [::subs/new-preset-name])
         new-preset-name-valid? (<== [::subs/new-preset-name-valid?])]
 
-    [mui/grid {:container true :spacing 1}
+    [:> Grid {:container true :spacing 1}
 
      ;; Helper text
-     [mui/grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
-      [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
-       [mui/typography {:variant "body1" :paragraph false}
+     [:> Grid {:item true :xs 12 :style {:margin-bottom "0.5em"}}
+      [:> Paper {:style {:padding "1em" :background-color "#f5e642"}}
+       [:> Typography {:variant "body1" :paragraph false}
         (tr :analysis/categories-help)]]]
 
      ;; Preset category selector
-     [mui/grid {:item true :xs 12 :md 12}
-      [mui/form-group {:style {:padding "0.5em" :margin-bottom "0.5em"}}
+     [:> Grid {:item true :xs 12 :md 12}
+      [:> FormGroup {:style {:padding "0.5em" :margin-bottom "0.5em"}}
        [lui/select
         {:value selected-preset
          :on-change #(==> [::events/select-category-preset %])
@@ -203,47 +219,47 @@
          :items category-presets}]]]
 
      ;; Seasonality switches
-     [mui/grid {:item true :xs 12 :md 12}
-      [mui/grid {:container true :style {:padding "0.5em"}}
+     [:> Grid {:item true :xs 12 :md 12}
+      [:> Grid {:container true :style {:padding "0.5em"}}
 
-       [mui/grid {:item true :xs 12}
-        [mui/typography {:variant "caption"} (tr :analysis/constraints)]]
+       [:> Grid {:item true :xs 12}
+        [:> Typography {:variant "caption"} (tr :analysis/constraints)]]
 
        ;; Summer season filter
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [lui/switch
          {:label (tr :analysis/in-use-summer)
           :value summer-enabled?
           :on-change #(==> [::events/toggle-seasonality "summer" %])}]]
 
        ;; Winter season filter
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [lui/switch
          {:label (tr :analysis/in-use-winter)
           :value winter-enabled?
           :on-change #(==> [::events/toggle-seasonality "winter" %])}]]
 
        ;; All-year filter
-       [mui/grid {:item true}
+       [:> Grid {:item true}
         [lui/switch
          {:label (tr :analysis/in-use-year-round)
           :value all-year-enabled?
           :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
 
      ;; Add new category button
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
 
-      [mui/grid {:container true :align-items "center"}
+      [:> Grid {:container true :align-items "center"}
 
-       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
-        [mui/button
+       [:> Grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [:> Button
          {:variant "text"
           :on-click #(==> [::events/add-new-category])}
          (tr :analysis/new-category)]]
 
        ;; Reset default categories button
-       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
-        [mui/button
+       [:> Grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [:> Button
          {:variant "text"
           :on-click (fn [_]
                       (==> [:lipas.ui.events/confirm
@@ -265,29 +281,29 @@
                          :on-change #(==> [::events/set-new-preset-name %])}]]
 
        ;; Save category preset button
-       [mui/grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
-        [mui/button
+       [:> Grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
+        [:> Button
          {:variant "text"
           :on-click #(==> [::events/toggle-category-save-dialog])}
          (tr :analysis/save-categories)]]]]
 
      ;; Category builder
-     [mui/grid {:item true :xs 12 :style {:margin-top "2em"}}
+     [:> Grid {:item true :xs 12 :style {:margin-top "2em"}}
       [category-builder]]]))
 
 (defn distance-settings []
   (let [tr (<== [:lipas.ui.subs/translator])
         max-distance-m (<== [::subs/max-distance-m])]
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
      ;; Helper text
-     [mui/grid {:item true :xs 12 :style {:margin-bottom "1em"}}
-      [mui/paper {:style {:padding "1em" :background-color "#f5e642"}}
-       [mui/typography {:variant "body1" :paragraph false}
+     [:> Grid {:item true :xs 12 :style {:margin-bottom "1em"}}
+      [:> Paper {:style {:padding "1em" :background-color "#f5e642"}}
+       [:> Typography {:variant "body1" :paragraph false}
         (tr :analysis/diversity-help3)]]]
 
      ;; Distance zones selector
-     [mui/grid {:item true :xs 12 :style {:margin-top "1em"
+     [:> Grid {:item true :xs 12 :style {:margin-top "1em"
                                           :margin-left "1em"
                                           :margin-right "1em"
                                           :margin-bottom "5em"}}
@@ -310,24 +326,24 @@
   (let [tr (<== [:lipas.ui.subs/translator])]
     [:<>
 
-     [mui/grid {:container true}
+     [:> Grid {:container true}
 
       ;; What's visible on map
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/expansion-panel
         {:label (tr :analysis/settings-map)
          :default-expanded false}
         [overlay-switches]]]
 
       ;; Categories
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/expansion-panel
         {:label (tr :analysis/categories)
          :default-expanded false}
         [categories-settings]]]
 
       ;; Distances
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        [lui/expansion-panel
         {:label (tr :analysis/distance)
          :default-expanded false}
@@ -336,10 +352,10 @@
 (defn export []
   (let [tr (<== [:lipas.ui.subs/translator])
         fmt (<== [::subs/selected-export-format])]
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
      ;; Format selector
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       [lui/select
        {:label (tr :analysis/format)
         :items [{:label "Excel" :value "excel"}
@@ -348,27 +364,27 @@
         :value fmt}]]
 
      ;; Export aggregate results
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
 
-      [mui/button
+      [:> Button
        {:on-click #(==> [::events/export-aggs fmt])}
        (tr :analysis/download-areas)]]
 
      ;; Export grid
-     [mui/grid {:item true :xs 12}
-      [mui/button
+     [:> Grid {:item true :xs 12}
+      [:> Button
        {:on-click #(==> [::events/export-grid fmt])}
        (tr :analysis/download-grid)]]
 
      ;; Export categories
-     [mui/grid {:item true :xs 12}
-      [mui/button
+     [:> Grid {:item true :xs 12}
+      [:> Button
        {:on-click #(==> [::events/export-categories fmt])}
        (tr :analysis/download-categories)]]
 
      ;; Export settings
-     [mui/grid {:item true :xs 12}
-      [mui/button
+     [:> Grid {:item true :xs 12}
+      [:> Button
        {:on-click #(==> [::events/export-settings fmt])}
        (tr :analysis/download-parameters)]]]))
 
@@ -468,13 +484,13 @@
                             (sort-by :label)
                             (map
                               (fn [{:keys [label color type]}]
-                                [mui/grid {:item true}
+                                [:> Grid {:item true}
                                  [misc/icon-text3
                                   {:icon (charts/legend-icons type)
                                    :icon-color color
                                    :text label}]]))
                             (into
-                              [mui/grid
+                              [:> Grid
                                {:container true
                                 :style {:margin-bottom "1.5em"}
                                 :justify-content "center"}])))))}]
@@ -553,19 +569,19 @@
      [lui/expansion-panel
       {:label (tr :analysis/graphs)
        :default-expanded true}
-      [mui/grid {:container true :spacing 2}
-       [mui/grid {:item true :xs 12}
+      [:> Grid {:container true :spacing 2}
+       [:> Grid {:item true :xs 12}
         [areas-selector]]
-       [mui/grid {:item true :xs 12}
-        [mui/tabs
+       [:> Grid {:item true :xs 12}
+        [:> Tabs
          {:size "small"
           :value selected-chart-tab
           :on-change #(==> [::events/select-analysis-chart-tab %2])
           :indicator-color "secondary"
           :text-color "inherit"}
-         [mui/tab {:label (tr :analysis/by-areas) :value "area"}]
-         [mui/tab {:label (tr :analysis/by-grid) :value "grid"}]]]
-       [mui/grid {:item true :xs 12}
+         [:> Tab {:label (tr :analysis/by-areas) :value "area"}]
+         [:> Tab {:label (tr :analysis/by-grid) :value "grid"}]]]
+       [:> Grid {:item true :xs 12}
         (when (= "area" selected-chart-tab)
           [area-chart])
         (when (= "grid" selected-chart-tab)
@@ -580,23 +596,23 @@
         selected-tab (<== [::subs/selected-analysis-tab])
         any-analysis-done? (<== [::subs/any-analysis-done?])]
 
-    [mui/grid {:container true :spacing 2}
+    [:> Grid {:container true :spacing 2}
 
-     #_[mui/grid {:item true :xs 12}
+     #_[:> Grid {:item true :xs 12}
         [overlay-switches]]
 
-     [mui/grid {:item true :xs 12}
-      [mui/tabs {:value selected-tab
+     [:> Grid {:item true :xs 12}
+      [:> Tabs {:value selected-tab
                  :on-change #(==> [::events/select-analysis-tab %2])
                  :variant "fullWidth"
                  :centered true
                  :indicator-color "secondary"
                  :text-color "secondary"}
-       [mui/tab {:label (tr :analysis/analysis-areas) :value "analysis-area"}]
-       [mui/tab {:label (tr :analysis/results) :value "results"}]
-       [mui/tab {:label (tr :analysis/settings) :value "settings"}]]]
+       [:> Tab {:label (tr :analysis/analysis-areas) :value "analysis-area"}]
+       [:> Tab {:label (tr :analysis/results) :value "results"}]
+       [:> Tab {:label (tr :analysis/settings) :value "settings"}]]]
 
-     [mui/grid {:item true :xs 12}
+     [:> Grid {:item true :xs 12}
       (when (= selected-tab "analysis-area")
         [analysis-area-selector])
 
@@ -606,8 +622,8 @@
       (when (= selected-tab "results")
         (if any-analysis-done?
           [results]
-          [mui/typography (tr :analysis/no-analyses-done)]))]
-     [mui/grid {:item true :xs 12 :style {:height "3em"}}]]))
+          [:> Typography (tr :analysis/no-analyses-done)]))]
+     [:> Grid {:item true :xs 12 :style {:height "3em"}}]]))
 
 ;; TODO translations
 

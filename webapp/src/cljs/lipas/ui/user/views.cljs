@@ -5,7 +5,20 @@
             ["@mui/material/Typography$default" :as Typography]
             [lipas.roles :as roles]
             [lipas.ui.components :as lui]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardActions$default" :as CardActions]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItemButton$default" :as ListItemButton]
+            ["@mui/material/ListItemIcon$default" :as ListItemIcon]
             [lipas.ui.org.subs :as org-subs]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
@@ -15,7 +28,7 @@
             [reitit.frontend.easy :as rfe]))
 
 (defn user-form [tr data]
-  [mui/form-group
+  [:> FormGroup
 
    ;; Email
    [lui/text-field
@@ -51,27 +64,27 @@
   (let [site     (<== [::subs/selected-sports-site])
         close    #(==> [::events/select-sports-site nil])
         lipas-id (:lipas-id site)]
-    [mui/dialog {:open     (some? (seq site))
+    [:> Dialog {:open     (some? (seq site))
                  :on-close close}
 
-     [mui/dialog-title
+     [:> DialogTitle
       (or (:name site) "")]
 
-     [mui/dialog-content
-      [mui/list
+     [:> DialogContent
+      [:> List
 
        ;; View basic info button
-       [mui/list-item-button
+       [:> ListItemButton
         {:on-click (comp
                      close
                      #(==> [:lipas.ui.events/display lipas-id]))}
-        [mui/list-item-icon
-         [mui/icon "keyboard_arrow_right"]]
-        [mui/typography {:variant "body2"}
+        [:> ListItemIcon
+         [:> Icon "keyboard_arrow_right"]]
+        [:> Typography {:variant "body2"}
          (tr :lipas.user/view-basic-info)]]]]
 
-     [mui/dialog-actions
-      [mui/button {:on-click close}
+     [:> DialogActions
+      [:> Button {:on-click close}
        (tr :actions/cancel)]]]))
 
 (def teaviisari-types #{1110, 1120, 1130 1310, 1320, 1330, 1340, 1370,
@@ -163,35 +176,35 @@
 
         saved-searches (<== [::subs/saved-searches])]
 
-    [mui/grid {:container true :spacing 2 :style {:padding "1em"}}
+    [:> Grid {:container true :spacing 2 :style {:padding "1em"}}
 
-     [mui/grid {:item true :xs 12 :lg 6}
-      [mui/grid {:container true :spacing 1}
+     [:> Grid {:item true :xs 12 :lg 6}
+      [:> Grid {:container true :spacing 1}
 
        ;; Profile card
-       [mui/grid {:item true :xs 12}
-        [mui/card card-props
-         [mui/card-header {:title (tr :user/greeting firstname lastname)}]
-         [mui/card-content
+       [:> Grid {:item true :xs 12}
+        [:> Card card-props
+         [:> CardHeader {:title (tr :user/greeting firstname lastname)}]
+         [:> CardContent
           [user-form tr user]]
-         [mui/card-actions
-          [mui/button {:href  "/etusivu"
+         [:> CardActions
+          [:> Button {:href  "/etusivu"
                        :color :secondary}
            (str "> " (tr :user/front-page-link))]
-          [mui/button {:href  "/passu-hukassa"
+          [:> Button {:href  "/passu-hukassa"
                        :color :primary}
            (str "> " (tr :reset-password/change-password))]
           (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
-            [mui/button {:href  "/admin"
+            [:> Button {:href  "/admin"
                          :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
 ;; Saved searches
        (when saved-searches
-         [mui/grid {:item true :xs 12}
-          [mui/card card-props
-           [mui/card-header {:title (tr :lipas.user/saved-searches)}]
-           [mui/card-content
+         [:> Grid {:item true :xs 12}
+          [:> Card card-props
+           [:> CardHeader {:title (tr :lipas.user/saved-searches)}]
+           [:> CardContent
             [lui/select
              {:label     (tr :actions/select)
               :style     {:width "170px"}
@@ -200,49 +213,49 @@
               :value-fn  identity
               :on-change #(==> [::events/select-saved-search %])}]]]])]]
 
-     [mui/grid {:item true :xs 12 :lg 6}
-      [mui/grid {:container true :spacing 1}
+     [:> Grid {:item true :xs 12 :lg 6}
+      [:> Grid {:container true :spacing 1}
 
        ;; Permissions
-       [mui/grid {:item true :xs 12}
+       [:> Grid {:item true :xs 12}
 
         [actions-dialog tr]
 
-        [mui/card (merge card-props)
-         [mui/card-header {:title (tr :lipas.user/permissions)}]
-         [mui/card-content
+        [:> Card (merge card-props)
+         [:> CardHeader {:title (tr :lipas.user/permissions)}]
+         [:> CardContent
 
           [explain-roles
            {:tr tr}]]
 
-         [mui/card-actions
-          [mui/button {:href  "/liikuntapaikat"
+         [:> CardActions
+          [:> Button {:href  "/liikuntapaikat"
                        :color :secondary}
            (str "> " (tr :sport/headline))]
 
           ;; (when (some #{2510 2520} (map :type-code sites))
-          ;;   [mui/button {:href  "/jaahalliportaali"
+          ;;   [:> Button {:href  "/jaahalliportaali"
           ;;                :color :secondary}
           ;;    (str "> " (tr :user/ice-stadiums-link))])
           ;; (when (some #{3110 3130} (map :type-code sites))
-          ;;   [mui/button {:href  "/uimahalliportaali"
+          ;;   [:> Button {:href  "/uimahalliportaali"
           ;;                :color :secondary}
           ;;    (str "> " (tr :user/swimming-pools-link))])
           ]]]
 
-       [mui/grid {:item true :xs 12}
-        [mui/card (merge card-props)
-         [mui/card-header {:title (tr :lipas.user/organizations)}]
-         [mui/card-content
+       [:> Grid {:item true :xs 12}
+        [:> Card (merge card-props)
+         [:> CardHeader {:title (tr :lipas.user/organizations)}]
+         [:> CardContent
 
           [explain-orgs]]]]
 
 ;; Promo card
-       [mui/grid {:item true :xs 12}
-        [mui/card card-props
-         [mui/card-header {:title (tr :user/promo-headline)}]
-         [mui/card-content
-          [mui/button
+       [:> Grid {:item true :xs 12}
+        [:> Card card-props
+         [:> CardHeader {:title (tr :user/promo-headline)}]
+         [:> CardContent
+          [:> Button
            {:variant "contained"
             :color   "secondary"
             :style   {:margin-top "1em"}
@@ -259,9 +272,9 @@
              [:li "Liikuntasalit ja -hallit (2150, 2210, 2220, 2230, 2240)"]
              [:li "Uimahallit, kylpylät ja maauimalat (3110, 3130, 3210)"]
              [:li "Polut, ladut ja reitit (4401, 4402, 4403, 4404, 4405)"]]
-          #_[mui/typography {:style {:margin-top "1em" :margin-bottom "1em"}}
+          #_[:> Typography {:style {:margin-top "1em" :margin-bottom "1em"}}
              "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
-          #_[mui/button
+          #_[:> Button
              {:variant  "contained"
               :color    "secondary"
               :on-click (fn []
@@ -271,17 +284,17 @@
                           (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
              (tr :user/promo1-link)]]]]
 
-       [mui/grid {:item true :xs 12}
-        [mui/card card-props
-         [mui/card-header {:title (tr :user/data-ownership)}]
-         [mui/card-content
-          [mui/typography (tr :disclaimer/data-ownership)]]]]]]
+       [:> Grid {:item true :xs 12}
+        [:> Card card-props
+         [:> CardHeader {:title (tr :user/data-ownership)}]
+         [:> CardContent
+          [:> Typography (tr :disclaimer/data-ownership)]]]]]]
 
 ;; Experimental features
-     #_[mui/grid {:item true :xs 12}
-        [mui/card card-props
-         [mui/card-header {:title "Experimental features"}]
-         [mui/card-content
+     #_[:> Grid {:item true :xs 12}
+        [:> Card card-props
+         [:> CardHeader {:title "Experimental features"}]
+         [:> CardContent
           [lui/checkbox
            {:label     "Enable experimental features"
             :value     experimental-features?
