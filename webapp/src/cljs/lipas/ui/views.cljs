@@ -1,5 +1,6 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.notifications :as notifications]
             [lipas.ui.events :as events]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
@@ -84,10 +85,10 @@
 
        ;; Global UI-blocking confirmation dialog
        (when confirmation
-         [lui/confirmation-dialog confirmation])
+         [dialogs/confirmation-dialog confirmation])
 
        ;; Global ephmeral notifications
        (when notification
-         [lui/notification
+         [notifications/notification
           {:notification notification
            :on-close     #(==> [::events/set-active-notification nil])}])]]]))

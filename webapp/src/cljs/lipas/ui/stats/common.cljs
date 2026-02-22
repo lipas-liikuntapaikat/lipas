@@ -1,5 +1,5 @@
 (ns lipas.ui.stats.common
-  (:require [lipas.ui.components :as components]
+  (:require [lipas.ui.components.layouts :as layouts]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/Icon$default" :as Icon]
@@ -29,7 +29,7 @@
    (tr :actions/download-excel)])
 
 (defn disclaimer [{:keys [texts label]}]
-  [components/expansion-panel
+  [layouts/expansion-panel
    {:label            label
     :default-expanded true
     :style            {:margin-bottom "1em" :background-color mui/gray3}}

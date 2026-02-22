@@ -1,6 +1,7 @@
 (ns lipas.ui.stats.subsidies.views
   (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -14,7 +15,7 @@
 
 (defn years-selector
   [{:keys [tr] :as props}]
-  [lui/years-selector
+  [selects/years-selector
    (merge
      props
      {:label (tr :actions/select-years)
@@ -23,7 +24,7 @@
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
-    [lui/select
+    [selects/select
      {:items     groupings
       :value     value
       :style     common/select-style
@@ -35,7 +36,7 @@
 (defn issuer-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         issuers (<== [::subs/issuers])]
-    [lui/multi-select
+    [selects/multi-select
      {:items     issuers
       :value     value
       :style     common/select-style
@@ -46,7 +47,7 @@
 
 (defn region-selector [props]
   (let [regions (<== [:lipas.ui.stats.subs/regions])]
-    [lui/region-selector (assoc props :regions regions)]))
+    [selects/region-selector (assoc props :regions regions)]))
 
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])
@@ -91,7 +92,7 @@
        ;; Type filter
        [:> Grid {:item true :xs 12}
         [:> Typography {:variant "body2"} (tr :stats/filter-types)]
-        [lui/type-category-selector
+        [selects/type-category-selector
          {:tr        tr
           :value     types
           :on-change #(==> [::events/select-types %])}]]
@@ -171,5 +172,5 @@
      ;; Table
      (when (= "table" view)
        [:> Grid {:item true :xs 12}
-        [lui/table
+        [tables/table
          {:headers headers :items data}]])]))

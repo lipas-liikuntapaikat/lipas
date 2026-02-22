@@ -1,6 +1,12 @@
 (ns lipas.ui.loi.views
   (:require [clojure.string :as str]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.loi.events :as events]
             [lipas.ui.loi.subs :as subs]
@@ -36,7 +42,7 @@
 
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id helper-text image-props]}]
-  [lui/dialog
+  [dialogs/dialog
    {:title         (if (-> @dialog-state :data :url)
                      (tr :utp/photo)
                      (tr :utp/photo))
@@ -77,7 +83,7 @@
           :src   url}])]
 
      ;; For debug
-     #_[lui/text-field
+     #_[text-fields/text-field
         {:value     (-> @dialog-state :data :url)
          :fullWidth true
          :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
@@ -85,7 +91,7 @@
 
     ;; Description
     [:> Grid {:item true :xs 12}
-     [lui/text-field
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :description locale)
@@ -98,7 +104,7 @@
 
     ;; Alt text
     [:> Grid {:item true :xs 12}
-     [lui/text-field
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :alt-text locale)
@@ -111,7 +117,7 @@
 
     ;; Copyright
     [:> Grid {:item true :xs 12}
-     [lui/text-field
+     [text-fields/text-field
       {:fullWidth   true
        :required    true
        :value       (-> @dialog-state :data :copyright locale)
@@ -170,7 +176,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [lui/form-table
+        [tables/form-table
          {:key        (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
@@ -264,7 +270,7 @@
 
      ;; Status
      [:> Grid {:item true :xs 12}
-      [lui/select
+      [selects/select
        {:items     statuses
         :disabled  read-only?
         :label     (tr :loi/status)
@@ -275,7 +281,7 @@
 
      ;; Loi category
      [:> Grid {:item true :xs 12}
-      [lui/select
+      [selects/select
        {:items     loi-cats
         :disabled  read-only?
         :label     (tr :loi/category)
@@ -286,7 +292,7 @@
 
      ;; Loi type
      [:> Grid {:item true :xs 12}
-      [lui/autocomplete
+      [autocompletes/autocomplete
        {:items     (vals (get-in loi-cats [loi-cat :types]))
         :disabled  read-only?
         :label     (tr :loi/type)
@@ -334,14 +340,14 @@
                (let [field-type (-> v :field :type)]
                  [:> Grid {:item true :xs 12}
                   (condp = field-type
-                    "checkbox" [lui/checkbox
+                    "checkbox" [checkboxes/checkbox
                                 {:disabled  read-only?
                                  :tooltip   (get-in field [:description locale])
                                  :value     (get form-data k)
                                  :label     (get-in v [:field :label locale])
                                  :on-change #(==> [::events/edit-loi-field k %])}]
 
-                    "textarea" [lui/text-field
+                    "textarea" [text-fields/text-field
                                 {:fullWidth   true
                                  :multiline   true
                                  :disabled    read-only?
@@ -361,7 +367,7 @@
                                :on-change   #(==> [::events/edit-loi-field k %])
                                :value       (->> (get-in form-data [k]))}]
 
-                    "select" [lui/select
+                    "select" [selects/select
                               {:disabled    read-only?
                                :deselect?   true
                                :items       (:opts field)
@@ -373,7 +379,7 @@
                                :value       (get-in form-data [k])}]
 
                     ;; Fallback
-                    [lui/text-field
+                    [text-fields/text-field
                      {:fullWidth   true
                       :disabled    read-only?
                       :value       (get-in form-data [k locale])
@@ -392,7 +398,7 @@
           data     loi
           statuses (<== [::subs/delete-statuses])]
 
-      [lui/dialog
+      [dialogs/dialog
        {:title         (tr :lipas.sports-site/delete (get-in data [:name locale]))
         :cancel-label  (tr :actions/cancel)
         :on-close      on-close
@@ -404,7 +410,7 @@
 
        [:> Grid {:container true :spacing 2}
         [:> Grid {:item true :xs 12}
-         [lui/select
+         [selects/select
           {:label     (tr :lipas.sports-site/delete-reason)
            :required  true
            :value     @status
@@ -415,7 +421,7 @@
 
         (when (= "out-of-service-permanently" @status)
           [:> Grid {:item true :xs 12}
-           [lui/year-selector
+           [selects/year-selector
             {:label     (tr :time/year)
              :value     @year
              :on-change #(reset! year %)}]])]])))
@@ -454,7 +460,7 @@
            :loi      edit-data
            :on-close #(reset! delete-dialog-open? false)}])
 
-       [lui/floating-container
+       [layouts/floating-container
         {:bottom 0 :background-color "transparent"}
         [:> Grid {:container true :spacing 1 :align-items "center" :style {:padding "0.5em"}}
 

@@ -20,7 +20,12 @@
             [lipas.ui.accessibility.views :as accessibility]
             [lipas.ui.analysis.views :as analysis]
             [lipas.ui.analysis.heatmap.subs :as heatmap-subs]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.loi.views :as loi]
             [lipas.ui.map.events :as events]
@@ -93,7 +98,7 @@
         value (<== [::subs/address-search-keyword])
         toggle (fn [] (==> [::events/toggle-address-search-dialog]))
         results (<== [::subs/address-search-results])]
-    [lui/dialog
+    [dialogs/dialog
      {:open? open?
       :title (tr :map.address-search/title)
       :on-close toggle
@@ -101,7 +106,7 @@
       :cancel-label (tr :actions/close)}
      [:> Grid {:container true}
       [:> Grid {:item true :xs 12}
-       [lui/text-field
+       [text-fields/text-field
         {:auto-focus true
          :fullWidth true
          :defer-ms 150
@@ -121,7 +126,7 @@
         open? (<== [::subs/restore-site-backup-dialog-open?])
         lipas-id (<== [::subs/restore-site-backup-lipas-id])
         error (<== [::subs/restore-site-backup-error])]
-    [lui/dialog
+    [dialogs/dialog
      {:open? open?
       :title (tr :map.tools/restore-backup-tooltip)
       :on-close #(==> [::events/close-restore-site-backup-dialog])
@@ -147,7 +152,7 @@
     [:> Slide {:direction "up" :in open?}
      [:r> (react/forwardRef
            (fn [_props ref]
-             (r/as-element [lui/floating-container {:ref ref :bottom 12 :left 550}
+             (r/as-element [layouts/floating-container {:ref ref :bottom 12 :left 550}
                             @simplify-tool-component])))]]))
 
 (defn simplify-tool
@@ -211,7 +216,7 @@
         basemap (<== [::subs/basemap])]
     [:> Grid {:container true :direction "column"}
      [:> Grid {:item true}
-      [lui/select
+      [selects/select
        {:items basemaps
         :value (:layer basemap)
         :label-fn second
@@ -373,7 +378,7 @@
       [:<>
 
        ;; Modal
-       [lui/dialog {:open? @geom-help-open?
+       [dialogs/dialog {:open? @geom-help-open?
                     :cancel-label (tr :actions/close)
                     :title (tr :type/name)
                     :max-width "xl"
@@ -390,7 +395,7 @@
 
         ;; Autocomplete
         [:> Grid {:item true :xs 11}
-         [lui/autocomplete
+         [autocompletes/autocomplete
           {:multi? false
            :items (vals types)
            :value @selected-type
@@ -718,7 +723,7 @@
     [:<>
 
      ;; Dialog
-     [lui/dialog
+     [dialogs/dialog
       {:open? dialog-open?
        :title (tr :map.resolve-address/choose-address)
        :save-label "Ok"
@@ -741,7 +746,7 @@
 
        ;; Address selector
        [:> Grid {:item true :xs 12}
-        [lui/autocomplete
+        [autocompletes/autocomplete
          {:label (tr :map.resolve-address/addresses)
           :items addresses
           :value selected-address
@@ -752,7 +757,7 @@
           :on-change #(==> [::events/select-address-locator-address %])}]]]]
 
      ;; Button
-     [lui/locator-button
+     [buttons/locator-button
       {:tooltip (tr :map.resolve-address/tooltip)
        :on-click (fn []
                    (==> [::events/open-address-locator-dialog])
@@ -1191,7 +1196,7 @@
 
      ;; Actions
       (when-not hide-actions?
-        [lui/floating-container
+        [layouts/floating-container
          {:bottom 0 :background-color "transparent"}
          (into
           [:> Grid
@@ -1594,7 +1599,7 @@
                                      (m/validate lat-spec (:lat @state)))]
                      [:<>
                       [:> Grid {:item true :xs 12}
-                       [lui/select
+                       [selects/select
                         {:style {:min-width "150px"}
                          :label "CRS"
                          :items [{:value :epsg3067 :label "TM35FIN EUREF"}
@@ -1602,7 +1607,7 @@
                          :value (:crs @state)
                          :on-change #(swap! state assoc :crs %1)}]]
                       [:> Grid {:item true :xs 6}
-                       [lui/text-field
+                       [text-fields/text-field
                         {:label (condp = (:crs @state)
                                   :epsg4326 "Lon"
                                   :epsg3067 "N")
@@ -1611,7 +1616,7 @@
                          :value (:lon @state)
                          :on-change #(swap! state assoc :lon %1)}]]
                       [:> Grid {:item true :xs 6}
-                       [lui/text-field
+                       [text-fields/text-field
                         {:label (condp = (:crs @state)
                                   :epsg4326 "Lat"
                                   :epsg3067 "E")
@@ -1781,7 +1786,7 @@
                             " "
                             (tr :map/retkikartta-checkbox-reminder))}
                    [:span
-                    [lui/icon-text
+                    [misc/icon-text
                      {:icon "warning"
                       :text "Retkikartta.fi"}]]]])])))
 
@@ -1881,7 +1886,7 @@
        ;; Actions
        [:> Grid {:container true :align-items "flex-end"}
         [:> Grid {:item true :xs 12 :style {:height "50px"}}
-         [lui/floating-container {:bottom 0 :background-color "transparent"}
+         [layouts/floating-container {:bottom 0 :background-color "transparent"}
           [:> Grid
            {:container true
             :align-items "center"
@@ -1893,7 +1898,7 @@
            ;; Save
            (when data
              [:> Grid {:item true}
-              [lui/save-button
+              [buttons/save-button
                {:tooltip (tr :actions/save)
                 :disabled-tooltip (tr :actions/fill-required-fields)
                 :disabled (not save-enabled?)
@@ -1902,7 +1907,7 @@
            [:> Grid {:item true}
 
             ;; Discard
-            [lui/discard-button
+            [buttons/discard-button
              {:on-click #(==> [::events/discard-new-site])
               :tooltip (tr :actions/discard)}]]
 
@@ -1933,7 +1938,7 @@
      [address-search-dialog]
 
      ;; Floating container
-     [lui/floating-container {:bottom 0 :background-color "transparent"}
+     [layouts/floating-container {:bottom 0 :background-color "transparent"}
       [:> Grid
        {:container true
         :align-items "center"
@@ -2053,7 +2058,7 @@
     [:> Grid {:container true :style {:height "100%" :width "100%"}}
 
      ;; Mini-nav
-     [lui/floating-container
+     [layouts/floating-container
       {:right 0 :background-color "transparent"}
       [:> Grid
        {:container true :direction "column" :align-items "flex-end" :spacing 2}
@@ -2067,7 +2072,7 @@
 
       (when-not drawer-open?
         ;; Open Drawer Button
-        [lui/floating-container {:background-color "transparent"}
+        [layouts/floating-container {:background-color "transparent"}
          [:> Toolbar {:disable-gutters true :style {:padding "8px 0px 0px 8px"}}
           [:> Fab
            {:size (if (utils/mobile? width) "small" "medium")
@@ -2094,7 +2099,7 @@
        [map-contents-view {:tr tr :logged-in? logged-in? :width width}]]]
 
      ;; Floating container (bottom right)
-     [lui/floating-container
+     [layouts/floating-container
       {:bottom "0.2em"
        :right "3.5em"
        :background-color "transparent"}

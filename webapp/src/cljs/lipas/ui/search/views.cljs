@@ -1,8 +1,12 @@
 (ns lipas.ui.search.views
   (:require [lipas.data.prop-types :as prop-types]
             [lipas.roles :as roles]
-            [lipas.ui.components :as lui]
-            [lipas.ui.components.autocompletes :refer [autocomplete2]]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.components.autocompletes :as autocompletes :refer [autocomplete2]]
             [lipas.ui.components.lists :as lists]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -48,14 +52,14 @@
       "numeric"
       [:> Grid {:container true :spacing 2}
        [:> Grid {:item true :xs 6}
-        [lui/text-field
+        [text-fields/text-field
          {:label "Min"
           :defer-ms 500
           :type "number"
           :value (:min filter-value)
           :on-change #(on-change (assoc filter-value :type :range :min %))}]]
        [:> Grid {:item true :xs 6}
-        [lui/text-field
+        [text-fields/text-field
          {:label "Max"
           :defer-ms 500
           :type "number"
@@ -85,7 +89,7 @@
         (tr :search/boolean-filter-no)]]
 
       "string"
-      [lui/text-field
+      [text-fields/text-field
        {:label (tr :search/contains-text)
         :placeholder (str prop-name "...")
         :defer-ms 500
@@ -98,7 +102,7 @@
                                 {:key k
                                  :label (get-in v [:label :fi] k)}))
                          (sort-by :label))]
-        [lui/autocomplete
+        [autocompletes/autocomplete
          {:label prop-name
           :value (first (:values filter-value))
           :items options
@@ -154,7 +158,7 @@
                                  available-props)]
 
     [filter-layout {:size size}
-     [lui/autocomplete
+     [autocompletes/autocomplete
       {:label (tr :search/add-property-filter)
        :value nil
        :items unselected-props ; Pass full property objects
@@ -252,7 +256,7 @@
                   :lipas-id ::roles/any}
                  :site/create-edit])
        [filter-layout {:size size}
-        [lui/checkbox
+        [checkboxes/checkbox
          {:value has-edit-permission?
           :label (tr :search/permissions-filter)
           :on-change #(==> [::events/set-filters-by-permissions %])}]])
@@ -262,7 +266,7 @@
       [:> Typography {:variant "caption"}
        (tr :actions/select-types)]
 
-      [lui/type-category-selector
+      [selects/type-category-selector
        {:tr tr
         :value type-codes
         :on-change #(==> [::events/set-type-filter %])}]]
@@ -272,7 +276,7 @@
       [:> Typography {:variant "caption"}
        (tr :actions/select-cities)]
 
-      [lui/region-selector
+      [selects/region-selector
        {:value city-codes
         :on-change #(==> [::events/set-city-filter %])}]]
 
@@ -281,7 +285,7 @@
       [:> Typography {:variant "caption"}
        (tr :actions/select-admins)]
 
-      [lui/admin-selector
+      [selects/admin-selector
        {:tr tr
         :value admins
         :on-change #(==> [::events/set-admins-filter %])}]]
@@ -291,7 +295,7 @@
       [:> Typography {:variant "caption"}
        (tr :actions/select-owners)]
 
-      [lui/owner-selector
+      [selects/owner-selector
        {:tr tr
         :value owners
         :on-change #(==> [::events/set-owners-filter %])}]]
@@ -305,7 +309,7 @@
 
        ;; Construction year min filter
        [:> Grid {:item true :xs 6}
-        [lui/text-field
+        [text-fields/text-field
          {:label "Min"
           :defer-ms 500
           :type "number"
@@ -314,7 +318,7 @@
 
        ;; Construction year max
        [:> Grid {:item true :xs 6}
-        [lui/text-field
+        [text-fields/text-field
          {:label "Max"
           :defer-ms 500
           :type "number"
@@ -323,7 +327,7 @@
 
      ;; Statuses filter
      [filter-layout {:size size}
-      [lui/status-selector
+      [selects/status-selector
        {:multi? true
         :value statuses
         :on-change #(==> [::events/set-status-filter %])}]]
@@ -412,7 +416,7 @@
 
      ;; Rank results close to map center higher
      [:> Grid {:item true}
-      [lui/checkbox
+      [checkboxes/checkbox
        {:style {:height "100%"}
         :label (tr :search/display-closest-first)
         :value (= :score (:sort-fn sort-opts))
@@ -420,13 +424,13 @@
 
      ;; Select table columns
      [:> Grid {:item true :style {:padding-right "0.5em"}}
-      [lui/search-results-column-selector
+      [selects/search-results-column-selector
        {:value selected-columns
         :on-change #(==> [::events/select-results-table-columns %])}]]
 
      ;; The table
      [:> Grid {:item true :xs 12}
-      [lui/table-v2
+      [tables/table-v2
        {:key (:sort-fn sort-opts)
         :in-progress? in-progress?
         :items results
@@ -532,7 +536,7 @@
 
     [:div {:style (merge {:width "100%"} (when max-width {:max-width max-width}))}
      [:> Stack {:direction "row"}
-      [lui/text-field
+      [text-fields/text-field
        {:value search-str
         :placeholder (tr :search/placeholder)
         :fullWidth true
@@ -552,7 +556,7 @@
           open? (<== [::subs/save-dialog-open?])]
       [:> Dialog {:open open?}
        [:> DialogContent
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :general/name)
           :value @name'
           :on-change #(reset! name' %)}]]
@@ -604,14 +608,14 @@
 
       ;; Search only from area visible on map
       (when (= result-view :list)
-        [lui/checkbox
+        [checkboxes/checkbox
          {:label (tr :map/bounding-box-filter)
           :disabled (not bbox-enabled?)
           :value bbox-only?
           :on-change #(==> [::events/set-bounding-box-filter %])}])
 
 ;; Filters expansion panel
-      [lui/expansion-panel
+      [layouts/expansion-panel
        {:label (tr :search/filters)
         :style {:width "100%"}
         :default-expanded false}
@@ -649,7 +653,7 @@
 
         ;; Saved searches select
         (when (and logged-in? (= :table result-view) saved-searches)
-          [lui/select
+          [selects/select
            {:style {:width "170px"}
             :items saved-searches
             :value "dummy"

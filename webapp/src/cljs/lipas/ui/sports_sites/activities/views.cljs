@@ -3,7 +3,12 @@
             [clojure.pprint :as pprint]
             [clojure.string :as str]
             [lipas.schema.common :as common-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             [lipas.ui.components.buttons :as lui-btn]
             [lipas.ui.components.forms :refer [->display-tf]]
             [lipas.ui.components.text-fields :as lui-tf]
@@ -64,7 +69,7 @@
 (defn checkbox
   [{:keys [read-only? label helper-text on-change value
            component]
-    :or   {component lui/checkbox}}]
+    :or   {component checkboxes/checkbox}}]
   [:> Grid {:container true :spacing 2}
 
    ;; Label
@@ -87,7 +92,7 @@
   [{:keys [read-only? items label helper-text label-fn value-fn
            on-change value sort-fn caption-fn component]
     :or   {value-fn  identity
-           component lui/switch}}]
+           component checkboxes/switch}}]
   (let [vs (set value)]
     [:> Grid {:container true :spacing 2}
 
@@ -124,7 +129,7 @@
 (defn contact-dialog
   [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
   (let [field-sorter (<== [::subs/field-sorter :default])]
-    [lui/dialog
+    [dialogs/dialog
      {:title         (tr :utp/add-contact)
       :open?         (:open? @dialog-state)
       :on-save       on-save
@@ -192,7 +197,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [lui/form-table
+        [tables/form-table
          {:key              (str (count (vals @state)))
           :headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
                              [:_role (get-in contact-props [:role :field :label locale])]]
@@ -229,7 +234,7 @@
        ;; Debug
        (when config/debug?
          [:> Grid {:item true :xs 12}
-          [lui/expansion-panel {:label "debug"}
+          [layouts/expansion-panel {:label "debug"}
            [:pre (with-out-str (pprint/pprint contact-props))]]])])))
 
 (defn accessibility
@@ -251,7 +256,7 @@
      [:> Grid
       {:key prop-k
        :item true :xs 12}
-      [lui/expansion-panel
+      [layouts/expansion-panel
        {:label            (get-in field [:label locale])
         :default-expanded false}
        (if read-only?
@@ -261,7 +266,7 @@
            :value     (get-in value [prop-k locale])}
           true
           5]
-         [lui/text-field
+         [lui-tf/text-field
           {:label     (get-in field [:description locale])
            :multiline true
            :rows      5
@@ -282,7 +287,7 @@
        [:> Typography {:variant "caption"} description]]
 
       [:> Grid {:item true :xs 3}
-       [lui/text-field
+       [lui-tf/text-field
         {:type      "number"
          :value     (:min value)
          :label     "Min"
@@ -290,7 +295,7 @@
          :disabled read-only?}]]
 
       [:> Grid {:item true :xs 3}
-       [lui/text-field
+       [lui-tf/text-field
         {:type      "number"
          :value     (:max value)
          :label     "Max"
@@ -298,7 +303,7 @@
          :disabled read-only?}]]
 
       [:> Grid {:item true :xs 6}
-       [lui/select
+       [selects/select
         {:disabled read-only?
          :items     [{:label {:fi "minuuttia" :se "minuter" :en "minutes"}
                       :value "minutes"
@@ -318,7 +323,7 @@
 
 (defn textlist-dialog
   [{:keys [tr locale dialog-state on-save on-close lipas-id label description]}]
-  [lui/dialog
+  [dialogs/dialog
    {:title         (tr :utp/add-highlight)
     :open?         (:open? @dialog-state)
     :on-save       on-save
@@ -338,7 +343,7 @@
     [:> Grid {:item true :xs 12}
      [:> Grid {:item true :xs 12}
       ;; FIXME: MUI-v5 input height or paddings are wrong
-      [lui/text-field
+      [lui-tf/text-field
        {:fullWidth   true
         :required    true
         :helper-text description
@@ -384,7 +389,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [lui/form-table
+        [tables/form-table
          {:key              @state
           :headers          [[locale label]]
           :hide-header-row? true
@@ -434,7 +439,7 @@
 
       ;; Dialog
       [:> Grid {:container true :spacing 2}
-       [lui/dialog
+       [dialogs/dialog
         {:title   label
          :open?   (:open? @dialog-state)
          :on-save (fn []
@@ -478,7 +483,7 @@
 
              ;; Label
              [:> Grid {:item true :xs 12}
-              [lui/text-field
+              [lui-tf/text-field
                {:fullWidth       true
                 :required        true
                 #_#_:helper-text description
@@ -489,7 +494,7 @@
 
              ;; Description
              [:> Grid {:item true :xs 12}
-              [lui/text-field
+              [lui-tf/text-field
                {:fullWidth       true
                 :required        true
                 #_#_:helper-text description
@@ -590,7 +595,7 @@
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
   (let [description-length-error (> (-> @dialog-state :data :description (get locale) count) 255)]
-    [lui/dialog
+    [dialogs/dialog
      {:title         (if (-> @dialog-state :data :url)
                        (tr :utp/photo)
                        (tr :utp/add-photo))
@@ -627,7 +632,7 @@
                                                          (assoc-in [:data :cms] cms-meta))))))])}]
 
        ;; For debug
-       #_[lui/text-field
+       #_[lui-tf/text-field
           {:value     (-> @dialog-state :data :url)
            :fullWidth true
            :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
@@ -641,7 +646,7 @@
 
       ;; Description
       [:> Grid {:item true :xs 12}
-       [lui/text-field
+       [lui-tf/text-field
         {:fullWidth   true
          :required    true
          :value       (-> @dialog-state :data :description locale)
@@ -655,7 +660,7 @@
 
       ;; Alt-text
       [:> Grid {:item true :xs 12}
-       [lui/text-field
+       [lui-tf/text-field
         {:fullWidth   true
          :required    true
          :value       (-> @dialog-state :data :alt-text locale)
@@ -668,7 +673,7 @@
 
       ;; Copyright
       [:> Grid {:item true :xs 12}
-       [lui/text-field
+       [lui-tf/text-field
         {:fullWidth   true
          :required    true
          :value       (-> @dialog-state :data :copyright locale)
@@ -731,7 +736,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [lui/form-table
+        [tables/form-table
          {:key (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
@@ -775,7 +780,7 @@
 
 (defn video-dialog
   [{:keys [tr label helper-text locale dialog-state on-save on-close]}]
-  [lui/dialog
+  [dialogs/dialog
    {:title         (if (-> @dialog-state :data :url)
                      (tr :utp/video)
                      (tr :utp/add-video))
@@ -795,14 +800,14 @@
      [:> Typography {:variant "caption"} helper-text]]
 
     [:> Grid {:item true :xs 12}
-     [lui/text-field
+     [lui-tf/text-field
       {:value     (-> @dialog-state :data :url)
        :fullWidth true
        :on-change (fn [s] (swap! dialog-state assoc-in [:data :url] s))
        :label     "Url"}]]
 
     [:> Grid {:item true :xs 12}
-     [lui/text-field
+     [lui-tf/text-field
       {:fullWidth true
        :value     (-> @dialog-state :data :description locale)
        :on-change #(swap! dialog-state assoc-in [:data :description locale] %)
@@ -849,7 +854,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [lui/form-table
+        [tables/form-table
          {:key             (str (count (vals @state)))
           :headers         [[:url (tr :utp/link)]
                             [:_description (tr :general/description)] []]
@@ -960,7 +965,7 @@
           (when (seq routes)
             [:> Grid {:item true :xs 12}
              [form-label {:label label}]
-             [lui/table
+             [tables/table
               {:headers
                [[:_route-name (tr :general/name)]
                 [:route-length (tr :utp/length-km)]]
@@ -1050,7 +1055,7 @@
 
        (when config/debug?
          [:> Grid {:item true :xs 12}
-          [lui/expansion-panel {:label "debug route props"}
+          [layouts/expansion-panel {:label "debug route props"}
            [:> Grid {:item true :xs 12}
             [:pre (with-out-str (pprint/pprint props))]]]])])))
 
@@ -1078,7 +1083,7 @@
 
      (when-not read-only?
        [:> Grid {:item true :xs 12}
-        [lui/switch {:label     (tr :utp/route-is-made-of-subroutes)
+        [checkboxes/switch {:label     (tr :utp/route-is-made-of-subroutes)
                      :value     (= :multi route-view)
                      :disabled  (> route-count 1)
                      :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
@@ -1126,7 +1131,7 @@
   [{:keys [field edit-data locale prop-k read-only? lipas-id set-field activity-k type-code]}]
   (case (:type field)
 
-    "select" [lui/select
+    "select" [selects/select
               {:disabled    read-only?
                :deselect?   (if (:default field)
                               false
@@ -1141,7 +1146,7 @@
                                 (:default field))}]
 
     "multi-select" [:<>
-                    [lui/autocomplete
+                    [autocompletes/autocomplete
                      {:disabled        read-only?
                       :multi?          true
                       :items           (:opts field)
@@ -1153,7 +1158,7 @@
                       :value           (get-in edit-data [prop-k])}]
                     [:> FormHelperText (get-in field [:description locale])]]
 
-    "text-field" [lui/text-field
+    "text-field" [lui-tf/text-field
                   {:disabled    read-only?
                    :label       (get-in field [:label locale])
                    :helper-text (get-in field [:description locale])
@@ -1161,7 +1166,7 @@
                    :on-change   #(set-field prop-k locale %)
                    :value       (get-in edit-data [prop-k locale])}]
 
-    "number" [lui/text-field
+    "number" [lui-tf/text-field
               {:type        "number"
                :adornment   (:adornment field)
                :disabled    read-only?
@@ -1171,7 +1176,7 @@
                :on-change   #(set-field prop-k %)
                :value       (get-in edit-data [prop-k])}]
 
-    "percentage" [lui/text-field
+    "percentage" [lui-tf/text-field
                   (merge
                    {:type        "number"
                     :adornment   "%"
@@ -1208,7 +1213,7 @@
 
     "checkbox" [checkbox
                 {:read-only?  read-only?
-                 :component   lui/switch
+                 :component   checkboxes/switch
                  :label       (get-in field [:label locale])
                  :helper-text (get-in field [:description locale])
                  :on-change   #(set-field prop-k %)
@@ -1355,7 +1360,7 @@
      ;; Debug
      (when config/debug?
        [:> Grid {:item true :xs 12}
-        [lui/expansion-panel {:label "debug"}
+        [layouts/expansion-panel {:label "debug"}
          [:pre (with-out-str (pprint/pprint activity))]]])]))
 
 (comment

@@ -4,7 +4,10 @@
             [lipas.ui.analysis.reachability.events :as events]
             [lipas.ui.analysis.reachability.subs :as subs]
             [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.map.events :as map-events]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Divider$default" :as Divider]
@@ -37,14 +40,14 @@
      ;; Tools
 
      [:> Grid {:item true :xs 12}
-      [lui/expansion-panel
+      [layouts/expansion-panel
        {:label (tr :analysis/filter-types)
         :default-expanded false}
 
        [:> Grid {:container true}
         ;; Types selector
         [:> Grid {:item true :xs 10}
-         [lui/type-category-selector
+         [selects/type-category-selector
           {:value selected-types
            :on-change #(==> [::events/set-type-codes-filter %])
            :label (tr :actions/select-types)}]]
@@ -90,7 +93,7 @@
 (defn travel-metric-selector
   [{:keys [tr]}]
   (let [metric (<== [::subs/selected-travel-metric])]
-    [lui/select
+    [selects/select
      {:on-change #(==> [::events/select-travel-metric %])
       :value metric
       :items
@@ -169,7 +172,7 @@
 
      ;; Cumulative / non-cumulative selector
      [:> Grid {:item true :xs 12 :style {:padding-left "1em"}}
-      [lui/checkbox
+      [checkboxes/checkbox
        {:label (tr :analysis/cumulative-results)
         :on-change #(==> [::events/set-population-chart-mode %1])
         :value (= "cumulative" chart-mode)}]]
@@ -234,7 +237,7 @@
 
         ;; Cumulative / non-cumulative selector
         [:> Grid {:item true :xs 12 :style {:padding-left "1em"}}
-         [lui/checkbox
+         [checkboxes/checkbox
           {:label (tr :analysis/cumulative-results)
            :on-change #(==> [::events/set-schools-chart-mode %1])
            :value (= "cumulative" chart-mode)}]]])]))
@@ -276,7 +279,7 @@
        [:> Grid {:item true :xs 2}
         [:> Grid {:container true :justify-content "center"}
          [:> Grid {:item true}
-          [lui/number-selector
+          [selects/number-selector
            {:value zones-count
             :label (tr :analysis/zones)
             :on-change #(==> [::events/set-zones-count % metric value value*])
@@ -294,7 +297,7 @@
 
       ;; What's visible on map
       [:> Grid {:item true :xs 12}
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label (tr :analysis/settings-map)
          :default-expanded true}
 
@@ -303,35 +306,35 @@
 
          ;; Sports facilities
          [:> Grid {:item true}
-          [lui/switch
+          [checkboxes/switch
            {:label (tr :sport/headline)
             :value show-sports-sites?
             :on-change #(==> [::map-events/set-overlay % :vectors])}]]
 
          ;; Analysis buffer
          [:> Grid {:item true}
-          [lui/switch
+          [checkboxes/switch
            {:label (tr :analysis/analysis-buffer)
             :value show-analysis?
             :on-change #(==> [::map-events/set-overlay % :analysis])}]]
 
          ;; Population
          [:> Grid {:item true}
-          [lui/switch
+          [checkboxes/switch
            {:label (tr :analysis/population)
             :value show-population?
             :on-change #(==> [::map-events/set-overlay % :population])}]]
 
          ;; Schools
          [:> Grid {:item true}
-          [lui/switch
+          [checkboxes/switch
            {:label (tr :analysis/schools)
             :value show-schools?
             :on-change #(==> [::map-events/set-overlay % :schools])}]]]]]
 
       ;; Distances and travel times
       [:> Grid {:item true :xs 12}
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label (tr :analysis/settings-zones)
          :default-expanded true}
         [:> Grid {:container true :spacing 1}
@@ -411,7 +414,7 @@
                    :align-items "center"
                    :spacing 1}
          [:> Grid {:item true}
-          [lui/select
+          [selects/select
            {:items sites
             :value selected-site
             :style {:fontFamily "Lato, serif",
@@ -434,7 +437,7 @@
         ;; Craete report button
         (when selected-site
           [:> Grid {:item true :style {:padding-right "1em"}}
-           [lui/download-button
+           [buttons/download-button
             {:size "small"
              :disabled loading?
              :on-click #(==> [::events/create-report])

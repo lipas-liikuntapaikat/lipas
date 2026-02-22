@@ -1,5 +1,7 @@
 (ns lipas.ui.reports.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Dialog$default" :as Dialog]
@@ -23,7 +25,7 @@
   (let [locale (tr)
         items  (<== [::subs/fields])]
     ^{:key value}
-    [lui/autocomplete
+    [autocompletes/autocomplete
      {:value       value
       :label       (tr :search/search-more)
       :multi?      true
@@ -40,7 +42,7 @@
                {:label "CSV" :value "csv"}
                {:label "GeoJSON" :value "geojson"}]]
     ^{:key value}
-    [lui/select
+    [selects/select
      {:value     value
       ;; NOTE: Label would be nice, but probably hidden because
       ;; this label doesn't fit that well into the reports dialog
@@ -56,7 +58,7 @@
           open?     (<== [::subs/save-dialog-open?])]
       [:> Dialog {:open open?}
        [:> DialogContent
-        [lui/text-field
+        [text-fields/text-field
          {:label     (tr :general/name)
           :value     @name'
           :on-change #(reset! name' %)}]]
@@ -115,7 +117,7 @@
         ;; Saved reports
         (when saved-reports
           [:> Grid {:item true}
-           [lui/select
+           [selects/select
             {:label     (tr :lipas.user/saved-reports)
              :style     {:width "210px"}
              :items     saved-reports

@@ -15,7 +15,13 @@
             [lipas.ui.analysis.diversity.events :as events]
             [lipas.ui.analysis.diversity.subs :as subs]
             [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.misc :as misc]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/FormGroup$default" :as FormGroup]
@@ -56,7 +62,7 @@
     [:> Grid {:container true :spacing 2}
 
      [:> Grid {:item true :xs 12}
-      [lui/expansion-panel {:label "Info"
+      [layouts/expansion-panel {:label "Info"
                             :default-expanded false}
        [:> Paper
         {:style
@@ -72,14 +78,14 @@
 
      [:> Grid {:item true :xs 12}
 
-      [lui/expansion-panel {:label (tr :analysis/use-postal-code-areas)
+      [layouts/expansion-panel {:label (tr :analysis/use-postal-code-areas)
                             :default-expanded true}
        [:> Grid {:container true}
         [:> Grid {:item true :xs 12}
-         [lui/city-selector-single
+         [selects/city-selector-single
           {:on-change #(==> [::events/fetch-postal-code-areas %])}]]]]
 
-      [lui/expansion-panel {:label (tr :analysis/import-own-areas)
+      [layouts/expansion-panel {:label (tr :analysis/import-own-areas)
                             :default-expanded false}
        [:<>
         [:> Grid {:item true :xs 12}
@@ -104,7 +110,7 @@
           [:> Button {:on-click #(==> [::events/calc-all-diversity-indices])}
            [:> Icon {:style {:margin-right "0.25em"}} "refresh"]
            (tr :analysis/calculate-all)]]
-         [lui/table-v2
+         [tables/table-v2
           {:headers headers
            :items candidates
            :in-progress? loading?
@@ -131,7 +137,7 @@
 
               ;; Category name
               [:> TableCell {:style {:width "40%"}}
-               [lui/text-field
+               [text-fields/text-field
                 {:full-width true
                  :value (:name category)
                  :placeholder (tr :analysis/new-category)
@@ -143,13 +149,13 @@
 
                 ;; Type selector
                 [:> Grid {:item true :xs 8}
-                 [lui/type-selector
+                 [selects/type-selector
                   {:value (:type-codes category)
                    :on-change #(==> [::events/set-category-type-codes idx %])}]]
 
                 ;; Factor selector
                 [:> Grid {:item true :xs 2}
-                 [lui/select
+                 [selects/select
                   {:label (tr :analysis/factor)
                    :items (map (fn [n] {:label n :value n}) [0 1 2 3 4 5])
                    :on-change #(==> [::events/set-category-factor idx %])
@@ -171,21 +177,21 @@
 
      ;; Sports facilities
      [:> Grid {:item true}
-      [lui/switch
+      [checkboxes/switch
        {:label (tr :sport/headline)
         :value show-sports-sites?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :vectors])}]]
 
      ;; Diversity area
      [:> Grid {:item true}
-      [lui/switch
+      [checkboxes/switch
        {:label (tr :analysis/analysis-areas)
         :value show-diversity-area?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-area])}]]
 
      ;; Diversity grid
      [:> Grid {:item true}
-      [lui/switch
+      [checkboxes/switch
        {:label (tr :analysis/diversity-grid)
         :value show-diversity-grid?
         :on-change #(==> [:lipas.ui.map.events/set-overlay % :diversity-grid])}]]]))
@@ -212,7 +218,7 @@
      ;; Preset category selector
      [:> Grid {:item true :xs 12 :md 12}
       [:> FormGroup {:style {:padding "0.5em" :margin-bottom "0.5em"}}
-       [lui/select
+       [selects/select
         {:value selected-preset
          :on-change #(==> [::events/select-category-preset %])
          :label (tr :analysis/ready-classifications)
@@ -227,21 +233,21 @@
 
        ;; Summer season filter
        [:> Grid {:item true}
-        [lui/switch
+        [checkboxes/switch
          {:label (tr :analysis/in-use-summer)
           :value summer-enabled?
           :on-change #(==> [::events/toggle-seasonality "summer" %])}]]
 
        ;; Winter season filter
        [:> Grid {:item true}
-        [lui/switch
+        [checkboxes/switch
          {:label (tr :analysis/in-use-winter)
           :value winter-enabled?
           :on-change #(==> [::events/toggle-seasonality "winter" %])}]]
 
        ;; All-year filter
        [:> Grid {:item true}
-        [lui/switch
+        [checkboxes/switch
          {:label (tr :analysis/in-use-year-round)
           :value all-year-enabled?
           :on-change #(==> [::events/toggle-seasonality "all-year" %])}]]]]
@@ -268,14 +274,14 @@
                             #()]))}
          (tr :analysis/restore-default-categories)]]
 
-       [lui/dialog {:open? save-dialog-open?
+       [dialogs/dialog {:open? save-dialog-open?
                     :title (tr :analysis/save-categorization)
                     :on-close #(==> [::events/toggle-category-save-dialog])
                     :cancel-label (tr :actions/cancel)
                     :save-label (tr :actions/save)
                     :on-save #(==> [::events/save-category-preset new-preset-name])
                     :save-enabled? new-preset-name-valid?}
-        [lui/text-field {:full-width true
+        [text-fields/text-field {:full-width true
                          :label (tr :analysis/categorization-name)
                          :value new-preset-name
                          :on-change #(==> [::events/set-new-preset-name %])}]]
@@ -330,21 +336,21 @@
 
       ;; What's visible on map
       [:> Grid {:item true :xs 12}
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label (tr :analysis/settings-map)
          :default-expanded false}
         [overlay-switches]]]
 
       ;; Categories
       [:> Grid {:item true :xs 12}
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label (tr :analysis/categories)
          :default-expanded false}
         [categories-settings]]]
 
       ;; Distances
       [:> Grid {:item true :xs 12}
-       [lui/expansion-panel
+       [layouts/expansion-panel
         {:label (tr :analysis/distance)
          :default-expanded false}
         [distance-settings]]]]]))
@@ -356,7 +362,7 @@
 
      ;; Format selector
      [:> Grid {:item true :xs 12}
-      [lui/select
+      [selects/select
        {:label (tr :analysis/format)
         :items [{:label "Excel" :value "excel"}
                 {:label "JSON" :value "geojson"}]
@@ -555,7 +561,7 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         result-areas (<== [::subs/result-area-options])
         selected-areas (<== [::subs/selected-result-areas])]
-    [lui/autocomplete
+    [autocompletes/autocomplete
      {:on-change #(==> [::events/select-analysis-chart-areas %])
       :multi? true
       :label (tr :analysis/select-areas)
@@ -566,7 +572,7 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         selected-chart-tab (<== [::subs/selected-analysis-chart-tab])]
     [:<>
-     [lui/expansion-panel
+     [layouts/expansion-panel
       {:label (tr :analysis/graphs)
        :default-expanded true}
       [:> Grid {:container true :spacing 2}
@@ -586,7 +592,7 @@
           [area-chart])
         (when (= "grid" selected-chart-tab)
           [grid-chart])]]]
-     [lui/expansion-panel
+     [layouts/expansion-panel
       {:label (tr :actions/load-as-file)
        :default-expanded false}
       [export]]]))

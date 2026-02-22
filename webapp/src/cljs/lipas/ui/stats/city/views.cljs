@@ -1,6 +1,7 @@
 (ns lipas.ui.stats.city.views
   (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.stats.city.events :as events]
@@ -11,7 +12,7 @@
 (defn finance-metrics-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/finance-metrics])]
-    [lui/multi-select
+    [selects/multi-select
      {:items        metrics
       :value        value
       :style        common/select-style
@@ -23,7 +24,7 @@
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         units  (<== [::subs/finance-units])]
-    [lui/select
+    [selects/select
      {:items     units
       :value     value
       :style     common/select-style
@@ -35,7 +36,7 @@
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/finance-city-services])]
-    [lui/select
+    [selects/select
      {:items     services
       :value     value
       :style     common/select-style
@@ -45,13 +46,13 @@
       :on-change on-change}]))
 
 (defn years-selector [props]
-  [lui/years-selector (merge props {:style common/select-style})])
+  [selects/years-selector (merge props {:style common/select-style})])
 
 (defn city-selector
   "Includes also abolished cities."
   [props]
   (let [cities (<== [:lipas.ui.stats.subs/cities])]
-    [lui/city-selector-single (assoc props :cities cities)]))
+    [selects/city-selector-single (assoc props :cities cities)]))
 
 (defn view []
   (let [tr           (<== [:lipas.ui.subs/translator])
@@ -145,5 +146,5 @@
      ;; Table
      (when (= view "table")
        [:> Grid {:item true :xs 12}
-        [lui/table
+        [tables/table
          {:headers headers :items finance-data}]])]))

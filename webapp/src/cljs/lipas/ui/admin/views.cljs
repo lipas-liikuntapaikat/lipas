@@ -22,7 +22,13 @@
             [malli.core :as m]
             [lipas.ui.admin.events :as events]
             [lipas.ui.admin.subs :as subs]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :as ac]
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Checkbox$default" :as Checkbox]
@@ -67,7 +73,7 @@
       (tr :lipas.admin/send-magic-link (:email user))]
      [:> DialogContent
       [:> FormGroup
-       [lui/select
+       [selects/select
         {:label (tr :lipas.admin/select-magic-link-template)
          :items variants
          :value variant
@@ -332,7 +338,7 @@
         history (<== [::subs/user-history])
         existing? (some? (:id user))]
 
-    [lui/full-screen-dialog
+    [dialogs/full-screen-dialog
      {:open? (boolean (seq user))
       :title (or (:username user) (:email user))
       :close-label (tr :actions/close)
@@ -368,7 +374,7 @@
           "Palauta"])
 
        ;; Send magic link button
-       [lui/email-button
+       [buttons/email-button
         {:label (tr :lipas.admin/magic-link)
          :disabled (not (m/validate users-schema/new-user-schema user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
@@ -387,32 +393,32 @@
       [magic-link-dialog {:tr tr}]
 
       ;;; Contact info
-      [lui/form-card {:title (tr :lipas.user/contact-info)}
+      [layouts/card {:title (tr :lipas.user/contact-info)}
        [:> FormGroup
 
         ;; Email
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/email)
           :value (:email user)
           :on-change #(==> [::events/edit-user [:email] %])
           :disabled existing?}]
 
         ;; Username
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/username)
           :value (:username user)
           :on-change #(==> [::events/edit-user [:username] %])
           :disabled existing?}]
 
         ;; Firstname
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/firstname)
           :value (-> user :user-data :firstname)
           :on-change #(==> [::events/edit-user [:user-data :firstname] %])
           :disabled existing?}]
 
         ;; Lastname
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.user/lastname)
           :value (-> user :user-data :lastname)
           :on-change #(==> [::events/edit-user [:user-data :lastname] %])
@@ -423,7 +429,7 @@
 
       ;;; Permissions
       ;; TODO: Replace this with roles management
-      [lui/form-card {:title (str (tr :lipas.user/permissions)
+      [layouts/card {:title (str (tr :lipas.user/permissions)
                                   " " (tr :lipas.user.permissions.roles/permissions-old))}
        [:> FormGroup
 
@@ -432,28 +438,28 @@
           :tr tr}]
 
         ;; Admin?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/admin?)
           :value (-> user :permissions :admin?)
           :on-change #(==> [::events/edit-user [:permissions :admin?] %])}]
 
         ;; Permission to all types?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/all-types?)
           :value (-> user :permissions :all-types?)
           :on-change #(==> [::events/edit-user [:permissions :all-types?] %])}]
 
         ;; Permission to all cities?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:disabled true
           :label (tr :lipas.user.permissions/all-cities?)
           :value (-> user :permissions :all-cities?)
           :on-change #(==> [::events/edit-user [:permissions :all-cities?] %])}]
 
         ;; Permission to individual spoorts-sites
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items sites
           :label (tr :lipas.user.permissions/sports-sites)
@@ -462,7 +468,7 @@
           :on-change #(==> [::events/edit-user [:permissions :sports-sites] %])}]
 
         ;; Permission to individual types
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items types
           :label (tr :lipas.user.permissions/types)
@@ -471,7 +477,7 @@
           :on-change #(==> [::events/edit-user [:permissions :types] %])}]
 
         ;; Permission to individual cities
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items cities
           :label (tr :lipas.user.permissions/cities)
@@ -480,7 +486,7 @@
           :on-change #(==> [::events/edit-user [:permissions :cities] %])}]
 
         ;; Permission to activities
-        [lui/autocomplete
+        [ac/autocomplete
          {:disabled true
           :items activities
           :label (tr :lipas.user.permissions/activities)
@@ -495,8 +501,8 @@
          "Anna oikeus aktiviteettien tyyppeihin"]]]
 
       ;;; History
-      [lui/form-card {:title (tr :lipas.user/history)}
-       [lui/table-v2
+      [layouts/card {:title (tr :lipas.user/history)}
+       [tables/table-v2
         {:items history
          :headers
          {:event {:label (tr :general/event)}
@@ -544,7 +550,7 @@
 
            ;; New symbol
           [:> TableCell (condp = shape
-                            "Point" [lui/select
+                            "Point" [selects/select
                                      {:items [{:label "Circle" :value "circle"}
                                               {:label "Square" :value "square"}]
                                       :value (or (-> type-code new-colors :symbol)
@@ -597,7 +603,7 @@
      [:> CardContent
       [:> Typography {:variant "h5"}
        "Tyyppikoodit"]
-      [lui/table
+      [tables/table
        {:hide-action-btn? true
         :headers
         [[:type-code "Tyyppikoodi"]
@@ -636,7 +642,7 @@
 
        ;; Status selector
        [:> Grid {:item true}
-        [lui/select
+        [selects/select
          {:style {:width "150px"}
           :label "Status"
           :value status
@@ -647,13 +653,13 @@
 
        ;; Users filter
        [:> Grid {:item true}
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :search/search)
           :on-change #(==> [::events/filter-users %])
           :value users-filter}]]]
 
       ;; Users table
-      [lui/table
+      [tables/table
        {:headers
         [[:email (tr :lipas.user/email)]
          [:firstname (tr :lipas.user/firstname)]
@@ -668,7 +674,7 @@
         org-id @(rf/subscribe [::subs/add-user-to-org-dialog-org-id])
         email @(rf/subscribe [::subs/add-user-to-org-email])
         role @(rf/subscribe [::subs/add-user-to-org-role])]
-    [lui/dialog
+    [dialogs/dialog
      {:open? open?
       :title (tr :org.form/add-user)
       :on-close #(rf/dispatch [::events/close-add-user-to-org-dialog])
@@ -678,12 +684,12 @@
       :on-save #(rf/dispatch [::events/add-user-to-org email role org-id])}
 
      [:> FormGroup
-      [lui/text-field
+      [text-fields/text-field
        {:label (tr :lipas.user/email)
         :value email
         :required true
         :on-change #(rf/dispatch [::events/set-add-user-to-org-email %])}]
-      [lui/select
+      [selects/select
        {:label (tr :lipas.org/org-role)
         :value role
         :required true
@@ -702,7 +708,7 @@
                        (fn []
                          (rf/dispatch [::events/set-org-to-edit nil])))
                      #js [edit-id])
-    [lui/full-screen-dialog
+    [dialogs/full-screen-dialog
      {:open? (boolean edit-id)
       :title (or (:name org)
                  "-")
@@ -720,29 +726,29 @@
 
      ;; Reuse lipas.ui.org.views
      [:> Grid {:container true :spacing 1}
-      [lui/form-card {:title (tr :org.form/details)
+      [layouts/card {:title (tr :org.form/details)
                       :xs 12
                       :md 12
                       :lg 12}
        [:> FormGroup
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.org/name)
           :value (:name org)
           :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
-        [lui/text-field
+        [text-fields/text-field
          {:label (tr :lipas.org/phone)
           :value (:phone (:data org))
           :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]]
 
        ;; TODO: Ptv data fields
 
-      [lui/form-card {:title (tr :org.form/users)
+      [layouts/card {:title (tr :org.form/users)
                       :xs 12
                       :md 12
                       :lg 12}
        [:> Grid {:container true :spacing 2 :align-items "flex-end"}
         [:> Grid {:item true :xs true}
-         [lui/table
+         [tables/table
           {:headers
            [[:email (tr :lipas.user/email)]
             [:username (tr :lipas.user/username)]
@@ -893,7 +899,7 @@
        [:> Card {:sx #js{:mb 2}}
         [:> CardHeader {:title "Performance Metrics"}]
         [:> CardContent
-         [lui/table
+         [tables/table
           {:headers [[:type "Job Type"]
                      [:status "Status"]
                      [:job_count "Count"]
@@ -1157,7 +1163,7 @@
        "Hae historia Lipas ID:llä"]
       [:> Grid2 {:container true :spacing 2 :alignItems "flex-end"}
        [:> Grid2 {:size 8}
-        [lui/text-field
+        [text-fields/text-field
          {:label "LIPAS ID"
           :value search-id-str
           :type "number"
@@ -1196,7 +1202,7 @@
        [:> Card
         [:> CardHeader {:title (str "Hukutulokset (" (count results) " versiota)")}]
         [:> CardContent
-         [lui/table-v2
+         [tables/table-v2
           {:items (map-indexed (fn [idx revision]
                                  (-> revision
                                      (assoc :index (+ idx 1))

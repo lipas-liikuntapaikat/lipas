@@ -4,7 +4,9 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.roles :as roles]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardActions$default" :as CardActions]
@@ -31,31 +33,31 @@
   [:> FormGroup
 
    ;; Email
-   [lui/text-field
+   [text-fields/text-field
     {:label    (tr :lipas.user/email)
      :value    (:email data)
      :disabled true}]
 
    ;; Username
-   [lui/text-field
+   [text-fields/text-field
     {:label    (tr :lipas.user/username)
      :value    (:username data)
      :disabled true}]
 
    ;; Firstname
-   [lui/text-field
+   [text-fields/text-field
     {:label    (tr :lipas.user/firstname)
      :value    (-> data :user-data :firstname)
      :disabled true}]
 
    ;; Lastname
-   [lui/text-field
+   [text-fields/text-field
     {:label    (tr :lipas.user/lastname)
      :value    (-> data :user-data :lastname)
      :disabled true}]
 
    ;; Permissions request
-   [lui/text-field
+   [text-fields/text-field
     {:label    (tr :lipas.user/requested-permissions)
      :value    (-> data :user-data :permissions-request)
      :disabled true}]])
@@ -205,7 +207,7 @@
           [:> Card card-props
            [:> CardHeader {:title (tr :lipas.user/saved-searches)}]
            [:> CardContent
-            [lui/select
+            [selects/select
              {:label     (tr :actions/select)
               :style     {:width "170px"}
               :items     saved-searches
@@ -295,7 +297,7 @@
         [:> Card card-props
          [:> CardHeader {:title "Experimental features"}]
          [:> CardContent
-          [lui/checkbox
+          [checkboxes/checkbox
            {:label     "Enable experimental features"
             :value     experimental-features?
             :on-change #(==> [::events/toggle-experimental-features])}]]]]]))

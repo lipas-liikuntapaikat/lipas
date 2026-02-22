@@ -1,5 +1,7 @@
 (ns lipas.ui.feedback.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.feedback.events :as events]
             [lipas.ui.feedback.subs :as subs]
             ["@mui/material/GridLegacy$default" :as Grid]
@@ -16,7 +18,7 @@
         form-state  (<== [::subs/form])
         form-valid? (<== [::subs/form-valid?])]
     [:<>
-     [lui/dialog
+     [dialogs/dialog
       {:open?         modal-open?
        :on-close      #(==> [::events/close-modal])
        :save-enabled? form-valid?
@@ -29,7 +31,7 @@
 
        ;; Feedback type
        [:> Grid {:item true :xs 12}
-        [lui/autocomplete
+        [autocompletes/autocomplete
          {:label     "Palautteen aihe"
           :required  true
           :style     {:min-width "170px"}
@@ -39,7 +41,7 @@
 
        ;; Sender email
        [:> Grid {:item true :xs 12}
-        [lui/text-field
+        [text-fields/text-field
          {:label     "Sähköpostiosoite (ei pakollinen)"
           :fullWidth true
           :spec      users-schema/email-schema
@@ -48,7 +50,7 @@
 
        ;; Feedback text
        [:> Grid {:item true :xs 12}
-        [lui/text-field
+        [text-fields/text-field
          {:label           "Palaute"
           :fullWidth       true
           :multiline       true

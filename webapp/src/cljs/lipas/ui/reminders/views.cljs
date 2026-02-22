@@ -1,5 +1,7 @@
 (ns lipas.ui.reminders.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/FormGroup$default" :as FormGroup]
@@ -30,7 +32,7 @@
         form   (<== [::subs/form])
         toggle (fn [] (==> [::events/toggle-dialog]))]
 
-    [lui/dialog
+    [dialogs/dialog
      {:open?         open?
       :title         (tr :reminders/title)
       :on-close      toggle
@@ -59,7 +61,7 @@
         [:> Grid {:container true :spacing 2}
 
          [:> Grid {:item true :xs 12}
-          [lui/date-picker
+          [selects/date-picker
            {:type      "date"
             :fullWidth true
             :label     (tr :reminders/select-date)
@@ -68,7 +70,7 @@
             :on-change #(==> [::events/set-date %])}]]
 
          [:> Grid {:item true :xs 12}
-          [lui/text-field
+          [text-fields/text-field
            {:label     (tr :reminders/message)
             :multiline true
             :fullWidth true

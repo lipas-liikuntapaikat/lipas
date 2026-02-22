@@ -1,6 +1,10 @@
 (ns lipas.ui.sports-sites.pools
   (:require [lipas.schema.swimming-pools :as pool-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
@@ -16,7 +20,7 @@
     [:> FormGroup
 
      ;; Pool type
-     [lui/select
+     [selects/select
       {:deselect? true
        :label     (tr :general/type)
        :value     (:type data)
@@ -26,7 +30,7 @@
        :on-change #(set-field :type %)}]
 
      ;; Structure
-     #_[lui/select
+     #_[selects/select
         {:label     (tr :general/structure)
          :deselect? true
          :value     (:structure data)
@@ -36,13 +40,13 @@
          :on-change #(set-field :structure %)}]
 
      ;; Outdoor pool?
-     [lui/checkbox
+     [checkboxes/checkbox
       {:label     (tr :lipas.swimming-pool.pool/outdoor-pool?)
        :value     (:outdoor-pool? data)
        :on-change #(set-field :outdoor-pool? %)}]
 
      ;; Length m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
@@ -51,7 +55,7 @@
        :on-change #(set-field :length-m %)}]
 
      ;; Width m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/width-m)
        :adornment (tr :physical-units/m)
@@ -60,7 +64,7 @@
        :on-change #(set-field :width-m %)}]
 
      ;; Area m2
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/area-m2)
        :adornment (tr :physical-units/m2)
@@ -69,7 +73,7 @@
        :on-change #(set-field :area-m2 %)}]
 
      ;; Depth min m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-min-m)
        :adornment (tr :physical-units/m)
@@ -78,7 +82,7 @@
        :on-change #(set-field :depth-min-m %)}]
 
      ;; Depth max m
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :dimensions/depth-max-m)
        :adornment (tr :physical-units/m)
@@ -87,7 +91,7 @@
        :on-change #(set-field :depth-max-m %)}]
 
      ;; Temperature c
-     [lui/text-field
+     [text-fields/text-field
       {:type      "number"
        :label     (tr :physical-units/temperature-c)
        :adornment (tr :physical-units/celsius)
@@ -96,7 +100,7 @@
        :on-change #(set-field :temperature-c %)}]
 
      ;; Volume m3
-     #_[lui/text-field
+     #_[text-fields/text-field
         {:type      "number"
          :label     (tr :dimensions/volume-m3)
          :adornment (tr :physical-units/m3)
@@ -105,7 +109,7 @@
          :on-change #(set-field :volume-m3 %)}]
 
      ;; Accessibility features
-     #_[lui/multi-select
+     #_[selects/multi-select
         {:label     (tr :lipas.swimming-pool.pool/accessibility)
          :items     accessibility
          :value     (:accessibility data)
@@ -118,7 +122,7 @@
         reset  #(==> [::hall/reset-dialog :pool])
         close  #(==> [::hall/toggle-dialog :pool])
         valid? (m/validate pool-schema/pool-schema data)]
-    [lui/dialog {:title         (if (:id data)
+    [dialogs/dialog {:title         (if (:id data)
                                   (tr :lipas.swimming-pool.pools/edit-pool)
                                   (tr :lipas.swimming-pool.pools/add-pool))
                  :save-label    (tr :actions/save)
@@ -149,7 +153,7 @@
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   (let [localize (partial utils/localize-field tr)]
-    [lui/form-table
+    [tables/form-table
      {:headers         (make-headers tr)
       :items
       (->> (vals items)
@@ -168,6 +172,6 @@
       :on-delete       #(==> [::hall/remove-pool lipas-id %])}]))
 
 (defn read-only-table [{:keys [tr items]}]
-  [lui/table {:headers (make-headers tr)
+  [tables/table {:headers (make-headers tr)
               :items   (sort-by :length-m utils/reverse-cmp items)
               :key-fn  #(gensym)}])

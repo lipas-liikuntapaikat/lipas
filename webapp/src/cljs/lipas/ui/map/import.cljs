@@ -1,6 +1,8 @@
 (ns lipas.ui.map.import
   (:require [clojure.string :as string]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.subs :as subs]
             ["@mui/material/Button$default" :as Button]
@@ -79,7 +81,7 @@
 
          ;; File encoding selector
          [:> Grid {:item true}
-          [lui/select
+          [selects/select
            {:items     ["utf-8" "ISO-8859-1"]
             :label     (tr :map.import/select-encoding)
             :style     {:min-width "120px"}
@@ -104,7 +106,7 @@
          [:> Grid {:item true :xs 12}
 
           ^{:key batch-id}
-          [lui/table-v2
+          [tables/table-v2
            {:items         (-> data vals (->> (map :properties) (map #(update-vals % str))))
             :key-fn        :id
             :multi-select? true
@@ -115,7 +117,7 @@
 
       ;; Replace existing feature checkbox
       (when show-replace?
-        [lui/checkbox
+        [checkboxes/checkbox
          {:label     (tr :map.import/replace-existing?)
           :value     replace?
           :on-change #(==> [::events/toggle-replace-existing-selection])}])

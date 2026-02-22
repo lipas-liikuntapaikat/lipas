@@ -1,6 +1,7 @@
 (ns lipas.ui.front-page.views
   (:require [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.front-page.events :as events]
             [lipas.ui.front-page.subs :as subs]
@@ -280,7 +281,7 @@
          [:> Grid {:container true :spacing 2}
           ;; Email
           [:> Grid {:item true :xs 12}
-           [lui/text-field
+           [text-fields/text-field
             {:value @email
              :full-width true
              :label (tr :lipas.user/email)
@@ -400,10 +401,10 @@
            [:> Typography {:variant "body1" :style {:height "1.65em"}}
             (tr :sport/description)]
            [:ul
-            [lui/li (tr :sport/up-to-date-information)]
-            [lui/li (tr :sport/updating-tools)]
-            [lui/li (tr :sport/analysis-tools)]
-            [lui/li (tr :sport/open-interfaces)]]]
+            [misc/li (tr :sport/up-to-date-information)]
+            [misc/li (tr :sport/updating-tools)]
+            [misc/li (tr :sport/analysis-tools)]
+            [misc/li (tr :sport/open-interfaces)]]]
 
           ;; Ice stadiums portal
           ;; [grid-card
@@ -413,9 +414,9 @@
           ;;  [:> Typography {:variant "body1"}
           ;;   (tr :ice/description)]
           ;;  [:ul
-          ;;   [lui/li (tr :ice/basic-data-of-halls)]
-          ;;   [lui/li (tr :ice/entering-energy-data)]
-          ;;   [lui/li (tr :ice/updating-basic-data)]]]
+          ;;   [misc/li (tr :ice/basic-data-of-halls)]
+          ;;   [misc/li (tr :ice/entering-energy-data)]
+          ;;   [misc/li (tr :ice/updating-basic-data)]]]
 
           ;; Swimming pools portal
           ;; [grid-card
@@ -425,9 +426,9 @@
           ;;  [:> Typography {:variant "body1"}
           ;;   (tr :swim/description)]
           ;;  [:ul
-          ;;   [lui/li (tr :swim/basic-data-of-halls)]
-          ;;   [lui/li (tr :swim/entering-energy-data)]
-          ;;   [lui/li (tr :swim/updating-basic-data)]]]
+          ;;   [misc/li (tr :swim/basic-data-of-halls)]
+          ;;   [misc/li (tr :swim/entering-energy-data)]
+          ;;   [misc/li (tr :swim/updating-basic-data)]]]
 
           ;; Reports
           [grid-card-2
@@ -437,10 +438,10 @@
            [:> Typography {:variant "body1" :style {:height "4em"}}
             (tr :stats/description)]
            [:ul
-            [lui/li (tr :stats/bullet2)]
-            [lui/li (tr :stats/bullet4)]
-            [lui/li (tr :stats/bullet1)]
-            [lui/li (tr :stats/bullet3)]]]
+            [misc/li (tr :stats/bullet2)]
+            [misc/li (tr :stats/bullet4)]
+            [misc/li (tr :stats/bullet1)]
+            [misc/li (tr :stats/bullet3)]]]
 
           ;; Open Data
           [grid-card-2 {:title (tr :open-data/headline)}

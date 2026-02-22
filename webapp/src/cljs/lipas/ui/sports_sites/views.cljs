@@ -9,7 +9,15 @@
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
             [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.forms :as forms]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :as autocompletes]
             [lipas.ui.map.utils :as map-utils]
             ["@mui/material/FormGroup$default" :as FormGroup]
@@ -67,20 +75,20 @@
   (let [locale (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
 
-    [lui/form {:read-only? read-only?}
+    [forms/form {:read-only? read-only?}
 
      (when (show-status? tr display-data)
        [:> Typography {:variant "h6" :color "error"}
         (:status display-data)])
 
      (when sub-headings?
-       [lui/sub-heading {:label (tr :lipas.sports-site/headline)}])
+       [misc/sub-heading {:label (tr :lipas.sports-site/headline)}])
 
      ;; Last modified
      (when-let [event-date (:event-date display-data)]
        {:label (tr :general/last-modified)
         :value event-date
-        :form-field [lui/text-field
+        :form-field [text-fields/text-field
                      {:value event-date
                       :on-change #()
                       :disabled true}]})
@@ -89,7 +97,7 @@
      (when (allow-editing-status? tr display-data)
        {:label (tr :lipas.sports-site/status)
         :value (-> display-data :status)
-        :form-field [lui/status-selector-single
+        :form-field [selects/status-selector-single
                      {:value (-> edit-data :status)
                       :on-change #(on-change :status %)
                       :read-only? status-read-only?}]})
@@ -114,7 +122,7 @@
      ;;                (= 2520 (-> display-data :type :type-code))))
      ;;   {:label      (tr :ice/size-category)
      ;;    :value      (-> display-data :type :size-category)
-     ;;    :form-field [lui/select
+     ;;    :form-field [selects/select
      ;;                 {:value     (-> edit-data :type :size-category)
      ;;                  :items     size-categories
      ;;                  :value-fn  first
@@ -124,7 +132,7 @@
      ;; Name
      {:label (tr :lipas.sports-site/name)
       :value (-> display-data :name)
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:spec sites-schema/name
                     :required true
                     :value (-> edit-data :name)
@@ -145,7 +153,7 @@
                        "lipas.sports-site"
                        (str "name-localized-" (name l))))
           :value (-> display-data :name-localized l)
-          :form-field [lui/text-field
+          :form-field [text-fields/text-field
                        {:spec sites-schema/name
                         :value (-> edit-data :name-localized l)
                         :on-change #(on-change :name-localized l %)}]}))
@@ -153,7 +161,7 @@
      ;; Marketing name
      {:label (tr :lipas.sports-site/marketing-name)
       :value (-> display-data :marketing-name)
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:spec sites-schema/marketing-name
                     :value (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
@@ -163,7 +171,7 @@
       :value (-> display-data :construction-year)
       ;; NOTE: This causes some MUI warnings if the value
       ;; is nil, because that doesn't exists as an option.
-      :form-field [lui/year-selector2
+      :form-field [autocompletes/year-selector
                    {:value (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)
                     :deselect? true}]}
@@ -171,7 +179,7 @@
      ;; Renovation years
      {:label (tr :lipas.sports-site/renovation-years)
       :value (-> display-data :renovation-years)
-      :form-field [lui/year-selector
+      :form-field [selects/year-selector
                    {:multi? true
                     :value (-> edit-data :renovation-years)
                     :on-change #(on-change :renovation-years %)}]}
@@ -180,7 +188,7 @@
      {:label (tr :lipas.sports-site/comment)
       :value (-> display-data :comment)
       :form-field
-      [lui/text-field
+      [text-fields/text-field
        {:spec sites-schema/comment
         :rows 5
         :value (-> edit-data :comment)
@@ -189,14 +197,14 @@
 
      (when sub-headings?
        [:<>
-        [lui/sub-heading {:label (tr :lipas.sports-site/contact)}]
+        [misc/sub-heading {:label (tr :lipas.sports-site/contact)}]
         (when-not read-only?
           [:> Typography {:variant "caption"} (tr :lipas.sports-site/contact-helper-text)])])
 
      ;; Email
      {:label (tr :lipas.sports-site/email-public)
       :value (-> display-data :email)
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:value (-> edit-data :email)
                     :spec sites-schema/email
                     :on-change #(on-change :email %)}]}
@@ -204,7 +212,7 @@
      ;; Phone number
      {:label (tr :lipas.sports-site/phone-number)
       :value (-> display-data :phone-number)
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:value (-> edit-data :phone-number)
                     :spec sites-schema/phone-number
                     :on-change #(on-change :phone-number %)}]}
@@ -213,7 +221,7 @@
      {:label (tr :lipas.sports-site/www)
       :value (-> display-data :www)
       :type :link
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:value (-> edit-data :www)
                     :spec sites-schema/www
                     :on-change #(on-change :www %)}]}
@@ -222,18 +230,18 @@
      {:label (tr :lipas.sports-site/reservations-link)
       :value (-> display-data :reservations-link)
       :type :link
-      :form-field [lui/text-field
+      :form-field [text-fields/text-field
                    {:value (-> edit-data :reservations-link)
                     :spec sites-schema/reservations-link
                     :on-change #(on-change :reservations-link %)}]}
 
      (when sub-headings?
-       [lui/sub-heading {:label (tr :lipas.sports-site/ownership)}])
+       [misc/sub-heading {:label (tr :lipas.sports-site/ownership)}])
 
      ;; Owner
      {:label (tr :lipas.sports-site/owner)
       :value (-> display-data :owner)
-      :form-field [lui/select
+      :form-field [selects/select
                    {:value (-> edit-data :owner)
                     :required true
                     :helper-text (tr :lipas.sports-site/owner-helper-text)
@@ -246,7 +254,7 @@
      ;; Admin
      {:label (tr :lipas.sports-site/admin)
       :value (-> display-data :admin)
-      :form-field [lui/select
+      :form-field [selects/select
                    {:value (-> edit-data :admin)
                     :required true
                     :helper-text (tr :lipas.sports-site/admin-helper-text)
@@ -266,7 +274,7 @@
           lipas-id (when editing? (<== [:lipas.ui.map.subs/editing-lipas-id]))
           first-point (when editing? (<== [::subs/editing-first-point lipas-id]))]
 
-      [lui/form
+      [forms/form
        {:read-only? read-only?}
        (when sub-headings?
          [:> Grid
@@ -274,7 +282,7 @@
            :container true
            :align-items "center"
            :justify-content "space-between"}
-          [lui/sub-heading {:label (tr :lipas.location/headline)}]
+          [misc/sub-heading {:label (tr :lipas.location/headline)}]
 
           ;; Address locator
           (when (and editing? address-locator-component)
@@ -284,7 +292,7 @@
        (when (and editing? (not address-required?))
          {:label (tr :lipas.location/no-address)
           :value @no-address?
-          :form-field [lui/switch
+          :form-field [checkboxes/switch
                        {:value @no-address?
                         :on-change (fn [checked?]
                                      (reset! no-address? checked?)
@@ -295,7 +303,7 @@
        ;; Address
        {:label (tr :lipas.location/address)
         :value (-> display-data :address)
-        :form-field [lui/text-field
+        :form-field [text-fields/text-field
                      {:value (-> edit-data :address)
                       :spec location-schema/address
                       :disabled @no-address?
@@ -305,7 +313,7 @@
        ;; Postal code
        {:label (tr :lipas.location/postal-code)
         :value (-> display-data :postal-code)
-        :form-field [lui/text-field
+        :form-field [text-fields/text-field
                      {:value (-> edit-data :postal-code)
                       :required true
                       :spec location-schema/postal-code
@@ -314,7 +322,7 @@
        ;; Postal office
        {:label (tr :lipas.location/postal-office)
         :value (-> display-data :postal-office)
-        :form-field [lui/text-field
+        :form-field [text-fields/text-field
                      {:value (-> edit-data :postal-office)
                       :spec location-schema/postal-office
                       :on-change #(on-change :postal-office %)}]}
@@ -334,7 +342,7 @@
        ;; Neighborhood
        {:label (tr :lipas.location/neighborhood)
         :value (-> display-data :city :neighborhood)
-        :form-field [lui/text-field
+        :form-field [text-fields/text-field
                      {:value (-> edit-data :city :neighborhood)
                       :spec location-schema/neighborhood
                       :on-change #(on-change :city :neighborhood %)}]}])))
@@ -343,7 +351,7 @@
   [{:keys [tr value on-change label multi? spec tooltip disabled]}]
   (let [locale (tr)
         items (<== [::subs/surface-materials])]
-    [lui/autocomplete
+    [autocompletes/autocomplete
      {:value value
       :multi? multi?
       :deselect? true
@@ -375,7 +383,7 @@
                        (==> [:lipas.ui.events/confirm message (partial on-change v)])
                        (on-change v)))]
     [:<>
-     [lui/checkbox (assoc props :on-change on-change*)]
+     [checkboxes/checkbox (assoc props :on-change on-change*)]
      (when problems?
        [:> Typography {:color "error"}
         (tr :map/retkikartta-problems-warning)])]))
@@ -388,14 +396,14 @@
                        (==> [:lipas.ui.events/confirm message (partial on-change v)])
                        (on-change v)))]
     [:<>
-     [lui/checkbox (assoc props :on-change on-change*)]]))
+     [checkboxes/checkbox (assoc props :on-change on-change*)]]))
 
 (defn route-length-km-field
   [{:keys [tr geoms on-change] :as props}]
   [:> Grid {:container true :wrap "nowrap"}
    [:> Grid {:item true :style {:flex-grow 1}}
     [:> FormGroup
-     [lui/text-field (dissoc props :geoms :tr)]]]
+     [text-fields/text-field (dissoc props :geoms :tr)]]]
    [:> Grid {:item true}
     [:> Tooltip {:title (tr :map/calculate-route-length)}
      [:> IconButton
@@ -407,7 +415,7 @@
   [:> Grid {:container true :wrap "nowrap"}
    [:> Grid {:item true :style {:flex-grow 1}}
     [:> FormGroup
-     [lui/text-field (dissoc props :geoms)]]]
+     [text-fields/text-field (dissoc props :geoms)]]]
    [:> Grid {:item true}
     [:> Tooltip {:title (tr :map/calculate-area)}
      [:> IconButton
@@ -494,13 +502,13 @@
   [{:keys [tr value label helper-text tooltip on-change spec disabled?] :as props}]
   (r/with-let [checkbox-state (r/atom (some? value))]
     [:<>
-     [lui/checkbox
+     [checkboxes/checkbox
       {:label label
        :tooltip tooltip
        :value @checkbox-state
        :on-change #(reset! checkbox-state %)}]
      (when @checkbox-state
-       [lui/text-field
+       [text-fields/text-field
         {:value value
          :label helper-text
          :disabled disabled?
@@ -577,14 +585,14 @@
                                :geoms geoms
                                :on-change on-change}]
 
-      (= "boolean" data-type) [lui/checkbox
+      (= "boolean" data-type) [checkboxes/checkbox
                                {:value value
                                 :label label
                                 :tooltip tooltip
                                 :disabled disabled?
                                 :on-change on-change}]
 
-      (= "enum" data-type k) [lui/select
+      (= "enum" data-type k) [selects/select
                               {:items (:opts prop-type)
                                :deselect? true
                                :value value
@@ -595,7 +603,7 @@
                                :on-change on-change
                                :label-fn (comp locale :name second)}]
 
-      (= "enum-coll" data-type k) [lui/multi-select
+      (= "enum-coll" data-type k) [selects/multi-select
                                    {:items (:opts prop-type)
                                     :deselect? true
                                     :value value
@@ -606,7 +614,7 @@
                                     :value-fn first
                                     :label-fn (comp locale :name second)}]
 
-      :else [lui/text-field
+      :else [text-fields/text-field
              {:value value
               :label label
               :disabled disabled?
@@ -623,7 +631,7 @@
   (let [locale (tr)
         types-props (<== [::subs/types-props type-code])]
     (into
-      [lui/form
+      [forms/form
        {:key key
         :read-only? read-only?}
 
@@ -725,13 +733,13 @@
                                         :geoms geoms
                                         :on-change on-change}]
 
-               (= "boolean" data-type) [lui/checkbox
+               (= "boolean" data-type) [checkboxes/checkbox
                                         {:value value
                                          :tooltip tooltip
                                          :disabled disabled?
                                          :on-change on-change}]
 
-               (= "enum" data-type) [lui/select
+               (= "enum" data-type) [selects/select
                                      {:items (:opts v)
                                       :deselect? true
                                       :value value
@@ -742,7 +750,7 @@
                                       :value-fn first
                                       :label-fn (comp locale :label second)}]
 
-               (= "enum-coll" data-type) [lui/autocomplete
+               (= "enum-coll" data-type) [autocompletes/autocomplete
                                           {:multi? true
                                            :items (:opts v)
                                            :deselect? true
@@ -754,7 +762,7 @@
                                            :value-fn first
                                            :label-fn (comp locale :label second)}]
                :else
-               (let [el [lui/text-field
+               (let [el [text-fields/text-field
                          {;; form ->field adds the :label, but that doesn't work
                           ;; for text-field wrapped inside calculate-field.
                           ;; just add it directly here.
@@ -808,7 +816,7 @@
                   :priority 89
                   :value (get-in display-data [:rinks 0 :width-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :width-m])
@@ -821,7 +829,7 @@
                   :priority 89
                   :value (get-in display-data [:rinks 0 :length-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :length-m])
@@ -834,7 +842,7 @@
                   :priority 88
                   :value (get-in display-data [:rinks 0 :area-m2])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 0 :area-m2])
@@ -847,7 +855,7 @@
                   :priority 87
                   :value (get-in display-data [:rinks 1 :width-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :width-m])
@@ -860,7 +868,7 @@
                   :priority 87
                   :value (get-in display-data [:rinks 1 :length-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :length-m])
@@ -873,7 +881,7 @@
                   :priority 86
                   :value (get-in display-data [:rinks 1 :area-m2])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 1 :area-m2])
@@ -886,7 +894,7 @@
                   :priority 84
                   :value (get-in display-data [:rinks 2 :width-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :width-m])
@@ -899,7 +907,7 @@
                   :priority 84
                   :value (get-in display-data [:rinks 2 :length-m])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :length-m])
@@ -912,7 +920,7 @@
                   :priority 83
                   :value (get-in display-data [:rinks 2 :area-m2])
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment "m"
                     :type "number"
                     :value (get-in edit-data [:rinks 2 :area-m2])
@@ -932,7 +940,7 @@
                   :sort "1"
                   :value (-> display-data :platforms-1m-count)
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-1m-count)
@@ -943,7 +951,7 @@
                   :sort "2"
                   :value (-> display-data :platforms-3m-count)
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-3m-count)
@@ -955,7 +963,7 @@
                   :value (-> display-data :platforms-5m-count)
                   :sort "3"
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-5m-count)
@@ -967,7 +975,7 @@
                   :value (-> display-data :platforms-7.5m-count)
                   :sort "4"
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-7.5m-count)
@@ -979,7 +987,7 @@
                   :value (-> display-data :platforms-10m-count)
                   :sort "5"
                   :form-field
-                  [lui/text-field
+                  [text-fields/text-field
                    {:adornment (tr :units/pcs)
                     :type "number"
                     :value (-> edit-data :platforms-10m-count)
@@ -1003,12 +1011,12 @@
       [:> Paper
        [:> Typography {:color "secondary" :style {:padding "1em"} :variant "h5"}
         (tr :reports/contacts)]
-       [lui/download-button
+       [buttons/download-button
         {:style {:margin-left "1.5em"}
          :on-click #(==> [::events/download-contacts-report sites headers])
          :label (tr :actions/download)}]
        [:> Grid {:item true}
-        [lui/table
+        [tables/table
          {:headers headers
           :sort-fn :city
           :items sites}]]]]]))
@@ -1022,7 +1030,7 @@
         can-publish? (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
         draft? (not can-publish?)]
 
-    [lui/dialog
+    [dialogs/dialog
      {:title (tr :lipas.sports-site/delete (:name data))
       :cancel-label (tr :actions/cancel)
       :on-close on-close
@@ -1033,7 +1041,7 @@
       :save-label (tr :actions/delete)}
 
      [:> FormGroup
-      [lui/select
+      [selects/select
        {:label (tr :lipas.sports-site/delete-reason)
         :required true
         :value status
@@ -1043,7 +1051,7 @@
         :label-fn (comp locale second)}]
 
       (when (= "out-of-service-permanently" status)
-        [lui/year-selector
+        [selects/year-selector
          {:label (tr :time/year)
           :value year
           :on-change #(==> [::events/select-delete-year %])}])]]))
@@ -1082,7 +1090,7 @@
        contents)
 
      ;; Floating actions
-     [lui/floating-container {:right 24 :bottom 16 :background-color "transparent"}
+     [layouts/floating-container {:right 24 :bottom 16 :background-color "transparent"}
       (into
         [:> Grid
          {:container true :align-items "center" :spacing 1}]
@@ -1115,7 +1123,7 @@
           :justify-content "flex-end"
           :align-items "center"}
          [:> Grid {:item true}
-          [lui/select
+          [selects/select
            {:items (range 0 (count elevation))
             :style {:min-width "120px"}
             :value @selected-segment

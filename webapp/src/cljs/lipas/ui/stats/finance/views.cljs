@@ -1,6 +1,7 @@
 (ns lipas.ui.stats.finance.views
   (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -14,7 +15,7 @@
 
 (defn year-selector
   [{:keys [tr] :as props}]
-  [lui/year-selector
+  [selects/year-selector
    (merge
     props
     {:label (tr :actions/select-year)
@@ -23,7 +24,7 @@
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
         units  (<== [::subs/units])]
-    [lui/select
+    [selects/select
      {:items     units
       :value     value
       :style     common/select-style
@@ -35,7 +36,7 @@
 (defn service-selector [{:keys [tr value on-change]}]
   (let [locale   (tr)
         services (<== [::subs/city-services])]
-    [lui/select
+    [selects/select
      {:items     services
       :value     value
       :style     common/select-style
@@ -47,7 +48,7 @@
 (defn metrics-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/metrics])]
-    [lui/multi-select
+    [selects/multi-select
      {:items     metrics
       :value     value
       :style     common/select-style
@@ -59,7 +60,7 @@
 (defn metric-selector [{:keys [tr value on-change]}]
   (let [locale  (tr)
         metrics (<== [::subs/metrics])]
-    [lui/select
+    [selects/select
      {:items     metrics
       :value     value
       :style     common/select-style
@@ -71,7 +72,7 @@
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
-    [lui/select
+    [selects/select
      {:items     groupings
       :value     value
       :style     common/select-style
@@ -82,7 +83,7 @@
 
 (defn region-selector [props]
   (let [regions (<== [:lipas.ui.stats.subs/regions])]
-    [lui/region-selector (assoc props :regions regions)]))
+    [selects/region-selector (assoc props :regions regions)]))
 
 (defn view []
   (let [tr             (<== [:lipas.ui.subs/translator])
@@ -233,5 +234,5 @@
      ;; Table
      (when (= "table" view)
        [:> Grid {:item true :xs 12}
-        [lui/table
+        [tables/table
          {:headers headers :items data}]])]))

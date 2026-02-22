@@ -1,6 +1,7 @@
 (ns lipas.ui.stats.sport.views
   (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Typography$default" :as Typography]
@@ -13,7 +14,7 @@
   (let [locale  (tr)
         metrics (<== [::subs/metrics])]
     ^{:key value}
-    [lui/select
+    [selects/select
      {:items        metrics
       :value        value
       :style        common/select-style
@@ -25,7 +26,7 @@
 (defn grouping-selector [{:keys [tr value on-change]}]
   (let [locale    (tr)
         groupings (<== [::subs/groupings])]
-    [lui/select
+    [selects/select
      {:items     groupings
       :value     value
       :style     common/select-style
@@ -67,14 +68,14 @@
        ;; Region selector
        [:> Grid {:item true :xs 12}
         [:> Typography {:variant "body2"} (tr :stats/filter-cities)]
-        [lui/region-selector
+        [selects/region-selector
          {:value     cities
           :on-change #(==> [::events/select-cities %])}]]
 
        ;; Type selector
        [:> Grid {:item true :xs 12}
         [:> Typography {:variant "body2"} (tr :stats/filter-types)]
-        [lui/type-category-selector
+        [selects/type-category-selector
          {:tr        tr
           :value     types
           :on-change #(==> [::events/select-types %])}]]
@@ -118,7 +119,7 @@
      ;; Table
      (when (= view "table")
        [:> Grid {:item true :xs 12}
-        [lui/table
+        [tables/table
          {:headers headers :items data}]])
 
      ;; Chart

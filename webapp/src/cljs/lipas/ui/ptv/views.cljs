@@ -36,7 +36,11 @@
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             ["@mui/material/Chip$default" :as Chip]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -80,7 +84,7 @@
   [{:keys [label]}]
   (let [orgs (<== [::subs/all-orgs])
         selected-org (<== [::subs/selected-org])]
-    [lui/select
+    [selects/select
      {:items orgs
       :label label
       :label-fn :name
@@ -137,7 +141,7 @@
       :style {:padding-top "1em" :padding-bottom "1em"}}
 
      [:> Grid {:item true :xs 12}
-      [lui/switch
+      [checkboxes/switch
        {:label (tr :ptv.actions/export-disclaimer)
         :value (:sync-enabled site)
         :on-change #(==> [::events/toggle-sync-enabled site %])}]]
@@ -190,7 +194,7 @@
              :enabled-languages (set org-languages)}]
 
            ;; Summary
-           [lui/text-field
+           [text-fields/text-field
             {:disabled loading?
              :multiline true
              :variant "outlined"
@@ -204,7 +208,7 @@
              :field-name :summary}]
 
            ;; Description
-           [lui/text-field
+           [text-fields/text-field
             {:disabled loading?
              :variant "outlined"
              :rows 5
@@ -338,7 +342,7 @@
 
                 ;; Enable sync
                 #_[:> TableCell
-                   [lui/switch
+                   [checkboxes/switch
                     {:value (:sync-enabled site)
                      :on-change #(==> [::events/toggle-sync-enabled site %])}]]
 
@@ -688,7 +692,7 @@
             (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
 
               ^{:key sub-category-id}
-              [lui/expansion-panel
+              [layouts/expansion-panel
                {:label sub-category
                 :label-icon (if valid
                               [:> Icon {:color "success"} "done"]
@@ -724,7 +728,7 @@
                         [:> Tab {:value "en" :label "EN"}])])
 
                     ;; Summary
-                   [lui/text-field
+                   [text-fields/text-field
                     {:multiline true
                      :variant "outlined"
                      :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
@@ -732,7 +736,7 @@
                      :value (get-in m [:summary @selected-tab])}]
 
                     ;; Description
-                   [lui/text-field
+                   [text-fields/text-field
                     {:variant "outlined"
                      :rows 5
                      :multiline true
@@ -786,7 +790,7 @@
 
            (when name-conflict
              [:> Stack
-              [lui/icon-text
+              [misc/icon-text
                {:icon "warning"
                 :icon-color "warning"
                 :text (tr :ptv.wizard/service-channel-name-conflict (:name site))}]
@@ -827,7 +831,7 @@
             :enabled-languages org-languages}]
 
           ;; Summary
-          [lui/text-field
+          [text-fields/text-field
            {:multiline true
             :variant "outlined"
             :on-change #(==> [::events/set-summary site selected-tab %])
@@ -835,7 +839,7 @@
             :value (get-in site [:summary selected-tab])}]
 
           ;; Description
-          [lui/text-field
+          [text-fields/text-field
            {:variant "outlined"
             :rows 5
             :multiline true
@@ -844,7 +848,7 @@
             :value (get-in site [:description selected-tab])}]
 
           ;; Disclaimer and enable switch
-          [lui/switch
+          [checkboxes/switch
            {:label (tr :ptv.actions/export-disclaimer)
             :value sync-enabled
             :on-change #(==> [::events/toggle-sync-enabled site %])}]])])]))
@@ -1021,7 +1025,7 @@
                 :languages org-languages
                 :summary (or (:summary descriptions) (:summary service))
                 :description (or (:description descriptions) (:description service))}]
-      [lui/expansion-panel {:label (:label service)}
+      [layouts/expansion-panel {:label (:label service)}
        [:> Stack {:spacing 2}
         [:> Stack {:direction "row" :spacing 2}
          [:> Stack {:spacing 2 :flex 1}
@@ -1054,7 +1058,7 @@
 
           ;; Summary
           [:> Typography (tr :ptv/summary)]
-          [lui/text-field
+          [text-fields/text-field
            {:disabled loading?
             :on-change #(==> [::events/set-service-candidate-summary source-id @lang %])
             :multiline true
@@ -1063,7 +1067,7 @@
 
           ;; Descriptions
           [:> Typography (tr :ptv/description)]
-          [lui/text-field
+          [text-fields/text-field
            {:disabled loading?
             :on-change #(==> [::events/set-service-candidate-description source-id @lang %])
             :multiline true
@@ -1098,7 +1102,7 @@
     [:> Paper
 
      ;; Filter checkbox
-     [lui/checkbox
+     [checkboxes/checkbox
       {:label (tr :ptv.service/show-only-lipas-managed)
        :value (= "lipas-managed" services-filter)
        :on-change #(==> [::events/toggle-services-filter])}]

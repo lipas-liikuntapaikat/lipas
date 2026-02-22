@@ -1,6 +1,7 @@
 (ns lipas.ui.forgot-password.views
   (:require [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.forgot-password.events :as events]
             [lipas.ui.forgot-password.subs :as subs]
@@ -19,7 +20,7 @@
     [:> FormGroup
 
      ;; Email
-     [lui/text-field
+     [text-fields/text-field
       {:label     (tr :lipas.user/email)
        :value     @email
        :spec      users-schema/email-schema
@@ -65,7 +66,7 @@
 
          ;; Register button
          (when (= error :email-not-found)
-           [lui/register-button
+           [buttons/register-button
             {:label (tr :register/headline)
              :href  "/rekisteroidy"}])
 
@@ -81,7 +82,7 @@
     [:> FormGroup
 
      ;; Password
-     [lui/text-field
+     [text-fields/text-field
       {:label     (tr :lipas.user/password)
        :type      :password
        :value     @password
