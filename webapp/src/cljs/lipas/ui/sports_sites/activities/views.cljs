@@ -1245,19 +1245,26 @@
             (tr :utp/add-subroute)]])])
 
      (when (and editing? (= :add-route mode))
-       [:<>
+       (let [selected-features (<== [::subs/selected-features])]
+         [:<>
 
-        [mui/grid {:item true :xs 12}
-         [mui/typography
-          {:variant "body2"}
-          (tr :utp/select-route-parts-on-map)]]
+          [mui/grid {:item true :xs 12}
+           [mui/typography
+            {:variant "body2"}
+            (tr :utp/select-route-parts-on-map)]]
 
-        [mui/grid {:item true :xs 12}
-         [mui/button
-          {:variant  "contained"
-           :color    "secondary"
-           :on-click #(==> [::events/finish-route])}
-          (tr :utp/add-subroute-ok)]]])
+          [mui/grid {:item true :xs 12
+                     :style {:display "flex" :gap "0.5em" :margin-top "0.5em"}}
+           [mui/button
+            {:variant  "contained"
+             :color    "secondary"
+             :disabled (empty? selected-features)
+             :on-click #(==> [::events/finish-route lipas-id activity-k])}
+            (tr :utp/add-subroute-ok)]
+           [mui/button
+            {:variant  "outlined"
+             :on-click #(==> [::events/cancel-route-details])}
+            (tr :actions/cancel)]]]))
 
      (when (and editing? (= :route-details mode))
        (let [selected-route (first (filter #(= selected-route-id (:id %)) routes))]

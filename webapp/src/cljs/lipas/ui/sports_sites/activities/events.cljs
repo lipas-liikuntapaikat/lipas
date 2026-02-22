@@ -62,49 +62,61 @@
 
 (rf/reg-event-fx ::init-routes
                  (fn [{:keys [db]} [_ lipas-id activity-k]]
-                   (let [routes (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
-                         edit-data (get-in db [:sports-sites lipas-id :editing])]
-                     (if (seq routes)
-        ;; Routes already exist - set travel directions for the first route
-                       (let [all-features (get-in edit-data [:location :geometries :features] [])
-                             first-route  (ensure-route-segments (first routes) all-features)
-                             segments     (:segments first-route)]
-                         (when (seq segments)
-                           {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
-                                 [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                             (segments->direction-map segments)]]
-                                 [:dispatch [:lipas.ui.map.events/set-segment-labels
-                                             (segments->label-map segments)]]]}))
-        ;; No routes - create initial route
-                       (let [all-features (get-in edit-data [:location :geometries :features] [])
-                             all-fids     (set (map :id all-features))
-                             segments     (mapv (fn [f] {:fid (:id f) :reversed? false}) all-features)
-                             initial-route {:id       (str (random-uuid))
-                                            :route-name {:fi (:name edit-data)
-                                                         :se (get-in edit-data [:name-localized :se])
-                                                         :en (:name edit-data)}
-                                            :fids     all-fids
-                                            :segments segments}]
-                         {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
-                               [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id
-                                           [:activities activity-k :routes] [initial-route]]]
-                               [:dispatch [:lipas.ui.map.events/set-segment-directions
-                                           (segments->direction-map segments)]]
-                               [:dispatch [:lipas.ui.map.events/set-segment-labels
-                                           (segments->label-map segments)]]]})))))
+                   ;; Don't reset map mode when user is actively selecting/editing route segments
+                   (let [activities-mode (get-in db [:sports-sites :activities :mode])]
+                     (when-not (#{:add-route :route-details} activities-mode)
+                       (let [routes (get-in db [:sports-sites lipas-id :editing :activities activity-k :routes] [])
+                             edit-data (get-in db [:sports-sites lipas-id :editing])]
+                         (if (seq routes)
+          ;; Routes already exist - set travel directions for the first route
+                           (let [all-features (get-in edit-data [:location :geometries :features] [])
+                                 first-route  (ensure-route-segments (first routes) all-features)
+                                 segments     (:segments first-route)]
+                             (when (seq segments)
+                               {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
+                                     [:dispatch [:lipas.ui.map.events/set-segment-directions
+                                                 (segments->direction-map segments)]]
+                                     [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                                 (segments->label-map segments)]]]}))
+          ;; No routes - create initial route
+                           (let [all-features (get-in edit-data [:location :geometries :features] [])
+                                 all-fids     (set (map :id all-features))
+                                 segments     (mapv (fn [f] {:fid (:id f) :reversed? false}) all-features)
+                                 initial-route {:id       (str (random-uuid))
+                                                :route-name {:fi (:name edit-data)
+                                                             :se (get-in edit-data [:name-localized :se])
+                                                             :en (:name edit-data)}
+                                                :fids     all-fids
+                                                :segments segments}]
+                             {:fx [[:dispatch [:lipas.ui.map.events/continue-editing :view-only]]
+                                   [:dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id
+                                               [:activities activity-k :routes] [initial-route]]]
+                                   [:dispatch [:lipas.ui.map.events/set-segment-directions
+                                               (segments->direction-map segments)]]
+                                   [:dispatch [:lipas.ui.map.events/set-segment-labels
+                                               (segments->label-map segments)]]]})))))))
 
 (rf/reg-event-fx ::add-route
-                 (fn [{:keys [db]} [_ lipas-id]]
+                 (fn [{:keys [db]} [_ lipas-id activity-k]]
                    {:db (-> db
                             (assoc-in [:sports-sites :activities :mode] :add-route)
-                            (assoc-in [:sports-sites :activities :selected-route-id] (str (random-uuid))))
+                            (assoc-in [:sports-sites :activities :selected-route-id] (str (random-uuid)))
+                            ;; Clear stale mode data that would interfere with fresh selecting mode
+                            (update-in [:map :mode] dissoc
+                                       :segment-directions :segment-labels :selected-features))
                     :fx [[:dispatch
                           [:lipas.ui.map.events/start-editing lipas-id :selecting "LineString"]]]}))
 
 (rf/reg-event-fx ::finish-route
-                 (fn [{:keys [db]} _]
-                   {:db (assoc-in db [:sports-sites :activities :mode] :route-details)
-                    :fx []}))
+                 (fn [{:keys [db]} [_ lipas-id activity-k]]
+                   (let [selected-fids (get-in db [:map :mode :selected-features])
+                         route-id      (get-in db [:sports-sites :activities :selected-route-id])]
+                     {:fx [[:dispatch [::finish-route-details
+                                       {:fids       (vec selected-fids)
+                                        :route      {}
+                                        :id         route-id
+                                        :lipas-id   lipas-id
+                                        :activity-k activity-k}]]]})))
 
 (rf/reg-event-fx ::clear
                  (fn [{:keys [db]} _]
