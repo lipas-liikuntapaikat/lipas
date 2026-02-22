@@ -1148,24 +1148,16 @@
           fids (<== [::subs/selected-features])]
 
       [:<>
-       ;; Tabs: Segments | Details
+       ;; Tabs: Details | Segments
        [mui/tabs {:value     @detail-tab
                   :on-change #(reset! detail-tab %2)
                   :style     {:margin-bottom "0.5em"}}
-        [mui/tab {:label (tr :utp/segments)}]
-        [mui/tab {:label (tr :utp/route-details-tab)}]]
+        [mui/tab {:label (tr :utp/route-details-tab)}]
+        [mui/tab {:label (tr :utp/segments)}]]
 
        ;; Tab content
        (case (int @detail-tab)
-         0 [segment-builder
-            {:lipas-id        lipas-id
-             :activity-k      activity-k
-             :route-id        route-id
-             :segments        (:segments route)
-             :segment-details (:segment-details route)
-             :read-only?      false}]
-
-         1 [route-form
+         0 [route-form
             {:locale       locale
              :tr           tr
              :field-sorter field-sorter
@@ -1173,7 +1165,15 @@
              :type-code    type-code
              :read-only?   read-only?
              :route-props  route-props
-             :state        route-form-state}])
+             :state        route-form-state}]
+
+         1 [segment-builder
+            {:lipas-id        lipas-id
+             :activity-k      activity-k
+             :route-id        route-id
+             :segments        (:segments route)
+             :segment-details (:segment-details route)
+             :read-only?      false}])
 
        ;; Buttons — always visible
        [mui/grid {:container true :spacing 1 :style {:margin-top "1em"}}
