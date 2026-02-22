@@ -52,6 +52,10 @@
     "zipcelx": "^1.6.2"
   },
   "devDependencies": {
-    "shadow-cljs": "^2.28.16"
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "shadow-cljs": "^3.3.6",
+    "stream-browserify": "^3.0.0",
+    "util": "^0.12.5"
   }
 }
