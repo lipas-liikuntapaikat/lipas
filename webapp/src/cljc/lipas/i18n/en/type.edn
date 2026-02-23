@@ -7,6 +7,7 @@
  :main-category "Main category",
  :name "Sports site type",
  :sports-site-types "Sports site types",
+ :no-sub-categories "No sub categories",
  :sub-category "Sub category",
  :sub-categories "Sub categories",
  :type-code "Type code"}

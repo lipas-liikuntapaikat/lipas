@@ -430,7 +430,7 @@
       ;;; Permissions
       ;; TODO: Replace this with roles management
       [layouts/card {:title (str (tr :lipas.user/permissions)
-                                  " " (tr :lipas.user.permissions.roles/permissions-old))}
+                                 " " (tr :lipas.user.permissions.roles/permissions-old))}
        [:> FormGroup
 
         [permissions-request-card
@@ -533,62 +533,62 @@
         [:> TableCell "New-stroke"]]]
 
       (into
-       [:> TableBody]
-       (for [[type-code type] (sort-by first types)
-             :let [shape (-> type-code types :geometry-type)
-                   fill (-> type-code styles/symbols :fill :color)
-                   stroke (-> type-code styles/symbols :stroke :color)]]
-         [:> TableRow
-          [:> TableCell type-code]
-          [:> TableCell (-> type :name :fi)]
-          [:> TableCell shape]
+        [:> TableBody]
+        (for [[type-code type] (sort-by first types)
+              :let [shape (-> type-code types :geometry-type)
+                    fill (-> type-code styles/symbols :fill :color)
+                    stroke (-> type-code styles/symbols :stroke :color)]]
+          [:> TableRow
+           [:> TableCell type-code]
+           [:> TableCell (-> type :name :fi)]
+           [:> TableCell shape]
 
            ;; Old symbol
-          [:> TableCell (condp = shape
-                            "Point" "Circle"
-                            shape)]
+           [:> TableCell (condp = shape
+                           "Point" "Circle"
+                           shape)]
 
            ;; New symbol
-          [:> TableCell (condp = shape
-                            "Point" [selects/select
-                                     {:items [{:label "Circle" :value "circle"}
-                                              {:label "Square" :value "square"}]
-                                      :value (or (-> type-code new-colors :symbol)
-                                                 "circle")
-                                      :on-change (partial pick-color type-code :symbol)}]
-                            shape)]
+           [:> TableCell (condp = shape
+                           "Point" [selects/select
+                                    {:items [{:label "Circle" :value "circle"}
+                                             {:label "Square" :value "square"}]
+                                     :value (or (-> type-code new-colors :symbol)
+                                                "circle")
+                                     :on-change (partial pick-color type-code :symbol)}]
+                           shape)]
 
            ;; Old fill
-          [:> TableCell
-           [color-picker {:value fill :on-change #()}]]
+           [:> TableCell
+            [color-picker {:value fill :on-change #()}]]
 
            ;; New fill
-          [:> TableCell
-           [:> Grid {:container true :wrap "nowrap"}
-            [:> Grid {:item true}
-             [color-picker
-              {:value (-> (new-colors type-code) :fill)
-               :on-change (partial pick-color type-code :fill)}]]
-            [:> Grid {:item true}
-             [:> Button
-              {:size :small :on-click #(pick-color type-code :fill fill)}
-              "reset"]]]]
+           [:> TableCell
+            [:> Grid {:container true :wrap "nowrap"}
+             [:> Grid {:item true}
+              [color-picker
+               {:value (-> (new-colors type-code) :fill)
+                :on-change (partial pick-color type-code :fill)}]]
+             [:> Grid {:item true}
+              [:> Button
+               {:size :small :on-click #(pick-color type-code :fill fill)}
+               "reset"]]]]
 
            ;; Old stroke
-          [:> TableCell
-           [color-picker {:value stroke :on-change #()}]]
+           [:> TableCell
+            [color-picker {:value stroke :on-change #()}]]
 
            ;; New stroke
-          [:> TableCell
-           [:> Grid {:container true :wrap "nowrap"}
-            [:> Grid {:item true}
-             [color-picker
-              {:value (-> (new-colors type-code) :stroke)
-               :on-change (partial pick-color type-code :stroke)}]]
-            [:> Grid {:item true}
-             [:> Button
-              {:size :small :on-click #(pick-color type-code :stroke stroke)}
-              "reset"]]]]]))]
+           [:> TableCell
+            [:> Grid {:container true :wrap "nowrap"}
+             [:> Grid {:item true}
+              [color-picker
+               {:value (-> (new-colors type-code) :stroke)
+                :on-change (partial pick-color type-code :stroke)}]]
+             [:> Grid {:item true}
+              [:> Button
+               {:size :small :on-click #(pick-color type-code :stroke stroke)}
+               "reset"]]]]]))]
      [:> Fab
       {:style {:position "sticky" :bottom "1em" :left "1em"}
        :variant "extended"
@@ -676,7 +676,7 @@
         role @(rf/subscribe [::subs/add-user-to-org-role])]
     [dialogs/dialog
      {:open? open?
-      :title (tr :org.form/add-user)
+      :title (tr :lipas.org/add-user)
       :on-close #(rf/dispatch [::events/close-add-user-to-org-dialog])
       :save-enabled? (and (seq email) role)
       :save-label (tr :actions/add)
@@ -726,10 +726,10 @@
 
      ;; Reuse lipas.ui.org.views
      [:> Grid {:container true :spacing 1}
-      [layouts/card {:title (tr :org.form/details)
-                      :xs 12
-                      :md 12
-                      :lg 12}
+      [layouts/card {:title (tr :lipas.org/details)
+                     :xs 12
+                     :md 12
+                     :lg 12}
        [:> FormGroup
         [text-fields/text-field
          {:label (tr :lipas.org/name)
@@ -742,10 +742,10 @@
 
        ;; TODO: Ptv data fields
 
-      [layouts/card {:title (tr :org.form/users)
-                      :xs 12
-                      :md 12
-                      :lg 12}
+      [layouts/card {:title (tr :lipas.org/users)
+                     :xs 12
+                     :md 12
+                     :lg 12}
        [:> Grid {:container true :spacing 2 :align-items "flex-end"}
         [:> Grid {:item true :xs true}
          [tables/table
@@ -793,15 +793,15 @@
          [:> Grid2 {:size 6}
           [:> Typography {:color "textSecondary"} "Failed At"]
           [:> Typography (let [died-at (:died-at job)]
-                            (cond
-                              (inst? died-at) (.toLocaleString died-at)
-                              (string? died-at) died-at
-                              :else (str died-at)))]]
+                           (cond
+                             (inst? died-at) (.toLocaleString died-at)
+                             (string? died-at) died-at
+                             :else (str died-at)))]]
          [:> Grid2 {:size 6}
           [:> Typography {:color "textSecondary"} "Status"]
           [:> Chip {:label (if (:acknowledged job) "Acknowledged" "Unacknowledged")
-                     :color (if (:acknowledged job) "default" "warning")
-                     :size "small"}]]]
+                    :color (if (:acknowledged job) "default" "warning")
+                    :size "small"}]]]
 
         ;; Error details
         [:> Typography {:variant "h6" :gutterBottom true} "Error Details"]
@@ -1043,8 +1043,8 @@
         [:> TableBody
          (for [job (sort-by :died-at #(compare %2 %1) dlq-jobs)]
            [:> TableRow {:key (:id job)
-                           :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}
-                           :selected (contains? selected-ids (:id job))}
+                         :sx #js{"&:last-child td, &:last-child th" #js{:border 0}}
+                         :selected (contains? selected-ids (:id job))}
             [:> TableCell {:padding "checkbox"}
              [:> Checkbox
               {:checked (contains? selected-ids (:id job))
@@ -1055,30 +1055,30 @@
              (let [msg (:error-message job)]
                [:> Tooltip {:title msg}
                 [:> Typography {:variant "body2"
-                                 :sx #js{:cursor "help"
-                                         :maxWidth 300
-                                         :overflow "hidden"
-                                         :textOverflow "ellipsis"
-                                         :whiteSpace "nowrap"}}
+                                :sx #js{:cursor "help"
+                                        :maxWidth 300
+                                        :overflow "hidden"
+                                        :textOverflow "ellipsis"
+                                        :whiteSpace "nowrap"}}
                  (if (> (count msg) 50)
                    (str (subs msg 0 47) "...")
                    msg)]])]
             [:> TableCell (let [died-at (:died-at job)]
-                              (cond
-                                (inst? died-at) (.toLocaleString died-at)
-                                (string? died-at) (-> died-at
-                                                      (str/replace "T" " ")
-                                                      (str/split ".")
-                                                      first)
-                                :else (str died-at)))]
+                            (cond
+                              (inst? died-at) (.toLocaleString died-at)
+                              (string? died-at) (-> died-at
+                                                    (str/replace "T" " ")
+                                                    (str/split ".")
+                                                    first)
+                              :else (str died-at)))]
             [:> TableCell
              (if (:acknowledged job)
                [:> Chip {:label "Acknowledged"
-                          :size "small"
-                          :color "default"}]
+                         :size "small"
+                         :color "default"}]
                [:> Chip {:label "Unacknowledged"
-                          :size "small"
-                          :color "warning"}])]
+                         :size "small"
+                         :color "warning"}])]
             [:> TableCell {:align "right"}
              [:> Stack {:direction "row" :spacing 1 :justifyContent "flex-end"}
               [:> Button
@@ -1245,15 +1245,15 @@
           :indicator-color "secondary"
           :text-color "inherit"}
          [:> Tab {:label (tr :lipas.admin/users)
-                   :value "users"}]
+                  :value "users"}]
          [:> Tab {:label "Historia"
-                   :value "site-history"}]
+                  :value "site-history"}]
          [:> Tab {:label "Symbolityökalu"
-                   :value "symbol"}]
+                  :value "symbol"}]
          [:> Tab {:label "Tyyppikoodit"
-                   :value "types"}]
+                  :value "types"}]
          [:> Tab {:label "Jobs Monitoring"
-                   :value "jobs"}]]]
+                  :value "jobs"}]]]
 
        (case selected-tab
          :symbol

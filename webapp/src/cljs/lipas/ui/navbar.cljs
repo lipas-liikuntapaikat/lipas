@@ -44,7 +44,7 @@
   [:> IconButton
    {:on-click #(==> [:lipas.ui.events/show-account-menu (.-currentTarget %)])
     :id "account-btn"
-    :aria-label (tr :actions/open-account-menu)}
+    :aria-label (tr :actions/show-account-menu)}
    (if logged-in?
      [avatar]
      [:> Icon "account_circle"])])
@@ -57,8 +57,8 @@
         org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
 
     [:> Menu {:anchor-el anchor
-               :open (some? anchor)
-               :on-close close}
+              :open (some? anchor)
+              :on-close close}
 
      ;; Login
      (when (not logged-in?)
@@ -72,7 +72,7 @@
      ;; Register
      (when (not logged-in?)
        [:> MenuItem {:id "account-menu-item-register"
-                       :on-click (comp close #(navigate! "/rekisteroidy"))}
+                     :on-click (comp close #(navigate! "/rekisteroidy"))}
         [:> ListItemIcon
          [:> Icon "group_add"]]
         [:> ListItemText {:primary (tr :register/headline)}]])
@@ -80,7 +80,7 @@
      ;; Profile
      (when logged-in?
        [:> MenuItem {:id "account-menu-item-profile"
-                       :on-click (comp close #(navigate! "/profiili"))}
+                     :on-click (comp close #(navigate! "/profiili"))}
         [:> ListItemIcon
          [:> Icon "account_circle"]]
         [:> ListItemText {:primary (tr :user/headline)}]])
@@ -90,7 +90,7 @@
                 (or admin?
                     org?))
        [:> MenuItem {:id "account-menu-item-organizations"
-                       :on-click (comp close #(navigate! "/organisaatiot"))}
+                     :on-click (comp close #(navigate! "/organisaatiot"))}
         [:> ListItemIcon
          [:> Icon "corporate_fare"]]
         [:> ListItemText {:primary (tr :lipas.admin/organizations)}]])
@@ -98,21 +98,21 @@
      ;; Admin
      (when admin?
        [:> MenuItem {:id "account-menu-item-admin"
-                       :on-click (comp close #(navigate! "/admin"))}
+                     :on-click (comp close #(navigate! "/admin"))}
         [:> ListItemIcon
          [:> Icon "settings"]]
         [:> ListItemText {:primary (tr :lipas.admin/headline)}]])
 
      ;; Help
      [:> MenuItem {:id "account-menu-item-help"
-                     :on-click (comp close #(navigate! (:help links)))}
+                   :on-click (comp close #(navigate! (:help links)))}
       [:> ListItemIcon
        [:> Icon "help"]]
       [:> ListItemText {:primary (tr :help/headline)}]]
 
      ;; Privacy policy
      [:> MenuItem {:id "account-menu-item-privacy-policy"
-                     :on-click (comp close #(navigate! (:privacy-policy links)))}
+                   :on-click (comp close #(navigate! (:privacy-policy links)))}
       [:> ListItemIcon
        [:> Icon "privacy_tip"]]
       [:> ListItemText {:primary (tr :help/privacy-policy)}]]
@@ -120,7 +120,7 @@
      ;; Logout
      (when logged-in?
        [:> MenuItem {:id "account-menu-item-logout"
-                       :on-click (comp close logout!)}
+                     :on-click (comp close logout!)}
         [:> ListItemIcon
          [:> Icon "exit_to_app"]]
         [:> ListItemText {:primary (tr :login/logout)}]])]))
@@ -163,9 +163,9 @@
   (let [open? (<== [::subs/drawer-open?])
         hide-and-navigate! (comp close-drawer navigate!)]
     [:> SwipeableDrawer {:open open?
-                           :anchor :top
-                           :on-open #(==> [:lipas.ui.events/open-drawer])
-                           :on-close close-drawer}
+                         :anchor :top
+                         :on-open #(==> [:lipas.ui.events/open-drawer])
+                         :on-close close-drawer}
 
      [:> List
 

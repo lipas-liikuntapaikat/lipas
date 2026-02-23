@@ -18,7 +18,7 @@
   [selects/years-selector
    (merge
      props
-     {:label (tr :actions/select-years)
+     {:label (tr :actions/select-year)
       :style common/select-style})])
 
 (defn grouping-selector [{:keys [tr value on-change]}]
@@ -128,8 +128,8 @@
             (tr :stats/show-ranking))}
          [:> IconButton {:on-click #(==> [::events/toggle-chart-type])}
           [:> Icon {:font-size "large" :color (if (= "ranking" chart-type)
-                                                 "secondary"
-                                                 "inherit")}
+                                                "secondary"
+                                                "inherit")}
            "sort"]]]]
 
        ;; Clear filters button

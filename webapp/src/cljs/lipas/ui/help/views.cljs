@@ -275,7 +275,7 @@
                                (filter #(= (get-in % [:sub-category :type-code]) selected-sub-category))
                                first)]
            (get-in sub-cat [:sub-category :name locale])
-           (str (tr :ttype/sub-category) " " selected-sub-category))])]
+           (str (tr :type/sub-category) " " selected-sub-category))])]
 
      ;; Main content area
      [:> Box {:sx #js{:p 2 :border "1px solid" :borderColor "divider" :borderRadius 1 :flex 1}}
@@ -307,7 +307,7 @@
 
             ;; No sub-categories found
             [:> Typography {:color "text.secondary"}
-             (tr :lipas.categories/no-sub-categories)])
+             (tr :type/no-sub-categories)])
 
           ;; Show main categories if no main category selected
           [:> Grid {:container true :spacing 2}

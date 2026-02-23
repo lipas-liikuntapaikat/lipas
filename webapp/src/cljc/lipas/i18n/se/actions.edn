@@ -1,4 +1,5 @@
-{:add "Tillägg "
+{:actions "Åtgärder",
+ :add "Tillägg "
  :back "Tillbaka",
  :back-to-listing "Till listan",
  :browse "flytta dig",

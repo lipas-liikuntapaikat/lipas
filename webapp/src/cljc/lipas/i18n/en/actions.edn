@@ -1,4 +1,5 @@
-{:add "Add"
+{:actions "Actions",
+ :add "Add"
  :back-to-listing "Back to list view",
  :browse "Browse",
  :browse-to-map "Go to map view",

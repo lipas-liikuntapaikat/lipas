@@ -115,11 +115,11 @@
          :on-change #(==> [::events/update-address-search-keyword %])}]]
       [:> Grid {:item true :xs 12}
        (into
-        [:> List]
-        (for [m results]
-          [:> ListItemButton {:on-click #(==> [::events/show-address m])}
-           [:> ListItemText
-            (:label m)]]))]]]))
+         [:> List]
+         (for [m results]
+           [:> ListItemButton {:on-click #(==> [::events/show-address m])}
+            [:> ListItemText
+             (:label m)]]))]]]))
 
 (defn restore-site-backup-dialog []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -151,9 +151,9 @@
   (when-let [open? (<== [::subs/simplify-dialog-open?])]
     [:> Slide {:direction "up" :in open?}
      [:r> (react/forwardRef
-           (fn [_props ref]
-             (r/as-element [layouts/floating-container {:ref ref :bottom 12 :left 550}
-                            @simplify-tool-component])))]]))
+            (fn [_props ref]
+              (r/as-element [layouts/floating-container {:ref ref :bottom 12 :left 550}
+                             @simplify-tool-component])))]]))
 
 (defn simplify-tool
   [{:keys [tr on-change on-close]
@@ -261,30 +261,30 @@
       [:<>
        (into
 
-        [:> Menu
-         {:open (boolean @anchor-el)
-          :anchorEl @anchor-el
-          :anchorOrigin {:vertical "top" :horizontal "left"}
-          :transformOrigin {:vertical "bottom" :horizontal "left"}
-          :on-close #(reset! anchor-el nil)}]
+         [:> Menu
+          {:open (boolean @anchor-el)
+           :anchorEl @anchor-el
+           :anchorOrigin {:vertical "top" :horizontal "left"}
+           :transformOrigin {:vertical "bottom" :horizontal "left"}
+           :on-close #(reset! anchor-el nil)}]
 
-        (for [[k {:keys [label label2 icon]}] overlays
-              :let [v (contains? selected-overlays k)]]
-          [:> MenuItem
-           {:on-click #(==> [::events/toggle-overlay k])}
-           [:> ListItemIcon
-            [:> Checkbox
-             {:checked (boolean v)
-              :size "medium"
-              :value (str v)
-              :color "secondary"
-              :on-change #()}]]
-           [:> ListItemText
-            {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
-             :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
-             :primary label :secondary label2}]
-           [:> ListItemIcon
-            icon]]))
+         (for [[k {:keys [label label2 icon]}] overlays
+               :let [v (contains? selected-overlays k)]]
+           [:> MenuItem
+            {:on-click #(==> [::events/toggle-overlay k])}
+            [:> ListItemIcon
+             [:> Checkbox
+              {:checked (boolean v)
+               :size "medium"
+               :value (str v)
+               :color "secondary"
+               :on-change #()}]]
+            [:> ListItemText
+             {:primaryTypographyProps {:style {:font-size "0.9em" :margin-right "2em"}}
+              :secondaryTypographyProps {:style {:font-size "0.7em" :margin-right "2em"}}
+              :primary label :secondary label2}]
+            [:> ListItemIcon
+             icon]]))
 
        [:> Grid {:item true}
         [:> Tooltip {:title (tr :map.overlay/tooltip)}
@@ -351,10 +351,10 @@
       [:> Grid {:container true}
        [:> Grid {:item true :xs 12}
         [:> TextField {:label (tr :search/search)
-                         :xs 3
-                         :on-change #(reset! search-term (-> % .-target .-value))
-                         :placeholder nil
-                         :variant "standard"}]]
+                       :xs 3
+                       :on-change #(reset! search-term (-> % .-target .-value))
+                       :placeholder nil
+                       :variant "standard"}]]
        [:> Grid {:item true :xs 12}
         [:> TableContainer
          [:> Table
@@ -364,12 +364,12 @@
             [:> TableCell (tr :type/geometry)]
             [:> TableCell (tr :general/description)]]]
           (into
-           [:> TableBody {:component "th" :scope "row"}]
-           (for [row sorted-and-filtered-table-data]
-             [:> TableRow {:on-click #(on-select (row :type-code))}
-              [:> TableCell (row :name)]
-              [:> TableCell (->> row :geometry-type (keyword :type) tr)]
-              [:> TableCell (row :description)]]))]]]])))
+            [:> TableBody {:component "th" :scope "row"}]
+            (for [row sorted-and-filtered-table-data]
+              [:> TableRow {:on-click #(on-select (row :type-code))}
+               [:> TableCell (row :name)]
+               [:> TableCell (->> row :geometry-type (keyword :type) tr)]
+               [:> TableCell (row :description)]]))]]]])))
 
 (defn type-selector-single [{:keys [tr value on-change types]}]
   (r/with-let [selected-type (r/atom value)
@@ -379,10 +379,10 @@
 
        ;; Modal
        [dialogs/dialog {:open? @geom-help-open?
-                    :cancel-label (tr :actions/close)
-                    :title (tr :type/name)
-                    :max-width "xl"
-                    :on-close #(swap! geom-help-open? not)}
+                        :cancel-label (tr :actions/close)
+                        :title (tr :type/name)
+                        :max-width "xl"
+                        :on-close #(swap! geom-help-open? not)}
 
         ;; Apu ankka table
         [type-helper-table {:tr tr
@@ -418,9 +418,9 @@
            [:> Typography {:style {:margin-top "1em" :margin-bottom "1em"}}
             (get-in types [@selected-type :description locale])]
            [:> Button {:on-click #(on-change @selected-type)
-                        :auto-focus true
-                        :variant "contained"
-                        :color "secondary"}
+                       :auto-focus true
+                       :variant "contained"
+                       :color "secondary"}
             "OK"]])]])))
 
 (defmulti popup-body :type)
@@ -560,7 +560,7 @@
           [:> TableCell
            [:> Typography {:variant "caption" :no-wrap true}
             (utils/round-safe
-             (:population-weighted-mean data))]]]
+              (:population-weighted-mean data))]]]
 
          ;; Population
          [:> TableRow
@@ -770,8 +770,8 @@
   (->> [;; Import geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
           [:> MenuItem {:on-click #(do
-                                       (==> [::events/close-more-tools-menu])
-                                       (==> [::events/toggle-import-dialog]))}
+                                     (==> [::events/close-more-tools-menu])
+                                     (==> [::events/toggle-import-dialog]))}
            [:> ListItemIcon
             [:> FileUpload]]
            [:> ListItemText (tr :map.import/tooltip)]])
@@ -779,8 +779,8 @@
         ;; Simplify
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
           [:> MenuItem {:on-click #(do
-                                       (==> [::events/close-more-tools-menu])
-                                       (==> [::events/open-simplify-tool]))}
+                                     (==> [::events/close-more-tools-menu])
+                                     (==> [::events/open-simplify-tool]))}
            [:> ListItemIcon
             [:> Icon "auto_fix_high"]]
            [:> ListItemText (tr :map.tools/simplify)]])
@@ -815,8 +815,8 @@
               [:> Icon {:color (if (= sub-mode :drawing) "secondary" "inherit")}
                "change_history"])]
            [:> ListItemText (case geom-type
-                                 "LineString" (tr :map/draw-linestring)
-                                 "Polygon" (tr :map/draw-polygon))]])
+                              "LineString" (tr :map/draw-linestring)
+                              "Polygon" (tr :map/draw-polygon))]])
 
         ;; Delete geom
         (when (and editing? can-edit-map? (#{"LineString" "Polygon"} geom-type))
@@ -829,8 +829,8 @@
             [:> Eraser
              {:color (if (= sub-mode :deleting) "secondary" "inherit")}]]
            [:> ListItemText (case geom-type
-                                 "LineString" (tr :map/remove-linestring)
-                                 "Polygon" (tr :map/remove-polygon))]])
+                              "LineString" (tr :map/remove-linestring)
+                              "Polygon" (tr :map/remove-polygon))]])
 
         ;; Split linestring
         (when (and editing? can-edit-map? (#{"LineString"} geom-type))
@@ -1199,143 +1199,143 @@
         [layouts/floating-container
          {:bottom 0 :background-color "transparent"}
          (into
-          [:> Grid
-           {:container true
-            :align-items "center"
-            :align-content "flex-start"
-            :spacing 1
-            :style {:padding "0.5em 0em 0.5em 0em"}}]
-          (->>
-           [;; Undo
+           [:> Grid
+            {:container true
+             :align-items "center"
+             :align-content "flex-start"
+             :spacing 1
+             :style {:padding "0.5em 0em 0.5em 0em"}}]
+           (->>
+             [;; Undo
               ;; TODO: Undo/redo are only for map edits, so not useful if
               ;; you only have floorball or activity privileges (if current activity doesn't have map tools)
-            (when editing?
-              [:> Tooltip {:title (tr :actions/undo)}
-               [:span
-                [:> Fab
-                 {:disabled (not undo)
-                  :size "small"
-                  :on-click #(==> [::events/undo lipas-id])}
-                 [:> Icon "undo"]]]])
+              (when editing?
+                [:> Tooltip {:title (tr :actions/undo)}
+                 [:span
+                  [:> Fab
+                   {:disabled (not undo)
+                    :size "small"
+                    :on-click #(==> [::events/undo lipas-id])}
+                   [:> Icon "undo"]]]])
 
            ;; Redo
-            (when editing?
-              [:> Tooltip {:title (tr :actions/redo)}
-               [:span
-                [:> Fab
-                 {:disabled (not redo)
-                  :size "small"
-                  :on-click #(==> [::events/redo lipas-id])}
-                 [:> Icon "redo"]]]])
+              (when editing?
+                [:> Tooltip {:title (tr :actions/redo)}
+                 [:span
+                  [:> Fab
+                   {:disabled (not redo)
+                    :size "small"
+                    :on-click #(==> [::events/redo lipas-id])}
+                   [:> Icon "redo"]]]])
 
             ;; Active editing tool
-            (when (and editing? (seq map-tool-items))
-              [:> Tooltip
-               {:title
-                (case sub-mode
-                  :drawing (tr :map.tools/drawing-tooltip)
-                  :drawing-hole (tr :map.tools/drawing-hole-tooltip)
-                  (:editing :undo) (tr :map/delete-vertices-hint)
-                  :importing (tr :map.tools/importing-tooltip)
-                  :deleting (tr :map.tools/deleting-tooltip)
-                  :splitting (tr :map.tools/splitting-tooltip)
-                  :simplifying (tr :map.tools/simplifying-tooltip)
-                  :selecting (tr :map.tools/selecting-tooltip)
-                  :travel-direction (tr :map.tools/travel-direction-tooltip)
-                  :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
-                  :view-only "-")}
-               [:> Fab
-                {:size "small"
-                 :on-click #() ; noop
-                 :color "inherit"}
-                (let [props {:color "secondary"}]
+              (when (and editing? (seq map-tool-items))
+                [:> Tooltip
+                 {:title
                   (case sub-mode
-                    :drawing (case geom-type
-                               "Point" [:> Icon props "edit"]
-                               "LineString" [:> Icon props "timeline"]
-                               "Polygon" [:> Icon props "change_history"])
-                    :drawing-hole [:> Icon props "vignette"]
-                    (:editing :undo) [:> Icon props "edit"]
-                    :importing [:> FileUpload props]
-                    :deleting [:> Eraser props]
-                    :splitting [:> ContentCut props]
-                    :simplifying [:> Icon props "auto_fix_high"]
-                    :selecting [:> Icon props "handshake"]
-                    :travel-direction [:> Icon props "turn_slight_right"]
-                    :route-part-difficulty [:> Icon props "warning"]
-                    :view-only [:> Icon props "dash"]))]])
+                    :drawing (tr :map.tools/drawing-tooltip)
+                    :drawing-hole (tr :map.tools/drawing-hole-tooltip)
+                    (:editing :undo) (tr :map/delete-vertices-hint)
+                    :importing (tr :map.tools/importing-tooltip)
+                    :deleting (tr :map.tools/deleting-tooltip)
+                    :splitting (tr :map.tools/splitting-tooltip)
+                    :simplifying (tr :map.tools/simplifying)
+                    :selecting (tr :map.tools/selecting)
+                    :travel-direction (tr :map.tools/travel-direction-tooltip)
+                    :route-part-difficulty (tr :map.tools/route-part-difficulty-tooltip)
+                    :view-only "-")}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #() ; noop
+                   :color "inherit"}
+                  (let [props {:color "secondary"}]
+                    (case sub-mode
+                      :drawing (case geom-type
+                                 "Point" [:> Icon props "edit"]
+                                 "LineString" [:> Icon props "timeline"]
+                                 "Polygon" [:> Icon props "change_history"])
+                      :drawing-hole [:> Icon props "vignette"]
+                      (:editing :undo) [:> Icon props "edit"]
+                      :importing [:> FileUpload props]
+                      :deleting [:> Eraser props]
+                      :splitting [:> ContentCut props]
+                      :simplifying [:> Icon props "auto_fix_high"]
+                      :selecting [:> Icon props "handshake"]
+                      :travel-direction [:> Icon props "turn_slight_right"]
+                      :route-part-difficulty [:> Icon props "warning"]
+                      :view-only [:> Icon props "dash"]))]])
 
            ;; Tool select button
-            (when editing?
-              (when (seq map-tool-items)
-                [:<>
-                 [:> Tooltip {:title (tr :actions/select-tool)}
-                  [:> Fab
-                   {:size "medium"
-                    :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
-                    :color "secondary"}
-                   [:> Icon "more_horiz"]]]
+              (when editing?
+                (when (seq map-tool-items)
+                  [:<>
+                   [:> Tooltip {:title (tr :actions/select-tool)}
+                    [:> Fab
+                     {:size "medium"
+                      :on-click #(==> [::events/open-more-tools-menu (.-currentTarget %)])
+                      :color "secondary"}
+                     [:> Icon "more_horiz"]]]
 
-                 (into [:> Menu
-                        {:variant "menu"
-                         :auto-focus false
-                         :anchor-el more-tools-menu-anchor
-                         :open (some? more-tools-menu-anchor)
-                         :on-close #(==> [::events/close-more-tools-menu])}]
-                       map-tool-items)]))
+                   (into [:> Menu
+                          {:variant "menu"
+                           :auto-focus false
+                           :anchor-el more-tools-menu-anchor
+                           :open (some? more-tools-menu-anchor)
+                           :on-close #(==> [::events/close-more-tools-menu])}]
+                         map-tool-items)]))
 
            ;; Download GPX
-            (when (and (not editing?) (#{"LineString"} geom-type))
-              [:> Tooltip {:title (tr :map/download-gpx)}
-               [:> Fab
-                {:size "small"
-                 :on-click #(==> [::events/download-gpx lipas-id])
-                 :color "inherit"}
-                [:> Icon "save_alt"]]])
+              (when (and (not editing?) (#{"LineString"} geom-type))
+                [:> Tooltip {:title (tr :map/download-gpx)}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #(==> [::events/download-gpx lipas-id])
+                   :color "inherit"}
+                  [:> Icon "save_alt"]]])
 
            ;; Zoom to site
-            (when-not editing?
-              [:> Tooltip {:title (tr :map/zoom-to-site)}
-               [:> Fab
-                {:size "small"
-                 :on-click #(==> [::events/zoom-to-site lipas-id width])
-                 :color "inherit"}
-                [:> Icon {:color "inherit"}
-                 "place"]]])
+              (when-not editing?
+                [:> Tooltip {:title (tr :map/zoom-to-site)}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #(==> [::events/zoom-to-site lipas-id width])
+                   :color "inherit"}
+                  [:> Icon {:color "inherit"}
+                   "place"]]])
 
            ;; Add reminder
-            (when (and logged-in? (not editing?))
-              (let [name (-> display-data :name)
-                    link (-> js/window .-location .-href)]
-                [reminders/add-button
-                 {:message (tr :reminders/placeholder name link)}]))
+              (when (and logged-in? (not editing?))
+                (let [name (-> display-data :name)
+                      link (-> js/window .-location .-href)]
+                  [reminders/add-button
+                   {:message (tr :reminders/placeholder name link)}]))
 
            ;; Copy sports site
-            (when (and logged-in? (not editing?))
-              [:> Tooltip {:title (tr :actions/duplicate)}
-               [:> Fab
-                {:size "small"
-                 :on-click #(==> [::events/duplicate-sports-site lipas-id])}
-                [:> ContentDuplicate]]])
+              (when (and logged-in? (not editing?))
+                [:> Tooltip {:title (tr :actions/duplicate)}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #(==> [::events/duplicate-sports-site lipas-id])}
+                  [:> ContentDuplicate]]])
 
            ;; Resurrect button
-            (when (and dead? logged-in? can-publish? editing-allowed?)
-              [:> Tooltip {:title (tr :actions/resurrect)}
-               [:> Fab
-                {:size "small"
-                 :on-click #(==> [::events/resurrect lipas-id])}
-                [:> Icon "360"]]])
+              (when (and dead? logged-in? can-publish? editing-allowed?)
+                [:> Tooltip {:title (tr :actions/resurrect)}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #(==> [::events/resurrect lipas-id])}
+                  [:> Icon "360"]]])
 
            ;; Analysis
-            (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
-                                       (roles/site-roles-context display-data)
-                                       :analysis-tool/use])
-                       (not editing?))
-              [:> Tooltip {:title (tr :map.demographics/tooltip)}
-               [:> Fab
-                {:size "small"
-                 :on-click #(==> [::events/show-analysis lipas-id])}
-                [:> Icon "insights"]]])
+              (when (and @(rf/subscribe [:lipas.ui.user.subs/check-privilege
+                                         (roles/site-roles-context display-data)
+                                         :analysis-tool/use])
+                         (not editing?))
+                [:> Tooltip {:title (tr :map.demographics/tooltip)}
+                 [:> Fab
+                  {:size "small"
+                   :on-click #(==> [::events/show-analysis lipas-id])}
+                  [:> Icon "insights"]]])
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -1411,31 +1411,31 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-            ]
+              ]
 
-           (concat
+             (concat
            ;; FIXME: Just reagent elements, maybe :<>
-            (misc/edit-actions-list
-             {:editing? editing?
-              :editing-allowed? editing-allowed?
-              :edit-activities? edit-activities?
-              :edit-floorball? edit-floorball?
-              :save-in-progress? save-in-progress?
-              :valid? edits-valid?
-              :logged-in? logged-in?
-              :user-can-publish? can-publish?
-              :on-discard #(==> [::events/discard-edits lipas-id])
-              :discard-tooltip (tr :actions/cancel)
-              :on-edit-start #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
-              :edit-tooltip (tr :actions/edit)
-              :on-publish #(==> [::events/save-edits lipas-id])
-              :publish-tooltip (tr :actions/save)
-              :invalid-message (tr :error/invalid-form)
-              :on-delete #(==> [::events/delete-site])
-              :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
+               (misc/edit-actions-list
+                 {:editing? editing?
+                  :editing-allowed? editing-allowed?
+                  :edit-activities? edit-activities?
+                  :edit-floorball? edit-floorball?
+                  :save-in-progress? save-in-progress?
+                  :valid? edits-valid?
+                  :logged-in? logged-in?
+                  :user-can-publish? can-publish?
+                  :on-discard #(==> [::events/discard-edits lipas-id])
+                  :discard-tooltip (tr :actions/cancel)
+                  :on-edit-start #(==> [::events/edit-site lipas-id geom-type can-publish? edit-activities? edit-floorball?])
+                  :edit-tooltip (tr :actions/edit)
+                  :on-publish #(==> [::events/save-edits lipas-id])
+                  :publish-tooltip (tr :actions/save)
+                  :invalid-message (tr :error/invalid-form)
+                  :on-delete #(==> [::events/delete-site])
+                  :delete-tooltip (tr :lipas.sports-site/delete-tooltip)}))
 
-           (remove nil?)
-           (map (fn [tool] [:> Grid {:item true} tool]))))])]]))
+             (remove nil?)
+             (map (fn [tool] [:> Grid {:item true} tool]))))])]]))
 
 (defn add-btn [{:keys [tr]}]
   [:> Tooltip {:title (tr :lipas.sports-site/add-new)}
@@ -1550,10 +1550,10 @@
                [:> Grid {:item true :xs 12}
 
                 [:> Tabs {:value @geom-tab
-                           :on-change #(reset! geom-tab %2)
-                           :variant "fullWidth"
-                           :indicator-color "secondary"
-                           :text-color "secondary"}
+                          :on-change #(reset! geom-tab %2)
+                          :variant "fullWidth"
+                          :indicator-color "secondary"
+                          :text-color "secondary"}
                  [:> Tab {:value "draw" :label (tr :map/draw-geoms)}]
                  (when (#{"LineString" "Polygon"} geom-type)
                    [:> Tab {:value "import" :label (tr :map.import/tab-header)}])
@@ -1782,9 +1782,9 @@
                   [:> Tooltip
                    {:placement "right"
                     :title (str
-                            (tr :map/retkikartta-problems-warning)
-                            " "
-                            (tr :map/retkikartta-checkbox-reminder))}
+                             (tr :map/retkikartta-problems-warning)
+                             " "
+                             (tr :map/retkikartta-checkbox-reminder))}
                    [:span
                     [misc/icon-text
                      {:icon "warning"

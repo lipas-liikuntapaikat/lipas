@@ -66,7 +66,7 @@
     (= (:status display-data) (tr (keyword :status "incorrect-data")))
     (= (:status display-data) (tr (keyword :status "out-of-service-permanently")))
     (= (:status display-data) (tr (keyword :status "planned")))
-    (= (:status display-data) (tr (keyword :status "planning")))))
+    (= (:status display-data) (tr (keyword :status "planned")))))
 
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins

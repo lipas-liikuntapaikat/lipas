@@ -1,4 +1,5 @@
-{:add "Lisää",
+{:actions "Toiminnot",
+ :add "Lisää",
  :back "Takaisin",
  :back-to-listing "Takaisin listaukseen",
  :browse "siirry",

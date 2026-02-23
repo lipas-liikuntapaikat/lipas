@@ -1,4 +1,5 @@
 {:add-to-map "Add to map",
+ :intersection "Intersection",
  :bounding-box-filter "Search from map area",
  :calculate-area "Calculate area",
  :calculate-count "Calculate count automatically",

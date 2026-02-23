@@ -1,4 +1,5 @@
 {:add-to-map "Lägg till på karta",
+ :intersection "Korsning",
  :bounding-box-filter "Sök i området",
  :calculate-area "Räkna ytlan",
  :calculate-count "Beräkna antal automatiskt",

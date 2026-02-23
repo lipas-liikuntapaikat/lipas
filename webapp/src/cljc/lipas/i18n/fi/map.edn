@@ -1,4 +1,5 @@
 {:add-to-map "Lisää kartalle",
+ :intersection "Risteämä",
  :bounding-box-filter "Hae kartan alueelta",
  :calculate-area "Laske alueen pinta-ala automaattisesti",
  :calculate-count "Laske lukumäärä automaattisesti",
