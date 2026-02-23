@@ -1,7 +1,4 @@
-{:LineString "Route",
- :Point "Point",
- :Polygon "Area",
- :count "Total types",
+{:count "Total types",
  :geometry "Geometry",
  :main-categories "Main categories",
  :main-category "Main category",
@@ -9,5 +6,4 @@
  :sports-site-types "Sports site types",
  :no-sub-categories "No sub categories",
  :sub-category "Sub category",
- :sub-categories "Sub categories",
  :type-code "Type code"}

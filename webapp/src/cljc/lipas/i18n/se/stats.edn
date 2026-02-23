@@ -34,7 +34,6 @@
  :length-km-sum "Idrottsrutters totalt längd ",
  :population "Folkmängd",
  :region "Region",
- :select-cities "Välj kommuner",
  :select-city "Välj kommun",
  :select-city-service "Välj administratör",
  :select-grouping "Gruppering",

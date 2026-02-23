@@ -5,7 +5,6 @@
  :direct "Fågelvägen",
  :constraints "Begränsningar",
  :download-grid "Ladda ner rutnät",
- :headline "Analysverktyg (beta)",
  :format "Format",
  :settings-zones "Avstånd och restider",
  :by-bicycle "Med cykel",
@@ -24,9 +23,7 @@
  "Verktyget använder indelning i postnummerområden som standard. Indelningen kan också göras utifrån annan befintlig områdesindelning genom att importera önskad geometrisk fil (Shapefile, GeoJSON eller KML).",
  :settings-map "Objekt som visas på kartan",
  :name-chart "Namn",
- :zone "Zon",
  :elementary-school "Grundskola",
- :default "Standard",
  :reachability "Tillgänglighet",
  :special-school "Specialskola",
  :diversity-help1
@@ -44,7 +41,6 @@
  :in-use-summer "I bruk på sommaren",
  :confirm-restore-defaults
  "Vill du verkligen återställa standardkategorierna?",
- :statistics-center-notice "Statistikcentralen befolkningsstruktur 2024",
  :import-own-areas "Importera egna områden",
  :close "Stäng analysverktygen",
  :download-areas "Ladda ner områden",
@@ -70,7 +66,6 @@
  :diversity-grid "Resultatgrid",
  :in-use-winter "I bruk på vintern",
  :distance "Avstånd",
- :add-new "Lägg till ny",
  :population-chart "Befolkning",
  :cumulative-results "Kumulativa resultat",
  :use-postal-code-areas "Använd postnummerområden",
@@ -113,11 +108,6 @@
  :heatmap-filter-by-map-view "Filtrera efter aktuell kartvy"
  :heatmap-analyzing-current-bounds "Analyserar data inom aktuella kartgränser"
  :heatmap-analyzing-whole-finland "Analyserar data för hela Finland"
- :heatmap-city-filter-todo "Stadsfilter (kommer att implementeras)"
- :heatmap-year-round-only "Endast åretruntanläggningar"
- :heatmap-retkikartta-only "Endast Retkikartta-platser"
- :heatmap-harrastuspassi-only "Endast Harrastuspassi-platser"
- :heatmap-school-use-only "Endast skolanvändning"
  :heatmap-visual-settings "Visualisering"
  :heatmap-radius "Radie: "
  :heatmap-blur "Oskärpa: "

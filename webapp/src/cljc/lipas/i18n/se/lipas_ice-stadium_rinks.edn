@@ -1,7 +1,4 @@
-{:add-rink "Lägg till en plan",
- :edit-rink "Redigera planen",
- :headline "Planen",
- :rink1-area-m2 "1. planens areal m²",
+{:rink1-area-m2 "1. planens areal m²",
  :rink1-length "1. planens längd m",
  :rink1-width "1. planens bredd m",
  :rink2-area-m2 "2. planens areal m²",

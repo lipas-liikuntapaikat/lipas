@@ -3,14 +3,11 @@
  :bulk-operations "Massapäivitys"
  :bulk-operations-description "Päivitä yhteystiedot usealle liikuntapaikalle kerralla"
  :bulk-operations-tab "Massapäivitys"
- :bulk-update-info "Jätä kenttä tyhjäksi, jos haluat tyhjentää kyseisen kentän valituissa liikuntapaikoissa"
  :contact-admin
  "Ota yhteyttä järjestelmän ylläpitäjään organisaatiojäsenyyden lisäämiseksi"
  :contact-info-tab "Yhteystiedot"
- :contact-info-update "Päivitettävät yhteystiedot"
  :details "Organisaation tiedot"
  :email "Sähköposti"
- :empty-field-clears "Tyhjä kenttä tyhjentää tiedon"
  :headline "Organisaatiot"
  :members-tab "Jäsenet"
  :name "Nimi"
@@ -22,5 +19,4 @@
  :ptv-tab "PTV"
  :reservations-link "Varauslinkki"
  :users "Organisaation käyttäjät"
- :users-section "Käyttäjät"
  :website "Verkkosivu"}

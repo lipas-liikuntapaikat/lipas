@@ -3,5 +3,4 @@
  :headline "Bekräftelse",
  :no "Nej",
  :resurrect? "Vill du spara grunddata?",
- :save-basic-data? "Vill du spara grunddata?",
  :yes "Ja"}

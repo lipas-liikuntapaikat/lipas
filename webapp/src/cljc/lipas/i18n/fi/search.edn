@@ -7,8 +7,6 @@
  :contains-text "Hakusana...",
  :display-closest-first "Näytä lähimmät kohteet ensin",
  :filters "Rajaa hakua",
- :harrastuspassi-filter "Harrastuspassi.fi-kohteet",
- :headline "Haku",
  :list-view "Näytä hakutulokset listana",
  :page-size "Näytä kerralla",
  :pagination "Tulokset {1}-{2}",
@@ -16,8 +14,6 @@
  :placeholder "Etsi...",
  :results "Hakutulokset",
  :results-count "{1} hakutulosta",
- :retkikartta-filter "Retkikartta.fi-kohteet",
- :school-use-filter "Koulujen liikuntapaikat",
  :search "Hae",
  :search-more "Hae lisää...",
  :table-view "Näytä hakutulokset taulukossa"}

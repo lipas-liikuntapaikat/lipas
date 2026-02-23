@@ -1,6 +1,5 @@
 {:all-services-exist
  "All required services exist in PTV. Great!",
- :assign-services-to-sports-sites "Connect sports sites to services",
  :attach-to-conflicting-service-channel "Connect to this service location",
  :export-service-locations-to-ptv "Export to Service Information Repository",
  :export-services-to-ptv "Export to Service Information Repository",

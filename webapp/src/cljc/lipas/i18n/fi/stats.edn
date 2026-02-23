@@ -34,7 +34,6 @@
  :length-km-sum "Liikuntareittien pituus km yhteensä",
  :population "Asukasluku",
  :region "Alue",
- :select-cities "Valitse kunnat",
  :select-city "Valitse kunta",
  :select-city-service "Valitse toimi",
  :select-grouping "Ryhmittely",

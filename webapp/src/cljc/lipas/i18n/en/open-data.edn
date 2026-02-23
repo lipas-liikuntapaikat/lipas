@@ -1,4 +1,1 @@
-{:description "Interface links and instructions",
- :headline "Open Data",
- :rest "REST",
- :wms-wfs "WMS & WFS"}
+{:headline "Open Data"}

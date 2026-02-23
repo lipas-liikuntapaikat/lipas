@@ -1,5 +1,4 @@
 {:check-to-update-field "Markera för att uppdatera detta fält"
- :field-will-be-updated "Detta fält kommer att uppdateras"
  :field-will-not-change "Detta fält kommer inte att ändras"
  :n-sites-selected "{1} idrottsplatser valda"
  :select-fields-to-update "Välj fält att uppdatera:"

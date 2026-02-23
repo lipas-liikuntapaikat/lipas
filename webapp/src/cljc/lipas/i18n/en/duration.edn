@@ -1,1 +1,1 @@
-{:hour "hours", :month "months", :years "years", :years-short "y"}
+{:month "months", :years-short "y"}

@@ -1,5 +1,4 @@
-{:add-new "Add new",
- :analysis-areas "Analysis areas",
+{:analysis-areas "Analysis areas",
  :analysis-buffer "Analysis area",
  :by-bicycle "By bicycle",
  :by-car "By car",
@@ -30,7 +29,6 @@
  :elementary-and-high-school "Elementary and high school",
  :elementary-school "Elementary school",
  :filter-types "Filter by type",
- :headline "Analysis Tool (beta)",
  :heatmap "Density Map",
  :heatmap-info-text "This density map visualization tool allows you to illustrate the regional and local quantity and density of sports facilities (so-called Heatmap visualization). You can modify the sports facilities shown in the visualization by adjusting the filter settings. Additionally, you can adjust the heatmap visualization settings to customize the appearance of the heatmap to suit your needs. This heatmap visualization works best for sports facilities stored as points. Therefore, routes (lines) are processed as points in the calculation, not as linear map features.",
  :high-school "High school",
@@ -48,9 +46,7 @@
  :settings-map "Objects shown on the map",
  :settings-zones "Distances and travel times",
  :special-school "Special school",
- :statistics-center-notice "Statistics Finland population structure 2024",
  :travel-time "Travel time",
- :zone "Zone",
  :zones "Zones"
 
  ;; Heatmap specific translations
@@ -82,11 +78,6 @@
  :heatmap-filter-by-map-view "Filter by current map view"
  :heatmap-analyzing-current-bounds "Analyzing data within current map bounds"
  :heatmap-analyzing-whole-finland "Analyzing data for whole Finland"
- :heatmap-city-filter-todo "City filter (to be implemented)"
- :heatmap-year-round-only "Year-round facilities only"
- :heatmap-retkikartta-only "Retkikartta sites only"
- :heatmap-harrastuspassi-only "Harrastuspassi sites only"
- :heatmap-school-use-only "School use only"
  :heatmap-visual-settings "Visualization"
  :heatmap-radius "Radius: "
  :heatmap-blur "Blur: "

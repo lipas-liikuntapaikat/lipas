@@ -7,9 +7,7 @@
  :service-channel "Palvelupaikka",
  :service-channels "Palvelupaikat",
  :services "Palvelut",
- :settings "Asetukset",
  :sports-sites "Liikuntapaikat",
  :summary "Tiivistelmä",
- :tools "Massatyökalut",
  :tooltip "Vie Palvelutietovarantoon",
  :wizard "Käyttöönotto"}

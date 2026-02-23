@@ -20,25 +20,25 @@
 (def langs ["fi" "se" "en"])
 (def ref-lang "fi")
 
-;; Namespaces where keys are constructed dynamically at runtime.
+;; Namespaces where keys are known to be constructed dynamically at runtime.
 ;; All keys in these namespaces are considered "used" regardless of static analysis.
-(def exempt-namespaces
-  #{"accessibility"
-    "pool-types"
-    "pool-structures"
-    "ptv.audit.status"
-    "map.import"
-    "error"
-    "reset-password"
-    "reminders"
-    "lipas.user.permissions.roles"})
+;; Additional dynamic namespaces are auto-detected by scanning for (keyword :ns expr)
+;; patterns where the key part is not a literal.
+;; Keep this set for namespaces that are hard to detect automatically (e.g. the key
+;; construction happens in data, not in a (keyword ...) call visible to regex).
+(def hardcoded-exempt-namespaces
+  #{"pool-types"
+    "pool-structures"})
+
+;; Will be set! after scanning source files
+(def ^:dynamic *all-exempt-namespaces* hardcoded-exempt-namespaces)
 
 (defn exempt-ns?
   "Check if a namespace is exempt (exact match or sub-namespace of an exempt ns)"
   [ns-name]
   (some #(or (= ns-name %)
              (str/starts-with? ns-name (str % ".")))
-        exempt-namespaces))
+        *all-exempt-namespaces*))
 
 ;; === CLI ===
 
@@ -108,6 +108,31 @@
        (filter #(str/ends-with? (.getName %) ".cljs"))
        vec))
 
+(defn extract-dynamic-namespaces
+  "Extract namespaces where keywords are constructed dynamically at runtime.
+   These namespaces should be treated as fully used since we can't statically
+   determine which keys will be generated.
+   Matches patterns like:
+     (keyword \"ns\" (str ...))  (keyword :ns some-var)  (keyword :ns (name ...))"
+  [content]
+  ;; Collapse whitespace so multiline (keyword ...) calls become single-line for regex
+  (let [flat (str/replace content #"\s+" " ")]
+    (into #{}
+          (concat
+            ;; (keyword "ns" <non-literal>) — string namespace with dynamic key
+            ;; Catches: (keyword "lipas.sports-site" (str "name-localized-" (name l)))
+            (->> (re-seq #"\(keyword\s+\"([^\"]+)\"\s+(?!\")" flat)
+                 (map second))
+            ;; (keyword :ns <non-literal>) — keyword namespace with dynamic key
+            ;; Matches :ns followed by something that is NOT a literal string or keyword
+            ;; Catches: (keyword :accessibility f)
+            (->> (re-seq #"\(keyword\s+:([\w.\-]+)\s+(?![:\"])[a-z(]" flat)
+                 (map second))
+            ;; (keyword (str "ns/" <expr>)) — fully dynamic with string concat
+            ;; Catches: (keyword (str "ptv.audit.status/" status))
+            (->> (re-seq #"\(keyword\s+\(str\s+\"([^\"]+)/" flat)
+                 (map second))))))
+
 (defn extract-used-keys
   "Extract translation keys referenced in a ClojureScript source string."
   [content]
@@ -136,6 +161,15 @@
         (reduce (fn [a k] (update a k (fnil conj #{}) path))
                 acc (extract-used-keys content))))
     {} (find-cljs-files)))
+
+(defn collect-dynamic-namespaces
+  "Scan .cljs files for namespaces where keywords are constructed dynamically."
+  []
+  (reduce
+    (fn [acc f]
+      (let [content (slurp f)]
+        (into acc (extract-dynamic-namespaces content))))
+    #{} (find-cljs-files)))
 
 ;; === Phase 3 & 4: Analysis & Reporting ===
 
@@ -309,13 +343,18 @@
 ;; === Main ===
 
 (let [_ (binding [*out* *err*] (println "Scanning translations..."))
-      defined (collect-defined-keys)
-      used (collect-used-keys)
-      results (analyze defined used)]
-  (if edn-output?
-    (edn-report results)
-    (print-report results))
-  (when (or remove? dry-run?)
-    (if edn-output?
-      (binding [*out* *err*] (perform-removal results))
-      (perform-removal results))))
+      dynamic-nss (collect-dynamic-namespaces)
+      _ (when (seq dynamic-nss)
+          (binding [*out* *err*]
+            (println "Auto-detected dynamic namespaces:" (str/join ", " (sort dynamic-nss)))))]
+  (binding [*all-exempt-namespaces* (into hardcoded-exempt-namespaces dynamic-nss)]
+    (let [defined (collect-defined-keys)
+          used (collect-used-keys)
+          results (analyze defined used)]
+      (if edn-output?
+        (edn-report results)
+        (print-report results))
+      (when (or remove? dry-run?)
+        (if edn-output?
+          (binding [*out* *err*] (perform-removal results))
+          (perform-removal results))))))

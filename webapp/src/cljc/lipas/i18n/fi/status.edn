@@ -1,5 +1,4 @@
-{:active "Toiminnassa",
- :incorrect-data "Väärä tieto",
+{:incorrect-data "Väärä tieto",
  :out-of-service-permanently "Poistettu käytöstä pysyvästi",
  :out-of-service-temporarily "Poistettu käytöstä väliaikaisesti",
  :planned "Suunniteltu"}

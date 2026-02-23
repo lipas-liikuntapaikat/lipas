@@ -1,5 +1,3 @@
 {:canceling "Canceling... Please wait",
- :headline "Create service location descriptions using AI",
- :start "Start",
  :start-helper
  "You can edit the AI suggestions as they are completed."}

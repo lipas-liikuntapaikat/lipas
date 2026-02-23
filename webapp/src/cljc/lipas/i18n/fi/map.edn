@@ -4,7 +4,6 @@
  :calculate-area "Laske alueen pinta-ala automaattisesti",
  :calculate-count "Laske lukumäärä automaattisesti",
  :calculate-route-length "Laske reitin pituus automaattisesti",
- :center-map-to-site "Kohdista kartta kohteeseen",
  :confirm-remove "Haluatko varmasti poistaa valitun geometrian?",
  :delete-vertices-hint
  "Yksittäisiä pisteitä voi poistaa pitämällä alt-näppäintä pohjassa ja klikkaamalla pistettä.",

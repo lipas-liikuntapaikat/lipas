@@ -1,6 +1,5 @@
 {:all-services-exist
  "Kaikki tarvittavat palvelut on PTV:ssä. Hieno juttu!",
- :assign-services-to-sports-sites "Liitä liikuntapaikat palveluihin",
  :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan",
  :export-service-locations-to-ptv "Vie palvelutietovarantoon",
  :export-services-to-ptv "Vie palvelutietovarantoon",

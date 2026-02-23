@@ -1,7 +1,4 @@
-{:LineString "Rutt",
- :Point "Punkt",
- :Polygon "Område",
- :count "Totalt antal typer",
+{:count "Totalt antal typer",
  :geometry "Geometri",
  :main-categories "Huvudkategorier",
  :main-category "Huvudkategori",
@@ -9,5 +6,4 @@
  :sports-site-types "Typ av idrottsanläggning",
  :no-sub-categories "Inga underkategorier",
  :sub-category "Underkategori",
- :sub-categories "Uderkategorier",
  :type-code "Typkod"}

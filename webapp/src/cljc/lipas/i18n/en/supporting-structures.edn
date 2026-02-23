@@ -1,7 +1,0 @@
-{:brick "Brick",
- :concrete "Concrete",
- :concrete-beam "Concrete beam",
- :concrete-pillar "Concrete pillar",
- :solid-rock "Solid rock",
- :steel "Steel",
- :wood "Wood"}

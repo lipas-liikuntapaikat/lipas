@@ -34,7 +34,6 @@
  :length-km-sum "Total route length km",
  :population "Population",
  :region "Region",
- :select-cities "Select cities",
  :select-city "Select city",
  :select-city-service "Select city service",
  :select-grouping "Grouping",
