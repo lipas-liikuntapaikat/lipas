@@ -7,5 +7,7 @@ CONSTRAINT city_pkey PRIMARY KEY (city_code)
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.city
 OWNER to lipas;

@@ -19,5 +19,7 @@ JOIN (
   GROUP BY loi.id) b
 ON a.id = b.id AND a.event_date = b.max_date;
 
+--;;
+
 COMMENT ON VIEW public.loi_current
 IS 'Latest revisions of all Locations of Interest (loi)';

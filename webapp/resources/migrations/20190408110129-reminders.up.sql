@@ -18,5 +18,7 @@ CREATE TABLE public.reminder (
 
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.reminder
 OWNER to lipas;

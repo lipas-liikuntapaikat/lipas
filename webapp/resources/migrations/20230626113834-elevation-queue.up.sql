@@ -9,5 +9,7 @@ CREATE TABLE IF NOT EXISTS public.elevation_queue (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.elevation_queue
 OWNER to lipas;

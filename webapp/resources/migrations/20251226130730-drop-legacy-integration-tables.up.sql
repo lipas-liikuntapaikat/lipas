@@ -3,4 +3,7 @@
 -- so these tables are no longer needed.
 
 DROP TABLE IF EXISTS integration_out_queue;
+
+--;;
+
 DROP TABLE IF EXISTS integration_log;

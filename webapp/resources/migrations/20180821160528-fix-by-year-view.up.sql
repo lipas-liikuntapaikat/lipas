@@ -22,7 +22,12 @@ FROM
     WHERE sports_site.status != 'draft'::text) b
 WHERE a.id = b.id AND b.row_number = 1;
 
+--;;
+
 ALTER TABLE public.sports_site_by_year
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.sports_site_by_year
 IS 'Lists latest revision for each lipas_id for each year.';

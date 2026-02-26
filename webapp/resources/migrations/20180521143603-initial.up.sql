@@ -19,8 +19,12 @@ CREATE TABLE IF NOT EXISTS public.account (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.account
 OWNER to lipas;
+
+--;;
 
 CREATE TABLE IF NOT EXISTS public.sports_site (
   id         uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -43,13 +47,21 @@ CREATE TABLE IF NOT EXISTS public.sports_site (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.sports_site
 OWNER to lipas;
 
+--;;
+
 CREATE SEQUENCE public.lipas_id_seq;
+
+--;;
 
 ALTER SEQUENCE public.lipas_id_seq
 OWNER TO lipas;
+
+--;;
 
 CREATE OR REPLACE VIEW public.sports_site_current AS
 SELECT
@@ -71,10 +83,17 @@ JOIN (
   GROUP BY sports_site.lipas_id) b
 ON a.lipas_id = b.lipas_id AND a.event_date = b.max_date;
 
+--;;
+
 ALTER TABLE public.sports_site_current
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.sports_site_current
 IS 'Latest revisions of all sports sites';
+
+--;;
 
 CREATE OR REPLACE VIEW public.sports_site_by_year AS
 SELECT
@@ -99,7 +118,12 @@ FROM
    WHERE sports_site.status != 'draft'::text) b
 WHERE a.id = b.id AND b.row_number = 1;
 
+--;;
+
 ALTER TABLE public.sports_site_by_year
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.sports_site_by_year
 IS 'Lists latest revision for each lipas_id for each year.';

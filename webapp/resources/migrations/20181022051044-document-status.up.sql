@@ -14,6 +14,8 @@
 -- Document statuses are now 'draft' and 'published'
 update sports_site set status = 'published' where status = 'active';
 
+--;;
+
 -- Change existing 'draft' sports-site statuses to 'active'
 update sports_site set "document" = jsonb_set("document", '{status}', '"active"')
 where "document"::json->>'status' = 'draft';
