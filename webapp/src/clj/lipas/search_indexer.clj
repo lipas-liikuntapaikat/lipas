@@ -186,7 +186,8 @@
    (let [idx-name (str mode "-" (search/gen-idx-name))
          mappings (case mode
                     "search" (:sports-site search/mappings)
-                    "legacy" (:legacy-sports-site search/mappings))
+                    "legacy" (:legacy-sports-site search/mappings)
+                    "analytics" {})
          types (keys types/all)
          alias (case mode
                  "search" (get-in indices [:sports-site :search])
