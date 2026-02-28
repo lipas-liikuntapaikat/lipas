@@ -198,7 +198,7 @@
          mappings (case mode
                     "search" (:sports-site search/mappings)
                     "legacy" (:legacy-sports-site search/mappings)
-                    "analytics" (:sports-site search/mappings))
+                    "analytics" (:analytics search/mappings))
          types (keys types/all)
          alias (case mode
                  "search" (get-in indices [:sports-site :search])
