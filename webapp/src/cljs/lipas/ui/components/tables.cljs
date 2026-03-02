@@ -23,7 +23,7 @@
 (defn table
   [{:keys [headers items on-select key-fn sort-fn sort-asc? sort-cmp
            action-icon hide-action-btn? on-sort-change in-progress? on-mouse-enter
-           on-mouse-leave]
+           on-mouse-leave on-custom-hover-in on-custom-hover-out]
     :or   {sort-cmp         compare
            sort-asc?        false
            action-icon      "keyboard_arrow_right"
@@ -45,12 +45,12 @@
         ;; Head
         [:> TableHead
          (into [:> TableRow (when (and on-select (not hide-action-btn?))
-                                [:> TableCell ""])]
+                              [:> TableCell ""])]
                (doall
                  (for [[key header hidden?] headers]
                    [:> TableCell {:style    (when hidden? {:display :none})
-                                    :on-click #(do (reset! sort-fn* key)
-                                                   (on-sort-change*))}
+                                  :on-click #(do (reset! sort-fn* key)
+                                                 (on-sort-change*))}
                     [:> TableSortLabel
                      {:active    (= key @sort-fn*)
                       :direction (if @sort-asc? "asc" "desc")
@@ -75,8 +75,12 @@
                  :on-click       (when on-select #(on-select item))
                  :hover          true
                  :style          (when on-select {:cursor "pointer"})
-                 :on-mouse-enter (when on-mouse-enter #(on-mouse-enter item))
-                 :on-mouse-leave (when on-mouse-leave #(on-mouse-leave item))}
+                 :on-mouse-enter (cond
+                                   on-custom-hover-in #(on-custom-hover-in % item)
+                                   on-mouse-enter     #(on-mouse-enter item))
+                 :on-mouse-leave (cond
+                                   on-custom-hover-out #(on-custom-hover-out % item)
+                                   on-mouse-leave      #(on-mouse-leave item))}
 
                 (when (and on-select (not hide-action-btn?))
                   [:> TableCell {:padding "checkbox"}
@@ -170,8 +174,8 @@
 
                (for [[key {:keys [label hidden?]}] headers]
                  [:> TableCell {:style    (when hidden? {:display :none})
-                                  :on-click #(do (reset! sort-fn* key)
-                                                 (on-sort-change*))}
+                                :on-click #(do (reset! sort-fn* key)
+                                               (on-sort-change*))}
                   [:> TableSortLabel
                    {:active    (= key @sort-fn*)
                     :direction (if @sort-asc? "asc" "desc")
@@ -204,9 +208,9 @@
                     [:> Grid {:item true}
                      [:> Tooltip {:title save-label}
                       [:> IconButton {:disabled (not (allow-saving? (@editing? id)))
-                                        :on-click (fn []
-                                                    (on-item-save (@editing? id))
-                                                    (swap! editing? dissoc id))}
+                                      :on-click (fn []
+                                                  (on-item-save (@editing? id))
+                                                  (swap! editing? dissoc id))}
                        [:> Icon "save"]]]]
 
                     [:> Grid {:item true}
@@ -308,10 +312,10 @@
        ;; Table
        (when-not (empty? (vals @idx->item))
          [:> Grid {:item  true :xs 12
-                    :style (merge {} (when max-width
+                   :style (merge {} (when max-width
                                        ;; Hacky place to do this here
                                        ;; TODO: move to smarter place
-                                       {:width (str "calc(" max-width " - 24px)")}))}
+                                      {:width (str "calc(" max-width " - 24px)")}))}
 
           ;; Handle horizontal overflow with scrollbar
           [:div {:style {:overflow-x "auto"}}
@@ -376,8 +380,8 @@
                                                                #(on-custom-hover-out % item))}]
                                 (r/as-element
                                   [:> TableRow (merge r-props
-                                                        (js->clj (.-draggableProps provided))
-                                                        (js->clj (.-dragHandleProps provided)))
+                                                      (js->clj (.-draggableProps provided))
+                                                      (js->clj (.-dragHandleProps provided)))
 
                                    [:> TableCell
                                     {:padding "checkbox"}
