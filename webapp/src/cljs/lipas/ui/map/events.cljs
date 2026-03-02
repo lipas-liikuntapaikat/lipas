@@ -351,9 +351,8 @@
 
 (rf/reg-event-fx ::loi-selected
                  (fn [{:keys [db]} [_ event loi-id]]
-                   (let [on-success [::show-loi loi-id]]
-                     {:fx
-                      [[:dispatch [:lipas.ui.loi.events/get loi-id on-success]]]})))
+                   {:fx
+                    [[:dispatch [::show-loi loi-id]]]}))
 
 (rf/reg-event-fx ::unselected
                  (fn [{:keys [db]} [_ _]]
@@ -368,12 +367,20 @@
 
 (rf/reg-event-fx ::show-loi
                  (fn [{:keys [db]} [_ loi-id]]
-                   (let [width (:screen-size db)
-                         loi (get-in db [:lois loi-id])]
-                     {:fx
-                      [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
-                       (when loi [:dispatch [:lipas.ui.map.events/zoom-to-loi loi width]])
-                       [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]]})))
+                   {:fx
+                    [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
+                     (if loi-id
+                       [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/loi-view {:loi-id loi-id}]]
+                       [:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]])]}))
+
+(rf/reg-event-fx ::show-loi*
+                 (fn [{:keys [db]} [_ loi-id]]
+                   (let [loi (get-in db [:lois loi-id])
+                         width (:screen-size db)
+                         drawer-open? (or loi-id (-> db :screen-size #{"sm" "xs"} boolean not))]
+                     {:db (assoc-in db [:map :drawer-open?] drawer-open?)
+                      :fx [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
+                           (when loi [:dispatch [::zoom-to-loi loi width]])]})))
 
 (rf/reg-event-fx ::show-sports-site
                  (fn [_ [_ lipas-id]]
