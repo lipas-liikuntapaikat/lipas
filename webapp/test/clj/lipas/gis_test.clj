@@ -460,6 +460,50 @@
       (is (= 6 (:connections quality))
           (str "Should have 6 connections (4+2). Got: " quality)))))
 
+;; ============================================================================
+;; Polygon Repair Tests
+;; ============================================================================
+
+(deftest test-repair-self-intersecting-polygon-preserves-feature-keys
+  (testing "Repaired features don't introduce :properties key when absent in source"
+    (let [;; Bowtie polygon that splits into MultiPolygon when repaired
+          bowtie {:type "FeatureCollection"
+                  :features [{:type "Feature"
+                              :id "bowtie"
+                              :geometry {:type "Polygon"
+                                         :coordinates [[[25.0 62.0]
+                                                        [25.1 62.0]
+                                                        [25.05 62.05]
+                                                        [25.1 62.1]
+                                                        [25.0 62.1]
+                                                        [25.05 62.05]
+                                                        [25.0 62.0]]]}}]}
+          result (gis/repair-self-intersecting-polygon bowtie)]
+      (is (= 2 (count (:features result)))
+          "Bowtie should split into 2 polygons")
+      (doseq [f (:features result)]
+        (is (not (contains? f :properties))
+            "Repaired feature should not have :properties when source didn't"))))
+
+  (testing "Repaired features preserve :properties when present in source"
+    (let [bowtie {:type "FeatureCollection"
+                  :features [{:type "Feature"
+                              :id "bowtie"
+                              :properties {:name "Test"}
+                              :geometry {:type "Polygon"
+                                         :coordinates [[[25.0 62.0]
+                                                        [25.1 62.0]
+                                                        [25.05 62.05]
+                                                        [25.1 62.1]
+                                                        [25.0 62.1]
+                                                        [25.05 62.05]
+                                                        [25.0 62.0]]]}}]}
+          result (gis/repair-self-intersecting-polygon bowtie)]
+      (is (= 2 (count (:features result))))
+      (doseq [f (:features result)]
+        (is (= {:name "Test"} (:properties f))
+            "Repaired feature should preserve :properties from source")))))
+
 (comment
   (t/run-tests *ns*)
 
