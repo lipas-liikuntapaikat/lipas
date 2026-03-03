@@ -279,16 +279,18 @@
                                _ (.setSRID poly geom-srid)
                                poly-geom (-> (gio/to-geojson poly)
                                              (json/parse-string true))]
-                           {:type "Feature"
-                            :id (str (:id feature) "-" i)
-                            :geometry poly-geom
-                            :properties (:properties feature)}))
+                           (cond-> {:type "Feature"
+                                    :id (str (:id feature) "-" i)
+                                    :geometry poly-geom}
+                             (contains? feature :properties)
+                             (assoc :properties (:properties feature)))))
                        ;; Single Polygon result
-                       [{:type "Feature"
-                         :id (:id feature)
-                         :geometry (-> (gio/to-geojson fixed-jts)
-                                       (json/parse-string true))
-                         :properties (:properties feature)}]))))
+                       [(cond-> {:type "Feature"
+                                 :id (:id feature)
+                                 :geometry (-> (gio/to-geojson fixed-jts)
+                                               (json/parse-string true))}
+                          (contains? feature :properties)
+                          (assoc :properties (:properties feature)))]))))
                [feature])))  ; Not a Polygon, keep as-is
          features)]
     (assoc fcoll :features (vec repaired-features))))
