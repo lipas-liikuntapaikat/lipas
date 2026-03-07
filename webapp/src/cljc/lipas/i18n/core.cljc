@@ -146,6 +146,13 @@
                       (update-vals :label))
     :many?        true}
 
+   ;; Properties->outdoor-exercise-structures
+   {:path         [:properties :outdoor-exercise-structures]
+    :translations (-> prop-types/all
+                      (get-in [:outdoor-exercise-structures :opts])
+                      (update-vals :label))
+    :many?        true}
+
    ;; Proerties->boating-service-class
    {:path         [:properties :boating-service-class]
     :translations (-> prop-types/all
@@ -281,6 +288,16 @@
      :translate-fn (fn [locales vs]
                      (-> prop-types/all
                          (get-in [:parkour-hall-equipment-and-structures :opts])
+                         (select-keys vs)
+                         (->> (map :label)
+                              (map #(select-keys % locales)))))}
+
+    ;; Properties->outdoor-exercise-structures
+    {:path         [:properties :outdoor-exercise-structures]
+     :target-path  [:properties :outdoor-exercise-structures-localized]
+     :translate-fn (fn [locales vs]
+                     (-> prop-types/all
+                         (get-in [:outdoor-exercise-structures :opts])
                          (select-keys vs)
                          (->> (map :label)
                               (map #(select-keys % locales)))))}
