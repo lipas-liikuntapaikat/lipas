@@ -165,19 +165,24 @@
 
 (defn compile-cljs
   []
-  (let [status (shadow/watch-compile! :app)
+  (let [_status (shadow/watch-compile! :app)
         worker (shadow.cljs.devtools.api/get-worker :app)
-        build-state (-> worker :state-ref deref :build-state)]
-    (tap> build-state)
-    {:build-exit-code status
-     :warnings (-> build-state
+        build-state (-> worker :state-ref deref :build-state)
+        warnings (-> build-state
                    :shadow.build/build-info
                    :sources
                    (->> (mapcat :warnings)))
-     :errors (-> build-state
+        errors (-> build-state
                  :shadow.build/build-info
                  :sources
-                 (->> (mapcat :errors)))}))
+                 (->> (mapcat :errors)))]
+    (tap> build-state)
+    {:status (cond
+               (seq warnings) :warning
+               (seq errors) :error
+               :else :ok)
+     :warnings warnings
+     :errors errors }))
 
 (defn validate-sports-sites
   "Scrolls through all sports sites in Elasticsearch and validates them against
