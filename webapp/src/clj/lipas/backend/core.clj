@@ -394,6 +394,24 @@
              (comp gis/repair-self-intersecting-polygon
                    gis/dedupe-polygon-coords)))
 
+(defn compute-renovation-years
+  "Computes :renovation-years by merging existing values with years from
+  \"major-renovation\" entries in :renovations. Used for backwards
+  compatibility so that old API consumers still see renovation years
+  derived from the new structured renovations data."
+  [sports-site]
+  (let [major-renovation-years (->> (:renovations sports-site)
+                                    (filter #(= "major-renovation" (:type %)))
+                                    (map :year))
+        computed (->> (concat (:renovation-years sports-site)
+                              major-renovation-years)
+                      distinct
+                      sort
+                      vec)]
+    (cond-> sports-site
+      (seq computed)
+      (assoc :renovation-years computed))))
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -435,19 +453,7 @@
         activity-keys (when-let [activities (:activities sports-site)]
                         (when (seq activities)
                           (vec (keys activities))))
-        ;; Compute renovation-years: merge existing values with years from
-        ;; new "major-renovation" entries in :renovations
-        major-renovation-years (->> (:renovations sports-site)
-                                    (filter #(= "major-renovation" (:type %)))
-                                    (map :year))
-        computed-renovation-years (->> (concat (:renovation-years sports-site)
-                                               major-renovation-years)
-                                       distinct
-                                       sort
-                                       vec)
-        sports-site (cond-> sports-site
-                      (seq computed-renovation-years)
-                      (assoc :renovation-years computed-renovation-years))
+        sports-site (compute-renovation-years sports-site)
 
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
@@ -515,7 +521,10 @@
   ([search sports-site]
    (index-legacy-sports-place! search sports-site false))
   ([{:keys [indices client]} sports-site sync?]
-   (let [legacy-data (-> (legacy-transform/->old-lipas-sports-site* sports-site)
+   (let [legacy-data (-> sports-site
+                         compute-renovation-years
+                         (dissoc :renovations)
+                         legacy-transform/->old-lipas-sports-site*
                          (assoc :id (:lipas-id sports-site))
                          (legacy-sports-place/format-sports-place
                            :all
