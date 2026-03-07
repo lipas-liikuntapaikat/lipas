@@ -2,11 +2,13 @@
  :add-new "Lägg till en idrottsanläggning",
  :add-new-planning
  "Lägg till en motions- eller friluftsplats i utkastläge",
+ :add-renovation "Lägg till åtgärd",
  :admin "Administratör",
  :admin-helper-text "Enhet ansvarig för underhåll av objektet",
  :basic-data "Grunddata",
  :comment "Ytterligare information",
- :construction-year "Byggår",
+ :construction-year "Grundläggningsår",
+ :construction-year-helper-text "Grundläggningsåret avser det år då idrottsverksamheten inleddes på denna plats.",
  :contact "Kontaktinformation",
  :contact-helper-text
  "Allmänt kontaktuppgifter för organisationen som ansvarar för anläggningen, tjänsterna eller strukturerna.",
@@ -18,6 +20,8 @@
  :email-public "E-post (publik)"
  :event-date "Redigerad",
  :headline "Idrottsanläggning",
+ :major-renovation "Ombyggnad",
+ :major-renovation-helper-text "Ombyggnad innebär en omfattande förbättring av en byggnad eller del av den, som förbättrar kvalitet, utrustningsnivå eller energieffektivitet till minst motsvarande ny.",
  :marketing-name "Varumärkesnamn",
  :name "Namn på finska",
  :name-localized-en "Namn på engelska",
@@ -26,6 +30,7 @@
  :new-site-of-type "Ny {1}",
  :no-permission-tab
  "Du har inte behörighet att redigera informationen på denna flik",
+ :other-maintenance "Annat underhåll",
  :owner "Ägare",
  :owner-helper-text "Ägare av strukturer eller tjänster i objektet",
  :ownership "Ägare",
@@ -34,7 +39,11 @@
  :properties "Ytterligare information",
  :properties2 "Funktioner",
  :property "Funktion",
+ :renovation-description "Åtgärdsbeskrivning",
+ :renovation-type "Åtgärdstyp",
+ :renovation-year "År",
  :renovation-years "Renoveringsår",
+ :renovations "Åtgärder",
  :reservations-link "Bokningar",
  :status "Status",
  :surface-materials "Ytmaterial",

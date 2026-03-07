@@ -4,6 +4,7 @@
             [lipas.data.owners :as owners]
             [lipas.data.activities :as activities]
             [lipas.data.prop-types :as prop-types]
+            [lipas.data.sports-sites.renovations :as renovations]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [lipas.schema.sports-sites.fields :as fields-schema]
@@ -74,6 +75,22 @@
                                               :distinct true}
                                  [:int {:min 1800 :max (+ 10 utils/this-year)}]]))
 
+(def renovation-type (m/schema (into [:enum {:description "Type of renovation"}]
+                                     (keys renovations/types))))
+
+(def renovation-description (m/schema [:map {:description "Multilingual description of the renovation"}
+                                       [:fi {:optional true} [:string {:min 1 :max 2000}]]
+                                       [:se {:optional true} [:string {:min 1 :max 2000}]]
+                                       [:en {:optional true} [:string {:min 1 :max 2000}]]]))
+
+(def renovation-entry (m/schema [:map {:description "A single renovation or maintenance entry"}
+                                 [:year [:int {:min 1800 :max (+ 10 utils/this-year)}]]
+                                 [:type #'renovation-type]
+                                 [:description {:optional true} #'renovation-description]]))
+
+(def renovations (m/schema [:vector {:description "List of renovations and maintenance actions"}
+                            #'renovation-entry]))
+
 (defn make-sports-site-schema
   "Creates a sports site schema. When compat is true, adds :encode/json identity
    to type-code enum to prevent json-transformer from converting integers to strings.
@@ -115,6 +132,7 @@
              [:comment {:optional true} #'comment]
              [:construction-year {:optional true} #'construction-year]
              [:renovation-years {:optional true} #'renovation-years]
+             [:renovations {:optional true} #'renovations]
              [:type
               [:map
                ;; Add :encode/json identity in compat mode to prevent conversion to string
