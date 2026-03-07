@@ -7,7 +7,12 @@
    [integrant.repl :refer [reset-all halt go]]
    [integrant.repl.state]
    [migratus.core :as migratus]
-   [lipas.wfs.core :as wfs]))
+   [lipas.wfs.core :as wfs]
+   [taoensso.timbre :as log]))
+
+;; Silence noisy Jetty logging during development
+(log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
+                                    ["*" :debug]])
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
