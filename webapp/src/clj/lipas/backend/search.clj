@@ -191,7 +191,7 @@
 
     {:settings
      {:max_result_window 60000
-      :index {:mapping {:total_fields {:limit 350}}}}
+      :index {:mapping {:total_fields {:limit 400}}}}
      :mappings
      {:dynamic "strict"
       :date_detection false
