@@ -498,7 +498,91 @@
     (is (m/validate sports-site-schema/sports-site body))
     (is (= [{:year 2020 :type "major-renovation" :description {:fi "Peruskorjaus"}}
             {:year 2023 :type "other-maintenance"}]
-           (:renovations body)))))
+           (:renovations body)))
+
+    (testing "renovation-years backwards compat: computed from major-renovation entries"
+      (is (contains? (set (:renovation-years body)) 2020)
+          "major-renovation year 2020 should be in computed renovation-years")
+      (is (not (contains? (set (:renovation-years body)) 2023))
+          "other-maintenance year 2023 should NOT be in renovation-years"))))
+
+(deftest renovation-years-backwards-compat-test
+  (testing "renovation-years merges old values with major-renovation years"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc :renovation-years [2010 2015])
+                   (assoc :renovations [{:year 2020
+                                         :type "major-renovation"
+                                         :description {:fi "Peruskorjaus"}}
+                                        {:year 2023
+                                         :type "other-maintenance"}]))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                             (mock/header "Accept" "application/transit+json")))
+          body (<-transit (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [2010 2015 2020] (:renovation-years body))
+          "renovation-years should merge old [2010 2015] with major-renovation year 2020")))
+
+  (testing "renovation-years computed when only renovations exist (no old renovation-years)"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (dissoc :renovation-years)
+                   (assoc :renovations [{:year 2018
+                                         :type "major-renovation"}
+                                        {:year 2022
+                                         :type "major-renovation"}]))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                             (mock/header "Accept" "application/transit+json")))
+          body (<-transit (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [2018 2022] (:renovation-years body))
+          "renovation-years should be computed from major-renovation entries")))
+
+  (testing "V1 API returns renovationYears with computed values"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc :renovation-years [2010])
+                   (assoc :renovations [{:year 2020
+                                         :type "major-renovation"}]))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index-legacy-sports-place! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/v1/sports-places/" lipas-id))
+                             (mock/content-type "application/json")))
+          body (<-json (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [2010 2020] (:renovationYears body))
+          "V1 API should return merged renovation years including major-renovation entries")))
+
+  (testing "V2 API returns both renovation-years and renovations"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc :renovation-years [2010])
+                   (assoc :renovations [{:year 2020
+                                         :type "major-renovation"
+                                         :description {:fi "Peruskorjaus"}}]))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/v2/sports-sites/" lipas-id))
+                             (mock/content-type "application/json")))
+          body (<-json (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [2010 2020] (:renovation-years body))
+          "V2 API should return merged renovation-years")
+      (is (= [{:year 2020 :type "major-renovation" :description {:fi "Peruskorjaus"}}]
+             (:renovations body))
+          "V2 API should return renovations field"))))
 
 (deftest get-non-existing-sports-site-test
   (let [lipas-id 9999999999
