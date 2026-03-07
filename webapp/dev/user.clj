@@ -6,6 +6,7 @@
     [shadow.cljs.devtools.api :as shadow]
     [integrant.repl :refer [reset-all halt go]]
     [integrant.repl.state]
+    [lipas.wfs.core :as wfs]
     [migratus.core :as migratus]
     [taoensso.timbre :as log]))
 
