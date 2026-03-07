@@ -1,6 +1,7 @@
 {:add-new "Add Sports Facility",
  :add-new-planning "Add a sports or outdoor site in draft mode",
  :add-renovation "Add action",
+ :edit-renovation "Edit action",
  :admin "Admin",
  :basic-data "General",
  :comment "More information",

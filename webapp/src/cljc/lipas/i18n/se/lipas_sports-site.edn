@@ -3,6 +3,7 @@
  :add-new-planning
  "Lägg till en motions- eller friluftsplats i utkastläge",
  :add-renovation "Lägg till åtgärd",
+ :edit-renovation "Redigera åtgärd",
  :admin "Administratör",
  :admin-helper-text "Enhet ansvarig för underhåll av objektet",
  :basic-data "Grunddata",

@@ -178,16 +178,12 @@
                     :helper-text (tr :lipas.sports-site/construction-year-helper-text)
                     :deselect? true}]}
 
-     ;; Renovations (structured replacement for old renovation-years)
-     {:label (tr :lipas.sports-site/renovations)
-      :value (renovations/format-summary
-               (-> display-data :renovations)
-               (tr))
-      :form-field [renovations/renovations-field
-                   {:tr tr
-                    :read-only? read-only?
-                    :value (-> edit-data :renovations)
-                    :on-change #(on-change :renovations %)}]}
+     ;; Renovations
+     [renovations/renovations-field
+      {:tr tr
+       :read-only? read-only?
+       :value (-> (if read-only? display-data edit-data) :renovations)
+       :on-change #(on-change :renovations %)}]
 
      ;; Comment
      {:label (tr :lipas.sports-site/comment)
