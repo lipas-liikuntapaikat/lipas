@@ -37,6 +37,7 @@
             [lipas.ui.sports-sites.subs :as subs]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.sports-sites.pools :as pools]
+            [lipas.ui.sports-sites.renovations :as renovations]
             [lipas.ui.sports-sites.slides :as slides]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [lipas.schema.sports-sites :as sites-schema]
@@ -166,7 +167,7 @@
                     :value (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
 
-     ;; Construction year
+     ;; Construction year (renamed to "Perustamisvuosi")
      {:label (tr :lipas.sports-site/construction-year)
       :value (-> display-data :construction-year)
       ;; NOTE: This causes some MUI warnings if the value
@@ -174,15 +175,19 @@
       :form-field [autocompletes/year-selector
                    {:value (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)
+                    :helper-text (tr :lipas.sports-site/construction-year-helper-text)
                     :deselect? true}]}
 
-     ;; Renovation years
-     {:label (tr :lipas.sports-site/renovation-years)
-      :value (-> display-data :renovation-years)
-      :form-field [selects/year-selector
-                   {:multi? true
-                    :value (-> edit-data :renovation-years)
-                    :on-change #(on-change :renovation-years %)}]}
+     ;; Renovations (structured replacement for old renovation-years)
+     {:label (tr :lipas.sports-site/renovations)
+      :value (renovations/format-summary
+               (-> display-data :renovations)
+               (tr))
+      :form-field [renovations/renovations-field
+                   {:tr tr
+                    :read-only? read-only?
+                    :value (-> edit-data :renovations)
+                    :on-change #(on-change :renovations %)}]}
 
      ;; Comment
      {:label (tr :lipas.sports-site/comment)
