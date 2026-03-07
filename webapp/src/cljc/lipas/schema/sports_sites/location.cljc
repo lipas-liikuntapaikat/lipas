@@ -6,42 +6,42 @@
 
 (def address
   (m/schema
-   [:string {:description "Street address of the sports facility."
-             :min 1
-             :max 200}]))
+    [:string {:description "Street address of the sports facility."
+              :min 1
+              :max 200}]))
 
 (def postal-code
   (m/schema
-   [:re {:description "Postal code of the address of the sports facility."}
-    common/postal-code-regex]))
+    [:re {:description "Postal code of the address of the sports facility."}
+     common/postal-code-regex]))
 
 (def postal-office
   (m/schema
-   [:string {:description "Postal office of the address of the sports facility."
-             :min 1
-             :max 100}]))
+    [:string {:description "Postal office of the address of the sports facility."
+              :min 1
+              :max 100}]))
 
 (def neighborhood
   (m/schema
-   [:string {:description "Neighborhood or common name for the area of the location."
-             :min 1
-             :max 100}]))
+    [:string {:description "Neighborhood or common name for the area of the location."
+              :min 1
+              :max 100}]))
 
 (def city-code
   (m/schema
-   (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
-         (sort (keys cities/by-city-code)))))
+    (into [:enum {:description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
+          (sort (keys cities/by-city-code)))))
 
 (def city-code-compat
   (m/schema
-   (into [:enum {:encode/json identity
-                 :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
-         (sort (keys cities/by-city-code)))))
+    (into [:enum {:encode/json identity
+                  :description "Official municipality identifier https://stat.fi/fi/luokitukset/kunta/kunta_1_20240101"}]
+          (sort (keys cities/by-city-code)))))
 
 (def city-codes
   (m/schema
-   [:set {:description (:description (m/properties city-code))}
-    city-code]))
+    [:set {:description (:description (m/properties city-code))}
+     city-code]))
 
 (defn make-location-schema
   ([feature-schema geom-type]
@@ -65,16 +65,17 @@
 
 (def line-string-feature-props
   (m/schema
-   [:map
-    [:name {:optional true} :string]
-    #_[:lipas-id {:optional true} #'lipas-id]
-    [:type-code {:optional true} :int]
-    [:route-part-difficulty {:optional true} :string]
-    [:travel-direction {:optional true} :string]]))
+    [:map
+     [:name {:optional true} :string]
+     #_[:lipas-id {:optional true} #'lipas-id]
+     [:type-code {:optional true} :int]
+     [:route-part-difficulty {:optional true} :string]
+     [:travel-direction {:optional true} :string]
+     [:itrs-technical {:optional true} :string]]))
 
 (def line-string-feature
   (m/schema
-   (mu/assoc common/line-string-feature :properties line-string-feature-props)))
+    (mu/assoc common/line-string-feature :properties line-string-feature-props)))
 
 (def point-location
   (m/schema (make-location-schema common/point-feature "Point")))
