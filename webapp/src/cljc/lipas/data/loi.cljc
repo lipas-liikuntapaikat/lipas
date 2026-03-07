@@ -420,16 +420,16 @@
                      {:schema (into [:enum] ["1" "2" "3" "4"])
                       :field
                       {:type "select"
-                       :label {:fi "ITRS Putoamisvaara"
-                               :se "ITRS Fallrisk"
-                               :en "ITRS Exposure"}
-                       :description {:fi "Putoamisvaaran luokitus (E1-E4)"
-                                     :se "Klassificering av fallrisk (E1-E4)"
-                                     :en "Fall risk classification (E1-E4)"}
-                       :opts {"1" {:fi "E1 - Vähäinen" :se "E1 - Låg" :en "E1 - Low"}
-                              "2" {:fi "E2 - Kohtalainen" :se "E2 - Måttlig" :en "E2 - Moderate"}
-                              "3" {:fi "E3 - Korkea" :se "E3 - Hög" :en "E3 - High"}
-                              "4" {:fi "E4 - Äärimmäinen" :se "E4 - Extrem" :en "E4 - Extreme"}}}}})}}}
+                       :label {:fi "Putoamisvaara"
+                               :se "Fallrisk"
+                               :en "Fall Hazard"}
+                       :description {:fi "Normaalista poikkeava vaaranpaikka. Putoamisvaaran luokittelun voi tehdä pyöräilyssä käytettävän ITRS-luokittelun mukaisesti. Luokitteluun vaikuttaa putoamisesta mahdollisesti aiheutuvat seuraukset."
+                                     :se "En plats med ovanlig risk för fall, kan klassificeras enligt ITRS exponering."
+                                     :en "Atypical danger caused by the risk of falling; may be classified using ITRS Exposure categories."}
+                       :opts {"1" {:fi "1 - Normaali loukkaantumisriski" :se "1 - Normal skaderisk" :en "1 - Normal injury risk"}
+                              "2" {:fi "2 - Vakava loukkaantumisriski" :se "2 - Hög risk för allvarliga skador" :en "2 - High risk of serious injury"}
+                              "3" {:fi "3 - Hengenvaaralliset seuraukset" :se "3 - Livshotande konsekvenser" :en "3 - Life-threatening consequences"}
+                              "4" {:fi "4 - Kuolemaan johtavat seuraukset" :se "4 - Dödliga konsekvenser" :en "4 - Fatal consequences"}}}}})}}}
 
    "natural-attractions-and-geo-objects"
    {:label {:fi "Luonnonnähtävyydet / geokohteet" :se "Natursevärdheter / Geologiska platser" :en "Natural Attractions / Geological sites"}

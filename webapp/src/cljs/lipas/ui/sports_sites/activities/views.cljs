@@ -23,6 +23,7 @@
             ["@mui/material/FormLabel$default" :as FormLabel]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Popper$default" :as Popper]
             ["@mui/material/Tab$default" :as Tab]
@@ -48,8 +49,8 @@
   [props children]
   [:> Grid {:container true :spacing 4}
    (doall
-    (for [[idx child] (map vector (range) children)]
-      [:> Grid {:item true :xs 12 :key (str "item-" idx)} child]))])
+     (for [[idx child] (map vector (range) children)]
+       [:> Grid {:item true :xs 12 :key (str "item-" idx)} child]))])
 
 (defn form-label
   [{:keys [label]}]
@@ -124,7 +125,7 @@
                              (on-change (vec (conj vs k)))))}]]
            (when-let [caption (not-empty (and caption-fn (caption-fn item)))]
              [:> Grid {:item true :xs 12 :style {:margin-top   "-1.5em"
-                                                  :padding-left "2.8em"}}
+                                                 :padding-left "2.8em"}}
               [:> Typography {:variant "caption"} caption]])]))]]))
 
 (defn contact-dialog
@@ -143,21 +144,21 @@
       [:> Grid {:item true :xs 12}
        [lang-selector {:locale locale}]]
       (doall
-       (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
-         [:> Grid
-          {:key prop-k
-           :item true
-           :xs 12}
-          [make-field
-           {:field        field
-            :prop-k       prop-k
-            :edit-data    (:data @dialog-state)
-            :display-data (:data @dialog-state)
-            :locale       locale
-            :set-field    (fn [& args]
-                            (let [path (into [:data] (butlast args))
-                                  v (last args)]
-                              (swap! dialog-state assoc-in path v)))}]]))]]))
+        (for [[prop-k {:keys [field]}] (sort-by field-sorter utils/reverse-cmp contact-props)]
+          [:> Grid
+           {:key prop-k
+            :item true
+            :xs 12}
+           [make-field
+            {:field        field
+             :prop-k       prop-k
+             :edit-data    (:data @dialog-state)
+             :display-data (:data @dialog-state)
+             :locale       locale
+             :set-field    (fn [& args]
+                             (let [path (into [:data] (butlast args))
+                                   v (last args)]
+                               (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
   [{:keys [read-only? lipas-id locale label description set-field
@@ -210,8 +211,8 @@
                                  (map #(assoc % :_role (->> %
                                                             :role
                                                             (map
-                                                             (fn [role]
-                                                               (get-in contact-props [:role :field :opts role locale])))
+                                                              (fn [role]
+                                                                (get-in contact-props [:role :field :opts role locale])))
                                                             (str/join ", ")))))
           :on-add           (fn []
                               (reset! dialog-state {:open? true
@@ -476,43 +477,43 @@
              [:> Typography description]]]
 
          (doall
-          (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
-            ^{:key k}
-            [:<>
-             [:> Grid {:item true :xs 12}
-              [:> Typography (str (tr :utp/custom-rule) " " (inc idx))]]
+           (for [[idx k] (map-indexed vector (keys (:data @dialog-state)))]
+             ^{:key k}
+             [:<>
+              [:> Grid {:item true :xs 12}
+               [:> Typography (str (tr :utp/custom-rule) " " (inc idx))]]
 
              ;; Label
-             [:> Grid {:item true :xs 12}
-              [lui-tf/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :label locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
-                :label           (tr :general/headline)
-                :variant         "outlined"}]]
+              [:> Grid {:item true :xs 12}
+               [lui-tf/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :label locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :label locale] %)
+                 :label           (tr :general/headline)
+                 :variant         "outlined"}]]
 
              ;; Description
-             [:> Grid {:item true :xs 12}
-              [lui-tf/text-field
-               {:fullWidth       true
-                :required        true
-                #_#_:helper-text description
-                :value           (-> @dialog-state :data (get k) :description locale)
-                :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
-                :label           (tr :general/description)
-                :variant         "outlined"}]]
+              [:> Grid {:item true :xs 12}
+               [lui-tf/text-field
+                {:fullWidth       true
+                 :required        true
+                 #_#_:helper-text description
+                 :value           (-> @dialog-state :data (get k) :description locale)
+                 :on-change       #(swap! dialog-state assoc-in [:data k :description locale] %)
+                 :label           (tr :general/description)
+                 :variant         "outlined"}]]
 
              ;; Delete btn
-             [:> Grid {:item true :style {:text-align "right"}}
-              [lui-btn/confirming-delete-button
-               {:tooltip         (tr :actions/delete)
-                :confirm-tooltip (tr :confirm/delete-confirm)
-                :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
+              [:> Grid {:item true :style {:text-align "right"}}
+               [lui-btn/confirming-delete-button
+                {:tooltip         (tr :actions/delete)
+                 :confirm-tooltip (tr :confirm/delete-confirm)
+                 :on-delete       (fn [] (swap! dialog-state update :data dissoc k))}]]
 
-             [:> Grid {:item true :xs 12}
-              [:> Divider]]]))
+              [:> Grid {:item true :xs 12}
+               [:> Divider]]]))
 
          ;; Add / edit btn
          [:> Grid {:item true :xs 12}
@@ -578,9 +579,9 @@
            :style      {:text-align "right"}
            :class-name :no-print}
           [:> Tooltip {:title     (if (seq (:custom-rules @state))
-                                     (tr :actions/edit)
-                                     (tr :actions/add))
-                        :placement "left"}
+                                    (tr :actions/edit)
+                                    (tr :actions/add))
+                       :placement "left"}
            [:> Fab
             {:style    {:margin-top "1em"}
              :on-click (fn []
@@ -590,8 +591,8 @@
              :size     "small"
              :color    "secondary"}
             [:> Icon (if (seq (:custom-rules @state))
-                        "edit"
-                        "add")]]]])])))
+                       "edit"
+                       "add")]]]])])))
 
 (defn image-dialog
   [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
@@ -899,52 +900,52 @@
            compute-itrs-technical]}]
   [nice-form {:read-only? read-only?}
    (doall
-    (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
-          :when (or (nil? show)
-                    (show {:type-code type-code}))]
-      (when-not (and
-                 (contains? route-props :independent-entity)
-                 (not (:independent-entity @state))
-                 (contains? independent-entity-ks prop-k))
-        (let [itrs-field?      (contains? itrs-field-ks prop-k)
-              itrs-locked?     (and itrs-field? (not read-only?) (not edit-itrs?))
-              field-read-only? (if itrs-field?
-                                 (or read-only? (not edit-itrs?))
-                                 read-only?)
-              set-field        (fn [& args]
-                                 (let [path (butlast args)
-                                       v (last args)]
-                                   (swap! state assoc-in path v)))
-              field-component  [make-field
-                                {:read-only?   field-read-only?
-                                 :key          prop-k
-                                 :field        field
-                                 :prop-k       prop-k
-                                 :edit-data    @state
-                                 :display-data @state
-                                 :locale       locale
-                                 :set-field    set-field
-                                 :lipas-id     lipas-id}]]
-          (cond
-            itrs-locked?
-            [mui/tooltip {:title (tr :lipas.sports-site/itrs-edit-requires-role)}
-             [:span field-component]]
+     (for [[prop-k {:keys [field show]}] (sort-by field-sorter utils/reverse-cmp route-props)
+           :when (or (nil? show)
+                     (show {:type-code type-code}))]
+       (when-not (and
+                   (contains? route-props :independent-entity)
+                   (not (:independent-entity @state))
+                   (contains? independent-entity-ks prop-k))
+         (let [itrs-field?      (contains? itrs-field-ks prop-k)
+               itrs-locked?     (and itrs-field? (not read-only?) (not edit-itrs?))
+               field-read-only? (if itrs-field?
+                                  (or read-only? (not edit-itrs?))
+                                  read-only?)
+               set-field        (fn [& args]
+                                  (let [path (butlast args)
+                                        v (last args)]
+                                    (swap! state assoc-in path v)))
+               field-component  [make-field
+                                 {:read-only?   field-read-only?
+                                  :key          prop-k
+                                  :field        field
+                                  :prop-k       prop-k
+                                  :edit-data    @state
+                                  :display-data @state
+                                  :locale       locale
+                                  :set-field    set-field
+                                  :lipas-id     lipas-id}]]
+           (cond
+             itrs-locked?
+             [:> Tooltip {:title (tr :lipas.sports-site/itrs-edit-requires-role)}
+              [:span field-component]]
 
-            (and (= :itrs-technical-route prop-k) edit-itrs? (not read-only?) compute-itrs-technical)
-            [mui/grid {:container true :alignItems "center" :spacing 1 :wrap "nowrap"}
-             [mui/grid {:item true :xs true}
-              field-component]
-             [mui/grid {:item true}
-              [mui/tooltip {:title (tr :map/compute-itrs-technical)}
-               [mui/icon-button
-                {:size     "small"
-                 :on-click (fn []
-                             (when-let [v (compute-itrs-technical)]
-                               (set-field :itrs-technical-route v)))}
-                [mui/icon "calculate"]]]]]
+             (and (= :itrs-technical-route prop-k) edit-itrs? (not read-only?) compute-itrs-technical)
+             [:> Grid {:container true :alignItems "center" :spacing 1 :wrap "nowrap"}
+              [:> Grid {:item true :xs true}
+               field-component]
+              [:> Grid {:item true}
+               [:> Tooltip {:title (tr :map/compute-itrs-technical)}
+                [:> IconButton
+                 {:size     "small"
+                  :on-click (fn []
+                              (when-let [v (compute-itrs-technical)]
+                                (set-field :itrs-technical-route v)))}
+                 [:> Icon "calculate"]]]]]
 
-            :else
-            field-component)))))])
+             :else
+             field-component)))))])
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
@@ -1135,9 +1136,9 @@
      (when-not read-only?
        [:> Grid {:item true :xs 12}
         [checkboxes/switch {:label     (tr :utp/route-is-made-of-subroutes)
-                     :value     (= :multi route-view)
-                     :disabled  (> route-count 1)
-                     :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
+                            :value     (= :multi route-view)
+                            :disabled  (> route-count 1)
+                            :on-change #(==> [::events/select-route-view ({true :multi false :single} %1)])}]])
 
      [:> Grid {:item true :xs 12}
       (case route-view
@@ -1229,15 +1230,15 @@
 
     "percentage" [lui-tf/text-field
                   (merge
-                   {:type        "number"
-                    :adornment   "%"
-                    :disabled    read-only?
-                    :label       (get-in field [:label locale])
-                    :helper-text (get-in field [:description locale])
-                    :fullWidth   true
-                    :spec        common-schema/percentage
-                    :on-change   #(set-field prop-k %)
-                    :value       (get-in edit-data [prop-k])})]
+                    {:type        "number"
+                     :adornment   "%"
+                     :disabled    read-only?
+                     :label       (get-in field [:label locale])
+                     :helper-text (get-in field [:description locale])
+                     :fullWidth   true
+                     :spec        common-schema/percentage
+                     :on-change   #(set-field prop-k %)
+                     :value       (get-in edit-data [prop-k])})]
 
     ;; FIXME: MUI-v5, outlined input is missing x-padding
     "textarea" [lui-tf/expandable-text-area

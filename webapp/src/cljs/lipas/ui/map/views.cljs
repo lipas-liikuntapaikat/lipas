@@ -924,16 +924,16 @@
                    edit-itrs?
                    (#{"LineString"} geom-type)
                    (= "cycling" activity-value))
-          [mui/menu-item
+          [:> MenuItem
            {:on-click
             #(do
                (==> [::events/close-more-tools-menu])
                (==> [::events/start-editing lipas-id :itrs-segment geom-type]))}
-           [mui/list-item-icon
-            [mui/icon
+           [:> ListItemIcon
+            [:> Icon
              {:color (if (= sub-mode :itrs-segment) "secondary" "inherit")}
              "terrain"]]
-           [mui/list-item-text (tr :map/itrs-segment)]])
+           [:> ListItemText (tr :map/itrs-segment)]])
 
         ;; Download backup
         (when editing?
