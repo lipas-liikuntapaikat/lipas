@@ -413,6 +413,11 @@
         token (jwt/create-token user)
         site (-> (tu/gen-sports-site)
                  (assoc :status "active")
+                 (assoc :renovations [{:year 2020
+                                       :type "major-renovation"
+                                       :description {:fi "Peruskorjaus"}}
+                                      {:year 2023
+                                       :type "other-maintenance"}])
                  (dissoc :lipas-id))
         resp (test-app (-> (mock/request :post "/api/sports-sites?draft=true")
                            (mock/content-type "application/json")
@@ -477,7 +482,12 @@
 (deftest get-sports-site-test
   (let [user (tu/gen-admin-user :db-component (test-db))
         rev1 (-> (tu/gen-sports-site)
-                 (assoc :status "active"))
+                 (assoc :status "active")
+                 (assoc :renovations [{:year 2020
+                                       :type "major-renovation"
+                                       :description {:fi "Peruskorjaus"}}
+                                      {:year 2023
+                                       :type "other-maintenance"}]))
         _ (core/upsert-sports-site!* (test-db) user rev1)
         _ (core/index! (test-search) rev1 :sync)
         lipas-id (:lipas-id rev1)
@@ -485,7 +495,10 @@
                            (mock/header "Accept" "application/transit+json")))
         body (<-transit (:body resp))]
     (is (= 200 (:status resp)))
-    (is (m/validate sports-site-schema/sports-site body))))
+    (is (m/validate sports-site-schema/sports-site body))
+    (is (= [{:year 2020 :type "major-renovation" :description {:fi "Peruskorjaus"}}
+            {:year 2023 :type "other-maintenance"}]
+           (:renovations body)))))
 
 (deftest get-non-existing-sports-site-test
   (let [lipas-id 9999999999
