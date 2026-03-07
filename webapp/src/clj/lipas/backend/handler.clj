@@ -127,7 +127,7 @@
       ["/swagger.json"
        {:get
         {:no-doc true
-         :swagger {:info {:title "Lipas-API v2"}
+         :swagger {:info {:title "Internal API"}
                    :securityDefinitions
                    {:token-auth
                     {:type "apiKey"
