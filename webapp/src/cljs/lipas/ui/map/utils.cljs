@@ -588,6 +588,15 @@
       (utils/round-safe 2)
       read-string))
 
+(defn calculate-area-m2
+  [fcoll]
+  (when (seq (:features fcoll))
+    (-> fcoll
+        clj->js
+        turf-area ;; returns square meters
+        (utils/round-safe 2)
+        read-string)))
+
 (defn calculate-elevation-stats
   [fcoll]
   (->> fcoll
