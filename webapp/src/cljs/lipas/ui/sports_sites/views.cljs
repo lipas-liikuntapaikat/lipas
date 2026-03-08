@@ -406,10 +406,10 @@
     [:> FormGroup
      [text-fields/text-field (dissoc props :geoms :tr)]]]
    [:> Grid {:item true}
-    [:> Tooltip {:title (tr :map/calculate-route-length)}
-     [:> IconButton
-      {:on-click #(-> geoms map-utils/calculate-length-km on-change)}
-      [:> Calculator]]]]])
+    [:> IconButton
+     {:title (tr :map/calculate-route-length)
+      :on-click #(-> geoms map-utils/calculate-length-km on-change)}
+     [:> Calculator]]]])
 
 (defn area-km2-field
   [{:keys [tr geoms on-change] :as props}]
@@ -418,10 +418,10 @@
     [:> FormGroup
      [text-fields/text-field (dissoc props :geoms)]]]
    [:> Grid {:item true}
-    [:> Tooltip {:title (tr :map/calculate-area)}
-     [:> IconButton
-      {:on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
-      [:> Calculator]]]]])
+    [:> IconButton
+     {:title (tr :map/calculate-area)
+      :on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
+     [:> Calculator]]]])
 
 ;; TODO: This can replace the previous two cases also
 (defn calculate-field
@@ -435,17 +435,32 @@
           :justify-content "center"}}
     children]
    [:> Grid {:item true}
-    [:> Tooltip {:title calculate-label}
-     [:> IconButton
-      {:on-click (fn [_e]
-                   (on-change (calculate-fn)))}
-      [:> Calculator]]]]])
+    [:> IconButton
+     {:title calculate-label
+      :on-click (fn [_e]
+                  (on-change (calculate-fn)))}
+     [:> Calculator]]]])
 
 (defn show-calc? [k geom-type]
   (and (= :route-length-km k) (#{"LineString"} geom-type)))
 
 (defn show-area-calc? [k geom-type]
   (and (= :area-km2 k) (#{"Polygon"} geom-type)))
+
+(defn show-area-m2-calc? [k geom-type]
+  (and (= :area-m2 k) (#{"Polygon"} geom-type)))
+
+(defn area-m2-field
+  [{:keys [tr geoms on-change] :as props}]
+  [:> Grid {:container true :wrap "nowrap"}
+   [:> Grid {:item true :style {:flex-grow 1}}
+    [:> FormGroup
+     [text-fields/text-field (dissoc props :geoms :tr)]]]
+   [:> Grid {:item true}
+    [:> IconButton
+     {:title (tr :map/calculate-area)
+      :on-click #(-> geoms map-utils/calculate-area-m2 on-change)}
+     [:> Calculator]]]])
 
 (defn pools-field
   [{:keys [tr read-only? width] :as props}]
@@ -574,6 +589,15 @@
                                       :tooltip tooltip
                                       :geoms geoms
                                       :on-change on-change}]
+      (show-area-m2-calc? k geom-type) [area-m2-field
+                                        {:tr tr
+                                         :value value
+                                         :type "number"
+                                         :spec spec
+                                         :label label
+                                         :tooltip tooltip
+                                         :geoms geoms
+                                         :on-change on-change}]
 
       (= :space-divisible k) [space-divisible-field
                               {:tr tr
@@ -722,6 +746,15 @@
                                                :tooltip tooltip
                                                :geoms geoms
                                                :on-change on-change}]
+               (show-area-m2-calc? k geom-type) [area-m2-field
+                                                 {:tr tr
+                                                  :value value
+                                                  :type "number"
+                                                  :spec spec
+                                                  :label label
+                                                  :tooltip tooltip
+                                                  :geoms geoms
+                                                  :on-change on-change}]
 
                (= :space-divisible k) [space-divisible-field
                                        {:tr tr
