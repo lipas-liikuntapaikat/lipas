@@ -129,6 +129,7 @@
          :www {:enabled false}
          :reservations-link {:enabled false}
          :renovation-years {:enabled false}
+         :renovations {:enabled false}
          :name-localized {:enabled false}
          :fields {:enabled false}
          :locker-rooms {:enabled false}

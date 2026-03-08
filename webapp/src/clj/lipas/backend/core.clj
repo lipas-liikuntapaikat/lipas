@@ -34,7 +34,7 @@
             [lipas.utils :as utils]
             [taoensso.timbre :as log])
   (:import
-   [java.io OutputStreamWriter]))
+    [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -394,6 +394,24 @@
              (comp gis/repair-self-intersecting-polygon
                    gis/dedupe-polygon-coords)))
 
+(defn compute-renovation-years
+  "Computes :renovation-years by merging existing values with years from
+  \"major-renovation\" entries in :renovations. Used for backwards
+  compatibility so that old API consumers still see renovation years
+  derived from the new structured renovations data."
+  [sports-site]
+  (let [major-renovation-years (->> (:renovations sports-site)
+                                    (filter #(= "major-renovation" (:type %)))
+                                    (map :year))
+        computed (->> (concat (:renovation-years sports-site)
+                              major-renovation-years)
+                      distinct
+                      sort
+                      vec)]
+    (cond-> sports-site
+      (seq computed)
+      (assoc :renovation-years computed))))
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -435,6 +453,8 @@
         activity-keys (when-let [activities (:activities sports-site)]
                         (when (seq activities)
                           (vec (keys activities))))
+        sports-site (compute-renovation-years sports-site)
+
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
                      :owner {:name (-> sports-site :owner owners)}
@@ -463,8 +483,8 @@
           area-m2 (-> building :total-ice-area-m2)]
       (-> ice-stadium
           (cond->
-           smaterial (assoc-in [:properties :surface-material] [smaterial])
-           area-m2 (assoc-in [:properties :area-m2] area-m2))
+            smaterial (assoc-in [:properties :surface-material] [smaterial])
+            area-m2 (assoc-in [:properties :area-m2] area-m2))
           utils/clean
           enrich*)))
 
@@ -501,11 +521,14 @@
   ([search sports-site]
    (index-legacy-sports-place! search sports-site false))
   ([{:keys [indices client]} sports-site sync?]
-   (let [legacy-data (-> (legacy-transform/->old-lipas-sports-site* sports-site)
+   (let [legacy-data (-> sports-site
+                         compute-renovation-years
+                         (dissoc :renovations)
+                         legacy-transform/->old-lipas-sports-site*
                          (assoc :id (:lipas-id sports-site))
                          (legacy-sports-place/format-sports-place
-                          :all
-                          legacy-locations/format-location))
+                           :all
+                           legacy-locations/format-location))
 
          idx-name (get-in indices [:legacy-sports-site :search])]
      ;; Use :sportsPlaceId as the id-fn since the data is in legacy camelCase format
@@ -645,10 +668,10 @@
    (get-cities db false))
   ([db no-cache]
    (or
-    (and (not no-cache) (:all-cities @cache))
-    (->> (db/get-cities db)
-         (swap! cache assoc :all-cities)
-         :all-cities))))
+     (and (not no-cache) (:all-cities @cache))
+     (->> (db/get-cities db)
+          (swap! cache assoc :all-cities)
+          :all-cities))))
 
 (defn get-populations
   [{:keys [indices client]} year]
@@ -689,10 +712,10 @@
                       (if-let [page (async/<! in-chan)]
                         (recur (-> page :body :hits :hits
                                    (->>
-                                    (map (comp (partial reports/->row fields)
-                                               (partial i18n/localize locale)
-                                               :_source))
-                                    (into res))))
+                                     (map (comp (partial reports/->row fields)
+                                                (partial i18n/localize locale)
+                                                :_source))
+                                     (into res))))
                         res)))]
     (->> (async/<!! data-chan)
          (excel/create-workbook "lipas")
@@ -712,15 +735,15 @@
         (when-let [page (async/<!! in-chan)]
           (let [ms (-> page :body :hits :hits)
                 feats (mapcat
-                       (fn [m]
-                         (let [props (-> m
-                                         :_source
-                                         localize
-                                         ->row
-                                         (->> (zipmap headers)))]
-                           (->> m :_source :location :geometries :features
-                                (map (fn [f] (assoc f :properties props))))))
-                       ms)]
+                        (fn [m]
+                          (let [props (-> m
+                                          :_source
+                                          localize
+                                          ->row
+                                          (->> (zipmap headers)))]
+                            (->> m :_source :location :geometries :features
+                                 (map (fn [f] (assoc f :properties props))))))
+                        ms)]
             (loop [feat-num 0
                    f (first feats)
                    fs (rest feats)]
@@ -866,11 +889,11 @@
                  :must_not {:term {:lipas-id lipas-id}}}}}
         resp (search search-cli query)]
     (merge
-     {:status (if (-> resp :body :hits :total :value (>= 1))
-                :conflict
-                :ok)}
-     (when-let [conflict (-> resp :body :hits :hits first :_source)]
-       {:conflict conflict}))))
+      {:status (if (-> resp :body :hits :total :value (>= 1))
+                 :conflict
+                 :ok)}
+      (when-let [conflict (-> resp :body :hits :hits first :_source)]
+        {:conflict conflict}))))
 
 (defn presign-upload-url
   [{:keys [s3-bucket s3-bucket-prefix region credentials-provider]}

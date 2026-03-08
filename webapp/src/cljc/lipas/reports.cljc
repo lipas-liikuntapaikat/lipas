@@ -59,9 +59,11 @@
    "admin"
    {:fi "Ylläpitäjä" :en "Administrator" :se "Administratör"}
    "construction-year"
-   {:fi "Rakennusvuosi" :en "Construction year" :se "Byggår"}
+   {:fi "Perustamisvuosi" :en "Year of establishment" :se "Grundläggningsår"}
    "renovation-years"
    {:fi "Peruskorjausvuodet" :en "Renovation years" :se "Renoveringsår"}
+   "renovations"
+   {:fi "Toimenpiteet" :en "Renovations" :se "Åtgärder"}
    "phone-number"
    {:fi "Puhelinnumero" :en "Phone number" :se "Telefonnummer"}
    "email"
