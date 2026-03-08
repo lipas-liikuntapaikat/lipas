@@ -21,6 +21,8 @@ WITH (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE IF EXISTS wfs.master
     OWNER to lipas;
 

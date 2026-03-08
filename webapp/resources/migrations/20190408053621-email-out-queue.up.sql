@@ -11,5 +11,7 @@ CREATE TABLE public.email_out_queue (
 
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.email_out_queue
 OWNER to lipas;

@@ -19,6 +19,8 @@ WITH (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE IF EXISTS wfs.gt_pk_metadata
     OWNER to lipas;
 

@@ -1,7 +1,11 @@
 (ns lipas.ui.accessibility.views
   (:require [lipas.ui.accessibility.events :as events]
             [lipas.ui.accessibility.subs :as subs]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn view
@@ -11,33 +15,33 @@
         can-edit?  (<== [:lipas.ui.user.subs/permission-to-publish? lipas-id])
         loading?   (<== [::subs/loading?])]
 
-    [mui/grid {:container true}
+    [:> Grid {:container true}
      (into
        [:<>]
        (for [[group sentences] statements]
-         [mui/grid {:item true :xs 12}
-          [mui/typography {:variant "body2"}
+         [:> Grid {:item true :xs 12}
+          [:> Typography {:variant "body2"}
            group]
           (into [:ul]
                 (for [s sentences]
                   [:li s]))]))
 
      (when (and logged-in? can-edit?)
-       [mui/grid {:item true :xs 12}
-        [mui/grid {:container true}
-         [mui/grid {:item true}
-          [mui/button
+       [:> Grid {:item true :xs 12}
+        [:> Grid {:container true}
+         [:> Grid {:item true}
+          [:> Button
            {:variant  "contained"
             :color    "secondary"
             :on-click #(==> [::events/get-app-url lipas-id])}
            "Täytä esteettömyyssovelluksessa"]]
 
-         [mui/grid {:item true}
+         [:> Grid {:item true}
           (if loading?
-            [mui/circular-progress {:style {:margin-left "0.5em"}}]
-            [mui/button
+            [:> CircularProgress {:style {:margin-left "0.5em"}}]
+            [:> Button
              {:style    {:margin-left "0.5em"}
 
               :color    "secondary"
               :on-click #(==> [::events/get-statements lipas-id])}
-             [mui/icon "refresh"]])]]])]))
+             [:> Icon "refresh"]])]]])]))

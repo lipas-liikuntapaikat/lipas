@@ -5,8 +5,6 @@
  :direct "Linnuntietä",
  :constraints "Rajaukset",
  :download-grid "Lataa ruudukko",
- :women "Naiset",
- :headline "Analyysityökalu (beta)",
  :format "Formaatti",
  :settings-zones "Etäisyydet ja matka-ajat",
  :by-bicycle "Polkupyörällä",
@@ -14,8 +12,6 @@
  :by-car "Autolla",
  :ready-classifications "Valmiit luokittelut",
  :in-use-year-round "Käytössä vuoden ympäri",
- :analyze-more-targets
- "Analysoi lisää kohteita klikkaamalla liikuntapaikkaa kartalla",
  :diversity-index-chart "Monipuolisuusindeksi",
  :diversity-idx "Monipuolisuusindeksi",
  :categorization-name "Kategorisoinnin nimi",
@@ -27,9 +23,7 @@
  "Oletuksena työkalussa käytetään postinumeroihin perustuvaa aluejakoa. Jako voidaan tehdä myös muun olemassa olevan aluejaon perusteella tuomalla haluttu geometriatiedosto (Shapefile, GeoJSON tai KML).",
  :settings-map "Kartalla näkyvät kohteet",
  :name-chart "Nimi",
- :zone "Kori",
  :elementary-school "Peruskoulu",
- :default "Oletus",
  :reachability "Saavutettavuus",
  :special-school "Erityiskoulu",
  :diversity-help1
@@ -47,14 +41,12 @@
  :in-use-summer "Käytössä kesällä",
  :confirm-restore-defaults
  "Tahdotko varmasti palauttaa oletuskategoriat?",
- :statistics-center-notice "Tilastokeskus väestörakenne 2024",
  :import-own-areas "Tuo omat alueet",
  :close "Sulje analyysityökalut",
  :download-areas "Lataa alueet",
  :by-grid "Ruuduittain",
  :diversity "Monipuolisuus",
  :by-foot "Kävellen",
- :total "Yhteensä",
  :description3
  "Matka-aikojen laskeminen eri kulkutavoilla (kävellen, polkupyörällä, autolla) perustuu avoimeen OpenStreetMap-aineistoon ja OSRM-työkaluun.",
  :download-parameters "Lataa parametrit",
@@ -77,7 +69,6 @@
  :graphs "Kuvaajat",
  :in-use-winter "Käytössä talvella",
  :distance "Etäisyys",
- :add-new "Lisää uusi",
  :population-chart "Väestö",
  :cumulative-results "Kumulatiiviset tulokset",
  :use-postal-code-areas "Käytä postinumeroalueita",
@@ -90,7 +81,6 @@
  :new-category "Uusi kategoria",
  :calculate-diversity "Laske monipuolisuus",
  :high-school "Lukio",
- :men "Miehet",
  :download-categories "Lataa kategoriat",
  :travel-time "Matka-aika",
  :results "Tulokset"
@@ -124,11 +114,6 @@
  :heatmap-filter-by-map-view "Suodata nykyisen karttanäkymän mukaan"
  :heatmap-analyzing-current-bounds "Analysoidaan dataa nykyisen kartan rajoissa"
  :heatmap-analyzing-whole-finland "Analysoidaan dataa koko Suomesta"
- :heatmap-city-filter-todo "Kaupunkisuodatin (tulossa)"
- :heatmap-year-round-only "Vain ympärivuotiset liikuntapaikat"
- :heatmap-retkikartta-only "Vain Retkikartta-kohteet"
- :heatmap-harrastuspassi-only "Vain Harrastuspassi-kohteet"
- :heatmap-school-use-only "Vain koulukäyttö"
  :heatmap-visual-settings "Visualisointi"
  :heatmap-radius "Säde: "
  :heatmap-blur "Sumennus: "

@@ -1,7 +1,4 @@
-{:add-rink "Add rink",
- :edit-rink "Edit rink",
- :headline "Rinks",
- :rink1-area-m2 "Rink 1 area m²",
+{:rink1-area-m2 "Rink 1 area m²",
  :rink1-length "Rink 1 length m",
  :rink1-width "Rink 1 width m",
  :rink2-area-m2 "Rink 2 area m²",

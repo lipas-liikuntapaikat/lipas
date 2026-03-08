@@ -1,7 +1,4 @@
-{:add-rink "Lisää kenttä",
- :edit-rink "Muokkaa kenttää",
- :headline "Kentät",
- :rink1-area-m2 "Kentän 1 pinta-ala m²",
+{:rink1-area-m2 "Kentän 1 pinta-ala m²",
  :rink1-length "Kentän 1 pituus m",
  :rink1-width "Kentän 1 leveys m",
  :rink2-area-m2 "Kentän 2 pinta-ala m²",

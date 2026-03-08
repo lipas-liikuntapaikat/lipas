@@ -1,26 +1,33 @@
 (ns lipas.ui.forgot-password.views
   (:require [lipas.schema.users :as users-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
             [lipas.ui.forgot-password.events :as events]
             [lipas.ui.forgot-password.subs :as subs]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
 (defn request-reset-link-form [{:keys [tr]}]
   (r/with-let [email (r/atom nil)]
-    [mui/form-group
+    [:> FormGroup
 
      ;; Email
-     [lui/text-field
+     [text-fields/text-field
       {:label     (tr :lipas.user/email)
        :value     @email
        :spec      users-schema/email-schema
        :on-change #(reset! email %)}]
 
      ;; Submit
-     [mui/button
+     [:> Button
       {:on-click #(==> [::events/request-password-reset @email])
        :variant  "contained"
        :color    "secondary"
@@ -32,50 +39,50 @@
   (let [error   (<== [::subs/error])
         success (<== [::subs/success])]
 
-    [mui/grid {:container true :justify-content "center" :style {:padding "1em"}}
-     [mui/grid {:item true :xs 12 :md 8 :lg 6}
-      [mui/card {:square true :style {:height "100%"}}
+    [:> Grid {:container true :justify-content "center" :style {:padding "1em"}}
+     [:> Grid {:item true :xs 12 :md 8 :lg 6}
+      [:> Card {:square true :style {:height "100%"}}
 
        ;; Header
-       [mui/card-header {:title title}]
+       [:> CardHeader {:title title}]
 
        ;; Form
-       [mui/card-content
-        [mui/typography helper-text]
+       [:> CardContent
+        [:> Typography helper-text]
         [form form-props]
 
         ;;; Successess & errors box
         [:div {:style {:margin-top "1em"}}
          (when success
-           [mui/typography
+           [:> Typography
             {:variant "body1"
              :style   {:margin-bottom "1em" :font-weight "bold"}}
             (tr (keyword :reset-password success))])
 
          ;; Error message
          (when error
-           [mui/typography {:color :error :style {:margin-bottom "1em"}}
+           [:> Typography {:color :error :style {:margin-bottom "1em"}}
             (tr (keyword :error error))])
 
          ;; Register button
          (when (= error :email-not-found)
-           [lui/register-button
+           [buttons/register-button
             {:label (tr :register/headline)
              :href  "/rekisteroidy"}])
 
          ;; Forgot password button
          (when (= error :reset-token-expired)
-           [mui/button
+           [:> Button
             {:color :primary
              :href  "/passu-hukassa"}
             (tr :reset-password/get-new-link)])]]]]]))
 
 (defn reset-password-form [{:keys [tr token]}]
   (r/with-let [password (r/atom nil)]
-    [mui/form-group
+    [:> FormGroup
 
      ;; Password
-     [lui/text-field
+     [text-fields/text-field
       {:label     (tr :lipas.user/password)
        :type      :password
        :value     @password
@@ -83,7 +90,7 @@
        :on-change #(reset! password %)}]
 
      ;; Submit
-     [mui/button
+     [:> Button
       {:on-click #(==> [::events/reset-password @password token])
        :variant  "contained"
        :color    "secondary"

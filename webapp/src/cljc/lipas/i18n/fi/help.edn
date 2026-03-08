@@ -1,10 +1,6 @@
 {:available-pages "Sivut tässä osiossa",
  :headline "Ohjeet",
  :manage-content "Hallitse ohjesisältöä",
- :permissions-help "Jos haluat lisää käyttöoikeuksia, ota yhteyttä ",
- :permissions-help-body
- "Haluan käyttöoikeudet seuraaviin liikunta- ja ulkoilupaikkoihin:",
- :permissions-help-subject "Haluan lisää käyttöoikeuksia",
  :privacy-policy "Tietosuojailmoitus"
  :data-model "Tietomalli"
  :data-model-excel "Lataa kuvaus Lipaksen tietomallista Excel-muodossa alla olevasta painikkeesta."}

@@ -1,5 +1,4 @@
 {:check-to-update-field "Check to update this field"
- :field-will-be-updated "This field will be updated"
  :field-will-not-change "This field will not change"
  :n-sites-selected "{1} sports sites selected"
  :select-fields-to-update "Select fields to update:"

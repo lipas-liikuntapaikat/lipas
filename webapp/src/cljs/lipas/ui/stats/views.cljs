@@ -1,5 +1,8 @@
 (ns lipas.ui.stats.views
-  (:require [lipas.ui.mui :as mui]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
             [lipas.ui.stats.age-structure.views :as age-structure-stats]
             [lipas.ui.stats.city.views :as city-stats]
             [lipas.ui.stats.events :as events]
@@ -13,25 +16,25 @@
   (let [tr  (<== [:lipas.ui.subs/translator])
         tab (<== [::subs/selected-tab])]
 
-    [mui/paper {:square true :style {:padding "1em"}}
+    [:> Paper {:square true :style {:padding "1em"}}
 
-     [mui/grid {:container true :spacing 4}
+     [:> Grid {:container true :spacing 4}
 
       ;; Tabs for choosing between different stats pages
-      [mui/grid {:item true :xs 12}
-       [mui/tabs
+      [:> Grid {:item true :xs 12}
+       [:> Tabs
         {:value     tab
          :variant   "fullWidth"
          :on-change #(==> [::events/navigate %2])
          :indicator-color "secondary"
          :text-color "inherit"}
-        [mui/tab {:value "sport" :label (tr :stats/sports-stats)}]
-        [mui/tab {:value "age-structure" :label (tr :stats/age-structure-stats)}]
-        [mui/tab {:value "city" :label (tr :stats/city-stats)}]
-        [mui/tab {:value "finance" :label (tr :stats/finance-stats)}]
-        [mui/tab {:value "subsidies" :label (tr :stats/subsidies)}]]]
+        [:> Tab {:value "sport" :label (tr :stats/sports-stats)}]
+        [:> Tab {:value "age-structure" :label (tr :stats/age-structure-stats)}]
+        [:> Tab {:value "city" :label (tr :stats/city-stats)}]
+        [:> Tab {:value "finance" :label (tr :stats/finance-stats)}]
+        [:> Tab {:value "subsidies" :label (tr :stats/subsidies)}]]]
 
-      [mui/grid {:item true :xs 12}
+      [:> Grid {:item true :xs 12}
        (condp = tab
          "sport"         [sport-stats/view]
          "age-structure" [age-structure-stats/view]

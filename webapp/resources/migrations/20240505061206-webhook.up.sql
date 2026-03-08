@@ -10,5 +10,7 @@ CREATE TABLE IF NOT EXISTS public.webhook_queue (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.webhook_queue
 OWNER to lipas;

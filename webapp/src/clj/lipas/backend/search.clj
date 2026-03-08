@@ -197,9 +197,27 @@
       :properties all-properties}}))
 
 ;; Unified mapping definitions for all Elasticsearch indices
+(defn generate-analytics-mapping
+  "Extends sports-site mapping with analytics-specific fields for historical
+  revision data."
+  []
+  (-> (generate-explicit-mapping)
+      (assoc-in [:settings :index :mapping :total_fields :limit] 400)
+      (update-in [:mappings :properties] merge
+                 {:id         {:type "keyword"}
+                  :doc-status {:type "keyword"}
+                  :created-at {:type "date"}
+                  :author     {:dynamic false
+                               :properties
+                               {:id          {:type "keyword"}
+                                :email       {:type "keyword"}
+                                :status      {:type "keyword"}
+                                :permissions {:enabled false}}}})))
+
 (def mappings
   "All Elasticsearch index mappings. Used by system initialization and tests."
   {:sports-site   (generate-explicit-mapping)
+   :analytics     (generate-analytics-mapping)
    :lois          {:settings
                    {:max_result_window 50000}
                    :mappings

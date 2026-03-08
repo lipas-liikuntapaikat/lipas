@@ -17,6 +17,18 @@
          (==> [:lipas.ui.help.events/get-help-data])
          (==> [:lipas.ui.map.events/show-sports-site* nil]))}]}]
 
+   ["/loi/:loi-id"
+    {:name       :lipas.ui.routes.map/loi-view
+     :parameters {:path [:map [:loi-id :string]]}
+     :controllers
+     [{:identity
+       (fn [match]
+         (-> match :parameters :path :loi-id))
+       :start
+       (fn [loi-id]
+         (let [on-success [:lipas.ui.map.events/show-loi* loi-id]]
+           (==> [:lipas.ui.loi.events/get loi-id on-success])))}]}]
+
    ["/:lipas-id"
     {:name       :lipas.ui.routes.map/details-view
      :parameters {:path [:map [:lipas-id :int]]}

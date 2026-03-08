@@ -10,7 +10,7 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.schema.users :as users]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.register.events :as events]
             [lipas.ui.register.subs :as subs]
@@ -30,7 +30,7 @@
      {}
 
      ;; Email
-     [lui/text-field
+     [text-fields/text-field
       {:required true
        :label (tr :lipas.user/email)
        :type "email"
@@ -40,7 +40,7 @@
        :placeholder (tr :lipas.user/email-example)}]
 
      ;; Username
-     [lui/text-field
+     [text-fields/text-field
       {:required true
        :Input-label-props (when-not (-> form-data :username empty?)
                             {:shrink true})
@@ -52,7 +52,7 @@
        :placeholder (tr :lipas.user/username-example)}]
 
      ;; Password
-     [lui/text-field
+     [text-fields/text-field
       {:required true
        :label (tr :lipas.user/password)
        :type "password"
@@ -61,7 +61,7 @@
        :on-change #(set-field :password %)}]
 
      ;; Firstname
-     [lui/text-field
+     [text-fields/text-field
       {:required true
        :label (tr :lipas.user/firstname)
        :spec users/firstname-schema
@@ -69,7 +69,7 @@
        :on-change #(set-field :user-data :firstname %)}]
 
      ;; Lastname
-     [lui/text-field
+     [text-fields/text-field
       {:required true
        :label (tr :lipas.user/lastname)
        :spec users/lastname-schema
@@ -77,7 +77,7 @@
        :on-change #(set-field :user-data :lastname %)}]
 
      ;; Permissions request
-     [lui/text-field
+     [text-fields/text-field
       {:label (tr :lipas.user/permissions)
        :multiline true
        :spec users/permissions-request-schema

@@ -20,6 +20,14 @@
             [goog.object :as gobj]
             [goog.string :as gstring]
             [lipas.ui.components.misc :as misc]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -179,11 +187,11 @@
             (sort-by sort-fn)
             (map
               (fn [{:keys [label color type]}]
-                [mui/grid {:item true}
+                [:> Grid {:item true}
                  [misc/icon-text2
                   {:icon (legend-icons type) :icon-color color :text label}]]))
             (into
-              [mui/grid {:container true :justify-content "center"}]))))))
+              [:> Grid {:container true :justify-content "center"}]))))))
 
 (defn tooltip
   "`payload-fn` should return a map with
@@ -196,33 +204,33 @@
    (let [label   (gobj/get props "label")
          payload (gobj/get props "payload")]
      (r/as-element
-       [mui/paper {:style {:padding "1em"}}
+       [:> Paper {:style {:padding "1em"}}
 
        ;; Tooltip header
         (when-not hide-header?
-          [mui/typography
+          [:> Typography
            {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
            label])
 
        ;; Content table
-        [mui/table {:style {:width "350"} :padding "normal" :size "small"}
+        [:> Table {:style {:width "350"} :padding "normal" :size "small"}
          (->> payload
               payload-fn
               (sort-by sort-fn)
               (map
                 (fn [{:keys [label value icon color]}]
-                  [mui/table-row #_{:style {:height "24px"}}
+                  [:> TableRow #_{:style {:height "24px"}}
                    (when icon
-                     [mui/table-cell {:padding "none"}
-                      [mui/icon {:style {:color color}}
+                     [:> TableCell {:padding "none"}
+                      [:> Icon {:style {:color color}}
                        icon]])
-                   [mui/table-cell
-                    [mui/typography {:variant "caption"}
+                   [:> TableCell
+                    [:> Typography {:variant "caption"}
                      label]]
-                   [mui/table-cell
-                    [mui/typography {:variant "caption"}
+                   [:> TableCell
+                    [:> Typography {:variant "caption"}
                      value]]]))
-              (into [mui/table-body]))]]))))
+              (into [:> TableBody]))]]))))
 
 (defn- get-population [payload]
   (when (> (count payload) 0)

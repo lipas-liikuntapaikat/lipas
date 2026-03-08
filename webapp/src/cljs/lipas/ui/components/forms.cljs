@@ -1,6 +1,10 @@
 (ns lipas.ui.components.forms
   (:require [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Divider$default" :as Divider]
+            ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/InputLabel$default" :as InputLabel]
+            ["@mui/material/Link$default" :as Link]
             [lipas.ui.utils :as utils]))
 
 (defn ->display-tf [{:keys [label value mui-props]} multiline? rows]
@@ -20,13 +24,13 @@
   (let [value (utils/display-value value :empty "-" :links? false)]
     (if-not (= "-" value)
       [:<>
-       [mui/input-label
+       [:> InputLabel
         {:shrink true
          :margin "dense"
          :style  {:transform "translate(0px, -1.5px) scale(0.75)"
                   :color     "rgba(0, 0, 0, 0.88)"}}
         label]
-       [mui/link
+       [:> Link
         {:href    (if (utils/link-strict? value)
                     value
                     (str "http://" value))
@@ -38,7 +42,7 @@
         (if (> (count value) 50)
           (str (subs value 0 50) " ...")
           value)]
-       [mui/divider
+       [:> Divider
         {:style {:border-top "1px dotted" :color "rgba(0, 0, 0, 0.12)"}}]]
       (->display-tf d false 1))))
 
@@ -60,11 +64,11 @@
 
 (defn form [{:keys [read-only?]} & data]
   (into
-   [mui/grid {:container true :spacing 2}]
+   [:> Grid {:container true :spacing 2}]
    (for [elem  data
          :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
          m     ms
          :when (some? m)]
-     [mui/grid {:item true :xs 12}
-      [mui/form-control {:full-width true}
+     [:> Grid {:item true :xs 12}
+      [:> FormControl {:full-width true}
        (->field read-only? m)]])))

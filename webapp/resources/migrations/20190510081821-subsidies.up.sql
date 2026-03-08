@@ -2,8 +2,12 @@
 
 CREATE SEQUENCE public.subsidy_id_seq;
 
+--;;
+
 ALTER SEQUENCE public.subsidy_id_seq
 OWNER TO lipas;
+
+--;;
 
 -- Table: public.subsidy
 
@@ -16,6 +20,8 @@ CONSTRAINT subsidy_pkey PRIMARY KEY (id)
   OIDS = FALSE
 )
 TABLESPACE pg_default;
+
+--;;
 
 ALTER TABLE public.subsidy
 OWNER to lipas;

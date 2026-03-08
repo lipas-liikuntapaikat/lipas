@@ -1,5 +1,4 @@
 {:check-to-update-field "Valitse päivitettäväksi"
- :field-will-be-updated "Tämä kenttä päivitetään"
  :field-will-not-change "Tämä kenttä ei muutu"
  :n-sites-selected "Valittu {1} liikuntapaikkaa"
  :select-fields-to-update "Valitse päivitettävät kentät:"

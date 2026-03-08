@@ -15,17 +15,13 @@
  :delete "Ta bort {1}",
  :delete-reason "Orsak",
  :delete-tooltip "Ta bort idrottsanläggningen...",
- :details-in-portal "Visa alla ytterligare information",
- :editable-sports-sites "Redigerbara idrottsplatser",
  :email-public "E-post (publik)"
  :event-date "Redigerad",
  :headline "Idrottsanläggning",
- :id "LIPAS-ID",
  :marketing-name "Varumärkesnamn",
  :name "Namn på finska",
  :name-localized-en "Namn på engelska",
  :name-localized-se "Namn på svenska",
- :name-short "Namn",
  :new-site "Ny idrottsplats",
  :new-site-of-type "Ny {1}",
  :no-permission-tab

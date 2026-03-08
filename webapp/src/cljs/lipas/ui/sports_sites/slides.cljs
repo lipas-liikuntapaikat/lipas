@@ -1,8 +1,10 @@
 (ns lipas.ui.sports-sites.slides
   (:require [lipas.schema.swimming-pools :as pool-schema]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.utils :refer [<== ==>]]))
 
@@ -11,8 +13,8 @@
 
 (defn form [{:keys [tr data]}]
   (let [set-field  (partial set-field :slide)]
-    [mui/form-group
-     [lui/text-field
+    [:> FormGroup
+     [text-fields/text-field
       {:label     (tr :dimensions/length-m)
        :adornment (tr :physical-units/m)
        :type      "number"
@@ -29,7 +31,7 @@
                   (tr :lipas.swimming-pool.slides/edit-slide)
                   (tr :lipas.swimming-pool.slides/add-slide))
         on-save (comp reset close #(==> [::hall/save-slide lipas-id data]))]
-    [lui/dialog {:title         title
+    [dialogs/dialog {:title         title
                  :save-label    (tr :actions/save)
                  :cancel-label  (tr :actions/cancel)
                  :on-close      #(==> [::hall/toggle-dialog :slide])
@@ -41,7 +43,7 @@
   [[:length-m (tr :dimensions/length-m)]])
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
-  [lui/form-table
+  [tables/form-table
    {:headers         (make-headers tr)
     :add-btn-size    add-btn-size
     :max-width       max-width
@@ -55,6 +57,6 @@
     :on-delete       #(==> [::hall/remove-slide lipas-id %])}])
 
 (defn read-only-table [{:keys [tr items]}]
-  [lui/table {:headers (make-headers tr)
+  [tables/table {:headers (make-headers tr)
               :items   items
               :key-fn  #(gensym)}])

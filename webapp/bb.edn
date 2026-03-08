@@ -259,6 +259,9 @@
                                  (println "Example: bb test-var lipas.gis-test/test-sequence-features")
                                  (println "Example: bb test-var lipas.gis-test/test-sequence-features lipas.roles-test/admin-test"))))}
 
+         i18n-unused {:doc "Find unused translation keys. Use --remove to delete them, --dry-run to preview."
+                      :task (apply shell "bb" "scripts/unused_translations.bb" *command-line-args*)}
+
          test-watch {:doc "Run tests in watch mode (re-runs on file changes)"
                      :task (shell "clojure" "-M:dev:test" "--watch")}
 

@@ -13,8 +13,6 @@
  :length-km "Pituus km",
  :link "Linkki",
  :photo "Valokuva",
- :read-only-disclaimer
- "Aktiviteeteille on toistaiseksi olemassa vain editointinäkymä. Kirjaudu sisään ja siirry kynäsymbolista muokkaustilaan.",
  :route-is-made-of-subroutes
  "Reitti koostuu monesta erillisestä osuudesta",
  :select-route-parts-on-map "Valitse reitin osat kartalta",

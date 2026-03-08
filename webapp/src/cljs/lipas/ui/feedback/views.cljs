@@ -1,8 +1,13 @@
 (ns lipas.ui.feedback.views
-  (:require [lipas.ui.components :as lui]
+  (:require [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.feedback.events :as events]
             [lipas.ui.feedback.subs :as subs]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.utils :refer [<== ==>]]
             [lipas.schema.users :as users-schema]))
 
@@ -13,7 +18,7 @@
         form-state  (<== [::subs/form])
         form-valid? (<== [::subs/form-valid?])]
     [:<>
-     [lui/dialog
+     [dialogs/dialog
       {:open?         modal-open?
        :on-close      #(==> [::events/close-modal])
        :save-enabled? form-valid?
@@ -22,11 +27,11 @@
        :cancel-label  (tr :actions/cancel)
        :on-save       #(==> [::events/send form-state])}
 
-      [mui/grid {:container true :spacing 2}
+      [:> Grid {:container true :spacing 2}
 
        ;; Feedback type
-       [mui/grid {:item true :xs 12}
-        [lui/autocomplete
+       [:> Grid {:item true :xs 12}
+        [autocompletes/autocomplete
          {:label     "Palautteen aihe"
           :required  true
           :style     {:min-width "170px"}
@@ -35,8 +40,8 @@
           :items     types}]]
 
        ;; Sender email
-       [mui/grid {:item true :xs 12}
-        [lui/text-field
+       [:> Grid {:item true :xs 12}
+        [text-fields/text-field
          {:label     "Sähköpostiosoite (ei pakollinen)"
           :fullWidth true
           :spec      users-schema/email-schema
@@ -44,8 +49,8 @@
           :on-change #(==> [::events/set-sender-email %])}]]
 
        ;; Feedback text
-       [mui/grid {:item true :xs 12}
-        [lui/text-field
+       [:> Grid {:item true :xs 12}
+        [text-fields/text-field
          {:label           "Palaute"
           :fullWidth       true
           :multiline       true
@@ -56,8 +61,8 @@
           :on-change       #(==> [::events/set-text %])}]]]]
 
      ;; The button
-     [mui/tooltip {:title "Anna palautetta"}
-      [mui/icon-button
+     [:> Tooltip {:title "Anna palautetta"}
+      [:> IconButton
        {:size     "large"
         :on-click #(==> [::events/open-modal])}
-       [mui/icon "feedback"]]]]))
+       [:> Icon "feedback"]]]]))

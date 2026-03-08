@@ -1,12 +1,9 @@
-{:LineString "Reitti",
- :Point "Piste",
- :Polygon "Alue",
- :count "Tyyppejä yhteensä",
+{:count "Tyyppejä yhteensä",
  :geometry "Geometria",
  :main-categories "Pääryhmät",
  :main-category "Pääryhmä",
  :name "Liikuntapaikkatyyppi",
  :sports-site-types "Liikuntapaikkatyypit"
  :sub-category "Alaryhmä",
- :sub-categories "Alaryhmät",
+ :no-sub-categories "Ei alaryhmiä",
  :type-code "Tyyppikoodi"}

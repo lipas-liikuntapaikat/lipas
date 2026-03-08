@@ -1,7 +1,0 @@
-{:brick "Tiili",
- :concrete "Betoni",
- :concrete-beam "Betonipalkki",
- :concrete-pillar "Betonipilari",
- :solid-rock "Kallio",
- :steel "Teräs",
- :wood "Puu"}

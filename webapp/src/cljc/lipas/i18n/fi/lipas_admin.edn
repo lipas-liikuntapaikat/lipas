@@ -1,8 +1,4 @@
-{:access-all-sites
- "Sinulla on pääkäyttäjän oikeudet. Voit muokata kaikkia liikuntapaikkoja.",
- :confirm-magic-link
- "Haluatko varmasti lähettää taikalinkin käyttäjälle {1}?",
- :headline "Admin",
+{:headline "Admin",
  :magic-link "Taikalinkki",
  :organizations "Organisaatiot",
  :select-magic-link-template "Valitse saatekirje",

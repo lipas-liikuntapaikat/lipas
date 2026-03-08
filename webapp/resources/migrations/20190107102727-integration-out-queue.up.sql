@@ -8,5 +8,7 @@ CREATE TABLE IF NOT EXISTS public.integration_out_queue (
 )
 TABLESPACE pg_default;
 
+--;;
+
 ALTER TABLE public.integration_out_queue
 OWNER to lipas;

@@ -1,9 +1,5 @@
 {:basic-data-of-halls "Simhallsportal",
  :description "",
- :edit "Simhallsportal",
  :entering-energy-data "Datum",
  :headline "Simhallsportal",
- :latest-updates "Timme",
- :list "Energi information",
- :updating-basic-data "Information",
- :visualizations "Energi information"}
+ :updating-basic-data "Information"}

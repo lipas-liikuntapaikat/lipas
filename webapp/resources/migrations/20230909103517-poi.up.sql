@@ -16,11 +16,17 @@ CREATE TABLE IF NOT EXISTS public.loi (
 )
 TABLESPACE pg_default;
 
+--;;
+
 COMMENT ON TABLE public.loi
 IS 'Location of Interest, other than sports site';
 
+--;;
+
 ALTER TABLE public.loi
 OWNER to lipas;
+
+--;;
 
 CREATE OR REPLACE VIEW public.loi_current AS
 SELECT
@@ -41,7 +47,12 @@ JOIN (
   GROUP BY loi.id) b
 ON a.id = b.id AND a.event_date = b.max_date;
 
+--;;
+
 ALTER TABLE public.loi_current
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.loi_current
 IS 'Latest revisions of all Locations of Interest (loi)';

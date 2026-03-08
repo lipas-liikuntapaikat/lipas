@@ -21,7 +21,14 @@
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.mui :as mui]
+            ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+            ["@mui/material/FormGroup$default" :as FormGroup]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
             [lipas.ui.subs :as ui-subs]
@@ -37,12 +44,12 @@
         ptv-enabled? (and (:sync-enabled ptv-config)
                           (not (str/blank? (:org-id ptv-config))))]
 
-    [mui/box {:sx {:p 2}}
-     [mui/typography {:variant "h5" :sx {:mb 2}}
+    [:> Box {:sx {:p 2}}
+     [:> Typography {:variant "h5" :sx {:mb 2}}
       (tr :lipas.org.ptv/prefix) (tr :lipas.org/ptv-integration)]
 
      ;; PTV Integration Status Banner
-     [mui/alert {:severity (if ptv-enabled? "success" "info")
+     [:> Alert {:severity (if ptv-enabled? "success" "info")
                  :sx {:mb 3}}
       (if ptv-enabled?
         (tr :lipas.org.ptv/integration-enabled)
@@ -55,7 +62,7 @@
          (tr :lipas.org.ptv/integration-not-enabled-2)])]
 
      ;; Show configuration to everyone, but only LIPAS admins can edit
-     [mui/form-group {:sx {:gap 2 :max-width 800}}
+     [:> FormGroup {:sx {:gap 2 :max-width 800}}
 
       ;; PTV Organization ID
       [text-fields/text-field-controlled
@@ -76,10 +83,10 @@
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :prod-org-id] %])}]
 
       ;; Test environment credentials
-      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+      [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
        (tr :lipas.org.ptv/test-credentials-title)]
 
-      [mui/box {:sx {:pl 2}}
+      [:> Box {:sx {:pl 2}}
        [text-fields/text-field-controlled
         {:label (tr :lipas.org.ptv/test-username-label)
          :value (get-in ptv-config [:test-credentials :username])
@@ -96,7 +103,7 @@
          :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :password] %])}]]
 
       ;; City codes
-      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+      [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
        (tr :lipas.org.ptv/municipality-codes-title)]
 
       [selects/city-selector
@@ -107,7 +114,7 @@
                      (rf/dispatch [::events/edit-org [:ptv-data :city-codes] value]))}]
 
       ;; Owners
-      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+      [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
        (tr :lipas.org.ptv/ownership-types-title)]
 
       [selects/owner-selector
@@ -117,7 +124,7 @@
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :owners] %])}]
 
       ;; Supported languages
-      [mui/typography {:variant "h6" :sx {:mt 2 :mb 1}}
+      [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
        (tr :lipas.org.ptv/supported-languages-title)]
 
       [selects/multi-select
@@ -130,7 +137,7 @@
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :supported-languages] %])}]
 
       ;; Sync enabled
-      [mui/form-control-label
+      [:> FormControlLabel
        {:control (r/as-element
                   [:> Checkbox
                    {:checked (boolean (:sync-enabled ptv-config))
@@ -144,17 +151,17 @@
 
       ;; Save button - only visible to LIPAS admins
       (when is-lipas-admin?
-        [mui/button
+        [:> Button
          {:variant "contained"
           :color "primary"
           :on-click #(rf/dispatch [::events/save-ptv-config])
           :sx {:mt 3 :align-self "flex-start"}}
-         [mui/icon {:sx {:mr 1}} "save"]
+         [:> Icon {:sx {:mr 1}} "save"]
          (tr :lipas.org.ptv/save-configuration)])
 
       ;; Info message for non-admins
       (when (not is-lipas-admin?)
-        [mui/alert {:severity "info" :sx {:mt 2}}
+        [:> Alert {:severity "info" :sx {:mt 2}}
          (tr :lipas.org.ptv/admin-only-message)])]]))
 
 ;; Component for LIPAS admins who can see all users
@@ -240,28 +247,28 @@
         current-tab @(rf/subscribe [::subs/current-tab])
         is-new? (= "new" org-id)]
 
-    [mui/paper {:sx {:p 3 :m 2}}
+    [:> Paper {:sx {:p 3 :m 2}}
      ;; Organization name as headline
-     [mui/typography {:variant "h4" :sx {:mb 3}}
+     [:> Typography {:variant "h4" :sx {:mb 3}}
       (if is-new?
         (tr :lipas.org/new-organization)
         (:name org))]
 
      ;; Tabs - only show if not new
      (when-not is-new?
-       [mui/tabs {:value current-tab
+       [:> Tabs {:value current-tab
                   :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
                   :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
-        [mui/tab {:label (tr :lipas.org/contact-info-tab) :value "contact"}]
-        [mui/tab {:label (tr :lipas.org/members-tab) :value "members"}]
-        [mui/tab {:label (tr :lipas.org/bulk-operations-tab) :value "bulk-operations"}]
-        [mui/tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]])
+        [:> Tab {:label (tr :lipas.org/contact-info-tab) :value "contact"}]
+        [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
+        [:> Tab {:label (tr :lipas.org/bulk-operations-tab) :value "bulk-operations"}]
+        [:> Tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]])
 
      ;; Tab panels
      (case (if is-new? "contact" current-tab)
        "contact"
-       [mui/box {:sx {:p 2}}
-        [mui/form-group {:sx {:gap 2 :max-width 600}}
+       [:> Box {:sx {:p 2}}
+        [:> FormGroup {:sx {:gap 2 :max-width 600}}
          [text-fields/text-field-controlled
           {:label (tr :lipas.org/name)
            :value (:name org)
@@ -295,17 +302,17 @@
            :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservations-link] x]))}]
 
          (when (or is-lipas-admin? is-org-admin? is-new?)
-           [mui/button
+           [:> Button
             {:variant "contained"
              :color "secondary"
              :disabled (not org-valid?)
              :on-click #(rf/dispatch [::events/save-org org])
              :sx {:mt 2 :align-self "flex-start"}}
-            [mui/icon {:sx {:mr 1}} "save"]
+            [:> Icon {:sx {:mr 1}} "save"]
             (tr :actions/save)])]]
 
        "members"
-       [mui/box {:sx {:p 2}}
+       [:> Box {:sx {:p 2}}
         ;; Only show user management form for admins
         (when (or is-lipas-admin? is-org-admin?)
           [:> Box {:sx {:mb 3}}
@@ -343,7 +350,7 @@
                    [:> DeleteIcon]])])])]]]
 
        "bulk-operations"
-       [mui/box
+       [:> Box
         [bulk-ops-views/main
          {:title nil
           :description nil
@@ -359,8 +366,8 @@
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         user-orgs @(rf/subscribe [::subs/user-orgs])
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
-    [mui/paper {:sx {:p 3 :m 2}}
-     [mui/typography {:variant "h4" :sx {:mb 3}}
+    [:> Paper {:sx {:p 3 :m 2}}
+     [:> Typography {:variant "h4" :sx {:mb 3}}
       (tr :lipas.admin/organizations)]
 
      ;; Add organization button for LIPAS admins
@@ -373,18 +380,18 @@
         [:> Icon "add"]])
 
      (if (seq user-orgs)
-       [mui/grid {:container true :spacing 2}
+       [:> Grid {:container true :spacing 2}
         (for [org user-orgs]
-          [mui/grid {:item true :xs 12 :md 6 :key (:id org)}
-           [mui/paper {:sx {:p 2 :cursor "pointer"}
+          [:> Grid {:item true :xs 12 :md 6 :key (:id org)}
+           [:> Paper {:sx {:p 2 :cursor "pointer"}
                        :on-click #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id (str (:id org))}})}
-            [mui/typography {:variant "h6"}
+            [:> Typography {:variant "h6"}
              (:name org)]]])]
 
-       [mui/paper {:sx {:p 3 :text-align "center"}}
-        [mui/typography {:variant "h6" :color "text.secondary"}
+       [:> Paper {:sx {:p 3 :text-align "center"}}
+        [:> Typography {:variant "h6" :color "text.secondary"}
          (tr :lipas.org/no-organizations)]
-        [mui/typography {:variant "body2" :color "text.secondary" :sx {:mt 1}}
+        [:> Typography {:variant "body2" :color "text.secondary" :sx {:mt 1}}
          (tr :lipas.org/contact-admin)]])]))
 
 (defn bulk-operations-view []

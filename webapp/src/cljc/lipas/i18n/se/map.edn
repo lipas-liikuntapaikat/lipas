@@ -1,9 +1,9 @@
 {:add-to-map "Lägg till på karta",
+ :intersection "Korsning",
  :bounding-box-filter "Sök i området",
  :calculate-area "Räkna ytlan",
  :calculate-count "Beräkna antal automatiskt",
  :calculate-route-length "Räkna ut längden",
- :center-map-to-site "Fokusera kartan på platsen",
  :confirm-remove "Är du säker att du vill ta bort geometrin?",
  :delete-vertices-hint
  "För att ta bort en punkt, tryck och håll alt-knappen och klicka på punkten",

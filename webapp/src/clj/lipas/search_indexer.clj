@@ -2,6 +2,7 @@
   (:require
    [clojure.core.async :as async]
    [clojure.data.csv :as csv]
+   [clojure.string :as str]
    [clojure.walk :as walk]
    [lipas.backend.api.v1.locations :as legacy-locations]
    [lipas.backend.api.v1.sports-place :as legacy-sports-place]
@@ -90,13 +91,23 @@
        (print-results results)))))
 
 (defn enrich-for-analytics
-  [users {:keys [id document author_id status created_at]}]
-  (-> document
-      core/enrich
-      (assoc :id id
-             :doc-status status
-             :author (users author_id)
-             :created-at created_at)))
+  [users {:keys [id document author_id status created_at] :as revision}]
+  (try
+    (-> document
+        core/enrich
+        (assoc :id id
+               :doc-status status
+               :author (users author_id)
+               :created-at created_at))
+    (catch IllegalArgumentException e
+      (if (str/starts-with? (.getMessage e) "Invalid number of points in LinearRing")
+        (do
+          (log/warn "Skipping broken revision" id
+                    "lipas-id" (:lipas-id document)
+                    "type-code" (:type-code document)
+                    ":" (.getMessage e))
+          nil)
+        (throw e)))))
 
 (defn get-users [db]
   (->> (core/get-users db)
@@ -112,7 +123,7 @@
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> (core/get-sports-sites-by-type-code db type-code query-opts)
-            (map (partial enrich-for-analytics users))
+            (keep (partial enrich-for-analytics users))
             (search/->bulk idx-name :id)
             (search/bulk-index! client)
             (wait-one)
@@ -126,7 +137,7 @@
     (doseq [type-code types]
       (log/info "Starting to re-index type" type-code)
       (->> (core/get-sports-sites-by-type-code db type-code query-opts)
-           (map (partial enrich-for-analytics users))
+           (keep (partial enrich-for-analytics users))
            (search/->bulk idx-name :id)
            (search/bulk-index! client)
            deref))))
@@ -186,7 +197,8 @@
    (let [idx-name (str mode "-" (search/gen-idx-name))
          mappings (case mode
                     "search" (:sports-site search/mappings)
-                    "legacy" (:legacy-sports-site search/mappings))
+                    "legacy" (:legacy-sports-site search/mappings)
+                    "analytics" (:analytics search/mappings))
          types (keys types/all)
          alias (case mode
                  "search" (get-in indices [:sports-site :search])

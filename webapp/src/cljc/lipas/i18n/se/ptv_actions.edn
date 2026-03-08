@@ -3,8 +3,6 @@
  "Jag har läst beskrivningarna och vill att denna objekt skickas till PTV.",
  :generate-with-ai
  "Generera beskrivningar med artificiell intelligens",
- :select-integration "Välj anslutningssätt",
- :select-languages "Välj språk",
  :select-org "Välj organisation",
  :select-service "Välj service",
  :select-service-channel "Välj servicepunkt"}

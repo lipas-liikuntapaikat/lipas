@@ -1,5 +1,7 @@
 DROP VIEW public.sports_site_current;
 
+--;;
+
 CREATE OR REPLACE VIEW public.sports_site_current AS
 SELECT a.id,
   a.created_at,
@@ -20,7 +22,12 @@ FROM sports_site a,
   WHERE sports_site.status <> 'draft'::text) b
 WHERE a.id = b.id AND b.row_number = 1;
 
+--;;
+
 ALTER TABLE public.sports_site_current
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.sports_site_current
 IS 'Latest revisions of all sports sites';

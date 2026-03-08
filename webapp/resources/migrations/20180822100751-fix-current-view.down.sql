@@ -15,7 +15,12 @@ JOIN ( SELECT sports_site.lipas_id,
        GROUP BY sports_site.lipas_id) b
 ON a.lipas_id = b.lipas_id AND a.event_date = b.max_date;
 
+--;;
+
 ALTER TABLE public.sports_site_current
 OWNER TO lipas;
+
+--;;
+
 COMMENT ON VIEW public.sports_site_current
 IS 'Latest revisions of all sports sites';

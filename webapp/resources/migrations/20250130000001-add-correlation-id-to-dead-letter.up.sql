@@ -2,6 +2,8 @@
 ALTER TABLE public.dead_letter_jobs
   ADD COLUMN IF NOT EXISTS correlation_id uuid;
 
+--;;
+
 -- Add index for efficient correlation-based queries
 CREATE INDEX IF NOT EXISTS idx_dead_letter_correlation ON public.dead_letter_jobs (correlation_id)
   WHERE correlation_id IS NOT NULL;

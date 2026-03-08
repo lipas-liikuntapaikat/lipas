@@ -1,5 +1,4 @@
-{:active "Aktiv",
- :incorrect-data "Fel information",
+{:incorrect-data "Fel information",
  :out-of-service-permanently "Permanent ur funktion",
  :out-of-service-temporarily "Tillfälligt ur funktion",
  :planned "Planerad"}

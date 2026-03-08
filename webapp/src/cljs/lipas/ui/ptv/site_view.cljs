@@ -14,7 +14,7 @@
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
-            [lipas.ui.components :as lui]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
@@ -75,7 +75,7 @@
         :enabled-languages (set org-languages)}]
 
       ;; Summary
-      [lui/text-field
+      [text-fields/text-field
        {:disabled (or loading?
                       read-only?)
         :multiline true
@@ -85,7 +85,7 @@
         :value (get summary selected-tab)}]
 
       ;; Description
-      [lui/text-field
+      [text-fields/text-field
        {:disabled (or loading?
                       read-only?)
         :variant "outlined"
@@ -399,7 +399,7 @@
                                       org-languages))}]
 
         ;; Summary
-        [lui/text-field
+        [text-fields/text-field
          {:disabled (or loading?
                         read-only?)
           :multiline true
@@ -416,7 +416,7 @@
           :field-name :summary}]
 
         ;; Description
-        [lui/text-field
+        [text-fields/text-field
          {:disabled (or loading?
                         read-only?)
           :variant "outlined"

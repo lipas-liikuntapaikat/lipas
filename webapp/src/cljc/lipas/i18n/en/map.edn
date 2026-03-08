@@ -1,9 +1,9 @@
 {:add-to-map "Add to map",
+ :intersection "Intersection",
  :bounding-box-filter "Search from map area",
  :calculate-area "Calculate area",
  :calculate-count "Calculate count automatically",
  :calculate-route-length "Calculate route length",
- :center-map-to-site "Center map to sports-facility",
  :confirm-remove "Are you sure you want to delete selected geometry?",
  :delete-vertices-hint
  "Vertices can be deleted by pressing alt-key and clicking.",
