@@ -42,6 +42,8 @@
    {}
    prop-types/all))
 
+(def total-fields-limit 450)
+
 (defn generate-explicit-mapping
   "Generates explicit Elasticsearch mapping for sports_sites_current index.
 
@@ -190,7 +192,7 @@
 
     {:settings
      {:max_result_window 60000
-      :index {:mapping {:total_fields {:limit 350}}}}
+      :index {:mapping {:total_fields {:limit total-fields-limit}}}}
      :mappings
      {:dynamic "strict"
       :date_detection false
@@ -202,7 +204,7 @@
   revision data."
   []
   (-> (generate-explicit-mapping)
-      (assoc-in [:settings :index :mapping :total_fields :limit] 400)
+      (assoc-in [:settings :index :mapping :total_fields :limit] (+ total-fields-limit 50))
       (update-in [:mappings :properties] merge
                  {:id         {:type "keyword"}
                   :doc-status {:type "keyword"}

@@ -609,6 +609,53 @@
      "Välj de strukturer eller utrustningar som finns i parkourhallen",
      :en
      "Select the structures or equipment available in the parkour gym"}},
+   :outdoor-exercise-structures
+   {:name
+    {:fi "Rakenteet",
+     :se "Strukturer",
+     :en "Structures"},
+    :data-type "enum-coll",
+    :opts
+    {"fitness-stairs"
+     {:label
+      {:fi "Kuntoportaat",
+       :en "Fitness stairs",
+       :se "Konditionstrappa"},
+      :description
+      {:fi "Portaat, jotka on suunniteltu kuntoiluharjoittelua varten.",
+       :en "Stairs designed for fitness training.",
+       :se "Trappor designade för konditionsträning."}},
+     "weight-stack-machines"
+     {:label
+      {:fi "Painopakkalaitteet",
+       :en "Weight stack machines",
+       :se "Viktmaskiner"},
+      :description
+      {:fi "Painopakalla varustetut ulkokuntoilulaitteet.",
+       :en "Outdoor exercise machines equipped with weight stacks.",
+       :se "Utomhusträningsmaskin med viktstapel."}},
+     "bodyweight-equipment"
+     {:label
+      {:fi "Kehonpainolaitteet",
+       :en "Bodyweight equipment",
+       :se "Kroppsviktsutrustning"},
+      :description
+      {:fi "Laitteet, jotka hyödyntävät kehon omaa painoa vastuksena.",
+       :en "Equipment that uses body weight as resistance.",
+       :se "Utrustning som använder kroppsvikt som motstånd."}},
+     "log-bar"
+     {:label
+      {:fi "Tukkitanko",
+       :en "Log bar",
+       :se "Stockstång"},
+      :description
+      {:fi "Tukkia muistuttava nostolaite voimaharjoitteluun.",
+       :en "A log-shaped lifting device for strength training.",
+       :se "En stockformad lyftanordning för styrketräning."}}},
+    :description
+    {:fi "Valitse ulkokuntoilupaikalla olevat rakenteet tai varusteet",
+     :se "Välj de strukturer eller utrustningar som finns på utomhusträningsplatsen",
+     :en "Select the structures or equipment available at the outdoor exercise area"}},
    :ski-track-traditional?
    {:name
     {:fi "Perinteinen latu",
