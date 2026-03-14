@@ -5,10 +5,58 @@
             [clojure.walk :as walk]
             [lipas.backend.config :as config]
             [malli.json-schema :as json-schema]
+            [malli.util :as mu]
             [taoensso.timbre :as log]))
+
+;;; ——— Provider & model registry ———————————————————————————————————————
+;;
+;; Single source of truth for all provider/model configuration.
+;;
+;; :models          — set of model IDs this provider supports
+;; :default-params  — workbench defaults sent to the frontend
+;; :new-api-models  — (OpenAI) models using max_completion_tokens
+;; :no-sampling     — (OpenAI) models that reject top_p / presence_penalty
+
+(def providers
+  {:openai
+   {:models         #{"gpt-4.1-nano" "gpt-4.1-mini" "gpt-4.1" "gpt-4o-mini" "gpt-4o"
+                      "gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
+                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
+    :new-api-models #{"gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
+                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
+    :no-sampling    #{"gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
+                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
+    :default-params {:model            "gpt-4.1-mini"
+                     :top-p            0.5
+                     :presence-penalty -2
+                     :max-tokens       4096
+                     :temperature      nil}}
+   :gemini
+   {:models         #{"gemini-3-flash-preview"}
+    :default-params {:model          "gemini-3-flash-preview"
+                     :top-p          0.90
+                     :temperature    1.0
+                     :max-tokens     8192
+                     :thinking-level "minimal"}}})
+
+(def model->provider
+  "Reverse lookup: model-id → provider keyword. Derived from `providers`."
+  (into {}
+        (for [[provider {:keys [models]}] providers
+              model models]
+          [model provider])))
+
+(def default-params
+  "Default workbench params (OpenAI). Sent to frontend on preview-data load."
+  (-> providers :openai :default-params))
+
+;;; ——— API credentials ——————————————————————————————————————————————————
 
 (def openai-config
   (get-in config/default-config [:open-ai]))
+
+(def gemini-config
+  (get-in config/default-config [:gemini]))
 
 (def default-headers
   {:Authorization (str "Bearer " (:api-key openai-config))
@@ -99,41 +147,104 @@ Each response must be:
 (def Response
   (json-schema/transform response-schema))
 
-(defn complete
-  [{:keys [completions-url model n #_temperature top-p presence-penalty message-format max-tokens]
+(def GeminiResponse
+  "JSON Schema for Gemini — same structure but without additionalProperties
+   which Gemini's API does not support."
+  (json-schema/transform (mu/open-schema response-schema)))
+
+(def default-params
+  {:model            (:model openai-config)
+   :top-p            0.5
+   :presence-penalty -2
+   :max-tokens       4096})
+
+(defn complete-raw
+  "Returns the full OpenAI response including :choices, :usage, and :model."
+  [{:keys [completions-url model n temperature top-p presence-penalty message-format max-tokens]
     :or   {n                1
-           #_#_temperature  0
            top-p            0.5
            presence-penalty -2
            max-tokens       4096}}
    system-instruction
    prompt]
-  (let [;; Response format with JSON Schema should ensure
-        ;; the response is valid JSON and according to the schema,
-        ;; without specfying this in the prompts.
-        message-format (or message-format
+  (let [message-format (or message-format
                            {:type "json_schema"
                             :json_schema {:name "Response"
-                                          ;; This is probably needed? Providing an unsupported Schema,
-                                          ;; like with maxLength, without this doesn't throw an error,
-                                          ;; but with this enabled it does.
                                           :strict true
                                           :schema Response}})
-        body   {:model            model
-                :n                n
-                :max_tokens       max-tokens
-                #_#_:temperature  temperature
-                :top_p            top-p
-                :presence_penalty presence-penalty
-                :response_format  message-format
-                :messages         [{:role "system" :content system-instruction}
-                                   {:role "user" :content prompt}]}
+        {:keys [new-api-models no-sampling]} (providers :openai)
+        new-api? (new-api-models model)
+        body   (cond-> {:model            model
+                        :n                n
+                        :response_format  message-format
+                        :messages         [{:role "system" :content system-instruction}
+                                           {:role "user" :content prompt}]}
+                 new-api?             (assoc :max_completion_tokens max-tokens)
+                 (not new-api?)       (assoc :max_tokens max-tokens)
+                 (not (no-sampling model))
+                 (-> (assoc :top_p top-p)
+                     (assoc :presence_penalty presence-penalty))
+                 temperature (assoc :temperature temperature))
         _ (log/infof "AI Prompt sent: %s" prompt)
         params {:headers default-headers
-                :body    (json/encode body)}
-        result (-> (client/post completions-url params)
+                :body    (json/encode body)}]
+    (-> (client/post completions-url params)
+        :body
+        (json/decode keyword))))
+
+(defn gemini-complete-raw
+  "Calls Gemini API and normalizes the response to match OpenAI's shape."
+  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level]
+    :or   {n              1
+           top-p          0.90
+           temperature    1.0
+           max-tokens     8192
+           thinking-level "minimal"}}
+   system-instruction
+   prompt]
+  (let [url  (str base-url "/models/" model ":generateContent")
+        body {:systemInstruction {:parts [{:text system-instruction}]}
+              :contents          [{:role "user" :parts [{:text prompt}]}]
+              :generationConfig  {:topP             top-p
+                                  :temperature      temperature
+                                  :maxOutputTokens  max-tokens
+                                  :candidateCount   n
+                                  :responseMimeType "application/json"
+                                  :responseSchema   GeminiResponse
+                                  :thinkingConfig   {:thinkingLevel thinking-level}}}
+        _      (log/infof "Gemini prompt sent: %s" prompt)
+        params {:headers      {"x-goog-api-key" api-key
+                               "Content-Type"   "application/json"}
+                :body         (json/encode body)
+                :content-type :json}
+        resp   (-> (client/post url params)
                    :body
-                   (json/decode keyword)
+                   (json/decode keyword))
+        usage  (:usageMetadata resp)]
+    ;; Normalize to OpenAI shape
+    {:model   model
+     :choices (mapv (fn [candidate]
+                      (let [text (-> candidate :content :parts first :text)
+                            ;; Parse JSON content server-side so the frontend receives
+                            ;; a proper nested map. Falls back to raw string if Gemini
+                            ;; truncated the output or returned invalid JSON.
+                            content (try
+                                      (json/decode text keyword)
+                                      (catch Exception e
+                                        (log/warnf "Failed to parse Gemini JSON content: %s" (.getMessage e))
+                                        text))]
+                        {:message {:content content}}))
+                    (:candidates resp))
+     :usage   {:prompt_tokens     (:promptTokenCount usage 0)
+               :completion_tokens (:candidatesTokenCount usage 0)
+               :total_tokens      (:totalTokenCount usage 0)}}))
+
+(defn complete
+  [{:keys [completions-url model n #_temperature top-p presence-penalty message-format max-tokens]
+    :as config-map}
+   system-instruction
+   prompt]
+  (let [result (-> (complete-raw config-map system-instruction prompt)
                    :choices
                    first
                    (update-in [:message :content] #(json/decode % keyword)))]

@@ -3,4 +3,5 @@
  "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge.",
  :save-failed "Saving failed",
  :save-success "Saving succeeded",
+ :copied-to-clipboard "Copied to clipboard"
  :thank-you-for-feedback "Thank you for feedback!"}
