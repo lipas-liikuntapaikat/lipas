@@ -52,6 +52,28 @@
    :sports-facilities (for [site sites]
                         {:type (-> site :search-meta :type :name :fi)})})
 
+(defn- nil-safe-frequencies
+  "Like frequencies but replaces nil keys with \"unknown\"."
+  [coll]
+  (into {} (map (fn [[k v]] [(if (nil? k) "unknown" k) v]))
+        (frequencies coll)))
+
+(defn make-aggregate-overview
+  [sites {:keys [free-use? surface-materials? lighting?]}]
+  (let [base {:city-name    (->> sites first :search-meta :location :city :name)
+              :service-name (->> sites first :search-meta :type :sub-category :name)
+              :total-count  (count sites)
+              :by-type      (nil-safe-frequencies (map #(-> % :search-meta :type :name :fi) sites))}]
+    (cond-> base
+      free-use?
+      (assoc :free-use (nil-safe-frequencies (map #(get-in % [:properties :free-use?]) sites)))
+
+      surface-materials?
+      (assoc :surface-materials (nil-safe-frequencies (mapcat #(get-in % [:properties :surface-material]) sites)))
+
+      lighting?
+      (assoc :lighting (nil-safe-frequencies (map #(get-in % [:properties :ligthing?]) sites))))))
+
 (defn generate-ptv-service-descriptions
   [search
    {:keys [sub-category-id city-codes overview]}]
@@ -168,9 +190,9 @@
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
                          (cond->
-                          archive? (dissoc :source-id
-                                           :service-channel-ids
-                                           :delete-existing)))]
+                           archive? (dissoc :source-id
+                                            :service-channel-ids
+                                            :delete-existing)))]
 
     (log/infof "Resp %s" ptv-resp)
 
@@ -397,9 +419,9 @@
 
 (comment
   (generate-ptv-service-descriptions
-   (user/search)
-   {:sub-category-id 2200
-    :city-codes [992 #_92]})
+    (user/search)
+    {:sub-category-id 2200
+     :city-codes [992 #_92]})
 
   (def s1 (core/get-sports-site (repl/db) 612967))
   (def s2 (core/get-sports-site (repl/db) 506032))
@@ -410,5 +432,4 @@
   (generate-ptv-descriptions-from-data (assoc s1 :comment "Luistinrata ylläpidetään lumisena aikana viikottain. Pukukopit käytössä aukioloaikoina. Kentälle on saatavissa pieniä jääkiekkomaaleja pelien järjestämistä ja lajitaitojen harjoittelua varten."))
   (generate-ptv-descriptions-from-data s2)
 
-  *1
-  )
+  *1)

@@ -3,4 +3,5 @@
  "Internet Explorer stöds inte. Vi rekommenderar du använder t.ex. Chrome, Firefox eller Edge.",
  :save-failed "Sparningen misslyckades",
  :save-success "Sparningen lyckades",
+ :copied-to-clipboard "Kopierat till urklipp"
  :thank-you-for-feedback "Tack för feedbacken!"}

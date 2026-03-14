@@ -6,4 +6,5 @@
   "esim. Chrome, Firefox tai Edge."),
  :save-failed "Tallennus epäonnistui",
  :save-success "Tallennus onnistui",
+ :copied-to-clipboard "Kopioitu leikepöydälle"
  :thank-you-for-feedback "Kiitos palautteesta!"}

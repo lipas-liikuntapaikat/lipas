@@ -5,10 +5,12 @@
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.core :as core]
+            [lipas.backend.search :as search*]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
             [lipas.backend.ptv.handler :as ptv-handler]
+            [lipas.backend.ptv.workbench :as workbench-handler]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -400,6 +402,48 @@
              (core/gdpr-remove-user! db user)
              {:status 200
               :body (core/get-user db (str id))}))}}]
+
+      ["/actions/autocomplete-sports-site"
+       {:post
+        {:no-doc false
+         :handler
+         (fn [{:keys [body-params]}]
+           (let [s (some-> (:search-string body-params) str clojure.string/trim)
+                 idx (get-in search [:indices :sports-site :search])
+                 client (:client search)]
+             (if (or (empty? s) (< (count s) 2))
+               {:status 200 :body []}
+               (let [lipas-id-num (try (Long/parseLong s) (catch Exception _ nil))
+                     text-query {:multi_match
+                                 {:query s
+                                  :fields ["name^10" "search-meta.type.name.fi^3"
+                                           "search-meta.location.city.name.fi^2"]
+                                  :type "best_fields"
+                                  :operator "and"}}
+                     must-clause (if lipas-id-num
+                                   [{:bool {:should [text-query
+                                                     {:term {:lipas-id lipas-id-num}}]}}]
+                                   [text-query])
+                     resp (search*/search
+                           client idx
+                           {:size 15
+                            :_source ["lipas-id" "name"
+                                      "search-meta.type.name.fi"
+                                      "search-meta.location.city.name.fi"]
+                            :query
+                            {:bool
+                             {:must must-clause
+                              :filter [{:terms {:status ["active"
+                                                         "out-of-service-temporarily"]}}]}}})
+                     hits (-> resp :body :hits :hits)]
+                 {:status 200
+                  :body (mapv (fn [h]
+                                (let [src (:_source h)]
+                                  {:lipas-id (:lipas-id src)
+                                   :name (:name src)
+                                   :type-name (get-in src [:search-meta :type :name :fi])
+                                   :city-name (get-in src [:search-meta :location :city :name :fi])}))
+                              hits)}))))}}]
 
       ["/actions/search"
        {:post
@@ -915,6 +959,7 @@
 
       (bulk-ops-handler/routes ctx)
       (ptv-handler/routes ctx)
+      (workbench-handler/routes ctx)
       (jobs-handler/routes ctx)]
 
      (v1/routes ctx)

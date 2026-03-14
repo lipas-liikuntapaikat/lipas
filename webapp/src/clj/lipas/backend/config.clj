@@ -65,6 +65,9 @@
                {:api {:username (env! :ptv-api-username)
                       :password (env! :ptv-api-password)}})
       :db (ig/ref :lipas/db)})
+   :gemini
+   {:api-key (env! :gemini-api-key)
+    :base-url "https://generativelanguage.googleapis.com/v1beta"}
    :open-ai
    {:api-key (env! :open-ai-api-key)
     :project "ptv"

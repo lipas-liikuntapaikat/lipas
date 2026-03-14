@@ -69,6 +69,7 @@ env:
   PTV_API_USERNAME: ${{ vars.PTV_API_USERNAME }}
   PTV_API_PASSWORD: ${{ secrets.PTV_API_PASSWORD }}
   OPEN_AI_API_KEY: ${{ secrets.OPEN_AI_API_KEY }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   ENVIRONMENT: ${{ vars.ENVIRONMENT }}
 
 jobs:
