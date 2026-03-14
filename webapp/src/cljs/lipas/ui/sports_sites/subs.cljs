@@ -366,6 +366,7 @@
 
            :construction-year (-> latest :construction-year)
            :renovation-years  (-> latest :renovation-years)
+           :renovations       (-> latest :renovations)
 
            :properties (-> latest
                            :properties

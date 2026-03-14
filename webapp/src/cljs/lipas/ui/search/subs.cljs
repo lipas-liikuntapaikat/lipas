@@ -111,6 +111,7 @@
      :email (-> site :email)
      :construction-year (-> site :construction-year)
      :renovation-years (-> site :renovation-years)
+     :renovations (-> site :renovations)
      :phone-number (-> site :phone-number)
      :admin.name (-> site :admin admins locale)
      :owner.name (-> site :owner owners locale)
