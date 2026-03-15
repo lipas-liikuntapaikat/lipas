@@ -126,6 +126,7 @@
     (case mode
       "server"
       (do
+        (log/set-min-level! :info)
         (println "Starting LIPAS server...")
         (reset! current-system (start-system! config/system-config)))
 

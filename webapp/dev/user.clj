@@ -7,7 +7,11 @@
    [integrant.repl :refer [reset-all halt go]]
    [integrant.repl.state]
    [migratus.core :as migratus]
-   [lipas.wfs.core :as wfs]))
+   [taoensso.timbre :as log]))
+
+;; Silence noisy Jetty logging during development
+(log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
+                                    ["*" :debug]])
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
@@ -160,19 +164,24 @@
 
 (defn compile-cljs
   []
-  (let [status (shadow/watch-compile! :app)
+  (let [_status (shadow/watch-compile! :app)
         worker (shadow.cljs.devtools.api/get-worker :app)
-        build-state (-> worker :state-ref deref :build-state)]
-    (tap> build-state)
-    {:build-exit-code status
-     :warnings (-> build-state
+        build-state (-> worker :state-ref deref :build-state)
+        warnings (-> build-state
                    :shadow.build/build-info
                    :sources
                    (->> (mapcat :warnings)))
-     :errors (-> build-state
+        errors (-> build-state
                  :shadow.build/build-info
                  :sources
-                 (->> (mapcat :errors)))}))
+                 (->> (mapcat :errors)))]
+    (tap> build-state)
+    {:status (cond
+               (seq warnings) :warning
+               (seq errors) :error
+               :else :ok)
+     :warnings warnings
+     :errors errors}))
 
 (defn validate-sports-sites
   "Scrolls through all sports sites in Elasticsearch and validates them against
