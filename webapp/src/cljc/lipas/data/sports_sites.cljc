@@ -124,12 +124,12 @@
                            :se "Fritext tilläggsinformation om idrottsplatsen"
                            :en "Free-form additional information about the sports facility"}
              :data-type "text"}
-   :construction-year {:name {:fi "Rakennusvuosi"
-                              :se "Byggår"
-                              :en "Construction year"}
-                       :description {:fi "Vuosi, jolloin liikuntapaikka rakennettiin"
-                                     :se "År då idrottsplatsen byggdes"
-                                     :en "Year when the sports facility was built"}
+   :construction-year {:name {:fi "Perustamisvuosi"
+                              :se "Grundläggningsår"
+                              :en "Year of establishment"}
+                       :description {:fi "Vuosi, jolloin liikuntatoiminta alkoi tässä kohteessa"
+                                     :se "År då idrottsverksamheten inleddes på denna plats"
+                                     :en "Year when sports activities began at this facility"}
                        :data-type "Integer"}
    :renovation-years {:name {:fi "Peruskorjausvuodet"
                              :se "Renoveringsår"
@@ -138,6 +138,13 @@
                                     :se "År då idrottsplatsen har renoverats"
                                     :en "Years when the sports facility has been renovated"}
                       :data-type "array[Integer]"}
+   :renovations {:name {:fi "Toimenpiteet"
+                        :se "Åtgärder"
+                        :en "Renovations"}
+                 :description {:fi "Liikuntapaikkaan kohdistuneet perusparannukset ja kunnostukset"
+                               :se "Ombyggnader och underhåll som utförts på idrottsplatsen"
+                               :en "Major renovations and maintenance performed on the sports facility"}
+                 :data-type "array[renovation-entry]"}
    :type.type-code {:required true
                     :name {:fi "Tyyppi"
                            :se "Typ"
@@ -214,12 +221,12 @@
                                  :en "Sports facility circumstance information (e.g. lighting hours)"}
                    :data-type "complex"}
    #_#_:fields {:name {:fi "Kentät"
-                   :se "Planer"
-                   :en "Fields"}
-            :description {:fi "Jäähallien, uimahallien yms. sisäiset kentät/radat/altaat"
-                          :se "Interna planer/banor/bassänger i ishallar, simhallar etc."
-                          :en "Internal fields/tracks/pools in ice halls, swimming halls etc."}
-            :data-type "array[field]"}})
+                       :se "Planer"
+                       :en "Fields"}
+                :description {:fi "Jäähallien, uimahallien yms. sisäiset kentät/radat/altaat"
+                              :se "Interna planer/banor/bassänger i ishallar, simhallar etc."
+                              :en "Internal fields/tracks/pools in ice halls, swimming halls etc."}
+                :data-type "array[field]"}})
 
 (def csv-headers
   ["Tietue"
@@ -246,5 +253,4 @@
            (:en description)])))
 
 (comment
-  (keys common-keys)
-  )
+  (keys common-keys))
