@@ -26,5 +26,9 @@
  :mapped-services "Kopplade tjänster",
  :translate-to-other-langs "Översätt till andra språk",
  :unlink-service "Ta bort koppling",
+ :step1-description "Exportera alla idrottsanläggningar på en gång eller begränsa exporten till specifika typklasser. I det sista steget kan du fortfarande utesluta enskilda anläggningar.",
+ :integrate-all "Exportera alla idrottsanläggningar",
+ :integrate-selected "Välj typklasser",
+ :select-sub-categories "Välj typklasser",
  :unselect-helper
  "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."}

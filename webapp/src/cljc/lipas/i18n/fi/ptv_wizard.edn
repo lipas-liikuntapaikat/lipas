@@ -25,5 +25,9 @@
  :mapped-services "Linkitetyt palvelut",
  :translate-to-other-langs "Käännä muille kielille",
  :unlink-service "Poista linkitys",
+ :step1-description "Valitse vietäväksi kaikki kunnan liikuntapaikat kerralla tai rajaa vienti tiettyihin tyyppiluokkiin. Viimeisessä vaiheessa voit vielä jättää yksittäisiä liikuntapaikkoja pois viennistä.",
+ :integrate-all "Vie kaikki liikuntapaikat",
+ :integrate-selected "Valitse tyyppiluokat",
+ :select-sub-categories "Valitse tyyppiluokat",
  :unselect-helper
  "Jos et halua viedä tiettyä kohdetta, voit avata\n     kohteen oikealta ja laittaa liukukytkimen pois päältä."}

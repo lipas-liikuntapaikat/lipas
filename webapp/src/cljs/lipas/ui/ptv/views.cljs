@@ -7,6 +7,9 @@
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
             ["@mui/icons-material/Warning$default" :as WarningIcon]
             ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+            ["@mui/material/Radio$default" :as Radio]
+            ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Alert$default" :as Alert]
@@ -425,6 +428,7 @@
         locale (tr)
         org-id @(rf/subscribe [::subs/selected-ptv-org-id])
         sports-sites @(rf/subscribe [::subs/sports-sites org-id])
+        total-count (count sports-sites)
         available-sub-cats (hooks/use-memo
                              (fn []
                                (into #{} (keep :sub-category-id) sports-sites))
@@ -442,26 +446,54 @@
                                         (sort-by :sort-value)))
                                  [locale available-sub-cats])
         value (:sub-cats @(rf/subscribe [::subs/candidates-search]))
+        [mode set-mode] (hooks/use-state (if (seq value) "select" "all"))
         on-change (fn [v]
-                    (rf/dispatch [::events/set-candidates-search {:sub-cats v}]))]
+                    (rf/dispatch [::events/set-candidates-search {:sub-cats v}]))
+        filtered-count (if (seq value)
+                         (count (filter (fn [s] (contains? (set value) (:sub-category-id s))) sports-sites))
+                         total-count)
+        count-label (fn [n] (str n " " (if (= 1 n)
+                                         (tr :ptv/sports-site-count-singular)
+                                         (tr :ptv/sports-sites-count))))]
     [:> Stack
      {:sx #js {:gap 2}}
 
-     [:> Typography
-      "Voit valita haluamasi Lipas-tyyppiluokat vietäväksi PTV:hen. Jos et tee valintaa, kaikki kunnan omistamat liikuntapaikat viedään. Viimeisessä vaiheessa voit jättää tietyt liikuntapaikat pois viennistä."]
+     [:> Typography {:variant "body1"}
+      (tr :ptv.wizard/step1-description)]
 
-     ;; NOTE: Huoltotilat antaa aina 0 tulosta koska filteröity pois
-     [autocomplete2
-      {:options options*
-       :multiple true
-       :label "Valitse ryhmät"
-       :value (to-array value)
-       :onChange (fn [_e v]
-                   (on-change (vec (map (fn [x]
-                                          (if (map? x)
-                                            (:value x)
-                                            x))
-                                        v))))}]
+     [:> RadioGroup
+      {:value mode
+       :on-change (fn [e]
+                    (let [v (.. e -target -value)]
+                      (set-mode v)
+                      (when (= "all" v)
+                        (on-change []))))}
+
+      [:> FormControlLabel
+       {:value "all"
+        :control (r/as-element [:> Radio])
+        :label (str (tr :ptv.wizard/integrate-all) " (" (count-label total-count) ")")}]
+
+      [:> FormControlLabel
+       {:value "select"
+        :control (r/as-element [:> Radio])
+        :label (tr :ptv.wizard/integrate-selected)}]]
+
+     (when (= mode "select")
+       [:> Stack {:spacing 1}
+        [autocomplete2
+         {:options options*
+          :multiple true
+          :label (tr :ptv.wizard/select-sub-categories)
+          :value (to-array value)
+          :onChange (fn [_e v]
+                      (on-change (vec (map (fn [x]
+                                             (if (map? x)
+                                               (:value x)
+                                               x))
+                                           v))))}]
+        [:> Typography {:variant "body2" :color "text.secondary"}
+         (count-label filtered-count)]])
 
      [:> Button
       {:onClick (fn [_e]
