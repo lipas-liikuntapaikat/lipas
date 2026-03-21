@@ -256,7 +256,8 @@ Source data:
    ;; Structured Outputs doesn't support maxLength
    ;; https://platform.openai.com/docs/guides/structured-outputs#some-type-specific-keywords-are-not-yet-supported
    ;; The prompt mentions summary should be max 150 chars
-   [:summary (localized-string-schema nil #_{:max 150})]])
+   [:summary (localized-string-schema nil #_{:max 150})]
+   [:user-instruction (localized-string-schema nil)]])
 
 (def Response
   (json-schema/transform response-schema))
@@ -412,6 +413,7 @@ Follow these requirements:
 
 1) Administrative summary (maximum 150 characters)
 2) Service description (2-3 paragraphs)
+3) User instruction (toimintaohje) - how to access the service (max 2500 characters)
 
 Requirements:
 - Maintain administrative tone in target languages
@@ -436,14 +438,15 @@ Source text:
 ")
 
 (defn translate-to-other-langs
-  [{:keys [from to summary description]}]
+  [{:keys [from to summary description user-instruction]}]
   (gemini-complete gemini-config
                    ptv-system-instruction-v5
                    (format translate-to-other-langs-prompt
                            from
                            (str/join ", " to)
-                           (json/encode {:summary summary
-                                         :description description}))))
+                           (json/encode (cond-> {:summary summary
+                                                 :description description}
+                                          user-instruction (assoc :user-instruction user-instruction))))))
 
 (comment
   (translate-to-other-langs
@@ -516,6 +519,14 @@ Description: 2–4 paragraphs covering:
 You may mention the approximate scale (\"useita\", \"kymmeniä\", \"yli sata\") but
 do NOT list exact counts per facility type. The detailed breakdown belongs in
 individual ServiceLocation descriptions.
+
+User instruction (Toimintaohje): 1–3 sentences telling the citizen how to access
+or start using the service. What concrete steps should they take? Can they go
+directly to a facility, or do they need to book or register first? Keep it
+actionable and written for the citizen. Do not include addresses or phone numbers.
+Max 2500 chars/language.
+- GOOD: \"Liikuntapaikat ovat vapaasti käytettävissä. Tarkista aukioloajat ja yhteystiedot palvelupaikkojen kuvauksista.\"
+- GOOD: \"Uimahallin käyttö edellyttää pääsylipun ostamista. Tarkista aukioloajat ja hinnat palvelupaikan kuvauksesta.\"
 
 Source data:
 %s")

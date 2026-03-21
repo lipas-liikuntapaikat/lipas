@@ -125,6 +125,7 @@
 (def persisted-ptv-keys [:languages
                          :summary
                          :description
+                         :user-instruction
                          :last-sync
                          :org-id
                          :sync-enabled
