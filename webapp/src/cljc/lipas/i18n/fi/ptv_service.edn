@@ -1,2 +1,3 @@
 {:classes "Palveluluokat",
+ :services-explanation "Organisaation PTV-palvelut, joihin liikuntapaikat liitetään palvelupaikkoina. Lipakseen liitetyt palvelut on luotu integraation kautta.",
  :show-only-lipas-managed "Näytä vain Lipakseen liitetyt palvelut"}

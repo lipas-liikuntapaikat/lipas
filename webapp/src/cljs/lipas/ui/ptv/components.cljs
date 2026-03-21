@@ -23,6 +23,9 @@
   "Preview component showing how a sports site will appear in PTV as a service location"
   [{:keys [org-id lipas-id]}]
   (let [preview @(rf/subscribe [::subs/service-location-preview org-id lipas-id])
+        sports-sites @(rf/subscribe [::subs/sports-sites org-id])
+        site-data (some #(when (= lipas-id (:lipas-id %)) %) sports-sites)
+        synced? (= :ok (:sync-status site-data))
         [expanded? set-expanded] (hooks/use-state false)
 
         row (fn [{:keys [label value tooltip]}]
@@ -84,7 +87,9 @@
 
        [:> TableBody
         (row {:label "Tila"
-              :value (:publishingStatus preview)
+              :value (if synced?
+                       (:publishingStatus preview)
+                       (str (:publishingStatus preview) " (esikatselu, ei vielä viety)"))
               :tooltip "Integraation PTV:hen viemät kohteet julkaistaan automaattisesti. Vedokseksi vieminen ei ole tuettu."})
 
         (row {:label "Kielet"

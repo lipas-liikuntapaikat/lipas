@@ -8,6 +8,9 @@
  :service-channels "Palvelupaikat",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
+ :synced-to-ptv "Viety PTV:hen",
+ :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
+ :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
  :tooltip "Vie Palvelutietovarantoon",
  :wizard "Käyttöönotto"}
