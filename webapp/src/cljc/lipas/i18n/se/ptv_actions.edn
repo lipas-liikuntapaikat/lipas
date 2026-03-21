@@ -1,6 +1,8 @@
 {:export "Skicka till",
  :export-disclaimer
  "Jag har läst beskrivningarna och vill att denna objekt skickas till PTV.",
+ :update-disclaimer
+ "Jag har läst beskrivningarna och vill att denna objekts uppgifter uppdateras i PTV.",
  :generate-with-ai
  "Generera beskrivningar med artificiell intelligens",
  :select-org "Välj organisation",

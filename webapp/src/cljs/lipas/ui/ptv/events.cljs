@@ -89,9 +89,20 @@
 
 (rf/reg-event-fx ::fetch-integration-candidates-success
                  (fn [{:keys [db]} [_ ptv-org-id resp]]
-                   {:db (-> db
-                            (assoc-in [:ptv :loading-from-lipas :candidates] false)
-                            (assoc-in [:ptv :org ptv-org-id :data :sports-sites] (utils/index-by :lipas-id resp)))}))
+                   (let [new-sites (utils/index-by :lipas-id resp)
+                         existing-sites (get-in db [:ptv :org ptv-org-id :data :sports-sites])
+                         ;; Preserve locally-modified :ptv data (e.g. AI-generated descriptions)
+                         merged-sites (reduce-kv
+                                       (fn [m lipas-id new-site]
+                                         (let [existing (get existing-sites lipas-id)]
+                                           (assoc m lipas-id
+                                                  (cond-> new-site
+                                                    (:ptv existing) (update :ptv #(merge (:ptv existing) %))))))
+                                       {}
+                                       new-sites)]
+                     {:db (-> db
+                              (assoc-in [:ptv :loading-from-lipas :candidates] false)
+                              (assoc-in [:ptv :org ptv-org-id :data :sports-sites] merged-sites))})))
 
 (rf/reg-event-fx ::fetch-integration-candidates-failure
                  (fn [{:keys [db]} [_ resp]]
