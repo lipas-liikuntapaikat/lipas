@@ -61,18 +61,7 @@
                  (fn [{:keys [db]} [_ lipas-org]]
                    (when lipas-org
                      (let [token (-> db :user :login :token)
-                           sub-cats (-> db :ptv :candidates-search :sub-cats)
-
-                           by-sub-category types/by-sub-category
-
-            ;; map sub-cats codes to type-codes for search API
-                           search (when (seq sub-cats)
-                                    {:type-codes (->> (select-keys by-sub-category sub-cats)
-                                                      (mapcat second)
-                                                      (map :type-code)
-                                                      vec)})
-
-            ;; Get params from the selected org's PTV config
+            ;; Always fetch ALL candidates - filtering is done in subscriptions
                            ptv-config (:ptv-data lipas-org)
                            ptv-org-id (:org-id ptv-config)
                            params (select-keys ptv-config [:city-codes :owners])]
@@ -81,7 +70,7 @@
                               {:method :post
                                :headers {:Authorization (str "Token " token)}
                                :uri (str (:backend-url db) "/actions/get-ptv-integration-candidates")
-                               :params (merge params search)
+                               :params params
                                :format (ajax/transit-request-format)
                                :response-format (ajax/transit-response-format)
                                :on-success [::fetch-integration-candidates-success ptv-org-id]

@@ -1012,10 +1012,10 @@
   [_props]
   (let [tr (<== [:lipas.ui.subs/translator])
         org-id (<== [::subs/selected-ptv-org-id])
-        sports-sites (<== [::subs/sports-sites org-id])
+        sports-sites (<== [::subs/sports-sites-wizard org-id])
         setup-done? (<== [::subs/sports-site-setup-done org-id])
-        sports-sites-count (<== [::subs/sports-sites-count org-id])
-        sports-sites-count-sync (<== [::subs/sports-sites-count-sync org-id])
+        sports-sites-count (count sports-sites)
+        sports-sites-count-sync (count (filter :sync-enabled sports-sites))
         sports-sites-filter (<== [::subs/sports-sites-filter])
 
         [selected-tab set-selected-tab] (hooks/use-state :fi)
