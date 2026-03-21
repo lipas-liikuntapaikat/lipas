@@ -593,7 +593,6 @@
           services @(rf/subscribe [::subs/services org-id])
 
           manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
-          mapped-candidates @(rf/subscribe [::subs/mapped-service-candidates org-id])
           missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])
           service-details-tab (<== [::subs/service-details-tab])]
 
@@ -698,14 +697,17 @@
 
           [:div
            (doall
-             (for [{:keys [source-id valid sub-category sub-category-id languages] :as m} service-candidates]
+             (for [{:keys [source-id valid sub-category sub-category-id languages linked?] :as m} service-candidates]
 
                ^{:key sub-category-id}
                [layouts/expansion-panel
-                {:label sub-category
-                 :label-icon (if valid
-                               [:> Icon {:color "success"} "done"]
-                               [:> Icon {:color "disabled"} "done"])}
+                {:label (if linked?
+                          (str sub-category " (linkitetty)")
+                          sub-category)
+                 :label-icon (cond
+                               linked? [:> Icon {:color "info"} "link"]
+                               valid [:> Icon {:color "success"} "done"]
+                               :else [:> Icon {:color "disabled"} "done"])}
 
                 [:> Stack {:spacing 2}
                  [:> Tabs {:value service-details-tab
@@ -718,28 +720,41 @@
                  (when (= "descriptions" service-details-tab)
                    [:> Stack {:spacing 2}
 
-                    ;; Link to existing PTV service (collapsible)
+                    ;; Link to existing PTV service (collapsible) or show linked status
                     (when (seq services)
-                      (let [expanded? (contains? @link-expanded source-id)]
-                        [:> Stack {:spacing 1}
-                         [:> Button
-                          {:size "small"
-                           :variant "text"
-                           :sx #js{:alignSelf "flex-start" :textTransform "none"}
-                           :startIcon (r/as-element
-                                        [:> Icon {:sx #js{:fontSize "1rem"}}
-                                         (if expanded? "expand_less" "expand_more")])
-                           :on-click #(swap! link-expanded (if expanded? disj conj) source-id)}
-                          (tr :ptv.wizard/link-to-existing-service)]
-                         (when expanded?
-                           [controls/services-selector
-                            {:options services
-                             :multiple false
-                             :value nil
-                             :on-change #(when %
-                                           (==> [::events/link-candidate-to-existing-service source-id %]))
-                             :value-fn :service-id
-                             :label (tr :ptv.wizard/select-existing-service)}])]))
+                      (if linked?
+                        ;; Already linked - show linked service with unlink option
+                        (let [linked-service (some #(when (= (:service-id %) (:service-id m)) %) services)]
+                          [:> Stack {:direction "row" :spacing 1 :align-items "center"
+                                     :sx #js{:p 1 :bgcolor "#e3f2fd" :borderRadius 1}}
+                           [:> Icon {:color "info" :sx #js{:fontSize "1.2rem"}} "link"]
+                           [:> Typography {:variant "body2" :flex 1}
+                            (str (tr :ptv.wizard/linked-to-service) ": " (:label linked-service))]
+                           [:> Button
+                            {:size "small" :color "warning"
+                             :on-click #(==> [::events/unlink-candidate-from-existing-service source-id])}
+                            (tr :ptv.wizard/unlink-service)]])
+                        ;; Not linked - show collapsible link option
+                        (let [expanded? (contains? @link-expanded source-id)]
+                          [:> Stack {:spacing 1}
+                           [:> Button
+                            {:size "small"
+                             :variant "text"
+                             :sx #js{:alignSelf "flex-start" :textTransform "none"}
+                             :startIcon (r/as-element
+                                          [:> Icon {:sx #js{:fontSize "1rem"}}
+                                           (if expanded? "expand_less" "expand_more")])
+                             :on-click #(swap! link-expanded (if expanded? disj conj) source-id)}
+                            (tr :ptv.wizard/link-to-existing-service)]
+                           (when expanded?
+                             [controls/services-selector
+                              {:options services
+                               :multiple false
+                               :value nil
+                               :on-change #(when %
+                                             (==> [::events/link-candidate-to-existing-service source-id %]))
+                               :value-fn :service-id
+                               :label (tr :ptv.wizard/select-existing-service)}])])))
 
                     (let [languages (set languages)]
                       [:> Tabs
@@ -772,26 +787,7 @@
                  (when (= "preview" service-details-tab)
                    [service-preview
                     {:source-id source-id
-                     :sub-category-id sub-category-id}])]]))]
-
-          ;; Mapped services section
-          (when (seq mapped-candidates)
-            [:> Stack {:spacing 2 :sx #js{:mt 2}}
-             [:> Typography {:variant "h6"}
-              (tr :ptv.wizard/mapped-services)]
-             (doall
-               (for [{:keys [source-id sub-category service-name]} mapped-candidates]
-                 ^{:key source-id}
-                 [:> Stack {:direction "row" :spacing 2 :align-items "center"
-                            :sx #js{:p 1 :bgcolor "#f5f5f5" :borderRadius 1}}
-                  [:> Icon {:color "success"} "link"]
-                  [:> Typography {:flex 1}
-                   (str sub-category " → " service-name)]
-                  [:> Button
-                   {:size "small"
-                    :color "warning"
-                    :on-click #(==> [::events/unlink-candidate-from-existing-service source-id])}
-                   (tr :ptv.wizard/unlink-service)]]))])]]]])))
+                     :sub-category-id sub-category-id}])]]))]]]]])))
 
 (r/defc service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]

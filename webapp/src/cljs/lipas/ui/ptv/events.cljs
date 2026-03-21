@@ -650,10 +650,24 @@
 
 (rf/reg-event-fx ::link-candidate-to-existing-service
                  (fn [{:keys [db]} [_ source-id service-id]]
-                   (let [org-id (-get-ptv-org-id db)]
+                   (let [org-id (-get-ptv-org-id db)
+                         ;; Get the existing service's descriptions to populate the form
+                         service (get-in db [:ptv :org org-id :data :services service-id])
+                         summaries (->> (:serviceDescriptions service)
+                                        (filter #(= (:type %) "Summary")))
+                         descriptions (->> (:serviceDescriptions service)
+                                           (filter #(= (:type %) "Description")))
+                         lang-map {"sv" :se "fi" :fi "en" :en}
+                         summary (into {} (keep (fn [m] (when-let [k (get lang-map (:language m))]
+                                                          [k (:value m)]))) summaries)
+                         description (into {} (keep (fn [m] (when-let [k (get lang-map (:language m))]
+                                                              [k (:value m)]))) descriptions)]
                      {:db (-> db
                               (assoc-in [:ptv :org org-id :data :service-mappings source-id]
                                         {:service-id service-id})
+                              ;; Populate descriptions from existing service
+                              (assoc-in [:ptv :org org-id :data :service-candidates source-id :summary] summary)
+                              (assoc-in [:ptv :org org-id :data :service-candidates source-id :description] description)
                               (update-in [:ptv :org org-id :data :manual-services] dissoc source-id))
                       :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 
@@ -674,6 +688,8 @@
                                        sports-sites)]
                      {:db (-> db
                               (update-in [:ptv :org org-id :data :service-mappings] dissoc source-id)
+                              ;; Clear populated descriptions
+                              (update-in [:ptv :org org-id :data :service-candidates] dissoc source-id)
                               (assoc-in [:ptv :org org-id :data :sports-sites] sports-sites))
                       :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 

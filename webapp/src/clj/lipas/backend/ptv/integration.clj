@@ -217,6 +217,18 @@
     (-> (http ptv org-id params)
         :body)))
 
+(defn update-service-by-id
+  "Update PTV service by its PTV UUID (not source-id).
+   Used when adopting an existing service into LIPAS integration."
+  [ptv service-id data]
+  (log/info "Update PTV service by ID" service-id)
+  (let [org-id (:mainResponsibleOrganization data)
+        params {:url (make-url ptv "/v11/Service/" service-id)
+                :method :put
+                :form-params data}]
+    (-> (http ptv org-id params)
+        :body)))
+
 (defn create-service-location
   [ptv service-location]
   (let [org-id (-> service-location :organizationId)
@@ -312,8 +324,7 @@
                                              :publishingStatus "Deleted"}))
     (println "Removing Service Locations in PTV Test... DONE!")
 
-
-    ;; Delete all org services in PTV test env for org 9
+;; Delete all org services in PTV test env for org 9
     (println "Removing Services in PTV Test...")
     (doseq [x (:itemList (get-org-services ptv* org-id*))]
       (when-let [source-id (:sourceId x)]
@@ -336,6 +347,4 @@
                                            false)]
         (core/index! search* resp :sync)))
 
-    (println "Liminka / org 9 wiped out successfully.")
-    )
-)
+    (println "Liminka / org 9 wiped out successfully.")))
