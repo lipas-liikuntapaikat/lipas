@@ -767,22 +767,48 @@
                        (when (contains? languages "en")
                          [:> Tab {:value "en" :label "EN"}])])
 
-                    ;; Summary
-                    [text-fields/text-field
-                     {:multiline true
-                      :variant "outlined"
-                      :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
-                      :label (tr :ptv/summary)
-                      :value (get-in m [:summary @selected-tab])}]
+                    ;; Summary (max 150 chars)
+                    (let [summary-val (or (get-in m [:summary @selected-tab]) "")
+                          summary-len (count summary-val)]
+                      [text-fields/text-field
+                       {:multiline true
+                        :variant "outlined"
+                        :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+                        :label (tr :ptv/summary)
+                        :value summary-val
+                        :helperText (str summary-len "/150")
+                        :error (> summary-len 150)}])
 
-                    ;; Description
-                    [text-fields/text-field
-                     {:variant "outlined"
-                      :rows 5
-                      :multiline true
-                      :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
-                      :label (tr :ptv/description)
-                      :value (get-in m [:description @selected-tab])}]])
+                    ;; Description (max 2500 chars)
+                    (let [desc-val (or (get-in m [:description @selected-tab]) "")
+                          desc-len (count desc-val)]
+                      [text-fields/text-field
+                       {:variant "outlined"
+                        :rows 5
+                        :multiline true
+                        :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+                        :label (tr :ptv/description)
+                        :value desc-val
+                        :helperText (str desc-len "/2500")
+                        :error (> desc-len 2500)}])
+
+                    ;; Translate button (only when multiple languages)
+                    (when (> (count languages) 1)
+                      (let [from-lang @selected-tab
+                            other-langs (disj (set (map keyword languages)) from-lang)
+                            generating? (<== [::subs/generating-descriptions?])
+                            has-text? (and (seq (get-in m [:summary from-lang]))
+                                           (seq (get-in m [:description from-lang])))]
+                        [:> Button
+                         {:size "small"
+                          :variant "text"
+                          :disabled (or generating? (not has-text?))
+                          :startIcon (r/as-element [:> Icon "translate"])
+                          :sx #js{:alignSelf "flex-start" :textTransform "none"}
+                          :on-click #(==> [::events/translate-service-candidate
+                                           source-id from-lang other-langs])}
+                         (str (tr :ptv.wizard/translate-from) " "
+                              (str/upper-case (name from-lang)))]))])
 
                  (when (= "preview" service-details-tab)
                    [service-preview
