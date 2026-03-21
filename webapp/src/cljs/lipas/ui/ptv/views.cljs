@@ -72,8 +72,8 @@
   [{:keys [value on-change opts]}]
   (let [opts (set opts)]
     [:> Tabs
-     {:value value
-      :on-change on-change}
+     {:value (if (keyword? value) (name value) value)
+      :on-change (fn [e v] (on-change e (keyword v)))}
      [:> Tab {:value "fi" :label "FI"}]
      (when (contains? opts "se")
        [:> Tab {:value "se" :label "SE"}])
@@ -920,8 +920,8 @@
 
            [lang-selector
             {:value selected-tab
-             :on-change set-selected-tab
-             :enabled-languages org-languages}]
+             :on-change (fn [_e v] (set-selected-tab v))
+             :opts org-languages}]
 
           ;; Summary
            [text-fields/text-field
@@ -1144,7 +1144,7 @@
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]
-  (r/with-let [lang (r/atom "fi")]
+  (r/with-let [lang (r/atom :fi)]
     (let [tr (<== [:lipas.ui.subs/translator])
           source-id (:source-id service)
           loading? false
