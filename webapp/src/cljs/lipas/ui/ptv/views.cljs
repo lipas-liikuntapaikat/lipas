@@ -807,8 +807,9 @@
                           :sx #js{:alignSelf "flex-start" :textTransform "none"}
                           :on-click #(==> [::events/translate-service-candidate
                                            source-id from-lang other-langs])}
-                         (str (tr :ptv.wizard/translate-from) " "
-                              (str/upper-case (name from-lang)))]))])
+                         (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                              (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                              ")")]))])
 
                  (when (= "preview" service-details-tab)
                    [service-preview
