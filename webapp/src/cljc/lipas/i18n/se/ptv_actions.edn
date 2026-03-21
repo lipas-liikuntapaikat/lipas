@@ -7,4 +7,9 @@
  "Generera beskrivningar med artificiell intelligens",
  :select-org "Välj organisation",
  :select-service "Välj service",
- :select-service-channel "Välj servicepunkt"}
+ :change-service "Ändra tjänst",
+ :attach-existing-service-channel "Koppla till befintlig servicepunkt...",
+ :new-service-channel-will-be-created "En ny servicepunkt skapas i PTV vid export.",
+ :change-service-channel "Ändra servicepunkt",
+ :select-service-channel "Välj servicepunkt",
+ :sync-now "Synkronisera nu"}

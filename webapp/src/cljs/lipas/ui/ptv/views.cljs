@@ -8,6 +8,7 @@
             ["@mui/icons-material/Warning$default" :as WarningIcon]
             ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Radio$default" :as Radio]
             ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
@@ -134,104 +135,220 @@
           "Auditoijan palaute")]
        feedback])))
 
+(defn ptv-link-field
+  "Shows PTV items as links with an edit button to switch to selector mode.
+   Props: :label, :items [{:id :name :url}], :editing?, :on-edit, :on-cancel, :selector-component"
+  [{:keys [label items editing? on-edit on-cancel selector-component tooltip tr]}]
+  (if (and (seq items) (not editing?))
+    [:> Stack {:spacing 0.5}
+     [:> Stack {:direction "row" :align-items "center" :spacing 0.5}
+      [:> Typography {:variant "caption" :color "text.secondary"} label]
+      [:> Tooltip {:title (or tooltip "")}
+       [:> IconButton {:size "small" :on-click on-edit
+                       :sx #js {:p 0}}
+        [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]]]
+     (for [{:keys [id name url]} items]
+       ^{:key id}
+       [:> Link {:href url :target "_blank" :variant "body2"} (or name id)])]
+    [:> Stack {:spacing 0.5}
+     selector-component
+     (when (and editing? (seq items))
+       [:> Button {:size "small" :variant "text"
+                   :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                   :on-click on-cancel}
+        (tr :actions/cancel)])]))
+
+(defn form-left-column
+  [{:keys [org-id tr site services ptv-base]}]
+  (r/with-let [editing-services? (r/atom false)
+               editing-channel? (r/atom false)]
+    (let [loading? (<== [::subs/generating-descriptions?])
+          service-ids (set (:service-ids site))
+          linked-services (filter #(contains? service-ids (:service-id %)) services)
+          channel-id (first (:service-channel-ids site))
+          channel-name (:service-channel-name site)]
+      [:> Stack {:spacing 2}
+
+       ;; Services
+       [ptv-link-field
+        {:tr tr
+         :label (str (tr :ptv/services) " PTV:ssä")
+         :items (for [s linked-services]
+                  {:id (:service-id s)
+                   :name (:label s)
+                   :url (str ptv-base "/services/service/" (:service-id s))})
+         :editing? @editing-services?
+         :on-edit #(reset! editing-services? true)
+         :on-cancel #(reset! editing-services? false)
+         :tooltip (tr :ptv.actions/change-service)
+         :selector-component
+         [controls/services-selector
+          {:options services
+           :value (:service-ids site)
+           :on-change (fn [ids]
+                        (rf/dispatch [::events/select-services site ids])
+                        (reset! editing-services? false))
+           :value-fn :service-id
+           :label (tr :ptv/services)}]}]
+
+       ;; Service channel
+       (if channel-id
+         ;; Already linked - show link with edit option
+         [ptv-link-field
+          {:tr tr
+           :label (str (tr :ptv/service-channel) " PTV:ssä")
+           :items [{:id channel-id
+                    :name channel-name
+                    :url (str ptv-base "/channels/serviceLocation/" channel-id)}]
+           :editing? @editing-channel?
+           :on-edit #(reset! editing-channel? true)
+           :on-cancel #(reset! editing-channel? false)
+           :tooltip (tr :ptv.actions/change-service-channel)
+           :selector-component
+           [service-channel-selector
+            {:org-id org-id
+             :value (:service-channel-ids site)
+             :value-fn :service-channel-id
+             :on-change (fn [v]
+                          (==> [::events/select-service-channels site v])
+                          (reset! editing-channel? false))
+             :label (tr :ptv/service-channel)}]}]
+         ;; Not linked - show "new will be created" with option to link existing
+         [:> Stack {:spacing 0.5}
+          [:> Typography {:variant "caption" :color "text.secondary"}
+           (tr :ptv/service-channel)]
+          [:> Typography {:variant "body2" :color "text.secondary" :sx #js {:fontStyle "italic"}}
+           (tr :ptv.actions/new-service-channel-will-be-created)]
+          (if @editing-channel?
+            [:> Stack {:spacing 0.5}
+             [service-channel-selector
+              {:org-id org-id
+               :value (:service-channel-ids site)
+               :value-fn :service-channel-id
+               :on-change (fn [v]
+                            (==> [::events/select-service-channels site v])
+                            (reset! editing-channel? false))
+               :label (tr :ptv/service-channel)}]
+             [:> Button {:size "small" :variant "text"
+                         :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                         :on-click #(reset! editing-channel? false)}
+              (tr :actions/cancel)]]
+            [:> Button {:size "small" :variant "text"
+                        :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                        :on-click #(reset! editing-channel? true)}
+             (tr :ptv.actions/attach-existing-service-channel)])])
+
+       ;; AI generate button
+       [:> Button {:disabled loading?
+                   :variant "outlined"
+                   :size "small"
+                   :sx #js {:textTransform "none"}
+                   :startIcon (r/as-element [:> Icon "auto_fix_high"])
+                   :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
+        (tr :ptv.actions/generate-with-ai)]
+
+       (when loading?
+         [:> CircularProgress {:size 20}])
+
+       ;; Sync / Export button
+       (let [valid? (and (:sync-enabled site)
+                         (some-> site :summary :fi count (> 5))
+                         (some-> site :description :fi count (> 5)))
+             synced? (:last-sync site)]
+         [:> Button
+          {:variant "contained"
+           :color "secondary"
+           :size "small"
+           :disabled (or loading? (not valid?))
+           :sx #js {:textTransform "none"}
+           :startIcon (r/as-element [:> Icon (if synced? "sync" "ios_share")])
+           :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+          (if synced?
+            (tr :ptv.actions/sync-now)
+            (tr :ptv.wizard/export-service-locations-to-ptv))])])))
+
+(defn form-right-column
+  [{:keys [tr site org-languages]}]
+  (r/with-let [selected-tab (r/atom :fi)]
+    (let [loading? (<== [::subs/generating-descriptions?])]
+      [:> Stack {:spacing 2}
+
+       [controls/lang-selector
+        {:value @selected-tab
+         :on-change #(reset! selected-tab %)
+         :enabled-languages (set org-languages)}]
+
+       ;; Summary
+       (let [v (or (get-in site [:summary @selected-tab]) "")]
+         [text-fields/text-field
+          {:disabled loading?
+           :multiline true
+           :variant "outlined"
+           :on-change #(==> [::events/set-summary site @selected-tab %])
+           :label (tr :ptv/summary)
+           :value v
+           :helperText (str (count v) "/150")
+           :error (> (count v) 150)}])
+
+       [audit-feedback-component
+        {:lipas-id (:lipas-id site)
+         :field-name :summary}]
+
+       ;; Description
+       (let [v (or (get-in site [:description @selected-tab]) "")]
+         [text-fields/text-field
+          {:disabled loading?
+           :variant "outlined"
+           :rows 5
+           :multiline true
+           :on-change #(==> [::events/set-description site @selected-tab %])
+           :label (tr :ptv/description)
+           :value v
+           :helperText (str (count v) "/2500")
+           :error (> (count v) 2500)}])
+
+       [audit-feedback-component
+        {:lipas-id (:lipas-id site)
+         :field-name :description}]
+
+       ;; Translate button
+       (when (> (count org-languages) 1)
+         (let [from-lang @selected-tab
+               other-langs (disj (set (map keyword org-languages)) from-lang)
+               has-text? (and (seq (get-in site [:summary from-lang]))
+                              (seq (get-in site [:description from-lang])))]
+           [:> Button
+            {:size "small"
+             :variant "text"
+             :disabled (or loading? (not has-text?))
+             :startIcon (r/as-element [:> Icon "translate"])
+             :sx #js {:alignSelf "flex-start" :textTransform "none"}
+             :on-click #(==> [::events/translate-site-descriptions
+                              (:lipas-id site) from-lang other-langs])}
+            (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                 (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                 ")")]))])))
+
 (defn form
   [{:keys [org-id tr site]}]
   (let [services @(rf/subscribe [::subs/services org-id])
-        org-languages (<== [::subs/org-languages org-id])]
-    [:> Grid
-     {:container true
-      :spacing 2
-      :style {:padding-top "1em" :padding-bottom "1em"}}
+        org-languages (<== [::subs/org-languages org-id])
+        ptv-base (if (utils/prod?)
+                   "https://palvelutietovaranto.suomi.fi"
+                   "https://palvelutietovaranto.trn.suomi.fi")]
+    [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
 
-     [:> Grid {:item true :xs 12}
-      [checkboxes/switch
-       {:label (tr :ptv.actions/export-disclaimer)
-        :value (:sync-enabled site)
-        :on-change #(==> [::events/toggle-sync-enabled site %])}]]
+     [checkboxes/switch
+      {:label (tr :ptv.actions/export-disclaimer)
+       :value (:sync-enabled site)
+       :on-change #(==> [::events/toggle-sync-enabled site %])}]
 
-     [:> Grid {:item true :xs 12 :lg 4}
-      [:> Stack {:spacing 2}
-
-       [:> Typography {:variant "h6"}
-        (tr :ptv/services)]
-
-       ;; Service
-       [controls/services-selector
-        {:options services
-         :value (:service-ids site)
-         :on-change (fn [ids] (rf/dispatch [::events/select-services site ids]))
-         :value-fn :service-id
-         :label (tr :ptv.actions/select-service)}]]]
-
-     ;; Service channels
-     [:> Grid {:item true :xs 12 :lg 4}
-      [:> Stack {:spacing 2}
-       [:> Typography {:variant "h6"}
-        (tr :ptv/service-channels)]
-
-       [service-channel-selector
-        {:org-id org-id
-         :value (:service-channel-ids site)
-         :value-fn :service-channel-id
-         :on-change #(==> [::events/select-service-channels site %])
-         :label (tr :ptv.actions/select-service-channel)}]]]
-
-     ;; Descriptions
-     (r/with-let [selected-tab (r/atom :fi)]
-       (let [loading? (<== [::subs/generating-descriptions?])]
-         [:> Grid {:item true :xs 12 :lg 4}
-          [:> Stack {:spacing 2}
-           [:> Typography {:variant "h6"}
-            (tr :ptv/descriptions)]
-
-           [:> Button {:disabled loading?
-                       :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
-            (tr :ptv.actions/generate-with-ai)]
-
-           (when loading?
-             [:> CircularProgress])
-
-           [controls/lang-selector
-            {:value @selected-tab
-             :on-change #(reset! selected-tab %)
-             :enabled-languages (set org-languages)}]
-
-           ;; Summary
-           [text-fields/text-field
-            {:disabled loading?
-             :multiline true
-             :variant "outlined"
-             :on-change #(==> [::events/set-summary site @selected-tab %])
-             :label "Tiivistelmä"
-             :value (get-in site [:summary @selected-tab])}]
-
-           ;; Summary audit feedback
-           [audit-feedback-component
-            {:lipas-id (:lipas-id site)
-             :field-name :summary}]
-
-           ;; Description
-           [text-fields/text-field
-            {:disabled loading?
-             :variant "outlined"
-             :rows 5
-             :multiline true
-             :on-change #(==> [::events/set-description site @selected-tab %])
-             :label "Kuvaus"
-             :value (get-in site [:description @selected-tab])}]
-
-           ;; Description audit feedback
-           [audit-feedback-component
-            {:lipas-id (:lipas-id site)
-             :field-name :description}]
-
-           (if (:sync-enabled site)
-             [:> Button {:disabled loading?
-                         :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-              "Vie PTV:hen"]
-             [:> Button {:disabled loading?
-                         :on-click #(==> [::events/save-ptv-meta [site]])}
-              "Tallenna"])]]))]))
+     [:> Grid {:container true :spacing 3}
+      [:> Grid {:item true :xs 12 :md 4}
+       [form-left-column {:org-id org-id :tr tr :site site
+                          :services services :ptv-base ptv-base}]]
+      [:> Grid {:item true :xs 12 :md 8}
+       [form-right-column {:tr tr :site site :org-languages org-languages}]]]]))
 
 (defn table []
   (r/with-let [expanded-rows (r/atom {})
@@ -350,32 +467,31 @@
                       :on-change #(==> [::events/toggle-sync-enabled site %])}]]
 
                  [:> TableCell {:sx #js{:textAlign "center"}}
-                  [:> Stack
-                   {:direction "row"
-                    :alignItems "center"
-                    :justifyContent "center"}
-                   [:> Tooltip {:placement "right-end"
-                                :title (if (:sync-enabled site)
-                                         (case sync-status
-                                           :ok "PTV:ssä on ajantasaiset tiedot tästä liikuntapaikasta"
-                                           :not-synced "Liikuntapaikkaa ei ole vielä koskaan viety Palvelutietovarantoon"
-                                           :out-of-date "Liikuntapaikkaan on tehty muutoksia, joita ei ole viety Palvelutietovarantoon")
-                                         "Integraatio ei ole päällä tälle liikuntapaikalle")}
-                    [:> Avatar
-                     {:sx #js {:bgcolor (if (:sync-enabled site)
-                                          (case sync-status
-                                            :ok "success.main"
-                                            :not-synced "error.main"
-                                            :out-of-date "warning.main")
-                                          mui/gray3)
-                               :mr 2}}
-                     (if (:sync-enabled site)
-                       (if (= :ok sync-status)
-                         [:> Sync {:color "white"}]
-                         [:> SyncProblem
-                          {:color "white"}])
-                       [:> SyncDisabled {:background "white"}])]]
-                   #_(:event-date-human site)]]
+                  (if (:sync-enabled site)
+                    (case sync-status
+                      :ok
+                      [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " "
+                                               (some-> site :last-sync utils/->human-date-time-at-user-tz))}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "success"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> Sync {:fontSize "small"}])}]]
+                      :out-of-date
+                      [:> Tooltip {:title (tr :ptv/out-of-date)}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "warning"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+                      ;; :not-synced
+                      [:> Tooltip {:title (tr :ptv/not-yet-synced)}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> SyncDisabled {:fontSize "small"}])}]])
+                    ;; sync not enabled - no chip
+                    nil)]
 
                 ;; Audit status
                  (audit-status-cell site)

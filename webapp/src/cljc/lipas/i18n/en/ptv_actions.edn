@@ -6,4 +6,9 @@
  :generate-with-ai "Generate descriptions with AI",
  :select-org "Select organization",
  :select-service "Select service",
- :select-service-channel "Select service location"}
+ :change-service "Change service",
+ :attach-existing-service-channel "Link to existing service location...",
+ :new-service-channel-will-be-created "A new service location will be created in PTV on export.",
+ :change-service-channel "Change service location",
+ :select-service-channel "Select service location",
+ :sync-now "Sync now"}

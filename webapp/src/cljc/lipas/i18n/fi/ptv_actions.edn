@@ -6,4 +6,9 @@
  :generate-with-ai "Generoi kuvaukset tekoälyllä",
  :select-org "Valitse organisaatio",
  :select-service "Valitse palvelu",
- :select-service-channel "Valitse palvelupaikka"}
+ :change-service "Muuta palvelua",
+ :attach-existing-service-channel "Liitä olemassa olevaan palvelupaikkaan...",
+ :new-service-channel-will-be-created "Uusi palvelupaikka luodaan PTV:hen viennin yhteydessä.",
+ :change-service-channel "Muuta palvelupaikkaa",
+ :select-service-channel "Valitse palvelupaikka",
+ :sync-now "Synkronoi nyt"}
