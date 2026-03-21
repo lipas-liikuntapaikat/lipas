@@ -89,19 +89,18 @@
         :content)))
 
 (defn upsert-ptv-service!
-  [ptv {:keys [source-id] :as m}]
+  [ptv {:keys [source-id service-id] :as m}]
   (let [data (ptv-data/->ptv-service m)]
-    ;; We have the source-id always?
-    ; (if source-id
-    ;   (ptv/update-service ptv source-id data)
-    ;   (ptv/create-service ptv data))
-    ;; PTV update using sourceId gives 404 if the sourceId doesn't exist yet
-    (try
-      (ptv/update-service ptv source-id data)
-      (catch clojure.lang.ExceptionInfo e
-        (if (= 404 (:status (:resp (ex-data e))))
-          (ptv/create-service ptv data)
-          (throw e))))))
+    (if service-id
+      ;; Linking to existing service: update by PTV UUID to set our source-id
+      (ptv/update-service-by-id ptv service-id data)
+      ;; Normal flow: try update by source-id, create if not found
+      (try
+        (ptv/update-service ptv source-id data)
+        (catch clojure.lang.ExceptionInfo e
+          (if (= 404 (:status (:resp (ex-data e))))
+            (ptv/create-service ptv data)
+            (throw e)))))))
 
 (defn fetch-ptv-org
   [ptv org-id]

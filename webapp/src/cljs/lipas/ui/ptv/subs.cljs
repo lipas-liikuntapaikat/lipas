@@ -225,12 +225,9 @@
 (rf/reg-sub ::missing-services
   (fn [[_ org-id]]
     [(rf/subscribe [::services-by-id org-id])
-     (rf/subscribe [::sports-sites org-id])
-     (rf/subscribe [::service-mappings org-id])])
-  (fn [[services sports-sites service-mappings] [_ org-id]]
-    (let [mapped-source-ids (set (keys service-mappings))]
-      (->> (ptv-data/resolve-missing-services org-id services sports-sites)
-           (remove (fn [m] (contains? mapped-source-ids (:source-id m))))))))
+     (rf/subscribe [::sports-sites org-id])])
+  (fn [[services sports-sites] [_ org-id]]
+    (ptv-data/resolve-missing-services org-id services sports-sites)))
 
 (rf/reg-sub ::mapped-service-candidates
   (fn [[_ org-id]]
@@ -301,22 +298,26 @@
     [(rf/subscribe [::missing-services org-id])
      (rf/subscribe [::manual-services org-id])
      (rf/subscribe [::service-candidate-descriptions org-id])
-     (rf/subscribe [::selected-org])])
-  (fn [[missing-services manual-services descriptions selected-org] [_ org-id]]
+     (rf/subscribe [::selected-org])
+     (rf/subscribe [::service-mappings org-id])])
+  (fn [[missing-services manual-services descriptions selected-org service-mappings] [_ org-id]]
     (->> (concat missing-services
                  manual-services)
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
                       summary (get-in descriptions [source-id :summary])
-                                ;; Get languages from selected org's PTV config
-                      languages (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])]
+                      languages (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])
+                      mapping (get service-mappings source-id)]
                   (-> m
                       (assoc :languages languages)
                       (assoc :description description)
                       (assoc :summary summary)
                       (assoc :valid (boolean (and
                                                (some-> description :fi count (> 5))
-                                               (some-> summary :fi count (> 5))))))))))))
+                                               (some-> summary :fi count (> 5)))))
+                      (cond->
+                        mapping (assoc :service-id (:service-id mapping)
+                                       :linked? true)))))))))
 
 (rf/reg-sub ::service-channels-by-id
   :<- [::ptv]
