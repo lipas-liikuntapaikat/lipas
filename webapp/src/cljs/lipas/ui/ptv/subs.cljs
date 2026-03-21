@@ -227,7 +227,7 @@
 (rf/reg-sub ::missing-services
   (fn [[_ org-id]]
     [(rf/subscribe [::services-by-id org-id])
-     (rf/subscribe [::sports-sites org-id])])
+     (rf/subscribe [::sports-sites-wizard org-id])])
   (fn [[services sports-sites] [_ org-id]]
     (ptv-data/resolve-missing-services org-id services sports-sites)))
 
@@ -367,7 +367,7 @@
            (sort-by :lipas-id)))))
 
 (rf/reg-sub ::sports-sites-wizard
-  "Sports sites filtered by the wizard step 1 sub-category selection."
+  ;; Sports sites filtered by the wizard step 1 sub-category selection.
   (fn [[_ org-id]]
     [(rf/subscribe [::sports-sites org-id])
      (rf/subscribe [::candidates-search])
