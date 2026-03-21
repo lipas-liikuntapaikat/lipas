@@ -19,7 +19,8 @@
  "Export failed. Try again or contact support if the problem persists.",
  :no-sports-sites-for-types
  "The municipality has no sports sites in LIPAS for the selected type classes.",
- :link-to-existing-service "Or link to an existing service",
+ :link-to-existing-service "Does the service already exist in PTV?",
+ :select-existing-service "Select existing service",
  :mapped-services "Linked services",
  :unlink-service "Unlink",
  :unselect-helper

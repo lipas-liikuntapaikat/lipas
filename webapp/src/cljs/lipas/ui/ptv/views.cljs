@@ -579,7 +579,8 @@
 
 (defn create-services
   []
-  (r/with-let [selected-tab (r/atom :fi)]
+  (r/with-let [selected-tab (r/atom :fi)
+               link-expanded (r/atom #{})]
     (let [tr (<== [:lipas.ui.subs/translator])
           org-id (<== [::subs/selected-ptv-org-id])
           service-candidates (<== [::subs/service-candidates org-id])
@@ -717,16 +718,28 @@
                  (when (= "descriptions" service-details-tab)
                    [:> Stack {:spacing 2}
 
-                    ;; Link to existing PTV service
+                    ;; Link to existing PTV service (collapsible)
                     (when (seq services)
-                      [controls/services-selector
-                       {:options services
-                        :multiple false
-                        :value nil
-                        :on-change #(when %
-                                      (==> [::events/link-candidate-to-existing-service source-id %]))
-                        :value-fn :service-id
-                        :label (tr :ptv.wizard/link-to-existing-service)}])
+                      (let [expanded? (contains? @link-expanded source-id)]
+                        [:> Stack {:spacing 1}
+                         [:> Button
+                          {:size "small"
+                           :variant "text"
+                           :sx #js{:alignSelf "flex-start" :textTransform "none"}
+                           :startIcon (r/as-element
+                                        [:> Icon {:sx #js{:fontSize "1rem"}}
+                                         (if expanded? "expand_less" "expand_more")])
+                           :on-click #(swap! link-expanded (if expanded? disj conj) source-id)}
+                          (tr :ptv.wizard/link-to-existing-service)]
+                         (when expanded?
+                           [controls/services-selector
+                            {:options services
+                             :multiple false
+                             :value nil
+                             :on-change #(when %
+                                           (==> [::events/link-candidate-to-existing-service source-id %]))
+                             :value-fn :service-id
+                             :label (tr :ptv.wizard/select-existing-service)}])]))
 
                     (let [languages (set languages)]
                       [:> Tabs
