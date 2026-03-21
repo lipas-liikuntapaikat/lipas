@@ -423,9 +423,16 @@
 (r/defc set-types [_props]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         locale (tr)
+        org-id @(rf/subscribe [::subs/selected-ptv-org-id])
+        sports-sites @(rf/subscribe [::subs/sports-sites org-id])
+        available-sub-cats (hooks/use-memo
+                             (fn []
+                               (into #{} (keep :sub-category-id) sports-sites))
+                             [sports-sites])
         options* (hooks/use-memo (fn []
                                    (->> types/sub-categories
                                         vals
+                                        (filter #(contains? available-sub-cats (:type-code %)))
                                         (map (fn [{:keys [type-code] :as x}]
                                                {:value type-code
                                                 :sort-value (case type-code
@@ -433,7 +440,7 @@
                                                               type-code)
                                                 :label (str type-code " " (get-in x [:name locale]))}))
                                         (sort-by :sort-value)))
-                                 [locale])
+                                 [locale available-sub-cats])
         value (:sub-cats @(rf/subscribe [::subs/candidates-search]))
         on-change (fn [v]
                     (rf/dispatch [::events/set-candidates-search {:sub-cats v}]))]
