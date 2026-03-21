@@ -1,3 +1,4 @@
 {:classes "Serviceklasser",
+ :services-explanation "Organisationens PTV-tjänster till vilka idrottsanläggningar kopplas som servicepunkter. Tjänster kopplade till LIPAS har skapats genom integrationen.",
  :show-only-lipas-managed
  "Visa endast tjänster som är kopplade till LIPAS."}

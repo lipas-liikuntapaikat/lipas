@@ -1,2 +1,3 @@
 {:classes "Service classes",
+ :services-explanation "The organization's PTV services to which sports sites are linked as service locations. Services connected to LIPAS were created through the integration.",
  :show-only-lipas-managed "Show only services connected to LIPAS"}

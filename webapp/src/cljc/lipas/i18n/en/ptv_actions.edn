@@ -1,6 +1,8 @@
 {:export "Export",
  :export-disclaimer
  "I have read the descriptions and want this site to be exported to PTV.",
+ :update-disclaimer
+ "I have read the descriptions and want this site's data to be updated in PTV.",
  :generate-with-ai "Generate descriptions with AI",
  :select-org "Select organization",
  :select-service "Select service",

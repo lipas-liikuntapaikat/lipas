@@ -8,6 +8,9 @@
  :service-channels "Servicepunkt",
  :services "Service",
  :sports-sites "Idrottsanläggningar",
+ :synced-to-ptv "Exporterad till PTV",
+ :out-of-date "LIPAS har nyare ändringar än PTV",
+ :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :tooltip "Skicka till PTV",
  :wizard "Idrifttagning"}
