@@ -318,6 +318,49 @@
                    (let [org-id (-get-ptv-org-id db)]
                      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :description locale] v))))
 
+(rf/reg-event-fx ::translate-site-descriptions
+                 (fn [{:keys [db]} [_ lipas-id from-lang to-langs]]
+                   (let [token (-> db :user :login :token)
+                         org-id (-get-ptv-org-id db)
+                         ptv-data (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv])
+                         summary (get-in ptv-data [:summary from-lang])
+                         description (get-in ptv-data [:description from-lang])]
+                     (when (and summary description)
+                       {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+                        :fx [[:http-xhrio
+                              {:method :post
+                               :headers {:Authorization (str "Token " token)}
+                               :uri (str (:backend-url db) "/actions/translate-to-other-langs")
+                               :params (cond-> {:from (name from-lang)
+                                                :to (set (map name to-langs))
+                                                :summary summary
+                                                :description description}
+                                         (get-in ptv-data [:user-instruction from-lang])
+                                         (assoc :user-instruction (get-in ptv-data [:user-instruction from-lang])))
+                               :format (ajax/transit-request-format)
+                               :response-format (ajax/transit-response-format)
+                               :on-success [::translate-site-descriptions-success lipas-id]
+                               :on-failure [::translate-site-descriptions-failure]}]]}))))
+
+(rf/reg-event-fx ::translate-site-descriptions-success
+                 (fn [{:keys [db]} [_ lipas-id resp]]
+                   (let [org-id (-get-ptv-org-id db)
+                         resp (update resp :summary
+                                      (fn [m] (reduce-kv (fn [acc k v]
+                                                           (assoc acc k (when v (subs v 0 (min 150 (count v))))))
+                                                         {} m)))]
+                     {:db (-> db
+                              (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+                              (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))})))
+
+(rf/reg-event-fx ::translate-site-descriptions-failure
+                 (fn [{:keys [db]} [_ _resp]]
+                   (let [tr (:translator db)
+                         notification {:message (tr :notifications/get-failed)
+                                       :success? false}]
+                     {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] false)
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 ;;; Service location descriptions generation ;;;
 
 (rf/reg-event-fx ::generate-descriptions
