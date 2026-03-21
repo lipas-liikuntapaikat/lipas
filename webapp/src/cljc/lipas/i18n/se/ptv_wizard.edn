@@ -20,5 +20,8 @@
  "Exporten misslyckades. Försök igen eller kontakta supporten om problemet kvarstår.",
  :no-sports-sites-for-types
  "Kommunen har inga idrottsanläggningar i LIPAS för de valda typklasserna.",
+ :link-to-existing-service "Eller koppla till en befintlig tjänst",
+ :mapped-services "Kopplade tjänster",
+ :unlink-service "Ta bort koppling",
  :unselect-helper
  "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."}

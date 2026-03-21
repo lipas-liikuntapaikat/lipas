@@ -648,6 +648,35 @@
                    (-> db
                        (assoc-in [:ptv :services-creation :halt?] true))))
 
+(rf/reg-event-fx ::link-candidate-to-existing-service
+                 (fn [{:keys [db]} [_ source-id service-id]]
+                   (let [org-id (-get-ptv-org-id db)]
+                     {:db (-> db
+                              (assoc-in [:ptv :org org-id :data :service-mappings source-id]
+                                        {:service-id service-id})
+                              (update-in [:ptv :org org-id :data :manual-services] dissoc source-id))
+                      :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
+
+(rf/reg-event-fx ::unlink-candidate-from-existing-service
+                 (fn [{:keys [db]} [_ source-id]]
+                   (let [org-id (-get-ptv-org-id db)
+                         mapped-service-id (get-in db [:ptv :org org-id :data :service-mappings source-id :service-id])
+                         ;; Clear the mapped service-id from affected sports sites
+                         sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
+                         sports-sites (reduce-kv
+                                       (fn [m lipas-id site]
+                                         (let [sids (get-in site [:ptv :service-ids])]
+                                           (if (and mapped-service-id (some #{mapped-service-id} sids))
+                                             (assoc-in m [lipas-id :ptv :service-ids]
+                                                       (vec (remove #{mapped-service-id} sids)))
+                                             m)))
+                                       sports-sites
+                                       sports-sites)]
+                     {:db (-> db
+                              (update-in [:ptv :org org-id :data :service-mappings] dissoc source-id)
+                              (assoc-in [:ptv :org org-id :data :sports-sites] sports-sites))
+                      :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
+
 (rf/reg-event-db ::assign-services-to-sports-sites
                  (fn [db _]
                    (let [org-id (-get-ptv-org-id db)
@@ -655,16 +684,24 @@
                          source-id->service (->> (get-in db [:ptv :org org-id :data :services])
                                                  vals
                                                  (utils/index-by :sourceId))
+                         service-mappings (get-in db [:ptv :org org-id :data :service-mappings])
                          sports-sites (get-in db [:ptv :org org-id :data :sports-sites])
                          sports-sites (reduce-kv
                                        (fn [sports-sites lipas-id sports-site]
                                          (let [;; the next function needs this!
                                  ;; this is "really" added to the :ptv data later in ::create-ptv-service-location
                                                sports-site (assoc-in sports-site [:ptv :org-id] org-id)
-                                               lipas-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                                           (if (seq lipas-service-ids)
+                                               ;; Match by sourceId (auto-created services)
+                                               lipas-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)
+                                               ;; Match by manual mapping
+                                               sub-cat-id (-> sports-site :type :type-code types :sub-category)
+                                               mapped-source-id (ptv-data/->service-source-id org-id sub-cat-id)
+                                               mapped-service-id (get-in service-mappings [mapped-source-id :service-id])
+                                               all-service-ids (cond-> (set lipas-service-ids)
+                                                                 mapped-service-id (conj mapped-service-id))]
+                                           (if (seq all-service-ids)
                                              (update-in sports-sites [lipas-id :ptv :service-ids] (fn [x]
-                                                                                                    (vec (into (set x) lipas-service-ids))))
+                                                                                                    (vec (into (set x) all-service-ids))))
                                              sports-sites)))
                                        sports-sites
                                        sports-sites)]
