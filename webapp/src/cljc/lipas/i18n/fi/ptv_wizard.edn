@@ -19,7 +19,8 @@
  "Vienti epäonnistui. Yritä uudelleen tai ota yhteyttä ylläpitoon, jos ongelma toistuu.",
  :no-sports-sites-for-types
  "Valitsemillasi tyyppiluokilla ei ole kunnassa liikuntapaikkoja Lipaksessa.",
- :link-to-existing-service "Tai linkitä olemassa olevaan palveluun",
+ :link-to-existing-service "Löytyykö palvelu jo PTV:stä?",
+ :select-existing-service "Valitse olemassa oleva palvelu",
  :mapped-services "Linkitetyt palvelut",
  :unlink-service "Poista linkitys",
  :unselect-helper
