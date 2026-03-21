@@ -8,6 +8,8 @@
  :service-channels "Service locations"
  :services "Services"
  :sports-sites "Sports sites"
+ :sports-sites-count "sports sites"
+ :sports-site-count-singular "sports site"
  :synced-to-ptv "Exported to PTV"
  :out-of-date "LIPAS has newer changes than PTV"
  :not-yet-synced "Selected for export, not yet synced to PTV"
