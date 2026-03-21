@@ -25,5 +25,9 @@
  :mapped-services "Linked services",
  :translate-to-other-langs "Translate to other languages",
  :unlink-service "Unlink",
+ :step1-description "Export all sports sites at once or narrow down to specific type classes. In the final step you can still exclude individual sports sites.",
+ :integrate-all "Export all sports sites",
+ :integrate-selected "Select type classes",
+ :select-sub-categories "Select type classes",
  :unselect-helper
  "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."}

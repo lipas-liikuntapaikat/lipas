@@ -8,6 +8,8 @@
  :service-channels "Palvelupaikat",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
+ :sports-sites-count "liikuntapaikkaa",
+ :sports-site-count-singular "liikuntapaikka",
  :synced-to-ptv "Viety PTV:hen",
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
