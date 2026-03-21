@@ -567,6 +567,47 @@
                    (let [org-id (-get-ptv-org-id db)]
                      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] v))))
 
+(rf/reg-event-fx ::translate-service-candidate
+                 (fn [{:keys [db]} [_ source-id from-lang to-langs]]
+                   (let [token (-> db :user :login :token)
+                         org-id (-get-ptv-org-id db)
+                         summary (get-in db [:ptv :org org-id :data :service-candidates source-id :summary from-lang])
+                         description (get-in db [:ptv :org org-id :data :service-candidates source-id :description from-lang])]
+                     (when (and summary description)
+                       {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+                        :fx [[:http-xhrio
+                              {:method :post
+                               :headers {:Authorization (str "Token " token)}
+                               :uri (str (:backend-url db) "/actions/translate-to-other-langs")
+                               :params {:from (name from-lang)
+                                        :to (set (map name to-langs))
+                                        :summary summary
+                                        :description description}
+                               :format (ajax/transit-request-format)
+                               :response-format (ajax/transit-response-format)
+                               :on-success [::translate-service-candidate-success source-id]
+                               :on-failure [::translate-service-candidate-failure]}]]}))))
+
+(rf/reg-event-fx ::translate-service-candidate-success
+                 (fn [{:keys [db]} [_ source-id resp]]
+                   (let [org-id (-get-ptv-org-id db)
+                         ;; Truncate summaries to 150 chars max
+                         resp (update resp :summary
+                                      (fn [m] (reduce-kv (fn [acc k v]
+                                                           (assoc acc k (when v (subs v 0 (min 150 (count v))))))
+                                                         {} m)))]
+                     {:db (-> db
+                              (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+                              (update-in [:ptv :org org-id :data :service-candidates source-id] merge resp))})))
+
+(rf/reg-event-fx ::translate-service-candidate-failure
+                 (fn [{:keys [db]} [_ _resp]]
+                   (let [tr (:translator db)
+                         notification {:message (tr :notifications/get-failed)
+                                       :success? false}]
+                     {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] false)
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
 ;;; Create Services in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service

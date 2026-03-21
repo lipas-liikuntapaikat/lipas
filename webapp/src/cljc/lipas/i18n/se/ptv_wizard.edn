@@ -24,6 +24,7 @@
  :select-existing-service "Välj befintlig tjänst",
  :linked-to-service "Kopplad till tjänst",
  :mapped-services "Kopplade tjänster",
+ :translate-from "Översätt från",
  :unlink-service "Ta bort koppling",
  :unselect-helper
  "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."}

@@ -23,6 +23,7 @@
  :select-existing-service "Valitse olemassa oleva palvelu",
  :linked-to-service "Linkitetty palveluun",
  :mapped-services "Linkitetyt palvelut",
+ :translate-from "Käännä kielestä",
  :unlink-service "Poista linkitys",
  :unselect-helper
  "Jos et halua viedä tiettyä kohdetta, voit avata\n     kohteen oikealta ja laittaa liukukytkimen pois päältä."}
