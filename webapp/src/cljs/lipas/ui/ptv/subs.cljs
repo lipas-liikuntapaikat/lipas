@@ -354,7 +354,6 @@
      (rf/subscribe [::selected-org])])
   (fn [[ptv services service-channels org-defaults types selected-org] [_ org-id]]
     (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])
-                    ;; Get languages from selected org's PTV config
           org-langs (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])]
       (->> (vals lipas-id->site)
            (map (fn [site]
@@ -366,6 +365,19 @@
                                                    services
                                                    site)))
            (sort-by :lipas-id)))))
+
+(rf/reg-sub ::sports-sites-wizard
+  "Sports sites filtered by the wizard step 1 sub-category selection."
+  (fn [[_ org-id]]
+    [(rf/subscribe [::sports-sites org-id])
+     (rf/subscribe [::candidates-search])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])])
+  (fn [[sites candidates-search types] _]
+    (let [sub-cats (:sub-cats candidates-search)]
+      (if (seq sub-cats)
+        (let [sub-cats-set (set sub-cats)]
+          (filter (fn [site] (contains? sub-cats-set (:sub-category-id site))) sites))
+        sites))))
 
 (rf/reg-sub ::sports-sites-count
   (fn [[_ org-id]]
