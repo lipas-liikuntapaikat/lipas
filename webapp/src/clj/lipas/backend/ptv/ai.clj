@@ -267,10 +267,7 @@ Source data:
   (json-schema/transform (mu/open-schema response-schema)))
 
 (def default-params
-  {:model            (:model openai-config)
-   :top-p            0.5
-   :presence-penalty -2
-   :max-tokens       4096})
+  (-> providers :gemini :default-params))
 
 (defn complete-raw
   "Returns the full OpenAI response including :choices, :usage, and :model."
@@ -365,6 +362,17 @@ Source data:
     (log/infof "AI Result (%s): %s" model result)
     result))
 
+(defn gemini-complete
+  "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
+   Merges provider defaults for any missing params."
+  [config system-instruction prompt]
+  (let [config (merge (-> providers :gemini :default-params) config)
+        result (-> (gemini-complete-raw config system-instruction prompt)
+                   :choices
+                   first)]
+    (log/infof "Gemini Result (%s): %s" (:model config) result)
+    result))
+
 (def generate-utp-descriptions-prompt
   "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
         1.	A concise summary (max 150 characters per language) that captures the essential service information
@@ -395,9 +403,9 @@ Follow these requirements:
 (defn generate-ptv-descriptions
   [sports-site]
   (let [prompt-doc (->prompt-doc sports-site)]
-    (complete openai-config
-              ptv-system-instruction-v3
-              (format generate-utp-descriptions-prompt (json/encode prompt-doc)))))
+    (gemini-complete gemini-config
+                     ptv-system-instruction-v5
+                     (format generate-utp-descriptions-prompt-v5 (json/encode prompt-doc)))))
 
 (def translate-to-other-langs-prompt
   "Translate the following Service Information Repository descriptions from %s to %s:
@@ -429,13 +437,13 @@ Source text:
 
 (defn translate-to-other-langs
   [{:keys [from to summary description]}]
-  (complete openai-config
-            ptv-system-instruction-v3
-            (format translate-to-other-langs-prompt
-                    from
-                    (str/join ", " to)
-                    (json/encode {:summary summary
-                                  :description description}))))
+  (gemini-complete gemini-config
+                   ptv-system-instruction-v5
+                   (format translate-to-other-langs-prompt
+                           from
+                           (str/join ", " to)
+                           (json/encode {:summary summary
+                                         :description description}))))
 
 (comment
   (translate-to-other-langs
@@ -515,9 +523,9 @@ Source data:
 (defn generate-ptv-service-descriptions
   [doc]
   (let [prompt-doc doc]
-    (complete openai-config
-              ptv-system-instruction-v3
-              (format generate-utp-service-descriptions-prompt (json/encode prompt-doc)))))
+    (gemini-complete gemini-config
+                     ptv-system-instruction-v5
+                     (format generate-utp-service-descriptions-prompt-v5 (json/encode prompt-doc)))))
 
 (defn get-models
   [{:keys [_api-key models-url]}]

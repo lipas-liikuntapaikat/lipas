@@ -1,20 +1,8 @@
 {:tasks {up {:doc "Start dev resource with Compose"
              :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}
 
-         vpn {:doc  "Connect to JYU VPN via openconnect"
-              :task (let [pw (clojure.string/trim
-                               (:out (shell {:out :string}
-                                            "security find-generic-password -s jyu-vpn -a vaotjuha -w")))
-                          proc (babashka.process/process
-                                 {:in (str pw "\npush\n") :inherit true}
-                                 "sudo" "openconnect" "--protocol=anyconnect"
-                                 "--user=vaotjuha" "--usergroup=appdevel"
-                                 "--no-xmlpost" "--passwd-on-stdin" "vpn.jyu.fi")]
-                      (println "\n\033[1;33m>>> Verify push in Duo Mobile after POST https://vpn.jyu.fi/+webvpn+/index.html <<<\033[0m\n")
-                      (sun.misc.Signal/handle
-                        (sun.misc.Signal. "INT")
-                        (reify sun.misc.SignalHandler
-                          (handle [_ _]
-                            (.destroy (:proc proc))
-                            (System/exit 0))))
-                      (deref proc))}}}
+         vpn-vaotjuha {:doc  "Connect to JYU VPN as vaotjuha"
+                       :task (shell "bash" "scripts/vpn-connect.sh" "vaotjuha")}
+
+         fix-network {:doc  "Restore network after OpenConnect crash"
+                      :task (shell "bash" "scripts/fix-network.sh")}}}
