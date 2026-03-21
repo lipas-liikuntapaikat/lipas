@@ -567,22 +567,29 @@
                    (let [org-id (-get-ptv-org-id db)]
                      (assoc-in db [:ptv :org org-id :data :service-candidates id :description locale] v))))
 
+(rf/reg-event-db ::set-service-candidate-user-instruction
+                 (fn [db [_ id locale v]]
+                   (let [org-id (-get-ptv-org-id db)]
+                     (assoc-in db [:ptv :org org-id :data :service-candidates id :user-instruction locale] v))))
+
 (rf/reg-event-fx ::translate-service-candidate
                  (fn [{:keys [db]} [_ source-id from-lang to-langs]]
                    (let [token (-> db :user :login :token)
                          org-id (-get-ptv-org-id db)
                          summary (get-in db [:ptv :org org-id :data :service-candidates source-id :summary from-lang])
-                         description (get-in db [:ptv :org org-id :data :service-candidates source-id :description from-lang])]
+                         description (get-in db [:ptv :org org-id :data :service-candidates source-id :description from-lang])
+                         user-instruction (get-in db [:ptv :org org-id :data :service-candidates source-id :user-instruction from-lang])]
                      (when (and summary description)
                        {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
                         :fx [[:http-xhrio
                               {:method :post
                                :headers {:Authorization (str "Token " token)}
                                :uri (str (:backend-url db) "/actions/translate-to-other-langs")
-                               :params {:from (name from-lang)
-                                        :to (set (map name to-langs))
-                                        :summary summary
-                                        :description description}
+                               :params (cond-> {:from (name from-lang)
+                                                :to (set (map name to-langs))
+                                                :summary summary
+                                                :description description}
+                                         user-instruction (assoc :user-instruction user-instruction))
                                :format (ajax/transit-request-format)
                                :response-format (ajax/transit-response-format)
                                :on-success [::translate-service-candidate-success source-id]
@@ -694,21 +701,21 @@
                    (let [org-id (-get-ptv-org-id db)
                          ;; Get the existing service's descriptions to populate the form
                          service (get-in db [:ptv :org org-id :data :services service-id])
-                         summaries (->> (:serviceDescriptions service)
-                                        (filter #(= (:type %) "Summary")))
-                         descriptions (->> (:serviceDescriptions service)
-                                           (filter #(= (:type %) "Description")))
-                         lang-map {"sv" :se "fi" :fi "en" :en}
-                         summary (into {} (keep (fn [m] (when-let [k (get lang-map (:language m))]
-                                                          [k (:value m)]))) summaries)
-                         description (into {} (keep (fn [m] (when-let [k (get lang-map (:language m))]
-                                                              [k (:value m)]))) descriptions)]
+                         extract-by-type (fn [type]
+                                           (let [items (->> (:serviceDescriptions service)
+                                                            (filter #(= (:type %) type)))]
+                                             (into {} (keep (fn [m] (when-let [k ({"sv" :se "fi" :fi "en" :en} (:language m))]
+                                                                      [k (:value m)]))) items)))
+                         summary (extract-by-type "Summary")
+                         description (extract-by-type "Description")
+                         user-instruction (extract-by-type "UserInstruction")]
                      {:db (-> db
                               (assoc-in [:ptv :org org-id :data :service-mappings source-id]
                                         {:service-id service-id})
                               ;; Populate descriptions from existing service
                               (assoc-in [:ptv :org org-id :data :service-candidates source-id :summary] summary)
                               (assoc-in [:ptv :org org-id :data :service-candidates source-id :description] description)
+                              (assoc-in [:ptv :org org-id :data :service-candidates source-id :user-instruction] user-instruction)
                               (update-in [:ptv :org org-id :data :manual-services] dissoc source-id))
                       :fx [[:dispatch [::assign-services-to-sports-sites]]]})))
 

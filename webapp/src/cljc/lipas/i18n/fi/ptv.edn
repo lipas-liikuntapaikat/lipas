@@ -12,5 +12,6 @@
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
+ :user-instruction "Toimintaohje",
  :tooltip "Vie Palvelutietovarantoon",
  :wizard "Käyttöönotto"}
