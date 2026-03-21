@@ -203,16 +203,11 @@
      ;; provided? Maybe default to just "fi"?
      :languages languages
 
-     :serviceDescriptions (for [[k v] {:summary "Summary" :description "Description"}
+     :serviceDescriptions (for [[k v] {:summary "Summary"
+                                       :description "Description"
+                                       :user-instruction "UserInstruction"}
                                 [lang locale] (select-keys lang->locale languages)]
-                            {:type v ; Description |
-                                        ; Summary |
-                                        ; UserInstruction |
-                                        ; ValidityTime |
-                                        ; ProcessingTime |
-                                        ; DeadLine |
-                                        ; ChargeTypeAdditionalInfo
-                                        ; | ServiceType
+                            {:type v
                              :language lang
                              :value (get-in m [k locale] placeholder)})
 
@@ -653,6 +648,7 @@
             (if-let [k (case type
                          "Summary" :summary
                          "Description" :description
+                         "UserInstruction" :user-instruction
                          nil)]
               (update acc k assoc (lang->locale language) value)
               acc))

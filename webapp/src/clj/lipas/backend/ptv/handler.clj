@@ -67,7 +67,8 @@
                           [:from :string]
                           [:to [:set :string]]
                           [:summary :string]
-                          [:description :string]]}
+                          [:description :string]
+                          [:user-instruction {:optional true} [:maybe :string]]]}
       :handler
       (fn [req]
         {:status 200
@@ -125,6 +126,7 @@
                           [:languages [:vector [:enum "fi" "se" "en"]]]
                           [:summary (ptv-schema/localized-string-schema {:max 150})]
                           [:description (ptv-schema/localized-string-schema nil)]
+                          [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
                           [:service-id {:optional true} [:maybe :string]]]}
       :handler
       (fn [req]

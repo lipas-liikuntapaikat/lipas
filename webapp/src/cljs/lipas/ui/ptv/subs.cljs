@@ -174,7 +174,8 @@
     (for [[id service] services]
       (let [service-name (->> service :serviceNames (ptv-data/select-service-name))
             descriptions (->> service :serviceDescriptions (filter #(= (:type %) "Description")))
-            summaries (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))]
+            summaries (->> service :serviceDescriptions (filter #(= (:type %) "Summary")))
+            user-instructions (->> service :serviceDescriptions (filter #(= (:type %) "UserInstruction")))]
         {:label service-name
          :service-id id
          :source-id (:sourceId service)
@@ -187,6 +188,7 @@
          :languages (map langs (:languages service))
          :summary (utils/index-by (comp langs :language) :value summaries)
          :description (utils/index-by (comp langs :language) :value descriptions)
+         :user-instruction (utils/index-by (comp langs :language) :value user-instructions)
          :service-name service-name
          :service-modified (:modified service)
          :service-channels (->> service :serviceChannels (map :serviceChannel))
@@ -306,15 +308,18 @@
          (map (fn [{:keys [source-id] :as m}]
                 (let [description (get-in descriptions [source-id :description])
                       summary (get-in descriptions [source-id :summary])
+                      user-instruction (get-in descriptions [source-id :user-instruction])
                       languages (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])
                       mapping (get service-mappings source-id)]
                   (-> m
                       (assoc :languages languages)
                       (assoc :description description)
                       (assoc :summary summary)
+                      (assoc :user-instruction user-instruction)
                       (assoc :valid (boolean (and
                                                (some-> description :fi count (> 5))
-                                               (some-> summary :fi count (> 5)))))
+                                               (some-> summary :fi count (> 5))
+                                               (some-> user-instruction :fi count (> 5)))))
                       (cond->
                         mapping (assoc :service-id (:service-id mapping)
                                        :linked? true)))))))))

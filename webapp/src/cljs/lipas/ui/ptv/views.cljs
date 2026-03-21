@@ -792,6 +792,19 @@
                         :helperText (str desc-len "/2500")
                         :error (> desc-len 2500)}])
 
+                    ;; User instruction / Toimintaohje (max 2500 chars)
+                    (let [ui-val (or (get-in m [:user-instruction @selected-tab]) "")
+                          ui-len (count ui-val)]
+                      [text-fields/text-field
+                       {:variant "outlined"
+                        :rows 3
+                        :multiline true
+                        :on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
+                        :label (tr :ptv/user-instruction)
+                        :value ui-val
+                        :helperText (str ui-len "/2500")
+                        :error (> ui-len 2500)}])
+
                     ;; Translate button (only when multiple languages)
                     (when (> (count languages) 1)
                       (let [from-lang @selected-tab
