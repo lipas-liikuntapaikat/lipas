@@ -296,18 +296,33 @@
 (r/defc prompt-editor-section []
   (r/with-let [system-expanded? (r/atom false)
                user-expanded?   (r/atom true)]
-    (let [system-prompt @(rf/subscribe [::subs/system-prompt])
-          user-prompt   @(rf/subscribe [::subs/user-prompt])
-          defaults      @(rf/subscribe [::subs/defaults])]
+    (let [system-prompt    @(rf/subscribe [::subs/system-prompt])
+          user-prompt      @(rf/subscribe [::subs/user-prompt])
+          defaults         @(rf/subscribe [::subs/defaults])
+          templates        @(rf/subscribe [::subs/templates])
+          prompt-template  @(rf/subscribe [::subs/prompt-template])]
       (when defaults
         [:<>
          [:> Divider {:sx #js {:my 1}}]
          [:> Stack {:direction "row" :align-items "center" :justify-content "space-between"}
           [section-header "PROMPTS"]
-          [:> Button
-           {:size     "small"
-            :on-click #(rf/dispatch [::events/reset-prompts])}
-           "Reset defaults"]]
+          [:> Stack {:direction "row" :spacing 1 :align-items "center"}
+           (when templates
+             [:> TextField
+              {:select    true
+               :size      "small"
+               :label     "Template"
+               :value     (or (some-> prompt-template name) "v5")
+               :on-change #(rf/dispatch [::events/set-prompt-template
+                                         (keyword (.. % -target -value))])
+               :sx        #js {:minWidth 160}}
+              (for [[k {:keys [label]}] (sort-by key templates)]
+                ^{:key (name k)}
+                [:> MenuItem {:value (name k)} label])])
+           [:> Button
+            {:size     "small"
+             :on-click #(rf/dispatch [::events/reset-prompts])}
+            "Reset defaults"]]]
          [:> Stack {:spacing 2 :sx #js {:mt 1}}
           ;; System prompt — collapsible, collapsed by default
           [:> Stack {:direction "row" :align-items "center" :justify-content "space-between"}
@@ -527,6 +542,17 @@
 
 (def parse-content events/parse-content)
 
+(defn- star-rating [{:keys [value on-change]}]
+  [:> Stack {:direction "row" :spacing 0}
+   (for [i (range 1 6)]
+     ^{:key i}
+     [:> IconButton {:size     "small"
+                     :on-click (fn [e]
+                                 (.stopPropagation e)
+                                 (on-change (if (= value i) nil i)))}
+      [:> Icon {:sx #js {:color (if (and value (>= value i)) "#f9a825" "action.disabled")}}
+       (if (and value (>= value i)) "star" "star_border")]])])
+
 (defn- char-count-label [count limit]
   [:> Typography {:variant   "caption"
                   :color     (if (> count limit) "error" "text.secondary")
@@ -567,6 +593,11 @@
          (when-let [cost (events/estimate-cost (-> result :params :model) usage)]
            [:> Chip {:label (str "$" (.toFixed cost 4))
                      :size  "small" :variant "outlined"
+                     :sx    #js {:fontWeight "bold"}}])
+         (when-let [grade (:grade result)]
+           [:> Chip {:label (str grade "/5")
+                     :size  "small" :variant "outlined"
+                     :icon  (r/as-element [:> Icon {:sx #js {:color "#f9a825" :fontSize "1rem"}} "star"])
                      :sx    #js {:fontWeight "bold"}}])]
         [:> Stack {:direction "row" :spacing 0}
          [:> Tooltip {:title "Copy summary and description for selected language" :arrow true}
@@ -622,7 +653,25 @@
                 [:> Typography {:variant "subtitle2" :color "text.secondary"} "Description"]
                 [char-count-label (count desc-txt) 2000]]
                [:> Box {:sx #js {:bgcolor "#f8f8f8" :p 1.5 :borderRadius 1}}
-                [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} desc-txt]]]]))]]])))
+                [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} desc-txt]]]]))
+
+         ;; Grading section
+         [:> Divider {:sx #js {:my 1.5}}]
+         [:> Stack {:spacing 1}
+          [:> Stack {:direction "row" :align-items "center" :spacing 2}
+           [:> Typography {:variant "subtitle2" :color "text.secondary"} "Grade"]
+           [star-rating {:value     (:grade result)
+                         :on-change #(rf/dispatch [::events/set-result-grade (:id result) %])}]
+           (when-let [g (:grade result)]
+             [:> Typography {:variant "body2" :color "text.secondary"} (str g "/5")])]
+          [:> TextField {:label      "Notes"
+                         :multiline  true
+                         :rows       2
+                         :size       "small"
+                         :fullWidth  true
+                         :value      (or (:grade-notes result) "")
+                         :on-click   (fn [e] (.stopPropagation e))
+                         :on-change  #(rf/dispatch [::events/set-result-notes (:id result) (.. % -target -value)])}]]]]])))
 
 ;; --- Results panel (right side) ---
 

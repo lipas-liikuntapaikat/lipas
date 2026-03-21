@@ -6,18 +6,34 @@
             [lipas.data.types :as types]
             [cheshire.core :as json]))
 
+(defn- make-templates [flow prompt-doc]
+  (let [json-doc (json/encode prompt-doc)
+        [v3-user-tmpl v5-user-tmpl]
+        (case flow
+          :service-location [ai/generate-utp-descriptions-prompt
+                             ai/generate-utp-descriptions-prompt-v5]
+          :service          [ai/generate-utp-service-descriptions-prompt
+                             ai/generate-utp-service-descriptions-prompt-v5])]
+    {:v3 {:label         "v3 (Current)"
+          :system-prompt ai/ptv-system-instruction-v3
+          :user-prompt   (format v3-user-tmpl json-doc)}
+     :v5 {:label         "v5 (DVV-aligned)"
+          :system-prompt ai/ptv-system-instruction-v5
+          :user-prompt   (format v5-user-tmpl json-doc)}}))
+
 (defn preview-service-location
   [search-client lipas-id]
-  (let [idx  (get-in search-client [:indices :sports-site :search])
-        doc  (-> (search/fetch-document (:client search-client) idx lipas-id)
-                 :body
-                 :_source)
-        prompt-doc (ai/->prompt-doc doc)]
-    {:prompt-doc           prompt-doc
-     :system-prompt        ai/ptv-system-instruction-v3
-     :user-prompt-template ai/generate-utp-descriptions-prompt
-     :user-prompt          (format ai/generate-utp-descriptions-prompt (json/encode prompt-doc))
-     :defaults             ai/default-params}))
+  (let [idx        (get-in search-client [:indices :sports-site :search])
+        doc        (-> (search/fetch-document (:client search-client) idx lipas-id)
+                       :body
+                       :_source)
+        prompt-doc (ai/->prompt-doc doc)
+        templates  (make-templates :service-location prompt-doc)]
+    {:prompt-doc    prompt-doc
+     :system-prompt (-> templates :v5 :system-prompt)
+     :user-prompt   (-> templates :v5 :user-prompt)
+     :defaults      ai/default-params
+     :templates     templates}))
 
 (defn preview-service
   [search-client {:keys [city-code sub-category-id overview-mode aggregate-fields]}]
@@ -31,12 +47,13 @@
         overview   (if (= overview-mode :aggregate)
                      (ptv-core/make-aggregate-overview sites (or aggregate-fields {}))
                      (ptv-core/make-overview sites))
-        prompt-doc overview]
-    {:prompt-doc           prompt-doc
-     :system-prompt        ai/ptv-system-instruction-v3
-     :user-prompt-template ai/generate-utp-service-descriptions-prompt
-     :user-prompt          (format ai/generate-utp-service-descriptions-prompt (json/encode prompt-doc))
-     :defaults             ai/default-params}))
+        prompt-doc overview
+        templates  (make-templates :service prompt-doc)]
+    {:prompt-doc    prompt-doc
+     :system-prompt (-> templates :v5 :system-prompt)
+     :user-prompt   (-> templates :v5 :user-prompt)
+     :defaults      ai/default-params
+     :templates     templates}))
 
 (defn preview-data
   [search params]

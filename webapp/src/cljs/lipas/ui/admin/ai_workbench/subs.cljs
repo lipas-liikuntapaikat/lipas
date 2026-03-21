@@ -78,3 +78,11 @@
 (rf/reg-sub ::aggregate-fields
   :<- [::state]
   (fn [state _] (:aggregate-fields state)))
+
+(rf/reg-sub ::prompt-template
+  :<- [::state]
+  (fn [state _] (or (:prompt-template state) :v5)))
+
+(rf/reg-sub ::templates
+  :<- [::state]
+  (fn [state _] (:templates state)))

@@ -42,6 +42,8 @@
    :preview-data      nil
    :preview-loading?  false
    :defaults          nil
+   :templates         nil
+   :prompt-template   :v5
    :system-prompt     ""
    :user-prompt       ""
    :params            (:openai provider-defaults)
@@ -144,6 +146,26 @@
   (fn [db _]
     (assoc-in db (conj state-path :results) [])))
 
+(rf/reg-event-db ::set-result-grade
+  (fn [db [_ result-id grade]]
+    (update-in db (conj state-path :results)
+               (fn [results]
+                 (mapv (fn [r]
+                         (if (= (:id r) result-id)
+                           (assoc r :grade grade)
+                           r))
+                       results)))))
+
+(rf/reg-event-db ::set-result-notes
+  (fn [db [_ result-id notes]]
+    (update-in db (conj state-path :results)
+               (fn [results]
+                 (mapv (fn [r]
+                         (if (= (:id r) result-id)
+                           (assoc r :grade-notes notes)
+                           r))
+                       results)))))
+
 (rf/reg-event-db ::reset-prompts
   (fn [db _]
     (let [defaults (get-in db (conj state-path :defaults))]
@@ -194,15 +216,33 @@
 
 (rf/reg-event-db ::fetch-preview-success
   (fn [db [_ resp]]
-    (-> db
-        (assoc-in (conj state-path :preview-loading?) false)
-        (assoc-in (conj state-path :preview-data) (:prompt-doc resp))
-        (assoc-in (conj state-path :system-prompt) (:system-prompt resp))
-        (assoc-in (conj state-path :user-prompt) (:user-prompt resp))
-        (assoc-in (conj state-path :defaults)
-                  {:system-prompt (:system-prompt resp)
-                   :user-prompt   (:user-prompt resp)
-                   :params        (:defaults resp)}))))
+    (let [template-key (get-in db (conj state-path :prompt-template) :v5)
+          templates    (:templates resp)
+          active       (get templates template-key (get templates :v5))]
+      (-> db
+          (assoc-in (conj state-path :preview-loading?) false)
+          (assoc-in (conj state-path :preview-data) (:prompt-doc resp))
+          (assoc-in (conj state-path :templates) templates)
+          (assoc-in (conj state-path :system-prompt) (:system-prompt active))
+          (assoc-in (conj state-path :user-prompt) (:user-prompt active))
+          (assoc-in (conj state-path :defaults)
+                    {:system-prompt (:system-prompt active)
+                     :user-prompt   (:user-prompt active)
+                     :params        (:defaults resp)})))))
+
+(rf/reg-event-db ::set-prompt-template
+  (fn [db [_ template-key]]
+    (let [templates (get-in db (conj state-path :templates))
+          tmpl      (get templates template-key)]
+      (when tmpl
+        (-> db
+            (assoc-in (conj state-path :prompt-template) template-key)
+            (assoc-in (conj state-path :system-prompt) (:system-prompt tmpl))
+            (assoc-in (conj state-path :user-prompt) (:user-prompt tmpl))
+            (assoc-in (conj state-path :defaults)
+                      (-> (get-in db (conj state-path :defaults))
+                          (assoc :system-prompt (:system-prompt tmpl)
+                                 :user-prompt   (:user-prompt tmpl)))))))))
 
 (rf/reg-event-db ::fetch-preview-failure
   (fn [db [_ resp]]
@@ -295,7 +335,9 @@
                            :user-prompt   (:user-prompt r)
                            :usage         (:usage r)
                            :elapsed-ms    (:elapsed-ms r)
-                           :choices       (-> r :response :choices)})
+                           :choices       (-> r :response :choices)
+                           :grade         (:grade r)
+                           :grade-notes   (:grade-notes r)})
                         results)
           json    (.stringify js/JSON (clj->js export) nil 2)]
       {:lipas.ui.effects/save-as!
@@ -323,7 +365,9 @@
    [:summary-en      "Summary (EN)"]
    [:description-fi  "Description (FI)"]
    [:description-se  "Description (SE)"]
-   [:description-en  "Description (EN)"]])
+   [:description-en  "Description (EN)"]
+   [:grade           "Grade (1-5)"]
+   [:grade-notes     "Grade Notes"]])
 
 (defn- result->excel-row [r]
   (let [params  (:params r)
@@ -348,7 +392,9 @@
      :summary-en       (get-in parsed [:summary :en] "")
      :description-fi   (get-in parsed [:description :fi] "")
      :description-se   (get-in parsed [:description :se] "")
-     :description-en   (get-in parsed [:description :en] "")}))
+     :description-en   (get-in parsed [:description :en] "")
+     :grade            (:grade r)
+     :grade-notes      (:grade-notes r)}))
 
 (rf/reg-event-fx ::export-results-excel
   (fn [{:keys [db]} _]
