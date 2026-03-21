@@ -217,12 +217,35 @@
                "lipas-managed" (filter (fn [m] (some-> m :source-id (str/starts-with? "lipas-"))) services)
                services))))
 
+(rf/reg-sub ::service-mappings
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (get-in ptv [:org org-id :data :service-mappings])))
+
 (rf/reg-sub ::missing-services
   (fn [[_ org-id]]
     [(rf/subscribe [::services-by-id org-id])
-     (rf/subscribe [::sports-sites org-id])])
-  (fn [[services sports-sites] [_ org-id]]
-    (ptv-data/resolve-missing-services org-id services sports-sites)))
+     (rf/subscribe [::sports-sites org-id])
+     (rf/subscribe [::service-mappings org-id])])
+  (fn [[services sports-sites service-mappings] [_ org-id]]
+    (let [mapped-source-ids (set (keys service-mappings))]
+      (->> (ptv-data/resolve-missing-services org-id services sports-sites)
+           (remove (fn [m] (contains? mapped-source-ids (:source-id m))))))))
+
+(rf/reg-sub ::mapped-service-candidates
+  (fn [[_ org-id]]
+    [(rf/subscribe [::service-mappings org-id])
+     (rf/subscribe [::services org-id])])
+  (fn [[mappings services] [_ _org-id]]
+    (let [service-by-id (into {} (map (juxt :service-id identity)) services)]
+      (for [[source-id {:keys [service-id]}] mappings
+            :let [service (get service-by-id service-id)
+                  sub-cat-id (ptv-data/parse-service-source-id source-id)]]
+        {:source-id source-id
+         :sub-category-id sub-cat-id
+         :sub-category (get-in types/sub-categories [sub-cat-id :name :fi])
+         :service-name (:label service)
+         :service-id service-id}))))
 
 (rf/reg-sub ::manual-services
   :<- [::ptv]

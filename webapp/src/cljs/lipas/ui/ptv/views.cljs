@@ -592,6 +592,7 @@
           services @(rf/subscribe [::subs/services org-id])
 
           manual-services @(rf/subscribe [::subs/manual-services-keys org-id])
+          mapped-candidates @(rf/subscribe [::subs/mapped-service-candidates org-id])
           missing-subcategories @(rf/subscribe [::subs/missing-subcategories org-id])
           service-details-tab (<== [::subs/service-details-tab])]
 
@@ -715,13 +716,17 @@
                  ;; Enter descriptions form
                  (when (= "descriptions" service-details-tab)
                    [:> Stack {:spacing 2}
-                    ;; TODO: Allow linking service to existing PTV Service
-                    #_[controls/services-selector
+
+                    ;; Link to existing PTV service
+                    (when (seq services)
+                      [controls/services-selector
                        {:options services
-                        :value (get m :service-ids)
-                        :on-change #(==> [::events/link-candidate-to-existing-service source-id %])
+                        :multiple false
+                        :value nil
+                        :on-change #(when %
+                                      (==> [::events/link-candidate-to-existing-service source-id %]))
                         :value-fn :service-id
-                        :label (tr :ptv/service)}]
+                        :label (tr :ptv.wizard/link-to-existing-service)}])
 
                     (let [languages (set languages)]
                       [:> Tabs
@@ -754,7 +759,26 @@
                  (when (= "preview" service-details-tab)
                    [service-preview
                     {:source-id source-id
-                     :sub-category-id sub-category-id}])]]))]]]]])))
+                     :sub-category-id sub-category-id}])]]))]
+
+          ;; Mapped services section
+          (when (seq mapped-candidates)
+            [:> Stack {:spacing 2 :sx #js{:mt 2}}
+             [:> Typography {:variant "h6"}
+              (tr :ptv.wizard/mapped-services)]
+             (doall
+               (for [{:keys [source-id sub-category service-name]} mapped-candidates]
+                 ^{:key source-id}
+                 [:> Stack {:direction "row" :spacing 2 :align-items "center"
+                            :sx #js{:p 1 :bgcolor "#f5f5f5" :borderRadius 1}}
+                  [:> Icon {:color "success"} "link"]
+                  [:> Typography {:flex 1}
+                   (str sub-category " → " service-name)]
+                  [:> Button
+                   {:size "small"
+                    :color "warning"
+                    :on-click #(==> [::events/unlink-candidate-from-existing-service source-id])}
+                   (tr :ptv.wizard/unlink-service)]]))])]]]])))
 
 (r/defc service-location-details
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
