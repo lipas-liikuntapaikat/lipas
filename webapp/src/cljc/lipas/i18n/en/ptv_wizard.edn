@@ -23,6 +23,7 @@
  :select-existing-service "Select existing service",
  :linked-to-service "Linked to service",
  :mapped-services "Linked services",
+ :translate-from "Translate from",
  :unlink-service "Unlink",
  :unselect-helper
  "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."}
