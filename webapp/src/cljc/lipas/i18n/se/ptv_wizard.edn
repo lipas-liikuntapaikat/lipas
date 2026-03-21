@@ -22,6 +22,7 @@
  "Kommunen har inga idrottsanläggningar i LIPAS för de valda typklasserna.",
  :link-to-existing-service "Finns tjänsten redan i PTV?",
  :select-existing-service "Välj befintlig tjänst",
+ :linked-to-service "Kopplad till tjänst",
  :mapped-services "Kopplade tjänster",
  :unlink-service "Ta bort koppling",
  :unselect-helper

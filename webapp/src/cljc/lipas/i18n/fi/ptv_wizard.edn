@@ -21,6 +21,7 @@
  "Valitsemillasi tyyppiluokilla ei ole kunnassa liikuntapaikkoja Lipaksessa.",
  :link-to-existing-service "Löytyykö palvelu jo PTV:stä?",
  :select-existing-service "Valitse olemassa oleva palvelu",
+ :linked-to-service "Linkitetty palveluun",
  :mapped-services "Linkitetyt palvelut",
  :unlink-service "Poista linkitys",
  :unselect-helper

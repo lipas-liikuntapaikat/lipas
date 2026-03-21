@@ -21,6 +21,7 @@
  "The municipality has no sports sites in LIPAS for the selected type classes.",
  :link-to-existing-service "Does the service already exist in PTV?",
  :select-existing-service "Select existing service",
+ :linked-to-service "Linked to service",
  :mapped-services "Linked services",
  :unlink-service "Unlink",
  :unselect-helper
