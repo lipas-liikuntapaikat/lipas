@@ -101,10 +101,25 @@
           organizations))
 
 (def lang->locale
+  "PTV language code -> LIPAS locale keyword"
   {"fi" :fi, "sv" :se, "en" :en})
 
 (def lipas-lang->ptv-lang
+  "LIPAS language code -> PTV language code"
   {"fi" "fi", "se" "sv", "en" "en"})
+
+(def locale->lang
+  "LIPAS locale keyword -> PTV language code"
+  {:fi "fi", :se "sv", :en "en"})
+
+(defn- resolve-lang-pairs
+  "Given a set/seq of LIPAS language codes (\"fi\" \"se\" \"en\"),
+   returns seq of [ptv-lang lipas-locale] pairs for iteration."
+  [languages]
+  (for [lipas-lang languages
+        :let [ptv-lang (get lipas-lang->ptv-lang lipas-lang)]
+        :when ptv-lang]
+    [ptv-lang (keyword lipas-lang)]))
 
 (def placeholder "TODO: Value missing!")
 
@@ -176,7 +191,7 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
-     :serviceNames (for [[lang locale] (select-keys lang->locale languages)]
+     :serviceNames (for [[lang locale] (resolve-lang-pairs languages)]
                      {:type "Name" ; Name | AlternativeName
                       :language lang
                       :value (get-in sub-cat [:name locale])})
@@ -206,7 +221,7 @@
      :serviceDescriptions (for [[k v] {:summary "Summary"
                                        :description "Description"
                                        :user-instruction "UserInstruction"}
-                                [lang locale] (select-keys lang->locale languages)]
+                                [lang locale] (resolve-lang-pairs languages)]
                             {:type v
                              :language lang
                              :value (get-in m [k locale] placeholder)})
@@ -327,7 +342,7 @@
                                                (let [fallback "TODO text missing"]
                                                  (for [[type-k type-v] {:summary "Summary"
                                                                         :description "Description"}
-                                                       [lang locale] (select-keys lang->locale languages)]
+                                                       [lang locale] (resolve-lang-pairs languages)]
                                                    {:type type-v
                                                     :value (get-in ptv [type-k locale] fallback)
                                                     :language lang})))
