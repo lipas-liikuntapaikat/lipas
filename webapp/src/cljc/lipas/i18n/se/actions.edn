@@ -4,6 +4,8 @@
  :browse-to-map "Flytta dig till kartan",
  :browse-to-portal "Flytta dig till portalen",
  :cancel "Avbryta",
+ :show-all "Visa alla",
+ :show-less "Visa färre",
  :clear-selections "Ta bort val",
  :close "Stäng",
  :delete "Radera",

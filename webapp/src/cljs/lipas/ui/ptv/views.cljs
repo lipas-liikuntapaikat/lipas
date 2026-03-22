@@ -176,7 +176,7 @@
          :items (for [s linked-services]
                   {:id (:service-id s)
                    :name (:label s)
-                   :url (str ptv-base "/services/service/" (:service-id s))})
+                   :url (str ptv-base "/service/" (:service-id s))})
          :editing? @editing-services?
          :on-edit #(reset! editing-services? true)
          :on-cancel #(reset! editing-services? false)
@@ -1297,91 +1297,196 @@
              :set-selected-tab set-selected-tab
              :service-channel-ids service-channel-ids}])]]]]]))
 
+(def ^:private service-channels-threshold 5)
+
+(defn service-channels-list
+  [{:keys [tr service ptv-base]}]
+  (r/with-let [show-all? (r/atom false)]
+    (let [channels (sort-by :name (:service-channels service))
+          total (count channels)
+          visible (if @show-all? channels (take service-channels-threshold channels))
+          truncated? (and (not @show-all?) (> total service-channels-threshold))]
+      [:> Stack {:spacing 0.5}
+       [:> Typography {:variant "caption" :color "text.secondary"}
+        (str (tr :ptv/service-channels) " (" total ")")]
+       (for [sc visible]
+         ^{:key (:id sc)}
+         [:> Link {:href (str ptv-base "/channels/serviceLocation/" (:id sc))
+                   :target "_blank"
+                   :variant "body2"}
+          (:name sc)])
+       (when truncated?
+         [:> Button {:size "small" :variant "text"
+                     :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                     :on-click #(reset! show-all? true)}
+          (str (tr :actions/show-all) " (" total ")")])
+       (when @show-all?
+         [:> Button {:size "small" :variant "text"
+                     :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
+                     :on-click #(reset! show-all? false)}
+          (tr :actions/show-less)])])))
+
+(defn service-panel-left
+  [{:keys [tr org-id service data ptv-base]}]
+  (let [service-id (:service-id service)
+        source-id (:source-id service)]
+    [:> Stack {:spacing 2}
+
+     ;; 1. Link to PTV
+     [:> Stack {:spacing 0.5}
+      [:> Typography {:variant "caption" :color "text.secondary"}
+       (str (tr :ptv/service) " PTV:ssä")]
+      [:> Link {:href (str ptv-base "/service/" service-id)
+                :target "_blank"
+                :variant "body2"}
+       (:label service)]]
+
+     ;; 2. Service classes
+     (when (seq (:service-classes service))
+       [:> Stack {:spacing 0.5}
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :ptv.service/classes)]
+        [:> Stack {:direction "row" :spacing 0.5 :flex-wrap "wrap"}
+         (doall
+           (for [class (:service-classes service)]
+             (let [label (or (get class :fi) (first (vals class)))]
+               ^{:key label}
+               [:> Chip {:label label :size "small" :variant "outlined"}])))]])
+
+     ;; 3. Keywords
+     (when (seq (:ontology-terms service))
+       [:> Stack {:spacing 0.5}
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :ptv/keywords)]
+        [:> Stack {:direction "row" :spacing 0.5 :flex-wrap "wrap"}
+         (doall
+           (for [onto (:ontology-terms service)]
+             (let [label (or (get onto :fi) (first (vals onto)))]
+               ^{:key label}
+               [:> Chip {:label label :size "small" :variant "outlined"}])))]])
+
+     ;; 4. Linked service locations
+     (when (seq (:service-channels service))
+       [service-channels-list {:tr tr :service service :ptv-base ptv-base}])
+
+     ;; Sync button
+     [:> Button
+      {:variant "contained"
+       :color "secondary"
+       :size "small"
+       :sx #js {:textTransform "none"}
+       :startIcon (r/as-element [:> Icon "sync"])
+       :on-click (fn [_e]
+                   (rf/dispatch [::events/create-ptv-service org-id source-id data
+                                 [[:dispatch [:lipas.ui.events/set-active-notification
+                                              {:message (tr :notifications/save-success)
+                                               :success? true}]]]
+                                 []]))}
+      (tr :ptv.actions/sync-now)]
+
+     ;; Last modified
+     [:> Typography {:variant "caption" :color "text.secondary"}
+      (str (tr :general/last-modified) " " (:last-modified-human service))]]))
+
+(defn service-panel-right
+  [{:keys [tr source-id service descriptions org-languages]}]
+  (r/with-let [selected-tab (r/atom :fi)]
+    (let [summary-data (or (:summary descriptions) (:summary service))
+          description-data (or (:description descriptions) (:description service))
+          user-instruction-data (or (:user-instruction descriptions) (:user-instruction service))]
+      [:> Stack {:spacing 2}
+
+       [controls/lang-selector
+        {:value @selected-tab
+         :on-change #(reset! selected-tab %)
+         :enabled-languages (set org-languages)}]
+
+       ;; Summary
+       (let [v (or (get summary-data @selected-tab) "")]
+         [text-fields/text-field
+          {:on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+           :multiline true
+           :variant "outlined"
+           :label (tr :ptv/summary)
+           :value v
+           :helperText (str (count v) "/150")
+           :error (> (count v) 150)}])
+
+       ;; Description
+       (let [v (or (get description-data @selected-tab) "")]
+         [text-fields/text-field
+          {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+           :variant "outlined"
+           :rows 5
+           :multiline true
+           :label (tr :ptv/description)
+           :value v
+           :helperText (str (count v) "/2500")
+           :error (> (count v) 2500)}])
+
+       ;; User instruction
+       (let [v (or (get user-instruction-data @selected-tab) "")]
+         [text-fields/text-field
+          {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
+           :variant "outlined"
+           :rows 3
+           :multiline true
+           :label (tr :ptv/user-instruction)
+           :value v
+           :helperText (str (count v) "/2500")
+           :error (> (count v) 2500)}])
+
+       ;; Translate button
+       (when (> (count org-languages) 1)
+         (let [from-lang @selected-tab
+               other-langs (disj (set (map keyword org-languages)) from-lang)
+               has-text? (and (seq (get summary-data from-lang))
+                              (seq (get description-data from-lang)))]
+           [:> Button
+            {:size "small"
+             :variant "text"
+             :disabled (not has-text?)
+             :startIcon (r/as-element [:> Icon "translate"])
+             :sx #js {:alignSelf "flex-start" :textTransform "none"}
+             :on-click #(==> [::events/translate-service-candidate
+                              source-id from-lang other-langs])}
+            (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                 (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                 ")")]))])))
+
 (defn service-panel
   [{:keys [org-id service descriptions]}]
-  (r/with-let [lang (r/atom :fi)]
-    (let [tr (<== [:lipas.ui.subs/translator])
-          source-id (:source-id service)
-          loading? false
-          org-languages (<== [::subs/org-languages org-id])
-          ;; Turn the PTV Service data structure back to Lipas API call for save!
-          data {:org-id org-id
-                :source-id source-id
-                :city-codes (:city-codes service)
-                :sub-category-id (ptv-data/parse-service-source-id (:source-id service))
-                :languages org-languages
-                :summary (or (:summary descriptions) (:summary service))
-                :description (or (:description descriptions) (:description service))}]
-      [layouts/expansion-panel {:label (:label service)}
-       [:> Stack {:spacing 2}
-        [:> Stack {:direction "row" :spacing 2}
-         [:> Stack {:spacing 2 :flex 1}
-
-          ;; Last modified
-          [:> Typography (str (tr :general/last-modified) " " (:last-modified-human service))]
-
-          ;; Service classes
-          [:> Typography (tr :ptv.service/classes)]
-          [:> Stack {:direction "row" :spacing 1}
-           (doall
-             (for [class (:service-classes service)]
-               (let [label (get class @lang)]
-                 ^{:key label}
-                 [:> Chip {:label label :variant "outlined"}])))]
-
-          ;; keywords
-          [:> Typography (tr :ptv/keywords)]
-          [:> Stack {:direction "row" :spacing 1}
-           (doall
-             (for [onto (:ontology-terms service)]
-               (let [label (get onto @lang)]
-                 ^{:key label}
-                 [:> Chip {:label label :variant "outlined"}])))]
-
-          [lang-selector
-           {:value @lang
-            :opts (:languages service)
-            :on-change #(reset! lang %2)}]
-
-          ;; Summary
-          [:> Typography (tr :ptv/summary)]
-          [text-fields/text-field
-           {:disabled loading?
-            :on-change #(==> [::events/set-service-candidate-summary source-id @lang %])
-            :multiline true
-            :label (tr :ptv/summary)
-            :value (get-in data [:summary @lang])}]
-
-          ;; Descriptions
-          [:> Typography (tr :ptv/description)]
-          [text-fields/text-field
-           {:disabled loading?
-            :on-change #(==> [::events/set-service-candidate-description source-id @lang %])
-            :multiline true
-            :label (tr :ptv/description)
-            :value (get-in data [:description @lang])}]
-
-          [:> Button
-           {:variant "contained"
-            :disabled loading?
-            :on-click (fn [_e]
-                        (rf/dispatch [::events/create-ptv-service org-id source-id data
-                                      [[:dispatch [:lipas.ui.events/set-active-notification
-                                                   {:message (tr :notifications/save-success)
-                                                    :success? true}]]]
-                                      []]))}
-           (tr :actions/save)]]
-
-         [:> Stack {:spacing 2 :flex 1}
-
-          ;; Service channels
-          [:> Typography (tr :ptv/service-channels)]
-          [:ul
-           (doall
-             (for [sc (sort-by :name (:service-channels service))]
-               (let [label (:name sc)]
-                 ^{:key label}
-                 [:li label])))]]]]])))
+  (let [tr (<== [:lipas.ui.subs/translator])
+        source-id (:source-id service)
+        org-languages (<== [::subs/org-languages org-id])
+        ptv-base (if (utils/prod?)
+                   "https://palvelutietovaranto.suomi.fi"
+                   "https://palvelutietovaranto.trn.suomi.fi")
+        data {:org-id org-id
+              :source-id source-id
+              :city-codes (:city-codes service)
+              :sub-category-id (ptv-data/parse-service-source-id source-id)
+              :languages org-languages
+              :summary (or (:summary descriptions) (:summary service))
+              :description (or (:description descriptions) (:description service))
+              :user-instruction (or (:user-instruction descriptions) (:user-instruction service))}]
+    [layouts/expansion-panel
+     {:label (:label service)
+      :label-icon (when (some-> source-id (str/starts-with? "lipas-"))
+                    [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
+                     [:> Chip {:label "PTV"
+                               :size "small"
+                               :color "success"
+                               :variant "outlined"
+                               :icon (r/as-element [:> Sync {:fontSize "small"}])}]])}
+     [:> Grid {:container true :spacing 3}
+      [:> Grid {:item true :xs 12 :md 4}
+       [service-panel-left {:tr tr :org-id org-id :service service
+                            :data data :ptv-base ptv-base}]]
+      [:> Grid {:item true :xs 12 :md 8}
+       [service-panel-right {:tr tr :source-id source-id :service service
+                             :descriptions descriptions
+                             :org-languages org-languages}]]]]))
 
 (defn services
   []
