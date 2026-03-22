@@ -1,3 +1,6 @@
 {:classes "Service classes",
  :services-explanation "The organization's PTV services to which sports sites are linked as service locations. Services connected to LIPAS were created through the integration.",
+ :no-lipas-services "No LIPAS-managed services have been created yet.",
+ :no-services "The organization has no services in PTV.",
+ :use-wizard-to-create "Create services using the Setup tab wizard.",
  :show-only-lipas-managed "Show only services connected to LIPAS"}

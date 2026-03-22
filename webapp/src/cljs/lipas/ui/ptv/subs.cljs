@@ -207,7 +207,7 @@
 (rf/reg-sub ::services-filter
   :<- [::ptv]
   (fn [ptv _]
-    (:services-filter ptv)))
+    (get ptv :services-filter "lipas-managed")))
 
 (rf/reg-sub ::services-filtered
   (fn [[_ org-id]]
