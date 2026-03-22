@@ -4,6 +4,7 @@
  :export-service-locations-to-ptv "Skicka till PTV",
  :export-services-to-ptv "Skicka till PTV",
  :generate-descriptions "Skapa beskrivningar",
+ :generate-descriptions-all "Skapa beskrivningar för alla",
  :regenerate-descriptions "Uppdatera beskrivningar",
  :generate-descriptions-helper1
  "Tjänster kan upprättas i PTV när de har minst en finsk beskrivning och sammanfattning. LIPAS kompletterar serviceklass, nyckelord och andra metadata automatiskt.",
@@ -25,10 +26,12 @@
  :linked-to-service "Kopplad till tjänst",
  :mapped-services "Kopplade tjänster",
  :translate-to-other-langs "Översätt till andra språk",
+ :translate-to-other-langs-tooltip "Översätt texterna från den aktuella fliken till andra språk. Användbart när du har redigerat texter och vill uppdatera översättningarna.",
  :unlink-service "Ta bort koppling",
  :step1-description "Exportera alla idrottsanläggningar på en gång eller begränsa exporten till specifika typklasser. I det sista steget kan du fortfarande utesluta enskilda anläggningar.",
  :integrate-all "Exportera alla idrottsanläggningar",
  :integrate-selected "Välj typklasser",
  :select-sub-categories "Välj typklasser",
  :unselect-helper
- "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."}
+ "Om du inte vill exportera ett visst objekt kan du öppna det i panelen till höger och inaktivera reglaget."
+ :step3-instruction "Öppna en idrottsanläggning från listan, skapa eller skriv beskrivningar och aktivera synkronisering med reglaget."}

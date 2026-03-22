@@ -4,6 +4,7 @@
  :export-service-locations-to-ptv "Export to Service Information Repository",
  :export-services-to-ptv "Export to Service Information Repository",
  :generate-descriptions "Create descriptions",
+ :generate-descriptions-all "Create descriptions for all",
  :regenerate-descriptions "Update descriptions",
  :generate-descriptions-helper1
  "Services can be created in PTV when they have at least a Finnish description and summary. LIPAS automatically fills in the service classification, keywords and other metadata.",
@@ -24,10 +25,12 @@
  :linked-to-service "Linked to service",
  :mapped-services "Linked services",
  :translate-to-other-langs "Translate to other languages",
+ :translate-to-other-langs-tooltip "Translate texts from the current tab to other languages. Useful when you've edited texts and want to update the translations.",
  :unlink-service "Unlink",
  :step1-description "Export all sports sites at once or narrow down to specific type classes. In the final step you can still exclude individual sports sites.",
  :integrate-all "Export all sports sites",
  :integrate-selected "Select type classes",
  :select-sub-categories "Select type classes",
  :unselect-helper
- "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."}
+ "If you don't want to export a specific site, you can open\n     the site on the right and turn off the toggle switch."
+ :step3-instruction "Open a sports site from the list, create or write descriptions, and enable sync with the toggle switch."}
