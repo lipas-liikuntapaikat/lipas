@@ -162,11 +162,15 @@
   [{:keys [org-id tr site services ptv-base]}]
   (r/with-let [editing-services? (r/atom false)
                editing-channel? (r/atom false)]
-    (let [loading? (<== [::subs/generating-descriptions?])
+    (let [generating? (<== [::subs/generating-descriptions?])
+          syncing? (<== [::subs/loading-from-lipas?])
+          loading? (or generating? syncing?)
           service-ids (set (:service-ids site))
           linked-services (filter #(contains? service-ids (:service-id %)) services)
           channel-id (first (:service-channel-ids site))
-          channel-name (:service-channel-name site)]
+          channel-name (:service-channel-name site)
+          sync-status (:sync-status site)
+          needs-sync? (contains? #{:out-of-date :content-drift} sync-status)]
       [:> Stack {:spacing 2}
 
        ;; Services
@@ -255,17 +259,21 @@
                          (some-> site :summary :fi count (> 5))
                          (some-> site :description :fi count (> 5)))
              synced? (:last-sync site)]
-         [:> Button
-          {:variant "contained"
-           :color "secondary"
-           :size "small"
-           :disabled (or loading? (not valid?))
-           :sx #js {:textTransform "none"}
-           :startIcon (r/as-element [:> Icon (if synced? "sync" "ios_share")])
-           :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-          (if synced?
-            (tr :ptv.actions/sync-now)
-            (tr :ptv.wizard/export-service-locations-to-ptv))])])))
+         [:> Stack {:direction "row" :spacing 1 :align-items "center"}
+          [:> Button
+           {:variant "contained"
+            :color "secondary"
+            :size "small"
+            :disabled (or syncing? (not valid?) (and synced? (not needs-sync?)))
+            :sx #js {:textTransform "none"}
+            :startIcon (r/as-element
+                         (if syncing?
+                           [:> CircularProgress {:size 16 :color "inherit"}]
+                           [:> Icon (if synced? "sync" "ios_share")]))
+            :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+           (if synced?
+             (tr :ptv.actions/sync-now)
+             (tr :ptv.wizard/export-service-locations-to-ptv))]])])))
 
 (defn form-right-column
   [{:keys [tr site org-languages]}]
@@ -1384,20 +1392,24 @@
        [service-channels-list {:tr tr :service service :ptv-base ptv-base}])
 
      ;; Sync button
-     [:> Button
-      {:variant "contained"
-       :color "secondary"
-       :disabled (not has-local-edits?)
-       :size "small"
-       :sx #js {:textTransform "none"}
-       :startIcon (r/as-element [:> Icon "sync"])
-       :on-click (fn [_e]
-                   (rf/dispatch [::events/create-ptv-service org-id source-id data
-                                 [[:dispatch [:lipas.ui.events/set-active-notification
-                                              {:message (tr :notifications/save-success)
-                                               :success? true}]]]
-                                 []]))}
-      (tr :ptv.actions/sync-now)]
+     (let [syncing? (<== [::subs/loading-from-lipas?])]
+       [:> Button
+        {:variant "contained"
+         :color "secondary"
+         :disabled (or syncing? (not has-local-edits?))
+         :size "small"
+         :sx #js {:textTransform "none"}
+         :startIcon (r/as-element
+                      (if syncing?
+                        [:> CircularProgress {:size 16 :color "inherit"}]
+                        [:> Icon "sync"]))
+         :on-click (fn [_e]
+                     (rf/dispatch [::events/create-ptv-service org-id source-id data
+                                   [[:dispatch [:lipas.ui.events/set-active-notification
+                                                {:message (tr :notifications/save-success)
+                                                 :success? true}]]]
+                                   []]))}
+        (tr :ptv.actions/sync-now)])
 
      ;; Last modified
      [:> Typography {:variant "caption" :color "text.secondary"}
