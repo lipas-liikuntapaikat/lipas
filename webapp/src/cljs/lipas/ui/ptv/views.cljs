@@ -1402,13 +1402,24 @@
        :on-change #(==> [::events/toggle-services-filter])}]
 
      ;; Services list
-     (doall
-       (for [service services]
-         ^{:key (:service-id service)}
-         [service-panel
-          {:org-id org-id
-           :service service
-           :descriptions (get descriptions (:source-id service))}]))]))
+     (if (seq services)
+       (doall
+         (for [service services]
+           ^{:key (:service-id service)}
+           [service-panel
+            {:org-id org-id
+             :service service
+             :descriptions (get descriptions (:source-id service))}]))
+
+       ;; Empty state
+       [:> Stack {:spacing 2 :sx #js {:p 2}}
+        [:> Alert {:severity "info"}
+         (if (= "lipas-managed" services-filter)
+           (tr :ptv.service/no-lipas-services)
+           (tr :ptv.service/no-services))]
+        (when (= "lipas-managed" services-filter)
+          [:> Typography {:variant "body2"}
+           (tr :ptv.service/use-wizard-to-create)])])]))
 
 (defn wizard
   []

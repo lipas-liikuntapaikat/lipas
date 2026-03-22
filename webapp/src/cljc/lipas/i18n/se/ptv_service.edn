@@ -1,4 +1,7 @@
 {:classes "Serviceklasser",
  :services-explanation "Organisationens PTV-tjänster till vilka idrottsanläggningar kopplas som servicepunkter. Tjänster kopplade till LIPAS har skapats genom integrationen.",
+ :no-lipas-services "Inga LIPAS-hanterade tjänster har skapats ännu.",
+ :no-services "Organisationen har inga tjänster i PTV.",
+ :use-wizard-to-create "Skapa tjänster med hjälp av guiden på fliken Idrifttagning.",
  :show-only-lipas-managed
  "Visa endast tjänster som är kopplade till LIPAS."}
