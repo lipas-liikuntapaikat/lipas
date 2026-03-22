@@ -165,7 +165,7 @@
     (when org-id
       (get-in ptv [:org org-id :data :services]))))
 
-(def langs {"sv" "se" "fi" "fi" "en" "en"})
+(def langs {"sv" :se "fi" :fi "en" :en})
 
 (rf/reg-sub ::services
   (fn [[_ org-id]]
