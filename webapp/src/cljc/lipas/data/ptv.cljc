@@ -560,20 +560,58 @@
       ;; No audit data
       :else :none)))
 
+(defn ptv-descriptions->texts
+  "Extract :summary, :description, :user-instruction maps from PTV descriptions array.
+   Works for both serviceDescriptions and serviceChannelDescriptions."
+  [descriptions]
+  (reduce (fn [acc {:keys [language value type]}]
+            (if-let [k (case type
+                         "Summary" :summary
+                         "Description" :description
+                         "UserInstruction" :user-instruction
+                         nil)]
+              (update acc k assoc (lang->locale language) value)
+              acc))
+          {}
+          descriptions))
+
+(defn texts-match?
+  "Compare LIPAS-side texts with PTV-side texts. Returns true if all
+   non-nil fields match. Trims whitespace for comparison."
+  [lipas-texts ptv-texts]
+  (let [trim #(some-> % str/trim not-empty)]
+    (every? (fn [field]
+              (let [lipas-vals (get lipas-texts field)
+                    ptv-vals (get ptv-texts field)]
+                (every? (fn [lang]
+                          (let [l (trim (get lipas-vals lang))
+                                p (trim (get ptv-vals lang))]
+                            (or (and (nil? l) (nil? p))
+                                (= l p))))
+                        [:fi :se :en])))
+            [:summary :description :user-instruction])))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
 
         summary (-> site :ptv :summary)
         description (-> site :ptv :description)
+        user-instruction (-> site :ptv :user-instruction)
 
-        last-sync (-> site :ptv :last-sync)]
+        last-sync (-> site :ptv :last-sync)
+
+        ;; Drift detection: compare LIPAS texts vs PTV texts
+        lipas-texts {:summary summary :description description :user-instruction user-instruction}
+        ptv-channel (get service-channels service-channel-id)
+        ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
+        content-drift? (and last-sync ptv-texts (not (texts-match? lipas-texts ptv-texts)))]
+
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
      :lipas-id (:lipas-id site)
      :name (:name site)
      :event-date (:event-date site)
-     ;; :event-date-human (some-> (:event-date site) utils/->human-date-time-at-user-tz)
      :name-conflict (detect-name-conflict site (vals service-channels))
      :marketing-name (:marketing-name site)
      :type (-> site :search-meta :type :name :fi)
@@ -584,16 +622,19 @@
      :owner (-> site :search-meta :owner :name :fi)
      :summary summary
      :description description
+     :user-instruction user-instruction
      :languages (or (-> site :ptv :languages) org-langs)
 
      :sync-enabled (get-in site [:ptv :sync-enabled] false)
      :last-sync last-sync
-     ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
 
      :sync-status (cond
                     (not last-sync) :not-synced
+                    content-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
+
+     :ptv-texts ptv-texts
 
      :service-ids (-> site :ptv :service-ids)
      :service-name (-> services
@@ -605,7 +646,6 @@
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
 
-     ;; Audit status determination
      :audit-status (determine-audit-status site)}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
@@ -642,18 +682,9 @@
                   (some-> summary :fi count (> 5))))))
 
 (defn ptv-service-channel->texts
-  "Take PTV ServiceChannel response and build Lipas :summary and :description"
+  "Take PTV ServiceChannel response and build Lipas :summary, :description, :user-instruction"
   [data]
-  (reduce (fn [acc {:keys [language value type]}]
-            (if-let [k (case type
-                         "Summary" :summary
-                         "Description" :description
-                         "UserInstruction" :user-instruction
-                         nil)]
-              (update acc k assoc (lang->locale language) value)
-              acc))
-          {}
-          (:serviceChannelDescriptions data)))
+  (ptv-descriptions->texts (:serviceChannelDescriptions data)))
 
 (defn get-all-pages [f]
   (loop [page 1

@@ -12,6 +12,7 @@
  :sports-site-count-singular "sports site"
  :synced-to-ptv "Exported to PTV"
  :out-of-date "LIPAS has newer changes than PTV"
+ :content-drift "PTV content differs from LIPAS"
  :not-yet-synced "Selected for export, not yet synced to PTV"
  :summary "Summary"
  :user-instruction "User instruction"

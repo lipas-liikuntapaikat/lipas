@@ -12,6 +12,7 @@
  :sports-site-count-singular "liikuntapaikka",
  :synced-to-ptv "Viety PTV:hen",
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
+ :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
  :user-instruction "Toimintaohje",

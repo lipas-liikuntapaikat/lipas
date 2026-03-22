@@ -12,6 +12,7 @@
  :sports-site-count-singular "idrottsanläggning",
  :synced-to-ptv "Exporterad till PTV",
  :out-of-date "LIPAS har nyare ändringar än PTV",
+ :content-drift "PTV-innehållet skiljer sig från LIPAS",
  :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",
