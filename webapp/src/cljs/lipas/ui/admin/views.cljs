@@ -27,6 +27,7 @@
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.admin.ai-workbench.views :as ai-workbench-views]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :as ac]
@@ -1253,7 +1254,9 @@
          [:> Tab {:label "Tyyppikoodit"
                   :value "types"}]
          [:> Tab {:label "Jobs Monitoring"
-                  :value "jobs"}]]]
+                  :value "jobs"}]
+         [:> Tab {:label "PTV AI Workbench"
+                  :value "ai-workbench"}]]]
 
        (case selected-tab
          :symbol
@@ -1270,6 +1273,9 @@
 
          :jobs
          [jobs-monitor-view]
+
+         :ai-workbench
+         [ai-workbench-views/ai-workbench-tab]
 
          [:div "Missing view"])]]]))
 

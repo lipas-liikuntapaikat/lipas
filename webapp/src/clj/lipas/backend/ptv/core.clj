@@ -52,6 +52,28 @@
    :sports-facilities (for [site sites]
                         {:type (-> site :search-meta :type :name :fi)})})
 
+(defn- nil-safe-frequencies
+  "Like frequencies but replaces nil keys with \"unknown\"."
+  [coll]
+  (into {} (map (fn [[k v]] [(if (nil? k) "unknown" k) v]))
+        (frequencies coll)))
+
+(defn make-aggregate-overview
+  [sites {:keys [free-use? surface-materials? lighting?]}]
+  (let [base {:city-name    (->> sites first :search-meta :location :city :name)
+              :service-name (->> sites first :search-meta :type :sub-category :name)
+              :total-count  (count sites)
+              :by-type      (nil-safe-frequencies (map #(-> % :search-meta :type :name :fi) sites))}]
+    (cond-> base
+      free-use?
+      (assoc :free-use (nil-safe-frequencies (map #(get-in % [:properties :free-use?]) sites)))
+
+      surface-materials?
+      (assoc :surface-materials (nil-safe-frequencies (mapcat #(get-in % [:properties :surface-material]) sites)))
+
+      lighting?
+      (assoc :lighting (nil-safe-frequencies (map #(get-in % [:properties :ligthing?]) sites))))))
+
 (defn generate-ptv-service-descriptions
   [search
    {:keys [sub-category-id city-codes overview]}]
@@ -67,19 +89,18 @@
         :content)))
 
 (defn upsert-ptv-service!
-  [ptv {:keys [source-id] :as m}]
+  [ptv {:keys [source-id service-id] :as m}]
   (let [data (ptv-data/->ptv-service m)]
-    ;; We have the source-id always?
-    ; (if source-id
-    ;   (ptv/update-service ptv source-id data)
-    ;   (ptv/create-service ptv data))
-    ;; PTV update using sourceId gives 404 if the sourceId doesn't exist yet
-    (try
-      (ptv/update-service ptv source-id data)
-      (catch clojure.lang.ExceptionInfo e
-        (if (= 404 (:status (:resp (ex-data e))))
-          (ptv/create-service ptv data)
-          (throw e))))))
+    (if service-id
+      ;; Linking to existing service: update by PTV UUID to set our source-id
+      (ptv/update-service-by-id ptv service-id data)
+      ;; Normal flow: try update by source-id, create if not found
+      (try
+        (ptv/update-service ptv source-id data)
+        (catch clojure.lang.ExceptionInfo e
+          (if (= 404 (:status (:resp (ex-data e))))
+            (ptv/create-service ptv data)
+            (throw e)))))))
 
 (defn fetch-ptv-org
   [ptv org-id]
@@ -94,6 +115,10 @@
   (ptv/get-org-services ptv org-id))
 
 (defn fetch-ptv-service-channels
+  "Fetch the org's service channels from PTV with full entity data.
+   Uses the /list/organization endpoint which returns complete channel
+   entities (descriptions, sourceId, publishingStatus etc.) needed for
+   drift detection and status warnings."
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
@@ -104,6 +129,7 @@
 (def persisted-ptv-keys [:languages
                          :summary
                          :description
+                         :user-instruction
                          :last-sync
                          :org-id
                          :sync-enabled
@@ -168,9 +194,9 @@
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
                          (cond->
-                          archive? (dissoc :source-id
-                                           :service-channel-ids
-                                           :delete-existing)))]
+                           archive? (dissoc :source-id
+                                            :service-channel-ids
+                                            :delete-existing)))]
 
     (log/infof "Resp %s" ptv-resp)
 
@@ -205,13 +231,9 @@
 
       {;; Return the updated :ptv meta for sports-site, to for the app-db
        :ptv new-ptv-data
-       ;; Return :id :name, same as the list endpoint that is used in the UI to show the Palvelupaikka autocomplete
-       :ptv-resp {:id (:id ptv-resp)
-                  :name (some (fn [x]
-                                (when (and (= "Name" (:type x))
-                                           (= "fi" (:language x)))
-                                  (:value x)))
-                              (:serviceChannelNames ptv-resp))}})))
+       ;; Return full PTV response so frontend can update service-channels cache
+       ;; (needed for drift detection and PTV link)
+       :ptv-resp ptv-resp})))
 
 (comment
   (require '[integrant.repl.state :as state])
@@ -397,9 +419,9 @@
 
 (comment
   (generate-ptv-service-descriptions
-   (user/search)
-   {:sub-category-id 2200
-    :city-codes [992 #_92]})
+    (user/search)
+    {:sub-category-id 2200
+     :city-codes [992 #_92]})
 
   (def s1 (core/get-sports-site (repl/db) 612967))
   (def s2 (core/get-sports-site (repl/db) 506032))
@@ -410,5 +432,4 @@
   (generate-ptv-descriptions-from-data (assoc s1 :comment "Luistinrata ylläpidetään lumisena aikana viikottain. Pukukopit käytössä aukioloaikoina. Kentälle on saatavissa pieniä jääkiekkomaaleja pelien järjestämistä ja lajitaitojen harjoittelua varten."))
   (generate-ptv-descriptions-from-data s2)
 
-  *1
-  )
+  *1)

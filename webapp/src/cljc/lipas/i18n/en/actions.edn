@@ -3,6 +3,8 @@
  :browse-to-map "Go to map view",
  :browse-to-portal "Enter portal",
  :cancel "Cancel",
+ :show-all "Show all",
+ :show-less "Show less",
  :clear-selections "Clear",
  :close "Close",
  :delete "Delete",

@@ -1,9 +1,10 @@
 {:all-services-exist
- "Kaikki tarvittavat palvelut on PTV:ssä. Hieno juttu!",
+ "Valitsemasi tyyppiluokan palvelut löytyvät jo PTV:stä. Voit siirtyä seuraavaan vaiheeseen.",
  :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan",
  :export-service-locations-to-ptv "Vie palvelutietovarantoon",
  :export-services-to-ptv "Vie palvelutietovarantoon",
  :generate-descriptions "Laadi kuvaukset",
+ :regenerate-descriptions "Päivitä kuvaukset",
  :generate-descriptions-helper1
  "Palvelut voidaan perustaa PTV:hen, kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti.",
  :generate-descriptions-helper2
@@ -14,5 +15,19 @@
  :service-channel-name-conflict
  "PTV:ssä on jo olemassa palvelupaikka nimellä {1}.",
  :services-to-add "Perustettavat palvelut",
+ :export-error-try-again
+ "Vienti epäonnistui. Yritä uudelleen tai ota yhteyttä ylläpitoon, jos ongelma toistuu.",
+ :no-sports-sites-for-types
+ "Valitsemillasi tyyppiluokilla ei ole kunnassa liikuntapaikkoja Lipaksessa.",
+ :link-to-existing-service "Löytyykö palvelu jo PTV:stä?",
+ :select-existing-service "Valitse olemassa oleva palvelu",
+ :linked-to-service "Linkitetty palveluun",
+ :mapped-services "Linkitetyt palvelut",
+ :translate-to-other-langs "Käännä muille kielille",
+ :unlink-service "Poista linkitys",
+ :step1-description "Valitse vietäväksi kaikki kunnan liikuntapaikat kerralla tai rajaa vienti tiettyihin tyyppiluokkiin. Viimeisessä vaiheessa voit vielä jättää yksittäisiä liikuntapaikkoja pois viennistä.",
+ :integrate-all "Vie kaikki liikuntapaikat",
+ :integrate-selected "Valitse tyyppiluokat",
+ :select-sub-categories "Valitse tyyppiluokat",
  :unselect-helper
  "Jos et halua viedä tiettyä kohdetta, voit avata\n     kohteen oikealta ja laittaa liukukytkimen pois päältä."}

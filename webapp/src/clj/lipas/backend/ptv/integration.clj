@@ -172,11 +172,16 @@
                                   :body)))))
 
 (defn get-org-service-channels
+  "Fetch all service channels for an org with full entity data.
+   Uses /list/organization (full entities with descriptions, sourceId,
+   publishingStatus etc.) rather than /organization/{id} (summary only
+   with {:id :name})."
   [ptv org-id]
   (ptv-data/get-all-pages (fn [page]
-                            (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
+                            (let [params {:url (make-url ptv "/v11/ServiceChannel/list/organization")
                                           :method :get
-                                          :query-params {:page page}}]
+                                          :query-params {:organizationId org-id
+                                                         :page page}}]
                               (-> (http ptv org-id params)
                                   :body)))))
 
@@ -186,6 +191,30 @@
                 :method :get}]
     (-> (http ptv auth-org-id params)
         :body)))
+
+(defn get-active-service-channel
+  "Fetch a service channel via the /active/ endpoint, which returns channels
+   in ANY publishing state (Published, Modified, Draft) — unlike the regular
+   endpoint which only returns Published versions.
+
+   Background: PTV may assign a new UUID to a ServiceChannel when it's edited.
+   The regular list endpoint only shows channels with the current Published UUID.
+   If someone edits a channel directly in PTV, the UUID stored in LIPAS becomes
+   stale — it won't appear in the regular list. But the /active/ endpoint still
+   returns the channel by its old UUID, allowing us to detect what happened
+   (e.g. it's now in 'Modified' state with unpublished changes).
+
+   Returns the full channel data including :sourceId and :publishingStatus,
+   or nil if the channel truly doesn't exist anymore."
+  [ptv auth-org-id service-channel-id]
+  (try
+    (let [params {:url (make-url ptv "/v11/ServiceChannel/active/" service-channel-id)
+                  :method :get}]
+      (-> (http ptv auth-org-id params)
+          :body))
+    (catch clojure.lang.ExceptionInfo e
+      (when-not (= 404 (:status (:resp (ex-data e))))
+        (throw e)))))
 
 (defn create-service
   [ptv
@@ -212,6 +241,18 @@
   (log/info "Update PTV service with id " source-id "and data" data)
   (let [org-id (:mainResponsibleOrganization data)
         params {:url (make-url ptv "/v11/Service/SourceId/" source-id)
+                :method :put
+                :form-params data}]
+    (-> (http ptv org-id params)
+        :body)))
+
+(defn update-service-by-id
+  "Update PTV service by its PTV UUID (not source-id).
+   Used when adopting an existing service into LIPAS integration."
+  [ptv service-id data]
+  (log/info "Update PTV service by ID" service-id)
+  (let [org-id (:mainResponsibleOrganization data)
+        params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
                 :form-params data}]
     (-> (http ptv org-id params)
@@ -291,108 +332,48 @@
                                      (empty? updated-services)
                                      (assoc :deleteAllChannelRelations true))})))
 
+;; Cleanup sequence for lipas-dev and "org 9" in PTV test env
+;; Meant to be run in lipas-dev
 (comment
-  (require '[clojure.java.jdbc :as sql]
-           '[integrant.repl.state :as state]
-           '[lipas.backend.core :as core]
-           '[lipas.utils :as utils])
 
-  (def ptv* (:lipas/ptv state/system))
+  (do
+    (require '[lipas.backend.system :as system])
+    (require '[lipas.backend.core :as core])
+    (require '[lipas.utils :as utils])
+    (def ptv* (:lipas/ptv @system/current-system))
+    (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5") ;; Liminka / org 9
+    (def db* (:lipas/db @system/current-system))
+    (def search* (:lipas/search @system/current-system))
+    (def robot* (core/get-user db* "robot@lipas.fi"))
 
-  ;; "Liminka" test / org 9
-  (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+    ;; Delete all org service locations in PTV test env for org 9
+    (println "Removing Service Locations in PTV Test...")
+    (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
+      (update-service-location ptv* (:id x) {:organizationId org-id*
+                                             :publishingStatus "Deleted"}))
+    (println "Removing Service Locations in PTV Test... DONE!")
 
-  (get-org-services ptv* org-id*)
+;; Delete all org services in PTV test env for org 9
+    (println "Removing Services in PTV Test...")
+    (doseq [x (:itemList (get-org-services ptv* org-id*))]
+      (when-let [source-id (:sourceId x)]
+        (update-service ptv*
+                        source-id
+                        {:mainResponsibleOrganization org-id*
+                         :publishingStatus "Deleted"})))
+    (println "Removing Services in PTV Test... DONE!")
 
-  ;; Create extra services for testing pagination
-  (dotimes [i 20]
-    (let [i (+ 80 i)]
-      (create-service ptv* {:sourceId (str "lipas-random-0-" i)
-                            :ontologyTerms ["http://www.yso.fi/onto/koko/p37350" "http://www.yso.fi/onto/koko/p33303"]
-                            :serviceClasses ["http://uri.suomi.fi/codelist/ptv/ptvserclass2/code/P27.2"]
-                            :type "Service"
-                            :fundingType "PubliclyFunded"
-                            :serviceNames [{:type "Name"
-                                            :language "fi"
-                                            :value (str "Lipas " i)}]
-                            :targetGroups ["http://uri.suomi.fi/codelist/ptv/ptvkohderyhmat/code/KR1"] ;; Kansalaiset
-                            :areaType "LimitedType"
-                            :areas [{:type "Municipality"
-                                     :areaCodes [837]}]
-                            :languages ["fi"]
-                            :serviceDescriptions [{:type "Description"
-                                                   :language "fi"
-                                                   :value "Kuvaus"}
-                                                  {:type "Summary"
-                                                   :language "fi"
-                                                   :value "Kuvaus 2"}]
-                            :publishingStatus "Published"
-                            :serviceProducers [{;; SelfProducedServices | ProcuredServices | Other
-                                                :provisionType "SelfProducedServices"
-                                                :organizations [org-id*]}]
-                            :mainResponsibleOrganization org-id*})))
+    ;; Remove PTV data from LIPAS for "Liminka"
+    (doseq [search-site (get-eligible-sites search*
+                                            {:city-codes [425]
+                                             :owners ["city" "city-main-owner"]})
+            :let [site (core/get-sports-site db* (:lipas-id search-site))]]
+      (println "Removing PTV data for site" (:lipas-id search-site))
+      (let [resp (core/upsert-sports-site! db*
+                                           robot*
+                                           (-> (dissoc site :ptv)
+                                               (assoc :event-date (utils/timestamp)))
+                                           false)]
+        (core/index! search* resp :sync)))
 
-  ;; Delete all org services
-  (doseq [x (:itemList (get-org-services ptv* org-id*))]
-    (when-let [source-id (:sourceId x)]
-      (update-service ptv*
-                      source-id
-                      {:mainResponsibleOrganization org-id*
-                       :publishingStatus "Deleted"})))
-
-  (get-service ptv*
-               org-id*
-               (-> (get-org-services {} org-id*)
-                   :itemList
-                   first
-                   :id))
-
-  (map :serviceNames (:itemList (get-org-services ptv* org-id*)))
-
-  (require 'user)
-
-  ;; Remove :ptv key
-  (def robot (repl/get-robot-user))
-  (doseq [search-site (get-eligible-sites (repl/search)
-                                          {:city-codes [425]
-                                           :owners ["city" "city-main-owner"]})
-          :let [site (core/get-sports-site (repl/db) (:lipas-id search-site))]]
-    (let [resp (core/upsert-sports-site! (repl/db)
-                                         robot
-                                         (-> (dissoc site :ptv)
-                                             (assoc :event-date (utils/timestamp)))
-                                         false)]
-      (core/index! (repl/search) resp :sync)))
-
-  (doseq [search-site (get-eligible-sites (repl/search)
-                                          {:city-codes [425]
-                                           :owners ["city" "city-main-owner"]})
-          :let [site (core/get-sports-site (repl/db) (:lipas-id search-site))]]
-    (core/index! (repl/search) site :sync))
-
-  (get-org-service-channels ptv* org-id*)
-
-  (http ptv* org-id* {:url (make-url ptv* "/v11/ServiceChannel/b4abd13e-0d36-4ff9-a6c9-94f2f5aee036")
-                      :method :get})
-
-  ;; Delete all org service locations
-  (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
-    (update-service-location ptv* (:id x) {:organizationId org-id*
-                                           :publishingStatus "Deleted"}))
-
-  ptv*
-
-  (update-service-location ptv*
-                           "fc768bb4-268c-4054-9b88-9ecc9a943452"
-                           {:org-id org-id*
-                            :publishingStatus "Deleted"})
-
-;; Get all prod orgs
-  (def ptv-prod-orgs
-    (ptv-data/get-all-pages
-     (fn [page]
-       (let [params {:url "https://api.palvelutietovaranto.suomi.fi/api/v11/Organization"
-                     :method :get
-                     :as :json
-                     :query-params {:page page :status "Published"}}]
-         (:body (client/request params)))))))
+    (println "Liminka / org 9 wiped out successfully.")))

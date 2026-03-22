@@ -1,9 +1,23 @@
 (ns lipas.backend.ptv.handler
-  (:require [lipas.backend.middleware :as mw]
+  (:require [cheshire.core :as json]
+            [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.ptv :as ptv-schema]))
+
+(defn- parse-ptv-error
+  "Extract structured error info from a PTV API ExceptionInfo."
+  [^Exception e]
+  (let [data (ex-data e)
+        resp-body (get-in data [:resp :body])
+        status (get-in data [:resp :status])]
+    (when (and status resp-body)
+      {:ptv-status status
+       :ptv-error (if (string? resp-body)
+                    (try (json/parse-string resp-body true)
+                         (catch Exception _ {:raw resp-body}))
+                    resp-body)})))
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
 
@@ -67,7 +81,8 @@
                           [:from :string]
                           [:to [:set :string]]
                           [:summary :string]
-                          [:description :string]]}
+                          [:description :string]
+                          [:user-instruction {:optional true} [:maybe :string]]]}
       :handler
       (fn [req]
         {:status 200
@@ -124,11 +139,19 @@
                           [:sub-category-id :int]
                           [:languages [:vector [:enum "fi" "se" "en"]]]
                           [:summary (ptv-schema/localized-string-schema {:max 150})]
-                          [:description (ptv-schema/localized-string-schema nil)]]}
+                          [:description (ptv-schema/localized-string-schema nil)]
+                          [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
+                          [:service-id {:optional true} [:maybe :string]]]}
       :handler
       (fn [req]
-        {:status 200
-         :body (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))})}}]
+        (try
+          {:status 200
+           :body (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))}
+          (catch clojure.lang.ExceptionInfo e
+            (if-let [ptv-err (parse-ptv-error e)]
+              {:status 409
+               :body ptv-err}
+              (throw e)))))}}]
 
    ["/actions/fetch-ptv-services"
     {:post
@@ -169,8 +192,14 @@
       :parameters {:body ptv-schema/create-ptv-service-location}
       :handler
       (fn [req]
-        {:status 200
-         :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))})}}]
+        (try
+          {:status 200
+           :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
+          (catch clojure.lang.ExceptionInfo e
+            (if-let [ptv-err (parse-ptv-error e)]
+              {:status 409
+               :body ptv-err}
+              (throw e)))))}}]
 
    ["/actions/save-ptv-meta"
     {:post

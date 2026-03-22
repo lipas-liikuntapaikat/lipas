@@ -1,2 +1,8 @@
 {:tasks {up {:doc "Start dev resource with Compose"
-             :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}}}
+             :task (shell "bash -c" "source .env.sh && docker compose up -d proxy-local")}
+
+         vpn-vaotjuha {:doc  "Connect to JYU VPN as vaotjuha"
+                       :task (shell "bash" "scripts/vpn-connect.sh" "vaotjuha")}
+
+         fix-network {:doc  "Restore network after OpenConnect crash"
+                      :task (shell "bash" "scripts/fix-network.sh")}}}

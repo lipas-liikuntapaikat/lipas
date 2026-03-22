@@ -8,6 +8,29 @@
  :service-channels "Palvelupaikat",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
+ :sports-sites-count "liikuntapaikkaa",
+ :sports-site-count-singular "liikuntapaikka",
+ :synced-to-ptv "Viety PTV:hen",
+ :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
+ :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
+ :modified-in-ptv "Muokattu PTV:ssä – tila on \"Muokattu\". Julkaise tai peru muutokset ensin PTV:ssä ennen synkronointia.",
+ :sync-failed-ptv-modified "Synkronointi epäonnistui: PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
+ :sync-failed "Synkronointi PTV:hen epäonnistui.",
+ :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
+ :user-instruction "Toimintaohje",
  :tooltip "Vie Palvelutietovarantoon",
- :wizard "Käyttöönotto"}
+ :wizard "Käyttöönotto"
+ :filter-all "Kaikki"
+ :filter-sync-enabled "Integraatio päällä"
+ :filter-sync-disabled "Integraatio pois"
+ :filter-not-synced "Ei vielä viety"
+ :filter-out-of-date "Muuttunut"
+ :filter-ok "Ajan tasalla"
+ :filter-missing-descriptions "Kuvaukset puuttuvat"
+ :search-placeholder "Hae nimellä..."
+ :hint-enable-sync "Kytke integraatio päälle liukukytkimellä"
+ :hint-select-service "Valitse palvelu ensin. Jos sopivaa palvelua ei löydy listasta, voit luoda uuden Palvelut-välilehdellä tai Käyttöönotto-ohjatun toiminnon kautta."
+ :hint-add-summary "Lisää suomenkielinen tiivistelmä"
+ :hint-add-description "Lisää suomenkielinen kuvaus"
+ :hint-up-to-date "Ajan tasalla"}

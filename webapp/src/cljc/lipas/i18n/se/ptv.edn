@@ -8,6 +8,29 @@
  :service-channels "Servicepunkt",
  :services "Service",
  :sports-sites "Idrottsanläggningar",
+ :sports-sites-count "idrottsanläggningar",
+ :sports-site-count-singular "idrottsanläggning",
+ :synced-to-ptv "Exporterad till PTV",
+ :out-of-date "LIPAS har nyare ändringar än PTV",
+ :content-drift "PTV-innehållet skiljer sig från LIPAS",
+ :modified-in-ptv "Redigerad i PTV \u2013 statusen är \"Ändrad\". Publicera eller ångra ändringarna i PTV först innan du synkroniserar.",
+ :sync-failed-ptv-modified "Synkroniseringen misslyckades: PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och försök igen.",
+ :sync-failed "Synkronisering till PTV misslyckades.",
+ :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
+ :user-instruction "Handlingsanvisning",
  :tooltip "Skicka till PTV",
- :wizard "Idrifttagning"}
+ :wizard "Idrifttagning"
+ :filter-all "Alla"
+ :filter-sync-enabled "Synkronisering på"
+ :filter-sync-disabled "Synkronisering av"
+ :filter-not-synced "Inte synkroniserad"
+ :filter-out-of-date "Ändrad"
+ :filter-ok "Uppdaterad"
+ :filter-missing-descriptions "Beskrivningar saknas"
+ :search-placeholder "Sök på namn..."
+ :hint-enable-sync "Aktivera synkronisering med reglaget"
+ :hint-select-service "Välj en tjänst först. Om en lämplig tjänst inte finns i listan kan du skapa en ny via fliken Tjänster eller med hjälp av guiden Idrifttagning."
+ :hint-add-summary "Lägg till en sammanfattning på finska"
+ :hint-add-description "Lägg till en beskrivning på finska"
+ :hint-up-to-date "Uppdaterad"}
