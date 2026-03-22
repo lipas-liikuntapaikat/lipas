@@ -484,6 +484,13 @@
                                  :color "warning"
                                  :variant "outlined"
                                  :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+                      :content-drift
+                      [:> Tooltip {:title (tr :ptv/content-drift)}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "error"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
                       ;; :not-synced
                       [:> Tooltip {:title (tr :ptv/not-yet-synced)}
                        [:> Chip {:label "PTV"
@@ -1153,6 +1160,13 @@
                     :color "warning"
                     :variant "outlined"
                     :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+         :content-drift
+         [:> Tooltip {:title (tr :ptv/content-drift)}
+          [:> Chip {:label "PTV"
+                    :size "small"
+                    :color "error"
+                    :variant "outlined"
+                    :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
          ;; :not-synced or nil
          (when sync-enabled
            [:> Tooltip {:title (tr :ptv/not-yet-synced)}
@@ -1327,7 +1341,7 @@
           (tr :actions/show-less)])])))
 
 (defn service-panel-left
-  [{:keys [tr org-id service data ptv-base]}]
+  [{:keys [tr org-id service data ptv-base has-local-edits?]}]
   (let [service-id (:service-id service)
         source-id (:source-id service)]
     [:> Stack {:spacing 2}
@@ -1373,6 +1387,7 @@
      [:> Button
       {:variant "contained"
        :color "secondary"
+       :disabled (not has-local-edits?)
        :size "small"
        :sx #js {:textTransform "none"}
        :startIcon (r/as-element [:> Icon "sync"])
@@ -1391,9 +1406,9 @@
 (defn service-panel-right
   [{:keys [tr source-id service descriptions org-languages]}]
   (r/with-let [selected-tab (r/atom :fi)]
-    (let [summary-data (or (:summary descriptions) (:summary service))
-          description-data (or (:description descriptions) (:description service))
-          user-instruction-data (or (:user-instruction descriptions) (:user-instruction service))]
+    (let [summary-data (merge (:summary service) (:summary descriptions))
+          description-data (merge (:description service) (:description descriptions))
+          user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))]
       [:> Stack {:spacing 2}
 
        [controls/lang-selector
@@ -1462,27 +1477,41 @@
         ptv-base (if (utils/prod?)
                    "https://palvelutietovaranto.suomi.fi"
                    "https://palvelutietovaranto.trn.suomi.fi")
-        data {:org-id org-id
-              :source-id source-id
-              :city-codes (:city-codes service)
-              :sub-category-id (ptv-data/parse-service-source-id source-id)
-              :languages org-languages
-              :summary (or (:summary descriptions) (:summary service))
-              :description (or (:description descriptions) (:description service))
-              :user-instruction (or (:user-instruction descriptions) (:user-instruction service))}]
+        current-texts {:summary (merge (:summary service) (:summary descriptions))
+                       :description (merge (:description service) (:description descriptions))
+                       :user-instruction (merge (:user-instruction service) (:user-instruction descriptions))}
+        ptv-texts {:summary (:summary service)
+                   :description (:description service)
+                   :user-instruction (:user-instruction service)}
+        has-local-edits? (not (ptv-data/texts-match? current-texts ptv-texts))
+        data (merge {:org-id org-id
+                     :source-id source-id
+                     :city-codes (:city-codes service)
+                     :sub-category-id (ptv-data/parse-service-source-id source-id)
+                     :languages org-languages}
+                    current-texts)
+        lipas-managed? (some-> source-id (str/starts-with? "lipas-"))]
     [layouts/expansion-panel
      {:label (:label service)
-      :label-icon (when (some-> source-id (str/starts-with? "lipas-"))
-                    [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
-                     [:> Chip {:label "PTV"
-                               :size "small"
-                               :color "success"
-                               :variant "outlined"
-                               :icon (r/as-element [:> Sync {:fontSize "small"}])}]])}
+      :label-icon (when lipas-managed?
+                    (if has-local-edits?
+                      [:> Tooltip {:title (tr :ptv/out-of-date)}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "warning"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+                      [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "success"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> Sync {:fontSize "small"}])}]]))}
      [:> Grid {:container true :spacing 3}
       [:> Grid {:item true :xs 12 :md 4}
        [service-panel-left {:tr tr :org-id org-id :service service
-                            :data data :ptv-base ptv-base}]]
+                            :data data :ptv-base ptv-base
+                            :has-local-edits? has-local-edits?}]]
       [:> Grid {:item true :xs 12 :md 8}
        [service-panel-right {:tr tr :source-id source-id :service service
                              :descriptions descriptions
