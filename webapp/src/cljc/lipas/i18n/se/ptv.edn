@@ -20,4 +20,17 @@
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",
  :tooltip "Skicka till PTV",
- :wizard "Idrifttagning"}
+ :wizard "Idrifttagning"
+ :filter-all "Alla"
+ :filter-sync-enabled "Synkronisering på"
+ :filter-sync-disabled "Synkronisering av"
+ :filter-not-synced "Inte synkroniserad"
+ :filter-out-of-date "Ändrad"
+ :filter-ok "Uppdaterad"
+ :filter-missing-descriptions "Beskrivningar saknas"
+ :search-placeholder "Sök på namn..."
+ :hint-enable-sync "Aktivera synkronisering med reglaget"
+ :hint-select-service "Välj en tjänst först. Om en lämplig tjänst inte finns i listan kan du skapa en ny via fliken Tjänster eller med hjälp av guiden Idrifttagning."
+ :hint-add-summary "Lägg till en sammanfattning på finska"
+ :hint-add-description "Lägg till en beskrivning på finska"
+ :hint-up-to-date "Uppdaterad"}

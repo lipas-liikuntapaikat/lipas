@@ -20,4 +20,17 @@
  :summary "Tiivistelmä",
  :user-instruction "Toimintaohje",
  :tooltip "Vie Palvelutietovarantoon",
- :wizard "Käyttöönotto"}
+ :wizard "Käyttöönotto"
+ :filter-all "Kaikki"
+ :filter-sync-enabled "Integraatio päällä"
+ :filter-sync-disabled "Integraatio pois"
+ :filter-not-synced "Ei vielä viety"
+ :filter-out-of-date "Muuttunut"
+ :filter-ok "Ajan tasalla"
+ :filter-missing-descriptions "Kuvaukset puuttuvat"
+ :search-placeholder "Hae nimellä..."
+ :hint-enable-sync "Kytke integraatio päälle liukukytkimellä"
+ :hint-select-service "Valitse palvelu ensin. Jos sopivaa palvelua ei löydy listasta, voit luoda uuden Palvelut-välilehdellä tai Käyttöönotto-ohjatun toiminnon kautta."
+ :hint-add-summary "Lisää suomenkielinen tiivistelmä"
+ :hint-add-description "Lisää suomenkielinen kuvaus"
+ :hint-up-to-date "Ajan tasalla"}
