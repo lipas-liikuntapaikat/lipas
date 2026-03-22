@@ -163,8 +163,7 @@
   (r/with-let [editing-services? (r/atom false)
                editing-channel? (r/atom false)]
     (let [generating? (<== [::subs/generating-descriptions?])
-          syncing? (<== [::subs/loading-from-lipas?])
-          loading? (or generating? syncing?)
+          syncing? (<== [::subs/syncing-service-location? (:lipas-id site)])
           service-ids (set (:service-ids site))
           linked-services (filter #(contains? service-ids (:service-id %)) services)
           channel-id (first (:service-channel-ids site))
@@ -243,37 +242,45 @@
              (tr :ptv.actions/attach-existing-service-channel)])])
 
        ;; AI generate button
-       [:> Button {:disabled loading?
+       [:> Button {:disabled (or generating? syncing?)
                    :variant "outlined"
                    :size "small"
                    :sx #js {:textTransform "none"}
-                   :startIcon (r/as-element [:> Icon "auto_fix_high"])
+                   :startIcon (r/as-element
+                                (if generating?
+                                  [:> CircularProgress {:size 16 :color "inherit"}]
+                                  [:> Icon "auto_fix_high"]))
                    :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
         (tr :ptv.actions/generate-with-ai)]
 
-       (when loading?
-         [:> CircularProgress {:size 20}])
+       ;; Modified in PTV warning
+       (when (= "Modified" (:service-channel-publishing-status site))
+         [:> Alert {:severity "warning" :variant "outlined"
+                    :sx #js {:py 0.5 :px 1}}
+          [:> Typography {:variant "body2"}
+           (tr :ptv/modified-in-ptv)]])
 
        ;; Sync / Export button
        (let [valid? (and (:sync-enabled site)
                          (some-> site :summary :fi count (> 5))
                          (some-> site :description :fi count (> 5)))
-             synced? (:last-sync site)]
-         [:> Stack {:direction "row" :spacing 1 :align-items "center"}
-          [:> Button
-           {:variant "contained"
-            :color "secondary"
-            :size "small"
-            :disabled (or syncing? (not valid?) (and synced? (not needs-sync?)))
-            :sx #js {:textTransform "none"}
-            :startIcon (r/as-element
-                         (if syncing?
-                           [:> CircularProgress {:size 16 :color "inherit"}]
-                           [:> Icon (if synced? "sync" "ios_share")]))
-            :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-           (if synced?
-             (tr :ptv.actions/sync-now)
-             (tr :ptv.wizard/export-service-locations-to-ptv))]])])))
+             synced? (:last-sync site)
+             modified? (= "Modified" (:service-channel-publishing-status site))]
+         [:> Button
+          {:variant "contained"
+           :color "secondary"
+           :size "small"
+           :full-width true
+           :disabled (or syncing? modified? (not valid?) (and synced? (not needs-sync?)))
+           :sx #js {:textTransform "none"}
+           :startIcon (r/as-element
+                        (if syncing?
+                          [:> CircularProgress {:size 16 :color "inherit"}]
+                          [:> Icon (if synced? "sync" "ios_share")]))
+           :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+          (if synced?
+            (tr :ptv.actions/sync-now)
+            (tr :ptv.wizard/export-service-locations-to-ptv))])])))
 
 (defn form-right-column
   [{:keys [tr site org-languages]}]
@@ -1391,12 +1398,34 @@
      (when (seq (:service-channels service))
        [service-channels-list {:tr tr :service service :ptv-base ptv-base}])
 
+     ;; AI generate button
+     (let [generating? (<== [::subs/generating-service-descriptions? source-id])]
+       [:> Button
+        {:variant "outlined"
+         :size "small"
+         :disabled generating?
+         :sx #js {:textTransform "none"}
+         :startIcon (r/as-element
+                      (if generating?
+                        [:> CircularProgress {:size 16 :color "inherit"}]
+                        [:> Icon "auto_fix_high"]))
+         :on-click #(==> [::events/generate-service-descriptions org-id source-id nil [] []])}
+        (tr :ptv.actions/generate-with-ai)])
+
+     ;; Modified in PTV warning
+     (when (= "Modified" (:publishing-status service))
+       [:> Alert {:severity "warning" :variant "outlined"
+                  :sx #js {:py 0.5 :px 1}}
+        [:> Typography {:variant "body2"}
+         (tr :ptv/modified-in-ptv)]])
+
      ;; Sync button
-     (let [syncing? (<== [::subs/loading-from-lipas?])]
+     (let [syncing? (<== [::subs/syncing-service? source-id])
+           modified? (= "Modified" (:publishing-status service))]
        [:> Button
         {:variant "contained"
          :color "secondary"
-         :disabled (or syncing? (not has-local-edits?))
+         :disabled (or syncing? modified? (not has-local-edits?))
          :size "small"
          :sx #js {:textTransform "none"}
          :startIcon (r/as-element
@@ -1404,11 +1433,7 @@
                         [:> CircularProgress {:size 16 :color "inherit"}]
                         [:> Icon "sync"]))
          :on-click (fn [_e]
-                     (rf/dispatch [::events/create-ptv-service org-id source-id data
-                                   [[:dispatch [:lipas.ui.events/set-active-notification
-                                                {:message (tr :notifications/save-success)
-                                                 :success? true}]]]
-                                   []]))}
+                     (rf/dispatch [::events/create-ptv-service org-id source-id data [] []]))}
         (tr :ptv.actions/sync-now)])
 
      ;; Last modified
@@ -1505,17 +1530,29 @@
                      :sub-category-id (ptv-data/parse-service-source-id source-id)
                      :languages org-languages}
                     current-texts)
-        lipas-managed? (some-> source-id (str/starts-with? "lipas-"))]
+        lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
+        modified? (= "Modified" (:publishing-status service))]
     [layouts/expansion-panel
      {:label (:label service)
       :label-icon (when lipas-managed?
-                    (if has-local-edits?
+                    (cond
+                      modified?
+                      [:> Tooltip {:title (tr :ptv/modified-in-ptv)}
+                       [:> Chip {:label "PTV"
+                                 :size "small"
+                                 :color "error"
+                                 :variant "outlined"
+                                 :icon (r/as-element [:> WarningIcon {:fontSize "small"}])}]]
+
+                      has-local-edits?
                       [:> Tooltip {:title (tr :ptv/out-of-date)}
                        [:> Chip {:label "PTV"
                                  :size "small"
                                  :color "warning"
                                  :variant "outlined"
                                  :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+
+                      :else
                       [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
                        [:> Chip {:label "PTV"
                                  :size "small"

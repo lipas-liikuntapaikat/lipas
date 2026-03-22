@@ -56,6 +56,21 @@
   (fn [[loading-from-ptv? loading-from-lipas?] _]
     (or loading-from-ptv? loading-from-lipas?)))
 
+(rf/reg-sub ::syncing-service-location?
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (boolean (get-in ptv [:syncing :service-location lipas-id]))))
+
+(rf/reg-sub ::syncing-service?
+  :<- [::ptv]
+  (fn [ptv [_ source-id]]
+    (boolean (get-in ptv [:syncing :service source-id]))))
+
+(rf/reg-sub ::generating-service-descriptions?
+  :<- [::ptv]
+  (fn [ptv [_ source-id]]
+    (boolean (get-in ptv [:syncing :service-descriptions source-id]))))
+
  ;; New subscriptions to get PTV config from organizations in app-db
 
 (rf/reg-sub ::all-orgs
@@ -179,6 +194,7 @@
         {:label service-name
          :service-id id
          :source-id (:sourceId service)
+         :publishing-status (:publishingStatus service)
          :last-modified (:modified service)
          :last-modified-human (utils/->human-date-time-at-user-tz (:modified service))
          :service-classes (->> service

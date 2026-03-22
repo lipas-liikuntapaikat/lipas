@@ -115,6 +115,10 @@
   (ptv/get-org-services ptv org-id))
 
 (defn fetch-ptv-service-channels
+  "Fetch the org's service channels from PTV with full entity data.
+   Uses the /list/organization endpoint which returns complete channel
+   entities (descriptions, sourceId, publishingStatus etc.) needed for
+   drift detection and status warnings."
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
