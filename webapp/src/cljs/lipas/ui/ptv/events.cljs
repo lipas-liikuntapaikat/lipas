@@ -647,6 +647,25 @@
                      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] false)
                       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
+(rf/reg-event-fx ::translate-service-candidate-with-texts
+                 (fn [{:keys [db]} [_ source-id from-lang to-langs {:keys [summary description user-instruction]}]]
+                   (let [token (-> db :user :login :token)]
+                     (when (and summary description)
+                       {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+                        :fx [[:http-xhrio
+                              {:method :post
+                               :headers {:Authorization (str "Token " token)}
+                               :uri (str (:backend-url db) "/actions/translate-to-other-langs")
+                               :params (cond-> {:from (name from-lang)
+                                                :to (set (map name to-langs))
+                                                :summary summary
+                                                :description description}
+                                         user-instruction (assoc :user-instruction user-instruction))
+                               :format (ajax/transit-request-format)
+                               :response-format (ajax/transit-response-format)
+                               :on-success [::translate-service-candidate-success source-id]
+                               :on-failure [::translate-service-candidate-failure]}]]}))))
+
 ;;; Create Services in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service
