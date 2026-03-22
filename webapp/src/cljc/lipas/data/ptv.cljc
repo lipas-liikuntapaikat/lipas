@@ -661,6 +661,7 @@
      :service-channel-ids (-> site :ptv :service-channel-ids)
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
+     :service-channel-publishing-status (:publishingStatus ptv-channel)
 
      :audit-status (determine-audit-status site)}))
 

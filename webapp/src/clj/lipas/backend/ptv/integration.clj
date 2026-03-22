@@ -172,11 +172,16 @@
                                   :body)))))
 
 (defn get-org-service-channels
+  "Fetch all service channels for an org with full entity data.
+   Uses /list/organization (full entities with descriptions, sourceId,
+   publishingStatus etc.) rather than /organization/{id} (summary only
+   with {:id :name})."
   [ptv org-id]
   (ptv-data/get-all-pages (fn [page]
-                            (let [params {:url (make-url ptv "/v11/ServiceChannel/organization/" org-id)
+                            (let [params {:url (make-url ptv "/v11/ServiceChannel/list/organization")
                                           :method :get
-                                          :query-params {:page page}}]
+                                          :query-params {:organizationId org-id
+                                                         :page page}}]
                               (-> (http ptv org-id params)
                                   :body)))))
 
@@ -186,6 +191,30 @@
                 :method :get}]
     (-> (http ptv auth-org-id params)
         :body)))
+
+(defn get-active-service-channel
+  "Fetch a service channel via the /active/ endpoint, which returns channels
+   in ANY publishing state (Published, Modified, Draft) — unlike the regular
+   endpoint which only returns Published versions.
+
+   Background: PTV may assign a new UUID to a ServiceChannel when it's edited.
+   The regular list endpoint only shows channels with the current Published UUID.
+   If someone edits a channel directly in PTV, the UUID stored in LIPAS becomes
+   stale — it won't appear in the regular list. But the /active/ endpoint still
+   returns the channel by its old UUID, allowing us to detect what happened
+   (e.g. it's now in 'Modified' state with unpublished changes).
+
+   Returns the full channel data including :sourceId and :publishingStatus,
+   or nil if the channel truly doesn't exist anymore."
+  [ptv auth-org-id service-channel-id]
+  (try
+    (let [params {:url (make-url ptv "/v11/ServiceChannel/active/" service-channel-id)
+                  :method :get}]
+      (-> (http ptv auth-org-id params)
+          :body))
+    (catch clojure.lang.ExceptionInfo e
+      (when-not (= 404 (:status (:resp (ex-data e))))
+        (throw e)))))
 
 (defn create-service
   [ptv

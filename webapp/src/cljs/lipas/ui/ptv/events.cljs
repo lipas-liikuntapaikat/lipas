@@ -11,6 +11,23 @@
             [malli.error :as me]
             [re-frame.core :as rf]))
 
+(defn- ptv-modified-error?
+  "Check if a PTV sync failure is due to 'Modified' publishing status."
+  [resp]
+  (let [ptv-error (or (:ptv-error (:response resp))
+                      (:ptv-error resp))]
+    (some-> ptv-error
+            :PublishingStatus
+            first
+            (str/includes? "Modified"))))
+
+(defn- ptv-sync-error-message
+  "Parse a PTV sync failure response and return a localized error message."
+  [tr resp]
+  (if (ptv-modified-error? resp)
+    (tr :ptv/sync-failed-ptv-modified)
+    (tr :ptv/sync-failed)))
+
 (defn -get-ptv-org-id
   [db]
   (get-in db [:ptv :selected-org :ptv-data :org-id]))
@@ -344,14 +361,17 @@
 
 (rf/reg-event-fx ::translate-site-descriptions-success
   (fn [{:keys [db]} [_ lipas-id resp]]
-    (let [org-id (-get-ptv-org-id db)
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
           resp (update resp :summary
                        (fn [m] (reduce-kv (fn [acc k v]
                                             (assoc acc k (when v (subs v 0 (min 150 (count v))))))
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
-               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))})))
+               (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr :notifications/translate-success) :success? true}]]]})))
 
 (rf/reg-event-fx ::translate-site-descriptions-failure
   (fn [{:keys [db]} [_ _resp]]
@@ -449,9 +469,12 @@
 
 (rf/reg-event-fx ::translate-to-other-langs-success
   (fn [{:keys [db]} [_ lipas-id resp]]
-    {:db (-> db
-             (assoc-in [:ptv :loading-from-lipas :descriptions] false)
-             (update-in [:sports-sites lipas-id :editing :ptv] merge resp))}))
+    (let [tr (:translator db)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+               (update-in [:sports-sites lipas-id :editing :ptv] merge resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr :notifications/translate-success) :success? true}]]]})))
 
 (rf/reg-event-fx ::translate-to-other-langs-failure
   (fn [{:keys [db]} [_]]
@@ -519,7 +542,9 @@
 (rf/reg-event-fx ::generate-service-descriptions
   (fn [{:keys [db]} [_ org-id id overview success-fx failure-fx]]
     (let [token (-> db :user :login :token)]
-      {:db (assoc-in db [:ptv :loading-from-lipas :service-descriptions] true)
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-descriptions] true)
+               (assoc-in [:ptv :syncing :service-descriptions id] true))
        :fx [[:http-xhrio
              {:method :post
               :headers {:Authorization (str "Token " token)}
@@ -536,17 +561,19 @@
 (rf/reg-event-fx ::generate-service-descriptions-success
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
     {:db (-> db
-             (assoc-in [:ptv :loading-from-lipas :lipas-managed-service-descriptions] false)
+             (assoc-in [:ptv :loading-from-lipas :service-descriptions] false)
+             (update-in [:ptv :syncing :service-descriptions] dissoc id)
              (update-in [:ptv :org org-id :data :service-candidates id] merge resp))
      :fx extra-fx}))
 
 (rf/reg-event-fx ::generate-service-descriptions-failure
-  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
+  (fn [{:keys [db]} [_ _org-id id extra-fx resp]]
     (let [tr (:translator db)
           notification {:message (tr :notifications/get-failed)
                         :success? false}]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-descriptions] false)
+               (update-in [:ptv :syncing :service-descriptions] dissoc id)
                (assoc-in [:ptv :errors :service-descriptions] resp))
        :fx (or extra-fx
                [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
@@ -629,7 +656,8 @@
 
 (rf/reg-event-fx ::translate-service-candidate-success
   (fn [{:keys [db]} [_ source-id resp]]
-    (let [org-id (-get-ptv-org-id db)
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
                          ;; Truncate summaries to 150 chars max
           resp (update resp :summary
                        (fn [m] (reduce-kv (fn [acc k v]
@@ -637,7 +665,9 @@
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
-               (update-in [:ptv :org org-id :data :service-candidates source-id] merge resp))})))
+               (update-in [:ptv :org org-id :data :service-candidates source-id] merge resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr :notifications/translate-success) :success? true}]]]})))
 
 (rf/reg-event-fx ::translate-service-candidate-failure
   (fn [{:keys [db]} [_ _resp]]
@@ -671,7 +701,9 @@
 (rf/reg-event-fx ::create-ptv-service
   (fn [{:keys [db]} [_ org-id id data success-fx failure-fx]]
     (let [token (-> db :user :login :token)]
-      {:db (assoc-in db [:ptv :loading-from-lipas :services] true)
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :services] true)
+               (assoc-in [:ptv :syncing :service id] true))
        :fx [[:http-xhrio
              {:method :post
               :headers {:Authorization (str "Token " token)}
@@ -686,25 +718,39 @@
 
 (rf/reg-event-fx ::create-ptv-service-success
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
-    {:db (-> db
-             (assoc-in [:ptv :loading-from-lipas :services] false)
-             (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
-             (update-in [:ptv :org org-id :data :service-candidates id]
-                        assoc :created-in-ptv true)
-             (update-in [:ptv :org org-id :data :manual-services]
-                        dissoc (:sourceId resp)))
-     :fx extra-fx}))
-
-(rf/reg-event-fx ::create-ptv-service-failure
-  (fn [{:keys [db]} [_ _org-id _id extra-fx resp]]
-    (let [tr (:translator db)
-          notification {:message (tr :notifications/get-failed)
-                        :success? false}]
+    (let [tr (:translator db)]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] false)
-               (assoc-in [:ptv :errors :services-creation] resp))
-       :fx (or extra-fx
-               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+               (update-in [:ptv :syncing :service] dissoc id)
+               (assoc-in [:ptv :org org-id :data :services (:id resp)] resp)
+               (update-in [:ptv :org org-id :data :service-candidates id]
+                          assoc :created-in-ptv true)
+               (update-in [:ptv :org org-id :data :manual-services]
+                          dissoc (:sourceId resp)))
+       :fx (into (or (seq extra-fx) [])
+                 [[:dispatch [:lipas.ui.events/set-active-notification
+                              {:message (tr :notifications/save-success) :success? true}]]])})))
+
+(rf/reg-event-fx ::create-ptv-service-failure
+  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
+    (let [tr (:translator db)
+          modified? (ptv-modified-error? resp)
+          notification {:message (ptv-sync-error-message tr resp)
+                        :success? false}
+          ;; Find the service by source-id to update its cached publishingStatus
+          services (get-in db [:ptv :org org-id :data :services])
+          service-id (some (fn [[sid svc]]
+                             (when (= id (:sourceId svc)) sid))
+                           services)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :services] false)
+               (update-in [:ptv :syncing :service] dissoc id)
+               (assoc-in [:ptv :errors :services-creation] resp)
+               (cond->
+                 (and modified? service-id)
+                 (assoc-in [:ptv :org org-id :data :services service-id :publishingStatus] "Modified")))
+       :fx (into (or (seq extra-fx) [])
+                 [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
 (rf/reg-event-fx ::create-all-ptv-services*
   (fn [{:keys [db]} [_ org-id ids]]
@@ -849,7 +895,9 @@
                                         :description])
                           ;; Always use org languages (site typically doesn't store this)
                           {:languages org-languages})]
-      {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-locations] true)
+               (assoc-in [:ptv :syncing :service-location lipas-id] true))
        :fx [[:http-xhrio
              {:method :post
               :headers {:Authorization (str "Token " token)}
@@ -864,12 +912,14 @@
 
 (rf/reg-event-fx ::create-ptv-service-location-success
   (fn [{:keys [db]} [_ lipas-id extra-fx {:keys [ptv-resp ptv]}]]
-    (let [org-id (-get-ptv-org-id db)
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
                          ;; Remove old service-channel entry if ID changed
           old-channel-id (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids 0])
           new-channel-id (:id ptv-resp)]
       {:db (-> db
-               (assoc-in [:ptv :loading-from-lipas :service-channels] false)
+               (assoc-in [:ptv :loading-from-lipas :service-locations] false)
+               (update-in [:ptv :syncing :service-location] dissoc lipas-id)
                (assoc-in [:ptv :org org-id :data :service-channels new-channel-id] ptv-resp)
                               ;; Clean up old channel entry if ID changed
                (cond->
@@ -878,18 +928,27 @@
                               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
-       :fx extra-fx})))
+       :fx (into (or (seq extra-fx) [])
+                 [[:dispatch [:lipas.ui.events/set-active-notification
+                              {:message (tr :notifications/save-success) :success? true}]]])})))
 
 (rf/reg-event-fx ::create-ptv-service-location-failure
-  (fn [{:keys [db]} [_ _id extra-fx resp]]
+  (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
     (let [tr (:translator db)
-          notification {:message (tr :notifications/get-failed)
-                        :success? false}]
+          modified? (ptv-modified-error? resp)
+          notification {:message (ptv-sync-error-message tr resp)
+                        :success? false}
+          org-id (-get-ptv-org-id db)
+          channel-id (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids 0])]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] false)
-               (assoc-in [:ptv :errors :service-locations-creation] resp))
-       :fx (or extra-fx
-               [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+               (update-in [:ptv :syncing :service-location] dissoc lipas-id)
+               (assoc-in [:ptv :errors :service-locations-creation] resp)
+               (cond->
+                 (and modified? channel-id)
+                 (assoc-in [:ptv :org org-id :data :service-channels channel-id :publishingStatus] "Modified")))
+       :fx (into (or (seq extra-fx) [])
+                 [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
 (rf/reg-event-fx ::create-all-ptv-service-locations*
   (fn [{:keys [db]} [_ org-id ids]]
