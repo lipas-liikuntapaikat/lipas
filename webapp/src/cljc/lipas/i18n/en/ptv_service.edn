@@ -3,4 +3,9 @@
  :no-lipas-services "No LIPAS-managed services have been created yet.",
  :no-services "The organization has no services in PTV.",
  :use-wizard-to-create "Create services using the Setup tab wizard.",
- :show-only-lipas-managed "Show only services connected to LIPAS"}
+ :show-only-lipas-managed "Show only services connected to LIPAS"
+ :add-service "Add service"
+ :create-new "Create new service"
+ :link-existing "Link existing PTV service"
+ :select-sub-category "Select type class"
+ :select-service "Select service from PTV"}
