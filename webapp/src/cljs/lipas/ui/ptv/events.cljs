@@ -836,16 +836,20 @@
                          sports-site (update sports-site :ptv #(merge {:org-id org-id} %))
 
           ;; Add other defaults and merge with summary/description from the UI
+                         org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ["fi"])
                          ptv-data (merge (select-keys (:default-settings (:ptv db))
                                                       [:sync-enabled])
-                                         {:service-channel-ids []}
+                                         {:service-channel-ids []
+                                          :languages org-languages}
                                          (select-keys (:ptv sports-site)
                                                       [:org-id
                                                        :sync-enabled
                                                        :service-channel-ids
                                                        :service-ids
                                                        :summary
-                                                       :description]))]
+                                                       :description])
+                                         ;; Ensure languages from org config (site may not have it stored)
+                                         {:languages (or (get-in sports-site [:ptv :languages]) org-languages)})]
                      {:db (assoc-in db [:ptv :loading-from-lipas :service-locations] true)
                       :fx [[:http-xhrio
                             {:method :post
