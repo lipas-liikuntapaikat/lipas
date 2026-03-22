@@ -142,7 +142,9 @@
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or {languages default-langs} :as m}]
-  (let [languages (set languages)
+  (let [lipas-languages (set languages)
+        ;; PTV language codes for the :languages field on the payload
+        languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         #_#_type (get types/all type-code)
         sub-cat (get types/sub-categories sub-category-id)
         main-cat (get types/main-categories (parse-long (:main-category sub-cat)))]
@@ -191,7 +193,7 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
-     :serviceNames (for [[lang locale] (resolve-lang-pairs languages)]
+     :serviceNames (for [[lang locale] (resolve-lang-pairs lipas-languages)]
                      {:type "Name" ; Name | AlternativeName
                       :language lang
                       :value (get-in sub-cat [:name locale])})
@@ -221,7 +223,7 @@
      :serviceDescriptions (for [[k v] {:summary "Summary"
                                        :description "Description"
                                        :user-instruction "UserInstruction"}
-                                [lang locale] (resolve-lang-pairs languages)]
+                                [lang locale] (resolve-lang-pairs lipas-languages)]
                             {:type v
                              :language lang
                              :value (get-in m [k locale] placeholder)})
@@ -284,10 +286,9 @@
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
-  (let [languages (-> ptv
-                      (get :languages default-langs)
-                      (->> (map lipas-lang->ptv-lang))
-                      set)
+  (let [lipas-languages (get ptv :languages default-langs)
+        ;; PTV language codes for the :languages field on the payload
+        languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         type (get types/all (get-in sports-site [:type :type-code]))
         _sub-cat (get types/sub-categories (:sub-category type))
         _main-cat (get types/main-categories (:main-category type))
@@ -342,7 +343,7 @@
                                                (let [fallback "TODO text missing"]
                                                  (for [[type-k type-v] {:summary "Summary"
                                                                         :description "Description"}
-                                                       [lang locale] (resolve-lang-pairs languages)]
+                                                       [lang locale] (resolve-lang-pairs lipas-languages)]
                                                    {:type type-v
                                                     :value (get-in ptv [type-k locale] fallback)
                                                     :language lang})))
