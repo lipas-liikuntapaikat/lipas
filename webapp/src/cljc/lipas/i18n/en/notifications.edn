@@ -4,4 +4,5 @@
  :save-failed "Saving failed",
  :save-success "Saving succeeded",
  :copied-to-clipboard "Copied to clipboard"
+ :translate-success "Translation succeeded"
  :thank-you-for-feedback "Thank you for feedback!"}
