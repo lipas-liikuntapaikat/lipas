@@ -227,13 +227,9 @@
 
       {;; Return the updated :ptv meta for sports-site, to for the app-db
        :ptv new-ptv-data
-       ;; Return :id :name, same as the list endpoint that is used in the UI to show the Palvelupaikka autocomplete
-       :ptv-resp {:id (:id ptv-resp)
-                  :name (some (fn [x]
-                                (when (and (= "Name" (:type x))
-                                           (= "fi" (:language x)))
-                                  (:value x)))
-                              (:serviceChannelNames ptv-resp))}})))
+       ;; Return full PTV response so frontend can update service-channels cache
+       ;; (needed for drift detection and PTV link)
+       :ptv-resp ptv-resp})))
 
 (comment
   (require '[integrant.repl.state :as state])
