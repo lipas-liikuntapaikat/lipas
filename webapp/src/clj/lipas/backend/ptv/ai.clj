@@ -363,16 +363,48 @@ Source data:
     (log/infof "AI Result (%s): %s" model result)
     result))
 
+(defn- gemini-unavailable?
+  "True if the exception is a 503 (or 429) from Gemini indicating capacity issues."
+  [e]
+  (when-let [status (or (:status (ex-data e))
+                        (some-> (ex-data e) :object :status))]
+    (contains? #{503 429} status)))
+
 (defn gemini-complete
   "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
-   Merges provider defaults for any missing params."
+   Merges provider defaults for any missing params.
+   On 503/429 errors, retries once after 2s, then falls back to OpenAI gpt-4.1-mini."
   [config system-instruction prompt]
-  (let [config (merge (-> providers :gemini :default-params) config)
-        result (-> (gemini-complete-raw config system-instruction prompt)
-                   :choices
-                   first)]
-    (log/infof "Gemini Result (%s): %s" (:model config) result)
-    result))
+  (let [config (merge (-> providers :gemini :default-params) config)]
+    (try
+      (let [result (-> (gemini-complete-raw config system-instruction prompt)
+                       :choices
+                       first)]
+        (log/infof "Gemini Result (%s): %s" (:model config) result)
+        result)
+      (catch Exception e
+        (if (gemini-unavailable? e)
+          (do
+            (log/warnf "Gemini unavailable (%s), retrying in 2s..." (.getMessage e))
+            (Thread/sleep 2000)
+            (try
+              (let [result (-> (gemini-complete-raw config system-instruction prompt)
+                               :choices
+                               first)]
+                (log/infof "Gemini retry succeeded (%s): %s" (:model config) result)
+                result)
+              (catch Exception e2
+                (if (gemini-unavailable? e2)
+                  (do
+                    (log/warnf "Gemini still unavailable, falling back to OpenAI gpt-4.1-mini")
+                    (let [openai-cfg (merge (-> providers :openai :default-params)
+                                            openai-config
+                                            {:model "gpt-4.1-mini"})
+                          result (complete openai-cfg system-instruction prompt)]
+                      (log/infof "OpenAI fallback result: %s" result)
+                      result))
+                  (throw e2)))))
+          (throw e))))))
 
 (def generate-utp-descriptions-prompt
   "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
