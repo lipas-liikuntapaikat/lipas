@@ -537,10 +537,12 @@
 
 (rf/reg-sub ::missing-subcategories
   (fn [[_ org-id]]
-    (rf/subscribe [::services org-id]))
-  (fn [created-services [_ org-id]]
+    [(rf/subscribe [::services org-id])
+     (rf/subscribe [::sports-sites org-id])])
+  (fn [[created-services sports-sites] [_ org-id]]
     (let [sub-cats types/sub-categories
-          source-id->service (into {} (map (juxt :source-id identity) created-services))]
+          source-id->service (into {} (map (juxt :source-id identity) created-services))
+          sub-cat-counts (frequencies (map :sub-category-id sports-sites))]
       (reduce (fn [acc [sub-cat-id sub-cat]]
                 (let [source-id (ptv-data/->service-source-id org-id sub-cat-id)]
                   (if (get source-id->service source-id)
@@ -548,6 +550,7 @@
                     (conj acc {:source-id source-id
                                :sub-category-id sub-cat-id
                                :sub-category (get-in sub-cat [:name :fi])
+                               :site-count (get sub-cat-counts sub-cat-id 0)
                                :label (get-in sub-cat [:name :fi])}))))
               []
               sub-cats))))

@@ -135,12 +135,13 @@
       :parameters {:body [:map
                           [:org-id :string]
                           [:city-codes [:vector :int]]
-                          [:source-id :string]
-                          [:sub-category-id :int]
+                          [:source-id {:optional true} [:maybe :string]]
+                          [:sub-category-id {:optional true} [:maybe :int]]
                           [:languages [:vector [:enum "fi" "se" "en"]]]
                           [:summary (ptv-schema/localized-string-schema {:max 150})]
                           [:description (ptv-schema/localized-string-schema nil)]
                           [:user-instruction {:optional true} (ptv-schema/localized-string-schema nil)]
+                          [:service-name {:optional true} [:maybe :string]]
                           [:service-id {:optional true} [:maybe :string]]]}
       :handler
       (fn [req]

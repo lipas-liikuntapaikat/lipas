@@ -1,6 +1,7 @@
 (ns lipas.backend.ptv.core
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
@@ -88,18 +89,132 @@
         :message
         :content)))
 
+(defn- ptv-list-has-content?
+  "Check if a PTV-style list of {:type :language :value} maps has any
+   non-placeholder content. Returns false for lists where all values
+   are empty/placeholder."
+  [items]
+  (boolean (some (fn [item]
+                   (let [v (:value item)]
+                     (and (string? v)
+                          (not (str/blank? v))
+                          (not= v "-"))))
+                 items)))
+
+(defn- normalize-ptv-service-for-update
+  "Convert PTV GET response enriched objects back to the input format
+   expected by the PUT endpoint. The GET returns rich objects (with names,
+   descriptions, parents), but PUT expects simplified input (URIs, codes)."
+  [service]
+  (-> service
+      ;; ontologyTerms: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :ontologyTerms (fn [terms] (mapv :uri terms)))
+      ;; serviceClasses: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :serviceClasses (fn [classes] (mapv :uri classes)))
+      ;; targetGroups: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :targetGroups (fn [groups] (mapv :uri groups)))
+      ;; areas: GET returns [{:type :municipalities [{:code "425" :name [...]}]}]
+      ;; PUT expects [{:type "Municipality" :areaCodes ["425"]}]
+      (update :areas (fn [areas]
+                       (mapv (fn [area]
+                               {:type (:type area)
+                                :areaCodes (mapv :code (:municipalities area))})
+                             areas)))))
+
+(defn- merge-ptv-lists
+  "Merge two PTV-style lists keyed by [:type :language]. Existing items
+   are kept; new items from LIPAS are added for missing type+language combos.
+   Items with actual content from LIPAS overwrite existing items."
+  [existing-items lipas-items]
+  (let [existing-by-key (into {} (map (fn [item]
+                                        [((juxt :type :language) item) item])
+                                      existing-items))
+        lipas-by-key (into {} (map (fn [item]
+                                     [((juxt :type :language) item) item])
+                                   lipas-items))]
+    (vals (reduce-kv (fn [acc k lipas-item]
+                       (if (contains? acc k)
+                         ;; Existing item: only overwrite if LIPAS has real content
+                         (let [v (:value lipas-item)]
+                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
+                             (assoc acc k lipas-item)
+                             acc))
+                         ;; Missing language: only add if LIPAS has real content
+                         (let [v (:value lipas-item)]
+                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
+                             (assoc acc k lipas-item)
+                             acc))))
+                     existing-by-key
+                     lipas-by-key))))
+
+(defn- merge-service-data
+  "Merge LIPAS-generated service data on top of existing PTV service.
+   Only overwrites fields that LIPAS actually provides meaningful content for.
+   This preserves PTV-managed data (ontology, classes, names) for
+   adopted services while allowing LIPAS to update descriptions."
+  [existing lipas-data]
+  (reduce-kv (fn [acc k v]
+               (cond
+                 (nil? v) acc
+                 ;; Empty collections: don't overwrite
+                 (and (coll? v) (empty? v)) acc
+                 ;; PTV-style lists (serviceNames, serviceDescriptions):
+                 ;; merge at item level to preserve existing + add missing languages
+                 (and (sequential? v)
+                      (seq v)
+                      (map? (first v))
+                      (contains? (first v) :value))
+                 (assoc acc k (merge-ptv-lists (get acc k) v))
+                 :else (assoc acc k v)))
+             existing
+             lipas-data))
+
+(def ^:private lipas-managed-service-fields
+  "Fields that LIPAS actively manages on a service. Other fields
+   (ontologyTerms, serviceClasses, targetGroups, etc.) are either
+   derived from sub-category or are defaults and should not overwrite
+   existing PTV data when adopting a service."
+  #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
+
 (defn upsert-ptv-service!
-  [ptv {:keys [source-id service-id] :as m}]
-  (let [data (ptv-data/->ptv-service m)]
+  [ptv {:keys [org-id source-id service-id sub-category-id] :as m}]
+  (let [lipas-data (ptv-data/->ptv-service m)]
     (if service-id
-      ;; Linking to existing service: update by PTV UUID to set our source-id
-      (ptv/update-service-by-id ptv service-id data)
-      ;; Normal flow: try update by source-id, create if not found
+      ;; Updating existing PTV service: fetch, normalize to input format, merge
+      (let [existing (-> (ptv/get-service ptv org-id service-id)
+                         (normalize-ptv-service-for-update))
+            ;; When adopting without sub-category, only merge fields LIPAS manages
+            ;; to avoid overwriting PTV-managed metadata with defaults
+            lipas-data (if sub-category-id
+                         lipas-data
+                         (select-keys lipas-data lipas-managed-service-fields))
+            merged (merge-service-data existing lipas-data)
+            ;; PTV requires names for all supported languages — use Finnish as fallback
+            fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
+                                 (:value %))
+                              (:serviceNames merged))
+                        "")
+            required-langs (set (map name (:languages merged)))
+            existing-name-langs (set (map :language (:serviceNames merged)))
+            missing-name-langs (clojure.set/difference required-langs existing-name-langs)
+            data (-> merged
+                     (update :serviceDescriptions (fn [items] (filterv #(not (str/blank? (:value %))) items)))
+                     ;; Fill empty name values with Finnish fallback
+                     (update :serviceNames (fn [items]
+                                             (let [filled (mapv #(if (str/blank? (:value %))
+                                                                   (assoc % :value fi-name)
+                                                                   %)
+                                                                items)]
+                                               ;; Add entries for completely missing languages
+                                               (into filled (for [lang missing-name-langs]
+                                                              {:type "Name" :language lang :value fi-name}))))))]
+        (ptv/update-service-by-id ptv service-id data))
+      ;; New service: try update by source-id, create if not found
       (try
-        (ptv/update-service ptv source-id data)
+        (ptv/update-service ptv source-id lipas-data)
         (catch clojure.lang.ExceptionInfo e
           (if (= 404 (:status (:resp (ex-data e))))
-            (ptv/create-service ptv data)
+            (ptv/create-service ptv lipas-data)
             (throw e)))))))
 
 (defn fetch-ptv-org
