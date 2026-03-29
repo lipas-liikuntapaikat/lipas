@@ -1,5 +1,5 @@
 {:all-services-exist
- "Valitsemasi tyyppiluokan palvelut löytyvät jo PTV:stä. Voit siirtyä seuraavaan vaiheeseen.",
+ "Valitsemasi tyyppiluokan palvelut löytyvät PTV:stä. Voit siirtyä seuraavaan vaiheeseen.",
  :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan",
  :export-service-locations-to-ptv "Vie palvelutietovarantoon",
  :export-services-to-ptv "Vie palvelutietovarantoon",

@@ -777,6 +777,11 @@
     (-> db
         (assoc-in [:ptv :service-descriptions-generation :halt?] true))))
 
+(rf/reg-event-db ::set-service-candidate-name
+  (fn [db [_ id locale v]]
+    (let [org-id (-get-ptv-org-id db)]
+      (assoc-in db [:ptv :org org-id :data :service-candidates id :name locale] v))))
+
 (rf/reg-event-db ::set-service-candidate-summary
   (fn [db [_ id locale v]]
     (let [org-id (-get-ptv-org-id db)]
