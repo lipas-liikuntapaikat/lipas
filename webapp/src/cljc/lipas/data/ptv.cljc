@@ -181,6 +181,16 @@
   [org-id sub-category-id]
   (str "lipas-" org-id "-" sub-category-id))
 
+(defn ->adopted-service-source-id
+  "Source-id for a PTV service adopted for LIPAS management (freeform, no sub-category mapping)."
+  [org-id service-id]
+  (str "lipas-" org-id "-ptv-" service-id))
+
+(defn adopted-service-source-id?
+  "True if source-id represents an adopted (non-sub-category-mapped) PTV service."
+  [source-id]
+  (boolean (and source-id (re-find #"lipas-.*-ptv-" source-id))))
+
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or {languages default-langs} :as m}]
@@ -188,8 +198,8 @@
         ;; PTV language codes for the :languages field on the payload
         languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         #_#_type (get types/all type-code)
-        sub-cat (get types/sub-categories sub-category-id)
-        main-cat (get types/main-categories (parse-long (:main-category sub-cat)))]
+        sub-cat (when sub-category-id (get types/sub-categories sub-category-id))
+        main-cat (when-let [mc (:main-category sub-cat)] (get types/main-categories (parse-long mc)))]
 
     {:sourceId (or source-id
                    (let [ts (str/replace (utils/timestamp) #":" "-")
@@ -235,10 +245,14 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
-     :serviceNames (for [[lang locale] (resolve-lang-pairs lipas-languages)]
-                     {:type "Name" ; Name | AlternativeName
-                      :language lang
-                      :value (get-in sub-cat [:name locale])})
+     :serviceNames (let [custom-name (:service-name m)]
+                     (for [[lang locale] (resolve-lang-pairs lipas-languages)]
+                       {:type "Name" ; Name | AlternativeName
+                        :language lang
+                        :value (or (when (and custom-name (= locale :fi))
+                                     custom-name)
+                                   (get-in sub-cat [:name locale])
+                                   "")}))
 
      ;; List of target group urls
      ;; https://koodistot.suomi.fi/codescheme;registryCode=ptv;schemeCode=ptvkohderyhmat
@@ -677,7 +691,16 @@
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
         content-drift? (and last-sync ptv-texts
                             (not (texts-match? lipas-texts ptv-texts
-                                               service-channel-compare-fields)))]
+                                               service-channel-compare-fields)))
+
+        ;; Drift detection: compare LIPAS service linkings vs PTV service linkings
+        lipas-service-ids (set (-> site :ptv :service-ids))
+        ptv-service-ids (when ptv-channel
+                          (->> (:services ptv-channel)
+                               (map (comp :id :service))
+                               set))
+        links-drift? (and last-sync ptv-service-ids
+                          (not= lipas-service-ids ptv-service-ids))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -703,7 +726,7 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
-                    content-drift? :content-drift
+                    (or content-drift? links-drift?) :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
 
