@@ -159,7 +159,7 @@
         (tr :actions/cancel)])]))
 
 (defn form-left-column
-  [{:keys [org-id tr site services ptv-base]}]
+  [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
   (r/with-let [editing-services? (r/atom false)
                editing-channel? (r/atom false)]
     (let [generating? (<== [::subs/generating-descriptions?])
@@ -241,17 +241,36 @@
                         :on-click #(reset! editing-channel? true)}
              (tr :ptv.actions/attach-existing-service-channel)])])
 
-       ;; AI generate button
-       [:> Button {:disabled (or generating? syncing?)
-                   :variant "outlined"
-                   :size "small"
-                   :sx #js {:textTransform "none"}
-                   :startIcon (r/as-element
-                                (if generating?
-                                  [:> CircularProgress {:size 16 :color "inherit"}]
-                                  [:> Icon "auto_fix_high"]))
-                   :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
-        (tr :ptv.actions/generate-with-ai)]
+       ;; AI generate + translate buttons
+       (let [from-lang @selected-tab
+             other-langs (disj (set (map keyword org-languages)) from-lang)
+             has-text? (and (seq (get-in site [:summary from-lang]))
+                            (seq (get-in site [:description from-lang])))]
+         [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
+          [:> Button
+           {:variant "outlined" :size "small" :disabled (or generating? syncing?)
+            :sx #js {:textTransform "none"}
+            :startIcon (r/as-element
+                         (if generating?
+                           [:> CircularProgress {:size 16 :color "inherit"}]
+                           [:> Icon "auto_fix_high"]))
+            :on-click #(==> [::events/generate-descriptions (:lipas-id site) [] []])}
+           (tr :ptv.actions/generate-with-ai)]
+          (when (> (count org-languages) 1)
+            [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
+             [:> Button
+              {:size "small" :variant "outlined"
+               :disabled (or generating? (not has-text?))
+               :startIcon (r/as-element
+                            (if generating?
+                              [:> CircularProgress {:size 16 :color "inherit"}]
+                              [:> Icon "translate"]))
+               :sx #js {:textTransform "none"}
+               :on-click #(==> [::events/translate-site-descriptions
+                                (:lipas-id site) from-lang other-langs])}
+              (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                   (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                   ")")]])])
 
        ;; Modified in PTV warning
        (when (= "Modified" (:service-channel-publishing-status site))
@@ -297,88 +316,71 @@
              hint])])])))
 
 (defn form-right-column
-  [{:keys [tr site org-languages]}]
-  (r/with-let [selected-tab (r/atom :fi)]
-    (let [loading? (<== [::subs/generating-descriptions?])]
-      [:> Stack {:spacing 2}
+  [{:keys [tr site org-languages selected-tab]}]
+  (let [loading? (<== [::subs/generating-descriptions?])]
+    [:> Stack {:spacing 2}
 
-       [controls/lang-selector
-        {:value @selected-tab
-         :on-change #(reset! selected-tab %)
-         :enabled-languages (set org-languages)}]
+     [controls/lang-selector
+      {:value @selected-tab
+       :on-change #(reset! selected-tab %)
+       :enabled-languages (set org-languages)}]
 
-       ;; Summary
-       (let [v (or (get-in site [:summary @selected-tab]) "")]
-         [text-fields/text-field
-          {:disabled loading?
-           :multiline true
-           :variant "outlined"
-           :on-change #(==> [::events/set-summary site @selected-tab %])
-           :label (tr :ptv/summary)
-           :value v
-           :helperText (str (count v) "/150")
-           :error (> (count v) 150)}])
+     ;; Summary
+     (let [v (or (get-in site [:summary @selected-tab]) "")]
+       [text-fields/text-field
+        {:disabled loading?
+         :multiline true
+         :variant "outlined"
+         :on-change #(==> [::events/set-summary site @selected-tab %])
+         :label (tr :ptv/summary)
+         :value v
+         :helperText (str (count v) "/150")
+         :error (> (count v) 150)}])
 
-       [audit-feedback-component
-        {:lipas-id (:lipas-id site)
-         :field-name :summary}]
+     [audit-feedback-component
+      {:lipas-id (:lipas-id site)
+       :field-name :summary}]
 
-       ;; Description
-       (let [v (or (get-in site [:description @selected-tab]) "")]
-         [text-fields/text-field
-          {:disabled loading?
-           :variant "outlined"
-           :rows 5
-           :multiline true
-           :on-change #(==> [::events/set-description site @selected-tab %])
-           :label (tr :ptv/description)
-           :value v
-           :helperText (str (count v) "/2500")
-           :error (> (count v) 2500)}])
+     ;; Description
+     (let [v (or (get-in site [:description @selected-tab]) "")]
+       [text-fields/text-field
+        {:disabled loading?
+         :variant "outlined"
+         :rows 5
+         :multiline true
+         :on-change #(==> [::events/set-description site @selected-tab %])
+         :label (tr :ptv/description)
+         :value v
+         :helperText (str (count v) "/2500")
+         :error (> (count v) 2500)}])
 
-       [audit-feedback-component
-        {:lipas-id (:lipas-id site)
-         :field-name :description}]
-
-       ;; Translate button
-       (when (> (count org-languages) 1)
-         (let [from-lang @selected-tab
-               other-langs (disj (set (map keyword org-languages)) from-lang)
-               has-text? (and (seq (get-in site [:summary from-lang]))
-                              (seq (get-in site [:description from-lang])))]
-           [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-            [:> Button
-             {:size "small"
-              :variant "text"
-              :disabled (or loading? (not has-text?))
-              :startIcon (r/as-element [:> Icon "translate"])
-              :sx #js {:alignSelf "flex-start" :textTransform "none"}
-              :on-click #(==> [::events/translate-site-descriptions
-                               (:lipas-id site) from-lang other-langs])}
-             (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                  (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                  ")")]]))])))
+     [audit-feedback-component
+      {:lipas-id (:lipas-id site)
+       :field-name :description}]]))
 
 (defn form
   [{:keys [org-id tr site]}]
-  (let [services @(rf/subscribe [::subs/services org-id])
-        org-languages (<== [::subs/org-languages org-id])
-        ptv-base (if (utils/prod?)
-                   "https://palvelutietovaranto.suomi.fi"
-                   "https://palvelutietovaranto.trn.suomi.fi")]
-    [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
+  (r/with-let [selected-tab (r/atom :fi)]
+    (let [services @(rf/subscribe [::subs/services org-id])
+          org-languages (<== [::subs/org-languages org-id])
+          ptv-base (if (utils/prod?)
+                     "https://palvelutietovaranto.suomi.fi"
+                     "https://palvelutietovaranto.trn.suomi.fi")]
+      [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
 
-     [checkboxes/switch
-      {:label (tr :ptv.actions/export-disclaimer)
-       :value (:sync-enabled site)
-       :on-change #(==> [::events/toggle-sync-enabled site %])}]
+       [checkboxes/switch
+        {:label (tr :ptv.actions/export-disclaimer)
+         :value (:sync-enabled site)
+         :on-change #(==> [::events/toggle-sync-enabled site %])}]
 
-     [:> Grid {:container true :spacing 3}
-      [:> Grid {:item true :xs 12 :md 4}
-       [form-left-column {:org-id org-id :tr tr :site site
-                          :services services :ptv-base ptv-base}]]
-      [:> Grid {:item true :xs 12 :md 8}
-       [form-right-column {:tr tr :site site :org-languages org-languages}]]]]))
+       [:> Grid {:container true :spacing 3}
+        [:> Grid {:item true :xs 12 :md 5}
+         [form-left-column {:org-id org-id :tr tr :site site
+                            :services services :ptv-base ptv-base
+                            :org-languages org-languages :selected-tab selected-tab}]]
+        [:> Grid {:item true :xs 12 :md 7}
+         [form-right-column {:tr tr :site site :org-languages org-languages
+                             :selected-tab selected-tab}]]]])))
 
 (defn- sites-filter-bar
   "Collapsible filter bar for the LIIKUNTAPAIKAT table."
@@ -1028,7 +1030,7 @@
                           other-langs (disj (set (map keyword languages)) from-lang)
                           has-text? (and (seq (get-in m [:summary from-lang]))
                                          (seq (get-in m [:description from-lang])))]
-                      [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap"}
+                      [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
                        [:> Button
                         {:variant "outlined" :size "small" :disabled generating?
                          :sx #js {:textTransform "none"}
@@ -1043,7 +1045,10 @@
                           [:> Button
                            {:size "small" :variant "outlined"
                             :disabled (or generating? (not has-text?))
-                            :startIcon (r/as-element [:> Icon "translate"])
+                            :startIcon (r/as-element
+                                         (if generating?
+                                           [:> CircularProgress {:size 16 :color "inherit"}]
+                                           [:> Icon "translate"]))
                             :sx #js {:textTransform "none"}
                             :on-click #(==> [::events/translate-service-candidate
                                              source-id from-lang other-langs])}
@@ -1189,7 +1194,7 @@
                  other-langs (disj (set (map keyword org-languages)) from-lang)
                  has-text? (and (seq (get-in site [:summary from-lang]))
                                 (seq (get-in site [:description from-lang])))]
-             [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap"}
+             [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
               [:> Button
                {:variant "outlined" :size "small" :disabled generating?
                 :sx #js {:textTransform "none"}
@@ -1204,7 +1209,10 @@
                  [:> Button
                   {:size "small" :variant "outlined"
                    :disabled (or generating? (not has-text?))
-                   :startIcon (r/as-element [:> Icon "translate"])
+                   :startIcon (r/as-element
+                                (if generating?
+                                  [:> CircularProgress {:size 16 :color "inherit"}]
+                                  [:> Icon "translate"]))
                    :sx #js {:textTransform "none"}
                    :on-click #(==> [::events/translate-site-descriptions lipas-id from-lang other-langs])}
                   (str (tr :ptv.wizard/translate-to-other-langs) " ("
@@ -1512,9 +1520,10 @@
           (tr :actions/show-less)])])))
 
 (defn service-panel-left
-  [{:keys [tr org-id service data ptv-base has-local-edits?]}]
+  [{:keys [tr org-id service data ptv-base has-local-edits? org-languages selected-tab]}]
   (let [service-id (:service-id service)
-        source-id (:source-id service)]
+        source-id (:source-id service)
+        generating? (<== [::subs/generating-service-descriptions? source-id])]
     [:> Stack {:spacing 2}
 
      ;; 1. Link to PTV
@@ -1554,19 +1563,39 @@
      (when (seq (:service-channels service))
        [service-channels-list {:tr tr :service service :ptv-base ptv-base}])
 
-     ;; AI generate button
-     (let [generating? (<== [::subs/generating-service-descriptions? source-id])]
-       [:> Button
-        {:variant "outlined"
-         :size "small"
-         :disabled generating?
-         :sx #js {:textTransform "none"}
-         :startIcon (r/as-element
-                      (if generating?
-                        [:> CircularProgress {:size 16 :color "inherit"}]
-                        [:> Icon "auto_fix_high"]))
-         :on-click #(==> [::events/generate-service-descriptions org-id source-id nil [] []])}
-        (tr :ptv.actions/generate-with-ai)])
+     ;; AI generate + translate buttons
+     (let [from-lang @selected-tab
+           other-langs (disj (set (map keyword org-languages)) from-lang)
+           has-text? (and (seq (get-in data [:summary from-lang]))
+                          (seq (get-in data [:description from-lang])))]
+       [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
+        [:> Button
+         {:variant "outlined" :size "small" :disabled generating?
+          :sx #js {:textTransform "none"}
+          :startIcon (r/as-element
+                       (if generating?
+                         [:> CircularProgress {:size 16 :color "inherit"}]
+                         [:> Icon "auto_fix_high"]))
+          :on-click #(==> [::events/generate-service-descriptions org-id source-id nil [] []])}
+         (tr :ptv.actions/generate-with-ai)]
+        (when (> (count org-languages) 1)
+          [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
+           [:> Button
+            {:size "small" :variant "outlined"
+             :disabled (or generating? (not has-text?))
+             :startIcon (r/as-element
+                          (if generating?
+                            [:> CircularProgress {:size 16 :color "inherit"}]
+                            [:> Icon "translate"]))
+             :sx #js {:textTransform "none"}
+             :on-click #(==> [::events/translate-service-candidate-with-texts
+                              source-id from-lang other-langs
+                              {:summary (get-in data [:summary from-lang])
+                               :description (get-in data [:description from-lang])
+                               :user-instruction (get-in data [:user-instruction from-lang])}])}
+            (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                 (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                 ")")]])])
 
      ;; Modified in PTV warning
      (when (= "Modified" (:publishing-status service))
@@ -1597,134 +1626,114 @@
       (str (tr :general/last-modified) " " (:last-modified-human service))]]))
 
 (defn service-panel-right
-  [{:keys [tr source-id service descriptions org-languages]}]
-  (r/with-let [selected-tab (r/atom :fi)]
-    (let [summary-data (merge (:summary service) (:summary descriptions))
-          description-data (merge (:description service) (:description descriptions))
-          user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))]
-      [:> Stack {:spacing 2}
+  [{:keys [tr source-id service descriptions org-languages selected-tab]}]
+  (let [summary-data (merge (:summary service) (:summary descriptions))
+        description-data (merge (:description service) (:description descriptions))
+        user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))]
+    [:> Stack {:spacing 2}
 
-       [controls/lang-selector
-        {:value @selected-tab
-         :on-change #(reset! selected-tab %)
-         :enabled-languages (set org-languages)}]
+     [controls/lang-selector
+      {:value @selected-tab
+       :on-change #(reset! selected-tab %)
+       :enabled-languages (set org-languages)}]
 
-       ;; Summary
-       (let [v (or (get summary-data @selected-tab) "")]
-         [text-fields/text-field
-          {:on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
-           :multiline true
-           :variant "outlined"
-           :label (tr :ptv/summary)
-           :value v
-           :helperText (str (count v) "/150")
-           :error (> (count v) 150)}])
+     ;; Summary
+     (let [v (or (get summary-data @selected-tab) "")]
+       [text-fields/text-field
+        {:on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
+         :multiline true
+         :variant "outlined"
+         :label (tr :ptv/summary)
+         :value v
+         :helperText (str (count v) "/150")
+         :error (> (count v) 150)}])
 
-       ;; Description
-       (let [v (or (get description-data @selected-tab) "")]
-         [text-fields/text-field
-          {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
-           :variant "outlined"
-           :rows 5
-           :multiline true
-           :label (tr :ptv/description)
-           :value v
-           :helperText (str (count v) "/2500")
-           :error (> (count v) 2500)}])
+     ;; Description
+     (let [v (or (get description-data @selected-tab) "")]
+       [text-fields/text-field
+        {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
+         :variant "outlined"
+         :rows 5
+         :multiline true
+         :label (tr :ptv/description)
+         :value v
+         :helperText (str (count v) "/2500")
+         :error (> (count v) 2500)}])
 
-       ;; User instruction
-       (let [v (or (get user-instruction-data @selected-tab) "")]
-         [text-fields/text-field
-          {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
-           :variant "outlined"
-           :rows 3
-           :multiline true
-           :label (tr :ptv/user-instruction)
-           :value v
-           :helperText (str (count v) "/2500")
-           :error (> (count v) 2500)}])
-
-       ;; Translate button
-       (when (> (count org-languages) 1)
-         (let [from-lang @selected-tab
-               other-langs (disj (set (map keyword org-languages)) from-lang)
-               has-text? (and (seq (get summary-data from-lang))
-                              (seq (get description-data from-lang)))]
-           [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-            [:> Button
-             {:size "small"
-              :variant "text"
-              :disabled (not has-text?)
-              :startIcon (r/as-element [:> Icon "translate"])
-              :sx #js {:alignSelf "flex-start" :textTransform "none"}
-              :on-click #(==> [::events/translate-service-candidate-with-texts
-                               source-id from-lang other-langs
-                               {:summary (get summary-data from-lang)
-                                :description (get description-data from-lang)
-                                :user-instruction (get user-instruction-data from-lang)}])}
-             (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                  (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                  ")")]]))])))
+     ;; User instruction
+     (let [v (or (get user-instruction-data @selected-tab) "")]
+       [text-fields/text-field
+        {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
+         :variant "outlined"
+         :rows 3
+         :multiline true
+         :label (tr :ptv/user-instruction)
+         :value v
+         :helperText (str (count v) "/2500")
+         :error (> (count v) 2500)}])]))
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]
-  (let [tr (<== [:lipas.ui.subs/translator])
-        source-id (:source-id service)
-        org-languages (<== [::subs/org-languages org-id])
-        ptv-base (if (utils/prod?)
-                   "https://palvelutietovaranto.suomi.fi"
-                   "https://palvelutietovaranto.trn.suomi.fi")
-        current-texts {:summary (merge (:summary service) (:summary descriptions))
-                       :description (merge (:description service) (:description descriptions))
-                       :user-instruction (merge (:user-instruction service) (:user-instruction descriptions))}
-        ptv-texts {:summary (:summary service)
-                   :description (:description service)
-                   :user-instruction (:user-instruction service)}
-        has-local-edits? (not (ptv-data/texts-match? current-texts ptv-texts))
-        data (merge {:org-id org-id
-                     :source-id source-id
-                     :city-codes (:city-codes service)
-                     :sub-category-id (ptv-data/parse-service-source-id source-id)
-                     :languages org-languages}
-                    current-texts)
-        lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
-        modified? (= "Modified" (:publishing-status service))]
-    [layouts/expansion-panel
-     {:label (:label service)
-      :label-icon (when lipas-managed?
-                    (cond
-                      modified?
-                      [:> Tooltip {:title (tr :ptv/modified-in-ptv)}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "error"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> WarningIcon {:fontSize "small"}])}]]
+  (r/with-let [selected-tab (r/atom :fi)]
+    (let [tr (<== [:lipas.ui.subs/translator])
+          source-id (:source-id service)
+          org-languages (<== [::subs/org-languages org-id])
+          ptv-base (if (utils/prod?)
+                     "https://palvelutietovaranto.suomi.fi"
+                     "https://palvelutietovaranto.trn.suomi.fi")
+          current-texts {:summary (merge (:summary service) (:summary descriptions))
+                         :description (merge (:description service) (:description descriptions))
+                         :user-instruction (merge (:user-instruction service) (:user-instruction descriptions))}
+          ptv-texts {:summary (:summary service)
+                     :description (:description service)
+                     :user-instruction (:user-instruction service)}
+          has-local-edits? (not (ptv-data/texts-match? current-texts ptv-texts))
+          data (merge {:org-id org-id
+                       :source-id source-id
+                       :city-codes (:city-codes service)
+                       :sub-category-id (ptv-data/parse-service-source-id source-id)
+                       :languages org-languages}
+                      current-texts)
+          lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
+          modified? (= "Modified" (:publishing-status service))]
+      [layouts/expansion-panel
+       {:label (:label service)
+        :label-icon (when lipas-managed?
+                      (cond
+                        modified?
+                        [:> Tooltip {:title (tr :ptv/modified-in-ptv)}
+                         [:> Chip {:label "PTV"
+                                   :size "small"
+                                   :color "error"
+                                   :variant "outlined"
+                                   :icon (r/as-element [:> WarningIcon {:fontSize "small"}])}]]
 
-                      has-local-edits?
-                      [:> Tooltip {:title (tr :ptv/out-of-date)}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "warning"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
+                        has-local-edits?
+                        [:> Tooltip {:title (tr :ptv/out-of-date)}
+                         [:> Chip {:label "PTV"
+                                   :size "small"
+                                   :color "warning"
+                                   :variant "outlined"
+                                   :icon (r/as-element [:> SyncProblem {:fontSize "small"}])}]]
 
-                      :else
-                      [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
-                       [:> Chip {:label "PTV"
-                                 :size "small"
-                                 :color "success"
-                                 :variant "outlined"
-                                 :icon (r/as-element [:> Sync {:fontSize "small"}])}]]))}
-     [:> Grid {:container true :spacing 3}
-      [:> Grid {:item true :xs 12 :md 4}
-       [service-panel-left {:tr tr :org-id org-id :service service
-                            :data data :ptv-base ptv-base
-                            :has-local-edits? has-local-edits?}]]
-      [:> Grid {:item true :xs 12 :md 8}
-       [service-panel-right {:tr tr :source-id source-id :service service
-                             :descriptions descriptions
-                             :org-languages org-languages}]]]]))
+                        :else
+                        [:> Tooltip {:title (str (tr :ptv/synced-to-ptv) " " (:last-modified-human service))}
+                         [:> Chip {:label "PTV"
+                                   :size "small"
+                                   :color "success"
+                                   :variant "outlined"
+                                   :icon (r/as-element [:> Sync {:fontSize "small"}])}]]))}
+       [:> Grid {:container true :spacing 3}
+        [:> Grid {:item true :xs 12 :md 5}
+         [service-panel-left {:tr tr :org-id org-id :service service
+                              :data data :ptv-base ptv-base
+                              :has-local-edits? has-local-edits?
+                              :org-languages org-languages :selected-tab selected-tab}]]
+        [:> Grid {:item true :xs 12 :md 7}
+         [service-panel-right {:tr tr :source-id source-id :service service
+                               :descriptions descriptions
+                               :org-languages org-languages
+                               :selected-tab selected-tab}]]]])))
 
 (defn- add-service-create-form
   "Form for creating a new service from a sub-category.
@@ -1747,7 +1756,7 @@
       [:> Grid {:container true :spacing 3}
 
        ;; Left column: selector and action buttons
-       [:> Grid {:item true :xs 12 :md 4}
+       [:> Grid {:item true :xs 12 :md 5}
         [:> Stack {:spacing 2}
          [controls/services-selector
           {:options missing-subcategories
@@ -1762,15 +1771,38 @@
 
          (when @source-id
            [:<>
-            [:> Button
-             {:variant "outlined" :size "small" :disabled generating?
-              :sx #js {:textTransform "none"}
-              :startIcon (r/as-element
-                           (if generating?
-                             [:> CircularProgress {:size 16 :color "inherit"}]
-                             [:> Icon "auto_fix_high"]))
-              :on-click #(==> [::events/generate-service-descriptions org-id @source-id nil [] []])}
-             (tr :ptv.actions/generate-with-ai)]
+            ;; AI generate + translate buttons
+            (let [from-lang @selected-tab
+                  other-langs (disj (set (map keyword org-languages)) from-lang)
+                  has-text? (and (seq (get-in desc [:summary from-lang]))
+                                 (seq (get-in desc [:description from-lang])))]
+              [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
+               [:> Button
+                {:variant "outlined" :size "small" :disabled generating?
+                 :sx #js {:textTransform "none"}
+                 :startIcon (r/as-element
+                              (if generating?
+                                [:> CircularProgress {:size 16 :color "inherit"}]
+                                [:> Icon "auto_fix_high"]))
+                 :on-click #(==> [::events/generate-service-descriptions org-id @source-id nil [] []])}
+                (tr :ptv.actions/generate-with-ai)]
+               (when (> (count org-languages) 1)
+                 [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
+                  [:> Button
+                   {:size "small" :variant "outlined"
+                    :disabled (or generating? (not has-text?))
+                    :startIcon (r/as-element
+                                 (if generating?
+                                   [:> CircularProgress {:size 16 :color "inherit"}]
+                                   [:> Icon "translate"]))
+                    :sx #js {:textTransform "none"}
+                    :on-click #(==> [::events/translate-service-candidate-with-texts
+                                     @source-id from-lang other-langs
+                                     {:summary (get-in desc [:summary from-lang])
+                                      :description (get-in desc [:description from-lang])
+                                      :user-instruction (get-in desc [:user-instruction from-lang])}])}
+                   (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                        (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]])])
 
             [:> Button
              {:variant "contained" :color "secondary" :size "small" :full-width true
@@ -1797,7 +1829,7 @@
 
        ;; Right column: language tabs + text fields
        (when @source-id
-         [:> Grid {:item true :xs 12 :md 8}
+         [:> Grid {:item true :xs 12 :md 7}
           [:> Stack {:spacing 2}
            [controls/lang-selector
             {:value @selected-tab
@@ -1820,25 +1852,7 @@
              [text-fields/text-field
               {:on-change #(==> [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
-               :helperText (str (count v) "/2500") :error (> (count v) 2500)}])
-
-           (when (> (count org-languages) 1)
-             (let [from-lang @selected-tab
-                   other-langs (disj (set (map keyword org-languages)) from-lang)
-                   has-text? (and (seq (get-in desc [:summary from-lang]))
-                                  (seq (get-in desc [:description from-lang])))]
-               [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                [:> Button
-                 {:size "small" :variant "text" :disabled (not has-text?)
-                  :startIcon (r/as-element [:> Icon "translate"])
-                  :sx #js {:alignSelf "flex-start" :textTransform "none"}
-                  :on-click #(==> [::events/translate-service-candidate-with-texts
-                                   @source-id from-lang other-langs
-                                   {:summary (get-in desc [:summary from-lang])
-                                    :description (get-in desc [:description from-lang])
-                                    :user-instruction (get-in desc [:user-instruction from-lang])}])}
-                 (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                      (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]]))]])])))
+               :helperText (str (count v) "/2500") :error (> (count v) 2500)}])]])])))
 
 (defn- add-service-link-form
   "Form for linking an existing PTV service."

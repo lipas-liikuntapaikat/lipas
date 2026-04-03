@@ -437,6 +437,8 @@
           [:> Button
            {:disabled (or loading?
                           read-only?)
+            :startIcon (when loading?
+                         (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
             :on-click (fn [_e]
                         (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
                                                                                   :to (disj #{"fi" "en" "se"} (name selected-tab))}]))}

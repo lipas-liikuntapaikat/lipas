@@ -50,6 +50,10 @@
   "Default workbench params (OpenAI). Sent to frontend on preview-data load."
   (-> providers :openai :default-params))
 
+(def gemini-default-params
+  "Default Gemini model params. Use this instead of hardcoding model names."
+  (-> providers :gemini :default-params))
+
 ;;; ——— API credentials ——————————————————————————————————————————————————
 
 (def openai-config
@@ -267,9 +271,6 @@ Source data:
    which Gemini's API does not support."
   (json-schema/transform (mu/open-schema response-schema)))
 
-(def default-params
-  (-> providers :gemini :default-params))
-
 (defn complete-raw
   "Returns the full OpenAI response including :choices, :usage, and :model."
   [{:keys [completions-url model n temperature top-p presence-penalty message-format max-tokens]
@@ -373,9 +374,9 @@ Source data:
 (defn gemini-complete
   "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
    Merges provider defaults for any missing params.
-   On 503/429 errors, retries once after 2s, then falls back to OpenAI gpt-4.1-mini."
+   On 503/429 errors, retries once after 2s, then falls back to OpenAI."
   [config system-instruction prompt]
-  (let [config (merge (-> providers :gemini :default-params) config)]
+  (let [config (merge gemini-default-params config)]
     (try
       (let [result (-> (gemini-complete-raw config system-instruction prompt)
                        :choices
@@ -397,13 +398,11 @@ Source data:
                 result)
               (catch Exception e2
                 (if (gemini-unavailable? e2)
-                  (do
-                    (log/warnf "Gemini still unavailable, falling back to OpenAI gpt-4.1-mini")
-                    (let [openai-cfg (merge (-> providers :openai :default-params)
-                                            openai-config
-                                            {:model "gpt-4.1-mini"})
+                  (let [fallback-model (:model default-params)]
+                    (log/warnf "Gemini still unavailable, falling back to OpenAI %s" fallback-model)
+                    (let [openai-cfg (merge default-params openai-config)
                           result (complete openai-cfg system-instruction prompt)]
-                      (log/infof "OpenAI fallback complete (gpt-4.1-mini)")
+                      (log/infof "OpenAI fallback complete (%s)" fallback-model)
                       result))
                   (throw e2)))))
           (throw e))))))
