@@ -17,6 +17,7 @@
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
+            ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogContent$default" :as DialogContent]
@@ -2089,7 +2090,25 @@
                 :flexDirection "column"
                 :gap 2}}
 
-      [org-selector {:label (tr :ptv.actions/select-org)}]
+      [:> Stack {:direction "row" :align-items "center" :spacing 2}
+       (when (and org-data (not loading?))
+         [:> Tabs
+          {:value selected-tab
+           :on-change #(==> [::events/select-tab %2])
+           :textColor "primary"
+           :indicatorColor "secondary"
+           :sx #js {:flex 1}}
+
+          (when has-manage-privilege?
+            [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
+          (when has-manage-privilege?
+            [:> Tab {:value "services" :label (tr :ptv/services)}])
+          (when has-manage-privilege?
+            [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
+          (when has-audit-privilege?
+            [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])
+       [:> Box {:sx #js {:minWidth 250}}
+        [org-selector {:label (tr :ptv.actions/select-org)}]]]
 
       (when loading?
         [:> Stack
@@ -2102,20 +2121,6 @@
 
       (when (and org-data (not loading?))
         [:<>
-         [:> Tabs
-          {:value selected-tab
-           :on-change #(==> [::events/select-tab %2])
-           :textColor "primary"
-           :indicatorColor "secondary"}
-
-          (when has-manage-privilege?
-            [:> Tab {:value "wizard" :label (tr :ptv/wizard)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "services" :label (tr :ptv/services)}])
-          (when has-manage-privilege?
-            [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
-          (when has-audit-privilege?
-            [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])]
 
          (when (and (= selected-tab "wizard") has-manage-privilege?)
            [wizard])
