@@ -19,6 +19,11 @@
     {:username "API9@testi.fi"
      :password "CLcPFgHQB3&"}
 
+    ;; org 7
+    "6745e341-be2a-45a4-b184-bbc2f8465615"
+    {:username "API11@testi.fi"
+     :password "yCfRXaNXg6+"}
+
     ;; org 9
     "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
     {:username "API15@testi.fi"
@@ -332,48 +337,84 @@
                                      (empty? updated-services)
                                      (assoc :deleteAllChannelRelations true))})))
 
-;; Cleanup sequence for lipas-dev and "org 9" in PTV test env
-;; Meant to be run in lipas-dev
+;; Cleanup sequence for wiping a PTV test org and its LIPAS data.
+;; Works in both lipas-dev and local dev environments.
 (comment
 
+  ;; --- Test org definitions ---
+
+  (def org-6-utajarvi {:org-id "3d1759a2-e47a-4947-9a31-cab1c1e2512b"
+                       :city-codes [889]
+                       :label "Utajärvi / org 6"})
+
+  (def org-7-raahe {:org-id "6745e341-be2a-45a4-b184-bbc2f8465615"
+                    :city-codes [678]
+                    :label "Raahe / org 7"})
+
+  (def org-9-liminka {:org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
+                      :city-codes [425]
+                      :label "Liminka / org 9"})
+
+  ;; --- Helpers (eval this block first) ---
+
   (do
-    (require '[lipas.backend.system :as system])
     (require '[lipas.backend.core :as core])
     (require '[lipas.utils :as utils])
-    (def ptv* (:lipas/ptv @system/current-system))
-    (def org-id* "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5") ;; Liminka / org 9
-    (def db* (:lipas/db @system/current-system))
-    (def search* (:lipas/search @system/current-system))
-    (def robot* (core/get-user db* "robot@lipas.fi"))
 
-    ;; Delete all org service locations in PTV test env for org 9
-    (println "Removing Service Locations in PTV Test...")
-    (doseq [x (:itemList (get-org-service-channels ptv* org-id*))]
-      (update-service-location ptv* (:id x) {:organizationId org-id*
-                                             :publishingStatus "Deleted"}))
-    (println "Removing Service Locations in PTV Test... DONE!")
+    (defn wipe-ptv-service-locations! [ptv org-id]
+      (println "Removing Service Locations in PTV Test...")
+      (doseq [x (:itemList (get-org-service-channels ptv org-id))]
+        (update-service-location ptv (:id x) {:organizationId org-id
+                                              :publishingStatus "Deleted"}))
+      (println "Removing Service Locations in PTV Test... DONE!"))
 
-;; Delete all org services in PTV test env for org 9
-    (println "Removing Services in PTV Test...")
-    (doseq [x (:itemList (get-org-services ptv* org-id*))]
-      (when-let [source-id (:sourceId x)]
-        (update-service ptv*
-                        source-id
-                        {:mainResponsibleOrganization org-id*
-                         :publishingStatus "Deleted"})))
-    (println "Removing Services in PTV Test... DONE!")
+    (defn wipe-ptv-services! [ptv org-id]
+      (println "Removing Services in PTV Test...")
+      (doseq [x (:itemList (get-org-services ptv org-id))]
+        (when-let [source-id (:sourceId x)]
+          (update-service ptv
+                          source-id
+                          {:mainResponsibleOrganization org-id
+                           :publishingStatus "Deleted"})))
+      (println "Removing Services in PTV Test... DONE!"))
 
-    ;; Remove PTV data from LIPAS for "Liminka"
-    (doseq [search-site (get-eligible-sites search*
-                                            {:city-codes [425]
-                                             :owners ["city" "city-main-owner"]})
-            :let [site (core/get-sports-site db* (:lipas-id search-site))]]
-      (println "Removing PTV data for site" (:lipas-id search-site))
-      (let [resp (core/upsert-sports-site! db*
-                                           robot*
-                                           (-> (dissoc site :ptv)
-                                               (assoc :event-date (utils/timestamp)))
-                                           false)]
-        (core/index! search* resp :sync)))
+    (defn wipe-lipas-ptv-data! [db search robot city-codes]
+      (println "Removing PTV data from LIPAS for city-codes" city-codes)
+      (doseq [search-site (get-eligible-sites search
+                                              {:city-codes city-codes
+                                               :owners ["city" "city-main-owner"]})
+              :let [site (core/get-sports-site db (:lipas-id search-site))]]
+        (println "Removing PTV data for site" (:lipas-id search-site))
+        (let [resp (core/upsert-sports-site! db
+                                             robot
+                                             (-> (dissoc site :ptv)
+                                                 (assoc :event-date (utils/timestamp)))
+                                             false)]
+          (core/index! search resp :sync)))
+      (println "Removing PTV data from LIPAS... DONE!"))
 
-    (println "Liminka / org 9 wiped out successfully.")))
+    (defn wipe-all! [ptv db search robot {:keys [org-id city-codes label]}]
+      (println "Wiping" label "...")
+      (wipe-ptv-service-locations! ptv org-id)
+      (wipe-ptv-services! ptv org-id)
+      (wipe-lipas-ptv-data! db search robot city-codes)
+      (println label "wiped out successfully.")))
+
+  ;; --- lipas-dev (system via -main) ---
+  (do
+    (require '[lipas.backend.system :as system])
+    (let [sys    @system/current-system
+          ptv    (:lipas/ptv sys)
+          db     (:lipas/db sys)
+          search (:lipas/search sys)
+          robot  (core/get-user db "robot@lipas.fi")]
+      (wipe-all! ptv db search robot org-9-liminka)))
+
+  ;; --- local dev (system from integrant.repl.state) ---
+  (do
+    (let [sys    integrant.repl.state/system
+          ptv    (:lipas/ptv sys)
+          db     (:lipas/db sys)
+          search (:lipas/search sys)
+          robot  (core/get-user db "robot@lipas.fi")]
+      (wipe-all! ptv db search robot org-9-liminka))))
