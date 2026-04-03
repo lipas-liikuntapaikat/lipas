@@ -1244,13 +1244,21 @@
                :on-change #(==> [::events/toggle-sync-enabled site %])}])])])]))
 
 (r/defc service-location
-  [{:keys [site sync-enabled name-conflict valid]
+  [{:keys [site sync-enabled name-conflict valid just-synced?]
     :as props}]
   (let [tr (<== [:lipas.ui.subs/translator])
         sync-status (:sync-status site)
-        last-sync (:last-sync site)]
+        last-sync (:last-sync site)
+        [expanded set-expanded] (hooks/use-state false)]
+
+    ;; Auto-collapse when site gets synced during batch
+    (hooks/use-effect
+      (fn [] (when just-synced? (set-expanded false)))
+      [just-synced?])
+
     [:> Accordion
-     {:defaultExpanded false
+     {:expanded expanded
+      :onChange (fn [_e v] (set-expanded v))
       :disableGutters true
       :square true
       ;; Much faster this way, only render the accordion content for open sites
@@ -1418,21 +1426,61 @@
          [:> Typography {:variant "body2"}
           (str "Valittuna " sports-sites-count-sync "/" sports-sites-count " liikuntapaikkaa")]]
 
-        [:> Stack
-         (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids service-name] :as site} sports-sites]
-           ^{:key lipas-id}
-           [service-location
-            {:tr tr
-             :site site
-             :org-id org-id
-             :lipas-id lipas-id
-             :name-conflict name-conflict
-             :sync-enabled sync-enabled
-             :valid valid
-             :service-ids service-ids
-             :selected-tab selected-tab
-             :set-selected-tab set-selected-tab
-             :service-channel-ids service-channel-ids}])]]]]]))
+        ;; Batch sync completion panel
+        (let [{sync-in-progress? :in-progress?
+               sync-processed :processed-lipas-ids
+               sync-processed-count :processed-count
+               sync-total :total-count
+               sync-halt? :halt?}
+              (<== [::subs/service-location-creation-progress])
+              batch-done? (and (not sync-in-progress?)
+                               (pos? (or sync-processed-count 0)))]
+          [:<>
+           (when batch-done?
+             [:> Alert {:severity (if sync-halt? "warning" "success")
+                        :sx #js {:mb 2}}
+              [:> AlertTitle
+               (if sync-halt?
+                 "Vienti keskeytyi"
+                 "Vienti valmis")]
+              [:> Typography {:variant "body2"}
+               (str sync-processed-count "/" sync-total " liikuntapaikkaa viety PTV:hen.")]
+              (when sync-halt?
+                [:> Typography {:variant "body2" :sx #js {:mt 1}}
+                 (tr :ptv.wizard/export-error-try-again)])
+              [:> Stack {:direction "row" :spacing 1 :sx #js {:mt 2} :flex-wrap "wrap"}
+               [:> Button
+                {:size "small" :variant "outlined"
+                 :sx #js {:textTransform "none"}
+                 :on-click #(==> [::events/reset-wizard])}
+                "Aloita uusi vienti"]
+               [:> Button
+                {:size "small" :variant "outlined"
+                 :sx #js {:textTransform "none"}
+                 :on-click #(==> [::events/select-tab "sports-sites"])}
+                "Siirry Liikuntapaikat-välilehdelle"]
+               [:> Button
+                {:size "small" :variant "outlined"
+                 :sx #js {:textTransform "none"}
+                 :on-click #(==> [::events/select-tab "services"])}
+                "Siirry Palvelut-välilehdelle"]]])
+
+           [:> Stack
+            (for [{:keys [lipas-id valid name-conflict sync-enabled service-ids service-channel-ids] :as site} sports-sites]
+              ^{:key lipas-id}
+              [service-location
+               {:tr tr
+                :site site
+                :org-id org-id
+                :lipas-id lipas-id
+                :name-conflict name-conflict
+                :sync-enabled sync-enabled
+                :valid valid
+                :service-ids service-ids
+                :selected-tab selected-tab
+                :set-selected-tab set-selected-tab
+                :service-channel-ids service-channel-ids
+                :just-synced? (contains? sync-processed lipas-id)}])]])]]]]))
 
 (def ^:private service-channels-threshold 5)
 
