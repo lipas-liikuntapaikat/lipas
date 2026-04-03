@@ -19,10 +19,10 @@
     {:username "API9@testi.fi"
      :password "CLcPFgHQB3&"}
 
-    ;; org 7
-    "6745e341-be2a-45a4-b184-bbc2f8465615"
-    {:username "API11@testi.fi"
-     :password "yCfRXaNXg6+"}
+    ;; org 8
+    "92374b0f-7d3c-4017-858e-666ee3ca2761"
+    {:username "API13@testi.fi"
+     :password "EfWjACLNS8+"}
 
     ;; org 9
     "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
@@ -347,9 +347,9 @@
                        :city-codes [889]
                        :label "Utajärvi / org 6"})
 
-  (def org-7-raahe {:org-id "6745e341-be2a-45a4-b184-bbc2f8465615"
+  (def org-8-raahe {:org-id "92374b0f-7d3c-4017-858e-666ee3ca2761"
                     :city-codes [678]
-                    :label "Raahe / org 7"})
+                    :label "Raahe / org 8"})
 
   (def org-9-liminka {:org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
                       :city-codes [425]
