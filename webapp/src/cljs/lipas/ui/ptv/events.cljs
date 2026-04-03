@@ -74,6 +74,25 @@
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
 
+(rf/reg-event-fx ::reset-wizard
+  "Reset all ephemeral wizard state back to defaults."
+  (fn [{:keys [db]} _]
+    (let [org-id (-get-ptv-org-id db)]
+      {:db (-> db
+               (update :ptv dissoc
+                       :selected-step
+                       :candidates-search
+                       :service-locations-creation)
+               (assoc-in [:ptv :batch-descriptions-generation]
+                         {:sports-sites-filter "sync-enabled"
+                          :halt? false})
+               ;; Clear local service candidate edits
+               (update-in [:ptv :org org-id :data] dissoc
+                          :service-candidates
+                          :manual-services))
+       :fx [;; Re-fetch fresh data from PTV
+            [:dispatch [::fetch-ptv-org-data (:selected-org (:ptv db))]]]})))
+
 (rf/reg-event-fx ::fetch-integration-candidates
   (fn [{:keys [db]} [_ lipas-org]]
     (when lipas-org
@@ -984,12 +1003,13 @@
       #_(println "To sync: " (count to-sync))
       #_(println "to save: " (count to-save))
 
-      {:db (update-in db [:ptv :service-locations-creation]
-                      merge
-                      {:batch-size (count ids)
-                       :halt? false
-                       :size (count ids)
-                       :ids (set ids)})
+      {:db (assoc-in db [:ptv :service-locations-creation]
+                     {:batch-size (count ids)
+                      :halt? false
+                      :in-progress? true
+                      :size (count ids)
+                      :ids (set ids)
+                      :processed-ids #{}})
        :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]
             [:dispatch [::save-ptv-meta to-save]]]})))
 
@@ -1069,9 +1089,8 @@
 
 (rf/reg-event-fx ::load-ptv-texts-failure
   (fn [{:keys [db]} [_ lipas-id org-id resp]]
-    {:db (-> db
+    {:db (-> db)}))
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
-             )}))
 
 (rf/reg-event-fx ::set-manual-services
   (fn [{:keys [db]} [_ org-id source-ids subcategories]]
