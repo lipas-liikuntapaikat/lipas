@@ -16,6 +16,8 @@
             ["@mui/material/TableRow$default" :as TableRow]
             [clojure.string :as str]
             [lipas.schema.org :as org-schema]
+            [lipas.utils :as utils]
+            [malli.core :as m]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
             [lipas.ui.components.autocompletes :as ac]
@@ -42,7 +44,8 @@
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
         ptv-config (or (:ptv-data org) {})
         ptv-enabled? (and (:sync-enabled ptv-config)
-                          (not (str/blank? (:org-id ptv-config))))]
+                          (not (str/blank? (:org-id ptv-config))))
+        ptv-config-valid? (m/validate org-schema/ptv-config-update (utils/clean ptv-config))]
 
     [:> Box {:sx {:p 2}}
      [:> Typography {:variant "h5" :sx {:mb 2}}
@@ -50,7 +53,7 @@
 
      ;; PTV Integration Status Banner
      [:> Alert {:severity (if ptv-enabled? "success" "info")
-                 :sx {:mb 3}}
+                :sx {:mb 3}}
       (if ptv-enabled?
         (tr :lipas.org.ptv/integration-enabled)
         [:span
@@ -70,6 +73,7 @@
         :value (:org-id ptv-config)
         :placeholder (tr :lipas.org.ptv/org-id-placeholder)
         :helper-text (tr :lipas.org.ptv/org-id-helper)
+        :required true
         :disabled (not is-lipas-admin?)
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :org-id] %])}]
 
@@ -82,25 +86,27 @@
         :disabled (not is-lipas-admin?)
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :prod-org-id] %])}]
 
-      ;; Test environment credentials
-      [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
-       (tr :lipas.org.ptv/test-credentials-title)]
+      ;; Test environment credentials — currently hard-coded in
+      ;; lipas.backend.ptv.integration/get-test-credentials.
+      ;; Preserved here for later use if credentials are moved to DB.
+      #_[:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
+         (tr :lipas.org.ptv/test-credentials-title)]
 
-      [:> Box {:sx {:pl 2}}
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.org.ptv/test-username-label)
-         :value (get-in ptv-config [:test-credentials :username])
-         :placeholder (tr :lipas.org.ptv/test-username-placeholder)
-         :disabled (not is-lipas-admin?)
-         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :username] %])}]
+      #_[:> Box {:sx {:pl 2}}
+         [text-fields/text-field-controlled
+          {:label (tr :lipas.org.ptv/test-username-label)
+           :value (get-in ptv-config [:test-credentials :username])
+           :placeholder (tr :lipas.org.ptv/test-username-placeholder)
+           :disabled (not is-lipas-admin?)
+           :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :username] %])}]
 
-       [text-fields/text-field-controlled
-        {:label (tr :lipas.org.ptv/test-password-label)
-         :type "password"
-         :value (get-in ptv-config [:test-credentials :password])
-         :placeholder (tr :lipas.org.ptv/test-password-placeholder)
-         :disabled (not is-lipas-admin?)
-         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :password] %])}]]
+         [text-fields/text-field-controlled
+          {:label (tr :lipas.org.ptv/test-password-label)
+           :type "password"
+           :value (get-in ptv-config [:test-credentials :password])
+           :placeholder (tr :lipas.org.ptv/test-password-placeholder)
+           :disabled (not is-lipas-admin?)
+           :on-change #(rf/dispatch [::events/edit-org [:ptv-data :test-credentials :password] %])}]]
 
       ;; City codes
       [:> Typography {:variant "h6" :sx {:mt 2 :mb 1}}
@@ -109,6 +115,7 @@
       [selects/city-selector
        {:label (tr :lipas.org.ptv/cities-label)
         :value (:city-codes ptv-config [])
+        :required true
         :disabled (not is-lipas-admin?)
         :on-change (fn [value]
                      (rf/dispatch [::events/edit-org [:ptv-data :city-codes] value]))}]
@@ -119,7 +126,8 @@
 
       [selects/owner-selector
        {:label (tr :lipas.org.ptv/owners-label)
-        :value (:owners ptv-config [])
+        :value (:owners ptv-config ["city" "city-main-owner"])
+        :required true
         :disabled (not is-lipas-admin?)
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :owners] %])}]
 
@@ -133,19 +141,20 @@
         :items [{:value "fi" :label (tr :lipas.org.ptv/finnish-label)}
                 {:value "se" :label (tr :lipas.org.ptv/swedish-label)}
                 {:value "en" :label (tr :lipas.org.ptv/english-label)}]
+        :required true
         :disabled (not is-lipas-admin?)
         :on-change #(rf/dispatch [::events/edit-org [:ptv-data :supported-languages] %])}]
 
       ;; Sync enabled
       [:> FormControlLabel
        {:control (r/as-element
-                  [:> Checkbox
-                   {:checked (boolean (:sync-enabled ptv-config))
-                    :disabled (not is-lipas-admin?)
-                    :onChange (fn [e]
-                                (rf/dispatch [::events/edit-org
-                                              [:ptv-data :sync-enabled]
-                                              (.-checked (.-target e))]))}])
+                   [:> Checkbox
+                    {:checked (boolean (:sync-enabled ptv-config))
+                     :disabled (not is-lipas-admin?)
+                     :onChange (fn [e]
+                                 (rf/dispatch [::events/edit-org
+                                               [:ptv-data :sync-enabled]
+                                               (.-checked (.-target e))]))}])
         :label (tr :lipas.org.ptv/sync-enabled-label)
         :sx {:mt 2}}]
 
@@ -154,6 +163,7 @@
         [:> Button
          {:variant "contained"
           :color "primary"
+          :disabled (not ptv-config-valid?)
           :on-click #(rf/dispatch [::events/save-ptv-config])
           :sx {:mt 3 :align-self "flex-start"}}
          [:> Icon {:sx {:mr 1}} "save"]
@@ -175,12 +185,12 @@
            :align-items "center"}}
      ;; User autocomplete dropdown
      (r/as-element
-      [ac/autocomplete2
-       {:sx #js {:minWidth 250}
-        :label (tr :lipas.user/email)
-        :options all-users
-        :value (:user-id add-form)
-        :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))}])
+       [ac/autocomplete2
+        {:sx #js {:minWidth 250}
+         :label (tr :lipas.user/email)
+         :options all-users
+         :value (:user-id add-form)
+         :onChange (fn [_e v] (rf/dispatch [::events/set-add-user-form [:user-id] (ac/safe-value v)]))}])
      ;; Role selector
      [:> FormControl
       {:sx {:min-width 120}}
@@ -257,8 +267,8 @@
      ;; Tabs - only show if not new
      (when-not is-new?
        [:> Tabs {:value current-tab
-                  :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
-                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
+                 :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
+                 :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
         [:> Tab {:label (tr :lipas.org/contact-info-tab) :value "contact"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
         [:> Tab {:label (tr :lipas.org/bulk-operations-tab) :value "bulk-operations"}]
@@ -384,7 +394,7 @@
         (for [org user-orgs]
           [:> Grid {:item true :xs 12 :md 6 :key (:id org)}
            [:> Paper {:sx {:p 2 :cursor "pointer"}
-                       :on-click #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id (str (:id org))}})}
+                      :on-click #(rfe/navigate :lipas.ui.routes/org {:path-params {:org-id (str (:id org))}})}
             [:> Typography {:variant "h6"}
              (:name org)]]])]
 
