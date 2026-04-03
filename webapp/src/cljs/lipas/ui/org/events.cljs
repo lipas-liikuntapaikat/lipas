@@ -3,6 +3,7 @@
             [cognitect.transit :as t]
             [lipas.roles :as roles]
             [lipas.ui.bulk-operations.events :as bulk-ops-events]
+            [lipas.utils :as utils]
             [re-frame.core :as rf]
             [reitit.frontend.easy :as rfe]))
 
@@ -244,7 +245,7 @@
                    (let [token (-> db :user :login :token)
                          org (get-in db [:org :editing-org])
                          org-id (:id org)
-                         ptv-config (:ptv-data org)]
+                         ptv-config (utils/clean (:ptv-data org))]
                      {:http-xhrio
                       {:method :put
                        :uri (str (:backend-url db) "/orgs/" org-id "/ptv-config")
