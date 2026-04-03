@@ -234,11 +234,17 @@
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success
-                 (fn [{:keys [db]} [_ resp]]
-                   (let [tr (:translator db)]
-                     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
-                                       {:message "PTV configuration saved successfully"
-                                        :success? true}]]]})))
+                 (fn [{:keys [db]} [_ org-id ptv-config resp]]
+                   {:db (update-in db [:user :orgs]
+                                   (fn [orgs]
+                                     (mapv (fn [org]
+                                             (if (= (:id org) org-id)
+                                               (assoc org :ptv-data ptv-config)
+                                               org))
+                                           orgs)))
+                    :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                                     {:message "PTV configuration saved successfully"
+                                      :success? true}]]]}))
 
 (rf/reg-event-fx ::save-ptv-config
                  (fn [{:keys [db]} [_]]
@@ -253,7 +259,7 @@
                        :params ptv-config
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
-                       :on-success [::save-ptv-config-success]
+                       :on-success [::save-ptv-config-success org-id ptv-config]
                        :on-failure [::failure]}})))
 
  ;; Generic failure handler

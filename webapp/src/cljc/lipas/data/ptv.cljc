@@ -100,6 +100,10 @@
           {}
           organizations))
 
+(def fallback-languages
+  "Default languages when org config is missing. Finnish only."
+  ["fi"])
+
 (def lang->locale
   "PTV language code -> LIPAS locale keyword"
   {"fi" :fi, "sv" :se, "en" :en})
