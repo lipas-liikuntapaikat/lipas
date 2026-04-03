@@ -74,6 +74,25 @@
   (fn [db [_ v]]
     (assoc-in db [:ptv :selected-tab] v)))
 
+(rf/reg-event-fx ::reset-wizard
+  "Reset all ephemeral wizard state back to defaults."
+  (fn [{:keys [db]} _]
+    (let [org-id (-get-ptv-org-id db)]
+      {:db (-> db
+               (update :ptv dissoc
+                       :selected-step
+                       :candidates-search
+                       :service-locations-creation)
+               (assoc-in [:ptv :batch-descriptions-generation]
+                         {:sports-sites-filter "sync-enabled"
+                          :halt? false})
+               ;; Clear local service candidate edits
+               (update-in [:ptv :org org-id :data] dissoc
+                          :service-candidates
+                          :manual-services))
+       :fx [;; Re-fetch fresh data from PTV
+            [:dispatch [::fetch-ptv-org-data (:selected-org (:ptv db))]]]})))
+
 (rf/reg-event-fx ::fetch-integration-candidates
   (fn [{:keys [db]} [_ lipas-org]]
     (when lipas-org
@@ -644,7 +663,9 @@
           description (get-in db [:ptv :org org-id :data :service-candidates source-id :description from-lang])
           user-instruction (get-in db [:ptv :org org-id :data :service-candidates source-id :user-instruction from-lang])]
       (when (and summary description)
-        {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+        {:db (-> db
+                 (assoc-in [:ptv :loading-from-lipas :descriptions] true)
+                 (assoc-in [:ptv :syncing :service-descriptions source-id] true))
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
@@ -657,7 +678,7 @@
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success [::translate-service-candidate-success source-id]
-                :on-failure [::translate-service-candidate-failure]}]]}))))
+                :on-failure [::translate-service-candidate-failure source-id]}]]}))))
 
 (rf/reg-event-fx ::translate-service-candidate-success
   (fn [{:keys [db]} [_ source-id resp]]
@@ -670,23 +691,28 @@
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+               (update-in [:ptv :syncing :service-descriptions] dissoc source-id)
                (update-in [:ptv :org org-id :data :service-candidates source-id] merge resp))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification
                         {:message (tr :notifications/translate-success) :success? true}]]]})))
 
 (rf/reg-event-fx ::translate-service-candidate-failure
-  (fn [{:keys [db]} [_ _resp]]
+  (fn [{:keys [db]} [_ source-id _resp]]
     (let [tr (:translator db)
           notification {:message (tr :notifications/get-failed)
                         :success? false}]
-      {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] false)
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+               (update-in [:ptv :syncing :service-descriptions] dissoc source-id))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::translate-service-candidate-with-texts
   (fn [{:keys [db]} [_ source-id from-lang to-langs {:keys [summary description user-instruction]}]]
     (let [token (-> db :user :login :token)]
       (when (and summary description)
-        {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
+        {:db (-> db
+                 (assoc-in [:ptv :loading-from-lipas :descriptions] true)
+                 (assoc-in [:ptv :syncing :service-descriptions source-id] true))
          :fx [[:http-xhrio
                {:method :post
                 :headers {:Authorization (str "Token " token)}
@@ -699,7 +725,7 @@
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success [::translate-service-candidate-success source-id]
-                :on-failure [::translate-service-candidate-failure]}]]}))))
+                :on-failure [::translate-service-candidate-failure source-id]}]]}))))
 
 ;;; Create Services in PTV ;;;
 
@@ -887,7 +913,7 @@
           sports-site (update sports-site :ptv #(merge {:org-id org-id} %))
 
           ;; Add other defaults and merge with summary/description from the UI
-          org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ["fi"])
+          org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
           ptv-data (merge (select-keys (:default-settings (:ptv db))
                                        [:sync-enabled])
                           {:service-channel-ids []}
@@ -989,12 +1015,13 @@
       #_(println "To sync: " (count to-sync))
       #_(println "to save: " (count to-save))
 
-      {:db (update-in db [:ptv :service-locations-creation]
-                      merge
-                      {:batch-size (count ids)
-                       :halt? false
-                       :size (count ids)
-                       :ids (set ids)})
+      {:db (assoc-in db [:ptv :service-locations-creation]
+                     {:batch-size (count ids)
+                      :halt? false
+                      :in-progress? true
+                      :size (count ids)
+                      :ids (set ids)
+                      :processed-ids #{}})
        :fx [[:dispatch [::create-all-ptv-service-locations* org-id ids]]
             [:dispatch [::save-ptv-meta to-save]]]})))
 

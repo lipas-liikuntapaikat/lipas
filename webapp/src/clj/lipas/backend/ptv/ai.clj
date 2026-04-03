@@ -50,6 +50,10 @@
   "Default workbench params (OpenAI). Sent to frontend on preview-data load."
   (-> providers :openai :default-params))
 
+(def gemini-default-params
+  "Default Gemini model params. Use this instead of hardcoding model names."
+  (-> providers :gemini :default-params))
+
 ;;; ——— API credentials ——————————————————————————————————————————————————
 
 (def openai-config
@@ -267,9 +271,6 @@ Source data:
    which Gemini's API does not support."
   (json-schema/transform (mu/open-schema response-schema)))
 
-(def default-params
-  (-> providers :gemini :default-params))
-
 (defn complete-raw
   "Returns the full OpenAI response including :choices, :usage, and :model."
   [{:keys [completions-url model n temperature top-p presence-penalty message-format max-tokens]
@@ -297,7 +298,7 @@ Source data:
                  (-> (assoc :top_p top-p)
                      (assoc :presence_penalty presence-penalty))
                  temperature (assoc :temperature temperature))
-        _ (log/infof "AI Prompt sent: %s" prompt)
+        _ (log/debugf "OpenAI prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers default-headers
                 :body    (json/encode body)}]
     (-> (client/post completions-url params)
@@ -324,7 +325,7 @@ Source data:
                                   :responseMimeType "application/json"
                                   :responseSchema   GeminiResponse
                                   :thinkingConfig   {:thinkingLevel thinking-level}}}
-        _      (log/infof "Gemini prompt sent: %s" prompt)
+        _      (log/debugf "Gemini prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers      {"x-goog-api-key" api-key
                                "Content-Type"   "application/json"}
                 :body         (json/encode body)
@@ -360,27 +361,28 @@ Source data:
                    :choices
                    first
                    (update-in [:message :content] #(json/decode % keyword)))]
-    (log/infof "AI Result (%s): %s" model result)
+    (log/infof "OpenAI complete (%s): %d tokens" model (get-in result [:usage :total_tokens] 0))
+    (log/debugf "OpenAI result: %s" result)
     result))
 
 (defn- gemini-unavailable?
   "True if the exception is a 503 (or 429) from Gemini indicating capacity issues."
   [e]
-  (when-let [status (or (:status (ex-data e))
-                        (some-> (ex-data e) :object :status))]
+  (when-let [status (:status (ex-data e))]
     (contains? #{503 429} status)))
 
 (defn gemini-complete
   "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
    Merges provider defaults for any missing params.
-   On 503/429 errors, retries once after 2s, then falls back to OpenAI gpt-4.1-mini."
+   On 503/429 errors, retries once after 2s, then falls back to OpenAI."
   [config system-instruction prompt]
-  (let [config (merge (-> providers :gemini :default-params) config)]
+  (let [config (merge gemini-default-params config)]
     (try
       (let [result (-> (gemini-complete-raw config system-instruction prompt)
                        :choices
                        first)]
-        (log/infof "Gemini Result (%s): %s" (:model config) result)
+        (log/infof "Gemini complete (%s)" (:model config))
+        (log/debugf "Gemini result: %s" result)
         result)
       (catch Exception e
         (if (gemini-unavailable? e)
@@ -391,17 +393,16 @@ Source data:
               (let [result (-> (gemini-complete-raw config system-instruction prompt)
                                :choices
                                first)]
-                (log/infof "Gemini retry succeeded (%s): %s" (:model config) result)
+                (log/infof "Gemini retry succeeded (%s)" (:model config))
+                (log/debugf "Gemini result: %s" result)
                 result)
               (catch Exception e2
                 (if (gemini-unavailable? e2)
-                  (do
-                    (log/warnf "Gemini still unavailable, falling back to OpenAI gpt-4.1-mini")
-                    (let [openai-cfg (merge (-> providers :openai :default-params)
-                                            openai-config
-                                            {:model "gpt-4.1-mini"})
+                  (let [fallback-model (:model default-params)]
+                    (log/warnf "Gemini still unavailable, falling back to OpenAI %s" fallback-model)
+                    (let [openai-cfg (merge default-params openai-config)
                           result (complete openai-cfg system-instruction prompt)]
-                      (log/infof "OpenAI fallback result: %s" result)
+                      (log/infof "OpenAI fallback complete (%s)" fallback-model)
                       result))
                   (throw e2)))))
           (throw e))))))

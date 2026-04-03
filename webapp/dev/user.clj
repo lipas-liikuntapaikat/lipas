@@ -7,7 +7,6 @@
     [integrant.repl :refer [reset-all halt go]]
     [integrant.repl.state]
     [migratus.core :as migratus]
-    [lipas.wfs.core :as wfs]
     [taoensso.timbre :as log]))
 
 ;; Silence noisy Jetty logging during development
@@ -21,6 +20,34 @@
 
 (defn current-config []
   integrant.repl.state/config)
+
+(def ^:private valid-log-levels
+  #{:trace :debug :info :warn :error :fatal})
+
+(defn set-log-level!
+  "Set the application log level. Preserves silencing of noisy dependencies.
+   Example: (set-log-level! :info)
+   Valid levels: :trace :debug :info :warn :error :fatal"
+  [level]
+  (when-not (contains? valid-log-levels level)
+    (throw (ex-info (str "Invalid log level: " level ". Valid levels: " (sort valid-log-levels))
+                    {:level level})))
+  (log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
+                                      ["*" level]])
+  (log/infof "Log level set to %s" level)
+  level)
+
+(defn get-log-level
+  "Returns the current application log level (ignoring per-namespace overrides)."
+  []
+  (let [min-level (:min-level log/*config*)]
+    (cond
+      ;; Vector of [pattern level] pairs — find the wildcard entry
+      (vector? min-level)
+      (some (fn [[pattern level]] (when (= "*" pattern) level)) min-level)
+      ;; Simple keyword
+      (keyword? min-level) min-level
+      :else :debug)))
 
 (defn current-system []
   integrant.repl.state/system)

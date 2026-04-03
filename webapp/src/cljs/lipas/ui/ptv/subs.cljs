@@ -99,20 +99,17 @@
           orgs)))
 
 (rf/reg-sub ::org-languages
-  (fn [[_ ptv-org-id]]
-    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  :<- [::selected-ptv-org]
   (fn [ptv-config]
-    (or (:supported-languages ptv-config) ["fi" "sv" "en"])))
+    (or (:supported-languages ptv-config) ptv-data/fallback-languages)))
 
 (rf/reg-sub ::org-city-codes
-  (fn [[_ ptv-org-id]]
-    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  :<- [::selected-ptv-org]
   (fn [ptv-config]
     (:city-codes ptv-config)))
 
 (rf/reg-sub ::org-params
-  (fn [[_ ptv-org-id]]
-    (rf/subscribe [::ptv-config-by-ptv-org-id ptv-org-id]))
+  :<- [::selected-ptv-org]
   (fn [ptv-config]
     ;; Return the config in the same format as org-id->params
     (when ptv-config
@@ -285,7 +282,7 @@
           descriptions (get-in ptv [:org org-id :data :service-candidates source-id])
                     ;; Get languages from selected org - NOTE: this is LIPAS org which has PTV config
           selected-org (:selected-org ptv)
-          org-languages (get-in selected-org [:ptv-data :supported-languages] ["fi"])
+          org-languages (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)
           org-city-codes (get-in selected-org [:ptv-data :city-codes])]
       (ptv-data/->ptv-service
         {:org-id org-id
@@ -325,7 +322,7 @@
                 (let [description (get-in descriptions [source-id :description])
                       summary (get-in descriptions [source-id :summary])
                       user-instruction (get-in descriptions [source-id :user-instruction])
-                      languages (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])
+                      languages (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)
                       mapping (get service-mappings source-id)]
                   (-> m
                       (assoc :languages languages)
@@ -370,7 +367,7 @@
      (rf/subscribe [::selected-org])])
   (fn [[ptv services service-channels org-defaults types selected-org] [_ org-id]]
     (let [lipas-id->site (get-in ptv [:org org-id :data :sports-sites])
-          org-langs (get-in selected-org [:ptv-data :supported-languages] ["fi" "sv" "en"])]
+          org-langs (get-in selected-org [:ptv-data :supported-languages] ptv-data/fallback-languages)]
       (->> (vals lipas-id->site)
            (map (fn [site]
                   (ptv-data/sports-site->ptv-input {:org-id org-id

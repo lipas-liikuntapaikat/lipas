@@ -284,8 +284,7 @@
                   removed-services (set/difference old-services new-services)
                   new-services (set/difference new-services old-services)
                   service-channel-id (first (:service-channel-ids (:ptv site)))]
-              (log/infof "Update PTV service-location, add services %s, remove services %s"
-                         new-services removed-services)
+              (log/infof "Update service-location connections: +%s -%s" new-services removed-services)
               (doseq [service-id removed-services]
                 (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
               (doseq [service-id new-services]
@@ -313,9 +312,8 @@
                                             :service-channel-ids
                                             :delete-existing)))]
 
-    (log/infof "Resp %s" ptv-resp)
-
-    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
+    (log/infof "Upserted service-location %s (status: %s, update: %s, channel: %s)"
+               (:lipas-id site) (:status site) (boolean id) (:id ptv-resp))
 
     [ptv-resp new-ptv-data]))
 
@@ -407,8 +405,8 @@
                       old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
                       old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
                       new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                  (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
-                             (:previous-type-code ptv) type-code
+                  (log/infof "Site %d type changed %s => %s, service-ids %s => %s"
+                             lipas-id (:previous-type-code ptv) type-code
                              old-service-ids new-service-ids)
                   (update ptv :service-ids (fn [ids]
                                              (let [x (set ids)
@@ -435,7 +433,7 @@
     (catch Exception e
       (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
                                             :data (ex-data e)})]
-        (log/infof e "Sports site updated but PTV integration had an error")
+        (log/errorf e "Sports site %d updated but PTV sync failed" lipas-id)
         (let [resp (core/upsert-sports-site! tx
                                              user
                                              (-> sports-site
@@ -463,7 +461,6 @@
 (defn save-ptv-audit
   "Saves PTV audit information for a sports site."
   [db search user {:keys [lipas-id audit]}]
-  (tap> user)
   (jdbc/with-db-transaction [tx db]
     (when-let [site (core/get-sports-site tx lipas-id)]
       ;; Add timestamp and auditor information to the audit data

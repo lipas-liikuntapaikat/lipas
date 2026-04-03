@@ -100,6 +100,10 @@
           {}
           organizations))
 
+(def fallback-languages
+  "Default languages when org config is missing. Finnish only."
+  ["fi"])
+
 (def lang->locale
   "PTV language code -> LIPAS locale keyword"
   {"fi" :fi, "sv" :se, "en" :en})
@@ -162,7 +166,7 @@
     {:sourceId (or source-id
                    (let [ts (str/replace (utils/timestamp) #":" "-")
                          x (str "lipas-" org-id "-" sub-category-id "-" ts)]
-                     (log/infof "Creating new PTV Service source-id %s" x)
+                     (log/debugf "Creating new PTV Service source-id %s" x)
                      x))
 
      #_#_:keywords (let [tags (:tags type)]
@@ -323,7 +327,7 @@
              :sourceId (or (:source-id ptv)
                            (let [ts (str/replace now #":" "-")
                                  x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
-                             (log/infof "Creating new PTV ServiceLocation source-id %s" x)
+                             (log/debugf "Creating new PTV ServiceLocation source-id %s" x)
                              x))
              :serviceChannelNames (keep identity
                                         (let [fallback (get-in sports-site [:name])]
