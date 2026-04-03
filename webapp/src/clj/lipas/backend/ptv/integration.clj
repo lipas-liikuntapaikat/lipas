@@ -112,7 +112,7 @@
             payload (parse-payload new-token)
             x {:token new-token
                :payload payload}]
-        (log/infof "Create token %s => %s (%s)" org-id new-token payload)
+        (log/debugf "Create token for org %s (expires %s)" org-id (:exp payload))
         (swap! (:tokens ptv) assoc org-id x)
         (:token x))
       (:token x))))
@@ -139,7 +139,7 @@
                     #_(= "Bearer error=\"invalid_token\", error_description=\"The access token is not valid.\""
                          (get (:headers d) "WWW-Authenticate")))
              (do
-               (log/infof "Invalid token, trying to get a new token and retry")
+               (log/debug "Invalid token, retrying with new token")
                (swap! (:tokens ptv) dissoc auth-org-id)
                (http ptv auth-org-id req true))
              (throw (ex-info (format "HTTP Error: %s %s" (:status d) (:body d))
@@ -228,7 +228,7 @@
         params {:url (make-url ptv "/v11/Service")
                 :method :post
                 :form-params service}]
-    (log/infof "Create PTV service %s" service)
+    (log/infof "Create PTV service (sourceId: %s)" (:sourceId service))
     (-> (http ptv org-id params)
         :body)))
 
@@ -243,7 +243,7 @@
   [ptv
    source-id
    data]
-  (log/info "Update PTV service with id " source-id "and data" data)
+  (log/infof "Update PTV service (sourceId: %s)" source-id)
   (let [org-id (:mainResponsibleOrganization data)
         params {:url (make-url ptv "/v11/Service/SourceId/" source-id)
                 :method :put
@@ -255,7 +255,7 @@
   "Update PTV service by its PTV UUID (not source-id).
    Used when adopting an existing service into LIPAS integration."
   [ptv service-id data]
-  (log/info "Update PTV service by ID" service-id)
+  (log/infof "Update PTV service by ID %s" service-id)
   (let [org-id (:mainResponsibleOrganization data)
         params {:url (make-url ptv "/v11/Service/" service-id)
                 :method :put
@@ -269,7 +269,7 @@
         params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation")
                 :method :post
                 :form-params service-location}]
-    (log/info "Create PTV service location" service-location)
+    (log/infof "Create PTV service-location (sourceId: %s, org: %s)" (:sourceId service-location) org-id)
     (-> (http ptv org-id params)
         :body)))
 
@@ -279,7 +279,7 @@
         params {:url (make-url ptv "/v11/ServiceChannel/ServiceLocation/" service-location-id)
                 :method :put
                 :form-params data}]
-    (log/infof "req %s" params)
+    (log/infof "Update PTV service-location %s" service-location-id)
     (-> (http ptv org-id params)
         :body)))
 
@@ -325,7 +325,7 @@
                               (map (fn [id]
                                      {:serviceChannelId id}))
                               vec)]
-    (log/infof "Update service %s connections, %s => %s" service-id current-services updated-services)
+    (log/infof "Update service %s connections: %d channels" service-id (count updated-services))
     ;; NOTE: Hopefully there weren't connection changes to this service between the API calls.
     (http ptv org-id {:url (make-url ptv "/v11/Connection/serviceId/" service-id)
                       :method :put
@@ -361,22 +361,43 @@
     (require '[lipas.backend.core :as core])
     (require '[lipas.utils :as utils])
 
+    (defn- modified-status-error? [e]
+      (and (instance? clojure.lang.ExceptionInfo e)
+           (= 400 (get-in (ex-data e) [:resp :status]))
+           (some-> (ex-message e) (str/includes? "status Modified"))))
+
     (defn wipe-ptv-service-locations! [ptv org-id]
       (println "Removing Service Locations in PTV Test...")
-      (doseq [x (:itemList (get-org-service-channels ptv org-id))]
-        (update-service-location ptv (:id x) {:organizationId org-id
-                                              :publishingStatus "Deleted"}))
-      (println "Removing Service Locations in PTV Test... DONE!"))
+      (let [skipped (atom [])]
+        (doseq [x (:itemList (get-org-service-channels ptv org-id))]
+          (try
+            (update-service-location ptv (:id x) {:organizationId org-id
+                                                  :publishingStatus "Deleted"})
+            (catch Exception e
+              (if (modified-status-error? e)
+                (do (println "  SKIPPED (Modified):" (:id x))
+                    (swap! skipped conj {:id (:id x) :name (:name x)}))
+                (throw e)))))
+        (println "Removing Service Locations in PTV Test... DONE!")
+        @skipped))
 
     (defn wipe-ptv-services! [ptv org-id]
       (println "Removing Services in PTV Test...")
-      (doseq [x (:itemList (get-org-services ptv org-id))]
-        (when-let [source-id (:sourceId x)]
-          (update-service ptv
-                          source-id
-                          {:mainResponsibleOrganization org-id
-                           :publishingStatus "Deleted"})))
-      (println "Removing Services in PTV Test... DONE!"))
+      (let [skipped (atom [])]
+        (doseq [x (:itemList (get-org-services ptv org-id))]
+          (when-let [source-id (:sourceId x)]
+            (try
+              (update-service ptv
+                              source-id
+                              {:mainResponsibleOrganization org-id
+                               :publishingStatus "Deleted"})
+              (catch Exception e
+                (if (modified-status-error? e)
+                  (do (println "  SKIPPED (Modified):" source-id)
+                      (swap! skipped conj {:sourceId source-id}))
+                  (throw e))))))
+        (println "Removing Services in PTV Test... DONE!")
+        @skipped))
 
     (defn wipe-lipas-ptv-data! [db search robot city-codes]
       (println "Removing PTV data from LIPAS for city-codes" city-codes)
@@ -395,10 +416,18 @@
 
     (defn wipe-all! [ptv db search robot {:keys [org-id city-codes label]}]
       (println "Wiping" label "...")
-      (wipe-ptv-service-locations! ptv org-id)
-      (wipe-ptv-services! ptv org-id)
-      (wipe-lipas-ptv-data! db search robot city-codes)
-      (println label "wiped out successfully.")))
+      (let [skipped-channels (wipe-ptv-service-locations! ptv org-id)
+            skipped-services (wipe-ptv-services! ptv org-id)]
+        (wipe-lipas-ptv-data! db search robot city-codes)
+        (if (and (empty? skipped-channels) (empty? skipped-services))
+          (println label "wiped out successfully.")
+          (do (println label "wiped out with some entities skipped (Modified status):")
+              (when (seq skipped-channels)
+                (println "  Service locations:" (count skipped-channels))
+                (doseq [s skipped-channels] (println "   " s)))
+              (when (seq skipped-services)
+                (println "  Services:" (count skipped-services))
+                (doseq [s skipped-services] (println "   " s))))))))
 
   ;; --- lipas-dev (system via -main) ---
   (do

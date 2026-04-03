@@ -297,7 +297,7 @@ Source data:
                  (-> (assoc :top_p top-p)
                      (assoc :presence_penalty presence-penalty))
                  temperature (assoc :temperature temperature))
-        _ (log/infof "AI Prompt sent: %s" prompt)
+        _ (log/debugf "OpenAI prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers default-headers
                 :body    (json/encode body)}]
     (-> (client/post completions-url params)
@@ -324,7 +324,7 @@ Source data:
                                   :responseMimeType "application/json"
                                   :responseSchema   GeminiResponse
                                   :thinkingConfig   {:thinkingLevel thinking-level}}}
-        _      (log/infof "Gemini prompt sent: %s" prompt)
+        _      (log/debugf "Gemini prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers      {"x-goog-api-key" api-key
                                "Content-Type"   "application/json"}
                 :body         (json/encode body)
@@ -360,19 +360,53 @@ Source data:
                    :choices
                    first
                    (update-in [:message :content] #(json/decode % keyword)))]
-    (log/infof "AI Result (%s): %s" model result)
+    (log/infof "OpenAI complete (%s): %d tokens" model (get-in result [:usage :total_tokens] 0))
+    (log/debugf "OpenAI result: %s" result)
     result))
+
+(defn- gemini-unavailable?
+  "True if the exception is a 503 (or 429) from Gemini indicating capacity issues."
+  [e]
+  (when-let [status (:status (ex-data e))]
+    (contains? #{503 429} status)))
 
 (defn gemini-complete
   "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
-   Merges provider defaults for any missing params."
+   Merges provider defaults for any missing params.
+   On 503/429 errors, retries once after 2s, then falls back to OpenAI gpt-4.1-mini."
   [config system-instruction prompt]
-  (let [config (merge (-> providers :gemini :default-params) config)
-        result (-> (gemini-complete-raw config system-instruction prompt)
-                   :choices
-                   first)]
-    (log/infof "Gemini Result (%s): %s" (:model config) result)
-    result))
+  (let [config (merge (-> providers :gemini :default-params) config)]
+    (try
+      (let [result (-> (gemini-complete-raw config system-instruction prompt)
+                       :choices
+                       first)]
+        (log/infof "Gemini complete (%s)" (:model config))
+        (log/debugf "Gemini result: %s" result)
+        result)
+      (catch Exception e
+        (if (gemini-unavailable? e)
+          (do
+            (log/warnf "Gemini unavailable (%s), retrying in 2s..." (.getMessage e))
+            (Thread/sleep 2000)
+            (try
+              (let [result (-> (gemini-complete-raw config system-instruction prompt)
+                               :choices
+                               first)]
+                (log/infof "Gemini retry succeeded (%s)" (:model config))
+                (log/debugf "Gemini result: %s" result)
+                result)
+              (catch Exception e2
+                (if (gemini-unavailable? e2)
+                  (do
+                    (log/warnf "Gemini still unavailable, falling back to OpenAI gpt-4.1-mini")
+                    (let [openai-cfg (merge (-> providers :openai :default-params)
+                                            openai-config
+                                            {:model "gpt-4.1-mini"})
+                          result (complete openai-cfg system-instruction prompt)]
+                      (log/infof "OpenAI fallback complete (gpt-4.1-mini)")
+                      result))
+                  (throw e2)))))
+          (throw e))))))
 
 (def generate-utp-descriptions-prompt
   "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
