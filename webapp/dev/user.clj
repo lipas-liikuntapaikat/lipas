@@ -1,13 +1,13 @@
 (ns user
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
-   [clojure.core.async :as async]
-   [clojure.tools.namespace.repl]
-   [shadow.cljs.devtools.api :as shadow]
-   [integrant.repl :refer [reset-all halt go]]
-   [integrant.repl.state]
-   [migratus.core :as migratus]
-   [taoensso.timbre :as log]))
+    [clojure.core.async :as async]
+    [clojure.tools.namespace.repl]
+    [shadow.cljs.devtools.api :as shadow]
+    [integrant.repl :refer [reset-all halt go]]
+    [integrant.repl.state]
+    [migratus.core :as migratus]
+    [taoensso.timbre :as log]))
 
 ;; Silence noisy Jetty logging during development
 (log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
@@ -20,6 +20,34 @@
 
 (defn current-config []
   integrant.repl.state/config)
+
+(def ^:private valid-log-levels
+  #{:trace :debug :info :warn :error :fatal})
+
+(defn set-log-level!
+  "Set the application log level. Preserves silencing of noisy dependencies.
+   Example: (set-log-level! :info)
+   Valid levels: :trace :debug :info :warn :error :fatal"
+  [level]
+  (when-not (contains? valid-log-levels level)
+    (throw (ex-info (str "Invalid log level: " level ". Valid levels: " (sort valid-log-levels))
+                    {:level level})))
+  (log/swap-config! assoc :min-level [["org.eclipse.jetty.*" :error]
+                                      ["*" level]])
+  (log/infof "Log level set to %s" level)
+  level)
+
+(defn get-log-level
+  "Returns the current application log level (ignoring per-namespace overrides)."
+  []
+  (let [min-level (:min-level log/*config*)]
+    (cond
+      ;; Vector of [pattern level] pairs — find the wildcard entry
+      (vector? min-level)
+      (some (fn [[pattern level]] (when (= "*" pattern) level)) min-level)
+      ;; Simple keyword
+      (keyword? min-level) min-level
+      :else :debug)))
 
 (defn current-system []
   integrant.repl.state/system)
@@ -168,13 +196,13 @@
         worker (shadow.cljs.devtools.api/get-worker :app)
         build-state (-> worker :state-ref deref :build-state)
         warnings (-> build-state
+                     :shadow.build/build-info
+                     :sources
+                     (->> (mapcat :warnings)))
+        errors (-> build-state
                    :shadow.build/build-info
                    :sources
-                   (->> (mapcat :warnings)))
-        errors (-> build-state
-                 :shadow.build/build-info
-                 :sources
-                 (->> (mapcat :errors)))]
+                   (->> (mapcat :errors)))]
     (tap> build-state)
     {:status (cond
                (seq warnings) :warning
@@ -214,19 +242,19 @@
 
          ;; Validate with progress reporting
          results (reduce
-                  (fn [{:keys [total valid errors] :as acc} doc]
-                    (when (and verbose? (pos? total) (zero? (mod total 1000)))
-                      (println (format "Processed %d documents..." total)))
-                    (if (m-validate schema doc)
-                      (-> acc (update :total inc) (update :valid inc))
-                      (-> acc
-                          (update :total inc)
-                          (update :errors conj
-                                  {:lipas-id (:lipas-id doc)
-                                   :type-code (-> doc :type :type-code)
-                                   :error (me-humanize (m-explain schema doc))}))))
-                  {:total 0 :valid 0 :errors []}
-                  all-docs)
+                   (fn [{:keys [total valid errors] :as acc} doc]
+                     (when (and verbose? (pos? total) (zero? (mod total 1000)))
+                       (println (format "Processed %d documents..." total)))
+                     (if (m-validate schema doc)
+                       (-> acc (update :total inc) (update :valid inc))
+                       (-> acc
+                           (update :total inc)
+                           (update :errors conj
+                                   {:lipas-id (:lipas-id doc)
+                                    :type-code (-> doc :type :type-code)
+                                    :error (me-humanize (m-explain schema doc))}))))
+                   {:total 0 :valid 0 :errors []}
+                   all-docs)
 
          results (assoc results :invalid (count (:errors results)))]
 
@@ -269,37 +297,37 @@
   (require '[clojure.set :as set])
 
   (def new-types (set/difference
-                  (set (keys types/all))
-                  (set (keys types-old/all))))
+                   (set (keys types/all))
+                   (set (keys types-old/all))))
 
   (require '[clojure.string :as str])
 
   (for [type-code (conj new-types 113)]
     (println
-     (format "INSERT INTO public.liikuntapaikkatyyppi(
+      (format "INSERT INTO public.liikuntapaikkatyyppi(
         id, tyyppikoodi, nimi_fi, nimi_se, kuvaus_fi, kuvaus_se, liikuntapaikkatyyppi_alaryhma, geometria, tason_nimi, nimi_en, kuvaus_en)
         VALUES (%s, %s, '%s', '%s', '%s', '%s', %s, '%s', '%s', '%s', '%s');"
-             type-code
-             type-code
-             (get-in types/all [type-code :name :fi])
-             (get-in types/all [type-code :name :se])
-             (get-in types/all [type-code :description :fi])
-             (get-in types/all [type-code :description :se])
-             (get-in types/all [type-code :sub-category])
-             (get-in types/all [type-code :geometry-type])
-             (-> types/all
-                 (get-in [type-code :name :fi])
-                 csk/->snake_case
-                 (str/replace "ä" "a")
-                 (str/replace "ö" "o")
-                 (str/replace #"[^a-zA-Z]" "")
-                 (->> (str "lipas_" type-code "_")))
-             (get-in types/all [type-code :name :en])
-             (get-in types/all [type-code :description :en]))))
+              type-code
+              type-code
+              (get-in types/all [type-code :name :fi])
+              (get-in types/all [type-code :name :se])
+              (get-in types/all [type-code :description :fi])
+              (get-in types/all [type-code :description :se])
+              (get-in types/all [type-code :sub-category])
+              (get-in types/all [type-code :geometry-type])
+              (-> types/all
+                  (get-in [type-code :name :fi])
+                  csk/->snake_case
+                  (str/replace "ä" "a")
+                  (str/replace "ö" "o")
+                  (str/replace #"[^a-zA-Z]" "")
+                  (->> (str "lipas_" type-code "_")))
+              (get-in types/all [type-code :name :en])
+              (get-in types/all [type-code :description :en]))))
 
   (def new-props (set/difference
-                  (set (keys prop-types/all))
-                  (set (keys prop-types-old/all))))
+                   (set (keys prop-types/all))
+                   (set (keys prop-types-old/all))))
 
   new-props
 
@@ -321,18 +349,18 @@
 
   (doseq [[legacy-prop-k prop-k] legacy-mapping]
     (println
-     (format "INSERT INTO public.ominaisuustyypit(
+      (format "INSERT INTO public.ominaisuustyypit(
         nimi_fi, tietotyyppi, kuvaus_fi, nimi_se, kuvaus_se, ui_nimi_fi, nimi_en, kuvaus_en, handle)
         VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');"
-             (csk/->snake_case (get-in prop-types/all [prop-k :name :fi]))
-             (get data-types (get-in prop-types/all [prop-k :data-type]) "string")
-             (get-in prop-types/all [prop-k :description :fi])
-             (get-in prop-types/all [prop-k :name :se])
-             (get-in prop-types/all [prop-k :description :se])
-             (get-in prop-types/all [prop-k :name :fi])
-             (get-in prop-types/all [prop-k :name :en])
-             (get-in prop-types/all [prop-k :description :en])
-             (name legacy-prop-k))))
+              (csk/->snake_case (get-in prop-types/all [prop-k :name :fi]))
+              (get data-types (get-in prop-types/all [prop-k :data-type]) "string")
+              (get-in prop-types/all [prop-k :description :fi])
+              (get-in prop-types/all [prop-k :name :se])
+              (get-in prop-types/all [prop-k :description :se])
+              (get-in prop-types/all [prop-k :name :fi])
+              (get-in prop-types/all [prop-k :name :en])
+              (get-in prop-types/all [prop-k :description :en])
+              (name legacy-prop-k))))
 
   (doseq [p             new-props
           [type-code m] types/all]
@@ -340,15 +368,15 @@
       (println (str "-- Type " type-code))
       (println (str "-- prop " p))
       (println
-       (format
-        "INSERT INTO public.tyypinominaisuus(
+        (format
+          "INSERT INTO public.tyypinominaisuus(
         liikuntapaikkatyyppi_id, ominaisuustyyppi_id, prioriteetti)
         VALUES (%s, %s, %s);"
-        (format "(select id from liikuntapaikkatyyppi where tyyppikoodi = %s)"
-                type-code)
-        (format "(select id from ominaisuustyypit where handle = '%s')"
-                (name (legacy-mapping-reverse p)))
-        (get-in types/all [type-code :props p :priority])))))
+          (format "(select id from liikuntapaikkatyyppi where tyyppikoodi = %s)"
+                  type-code)
+          (format "(select id from ominaisuustyypit where handle = '%s')"
+                  (name (legacy-mapping-reverse p)))
+          (get-in types/all [type-code :props p :priority])))))
 
   (require '[malli.provider :as mp])
   (require '[lipas.data.types :as types])
@@ -406,8 +434,8 @@
   (require '[clojure.set :as set])
 
   (def new-codes (set/difference
-                  (set (keys types-new/all))
-                  (set (keys types-old/all))))
+                   (set (keys types-new/all))
+                   (set (keys types-old/all))))
 
   (-> types-new/all
       (select-keys new-codes)
@@ -415,8 +443,8 @@
            (sort-by first)))
 
   (def merged-codes (set/difference
-                     (set (keys types-old/active))
-                     (set (keys types-new/active))))
+                      (set (keys types-old/active))
+                      (set (keys types-new/active))))
 
   (-> types-old/all
       (select-keys merged-codes)
@@ -433,8 +461,8 @@
   (require '[lipas.data.prop-types-old :as prop-types-old])
 
   (def new-prop-types (set/difference
-                       (set (keys prop-types-new/all))
-                       (set (keys prop-types-old/all))))
+                        (set (keys prop-types-new/all))
+                        (set (keys prop-types-old/all))))
 
   (require '[lipas.data.help :as help-data])
   (require '[lipas.backend.core :as core])
