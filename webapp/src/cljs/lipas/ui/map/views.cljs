@@ -1997,10 +1997,12 @@
           [:> Grid {:item true}
            [:> Fab
             {:size "small"
+             :variant "extended"
+             :color (if ptv-dialog-open? "secondary" "default")
              :on-click #(==> (if ptv-dialog-open?
                                [:lipas.ui.ptv.events/close-dialog]
                                [:lipas.ui.ptv.events/open-dialog]))}
-            [:> Icon "ios_share"]]]])]]]))
+            "PTV"]]])]]]))
 
 (defn add-view
   [{:keys [tr width]}]
