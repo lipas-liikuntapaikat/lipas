@@ -339,6 +339,8 @@
 
             get-parkour-structure #(get-in prop-types/all [:parkour-hall-equipment-and-structures :opts % :label locale])
 
+            get-outdoor-exercise-structure #(get-in prop-types/all [:outdoor-exercise-structures :opts % :label locale])
+
             get-boating-service-class #(get-in prop-types/all [:boating-service-class :opts % :label locale])
 
             get-water-point #(get-in prop-types/all [:water-point :opts % :label locale])
@@ -374,6 +376,7 @@
                            (update :training-spot-surface-material get-material)
                            (update :travel-modes #(map get-travel-mode %))
                            (update :parkour-hall-equipment-and-structures #(map get-parkour-structure %))
+                           (update :outdoor-exercise-structures #(map get-outdoor-exercise-structure %))
                            (update :boating-service-class get-boating-service-class)
                            (update :water-point get-water-point)
                            (update :sport-specification get-sport-specification))

@@ -2,7 +2,7 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the outcome of the changes."
   (:require
-   [lipas.utils :as utils]))
+    [lipas.utils :as utils]))
 
 (def main-categories
   {0
@@ -4093,7 +4093,8 @@
      :ligthing? {:priority 70},
      :playground? {:priority 80},
      :school-use? {:priority 0},
-     :exercise-machines-count {:priority 80}}},
+     :exercise-machines-count {:priority 80},
+     :outdoor-exercise-structures {:priority 85}}},
    5120
    {:description
     {:fi "Pysyvästi purjehdusta varten varustettu alue.",
@@ -4722,5 +4723,4 @@
   #?(:clj (spit "/tmp/types.edn" (with-out-str (pprint/pprint all))))
   #?(:clj (spit "/tmp/sub-cats.edn" (with-out-str (pprint/pprint sub-categories))))
   #?(:clj (spit "/tmp/main-cats.edn" (with-out-str (pprint/pprint main-categories))))
-  (->> all vals (map :status) distinct)
-  )
+  (->> all vals (map :status) distinct))
