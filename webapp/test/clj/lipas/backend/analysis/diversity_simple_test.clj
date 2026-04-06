@@ -3,7 +3,11 @@
   (:require [clojure.test :refer [deftest testing is]]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.search :as search]
-            [lipas.backend.osrm :as osrm]))
+            [lipas.backend.osrm :as osrm]
+            [lipas.schema.diversity :as diversity-schema]
+            [malli.core :as m]
+            [malli.error :as me]
+            [muuntaja.core :as muuntaja]))
 
 ;;; Pure function tests ;;;
 
@@ -152,3 +156,116 @@
              (nth bulk-data 2)))
       (is (= (second grid-items)
              (nth bulk-data 3))))))
+
+;;; Schema validation tests ;;;
+
+(def valid-analysis-area-fcoll
+  {:type "FeatureCollection"
+   :features [{:type "Feature"
+               :geometry {:type "Point"
+                          :coordinates [24.9 60.1]}}]})
+
+(defn make-req [categories & {:as overrides}]
+  (merge {:categories categories
+          :analysis-area-fcoll valid-analysis-area-fcoll}
+         overrides))
+
+(deftest schema-accepts-various-collection-types-test
+  (testing "Schema accepts vectors for categories and type-codes"
+    (is (m/validate diversity-schema/diversity-indices-req
+                    (make-req [{:name "Cat" :type-codes [1520 1530] :factor 1}]))))
+
+  (testing "Schema accepts lists for type-codes (transit deserialization)"
+    (is (m/validate diversity-schema/diversity-indices-req
+                    (make-req [{:name "Cat" :type-codes '(1520 1530) :factor 1}]))))
+
+  (testing "Schema accepts lazy seqs for type-codes"
+    (is (m/validate diversity-schema/diversity-indices-req
+                    (make-req [{:name "Cat" :type-codes (map identity [1520 1530]) :factor 1}]))))
+
+  (testing "Schema accepts list of categories"
+    (is (m/validate diversity-schema/diversity-indices-req
+                    (make-req (list {:name "Cat" :type-codes [1520] :factor 1})))))
+
+  (testing "Schema rejects empty type-codes"
+    (is (not (m/validate diversity-schema/diversity-indices-req
+                         (make-req [{:name "Cat" :type-codes [] :factor 1}])))))
+
+  (testing "Schema rejects empty categories"
+    (is (not (m/validate diversity-schema/diversity-indices-req
+                         (make-req [])))))
+
+  (testing "Schema accepts optional settings"
+    (is (m/validate diversity-schema/diversity-indices-req
+                    (make-req [{:name "Cat" :type-codes [1520] :factor 1}]
+                              :max-distance-m 1000
+                              :analysis-radius-km 3
+                              :distance-mode "euclid")))))
+
+(deftest error-response-serializable-test
+  (testing "Validation error response is transit-serializable"
+    (let [invalid-data (make-req [{:name "Cat" :type-codes [] :factor 1}])
+          error-body {:error (-> (m/explain diversity-schema/diversity-indices-req invalid-data)
+                                 me/humanize)}
+          m-instance (muuntaja/create)]
+      (is (some? (muuntaja/encode m-instance "application/transit+json" error-body))))))
+
+;;; Custom categories in calc-indices ;;;
+
+(deftest calc-indices-with-custom-categories-test
+  (let [pop-data [{:_source {:vaesto "200" :ika_0_14 "30" :ika_15_64 "140" :ika_65_ "30"}
+                   :sports-sites [{:type-code 1520 :distance-m 300 :status true}
+                                  {:type-code 1530 :distance-m 500 :status true}
+                                  {:type-code 2210 :distance-m 700 :status true}]}]
+        opts {:max-distance-m 800
+              :statuses #{true}}]
+
+    (testing "Single custom category with one matching type"
+      (let [categories (diversity/prepare-categories
+                         [{:name "Ice rinks" :type-codes [1520] :factor 1}])
+            result (first (#'diversity/calc-indices pop-data categories opts))]
+        (is (= 1 (get-in result [:categories "Ice rinks"])))
+        (is (= 1 (:diversity-index result)))))
+
+    (testing "Multiple custom categories"
+      (let [categories (diversity/prepare-categories
+                         [{:name "Ice" :type-codes [1520 1530] :factor 1}
+                          {:name "Swim" :type-codes [2210] :factor 1}])
+            result (first (#'diversity/calc-indices pop-data categories opts))]
+        (is (= 1 (get-in result [:categories "Ice"])))
+        (is (= 1 (get-in result [:categories "Swim"])))
+        (is (= 2 (:diversity-index result)))))
+
+    (testing "Category with no matching sites scores 0"
+      (let [categories (diversity/prepare-categories
+                         [{:name "Missing" :type-codes [4530] :factor 1}])
+            result (first (#'diversity/calc-indices pop-data categories opts))]
+        (is (= 0 (get-in result [:categories "Missing"])))
+        (is (= 0 (:diversity-index result)))))
+
+    (testing "Custom factor multiplies the score"
+      (let [categories (diversity/prepare-categories
+                         [{:name "Weighted" :type-codes [1520] :factor 3}])
+            result (first (#'diversity/calc-indices pop-data categories opts))]
+        (is (= 3 (get-in result [:categories "Weighted"])))
+        (is (= 3 (:diversity-index result)))))
+
+    (testing "Sites beyond max-distance-m are excluded"
+      (let [categories (diversity/prepare-categories
+                         [{:name "Near" :type-codes [1520] :factor 1}
+                          {:name "Far" :type-codes [2210] :factor 1}])
+            result (first (#'diversity/calc-indices pop-data categories
+                                                    (assoc opts :max-distance-m 400)))]
+        (is (= 1 (get-in result [:categories "Near"])))
+        (is (= 0 (get-in result [:categories "Far"])))
+        (is (= 1 (:diversity-index result)))))
+
+    (testing "prepare-categories works with lists and lazy seqs"
+      (let [cats-from-list (diversity/prepare-categories
+                             (list {:name "Cat" :type-codes '(1520 1530) :factor 1}))
+            cats-from-seq (diversity/prepare-categories
+                            [{:name "Cat" :type-codes (map identity [1520 1530]) :factor 1}])]
+        (is (set? (:type-codes (first cats-from-list))))
+        (is (set? (:type-codes (first cats-from-seq))))
+        (is (= #{1520 1530} (:type-codes (first cats-from-list))))
+        (is (= #{1520 1530} (:type-codes (first cats-from-seq))))))))
