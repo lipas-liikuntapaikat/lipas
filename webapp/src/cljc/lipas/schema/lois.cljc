@@ -1,11 +1,7 @@
 (ns lipas.schema.lois
-  (:require #?(:clj [cheshire.core :as json])
-            #?(:clj [cheshire.generate])
-            #?(:clj [clojure.data.csv :as csv])
-            [lipas.data.loi :as loi]
+  (:require [lipas.data.loi :as loi]
             [lipas.schema.common :as common]
-            [malli.core :as m]
-            [malli.json-schema :as json-schema]))
+            [malli.core :as m]))
 
 (def loi-id (m/schema common/uuid))
 (def loi-category (m/schema (into [:enum] (keys loi/categories))))
@@ -49,36 +45,3 @@
   (require '[malli.core :as m])
   (m/schema loi))
 
-#?(:clj
-   (cheshire.generate/add-encoder java.util.regex.Pattern
-                                  (fn [re jsonGenerator]
-                                    (.writeString jsonGenerator (str re)))))
-
-(defn gen-json-schema
-  []
-  (-> loi
-      json-schema/transform
-      #?(:clj (json/encode {:pretty true})
-         :cljs clj->js)
-      println))
-
-(declare gen-csv)
-
-#?(:clj
-   (defn gen-csv
-     []
-     (csv/write-csv *out* loi/csv-data)))
-
-(comment
-  (gen-json-schema)
-  (json-schema/transform [:tuple :double :double])
-  ;; => {:type "array",
-  ;;     :items [{:type "number"} {:type "number"}],
-  ;;     :additionalItems false}
-
-  (gen-csv))
-
-(defn -main [& args]
-  (if (= "csv" (first args))
-    (gen-csv)
-    (gen-json-schema)))
