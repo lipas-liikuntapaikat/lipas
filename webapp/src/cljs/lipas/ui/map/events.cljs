@@ -47,7 +47,8 @@
        ;; causes an extra unncesssary search call.
                       :dispatch-n
                       [(when (and extent width) [:lipas.ui.search.events/submit-search])
-                       (when (and extent width) [:lipas.ui.loi.events/search])]})))
+                       (when (and extent width) [:lipas.ui.loi.events/search])
+                       (when (and extent width) [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
 
 ;; Map displaying events ;;
 
