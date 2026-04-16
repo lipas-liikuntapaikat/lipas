@@ -100,12 +100,32 @@ A **sports site** is the core entity representing any sports or recreational fac
 
  ;; Additional content (optional)
  :comment       "Additional notes..."
- :activities    {...}                             ; Luontoon.fi integration
+ :activities    {...}                             ; Luontoon.fi integration (activity-scoped images)
+ :images        [{:url "https://..."              ; Site-level image links
+                  :alt-text {:fi "..." :se "..."}
+                  :copyright {:fi "..."}
+                  :description {:fi "..."}}]
  :fields        [...]                             ; Floorball-specific
  :locker-rooms  [...]                             ; Floorball-specific
  :circumstances {...}                             ; Floorball-specific
  :audits        [...]}                            ; Facility audits
 ```
+
+**Site-level `:images` vs. activity-level images.** Two independent image
+collections exist:
+
+- `:images` (site-level) — describes the *facility* itself. Editable by any
+  user with site-save privileges, or by a narrow role (`:images-manager`) that
+  can save image-only revisions. Applies to all sports-site types.
+- `:activities.<activity>.images` — describes the *activity* (UTP/Luontoon.fi
+  content). Scoped to activity-based sites only.
+
+LIPAS stores only the metadata (URL + alt-text + copyright + caption) for
+site-level images; the image files themselves are hosted externally by the
+facility owner. Metadata is licensed **CC BY 4.0**; image files are not.
+
+See `docs/site-images.md` for the end-user-facing feature description and
+`src/cljc/lipas/schema/sports_sites/images.cljc` for the Malli schema.
 
 ### Schema Implementation
 

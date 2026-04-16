@@ -306,12 +306,42 @@
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))
 
-(defn- check-permissions! [user sports-site draft?]
-  (when-not (or draft?
-                (new? sports-site)
-                (roles/check-privilege user (roles/site-roles-context sports-site) :site/save-api))
-    (throw (ex-info "User doesn't have enough permissions!"
-                    {:type :no-permission}))))
+;; Map-level keys stripped before comparing revisions to decide whether a save
+;; is an "images-only" change. :event-date is always bumped per save.
+;; :search-meta can leak into the persisted document via UI round-trips (known
+;; issue) but gets recomputed on every save, so differences there don't
+;; reflect user intent. :author-id and :doc-status live on Clojure metadata,
+;; not the map, so they're irrelevant to = and not listed here.
+(def ^:private revision-noise-keys
+  #{:event-date :search-meta})
+
+(defn- images-only-diff?
+  "True when the incoming sports-site differs from the persisted one only in
+  the :images field. New sites (no persisted revision) are never considered
+  images-only."
+  [new-site current-site]
+  (boolean
+   (when current-site
+     (let [strip (fn [m] (apply dissoc m revision-noise-keys))
+           a (strip new-site)
+           b (strip current-site)]
+       (= (dissoc a :images) (dissoc b :images))))))
+
+(defn- check-permissions! [db user sports-site draft?]
+  (let [ctx (roles/site-roles-context sports-site)
+        has-save-api? (roles/check-privilege user ctx :site/save-api)
+        images-only-save?
+        (and (not has-save-api?)
+             (not (new? sports-site))
+             (roles/check-privilege user ctx :site/edit-images)
+             (images-only-diff? sports-site
+                                (db/get-sports-site db (:lipas-id sports-site))))]
+    (when-not (or draft?
+                  (new? sports-site)
+                  has-save-api?
+                  images-only-save?)
+      (throw (ex-info "User doesn't have enough permissions!"
+                      {:type :no-permission})))))
 
 (defn- check-sports-site-exists! [db lipas-id]
   (when (empty? (db/get-sports-site db lipas-id))
@@ -349,7 +379,7 @@
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
   ([db user sports-site draft?]
-   (check-permissions! user sports-site draft?)
+   (check-permissions! db user sports-site draft?)
    (when-let [lipas-id (:lipas-id sports-site)]
      (check-sports-site-exists! db lipas-id))
    (let [resp (upsert-sports-site!* db user sports-site draft?)]

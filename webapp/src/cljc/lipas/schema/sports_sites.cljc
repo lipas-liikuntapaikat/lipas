@@ -8,6 +8,7 @@
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.schema.sports-sites.images :as images-schema]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
@@ -133,6 +134,7 @@
              [:construction-year {:optional true} #'construction-year]
              [:renovation-years {:optional true} #'renovation-years]
              [:renovations {:optional true} #'renovations]
+             [:images {:optional true} #'images-schema/images]
              [:type
               [:map
                ;; Add :encode/json identity in compat mode to prevent conversion to string

@@ -1,0 +1,12 @@
+{:headline "Bilder",
+ :add-image "Lägg till bild",
+ :edit-image "Redigera bild",
+ :url "Bildens URL-adress",
+ :url-helper "Ange bildens direkta URL-adress (https://...). Bildfilen sparas inte i LIPAS — den ligger hos en extern bildbank.",
+ :alt-text "Alt-text",
+ :alt-text-helper "Beskrivning av bilden för skärmläsare och sökmotorer (tillgänglighet).",
+ :copyright "Upphovsrättsinformation",
+ :copyright-helper "Fotograf, källa, licens och datum om känt.",
+ :description "Bildtext",
+ :description-helper "Fri text som visas i anslutning till bilden.",
+ :cc-by-notice "LIPAS lagrar eller distribuerar inte själva bildfilerna. Bildlänkarnas metadata (URL, alt-text, upphovsrätt, bildtext) får fritt användas enligt CC BY 4.0; bildfilerna omfattas inte av denna licens. Ansvaret för bildlänkarna ligger hos den som lagt till dem."}
