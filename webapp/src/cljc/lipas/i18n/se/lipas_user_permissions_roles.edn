@@ -15,6 +15,7 @@
  :role "Roll",
  :role-names
  {:activities-manager "UTP-administratör",
+  :images-manager "Bildlänkshanterare",
   :ptv-manager "PTV-administratör",
   :admin "Admin",
   :analysis-user "Analysverktygsanvändare",

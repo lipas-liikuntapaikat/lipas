@@ -12,6 +12,7 @@
    ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
+   :site/edit-images {:doc "Oikeus muokata kohteen kuvalinkkejä (URL, alt-teksti, tekijänoikeustieto)"}
 
    :activity/view {:doc "Nähdä UTP tiedot"}
    :activity/edit {:doc "Oikeus muokata UTP tietoja"}
@@ -96,6 +97,17 @@
     :privileges basic
     :required-context-keys [:lipas-id]
     :optional-context-keys []}
+
+   ;; Narrow role: users can save sports-site revisions ONLY when the diff is
+   ;; limited to the :images field. Enforced in backend/core/check-permissions!
+   ;; Deliberately does NOT include :site/save-api, so it can't be used to
+   ;; bypass edit permissions on other fields.
+   :images-manager
+   {:sort 15
+    :assignable true
+    :privileges #{:site/edit-images}
+    :required-context-keys [:city-code]
+    :optional-context-keys [:type-code]}
 
    :activities-manager
    {:sort 20
