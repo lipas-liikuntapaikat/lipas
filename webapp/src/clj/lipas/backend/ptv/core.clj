@@ -29,6 +29,27 @@
         :message
         :content)))
 
+(defn generate-ptv-descriptions-batch
+  "Generate PTV descriptions for multiple same-type sports sites in one Gemini call.
+
+  opts keys:
+    :lipas-ids  — seq of integer lipas ids (same type, ≤10 recommended)
+    :reference  — optional {:summary :description} (Finnish) anchoring style across
+                  partitioned batches
+
+  Returns {:sites [{:lipas-id :summary :description :user-instruction} ...]}"
+  [{:keys [client indices] :as _search}
+   {:keys [lipas-ids reference]}]
+  (let [idx   (get-in indices [:sports-site :search])
+        docs  (mapv (fn [lipas-id]
+                      (-> (search/fetch-document client idx lipas-id)
+                          :body
+                          :_source))
+                    lipas-ids)]
+    (-> (ai/generate-ptv-descriptions-batch docs {:reference reference})
+        :message
+        :content)))
+
 (defn generate-ptv-descriptions-from-data
   [doc]
   (let [doc (core/enrich doc)]

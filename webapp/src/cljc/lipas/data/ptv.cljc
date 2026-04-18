@@ -635,6 +635,7 @@
      :name-conflict (detect-name-conflict site (vals service-channels))
      :marketing-name (:marketing-name site)
      :type (-> site :search-meta :type :name :fi)
+     :type-code (-> site :type :type-code)
      :sub-category (-> site :search-meta :type :sub-category :name :fi)
      :sub-category-id (-> site :type :type-code types :sub-category)
      :org-id org-id

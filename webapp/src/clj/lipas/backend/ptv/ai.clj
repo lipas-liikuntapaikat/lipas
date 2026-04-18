@@ -307,12 +307,13 @@ Source data:
 
 (defn gemini-complete-raw
   "Calls Gemini API and normalizes the response to match OpenAI's shape."
-  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level]
-    :or   {n              1
-           top-p          0.90
-           temperature    1.0
-           max-tokens     8192
-           thinking-level "minimal"}}
+  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level response-schema]
+    :or   {n               1
+           top-p           0.90
+           temperature     1.0
+           max-tokens      8192
+           thinking-level  "minimal"
+           response-schema GeminiResponse}}
    system-instruction
    prompt]
   (let [url  (str base-url "/models/" model ":generateContent")
@@ -323,7 +324,7 @@ Source data:
                                   :maxOutputTokens  max-tokens
                                   :candidateCount   n
                                   :responseMimeType "application/json"
-                                  :responseSchema   GeminiResponse
+                                  :responseSchema   response-schema
                                   :thinkingConfig   {:thinkingLevel thinking-level}}}
         _      (log/debugf "Gemini prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers      {"x-goog-api-key" api-key
@@ -440,6 +441,91 @@ Follow these requirements:
     (gemini-complete gemini-config
                      ptv-system-instruction-v5
                      (format generate-utp-descriptions-prompt-v5 (json/encode prompt-doc)))))
+
+;;; ——— Batch generation ———————————————————————————————————————————————
+;;
+;; Multiple same-type facilities generated in one Gemini call. The model
+;; naturally aligns structure, vocabulary, and sentence patterns across
+;; facilities, producing uniform output for display on municipality pages.
+;;
+;; Gemini reliably handles ~10–20 items per batch; beyond that it tends
+;; to bail early with a stub response. Callers partition larger groups
+;; and use :reference to anchor style across batches.
+
+(def batch-response-schema
+  [:map
+   {:closed true}
+   [:sites
+    [:vector
+     [:map
+      {:closed true}
+      [:lipas-id :int]
+      [:summary (localized-string-schema nil)]
+      [:description (localized-string-schema nil)]
+      [:user-instruction (localized-string-schema nil)]]]]])
+
+(def BatchGeminiResponse
+  (json-schema/transform (mu/open-schema batch-response-schema)))
+
+(def generate-utp-descriptions-batch-prompt-v1
+  "Create summaries and descriptions for %d sports facilities of the SAME TYPE in the same municipality, for the Service Information Repository (Palvelutietovaranto).
+
+CRITICAL — all %d facilities MUST share identical structure:
+- Same number of paragraphs in every description
+- Same paragraph topics in the same order
+- Same sentence patterns and level of detail
+- Consistent vocabulary across all facilities
+- The descriptions should read as if written by one person in one session
+
+Per facility, produce:
+- summary: A complete sentence (not a list). Max 150 chars/language.
+- description: 2–4 paragraphs in the order: what → access → facilities → conditions. Include a brief usage instruction. Max 2000 chars/language.
+- user-instruction: 1–3 sentences on how to access. Max 2500 chars/language.
+
+BEFORE WRITING, verify for EACH facility:
+1. STATUS — is it \"active\", \"out-of-service-permanently\", or other? Reflect this.
+2. FACTS — write ONLY what is explicitly in the data. Do not infer or invent.
+3. ADDRESS — do NOT include any street address, phone number, or URL.
+4. ORGANIZATION — do NOT repeat the organization/municipality name as subject.
+
+Return a \"sites\" array. Each entry's lipas-id MUST match the source data exactly (as an integer).%s
+
+Source data:
+%s")
+
+(def batch-reference-section
+  "
+
+STYLE REFERENCE — an approved description of a previous facility of the same type.
+Follow the same paragraph structure, topic ordering, sentence patterns, and level of detail.
+Adapt only the specific facts to each facility's data.
+
+Reference (Finnish):
+Summary: %s
+Description: %s")
+
+(defn generate-ptv-descriptions-batch
+  "Generate PTV descriptions for a batch of same-type sports sites in one call.
+
+  sports-sites : seq of enriched sports site maps (like single-site input)
+  reference    : optional {:summary string :description string} in Finnish.
+                 When provided, anchors the style for continuity across partitioned batches."
+  [sports-sites & [{:keys [reference]}]]
+  (let [prompt-docs (mapv ->prompt-doc sports-sites)
+        ref-section (if reference
+                      (format batch-reference-section
+                              (:summary reference)
+                              (:description reference))
+                      "")
+        prompt      (format generate-utp-descriptions-batch-prompt-v1
+                            (count prompt-docs)
+                            (count prompt-docs)
+                            ref-section
+                            (json/encode prompt-docs))
+        config      (assoc gemini-config
+                           :response-schema BatchGeminiResponse
+                           :max-tokens 32768)]
+    (gemini-complete config ptv-system-instruction-v5 prompt)))
 
 (def translate-to-other-langs-prompt
   "Translate the following Service Information Repository descriptions from %s to %s:
