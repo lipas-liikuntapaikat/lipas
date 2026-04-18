@@ -581,16 +581,19 @@ Follow these requirements:
 (def generate-utp-descriptions-batch-prompt-v1
   "Create summaries and descriptions for %d sports facilities of the SAME TYPE in the same municipality, for the Service Information Repository (Palvelutietovaranto).
 
-CRITICAL — all %d facilities MUST share identical structure:
-- Same number of paragraphs in every description
-- Same paragraph topics in the same order
-- Same sentence patterns and level of detail
-- Consistent vocabulary across all facilities
-- The descriptions should read as if written by one person in one session
+CONSISTENCY — the descriptions will be shown side-by-side on municipality pages, so:
+- Use the same TOPIC ORDER across all facilities (what → access → facilities → conditions)
+- Use matching SENTENCE PATTERNS and VOCABULARY between facilities
+- The set should read as if written by one person in one session
+
+ADAPT TO DATA DENSITY — a facility with sparse data gets a SHORTER description, not a padded one:
+- Omit any paragraph whose topic has no supporting data — do NOT write a paragraph about missing information
+- A facility with only a few facts may warrant 2 paragraphs; a rich one may warrant 4
+- NEVER write sentences like \"Kentällä ei ole mainittu pukeutumistiloja\" / \"inga uppgifter om X\" / \"no amenities are listed\" — these are meta-commentary about the data, not about the facility. Silently drop the topic.
 
 Per facility, produce:
 - summary: A complete sentence (not a list). Max 150 chars/language.
-- description: 2–4 paragraphs in the order: what → access → facilities → conditions. Include a brief usage instruction. Max 2000 chars/language.
+- description: 2–4 paragraphs, topic order as above. Include a brief usage instruction. Max 2000 chars/language.
 - user-instruction: 1–3 sentences on how to access. Max 2500 chars/language.
 
 BEFORE WRITING, verify for EACH facility:
@@ -608,8 +611,9 @@ Source data:
   "
 
 STYLE REFERENCE — an approved description of a previous facility of the same type.
-Follow the same paragraph structure, topic ordering, sentence patterns, and level of detail.
-Adapt only the specific facts to each facility's data.
+Match its tone, topic ordering, sentence patterns, and vocabulary. DO NOT copy its
+paragraph count — let each facility's description length follow its own data.
+Omit topics that are not supported by a given facility's data.
 
 Reference (Finnish):
 Summary: %s
@@ -629,7 +633,6 @@ Description: %s")
                               (:description reference))
                       "")
         prompt      (format generate-utp-descriptions-batch-prompt-v1
-                            (count prompt-docs)
                             (count prompt-docs)
                             ref-section
                             (json/encode prompt-docs))
