@@ -2,7 +2,6 @@
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
             [clojure.string :as str]
-            [clojure.walk :as walk]
             [lipas.backend.config :as config]
             [malli.json-schema :as json-schema]
             [malli.util :as mu]
@@ -422,18 +421,130 @@ Follow these requirements:
         •	Exclude street address from descriptions
 %s")
 
+;;; ——— Prompt input shaping —————————————————————————————————————————
+;;
+;; ->prompt-doc reduces a full sports-site document down to the subset of
+;; fields the AI should actually consider when writing a citizen-facing
+;; description. Everything not declared in the allowlists below is dropped.
+;;
+;; Principles driving the allowlist:
+;; - Citizen utility first: include only facts a resident reading a
+;;   municipality's service page would act on.
+;; - No contact information: addresses, phone numbers, websites belong in
+;;   PTV's structured fields, never inlined into descriptions.
+;; - No noisy technical dimensions: surface area, ball-field length/width,
+;;   ceiling height etc. clutter descriptions without helping users.
+;; - Keep dimensions citizens actually use: route-length, pool-length,
+;;   track-length, beach-length are directly actionable.
+;; - Safe-by-default: any property added to prop-types in the future is
+;;   invisible to the AI until explicitly listed here.
+
+(defn- blank?
+  [v]
+  (or (nil? v)
+      (and (string? v) (str/blank? v))
+      (and (coll? v) (empty? v))))
+
+(defn- select+transform
+  "Build a map from `source` using `field->transformer`. Each key is looked
+   up, the transformer applied, and the pair kept only if the result is
+   non-blank. New entries do not appear on the output when the source lacks
+   the key, so callers don't need to clean up nils."
+  [field->transformer source]
+  (reduce-kv (fn [acc k transformer]
+               (if-some [v (get source k)]
+                 (let [v' (transformer v)]
+                   (cond-> acc (not (blank? v')) (assoc k v')))
+                 acc))
+             {}
+             field->transformer))
+
+(defn- encode-stand-capacity
+  [n]
+  (cond (< n 100) :small (< n 500) :medium :else :large))
+
+(defn- trim-location
+  "Keep only neighborhood. Address, postal-code, postal-office are excluded
+   by the no-contact-info policy; city name is sourced from :search-meta."
+  [loc]
+  (when-let [nbh (get-in loc [:city :neighborhood])]
+    {:neighborhood nbh}))
+
+(defn- trim-search-meta
+  "Keep the resolved, multilingual type and city names the AI relies on.
+   Drops coordinates, administrative hierarchy, audit timestamps, etc."
+  [sm]
+  (let [type-info {:name         (get-in sm [:type :name])
+                   :sub-category (get-in sm [:type :sub-category :name])}
+        city-name (get-in sm [:location :city :name])]
+    (cond-> {}
+      (seq type-info) (assoc :type type-info)
+      (seq city-name) (assoc-in [:location :city :name] city-name))))
+
+(def ^:private top-level-ai-fields
+  {:name              identity
+   :marketing-name    identity
+   :comment           identity
+   :status            identity
+   :reservations-link identity
+   :lipas-id          identity
+   :location          trim-location
+   :search-meta       trim-search-meta})
+
+(def ^:private property-ai-fields
+  {;; Access & use
+   :free-use?               identity
+   :school-use?             identity
+   :year-round-use?         identity
+
+   ;; Amenities
+   :toilet?                 identity
+   :changing-rooms?         identity
+   :shower?                 identity
+   :sauna?                  identity
+   :kiosk?                  identity
+   :pier?                   identity
+
+   ;; Surface & lighting
+   :surface-material        identity
+   :surface-material-info   identity
+   :ligthing?               identity
+   :lighting-info           identity
+
+   ;; Accessibility
+   :accessibility-info      identity
+
+   ;; Citizen-meaningful linear dimensions
+   :route-length-km         identity
+   :lit-route-length-km     identity
+   :track-length-m          identity
+   :pool-length-m           identity
+   :beach-length-m          identity
+
+   ;; Activity-indicator counts
+   :swimming-pool-count     identity
+   :ice-rinks-count         identity
+   :holes-count             identity
+   :basketball-fields-count identity
+   :volleyball-fields-count identity
+   :tennis-courts-count     identity
+   :badminton-courts-count  identity
+   :floorball-fields-count  identity
+   :handball-fields-count   identity
+   :football-fields-count   identity
+
+   ;; Encoded: exact count is misleading, buckets convey the signal
+   :stand-capacity-person   encode-stand-capacity})
+
 (defn ->prompt-doc
+  "Shape a sports-site document for AI prompting: include only
+   citizen-relevant, non-noisy fields as defined by `top-level-ai-fields`
+   and `property-ai-fields`."
   [sports-site]
-  ;; Might include (some) of the UTP data now?
-  ;; Could be a good thing, but might make the prompt data too large?
-  (walk/postwalk (fn [x]
-                   (if (map? x)
-                     (dissoc x :geoms :geometries :simple-geoms :images :videos :id :fids :event-date
-                             ;; This includes the already generated summary/description, important that that isn't
-                             ;; passed back into the AI.
-                             :ptv)
-                     x))
-                 sports-site))
+  (let [top   (select+transform top-level-ai-fields sports-site)
+        props (select+transform property-ai-fields (:properties sports-site))]
+    (cond-> top
+      (seq props) (assoc :properties props))))
 
 (defn generate-ptv-descriptions
   [sports-site]
