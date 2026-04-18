@@ -74,6 +74,22 @@
          :body (ptv-core/generate-ptv-descriptions-from-data
                 (-> req :parameters :body))})}}]
 
+   ["/actions/generate-ptv-descriptions-batch"
+    {:post
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      :parameters {:body [:map
+                          [:lipas-ids [:vector :int]]
+                          [:reference {:optional true}
+                           [:maybe [:map
+                                    [:summary :string]
+                                    [:description :string]]]]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/generate-ptv-descriptions-batch
+                search
+                (-> req :parameters :body))})}}]
+
    ["/actions/translate-to-other-langs"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
