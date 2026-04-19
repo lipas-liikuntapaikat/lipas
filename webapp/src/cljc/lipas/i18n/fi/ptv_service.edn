@@ -8,4 +8,5 @@
  :create-new "Luo uusi palvelu"
  :link-existing "Liitä olemassa oleva PTV-palvelu"
  :select-sub-category "Valitse tyyppiluokka"
- :select-service "Valitse palvelu PTV:stä"}
+ :select-service "Valitse palvelu PTV:stä"
+ :needs-service-helper "Liikuntapaikan tulee olla kytkettynä PTV-palveluun. Valitse olemassa oleva palvelu tai luo uusi."}

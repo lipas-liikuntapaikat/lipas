@@ -8,4 +8,5 @@
  :create-new "Skapa ny tjänst"
  :link-existing "Koppla befintlig PTV-tjänst"
  :select-sub-category "Välj typklass"
- :select-service "Välj tjänst från PTV"}
+ :select-service "Välj tjänst från PTV"
+ :needs-service-helper "Idrottsanläggningen måste vara kopplad till en tjänst i PTV. Välj en befintlig tjänst eller skapa en ny."}

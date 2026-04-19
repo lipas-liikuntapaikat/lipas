@@ -12,4 +12,6 @@
  :new-service-channel-will-be-created "En ny servicepunkt skapas i PTV vid export.",
  :change-service-channel "Ändra servicepunkt",
  :select-service-channel "Välj servicepunkt",
- :sync-now "Synkronisera nu"}
+ :sync-now "Synkronisera nu",
+ :archive-in-ptv "Arkivera platsen i PTV",
+ :integration-enabled "PTV-integrationen aktiv"}

@@ -33,4 +33,16 @@
  :hint-select-service "Välj en tjänst först. Om en lämplig tjänst inte finns i listan kan du skapa en ny via fliken Tjänster eller med hjälp av guiden Idrifttagning."
  :hint-add-summary "Lägg till en sammanfattning på finska"
  :hint-add-description "Lägg till en beskrivning på finska"
- :hint-up-to-date "Uppdaterad"}
+ :hint-up-to-date "Uppdaterad"
+
+ :integration-enabled "PTV-integrationen är aktiv"
+ :integration-enabled-sync-off "PTV-integrationen är aktiv, men synkroniseringen av idrottsanläggningen till PTV är avstängd."
+ :will-be-archived-on-save "Idrottsanläggningen arkiveras från PTV när du sparar"
+ :will-be-archived-type-changed "Idrottsanläggningen har tidigare exporterats till PTV, men uppgifterna har ändrats så att de inte längre exporteras. PTV-servicepunkten arkiveras när du sparar."
+ :new-service-location-will-be-created "Idrottsanläggningen har inte tidigare exporterats till PTV. En ny servicepunkt skapas när du sparar."
+ :data-incomplete "PTV-uppgifterna är ofullständiga. Fyll i de uppgifter som saknas så exporteras idrottsanläggningen till PTV när du sparar."
+ :integration-error "Fel i PTV-integrationen, de senaste uppgifterna har inte exporterats till PTV."
+ :open-in-ptv "Öppna i PTV"
+ :open-in-suomi-fi "Öppna i suomi.fi"
+ :service-missing-for-type "Typen av idrottsanläggning har ändrats och motsvarande tjänst saknas i PTV."
+ :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."}
