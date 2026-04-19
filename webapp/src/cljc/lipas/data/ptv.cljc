@@ -633,21 +633,31 @@
           {}
           descriptions))
 
+(def service-channel-compare-fields
+  "Fields to compare when checking drift against a PTV ServiceChannel.
+   PTV ServiceChannels don't carry :user-instruction — that's a Service-level
+   concept — so leave it out of the comparison."
+  [:summary :description])
+
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
-   non-nil fields match. Trims whitespace for comparison."
-  [lipas-texts ptv-texts]
-  (let [trim #(some-> % str/trim not-empty)]
-    (every? (fn [field]
-              (let [lipas-vals (get lipas-texts field)
-                    ptv-vals (get ptv-texts field)]
-                (every? (fn [lang]
-                          (let [l (trim (get lipas-vals lang))
-                                p (trim (get ptv-vals lang))]
-                            (or (and (nil? l) (nil? p))
-                                (= l p))))
-                        [:fi :se :en])))
-            [:summary :description :user-instruction])))
+   non-nil fields match. Trims whitespace for comparison. `fields`
+   defaults to all three lipas text fields; callers comparing against
+   a PTV ServiceChannel should pass `service-channel-compare-fields`."
+  ([lipas-texts ptv-texts]
+   (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
+  ([lipas-texts ptv-texts fields]
+   (let [trim #(some-> % str/trim not-empty)]
+     (every? (fn [field]
+               (let [lipas-vals (get lipas-texts field)
+                     ptv-vals (get ptv-texts field)]
+                 (every? (fn [lang]
+                           (let [l (trim (get lipas-vals lang))
+                                 p (trim (get ptv-vals lang))]
+                             (or (and (nil? l) (nil? p))
+                                 (= l p))))
+                         [:fi :se :en])))
+             fields))))
 
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
@@ -659,11 +669,15 @@
 
         last-sync (-> site :ptv :last-sync)
 
-        ;; Drift detection: compare LIPAS texts vs PTV texts
+        ;; Drift detection: compare LIPAS texts vs PTV ServiceChannel texts.
+        ;; ServiceChannels only carry summary + description, so user-instruction
+        ;; is intentionally excluded from the comparison.
         lipas-texts {:summary summary :description description :user-instruction user-instruction}
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        content-drift? (and last-sync ptv-texts (not (texts-match? lipas-texts ptv-texts)))]
+        content-drift? (and last-sync ptv-texts
+                            (not (texts-match? lipas-texts ptv-texts
+                                               service-channel-compare-fields)))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
