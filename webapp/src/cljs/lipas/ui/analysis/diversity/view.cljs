@@ -63,7 +63,7 @@
 
      [:> Grid {:item true :xs 12}
       [layouts/expansion-panel {:label "Info"
-                            :default-expanded false}
+                                :default-expanded false}
        [:> Paper
         {:style
          {:padding "1em" :background-color "#f5e642"}}
@@ -79,14 +79,14 @@
      [:> Grid {:item true :xs 12}
 
       [layouts/expansion-panel {:label (tr :analysis/use-postal-code-areas)
-                            :default-expanded true}
+                                :default-expanded true}
        [:> Grid {:container true}
         [:> Grid {:item true :xs 12}
          [selects/city-selector-single
           {:on-change #(==> [::events/fetch-postal-code-areas %])}]]]]
 
       [layouts/expansion-panel {:label (tr :analysis/import-own-areas)
-                            :default-expanded false}
+                                :default-expanded false}
        [:<>
         [:> Grid {:item true :xs 12}
          [:> Typography {:variant "body2"}
@@ -123,6 +123,15 @@
 (defn seq-indexed [coll]
   (map-indexed vector coll))
 
+(defn category-name-input [{:keys [value placeholder on-save]}]
+  (r/with-let [local (r/atom value)]
+    [text-fields/text-field
+     {:full-width true
+      :value @local
+      :placeholder placeholder
+      :on-change #(reset! local %)
+      :on-blur #(on-save @local)}]))
+
 (defn category-builder []
   (let [tr (<== [:lipas.ui.subs/translator])
         categories (<== [::subs/categories])]
@@ -137,11 +146,11 @@
 
               ;; Category name
               [:> TableCell {:style {:width "40%"}}
-               [text-fields/text-field
-                {:full-width true
-                 :value (:name category)
+               ^{:key idx}
+               [category-name-input
+                {:value (:name category)
                  :placeholder (tr :analysis/new-category)
-                 :on-change #(==> [::events/set-category-name idx %])}]]
+                 :on-save #(==> [::events/set-category-name idx %])}]]
 
               ;; Types + delete
               [:> TableCell {:style {:width "60%"}}
@@ -275,16 +284,16 @@
          (tr :analysis/restore-default-categories)]]
 
        [dialogs/dialog {:open? save-dialog-open?
-                    :title (tr :analysis/save-categorization)
-                    :on-close #(==> [::events/toggle-category-save-dialog])
-                    :cancel-label (tr :actions/cancel)
-                    :save-label (tr :actions/save)
-                    :on-save #(==> [::events/save-category-preset new-preset-name])
-                    :save-enabled? new-preset-name-valid?}
+                        :title (tr :analysis/save-categorization)
+                        :on-close #(==> [::events/toggle-category-save-dialog])
+                        :cancel-label (tr :actions/cancel)
+                        :save-label (tr :actions/save)
+                        :on-save #(==> [::events/save-category-preset new-preset-name])
+                        :save-enabled? new-preset-name-valid?}
         [text-fields/text-field {:full-width true
-                         :label (tr :analysis/categorization-name)
-                         :value new-preset-name
-                         :on-change #(==> [::events/set-new-preset-name %])}]]
+                                 :label (tr :analysis/categorization-name)
+                                 :value new-preset-name
+                                 :on-change #(==> [::events/set-new-preset-name %])}]]
 
        ;; Save category preset button
        [:> Grid {:item true :xs 12 :md 4 :style {:text-align "center"}}
@@ -310,9 +319,9 @@
 
      ;; Distance zones selector
      [:> Grid {:item true :xs 12 :style {:margin-top "1em"
-                                          :margin-left "1em"
-                                          :margin-right "1em"
-                                          :margin-bottom "5em"}}
+                                         :margin-left "1em"
+                                         :margin-right "1em"
+                                         :margin-bottom "5em"}}
 
       (let [min 500 max 1500 step 100]
         ;; TODO: Juho later, could use MUI slider
@@ -609,11 +618,11 @@
 
      [:> Grid {:item true :xs 12}
       [:> Tabs {:value selected-tab
-                 :on-change #(==> [::events/select-analysis-tab %2])
-                 :variant "fullWidth"
-                 :centered true
-                 :indicator-color "secondary"
-                 :text-color "secondary"}
+                :on-change #(==> [::events/select-analysis-tab %2])
+                :variant "fullWidth"
+                :centered true
+                :indicator-color "secondary"
+                :text-color "secondary"}
        [:> Tab {:label (tr :analysis/analysis-areas) :value "analysis-area"}]
        [:> Tab {:label (tr :analysis/results) :value "results"}]
        [:> Tab {:label (tr :analysis/settings) :value "settings"}]]]

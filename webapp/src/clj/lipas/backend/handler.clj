@@ -834,7 +834,8 @@
                {:status 200
                 :body (core/calc-diversity-indices search body)}
                {:status 400
-                :body {:error (malli/explain diversity-schema/diversity-indices-req body)}})))}}]
+                :body {:error (-> (malli/explain diversity-schema/diversity-indices-req body)
+                                  me/humanize)}})))}}]
 
       ;; Send feedback
       ["/actions/send-feedback"

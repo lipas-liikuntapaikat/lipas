@@ -1,14 +1,11 @@
 (ns lipas.data.activities
   (:require
-   #?(:clj [cheshire.core :as json])
-   #?(:clj [clojure.data.csv :as csv])
    [clojure.string :as str]
    [lipas.data.materials :as materials]
    [lipas.data.types :as types]
    [lipas.schema.common :as common-schema]
    [lipas.utils :as utils]
    [malli.core :as m]
-   [malli.json-schema :as json-schema]
    [malli.util :as mu]))
 
 (defn collect-schema
@@ -1961,22 +1958,7 @@
 (comment
   (m/schema activities-schema)
   (require '[clojure.pprint :as pprint])
-  (pprint/pprint activities-schema)
-
-  (require '[malli.json-schema :as json-schema])
-  (json-schema/transform activities-schema)
-
-  (require '[cheshire.core :as json])
-
-  (println (-> activities-schema json-schema/transform json/encode)))
-
-(defn gen-json-schema
-  []
-  (-> activities-schema
-      json-schema/transform
-      #?(:clj (json/encode {:pretty true})
-         :cljs clj->js)
-      println))
+  (pprint/pprint activities-schema))
 
 (def by-types
   (utils/index-by :type-codes [outdoor-recreation-areas
@@ -2027,13 +2009,6 @@
            (get-in prop [:field :description :se])
            (get-in prop [:field :description :en])])))
 
-(declare gen-csv)
-
-#?(:clj
-   (defn gen-csv
-     []
-     (csv/write-csv *out* csv-data)))
-
 (def by-type-code
   (->> by-types
        (mapcat (fn [[type-codes v]]
@@ -2043,12 +2018,3 @@
 
 (def activities (->> by-types vals (utils/index-by :value)))
 
-(defn -main [& args]
-  (if (= "csv" (first args))
-    (gen-csv)
-    (gen-json-schema)))
-
-(comment
-
-  (json-schema/transform birdwatching-schema)
-  (json-schema/transform activities-schema))

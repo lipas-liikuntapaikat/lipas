@@ -1,5 +1,6 @@
 (ns lipas.schema.sports-sites.location
-  (:require [lipas.data.cities :as cities]
+  (:require [lipas.data.activities :as activities]
+            [lipas.data.cities :as cities]
             [lipas.schema.common :as common]
             [malli.core :as m]
             [malli.util :as mu]))
@@ -71,7 +72,8 @@
      [:type-code {:optional true} :int]
      [:route-part-difficulty {:optional true} :string]
      [:travel-direction {:optional true} :string]
-     [:itrs-technical {:optional true} :string]]))
+     [:itrs-technical {:optional true}
+      (into [:enum] (keys activities/itrs-technical-options))]]))
 
 (def line-string-feature
   (m/schema

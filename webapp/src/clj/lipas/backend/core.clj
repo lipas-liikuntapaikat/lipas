@@ -593,73 +593,77 @@
    (let [correlation-id (jobs/gen-correlation-id)]
      (jobs/with-correlation-context correlation-id
        (fn []
-         (jdbc/with-db-transaction [tx db]
-           (let [resp (upsert-sports-site! tx user sports-site draft?)
-                 route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
+         ;; Phase 1: All DB operations inside the transaction.
+         ;; ES indexing is deliberately outside the transaction so that
+         ;; a failure in indexing cannot roll back committed DB data.
+         ;; Worst case: data in DB but not in ES, fixable by reindexing.
+         (let [resp
+               (jdbc/with-db-transaction [tx db]
+                 (let [resp (upsert-sports-site! tx user sports-site draft?)
+                       route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
-             (when-not draft?
-               (log/info "Saving sports site with background jobs"
-                         {:lipas-id (:lipas-id resp)
-                          :is-route? route?
-                          :user (:email user)})
+                   (when-not draft?
+                     (log/info "Saving sports site with background jobs"
+                               {:lipas-id (:lipas-id resp)
+                                :is-route? route?
+                                :user (:email user)})
 
-               ;; NOTE: routes will be re-indexed after elevation has been
-               ;; resolved.
-               (index! search resp :sync)
+                     (when route?
+                       (jobs/enqueue-job! tx "elevation"
+                                          {:lipas-id (:lipas-id resp)}
+                                          {:correlation-id correlation-id
+                                           :priority 70}))
 
-               ;; Sync to legacy API index - keep it in sync with the main index
-               (if (should-be-in-legacy-index? resp)
-                 (index-legacy-sports-place! search resp :sync)
-                 ;; Delete from legacy index if status changed to inactive
-                 (delete-from-legacy-index! search (:lipas-id resp)))
+                     ;; Analysis doesn't require elevation information
+                     (jobs/enqueue-job! tx "analysis"
+                                        {:lipas-id (:lipas-id resp)}
+                                        {:correlation-id correlation-id
+                                         :priority 80})
 
-               (when route?
-                 (jobs/enqueue-job! tx "elevation"
-                                    {:lipas-id (:lipas-id resp)}
-                                    {:correlation-id correlation-id
-                                     :priority 70}))
+                     ;; Webhook Notification
 
-               ;; Analysis doesn't require elevation information
-               (jobs/enqueue-job! tx "analysis"
-                                  {:lipas-id (:lipas-id resp)}
-                                  {:correlation-id correlation-id
-                                   :priority 80})
+                     ;; NOTE: Webhook is disabled until UTP or someone else
+                     ;; starts using it again.
 
-               ;; Webhook Notification
+                     #_(jobs/enqueue-job! tx "webhook"
+                                          {:lipas-ids [(:lipas-id resp)]
+                                           :operation-type (if (new? sports-site) "create" "update")
+                                           :initiated-by (:id user)}
+                                          {:correlation-id correlation-id
+                                           :priority 85}))
 
-               ;; NOTE: Webhook is disabled until UTP or someone else
-               ;; starts using it again.
+                   ;; Sync the site to PTV if
+                   ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+                   ;; - it is PTV candidate now
+                   ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+                   ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+                   ;; that doesn't trigger update if sync-enabled is false.
+                   (if (and (not draft?)
+                            (or (:sync-enabled (:ptv resp))
+                                (:delete-existing (:ptv resp)))
+                            ;; TODO: Check privilage :ptv/basic or such
+                            (or (ptv-data/ptv-candidate? resp)
+                                (ptv-data/is-sent-to-ptv? resp)))
+                     ;; NOTE:  this will create a new sports-site rev.
+                     ;; Make it instead update the sports-site already created in the tx?
+                     ;; Otherwise each save-sports-site! will create two sports-site revs.
+                     (let [new-ptv-data (sync-ptv! tx search ptv user
+                                                   {:sports-site resp
+                                                    :org-id (:org-id (:ptv resp))
+                                                    :lipas-id (:lipas-id resp)
+                                                    :ptv (:ptv resp)})]
+                       (log/infof "Sports site updated and PTV integration enabled")
+                       (assoc resp :ptv new-ptv-data))
+                     resp)))]
 
-               #_(jobs/enqueue-job! tx "webhook"
-                                    {:lipas-ids [(:lipas-id resp)]
-                                     :operation-type (if (new? sports-site) "create" "update")
-                                     :initiated-by (:id user)}
-                                    {:correlation-id correlation-id
-                                     :priority 85}))
+           ;; Phase 2: ES indexing after transaction has committed.
+           (when-not draft?
+             (index! search resp :sync)
+             (if (should-be-in-legacy-index? resp)
+               (index-legacy-sports-place! search resp :sync)
+               (delete-from-legacy-index! search (:lipas-id resp))))
 
-             ;; Sync the site to PTV if
-             ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
-             ;; - it is PTV candidate now
-             ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
-             ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
-             ;; that doesn't trigger update if sync-enabled is false.
-             (if (and (not draft?)
-                      (or (:sync-enabled (:ptv resp))
-                          (:delete-existing (:ptv resp)))
-                      ;; TODO: Check privilage :ptv/basic or such
-                      (or (ptv-data/ptv-candidate? resp)
-                          (ptv-data/is-sent-to-ptv? resp)))
-               ;; NOTE:  this will create a new sports-site rev.
-               ;; Make it instead update the sports-site already created in the tx?
-               ;; Otherwise each save-sports-site! will create two sports-site revs.
-               (let [new-ptv-data (sync-ptv! tx search ptv user
-                                             {:sports-site resp
-                                              :org-id (:org-id (:ptv resp))
-                                              :lipas-id (:lipas-id resp)
-                                              :ptv (:ptv resp)})]
-                 (log/infof "Sports site updated and PTV integration enabled")
-                 (assoc resp :ptv new-ptv-data))
-               resp))))))))
+           resp))))))
 
 ;;; Cities ;;;
 
