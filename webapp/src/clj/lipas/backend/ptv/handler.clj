@@ -56,13 +56,17 @@
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
-                          [:lipas-id :int]]}
+                          [:lipas-id :int]
+                          [:reference {:optional true}
+                           [:maybe [:map
+                                    [:summary :string]
+                                    [:description :string]]]]]}
       :handler
       (fn [req]
-        {:status 200
-         :body (ptv-core/generate-ptv-descriptions
-                search
-                (-> req :parameters :body :lipas-id))})}}]
+        (let [{:keys [lipas-id reference]} (-> req :parameters :body)]
+          {:status 200
+           :body (ptv-core/generate-ptv-descriptions
+                  search lipas-id {:reference reference})}))}}]
 
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
@@ -70,8 +74,27 @@
       :parameters {:body #'sports-sites-schema/new-or-existing-sports-site}
       :handler
       (fn [req]
+        (let [body (-> req :parameters :body)
+              reference (:reference body)
+              doc (dissoc body :reference)]
+          {:status 200
+           :body (ptv-core/generate-ptv-descriptions-from-data
+                  doc {:reference reference})}))}}]
+
+   ["/actions/generate-ptv-descriptions-batch"
+    {:post
+     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      :parameters {:body [:map
+                          [:lipas-ids [:vector :int]]
+                          [:reference {:optional true}
+                           [:maybe [:map
+                                    [:summary :string]
+                                    [:description :string]]]]]}
+      :handler
+      (fn [req]
         {:status 200
-         :body (ptv-core/generate-ptv-descriptions-from-data
+         :body (ptv-core/generate-ptv-descriptions-batch
+                search
                 (-> req :parameters :body))})}}]
 
    ["/actions/translate-to-other-langs"

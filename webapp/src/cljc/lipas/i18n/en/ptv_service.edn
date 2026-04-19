@@ -8,4 +8,5 @@
  :create-new "Create new service"
  :link-existing "Link existing PTV service"
  :select-sub-category "Select type class"
- :select-service "Select service from PTV"}
+ :select-service "Select service from PTV"
+ :needs-service-helper "This sports site needs to be connected to a Service in PTV. Choose an existing service or create a new one."}

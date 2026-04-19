@@ -11,4 +11,6 @@
  :new-service-channel-will-be-created "Uusi palvelupaikka luodaan PTV:hen viennin yhteydessä.",
  :change-service-channel "Muuta palvelupaikkaa",
  :select-service-channel "Valitse palvelupaikka",
- :sync-now "Synkronoi nyt"}
+ :sync-now "Synkronoi nyt",
+ :archive-in-ptv "Arkistoi paikka PTV:ssä",
+ :integration-enabled "PTV-integraatio käytössä"}

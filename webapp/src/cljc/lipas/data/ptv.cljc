@@ -104,6 +104,54 @@
   "Default languages when org config is missing. Finnish only."
   ["fi"])
 
+(defn pick-style-reference
+  "Pick a Finnish style reference from sites already in memory. Tiers, best
+   to worst fallback:
+   1. Same type-code
+   2. Same sub-category-id
+   3. Any site with Finnish summary + description
+   Within a tier, most recently synced wins. Uses in-memory data so
+   unpersisted AI-generated drafts qualify.
+
+   `sports-sites` — seq of maps with :lipas-id :type-code :sub-category-id
+   :summary {:fi …} :description {:fi …} :last-sync (from
+   lipas.data.ptv/sports-site->ptv-input shape).
+
+   Returns {:summary string :description string} in Finnish, or nil."
+  [sports-sites {:keys [type-code sub-category-id exclude-lipas-id]}]
+  (let [candidates (->> sports-sites
+                        (remove #(= exclude-lipas-id (:lipas-id %)))
+                        (filter (fn [s] (and (seq (get-in s [:summary :fi]))
+                                             (seq (get-in s [:description :fi])))))
+                        (sort-by :last-sync #(compare %2 %1)))
+        tier1 (when type-code
+                (first (filter #(= type-code (:type-code %)) candidates)))
+        tier2 (when (and sub-category-id (not tier1))
+                (first (filter #(= sub-category-id (:sub-category-id %)) candidates)))
+        picked (or tier1 tier2 (first candidates))]
+    (when picked
+      {:summary (get-in picked [:summary :fi])
+       :description (get-in picked [:description :fi])})))
+
+(defn resolve-org-id
+  "Returns the effective PTV org-id for a site.
+   Resolution order:
+   1. Persisted :ptv :org-id on the site (authoritative once integrated).
+   2. User belongs to exactly one org → that org.
+   3. Exactly one of the user's orgs covers the site's city-code → that org.
+   4. Nil (ambiguous; UI must prompt)."
+  [site user-orgs]
+  (or (get-in site [:ptv :org-id])
+      (when (= 1 (count user-orgs))
+        (get-in (first user-orgs) [:ptv-data :org-id]))
+      (let [city-code (get-in site [:location :city :city-code])
+            matches (filter (fn [org]
+                              (contains? (set (get-in org [:ptv-data :city-codes]))
+                                         city-code))
+                            user-orgs)]
+        (when (= 1 (count matches))
+          (get-in (first matches) [:ptv-data :org-id])))))
+
 (def lang->locale
   "PTV language code -> LIPAS locale keyword"
   {"fi" :fi, "sv" :se, "en" :en})
@@ -128,16 +176,6 @@
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
-
-;; NOTE: Right now the UI mostly just uses this always.
-;; The languages value is also stored to sports-site :ptv on
-;; sync, but that value isn't used now?
-;; So it is possible to enable new languages by modying the org config.
-;; Summary/description texts are always generated for all languages,
-;; but additional languages aren't shown on the FE or sent to PTV.
-(defn org-id->languages [org-id]
-  (or (:supported-languages (get org-id->params org-id))
-      default-langs))
 
 (defn ->service-source-id
   [org-id sub-category-id]
@@ -609,21 +647,31 @@
           {}
           descriptions))
 
+(def service-channel-compare-fields
+  "Fields to compare when checking drift against a PTV ServiceChannel.
+   PTV ServiceChannels don't carry :user-instruction — that's a Service-level
+   concept — so leave it out of the comparison."
+  [:summary :description])
+
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
-   non-nil fields match. Trims whitespace for comparison."
-  [lipas-texts ptv-texts]
-  (let [trim #(some-> % str/trim not-empty)]
-    (every? (fn [field]
-              (let [lipas-vals (get lipas-texts field)
-                    ptv-vals (get ptv-texts field)]
-                (every? (fn [lang]
-                          (let [l (trim (get lipas-vals lang))
-                                p (trim (get ptv-vals lang))]
-                            (or (and (nil? l) (nil? p))
-                                (= l p))))
-                        [:fi :se :en])))
-            [:summary :description :user-instruction])))
+   non-nil fields match. Trims whitespace for comparison. `fields`
+   defaults to all three lipas text fields; callers comparing against
+   a PTV ServiceChannel should pass `service-channel-compare-fields`."
+  ([lipas-texts ptv-texts]
+   (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
+  ([lipas-texts ptv-texts fields]
+   (let [trim #(some-> % str/trim not-empty)]
+     (every? (fn [field]
+               (let [lipas-vals (get lipas-texts field)
+                     ptv-vals (get ptv-texts field)]
+                 (every? (fn [lang]
+                           (let [l (trim (get lipas-vals lang))
+                                 p (trim (get ptv-vals lang))]
+                             (or (and (nil? l) (nil? p))
+                                 (= l p))))
+                         [:fi :se :en])))
+             fields))))
 
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
@@ -635,11 +683,15 @@
 
         last-sync (-> site :ptv :last-sync)
 
-        ;; Drift detection: compare LIPAS texts vs PTV texts
+        ;; Drift detection: compare LIPAS texts vs PTV ServiceChannel texts.
+        ;; ServiceChannels only carry summary + description, so user-instruction
+        ;; is intentionally excluded from the comparison.
         lipas-texts {:summary summary :description description :user-instruction user-instruction}
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        content-drift? (and last-sync ptv-texts (not (texts-match? lipas-texts ptv-texts)))
+        content-drift? (and last-sync ptv-texts
+                            (not (texts-match? lipas-texts ptv-texts
+                                               service-channel-compare-fields)))
 
         ;; Drift detection: compare LIPAS service linkings vs PTV service linkings
         lipas-service-ids (set (-> site :ptv :service-ids))
@@ -658,6 +710,7 @@
      :name-conflict (detect-name-conflict site (vals service-channels))
      :marketing-name (:marketing-name site)
      :type (-> site :search-meta :type :name :fi)
+     :type-code (-> site :type :type-code)
      :sub-category (-> site :search-meta :type :sub-category :name :fi)
      :sub-category-id (-> site :type :type-code types :sub-category)
      :org-id org-id

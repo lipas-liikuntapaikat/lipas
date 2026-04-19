@@ -653,7 +653,13 @@
                                                     :lipas-id (:lipas-id resp)
                                                     :ptv (:ptv resp)})]
                        (log/infof "Sports site updated and PTV integration enabled")
-                       (assoc resp :ptv new-ptv-data))
+                       ;; sync-ptv! creates a new sports-site revision with
+                       ;; event-date = last-sync. Mirror that here so the
+                       ;; outer index! below doesn't reindex with the
+                       ;; pre-sync event-date and trip drift detection.
+                       (-> resp
+                           (assoc :event-date (:last-sync new-ptv-data))
+                           (assoc :ptv new-ptv-data)))
                      resp)))]
 
            ;; Phase 2: ES indexing after transaction has committed.

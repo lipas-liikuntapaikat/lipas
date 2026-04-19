@@ -11,4 +11,6 @@
  :new-service-channel-will-be-created "A new service location will be created in PTV on export.",
  :change-service-channel "Change service location",
  :select-service-channel "Select service location",
- :sync-now "Sync now"}
+ :sync-now "Sync now",
+ :archive-in-ptv "Archive in PTV",
+ :integration-enabled "PTV integration enabled"}

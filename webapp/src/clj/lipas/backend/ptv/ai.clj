@@ -2,7 +2,6 @@
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
             [clojure.string :as str]
-            [clojure.walk :as walk]
             [lipas.backend.config :as config]
             [malli.json-schema :as json-schema]
             [malli.util :as mu]
@@ -238,7 +237,7 @@ EXAMPLES of DVV-approved summaries (Finnish):
 - \"Ikosen koulun kaukalo Pyhäjärvellä on ilmaiseksi kaikkien käytettävissä.\"
 - \"Haminan ala-asteen sali on koulun liikuntasali, jossa on yksi koripallo-, käsipallo- ja lentopallokenttä.\"
 - \"Aseman ala-asteen lähiliikuntapaikka tarjoaa ympäri vuoden maksutta kaksi urheilukenttää.\"
-- \"Oijärven vesillelaskuluiska on ympäri vuoden käytössä oleva vesillelaskuluiska Iissä.\"
+- \"Oijärven vesillelaskuluiska on ympäri vuoden käytössä oleva vesillelaskuluiska Iissä.\"%s
 
 Source data:
 %s")
@@ -307,12 +306,13 @@ Source data:
 
 (defn gemini-complete-raw
   "Calls Gemini API and normalizes the response to match OpenAI's shape."
-  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level]
-    :or   {n              1
-           top-p          0.90
-           temperature    1.0
-           max-tokens     8192
-           thinking-level "minimal"}}
+  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level response-schema]
+    :or   {n               1
+           top-p           0.90
+           temperature     1.0
+           max-tokens      8192
+           thinking-level  "minimal"
+           response-schema GeminiResponse}}
    system-instruction
    prompt]
   (let [url  (str base-url "/models/" model ":generateContent")
@@ -323,7 +323,7 @@ Source data:
                                   :maxOutputTokens  max-tokens
                                   :candidateCount   n
                                   :responseMimeType "application/json"
-                                  :responseSchema   GeminiResponse
+                                  :responseSchema   response-schema
                                   :thinkingConfig   {:thinkingLevel thinking-level}}}
         _      (log/debugf "Gemini prompt (%s, %d chars): %s" model (count prompt) prompt)
         params {:headers      {"x-goog-api-key" api-key
@@ -421,25 +421,235 @@ Follow these requirements:
         •	Exclude street address from descriptions
 %s")
 
+;;; ——— Prompt input shaping —————————————————————————————————————————
+;;
+;; ->prompt-doc reduces a full sports-site document down to the subset of
+;; fields the AI should actually consider when writing a citizen-facing
+;; description. Everything not declared in the allowlists below is dropped.
+;;
+;; Principles driving the allowlist:
+;; - Citizen utility first: include only facts a resident reading a
+;;   municipality's service page would act on.
+;; - No contact information: addresses, phone numbers, websites belong in
+;;   PTV's structured fields, never inlined into descriptions.
+;; - No noisy technical dimensions: surface area, ball-field length/width,
+;;   ceiling height etc. clutter descriptions without helping users.
+;; - Keep dimensions citizens actually use: route-length, pool-length,
+;;   track-length, beach-length are directly actionable.
+;; - Safe-by-default: any property added to prop-types in the future is
+;;   invisible to the AI until explicitly listed here.
+
+(defn- blank?
+  [v]
+  (or (nil? v)
+      (and (string? v) (str/blank? v))
+      (and (coll? v) (empty? v))))
+
+(defn- select+transform
+  "Build a map from `source` using `field->transformer`. Each key is looked
+   up, the transformer applied, and the pair kept only if the result is
+   non-blank. New entries do not appear on the output when the source lacks
+   the key, so callers don't need to clean up nils."
+  [field->transformer source]
+  (reduce-kv (fn [acc k transformer]
+               (if-some [v (get source k)]
+                 (let [v' (transformer v)]
+                   (cond-> acc (not (blank? v')) (assoc k v')))
+                 acc))
+             {}
+             field->transformer))
+
+(defn- encode-stand-capacity
+  [n]
+  (cond (< n 100) :small (< n 500) :medium :else :large))
+
+(defn- trim-location
+  "Keep only neighborhood. Address, postal-code, postal-office are excluded
+   by the no-contact-info policy; city name is sourced from :search-meta."
+  [loc]
+  (when-let [nbh (get-in loc [:city :neighborhood])]
+    {:neighborhood nbh}))
+
+(defn- trim-search-meta
+  "Keep the resolved, multilingual type and city names the AI relies on.
+   Drops coordinates, administrative hierarchy, audit timestamps, etc."
+  [sm]
+  (let [type-info {:name         (get-in sm [:type :name])
+                   :sub-category (get-in sm [:type :sub-category :name])}
+        city-name (get-in sm [:location :city :name])]
+    (cond-> {}
+      (seq type-info) (assoc :type type-info)
+      (seq city-name) (assoc-in [:location :city :name] city-name))))
+
+(def ^:private top-level-ai-fields
+  {:name              identity
+   :marketing-name    identity
+   :comment           identity
+   :status            identity
+   :reservations-link identity
+   :lipas-id          identity
+   :location          trim-location
+   :search-meta       trim-search-meta})
+
+(def ^:private property-ai-fields
+  {;; Access & use
+   :free-use?               identity
+   :school-use?             identity
+   :year-round-use?         identity
+
+   ;; Amenities
+   :toilet?                 identity
+   :changing-rooms?         identity
+   :shower?                 identity
+   :sauna?                  identity
+   :kiosk?                  identity
+   :pier?                   identity
+
+   ;; Surface & lighting
+   :surface-material        identity
+   :surface-material-info   identity
+   :ligthing?               identity
+   :lighting-info           identity
+
+   ;; Accessibility
+   :accessibility-info      identity
+
+   ;; Citizen-meaningful linear dimensions
+   :route-length-km         identity
+   :lit-route-length-km     identity
+   :track-length-m          identity
+   :pool-length-m           identity
+   :beach-length-m          identity
+
+   ;; Activity-indicator counts
+   :swimming-pool-count     identity
+   :ice-rinks-count         identity
+   :holes-count             identity
+   :basketball-fields-count identity
+   :volleyball-fields-count identity
+   :tennis-courts-count     identity
+   :badminton-courts-count  identity
+   :floorball-fields-count  identity
+   :handball-fields-count   identity
+   :football-fields-count   identity
+
+   ;; Encoded: exact count is misleading, buckets convey the signal
+   :stand-capacity-person   encode-stand-capacity})
+
 (defn ->prompt-doc
+  "Shape a sports-site document for AI prompting: include only
+   citizen-relevant, non-noisy fields as defined by `top-level-ai-fields`
+   and `property-ai-fields`."
   [sports-site]
-  ;; Might include (some) of the UTP data now?
-  ;; Could be a good thing, but might make the prompt data too large?
-  (walk/postwalk (fn [x]
-                   (if (map? x)
-                     (dissoc x :geoms :geometries :simple-geoms :images :videos :id :fids :event-date
-                             ;; This includes the already generated summary/description, important that that isn't
-                             ;; passed back into the AI.
-                             :ptv)
-                     x))
-                 sports-site))
+  (let [top   (select+transform top-level-ai-fields sports-site)
+        props (select+transform property-ai-fields (:properties sports-site))]
+    (cond-> top
+      (seq props) (assoc :properties props))))
+
+(def batch-reference-section
+  "
+
+STYLE REFERENCE — an approved description of a previous facility of the same type.
+Match its tone, topic ordering, sentence patterns, and vocabulary. DO NOT copy its
+paragraph count — let each facility's description length follow its own data.
+Omit topics that are not supported by a given facility's data.
+
+Reference (Finnish):
+Summary: %s
+Description: %s")
 
 (defn generate-ptv-descriptions
-  [sports-site]
-  (let [prompt-doc (->prompt-doc sports-site)]
+  "Generate PTV descriptions for a single sports site.
+   Optional `reference` {:summary :description} in Finnish anchors the style
+   to an approved description of a peer facility (same type, same org)."
+  [sports-site & [{:keys [reference]}]]
+  (let [prompt-doc  (->prompt-doc sports-site)
+        ref-section (if reference
+                      (format batch-reference-section
+                              (:summary reference)
+                              (:description reference))
+                      "")]
     (gemini-complete gemini-config
                      ptv-system-instruction-v5
-                     (format generate-utp-descriptions-prompt-v5 (json/encode prompt-doc)))))
+                     (format generate-utp-descriptions-prompt-v5
+                             ref-section
+                             (json/encode prompt-doc)))))
+
+;;; ——— Batch generation ———————————————————————————————————————————————
+;;
+;; Multiple same-type facilities generated in one Gemini call. The model
+;; naturally aligns structure, vocabulary, and sentence patterns across
+;; facilities, producing uniform output for display on municipality pages.
+;;
+;; Gemini reliably handles ~10–20 items per batch; beyond that it tends
+;; to bail early with a stub response. Callers partition larger groups
+;; and use :reference to anchor style across batches.
+
+(def batch-response-schema
+  [:map
+   {:closed true}
+   [:sites
+    [:vector
+     [:map
+      {:closed true}
+      [:lipas-id :int]
+      [:summary (localized-string-schema nil)]
+      [:description (localized-string-schema nil)]
+      [:user-instruction (localized-string-schema nil)]]]]])
+
+(def BatchGeminiResponse
+  (json-schema/transform (mu/open-schema batch-response-schema)))
+
+(def generate-utp-descriptions-batch-prompt-v1
+  "Create summaries and descriptions for %d sports facilities of the SAME TYPE in the same municipality, for the Service Information Repository (Palvelutietovaranto).
+
+CONSISTENCY — the descriptions will be shown side-by-side on municipality pages, so:
+- Use the same TOPIC ORDER across all facilities (what → access → facilities → conditions)
+- Use matching SENTENCE PATTERNS and VOCABULARY between facilities
+- The set should read as if written by one person in one session
+
+ADAPT TO DATA DENSITY — a facility with sparse data gets a SHORTER description, not a padded one:
+- Omit any paragraph whose topic has no supporting data — do NOT write a paragraph about missing information
+- A facility with only a few facts may warrant 2 paragraphs; a rich one may warrant 4
+- NEVER write sentences like \"Kentällä ei ole mainittu pukeutumistiloja\" / \"inga uppgifter om X\" / \"no amenities are listed\" — these are meta-commentary about the data, not about the facility. Silently drop the topic.
+
+Per facility, produce:
+- summary: A complete sentence (not a list). Max 150 chars/language.
+- description: 2–4 paragraphs, topic order as above. Include a brief usage instruction. Max 2000 chars/language.
+- user-instruction: 1–3 sentences on how to access. Max 2500 chars/language.
+
+BEFORE WRITING, verify for EACH facility:
+1. STATUS — is it \"active\", \"out-of-service-permanently\", or other? Reflect this.
+2. FACTS — write ONLY what is explicitly in the data. Do not infer or invent.
+3. ADDRESS — do NOT include any street address, phone number, or URL.
+4. ORGANIZATION — do NOT repeat the organization/municipality name as subject.
+
+Return a \"sites\" array. Each entry's lipas-id MUST match the source data exactly (as an integer).%s
+
+Source data:
+%s")
+
+(defn generate-ptv-descriptions-batch
+  "Generate PTV descriptions for a batch of same-type sports sites in one call.
+
+  sports-sites : seq of enriched sports site maps (like single-site input)
+  reference    : optional {:summary string :description string} in Finnish.
+                 When provided, anchors the style for continuity across partitioned batches."
+  [sports-sites & [{:keys [reference]}]]
+  (let [prompt-docs (mapv ->prompt-doc sports-sites)
+        ref-section (if reference
+                      (format batch-reference-section
+                              (:summary reference)
+                              (:description reference))
+                      "")
+        prompt      (format generate-utp-descriptions-batch-prompt-v1
+                            (count prompt-docs)
+                            ref-section
+                            (json/encode prompt-docs))
+        config      (assoc gemini-config
+                           :response-schema BatchGeminiResponse
+                           :max-tokens 32768)]
+    (gemini-complete config ptv-system-instruction-v5 prompt)))
 
 (def translate-to-other-langs-prompt
   "Translate the following Service Information Repository descriptions from %s to %s:

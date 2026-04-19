@@ -56,4 +56,16 @@
  :wizard-descriptions-missing-message "Sports site descriptions must be created or filled in before export to the Service Information Repository."
  :wizard-sports-sites-selection-count "Selected {1} sports sites"
  :wizard-descriptions-generated-title "Service location descriptions created!"
- :wizard-descriptions-generated-message "Great! Now you can export the sports sites to the Service Information Repository."}
+ :wizard-descriptions-generated-message "Great! Now you can export the sports sites to the Service Information Repository."
+
+ :integration-enabled "PTV integration is active"
+ :integration-enabled-sync-off "PTV integration is active, but sync for this sports site is disabled."
+ :will-be-archived-on-save "The sports site will be removed from PTV when you save"
+ :will-be-archived-type-changed "The sports site was previously exported to PTV, but its data has changed so it no longer qualifies for export. The PTV service location will be archived when you save."
+ :new-service-location-will-be-created "The sports site has not been exported to PTV before. A new service location will be created when you save."
+ :data-incomplete "PTV data is incomplete. Fill in the missing information and the sports site will be exported to PTV on save."
+ :integration-error "PTV integration error, the latest data has not been exported to PTV."
+ :open-in-ptv "Open in PTV"
+ :open-in-suomi-fi "Open in suomi.fi"
+ :service-missing-for-type "The sports site type has changed and no matching service exists in PTV."
+ :type-changed-may-rebind "The sports site type has changed. The site may be linked to a different service in PTV."}

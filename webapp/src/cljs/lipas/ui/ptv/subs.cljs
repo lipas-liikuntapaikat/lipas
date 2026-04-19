@@ -98,19 +98,33 @@
               (:ptv-data org)))
           orgs)))
 
+(rf/reg-sub ::resolved-org-id
+  ;; The effective PTV org for a specific site. Use this anywhere the site
+  ;; view needs a "current org" — do not reach into :ptv :selected-org,
+  ;; that state is wizard-scoped.
+  (fn [[_ lipas-id]]
+    [(rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev lipas-id])
+     (rf/subscribe [:lipas.ui.sports-sites.subs/editing-rev lipas-id])
+     (rf/subscribe [::all-orgs])])
+  (fn [[latest edit-data orgs] _]
+    (ptv-data/resolve-org-id (or edit-data latest) orgs)))
+
 (rf/reg-sub ::org-languages
-  :<- [::selected-ptv-org]
-  (fn [ptv-config]
+  (fn [[_ org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id org-id]))
+  (fn [ptv-config _]
     (or (:supported-languages ptv-config) ptv-data/fallback-languages)))
 
 (rf/reg-sub ::org-city-codes
-  :<- [::selected-ptv-org]
-  (fn [ptv-config]
+  (fn [[_ org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id org-id]))
+  (fn [ptv-config _]
     (:city-codes ptv-config)))
 
 (rf/reg-sub ::org-params
-  :<- [::selected-ptv-org]
-  (fn [ptv-config]
+  (fn [[_ org-id]]
+    (rf/subscribe [::ptv-config-by-ptv-org-id org-id]))
+  (fn [ptv-config _]
     ;; Return the config in the same format as org-id->params
     (when ptv-config
       (select-keys ptv-config [:org-id :city-codes :owners :supported-languages]))))

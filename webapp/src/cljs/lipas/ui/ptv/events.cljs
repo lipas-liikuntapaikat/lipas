@@ -299,6 +299,25 @@
     (let [org-id (-get-ptv-org-id db)]
       (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v))))
 
+(rf/reg-event-fx ::toggle-site-sync-enabled
+  ;; Site-tab specific: toggle :ptv :sync-enabled on the site's edit-buffer.
+  ;; If enabling and the site has no persisted org-id, atomically also write
+  ;; the resolved org-id so the "sync-enabled implies org-id" invariant holds.
+  (fn [{:keys [db]} [_ lipas-id enabled?]]
+    (let [edit-site (get-in db [:sports-sites lipas-id :editing])
+          latest-id (get-in db [:sports-sites lipas-id :latest])
+          latest-site (get-in db [:sports-sites lipas-id :history latest-id])
+          user-orgs (get-in db [:user :orgs])
+          persisted-org-id (get-in (or edit-site latest-site) [:ptv :org-id])
+          resolved-org-id (or persisted-org-id
+                              (ptv-data/resolve-org-id (or edit-site latest-site)
+                                                       user-orgs))]
+      {:fx (cond-> [[:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                lipas-id [:ptv :sync-enabled] enabled?]]]
+             (and enabled? (not persisted-org-id) resolved-org-id)
+             (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                               lipas-id [:ptv :org-id] resolved-org-id]]))})))
+
 (rf/reg-event-db ::select-services
   (fn [db [_ {:keys [lipas-id]} v]]
     (let [org-id (-get-ptv-org-id db)]
@@ -402,16 +421,45 @@
 
 ;;; Service location descriptions generation ;;;
 
+(defn- pick-reference-for-site
+  "Picks a Finnish style reference from the peer sites already loaded in app-db
+   for the site's org. Returns {:summary :description} or nil."
+  [db lipas-id]
+  (let [edit-data (-> db :sports-sites (get lipas-id) :editing)
+        latest-id (-> db :sports-sites (get lipas-id) :latest)
+        site (or edit-data (get-in db [:sports-sites lipas-id :history latest-id]))
+        org-id (-> site :ptv :org-id)
+        types (get-in db [:sports-sites :types])
+        type-code (-> site :type :type-code)
+        sub-category-id (get-in types [type-code :sub-category])]
+    (when org-id
+      (let [peers (->> (get-in db [:ptv :org org-id :data :sports-sites])
+                       vals
+                       (map (fn [s]
+                              (let [tc (-> s :type :type-code)]
+                                {:lipas-id (:lipas-id s)
+                                 :type-code tc
+                                 :sub-category-id (get-in types [tc :sub-category])
+                                 :summary (-> s :ptv :summary)
+                                 :description (-> s :ptv :description)
+                                 :last-sync (-> s :ptv :last-sync)}))))]
+        (ptv-data/pick-style-reference peers
+                                       {:type-code type-code
+                                        :sub-category-id sub-category-id
+                                        :exclude-lipas-id lipas-id})))))
+
 (rf/reg-event-fx ::generate-descriptions
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
-    (let [token (-> db :user :login :token)]
+    (let [token (-> db :user :login :token)
+          reference (pick-reference-for-site db lipas-id)]
       {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
        :fx [[:http-xhrio
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/generate-ptv-descriptions")
 
-              :params {:lipas-id lipas-id}
+              :params (cond-> {:lipas-id lipas-id}
+                        reference (assoc :reference reference))
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success [::generate-descriptions-success lipas-id success-fx]
@@ -439,14 +487,16 @@
 (rf/reg-event-fx ::generate-descriptions-from-data
   (fn [{:keys [db]} [_ lipas-id]]
     (let [token (-> db :user :login :token)
-          edit-data (-> db :sports-sites (get lipas-id) :editing)]
+          edit-data (-> db :sports-sites (get lipas-id) :editing)
+          reference (pick-reference-for-site db lipas-id)]
       {:db (assoc-in db [:ptv :loading-from-lipas :descriptions] true)
        :fx [[:http-xhrio
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/generate-ptv-descriptions-from-data")
               ;; :ptv data isn't used as AI input, and the data might not we valid spec yet?
-              :params (utils/make-saveable (dissoc edit-data :ptv))
+              :params (cond-> (utils/make-saveable (dissoc edit-data :ptv))
+                        reference (assoc :reference reference))
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success [::generate-descriptions-from-data-success lipas-id]
@@ -515,37 +565,129 @@
                            ms
                            (keys ms)))))))
 
+;; Batch description generation ;;
+
+(def ^:private batch-size
+  "Max sites per Gemini call. Kept small because the model tends to bail
+   out mid-response on larger batches. Style-reference chaining keeps
+   output consistent across multiple batches of the same type."
+  10)
+
+(def ^:private max-batch-attempts
+  "How many times a (type-code + set of missing sites) may be retried.
+   Each retry happens as a follow-up batch after the initial pass."
+  2)
+
+(defn- partition-batches
+  "Group sports sites by :type-code, then split each group into batches
+   of `batch-size`. Order: same-type batches stay adjacent so the style
+   reference from batch 1 flows into batches 2..N of that type."
+  [sports-sites]
+  (->> sports-sites
+       (group-by :type-code)
+       (sort-by key)
+       (mapcat (fn [[type-code sites]]
+                 (let [ids (mapv :lipas-id sites)]
+                   (->> (partition-all batch-size ids)
+                        (map-indexed (fn [idx chunk]
+                                       {:type-code    type-code
+                                        :lipas-ids    (vec chunk)
+                                        :batch-idx    idx
+                                        :attempt      0}))))))
+       vec))
+
 (rf/reg-event-fx ::generate-all-descriptions*
-  (fn [{:keys [db]} [_ org-id lipas-ids]]
-    (let [halt? (get-in db [:ptv :batch-descriptions-generation :halt?] false)
-          lipas-ids* (get-in db [:ptv :batch-descriptions-generation :lipas-ids])
-          processed (set/difference (set lipas-ids*) (set lipas-ids))
-          on-single-success [[:dispatch [::generate-all-descriptions* org-id (rest lipas-ids)]]]
-          on-single-failure [#_[:dispatch [::generate-all-descriptions* org-id (rest lipas-ids)]]
-                             [:dispatch [::halt-descriptions-generation]]]]
+  (fn [{:keys [db]} [_ org-id queue]]
+    (let [halt? (get-in db [:ptv :batch-descriptions-generation :halt?] false)]
+      (cond
+        (or halt? (empty? queue))
+        {:db (assoc-in db [:ptv :batch-descriptions-generation :in-progress?] false)}
+
+        :else
+        (let [{:keys [type-code lipas-ids attempt]} (first queue)
+              token      (-> db :user :login :token)
+              references (get-in db [:ptv :batch-descriptions-generation :references] {})
+              reference  (get references type-code)]
+          {:db (assoc-in db [:ptv :batch-descriptions-generation :in-progress?] true)
+           :fx [[:http-xhrio
+                 {:method :post
+                  :headers {:Authorization (str "Token " token)}
+                  :uri (str (:backend-url db) "/actions/generate-ptv-descriptions-batch")
+                  :params (cond-> {:lipas-ids (vec lipas-ids)}
+                            reference (assoc :reference reference))
+                  :format (ajax/transit-request-format)
+                  :response-format (ajax/transit-response-format)
+                  :timeout 240000
+                  :on-success [::generate-descriptions-batch-success
+                               org-id type-code attempt lipas-ids queue]
+                  :on-failure [::generate-descriptions-batch-failure]}]]})))))
+
+(rf/reg-event-fx ::generate-descriptions-batch-success
+  (fn [{:keys [db]} [_ org-id type-code attempt requested-ids queue resp]]
+    (let [sites          (:sites resp)
+          returned-ids   (set (map :lipas-id sites))
+          missing-ids    (set/difference (set requested-ids) returned-ids)
+          db-with-sites  (reduce (fn [acc {:keys [lipas-id] :as s}]
+                                   (update-in acc
+                                              [:ptv :org org-id :data :sports-sites lipas-id :ptv]
+                                              merge
+                                              (dissoc s :lipas-id)))
+                                 db
+                                 sites)
+          processed      (get-in db-with-sites [:ptv :batch-descriptions-generation :processed-lipas-ids] #{})
+          failed         (get-in db-with-sites [:ptv :batch-descriptions-generation :failed-lipas-ids] #{})
+          references     (get-in db-with-sites [:ptv :batch-descriptions-generation :references] {})
+          first-site     (first sites)
+          new-references (cond-> references
+                           (and first-site (not (contains? references type-code)))
+                           (assoc type-code {:summary     (get-in first-site [:summary :fi])
+                                             :description (get-in first-site [:description :fi])}))
+          retry-batch    (when (and (seq missing-ids) (< attempt max-batch-attempts))
+                           {:type-code type-code
+                            :lipas-ids (vec missing-ids)
+                            :batch-idx :retry
+                            :attempt   (inc attempt)})
+          next-queue     (cond-> (vec (rest queue))
+                           retry-batch (conj retry-batch))]
+      {:db (-> db-with-sites
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+               (assoc-in [:ptv :batch-descriptions-generation :processed-lipas-ids]
+                         (set/union processed returned-ids))
+               (assoc-in [:ptv :batch-descriptions-generation :failed-lipas-ids]
+                         (if retry-batch
+                           failed
+                           (set/union failed missing-ids)))
+               (assoc-in [:ptv :batch-descriptions-generation :references]
+                         new-references))
+       :fx [[:dispatch [::generate-all-descriptions* org-id next-queue]]]})))
+
+(rf/reg-event-fx ::generate-descriptions-batch-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr (:translator db)
+          notification {:message (tr :notifications/get-failed)
+                        :success? false}]
       {:db (-> db
-               (update-in [:ptv :batch-descriptions-generation]
-                          merge
-                          {:in-progress? (if halt? false (boolean (seq lipas-ids)))
-                           :processed-lipas-ids processed
-                           :halt? halt?}))
-       :fx [(when (and (not halt?) (seq lipas-ids))
-              [:dispatch [::generate-descriptions
-                          (first lipas-ids)
-                          on-single-success
-                          on-single-failure]])]})))
+               (assoc-in [:ptv :loading-from-lipas :descriptions] false)
+               (assoc-in [:ptv :errors :descriptions] resp)
+               (assoc-in [:ptv :batch-descriptions-generation :halt?] true)
+               (assoc-in [:ptv :batch-descriptions-generation :in-progress?] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::generate-all-descriptions
   (fn [{:keys [db]} [_ sports-sites]]
-    (let [org-id (-get-ptv-org-id db)
-          lipas-ids (map :lipas-id sports-sites)]
+    (let [org-id    (-get-ptv-org-id db)
+          lipas-ids (map :lipas-id sports-sites)
+          queue     (partition-batches sports-sites)]
       {:db (update-in db [:ptv :batch-descriptions-generation]
                       merge
                       {:batch-size (count lipas-ids)
                        :halt? false
                        :size (count lipas-ids)
-                       :lipas-ids (set lipas-ids)})
-       :fx [[:dispatch [::generate-all-descriptions* org-id lipas-ids]]]})))
+                       :lipas-ids (set lipas-ids)
+                       :processed-lipas-ids #{}
+                       :failed-lipas-ids #{}
+                       :references {}})
+       :fx [[:dispatch [::generate-all-descriptions* org-id queue]]]})))
 
 (rf/reg-event-db ::halt-descriptions-generation
   (fn [db _]
@@ -730,8 +872,14 @@
 ;;; Create Services in PTV ;;;
 
 (rf/reg-event-fx ::create-ptv-service
-  (fn [{:keys [db]} [_ org-id id data success-fx failure-fx]]
-    (let [token (-> db :user :login :token)]
+  ;; Optional 7th arg lipas-id: when set, the newly created service's id is
+  ;; auto-added to that site's :ptv :service-ids on success.
+  (fn [{:keys [db]} [_ org-id id data success-fx failure-fx lipas-id]]
+    (let [token (-> db :user :login :token)
+          ptv-config (or (get-in db [:ptv :selected-org :ptv-data])
+                         (some #(when (= org-id (get-in % [:ptv-data :org-id]))
+                                  (:ptv-data %))
+                               (get-in db [:user :orgs])))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] true)
                (assoc-in [:ptv :syncing :service id] true))
@@ -739,17 +887,18 @@
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/save-ptv-service")
-              :params (merge (let [ptv-config (get-in db [:ptv :selected-org :ptv-data])]
-                               (select-keys ptv-config [:org-id :city-codes]))
+              :params (merge (select-keys ptv-config [:org-id :city-codes])
                              data)
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
-              :on-success [::create-ptv-service-success org-id id success-fx]
+              :on-success [::create-ptv-service-success org-id id success-fx lipas-id]
               :on-failure [::create-ptv-service-failure org-id id failure-fx]}]]})))
 
 (rf/reg-event-fx ::create-ptv-service-success
-  (fn [{:keys [db]} [_ org-id id extra-fx resp]]
-    (let [tr (:translator db)]
+  (fn [{:keys [db]} [_ org-id id extra-fx lipas-id resp]]
+    (let [tr (:translator db)
+          new-service-id (:id resp)
+          existing-ids (set (get-in db [:sports-sites lipas-id :editing :ptv :service-ids]))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :services] false)
                (update-in [:ptv :syncing :service] dissoc id)
@@ -758,9 +907,13 @@
                           assoc :created-in-ptv true)
                (update-in [:ptv :org org-id :data :manual-services]
                           dissoc (:sourceId resp)))
-       :fx (into (or (seq extra-fx) [])
-                 [[:dispatch [:lipas.ui.events/set-active-notification
-                              {:message (tr :notifications/save-success) :success? true}]]])})))
+       :fx (cond-> (into (or (seq extra-fx) [])
+                         [[:dispatch [:lipas.ui.events/set-active-notification
+                                      {:message (tr :notifications/save-success) :success? true}]]])
+             (and lipas-id new-service-id)
+             (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                               lipas-id [:ptv :service-ids]
+                               (vec (conj existing-ids new-service-id))]]))})))
 
 (rf/reg-event-fx ::create-ptv-service-failure
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
