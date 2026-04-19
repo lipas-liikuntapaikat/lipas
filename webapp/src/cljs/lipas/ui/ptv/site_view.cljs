@@ -123,11 +123,19 @@
 
         services @(rf/subscribe [::subs/services-by-id org-id])
         services* @(rf/subscribe [::subs/services org-id])
+        site-sub-cat-id (-> site :type :type-code types :sub-category)
         missing-services-input [{:service-ids #{}
-                                 :sub-category-id (-> site :type :type-code types :sub-category)
+                                 :sub-category-id site-sub-cat-id
                                  :sub-category (-> site :search-meta :type :sub-category :name :fi)}]
         missing-services (when (and org-id candidate-now? (not loading-ptv?))
                            (ptv-data/resolve-missing-services org-id services missing-services-input))
+        matching-service-id
+        (when (and org-id site-sub-cat-id (seq services))
+          (let [expected-source-id (ptv-data/->service-source-id org-id site-sub-cat-id)]
+            (some (fn [s]
+                    (when (= expected-source-id (:sourceId s))
+                      (:id s)))
+                  (vals services))))
 
         org-options (hooks/use-memo (fn []
                                       (->> orgs
@@ -151,13 +159,28 @@
     ;; The events expect a lipas-org-like structure with [:ptv-data :org-id].
     (hooks/use-effect (fn []
                         (when org-id
-                          (let [lipas-org-stub {:ptv-data {:org-id org-id
-                                                           :city-codes (:city-codes org-ptv-config)}}]
+                          (let [lipas-org-stub {:ptv-data (merge {:org-id org-id}
+                                                                 (select-keys org-ptv-config
+                                                                              [:city-codes :owners]))}]
                             (rf/dispatch [::events/fetch-ptv-org lipas-org-stub])
                             (rf/dispatch [::events/fetch-ptv-services lipas-org-stub])
-                            (when (seq (:city-codes org-ptv-config))
+                            (when (and (seq (:city-codes org-ptv-config))
+                                       (seq (:owners org-ptv-config)))
                               (rf/dispatch [::events/fetch-integration-candidates lipas-org-stub])))))
                       [org-id org-ptv-config])
+
+    ;; Auto-attach a matching lipas-managed service when one exists for the
+    ;; site's sub-category and nothing is attached yet. User can still swap it
+    ;; via the service selector's edit button.
+    (hooks/use-effect (fn []
+                        (when (and editing?
+                                   sync-enabled
+                                   candidate-now?
+                                   matching-service-id
+                                   (empty? (:service-ids (:ptv site))))
+                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field
+                                        lipas-id [:ptv :service-ids] [matching-service-id]])))
+                      [editing? sync-enabled candidate-now? matching-service-id])
 
     [:> Stack
      {:direction "column"
