@@ -237,7 +237,7 @@ EXAMPLES of DVV-approved summaries (Finnish):
 - \"Ikosen koulun kaukalo Pyhäjärvellä on ilmaiseksi kaikkien käytettävissä.\"
 - \"Haminan ala-asteen sali on koulun liikuntasali, jossa on yksi koripallo-, käsipallo- ja lentopallokenttä.\"
 - \"Aseman ala-asteen lähiliikuntapaikka tarjoaa ympäri vuoden maksutta kaksi urheilukenttää.\"
-- \"Oijärven vesillelaskuluiska on ympäri vuoden käytössä oleva vesillelaskuluiska Iissä.\"
+- \"Oijärven vesillelaskuluiska on ympäri vuoden käytössä oleva vesillelaskuluiska Iissä.\"%s
 
 Source data:
 %s")
@@ -546,12 +546,34 @@ Follow these requirements:
     (cond-> top
       (seq props) (assoc :properties props))))
 
+(def batch-reference-section
+  "
+
+STYLE REFERENCE — an approved description of a previous facility of the same type.
+Match its tone, topic ordering, sentence patterns, and vocabulary. DO NOT copy its
+paragraph count — let each facility's description length follow its own data.
+Omit topics that are not supported by a given facility's data.
+
+Reference (Finnish):
+Summary: %s
+Description: %s")
+
 (defn generate-ptv-descriptions
-  [sports-site]
-  (let [prompt-doc (->prompt-doc sports-site)]
+  "Generate PTV descriptions for a single sports site.
+   Optional `reference` {:summary :description} in Finnish anchors the style
+   to an approved description of a peer facility (same type, same org)."
+  [sports-site & [{:keys [reference]}]]
+  (let [prompt-doc  (->prompt-doc sports-site)
+        ref-section (if reference
+                      (format batch-reference-section
+                              (:summary reference)
+                              (:description reference))
+                      "")]
     (gemini-complete gemini-config
                      ptv-system-instruction-v5
-                     (format generate-utp-descriptions-prompt-v5 (json/encode prompt-doc)))))
+                     (format generate-utp-descriptions-prompt-v5
+                             ref-section
+                             (json/encode prompt-doc)))))
 
 ;;; ——— Batch generation ———————————————————————————————————————————————
 ;;
@@ -606,18 +628,6 @@ Return a \"sites\" array. Each entry's lipas-id MUST match the source data exact
 
 Source data:
 %s")
-
-(def batch-reference-section
-  "
-
-STYLE REFERENCE — an approved description of a previous facility of the same type.
-Match its tone, topic ordering, sentence patterns, and vocabulary. DO NOT copy its
-paragraph count — let each facility's description length follow its own data.
-Omit topics that are not supported by a given facility's data.
-
-Reference (Finnish):
-Summary: %s
-Description: %s")
 
 (defn generate-ptv-descriptions-batch
   "Generate PTV descriptions for a batch of same-type sports sites in one call.

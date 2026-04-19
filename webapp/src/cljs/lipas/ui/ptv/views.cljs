@@ -136,28 +136,7 @@
           "Auditoijan palaute")]
        feedback])))
 
-(defn ptv-link-field
-  "Shows PTV items as links with an edit button to switch to selector mode.
-   Props: :label, :items [{:id :name :url}], :editing?, :on-edit, :on-cancel, :selector-component"
-  [{:keys [label items editing? on-edit on-cancel selector-component tooltip tr]}]
-  (if (and (seq items) (not editing?))
-    [:> Stack {:spacing 0.5}
-     [:> Stack {:direction "row" :align-items "center" :spacing 0.5}
-      [:> Typography {:variant "caption" :color "text.secondary"} label]
-      [:> Tooltip {:title (or tooltip "")}
-       [:> IconButton {:size "small" :on-click on-edit
-                       :sx #js {:p 0}}
-        [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]]]
-     (for [{:keys [id name url]} items]
-       ^{:key id}
-       [:> Link {:href url :target "_blank" :variant "body2"} (or name id)])]
-    [:> Stack {:spacing 0.5}
-     selector-component
-     (when (and editing? (seq items))
-       [:> Button {:size "small" :variant "text"
-                   :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
-                   :on-click on-cancel}
-        (tr :actions/cancel)])]))
+(def ptv-link-field ptv-components/ptv-link-field)
 
 (defn form-left-column
   [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
@@ -1736,175 +1715,6 @@
                                :org-languages org-languages
                                :selected-tab selected-tab}]]]])))
 
-(defn- add-service-create-form
-  "Form for creating a new service from a sub-category.
-   Two-column layout matching service-panel: left=selector+buttons, right=text fields."
-  [{:keys [on-cancel]}]
-  (r/with-let [source-id (r/atom nil)
-               selected-tab (r/atom :fi)]
-    (let [tr (<== [:lipas.ui.subs/translator])
-          org-id (<== [::subs/selected-ptv-org-id])
-          missing-subcategories (<== [::subs/missing-subcategories org-id])
-          org-languages (<== [::subs/org-languages org-id])
-          descriptions (<== [::subs/service-candidate-descriptions org-id])
-          desc (when @source-id (get descriptions @source-id))
-          generating? (<== [::subs/generating-service-descriptions? @source-id])
-          syncing? (when @source-id (<== [::subs/syncing-service? @source-id]))
-          valid? (and @source-id
-                      (some-> desc :summary :fi count (> 5))
-                      (some-> desc :description :fi count (> 5))
-                      (some-> desc :user-instruction :fi count (> 5)))]
-      [:> Grid {:container true :spacing 3}
-
-       ;; Left column: selector and action buttons
-       [:> Grid {:item true :xs 12 :md 5}
-        [:> Stack {:spacing 2}
-         [controls/services-selector
-          {:options missing-subcategories
-           :multiple false
-           :value @source-id
-           :value-fn :source-id
-           :on-change (fn [v]
-                        (reset! source-id v)
-                        (when v
-                          (==> [::events/set-manual-services org-id [v] missing-subcategories])))
-           :label (tr :ptv.service/select-sub-category)}]
-
-         (when @source-id
-           [:<>
-            ;; AI generate + translate buttons
-            (let [from-lang @selected-tab
-                  other-langs (disj (set (map keyword org-languages)) from-lang)
-                  has-text? (and (seq (get-in desc [:summary from-lang]))
-                                 (seq (get-in desc [:description from-lang])))]
-              [:> Stack {:direction "row" :spacing 1 :flex-wrap "wrap" :align-items "flex-start"}
-               [:> Button
-                {:variant "outlined" :size "small" :disabled generating?
-                 :sx #js {:textTransform "none"}
-                 :startIcon (r/as-element
-                              (if generating?
-                                [:> CircularProgress {:size 16 :color "inherit"}]
-                                [:> Icon "auto_fix_high"]))
-                 :on-click #(==> [::events/generate-service-descriptions org-id @source-id nil [] []])}
-                (tr :ptv.actions/generate-with-ai)]
-               (when (> (count org-languages) 1)
-                 [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                  [:> Button
-                   {:size "small" :variant "outlined"
-                    :disabled (or generating? (not has-text?))
-                    :startIcon (r/as-element
-                                 (if generating?
-                                   [:> CircularProgress {:size 16 :color "inherit"}]
-                                   [:> Icon "translate"]))
-                    :sx #js {:textTransform "none"}
-                    :on-click #(==> [::events/translate-service-candidate-with-texts
-                                     @source-id from-lang other-langs
-                                     {:summary (get-in desc [:summary from-lang])
-                                      :description (get-in desc [:description from-lang])
-                                      :user-instruction (get-in desc [:user-instruction from-lang])}])}
-                   (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                        (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]])])
-
-            [:> Button
-             {:variant "contained" :color "secondary" :size "small" :full-width true
-              :disabled (or syncing? (not valid?))
-              :sx #js {:textTransform "none"}
-              :startIcon (r/as-element
-                           (if syncing?
-                             [:> CircularProgress {:size 16 :color "inherit"}]
-                             [:> Icon "ios_share"]))
-              :on-click #(let [data (merge {:org-id org-id
-                                            :source-id @source-id
-                                            :sub-category-id (ptv-data/parse-service-source-id @source-id)
-                                            :languages org-languages}
-                                           desc)]
-                           (==> [::events/create-ptv-service org-id @source-id data [] []])
-                           (on-cancel))}
-             (tr :ptv.wizard/export-services-to-ptv)]])
-
-         [:> Button
-          {:size "small" :variant "text"
-           :sx #js {:textTransform "none" :alignSelf "flex-start"}
-           :on-click on-cancel}
-          (tr :actions/cancel)]]]
-
-       ;; Right column: language tabs + text fields
-       (when @source-id
-         [:> Grid {:item true :xs 12 :md 7}
-          [:> Stack {:spacing 2}
-           [controls/lang-selector
-            {:value @selected-tab
-             :on-change #(reset! selected-tab %)
-             :enabled-languages (set org-languages)}]
-
-           (let [v (or (get-in desc [:summary @selected-tab]) "")]
-             [text-fields/text-field
-              {:on-change #(==> [::events/set-service-candidate-summary @source-id @selected-tab %])
-               :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
-               :helperText (str (count v) "/150") :error (> (count v) 150)}])
-
-           (let [v (or (get-in desc [:description @selected-tab]) "")]
-             [text-fields/text-field
-              {:on-change #(==> [::events/set-service-candidate-description @source-id @selected-tab %])
-               :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
-               :helperText (str (count v) "/2500") :error (> (count v) 2500)}])
-
-           (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
-             [text-fields/text-field
-              {:on-change #(==> [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
-               :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
-               :helperText (str (count v) "/2500") :error (> (count v) 2500)}])]])])))
-
-(defn- add-service-link-form
-  "Form for linking an existing PTV service."
-  [{:keys [on-cancel]}]
-  (let [tr (<== [:lipas.ui.subs/translator])
-        org-id (<== [::subs/selected-ptv-org-id])
-        all-services (<== [::subs/services org-id])
-        non-lipas-services (remove #(some-> (:source-id %) (str/starts-with? "lipas-")) all-services)
-        org-languages (<== [::subs/org-languages org-id])]
-    [:> Stack {:spacing 2}
-     [controls/services-selector
-      {:options non-lipas-services
-       :multiple false
-       :value nil
-       :value-fn :service-id
-       :on-change (fn [service-id]
-                    (when service-id
-                      (let [service (some #(when (= (:service-id %) service-id) %) all-services)
-                            data (merge {:org-id org-id
-                                         :service-id service-id
-                                         :languages org-languages}
-                                        (select-keys service [:summary :description :user-instruction]))]
-                        (==> [::events/create-ptv-service org-id nil data [] []])
-                        (on-cancel))))
-       :label (tr :ptv.service/select-service)}]
-     [:> Button
-      {:size "small" :variant "text" :sx #js {:textTransform "none"}
-       :on-click on-cancel}
-      (tr :actions/cancel)]]))
-
-(defn add-service-panel
-  "Panel for creating a new service or linking an existing PTV service."
-  []
-  (r/with-let [mode (r/atom nil)]
-    (let [tr (<== [:lipas.ui.subs/translator])]
-      [:> Stack {:spacing 2 :sx #js {:p 2}}
-       (case @mode
-         :create [add-service-create-form {:on-cancel #(reset! mode nil)}]
-         :link   [add-service-link-form {:on-cancel #(reset! mode nil)}]
-         [:> Stack {:direction "row" :spacing 1}
-          [:> Button
-           {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-            :startIcon (r/as-element [:> Icon "add"])
-            :on-click #(reset! mode :create)}
-           (tr :ptv.service/create-new)]
-          [:> Button
-           {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-            :startIcon (r/as-element [:> Icon "link"])
-            :on-click #(reset! mode :link)}
-           (tr :ptv.service/link-existing)]])])))
-
 (defn services
   []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -1926,7 +1736,7 @@
         :on-change #(==> [::events/toggle-services-filter])}]]
 
      ;; Add service panel
-     [add-service-panel]
+     [ptv-components/add-service-panel {:org-id org-id}]
 
      ;; Services list
      (if (seq services)

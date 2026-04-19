@@ -20,12 +20,12 @@
 
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
-   lipas-id]
+   lipas-id & [{:keys [reference]}]]
   (let [idx (get-in indices [:sports-site :search])
         doc (-> (search/fetch-document client idx lipas-id)
                 :body
                 :_source)]
-    (-> (ai/generate-ptv-descriptions doc)
+    (-> (ai/generate-ptv-descriptions doc {:reference reference})
         :message
         :content)))
 
@@ -51,9 +51,9 @@
         :content)))
 
 (defn generate-ptv-descriptions-from-data
-  [doc]
+  [doc & [{:keys [reference]}]]
   (let [doc (core/enrich doc)]
-    (-> (ai/generate-ptv-descriptions doc)
+    (-> (ai/generate-ptv-descriptions doc {:reference reference})
         :message
         :content)))
 
@@ -163,6 +163,13 @@
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
+        ;; Languages are determined by the org's live PTV config at sync time —
+        ;; we don't trust the site's persisted :languages because it may be a
+        ;; snapshot from an older org config. See calc-derived-fields archaeology.
+        org-config (ptv/get-org-ptv-config-with-fallback ptv-component org-id)
+        org-langs (or (:supported-languages org-config)
+                      ptv-data/fallback-languages)
+        ptv (assoc ptv :languages org-langs)
         ;; merge or just replace?
         site (update site :ptv merge ptv)
         ;; Use the same TS for sourceId, ptv last-sync and site event-date

@@ -22,4 +22,11 @@
  :audited "granskade",
  :notification-sent-success "Meddelande skickat till %1$s användare",
  :no-recipients-found "Inga mottagare hittades",
- :notification-sent "Meddelande skickat"}
+ :notification-sent "Meddelande skickat",
+ :issues-found "Problem upptäckta vid granskning",
+ :both-fields-need-changes "Både sammanfattningen och beskrivningen kräver ändringar. Se kommentarerna under fälten.",
+ :summary-needs-changes "Sammanfattningen kräver ändringar. Se kommentaren under fältet.",
+ :description-needs-changes "Beskrivningen kräver ändringar. Se kommentaren under fältet.",
+ :auditor-feedback "Granskarens respons",
+ :auditor-feedback-changes-requested "Granskarens respons – kräver ändringar",
+ :auditor-feedback-approved "Granskarens respons – godkänd"}
