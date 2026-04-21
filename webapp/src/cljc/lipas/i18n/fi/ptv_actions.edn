@@ -3,7 +3,7 @@
  "Olen lukenut kuvaukset ja haluan, että tämä kohde viedään PTV:hen.",
  :update-disclaimer
  "Olen lukenut kuvaukset ja haluan, että tämän kohteen tiedot päivitetään PTV:hen.",
- :generate-with-ai "Laadi kuvaukset tekoälyllä",
+ :generate-with-ai "Laadi luonnokset tekoälyllä",
  :select-org "Valitse organisaatio",
  :select-service "Valitse palvelu",
  :change-service "Muuta palvelua",

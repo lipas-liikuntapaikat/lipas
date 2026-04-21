@@ -616,7 +616,7 @@ ADAPT TO DATA DENSITY — a facility with sparse data gets a SHORTER description
 Per facility, produce:
 - summary: A complete sentence (not a list). Max 150 chars/language.
 - description: 2–4 paragraphs, topic order as above. Include a brief usage instruction. Max 2000 chars/language.
-- user-instruction: 1–3 sentences on how to access. Max 2500 chars/language.
+- user-instruction: 1–3 sentences on how to access. Max 5000 chars/language.
 
 BEFORE WRITING, verify for EACH facility:
 1. STATUS — is it \"active\", \"out-of-service-permanently\", or other? Reflect this.
@@ -656,7 +656,7 @@ Source data:
 
 1) Administrative summary (maximum 150 characters)
 2) Service description (2-3 paragraphs)
-3) User instruction (toimintaohje) - how to access the service (max 2500 characters)
+3) User instruction (toimintaohje) - how to access the service (max 5000 characters)
 
 Requirements:
 - Maintain administrative tone in target languages
@@ -767,7 +767,7 @@ User instruction (Toimintaohje): 1–3 sentences telling the citizen how to acce
 or start using the service. What concrete steps should they take? Can they go
 directly to a facility, or do they need to book or register first? Keep it
 actionable and written for the citizen. Do not include addresses or phone numbers.
-Max 2500 chars/language.
+Max 5000 chars/language.
 - GOOD: \"Liikuntapaikat ovat vapaasti käytettävissä. Tarkista aukioloajat ja yhteystiedot palvelupaikkojen kuvauksista.\"
 - GOOD: \"Uimahallin käyttö edellyttää pääsylipun ostamista. Tarkista aukioloajat ja hinnat palvelupaikan kuvauksesta.\"
 
