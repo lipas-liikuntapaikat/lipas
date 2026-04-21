@@ -177,6 +177,15 @@
 
 (def default-langs ["fi"])
 
+;; Per-language character limits enforced by the PTV API. Exceeding these
+;; produces a 400 (e.g. "Maximum length of property 'Value' for 'Summary'
+;; must be '150'."). Applies to serviceDescriptions (Service) and
+;; serviceChannelDescriptions (ServiceLocation). ServiceLocation does not
+;; support user-instruction at all.
+(def max-description-length 5000)
+(def max-summary-length 150)
+(def max-user-instruction-length 5000)
+
 (defn ->service-source-id
   [org-id sub-category-id]
   (str "lipas-" org-id "-" sub-category-id))
