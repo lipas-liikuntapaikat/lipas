@@ -3,15 +3,15 @@
  :attach-to-conflicting-service-channel "Liitä tähän palvelupaikkaan",
  :export-service-locations-to-ptv "Vie palvelutietovarantoon",
  :export-services-to-ptv "Vie palvelutietovarantoon",
- :generate-descriptions "Laadi kuvaukset",
- :generate-descriptions-all "Laadi kuvaukset kaikille",
- :regenerate-descriptions "Päivitä kuvaukset",
+ :generate-descriptions "Laadi luonnokset",
+ :generate-descriptions-all "Laadi luonnokset kaikille",
+ :regenerate-descriptions "Päivitä luonnokset",
  :generate-descriptions-helper1
- "Palvelut voidaan perustaa PTV:hen, kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti.",
+ "Palvelut voidaan perustaa PTV:hen, kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, asiasanat ja muut metatiedot automaattisesti.",
  :generate-descriptions-helper2
- "Paina \"Laadi kuvaukset\" -painiketta luodaksesi kuvaukset automaattisesti tekoälyn avulla. Kuvaukset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta.",
+ "Paina \"Laadi luonnokset\" -painiketta luodaksesi luonnokset automaattisesti tekoälyn avulla. Luonnokset laaditaan Lipakseen tallennettujen liikuntapaikkojen pohjalta.",
  :generate-descriptions-helper3
- "Palvelupaikat voidaan perustaa PTV:hen kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, avainsanat ja muut metatiedot automaattisesti.",
+ "Palvelupaikat voidaan perustaa PTV:hen kun niissä on vähintään suomenkielinen kuvaus ja tiivistelmä. LIPAS täydentää palveluluokituksen, asiasanat ja muut metatiedot automaattisesti.",
  :integrate-service-locations "Luo liikuntapaikoista palvelupaikat",
  :service-channel-name-conflict
  "PTV:ssä on jo olemassa palvelupaikka nimellä {1}.",
