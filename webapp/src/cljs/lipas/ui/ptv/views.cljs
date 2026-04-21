@@ -377,8 +377,8 @@
          :on-change #(==> [::events/set-summary site @selected-tab %])
          :label (tr :ptv/summary)
          :value v
-         :helperText (str (count v) "/150")
-         :error (> (count v) 150)}])
+         :helperText (str (count v) "/" ptv-data/max-summary-length)
+         :error (> (count v) ptv-data/max-summary-length)}])
 
      [audit-feedback-component
       {:lipas-id (:lipas-id site)
@@ -394,8 +394,8 @@
          :on-change #(==> [::events/set-description site @selected-tab %])
          :label (tr :ptv/description)
          :value v
-         :helperText (str (count v) "/2500")
-         :error (> (count v) 2500)}])
+         :helperText (str (count v) "/" ptv-data/max-description-length)
+         :error (> (count v) ptv-data/max-description-length)}])
 
      [audit-feedback-component
       {:lipas-id (:lipas-id site)
@@ -1110,7 +1110,7 @@
                        (when (contains? languages "en")
                          [:> Tab {:value "en" :label "EN"}])])
 
-                    ;; Summary (max 150 chars)
+                    ;; Summary
                     (let [summary-val (or (get-in m [:summary @selected-tab]) "")
                           summary-len (count summary-val)]
                       [text-fields/text-field
@@ -1119,10 +1119,10 @@
                         :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
                         :label (tr :ptv/summary)
                         :value summary-val
-                        :helperText (str summary-len "/150")
-                        :error (> summary-len 150)}])
+                        :helperText (str summary-len "/" ptv-data/max-summary-length)
+                        :error (> summary-len ptv-data/max-summary-length)}])
 
-                    ;; Description (max 2500 chars)
+                    ;; Description
                     (let [desc-val (or (get-in m [:description @selected-tab]) "")
                           desc-len (count desc-val)]
                       [text-fields/text-field
@@ -1132,10 +1132,10 @@
                         :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
                         :label (tr :ptv/description)
                         :value desc-val
-                        :helperText (str desc-len "/2500")
-                        :error (> desc-len 2500)}])
+                        :helperText (str desc-len "/" ptv-data/max-description-length)
+                        :error (> desc-len ptv-data/max-description-length)}])
 
-                    ;; User instruction / Toimintaohje (max 2500 chars)
+                    ;; User instruction / Toimintaohje
                     (let [ui-val (or (get-in m [:user-instruction @selected-tab]) "")
                           ui-len (count ui-val)]
                       [text-fields/text-field
@@ -1145,8 +1145,8 @@
                         :on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
                         :label (tr :ptv/user-instruction)
                         :value ui-val
-                        :helperText (str ui-len "/2500")
-                        :error (> ui-len 2500)}])])
+                        :helperText (str ui-len "/" ptv-data/max-user-instruction-length)
+                        :error (> ui-len ptv-data/max-user-instruction-length)}])])
 
                  (when (= "preview" service-details-tab)
                    [service-preview
@@ -1691,8 +1691,8 @@
          :variant "outlined"
          :label (tr :ptv/summary)
          :value v
-         :helperText (str (count v) "/150")
-         :error (> (count v) 150)}])
+         :helperText (str (count v) "/" ptv-data/max-summary-length)
+         :error (> (count v) ptv-data/max-summary-length)}])
 
      ;; Description
      (let [v (or (get description-data @selected-tab) "")]
@@ -1703,8 +1703,8 @@
          :multiline true
          :label (tr :ptv/description)
          :value v
-         :helperText (str (count v) "/2500")
-         :error (> (count v) 2500)}])
+         :helperText (str (count v) "/" ptv-data/max-description-length)
+         :error (> (count v) ptv-data/max-description-length)}])
 
      ;; User instruction
      (let [v (or (get user-instruction-data @selected-tab) "")]
@@ -1715,8 +1715,8 @@
          :multiline true
          :label (tr :ptv/user-instruction)
          :value v
-         :helperText (str (count v) "/2500")
-         :error (> (count v) 2500)}])]))
+         :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
+         :error (> (count v) ptv-data/max-user-instruction-length)}])]))
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]

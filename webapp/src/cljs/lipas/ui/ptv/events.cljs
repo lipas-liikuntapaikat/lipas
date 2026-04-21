@@ -403,7 +403,7 @@
           org-id (-get-ptv-org-id db)
           resp (update resp :summary
                        (fn [m] (reduce-kv (fn [acc k v]
-                                            (assoc acc k (when v (subs v 0 (min 150 (count v))))))
+                                            (assoc acc k (when v (subs v 0 (min ptv-data/max-summary-length (count v))))))
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)
@@ -826,10 +826,9 @@
   (fn [{:keys [db]} [_ source-id resp]]
     (let [tr (:translator db)
           org-id (-get-ptv-org-id db)
-                         ;; Truncate summaries to 150 chars max
           resp (update resp :summary
                        (fn [m] (reduce-kv (fn [acc k v]
-                                            (assoc acc k (when v (subs v 0 (min 150 (count v))))))
+                                            (assoc acc k (when v (subs v 0 (min ptv-data/max-summary-length (count v))))))
                                           {} m)))]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :descriptions] false)

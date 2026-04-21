@@ -435,8 +435,8 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
             :label (tr :ptv/summary)
             :value v
-            :helperText (str (count v) "/150")
-            :error (> (count v) 150)}])
+            :helperText (str (count v) "/" ptv-data/max-summary-length)
+            :error (> (count v) ptv-data/max-summary-length)}])
 
         ;; Summary audit feedback
         [audit-feedback-component
@@ -458,8 +458,8 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
             :label (tr :ptv/description)
             :value v
-            :helperText (str (count v) "/2500")
-            :error (> (count v) 2500)}])
+            :helperText (str (count v) "/" ptv-data/max-description-length)
+            :error (> (count v) ptv-data/max-description-length)}])
 
         ;; Description audit feedback
         [audit-feedback-component

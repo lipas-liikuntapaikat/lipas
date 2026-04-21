@@ -373,19 +373,22 @@
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-summary @source-id @selected-tab %])
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
-                :helperText (str (count v) "/150") :error (> (count v) 150)}])
+                :helperText (str (count v) "/" ptv-data/max-summary-length)
+                :error (> (count v) ptv-data/max-summary-length)}])
 
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
-                :helperText (str (count v) "/2500") :error (> (count v) 2500)}])
+                :helperText (str (count v) "/" ptv-data/max-description-length)
+                :error (> (count v) ptv-data/max-description-length)}])
 
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                 :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
-                :helperText (str (count v) "/2500") :error (> (count v) 2500)}])]])]])))
+                :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
+                :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
 
 (defn add-service-link-form
   "Form for linking (adopting) an existing PTV service into LIPAS management.
