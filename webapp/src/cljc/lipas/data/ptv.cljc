@@ -316,11 +316,11 @@
         {:is-finnish-service-number true
          :number (str/replace n #" " "")}
         (let [prefix (or ;; Special case for +358 prefix, doesn't allow fourth number
-                      (re-find #"^\+358" n)
+                       (re-find #"^\+358" n)
                          ;; Generic 1-4 number + prefix, if there are no spaces, will include
                          ;; too many numbers...?
-                      (re-find RE-PREFIX n)
-                      "+358")
+                       (re-find RE-PREFIX n)
+                       "+358")
               ;; strip the prefix
               n (-> (if (str/starts-with? n prefix)
                       (subs n (count prefix))
@@ -376,42 +376,49 @@
                                  x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
                              (log/debugf "Creating new PTV ServiceLocation source-id %s" x)
                              x))
+             ;; Names/descriptions: emit only entries LIPAS has real content for.
+             ;; Finnish is always emitted (required field); sv/en only when the
+             ;; user has entered a localized value. The upsert layer then merges
+             ;; these on top of PTV's stored values so kunta-side edits to sv/en
+             ;; survive LIPAS syncs, and fills any remaining language coverage
+             ;; with a Finnish fallback before PUT.
              :serviceChannelNames (keep identity
-                                        (let [fallback (get-in sports-site [:name])]
-                                          [(when (contains? languages "fi")
-                                             {:type "Name"
-                                              :value fallback
-                                              :language "fi"})
+                                        (let [fi-name (:name sports-site)
+                                              sv-name (get-in sports-site [:name-localized :se])
+                                              en-name (get-in sports-site [:name-localized :en])
+                                              marketing (:marketing-name sports-site)]
+                                          [(when (and (contains? languages "fi")
+                                                      (not (str/blank? fi-name)))
+                                             {:type "Name" :value fi-name :language "fi"})
+                                           (when (and (contains? languages "sv")
+                                                      (not (str/blank? sv-name)))
+                                             {:type "Name" :value sv-name :language "sv"})
+                                           (when (and (contains? languages "en")
+                                                      (not (str/blank? en-name)))
+                                             {:type "Name" :value en-name :language "en"})
+                                           (when (and (contains? languages "fi")
+                                                      (not (str/blank? marketing)))
+                                             {:type "AlternativeName" :value marketing :language "fi"})]))
 
-                                           (when (contains? languages "sv")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :se] fallback)
-                                              :language "sv"})
+             ;; Mirrors the Name entries we actually emit. Post-merge the upsert
+             ;; layer regenerates this to match the final covered languages.
+             :displayNameType (vec (for [lang ["fi" "sv" "en"]
+                                         :when (contains? languages lang)
+                                         :let [key (case lang "fi" :name
+                                                         "sv" [:name-localized :se]
+                                                         "en" [:name-localized :en])
+                                               v (if (vector? key) (get-in sports-site key) (get sports-site key))]
+                                         :when (not (str/blank? v))]
+                                     {:type "Name" :language lang}))
 
-                                           (when (contains? languages "en")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :en] fallback)
-                                              :language "en"})
-
-                                           (when (contains? languages "fi")
-                                             (when-let [s (:marketing-name sports-site)]
-                                               {:type "AlternativeName"
-                                                :value s
-                                                :language "fi"}))]))
-
-             :displayNameType (keep identity
-                                    [(when (contains? languages "fi") {:type "Name" :language "fi"})
-                                     (when (contains? languages "sv") {:type "Name" :language "sv"})
-                                     (when (contains? languages "en") {:type "Name" :language "en"})])
-
-             :serviceChannelDescriptions (keep identity
-                                               (let [fallback "TODO text missing"]
-                                                 (for [[type-k type-v] {:summary "Summary"
-                                                                        :description "Description"}
-                                                       [lang locale] (resolve-lang-pairs lipas-languages)]
-                                                   {:type type-v
-                                                    :value (get-in ptv [type-k locale] fallback)
-                                                    :language lang})))
+             :serviceChannelDescriptions (vec (for [[type-k type-v] {:summary "Summary"
+                                                                     :description "Description"}
+                                                    [lang locale] (resolve-lang-pairs lipas-languages)
+                                                    :let [v (get-in ptv [type-k locale])]
+                                                    :when (and (string? v) (not (str/blank? v)))]
+                                                {:type type-v
+                                                 :value v
+                                                 :language lang}))
 
              ;; TODO should this be controlled in org or sports-site level?
              :languages languages
@@ -600,8 +607,8 @@
             (let [ssname (resolve-service-channel-name service-channel)
                   s2 (some-> ssname str/trim str/lower-case)]
               (when (and
-                     (not (contains? attached-channels (:id service-channel)))
-                     (= s1 s2))
+                      (not (contains? attached-channels (:id service-channel)))
+                      (= s1 s2))
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
