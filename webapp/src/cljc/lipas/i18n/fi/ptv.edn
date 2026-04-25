@@ -13,7 +13,7 @@
  :synced-to-ptv "Viety PTV:hen",
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
  :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
- :modified-in-ptv "Muokattu PTV:ssä – tila on \"Muokattu\". Julkaise tai peru muutokset ensin PTV:ssä ennen synkronointia.",
+ :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
  :sync-failed-ptv-modified "Synkronointi epäonnistui: PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
  :sync-failed "Synkronointi PTV:hen epäonnistui.",
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",

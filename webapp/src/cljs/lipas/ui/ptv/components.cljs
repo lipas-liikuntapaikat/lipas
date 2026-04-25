@@ -25,6 +25,7 @@
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.ptv.controls :as controls]
+            [lipas.ui.ptv.diff :as ptv-diff]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [re-frame.core :as rf]
@@ -83,11 +84,49 @@
      (tr :ptv.drift/empty)]
     [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} value]))
 
+(def ^:private diff-styles
+  {;; LIPAS column: highlight tokens present only in LIPAS — these are
+   ;; what's about to be pushed into PTV. Green underline.
+   :lipas {:background "#e6f4ea"
+           :font-weight 500
+           :text-decoration "underline"
+           :text-decoration-color "#137333"}
+   ;; PTV column: highlight tokens present only in PTV — these are what
+   ;; will be erased on the next sync. Red strikethrough.
+   :ptv {:background "#fce8e6"
+         :text-decoration "line-through"
+         :text-decoration-color "#c5221f"}})
+
+(defn- diffed-cell
+  "Render one column of a side-by-side word diff. `ops` is the result
+   of `(ptv-diff/diff lipas-text ptv-text)` already coalesced. `side` is
+   :lipas or :ptv and determines which ops are skipped (the other side's
+   additions) and which are highlighted (this side's additions)."
+  [tr ops side]
+  (let [skip-op (case side :lipas :added :ptv :removed)
+        highlight-op (case side :lipas :removed :ptv :added)
+        highlight-style (clj->js (get diff-styles side))
+        any-content? (some (fn [[op _]] (or (= op :equal) (= op highlight-op))) ops)]
+    (if any-content?
+      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}}
+       (into [:<>]
+             (for [[i [op v]] (map-indexed vector ops)
+                   :when (not= op skip-op)]
+               (if (= op highlight-op)
+                 ^{:key i} [:span {:style highlight-style} v]
+                 ^{:key i} [:span v])))]
+      [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+       (tr :ptv.drift/empty)])))
+
+(def ^:private text-fields
+  "Drift fields where word-level diff highlighting helps readability."
+  #{:name :marketing-name :summary :description})
+
 (defn- drift-services-cell
-  [tr id-set]
-  (if (seq id-set)
+  [tr entries]
+  (if (seq entries)
     [:> Typography {:variant "body2"}
-     (str/join ", " id-set)]
+     (str/join ", " (map (fn [{:keys [id name]}] (or name id)) entries))]
     [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
      (tr :ptv.drift/empty)]))
 
@@ -119,7 +158,8 @@
           [:> TableCell {:sx #js {:verticalAlign "top"}}
            [:> Typography {:variant "body2" :sx #js {:fontWeight 500}}
             (drift-field-label tr entry)]]
-          (if (= field :services)
+          (cond
+            (= field :services)
             [:<>
              [:> TableCell {:sx #js {:verticalAlign "top"}}
               [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
@@ -135,6 +175,16 @@
               (when (seq added)
                 [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
                  (tr :ptv.drift/services-will-be-removed)])]]
+
+            (contains? text-fields field)
+            (let [ops (ptv-diff/coalesce (ptv-diff/diff lipas ptv))]
+              [:<>
+               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+                [diffed-cell tr ops :lipas]]
+               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+                [diffed-cell tr ops :ptv]]])
+
+            :else
             [:<>
              [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
               [drift-cell tr lipas]]
