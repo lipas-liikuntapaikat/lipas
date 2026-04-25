@@ -1,0 +1,18 @@
+{:title "Innehållet skiljer sig mellan LIPAS och PTV"
+ :warning "Vid nästa synkronisering skickas LIPAS-värdena till PTV och de avvikande värdena skrivs över."
+ :instruction "Kontrollera vilken sida som har rätt innehåll. Om värdet i PTV är korrekt, uppdatera även LIPAS innan nästa synkronisering."
+ :field-header "Fält"
+ :lipas-header "LIPAS (skickas till PTV)"
+ :ptv-header "PTV (nuvarande)"
+ :empty "(inget värde)"
+
+ :field-name "Namn"
+ :field-marketing-name "Marknadsföringsnamn"
+ :field-summary "Sammanfattning"
+ :field-description "Beskrivning"
+ :field-services "Anslutna tjänster"
+
+ :services-lipas-has "Anslutet i LIPAS:"
+ :services-ptv-has "Anslutet i PTV:"
+ :services-will-remain "Bevaras efter synkronisering."
+ :services-will-be-removed "Tas bort vid nästa synkronisering."}

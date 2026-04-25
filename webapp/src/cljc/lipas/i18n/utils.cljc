@@ -59,6 +59,7 @@
    :ptv.actions
    :ptv.audit
    :ptv.audit.status
+   :ptv.drift
    :ptv.name-conflict
    :ptv.service
    :ptv.tools.ai

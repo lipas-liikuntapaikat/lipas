@@ -1,5 +1,6 @@
 (ns lipas.data.ptv
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
@@ -316,11 +317,11 @@
         {:is-finnish-service-number true
          :number (str/replace n #" " "")}
         (let [prefix (or ;; Special case for +358 prefix, doesn't allow fourth number
-                      (re-find #"^\+358" n)
+                       (re-find #"^\+358" n)
                          ;; Generic 1-4 number + prefix, if there are no spaces, will include
                          ;; too many numbers...?
-                      (re-find RE-PREFIX n)
-                      "+358")
+                       (re-find RE-PREFIX n)
+                       "+358")
               ;; strip the prefix
               n (-> (if (str/starts-with? n prefix)
                       (subs n (count prefix))
@@ -376,42 +377,43 @@
                                  x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
                              (log/debugf "Creating new PTV ServiceLocation source-id %s" x)
                              x))
+             ;; Per-language rule (one-way LIPAS→PTV): every declared language
+             ;; gets full coverage in serviceChannelNames / displayNameType /
+             ;; serviceChannelDescriptions. For sv/en, use the LIPAS-entered
+             ;; localized value if non-blank, otherwise fall back to the
+             ;; Finnish value. PTV-side edits to these fields are not
+             ;; preserved — drift is surfaced separately in the LIPAS UI.
              :serviceChannelNames (keep identity
-                                        (let [fallback (get-in sports-site [:name])]
+                                        (let [fi-name (:name sports-site)
+                                              pick (fn [locale]
+                                                     (let [v (get-in sports-site [:name-localized locale])]
+                                                       (if (str/blank? v) fi-name v)))]
                                           [(when (contains? languages "fi")
-                                             {:type "Name"
-                                              :value fallback
-                                              :language "fi"})
-
+                                             {:type "Name" :value fi-name :language "fi"})
                                            (when (contains? languages "sv")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :se] fallback)
-                                              :language "sv"})
-
+                                             {:type "Name" :value (pick :se) :language "sv"})
                                            (when (contains? languages "en")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :en] fallback)
-                                              :language "en"})
-
-                                           (when (contains? languages "fi")
-                                             (when-let [s (:marketing-name sports-site)]
-                                               {:type "AlternativeName"
-                                                :value s
-                                                :language "fi"}))]))
+                                             {:type "Name" :value (pick :en) :language "en"})
+                                           (when (and (contains? languages "fi")
+                                                      (not (str/blank? (:marketing-name sports-site))))
+                                             {:type "AlternativeName" :value (:marketing-name sports-site) :language "fi"})]))
 
              :displayNameType (keep identity
                                     [(when (contains? languages "fi") {:type "Name" :language "fi"})
                                      (when (contains? languages "sv") {:type "Name" :language "sv"})
                                      (when (contains? languages "en") {:type "Name" :language "en"})])
 
-             :serviceChannelDescriptions (keep identity
-                                               (let [fallback "TODO text missing"]
-                                                 (for [[type-k type-v] {:summary "Summary"
-                                                                        :description "Description"}
-                                                       [lang locale] (resolve-lang-pairs lipas-languages)]
-                                                   {:type type-v
-                                                    :value (get-in ptv [type-k locale] fallback)
-                                                    :language lang})))
+             :serviceChannelDescriptions (let [pick (fn [type-k locale]
+                                                      (let [v (get-in ptv [type-k locale])]
+                                                        (if (str/blank? v)
+                                                          (or (get-in ptv [type-k :fi]) placeholder)
+                                                          v)))]
+                                           (vec (for [[type-k type-v] {:summary "Summary"
+                                                                       :description "Description"}
+                                                      [lang locale] (resolve-lang-pairs lipas-languages)]
+                                                  {:type type-v
+                                                   :value (pick type-k locale)
+                                                   :language lang})))
 
              ;; TODO should this be controlled in org or sports-site level?
              :languages languages
@@ -600,8 +602,8 @@
             (let [ssname (resolve-service-channel-name service-channel)
                   s2 (some-> ssname str/trim str/lower-case)]
               (when (and
-                     (not (contains? attached-channels (:id service-channel)))
-                     (= s1 s2))
+                      (not (contains? attached-channels (:id service-channel)))
+                      (= s1 s2))
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
@@ -682,6 +684,109 @@
                          [:fi :se :en])))
              fields))))
 
+(defn- effective-lipas-name
+  "What LIPAS will push for [type, locale] under the strict 1-way model.
+   Mirrors the per-language fallback rule in `->ptv-service-location`:
+   sv/en use the localized name when entered, else the Finnish name.
+   Returns nil when LIPAS has nothing to push (e.g., AlternativeName
+   without a marketing-name)."
+  [site type locale]
+  (case type
+    "Name" (let [v (get-in site [:name-localized locale])]
+             (if (str/blank? v) (:name site) v))
+    "AlternativeName" (when-not (str/blank? (:marketing-name site))
+                        (:marketing-name site))))
+
+(defn- effective-lipas-text
+  "Mirrors the description fallback in `->ptv-service-location`: use the
+   localized value if entered, else the Finnish value, else nil."
+  [site field locale]
+  (let [m (get-in site [:ptv field])
+        v (get m locale)]
+    (if (str/blank? v) (get m :fi) v)))
+
+(defn- resolve-service-name
+  "Resolve a service ID to a human-readable Finnish name from the
+   services-by-id map. Falls back to the ID when the service isn't
+   in the cache (e.g. external services or stale cache)."
+  [services service-id]
+  (or (some-> (get services service-id)
+              :serviceNames
+              select-service-name)
+      service-id))
+
+(defn compute-service-channel-drift
+  "Build a structured per-field drift report comparing what LIPAS would
+   push on next sync against what's currently stored in PTV. Returns a
+   vector of entries; empty vector means no drift. Each entry has
+   `:field` (:name, :marketing-name, :summary, :description, :services).
+   For value fields, the entry has localized `:lipas`/`:ptv` strings
+   (with `:language`, `:type`, `:locale`). For service link drift, the
+   entry's `:lipas`/`:ptv`/`:added`/`:removed` are vectors of
+   `{:id :name}` maps so the UI can show readable service names rather
+   than raw UUIDs.
+
+   `site` is the LIPAS sports-site map; `ptv-channel` is the cached PTV
+   ServiceChannel response (or nil if unavailable); `services` is the
+   org's services-by-id map used for resolving service names; and
+   `lipas-languages` is the list of LIPAS-side language codes
+   (e.g. [\"fi\" \"se\" \"en\"]) to consider. Returns nil when the
+   channel hasn't been fetched yet."
+  [site ptv-channel services lipas-languages]
+  (when ptv-channel
+    (let [ptv-names (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelNames ptv-channel))
+          ptv-descs (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelDescriptions ptv-channel))
+          lang-pairs (resolve-lang-pairs lipas-languages)
+          trim #(some-> % str/trim not-empty)
+          mk-text-comparison (fn [field type-v]
+                               (for [[ptv-lang locale] lang-pairs]
+                                 {:field field
+                                  :type type-v
+                                  :language ptv-lang
+                                  :locale locale
+                                  :lipas (effective-lipas-text site (case field
+                                                                      :summary :summary
+                                                                      :description :description) locale)
+                                  :ptv (get ptv-descs [type-v ptv-lang])}))
+          comparisons (concat
+                        (for [[ptv-lang locale] lang-pairs]
+                          {:field :name
+                           :type "Name"
+                           :language ptv-lang
+                           :locale locale
+                           :lipas (effective-lipas-name site "Name" locale)
+                           :ptv (get ptv-names ["Name" ptv-lang])})
+                        [{:field :marketing-name
+                          :type "AlternativeName"
+                          :language "fi"
+                          :locale :fi
+                          :lipas (effective-lipas-name site "AlternativeName" :fi)
+                          :ptv (get ptv-names ["AlternativeName" "fi"])}]
+                        (mk-text-comparison :summary "Summary")
+                        (mk-text-comparison :description "Description"))
+          drifted (->> comparisons
+                       (keep (fn [c]
+                               (let [l (trim (:lipas c))
+                                     p (trim (:ptv c))]
+                                 (when (not= l p)
+                                   (assoc c :lipas l :ptv p))))))
+          lipas-service-ids (set (-> site :ptv :service-ids))
+          ptv-service-ids (->> (:services ptv-channel)
+                               (map (comp :id :service))
+                               (remove nil?)
+                               set)
+          mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
+          mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
+          link-drift (when (not= lipas-service-ids ptv-service-ids)
+                       [{:field :services
+                         :lipas (mk-entries lipas-service-ids)
+                         :ptv (mk-entries ptv-service-ids)
+                         :added (mk-entries (set/difference ptv-service-ids lipas-service-ids))
+                         :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
+      (vec (concat drifted link-drift)))))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
@@ -692,24 +797,16 @@
 
         last-sync (-> site :ptv :last-sync)
 
-        ;; Drift detection: compare LIPAS texts vs PTV ServiceChannel texts.
-        ;; ServiceChannels only carry summary + description, so user-instruction
-        ;; is intentionally excluded from the comparison.
-        lipas-texts {:summary summary :description description :user-instruction user-instruction}
+        ;; Drift detection: build a structured per-field diff comparing what
+        ;; LIPAS would push on next sync vs what's currently stored in PTV.
+        ;; Covers Name (per language), AlternativeName/marketing-name, Summary
+        ;; and Description (per language), and service-link membership.
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        content-drift? (and last-sync ptv-texts
-                            (not (texts-match? lipas-texts ptv-texts
-                                               service-channel-compare-fields)))
-
-        ;; Drift detection: compare LIPAS service linkings vs PTV service linkings
-        lipas-service-ids (set (-> site :ptv :service-ids))
-        ptv-service-ids (when ptv-channel
-                          (->> (:services ptv-channel)
-                               (map (comp :id :service))
-                               set))
-        links-drift? (and last-sync ptv-service-ids
-                          (not= lipas-service-ids ptv-service-ids))]
+        drift-langs (or (-> site :ptv :languages) org-langs)
+        drift-fields (when (and last-sync ptv-channel)
+                       (compute-service-channel-drift site ptv-channel services drift-langs))
+        has-drift? (boolean (seq drift-fields))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -735,9 +832,11 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
-                    (or content-drift? links-drift?) :content-drift
+                    has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
+
+     :drift-fields drift-fields
 
      :ptv-texts ptv-texts
 

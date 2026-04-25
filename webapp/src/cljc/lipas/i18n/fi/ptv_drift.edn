@@ -1,0 +1,18 @@
+{:title "Lipaksen ja PTV:n sisällöt eroavat toisistaan"
+ :warning "Seuraava synkronointi vie Lipaksen arvot PTV:hen ja korvaa eroavat tiedot."
+ :instruction "Tarkista, kummalla puolella on oikea sisältö. Jos PTV:n arvo on oikea, päivitä se myös Lipakseen ennen seuraavaa synkronointia."
+ :field-header "Kenttä"
+ :lipas-header "Lipas (viedään PTV:hen)"
+ :ptv-header "PTV (nykyinen tila)"
+ :empty "(ei arvoa)"
+
+ :field-name "Nimi"
+ :field-marketing-name "Markkinointinimi"
+ :field-summary "Tiivistelmä"
+ :field-description "Kuvaus"
+ :field-services "Liitetyt palvelut"
+
+ :services-lipas-has "Lipaksessa liitetty:"
+ :services-ptv-has "PTV:ssä liitetty:"
+ :services-will-remain "Pysyvät synkronoinnin jälkeen."
+ :services-will-be-removed "Poistetaan seuraavan synkronoinnin yhteydessä."}

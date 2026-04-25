@@ -1,0 +1,18 @@
+{:title "Content differs between LIPAS and PTV"
+ :warning "The next sync will push LIPAS values to PTV, overwriting the differing values."
+ :instruction "Check which side has the correct content. If the PTV value is correct, update LIPAS to match before the next sync."
+ :field-header "Field"
+ :lipas-header "LIPAS (will be pushed)"
+ :ptv-header "PTV (current)"
+ :empty "(no value)"
+
+ :field-name "Name"
+ :field-marketing-name "Marketing name"
+ :field-summary "Summary"
+ :field-description "Description"
+ :field-services "Linked services"
+
+ :services-lipas-has "Linked in LIPAS:"
+ :services-ptv-has "Linked in PTV:"
+ :services-will-remain "Will remain after sync."
+ :services-will-be-removed "Will be unlinked on next sync."}

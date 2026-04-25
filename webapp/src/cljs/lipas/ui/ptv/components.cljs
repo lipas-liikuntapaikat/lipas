@@ -1,6 +1,8 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
-  (:require ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/AlertTitle$default" :as AlertTitle]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Grid$default" :as Grid]
@@ -23,6 +25,7 @@
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.ptv.controls :as controls]
+            [lipas.ui.ptv.diff :as ptv-diff]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.ptv.subs :as subs]
             [re-frame.core :as rf]
@@ -47,10 +50,9 @@
                          :sx #js {:p 0}}
           [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]])]
      (for [{:keys [id name url]} items]
-       ^{:key id}
        (if url
-         [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
-         [:> Typography {:variant "body2"} (or name id)]))]
+         ^{:key id} [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
+         ^{:key id} [:> Typography {:variant "body2"} (or name id)]))]
     [:> Stack {:spacing 0.5}
      selector-component
      (when (and editing? (seq items))
@@ -58,6 +60,135 @@
                    :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                    :on-click on-cancel}
         (tr :actions/cancel)])]))
+
+(defn- drift-field-label
+  [tr {:keys [field type language]}]
+  (let [field-label (case field
+                      :name (tr :ptv.drift/field-name)
+                      :marketing-name (tr :ptv.drift/field-marketing-name)
+                      :summary (tr :ptv.drift/field-summary)
+                      :description (tr :ptv.drift/field-description)
+                      :services (tr :ptv.drift/field-services)
+                      (str field))]
+    (cond
+      (= field :services) field-label
+      (= type "AlternativeName") field-label
+      language (str field-label " (" (str/upper-case language) ")")
+      :else field-label)))
+
+(defn- drift-cell
+  [tr value]
+  (if (or (nil? value) (and (string? value) (str/blank? value)))
+    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+     (tr :ptv.drift/empty)]
+    [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} value]))
+
+(def ^:private diff-styles
+  {;; LIPAS column: highlight tokens present only in LIPAS — these are
+   ;; what's about to be pushed into PTV. Green underline.
+   :lipas {:background "#e6f4ea"
+           :font-weight 500
+           :text-decoration "underline"
+           :text-decoration-color "#137333"}
+   ;; PTV column: highlight tokens present only in PTV — these are what
+   ;; will be erased on the next sync. Red strikethrough.
+   :ptv {:background "#fce8e6"
+         :text-decoration "line-through"
+         :text-decoration-color "#c5221f"}})
+
+(defn- diffed-cell
+  "Render one column of a side-by-side word diff. `ops` is the result
+   of `(ptv-diff/diff lipas-text ptv-text)` already coalesced. `side` is
+   :lipas or :ptv and determines which ops are skipped (the other side's
+   additions) and which are highlighted (this side's additions)."
+  [tr ops side]
+  (let [skip-op (case side :lipas :added :ptv :removed)
+        highlight-op (case side :lipas :removed :ptv :added)
+        highlight-style (clj->js (get diff-styles side))
+        any-content? (some (fn [[op _]] (or (= op :equal) (= op highlight-op))) ops)]
+    (if any-content?
+      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}}
+       (into [:<>]
+             (for [[i [op v]] (map-indexed vector ops)
+                   :when (not= op skip-op)]
+               (if (= op highlight-op)
+                 ^{:key i} [:span {:style highlight-style} v]
+                 ^{:key i} [:span v])))]
+      [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+       (tr :ptv.drift/empty)])))
+
+(def ^:private text-fields
+  "Drift fields where word-level diff highlighting helps readability."
+  #{:name :marketing-name :summary :description})
+
+(defn- drift-services-cell
+  [tr entries]
+  (if (seq entries)
+    [:> Typography {:variant "body2"}
+     (str/join ", " (map (fn [{:keys [id name]}] (or name id)) entries))]
+    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+     (tr :ptv.drift/empty)]))
+
+(r/defc drift-panel
+  "Renders a per-field diff between the LIPAS-side value (what will be
+   pushed on the next sync) and the PTV-side value (what the kunta is
+   currently seeing in PTV). Only shown when the site has drift."
+  [{:keys [drift-fields tr]}]
+  (when (seq drift-fields)
+    [:> Alert {:severity "warning"
+               :icon false
+               :sx #js {:my 2}}
+     [:> AlertTitle (tr :ptv.drift/title)]
+     [:> Typography {:variant "body2" :sx #js {:mb 1}}
+      (tr :ptv.drift/warning)]
+     [:> Typography {:variant "body2" :sx #js {:mb 2}}
+      (tr :ptv.drift/instruction)]
+     [:> Table {:size "small" :sx #js {:bgcolor "background.paper"}}
+      [:> TableHead
+       [:> TableRow
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/field-header)]
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/lipas-header)]
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/ptv-header)]]]
+      [:> TableBody
+       (for [{:keys [field lipas ptv added removed] :as entry}
+             (sort-by (juxt :field :language) drift-fields)]
+         ^{:key (str field "-" (:language entry) "-" (:type entry))}
+         [:> TableRow
+          [:> TableCell {:sx #js {:verticalAlign "top"}}
+           [:> Typography {:variant "body2" :sx #js {:fontWeight 500}}
+            (drift-field-label tr entry)]]
+          (cond
+            (= field :services)
+            [:<>
+             [:> TableCell {:sx #js {:verticalAlign "top"}}
+              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
+               (tr :ptv.drift/services-lipas-has)]
+              [drift-services-cell tr lipas]
+              (when (seq removed)
+                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
+                 (tr :ptv.drift/services-will-remain)])]
+             [:> TableCell {:sx #js {:verticalAlign "top"}}
+              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
+               (tr :ptv.drift/services-ptv-has)]
+              [drift-services-cell tr ptv]
+              (when (seq added)
+                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
+                 (tr :ptv.drift/services-will-be-removed)])]]
+
+            (contains? text-fields field)
+            (let [ops (ptv-diff/coalesce (ptv-diff/diff lipas ptv))]
+              [:<>
+               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+                [diffed-cell tr ops :lipas]]
+               [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+                [diffed-cell tr ops :ptv]]])
+
+            :else
+            [:<>
+             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+              [drift-cell tr lipas]]
+             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+              [drift-cell tr ptv]]])])]]]))
 
 (r/defc service-location-preview
   "Preview component showing how a sports site will appear in PTV as a service location"
@@ -267,13 +398,14 @@
        [:> Grid {:container true :spacing 3}
 
         ;; Left column: selector and action buttons
-        [:> Grid {:item true :xs 12 :md 5}
+        [:> Grid {:size #js {:xs 12 :md 5}}
          [:> Stack {:spacing 2}
           (let [selector [controls/services-selector
                           {:options missing-subcategories
                            :multiple false
                            :value @source-id
                            :value-fn :source-id
+                           :sx #js {:minWidth 320}
                            :on-change (fn [v]
                                         (reset! source-id v)
                                         (when v
@@ -320,21 +452,22 @@
                  (tr :ptv.actions/generate-with-ai)]
                 (when (> (count org-languages) 1)
                   [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                   [:> Button
-                    {:size "small" :variant "outlined"
-                     :disabled (or generating? (not has-text?))
-                     :startIcon (r/as-element
-                                 (if generating?
-                                   [:> CircularProgress {:size 16 :color "inherit"}]
-                                   [:> Icon "translate"]))
-                     :sx #js {:textTransform "none"}
-                     :on-click #(rf/dispatch [::events/translate-service-candidate-with-texts
-                                              @source-id from-lang other-langs
-                                              {:summary (get-in desc [:summary from-lang])
-                                               :description (get-in desc [:description from-lang])
-                                               :user-instruction (get-in desc [:user-instruction from-lang])}])}
-                    (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                         (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]])])
+                   [:span
+                    [:> Button
+                     {:size "small" :variant "outlined"
+                      :disabled (or generating? (not has-text?))
+                      :startIcon (r/as-element
+                                  (if generating?
+                                    [:> CircularProgress {:size 16 :color "inherit"}]
+                                    [:> Icon "translate"]))
+                      :sx #js {:textTransform "none"}
+                      :on-click #(rf/dispatch [::events/translate-service-candidate-with-texts
+                                               @source-id from-lang other-langs
+                                               {:summary (get-in desc [:summary from-lang])
+                                                :description (get-in desc [:description from-lang])
+                                                :user-instruction (get-in desc [:user-instruction from-lang])}])}
+                     (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                          (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]]])])
 
              [:> Button
               {:variant "contained" :color "secondary" :size "small" :full-width true
@@ -362,7 +495,7 @@
 
         ;; Right column: language tabs + text fields
         (when @source-id
-          [:> Grid {:item true :xs 12 :md 7}
+          [:> Grid {:size #js {:xs 12 :md 7}}
            [:> Stack {:spacing 2}
             [controls/lang-selector
              {:value @selected-tab
@@ -372,6 +505,7 @@
             (let [v (or (get-in desc [:summary @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-summary @source-id @selected-tab %])
+                :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :helperText (str (count v) "/" ptv-data/max-summary-length)
                 :error (> (count v) ptv-data/max-summary-length)}])
@@ -379,6 +513,7 @@
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
+                :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
@@ -386,6 +521,7 @@
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
+                :fullWidth true
                 :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
                 :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
                 :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))

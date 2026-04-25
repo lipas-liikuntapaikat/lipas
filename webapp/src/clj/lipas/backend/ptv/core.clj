@@ -294,8 +294,9 @@
                archive? (assoc :publishingStatus "Deleted"))
         ;; Note: Update request doesn't update Service connections!
 
-        ;; TODO: Would be nice to avoid this, by getting the previous
-        ;; :ptv :service-ids value here.
+        ;; Fetch the stored channel for service-connection diffing below.
+        ;; Drift detection in `sports-site->ptv-input` uses a separately
+        ;; cached channel snapshot, not this fetch.
         old-service-location (when id
                                (ptv/get-org-service-channel ptv-component org-id id))
 
