@@ -1,5 +1,6 @@
 (ns lipas.data.ptv
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
@@ -683,6 +684,93 @@
                          [:fi :se :en])))
              fields))))
 
+(defn- effective-lipas-name
+  "What LIPAS will push for [type, locale] under the strict 1-way model.
+   Mirrors the per-language fallback rule in `->ptv-service-location`:
+   sv/en use the localized name when entered, else the Finnish name.
+   Returns nil when LIPAS has nothing to push (e.g., AlternativeName
+   without a marketing-name)."
+  [site type locale]
+  (case type
+    "Name" (let [v (get-in site [:name-localized locale])]
+             (if (str/blank? v) (:name site) v))
+    "AlternativeName" (when-not (str/blank? (:marketing-name site))
+                        (:marketing-name site))))
+
+(defn- effective-lipas-text
+  "Mirrors the description fallback in `->ptv-service-location`: use the
+   localized value if entered, else the Finnish value, else nil."
+  [site field locale]
+  (let [m (get-in site [:ptv field])
+        v (get m locale)]
+    (if (str/blank? v) (get m :fi) v)))
+
+(defn compute-service-channel-drift
+  "Build a structured per-field drift report comparing what LIPAS would
+   push on next sync against what's currently stored in PTV. Returns a
+   vector of entries; empty vector means no drift. Each entry has
+   `:field` (:name, :marketing-name, :summary, :description, :services)
+   and either localized `:lipas`/`:ptv` strings (with `:language`,
+   `:type`, `:locale`) or, for service link drift, `:added`/`:removed`
+   id sets.
+
+   `site` is the LIPAS sports-site map; `ptv-channel` is the cached PTV
+   ServiceChannel response (or nil if unavailable); `lipas-languages`
+   is the list of LIPAS-side language codes (e.g. [\"fi\" \"se\" \"en\"])
+   to consider. Returns nil when the channel hasn't been fetched yet."
+  [site ptv-channel lipas-languages]
+  (when ptv-channel
+    (let [ptv-names (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelNames ptv-channel))
+          ptv-descs (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelDescriptions ptv-channel))
+          lang-pairs (resolve-lang-pairs lipas-languages)
+          trim #(some-> % str/trim not-empty)
+          mk-text-comparison (fn [field type-v]
+                               (for [[ptv-lang locale] lang-pairs]
+                                 {:field field
+                                  :type type-v
+                                  :language ptv-lang
+                                  :locale locale
+                                  :lipas (effective-lipas-text site (case field
+                                                                      :summary :summary
+                                                                      :description :description) locale)
+                                  :ptv (get ptv-descs [type-v ptv-lang])}))
+          comparisons (concat
+                        (for [[ptv-lang locale] lang-pairs]
+                          {:field :name
+                           :type "Name"
+                           :language ptv-lang
+                           :locale locale
+                           :lipas (effective-lipas-name site "Name" locale)
+                           :ptv (get ptv-names ["Name" ptv-lang])})
+                        [{:field :marketing-name
+                          :type "AlternativeName"
+                          :language "fi"
+                          :locale :fi
+                          :lipas (effective-lipas-name site "AlternativeName" :fi)
+                          :ptv (get ptv-names ["AlternativeName" "fi"])}]
+                        (mk-text-comparison :summary "Summary")
+                        (mk-text-comparison :description "Description"))
+          drifted (->> comparisons
+                       (keep (fn [c]
+                               (let [l (trim (:lipas c))
+                                     p (trim (:ptv c))]
+                                 (when (not= l p)
+                                   (assoc c :lipas l :ptv p))))))
+          lipas-service-ids (set (-> site :ptv :service-ids))
+          ptv-service-ids (->> (:services ptv-channel)
+                               (map (comp :id :service))
+                               (remove nil?)
+                               set)
+          link-drift (when (not= lipas-service-ids ptv-service-ids)
+                       [{:field :services
+                         :lipas lipas-service-ids
+                         :ptv ptv-service-ids
+                         :added (set/difference ptv-service-ids lipas-service-ids)
+                         :removed (set/difference lipas-service-ids ptv-service-ids)}])]
+      (vec (concat drifted link-drift)))))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
@@ -693,24 +781,16 @@
 
         last-sync (-> site :ptv :last-sync)
 
-        ;; Drift detection: compare LIPAS texts vs PTV ServiceChannel texts.
-        ;; ServiceChannels only carry summary + description, so user-instruction
-        ;; is intentionally excluded from the comparison.
-        lipas-texts {:summary summary :description description :user-instruction user-instruction}
+        ;; Drift detection: build a structured per-field diff comparing what
+        ;; LIPAS would push on next sync vs what's currently stored in PTV.
+        ;; Covers Name (per language), AlternativeName/marketing-name, Summary
+        ;; and Description (per language), and service-link membership.
         ptv-channel (get service-channels service-channel-id)
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
-        content-drift? (and last-sync ptv-texts
-                            (not (texts-match? lipas-texts ptv-texts
-                                               service-channel-compare-fields)))
-
-        ;; Drift detection: compare LIPAS service linkings vs PTV service linkings
-        lipas-service-ids (set (-> site :ptv :service-ids))
-        ptv-service-ids (when ptv-channel
-                          (->> (:services ptv-channel)
-                               (map (comp :id :service))
-                               set))
-        links-drift? (and last-sync ptv-service-ids
-                          (not= lipas-service-ids ptv-service-ids))]
+        drift-langs (or (-> site :ptv :languages) org-langs)
+        drift-fields (when (and last-sync ptv-channel)
+                       (compute-service-channel-drift site ptv-channel drift-langs))
+        has-drift? (boolean (seq drift-fields))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -736,9 +816,11 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
-                    (or content-drift? links-drift?) :content-drift
+                    has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
+
+     :drift-fields drift-fields
 
      :ptv-texts ptv-texts
 
