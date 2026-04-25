@@ -394,21 +394,22 @@
             (tr :ptv.actions/generate-with-ai)]
            (when (> (count effective-languages) 1)
              [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-              [:> Button
-               {:disabled (or loading?
-                              read-only?
-                              (not has-text?))
-                :variant "outlined"
-                :size "small"
-                :sx #js {:textTransform "none"}
-                :startIcon (when loading?
-                             (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
-                :on-click (fn [_e]
-                            (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
-                                                                                      :to other-langs}]))}
-               (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                    (str/join ", " (map str/upper-case (sort other-langs)))
-                    ")")]])
+              [:span
+               [:> Button
+                {:disabled (or loading?
+                               read-only?
+                               (not has-text?))
+                 :variant "outlined"
+                 :size "small"
+                 :sx #js {:textTransform "none"}
+                 :startIcon (when loading?
+                              (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
+                 :on-click (fn [_e]
+                             (rf/dispatch [::events/translate-to-other-langs lipas-id {:from (name selected-tab)
+                                                                                       :to other-langs}]))}
+                (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                     (str/join ", " (map str/upper-case (sort other-langs)))
+                     ")")]]])
            (when loading?
              [:> CircularProgress
               {:size 24

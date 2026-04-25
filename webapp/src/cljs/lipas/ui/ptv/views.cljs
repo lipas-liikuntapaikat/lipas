@@ -301,19 +301,20 @@
            (tr :ptv.actions/generate-with-ai)]
           (when (> (count org-languages) 1)
             [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-             [:> Button
-              {:size "small" :variant "outlined"
-               :disabled (or generating? (not has-text?))
-               :startIcon (r/as-element
-                            (if generating?
-                              [:> CircularProgress {:size 16 :color "inherit"}]
-                              [:> Icon "translate"]))
-               :sx #js {:textTransform "none"}
-               :on-click #(==> [::events/translate-site-descriptions
-                                (:lipas-id site) from-lang other-langs])}
-              (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                   (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                   ")")]])])
+             [:span
+              [:> Button
+               {:size "small" :variant "outlined"
+                :disabled (or generating? (not has-text?))
+                :startIcon (r/as-element
+                             (if generating?
+                               [:> CircularProgress {:size 16 :color "inherit"}]
+                               [:> Icon "translate"]))
+                :sx #js {:textTransform "none"}
+                :on-click #(==> [::events/translate-site-descriptions
+                                 (:lipas-id site) from-lang other-langs])}
+               (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                    (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                    ")")]]])])
 
        ;; Modified in PTV warning
        (when (= "Modified" (:service-channel-publishing-status site))
@@ -1092,19 +1093,20 @@
                         (tr :ptv.actions/generate-with-ai)]
                        (when (> (count languages*) 1)
                          [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                          [:> Button
-                           {:size "small" :variant "outlined"
-                            :disabled (or generating? (not has-text?))
-                            :startIcon (r/as-element
-                                         (if generating?
-                                           [:> CircularProgress {:size 16 :color "inherit"}]
-                                           [:> Icon "translate"]))
-                            :sx #js {:textTransform "none"}
-                            :on-click #(==> [::events/translate-service-candidate
-                                             source-id from-lang other-langs])}
-                           (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                                (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                                ")")]])])
+                          [:span
+                           [:> Button
+                            {:size "small" :variant "outlined"
+                             :disabled (or generating? (not has-text?))
+                             :startIcon (r/as-element
+                                          (if generating?
+                                            [:> CircularProgress {:size 16 :color "inherit"}]
+                                            [:> Icon "translate"]))
+                             :sx #js {:textTransform "none"}
+                             :on-click #(==> [::events/translate-service-candidate
+                                              source-id from-lang other-langs])}
+                            (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                                 (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                                 ")")]]])])
 
                     (let [languages (set languages)]
                       [:> Tabs
@@ -1256,17 +1258,18 @@
                (tr :ptv.actions/generate-with-ai)]
               (when (> (count org-languages) 1)
                 [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                 [:> Button
-                  {:size "small" :variant "outlined"
-                   :disabled (or generating? (not has-text?))
-                   :startIcon (r/as-element
-                                (if generating?
-                                  [:> CircularProgress {:size 16 :color "inherit"}]
-                                  [:> Icon "translate"]))
-                   :sx #js {:textTransform "none"}
-                   :on-click #(==> [::events/translate-site-descriptions lipas-id from-lang other-langs])}
-                  (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                       (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]])])
+                 [:span
+                  [:> Button
+                   {:size "small" :variant "outlined"
+                    :disabled (or generating? (not has-text?))
+                    :startIcon (r/as-element
+                                 (if generating?
+                                   [:> CircularProgress {:size 16 :color "inherit"}]
+                                   [:> Icon "translate"]))
+                    :sx #js {:textTransform "none"}
+                    :on-click #(==> [::events/translate-site-descriptions lipas-id from-lang other-langs])}
+                   (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                        (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]]])])
 
            [lang-selector
             {:value selected-tab
@@ -1633,22 +1636,23 @@
            (tr :ptv.actions/generate-with-ai)]]]
         (when (> (count org-languages) 1)
           [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-           [:> Button
-            {:size "small" :variant "outlined"
-             :disabled (or generating? (not has-text?))
-             :startIcon (r/as-element
-                          (if generating?
-                            [:> CircularProgress {:size 16 :color "inherit"}]
-                            [:> Icon "translate"]))
-             :sx #js {:textTransform "none"}
-             :on-click #(==> [::events/translate-service-candidate-with-texts
-                              source-id from-lang other-langs
-                              {:summary (get-in data [:summary from-lang])
-                               :description (get-in data [:description from-lang])
-                               :user-instruction (get-in data [:user-instruction from-lang])}])}
-            (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                 (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
-                 ")")]])])
+           [:span
+            [:> Button
+             {:size "small" :variant "outlined"
+              :disabled (or generating? (not has-text?))
+              :startIcon (r/as-element
+                           (if generating?
+                             [:> CircularProgress {:size 16 :color "inherit"}]
+                             [:> Icon "translate"]))
+              :sx #js {:textTransform "none"}
+              :on-click #(==> [::events/translate-service-candidate-with-texts
+                               source-id from-lang other-langs
+                               {:summary (get-in data [:summary from-lang])
+                                :description (get-in data [:description from-lang])
+                                :user-instruction (get-in data [:user-instruction from-lang])}])}
+             (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                  (str/join ", " (map (comp str/upper-case name) (sort other-langs)))
+                  ")")]]])])
 
      ;; Modified in PTV warning
      (when (= "Modified" (:publishing-status service))
