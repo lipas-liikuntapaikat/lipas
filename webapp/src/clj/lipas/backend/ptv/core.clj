@@ -197,66 +197,6 @@
    existing PTV data when adopting a service."
   #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
 
-(defn- fi-value
-  "Pick the Finnish value for a given PTV entry type from a list of
-   language items."
-  [items type-v]
-  (some #(when (and (= "fi" (:language %)) (= type-v (:type %)))
-           (:value %))
-        items))
-
-(defn- fill-missing-languages
-  "For the given PTV-style list, ensure every required language has an
-   entry of `type-v`. Missing languages are filled with the Finnish
-   fallback value so PTV's cross-list coverage check (ServiceChannelNames /
-   ServiceChannelDescriptions must cover every language in :languages)
-   passes. If no fi fallback exists, nothing is filled for that gap."
-  [items type-v required-langs fi-fallback]
-  (let [covered (->> items
-                     (filter #(= type-v (:type %)))
-                     (map :language)
-                     set)
-        missing (set/difference (set required-langs) covered)]
-    (into (vec items)
-          (when fi-fallback
-            (for [lang missing]
-              {:type type-v :language lang :value fi-fallback})))))
-
-(defn- finalize-service-channel-payload
-  "Take the LIPAS-built service-channel payload and, when updating an
-   existing PTV channel, merge its name/description lists on top of the
-   stored channel's lists so kunta-side PTV edits (especially for sv/en
-   language versions) survive LIPAS syncs. Any language declared in
-   :languages that still has no Name/Summary/Description coverage after
-   merge is filled with the Finnish fallback — required because PTV
-   cross-validates that every declared language is covered in the
-   required lists. Finally, derive :displayNameType from the resulting
-   Name entries.
-
-   When `stored` is nil (create path), the merge is a no-op and only the
-   fi-fallback fill applies."
-  [payload stored]
-  (let [langs (mapv name (:languages payload))
-        lipas-names (:serviceChannelNames payload)
-        lipas-descs (:serviceChannelDescriptions payload)
-        stored-names (:serviceChannelNames stored)
-        stored-descs (:serviceChannelDescriptions stored)
-        merged-names (merge-ptv-lists (or stored-names []) (or lipas-names []))
-        merged-descs (merge-ptv-lists (or stored-descs []) (or lipas-descs []))
-        fi-name (fi-value merged-names "Name")
-        fi-summary (fi-value merged-descs "Summary")
-        fi-description (fi-value merged-descs "Description")
-        filled-names (fill-missing-languages merged-names "Name" langs fi-name)
-        filled-descs (-> merged-descs
-                         (fill-missing-languages "Summary" langs fi-summary)
-                         (fill-missing-languages "Description" langs fi-description))
-        display-name-type (vec (for [lang langs]
-                                 {:type "Name" :language lang}))]
-    (assoc payload
-           :serviceChannelNames filled-names
-           :serviceChannelDescriptions filled-descs
-           :displayNameType display-name-type)))
-
 (defn upsert-ptv-service!
   [ptv {:keys [org-id source-id service-id sub-category-id] :as m}]
   (let [lipas-data (ptv-data/->ptv-service m)]
@@ -349,16 +289,16 @@
         site (update site :ptv merge ptv)
         ;; Use the same TS for sourceId, ptv last-sync and site event-date
         now (utils/timestamp)
-        lipas-data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
-        ;; Fetch the stored channel up-front (when updating) so we can merge
-        ;; LIPAS's names/descriptions on top, preserving kunta-side PTV edits.
-        ;; The fetch is also reused below for service-connection diffing.
+        data (ptv-data/->ptv-service-location org-id gis/wgs84->tm35fin-no-wrap now (core/enrich site))
+        data (cond-> data
+               archive? (assoc :publishingStatus "Deleted"))
+        ;; Note: Update request doesn't update Service connections!
+
+        ;; Fetch the stored channel for service-connection diffing below.
+        ;; Drift detection in `sports-site->ptv-input` uses a separately
+        ;; cached channel snapshot, not this fetch.
         old-service-location (when id
                                (ptv/get-org-service-channel ptv-component org-id id))
-        data (-> lipas-data
-                 (finalize-service-channel-payload old-service-location)
-                 (cond-> archive? (assoc :publishingStatus "Deleted")))
-        ;; Note: Update request doesn't update Service connections!
 
         ptv-resp (if id
                    (ptv/update-service-location ptv-component id data)
