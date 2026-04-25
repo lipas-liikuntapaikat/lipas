@@ -50,10 +50,9 @@
                          :sx #js {:p 0}}
           [:> Icon {:sx #js {:fontSize "1rem"}} "edit"]]])]
      (for [{:keys [id name url]} items]
-       ^{:key id}
        (if url
-         [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
-         [:> Typography {:variant "body2"} (or name id)]))]
+         ^{:key id} [:> Link {:href url :target "_blank" :variant "body2"} (or name id)]
+         ^{:key id} [:> Typography {:variant "body2"} (or name id)]))]
     [:> Stack {:spacing 0.5}
      selector-component
      (when (and editing? (seq items))
@@ -453,21 +452,22 @@
                  (tr :ptv.actions/generate-with-ai)]
                 (when (> (count org-languages) 1)
                   [:> Tooltip {:title (tr :ptv.wizard/translate-to-other-langs-tooltip)}
-                   [:> Button
-                    {:size "small" :variant "outlined"
-                     :disabled (or generating? (not has-text?))
-                     :startIcon (r/as-element
-                                 (if generating?
-                                   [:> CircularProgress {:size 16 :color "inherit"}]
-                                   [:> Icon "translate"]))
-                     :sx #js {:textTransform "none"}
-                     :on-click #(rf/dispatch [::events/translate-service-candidate-with-texts
-                                              @source-id from-lang other-langs
-                                              {:summary (get-in desc [:summary from-lang])
-                                               :description (get-in desc [:description from-lang])
-                                               :user-instruction (get-in desc [:user-instruction from-lang])}])}
-                    (str (tr :ptv.wizard/translate-to-other-langs) " ("
-                         (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]])])
+                   [:span
+                    [:> Button
+                     {:size "small" :variant "outlined"
+                      :disabled (or generating? (not has-text?))
+                      :startIcon (r/as-element
+                                  (if generating?
+                                    [:> CircularProgress {:size 16 :color "inherit"}]
+                                    [:> Icon "translate"]))
+                      :sx #js {:textTransform "none"}
+                      :on-click #(rf/dispatch [::events/translate-service-candidate-with-texts
+                                               @source-id from-lang other-langs
+                                               {:summary (get-in desc [:summary from-lang])
+                                                :description (get-in desc [:description from-lang])
+                                                :user-instruction (get-in desc [:user-instruction from-lang])}])}
+                     (str (tr :ptv.wizard/translate-to-other-langs) " ("
+                          (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]]])])
 
              [:> Button
               {:variant "contained" :color "secondary" :size "small" :full-width true
