@@ -1,0 +1,18 @@
+{:title "PTV has changes that are not in LIPAS"
+ :warning "The next sync to PTV will overwrite these changes with LIPAS data."
+ :instruction "Update LIPAS to match the PTV-side changes, or accept that the PTV-side edits will be reverted on the next sync."
+ :field-header "Field"
+ :lipas-header "LIPAS (will be pushed)"
+ :ptv-header "PTV (current)"
+ :empty "(no value)"
+
+ :field-name "Name"
+ :field-marketing-name "Marketing name"
+ :field-summary "Summary"
+ :field-description "Description"
+ :field-services "Linked services"
+
+ :services-lipas-has "Linked in LIPAS:"
+ :services-ptv-has "Linked in PTV:"
+ :services-will-remain "Will remain after sync."
+ :services-will-be-removed "Will be unlinked on next sync."}

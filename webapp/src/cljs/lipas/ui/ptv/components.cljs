@@ -1,6 +1,8 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
-  (:require ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/AlertTitle$default" :as AlertTitle]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Grid$default" :as Grid]
@@ -58,6 +60,86 @@
                    :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                    :on-click on-cancel}
         (tr :actions/cancel)])]))
+
+(defn- drift-field-label
+  [tr {:keys [field type language]}]
+  (let [field-label (case field
+                      :name (tr :ptv.drift/field-name)
+                      :marketing-name (tr :ptv.drift/field-marketing-name)
+                      :summary (tr :ptv.drift/field-summary)
+                      :description (tr :ptv.drift/field-description)
+                      :services (tr :ptv.drift/field-services)
+                      (str field))]
+    (cond
+      (= field :services) field-label
+      (= type "AlternativeName") field-label
+      language (str field-label " (" (str/upper-case language) ")")
+      :else field-label)))
+
+(defn- drift-cell
+  [tr value]
+  (if (or (nil? value) (and (string? value) (str/blank? value)))
+    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+     (tr :ptv.drift/empty)]
+    [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-wrap"}} value]))
+
+(defn- drift-services-cell
+  [tr id-set]
+  (if (seq id-set)
+    [:> Typography {:variant "body2"}
+     (str/join ", " id-set)]
+    [:> Typography {:variant "body2" :sx #js {:color "text.disabled" :fontStyle "italic"}}
+     (tr :ptv.drift/empty)]))
+
+(r/defc drift-panel
+  "Renders a per-field diff between the LIPAS-side value (what will be
+   pushed on the next sync) and the PTV-side value (what the kunta is
+   currently seeing in PTV). Only shown when the site has drift."
+  [{:keys [drift-fields tr]}]
+  (when (seq drift-fields)
+    [:> Alert {:severity "warning"
+               :icon false
+               :sx #js {:my 2}}
+     [:> AlertTitle (tr :ptv.drift/title)]
+     [:> Typography {:variant "body2" :sx #js {:mb 1}}
+      (tr :ptv.drift/warning)]
+     [:> Typography {:variant "body2" :sx #js {:mb 2}}
+      (tr :ptv.drift/instruction)]
+     [:> Table {:size "small" :sx #js {:bgcolor "background.paper"}}
+      [:> TableHead
+       [:> TableRow
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/field-header)]
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/lipas-header)]
+        [:> TableCell {:sx #js {:fontWeight 600}} (tr :ptv.drift/ptv-header)]]]
+      [:> TableBody
+       (for [{:keys [field lipas ptv added removed] :as entry}
+             (sort-by (juxt :field :language) drift-fields)]
+         ^{:key (str field "-" (:language entry) "-" (:type entry))}
+         [:> TableRow
+          [:> TableCell {:sx #js {:verticalAlign "top"}}
+           [:> Typography {:variant "body2" :sx #js {:fontWeight 500}}
+            (drift-field-label tr entry)]]
+          (if (= field :services)
+            [:<>
+             [:> TableCell {:sx #js {:verticalAlign "top"}}
+              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
+               (tr :ptv.drift/services-lipas-has)]
+              [drift-services-cell tr lipas]
+              (when (seq removed)
+                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
+                 (tr :ptv.drift/services-will-remain)])]
+             [:> TableCell {:sx #js {:verticalAlign "top"}}
+              [:> Typography {:variant "caption" :sx #js {:color "text.secondary" :display "block"}}
+               (tr :ptv.drift/services-ptv-has)]
+              [drift-services-cell tr ptv]
+              (when (seq added)
+                [:> Typography {:variant "caption" :sx #js {:color "warning.dark" :display "block" :mt 1}}
+                 (tr :ptv.drift/services-will-be-removed)])]]
+            [:<>
+             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+              [drift-cell tr lipas]]
+             [:> TableCell {:sx #js {:verticalAlign "top" :width "40%"}}
+              [drift-cell tr ptv]]])])]]]))
 
 (r/defc service-location-preview
   "Preview component showing how a sports site will appear in PTV as a service location"

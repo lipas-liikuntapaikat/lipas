@@ -1,0 +1,18 @@
+{:title "PTV:ssä on muutoksia, joita ei ole Lipaksessa"
+ :warning "Seuraava synkronointi PTV:hen ylikirjoittaa nämä muutokset Lipaksen tiedoilla."
+ :instruction "Päivitä Lipas vastaamaan PTV:ssä tehtyjä muutoksia, tai hyväksy että PTV:ssä tehdyt muutokset perutaan seuraavalla synkronoinnilla."
+ :field-header "Kenttä"
+ :lipas-header "Lipas (viedään PTV:hen)"
+ :ptv-header "PTV (nykyinen tila)"
+ :empty "(ei arvoa)"
+
+ :field-name "Nimi"
+ :field-marketing-name "Markkinointinimi"
+ :field-summary "Tiivistelmä"
+ :field-description "Kuvaus"
+ :field-services "Liitetyt palvelut"
+
+ :services-lipas-has "Lipaksessa liitetty:"
+ :services-ptv-has "PTV:ssä liitetty:"
+ :services-will-remain "Pysyvät synkronoinnin jälkeen."
+ :services-will-be-removed "Poistetaan seuraavan synkronoinnin yhteydessä."}
