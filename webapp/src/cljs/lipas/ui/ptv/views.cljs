@@ -411,6 +411,13 @@
                      "https://palvelutietovaranto.trn.suomi.fi")]
       [:> Stack {:spacing 2 :sx #js {:pt 2 :pb 2}}
 
+       ;; Drift panel: temporarily disabled. Re-enable by uncommenting
+       ;; the line below once we're ready to surface the diff to users.
+       ;; The drift detection and the panel component itself stay live —
+       ;; only the render site is commented out.
+       #_[ptv-components/drift-panel {:drift-fields (:drift-fields site)
+                                      :tr tr}]
+
        [checkboxes/switch
         {:label (tr :ptv.actions/export-disclaimer)
          :value (:sync-enabled site)
@@ -1162,12 +1169,6 @@
      {}
      (r/as-element
        [:> Stack {:spacing 2}
-
-        ;; Drift panel: shown when PTV-side state diverges from what
-        ;; LIPAS will push. Tells the user exactly which fields differ
-        ;; and warns that the next sync will overwrite PTV with LIPAS.
-        [ptv-components/drift-panel {:drift-fields (:drift-fields site)
-                                     :tr tr}]
 
         [:> Tabs {:value selected-tab2
                   :indicatorColor "secondary"

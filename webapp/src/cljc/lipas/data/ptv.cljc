@@ -705,20 +705,34 @@
         v (get m locale)]
     (if (str/blank? v) (get m :fi) v)))
 
+(defn- resolve-service-name
+  "Resolve a service ID to a human-readable Finnish name from the
+   services-by-id map. Falls back to the ID when the service isn't
+   in the cache (e.g. external services or stale cache)."
+  [services service-id]
+  (or (some-> (get services service-id)
+              :serviceNames
+              select-service-name)
+      service-id))
+
 (defn compute-service-channel-drift
   "Build a structured per-field drift report comparing what LIPAS would
    push on next sync against what's currently stored in PTV. Returns a
    vector of entries; empty vector means no drift. Each entry has
-   `:field` (:name, :marketing-name, :summary, :description, :services)
-   and either localized `:lipas`/`:ptv` strings (with `:language`,
-   `:type`, `:locale`) or, for service link drift, `:added`/`:removed`
-   id sets.
+   `:field` (:name, :marketing-name, :summary, :description, :services).
+   For value fields, the entry has localized `:lipas`/`:ptv` strings
+   (with `:language`, `:type`, `:locale`). For service link drift, the
+   entry's `:lipas`/`:ptv`/`:added`/`:removed` are vectors of
+   `{:id :name}` maps so the UI can show readable service names rather
+   than raw UUIDs.
 
    `site` is the LIPAS sports-site map; `ptv-channel` is the cached PTV
-   ServiceChannel response (or nil if unavailable); `lipas-languages`
-   is the list of LIPAS-side language codes (e.g. [\"fi\" \"se\" \"en\"])
-   to consider. Returns nil when the channel hasn't been fetched yet."
-  [site ptv-channel lipas-languages]
+   ServiceChannel response (or nil if unavailable); `services` is the
+   org's services-by-id map used for resolving service names; and
+   `lipas-languages` is the list of LIPAS-side language codes
+   (e.g. [\"fi\" \"se\" \"en\"]) to consider. Returns nil when the
+   channel hasn't been fetched yet."
+  [site ptv-channel services lipas-languages]
   (when ptv-channel
     (let [ptv-names (into {} (map (juxt (juxt :type :language) :value))
                           (:serviceChannelNames ptv-channel))
@@ -763,12 +777,14 @@
                                (map (comp :id :service))
                                (remove nil?)
                                set)
+          mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
+          mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
           link-drift (when (not= lipas-service-ids ptv-service-ids)
                        [{:field :services
-                         :lipas lipas-service-ids
-                         :ptv ptv-service-ids
-                         :added (set/difference ptv-service-ids lipas-service-ids)
-                         :removed (set/difference lipas-service-ids ptv-service-ids)}])]
+                         :lipas (mk-entries lipas-service-ids)
+                         :ptv (mk-entries ptv-service-ids)
+                         :added (mk-entries (set/difference ptv-service-ids lipas-service-ids))
+                         :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
       (vec (concat drifted link-drift)))))
 
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
@@ -789,7 +805,7 @@
         ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
         drift-langs (or (-> site :ptv :languages) org-langs)
         drift-fields (when (and last-sync ptv-channel)
-                       (compute-service-channel-drift site ptv-channel drift-langs))
+                       (compute-service-channel-drift site ptv-channel services drift-langs))
         has-drift? (boolean (seq drift-fields))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))

@@ -13,7 +13,7 @@
  :synced-to-ptv "Exported to PTV"
  :out-of-date "LIPAS has newer changes than PTV"
  :content-drift "PTV content differs from LIPAS"
- :modified-in-ptv "Modified in PTV \u2013 status is \"Modified\". Publish or discard changes in PTV first before syncing."
+ :modified-in-ptv "Unpublished changes in PTV – publish or discard the changes in PTV before syncing"
  :sync-failed-ptv-modified "Sync failed: PTV has unpublished changes. Publish or discard changes in PTV and try again."
  :sync-failed "Sync to PTV failed."
  :not-yet-synced "Selected for export, not yet synced to PTV"

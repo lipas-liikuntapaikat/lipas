@@ -137,12 +137,17 @@
    :services [{:service {:id "svc-a"}}
               {:service {:id "svc-b"}}]})
 
+(def ^:private drift-services
+  {"svc-a" {:serviceNames [{:type "Name" :language "fi" :value "Pallokentät"}]}
+   "svc-b" {:serviceNames [{:type "Name" :language "fi" :value "Liikuntahallit"}]}})
+
 (defn- by-field [drift k]
   (filter #(= k (:field %)) drift))
 
 (deftest compute-service-channel-drift-test
   (testing "returns nil when channel hasn't been fetched"
-    (is (nil? (sut/compute-service-channel-drift drift-site nil ["fi" "se" "en"]))))
+    (is (nil? (sut/compute-service-channel-drift drift-site nil drift-services
+                                                 ["fi" "se" "en"]))))
 
   (testing "returns empty when no drift"
     (let [synced-channel
@@ -157,9 +162,11 @@
                                         {:type "Description" :language "en" :value "desc-fi"}]
            :services [{:service {:id "svc-a"}}]}]
       (is (= [] (sut/compute-service-channel-drift drift-site synced-channel
+                                                   drift-services
                                                    ["fi" "se" "en"])))))
 
   (let [drift (sut/compute-service-channel-drift drift-site drift-channel
+                                                 drift-services
                                                  ["fi" "se" "en"])]
     (testing "kunta-edited sv name appears as drift; LIPAS-pushed value uses fi fallback"
       (let [[name-drift] (by-field drift :name)]
@@ -177,16 +184,28 @@
             "LIPAS would push fi-fallback for sv summary")
         (is (= "kunta-summary-sv" (:ptv s)))))
 
-    (testing "service link membership drift"
+    (testing "service link drift carries human-readable names, not just UUIDs"
       (let [[svc] (by-field drift :services)]
-        (is (= #{"svc-b"} (:added svc))
+        (is (= [{:id "svc-b" :name "Liikuntahallit"}] (:added svc))
             "PTV has svc-b that LIPAS doesn't")
-        (is (= #{} (:removed svc)))))))
+        (is (= [] (:removed svc)))
+        (is (= [{:id "svc-a" :name "Pallokentät"}] (:lipas svc)))
+        (is (= #{"Liikuntahallit" "Pallokentät"}
+               (set (map :name (:ptv svc)))))))
+
+    (testing "unknown service id falls back to the id as its name"
+      (let [site (assoc-in drift-site [:ptv :service-ids] ["svc-mystery"])
+            drift (sut/compute-service-channel-drift site drift-channel
+                                                     drift-services
+                                                     ["fi" "se" "en"])
+            [svc] (by-field drift :services)]
+        (is (some #(= {:id "svc-mystery" :name "svc-mystery"} %) (:lipas svc)))))))
 
 (deftest compute-service-channel-drift-marketing-name-test
   (testing "LIPAS marketing-name appears as drift when PTV has no AlternativeName"
     (let [site (assoc drift-site :marketing-name "Hallikauppa")
           drift (sut/compute-service-channel-drift site drift-channel
+                                                   drift-services
                                                    ["fi" "se" "en"])
           [m] (by-field drift :marketing-name)]
       (is (= {:field :marketing-name :type "AlternativeName" :language "fi" :locale :fi
@@ -197,6 +216,7 @@
     (let [channel (update drift-channel :serviceChannelNames conj
                           {:type "AlternativeName" :language "fi" :value "PTV-marketing"})
           drift (sut/compute-service-channel-drift drift-site channel
+                                                   drift-services
                                                    ["fi" "se" "en"])
           [m] (by-field drift :marketing-name)]
       (is (= "PTV-marketing" (:ptv m)))
