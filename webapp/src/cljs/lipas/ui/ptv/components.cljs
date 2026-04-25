@@ -399,13 +399,14 @@
        [:> Grid {:container true :spacing 3}
 
         ;; Left column: selector and action buttons
-        [:> Grid {:item true :xs 12 :md 5}
+        [:> Grid {:size #js {:xs 12 :md 5}}
          [:> Stack {:spacing 2}
           (let [selector [controls/services-selector
                           {:options missing-subcategories
                            :multiple false
                            :value @source-id
                            :value-fn :source-id
+                           :sx #js {:minWidth 320}
                            :on-change (fn [v]
                                         (reset! source-id v)
                                         (when v
@@ -494,7 +495,7 @@
 
         ;; Right column: language tabs + text fields
         (when @source-id
-          [:> Grid {:item true :xs 12 :md 7}
+          [:> Grid {:size #js {:xs 12 :md 7}}
            [:> Stack {:spacing 2}
             [controls/lang-selector
              {:value @selected-tab
@@ -504,6 +505,7 @@
             (let [v (or (get-in desc [:summary @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-summary @source-id @selected-tab %])
+                :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
                 :helperText (str (count v) "/" ptv-data/max-summary-length)
                 :error (> (count v) ptv-data/max-summary-length)}])
@@ -511,6 +513,7 @@
             (let [v (or (get-in desc [:description @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
+                :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
@@ -518,6 +521,7 @@
             (let [v (or (get-in desc [:user-instruction @selected-tab]) "")]
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
+                :fullWidth true
                 :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
                 :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
                 :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
