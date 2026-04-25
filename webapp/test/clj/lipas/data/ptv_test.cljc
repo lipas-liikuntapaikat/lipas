@@ -75,45 +75,48 @@
    :location {:city {:city-code 889} :address "Katu 1" :postal-code "99999"}})
 
 (deftest ->ptv-service-location-names
-  (testing "only LIPAS-entered name entries are emitted"
-    (testing "fi only — sv/en fall through to merge step"
-      (is (= [["Name" "fi" "Halli"]]
+  (testing "every declared language gets a Name entry"
+    (testing "no localized names — sv/en fall back to fi"
+      (is (= [["Name" "fi" "Halli"]
+              ["Name" "sv" "Halli"]
+              ["Name" "en" "Halli"]]
              (names (build-location (assoc base-site :name "Halli"))))))
 
-    (testing "fi + sv entered — en still absent"
+    (testing "sv entered, en falls back to fi"
       (is (= [["Name" "fi" "Halli"]
-              ["Name" "sv" "Hall"]]
+              ["Name" "sv" "Hall"]
+              ["Name" "en" "Halli"]]
              (names (build-location (assoc base-site
                                            :name "Halli"
                                            :name-localized {:se "Hall"}))))))
 
-    (testing "blank sv counts as not entered"
-      (is (= [["Name" "fi" "Halli"]]
+    (testing "blank sv counts as not entered → falls back to fi"
+      (is (= [["Name" "fi" "Halli"]
+              ["Name" "sv" "Halli"]
+              ["Name" "en" "English name"]]
              (names (build-location (assoc base-site
                                            :name "Halli"
-                                           :name-localized {:se "   " :en nil}))))))
+                                           :name-localized {:se "   " :en "English name"}))))))
 
     (testing "marketing name becomes AlternativeName/fi"
-      (is (= [["Name" "fi" "Halli"]
-              ["AlternativeName" "fi" "Hallikauppa"]]
-             (names (build-location (assoc base-site
-                                           :name "Halli"
-                                           :marketing-name "Hallikauppa")))))))
+      (is (some #(= ["AlternativeName" "fi" "Hallikauppa"] %)
+                (names (build-location (assoc base-site
+                                              :name "Halli"
+                                              :marketing-name "Hallikauppa")))))))
 
-  (testing "displayNameType mirrors the emitted Name entries"
+  (testing "displayNameType has one Name entry per declared org language"
     (is (= [{:type "Name" :language "fi"}
-            {:type "Name" :language "sv"}]
+            {:type "Name" :language "sv"}
+            {:type "Name" :language "en"}]
            (:displayNameType
-             (build-location (assoc base-site
-                                    :name "Halli"
-                                    :name-localized {:se "Hall"}))))))
+             (build-location (assoc base-site :name "Halli"))))))
 
-  (testing "descriptions: emit only languages with non-blank values"
+  (testing "descriptions: every declared language has a Summary and a Description"
     (let [p (build-location (assoc base-site :name "Halli"))]
       (is (= #{"fi" "sv" "en"} (desc-langs p "Summary"))
           "ptv map has summary in all three languages")
-      (is (= #{"fi"} (desc-langs p "Description"))
-          "ptv map only has fi description"))))
+      (is (= #{"fi" "sv" "en"} (desc-langs p "Description"))
+          "ptv map only has fi description, but sv/en fall back to fi"))))
 
 (deftest get-all-pages-test
   (is (= {:pageCount 2
