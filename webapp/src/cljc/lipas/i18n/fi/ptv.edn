@@ -1,13 +1,48 @@
 {:description "Kuvaus",
  :descriptions "Kuvaukset",
  :not-suitable-for-export "Liikuntapaikka ei sovellu PTV:hen vietäväksi.",
- :keywords "Avainsanat",
+ :keywords "Asiasanat",
  :loading-from-ptv "Haetaan tietoja PTV:stä...",
  :service "Palvelu",
  :service-channel "Palvelupaikka",
- :service-channels "Palvelupaikat",
+ :service-channels "Palveluun liitetyt asiointikanavat PTV:ssa",
  :services "Palvelut",
  :sports-sites "Liikuntapaikat",
+ :sports-sites-count "liikuntapaikkaa",
+ :sports-site-count-singular "liikuntapaikka",
+ :synced-to-ptv "Viety PTV:hen",
+ :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
+ :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
+ :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
+ :sync-failed-ptv-modified "Synkronointi epäonnistui: PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
+ :sync-failed "Synkronointi PTV:hen epäonnistui.",
+ :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
+ :user-instruction "Toimintaohje",
  :tooltip "Vie Palvelutietovarantoon",
- :wizard "Käyttöönotto"}
+ :wizard "Käyttöönotto"
+ :filter-all "Kaikki"
+ :filter-sync-enabled "Integraatio päällä"
+ :filter-sync-disabled "Integraatio pois"
+ :filter-not-synced "Ei vielä viety"
+ :filter-out-of-date "Muuttunut"
+ :filter-ok "Ajan tasalla"
+ :filter-missing-descriptions "Kuvaukset puuttuvat"
+ :search-placeholder "Hae nimellä..."
+ :hint-enable-sync "Kytke integraatio päälle liukukytkimellä"
+ :hint-select-service "Valitse palvelu ensin. Jos sopivaa palvelua ei löydy listasta, voit luoda uuden Palvelut-välilehdellä tai Käyttöönotto-ohjatun toiminnon kautta."
+ :hint-add-summary "Lisää suomenkielinen tiivistelmä"
+ :hint-add-description "Lisää suomenkielinen kuvaus"
+ :hint-up-to-date "Ajan tasalla"
+
+ :integration-enabled "PTV-integraatio on käytössä"
+ :integration-enabled-sync-off "PTV-integraatio on käytössä, mutta liikuntapaikan synkronointi PTV:hen on kytketty pois päältä."
+ :will-be-archived-on-save "Liikuntapaikka poistetaan PTV:stä tallennuksen yhteydessä"
+ :will-be-archived-type-changed "Liikuntapaikka on viety aiemmin PTV:hen, mutta tietoja on muutettu siten, että tietoja ei enää viedä. PTV-palvelupaikka tullaan arkistoimaan tallennuksen yhteydessä."
+ :new-service-location-will-be-created "Liikuntapaikkaa ei ole aiemmin viety PTV:hen. Uusi palvelupaikka tullaan luomaan tallennuksen yhteydessä."
+ :data-incomplete "PTV-tiedot ovat vielä puutteelliset. Täytä puuttuvat tiedot, niin liikuntapaikka viedään PTV:hen tallennuksen yhteydessä."
+ :integration-error "Virhe PTV-integraatiossa, uusimpia tietoja ei ole viety PTV:hen."
+ :open-in-ptv "Avaa PTV:ssä"
+ :open-in-suomi-fi "Avaa suomi.fi:ssä"
+ :service-missing-for-type "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä."
+ :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."}

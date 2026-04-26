@@ -65,10 +65,11 @@
 
     [:service-channel-ids [:vector :string]]
     [:service-ids [:vector :string]]
-    ;; [:languages [:vector :string]]
+    [:languages {:optional true} [:vector :string]]
 
     [:summary (localized-string-schema {:max 150})]
     [:description (localized-string-schema {})]
+    [:user-instruction {:optional true} (localized-string-schema {})]
 
     [:audit {:optional true} ptv-audit]]))
 

@@ -4,4 +4,5 @@
  :save-failed "Sparningen misslyckades",
  :save-success "Sparningen lyckades",
  :copied-to-clipboard "Kopierat till urklipp"
+ :translate-success "Översättningen lyckades"
  :thank-you-for-feedback "Tack för feedbacken!"}

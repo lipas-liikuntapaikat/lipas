@@ -62,11 +62,11 @@
   "Low-level Gemini API call with custom response schema.
    Returns {:content <parsed-json> :usage {...} :elapsed-ms <int> :model <str>}."
   [{:keys [model thinking-level top-p temperature max-tokens response-schema]
-    :or   {model          "gemini-3-flash-preview"
-           thinking-level "minimal"
-           top-p          0.90
-           temperature    1.0
-           max-tokens     8192}}
+    :or   {model          (:model ai/gemini-default-params)
+           thinking-level (:thinking-level ai/gemini-default-params)
+           top-p          (:top-p ai/gemini-default-params)
+           temperature    (:temperature ai/gemini-default-params)
+           max-tokens     (:max-tokens ai/gemini-default-params)}}
    system-prompt
    user-prompt]
   (let [{:keys [base-url api-key]} ai/gemini-config
@@ -382,8 +382,8 @@ Be specific — cite exact problematic phrases.")
   (json-schema/transform (mu/open-schema ai/response-schema)))
 
 (def default-generator-config
-  {:model          "gemini-3-flash-preview"
-   :thinking-level "minimal"
+  {:model          (:model ai/gemini-default-params)
+   :thinking-level (:thinking-level ai/gemini-default-params)
    :response-schema generation-schema})
 
 (defn- fetch-prompt-doc
@@ -420,7 +420,7 @@ Be specific — cite exact problematic phrases.")
   (json-schema/transform (mu/open-schema grading-response-schema)))
 
 (def default-grader-config
-  {:model          "gemini-3-flash-preview"
+  {:model          (:model ai/gemini-default-params)
    :thinking-level "high"
    :temperature    0.5
    :top-p          0.90
@@ -508,7 +508,7 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
   (json-schema/transform (mu/open-schema grading-response-schema-v2)))
 
 (def grader-config-v2
-  {:model          "gemini-3-flash-preview"
+  {:model          (:model ai/gemini-default-params)
    :thinking-level "high"
    :temperature    0.5
    :top-p          0.90

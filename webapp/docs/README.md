@@ -18,6 +18,7 @@ Technical documentation for developers working on the webapp.
 - **architecture.md** - System design, patterns, decisions
 - **frontend.md** - Frontend architecture overview
 - **i18n.md** - Internationalization system
+- **agent-tooling.md** - How we work with AI coding agents (skills, runtime tools, principles)
 
 ### Guides
 - **guide-debugging.md** - Debugging heuristics

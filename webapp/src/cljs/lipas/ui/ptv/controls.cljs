@@ -21,9 +21,10 @@
    children])
 
 (r/defc services-selector
-  [{:keys [disabled options value on-change label value-fn]
+  [{:keys [disabled options value on-change label value-fn multiple sx]
     :or   {value-fn identity
-           label    ""}}]
+           label    ""
+           multiple true}}]
   (let [options* (hooks/use-memo (fn []
                                    (->> options
                                         (map (fn [x]
@@ -32,17 +33,20 @@
                                         (sort-by :label)))
                                  [options value-fn])]
     [autocomplete2
-     {:disabled  disabled
-      :options   options*
-      :multiple  true
-      :label     label
-      :value     (to-array value)
-      :onChange (fn [_e v]
-                  (on-change (vec (map (fn [x]
-                                         (if (map? x)
-                                           (:value x)
-                                           x))
-                                       v))))}]))
+     (cond-> {:disabled  disabled
+              :options   options*
+              :multiple  multiple
+              :label     label
+              :value     (if multiple (to-array value) value)
+              :onChange (fn [_e v]
+                          (if multiple
+                            (on-change (vec (map (fn [x]
+                                                   (if (map? x)
+                                                     (:value x)
+                                                     x))
+                                                 v)))
+                            (on-change (if (map? v) (:value v) v))))}
+       sx (assoc :sx sx))]))
 
 (r/defc lang-selector [{:keys [value on-change enabled-languages]}]
   [:> Tabs

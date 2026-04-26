@@ -1,5 +1,6 @@
 (ns lipas.data.ptv
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
@@ -100,42 +101,120 @@
           {}
           organizations))
 
+(def fallback-languages
+  "Default languages when org config is missing. Finnish only."
+  ["fi"])
+
+(defn pick-style-reference
+  "Pick a Finnish style reference from sites already in memory. Tiers, best
+   to worst fallback:
+   1. Same type-code
+   2. Same sub-category-id
+   3. Any site with Finnish summary + description
+   Within a tier, most recently synced wins. Uses in-memory data so
+   unpersisted AI-generated drafts qualify.
+
+   `sports-sites` — seq of maps with :lipas-id :type-code :sub-category-id
+   :summary {:fi …} :description {:fi …} :last-sync (from
+   lipas.data.ptv/sports-site->ptv-input shape).
+
+   Returns {:summary string :description string} in Finnish, or nil."
+  [sports-sites {:keys [type-code sub-category-id exclude-lipas-id]}]
+  (let [candidates (->> sports-sites
+                        (remove #(= exclude-lipas-id (:lipas-id %)))
+                        (filter (fn [s] (and (seq (get-in s [:summary :fi]))
+                                             (seq (get-in s [:description :fi])))))
+                        (sort-by :last-sync #(compare %2 %1)))
+        tier1 (when type-code
+                (first (filter #(= type-code (:type-code %)) candidates)))
+        tier2 (when (and sub-category-id (not tier1))
+                (first (filter #(= sub-category-id (:sub-category-id %)) candidates)))
+        picked (or tier1 tier2 (first candidates))]
+    (when picked
+      {:summary (get-in picked [:summary :fi])
+       :description (get-in picked [:description :fi])})))
+
+(defn resolve-org-id
+  "Returns the effective PTV org-id for a site.
+   Resolution order:
+   1. Persisted :ptv :org-id on the site (authoritative once integrated).
+   2. User belongs to exactly one org → that org.
+   3. Exactly one of the user's orgs covers the site's city-code → that org.
+   4. Nil (ambiguous; UI must prompt)."
+  [site user-orgs]
+  (or (get-in site [:ptv :org-id])
+      (when (= 1 (count user-orgs))
+        (get-in (first user-orgs) [:ptv-data :org-id]))
+      (let [city-code (get-in site [:location :city :city-code])
+            matches (filter (fn [org]
+                              (contains? (set (get-in org [:ptv-data :city-codes]))
+                                         city-code))
+                            user-orgs)]
+        (when (= 1 (count matches))
+          (get-in (first matches) [:ptv-data :org-id])))))
+
 (def lang->locale
+  "PTV language code -> LIPAS locale keyword"
   {"fi" :fi, "sv" :se, "en" :en})
 
 (def lipas-lang->ptv-lang
+  "LIPAS language code -> PTV language code"
   {"fi" "fi", "se" "sv", "en" "en"})
+
+(def locale->lang
+  "LIPAS locale keyword -> PTV language code"
+  {:fi "fi", :se "sv", :en "en"})
+
+(defn- resolve-lang-pairs
+  "Given a set/seq of LIPAS language codes (\"fi\" \"se\" \"en\"),
+   returns seq of [ptv-lang lipas-locale] pairs for iteration."
+  [languages]
+  (for [lipas-lang languages
+        :let [ptv-lang (get lipas-lang->ptv-lang lipas-lang)]
+        :when ptv-lang]
+    [ptv-lang (keyword lipas-lang)]))
 
 (def placeholder "TODO: Value missing!")
 
 (def default-langs ["fi"])
 
-;; NOTE: Right now the UI mostly just uses this always.
-;; The languages value is also stored to sports-site :ptv on
-;; sync, but that value isn't used now?
-;; So it is possible to enable new languages by modying the org config.
-;; Summary/description texts are always generated for all languages,
-;; but additional languages aren't shown on the FE or sent to PTV.
-(defn org-id->languages [org-id]
-  (or (:supported-languages (get org-id->params org-id))
-      default-langs))
+;; Per-language character limits enforced by the PTV API. Exceeding these
+;; produces a 400 (e.g. "Maximum length of property 'Value' for 'Summary'
+;; must be '150'."). Applies to serviceDescriptions (Service) and
+;; serviceChannelDescriptions (ServiceLocation). ServiceLocation does not
+;; support user-instruction at all.
+(def max-description-length 5000)
+(def max-summary-length 150)
+(def max-user-instruction-length 5000)
 
 (defn ->service-source-id
   [org-id sub-category-id]
   (str "lipas-" org-id "-" sub-category-id))
 
+(defn ->adopted-service-source-id
+  "Source-id for a PTV service adopted for LIPAS management (freeform, no sub-category mapping)."
+  [org-id service-id]
+  (str "lipas-" org-id "-ptv-" service-id))
+
+(defn adopted-service-source-id?
+  "True if source-id represents an adopted (non-sub-category-mapped) PTV service."
+  [source-id]
+  (boolean (and source-id (re-find #"lipas-.*-ptv-" source-id))))
+
 (defn ->ptv-service
   [{:keys [org-id city-codes source-id sub-category-id languages _description _summary]
     :or {languages default-langs} :as m}]
-  (let [languages (set languages)
+  (let [lipas-languages (set languages)
+        ;; PTV language codes for the :languages field on the payload
+        languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         #_#_type (get types/all type-code)
-        sub-cat (get types/sub-categories sub-category-id)
-        main-cat (get types/main-categories (parse-long (:main-category sub-cat)))]
+        sub-cat (when sub-category-id (get types/sub-categories sub-category-id))
+        main-cat (when-let [mc (:main-category sub-cat)] (get types/main-categories (parse-long mc)))]
 
     {:sourceId (or source-id
                    (let [ts (str/replace (utils/timestamp) #":" "-")
                          x (str "lipas-" org-id "-" sub-category-id "-" ts)]
-                     (log/infof "Creating new PTV Service source-id %s" x)
+                     (log/debugf "Creating new PTV Service source-id %s" x)
                      x))
 
      #_#_:keywords (let [tags (:tags type)]
@@ -176,10 +255,14 @@
 
      :fundingType "PubliclyFunded" ;; PubliclyFunded | MarketFunded
 
-     :serviceNames (for [[lang locale] (select-keys lang->locale languages)]
-                     {:type "Name" ; Name | AlternativeName
-                      :language lang
-                      :value (get-in sub-cat [:name locale])})
+     :serviceNames (let [custom-name (:service-name m)]
+                     (for [[lang locale] (resolve-lang-pairs lipas-languages)]
+                       {:type "Name" ; Name | AlternativeName
+                        :language lang
+                        :value (or (when (and custom-name (= locale :fi))
+                                     custom-name)
+                                   (get-in sub-cat [:name locale])
+                                   "")}))
 
      ;; List of target group urls
      ;; https://koodistot.suomi.fi/codescheme;registryCode=ptv;schemeCode=ptvkohderyhmat
@@ -203,16 +286,11 @@
      ;; provided? Maybe default to just "fi"?
      :languages languages
 
-     :serviceDescriptions (for [[k v] {:summary "Summary" :description "Description"}
-                                [lang locale] (select-keys lang->locale languages)]
-                            {:type v ; Description |
-                                        ; Summary |
-                                        ; UserInstruction |
-                                        ; ValidityTime |
-                                        ; ProcessingTime |
-                                        ; DeadLine |
-                                        ; ChargeTypeAdditionalInfo
-                                        ; | ServiceType
+     :serviceDescriptions (for [[k v] {:summary "Summary"
+                                       :description "Description"
+                                       :user-instruction "UserInstruction"}
+                                [lang locale] (resolve-lang-pairs lipas-languages)]
+                            {:type v
                              :language lang
                              :value (get-in m [k locale] placeholder)})
 
@@ -239,11 +317,11 @@
         {:is-finnish-service-number true
          :number (str/replace n #" " "")}
         (let [prefix (or ;; Special case for +358 prefix, doesn't allow fourth number
-                      (re-find #"^\+358" n)
+                       (re-find #"^\+358" n)
                          ;; Generic 1-4 number + prefix, if there are no spaces, will include
                          ;; too many numbers...?
-                      (re-find RE-PREFIX n)
-                      "+358")
+                       (re-find RE-PREFIX n)
+                       "+358")
               ;; strip the prefix
               n (-> (if (str/starts-with? n prefix)
                       (subs n (count prefix))
@@ -274,10 +352,9 @@
    coord-transform-fn
    now
    {:keys [status ptv lipas-id location search-meta] :as sports-site}]
-  (let [languages (-> ptv
-                      (get :languages default-langs)
-                      (->> (map lipas-lang->ptv-lang))
-                      set)
+  (let [lipas-languages (get ptv :languages default-langs)
+        ;; PTV language codes for the :languages field on the payload
+        languages (->> lipas-languages (map lipas-lang->ptv-lang) (remove nil?) set)
         type (get types/all (get-in sports-site [:type :type-code]))
         _sub-cat (get types/sub-categories (:sub-category type))
         _main-cat (get types/main-categories (:main-category type))
@@ -298,44 +375,45 @@
              :sourceId (or (:source-id ptv)
                            (let [ts (str/replace now #":" "-")
                                  x (str "lipas-" (:org-id ptv) "-" lipas-id "-" ts)]
-                             (log/infof "Creating new PTV ServiceLocation source-id %s" x)
+                             (log/debugf "Creating new PTV ServiceLocation source-id %s" x)
                              x))
+             ;; Per-language rule (one-way LIPAS→PTV): every declared language
+             ;; gets full coverage in serviceChannelNames / displayNameType /
+             ;; serviceChannelDescriptions. For sv/en, use the LIPAS-entered
+             ;; localized value if non-blank, otherwise fall back to the
+             ;; Finnish value. PTV-side edits to these fields are not
+             ;; preserved — drift is surfaced separately in the LIPAS UI.
              :serviceChannelNames (keep identity
-                                        (let [fallback (get-in sports-site [:name])]
+                                        (let [fi-name (:name sports-site)
+                                              pick (fn [locale]
+                                                     (let [v (get-in sports-site [:name-localized locale])]
+                                                       (if (str/blank? v) fi-name v)))]
                                           [(when (contains? languages "fi")
-                                             {:type "Name"
-                                              :value fallback
-                                              :language "fi"})
-
+                                             {:type "Name" :value fi-name :language "fi"})
                                            (when (contains? languages "sv")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :se] fallback)
-                                              :language "sv"})
-
+                                             {:type "Name" :value (pick :se) :language "sv"})
                                            (when (contains? languages "en")
-                                             {:type "Name"
-                                              :value (get-in sports-site [:name-localized :en] fallback)
-                                              :language "en"})
-
-                                           (when (contains? languages "fi")
-                                             (when-let [s (:marketing-name sports-site)]
-                                               {:type "AlternativeName"
-                                                :value s
-                                                :language "fi"}))]))
+                                             {:type "Name" :value (pick :en) :language "en"})
+                                           (when (and (contains? languages "fi")
+                                                      (not (str/blank? (:marketing-name sports-site))))
+                                             {:type "AlternativeName" :value (:marketing-name sports-site) :language "fi"})]))
 
              :displayNameType (keep identity
                                     [(when (contains? languages "fi") {:type "Name" :language "fi"})
                                      (when (contains? languages "sv") {:type "Name" :language "sv"})
                                      (when (contains? languages "en") {:type "Name" :language "en"})])
 
-             :serviceChannelDescriptions (keep identity
-                                               (let [fallback "TODO text missing"]
-                                                 (for [[type-k type-v] {:summary "Summary"
-                                                                        :description "Description"}
-                                                       [lang locale] (select-keys lang->locale languages)]
-                                                   {:type type-v
-                                                    :value (get-in ptv [type-k locale] fallback)
-                                                    :language lang})))
+             :serviceChannelDescriptions (let [pick (fn [type-k locale]
+                                                      (let [v (get-in ptv [type-k locale])]
+                                                        (if (str/blank? v)
+                                                          (or (get-in ptv [type-k :fi]) placeholder)
+                                                          v)))]
+                                           (vec (for [[type-k type-v] {:summary "Summary"
+                                                                       :description "Description"}
+                                                      [lang locale] (resolve-lang-pairs lipas-languages)]
+                                                  {:type type-v
+                                                   :value (pick type-k locale)
+                                                   :language lang})))
 
              ;; TODO should this be controlled in org or sports-site level?
              :languages languages
@@ -524,8 +602,8 @@
             (let [ssname (resolve-service-channel-name service-channel)
                   s2 (some-> ssname str/trim str/lower-case)]
               (when (and
-                     (not (contains? attached-channels (:id service-channel)))
-                     (= s1 s2))
+                      (not (contains? attached-channels (:id service-channel)))
+                      (= s1 s2))
                 {:service-channel-id (:id service-channel)})))
           service-channels)))
 
@@ -565,23 +643,180 @@
       ;; No audit data
       :else :none)))
 
+(defn ptv-descriptions->texts
+  "Extract :summary, :description, :user-instruction maps from PTV descriptions array.
+   Works for both serviceDescriptions and serviceChannelDescriptions."
+  [descriptions]
+  (reduce (fn [acc {:keys [language value type]}]
+            (if-let [k (case type
+                         "Summary" :summary
+                         "Description" :description
+                         "UserInstruction" :user-instruction
+                         nil)]
+              (update acc k assoc (lang->locale language) value)
+              acc))
+          {}
+          descriptions))
+
+(def service-channel-compare-fields
+  "Fields to compare when checking drift against a PTV ServiceChannel.
+   PTV ServiceChannels don't carry :user-instruction — that's a Service-level
+   concept — so leave it out of the comparison."
+  [:summary :description])
+
+(defn texts-match?
+  "Compare LIPAS-side texts with PTV-side texts. Returns true if all
+   non-nil fields match. Trims whitespace for comparison. `fields`
+   defaults to all three lipas text fields; callers comparing against
+   a PTV ServiceChannel should pass `service-channel-compare-fields`."
+  ([lipas-texts ptv-texts]
+   (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
+  ([lipas-texts ptv-texts fields]
+   (let [trim #(some-> % str/trim not-empty)]
+     (every? (fn [field]
+               (let [lipas-vals (get lipas-texts field)
+                     ptv-vals (get ptv-texts field)]
+                 (every? (fn [lang]
+                           (let [l (trim (get lipas-vals lang))
+                                 p (trim (get ptv-vals lang))]
+                             (or (and (nil? l) (nil? p))
+                                 (= l p))))
+                         [:fi :se :en])))
+             fields))))
+
+(defn- effective-lipas-name
+  "What LIPAS will push for [type, locale] under the strict 1-way model.
+   Mirrors the per-language fallback rule in `->ptv-service-location`:
+   sv/en use the localized name when entered, else the Finnish name.
+   Returns nil when LIPAS has nothing to push (e.g., AlternativeName
+   without a marketing-name)."
+  [site type locale]
+  (case type
+    "Name" (let [v (get-in site [:name-localized locale])]
+             (if (str/blank? v) (:name site) v))
+    "AlternativeName" (when-not (str/blank? (:marketing-name site))
+                        (:marketing-name site))))
+
+(defn- effective-lipas-text
+  "Mirrors the description fallback in `->ptv-service-location`: use the
+   localized value if entered, else the Finnish value, else nil."
+  [site field locale]
+  (let [m (get-in site [:ptv field])
+        v (get m locale)]
+    (if (str/blank? v) (get m :fi) v)))
+
+(defn- resolve-service-name
+  "Resolve a service ID to a human-readable Finnish name from the
+   services-by-id map. Falls back to the ID when the service isn't
+   in the cache (e.g. external services or stale cache)."
+  [services service-id]
+  (or (some-> (get services service-id)
+              :serviceNames
+              select-service-name)
+      service-id))
+
+(defn compute-service-channel-drift
+  "Build a structured per-field drift report comparing what LIPAS would
+   push on next sync against what's currently stored in PTV. Returns a
+   vector of entries; empty vector means no drift. Each entry has
+   `:field` (:name, :marketing-name, :summary, :description, :services).
+   For value fields, the entry has localized `:lipas`/`:ptv` strings
+   (with `:language`, `:type`, `:locale`). For service link drift, the
+   entry's `:lipas`/`:ptv`/`:added`/`:removed` are vectors of
+   `{:id :name}` maps so the UI can show readable service names rather
+   than raw UUIDs.
+
+   `site` is the LIPAS sports-site map; `ptv-channel` is the cached PTV
+   ServiceChannel response (or nil if unavailable); `services` is the
+   org's services-by-id map used for resolving service names; and
+   `lipas-languages` is the list of LIPAS-side language codes
+   (e.g. [\"fi\" \"se\" \"en\"]) to consider. Returns nil when the
+   channel hasn't been fetched yet."
+  [site ptv-channel services lipas-languages]
+  (when ptv-channel
+    (let [ptv-names (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelNames ptv-channel))
+          ptv-descs (into {} (map (juxt (juxt :type :language) :value))
+                          (:serviceChannelDescriptions ptv-channel))
+          lang-pairs (resolve-lang-pairs lipas-languages)
+          trim #(some-> % str/trim not-empty)
+          mk-text-comparison (fn [field type-v]
+                               (for [[ptv-lang locale] lang-pairs]
+                                 {:field field
+                                  :type type-v
+                                  :language ptv-lang
+                                  :locale locale
+                                  :lipas (effective-lipas-text site (case field
+                                                                      :summary :summary
+                                                                      :description :description) locale)
+                                  :ptv (get ptv-descs [type-v ptv-lang])}))
+          comparisons (concat
+                        (for [[ptv-lang locale] lang-pairs]
+                          {:field :name
+                           :type "Name"
+                           :language ptv-lang
+                           :locale locale
+                           :lipas (effective-lipas-name site "Name" locale)
+                           :ptv (get ptv-names ["Name" ptv-lang])})
+                        [{:field :marketing-name
+                          :type "AlternativeName"
+                          :language "fi"
+                          :locale :fi
+                          :lipas (effective-lipas-name site "AlternativeName" :fi)
+                          :ptv (get ptv-names ["AlternativeName" "fi"])}]
+                        (mk-text-comparison :summary "Summary")
+                        (mk-text-comparison :description "Description"))
+          drifted (->> comparisons
+                       (keep (fn [c]
+                               (let [l (trim (:lipas c))
+                                     p (trim (:ptv c))]
+                                 (when (not= l p)
+                                   (assoc c :lipas l :ptv p))))))
+          lipas-service-ids (set (-> site :ptv :service-ids))
+          ptv-service-ids (->> (:services ptv-channel)
+                               (map (comp :id :service))
+                               (remove nil?)
+                               set)
+          mk-entry (fn [id] {:id id :name (resolve-service-name services id)})
+          mk-entries (fn [id-set] (->> id-set (map mk-entry) (sort-by :name) vec))
+          link-drift (when (not= lipas-service-ids ptv-service-ids)
+                       [{:field :services
+                         :lipas (mk-entries lipas-service-ids)
+                         :ptv (mk-entries ptv-service-ids)
+                         :added (mk-entries (set/difference ptv-service-ids lipas-service-ids))
+                         :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
+      (vec (concat drifted link-drift)))))
+
 (defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
 
         summary (-> site :ptv :summary)
         description (-> site :ptv :description)
+        user-instruction (-> site :ptv :user-instruction)
 
-        last-sync (-> site :ptv :last-sync)]
+        last-sync (-> site :ptv :last-sync)
+
+        ;; Drift detection: build a structured per-field diff comparing what
+        ;; LIPAS would push on next sync vs what's currently stored in PTV.
+        ;; Covers Name (per language), AlternativeName/marketing-name, Summary
+        ;; and Description (per language), and service-link membership.
+        ptv-channel (get service-channels service-channel-id)
+        ptv-texts (when ptv-channel (ptv-descriptions->texts (:serviceChannelDescriptions ptv-channel)))
+        drift-langs (or (-> site :ptv :languages) org-langs)
+        drift-fields (when (and last-sync ptv-channel)
+                       (compute-service-channel-drift site ptv-channel services drift-langs))
+        has-drift? (boolean (seq drift-fields))]
+
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
      :lipas-id (:lipas-id site)
      :name (:name site)
      :event-date (:event-date site)
-     ;; :event-date-human (some-> (:event-date site) utils/->human-date-time-at-user-tz)
      :name-conflict (detect-name-conflict site (vals service-channels))
      :marketing-name (:marketing-name site)
      :type (-> site :search-meta :type :name :fi)
+     :type-code (-> site :type :type-code)
      :sub-category (-> site :search-meta :type :sub-category :name :fi)
      :sub-category-id (-> site :type :type-code types :sub-category)
      :org-id org-id
@@ -589,16 +824,21 @@
      :owner (-> site :search-meta :owner :name :fi)
      :summary summary
      :description description
+     :user-instruction user-instruction
      :languages (or (-> site :ptv :languages) org-langs)
 
      :sync-enabled (get-in site [:ptv :sync-enabled] false)
      :last-sync last-sync
-     ;; :last-sync-human             (some-> last-sync utils/->human-date-time-at-user-tz)
 
      :sync-status (cond
                     (not last-sync) :not-synced
+                    has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
+
+     :drift-fields drift-fields
+
+     :ptv-texts ptv-texts
 
      :service-ids (-> site :ptv :service-ids)
      :service-name (-> services
@@ -609,8 +849,8 @@
      :service-channel-ids (-> site :ptv :service-channel-ids)
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
+     :service-channel-publishing-status (:publishingStatus ptv-channel)
 
-     ;; Audit status determination
      :audit-status (determine-audit-status site)}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
@@ -647,17 +887,9 @@
                   (some-> summary :fi count (> 5))))))
 
 (defn ptv-service-channel->texts
-  "Take PTV ServiceChannel response and build Lipas :summary and :description"
+  "Take PTV ServiceChannel response and build Lipas :summary, :description, :user-instruction"
   [data]
-  (reduce (fn [acc {:keys [language value type]}]
-            (if-let [k (case type
-                         "Summary" :summary
-                         "Description" :description
-                         nil)]
-              (update acc k assoc (lang->locale language) value)
-              acc))
-          {}
-          (:serviceChannelDescriptions data)))
+  (ptv-descriptions->texts (:serviceChannelDescriptions data)))
 
 (defn get-all-pages [f]
   (loop [page 1

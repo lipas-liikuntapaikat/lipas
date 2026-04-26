@@ -624,13 +624,20 @@
                      ;; NOTE:  this will create a new sports-site rev.
                      ;; Make it instead update the sports-site already created in the tx?
                      ;; Otherwise each save-sports-site! will create two sports-site revs.
-                     (let [new-ptv-data (sync-ptv! tx search ptv user
-                                                   {:sports-site resp
-                                                    :org-id (:org-id (:ptv resp))
-                                                    :lipas-id (:lipas-id resp)
-                                                    :ptv (:ptv resp)})]
+                     (let [{new-ptv :ptv new-event-date :event-date}
+                           (sync-ptv! tx search ptv user
+                                      {:sports-site resp
+                                       :org-id (:org-id (:ptv resp))
+                                       :lipas-id (:lipas-id resp)
+                                       :ptv (:ptv resp)})]
                        (log/infof "Sports site updated and PTV integration enabled")
-                       (assoc resp :ptv new-ptv-data))
+                       ;; sync-ptv! wrote a new revision (success or failure)
+                       ;; and returned the event-date it used. Adopt both so
+                       ;; the outer index! below reindexes that exact
+                       ;; revision rather than the pre-sync resp.
+                       (-> resp
+                           (assoc :event-date new-event-date)
+                           (assoc :ptv new-ptv)))
                      resp)))]
 
            ;; Phase 2: ES indexing after transaction has committed.
