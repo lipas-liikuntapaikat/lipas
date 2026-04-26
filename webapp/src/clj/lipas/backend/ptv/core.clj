@@ -122,6 +122,28 @@
                           (not= v "-"))))
                  items)))
 
+(defn- localized-list?
+  "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
+   PTV for descriptions, names, requirements, etc."
+  [v]
+  (and (sequential? v)
+       (seq v)
+       (every? map? v)
+       (every? #(contains? % :value) v)))
+
+(defn- strip-blank-localized-entries
+  "PTV's PUT endpoint rejects localized list entries with blank :value
+   (400 'The Value field is required.'). The GET response can include
+   such entries — e.g. :requirements with empty per-language slots — so
+   strip them before round-tripping."
+  [m]
+  (reduce-kv (fn [acc k v]
+               (cond-> acc
+                 (localized-list? v)
+                 (assoc k (filterv #(not (str/blank? (:value %))) v))))
+             m
+             m))
+
 (defn- normalize-ptv-service-for-update
   "Convert PTV GET response enriched objects back to the input format
    expected by the PUT endpoint. The GET returns rich objects (with names,
@@ -140,7 +162,8 @@
                        (mapv (fn [area]
                                {:type (:type area)
                                 :areaCodes (mapv :code (:municipalities area))})
-                             areas)))))
+                             areas)))
+      strip-blank-localized-entries))
 
 (defn- merge-ptv-lists
   "Merge two PTV-style lists keyed by [:type :language]. Existing items
