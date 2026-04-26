@@ -57,15 +57,31 @@ Fetch current → modify → save. The "modify" step must include a fresh `:even
 
 **Use `save-sports-site!`** (sync ES + jobs), not `upsert-sports-site!` (DB-only). See [create-site.md](create-site.md) for the distinction.
 
-## Trigger — UI path
+## Trigger — UI path via clj REPL (default)
 
+`e2e/ui-update-site!` drives the full edit flow via re-frame dispatches: load → `::edit-site` → `::edit-field` × N → `::save-edits` → wait for save complete.
+
+```clojure
+(require '[lipas.e2e.tools :as e2e] :reload)
+
+(e2e/ui-login! "limindemo" "liminka")    ; idempotent
+
+(e2e/ui-update-site! {:lipas-id lid
+                      :changes  [[[:name]                    "Updated Name"]
+                                 [[:location :address]       "Päivitetty 9"]]})
+;; → returns lipas-id once save-edits completes
+
+;; Verify (capture rev count BEFORE the update for an exact-+1 assertion)
+(e2e/coherent? lid)              ; → {:ok? true :drift []}
+(e2e/revision-count lid)         ; rev-before + 1
+(e2e/ui-current-name lid)        ; → "Updated Name"
 ```
-1. Login as the chosen user
-2. Navigate /liikuntapaikat/<lid> (or search → click result)
-3. Click "Edit" button
-4. Modify field(s)
-5. Click Save — dispatches ::sports-sites.events/commit-rev
-```
+
+For permission-rejection variants: the dispatch fires regardless; the failure surfaces in `[:sports-sites :errors <ts>]` after save-edits. Read via `(e2e/cljs-eval '(get-in @re-frame.db/app-db [:sports-sites :errors]))`.
+
+### When to fall back to click-driven testing
+
+Only when verifying user-visible interaction the dispatch path can't see — the Edit button enabled-state, form-validation tooltips, geometry handle dragging, etc. See the click-driven gotchas in [create-site.md](create-site.md#when-this-isnt-enough--testing-user-visible-ux).
 
 ## Verify
 
