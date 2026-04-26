@@ -144,10 +144,22 @@
              m
              m))
 
+(def ^:private get-only-service-fields
+  "Fields present in the GET response but not accepted by the PUT endpoint,
+   either because they're response-only metadata or because the GET shape
+   differs from the PUT shape entirely. :organizations is the worst offender:
+   GET returns `[{:organization {:id ...} :roleType ...}]` but PUT expects
+   `:mainResponsibleOrganization` (UUID string) which LIPAS sets explicitly."
+  #{:id :modified :organizations :serviceChannels})
+
+(defn- drop-nil-vals [m]
+  (into {} (remove (fn [[_ v]] (nil? v))) m))
+
 (defn- normalize-ptv-service-for-update
   "Convert PTV GET response enriched objects back to the input format
    expected by the PUT endpoint. The GET returns rich objects (with names,
-   descriptions, parents), but PUT expects simplified input (URIs, codes)."
+   descriptions, parents) plus response-only metadata, but PUT expects
+   simplified input (URIs, codes) and rejects unknown/wrong-shape fields."
   [service]
   (-> service
       ;; ontologyTerms: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
@@ -163,6 +175,8 @@
                                {:type (:type area)
                                 :areaCodes (mapv :code (:municipalities area))})
                              areas)))
+      (as-> $ (apply dissoc $ get-only-service-fields))
+      drop-nil-vals
       strip-blank-localized-entries))
 
 (defn- merge-ptv-lists
@@ -222,7 +236,18 @@
 
 (defn upsert-ptv-service!
   [ptv {:keys [org-id source-id service-id sub-category-id] :as m}]
-  (let [lipas-data (ptv-data/->ptv-service m)]
+  (let [;; Adoption path: always use the adopted-source-id pattern
+        ;; (lipas-{org}-ptv-{service-id}). The standard sub-category
+        ;; pattern (lipas-{org}-{sub-cat}) collides with prior LIPAS-managed
+        ;; services that were soft-archived in PTV — archived services keep
+        ;; their sourceId, and PTV's PUT crashes with a 500 ('An unexpected
+        ;; error occurred. Trace id: ...') on the collision rather than
+        ;; returning a clean 409. The adopted pattern uses the unique PTV
+        ;; service UUID, sidestepping the collision entirely.
+        m (cond-> m
+            service-id (assoc :source-id
+                              (ptv-data/->adopted-service-source-id org-id service-id)))
+        lipas-data (ptv-data/->ptv-service m)]
     (if service-id
       ;; Updating existing PTV service: fetch, normalize to input format, merge
       (let [existing (-> (ptv/get-service ptv org-id service-id)
