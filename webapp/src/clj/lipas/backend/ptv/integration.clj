@@ -366,7 +366,29 @@
            (= 400 (get-in (ex-data e) [:resp :status]))
            (some-> (ex-message e) (str/includes? "status Modified"))))
 
+    (defn- tombstone-source-id
+      "Build a unique tombstone sourceId from an original. Timestamp suffix
+       avoids collisions across repeated wipe runs of the same org."
+      [original]
+      (str original "-tombstone-" (System/currentTimeMillis)))
+
+    (defn- minimal-service-put-body
+      "PTV's PUT-by-id rejects partial bodies — TargetGroups, OntologyTerms,
+       ServiceClasses, PublishingStatus, and mainResponsibleOrganization
+       are all required. Reconstruct them from the GET response."
+      [ptv org-id ptv-id]
+      (let [s (get-service ptv org-id ptv-id)]
+        {:mainResponsibleOrganization org-id
+         :publishingStatus (:publishingStatus s)
+         :ontologyTerms (mapv :uri (:ontologyTerms s))
+         :serviceClasses (mapv :uri (:serviceClasses s))
+         :targetGroups (mapv :uri (:targetGroups s))}))
+
     (defn wipe-ptv-service-locations! [ptv org-id]
+      ;; ServiceLocation sourceIds already include a millisecond timestamp
+      ;; (lipas-{org}-{lipas-id}-{ts}), so future re-creates can't collide
+      ;; with soft-archived rows. No tombstone-rename needed here — straight
+      ;; archive is sufficient.
       (println "Removing Service Locations in PTV Test...")
       (let [skipped (atom [])]
         (doseq [x (:itemList (get-org-service-channels ptv org-id))]
@@ -381,21 +403,39 @@
         (println "Removing Service Locations in PTV Test... DONE!")
         @skipped))
 
-    (defn wipe-ptv-services! [ptv org-id]
+    (defn wipe-ptv-services!
+      "Soft-archive every service in the org. Before archiving, rename each
+       service's sourceId to a tombstone pattern so the original sourceId
+       is freed for future re-creates. Without this, the soft-archived row
+       keeps the sourceId forever and a future LIPAS sync that POSTs the
+       same sourceId hits a 400 ('Cannot create new content with sourceId
+       that already exists') — or, worse, the PUT-by-id adoption path
+       crashes PTV with a 500.
+
+       PTV silently drops :sourceId changes when :publishingStatus is set
+       to 'Deleted' in the same PUT, so this is a two-step: rename while
+       still Published, then archive."
+      [ptv org-id]
       (println "Removing Services in PTV Test...")
       (let [skipped (atom [])]
-        (doseq [x (:itemList (get-org-services ptv org-id))]
-          (when-let [source-id (:sourceId x)]
-            (try
-              (update-service ptv
-                              source-id
-                              {:mainResponsibleOrganization org-id
-                               :publishingStatus "Deleted"})
-              (catch Exception e
-                (if (modified-status-error? e)
-                  (do (println "  SKIPPED (Modified):" source-id)
-                      (swap! skipped conj {:sourceId source-id}))
-                  (throw e))))))
+        (doseq [svc (:itemList (get-org-services ptv org-id))
+                :let [ptv-id (:id svc)
+                      original-id (:sourceId svc)]
+                :when ptv-id]
+          (try
+            (let [base (minimal-service-put-body ptv org-id ptv-id)]
+              (when original-id
+                ;; Step 1: rename sourceId to tombstone (keep current status).
+                (update-service-by-id ptv ptv-id
+                                      (assoc base :sourceId (tombstone-source-id original-id))))
+              ;; Step 2: archive.
+              (update-service-by-id ptv ptv-id
+                                    (assoc base :publishingStatus "Deleted")))
+            (catch Exception e
+              (if (modified-status-error? e)
+                (do (println "  SKIPPED (Modified):" (or original-id ptv-id))
+                    (swap! skipped conj {:sourceId original-id :id ptv-id}))
+                (throw e)))))
         (println "Removing Services in PTV Test... DONE!")
         @skipped))
 
