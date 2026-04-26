@@ -25,9 +25,70 @@ For the *why* behind this skill (principles, architecture, what we deliberately 
 
 If your task isn't listed, compose from the [catalog](catalog.md). Add a new scenario file when the task you just did is something you'll do again.
 
-## E2E tooling
+## E2E tooling — one layer, all from clj REPL
 
-`lipas.e2e.tools` (in `dev/lipas/e2e/tools.clj`) — REPL helpers for seeding, snapshotting, and verifying. Public API summary in [catalog.md](catalog.md#e2e-tools-api). Load it with `(require '[lipas.e2e.tools :as e2e] :reload)`.
+The agent stays in the **clj nREPL session** the entire time. `lipas.e2e.tools` exposes both backend and UI-driver helpers; UI helpers internally call into the running browser via `shadow.cljs.devtools.api/cljs-eval`, polling cljs state from clj where `Thread/sleep` actually blocks.
+
+```clojure
+(require '[lipas.e2e.tools :as e2e] :reload)
+(require '[lipas.backend.core :as core])
+
+;; Backend / fixture ops
+(def liminka (core/get-user (e2e/db) "liminka@lipas.fi"))
+(def lid (e2e/seed-site! {:type-code 3110 :city-code 425
+                          :name "Fixture" :user liminka}))
+
+;; UI-driven ops (browser dispatches under the hood, blocks on clj side)
+(e2e/ui-login! "limindemo" "liminka")
+(def created (e2e/ui-create-site! {:type-code 3110 :coords [25.42 64.81]
+                                   :name "Demo" :owner "city" :admin "city-sports"
+                                   :address "Testikatu 1" :postal-code "91900"}))
+(e2e/ui-update-site! {:lipas-id created :changes [[[:name] "Updated"]]})
+
+;; Verification helpers
+(e2e/ui-current-name created)        ; reads app-db latest revision
+(e2e/coherent? created)              ; cross-layer DB↔ES check
+(e2e/revision-count created)         ; raw revision count
+(e2e/cleanup! created)
+```
+
+### `lipas.e2e.tools` API (in `dev/lipas/e2e/tools.clj`)
+
+**Backend / fixture helpers** (CLJ-only, no browser involved):
+| Fn | Purpose |
+|---|---|
+| `(seed-site! params)` | Create a fixture site via `core/save-sports-site!`. Returns lipas-id. |
+| `(coherent? lid)` | DB↔ES drift check. Returns `{:ok? bool :drift [...]}` |
+| `(revision-count lid)` | Raw revision count (queries `sports_site` directly, not the by-year view) |
+| `(snapshot lid)` | Failure-debug snapshot across DB / ES / revs / jobs |
+| `(jobs-for lid)` / `(wait-for-job lid type)` | Async job inspection |
+| `(cleanup! lid)` | Soft-delete (status flip — append-only model) |
+
+**UI-driver helpers** (drive the running browser via cljs-eval):
+| Fn | Purpose |
+|---|---|
+| `(ui-login! username password)` | Dispatches login, waits for `[:logged-in?]` true. Idempotent. |
+| `(ui-logout!)` | Logs out via re-frame. |
+| `(ui-create-site! params)` | Full create wizard — discard → start → init → edit-fields → save → wait for navigation. Returns new lipas-id. |
+| `(ui-update-site! {:lipas-id ... :changes [[path val] ...]})` | Fetch → edit-fields → save-edits → wait. Returns lipas-id. |
+| `(ui-current-name lid)` | Reads `[:sports-sites lid :history latest :name]` from app-db. |
+| `(ui-list-handlers kind pattern)` | Discover registered re-frame handlers (`:event`/`:sub`/`:fx`/`:cofx`). |
+
+**Lower-level cljs-eval primitives** (when you need to dispatch an event without a wrapper):
+| Fn | Purpose |
+|---|---|
+| `(cljs-eval form)` | Evaluate any cljs form in the browser, parse the result as EDN. |
+| `(await-cljs check-form opts)` | Poll a cljs check-form until truthy. `opts = {:timeout-ms :interval-ms :label}` |
+
+The browser-side counterpart lives in `dev/lipas/e2e/scripts.cljs` (`lipas.e2e.scripts/dispatch-create!`, `dispatch-update!`, `current-rev`, etc.). It's sync-only — no Promises, no async ceremony. The clj wrappers do the polling.
+
+### Why this design
+
+**Async waits belong on the clj side.** `Thread/sleep` actually blocks; JS Promises don't round-trip cleanly through nREPL eval. By keeping the agent in clj and polling browser state through `cljs-eval`, async waits become as natural as a synchronous function call.
+
+**Single language, single session.** No `(user/browser-repl)` / `:cljs/quit` switching. No `window.lipasE2E` JS bridge with its own conversion bugs. Everything is Clojure, and event vectors are written as natural Clojure data: `[:lipas.ui.events/foo arg]`, not `[':lipas.ui.events/foo', 'arg']`.
+
+**Use REPL helpers when possible; drop to `cljs-eval` for ad-hoc dispatches.** If the helper exists, use it. If you need a one-off dispatch the helpers don't cover, `(e2e/cljs-eval '(rf/dispatch [...]))` is fine — just don't build script artifacts ad-hoc; codify them into `scripts.cljs` + a tools.clj wrapper so the next agent benefits.
 
 ## Where domain facts live
 
@@ -73,6 +134,6 @@ If you find yourself reaching for one of these for an e2e task, you probably nee
 After completing an e2e task:
 
 1. **Did you discover a fact you had to dig for?** Add it to the relevant scenario, or to [catalog.md](catalog.md) if cross-cutting.
-2. **Did you do a flow not yet covered?** Drop a new file in `scenarios/`. Use the existing ones as templates.
+2. **Did you do a flow not yet covered?** Drop a new file in `scenarios/`. Use the existing ones as templates. If the flow is repeatable through the bridge, also add a script to `scripts/`.
 3. **Did a scenario steer you wrong?** Fix it. Stale > missing.
-4. **Did you find a tool you needed but didn't have?** Add a stub to `lipas.e2e.tools` with a docstring describing the intent.
+4. **Did you find a tool you needed but didn't have?** Add a stub to `lipas.e2e.tools` (REPL side) or `lipas.ui.dev-bridge` (browser side) with a docstring describing the intent.

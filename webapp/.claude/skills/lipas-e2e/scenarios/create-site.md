@@ -66,21 +66,56 @@ Skip the UI; drive the same `core/save-sports-site!` the HTTP handler calls. Cap
 
 **Why `save-sports-site!`, not `upsert-sports-site!`?** `upsert-sports-site!` is DB-only. `save-sports-site!` wraps it in a transaction, calls `index! search resp :sync` after the tx commits, and enqueues the async jobs (analysis, elevation, PTV sync). Always use `save-sports-site!` for e2e.
 
-## Trigger — UI path (when UX matters)
+## Trigger — UI path via clj REPL (default)
 
-Use only when verifying user-visible behavior the REPL path can't see (form layout, button enablement, geometry-drawing UX).
+The agent stays in the clj nREPL session. `e2e/ui-create-site!` drives the full wizard via re-frame dispatches under the hood, returns the new lipas-id when the save+navigate cycle finishes.
 
+```clojure
+(require '[lipas.e2e.tools :as e2e] :reload)
+
+(e2e/ui-login! "limindemo" "liminka")    ; idempotent
+
+(def lid (e2e/ui-create-site! {:type-code   3110
+                               :coords      [25.42 64.81]
+                               :name        "E2E Pool"
+                               :owner       "city"        ; see lipas.data.owners
+                               :admin       "city-sports" ; see lipas.data.admins
+                               :address     "Testikatu 1"
+                               :postal-code "91900"
+                               ;; :city-code optional — auto-inferred from user role
+                               }))
+;; → 618848 (the new lipas-id) once save success + navigation lands
+
+;; Then verify with the standard cross-layer assertions:
+(e2e/coherent? lid)                       ; → {:ok? true :drift []}
+(e2e/revision-count lid)                  ; → 1
+(:name (core/get-sports-site (e2e/db) lid))   ; backend confirms
+(e2e/ui-current-name lid)                 ; browser app-db confirms
 ```
-1. POST /actions/login (basic auth: city-user creds)
-2. Navigate /liikuntapaikat
-3. Click the "Add" FAB (top-right of map) — dispatches ::map.events/start-adding-new-site
-4. Step 1: pick site type 3110
-5. Step 2: draw point geometry on map (drawend → ::map.events/new-geom-drawn)
-6. Step 3: fill form fields (only :name is required)
-7. Click Save — dispatches ::map.events/save-new-site → ::sports-sites.events/commit-rev
-```
 
-If delegating to the browser-tester subagent: hand it the exact creds, city-code, and type-code. Don't make it discover the flow.
+This exercises the real frontend code paths — `start-adding-new-site` → `select-new-site-type` → `init-new-site` → `edit-new-site-field` × N → `save-new-site` → backend POST → success effect → SPA navigation — but skips human input mechanics (clicks, typing).
+
+### When this isn't enough — testing user-visible UX
+
+For form-layout assertions, button-enabled-state changes, draw-on-map ergonomics, or anything that requires a real human click sequence: use the click-driven path with Chrome MCP. The trip-wires below apply.
+
+#### UI gotchas if you do click-driven testing
+
+- **The form has 7 required fields, not 1.** Backend (`save-sports-site!`) accepts a doc with just `:name`, but the UI form blocks Tallenna until all of these are filled: `Liikuntapaikkatyyppi`, `Nimi suomeksi`, `Omistaja` (Owner), `Ylläpitäjä` (Admin), `Katuosoite` (Street), `Postinumero` (Postal), `Kunta` (City — auto-set from geometry, no action needed). Hovering disabled save shows tooltip "Täytä pakolliset kentät".
+- **Owner/Admin enum text mapping** (form labels in Finnish, backend stores enum keys):
+  - `:owner "city"` → "Kunta"
+  - `:admin "city-sports"` → "Kunta / liikuntatoimi"
+- **Drawing requires zoom; coordinate-input does not.** Step 2's "Piirrä" tab disables "Lisää kartalle" with "Kartta täytyy zoomata lähemmäs" until zoomed in. The "Syötä koordinaatit" tab works at any zoom and is the easier automation path. Use drawing only when you're specifically testing draw UX.
+- **MUI inputs drop keystrokes from `computer.type`.** Fast typing after `left_click` consistently lost leading characters. If you must use Chrome MCP, set values via the React-aware native setter:
+  ```js
+  const setNative = (el, val) => {
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value').set;
+    setter.call(el, val);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  ```
+- **MUI Autocomplete/Select pickers** still need real clicks (not value-set). They read from app-db, not the underlying input.
 
 ## Verify
 

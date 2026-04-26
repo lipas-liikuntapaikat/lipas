@@ -9,8 +9,10 @@
   possible, fall back to direct SQL otherwise. Marked TODOs are unverified
   paths that should be tightened the first time they bite."
   (:require
+    [clojure.edn :as edn]
     [lipas.backend.core :as core]
-    [next.jdbc :as jdbc])
+    [next.jdbc :as jdbc]
+    [shadow.cljs.devtools.api :as shadow])
   (:import
     (java.time Instant)))
 
@@ -217,6 +219,110 @@
                        (assoc :event-date (str (Instant/now))))]
       (core/save-sports-site! (db) (search) (ptv) (admin-user) modified)))
   nil)
+
+;; ---------------------------------------------------------------------------
+;; UI driver — bridge to running browser via shadow's cljs-eval
+;; ---------------------------------------------------------------------------
+;;
+;; These helpers let you stay in the clj nREPL session and drive the SPA
+;; without manual `(user/browser-repl)` / `:cljs/quit` switching. They:
+;;
+;;   1. Eval forms in the running browser via shadow.cljs.devtools.api/cljs-eval
+;;   2. Poll cljs state from the clj side using Thread/sleep
+;;
+;; The browser-side scripts live in dev/lipas/e2e/scripts.cljs — synchronous
+;; dispatchers and readers only, no Promises. Async waits happen here in clj
+;; where Thread/sleep actually blocks.
+
+(defn cljs-eval
+  "Evaluate `form` (a Clojure form, will be pr-str'd) in the running cljs app
+  build. Returns the parsed return value. Throws on cljs error.
+
+    (cljs-eval '(:logged-in? @re-frame.db/app-db))   ;; → true"
+  [form]
+  (let [{:keys [results err]} (shadow/cljs-eval :app (pr-str form) {})]
+    (when (and err (seq err))
+      (throw (ex-info (str "cljs-eval error: " err) {:err err :form form})))
+    (when-let [r (last results)]
+      (edn/read-string r))))
+
+(defn await-cljs
+  "Eval `check-form` repeatedly in the browser until it returns truthy.
+  Returns the truthy value or throws on timeout. Sleeps between polls on
+  the clj side (where Thread/sleep actually blocks).
+
+    (await-cljs '(:logged-in? @re-frame.db/app-db) :label \"login\")"
+  [check-form & {:keys [timeout-ms interval-ms label]
+                 :or {timeout-ms 10000 interval-ms 200 label "condition"}}]
+  (let [start (System/currentTimeMillis)]
+    (loop []
+      (let [v (cljs-eval check-form)]
+        (cond
+          v v
+
+          (> (- (System/currentTimeMillis) start) timeout-ms)
+          (throw (ex-info (str "await-cljs '" label "' timed out after " timeout-ms "ms")
+                          {:label label :form check-form}))
+
+          :else
+          (do (Thread/sleep ^long interval-ms) (recur)))))))
+
+(defn ui-login!
+  "Log into the SPA via re-frame. Idempotent; returns when [:logged-in?] true."
+  [username password & {:keys [timeout-ms] :or {timeout-ms 10000}}]
+  (cljs-eval '(require '[lipas.e2e.scripts :as scr] :reload))
+  (cljs-eval `(scr/dispatch-login! ~username ~password))
+  (await-cljs '(scr/login-result) :label (str "login " username) :timeout-ms timeout-ms))
+
+(defn ui-logout!
+  "Log out via re-frame."
+  []
+  (cljs-eval '(require '[lipas.e2e.scripts :as scr] :reload))
+  (cljs-eval '(scr/dispatch-logout!))
+  (await-cljs '(not (:logged-in? @re-frame.db/app-db)) :label "logout"))
+
+(defn ui-create-site!
+  "Drive the create-site wizard via the browser. Returns the new lipas-id.
+
+  Required keys: :type-code :coords :name :owner :admin :address :postal-code
+  Optional: :city-code (auto-inferred from user role), :timeout-ms"
+  [params]
+  (cljs-eval '(require '[lipas.e2e.scripts :as scr] :reload))
+  (cljs-eval `(scr/dispatch-create! ~params))
+  (await-cljs '(scr/url-lipas-id)
+              :timeout-ms (:timeout-ms params 10000)
+              :label "save-new-site nav"))
+
+(defn ui-update-site!
+  "Edit an existing site via the browser. Returns the lipas-id when save
+  completes.
+
+    (ui-update-site! {:lipas-id 618848
+                      :changes [[[:name] \"New Name\"]]})"
+  [{:keys [lipas-id changes timeout-ms] :or {timeout-ms 15000} :as params}]
+  (assert (and lipas-id (seq changes)) ":lipas-id and non-empty :changes required")
+  (cljs-eval '(require '[lipas.e2e.scripts :as scr] :reload))
+  (cljs-eval `(scr/dispatch-update! ~params))
+  (await-cljs `(scr/update-done? ~lipas-id)
+              :timeout-ms timeout-ms
+              :label (str "save-edits " lipas-id))
+  lipas-id)
+
+(defn ui-current-name
+  "Read current name of a saved site from app-db (latest revision)."
+  [lipas-id]
+  (cljs-eval '(require '[lipas.e2e.scripts :as scr] :reload))
+  (cljs-eval `(scr/current-name ~lipas-id)))
+
+(defn ui-list-handlers
+  "Discover registered re-frame handlers. kind is :event/:sub/:fx/:cofx;
+  pattern is an optional case-insensitive substring filter."
+  ([] (cljs-eval '(do (require '[lipas.e2e.scripts :as scr] :reload)
+                      (scr/list-handlers))))
+  ([kind] (ui-list-handlers kind nil))
+  ([kind pattern]
+   (cljs-eval `(do (require '[lipas.e2e.scripts :as scr] :reload)
+                   (scr/list-handlers ~kind ~pattern)))))
 
 (comment
   ;; Smoke test (run in nREPL after a fresh `(user/reset)`)
