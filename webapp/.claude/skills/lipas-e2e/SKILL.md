@@ -7,6 +7,8 @@ description: Run end-to-end scenarios against a live LIPAS dev system. Use when 
 
 Driving real flows through a running dev system, verifying coherently across DB, ES, app-db, and DOM. Not blackbox UI testing — glass-box, REPL-augmented.
 
+For the *why* behind this skill (principles, architecture, what we deliberately don't build), see [`webapp/docs/agent-tooling.md`](../../../docs/agent-tooling.md).
+
 ## Prerequisites
 
 - nREPL on `localhost:7888` (use `clj-nrepl-eval -p 7888`)
