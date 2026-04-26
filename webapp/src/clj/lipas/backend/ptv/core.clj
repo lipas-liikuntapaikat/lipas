@@ -456,9 +456,10 @@
                                                   :event-date (:last-sync new-ptv-data)
                                                   :ptv new-ptv-data)
                                            false)]
-        (core/index! search resp :sync))
-
-      new-ptv-data)
+        (core/index! search resp :sync)
+        ;; Return both :ptv and :event-date so the caller's outer index!
+        ;; reindexes the same revision we just wrote.
+        {:ptv new-ptv-data :event-date (:event-date resp)}))
     (catch Exception e
       (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
                                             :data (ex-data e)})]
@@ -470,7 +471,9 @@
                                                  (assoc :ptv new-ptv-data))
                                              false)]
           (core/index! search resp :sync)
-          (:ptv resp))))))
+          ;; Failure path also wrote a new revision (with :error captured
+          ;; on :ptv). Return the same :event-date so DB and ES match.
+          {:ptv (:ptv resp) :event-date (:event-date resp)})))))
 
 (defn save-ptv-integration-definitions
   "Saves ptv definitions under key :ptv. Does not notify webhooks,
