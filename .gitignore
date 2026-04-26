@@ -42,6 +42,7 @@ webapp/local-scrap
 webapp/.eca/
 
 # IDE and development files
-.claude/
+.claude/*
+!.claude/skills/
 .git-rewrite/
 data/
