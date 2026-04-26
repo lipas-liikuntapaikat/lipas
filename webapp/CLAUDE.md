@@ -1,5 +1,9 @@
 # LIPAS Development Guide
 
+## Clojure codebase exploration
+
+Use the `clj-surgeon` skill (auto-loaded from `.claude/skills/clj-surgeon/`) for structural ops on .clj files. ALWAYS run `/clj-surgeon` with `:op :ls` before reading any .clj file over 500 lines or spawning an Explore agent for Clojure code — measured 150x more token-efficient (~1k tokens vs ~150k) and returns in ms vs ~100s. Use `:ls` for form boundaries, then Read only the specific line ranges you need. Only spawn Explore agents for targeted follow-ups with specific file paths.
+
 ## REPL Access
 
 nREPL runs on port 7888. Use `clj-nrepl-eval` to evaluate Clojure code:
