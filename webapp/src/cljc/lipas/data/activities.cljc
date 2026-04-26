@@ -1008,18 +1008,18 @@
         :en "5 - Professional cycling training"}})
 
 (def itrs-wilderness-options
-  {"1" {:fi "1 - Palveluiden läheisyydessä"
-        :se "1 - I närheten av tjänster"
-        :en "1 - Near services"}
-   "2" {:fi "2 - Vaatii valmistautumista"
-        :se "2 - Kräver förberedelse"
-        :en "2 - Requires preparation"}
-   "3" {:fi "3 - Vaatii huolellista valmistautumista"
-        :se "3 - Kräver noggrann förberedelse"
-        :en "3 - Requires careful preparation"}
-   "4" {:fi "4 - Vaatii ammattimaista valmistautumista"
-        :se "4 - Kräver professionell förberedelse"
-        :en "4 - Requires professional preparation"}})
+  {"1" {:fi "1 - Kaupunki- tai taajama-alue"
+        :se "1 - Stads- eller tätortsområde"
+        :en "1 - Urban or built-up area"}
+   "2" {:fi "2 - Maaseutu- tai luontoympäristö"
+        :se "2 - Landsbygd eller naturmiljö"
+        :en "2 - Rural or natural environment"}
+   "3" {:fi "3 - Syrjäinen luontoympäristö"
+        :se "3 - Avlägsen naturmiljö"
+        :en "3 - Remote natural environment"}
+   "4" {:fi "4 - Erämaa-alue"
+        :se "4 - Vildmarksområde"
+        :en "4 - Wilderness area"}})
 
 (def cycling
   {:label       {:fi "Pyöräily"
@@ -1169,12 +1169,12 @@
         :itrs-wilderness
         {:field
          {:type        "select"
-          :label       {:fi "ITRS Erämaisuus"
-                        :se "ITRS Vildmarksgrad"
-                        :en "ITRS Wilderness Level"}
-          :description {:fi "Reitille vaadittava ennakkovalmistautuminen ja reitin sijainti suhteessa palveluihin, esim. matkapuhelimen kuuluvuus, ympäröivän tieverkoston laatu."
-                        :se "Den planeringsnivå som krävs samt ledens avlägsenhet från service (t.ex. mobiltäckning, räddningsmöjligheter, vägnät)."
-                        :en "Amount of advance planning required and the route's remoteness in relation to services (e.g., mobile coverage, rescue options, roads)."}
+          :label       {:fi "ITRS Sijainti"
+                        :se "ITRS Läge"
+                        :en "ITRS Location"}
+          :description {:fi "Reitin sijainti suhteessa vaadittavaan ennakkovalmistautumiseen ja palveluihin, esim. matkapuhelimen kuuluvuus, ympäröivän tieverkoston laatu."
+                        :se "Ledens läge i förhållande till nödvändig förberedelse och tjänster, t.ex. mobiltäckning, kvaliteten på det omgivande vägnätet."
+                        :en "Route location in relation to required advance preparation and services, e.g., mobile coverage, quality of the surrounding road network."}
           :opts        itrs-wilderness-options}}
 
         :itrs-technical-route
