@@ -86,7 +86,7 @@ The browser-side counterpart lives in `dev/lipas/e2e/scripts.cljs` (`lipas.e2e.s
 
 **Async waits belong on the clj side.** `Thread/sleep` actually blocks; JS Promises don't round-trip cleanly through nREPL eval. By keeping the agent in clj and polling browser state through `cljs-eval`, async waits become as natural as a synchronous function call.
 
-**Single language, single session.** No `(user/browser-repl)` / `:cljs/quit` switching. No `window.lipasE2E` JS bridge with its own conversion bugs. Everything is Clojure, and event vectors are written as natural Clojure data: `[:lipas.ui.events/foo arg]`, not `[':lipas.ui.events/foo', 'arg']`.
+**Single language, single session.** No `(user/browser-repl)` / `:cljs/quit` switching. Event vectors are natural Clojure data: `[:lipas.ui.events/foo arg]`, no JSON-string keyword conventions.
 
 **Use REPL helpers when possible; drop to `cljs-eval` for ad-hoc dispatches.** If the helper exists, use it. If you need a one-off dispatch the helpers don't cover, `(e2e/cljs-eval '(rf/dispatch [...]))` is fine — just don't build script artifacts ad-hoc; codify them into `scripts.cljs` + a tools.clj wrapper so the next agent benefits.
 
@@ -136,4 +136,4 @@ After completing an e2e task:
 1. **Did you discover a fact you had to dig for?** Add it to the relevant scenario, or to [catalog.md](catalog.md) if cross-cutting.
 2. **Did you do a flow not yet covered?** Drop a new file in `scenarios/`. Use the existing ones as templates. If the flow is repeatable through the bridge, also add a script to `scripts/`.
 3. **Did a scenario steer you wrong?** Fix it. Stale > missing.
-4. **Did you find a tool you needed but didn't have?** Add a stub to `lipas.e2e.tools` (REPL side) or `lipas.ui.dev-bridge` (browser side) with a docstring describing the intent.
+4. **Did you find a tool you needed but didn't have?** Add a stub to `lipas.e2e.tools` (clj side, agent-facing) or `lipas.e2e.scripts` (cljs side, browser dispatchers/readers) with a docstring describing the intent.

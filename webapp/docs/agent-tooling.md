@@ -103,6 +103,8 @@ Skills tell agents *what to do*; runtime helpers let them actually do it. For LI
 - **Document drift causes inline.** When the obvious fn is wrong (`core/get-sports-site-history` collapses by year), the helper that replaces it (`revision-count`) says so in its docstring. Future-agent reads the docstring, doesn't repeat the mistake.
 - **Trust internal code; throw at boundaries.** No defensive validation around things the framework guarantees. Try/catch only where a missing layer (ES doc not yet indexed) is genuinely an expected `nil`.
 
+The same namespace also exposes UI-driver helpers (`ui-login!`, `ui-create-site!`, `ui-update-site!`, etc.) that drive the running SPA via re-frame dispatches. These call `shadow.cljs.devtools.api/cljs-eval` to fire events in the browser and poll cljs state from the clj side using `Thread/sleep`. The browser-side counterpart is `dev/lipas/e2e/scripts.cljs` — a sync-only namespace of dispatchers and readers, no Promises. The clj wrappers do all the waiting. Result: agents get UI flows that feel synchronous (`(def lid (e2e/ui-create-site! ...))`) without ever leaving the clj REPL session.
+
 ## The first skill: lipas-e2e
 
 `/.claude/skills/lipas-e2e/` is our first agent-first skill. Its purpose: drive end-to-end flows against a live dev system, verifying glass-box across DB / ES / app-db / DOM.
