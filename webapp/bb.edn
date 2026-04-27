@@ -1,15 +1,37 @@
-{:tasks {:requires ([clojure.string :as str])
+{:tasks {:requires ([clojure.string :as str]
+                    [clojure.edn :as edn])
 
          ;; === DEPLOYMENT CONFIGURATION ===
-         :init (def deploy-config
-                 {:paths {:backend-jar "target/backend.jar"
-                          :frontend-js "resources/public/js/compiled/app.js"
-                          :remote-backend "/var/lipas/webapp/backend.jar"
-                          :remote-frontend "/var/lipas/webapp/resources/public/js/compiled/app.js"}
-                  :hosts {:dev "lipas-dev"
-                          :prod "lipas-prod"}
-                  :urls {:dev "https://lipas-dev.cc.jyu.fi"
-                         :prod "https://lipas.fi"}})
+         :init (do
+                 (def deploy-config
+                   {:paths {:backend-jar           "target/backend.jar"
+                            :frontend-manifest     "resources/public/js/compiled/manifest.edn"
+                            :frontend-index        "resources/public/index.html"
+                            :frontend-compiled-dir "resources/public/js/compiled"
+                            :remote-backend        "/var/lipas/webapp/backend.jar"
+                            :remote-public         "/var/lipas/webapp/resources/public"}
+                    :hosts {:dev "lipas-dev"
+                            :prod "lipas-prod"}
+                    :urls {:dev "https://lipas-dev.cc.jyu.fi"
+                           :prod "https://lipas.fi"}})
+
+                 (defn frontend-bundle-name
+                   "Reads manifest.edn (written by shadow-cljs on every build) and
+                    returns the resolved :app bundle filename — e.g. \"app.0EA395B3.js\"
+                    in release mode, \"app.js\" in dev. Exits with an error message if
+                    the manifest is missing or malformed."
+                   []
+                   (let [path (get-in deploy-config [:paths :frontend-manifest])
+                         f    (java.io.File. path)]
+                     (when-not (.exists f)
+                       (println (str "❌ Frontend manifest not found at " path
+                                     " — did the build run?"))
+                       (System/exit 1))
+                     (let [manifest (edn/read-string (slurp f))
+                           app-mod  (first (filter (fn [m] (= :app (:module-id m))) manifest))]
+                       (or (:output-name app-mod)
+                           (do (println "❌ No :app module found in manifest.edn")
+                               (System/exit 1)))))))
 
          nuke-cc {:doc "Remove and reinstall Claude Code globally"
                   :task (do
@@ -42,8 +64,17 @@
 
          dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
                           :task (do (shell "clojure -M -m shadow.cljs.devtools.cli release app")
-                                    (shell (str "scp " (get-in deploy-config [:paths :frontend-js]) " lipas-dev.cc.jyu.fi:/var/tmp/app.js"))
-                                    (shell (str "ssh lipas-dev.cc.jyu.fi \"sudo cp /var/tmp/app.js " (get-in deploy-config [:paths :remote-frontend]) "\"")))}
+                                    (let [bundle        (frontend-bundle-name)
+                                          compiled-dir  (get-in deploy-config [:paths :frontend-compiled-dir])
+                                          index         (get-in deploy-config [:paths :frontend-index])
+                                          remote-public (get-in deploy-config [:paths :remote-public])
+                                          host          "lipas-dev.cc.jyu.fi"]
+                                      (shell (str "scp " compiled-dir "/" bundle " " index
+                                                  " " host ":/var/tmp/"))
+                                      (shell (str "ssh " host " \"sudo cp /var/tmp/" bundle " "
+                                                  remote-public "/js/compiled/" bundle
+                                                  " && sudo cp /var/tmp/index.html "
+                                                  remote-public "/index.html\""))))}
 
          ;; === NEW DEPLOYMENT TASKS ===
 
@@ -78,30 +109,49 @@
 
                              ;; Build frontend if needed
                              (when deploy-frontend?
-                               (println "🏗️  Building frontend app.js...")
-                               (shell "npm run build")
-                               (when-not (.exists (java.io.File. (get-in deploy-config [:paths :frontend-js])))
-                                 (println (str "❌ Frontend app.js not found at " (get-in deploy-config [:paths :frontend-js])))
-                                 (System/exit 1)))
+                               (println "🏗️  Building frontend release bundle...")
+                               (shell "npm run build"))
 
-                             ;; Upload files
-                             (println (str "📦 Uploading " type-str " to " host "..."))
-                             (when deploy-backend?
-                               (shell (str "scp " (get-in deploy-config [:paths :backend-jar]) " " host ":/tmp/")))
-                             (when deploy-frontend?
-                               (shell (str "scp " (get-in deploy-config [:paths :frontend-js]) " " host ":/tmp/")))
+                             ;; Resolve hashed bundle name from manifest.edn (post-build)
+                             (let [bundle        (when deploy-frontend? (frontend-bundle-name))
+                                   compiled-dir  (get-in deploy-config [:paths :frontend-compiled-dir])
+                                   bundle-local  (when bundle (str compiled-dir "/" bundle))
+                                   index-local   (get-in deploy-config [:paths :frontend-index])
+                                   remote-public (get-in deploy-config [:paths :remote-public])]
 
-                             ;; Deploy files and restart if needed
-                             (println (str "🔄 Deploying " type-str " on " host "..."))
-                             (let [backend-commands (when deploy-backend?
-                                                      (str "sudo cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend])))
-                                   frontend-commands (when deploy-frontend?
-                                                       (str "sudo cp /tmp/app.js " (get-in deploy-config [:paths :remote-frontend])))
-                                   restart-commands (when deploy-backend?
-                                                      "sudo bash -c \"source /var/lipas/.env.sh && docker compose -f /var/lipas/docker-compose.yml rm -sf backend worker && docker compose -f /var/lipas/docker-compose.yml up -d backend worker && docker compose -f /var/lipas/docker-compose.yml restart proxy\"")
-                                   all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
+                               (when deploy-frontend?
+                                 (when-not (.exists (java.io.File. bundle-local))
+                                   (println (str "❌ Frontend bundle not found at " bundle-local))
+                                   (System/exit 1))
+                                 (when-not (.exists (java.io.File. index-local))
+                                   (println (str "❌ Frontend index.html not found at " index-local
+                                                 " — build hook should have rendered it"))
+                                   (System/exit 1)))
 
-                               (shell (str "ssh " host " 'set -e && " all-commands "'")))
+                               ;; Upload files
+                               (println (str "📦 Uploading " type-str " to " host "..."))
+                               (when deploy-backend?
+                                 (shell (str "scp " (get-in deploy-config [:paths :backend-jar]) " " host ":/tmp/")))
+                               (when deploy-frontend?
+                                 ;; Upload both the hashed JS bundle and the rendered index.html.
+                                 ;; Bundle filename is content-addressed so it never collides with
+                                 ;; previous deploys; index.html is rewritten in place.
+                                 (shell (str "scp " bundle-local " " index-local " " host ":/tmp/")))
+
+                               ;; Deploy files and restart if needed
+                               (println (str "🔄 Deploying " type-str " on " host "..."))
+                               (let [backend-commands (when deploy-backend?
+                                                        (str "sudo cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend])))
+                                     ;; Order matters: install the new bundle BEFORE rewriting index.html
+                                     ;; so users never see an index.html that points to a missing bundle.
+                                     frontend-commands (when deploy-frontend?
+                                                         (str "sudo cp /tmp/" bundle " " remote-public "/js/compiled/" bundle
+                                                              " && sudo cp /tmp/index.html " remote-public "/index.html"))
+                                     restart-commands (when deploy-backend?
+                                                        "sudo bash -c \"source /var/lipas/.env.sh && docker compose -f /var/lipas/docker-compose.yml rm -sf backend worker && docker compose -f /var/lipas/docker-compose.yml up -d backend worker && docker compose -f /var/lipas/docker-compose.yml restart proxy\"")
+                                     all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
+
+                                 (shell (str "ssh " host " 'set -e && " all-commands "'"))))
 
                              (println (str "✅ " (str/capitalize type-str) " deployment to " env " completed successfully!"))
                              (println (str "🌐 " (get-in deploy-config [:urls env-key]))))}

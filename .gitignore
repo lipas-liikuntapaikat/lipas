@@ -23,6 +23,7 @@ webapp/*.log
 webapp/target
 webapp/*-init.clj
 webapp/resources/public/js/compiled
+webapp/resources/public/index.html
 webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
 webapp/.clj-kondo/.cache
