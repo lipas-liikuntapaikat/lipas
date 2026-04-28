@@ -54,6 +54,22 @@
                        :on-success [::get-all-users-success]
                        :on-failure [::failure]}})))
 
+(defn- init-ptv-data
+  "Ensure ptv-data has explicit defaults for fields the strict
+  `ptv-config-update` schema requires. Without these defaults the
+  Save button stays disabled — either because legacy rows lack
+  :sync-enabled, or because selectors render a default value
+  (:owners) that never gets written to app-db until the user
+  actively interacts with them."
+  [ptv-data]
+  (merge {:sync-enabled false
+          :owners ["city" "city-main-owner"]}
+         ptv-data))
+
+(defn- init-org [org]
+  (when org
+    (update org :ptv-data init-ptv-data)))
+
 (rf/reg-event-fx ::init-view
                  (fn [{:keys [db]} [_ org-id]]
                    (let [user-data (get-in db [:user :login])
@@ -64,11 +80,11 @@
                                        {:id (random-uuid)
                                         :name ""
                                         :data {:primary-contact {}}
-                                        :ptv-data {}}
+                                        :ptv-data (init-ptv-data {})}
                                        (when user-orgs
                                          (some (fn [o]
                                                  (when (= org-id (str (:id o)))
-                                                   o))
+                                                   (init-org o)))
                                                user-orgs)))
                          fx (cond-> []
                               (not is-new?) (conj [:dispatch [::get-org-users org-id]])
@@ -91,7 +107,7 @@
         ;; If we have orgs or exceeded retries, find the org
                        (let [current-org (some (fn [o]
                                                  (when (= org-id (str (:id o)))
-                                                   o))
+                                                   (init-org o)))
                                                user-orgs)]
                          {:db (assoc-in db [:org :editing-org] current-org)})
         ;; Otherwise wait and retry
