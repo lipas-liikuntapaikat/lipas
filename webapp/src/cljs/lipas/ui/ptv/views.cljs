@@ -360,14 +360,26 @@
              hint])])])))
 
 (defn form-right-column
-  [{:keys [tr site org-languages selected-tab]}]
-  (let [loading? (<== [::subs/generating-descriptions?])]
+  [{:keys [org-id tr site org-languages selected-tab]}]
+  (let [loading? (<== [::subs/generating-descriptions?])
+        channel-id (first (:service-channel-ids site))]
     [:> Stack {:spacing 2}
 
-     [controls/lang-selector
-      {:value @selected-tab
-       :on-change #(reset! selected-tab %)
-       :enabled-languages (set org-languages)}]
+     [:> Stack {:direction "row" :align-items "center"
+                :flex-wrap "wrap" :spacing 1
+                :sx #js {:rowGap 1 :minWidth 0}}
+      [controls/lang-selector
+       {:value @selected-tab
+        :on-change #(reset! selected-tab %)
+        :enabled-languages (set org-languages)}]
+      (when channel-id
+        [:> Tooltip {:title (tr :ptv.actions/load-texts-from-ptv-tooltip)}
+         [:> Button
+          {:size "small" :variant "outlined"
+           :sx #js {:textTransform "none"}
+           :startIcon (r/as-element [:> Icon "download"])
+           :on-click #(==> [::events/load-ptv-texts (:lipas-id site) org-id channel-id])}
+          (tr :ptv.actions/load-texts-from-ptv)]])]
 
      ;; Summary
      (let [v (or (get-in site [:summary @selected-tab]) "")]
@@ -430,7 +442,7 @@
                             :services services :ptv-base ptv-base
                             :org-languages org-languages :selected-tab selected-tab}]]
         [:> Grid {:item true :xs 12 :md 7}
-         [form-right-column {:tr tr :site site :org-languages org-languages
+         [form-right-column {:org-id org-id :tr tr :site site :org-languages org-languages
                              :selected-tab selected-tab}]]]])))
 
 (defn- sites-filter-bar
@@ -1166,7 +1178,8 @@
   [{:keys [org-id tr site lipas-id sync-enabled name-conflict service-ids selected-tab set-selected-tab service-channel-ids]}]
   (let [services @(rf/subscribe [::subs/services org-id])
         org-languages (<== [::subs/org-languages org-id])
-        [selected-tab2 set-selected-tab2] (hooks/use-state "descriptions")]
+        [selected-tab2 set-selected-tab2] (hooks/use-state "descriptions")
+        [link-expanded? set-link-expanded] (hooks/use-state false)]
     [:> AccordionDetails
      {}
      (r/as-element
@@ -1225,22 +1238,52 @@
                                  [(:service-channel-id name-conflict)]])}
                (tr :ptv.wizard/attach-to-conflicting-service-channel)])
 
-            ;; Only show service-channel selector when there's a conflict or existing link
-            (when (or name-conflict (seq service-channel-ids))
+            ;; Linked state OR collapsible "is it already in PTV?" expander.
+            ;; During a name-conflict we keep the in-place selector visible so the
+            ;; user can still pick an alternative existing channel.
+            (cond
+              (seq service-channel-ids)
+              [:> Stack {:direction "row" :spacing 1 :align-items "center"
+                         :sx #js {:p 1 :bgcolor "#e3f2fd" :borderRadius 1}}
+               [:> Icon {:color "info" :sx #js {:fontSize "1.2rem"}} "link"]
+               [:> Typography {:variant "body2" :flex 1}
+                (str (tr :ptv.wizard/linked-to-service-channel) ": "
+                     (:service-channel-name site))]
+               [:> Button
+                {:size "small" :color "warning"
+                 :on-click #(==> [::events/select-service-channels site []])}
+                (tr :ptv.wizard/unlink-service-channel)]]
+
+              name-conflict
               [service-channel-selector
                {:org-id org-id
                 :value service-channel-ids
                 :value-fn :service-channel-id
                 :on-change #(==> [::events/select-service-channels site %])
-                :label (tr :ptv/service-channel)}])
+                :label (tr :ptv/service-channel)}]
 
-            (when-let [id (first (seq service-channel-ids))]
-              [:> Button
-               {:type "button"
-                :on-click (fn [_e] (rf/dispatch [::events/load-ptv-texts lipas-id org-id id]))}
-               "Lataa tekstit PTV:stä"])]
+              :else
+              [:> Stack {:spacing 1}
+               [:> Button
+                {:size "small"
+                 :variant "text"
+                 :sx #js {:alignSelf "flex-start" :textTransform "none"}
+                 :startIcon (r/as-element
+                              [:> Icon {:sx #js {:fontSize "1rem"}}
+                               (if link-expanded? "expand_less" "expand_more")])
+                 :on-click #(set-link-expanded (not link-expanded?))}
+                (tr :ptv.wizard/link-to-existing-service-channel)]
+               (when link-expanded?
+                 [service-channel-selector
+                  {:org-id org-id
+                   :value service-channel-ids
+                   :value-fn :service-channel-id
+                   :on-change (fn [v]
+                                (==> [::events/select-service-channels site v])
+                                (set-link-expanded false))
+                   :label (tr :ptv.wizard/select-existing-service-channel)}])])]
 
-          ;; AI generate + translate buttons
+;; AI generate + translate buttons
            (let [generating? @(rf/subscribe [::subs/generating-descriptions?])
                  from-lang (keyword selected-tab)
                  other-langs (disj (set (map keyword org-languages)) from-lang)
@@ -1271,10 +1314,21 @@
                    (str (tr :ptv.wizard/translate-to-other-langs) " ("
                         (str/join ", " (map (comp str/upper-case name) (sort other-langs))) ")")]]])])
 
-           [lang-selector
-            {:value selected-tab
-             :on-change (fn [_e v] (set-selected-tab v))
-             :opts org-languages}]
+           [:> Stack {:direction "row" :align-items "center"
+                      :flex-wrap "wrap" :spacing 1
+                      :sx #js {:rowGap 1 :minWidth 0}}
+            [lang-selector
+             {:value selected-tab
+              :on-change (fn [_e v] (set-selected-tab v))
+              :opts org-languages}]
+            (when-let [id (first (seq service-channel-ids))]
+              [:> Tooltip {:title (tr :ptv.actions/load-texts-from-ptv-tooltip)}
+               [:> Button
+                {:size "small" :variant "outlined"
+                 :sx #js {:textTransform "none"}
+                 :startIcon (r/as-element [:> Icon "download"])
+                 :on-click #(==> [::events/load-ptv-texts lipas-id org-id id])}
+                (tr :ptv.actions/load-texts-from-ptv)]])]
 
           ;; Summary
            [text-fields/text-field

@@ -13,6 +13,9 @@
  :change-service-channel "Ändra servicepunkt",
  :select-service-channel "Välj servicepunkt",
  :sync-now "Synkronisera nu",
+ :load-texts-from-ptv "Hämta texter från PTV",
+ :load-texts-from-ptv-tooltip
+ "Ersätt sammanfattningen och beskrivningen med texterna som för närvarande finns i PTV. Osparade ändringar går förlorade.",
  :refresh-data "Hämta all data på nytt från PTV",
  :archive-in-ptv "Arkivera platsen i PTV",
  :integration-enabled "PTV-integrationen aktiv"}
