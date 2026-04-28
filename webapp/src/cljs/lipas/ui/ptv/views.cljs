@@ -1949,6 +1949,8 @@
   (let [open? (<== [::subs/dialog-open?])
         selected-tab (<== [::subs/selected-tab])
         loading? (<== [::subs/loading-from-ptv?])
+        any-loading? (<== [::subs/loading?])
+        selected-org (<== [::subs/selected-org])
         ptv-org-id (<== [::subs/selected-ptv-org-id])
         org-data (<== [::subs/selected-org-data ptv-org-id])
         sites (<== [::subs/sports-sites ptv-org-id])
@@ -1999,6 +2001,12 @@
             [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
           (when has-audit-privilege?
             [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])
+       [:> Tooltip {:title (tr :ptv.actions/refresh-data)}
+        [:span
+         [:> IconButton
+          {:disabled (or (nil? selected-org) any-loading?)
+           :on-click #(==> [::events/fetch-ptv-org-data selected-org])}
+          [:> Icon "refresh"]]]]
        [:> Box {:sx #js {:minWidth 250}}
         [org-selector {:label (tr :ptv.actions/select-org)}]]]
 
