@@ -334,14 +334,14 @@
         [:> Table
          [:> TableHead
           [:> TableRow
-           [:> TableCell (tr :lipas.user/username)]
+           [:> TableCell (tr :lipas.user/email)]
            [:> TableCell (tr :lipas.org/org-role)]
            (when (or is-lipas-admin? is-org-admin?)
              [:> TableCell {:align "right"} (tr :actions/actions)])]]
          [:> TableBody
           (for [item org-users]
             [:> TableRow {:key (:id item)}
-             [:> TableCell (:username item)]
+             [:> TableCell (:email item)]
              [:> TableCell
               (for [{:keys [role] :as x} (-> item :permissions :roles)
                     :when (contains? (set (:org-id x)) org-id)]
