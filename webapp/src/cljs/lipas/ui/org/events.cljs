@@ -126,8 +126,8 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :add-user-form])
                          user-id (:user-id form)
-                         role (:role form)]
-                     (if (and user-id role)
+                         role (or (:role form) "org-user")]
+                     (if user-id
                        {:fx [[:dispatch [::org-user-update org-id user-id role "add"]]
                              [:dispatch [::clear-add-user-form]]]}
                        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
@@ -146,8 +146,8 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :add-user-email-form])
                          email (:email form)
-                         role (:role form)]
-                     (if (and email role)
+                         role (or (:role form) "org-user")]
+                     (if email
                        (let [token (-> db :user :login :token)]
                          {:http-xhrio
                           {:method :post
