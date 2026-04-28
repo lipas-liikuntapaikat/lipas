@@ -12,5 +12,6 @@
  :change-service-channel "Muuta palvelupaikkaa",
  :select-service-channel "Valitse palvelupaikka",
  :sync-now "Synkronoi nyt",
+ :refresh-data "Hae kaikki tiedot uudelleen PTV:stä",
  :archive-in-ptv "Arkistoi paikka PTV:ssä",
  :integration-enabled "PTV-integraatio käytössä"}
