@@ -2011,6 +2011,7 @@
 
         has-manage-privilege? (<== [::subs/has-manage-privilege?])
         has-audit-privilege? (<== [::subs/has-audit-privilege?])
+        admin? (<== [:lipas.ui.user.subs/check-privilege nil :users/manage])
 
         on-close #(==> [::events/close-dialog])]
 
@@ -2055,12 +2056,13 @@
             [:> Tab {:value "sports-sites" :label (tr :ptv/sports-sites)}])
           (when has-audit-privilege?
             [:> Tab {:value "audit" :label (tr :ptv.audit/tab-label)}])])
-       [:> Tooltip {:title (tr :ptv.actions/refresh-data)}
-        [:span
-         [:> IconButton
-          {:disabled (or (nil? selected-org) any-loading?)
-           :on-click #(==> [::events/fetch-ptv-org-data selected-org])}
-          [:> Icon "refresh"]]]]
+       (when admin?
+         [:> Tooltip {:title (tr :ptv.actions/refresh-data)}
+          [:span
+           [:> IconButton
+            {:disabled (or (nil? selected-org) any-loading?)
+             :on-click #(==> [::events/fetch-ptv-org-data selected-org])}
+            [:> Icon "refresh"]]]])
        [:> Box {:sx #js {:minWidth 250}}
         [org-selector {:label (tr :ptv.actions/select-org)}]]]
 
