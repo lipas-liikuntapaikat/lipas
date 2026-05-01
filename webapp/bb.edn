@@ -33,21 +33,6 @@
                            (do (println "❌ No :app module found in manifest.edn")
                                (System/exit 1)))))))
 
-         nuke-cc {:doc "Remove and reinstall Claude Code globally"
-                  :task (do
-                          (println "🗑️  Removing Claude Code installation...")
-                          (shell "rm -rf /opt/homebrew/lib/node_modules/@anthropic-ai/claude-code")
-                          (println "🧹 Cleaning npm cache...")
-                          (shell "npm cache clean --force")
-                          (println "📦 Reinstalling Claude Code...")
-                          (shell "npm install -g @anthropic-ai/claude-code")
-                          (println "✅ Claude Code reinstalled successfully!"))}
-
-         user-repl {:doc "Start user configured nREPL process"
-                    :task (if-let [cmd (:repl-command (read-string (slurp ".user.edn")))]
-                            (shell "bash -c" (apply str "source ../.env.sh && " cmd))
-                            (do (println "Missing :repl-command in .user.edn")
-                                (System/exit 1)))}
          cljs-watch {:task (shell "npm run watch")}
          lint {:doc "Run clj-kondo"
                :task (shell "clj-kondo --lint src")}
@@ -61,20 +46,6 @@
                  :task (do
                          (let [files *command-line-args*]
                            (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}
-
-         dev-deploy-cljs {:doc "Quickly compile Cljs release file and deploy to the dev server"
-                          :task (do (shell "clojure -M -m shadow.cljs.devtools.cli release app")
-                                    (let [bundle        (frontend-bundle-name)
-                                          compiled-dir  (get-in deploy-config [:paths :frontend-compiled-dir])
-                                          index         (get-in deploy-config [:paths :frontend-index])
-                                          remote-public (get-in deploy-config [:paths :remote-public])
-                                          host          "lipas-dev.cc.jyu.fi"]
-                                      (shell (str "scp " compiled-dir "/" bundle " " index
-                                                  " " host ":/var/tmp/"))
-                                      (shell (str "ssh " host " \"sudo cp /var/tmp/" bundle " "
-                                                  remote-public "/js/compiled/" bundle
-                                                  " && sudo cp /var/tmp/index.html "
-                                                  remote-public "/index.html\""))))}
 
          ;; === NEW DEPLOYMENT TASKS ===
 
@@ -224,23 +195,6 @@
                             (shell "clojure -M:migrate down" migration-id)
                             (do (println "Usage: bb db-down <migration-id>")
                                 (println "Example: bb db-down 20240101123456"))))}
-
-         db-help {:doc "Show database migration help"
-                  :task (do (println "Database Migration Tasks:")
-                            (println "  bb db-status     - Show migration status")
-                            (println "  bb db-migrate    - Run pending migrations")
-                            (println "  bb db-rollback   - Rollback last migration")
-                            (println "  bb db-reset      - Reset entire database")
-                            (println "  bb db-create <n> - Create new migration")
-                            (println "  bb db-up <id>    - Migrate up to specific ID")
-                            (println "  bb db-down <id>  - Migrate down specific ID")
-                            (println "  bb db-help       - Show this help")
-                            (println "")
-                            (println "Examples:")
-                            (println "  bb db-status")
-                            (println "  bb db-migrate")
-                            (println "  bb db-create add-user-email-index")
-                            (println "  bb db-up 20240101123456"))}
 
          ;; Build Tasks
          uberjar {:doc "Build uberjar using tools.build"
