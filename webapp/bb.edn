@@ -316,4 +316,34 @@
                      :task (shell "clojure" "-M:dev:test" "--watch")}
 
          test-verbose {:doc "Run all tests with full output (no capture)"
-                       :task (shell "clojure" "-M:dev:test" "--no-capture-output")}}}
+                       :task (shell "clojure" "-M:dev:test" "--no-capture-output")}
+
+         geoserver-snapshot
+         {:doc "Download Shape-Zip snapshots of lipas_kaikki_{pisteet,reitit,alueet} from prod Geoserver in EPSG:3067 into local-scrap/<yyyy-mm-dd>-otos/"
+          :requires ([babashka.fs :as fs]
+                     [babashka.http-client :as http]
+                     [clojure.java.io :as io])
+          :task (let [layers   ["lipas_kaikki_pisteet"
+                                "lipas_kaikki_reitit"
+                                "lipas_kaikki_alueet"]
+                      date-str (str (java.time.LocalDate/now))
+                      out-dir  (str "local-scrap/" date-str "-otos")]
+                  (fs/create-dirs out-dir)
+                  (println (str "📦 Snapshot directory: " out-dir))
+                  (doseq [layer layers]
+                    (let [url      (str "https://lipas.fi/geoserver/wfs"
+                                        "?service=WFS"
+                                        "&version=2.0.0"
+                                        "&request=GetFeature"
+                                        "&typeName=lipas:" layer
+                                        "&outputFormat=SHAPE-ZIP"
+                                        "&srsName=EPSG:3067"
+                                        "&format_options=filename:" layer)
+                          out-file (str out-dir "/" layer ".zip")]
+                      (println (str "⬇️  " layer))
+                      (with-open [in  (:body (http/get url {:as :stream}))
+                                  out (io/output-stream out-file)]
+                        (io/copy in out))
+                      (let [size-mb (-> (fs/size out-file) (/ 1024.0 1024.0))]
+                        (println (format "✅ %s (%.2f MB)" out-file size-mb)))))
+                  (println "🎉 Done"))}}}
