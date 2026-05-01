@@ -394,11 +394,30 @@
              (comp gis/repair-self-intersecting-polygon
                    gis/dedupe-polygon-coords)))
 
+(defn compute-renovations
+  "Materializes :renovations from legacy :renovation-years entries. For
+  each year in :renovation-years not already covered by a :renovations
+  entry (any type), synthesizes {:year y :type \"major-renovation\"}.
+  Lets legacy data appear in the structured renovations UI without a
+  one-off DB migration."
+  [sports-site]
+  (let [covered-years (->> (:renovations sports-site) (map :year) set)
+        synthesized (->> (:renovation-years sports-site)
+                         (remove covered-years)
+                         (map (fn [y] {:year y :type "major-renovation"})))
+        merged (->> (concat (:renovations sports-site) synthesized)
+                    (sort-by :year)
+                    vec)]
+    (cond-> sports-site
+      (seq merged)
+      (assoc :renovations merged))))
+
 (defn compute-renovation-years
   "Computes :renovation-years by merging existing values with years from
   \"major-renovation\" entries in :renovations. Used for backwards
   compatibility so that old API consumers still see renovation years
-  derived from the new structured renovations data."
+  derived from the new structured renovations data. Pairs with
+  compute-renovations as the inverse direction."
   [sports-site]
   (let [major-renovation-years (->> (:renovations sports-site)
                                     (filter #(= "major-renovation" (:type %)))
@@ -453,7 +472,9 @@
         activity-keys (when-let [activities (:activities sports-site)]
                         (when (seq activities)
                           (vec (keys activities))))
-        sports-site (compute-renovation-years sports-site)
+        sports-site (-> sports-site
+                        compute-renovations
+                        compute-renovation-years)
 
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}

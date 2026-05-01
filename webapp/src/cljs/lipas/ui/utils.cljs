@@ -241,6 +241,10 @@
 (defn make-saveable [sports-site]
   (-> sports-site
 
+      ;; :renovations is the source of truth; :renovation-years is
+      ;; recomputed by the backend's enrichment shim.
+      (dissoc :renovation-years)
+
       (update-in [:location :geometries :features] vec)
 
       ;; Swimming pools

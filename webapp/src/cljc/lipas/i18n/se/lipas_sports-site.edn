@@ -44,6 +44,7 @@
  :renovation-description "Åtgärdsbeskrivning",
  :renovation-type "Åtgärdstyp",
  :renovation-year "År",
+ :renovation-year-helper-text "För fleråriga projekt, ange färdigställandeåret.",
  :renovation-years "Renoveringsår",
  :renovations "Åtgärder",
  :reservations-link "Bokningar",

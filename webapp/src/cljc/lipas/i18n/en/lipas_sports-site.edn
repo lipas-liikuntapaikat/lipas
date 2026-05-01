@@ -36,6 +36,7 @@
  :renovation-description "Action description",
  :renovation-type "Action type",
  :renovation-year "Year",
+ :renovation-year-helper-text "For multi-year projects, enter the completion year.",
  :renovation-years "Renovation years",
  :renovations "Actions",
  :reservations-link "Reservations",

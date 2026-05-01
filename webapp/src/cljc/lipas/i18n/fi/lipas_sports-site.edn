@@ -41,6 +41,7 @@
  :renovation-description "Toimenpiteen kuvaus",
  :renovation-type "Toimenpiteen tyyppi",
  :renovation-year "Vuosi",
+ :renovation-year-helper-text "Monivuotisten hankkeiden osalta ilmoita valmistumisvuosi.",
  :renovation-years "Perus\u200Bkorjaus\u200Bvuodet",
  :renovations "Parannustoimenpiteet",
  :reservations-link "Tilavaraukset",

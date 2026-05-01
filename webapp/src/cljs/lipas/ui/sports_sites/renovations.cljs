@@ -50,6 +50,7 @@
       ;; Year
       [autocompletes/year-selector
        {:label (tr :lipas.sports-site/renovation-year)
+        :helper-text (tr :lipas.sports-site/renovation-year-helper-text)
         :value (:year entry)
         :on-change #(update-entry :year %)
         :deselect? true}]

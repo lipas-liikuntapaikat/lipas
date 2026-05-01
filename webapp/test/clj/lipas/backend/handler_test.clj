@@ -580,9 +580,47 @@
       (is (= 200 (:status resp)))
       (is (= [2010 2020] (:renovation-years body))
           "V2 API should return merged renovation-years")
-      (is (= [{:year 2020 :type "major-renovation" :description {:fi "Peruskorjaus"}}]
+      (is (= [{:year 2010 :type "major-renovation"}
+              {:year 2020 :type "major-renovation" :description {:fi "Peruskorjaus"}}]
              (:renovations body))
-          "V2 API should return renovations field"))))
+          "V2 API should return renovations with the legacy 2010 year synthesized as a major-renovation entry"))))
+
+(deftest renovations-materialized-from-legacy-renovation-years-test
+  (testing "legacy site with only :renovation-years gets :renovations synthesized for the new UI"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc :renovation-years [2010 2015])
+                   (dissoc :renovations))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                             (mock/header "Accept" "application/transit+json")))
+          body (<-transit (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [{:year 2010 :type "major-renovation"}
+              {:year 2015 :type "major-renovation"}]
+             (:renovations body))
+          "synthesized major-renovation entries for each legacy year")))
+
+  (testing "existing :renovations entry wins per year (any type)"
+    (let [user (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc :renovation-years [2015 2020])
+                   (assoc :renovations [{:year 2015 :type "other-maintenance"}]))
+          _ (core/upsert-sports-site!* (test-db) user site)
+          _ (core/index! (test-search) site :sync)
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :get (str "/api/sports-sites/" lipas-id))
+                             (mock/header "Accept" "application/transit+json")))
+          body (<-transit (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [{:year 2015 :type "other-maintenance"}
+              {:year 2020 :type "major-renovation"}]
+             (:renovations body))
+          "2015 keeps its other-maintenance type; 2020 synthesized as major-renovation"))))
 
 (deftest get-non-existing-sports-site-test
   (let [lipas-id 9999999999
@@ -739,6 +777,50 @@
         (is (= 200 (:status resp)))
         (is (contains? ids 100003) "Should include the type-2510 site")
         (is (not (contains? ids 100001)) "Should exclude type-1120 sites")))))
+
+(deftest sports-sites-report-renovation-fields-test
+  (testing "modern-shape site (renovations only) renders renovation-years column from major-renovation entries"
+    (let [site (-> (tu/make-point-site 110001 :type-code 1120 :name "Modern site")
+                   (assoc :renovations [{:year 2020 :type "major-renovation"}
+                                        {:year 2023 :type "other-maintenance"}]))
+          _ (core/index! (test-search) site :sync)
+          path "/api/actions/create-sports-sites-report"
+          resp (test-app (report-request path
+                                         {:query {:bool {:must   {:match_all {}}
+                                                         :filter [{:term {:lipas-id 110001}}]}}}
+                                         ["lipas-id" "renovation-years"]
+                                         :fi :json))
+          wb (excel/load-workbook (:body resp))
+          rows (->> wb
+                    (excel/select-sheet "lipas")
+                    (excel/select-columns {:A :lipas-id :B :renovation-years})
+                    rest)
+          row (first rows)]
+      (is (= 200 (:status resp)))
+      (is (= 110001 (long (:lipas-id row))))
+      (is (= "2020" (:renovation-years row))
+          "renovation-years column should be derived from major-renovation entries")))
+
+  (testing "legacy-shape site (renovation-years only) renders renovation-years column"
+    (let [site (-> (tu/make-point-site 110002 :type-code 1120 :name "Legacy site")
+                   (assoc :renovation-years [2010 2015]))
+          _ (core/index! (test-search) site :sync)
+          path "/api/actions/create-sports-sites-report"
+          resp (test-app (report-request path
+                                         {:query {:bool {:must   {:match_all {}}
+                                                         :filter [{:term {:lipas-id 110002}}]}}}
+                                         ["lipas-id" "renovation-years"]
+                                         :fi :json))
+          wb (excel/load-workbook (:body resp))
+          rows (->> wb
+                    (excel/select-sheet "lipas")
+                    (excel/select-columns {:A :lipas-id :B :renovation-years})
+                    rest)
+          row (first rows)]
+      (is (= 200 (:status resp)))
+      (is (= 110002 (long (:lipas-id row))))
+      (is (= "2010,2015" (:renovation-years row))
+          "legacy renovation-years column rendered as comma-separated list"))))
 
 (deftest finance-report-test
   (let [_ (seed/seed-city-data! (test-db) (test-search))
