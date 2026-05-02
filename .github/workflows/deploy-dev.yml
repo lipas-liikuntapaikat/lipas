@@ -2,7 +2,7 @@ name: Deploy to lipas-dev
 
 on:
   pull_request:
-    types: [labeled, unlabeled, closed]
+    types: [labeled, unlabeled, synchronize, closed]
   workflow_dispatch:
     inputs:
       ref:
@@ -20,6 +20,11 @@ env:
 
 jobs:
   plan:
+    # Reject pull_request events from forks. The deploy job runs on a
+    # self-hosted runner with access to /var/lipas — fork PRs must not
+    # be able to trigger this. workflow_dispatch always uses the default
+    # branch's workflow file and is unaffected.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       should_deploy: ${{ steps.decide.outputs.should_deploy }}
@@ -70,6 +75,15 @@ jobs:
                   if [[ "$LABEL_NAME" == "$DEPLOY_LABEL" ]]; then
                     authorize
                     emit "master"
+                  else
+                    echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+                  fi
+                  ;;
+                synchronize)
+                  # New commits on a labeled PR — keep dev tracking the head.
+                  # Label is the gate, so no authorize() check on the pusher.
+                  if [[ "$PR_HAD_LABEL" == "true" ]]; then
+                    emit "$PR_HEAD_REF"
                   else
                     echo "should_deploy=false" >> "$GITHUB_OUTPUT"
                   fi
