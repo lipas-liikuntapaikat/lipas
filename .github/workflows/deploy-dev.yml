@@ -1,0 +1,172 @@
+name: Deploy to lipas-dev
+
+on:
+  pull_request:
+    types: [labeled, unlabeled, closed]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or SHA to deploy (default: master)'
+        required: false
+        default: 'master'
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  DEPLOY_LABEL: on-lipas-dev
+  ALLOWED_USERS: "vharmain"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.decide.outputs.should_deploy }}
+      ref:           ${{ steps.decide.outputs.ref }}
+    steps:
+      - name: Decide what to deploy
+        id: decide
+        env:
+          EVENT:         ${{ github.event_name }}
+          ACTION:        ${{ github.event.action }}
+          LABEL_NAME:    ${{ github.event.label.name }}
+          SENDER:        ${{ github.event.sender.login }}
+          PR_HEAD_REF:   ${{ github.event.pull_request.head.ref }}
+          PR_HAD_LABEL:  ${{ contains(github.event.pull_request.labels.*.name, 'on-lipas-dev') }}
+          INPUT_REF:     ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+
+          authorize() {
+            if ! grep -qw "$SENDER" <<<"$ALLOWED_USERS"; then
+              echo "::error::User '$SENDER' is not allowed to deploy to lipas-dev"
+              exit 1
+            fi
+          }
+
+          emit() {
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "ref=$1" >> "$GITHUB_OUTPUT"
+            echo "Will deploy ref: $1"
+          }
+
+          case "$EVENT" in
+            workflow_dispatch)
+              authorize
+              emit "$INPUT_REF"
+              ;;
+            pull_request)
+              case "$ACTION" in
+                labeled)
+                  if [[ "$LABEL_NAME" == "$DEPLOY_LABEL" ]]; then
+                    authorize
+                    emit "$PR_HEAD_REF"
+                  else
+                    echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+                  fi
+                  ;;
+                unlabeled)
+                  if [[ "$LABEL_NAME" == "$DEPLOY_LABEL" ]]; then
+                    authorize
+                    emit "master"
+                  else
+                    echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+                  fi
+                  ;;
+                closed)
+                  if [[ "$PR_HAD_LABEL" == "true" ]]; then
+                    emit "master"
+                  else
+                    echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+                  fi
+                  ;;
+                *)
+                  echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+                  ;;
+              esac
+              ;;
+            *)
+              echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+  # Strip the deploy label from any other PRs so it stays exclusive to one PR.
+  exclusive-label:
+    needs: plan
+    if: |
+      needs.plan.outputs.should_deploy == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'on-lipas-dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove label from any other open PRs
+        env:
+          GH_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "$DEPLOY_LABEL" \
+            --state open \
+            --json number --jq '.[].number' \
+          | while read -r n; do
+              if [[ "$n" != "$PR_NUMBER" ]]; then
+                echo "Removing $DEPLOY_LABEL from PR #$n"
+                gh pr edit "$n" --repo "$GITHUB_REPOSITORY" --remove-label "$DEPLOY_LABEL"
+              fi
+            done
+
+  deploy:
+    needs: [plan, exclusive-label]
+    if: |
+      always() &&
+      needs.plan.outputs.should_deploy == 'true' &&
+      (needs.exclusive-label.result == 'success' || needs.exclusive-label.result == 'skipped')
+    runs-on: [self-hosted, lipas-dev]
+    environment:
+      name: lipas-dev
+      url: https://lipas-dev.cc.jyu.fi
+    steps:
+      - name: Sync /var/lipas to ${{ needs.plan.outputs.ref }}
+        working-directory: /var/lipas
+        env:
+          REF: ${{ needs.plan.outputs.ref }}
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet HEAD; then
+            echo "::error::/var/lipas has uncommitted changes to tracked files; refusing to switch refs"
+            git status --short
+            exit 1
+          fi
+          git fetch origin --prune --tags
+          if git rev-parse --verify "origin/${REF}" >/dev/null 2>&1; then
+            TARGET="origin/${REF}"
+          else
+            TARGET="${REF}"
+          fi
+          git -c advice.detachedHead=false checkout "$TARGET"
+          echo "Now at $(git rev-parse --short HEAD) — $(git log -1 --pretty='%s')"
+
+      - name: Build backend and frontend (dockerized)
+        working-directory: /var/lipas
+        run: |
+          set -euo pipefail
+          source /var/lipas/.env.sh
+          docker compose run --rm backend-build
+          docker compose run --rm frontend-npm-deps
+          docker compose run --rm frontend-build
+
+      - name: Install artifacts and restart services
+        working-directory: /var/lipas
+        run: |
+          set -euo pipefail
+          cp webapp/target/backend.jar webapp/backend.jar
+          # frontend bundle + rendered index.html landed in webapp/resources/public/ during build
+          source /var/lipas/.env.sh
+          docker compose rm -sf backend worker
+          docker compose up -d backend worker
+          docker compose restart proxy
+          echo "Deployed $(git -C /var/lipas rev-parse --short HEAD)"
