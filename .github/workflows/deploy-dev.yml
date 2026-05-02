@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DEPLOY_LABEL: on-lipas-dev
+  DEPLOY_LABEL: lipas-dev
   ALLOWED_USERS: "vharmain"
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
           LABEL_NAME:    ${{ github.event.label.name }}
           SENDER:        ${{ github.event.sender.login }}
           PR_HEAD_REF:   ${{ github.event.pull_request.head.ref }}
-          PR_HAD_LABEL:  ${{ contains(github.event.pull_request.labels.*.name, 'on-lipas-dev') }}
+          PR_HAD_LABEL:  ${{ contains(github.event.pull_request.labels.*.name, 'lipas-dev') }}
           INPUT_REF:     ${{ inputs.ref }}
         run: |
           set -euo pipefail
@@ -98,7 +98,7 @@ jobs:
       needs.plan.outputs.should_deploy == 'true' &&
       github.event_name == 'pull_request' &&
       github.event.action == 'labeled' &&
-      github.event.label.name == 'on-lipas-dev'
+      github.event.label.name == 'lipas-dev'
     runs-on: ubuntu-latest
     steps:
       - name: Remove label from any other open PRs
