@@ -136,6 +136,9 @@ jobs:
           REF: ${{ needs.plan.outputs.ref }}
         run: |
           set -euo pipefail
+          # Runner container runs as root; /var/lipas is owned by lipas-ci on the host.
+          # Tell git to trust the directory regardless of ownership mismatch.
+          git config --global --add safe.directory /var/lipas
           if ! git diff --quiet HEAD; then
             echo "::error::/var/lipas has uncommitted changes to tracked files; refusing to switch refs"
             git status --short
