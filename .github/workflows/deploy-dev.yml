@@ -162,6 +162,13 @@ jobs:
           docker compose run --rm frontend-npm-deps
           docker compose run --rm frontend-build
 
+      - name: Run database migrations
+        working-directory: /var/lipas
+        run: |
+          set -euo pipefail
+          source /var/lipas/.env.sh
+          docker compose run --rm backend-migrate
+
       - name: Install artifacts and restart services
         working-directory: /var/lipas
         run: |
@@ -173,3 +180,10 @@ jobs:
           docker compose up -d backend worker
           docker compose restart proxy
           echo "Deployed $(git -C /var/lipas rev-parse --short HEAD)"
+
+      - name: Re-index Elasticsearch
+        working-directory: /var/lipas
+        run: |
+          set -euo pipefail
+          source /var/lipas/.env.sh
+          docker compose run --rm backend-index-search
