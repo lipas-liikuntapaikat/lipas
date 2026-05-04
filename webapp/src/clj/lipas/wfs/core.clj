@@ -42,12 +42,17 @@
       (into {}))]))
 
 (defn ->wfs-rows [sports-site]
-  (->> sports-site
-       :location
-       :geometries
-       :features
-       (map-indexed (fn [idx feature]
-                      (->wfs-row sports-site idx feature)))))
+  ;; WFS reads the document straight from the DB without going through
+  ;; enrich*, so we apply the forward shim here. Otherwise modern-shape
+  ;; sites (only :renovations on disk) would have an empty
+  ;; :peruskorjausvuodet column.
+  (let [sports-site (core/compute-renovation-years sports-site)]
+    (->> sports-site
+         :location
+         :geometries
+         :features
+         (map-indexed (fn [idx feature]
+                        (->wfs-row sports-site idx feature))))))
 
 ;;; Creating the tables ;;;
 

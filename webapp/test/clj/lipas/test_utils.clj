@@ -27,12 +27,13 @@
 (declare gen-user prune-es!)
 
 (defn fix-generated-site [site]
-  (cond-> site
-    (:renovation-years site) (update :renovation-years (fn [years]
-                                                         (->> years
-                                                              distinct
-                                                              (filter #(>= % 1900))
-                                                              vec)))
+  ;; Strip renovation fields by default. Malli generates :renovation-years
+  ;; and :renovations independently, with no mutual consistency. The
+  ;; renovation enrichment shims (compute-renovations,
+  ;; compute-renovation-years) then merge them in surprising ways for
+  ;; tests that don't care. Tests that DO care should assoc explicit
+  ;; values.
+  (cond-> (dissoc site :renovation-years :renovations)
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))

@@ -326,6 +326,23 @@
         (is (= "2020,2022,2023"
                ((get wfs-mappings/legacy-field->resolve-fn :peruskorjausvuodet) {:site site-with-collection})))))
 
+    (testing "peruskorjausvuodet from modern :renovations (no :renovation-years)"
+      (let [site (assoc sample-point-sports-site
+                        :renovations [{:year 2020 :type "major-renovation"}
+                                      {:year 2023 :type "other-maintenance"}])
+            site (dissoc site :renovation-years)
+            [_ row] (first (wfs/->wfs-rows site))]
+        (is (= "2020" (:peruskorjausvuodet row))
+            "WFS exposes major-renovation years; other-maintenance excluded")))
+
+    (testing "peruskorjausvuodet merges :renovation-years and :renovations major years"
+      (let [site (-> sample-point-sports-site
+                     (assoc :renovation-years [2010])
+                     (assoc :renovations [{:year 2020 :type "major-renovation"}]))
+            [_ row] (first (wfs/->wfs-rows site))]
+        (is (= "2010,2020" (:peruskorjausvuodet row))
+            "WFS merges legacy years and structured major-renovation years")))
+
     (testing "Helsinki time conversion"
       (let [site-with-date {:event-date "2024-01-15T12:00:00.000Z"}]
         (is (= "2024-01-15T14:00"
