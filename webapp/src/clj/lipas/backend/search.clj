@@ -291,26 +291,30 @@
   ([client data]
    ;; Return a future to keep consistent with previous impl
    (future
-     (let [{:keys [input-ch output-ch]}
-           (es/bulk-chan client {:flush-threshold         100
-                                 :flush-interval          5000
-                                 :max-concurrent-requests 3})]
+     ;; Short-circuit on empty data: spandex would still send a request with
+     ;; an empty body, which ES rejects with 400 "request body is required".
+     (if (empty? data)
+       {}
+       (let [{:keys [input-ch output-ch]}
+             (es/bulk-chan client {:flush-threshold         100
+                                   :flush-interval          5000
+                                   :max-concurrent-requests 3})]
 
-       (async/put! input-ch data)
-       (async/close! input-ch)
+         (async/put! input-ch data)
+         (async/close! input-ch)
 
-       (when-let [[_job resp] (async/<!! output-ch)]
-         (async/close! output-ch)
-         (when (instance? Throwable resp)
-           (throw (ex-info "Bulk index request failed"
-                           {:status (when (instance? clojure.lang.IExceptionInfo resp)
-                                      (-> resp ex-data :status))}
-                           resp)))
-         (->> resp
-              :body
-              :items
-              (map (comp :result second first))
-              frequencies))))))
+         (when-let [[_job resp] (async/<!! output-ch)]
+           (async/close! output-ch)
+           (when (instance? Throwable resp)
+             (throw (ex-info "Bulk index request failed"
+                             {:status (when (instance? clojure.lang.IExceptionInfo resp)
+                                        (-> resp ex-data :status))}
+                             resp)))
+           (->> resp
+                :body
+                :items
+                (map (comp :result second first))
+                frequencies)))))))
 
 (defn bulk-index-sync!
   ([client data]
