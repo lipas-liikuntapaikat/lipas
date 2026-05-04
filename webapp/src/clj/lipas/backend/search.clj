@@ -301,6 +301,11 @@
 
        (when-let [[_job resp] (async/<!! output-ch)]
          (async/close! output-ch)
+         (when (instance? Throwable resp)
+           (throw (ex-info "Bulk index request failed"
+                           {:status (when (instance? clojure.lang.IExceptionInfo resp)
+                                      (-> resp ex-data :status))}
+                           resp)))
          (->> resp
               :body
               :items
