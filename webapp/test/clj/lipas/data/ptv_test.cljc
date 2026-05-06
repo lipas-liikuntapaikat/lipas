@@ -118,6 +118,38 @@
       (is (= #{"fi" "sv" "en"} (desc-langs p "Description"))
           "ptv map only has fi description, but sv/en fall back to fi"))))
 
+(defn- area-codes [payload]
+  (mapv :areaCodes (:areas payload)))
+
+(deftest ->ptv-service-area-codes
+  (testing "city-codes < 100 are zero-padded to 3 digits (PTV's expected format)"
+    ;; Regression: Eurajoki (51) hit "The code '51' was not found!" because
+    ;; LIPAS sent the raw int and PTV's codelist keys on the zero-padded form.
+    (is (= [["051"]]
+           (area-codes (sut/->ptv-service {:org-id "org-x"
+                                           :city-codes [51]
+                                           :sub-category-id 2200
+                                           :languages ["fi"]}))))
+    (is (= [["049"]]
+           (area-codes (sut/->ptv-service {:org-id "org-x"
+                                           :city-codes [49]
+                                           :sub-category-id 2200
+                                           :languages ["fi"]})))))
+
+  (testing "city-codes >= 100 are emitted as-is (existing pilot orgs)"
+    (is (= [["889"]]
+           (area-codes (sut/->ptv-service {:org-id "org-x"
+                                           :city-codes [889]
+                                           :sub-category-id 2200
+                                           :languages ["fi"]})))))
+
+  (testing "mixed codes each get their own zero-padded entry"
+    (is (= [["051"] ["889"]]
+           (area-codes (sut/->ptv-service {:org-id "org-x"
+                                           :city-codes [51 889]
+                                           :sub-category-id 2200
+                                           :languages ["fi"]}))))))
+
 (def ^:private drift-site
   {:name "Halli"
    :ptv {:summary {:fi "summary-fi" :en "summary-en"}

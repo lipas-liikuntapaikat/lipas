@@ -4,7 +4,8 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
-            [lipas.schema.sports-sites.ptv :as ptv-schema]))
+            [lipas.schema.sports-sites.ptv :as ptv-schema]
+            [taoensso.timbre :as log]))
 
 (defn- parse-ptv-error
   "Extract structured error info from a PTV API ExceptionInfo."
@@ -173,8 +174,14 @@
            :body (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
             (if-let [ptv-err (parse-ptv-error e)]
-              {:status 409
-               :body ptv-err}
+              (do
+                (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
+                           (-> req :parameters :body :org-id)
+                           (-> req :parameters :body :source-id)
+                           (-> req :parameters :body :service-id)
+                           (pr-str ptv-err))
+                {:status 409
+                 :body ptv-err})
               (throw e)))))}}]
 
    ["/actions/fetch-ptv-services"
@@ -221,8 +228,13 @@
            :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
             (if-let [ptv-err (parse-ptv-error e)]
-              {:status 409
-               :body ptv-err}
+              (do
+                (log/warnf "save-ptv-service-location failed (lipas-id: %s, org: %s): %s"
+                           (-> req :parameters :body :lipas-id)
+                           (-> req :parameters :body :org-id)
+                           (pr-str ptv-err))
+                {:status 409
+                 :body ptv-err})
               (throw e)))))}}]
 
    ["/actions/save-ptv-meta"

@@ -280,7 +280,7 @@
                ;; List of area codes related to type. For example if
                ;; type = Municipality, areaCodes-list need to include
                ;; municipality codes like 491 or 091.
-               :areaCodes [city-code]})
+               :areaCodes [(utils/zero-left-pad city-code 3)]})
 
      ;; TODO is this the actual language in which the service is
      ;; provided? Maybe default to just "fi"?
