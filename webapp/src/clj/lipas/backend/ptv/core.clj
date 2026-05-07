@@ -235,7 +235,7 @@
   #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
 
 (defn upsert-ptv-service!
-  [ptv {:keys [org-id source-id service-id sub-category-id] :as m}]
+  [ptv {:keys [org-id source-id service-id] :as m}]
   (let [;; Adoption path: always use the adopted-source-id pattern
         ;; (lipas-{org}-ptv-{service-id}). The standard sub-category
         ;; pattern (lipas-{org}-{sub-cat}) collides with prior LIPAS-managed
@@ -249,14 +249,20 @@
                               (ptv-data/->adopted-service-source-id org-id service-id)))
         lipas-data (ptv-data/->ptv-service m)]
     (if service-id
-      ;; Updating existing PTV service: fetch, normalize to input format, merge
+      ;; Adoption: fetch existing PTV service and overwrite ONLY LIPAS-managed
+      ;; fields (names, descriptions, languages, publishingStatus, sourceId).
+      ;; Everything else — targetGroups, ontologyTerms, serviceClasses,
+      ;; industrialClasses, areas, generalDescriptionId, etc. — must be left
+      ;; intact, otherwise PTV's cross-validation breaks. Concrete failure
+      ;; mode: when the existing service has a generalDescriptionId whose GD
+      ;; lists KR2 without sub-targets, replacing the service's full target
+      ;; groups (which include KR2.x children) with LIPAS's hardcoded [KR1]
+      ;; trips the SubTargetGroupRequired check (ServiceValidator.cs:225).
+      ;; sub-category-id is still useful upstream (source-id, app-db
+      ;; mapping), but it must not drive payload overrides on adoption.
       (let [existing (-> (ptv/get-service ptv org-id service-id)
                          (normalize-ptv-service-for-update))
-            ;; When adopting without sub-category, only merge fields LIPAS manages
-            ;; to avoid overwriting PTV-managed metadata with defaults
-            lipas-data (if sub-category-id
-                         lipas-data
-                         (select-keys lipas-data lipas-managed-service-fields))
+            lipas-data (select-keys lipas-data lipas-managed-service-fields)
             merged (merge-service-data existing lipas-data)
             ;; PTV requires names for all supported languages — use Finnish as fallback
             fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
