@@ -586,8 +586,14 @@
             :startIcon (r/as-element [:> Icon "add"])
             :on-click #(reset! mode :create)}
            (tr :ptv.service/create-new)]
-          [:> Button
-           {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
-            :startIcon (r/as-element [:> Icon "link"])
-            :on-click #(reset! mode :link)}
-           (tr :ptv.service/link-existing)]])])))
+          ;; HIDDEN: "Liitä olemassa oleva PTV-palvelu" entry point is
+          ;; reader-discarded (`#_`) until the adoption flow is verified
+          ;; on fix/ptv-adopt-preserve-target-groups. Restore by removing
+          ;; the `#_` below. The :link case in the case-form above is
+          ;; unreachable while this is hidden but is intentionally kept
+          ;; so add-service-link-form remains wired up for restoration.
+          #_[:> Button
+             {:variant "outlined" :size "small" :sx #js {:textTransform "none"}
+              :startIcon (r/as-element [:> Icon "link"])
+              :on-click #(reset! mode :link)}
+             (tr :ptv.service/link-existing)]])])))
