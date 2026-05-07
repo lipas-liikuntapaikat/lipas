@@ -31,6 +31,187 @@
             :number "11612345"}
            (sut/parse-phone-number "116 12345")))))
 
+(deftest parse-phone-number-finnish-separators
+  (testing "no separator"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567"))))
+  (testing "spaces"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050 1234567")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050 123 4567"))))
+  (testing "single dash — the Eurajoki regression case"
+    (is (= {:prefix "+358" :number "443124267"}
+           (sut/parse-phone-number "044-3124267")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050-1234567"))))
+  (testing "multiple dashes"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050-123-4567"))))
+  (testing "dots"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050.123.4567"))))
+  (testing "parentheses around area code"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "(050) 123 4567")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "(050)1234567"))))
+  (testing "slash"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050/1234567"))))
+  (testing "mixed punctuation"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "(050) 123-4567"))))
+  (testing "leading/trailing whitespace and tabs"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "  0501234567  ")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "\t050\t1234567"))))
+  (testing "embedded label like 'puh.'"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "puh. 050 1234567")))))
+
+(deftest parse-phone-number-international-formats
+  (testing "+358 with various separators"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "+358 50 1234567")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "+358501234567")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "+358-50-1234567"))))
+  (testing "00 international prefix is rewritten as +"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "00358 50 1234567")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "00358501234567"))))
+  (testing "explicit (0) trunk hint is dropped"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "+358 (0)50 1234567"))))
+  (testing "leftover trunk 0 after country code is dropped"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "+358 0501234567"))))
+  (testing "non-Finnish country codes preserved"
+    (is (= {:prefix "+1111" :number "441234567"}
+           (sut/parse-phone-number "+1111 044 1234567")))))
+
+(deftest parse-phone-number-service-numbers-with-separators
+  (testing "0600/0700/0800/0900 with various separators"
+    (is (= {:is-finnish-service-number true :number "060012345"}
+           (sut/parse-phone-number "0600 12345")))
+    (is (= {:is-finnish-service-number true :number "070012345"}
+           (sut/parse-phone-number "0700-12345")))
+    (is (= {:is-finnish-service-number true :number "080012345"}
+           (sut/parse-phone-number "0800.12345")))
+    (is (= {:is-finnish-service-number true :number "090012345"}
+           (sut/parse-phone-number "(0900) 12345"))))
+  (testing "116 short codes"
+    (is (= {:is-finnish-service-number true :number "11612345"}
+           (sut/parse-phone-number "116 12345")))
+    (is (= {:is-finnish-service-number true :number "116123"}
+           (sut/parse-phone-number "116-123")))))
+
+(deftest parse-phone-number-rejects-garbage
+  (testing "nil"
+    (is (nil? (sut/parse-phone-number nil))))
+  (testing "blank strings"
+    (is (nil? (sut/parse-phone-number "")))
+    (is (nil? (sut/parse-phone-number "   ")))
+    (is (nil? (sut/parse-phone-number "\t\t"))))
+  (testing "non-string"
+    (is (nil? (sut/parse-phone-number 1234567))))
+  (testing "no digits at all"
+    (is (nil? (sut/parse-phone-number "abc")))
+    (is (nil? (sut/parse-phone-number "+")))
+    (is (nil? (sut/parse-phone-number "(--)"))))
+  (testing "country code only"
+    (is (nil? (sut/parse-phone-number "+358"))))
+  (testing "trunk zeros only"
+    (is (nil? (sut/parse-phone-number "0")))
+    (is (nil? (sut/parse-phone-number "+358 0"))))
+  (testing "more than 20 digits is rejected (PTV's limit)"
+    (is (nil? (sut/parse-phone-number "+358 12345678901234567890123")))))
+
+(deftest parse-phone-number-multi-phone-fields
+  (testing "comma-separated: take the first phone, discard the rest"
+    (is (= {:prefix "+358" :number "447801245"}
+           (sut/parse-phone-number "0447801245, 0447801357, 0447801448")))
+    (is (= {:prefix "+358" :number "447801357"}
+           (sut/parse-phone-number "044 7801357, 044 7801448, 044 7801245")))
+    (is (= {:prefix "+358" :number "447801357"}
+           (sut/parse-phone-number "044 780 1357, 044 780 1245, 044 7801 448"))))
+  (testing "comma without space"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567,0507654321"))))
+  (testing "two-phone case (current parser concatenated them into a 19-digit blob)"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567, 0507654321"))))
+  (testing "semicolon-separated"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567; 0507654321")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567;0507654321"))))
+  (testing "pipe-separated"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567 | 0507654321"))))
+  (testing "newline-separated"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567\n0507654321")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567\r\n0507654321"))))
+  (testing "slash with surrounding whitespace IS a separator"
+    (is (= {:prefix "+358" :number "931041761"}
+           (sut/parse-phone-number "+358 9 310 41761 / 358 40 334 4216"))))
+  (testing "slash without spaces is NOT a separator (in-number formatting)"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "050/1234567"))))
+  (testing "leading and trailing whitespace around the multi-phone field"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "  0501234567 , 0507654321  "))))
+  (testing "trailing separator with empty piece is ignored"
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567, ")))
+    (is (= {:prefix "+358" :number "501234567"}
+           (sut/parse-phone-number "0501234567,"))))
+  (testing "leading empty piece (e.g. just a comma) is skipped"
+    (is (= {:prefix "+358" :number "507654321"}
+           (sut/parse-phone-number ", 0507654321"))))
+  (testing "name + phone: skip the name piece, take the phone"
+    (is (= {:prefix "+358" :number "405609840"}
+           (sut/parse-phone-number "Harju Eeva, 040 560 9840")))
+    (is (= {:prefix "+358" :number "400346097"}
+           (sut/parse-phone-number "Ruuskanen Heino, 0400 346 097")))
+    (is (= {:prefix "+358" :number "405609840"}
+           (sut/parse-phone-number "Anne; 040 560 9840"))))
+  (testing "all pieces digit-less still returns nil"
+    (is (nil? (sut/parse-phone-number "Anne, Mikko, Liisa")))))
+
+(deftest parse-phone-number-output-is-ptv-compatible
+  (testing "every parsed :number matches PTV's ^\\d{1,20}$ regex"
+    ;; PTV rejects anything that isn't 1-20 digits. Run a battery of
+    ;; realistic free-form inputs through the parser and assert the
+    ;; postcondition on every successful parse — this is the contract
+    ;; that drives all the tests above.
+    (let [ptv-number-re #"^\d{1,20}$"
+          inputs ["1234567"
+                  "0501234567" "050 1234567" "050 123 4567"
+                  "050-1234567" "050-123-4567" "050.123.4567"
+                  "(050) 1234567" "(050)1234567" "050/1234567"
+                  "(050) 123-4567" "  0501234567  " "\t050\t1234567"
+                  "puh. 050 1234567"
+                  "+358 50 1234567" "+358501234567" "+358-50-1234567"
+                  "00358 50 1234567" "00358501234567"
+                  "+358 (0)50 1234567" "+358 0501234567"
+                  "+1111 044 1234567" "044-3124267"
+                  "0600 12345" "0700-12345" "0800.12345" "(0900) 12345"
+                  "116 12345" "116-123"]]
+      (doseq [in inputs]
+        (let [parsed (sut/parse-phone-number in)]
+          (is (some? parsed)
+              (str "expected to parse: " (pr-str in)))
+          (is (re-matches ptv-number-re (:number parsed))
+              (str "PTV-incompatible :number for input " (pr-str in)
+                   " → " (pr-str parsed))))))))
+
 (deftest parse-www
   (is (= "http://example.com"
          (sut/parse-www "example.com")))

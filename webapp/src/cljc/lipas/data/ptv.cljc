@@ -308,30 +308,83 @@
 
 (def RE-PREFIX #"^\+[0-9]{1,4}")
 
-(defn parse-phone-number [n]
-  (when n
-    (let [;; match 0600 etc. service prefixes
-          ;; https://www.traficom.fi/fi/viestinta/laajakaista-ja-puhelin/mita-ovat-palvelunumerot
-          finnish-service (re-find #"^(0[6789]00|116)" n)]
-      (if finnish-service
-        {:is-finnish-service-number true
-         :number (str/replace n #" " "")}
-        (let [prefix (or ;; Special case for +358 prefix, doesn't allow fourth number
-                       (re-find #"^\+358" n)
-                         ;; Generic 1-4 number + prefix, if there are no spaces, will include
-                         ;; too many numbers...?
-                       (re-find RE-PREFIX n)
-                       "+358")
-              ;; strip the prefix
-              n (-> (if (str/starts-with? n prefix)
-                      (subs n (count prefix))
-                      n)
-                    ;; strip spaces
-                    (str/replace #" " "")
-                    ;; strip leading zero
-                    (str/replace #"^0" ""))]
+(def ^:private multi-phone-split-re
+  ;; Recognized separators between multiple phone-numbers in a single field.
+  ;; Comma/semicolon/pipe split with any surrounding whitespace; slash only
+  ;; with whitespace on both sides because bare `/` is also used as in-number
+  ;; formatting like "050/1234567".
+  #"\s*[,;|]\s*|\s+/\s+|\s*\r?\n\s*")
+
+(defn- first-of-multi-phone
+  "If `s` contains a multi-phone separator, return the first non-blank piece
+   that actually contains a digit (e.g. for fields like \"Name Surname, 040
+   1234567\" the name piece is skipped). Falls back to the first non-blank
+   piece if none have digits, and to s itself if there are no separators."
+  [s]
+  (let [pieces (->> (str/split s multi-phone-split-re)
+                    (map str/trim)
+                    (remove str/blank?))]
+    (or (->> pieces (filter #(re-find #"\d" %)) first)
+        (first pieces)
+        s)))
+
+(defn- digits-only [s]
+  (str/replace s #"\D" ""))
+
+(defn- normalize-phone-input
+  "Trim, drop the conventional `(0)` international-trunk hint, and rewrite
+   a leading `00<cc>` international prefix as `+<cc>`."
+  [s]
+  (-> s
+      str/trim
+      (str/replace "(0)" "")
+      (str/replace #"^00(?=\d{1,4})" "+")))
+
+(defn- parse-single-phone-number
+  "Parse a single phone-number string. Returns a parsed map or nil for
+   unparseable input. Pre-condition: `n` is a non-blank string."
+  [n]
+  (let [s (normalize-phone-input n)
+        all-digits (digits-only s)]
+    (cond
+      (str/blank? all-digits) nil
+
+      ;; Finnish service prefixes (0600/0700/0800/0900/116) — only when the
+      ;; input doesn't already carry an international "+" prefix.
+      ;; https://www.traficom.fi/fi/viestinta/laajakaista-ja-puhelin/mita-ovat-palvelunumerot
+      (and (not (str/starts-with? s "+"))
+           (re-find #"^(0[6789]00|116)" all-digits))
+      {:is-finnish-service-number true
+       :number all-digits}
+
+      :else
+      (let [prefix (or ;; Special-case +358 because the generic 1-4 digit
+                       ;; pattern would greedily eat the leading "5" of e.g.
+                       ;; "+358501234567" and produce "+3585".
+                     (re-find #"^\+358" s)
+                     (re-find RE-PREFIX s)
+                     "+358")
+            num-digits (-> (if (str/starts-with? s prefix)
+                             (subs s (count prefix))
+                             s)
+                           digits-only
+                           ;; Strip any leftover Finnish trunk 0(s).
+                           (str/replace #"^0+" ""))]
+        (when (re-matches #"\d{1,20}" num-digits)
           {:prefix prefix
-           :number n})))))
+           :number num-digits})))))
+
+(defn parse-phone-number
+  "Parse a free-form phone number into a PTV-compatible payload. PTV
+   requires :number to match `^\\d{1,20}$` (digits only, 1–20 of them).
+   Tolerates dashes, dots, slashes, parentheses, multiple spaces, and
+   embedded labels (e.g. \"puh.\"). When the field contains multiple
+   phone numbers separated by `,`, `;`, `|`, ` / ` (whitespace-bounded)
+   or newlines, only the first is kept. Returns nil for blank or
+   unparseable input."
+  [n]
+  (when (and (string? n) (not (str/blank? n)))
+    (parse-single-phone-number (first-of-multi-phone n))))
 
 (defn parse-www [v]
   (when v
