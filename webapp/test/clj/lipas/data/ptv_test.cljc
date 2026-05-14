@@ -257,6 +257,18 @@
     (is (= "https://www.salla.fi/"
            (sut/parse-www "https://www.salla.fi/      https://www.visitsalla.fi/"))))
 
+  (testing "schemeless multi-URL: first host is salvaged"
+    (is (= "https://www.sastamala.fi"
+           (sut/parse-www "www.sastamala.fi, sastamala.sometec.fi")))
+    (is (= "https://www.kaakonkaksikkoliikkuu.fi"
+           (sut/parse-www "www.kaakonkaksikkoliikkuu.fi, www.virolahti.fi"))))
+
+  (testing "schemeless with breadcrumb-style trailing junk"
+    (is (= "https://www.rauma.fi"
+           (sut/parse-www "www.rauma.fi › Koe kaupunki › Meri ja saaristo")))
+    (is (= "https://www.sipoo.fi/"
+           (sut/parse-www "www.sipoo.fi/ ulkoilusaaret"))))
+
   (testing "trailing separator punctuation is stripped"
     (is (= "https://a.fi"
            (sut/parse-www "https://a.fi,"))))

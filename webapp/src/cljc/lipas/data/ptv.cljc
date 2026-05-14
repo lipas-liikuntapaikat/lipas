@@ -399,7 +399,13 @@
     (let [trimmed (-> v str/trim fix-www-scheme-typo)
           extracted (or (some-> (re-find RE-WWW-EXTRACT trimmed)
                                 (str/replace #"[,;.\)]+\z" ""))
-                        (str "https://" trimmed))]
+                        ;; Schemeless: take the first token before any
+                        ;; whitespace, comma, semicolon, pipe or arrow
+                        ;; character. Handles `www.a.fi, www.b.fi`,
+                        ;; `www.a.fi › breadcrumb`, `www.a.fi/x y.html`.
+                        (some->> (str/split trimmed #"[\s,;|›→]+")
+                                 first
+                                 (str "https://")))]
       (when (and (re-find RE-WWW-HOST-SHAPE extracted)
                  (<= (count extracted) 500))
         extracted))))
