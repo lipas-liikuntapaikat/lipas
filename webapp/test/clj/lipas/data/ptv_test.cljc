@@ -213,14 +213,68 @@
                    " → " (pr-str parsed))))))))
 
 (deftest parse-www
-  (is (= "http://example.com"
-         (sut/parse-www "example.com")))
+  (testing "schemeless host gets https://"
+    (is (= "https://example.com"
+           (sut/parse-www "example.com")))
+    (is (= "https://www.example.fi"
+           (sut/parse-www "www.example.fi"))))
 
-  (is (= "http://example.com"
-         (sut/parse-www "http://example.com")))
+  (testing "existing scheme is preserved"
+    (is (= "http://example.com"
+           (sut/parse-www "http://example.com")))
+    (is (= "https://example.com"
+           (sut/parse-www "https://example.com")))
+    (is (= "ftp://example.com"
+           (sut/parse-www "ftp://example.com"))))
 
-  (is (= "https://example.com"
-         (sut/parse-www "https://example.com"))))
+  (testing "leading and trailing whitespace is trimmed"
+    (is (= "https://laaksontalli.com"
+           (sut/parse-www "https://laaksontalli.com ")))
+    (is (= "http://retkipaikka.fi/foo"
+           (sut/parse-www " http://retkipaikka.fi/foo"))))
+
+  (testing "scheme typos observed in real LIPAS data are repaired"
+    (is (= "https://salo.fi/x"
+           (sut/parse-www "hhttps://salo.fi/x")))
+    (is (= "https://palaute.kuopio.fi"
+           (sut/parse-www "htpps://palaute.kuopio.fi")))
+    (is (= "https://palaute.kuopio.fi"
+           (sut/parse-www "hpps://palaute.kuopio.fi")))
+    (is (= "http://example.fi"
+           (sut/parse-www "htpp://example.fi"))))
+
+  (testing "internal commas in query strings and anchors are kept"
+    (is (= "https://saimaageopark.fi/path/#filter=r-fullyTranslatedLangus-,r-openState-"
+           (sut/parse-www "https://saimaageopark.fi/path/#filter=r-fullyTranslatedLangus-,r-openState-")))
+    (is (= "https://x.fi/route/?id=37804892"
+           (sut/parse-www "https://x.fi/route/?id=37804892"))))
+
+  (testing "first URL is taken when several are separated by whitespace"
+    (is (= "https://a.fi"
+           (sut/parse-www "https://a.fi https://b.fi")))
+    (is (= "https://a.fi"
+           (sut/parse-www "https://a.fi, https://b.fi")))
+    (is (= "https://www.salla.fi/"
+           (sut/parse-www "https://www.salla.fi/      https://www.visitsalla.fi/"))))
+
+  (testing "trailing separator punctuation is stripped"
+    (is (= "https://a.fi"
+           (sut/parse-www "https://a.fi,"))))
+
+  (testing "unsalvageable input returns nil"
+    (is (nil? (sut/parse-www nil)))
+    (is (nil? (sut/parse-www "")))
+    (is (nil? (sut/parse-www "   ")))
+    (is (nil? (sut/parse-www "fkjglkaldkfgäkljhklfh"))
+        "gibberish without a host shape")
+    (is (nil? (sut/parse-www "013686511"))
+        "phone number wrongly placed in :www field")
+    (is (nil? (sut/parse-www "https:// pirkaa.fi/hiihto"))
+        "space immediately after scheme — pathological"))
+
+  (testing "values longer than 500 chars are rejected"
+    (let [too-long (str "https://example.com/" (apply str (repeat 500 "x")))]
+      (is (nil? (sut/parse-www too-long))))))
 
 (deftest parse-email
   (is (= nil

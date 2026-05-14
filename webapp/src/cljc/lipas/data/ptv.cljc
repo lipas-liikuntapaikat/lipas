@@ -353,12 +353,56 @@
   (when (and (string? n) (not (str/blank? n)))
     (parse-single-phone-number (first-of-multi-phone n))))
 
-(defn parse-www [v]
-  (when v
-    (let [has-scheme (re-find #"^http[s]?:" v)]
-      (if has-scheme
-        v
-        (str "http://" v)))))
+(def ^:private RE-WWW-EXTRACT
+  ;; Match the first http/https/ftp URL in a string, up to next whitespace.
+  ;; Whitespace is the only delimiter between URLs — internal commas and
+  ;; semicolons are kept (they appear legitimately inside query strings and
+  ;; URL fragments, e.g. `#filter=r-fullyTranslatedLangus-,r-openState-`).
+  #"(?i)(?:https?|ftp)://\S+")
+
+(def ^:private RE-WWW-HOST-SHAPE
+  ;; After a scheme, the host must have at least one dot (FQDN) before any
+  ;; path. Rejects phone numbers, gibberish, and `https://` with no host.
+  #"(?i)^(?:https?|ftp)://[^./\s]+\.[^/\s]")
+
+(defn- fix-www-scheme-typo
+  "Repair common scheme typos observed in real LIPAS data (`hhttps://`,
+  `htpps://`, `hpps://`, etc.) so they pass PTV's URL validator. Applied
+  before scheme detection so the corrected form is used downstream."
+  [v]
+  (-> v
+      (str/replace #"(?i)^hhttps://" "https://")
+      (str/replace #"(?i)^hhttp://"  "http://")
+      (str/replace #"(?i)^htpps://"  "https://")
+      (str/replace #"(?i)^htpp://"   "http://")
+      (str/replace #"(?i)^hpps://"   "https://")
+      (str/replace #"(?i)^hpp://"    "http://")))
+
+(defn parse-www
+  "Parse a free-form website value into a PTV-compatible URL or nil.
+  PTV requires a valid scheme (http/https/ftp), a valid FQDN host, and
+  ≤500 chars (`PTVUrlAttribute` + `[MaxLength(500)]`).
+
+  Real LIPAS data includes leading/trailing whitespace, common scheme
+  typos, multiple URLs in one field, and pure garbage. This:
+  - trims whitespace,
+  - repairs known scheme typos (see `fix-www-scheme-typo`),
+  - extracts the first URL when several appear separated by whitespace,
+  - prepends `https://` to schemeless hosts,
+  - validates the resulting URL has a real host and is within length,
+  - returns nil for blank or unparseable input.
+
+  Returning nil triggers `:deleteAllWebPages true` upstream, so a
+  malformed `:www` doesn't take down the rest of the PTV sync."
+  [v]
+  (when (and (string? v) (not (str/blank? v)))
+    (let [trimmed (-> v str/trim fix-www-scheme-typo)
+          extracted (or (some-> (re-find RE-WWW-EXTRACT trimmed)
+                                (str/replace #"[,;.\)]+\z" ""))
+                        (str "https://" trimmed))]
+      (when (and (re-find RE-WWW-HOST-SHAPE extracted)
+                 (<= (count extracted) 500))
+        extracted))))
 
 ;; Should allow nearly all valid email addresses according to RFC 5322?
 (def RE-EMAIL #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
