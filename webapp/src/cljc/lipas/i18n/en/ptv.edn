@@ -14,8 +14,17 @@
  :out-of-date "LIPAS has newer changes than PTV"
  :content-drift "PTV content differs from LIPAS"
  :modified-in-ptv "Unpublished changes in PTV – publish or discard the changes in PTV before syncing"
- :sync-failed-ptv-modified "Sync failed: PTV has unpublished changes. Publish or discard changes in PTV and try again."
- :sync-failed "Sync to PTV failed."
+ ;; Titles (rendered bold). Used standalone when there's no actionable detail,
+ ;; or paired with one of the body strings below for the full message.
+ :sync-failed "Sync to PTV failed"
+ :saved-but-sync-failed "Sports site saved, but PTV sync failed"
+ ;; Bodies for the dialog-driven sync flows.
+ :sync-failed-body-ptv-modified "PTV has unpublished changes. Publish or discard changes in PTV and try again."
+ :sync-failed-body-invalid-postal-code "Postal code '{1}' is not recognized by PTV (not found in Posti's registry). Update the site's postal code (e.g. with 'Resolve address automatically' on the site's basic data), save, and try syncing again."
+ ;; Bodies for the sports-site save flow — the LIPAS data is saved; only the
+ ;; downstream PTV propagation needs follow-up. Phrasing reflects that.
+ :saved-but-sync-failed-body-ptv-modified "PTV has unpublished changes. Publish or discard changes in PTV and save again."
+ :saved-but-sync-failed-body-invalid-postal-code "Postal code '{1}' is not recognized by PTV (not found in Posti's registry). Update the site's postal code (e.g. with 'Resolve address automatically' on the site's basic data) and save again."
  :not-yet-synced "Selected for export, not yet synced to PTV"
  :summary "Summary"
  :user-instruction "User instruction"

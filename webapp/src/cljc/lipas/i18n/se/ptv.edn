@@ -14,8 +14,17 @@
  :out-of-date "LIPAS har nyare ändringar än PTV",
  :content-drift "PTV-innehållet skiljer sig från LIPAS",
  :modified-in-ptv "Opublicerade ändringar i PTV – publicera eller ångra ändringarna i PTV innan synkronisering",
- :sync-failed-ptv-modified "Synkroniseringen misslyckades: PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och försök igen.",
- :sync-failed "Synkronisering till PTV misslyckades.",
+ ;; Titles (rendered bold). Used standalone when there's no actionable detail,
+ ;; or paired with one of the body strings below for the full message.
+ :sync-failed "Synkronisering till PTV misslyckades",
+ :saved-but-sync-failed "Idrottsanläggningen sparades, men PTV-synkroniseringen misslyckades",
+ ;; Bodies for the dialog-driven sync flows.
+ :sync-failed-body-ptv-modified "PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och försök igen.",
+ :sync-failed-body-invalid-postal-code "Postnumret '{1}' godkänns inte av PTV (finns inte i Postis register). Uppdatera idrottsanläggningens postnummer (t.ex. via 'Hitta adress automatiskt' under grunduppgifterna), spara och försök synkronisera igen.",
+ ;; Bodies for the sports-site save flow — the LIPAS data is saved; only the
+ ;; downstream PTV propagation needs follow-up. Phrasing reflects that.
+ :saved-but-sync-failed-body-ptv-modified "PTV har opublicerade ändringar. Publicera eller ångra ändringarna i PTV och spara igen.",
+ :saved-but-sync-failed-body-invalid-postal-code "Postnumret '{1}' godkänns inte av PTV (finns inte i Postis register). Uppdatera idrottsanläggningens postnummer (t.ex. via 'Hitta adress automatiskt' under grunduppgifterna) och spara igen.",
  :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",

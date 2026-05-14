@@ -1,24 +1,10 @@
 (ns lipas.backend.ptv.handler
-  (:require [cheshire.core :as json]
-            [lipas.backend.middleware :as mw]
+  (:require [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [taoensso.timbre :as log]))
-
-(defn- parse-ptv-error
-  "Extract structured error info from a PTV API ExceptionInfo."
-  [^Exception e]
-  (let [data (ex-data e)
-        resp-body (get-in data [:resp :body])
-        status (get-in data [:resp :status])]
-    (when (and status resp-body)
-      {:ptv-status status
-       :ptv-error (if (string? resp-body)
-                    (try (json/parse-string resp-body true)
-                         (catch Exception _ {:raw resp-body}))
-                    resp-body)})))
 
 ;; Schemas moved to lipas.schema.sports-sites.ptv
 
@@ -173,7 +159,7 @@
           {:status 200
            :body (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
-            (if-let [ptv-err (parse-ptv-error e)]
+            (if-let [ptv-err (ptv-core/parse-ptv-error e)]
               (do
                 (log/warnf "save-ptv-service failed (org: %s, source-id: %s, service-id: %s): %s"
                            (-> req :parameters :body :org-id)
@@ -227,7 +213,7 @@
           {:status 200
            :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
-            (if-let [ptv-err (parse-ptv-error e)]
+            (if-let [ptv-err (ptv-core/parse-ptv-error e)]
               (do
                 (log/warnf "save-ptv-service-location failed (lipas-id: %s, org: %s): %s"
                            (-> req :parameters :body :lipas-id)

@@ -14,8 +14,17 @@
  :out-of-date "Lipaksessa on uudempia muutoksia kuin PTV:ssä",
  :content-drift "PTV:ssä on eri sisältö kuin Lipaksessa",
  :modified-in-ptv "PTV:ssa julkaisemattomia muutoksia – julkaise tai peru muutokset ensin PTV:ssa ennen synkronointia",
- :sync-failed-ptv-modified "Synkronointi epäonnistui: PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
- :sync-failed "Synkronointi PTV:hen epäonnistui.",
+ ;; Titles (rendered bold). Used standalone when there's no actionable detail,
+ ;; or paired with one of the body strings below for the full message.
+ :sync-failed "Synkronointi PTV:hen epäonnistui",
+ :saved-but-sync-failed "Liikuntapaikka tallennettu, mutta PTV-synkronointi epäonnistui",
+ ;; Bodies for the dialog-driven sync flows (PTV dialog wizard / Liikuntapaikat tab).
+ :sync-failed-body-ptv-modified "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja yritä uudelleen.",
+ :sync-failed-body-invalid-postal-code "Postinumeroa '{1}' ei tunneta PTV:ssä (ei löydy Postin rekisteristä). Korjaa kohteen postinumero (esim. 'Selvitä osoite automaattisesti' -toiminnolla kohteen perustiedoissa), tallenna ja yritä synkronointia uudelleen.",
+ ;; Bodies for the sports-site save flow — the LIPAS data is saved; only the
+ ;; downstream PTV propagation needs follow-up. Phrasing reflects that.
+ :saved-but-sync-failed-body-ptv-modified "PTV:ssä on julkaisemattomia muutoksia. Julkaise tai peru muutokset PTV:ssä ja tallenna uudelleen.",
+ :saved-but-sync-failed-body-invalid-postal-code "Postinumeroa '{1}' ei tunneta PTV:ssä (ei löydy Postin rekisteristä). Korjaa kohteen postinumero (esim. 'Selvitä osoite automaattisesti' -toiminnolla kohteen perustiedoissa) ja tallenna uudelleen.",
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
  :user-instruction "Toimintaohje",

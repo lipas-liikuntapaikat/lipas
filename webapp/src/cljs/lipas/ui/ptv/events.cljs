@@ -11,22 +11,118 @@
             [malli.error :as me]
             [re-frame.core :as rf]))
 
-(defn- ptv-modified-error?
+(defn ptv-error-payload
+  "Return the structured PTV error map from any of the shapes it appears in:
+  the raw ajax response (wrapped under `:response`), the parsed handler
+  payload (`{:ptv-error ...}`), or the per-site `:error` map stored on
+  `(:ptv site)` by backend `sync-ptv!`."
+  [resp]
+  (or (:ptv-error (:response resp))
+      (:ptv-error resp)))
+
+(defn ptv-modified-error?
   "Check if a PTV sync failure is due to 'Modified' publishing status."
   [resp]
-  (let [ptv-error (or (:ptv-error (:response resp))
-                      (:ptv-error resp))]
-    (some-> ptv-error
-            :PublishingStatus
-            first
-            (str/includes? "Modified"))))
+  (some-> (ptv-error-payload resp)
+          :PublishingStatus
+          first
+          (str/includes? "Modified")))
 
-(defn- ptv-sync-error-message
-  "Parse a PTV sync failure response and return a localized error message."
+(defn ptv-invalid-postal-code
+  "If the PTV sync failed because the postal code isn't in Posti's registry,
+  return the offending code (e.g. \"29170\"). Otherwise nil.
+
+  PTV returns model-state errors keyed by property path, e.g.
+  `:Addresses[0].StreetAddress.PostalCode` →
+  [\"The code '29170' was not found!\"]."
+  [resp]
+  (let [body (ptv-error-payload resp)]
+    (when (map? body)
+      (some (fn [[k v]]
+              (when (and (str/ends-with? (name k) "PostalCode")
+                         (sequential? v))
+                (some (fn [msg]
+                        (when (string? msg)
+                          (second (re-find #"'([^']+)'" msg))))
+                      v)))
+            body))))
+
+(def ^:private dialog-body-keys
+  {:modified            :ptv/sync-failed-body-ptv-modified
+   :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code})
+
+(def ^:private save-body-keys
+  {:modified            :ptv/saved-but-sync-failed-body-ptv-modified
+   :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code})
+
+(defn- ptv-sync-error-body
+  "Localized actionable body text for a PTV sync failure. `body-keys`
+  selects the translation family. Returns nil for generic failures with no
+  specific detail beyond the title."
+  [tr resp body-keys]
+  (let [bad-code (ptv-invalid-postal-code resp)]
+    (cond
+      (ptv-modified-error? resp)
+      (tr (:modified body-keys))
+
+      bad-code
+      (tr (:invalid-postal-code body-keys) bad-code)
+
+      :else
+      nil)))
+
+(defn ptv-error-body
+  "Public helper for the persistent inline Alert on the sports-site PTV tab.
+  Returns the actionable body text using dialog-flow phrasing (the inline
+  Alert is a drift indicator, not tied to the immediate save event).
+  Returns nil if there's no specific detail."
   [tr resp]
-  (if (ptv-modified-error? resp)
-    (tr :ptv/sync-failed-ptv-modified)
-    (tr :ptv/sync-failed)))
+  (ptv-sync-error-body tr resp dialog-body-keys))
+
+(defn- error-notification
+  "Builds a notification map for a PTV failure. `title-key` is the bold
+  one-line summary; `body-keys` selects the actionable detail family.
+  `severity` is `:error` (red) or `:warning` (yellow). Long actionable
+  messages are sticky so the user can read them; generic failures use
+  the title alone."
+  [tr resp {:keys [title-key body-keys severity]}]
+  (let [body (ptv-sync-error-body tr resp body-keys)]
+    (if body
+      {:title (tr title-key) :message body :severity severity :sticky? true}
+      {:message (tr title-key) :severity severity})))
+
+(defn ptv-sync-error-notification
+  "Notification map for a PTV sync failure in a dialog-driven flow
+  (Käyttöönotto wizard / Liikuntapaikat tab). Red error severity."
+  [tr resp]
+  (error-notification tr resp
+                      {:title-key :ptv/sync-failed
+                       :body-keys dialog-body-keys
+                       :severity  :error}))
+
+(defn ptv-saved-but-sync-failed-notification
+  "Notification map for the sports-site save flow when the LIPAS-side save
+  succeeded but the downstream PTV sync failed. Yellow warning — the user's
+  data was persisted; only the downstream propagation needs follow-up."
+  [tr resp]
+  (error-notification tr resp
+                      {:title-key :ptv/saved-but-sync-failed
+                       :body-keys save-body-keys
+                       :severity  :warning}))
+
+(rf/reg-event-fx ::notify-if-sync-failed
+  ;; Fires after a sports-site save whose response carries a PTV sync error.
+  ;; The save endpoint always returns 200 (the DB write succeeded) even when
+  ;; backend `sync-ptv!` failed — the failure is captured on `:ptv :error`.
+  ;; The inline Alert on the sports-site PTV tab handles persistent state;
+  ;; this event surfaces a sticky warning toast so the user gets immediate
+  ;; feedback no matter which tab they end up on, framed as "saved but…"
+  ;; (yellow) rather than a plain failure (red).
+  (fn [{:keys [db]} [_ result]]
+    (when-let [err (some-> result :ptv :error)]
+      (let [tr (:translator db)]
+        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+                          (ptv-saved-but-sync-failed-notification tr err)]]]}))))
 
 (defn -get-ptv-org-id
   [db]
@@ -918,8 +1014,7 @@
   (fn [{:keys [db]} [_ org-id id extra-fx resp]]
     (let [tr (:translator db)
           modified? (ptv-modified-error? resp)
-          notification {:message (ptv-sync-error-message tr resp)
-                        :success? false}
+          notification (ptv-sync-error-notification tr resp)
           ;; Find the service by source-id to update its cached publishingStatus
           services (get-in db [:ptv :org org-id :data :services])
           service-id (some (fn [[sid svc]]
@@ -1119,8 +1214,7 @@
   (fn [{:keys [db]} [_ lipas-id extra-fx resp]]
     (let [tr (:translator db)
           modified? (ptv-modified-error? resp)
-          notification {:message (ptv-sync-error-message tr resp)
-                        :success? false}
+          notification (ptv-sync-error-notification tr resp)
           org-id (-get-ptv-org-id db)
           channel-id (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids 0])]
       {:db (-> db

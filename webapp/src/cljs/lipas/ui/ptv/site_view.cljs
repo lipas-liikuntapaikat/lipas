@@ -220,13 +220,18 @@
                           [:> Link {:target "new"
                                     :href (str "https://www.suomi.fi/palvelut/palvelupiste/x/" channel-id)}
                            (tr :ptv/open-in-suomi-fi)])])
-           alert (fn [severity body]
-                   [:> Alert {:severity severity}
-                    body
-                    ptv-links])]
+           alert (fn alert-fn
+                   ([severity body] (alert-fn severity nil body))
+                   ([severity title body]
+                    [:> Alert {:severity severity}
+                     (when title [:> AlertTitle title])
+                     body
+                     ptv-links]))]
        (cond
          (:error (:ptv site))
-         (alert "error" (str (tr :ptv/integration-error) " " (:message (:error (:ptv site)))))
+         (alert "error"
+                (tr :ptv/integration-error)
+                (events/ptv-error-body tr (:error (:ptv site))))
 
          (and previous-sent? candidate-now? ready?)
          (cond

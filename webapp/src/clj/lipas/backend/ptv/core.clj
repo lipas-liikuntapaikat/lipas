@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.core
-  (:require [clojure.java.jdbc :as jdbc]
+  (:require [cheshire.core :as json]
+            [clojure.java.jdbc :as jdbc]
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.backend.core :as core]
@@ -14,6 +15,20 @@
             [lipas.data.types :as types]
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
+
+(defn parse-ptv-error
+  "Extract structured error info from a PTV API ExceptionInfo. Returns nil
+  if `e` doesn't carry a PTV HTTP response in its ex-data."
+  [^Exception e]
+  (let [data (ex-data e)
+        resp-body (get-in data [:resp :body])
+        status (get-in data [:resp :status])]
+    (when (and status resp-body)
+      {:ptv-status status
+       :ptv-error (if (string? resp-body)
+                    (try (json/parse-string resp-body true)
+                         (catch Exception _ {:raw resp-body}))
+                    resp-body)})))
 
 (defn get-ptv-integration-candidates
   [search criteria]
@@ -530,8 +545,13 @@
         ;; reindexes the same revision we just wrote.
         {:ptv new-ptv-data :event-date (:event-date resp)}))
     (catch Exception e
-      (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
-                                            :data (ex-data e)})]
+      ;; Don't store (ex-data e) directly — clj-http's response includes a
+      ;; live `HttpClient` Java object that Cheshire can't serialize to the
+      ;; JSONB column, and `(ex-data e) :req :headers` carries the PTV
+      ;; bearer token. The parsed `:ptv-status`/`:ptv-error` covers
+      ;; everything the frontend and operators actually need.
+      (let [new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)}
+                                                  (parse-ptv-error e)))]
         (log/errorf e "Sports site %d updated but PTV sync failed" lipas-id)
         (let [resp (core/upsert-sports-site! tx
                                              user
