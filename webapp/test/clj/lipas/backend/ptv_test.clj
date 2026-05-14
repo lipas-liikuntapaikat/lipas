@@ -1,10 +1,11 @@
 (ns lipas.backend.ptv-test
-  (:require [clojure.test :refer [deftest is use-fixtures] :as t]
+  (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [clojure.pprint :refer [pprint]]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.backend.ptv.integration :as ptv-integ]
             [lipas.data.ptv :as ptv-data]
             [lipas.data.types :as types]
             [lipas.test-utils :refer [<-json] :as tu]
@@ -190,6 +191,140 @@
 
     ;; TODO: Archive the site in Lipas and PTV
       ))
+
+(deftest upsert-ptv-service-location-refetches-channel-after-connection-updates
+  ;; Regression: the PUT response is captured BEFORE the separate
+  ;; update-service-connections calls land, so its :services list is stale.
+  ;; The FE caches that response as service-channels[id], and drift detection
+  ;; in compute-service-channel-drift sees stale services → reports
+  ;; :content-drift → the green "synced" chip never appears immediately
+  ;; after sync. The fix refetches the channel via GET after the connection
+  ;; updates so the FE caches the canonical post-sync shape.
+  (let [calls (atom [])
+        record! (fn [tag] (swap! calls conj tag))
+        channel-id "channel-uuid"
+        old-service-id "service-old"
+        new-service-id "service-new"
+        ;; PTV's PUT response: :services still has the OLD service-id
+        ;; because update-service-connections hasn't run yet at the moment
+        ;; PTV serialized this response.
+        stale-put-resp {:id channel-id
+                        :sourceId "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
+                        :publishingStatus "Published"
+                        :services [{:service {:id old-service-id}}]
+                        :serviceChannelNames []
+                        :serviceChannelDescriptions []}
+        ;; Canonical GET response (post-connection-updates): :services has
+        ;; the NEW service-id.
+        fresh-get-resp (assoc stale-put-resp
+                              :services [{:service {:id new-service-id}}])
+        site {:lipas-id 12345
+              :name "Test Halli"
+              :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425}
+                         :address "Katu 1"
+                         :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point"
+                                                             :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              :ptv {:org-id "org-x"
+                    :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
+                    :service-channel-ids [channel-id]
+                    :service-ids [new-service-id]
+                    :sync-enabled true
+                    :languages ["fi"]
+                    :summary {:fi "summary"}
+                    :description {:fi "description"}}}
+        ;; First GET (pre-PUT) returns a snapshot with the OLD service-id,
+        ;; used for the connection diff. Subsequent GETs (the refetch)
+        ;; return the canonical post-update state.
+        get-channel-call-count (atom 0)]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback
+                  (fn [_ _] {:supported-languages ["fi"]})
+                  ptv-integ/get-org-service-channel
+                  (fn [_ _ id]
+                    (record! :get-channel)
+                    (swap! get-channel-call-count inc)
+                    (if (= 1 @get-channel-call-count)
+                      {:id id
+                       :services [{:service {:id old-service-id}}]}
+                      fresh-get-resp))
+                  ptv-integ/update-service-location
+                  (fn [_ _ _]
+                    (record! :put)
+                    stale-put-resp)
+                  ptv-integ/update-service-connections
+                  (fn [_ _ _ _]
+                    (record! :update-connections))]
+      (let [[ptv-resp new-ptv-data]
+            (ptv-core/upsert-ptv-service-location!*
+              {} {:org-id "org-x" :site site :ptv (:ptv site)})]
+
+        (testing "Returned ptv-resp reflects the post-connection-update state"
+          (is (= [new-service-id]
+                 (map (comp :id :service) (:services ptv-resp)))
+              "ptv-resp must be the fresh GET response, not the stale PUT response"))
+
+        (testing "Call order: pre-PUT GET → PUT → update-connections → refetch GET"
+          (is (= [:get-channel :put :update-connections :update-connections :get-channel]
+                 @calls)
+              "GET must happen AFTER update-service-connections so its :services is canonical"))
+
+        (testing "Sanity: ptv meta still uses LIPAS-side :service-ids"
+          (is (= [new-service-id] (:service-ids new-ptv-data))))))))
+
+(deftest upsert-ptv-service-location-falls-back-when-refetch-fails
+  ;; If the post-PUT refetch fails (transient PTV error), the function
+  ;; must fall back to the PUT response rather than throwing. The chip may
+  ;; momentarily look stale, but the sync itself is durable.
+  (let [stale-put-resp {:id "channel-uuid"
+                        :sourceId "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
+                        :publishingStatus "Published"
+                        :services [{:service {:id "service-old"}}]
+                        :serviceChannelNames []
+                        :serviceChannelDescriptions []}
+        site {:lipas-id 12345
+              :name "Test Halli"
+              :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425}
+                         :address "Katu 1"
+                         :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point"
+                                                             :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              :ptv {:org-id "org-x"
+                    :source-id "lipas-org-x-12345-2026-04-26T18-12-24.376411Z"
+                    :service-channel-ids ["channel-uuid"]
+                    :service-ids ["service-new"]
+                    :sync-enabled true
+                    :languages ["fi"]
+                    :summary {:fi "summary"}
+                    :description {:fi "description"}}}
+        get-channel-call-count (atom 0)]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback
+                  (fn [_ _] {:supported-languages ["fi"]})
+                  ptv-integ/get-org-service-channel
+                  (fn [_ _ _id]
+                    (swap! get-channel-call-count inc)
+                    (if (= 1 @get-channel-call-count)
+                      {:services [{:service {:id "service-old"}}]}
+                      (throw (ex-info "PTV down" {:status 503}))))
+                  ptv-integ/update-service-location
+                  (fn [_ _ _] stale-put-resp)
+                  ptv-integ/update-service-connections
+                  (fn [_ _ _ _] nil)]
+      (let [[ptv-resp _] (ptv-core/upsert-ptv-service-location!*
+                           {} {:org-id "org-x" :site site :ptv (:ptv site)})]
+        (is (= stale-put-resp ptv-resp)
+            "Refetch failure must fall back to PUT response, not throw")))))
 
 (comment
   (t/run-tests *ns*)

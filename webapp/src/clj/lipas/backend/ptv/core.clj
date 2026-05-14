@@ -372,6 +372,21 @@
                 (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
               (doseq [service-id new-services]
                 (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
+        ;; Refetch the channel via GET so the FE caches the canonical
+        ;; post-sync shape (the same shape /list/organization returns and
+        ;; that drift detection in `compute-service-channel-drift` expects).
+        ;; The PUT response is captured BEFORE the separate
+        ;; update-service-connections calls land, so its :services list
+        ;; can be stale on updates. Without refetching, drift detection
+        ;; sees a stale :services list and reports :content-drift instead
+        ;; of :ok — that's why the green chip didn't appear immediately
+        ;; after sync (tester feedback). Tolerate refetch failures
+        ;; (transient PTV errors) by falling back to the PUT response.
+        ptv-resp (try
+                   (ptv/get-org-service-channel ptv-component org-id (:id ptv-resp))
+                   (catch Exception e
+                     (log/warnf e "Failed to refetch channel %s after sync; using PUT response" (:id ptv-resp))
+                     ptv-resp))
         ;; Store the new PTV info to Lipas DB
         new-ptv-data (-> ptv
                          (select-keys persisted-ptv-keys)
