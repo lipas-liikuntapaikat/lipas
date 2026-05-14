@@ -33,6 +33,12 @@
             :city-codes [889]
             :owners ["city" "city-main-owner"]
             :supported-languages ["fi"]}}
+   {:name "Raahen kaupunki"
+    :props {;; org 8
+            :org-id "92374b0f-7d3c-4017-858e-666ee3ca2761"
+            :city-codes [678]
+            :owners ["city" "city-main-owner"]
+            :supported-languages ["fi"]}}
    {:name "Limingan kunta"
     :props {;; org 9
             :org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
