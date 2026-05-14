@@ -366,17 +366,34 @@
   #"(?i)^(?:https?|ftp)://[^./\s]+\.[^/\s]")
 
 (defn- fix-www-scheme-typo
-  "Repair common scheme typos observed in real LIPAS data (`hhttps://`,
-  `htpps://`, `hpps://`, etc.) so they pass PTV's URL validator. Applied
-  before scheme detection so the corrected form is used downstream."
+  "Repair common scheme typos and adjacent host damage observed in real
+  LIPAS data so they pass PTV's URL validator. Applied before scheme
+  detection so the corrected form is used downstream.
+
+  Handles, in order:
+   - Doubled scheme prefixes (`https://whttps://foo`) → keep the second.
+   - Missing colon after scheme (`http//`, `https//`, `http.//`).
+   - Single-slash schemes (`https:/foo` where host isn't `/`).
+   - Letter-doubling typos (`hhttps://`, `htpps://`, `hpps://`).
+   - A space immediately after `www.` (`https://www. foo` → `https://www.foo`).
+   - `www,host` typo where the dot was mistyped as a comma."
   [v]
   (-> v
+      (str/replace #"(?i)^https?://[^/?#\s]*?(https?://)" "$1")
+      (str/replace #"(?i)^(https?)//" "$1://")
+      (str/replace #"(?i)^(https?)\.//?" "$1://")
+      (str/replace #"(?i)^(https?|ftp):/(?!/)" "$1://")
       (str/replace #"(?i)^hhttps://" "https://")
       (str/replace #"(?i)^hhttp://"  "http://")
       (str/replace #"(?i)^htpps://"  "https://")
       (str/replace #"(?i)^htpp://"   "http://")
       (str/replace #"(?i)^hpps://"   "https://")
-      (str/replace #"(?i)^hpp://"    "http://")))
+      (str/replace #"(?i)^hpp://"    "http://")
+      (str/replace #"(?i)(://)www\.\s+" "$1www.")
+      (str/replace #"(?i)^www\.\s+" "www.")
+      (str/replace #"(?i)^ps://(?!www\.)" "https://")
+      (str/replace #"(?i)^ps://www\." "https://www.")
+      (str/replace #"(?i)^www,(?=[^,\s])" "www.")))
 
 (defn parse-www
   "Parse a free-form website value into a PTV-compatible URL or nil.
@@ -410,12 +427,66 @@
                  (<= (count extracted) 500))
         extracted))))
 
-;; Should allow nearly all valid email addresses according to RFC 5322?
-(def RE-EMAIL #"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])")
+;; Mirrors PTV's PTVEmailAddressAttribute (see ptv-releases/.../PTVEmailAddressAttribute.cs).
+;; Local part: ASCII letters case-insensitive, digits, the symbol set PTV
+;; lists explicitly, plus the Unicode BMP ranges PTV allows
+;; ( -퟿, 豈-﷏, ﷰ-￯) so Finnish-looking
+;; addresses like `kenttämiehet@naantali.fi` validate. Domain: dot-
+;; separated labels of alphanumerics or the same Unicode ranges (PTV's
+;; test API accepts `info@itäharjunkuntosali.fi`), with internal hyphens.
+;; The previous regex was strict-lowercase RFC 5322 and rejected 223 real
+;; LIPAS addresses (capitalized locals like `Vantaa-info@vantaa.fi`,
+;; Unicode locals like `kenttämiehet@naantali.fi`, and IDN domains like
+;; `info@itäharjunkuntosali.fi`) that PTV itself accepts — verified by
+;; dry-running each against the test API on 2026-05-14.
+(def RE-EMAIL
+  #"(?i)[A-Z0-9!#$%&'*+/=?^_`{|}~\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF.-]+@(?:[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF](?:[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF-]*[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])?\.)+[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF](?:[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF-]*[A-Z0-9\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])?")
 
-(defn parse-email [v]
-  (when (and v (re-matches RE-EMAIL v))
-    v))
+(defn parse-email
+  "Trim and validate `v` against an email shape PTV accepts. Returns the
+   trimmed address or nil. Returning nil triggers `:deleteAllEmails true`
+   upstream so a malformed `:email` doesn't fail the rest of the sync."
+  [v]
+  (when (string? v)
+    (let [trimmed (str/trim v)]
+      (when (re-matches RE-EMAIL trimmed)
+        trimmed))))
+
+(defn parse-postal-code
+  "Extract a 5-digit Finnish postal code from `v`, or nil. Trims, then
+   pulls the first 5-digit run. Handles the common LIPAS data shapes
+   `\"82300 Rääkkylä\"`, `\"Oulu 90670\"` and the plain `\"00100\"` form.
+   Returning nil lets the upstream caller decide how to react — without
+   a postal code, PTV will reject the whole ServiceLocation payload."
+  [v]
+  (when (string? v)
+    (let [m (re-find #"\b\d{5}\b" (str/trim v))]
+      (when m m))))
+
+(def ^:private ptv-street-max-length 100)
+
+(defn parse-address
+  "Trim `v` to a PTV-compatible street-address value: blank → nil, ≤100
+   chars → as-is, longer → truncate at the rightmost natural break
+   (comma, period, semicolon or whitespace) that fits, falling back to
+   a hard 100-char cut. `streetAddress.street[].value` has
+   `[ListPropertyMaxLength(100, \"Value\")]` so anything longer fails
+   PTV with `Maximum length of property 'Value' must be '100'.`"
+  [v]
+  (when (string? v)
+    (let [trimmed (str/trim v)]
+      (cond
+        (str/blank? trimmed) nil
+        (<= (count trimmed) ptv-street-max-length) trimmed
+        :else
+        (let [head (subs trimmed 0 ptv-street-max-length)
+              cut (or (str/last-index-of head ",")
+                      (str/last-index-of head ".")
+                      (str/last-index-of head ";")
+                      (str/last-index-of head " "))]
+          (str/trimr (if (and cut (pos? cut))
+                       (subs head 0 cut)
+                       head)))))))
 
 (defn ->ptv-service-location
   [org-id
@@ -492,14 +563,16 @@
                           :subType "Single" ; | Single | Street | PostOfficeBox | Abroad | Other.
                           :country "FI"
                           :streetAddress
-                          (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)]
+                          (let [[lon lat] (-> search-meta :location :wgs84-point coord-transform-fn)
+                                street-value (parse-address (:address location))
+                                postal-code (parse-postal-code (:postal-code location))]
                             {:municipality (-> location
                                                :city
                                                :city-code
                                                (utils/zero-left-pad 3))
                              :street (for [lang languages]
-                                       {:value (:address location) :language lang})
-                             :postalCode (-> location :postal-code)
+                                       {:value street-value :language lang})
+                             :postalCode postal-code
                              :latitude lat
                              :longitude lon})}]
 

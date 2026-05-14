@@ -243,6 +243,32 @@
     (is (= "http://example.fi"
            (sut/parse-www "htpp://example.fi"))))
 
+  (testing "additional scheme-shape repairs (data-driven, verified against PTV test API)"
+    (is (= "https://korsholm.fi/valfard"
+           (sut/parse-www "https:/korsholm.fi/valfard"))
+        "single-slash scheme")
+    (is (= "http://www.multia.fi"
+           (sut/parse-www "http//www.multia.fi"))
+        "missing colon after scheme")
+    (is (= "http://www.virolahti.fi"
+           (sut/parse-www "http.//www.virolahti.fi"))
+        "period typed where colon was meant")
+    (is (= "https://www.jamsa.fi/vapaa-aika"
+           (sut/parse-www "https://whttps://www.jamsa.fi/vapaa-aika"))
+        "doubled scheme prefix")
+    (is (= "https://www.iisalmi.fi/Suomeksi/Palvelut"
+           (sut/parse-www "ps://www.iisalmi.fi/Suomeksi/Palvelut"))
+        "truncated `ps://` scheme")
+    (is (= "https://www.pietarsaari.fi"
+           (sut/parse-www "www. pietarsaari.fi"))
+        "schemeless host with space after www.")
+    (is (= "https://www.pietarsaari.fi"
+           (sut/parse-www "https://www. pietarsaari.fi"))
+        "scheme present, space after www.")
+    (is (= "https://www.vihti.fi"
+           (sut/parse-www "www,vihti.fi"))
+        "comma typed where dot was meant"))
+
   (testing "internal commas in query strings and anchors are kept"
     (is (= "https://saimaageopark.fi/path/#filter=r-fullyTranslatedLangus-,r-openState-"
            (sut/parse-www "https://saimaageopark.fi/path/#filter=r-fullyTranslatedLangus-,r-openState-")))
@@ -293,7 +319,67 @@
          (sut/parse-email "foo")))
 
   (is (= "juho@example.com"
-         (sut/parse-email "juho@example.com"))))
+         (sut/parse-email "juho@example.com")))
+
+  (testing "uppercase characters in local part (PTV accepts)"
+    (is (= "Vantaa-info@vantaa.fi"
+           (sut/parse-email "Vantaa-info@vantaa.fi")))
+    (is (= "Juha.Husu@ruokolahti.fi"
+           (sut/parse-email "Juha.Husu@ruokolahti.fi"))))
+
+  (testing "Unicode characters in local part (PTV accepts)"
+    (is (= "kenttämiehet@naantali.fi"
+           (sut/parse-email "kenttämiehet@naantali.fi")))
+    (is (= "sorsapuistonurheilukenttä@tampere.fi"
+           (sut/parse-email "sorsapuistonurheilukenttä@tampere.fi"))))
+
+  (testing "Unicode characters in domain — IDN (PTV accepts)"
+    (is (= "info@itäharjunkuntosali.fi"
+           (sut/parse-email "info@itäharjunkuntosali.fi"))))
+
+  (testing "surrounding whitespace is trimmed"
+    (is (= "admin@example.fi"
+           (sut/parse-email " admin@example.fi  "))))
+
+  (testing "blank or missing input"
+    (is (nil? (sut/parse-email nil)))
+    (is (nil? (sut/parse-email "")))
+    (is (nil? (sut/parse-email "   ")))))
+
+(deftest parse-postal-code
+  (testing "5-digit input passes through"
+    (is (= "00100" (sut/parse-postal-code "00100")))
+    (is (= "91900" (sut/parse-postal-code "91900"))))
+
+  (testing "5-digit token is extracted from real LIPAS shapes"
+    (is (= "82300" (sut/parse-postal-code "82300 Rääkkylä")))
+    (is (= "20750" (sut/parse-postal-code "20750 Turku")))
+    (is (= "90670" (sut/parse-postal-code "Oulu 90670")))
+    (is (= "00100" (sut/parse-postal-code "  00100  "))))
+
+  (testing "values without a 5-digit run return nil"
+    (is (nil? (sut/parse-postal-code nil)))
+    (is (nil? (sut/parse-postal-code "")))
+    (is (nil? (sut/parse-postal-code "abc")))
+    (is (nil? (sut/parse-postal-code "123")))))
+
+(deftest parse-address
+  (testing "short addresses are passed through, trimmed"
+    (is (= "Alapääntie 7" (sut/parse-address "Alapääntie 7")))
+    (is (= "Alapääntie 7" (sut/parse-address "  Alapääntie 7  "))))
+
+  (testing "blank or missing input"
+    (is (nil? (sut/parse-address nil)))
+    (is (nil? (sut/parse-address "")))
+    (is (nil? (sut/parse-address "   "))))
+
+  (testing "over-100 truncates at the rightmost natural break"
+    (is (= "Autiolahdentie 120"
+           (sut/parse-address
+             "Autiolahdentie 120, mistä opastus parkkialueelle. Partiomajalta on noin 550 metrin kävely parkkialueelle.")))
+    (let [no-breaks (apply str (repeat 120 "a"))
+          out (sut/parse-address no-breaks)]
+      (is (= 100 (count out)) "hard truncate when no breaks fit"))))
 
 (defn- names [payload]
   (mapv (juxt :type :language :value) (:serviceChannelNames payload)))
