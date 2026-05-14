@@ -1,0 +1,4 @@
+{:ns lipas.migrations.fix-postal-codes
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}
