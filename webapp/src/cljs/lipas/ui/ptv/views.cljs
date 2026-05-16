@@ -518,7 +518,7 @@
   (r/with-let [expanded-rows (r/atom {})
                search-text (r/atom "")
                status-filter (r/atom :all)
-               filter-expanded? (r/atom false)]
+               filter-expanded? (r/atom true)]
     (let [tr (<== [:lipas.ui.subs/translator])
           org-id (<== [::subs/selected-ptv-org-id])
           sites (<== [::subs/sports-sites org-id])
