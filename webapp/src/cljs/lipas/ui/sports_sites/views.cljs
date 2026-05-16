@@ -269,7 +269,8 @@
   [{:keys [tr edit-data display-data cities on-change read-only?
            sub-headings? address-required? address-locator-component]
     :or {address-required? true}}]
-  (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
+  (r/with-let [no-address? (r/atom (and (not address-required?)
+                                        (= "-" (:address display-data))))]
     (let [locale (tr)
           editing? (not read-only?)
           lipas-id (when editing? (<== [:lipas.ui.map.subs/editing-lipas-id]))
