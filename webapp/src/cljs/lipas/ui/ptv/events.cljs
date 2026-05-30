@@ -47,26 +47,52 @@
                       v)))
             body))))
 
+(defn ptv-duplicate-name
+  "If the PTV sync failed because the service-channel name already exists in
+  the organization, return the offending name (e.g. \"Haapamäen
+  urheilukenttä\"). Otherwise nil.
+
+  PTV returns `:ServiceChannelNames [\"Value 'X' of language code 'fi'
+  already exists within organization. The name must be unique.\"]`."
+  [resp]
+  (let [body (ptv-error-payload resp)]
+    (when (map? body)
+      (some (fn [[k v]]
+              (when (and (= "ServiceChannelNames" (name k))
+                         (sequential? v))
+                (some (fn [msg]
+                        (when (and (string? msg)
+                                   (str/includes? msg "already exists within organization"))
+                          (second (re-find #"'([^']+)'" msg))))
+                      v)))
+            body))))
+
 (def ^:private dialog-body-keys
   {:modified            :ptv/sync-failed-body-ptv-modified
-   :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code})
+   :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
+   :duplicate-name      :ptv/sync-failed-body-name-conflict})
 
 (def ^:private save-body-keys
   {:modified            :ptv/saved-but-sync-failed-body-ptv-modified
-   :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code})
+   :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code
+   :duplicate-name      :ptv/saved-but-sync-failed-body-name-conflict})
 
 (defn- ptv-sync-error-body
   "Localized actionable body text for a PTV sync failure. `body-keys`
   selects the translation family. Returns nil for generic failures with no
   specific detail beyond the title."
   [tr resp body-keys]
-  (let [bad-code (ptv-invalid-postal-code resp)]
+  (let [bad-code (ptv-invalid-postal-code resp)
+        dup-name (ptv-duplicate-name resp)]
     (cond
       (ptv-modified-error? resp)
       (tr (:modified body-keys))
 
       bad-code
       (tr (:invalid-postal-code body-keys) bad-code)
+
+      dup-name
+      (tr (:duplicate-name body-keys) dup-name)
 
       :else
       nil)))
@@ -1148,31 +1174,36 @@
 
 ;;; Create service locations in PTV ;;;
 
+(defn service-location-payload
+  "Build the exact request body posted to /actions/save-ptv-service-location
+  for `lipas-id`. Shared by the sync event and the client-side schema
+  validation (see ::service-location-schema-errors) so the validation always
+  matches what actually gets sent."
+  [db lipas-id]
+  (let [org-id (-get-ptv-org-id db)
+        ;; Add default org-id for service-ids linking
+        sports-site (-> (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+                        (update :ptv #(merge {:org-id org-id} %)))
+        ;; Always use org languages (site typically doesn't store this)
+        org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
+        ptv (merge (select-keys (:default-settings (:ptv db))
+                                [:sync-enabled])
+                   {:service-channel-ids []}
+                   (select-keys (:ptv sports-site)
+                                [:org-id
+                                 :sync-enabled
+                                 :service-channel-ids
+                                 :service-ids
+                                 :summary
+                                 :description])
+                   {:languages org-languages})]
+    {:lipas-id lipas-id
+     :org-id org-id
+     :ptv ptv}))
+
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
-    (let [token (-> db :user :login :token)
-          ;; Or per site?
-          org-id (-get-ptv-org-id db)
-
-          sports-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-
-          ;; Add default org-id for service-ids linking
-          sports-site (update sports-site :ptv #(merge {:org-id org-id} %))
-
-          ;; Add other defaults and merge with summary/description from the UI
-          org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
-          ptv-data (merge (select-keys (:default-settings (:ptv db))
-                                       [:sync-enabled])
-                          {:service-channel-ids []}
-                          (select-keys (:ptv sports-site)
-                                       [:org-id
-                                        :sync-enabled
-                                        :service-channel-ids
-                                        :service-ids
-                                        :summary
-                                        :description])
-                          ;; Always use org languages (site typically doesn't store this)
-                          {:languages org-languages})]
+    (let [token (-> db :user :login :token)]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] true)
                (assoc-in [:ptv :syncing :service-location lipas-id] true))
@@ -1180,9 +1211,7 @@
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/save-ptv-service-location")
-              :params {:lipas-id lipas-id
-                       :org-id org-id
-                       :ptv ptv-data}
+              :params (service-location-payload db lipas-id)
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success [::create-ptv-service-location-success lipas-id success-fx]

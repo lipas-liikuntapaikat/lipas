@@ -54,4 +54,9 @@
  :open-in-ptv "Öppna i PTV"
  :open-in-suomi-fi "Öppna i suomi.fi"
  :service-missing-for-type "Typen av idrottsanläggning har ändrats och motsvarande tjänst saknas i PTV."
- :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."}
+ :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."
+ :error-summary-too-long "Sammandraget är för långt (högst 150 tecken)."
+ :error-description-too-long "Beskrivningen är för lång (högst 5000 tecken)."
+ :error-user-instruction-too-long "Användarinstruktionen är för lång (högst 5000 tecken)."
+ :sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och försök igen."
+ :saved-but-sync-failed-body-name-conflict "Namnet '{1}' används redan av ett annat serviceställe i organisationen i PTV. PTV kräver unika namn för serviceställen. Koppla idrottsanläggningen till det befintliga servicestället eller ändra namnet och spara igen."}

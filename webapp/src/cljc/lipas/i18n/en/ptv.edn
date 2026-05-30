@@ -77,4 +77,9 @@
  :open-in-ptv "Open in PTV"
  :open-in-suomi-fi "Open in suomi.fi"
  :service-missing-for-type "The sports site type has changed and no matching service exists in PTV."
- :type-changed-may-rebind "The sports site type has changed. The site may be linked to a different service in PTV."}
+ :type-changed-may-rebind "The sports site type has changed. The site may be linked to a different service in PTV."
+ :error-summary-too-long "Summary is too long (maximum 150 characters)."
+ :error-description-too-long "Description is too long (maximum 5000 characters)."
+ :error-user-instruction-too-long "User instruction is too long (maximum 5000 characters)."
+ :sync-failed-body-name-conflict "The name '{1}' is already used by another service location in the organization in PTV. PTV requires service location names to be unique. Attach the sports site to the existing service location or change the name, then try again."
+ :saved-but-sync-failed-body-name-conflict "The name '{1}' is already used by another service location in the organization in PTV. PTV requires service location names to be unique. Attach the sports site to the existing service location or change the name, then save again."}

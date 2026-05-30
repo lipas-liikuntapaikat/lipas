@@ -507,6 +507,7 @@
                {:on-change #(rf/dispatch [::events/set-service-candidate-summary @source-id @selected-tab %])
                 :fullWidth true
                 :multiline true :variant "outlined" :label (tr :ptv/summary) :value v
+                :inputProps #js {:maxLength ptv-data/max-summary-length}
                 :helperText (str (count v) "/" ptv-data/max-summary-length)
                 :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -515,6 +516,7 @@
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
                 :fullWidth true
                 :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
+                :inputProps #js {:maxLength ptv-data/max-description-length}
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
 
@@ -523,6 +525,7 @@
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                 :fullWidth true
                 :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
+                :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                 :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
                 :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
 

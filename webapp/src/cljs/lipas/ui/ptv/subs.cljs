@@ -5,8 +5,10 @@
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.ptv.events :as events]
             [lipas.ui.utils :as utils :refer [prod?]]
             [malli.core :as m]
+            [malli.error :as me]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::ptv
@@ -316,6 +318,23 @@
                                        (comp map-utils/wgs84->epsg3067 clj->js)
                                        (utils/timestamp)
                                        site))))
+
+(rf/reg-sub ::service-location-schema-errors
+  ;; Localized error-message keys for the would-be /save-ptv-service-location
+  ;; payload of `lipas-id`, validated against the same malli schema the backend
+  ;; coerces against. Returns a distinct vector of localization keys (from the
+  ;; schema's :error/message props) — empty when the payload is valid. Only
+  ;; keyword messages are surfaced; structural errors (missing required keys)
+  ;; are left to the business-level sync hints. Used to disable the sync button
+  ;; and explain why in its tooltip.
+  (fn [db [_ lipas-id]]
+    (let [payload (events/service-location-payload db lipas-id)]
+      (->> (some-> (m/explain ptv-schema/create-ptv-service-location payload)
+                   :errors)
+           (map me/error-message)
+           (filter keyword?)
+           distinct
+           vec))))
 
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]

@@ -441,6 +441,7 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :summary selected-tab] v]))
             :label (tr :ptv/summary)
             :value v
+            :inputProps #js {:maxLength ptv-data/max-summary-length}
             :helperText (str (count v) "/" ptv-data/max-summary-length)
             :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -464,6 +465,7 @@
                          (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :description selected-tab] v]))
             :label (tr :ptv/description)
             :value v
+            :inputProps #js {:maxLength ptv-data/max-description-length}
             :helperText (str (count v) "/" ptv-data/max-description-length)
             :error (> (count v) ptv-data/max-description-length)}])
 

@@ -54,4 +54,9 @@
  :open-in-ptv "Avaa PTV:ssä"
  :open-in-suomi-fi "Avaa suomi.fi:ssä"
  :service-missing-for-type "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä."
- :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."}
+ :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."
+ :error-summary-too-long "Tiivistelmä on liian pitkä (enintään 150 merkkiä)."
+ :error-description-too-long "Kuvaus on liian pitkä (enintään 5000 merkkiä)."
+ :error-user-instruction-too-long "Toimintaohje on liian pitkä (enintään 5000 merkkiä)."
+ :sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja yritä uudelleen."
+ :saved-but-sync-failed-body-name-conflict "Nimi '{1}' on jo käytössä organisaation toisella palvelupaikalla PTV:ssä. PTV vaatii palvelupaikoille uniikit nimet. Liitä liikuntapaikka olemassa olevaan palvelupaikkaan tai muuta nimeä, ja tallenna uudelleen."}

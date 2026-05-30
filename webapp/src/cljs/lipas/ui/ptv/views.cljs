@@ -328,7 +328,13 @@
              has-service? (seq (:service-ids site))
              has-summary? (some-> site :summary :fi count (> 5))
              has-description? (some-> site :description :fi count (> 5))
-             valid? (and sync-enabled? has-service? has-summary? has-description?)
+             ;; Validate the would-be payload against the same malli schema the
+             ;; backend coerces against, so an over-length text (or other schema
+             ;; violation) is caught here instead of bouncing as a 400.
+             schema-error-keys (<== [::subs/service-location-schema-errors (:lipas-id site)])
+             schema-errors (map tr schema-error-keys)
+             valid? (and sync-enabled? has-service? has-summary? has-description?
+                         (empty? schema-error-keys))
              synced? (:last-sync site)
              modified? (= "Modified" (:service-channel-publishing-status site))
              disabled? (or syncing? modified? (not valid?) (and synced? (not needs-sync?)))
@@ -338,26 +344,33 @@
                     (not has-service?) (tr :ptv/hint-select-service)
                     (not has-summary?) (tr :ptv/hint-add-summary)
                     (not has-description?) (tr :ptv/hint-add-description)
-                    (and synced? (not needs-sync?)) (tr :ptv/hint-up-to-date))]
+                    (and synced? (not needs-sync?)) (tr :ptv/hint-up-to-date))
+             ;; Every reason the button is disabled, for the tooltip.
+             reasons (->> (concat (when hint [hint]) schema-errors)
+                          (remove nil?))]
          [:<>
-          [:> Button
-           {:variant "contained"
-            :color "secondary"
-            :size "small"
-            :full-width true
-            :disabled disabled?
-            :sx #js {:textTransform "none"}
-            :startIcon (r/as-element
-                         (if syncing?
-                           [:> CircularProgress {:size 16 :color "inherit"}]
-                           [:> Icon (if synced? "sync" "ios_share")]))
-            :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-           (if synced?
-             (tr :ptv.actions/sync-now)
-             (tr :ptv.wizard/export-service-locations-to-ptv))]
-          (when hint
+          [:> Tooltip {:title (if (and disabled? (seq reasons))
+                                (str/join " " reasons)
+                                "")}
+           [:span
+            [:> Button
+             {:variant "contained"
+              :color "secondary"
+              :size "small"
+              :full-width true
+              :disabled disabled?
+              :sx #js {:textTransform "none"}
+              :startIcon (r/as-element
+                           (if syncing?
+                             [:> CircularProgress {:size 16 :color "inherit"}]
+                             [:> Icon (if synced? "sync" "ios_share")]))
+              :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+             (if synced?
+               (tr :ptv.actions/sync-now)
+               (tr :ptv.wizard/export-service-locations-to-ptv))]]]
+          (when (or hint (seq schema-errors))
             [:> Typography {:variant "caption" :color "text.secondary"}
-             hint])])])))
+             (str/join " " reasons)])])])))
 
 (defn form-right-column
   [{:keys [org-id tr site org-languages selected-tab]}]
@@ -390,6 +403,7 @@
          :on-change #(==> [::events/set-summary site @selected-tab %])
          :label (tr :ptv/summary)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-summary-length}
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -407,6 +421,7 @@
          :on-change #(==> [::events/set-description site @selected-tab %])
          :label (tr :ptv/description)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-description-length}
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
@@ -1148,6 +1163,7 @@
                         :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
                         :label (tr :ptv/summary)
                         :value summary-val
+                        :inputProps #js {:maxLength ptv-data/max-summary-length}
                         :helperText (str summary-len "/" ptv-data/max-summary-length)
                         :error (> summary-len ptv-data/max-summary-length)}])
 
@@ -1161,6 +1177,7 @@
                         :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
                         :label (tr :ptv/description)
                         :value desc-val
+                        :inputProps #js {:maxLength ptv-data/max-description-length}
                         :helperText (str desc-len "/" ptv-data/max-description-length)
                         :error (> desc-len ptv-data/max-description-length)}])
 
@@ -1174,6 +1191,7 @@
                         :on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
                         :label (tr :ptv/user-instruction)
                         :value ui-val
+                        :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                         :helperText (str ui-len "/" ptv-data/max-user-instruction-length)
                         :error (> ui-len ptv-data/max-user-instruction-length)}])])
 
@@ -1764,6 +1782,7 @@
          :variant "outlined"
          :label (tr :ptv/summary)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-summary-length}
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -1776,6 +1795,7 @@
          :multiline true
          :label (tr :ptv/description)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-description-length}
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
@@ -1788,6 +1808,7 @@
          :multiline true
          :label (tr :ptv/user-instruction)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
          :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
          :error (> (count v) ptv-data/max-user-instruction-length)}])]))
 

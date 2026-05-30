@@ -1,6 +1,7 @@
 (ns lipas.schema.sports-sites.ptv
   "Schema definitions for PTV (Palvelutietovaranto) integration in sports sites."
-  (:require [malli.core :as m]))
+  (:require [lipas.data.ptv :as ptv-data]
+            [malli.core :as m]))
 
 (defn localized-string-schema
   "Creates schema for localized strings with optional constraints."
@@ -67,9 +68,15 @@
     [:service-ids [:vector :string]]
     [:languages {:optional true} [:vector :string]]
 
-    [:summary (localized-string-schema {:max 150})]
-    [:description (localized-string-schema {})]
-    [:user-instruction {:optional true} (localized-string-schema {})]
+    ;; Per-language character limits enforced by PTV (see lipas.data.ptv).
+    ;; The :error/message values are localization keys resolved via `tr`
+    ;; in the UI (e.g. the sync-button why-disabled tooltip).
+    [:summary (localized-string-schema {:max ptv-data/max-summary-length
+                                        :error/message :ptv/error-summary-too-long})]
+    [:description (localized-string-schema {:max ptv-data/max-description-length
+                                            :error/message :ptv/error-description-too-long})]
+    [:user-instruction {:optional true} (localized-string-schema {:max ptv-data/max-user-instruction-length
+                                                                  :error/message :ptv/error-user-instruction-too-long})]
 
     [:audit {:optional true} ptv-audit]]))
 
