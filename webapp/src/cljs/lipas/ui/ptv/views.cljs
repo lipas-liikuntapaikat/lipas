@@ -373,10 +373,12 @@
             [:> Typography {:variant "caption" :color "text.secondary"}
              (str/join " " reasons)])
 
-          ;; Explicit archive — only for a site currently published in PTV.
-          ;; Two-step confirm; reversible by re-enabling sync (resurrects the
-          ;; same channel), so no destructive recreate.
-          (when (and channel-id (= "Published" (:service-channel-publishing-status site)))
+          ;; Explicit archive — only when sync is OFF and the site is currently
+          ;; published in PTV (mirrors the sports-site PTV tab). Two-step confirm;
+          ;; reversible by re-enabling sync (resurrects the same channel).
+          (when (and (not sync-enabled?)
+                     channel-id
+                     (= "Published" (:service-channel-publishing-status site)))
             (if @confirm-archive?
               [:> Stack {:direction "row" :spacing 1 :sx #js {:mt 1 :alignItems "center"}}
                [:> Typography {:variant "caption" :color "text.secondary"}

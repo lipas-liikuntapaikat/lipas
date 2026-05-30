@@ -416,10 +416,28 @@
 
 ;;; Service locations views and manipulation ;;;
 
-(rf/reg-event-db ::toggle-sync-enabled
-  (fn [db [_ {:keys [lipas-id]} v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v))))
+(rf/reg-event-db ::set-sync-enabled
+  (fn [db [_ org-id lipas-id v]]
+    (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v)))
+
+(rf/reg-event-fx ::toggle-sync-enabled
+  ;; Turning sync OFF on a site that is currently published in PTV prompts the
+  ;; user whether to also archive the PTV service-location (Kyllä = archive,
+  ;; Ei = keep it frozen in PTV, Peruuta = leave sync on). Other toggles just
+  ;; flip the flag.
+  (fn [{:keys [db]} [_ {:keys [lipas-id service-channel-publishing-status]} v]]
+    (let [org-id (-get-ptv-org-id db)
+          tr (:translator db)
+          published? (= "Published" service-channel-publishing-status)]
+      (if (and (not v) published?)
+        {:fx [[:dispatch [:lipas.ui.events/confirm
+                          (tr :ptv.actions/archive-on-sync-off-confirm)
+                          (fn []
+                            (rf/dispatch [::set-sync-enabled org-id lipas-id false])
+                            (rf/dispatch [::archive-ptv-service-location lipas-id]))
+                          (fn []
+                            (rf/dispatch [::set-sync-enabled org-id lipas-id false]))]]]}
+        {:fx [[:dispatch [::set-sync-enabled org-id lipas-id v]]]}))))
 
 (rf/reg-event-fx ::toggle-site-sync-enabled
   ;; Site-tab specific: toggle :ptv :sync-enabled on the site's edit-buffer.
@@ -430,15 +448,39 @@
           latest-id (get-in db [:sports-sites lipas-id :latest])
           latest-site (get-in db [:sports-sites lipas-id :history latest-id])
           user-orgs (get-in db [:user :orgs])
+          tr (:translator db)
           persisted-org-id (get-in (or edit-site latest-site) [:ptv :org-id])
           resolved-org-id (or persisted-org-id
                               (ptv-data/resolve-org-id (or edit-site latest-site)
-                                                       user-orgs))]
-      {:fx (cond-> [[:dispatch [:lipas.ui.sports-sites.events/edit-field
-                                lipas-id [:ptv :sync-enabled] enabled?]]]
-             (and enabled? (not persisted-org-id) resolved-org-id)
-             (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
-                               lipas-id [:ptv :org-id] resolved-org-id]]))})))
+                                                       user-orgs))
+          ;; Published in PTV right now? Archiving only makes sense then.
+          published? (ptv-data/is-sent-to-ptv? (or edit-site latest-site))
+          set-flag (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                       lipas-id [:ptv :sync-enabled] v]])
+          set-archive (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                          lipas-id [:ptv :delete-existing] v]])]
+      (cond
+        ;; Enabling: keep existing behaviour (set flag + maybe org-id invariant).
+        enabled?
+        {:fx (cond-> [(set-flag true)]
+               (and (not persisted-org-id) resolved-org-id)
+               (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                 lipas-id [:ptv :org-id] resolved-org-id]]))}
+
+        ;; Disabling a published site: ask whether to archive in PTV. The archive
+        ;; itself is deferred to the next sports-site save (via :delete-existing).
+        published?
+        {:fx [[:dispatch [:lipas.ui.events/confirm
+                          (tr :ptv.actions/archive-on-sync-off-confirm)
+                          (fn []
+                            (rf/dispatch (set-flag false))
+                            (rf/dispatch (set-archive true)))
+                          (fn []
+                            (rf/dispatch (set-flag false)))]]]}
+
+        ;; Disabling a not-yet-published site: just turn it off.
+        :else
+        {:fx [(set-flag false)]}))))
 
 (rf/reg-event-db ::select-services
   (fn [db [_ {:keys [lipas-id]} v]]

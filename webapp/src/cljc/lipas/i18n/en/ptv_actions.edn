@@ -20,4 +20,5 @@
  :archive "Archive",
  :archive-confirm "Archive this sports facility in PTV? You can restore it later by re-enabling synchronization.",
  :archived-in-ptv "Sports facility archived in PTV",
+ :archive-on-sync-off-confirm "Synchronization will be turned off. Archive the service location in PTV? You can restore it later by re-enabling synchronization.",
  :integration-enabled "PTV integration enabled"}

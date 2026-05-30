@@ -21,4 +21,5 @@
  :archive "Arkivera",
  :archive-confirm "Vill du arkivera idrottsanläggningen i PTV? Du kan återställa den senare genom att aktivera synkroniseringen på nytt.",
  :archived-in-ptv "Idrottsanläggningen arkiverad i PTV",
+ :archive-on-sync-off-confirm "Synkroniseringen stängs av. Vill du arkivera servicestället i PTV? Du kan återställa det senare genom att aktivera synkroniseringen på nytt.",
  :integration-enabled "PTV-integrationen aktiv"}

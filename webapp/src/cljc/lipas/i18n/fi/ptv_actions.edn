@@ -20,4 +20,5 @@
  :archive "Arkistoi",
  :archive-confirm "Arkistoidaanko liikuntapaikka PTV:stä? Voit palauttaa sen myöhemmin ottamalla synkronoinnin uudelleen käyttöön.",
  :archived-in-ptv "Liikuntapaikka arkistoitu PTV:ssä",
+ :archive-on-sync-off-confirm "Synkronointi otetaan pois päältä. Arkistoidaanko palvelupaikka PTV:ssä? Voit palauttaa sen myöhemmin ottamalla synkronoinnin uudelleen käyttöön.",
  :integration-enabled "PTV-integraatio käytössä"}
