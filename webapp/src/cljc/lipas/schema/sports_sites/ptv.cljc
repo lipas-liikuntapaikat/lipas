@@ -81,10 +81,14 @@
     [:audit {:optional true} ptv-audit]]))
 
 (def create-ptv-service-location
-  "Schema for creating PTV service locations."
+  "Schema for creating PTV service locations.
+   `:archive?` requests an explicit archive (publishingStatus \"Deleted\")
+   instead of a publish/update — used by the explicit \"Archive in PTV\"
+   actions in both the wizard and the sports-site PTV tab."
   (m/schema
    [:map
     {:closed true}
     [:org-id :string]
     [:lipas-id :int]
+    [:archive? {:optional true} :boolean]
     [:ptv ptv-meta]]))

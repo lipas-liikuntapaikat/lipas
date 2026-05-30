@@ -55,6 +55,7 @@
  :open-in-suomi-fi "Öppna i suomi.fi"
  :service-missing-for-type "Typen av idrottsanläggning har ändrats och motsvarande tjänst saknas i PTV."
  :type-changed-may-rebind "Typen av idrottsanläggning har ändrats. Idrottsanläggningen kan komma att kopplas till en annan tjänst i PTV."
+ :delete-will-archive "Denna idrottsanläggning har förts till PTV. Borttagning arkiverar även PTV-servicestället."
  :error-summary-too-long "Sammandraget är för långt (högst 150 tecken)."
  :error-description-too-long "Beskrivningen är för lång (högst 5000 tecken)."
  :error-user-instruction-too-long "Användarinstruktionen är för lång (högst 5000 tecken)."

@@ -1256,6 +1256,40 @@
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
 
+;;; Explicit archive (publishingStatus "Deleted") ;;;
+
+(rf/reg-event-fx ::archive-ptv-service-location
+  ;; Explicit, user-requested archive of a previously-published service-location.
+  ;; Posts the same payload as a sync but with :archive? true, so the backend
+  ;; PUTs publishingStatus "Deleted" while preserving the channel link (a later
+  ;; re-activation re-publishes the same channel). Reuses the sync failure
+  ;; handler so PTV errors (incl. name conflicts) surface the same way.
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [token (-> db :user :login :token)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-locations] true)
+               (assoc-in [:ptv :syncing :service-location lipas-id] true))
+       :fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/save-ptv-service-location")
+              :params (assoc (service-location-payload db lipas-id) :archive? true)
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::archive-ptv-service-location-success lipas-id]
+              :on-failure [::create-ptv-service-location-failure lipas-id []]}]]})))
+
+(rf/reg-event-fx ::archive-ptv-service-location-success
+  (fn [{:keys [db]} [_ lipas-id {:keys [ptv]}]]
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-locations] false)
+               (update-in [:ptv :syncing :service-location] dissoc lipas-id)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
+
 (rf/reg-event-fx ::create-all-ptv-service-locations*
   (fn [{:keys [db]} [_ org-id ids]]
     (let [halt? (get-in db [:ptv :service-locations-creation :halt?] false)

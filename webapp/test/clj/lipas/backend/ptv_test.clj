@@ -326,6 +326,103 @@
         (is (= stale-put-resp ptv-resp)
             "Refetch failure must fall back to PUT response, not throw")))))
 
+;;; Archiving behaviour ;;;
+
+(defn- sent-ptv [extra]
+  (merge {:org-id "org-x" :source-id "src-1" :service-channel-ids ["chan-1"]
+          :publishing-status "Published" :service-ids [] :sync-enabled true
+          :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
+         extra))
+
+(deftest to-archive?-decision-test
+  (let [sent (fn [status & [ptv-extra]]
+               {:status status :ptv (sent-ptv ptv-extra)})]
+    (testing "Previously-published site is archived only on a genuine removal"
+      (is (true?  (ptv-core/to-archive? (sent "out-of-service-permanently") {}))
+          "status permanently-out archives")
+      (is (true?  (ptv-core/to-archive? (sent "incorrect-data") {}))
+          "status incorrect-data archives")
+      (is (true?  (ptv-core/to-archive? (sent "active") {:delete-existing true}))
+          "explicit :delete-existing archives"))
+    (testing "Edits that previously auto-archived no longer do"
+      (is (false? (ptv-core/to-archive? (sent "active") {}))
+          "plain active save does not archive")
+      (is (false? (ptv-core/to-archive?
+                    {:status "active" :owner "private"
+                     :ptv (sent-ptv nil)} {}))
+          "owner change does not archive")
+      (is (false? (ptv-core/to-archive?
+                    (sent "active" {:summary {:fi ""} :description {:fi ""}}) {}))
+          "blanked texts do not archive a published site"))
+    (testing "Never-published site is never archived"
+      (is (false? (ptv-core/to-archive?
+                    {:status "out-of-service-permanently" :ptv {}} {}))))))
+
+(deftest archive-preserves-ptv-link-test
+  (let [channel-id "chan-1"
+        site {:lipas-id 12345 :name "Arkistoitava" :status "out-of-service-permanently"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425} :address "Katu 1" :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              :ptv (sent-ptv {:delete-existing true})}
+        deleted-resp {:id channel-id :sourceId "src-1" :publishingStatus "Deleted"
+                      :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
+                  ptv-integ/get-org-service-channel (fn [_ _ _] deleted-resp)
+                  ptv-integ/update-service-location (fn [_ _ data] (assoc deleted-resp :publishingStatus (:publishingStatus data)))
+                  ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
+      (let [[ptv-resp new-ptv-data]
+            (ptv-core/upsert-ptv-service-location!*
+              {} {:org-id "org-x" :site site :ptv (:ptv site) :archive? true})]
+        (testing "Archive sends publishingStatus Deleted"
+          (is (= "Deleted" (:publishingStatus ptv-resp))))
+        (testing "LIPAS↔PTV link is preserved (source-id + channel-id kept)"
+          (is (= "src-1" (:source-id new-ptv-data)))
+          (is (= [channel-id] (:service-channel-ids new-ptv-data))))
+        (testing "Stored publishing-status is Deleted (so is-sent-to-ptv? stays false)"
+          (is (= "Deleted" (:publishing-status new-ptv-data)))
+          (is (not (ptv-data/is-sent-to-ptv? {:ptv new-ptv-data}))))
+        (testing "One-shot :delete-existing flag is cleared"
+          (is (not (contains? new-ptv-data :delete-existing))))))))
+
+(deftest resurrect-reuses-channel-test
+  (let [channel-id "chan-1"
+        calls (atom [])
+        site {:lipas-id 12345 :name "Palautettava" :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425} :address "Katu 1" :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              ;; Previously archived: link kept, status "Deleted".
+              :ptv (sent-ptv {:publishing-status "Deleted"})}
+        published-resp {:id channel-id :sourceId "src-1" :publishingStatus "Published"
+                        :services [] :serviceChannelNames [] :serviceChannelDescriptions []}
+        notfound (ex-info "HTTP Error: 404" {:resp {:status 404}})]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
+                  ;; Archived channels 404 on every read endpoint.
+                  ptv-integ/get-org-service-channel (fn [_ _ _] (swap! calls conj :get) (throw notfound))
+                  ptv-integ/update-service-location (fn [_ _ data] (swap! calls conj :put) (assoc published-resp :publishingStatus (:publishingStatus data)))
+                  ptv-integ/create-service-location (fn [_ _] (swap! calls conj :create) published-resp)
+                  ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
+      (let [[ptv-resp new-ptv-data]
+            (ptv-core/upsert-ptv-service-location!*
+              {} {:org-id "org-x" :site site :ptv (:ptv site)})]
+        (testing "Re-publishes the SAME channel (PUT), never creates a duplicate"
+          (is (some #{:put} @calls))
+          (is (not (some #{:create} @calls))))
+        (testing "Pre-fetch 404 on the archived channel is tolerated"
+          (is (= "Published" (:publishingStatus ptv-resp))))
+        (testing "Channel-id is retained and status flips back to Published"
+          (is (= [channel-id] (:service-channel-ids new-ptv-data)))
+          (is (= "Published" (:publishing-status new-ptv-data))))))))
+
 (comment
   (t/run-tests *ns*)
   (t/run-test-var #'init-site-ptv))

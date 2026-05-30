@@ -17,4 +17,7 @@
  "Korvaa tiivistelmä ja kuvaus PTV:ssä tällä hetkellä olevilla teksteillä. Tallentamattomat muutokset menetetään.",
  :refresh-data "Hae kaikki tiedot uudelleen PTV:stä",
  :archive-in-ptv "Arkistoi paikka PTV:ssä",
+ :archive "Arkistoi",
+ :archive-confirm "Arkistoidaanko liikuntapaikka PTV:stä? Voit palauttaa sen myöhemmin ottamalla synkronoinnin uudelleen käyttöön.",
+ :archived-in-ptv "Liikuntapaikka arkistoitu PTV:ssä",
  :integration-enabled "PTV-integraatio käytössä"}

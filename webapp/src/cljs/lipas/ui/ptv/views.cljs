@@ -204,7 +204,8 @@
 (defn form-left-column
   [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
   (r/with-let [editing-services? (r/atom false)
-               editing-channel? (r/atom false)]
+               editing-channel? (r/atom false)
+               confirm-archive? (r/atom false)]
     (let [generating? (<== [::subs/generating-descriptions?])
           syncing? (<== [::subs/syncing-service-location? (:lipas-id site)])
           service-ids (set (:service-ids site))
@@ -370,7 +371,33 @@
                (tr :ptv.wizard/export-service-locations-to-ptv))]]]
           (when (or hint (seq schema-errors))
             [:> Typography {:variant "caption" :color "text.secondary"}
-             (str/join " " reasons)])])])))
+             (str/join " " reasons)])
+
+          ;; Explicit archive — only for a site currently published in PTV.
+          ;; Two-step confirm; reversible by re-enabling sync (resurrects the
+          ;; same channel), so no destructive recreate.
+          (when (and channel-id (= "Published" (:service-channel-publishing-status site)))
+            (if @confirm-archive?
+              [:> Stack {:direction "row" :spacing 1 :sx #js {:mt 1 :alignItems "center"}}
+               [:> Typography {:variant "caption" :color "text.secondary"}
+                (tr :ptv.actions/archive-confirm)]
+               [:> Button {:size "small" :variant "outlined" :color "error"
+                           :disabled syncing?
+                           :sx #js {:textTransform "none"}
+                           :on-click (fn []
+                                       (reset! confirm-archive? false)
+                                       (==> [::events/archive-ptv-service-location (:lipas-id site)]))}
+                (tr :ptv.actions/archive)]
+               [:> Button {:size "small" :variant "text"
+                           :sx #js {:textTransform "none"}
+                           :on-click #(reset! confirm-archive? false)}
+                (tr :actions/cancel)]]
+              [:> Button {:size "small" :variant "text" :color "error"
+                          :disabled syncing?
+                          :sx #js {:textTransform "none" :alignSelf "flex-start"}
+                          :startIcon (r/as-element [:> Icon "archive"])
+                          :on-click #(reset! confirm-archive? true)}
+               (tr :ptv.actions/archive-in-ptv)]))])])))
 
 (defn form-right-column
   [{:keys [org-id tr site org-languages selected-tab]}]

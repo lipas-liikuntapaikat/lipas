@@ -18,4 +18,7 @@
  "Ersätt sammanfattningen och beskrivningen med texterna som för närvarande finns i PTV. Osparade ändringar går förlorade.",
  :refresh-data "Hämta all data på nytt från PTV",
  :archive-in-ptv "Arkivera platsen i PTV",
+ :archive "Arkivera",
+ :archive-confirm "Vill du arkivera idrottsanläggningen i PTV? Du kan återställa den senare genom att aktivera synkroniseringen på nytt.",
+ :archived-in-ptv "Idrottsanläggningen arkiverad i PTV",
  :integration-enabled "PTV-integrationen aktiv"}

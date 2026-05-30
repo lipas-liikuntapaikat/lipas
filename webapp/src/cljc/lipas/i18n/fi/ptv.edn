@@ -55,6 +55,7 @@
  :open-in-suomi-fi "Avaa suomi.fi:ssä"
  :service-missing-for-type "Liikuntapaikan tyyppi on muuttunut ja uutta tyyppiä vastaava Palvelu puuttuu PTV:stä."
  :type-changed-may-rebind "Liikuntapaikan tyyppi on vaihdettu. Liikuntapaikka liitetään PTV:ssä mahdollisesti toiseen Palveluun vaihdon seurauksena."
+ :delete-will-archive "Tämä liikuntapaikka on viety PTV:hen. Poistaminen arkistoi myös PTV-palvelupaikan."
  :error-summary-too-long "Tiivistelmä on liian pitkä (enintään 150 merkkiä)."
  :error-description-too-long "Kuvaus on liian pitkä (enintään 5000 merkkiä)."
  :error-user-instruction-too-long "Toimintaohje on liian pitkä (enintään 5000 merkkiä)."

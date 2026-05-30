@@ -78,6 +78,7 @@
  :open-in-suomi-fi "Open in suomi.fi"
  :service-missing-for-type "The sports site type has changed and no matching service exists in PTV."
  :type-changed-may-rebind "The sports site type has changed. The site may be linked to a different service in PTV."
+ :delete-will-archive "This sports facility has been exported to PTV. Deleting it also archives the PTV service location."
  :error-summary-too-long "Summary is too long (maximum 150 characters)."
  :error-description-too-long "Description is too long (maximum 5000 characters)."
  :error-user-instruction-too-long "User instruction is too long (maximum 5000 characters)."

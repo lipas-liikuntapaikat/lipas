@@ -17,4 +17,7 @@
  "Replace the summary and description with the texts currently in PTV. Unsaved changes will be lost.",
  :refresh-data "Re-fetch all data from PTV",
  :archive-in-ptv "Archive in PTV",
+ :archive "Archive",
+ :archive-confirm "Archive this sports facility in PTV? You can restore it later by re-enabling synchronization.",
+ :archived-in-ptv "Sports facility archived in PTV",
  :integration-enabled "PTV integration enabled"}
