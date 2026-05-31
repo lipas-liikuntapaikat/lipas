@@ -598,3 +598,102 @@
                                 2 {:pageNumber 2
                                    :pageCount 2
                                    :itemList ["h" "i"]}))))))
+
+(deftest normalize-ws-test
+  (testing "nil / blank / whitespace-only collapse to nil"
+    (is (nil? (sut/normalize-ws nil)))
+    (is (nil? (sut/normalize-ws "")))
+    (is (nil? (sut/normalize-ws "   ")))
+    (is (nil? (sut/normalize-ws "\t \t")))
+    (is (nil? (sut/normalize-ws "\n\n")))
+    (is (nil? (sut/normalize-ws "  \n  \n  "))))
+
+  (testing "plain text is unchanged"
+    (is (= "hello" (sut/normalize-ws "hello")))
+    (is (= "hello world" (sut/normalize-ws "hello world"))))
+
+  (testing "leading/trailing whitespace is trimmed"
+    (is (= "hello" (sut/normalize-ws "  hello  ")))
+    (is (= "hello" (sut/normalize-ws "\t hello \n")))
+    (is (= "a b" (sut/normalize-ws "\n  a b  \n"))))
+
+  (testing "internal horizontal whitespace runs collapse to a single space"
+    ;; This is the PTV double-space-in-name case.
+    (is (= "a b" (sut/normalize-ws "a  b")))
+    (is (= "a b" (sut/normalize-ws "a     b")))
+    (is (= "a b" (sut/normalize-ws "a\tb")))
+    (is (= "a b" (sut/normalize-ws "a\t\tb")))
+    (is (= "a b" (sut/normalize-ws "a \t b")))
+    (is (= "a b c" (sut/normalize-ws "a   b   c"))))
+
+  (testing "line endings are normalized to LF"
+    (is (= "a\nb" (sut/normalize-ws "a\r\nb")))
+    (is (= "a\nb" (sut/normalize-ws "a\rb")))
+    (is (= "a\nb\nc" (sut/normalize-ws "a\r\nb\rc"))))
+
+  (testing "newlines (paragraph structure) are preserved"
+    (is (= "a\nb" (sut/normalize-ws "a\nb")))
+    (is (= "a\n\nb" (sut/normalize-ws "a\n\nb")))
+    ;; horizontal whitespace hugging a newline is dropped, the newline stays
+    (is (= "a\nb" (sut/normalize-ws "a  \n  b")))
+    (is (= "a\nb" (sut/normalize-ws "a\t\n\tb")))
+    (is (= "a\n\nb" (sut/normalize-ws "a \n \n b")))
+    ;; a blank paragraph break survives even with surrounding spaces
+    (is (= "para one\n\npara two" (sut/normalize-ws "para one  \n\n  para two"))))
+
+  (testing "combination: collapse horizontal ws but keep multi-paragraph layout"
+    (is (= "Title here\n\nBody line one\nBody line two"
+           (sut/normalize-ws "  Title   here \r\n\r\n Body  line one\r\nBody\tline two  "))))
+
+  (testing "idempotent"
+    (doseq [s ["a  b" "a \n b" "  x\ty  " "p\r\n\r\nq" "a\n\n\nb"]]
+      (is (= (sut/normalize-ws s)
+             (sut/normalize-ws (sut/normalize-ws s)))
+          (str "idempotent for " (pr-str s)))))
+
+  (testing "the real PTV name case: double space vs PTV-collapsed single space compare equal"
+    (is (= (sut/normalize-ws "Rantakylän stadionalueen  puolikota")
+           (sut/normalize-ws "Rantakylän stadionalueen puolikota")
+           "Rantakylän stadionalueen puolikota"))))
+
+(deftest texts-match?-whitespace-test
+  (testing "texts differing only by collapsible whitespace match"
+    (is (sut/texts-match? {:summary {:fi "a  b"}}
+                          {:summary {:fi "a b"}}
+                          [:summary]))
+    (is (sut/texts-match? {:description {:fi "line1\r\n\r\nline2"}}
+                          {:description {:fi "line1\n\nline2"}}
+                          [:description]))
+    ;; nil vs all-whitespace are treated as equal (both normalize to nil)
+    (is (sut/texts-match? {:summary {:fi nil}}
+                          {:summary {:fi "   "}}
+                          [:summary])))
+  (testing "genuine content differences still don't match"
+    (is (not (sut/texts-match? {:summary {:fi "a b"}}
+                               {:summary {:fi "a c"}}
+                               [:summary])))))
+
+(deftest compute-service-channel-drift-whitespace-test
+  (let [ptv-channel {:serviceChannelNames [{:type "Name" :language "fi" :value "Rantakylä stadion"}]
+                     :serviceChannelDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                                  {:type "Description" :language "fi" :value "Kuvaus rivi 1\n\nrivi 2"}]
+                     :services []}
+        base-site {:ptv {:summary {:fi "Tiivistelmä"}
+                         :description {:fi "Kuvaus rivi 1\n\nrivi 2"}
+                         :service-ids []}}]
+    (testing "PTV-collapsed whitespace in the name is NOT reported as drift"
+      (let [site (assoc base-site :name "Rantakylä  stadion")] ; double space, PTV stored single
+        (is (empty? (sut/compute-service-channel-drift site ptv-channel {} ["fi"])))))
+
+    (testing "whitespace-only differences in description are NOT drift"
+      (let [site (assoc base-site
+                        :name "Rantakylä stadion"
+                        :ptv (assoc (:ptv base-site)
+                                    :description {:fi "Kuvaus   rivi 1\r\n\r\nrivi 2"}))]
+        (is (empty? (sut/compute-service-channel-drift site ptv-channel {} ["fi"])))))
+
+    (testing "a genuine name change IS still reported as drift"
+      (let [site (assoc base-site :name "Eri nimi")
+            drift (sut/compute-service-channel-drift site ptv-channel {} ["fi"])]
+        (is (seq drift))
+        (is (= #{:name} (set (map :field drift))))))))

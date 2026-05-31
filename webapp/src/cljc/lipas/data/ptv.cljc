@@ -807,15 +807,33 @@
    concept — so leave it out of the comparison."
   [:summary :description])
 
+(defn normalize-ws
+  "Normalize whitespace for *comparing* PTV/LIPAS free-text values — never for
+   storing or pushing them. PTV collapses runs of horizontal whitespace in
+   fields on save (e.g. a double space in a Name becomes a single space), which
+   would otherwise read as drift immediately after a sync. Collapses runs of
+   spaces/tabs to a single space, normalizes line endings and trims, but keeps
+   newlines: paragraph structure is meaningful and PTV preserves it. Returns nil
+   for nil/blank input (so a missing value and an all-whitespace value compare
+   equal)."
+  [s]
+  (some-> s
+          (str/replace #"\r\n?" "\n")    ; CRLF / CR -> LF
+          (str/replace #"[^\S\n]+" " ")  ; collapse horizontal whitespace runs, keep \n
+          (str/replace #" *\n *" "\n")   ; drop spaces hugging newlines (line-edge ws)
+          str/trim
+          not-empty))
+
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
-   non-nil fields match. Trims whitespace for comparison. `fields`
-   defaults to all three lipas text fields; callers comparing against
-   a PTV ServiceChannel should pass `service-channel-compare-fields`."
+   non-nil fields match. Whitespace is normalized for comparison
+   (see `normalize-ws`). `fields` defaults to all three lipas text fields;
+   callers comparing against a PTV ServiceChannel should pass
+   `service-channel-compare-fields`."
   ([lipas-texts ptv-texts]
    (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
   ([lipas-texts ptv-texts fields]
-   (let [trim #(some-> % str/trim not-empty)]
+   (let [trim normalize-ws]
      (every? (fn [field]
                (let [lipas-vals (get lipas-texts field)
                      ptv-vals (get ptv-texts field)]
@@ -882,7 +900,9 @@
           ptv-descs (into {} (map (juxt (juxt :type :language) :value))
                           (:serviceChannelDescriptions ptv-channel))
           lang-pairs (resolve-lang-pairs lipas-languages)
-          trim #(some-> % str/trim not-empty)
+          ;; Normalize whitespace so PTV's server-side collapsing (e.g. a
+          ;; double space in a name) isn't reported as drift right after a sync.
+          trim normalize-ws
           mk-text-comparison (fn [field type-v]
                                (for [[ptv-lang locale] lang-pairs]
                                  {:field field
