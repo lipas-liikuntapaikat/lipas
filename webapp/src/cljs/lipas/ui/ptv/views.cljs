@@ -516,7 +516,8 @@
        [checkboxes/switch
         {:label (tr :ptv.actions/export-disclaimer)
          :value (:sync-enabled site)
-         :on-change #(==> [::events/toggle-sync-enabled site %])}]
+         ;; Liikuntapaikat tab has no batch "save all" — persist the toggle now.
+         :on-change #(==> [::events/toggle-sync-enabled site % :persist? true])}]
 
        [:> Grid {:container true :spacing 3}
         [:> Grid {:item true :xs 12 :md 5}

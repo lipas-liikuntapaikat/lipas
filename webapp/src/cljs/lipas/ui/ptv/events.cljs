@@ -420,12 +420,30 @@
   (fn [db [_ org-id lipas-id v]]
     (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v)))
 
+(rf/reg-event-fx ::persist-ptv-meta
+  ;; Persist a single site's :ptv meta (sync-enabled, texts, links, ...) via
+  ;; save-ptv-meta without syncing to PTV. Reads the (already-updated) app-db
+  ;; site, so dispatch any flag change before this. save-ptv-meta keys off the
+  ;; top-level :lipas-id and reads the remaining meta from the flattened map.
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [org-id (-get-ptv-org-id db)
+          site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
+      {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]})))
+
 (rf/reg-event-fx ::toggle-sync-enabled
   ;; Turning sync OFF on a site that is currently published in PTV prompts the
   ;; user whether to also archive the PTV service-location (Kyllä = archive,
   ;; Ei = keep it frozen in PTV, Peruuta = leave sync on). Other toggles just
   ;; flip the flag.
-  (fn [{:keys [db]} [_ {:keys [lipas-id service-channel-publishing-status]} v]]
+  ;;
+  ;; With :persist? true (the Liikuntapaikat tab, which has no batch "save all"
+  ;; step) turning sync OFF is written to the backend via save-ptv-meta so the
+  ;; switch sticks across reloads: "Ei" and a non-prompt off persist directly,
+  ;; "Kyllä"/archive persists on its own, and "Peruuta" persists nothing (and
+  ;; doesn't flip the flag). Turning sync ON is NOT persisted here — that's the
+  ;; "Synkronoi nyt" button's job. Callers without :persist? (the wizard, which
+  ;; persists later via its batch export) keep the app-db-only behaviour.
+  (fn [{:keys [db]} [_ {:keys [lipas-id service-channel-publishing-status]} v & {:keys [persist?]}]]
     (let [org-id (-get-ptv-org-id db)
           tr (:translator db)
           published? (= "Published" service-channel-publishing-status)]
@@ -436,8 +454,11 @@
                             (rf/dispatch [::set-sync-enabled org-id lipas-id false])
                             (rf/dispatch [::archive-ptv-service-location lipas-id]))
                           (fn []
-                            (rf/dispatch [::set-sync-enabled org-id lipas-id false]))]]]}
-        {:fx [[:dispatch [::set-sync-enabled org-id lipas-id v]]]}))))
+                            (rf/dispatch [::set-sync-enabled org-id lipas-id false])
+                            (when persist? (rf/dispatch [::persist-ptv-meta lipas-id])))]]]}
+        {:fx (cond-> [[:dispatch [::set-sync-enabled org-id lipas-id v]]]
+               ;; Persist OFF only; ON is persisted by an actual sync.
+               (and persist? (not v)) (conj [:dispatch [::persist-ptv-meta lipas-id]]))}))))
 
 (rf/reg-event-fx ::toggle-site-sync-enabled
   ;; Site-tab specific: toggle :ptv :sync-enabled on the site's edit-buffer.

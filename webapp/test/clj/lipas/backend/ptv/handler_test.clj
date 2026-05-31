@@ -660,6 +660,33 @@
                              (tu/token-header token)))]
       (is (= 200 (:status resp))))))
 
+(deftest save-ptv-meta-persists-sync-enabled-test
+  (testing "save-ptv-meta turns sync off in the DB without touching PTV"
+    ;; This is the contract the Liikuntapaikat-tab toggle relies on: turning the
+    ;; switch off persists sync-enabled=false via save-ptv-meta (no sync), and
+    ;; it sticks. The site keeps its channel link (frozen in PTV).
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [pool]} (seed-double-link-scenario! admin)
+          before (core/get-sports-site (test-db) pool)
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {pool {:org-id ptv-org-id
+                                                          :sync-enabled false
+                                                          :service-ids []
+                                                          :service-channel-ids [pool-channel]
+                                                          :summary {:fi "Test summary"}
+                                                          :description {:fi "Test description"}}}))
+                             (tu/token-header token)))
+          after (core/get-sports-site (test-db) pool)]
+      (is (= 200 (:status resp)))
+      ;; precondition: seeded as sync-enabled
+      (is (true? (get-in before [:ptv :sync-enabled])))
+      ;; persisted off
+      (is (false? (get-in after [:ptv :sync-enabled])))
+      ;; channel link preserved (frozen, not unlinked)
+      (is (= [pool-channel] (get-in after [:ptv :service-channel-ids]))))))
+
 (deftest save-ptv-service-location-rejects-double-link-test
   (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"
     (let [admin (tu/gen-admin-user :db-component (test-db))
