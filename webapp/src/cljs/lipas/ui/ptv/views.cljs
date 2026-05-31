@@ -212,6 +212,7 @@
           linked-services (filter #(contains? service-ids (:service-id %)) services)
           channel-id (first (:service-channel-ids site))
           channel-name (:service-channel-name site)
+          name-conflict (:name-conflict site)
           sync-status (:sync-status site)
           needs-sync? (contains? #{:out-of-date :content-drift} sync-status)]
       [:> Stack {:spacing 2}
@@ -284,6 +285,32 @@
                         :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                         :on-click #(reset! editing-channel? true)}
              (tr :ptv.actions/attach-existing-service-channel)])])
+
+       ;; Name conflict warning. PTV enforces unique service-location names
+       ;; per org, so syncing this site (which on next sync creates/updates a
+       ;; channel named after the site) would collide with an existing,
+       ;; differently-linked channel of the same name. Surface it here with
+       ;; the same guidance the wizard uses; otherwise the conflict only
+       ;; manifests as a PTV 400 at sync time.
+       (when name-conflict
+         [:> Alert {:severity "warning" :variant "outlined"}
+          [:> AlertTitle
+           (tr :ptv.wizard/service-channel-name-conflict (:name site))]
+          [:> Typography {:variant "body2"}
+           (tr :ptv.name-conflict/do-one-of-these)]
+          [:ul {:style {:margin 0}}
+           [:li (tr :ptv.name-conflict/opt1)]
+           [:li (tr :ptv.name-conflict/opt2)]
+           [:li (tr :ptv.name-conflict/opt3)]]
+          [:> Button
+           {:size "small"
+            :variant "outlined"
+            :color "warning"
+            :sx #js {:textTransform "none"}
+            :on-click #(==> [::events/select-service-channels
+                             {:lipas-id (:lipas-id site)}
+                             [(:service-channel-id name-conflict)]])}
+           (tr :ptv.wizard/attach-to-conflicting-service-channel)]])
 
        ;; AI generate + translate buttons
        (let [from-lang @selected-tab

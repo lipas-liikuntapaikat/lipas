@@ -949,7 +949,18 @@
         drift-langs (or (-> site :ptv :languages) org-langs)
         drift-fields (when (and last-sync ptv-channel)
                        (compute-service-channel-drift site ptv-channel services drift-langs))
-        has-drift? (boolean (seq drift-fields))]
+        has-drift? (boolean (seq drift-fields))
+
+        ;; A site that was synced before (last-sync present) but now has no
+        ;; service-channel-ids was deliberately unlinked by the user — a
+        ;; successful sync always writes service-channel-ids back, so this
+        ;; combination can't arise any other way. Treat it as out-of-date so
+        ;; the sync button re-activates and the backend create-path (channel
+        ;; id nil) builds a fresh PTV service-location. Without this,
+        ;; has-drift? is false (no channel left to diff) and event-date still
+        ;; equals last-sync, so sync-status would wrongly read :ok and the
+        ;; button would stay disabled ("up to date").
+        link-removed? (and last-sync (empty? (-> site :ptv :service-channel-ids)))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -975,6 +986,7 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
+                    link-removed? :out-of-date
                     has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
