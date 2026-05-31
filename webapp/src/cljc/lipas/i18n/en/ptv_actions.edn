@@ -10,6 +10,7 @@
  :attach-existing-service-channel "Link to existing service location...",
  :new-service-channel-will-be-created "A new service location will be created in PTV on export.",
  :change-service-channel "Change service location",
+ :service-channel-archived "Service location archived in PTV",
  :select-service-channel "Select service location",
  :sync-now "Sync now",
  :load-texts-from-ptv "Load texts from PTV",

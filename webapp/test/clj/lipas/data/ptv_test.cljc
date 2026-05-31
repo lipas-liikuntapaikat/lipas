@@ -721,3 +721,25 @@
         (is (= :out-of-date
                (status (assoc-in base [:ptv :service-channel-ids] cleared)))
             (str "cleared as " (pr-str cleared)))))))
+
+(deftest sync-status-archived-resync-test
+  (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
+        status (fn [site] (:sync-status (sut/sports-site->ptv-input ctx {} {} site)))
+        ;; Archived in PTV but still linked, event-date == last-sync (the
+        ;; archive). service-channels {} so the archived channel can't be diffed.
+        base {:lipas-id 1 :name "X" :event-date "T1"
+              :ptv {:last-sync "T1"
+                    :publishing-status "Deleted"
+                    :service-channel-ids ["C1"]
+                    :summary {:fi "aaaaaa"}
+                    :description {:fi "bbbbbb"}}}]
+    (testing "re-enabling an archived site needs a resurrect sync (:out-of-date)"
+      (is (= :out-of-date (status (assoc-in base [:ptv :sync-enabled] true)))))
+
+    (testing "an archived site left disabled is not forced to needs-sync"
+      (is (= :ok (status (assoc-in base [:ptv :sync-enabled] false)))))
+
+    (testing "a published, up-to-date site stays :ok"
+      (is (= :ok (status (-> base
+                             (assoc-in [:ptv :publishing-status] "Published")
+                             (assoc-in [:ptv :sync-enabled] true))))))))

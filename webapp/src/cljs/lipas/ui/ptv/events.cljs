@@ -1428,17 +1428,10 @@
     ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
       (let [token (-> db :user :login :token)
-            ks [:languages
-                :summary
-                :description
-                :last-sync
-                :org-id
-                :sync-enabled
-                :service-integration
-                :descriptions-integration
-                :service-channel-integration
-                :service-ids
-                :service-channel-ids]]
+            ;; Same editable keys the sync path persists (shared source of
+            ;; truth). The backend preserves server-owned lifecycle keys
+            ;; (:source-id, :publishing-status, :previous-type-code) itself.
+            ks ptv-data/persisted-ptv-keys]
         {:db (assoc-in db [:ptv :save-in-progress] true)
          :fx [[:http-xhrio
                {:method :post

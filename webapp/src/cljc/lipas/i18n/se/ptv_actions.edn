@@ -11,6 +11,7 @@
  :attach-existing-service-channel "Koppla till befintlig servicepunkt...",
  :new-service-channel-will-be-created "En ny servicepunkt skapas i PTV vid export.",
  :change-service-channel "Ändra servicepunkt",
+ :service-channel-archived "Servicestället arkiverat i PTV",
  :select-service-channel "Välj servicepunkt",
  :sync-now "Synkronisera nu",
  :load-texts-from-ptv "Hämta texter från PTV",

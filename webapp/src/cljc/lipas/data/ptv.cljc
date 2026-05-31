@@ -801,6 +801,27 @@
           {}
           descriptions))
 
+(def persisted-ptv-keys
+  "The editable :ptv meta keys persisted on a sync. Both the sync path
+   (upsert-ptv-service-location!*) and the no-sync meta path
+   (save-ptv-integration-definitions / ::save-ptv-meta) select exactly these
+   from the incoming payload, so the two stay in lock-step. Lifecycle keys the
+   server owns (:source-id, :publishing-status, :previous-type-code) are NOT
+   here — the sync path derives them from the PTV response, the meta path
+   preserves them from the existing record."
+  [:languages
+   :summary
+   :description
+   :user-instruction
+   :last-sync
+   :org-id
+   :sync-enabled
+   :service-integration
+   :descriptions-integration
+   :service-channel-integration
+   :service-ids
+   :service-channel-ids])
+
 (def service-channel-compare-fields
   "Fields to compare when checking drift against a PTV ServiceChannel.
    PTV ServiceChannels don't carry :user-instruction — that's a Service-level
@@ -982,7 +1003,15 @@
         ;; channel left to diff) and event-date still equals last-sync, so
         ;; sync-status would wrongly read :ok and the button would stay
         ;; disabled ("up to date").
-        link-removed? (and last-sync (str/blank? service-channel-id))]
+        link-removed? (and last-sync (str/blank? service-channel-id))
+
+        ;; A channel archived in PTV ("Deleted") that the user has re-enabled
+        ;; needs a sync to resurrect it (the upsert PUTs publishingStatus
+        ;; "Published" on the same channel). Without this, event-date still
+        ;; equals last-sync (from the archive) and the archived channel can't be
+        ;; diffed, so status reads :ok and "Synkronoi nyt" stays disabled.
+        archived-resync? (and (= "Deleted" (-> site :ptv :publishing-status))
+                              (get-in site [:ptv :sync-enabled] false))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -1009,6 +1038,7 @@
      :sync-status (cond
                     (not last-sync) :not-synced
                     link-removed? :out-of-date
+                    archived-resync? :out-of-date
                     has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
@@ -1026,7 +1056,13 @@
      :service-channel-ids (-> site :ptv :service-channel-ids)
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
+     ;; Live status from the cached PTV channel (nil once archived — PTV drops
+     ;; Deleted channels from /list/organization).
      :service-channel-publishing-status (:publishingStatus ptv-channel)
+     ;; LIPAS-persisted status from the last sync/archive. Stays "Deleted" for
+     ;; an archived channel, so the UI can label it instead of showing a bare
+     ;; UUID it can no longer resolve to a name.
+     :publishing-status (-> site :ptv :publishing-status)
 
      :audit-status (determine-audit-status site)}))
 

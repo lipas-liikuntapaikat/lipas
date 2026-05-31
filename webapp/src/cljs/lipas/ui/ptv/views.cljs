@@ -211,7 +211,12 @@
           service-ids (set (:service-ids site))
           linked-services (filter #(contains? service-ids (:service-id %)) services)
           channel-id (first (:service-channel-ids site))
-          channel-name (:service-channel-name site)
+          ;; An archived (PTV "Deleted") channel is gone from /list/organization,
+          ;; so its name can't be resolved — label it instead of showing the
+          ;; bare UUID. Its PTV link 404s, so drop it (rendered as plain text).
+          archived? (= "Deleted" (:publishing-status site))
+          channel-name (or (:service-channel-name site)
+                           (when archived? (tr :ptv.actions/service-channel-archived)))
           name-conflict (:name-conflict site)
           double-link-block (<== [::subs/double-link-block (:lipas-id site)])
           sync-status (:sync-status site)
@@ -248,7 +253,8 @@
            :label (str (tr :ptv/service-channel) " PTV:ssä")
            :items [{:id channel-id
                     :name channel-name
-                    :url (str ptv-base "/channels/serviceLocation/" channel-id)}]
+                    :url (when-not archived?
+                           (str ptv-base "/channels/serviceLocation/" channel-id))}]
            :editing? @editing-channel?
            :on-edit #(reset! editing-channel? true)
            :on-cancel #(reset! editing-channel? false)

@@ -331,18 +331,9 @@
   [ptv org-id service-channel-id]
   (ptv/get-org-service-channel ptv org-id service-channel-id))
 
-(def persisted-ptv-keys [:languages
-                         :summary
-                         :description
-                         :user-instruction
-                         :last-sync
-                         :org-id
-                         :sync-enabled
-                         :service-integration
-                         :descriptions-integration
-                         :service-channel-integration
-                         :service-ids
-                         :service-channel-ids])
+;; Single source of truth lives in lipas.data.ptv so the sync path and the
+;; no-sync meta path persist exactly the same editable keys.
+(def persisted-ptv-keys ptv-data/persisted-ptv-keys)
 
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
@@ -637,12 +628,22 @@
       ;; Meta-save can persist :service-channel-ids without a sync, so guard the
       ;; one-service-location-per-site invariant here too.
       (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
-      ;; TODO take when-let -> let and add assert
-      (when-let [site (-> (core/get-sports-site tx lipas-id)
-                          (assoc :event-date (utils/timestamp))
-                          (assoc :ptv ptv))]
-        (core/upsert-sports-site! tx user site)
-        (core/index! search site :sync))))
+      (when-let [existing (core/get-sports-site tx lipas-id)]
+        ;; Persist the same editable keys the sync path does (persisted-ptv-keys
+        ;; from the payload), and explicitly preserve the server-owned lifecycle
+        ;; keys from the existing record — there's no PTV response here to
+        ;; re-derive them, and a blanket (assoc :ptv ptv) would wipe them and
+        ;; break the reversible-archive bookkeeping (is-sent-to-ptv?).
+        (let [old-ptv (:ptv existing)
+              new-ptv (-> (select-keys ptv persisted-ptv-keys)
+                          (assoc :source-id          (:source-id old-ptv)
+                                 :publishing-status  (:publishing-status old-ptv)
+                                 :previous-type-code (:previous-type-code old-ptv)))
+              site (assoc existing
+                          :event-date (utils/timestamp)
+                          :ptv new-ptv)]
+          (core/upsert-sports-site! tx user site)
+          (core/index! search site :sync)))))
   {:status "OK"})
 
 (defn save-ptv-audit

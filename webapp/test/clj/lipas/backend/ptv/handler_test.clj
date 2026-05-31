@@ -660,32 +660,60 @@
                              (tu/token-header token)))]
       (is (= 200 (:status resp))))))
 
-(deftest save-ptv-meta-persists-sync-enabled-test
-  (testing "save-ptv-meta turns sync off in the DB without touching PTV"
-    ;; This is the contract the Liikuntapaikat-tab toggle relies on: turning the
-    ;; switch off persists sync-enabled=false via save-ptv-meta (no sync), and
-    ;; it sticks. The site keeps its channel link (frozen in PTV).
+(deftest save-ptv-meta-preserves-lifecycle-keys-test
+  (testing "save-ptv-meta turns sync off without wiping server-owned lifecycle keys"
+    ;; Contract the Liikuntapaikat-tab toggle relies on: turning the switch off
+    ;; persists sync-enabled=false via save-ptv-meta (no PTV call) AND keeps the
+    ;; channel link plus the lifecycle keys (:source-id, :publishing-status,
+    ;; :previous-type-code) the sync path owns. A blanket :ptv replace used to
+    ;; wipe those, breaking is-sent-to-ptv? and the reversible-archive flow.
     (let [admin (tu/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin)
-          {:keys [pool]} (seed-double-link-scenario! admin)
-          before (core/get-sports-site (test-db) pool)
+          channel "b0000000-0000-4000-8000-000000000abc"
+          source-id (str "lipas-" ptv-org-id "-700001-2026-01-01T00-00-00.000Z")
+          texts {:summary {:fi "Kesäkäyttöinen urheilukenttä."}
+                 :description {:fi "Limingan keskustan urheilukenttä."}}
+          ;; A published, synced site carrying the full lifecycle meta.
+          site (core/upsert-sports-site!*
+                (test-db) admin
+                {:status "active"
+                 :event-date "2026-01-02T00:00:00.000Z"
+                 :name "Limingan urheilukenttä"
+                 :owner "city" :admin "city-sports"
+                 :type {:type-code 1210}
+                 :location {:city {:city-code 425}
+                            :address "Kentäntie 1" :postal-code "91900" :postal-office "Liminka"
+                            :geometries {:type "FeatureCollection"
+                                         :features [{:type "Feature"
+                                                     :geometry {:type "Point" :coordinates [25.41 64.81]}}]}}
+                 :ptv (merge texts
+                             {:org-id ptv-org-id
+                              :sync-enabled true
+                              :last-sync "2026-01-02T00:00:00.000Z"
+                              :source-id source-id
+                              :publishing-status "Published"
+                              :previous-type-code 1210
+                              :service-ids []
+                              :service-channel-ids [channel]})})
+          lipas-id (:lipas-id site)
           resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                              (mock/content-type "application/json")
-                             (mock/body (tu/->json {pool {:org-id ptv-org-id
-                                                          :sync-enabled false
-                                                          :service-ids []
-                                                          :service-channel-ids [pool-channel]
-                                                          :summary {:fi "Test summary"}
-                                                          :description {:fi "Test description"}}}))
+                             (mock/body (tu/->json {lipas-id (merge texts
+                                                                    {:org-id ptv-org-id
+                                                                     :sync-enabled false
+                                                                     :service-ids []
+                                                                     :service-channel-ids [channel]})}))
                              (tu/token-header token)))
-          after (core/get-sports-site (test-db) pool)]
+          after (:ptv (core/get-sports-site (test-db) lipas-id))]
       (is (= 200 (:status resp)))
-      ;; precondition: seeded as sync-enabled
-      (is (true? (get-in before [:ptv :sync-enabled])))
-      ;; persisted off
-      (is (false? (get-in after [:ptv :sync-enabled])))
-      ;; channel link preserved (frozen, not unlinked)
-      (is (= [pool-channel] (get-in after [:ptv :service-channel-ids]))))))
+      ;; editable key updated
+      (is (false? (:sync-enabled after)))
+      ;; server-owned lifecycle keys preserved (not wiped)
+      (is (= source-id (:source-id after)))
+      (is (= "Published" (:publishing-status after)))
+      (is (= 1210 (:previous-type-code after)))
+      ;; channel link preserved (frozen in PTV, not unlinked)
+      (is (= [channel] (:service-channel-ids after))))))
 
 (deftest save-ptv-service-location-rejects-double-link-test
   (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"
