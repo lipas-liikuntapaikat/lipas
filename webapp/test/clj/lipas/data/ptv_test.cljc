@@ -697,3 +697,27 @@
             drift (sut/compute-service-channel-drift site ptv-channel {} ["fi"])]
         (is (seq drift))
         (is (= #{:name} (set (map :field drift))))))))
+
+(deftest sync-status-unlink-test
+  (let [ctx {:org-id "o" :types {} :org-defaults {} :org-langs ["fi"]}
+        status (fn [site] (:sync-status (sut/sports-site->ptv-input ctx {} {} site)))
+        base {:lipas-id 1 :name "X" :event-date "T1"
+              :ptv {:last-sync "T1"
+                    :summary {:fi "aaaaaa"}
+                    :description {:fi "bbbbbb"}}}]
+    (testing "synced, linked and up to date is :ok"
+      (is (= :ok (status (assoc-in base [:ptv :service-channel-ids] ["C1"])))))
+
+    (testing "never-synced (no last-sync) is :not-synced"
+      (is (= :not-synced
+             (status (-> base
+                         (update :ptv dissoc :last-sync)
+                         (assoc-in [:ptv :service-channel-ids] []))))))
+
+    (testing "unlinking a previously-synced site re-activates sync (:out-of-date)"
+      ;; Clearing the single-select autocomplete can leave service-channel-ids
+      ;; as [], [nil] or [""] — all must be detected as a removed link.
+      (doseq [cleared [[] [nil] [""] ["   "]]]
+        (is (= :out-of-date
+               (status (assoc-in base [:ptv :service-channel-ids] cleared)))
+            (str "cleared as " (pr-str cleared)))))))

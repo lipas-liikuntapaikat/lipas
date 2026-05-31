@@ -490,6 +490,10 @@
 (rf/reg-event-db ::select-service-channels
   (fn [db [_ {:keys [lipas-id]} v]]
     (let [org-id (-get-ptv-org-id db)
+          ;; Clearing the single-select autocomplete fires on-change with [nil];
+          ;; normalize to [] so "no link" is represented consistently — clean
+          ;; sync payload, and link-removed? (drift detection) actually fires.
+          v (vec (remove str/blank? v))
           new-id (first v)
           sites (get-in db [:ptv :org org-id :data :sports-sites])
           ;; Hard-block double-linking: refuse to bind this site to a
