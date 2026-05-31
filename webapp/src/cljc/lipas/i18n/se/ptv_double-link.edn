@@ -1,0 +1,8 @@
+{:warning-title "Servicestället delas mellan flera idrottsanläggningar",
+ :linked-also-to "Detta PTV-serviceställe är också kopplat till: {1}.",
+ :explanation
+ "Ett serviceställe kan höra till endast en idrottsanläggning. Att koppla två anläggningar till samma serviceställe orsakar konflikter: synkroniseringarna skriver över varandras uppgifter och arkivering gäller det gemensamma servicestället.",
+ :remediation
+ "Ta bort kopplingen och synkronisera, så skapas ett eget serviceställe för detta objekt i PTV.",
+ :blocked
+ "Servicestället är redan kopplat till {1} och kan därför inte kopplas till denna anläggning."}

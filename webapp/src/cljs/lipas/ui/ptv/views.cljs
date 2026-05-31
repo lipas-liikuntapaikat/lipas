@@ -204,13 +204,21 @@
 (defn form-left-column
   [{:keys [org-id tr site services ptv-base org-languages selected-tab]}]
   (r/with-let [editing-services? (r/atom false)
-               editing-channel? (r/atom false)]
+               editing-channel? (r/atom false)
+               confirm-archive? (r/atom false)]
     (let [generating? (<== [::subs/generating-descriptions?])
           syncing? (<== [::subs/syncing-service-location? (:lipas-id site)])
           service-ids (set (:service-ids site))
           linked-services (filter #(contains? service-ids (:service-id %)) services)
           channel-id (first (:service-channel-ids site))
-          channel-name (:service-channel-name site)
+          ;; An archived (PTV "Deleted") channel is gone from /list/organization,
+          ;; so its name can't be resolved — label it instead of showing the
+          ;; bare UUID. Its PTV link 404s, so drop it (rendered as plain text).
+          archived? (= "Deleted" (:publishing-status site))
+          channel-name (or (:service-channel-name site)
+                           (when archived? (tr :ptv.actions/service-channel-archived)))
+          name-conflict (:name-conflict site)
+          double-link-block (<== [::subs/double-link-block (:lipas-id site)])
           sync-status (:sync-status site)
           needs-sync? (contains? #{:out-of-date :content-drift} sync-status)]
       [:> Stack {:spacing 2}
@@ -245,7 +253,8 @@
            :label (str (tr :ptv/service-channel) " PTV:ssä")
            :items [{:id channel-id
                     :name channel-name
-                    :url (str ptv-base "/channels/serviceLocation/" channel-id)}]
+                    :url (when-not archived?
+                           (str ptv-base "/channels/serviceLocation/" channel-id))}]
            :editing? @editing-channel?
            :on-edit #(reset! editing-channel? true)
            :on-cancel #(reset! editing-channel? false)
@@ -283,6 +292,42 @@
                         :sx #js {:textTransform "none" :alignSelf "flex-start" :p 0}
                         :on-click #(reset! editing-channel? true)}
              (tr :ptv.actions/attach-existing-service-channel)])])
+
+       ;; Name conflict warning. PTV enforces unique service-location names
+       ;; per org, so syncing this site (which on next sync creates/updates a
+       ;; channel named after the site) would collide with an existing,
+       ;; differently-linked channel of the same name. Surface it here with
+       ;; the same guidance the wizard uses; otherwise the conflict only
+       ;; manifests as a PTV 400 at sync time.
+       (when name-conflict
+         [:> Alert {:severity "warning" :variant "outlined"}
+          [:> AlertTitle
+           (tr :ptv.wizard/service-channel-name-conflict (:name site))]
+          [:> Typography {:variant "body2"}
+           (tr :ptv.name-conflict/do-one-of-these)]
+          [:ul {:style {:margin 0}}
+           [:li (tr :ptv.name-conflict/opt1)]
+           [:li (tr :ptv.name-conflict/opt2)]
+           [:li (tr :ptv.name-conflict/opt3)]]
+          [:> Button
+           {:size "small"
+            :variant "outlined"
+            :color "warning"
+            :sx #js {:textTransform "none"}
+            :on-click #(==> [::events/select-service-channels
+                             {:lipas-id (:lipas-id site)}
+                             [(:service-channel-id name-conflict)]])}
+           (tr :ptv.wizard/attach-to-conflicting-service-channel)]])
+
+       ;; Double-link block: the user tried to attach a service-location that
+       ;; another site already owns. The link was refused (not set); explain why.
+       (when double-link-block
+         [:> Alert {:severity "error" :variant "outlined"}
+          [:> AlertTitle (tr :ptv.double-link/warning-title)]
+          [:> Typography {:variant "body2"}
+           (tr :ptv.double-link/blocked (:name double-link-block))]
+          [:> Typography {:variant "body2" :sx #js {:mt 1}}
+           (tr :ptv.double-link/explanation)]])
 
        ;; AI generate + translate buttons
        (let [from-lang @selected-tab
@@ -328,7 +373,13 @@
              has-service? (seq (:service-ids site))
              has-summary? (some-> site :summary :fi count (> 5))
              has-description? (some-> site :description :fi count (> 5))
-             valid? (and sync-enabled? has-service? has-summary? has-description?)
+             ;; Validate the would-be payload against the same malli schema the
+             ;; backend coerces against, so an over-length text (or other schema
+             ;; violation) is caught here instead of bouncing as a 400.
+             schema-error-keys (<== [::subs/service-location-schema-errors (:lipas-id site)])
+             schema-errors (map tr schema-error-keys)
+             valid? (and sync-enabled? has-service? has-summary? has-description?
+                         (empty? schema-error-keys))
              synced? (:last-sync site)
              modified? (= "Modified" (:service-channel-publishing-status site))
              disabled? (or syncing? modified? (not valid?) (and synced? (not needs-sync?)))
@@ -338,26 +389,61 @@
                     (not has-service?) (tr :ptv/hint-select-service)
                     (not has-summary?) (tr :ptv/hint-add-summary)
                     (not has-description?) (tr :ptv/hint-add-description)
-                    (and synced? (not needs-sync?)) (tr :ptv/hint-up-to-date))]
+                    (and synced? (not needs-sync?)) (tr :ptv/hint-up-to-date))
+             ;; Every reason the button is disabled, for the tooltip.
+             reasons (->> (concat (when hint [hint]) schema-errors)
+                          (remove nil?))]
          [:<>
-          [:> Button
-           {:variant "contained"
-            :color "secondary"
-            :size "small"
-            :full-width true
-            :disabled disabled?
-            :sx #js {:textTransform "none"}
-            :startIcon (r/as-element
-                         (if syncing?
-                           [:> CircularProgress {:size 16 :color "inherit"}]
-                           [:> Icon (if synced? "sync" "ios_share")]))
-            :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
-           (if synced?
-             (tr :ptv.actions/sync-now)
-             (tr :ptv.wizard/export-service-locations-to-ptv))]
-          (when hint
+          [:> Tooltip {:title (if (and disabled? (seq reasons))
+                                (str/join " " reasons)
+                                "")}
+           [:span
+            [:> Button
+             {:variant "contained"
+              :color "secondary"
+              :size "small"
+              :full-width true
+              :disabled disabled?
+              :sx #js {:textTransform "none"}
+              :startIcon (r/as-element
+                           (if syncing?
+                             [:> CircularProgress {:size 16 :color "inherit"}]
+                             [:> Icon (if synced? "sync" "ios_share")]))
+              :on-click #(==> [::events/create-ptv-service-location (:lipas-id site) [] []])}
+             (if synced?
+               (tr :ptv.actions/sync-now)
+               (tr :ptv.wizard/export-service-locations-to-ptv))]]]
+          (when (or hint (seq schema-errors))
             [:> Typography {:variant "caption" :color "text.secondary"}
-             hint])])])))
+             (str/join " " reasons)])
+
+          ;; Explicit archive — only when sync is OFF and the site is currently
+          ;; published in PTV (mirrors the sports-site PTV tab). Two-step confirm;
+          ;; reversible by re-enabling sync (resurrects the same channel).
+          (when (and (not sync-enabled?)
+                     channel-id
+                     (= "Published" (:service-channel-publishing-status site)))
+            (if @confirm-archive?
+              [:> Stack {:direction "row" :spacing 1 :sx #js {:mt 1 :alignItems "center"}}
+               [:> Typography {:variant "caption" :color "text.secondary"}
+                (tr :ptv.actions/archive-confirm)]
+               [:> Button {:size "small" :variant "outlined" :color "error"
+                           :disabled syncing?
+                           :sx #js {:textTransform "none"}
+                           :on-click (fn []
+                                       (reset! confirm-archive? false)
+                                       (==> [::events/archive-ptv-service-location (:lipas-id site)]))}
+                (tr :ptv.actions/archive)]
+               [:> Button {:size "small" :variant "text"
+                           :sx #js {:textTransform "none"}
+                           :on-click #(reset! confirm-archive? false)}
+                (tr :actions/cancel)]]
+              [:> Button {:size "small" :variant "text" :color "error"
+                          :disabled syncing?
+                          :sx #js {:textTransform "none" :alignSelf "flex-start"}
+                          :startIcon (r/as-element [:> Icon "archive"])
+                          :on-click #(reset! confirm-archive? true)}
+               (tr :ptv.actions/archive-in-ptv)]))])])))
 
 (defn form-right-column
   [{:keys [org-id tr site org-languages selected-tab]}]
@@ -390,6 +476,7 @@
          :on-change #(==> [::events/set-summary site @selected-tab %])
          :label (tr :ptv/summary)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-summary-length}
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -407,6 +494,7 @@
          :on-change #(==> [::events/set-description site @selected-tab %])
          :label (tr :ptv/description)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-description-length}
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
@@ -434,7 +522,8 @@
        [checkboxes/switch
         {:label (tr :ptv.actions/export-disclaimer)
          :value (:sync-enabled site)
-         :on-change #(==> [::events/toggle-sync-enabled site %])}]
+         ;; Liikuntapaikat tab has no batch "save all" — persist the toggle now.
+         :on-change #(==> [::events/toggle-sync-enabled site % :persist? true])}]
 
        [:> Grid {:container true :spacing 3}
         [:> Grid {:item true :xs 12 :md 5}
@@ -524,6 +613,7 @@
           sites (<== [::subs/sports-sites org-id])
           filtered-sites (filter-sites sites @search-text @status-filter)
           sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
+          double-linked-ids (<== [::subs/double-linked-lipas-ids org-id])
 
           ;; Audit status component
           audit-status-cell (fn [site]
@@ -694,7 +784,11 @@
 
                 ;; Name
                   [:> TableCell
-                   (:name site)]
+                   [:> Stack {:direction "row" :spacing 0.5 :align-items "center"}
+                    (when (contains? double-linked-ids (:lipas-id site))
+                      [:> Tooltip {:title (tr :ptv.double-link/warning-title)}
+                       [:> WarningIcon {:color "warning" :sx #js {:fontSize "1rem"}}]])
+                    [:span (:name site)]]]
 
                 ;; Type
                   [:> TableCell
@@ -1148,6 +1242,7 @@
                         :on-change #(==> [::events/set-service-candidate-summary source-id @selected-tab %])
                         :label (tr :ptv/summary)
                         :value summary-val
+                        :inputProps #js {:maxLength ptv-data/max-summary-length}
                         :helperText (str summary-len "/" ptv-data/max-summary-length)
                         :error (> summary-len ptv-data/max-summary-length)}])
 
@@ -1161,6 +1256,7 @@
                         :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
                         :label (tr :ptv/description)
                         :value desc-val
+                        :inputProps #js {:maxLength ptv-data/max-description-length}
                         :helperText (str desc-len "/" ptv-data/max-description-length)
                         :error (> desc-len ptv-data/max-description-length)}])
 
@@ -1174,6 +1270,7 @@
                         :on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
                         :label (tr :ptv/user-instruction)
                         :value ui-val
+                        :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                         :helperText (str ui-len "/" ptv-data/max-user-instruction-length)
                         :error (> ui-len ptv-data/max-user-instruction-length)}])])
 
@@ -1764,6 +1861,7 @@
          :variant "outlined"
          :label (tr :ptv/summary)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-summary-length}
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
@@ -1776,6 +1874,7 @@
          :multiline true
          :label (tr :ptv/description)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-description-length}
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
@@ -1788,6 +1887,7 @@
          :multiline true
          :label (tr :ptv/user-instruction)
          :value v
+         :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
          :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
          :error (> (count v) ptv-data/max-user-instruction-length)}])]))
 

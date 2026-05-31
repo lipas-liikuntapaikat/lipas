@@ -10,6 +10,7 @@
  :attach-existing-service-channel "Liitä olemassa olevaan palvelupaikkaan...",
  :new-service-channel-will-be-created "Uusi palvelupaikka luodaan PTV:hen viennin yhteydessä.",
  :change-service-channel "Muuta palvelupaikkaa",
+ :service-channel-archived "Palvelupaikka arkistoitu PTV:ssä",
  :select-service-channel "Valitse palvelupaikka",
  :sync-now "Synkronoi nyt",
  :load-texts-from-ptv "Lataa tekstit PTV:stä",
@@ -17,4 +18,8 @@
  "Korvaa tiivistelmä ja kuvaus PTV:ssä tällä hetkellä olevilla teksteillä. Tallentamattomat muutokset menetetään.",
  :refresh-data "Hae kaikki tiedot uudelleen PTV:stä",
  :archive-in-ptv "Arkistoi paikka PTV:ssä",
+ :archive "Arkistoi",
+ :archive-confirm "Arkistoidaanko liikuntapaikka PTV:stä? Voit palauttaa sen myöhemmin ottamalla synkronoinnin uudelleen käyttöön.",
+ :archived-in-ptv "Liikuntapaikka arkistoitu PTV:ssä",
+ :archive-on-sync-off-confirm "Synkronointi otetaan pois päältä. Arkistoidaanko palvelupaikka PTV:ssä? Voit palauttaa sen myöhemmin ottamalla synkronoinnin uudelleen käyttöön.",
  :integration-enabled "PTV-integraatio käytössä"}

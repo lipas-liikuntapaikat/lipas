@@ -5,8 +5,10 @@
             [lipas.roles :as roles]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.ptv.events :as events]
             [lipas.ui.utils :as utils :refer [prod?]]
             [malli.core :as m]
+            [malli.error :as me]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::ptv
@@ -317,6 +319,23 @@
                                        (utils/timestamp)
                                        site))))
 
+(rf/reg-sub ::service-location-schema-errors
+  ;; Localized error-message keys for the would-be /save-ptv-service-location
+  ;; payload of `lipas-id`, validated against the same malli schema the backend
+  ;; coerces against. Returns a distinct vector of localization keys (from the
+  ;; schema's :error/message props) — empty when the payload is valid. Only
+  ;; keyword messages are surfaced; structural errors (missing required keys)
+  ;; are left to the business-level sync hints. Used to disable the sync button
+  ;; and explain why in its tooltip.
+  (fn [db [_ lipas-id]]
+    (let [payload (events/service-location-payload db lipas-id)]
+      (->> (some-> (m/explain ptv-schema/create-ptv-service-location payload)
+                   :errors)
+           (map me/error-message)
+           (filter keyword?)
+           distinct
+           vec))))
+
 (rf/reg-sub ::service-candidate-descriptions
   :<- [::ptv]
   (fn [ptv [_ org-id]]
@@ -370,6 +389,40 @@
     (for [m channels]
       {:service-channel-id (:id m)
        :name (ptv-data/resolve-service-channel-name m)})))
+
+(rf/reg-sub ::double-link-others
+  ;; Other sports-sites linked to this site's PTV service-location, as resolved
+  ;; by the backend check (see ::events/check-double-link). Empty/nil = no
+  ;; double-link.
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:double-link-check lipas-id])))
+
+(rf/reg-sub ::double-link-block
+  ;; A blocked attempt to link this site to a service-location another site
+  ;; already owns (see ::events/select-service-channels). nil = no block.
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:double-link-block lipas-id])))
+
+(rf/reg-sub ::channel-id->lipas-ids
+  ;; {service-channel-id #{lipas-id ...}} across the org's loaded sites.
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (let [sites (get-in ptv [:org org-id :data :sports-sites])]
+      (reduce (fn [m [lipas-id site]]
+                (reduce (fn [m cid] (update m cid (fnil conj #{}) lipas-id))
+                        m
+                        (-> site :ptv :service-channel-ids)))
+              {}
+              sites))))
+
+(rf/reg-sub ::double-linked-lipas-ids
+  ;; Set of lipas-ids that share a PTV service-location with at least one other
+  ;; loaded site — used to flag double-linked rows in the table.
+  (fn [[_ org-id]] (rf/subscribe [::channel-id->lipas-ids org-id]))
+  (fn [idx _]
+    (->> idx vals (filter #(> (count %) 1)) (apply concat) set)))
 
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]

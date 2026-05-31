@@ -8,6 +8,7 @@
             ["recharts/es6/component/Legend" :refer [Legend]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
+            [lipas.data.ptv :as ptv-data]
             [lipas.ui.charts :as charts]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
@@ -1089,7 +1090,15 @@
         [selects/year-selector
          {:label (tr :time/year)
           :value year
-          :on-change #(==> [::events/select-delete-year %])}])]]))
+          :on-change #(==> [::events/select-delete-year %])}])
+
+      ;; If this facility is integrated to PTV, a permanently-out / incorrect-data
+      ;; deletion also archives the PTV service-location. Surface it here, where
+      ;; the user is consciously marking the facility gone.
+      (when (and (contains? #{"out-of-service-permanently" "incorrect-data"} status)
+                 (ptv-data/is-sent-to-ptv? data))
+        [:> Alert {:severity "info" :sx #js {:mt 2}}
+         (tr :ptv/delete-will-archive)])]]))
 
 (defn site-view [{:keys [title on-close close-label bottom-actions lipas-id]}
                  & contents]

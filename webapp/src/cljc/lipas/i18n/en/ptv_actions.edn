@@ -10,6 +10,7 @@
  :attach-existing-service-channel "Link to existing service location...",
  :new-service-channel-will-be-created "A new service location will be created in PTV on export.",
  :change-service-channel "Change service location",
+ :service-channel-archived "Service location archived in PTV",
  :select-service-channel "Select service location",
  :sync-now "Sync now",
  :load-texts-from-ptv "Load texts from PTV",
@@ -17,4 +18,8 @@
  "Replace the summary and description with the texts currently in PTV. Unsaved changes will be lost.",
  :refresh-data "Re-fetch all data from PTV",
  :archive-in-ptv "Archive in PTV",
+ :archive "Archive",
+ :archive-confirm "Archive this sports facility in PTV? You can restore it later by re-enabling synchronization.",
+ :archived-in-ptv "Sports facility archived in PTV",
+ :archive-on-sync-off-confirm "Synchronization will be turned off. Archive the service location in PTV? You can restore it later by re-enabling synchronization.",
  :integration-enabled "PTV integration enabled"}

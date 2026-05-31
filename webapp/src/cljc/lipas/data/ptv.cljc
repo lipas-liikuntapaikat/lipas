@@ -801,21 +801,60 @@
           {}
           descriptions))
 
+(def persisted-ptv-keys
+  "The editable :ptv meta keys persisted on a sync. Both the sync path
+   (upsert-ptv-service-location!*) and the no-sync meta path
+   (save-ptv-integration-definitions / ::save-ptv-meta) select exactly these
+   from the incoming payload, so the two stay in lock-step. Lifecycle keys the
+   server owns (:source-id, :publishing-status, :previous-type-code) are NOT
+   here — the sync path derives them from the PTV response, the meta path
+   preserves them from the existing record."
+  [:languages
+   :summary
+   :description
+   :user-instruction
+   :last-sync
+   :org-id
+   :sync-enabled
+   :service-integration
+   :descriptions-integration
+   :service-channel-integration
+   :service-ids
+   :service-channel-ids])
+
 (def service-channel-compare-fields
   "Fields to compare when checking drift against a PTV ServiceChannel.
    PTV ServiceChannels don't carry :user-instruction — that's a Service-level
    concept — so leave it out of the comparison."
   [:summary :description])
 
+(defn normalize-ws
+  "Normalize whitespace for *comparing* PTV/LIPAS free-text values — never for
+   storing or pushing them. PTV collapses runs of horizontal whitespace in
+   fields on save (e.g. a double space in a Name becomes a single space), which
+   would otherwise read as drift immediately after a sync. Collapses runs of
+   spaces/tabs to a single space, normalizes line endings and trims, but keeps
+   newlines: paragraph structure is meaningful and PTV preserves it. Returns nil
+   for nil/blank input (so a missing value and an all-whitespace value compare
+   equal)."
+  [s]
+  (some-> s
+          (str/replace #"\r\n?" "\n")    ; CRLF / CR -> LF
+          (str/replace #"[^\S\n]+" " ")  ; collapse horizontal whitespace runs, keep \n
+          (str/replace #" *\n *" "\n")   ; drop spaces hugging newlines (line-edge ws)
+          str/trim
+          not-empty))
+
 (defn texts-match?
   "Compare LIPAS-side texts with PTV-side texts. Returns true if all
-   non-nil fields match. Trims whitespace for comparison. `fields`
-   defaults to all three lipas text fields; callers comparing against
-   a PTV ServiceChannel should pass `service-channel-compare-fields`."
+   non-nil fields match. Whitespace is normalized for comparison
+   (see `normalize-ws`). `fields` defaults to all three lipas text fields;
+   callers comparing against a PTV ServiceChannel should pass
+   `service-channel-compare-fields`."
   ([lipas-texts ptv-texts]
    (texts-match? lipas-texts ptv-texts [:summary :description :user-instruction]))
   ([lipas-texts ptv-texts fields]
-   (let [trim #(some-> % str/trim not-empty)]
+   (let [trim normalize-ws]
      (every? (fn [field]
                (let [lipas-vals (get lipas-texts field)
                      ptv-vals (get ptv-texts field)]
@@ -882,7 +921,9 @@
           ptv-descs (into {} (map (juxt (juxt :type :language) :value))
                           (:serviceChannelDescriptions ptv-channel))
           lang-pairs (resolve-lang-pairs lipas-languages)
-          trim #(some-> % str/trim not-empty)
+          ;; Normalize whitespace so PTV's server-side collapsing (e.g. a
+          ;; double space in a name) isn't reported as drift right after a sync.
+          trim normalize-ws
           mk-text-comparison (fn [field type-v]
                                (for [[ptv-lang locale] lang-pairs]
                                  {:field field
@@ -949,7 +990,28 @@
         drift-langs (or (-> site :ptv :languages) org-langs)
         drift-fields (when (and last-sync ptv-channel)
                        (compute-service-channel-drift site ptv-channel services drift-langs))
-        has-drift? (boolean (seq drift-fields))]
+        has-drift? (boolean (seq drift-fields))
+
+        ;; A site that was synced before (last-sync present) but now has no
+        ;; service-channel-id was deliberately unlinked by the user — a
+        ;; successful sync always writes service-channel-ids back, so this
+        ;; combination can't arise any other way. (Use str/blank? rather than
+        ;; empty?: clearing the autocomplete can leave service-channel-ids as
+        ;; [nil]/[""], not [].) Treat it as out-of-date so the sync button
+        ;; re-activates and the backend create-path (channel id nil) builds a
+        ;; fresh PTV service-location. Without this, has-drift? is false (no
+        ;; channel left to diff) and event-date still equals last-sync, so
+        ;; sync-status would wrongly read :ok and the button would stay
+        ;; disabled ("up to date").
+        link-removed? (and last-sync (str/blank? service-channel-id))
+
+        ;; A channel archived in PTV ("Deleted") that the user has re-enabled
+        ;; needs a sync to resurrect it (the upsert PUTs publishingStatus
+        ;; "Published" on the same channel). Without this, event-date still
+        ;; equals last-sync (from the archive) and the archived channel can't be
+        ;; diffed, so status reads :ok and "Synkronoi nyt" stays disabled.
+        archived-resync? (and (= "Deleted" (-> site :ptv :publishing-status))
+                              (get-in site [:ptv :sync-enabled] false))]
 
     {:valid (boolean (and (some-> description :fi count (> 5))
                           (some-> summary :fi count (> 5))))
@@ -975,6 +1037,8 @@
 
      :sync-status (cond
                     (not last-sync) :not-synced
+                    link-removed? :out-of-date
+                    archived-resync? :out-of-date
                     has-drift? :content-drift
                     (= (:event-date site) last-sync) :ok
                     :else :out-of-date)
@@ -992,7 +1056,13 @@
      :service-channel-ids (-> site :ptv :service-channel-ids)
      :service-channel-name (-> (get service-channels service-channel-id)
                                (resolve-service-channel-name))
+     ;; Live status from the cached PTV channel (nil once archived — PTV drops
+     ;; Deleted channels from /list/organization).
      :service-channel-publishing-status (:publishingStatus ptv-channel)
+     ;; LIPAS-persisted status from the last sync/archive. Stays "Deleted" for
+     ;; an archived channel, so the UI can label it instead of showing a bare
+     ;; UUID it can no longer resolve to a name.
+     :publishing-status (-> site :ptv :publishing-status)
 
      :audit-status (determine-audit-status site)}))
 

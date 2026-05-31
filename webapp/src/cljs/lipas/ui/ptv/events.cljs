@@ -47,26 +47,52 @@
                       v)))
             body))))
 
+(defn ptv-duplicate-name
+  "If the PTV sync failed because the service-channel name already exists in
+  the organization, return the offending name (e.g. \"Haapamäen
+  urheilukenttä\"). Otherwise nil.
+
+  PTV returns `:ServiceChannelNames [\"Value 'X' of language code 'fi'
+  already exists within organization. The name must be unique.\"]`."
+  [resp]
+  (let [body (ptv-error-payload resp)]
+    (when (map? body)
+      (some (fn [[k v]]
+              (when (and (= "ServiceChannelNames" (name k))
+                         (sequential? v))
+                (some (fn [msg]
+                        (when (and (string? msg)
+                                   (str/includes? msg "already exists within organization"))
+                          (second (re-find #"'([^']+)'" msg))))
+                      v)))
+            body))))
+
 (def ^:private dialog-body-keys
   {:modified            :ptv/sync-failed-body-ptv-modified
-   :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code})
+   :invalid-postal-code :ptv/sync-failed-body-invalid-postal-code
+   :duplicate-name      :ptv/sync-failed-body-name-conflict})
 
 (def ^:private save-body-keys
   {:modified            :ptv/saved-but-sync-failed-body-ptv-modified
-   :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code})
+   :invalid-postal-code :ptv/saved-but-sync-failed-body-invalid-postal-code
+   :duplicate-name      :ptv/saved-but-sync-failed-body-name-conflict})
 
 (defn- ptv-sync-error-body
   "Localized actionable body text for a PTV sync failure. `body-keys`
   selects the translation family. Returns nil for generic failures with no
   specific detail beyond the title."
   [tr resp body-keys]
-  (let [bad-code (ptv-invalid-postal-code resp)]
+  (let [bad-code (ptv-invalid-postal-code resp)
+        dup-name (ptv-duplicate-name resp)]
     (cond
       (ptv-modified-error? resp)
       (tr (:modified body-keys))
 
       bad-code
       (tr (:invalid-postal-code body-keys) bad-code)
+
+      dup-name
+      (tr (:duplicate-name body-keys) dup-name)
 
       :else
       nil)))
@@ -390,10 +416,49 @@
 
 ;;; Service locations views and manipulation ;;;
 
-(rf/reg-event-db ::toggle-sync-enabled
-  (fn [db [_ {:keys [lipas-id]} v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v))))
+(rf/reg-event-db ::set-sync-enabled
+  (fn [db [_ org-id lipas-id v]]
+    (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :sync-enabled] v)))
+
+(rf/reg-event-fx ::persist-ptv-meta
+  ;; Persist a single site's :ptv meta (sync-enabled, texts, links, ...) via
+  ;; save-ptv-meta without syncing to PTV. Reads the (already-updated) app-db
+  ;; site, so dispatch any flag change before this. save-ptv-meta keys off the
+  ;; top-level :lipas-id and reads the remaining meta from the flattened map.
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [org-id (-get-ptv-org-id db)
+          site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])]
+      {:fx [[:dispatch [::save-ptv-meta [(assoc (:ptv site) :lipas-id lipas-id)]]]]})))
+
+(rf/reg-event-fx ::toggle-sync-enabled
+  ;; Turning sync OFF on a site that is currently published in PTV prompts the
+  ;; user whether to also archive the PTV service-location (Kyllä = archive,
+  ;; Ei = keep it frozen in PTV, Peruuta = leave sync on). Other toggles just
+  ;; flip the flag.
+  ;;
+  ;; With :persist? true (the Liikuntapaikat tab, which has no batch "save all"
+  ;; step) turning sync OFF is written to the backend via save-ptv-meta so the
+  ;; switch sticks across reloads: "Ei" and a non-prompt off persist directly,
+  ;; "Kyllä"/archive persists on its own, and "Peruuta" persists nothing (and
+  ;; doesn't flip the flag). Turning sync ON is NOT persisted here — that's the
+  ;; "Synkronoi nyt" button's job. Callers without :persist? (the wizard, which
+  ;; persists later via its batch export) keep the app-db-only behaviour.
+  (fn [{:keys [db]} [_ {:keys [lipas-id service-channel-publishing-status]} v & {:keys [persist?]}]]
+    (let [org-id (-get-ptv-org-id db)
+          tr (:translator db)
+          published? (= "Published" service-channel-publishing-status)]
+      (if (and (not v) published?)
+        {:fx [[:dispatch [:lipas.ui.events/confirm
+                          (tr :ptv.actions/archive-on-sync-off-confirm)
+                          (fn []
+                            (rf/dispatch [::set-sync-enabled org-id lipas-id false])
+                            (rf/dispatch [::archive-ptv-service-location lipas-id]))
+                          (fn []
+                            (rf/dispatch [::set-sync-enabled org-id lipas-id false])
+                            (when persist? (rf/dispatch [::persist-ptv-meta lipas-id])))]]]}
+        {:fx (cond-> [[:dispatch [::set-sync-enabled org-id lipas-id v]]]
+               ;; Persist OFF only; ON is persisted by an actual sync.
+               (and persist? (not v)) (conj [:dispatch [::persist-ptv-meta lipas-id]]))}))))
 
 (rf/reg-event-fx ::toggle-site-sync-enabled
   ;; Site-tab specific: toggle :ptv :sync-enabled on the site's edit-buffer.
@@ -404,15 +469,39 @@
           latest-id (get-in db [:sports-sites lipas-id :latest])
           latest-site (get-in db [:sports-sites lipas-id :history latest-id])
           user-orgs (get-in db [:user :orgs])
+          tr (:translator db)
           persisted-org-id (get-in (or edit-site latest-site) [:ptv :org-id])
           resolved-org-id (or persisted-org-id
                               (ptv-data/resolve-org-id (or edit-site latest-site)
-                                                       user-orgs))]
-      {:fx (cond-> [[:dispatch [:lipas.ui.sports-sites.events/edit-field
-                                lipas-id [:ptv :sync-enabled] enabled?]]]
-             (and enabled? (not persisted-org-id) resolved-org-id)
-             (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
-                               lipas-id [:ptv :org-id] resolved-org-id]]))})))
+                                                       user-orgs))
+          ;; Published in PTV right now? Archiving only makes sense then.
+          published? (ptv-data/is-sent-to-ptv? (or edit-site latest-site))
+          set-flag (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                       lipas-id [:ptv :sync-enabled] v]])
+          set-archive (fn [v] [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                          lipas-id [:ptv :delete-existing] v]])]
+      (cond
+        ;; Enabling: keep existing behaviour (set flag + maybe org-id invariant).
+        enabled?
+        {:fx (cond-> [(set-flag true)]
+               (and (not persisted-org-id) resolved-org-id)
+               (conj [:dispatch [:lipas.ui.sports-sites.events/edit-field
+                                 lipas-id [:ptv :org-id] resolved-org-id]]))}
+
+        ;; Disabling a published site: ask whether to archive in PTV. The archive
+        ;; itself is deferred to the next sports-site save (via :delete-existing).
+        published?
+        {:fx [[:dispatch [:lipas.ui.events/confirm
+                          (tr :ptv.actions/archive-on-sync-off-confirm)
+                          (fn []
+                            (rf/dispatch (set-flag false))
+                            (rf/dispatch (set-archive true)))
+                          (fn []
+                            (rf/dispatch (set-flag false)))]]]}
+
+        ;; Disabling a not-yet-published site: just turn it off.
+        :else
+        {:fx [(set-flag false)]}))))
 
 (rf/reg-event-db ::select-services
   (fn [db [_ {:keys [lipas-id]} v]]
@@ -421,8 +510,29 @@
 
 (rf/reg-event-db ::select-service-channels
   (fn [db [_ {:keys [lipas-id]} v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))
+    (let [org-id (-get-ptv-org-id db)
+          ;; Clearing the single-select autocomplete fires on-change with [nil];
+          ;; normalize to [] so "no link" is represented consistently — clean
+          ;; sync payload, and link-removed? (drift detection) actually fires.
+          v (vec (remove str/blank? v))
+          new-id (first v)
+          sites (get-in db [:ptv :org org-id :data :sports-sites])
+          ;; Hard-block double-linking: refuse to bind this site to a
+          ;; service-location another loaded site already holds. Clearing the
+          ;; link (empty v) is always allowed — it's the remediation path.
+          conflict (when new-id
+                     (some (fn [[other-lipas-id site]]
+                             (when (and (not= other-lipas-id lipas-id)
+                                        (contains? (set (-> site :ptv :service-channel-ids)) new-id))
+                               {:lipas-id other-lipas-id
+                                :name (:name site)
+                                :service-channel-id new-id}))
+                           sites))]
+      (if conflict
+        (assoc-in db [:ptv :double-link-block lipas-id] conflict)
+        (-> db
+            (update-in [:ptv :double-link-block] dissoc lipas-id)
+            (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))))
 
 (rf/reg-event-db ::select-service-integration
   (fn [db [_ {:keys [lipas-id]} v]]
@@ -1148,31 +1258,36 @@
 
 ;;; Create service locations in PTV ;;;
 
+(defn service-location-payload
+  "Build the exact request body posted to /actions/save-ptv-service-location
+  for `lipas-id`. Shared by the sync event and the client-side schema
+  validation (see ::service-location-schema-errors) so the validation always
+  matches what actually gets sent."
+  [db lipas-id]
+  (let [org-id (-get-ptv-org-id db)
+        ;; Add default org-id for service-ids linking
+        sports-site (-> (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+                        (update :ptv #(merge {:org-id org-id} %)))
+        ;; Always use org languages (site typically doesn't store this)
+        org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
+        ptv (merge (select-keys (:default-settings (:ptv db))
+                                [:sync-enabled])
+                   {:service-channel-ids []}
+                   (select-keys (:ptv sports-site)
+                                [:org-id
+                                 :sync-enabled
+                                 :service-channel-ids
+                                 :service-ids
+                                 :summary
+                                 :description])
+                   {:languages org-languages})]
+    {:lipas-id lipas-id
+     :org-id org-id
+     :ptv ptv}))
+
 (rf/reg-event-fx ::create-ptv-service-location
   (fn [{:keys [db]} [_ lipas-id success-fx failure-fx]]
-    (let [token (-> db :user :login :token)
-          ;; Or per site?
-          org-id (-get-ptv-org-id db)
-
-          sports-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
-
-          ;; Add default org-id for service-ids linking
-          sports-site (update sports-site :ptv #(merge {:org-id org-id} %))
-
-          ;; Add other defaults and merge with summary/description from the UI
-          org-languages (get-in db [:ptv :selected-org :ptv-data :supported-languages] ptv-data/fallback-languages)
-          ptv-data (merge (select-keys (:default-settings (:ptv db))
-                                       [:sync-enabled])
-                          {:service-channel-ids []}
-                          (select-keys (:ptv sports-site)
-                                       [:org-id
-                                        :sync-enabled
-                                        :service-channel-ids
-                                        :service-ids
-                                        :summary
-                                        :description])
-                          ;; Always use org languages (site typically doesn't store this)
-                          {:languages org-languages})]
+    (let [token (-> db :user :login :token)]
       {:db (-> db
                (assoc-in [:ptv :loading-from-lipas :service-locations] true)
                (assoc-in [:ptv :syncing :service-location lipas-id] true))
@@ -1180,9 +1295,7 @@
              {:method :post
               :headers {:Authorization (str "Token " token)}
               :uri (str (:backend-url db) "/actions/save-ptv-service-location")
-              :params {:lipas-id lipas-id
-                       :org-id org-id
-                       :ptv ptv-data}
+              :params (service-location-payload db lipas-id)
               :format (ajax/transit-request-format)
               :response-format (ajax/transit-response-format)
               :on-success [::create-ptv-service-location-success lipas-id success-fx]
@@ -1226,6 +1339,40 @@
                  (assoc-in [:ptv :org org-id :data :service-channels channel-id :publishingStatus] "Modified")))
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification notification]]])})))
+
+;;; Explicit archive (publishingStatus "Deleted") ;;;
+
+(rf/reg-event-fx ::archive-ptv-service-location
+  ;; Explicit, user-requested archive of a previously-published service-location.
+  ;; Posts the same payload as a sync but with :archive? true, so the backend
+  ;; PUTs publishingStatus "Deleted" while preserving the channel link (a later
+  ;; re-activation re-publishes the same channel). Reuses the sync failure
+  ;; handler so PTV errors (incl. name conflicts) surface the same way.
+  (fn [{:keys [db]} [_ lipas-id]]
+    (let [token (-> db :user :login :token)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-locations] true)
+               (assoc-in [:ptv :syncing :service-location lipas-id] true))
+       :fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/save-ptv-service-location")
+              :params (assoc (service-location-payload db lipas-id) :archive? true)
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::archive-ptv-service-location-success lipas-id]
+              :on-failure [::create-ptv-service-location-failure lipas-id []]}]]})))
+
+(rf/reg-event-fx ::archive-ptv-service-location-success
+  (fn [{:keys [db]} [_ lipas-id {:keys [ptv]}]]
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)]
+      {:db (-> db
+               (assoc-in [:ptv :loading-from-lipas :service-locations] false)
+               (update-in [:ptv :syncing :service-location] dissoc lipas-id)
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                        {:message (tr :ptv.actions/archived-in-ptv) :success? true}]]]})))
 
 (rf/reg-event-fx ::create-all-ptv-service-locations*
   (fn [{:keys [db]} [_ org-id ids]]
@@ -1281,17 +1428,10 @@
     ;; This event is used to save :ptv data for sites which have :sync-enabled false
     (when (seq sports-sites)
       (let [token (-> db :user :login :token)
-            ks [:languages
-                :summary
-                :description
-                :last-sync
-                :org-id
-                :sync-enabled
-                :service-integration
-                :descriptions-integration
-                :service-channel-integration
-                :service-ids
-                :service-channel-ids]]
+            ;; Same editable keys the sync path persists (shared source of
+            ;; truth). The backend preserves server-owned lifecycle keys
+            ;; (:source-id, :publishing-status, :previous-type-code) itself.
+            ks ptv-data/persisted-ptv-keys]
         {:db (assoc-in db [:ptv :save-in-progress] true)
          :fx [[:http-xhrio
                {:method :post
@@ -1349,6 +1489,33 @@
   (fn [{:keys [db]} [_ lipas-id org-id resp]]
     {:db (-> db)}))
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+
+;;; Double-link detection (single-site PTV tab) ;;;
+
+(rf/reg-event-fx ::check-double-link
+  ;; Ask the backend whether another sports-site is linked to the same PTV
+  ;; service-location. The single-site view can't detect this locally (it loads
+  ;; neither the org's channels nor its sibling sites).
+  (fn [{:keys [db]} [_ lipas-id service-channel-id]]
+    (let [token (-> db :user :login :token)]
+      {:fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/check-ptv-service-channel-link")
+              :params {:lipas-id lipas-id
+                       :service-channel-id service-channel-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::check-double-link-success lipas-id]
+              :on-failure [::check-double-link-failure lipas-id]}]]})))
+
+(rf/reg-event-db ::check-double-link-success
+  (fn [db [_ lipas-id resp]]
+    (assoc-in db [:ptv :double-link-check lipas-id] (:other-sites resp))))
+
+(rf/reg-event-db ::check-double-link-failure
+  (fn [db [_ lipas-id _resp]]
+    (update-in db [:ptv :double-link-check] dissoc lipas-id)))
 
 (rf/reg-event-fx ::set-manual-services
   (fn [{:keys [db]} [_ org-id source-ids subcategories]]

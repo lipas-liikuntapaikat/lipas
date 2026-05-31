@@ -58,6 +58,7 @@
    :ptv.actions
    :ptv.audit
    :ptv.audit.status
+   :ptv.double-link
    :ptv.drift
    :ptv.name-conflict
    :ptv.service

@@ -11,6 +11,7 @@
  :attach-existing-service-channel "Koppla till befintlig servicepunkt...",
  :new-service-channel-will-be-created "En ny servicepunkt skapas i PTV vid export.",
  :change-service-channel "Ändra servicepunkt",
+ :service-channel-archived "Servicestället arkiverat i PTV",
  :select-service-channel "Välj servicepunkt",
  :sync-now "Synkronisera nu",
  :load-texts-from-ptv "Hämta texter från PTV",
@@ -18,4 +19,8 @@
  "Ersätt sammanfattningen och beskrivningen med texterna som för närvarande finns i PTV. Osparade ändringar går förlorade.",
  :refresh-data "Hämta all data på nytt från PTV",
  :archive-in-ptv "Arkivera platsen i PTV",
+ :archive "Arkivera",
+ :archive-confirm "Vill du arkivera idrottsanläggningen i PTV? Du kan återställa den senare genom att aktivera synkroniseringen på nytt.",
+ :archived-in-ptv "Idrottsanläggningen arkiverad i PTV",
+ :archive-on-sync-off-confirm "Synkroniseringen stängs av. Vill du arkivera servicestället i PTV? Du kan återställa det senare genom att aktivera synkroniseringen på nytt.",
  :integration-enabled "PTV-integrationen aktiv"}
