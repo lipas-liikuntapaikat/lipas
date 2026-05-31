@@ -144,7 +144,8 @@
                                                    :value (:org-id ptv-data)}))))
                                     [orgs])
         single-org? (= 1 (count org-options))
-        service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))]
+        service-channel-modified? (= "Modified" (-> site :ptv :service-channel-publishing-status))
+        double-link-others @(rf/subscribe [::subs/double-link-others lipas-id])]
 
     ;; Load user orgs on mount if not already loaded
     ;; Note: orgs is nil when not loaded, empty vector [] when loaded but user has no orgs
@@ -181,6 +182,15 @@
                           (rf/dispatch [:lipas.ui.sports-sites.events/edit-field
                                         lipas-id [:ptv :service-ids] [matching-service-id]])))
                       [editing? sync-enabled candidate-now? matching-service-id])
+
+    ;; Detect a pre-existing double-link: another sports-site bound to the same
+    ;; PTV service-location. This view loads neither the org's channels nor its
+    ;; sibling sites, so the backend resolves it whenever the linked channel
+    ;; changes.
+    (hooks/use-effect (fn []
+                        (when-let [channel-id (first (:service-channel-ids (:ptv site)))]
+                          (rf/dispatch [::events/check-double-link lipas-id channel-id])))
+                      [lipas-id (first (:service-channel-ids (:ptv site)))])
 
     [:> Stack
      {:direction "column"
@@ -364,6 +374,20 @@
                  :sx #js {:textTransform "none" :alignSelf "flex-start"}
                  :on-click #(set-creating-service? true)}
                 (tr :ptv.service/create-new)]]))]))
+
+     ;; Double-link warning: another sports-site is bound to the same PTV
+     ;; service-location. Always shown (independent of sync state) since it's a
+     ;; data-integrity problem. Remediation is the unlink → sync flow.
+     (when (seq double-link-others)
+       [:> Alert {:severity "warning" :variant "outlined"}
+        [:> AlertTitle (tr :ptv.double-link/warning-title)]
+        [:> Typography {:variant "body2"}
+         (tr :ptv.double-link/linked-also-to
+             (str/join ", " (map :name double-link-others)))]
+        [:> Typography {:variant "body2" :sx #js {:mt 1}}
+         (tr :ptv.double-link/explanation)]
+        [:> Typography {:variant "body2" :sx #js {:mt 1}}
+         (tr :ptv.double-link/remediation)]])
 
      ;; 5. Descriptions and everything below — gated on sync-enabled + org-id.
      (when (and sync-enabled org-id)

@@ -1,0 +1,8 @@
+{:warning-title "Palvelupaikka on jaettu usean liikuntapaikan kesken",
+ :linked-also-to "Tämä PTV-palvelupaikka on liitetty myös: {1}.",
+ :explanation
+ "Yksi palvelupaikka voi kuulua vain yhdelle liikuntapaikalle. Kahden liikuntapaikan liittäminen samaan palvelupaikkaan aiheuttaa ristiriitoja: synkronoinnit ylikirjoittavat toistensa tiedot ja arkistointi koskee yhteistä palvelupaikkaa.",
+ :remediation
+ "Poista liitos ja synkronoi, jolloin PTV:hen luodaan tälle kohteelle oma palvelupaikka.",
+ :blocked
+ "Palvelupaikka on jo liitetty kohteeseen {1}, joten sitä ei voi liittää tähän liikuntapaikkaan."}

@@ -444,6 +444,36 @@
 
     [ptv-resp new-ptv-data]))
 
+(defn assert-no-double-link!
+  "Guards the PTV invariant of one service-location per sports-site: throws an
+  ex-info {:type :double-link ...} when `service-channel-id` is already bound to
+  a sports-site other than `lipas-id`. Two LIPAS sites sharing one PTV
+  service-location corrupt each other — their one-way syncs overwrite the
+  channel and archiving one archives the shared channel. A blank/nil channel-id
+  (a fresh create or a deliberate unlink) is always allowed. Re-syncing a site's
+  own channel is allowed because the current `lipas-id` is excluded."
+  [db lipas-id service-channel-id]
+  (when-not (str/blank? service-channel-id)
+    (let [others (->> (db/get-sports-sites-by-ptv-service-channel-id db service-channel-id)
+                      (remove #(= lipas-id (:lipas-id %))))]
+      (when (seq others)
+        (throw (ex-info "PTV service-location already linked to another sports-site"
+                        {:type :double-link
+                         :service-channel-id service-channel-id
+                         :lipas-id lipas-id
+                         :other-sites (vec others)}))))))
+
+(defn check-service-channel-link
+  "Returns the OTHER sports-sites currently linked to `service-channel-id`,
+  excluding `lipas-id`. The single-site PTV view uses this to warn about a
+  pre-existing double-link, which it can't detect locally (it loads neither the
+  org's channels nor its sibling sites)."
+  [db {:keys [lipas-id service-channel-id]}]
+  {:service-channel-id service-channel-id
+   :other-sites (->> (db/get-sports-sites-by-ptv-service-channel-id db service-channel-id)
+                     (remove #(= lipas-id (:lipas-id %)))
+                     vec)})
+
 (defn upsert-ptv-service-location!
   [db ptv-component search user {:keys [lipas-id org-id ptv archive?]}]
   ;; FIXME: This is called from inside tx in save-sports-site! is that a problem?
@@ -452,6 +482,9 @@
   (jdbc/with-db-transaction [tx db]
     (let [site (db/get-sports-site db lipas-id)
           _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
+          ;; Reject linking to a service-location another site already owns
+          ;; before we touch PTV (a fresh create / unlink has no id and passes).
+          _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
 
           [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                  {:org-id org-id
@@ -601,6 +634,9 @@
   [db search user lipas-id->ptv-meta]
   (jdbc/with-db-transaction [tx db]
     (doseq [[lipas-id ptv] lipas-id->ptv-meta]
+      ;; Meta-save can persist :service-channel-ids without a sync, so guard the
+      ;; one-service-location-per-site invariant here too.
+      (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
       ;; TODO take when-let -> let and add assert
       (when-let [site (-> (core/get-sports-site tx lipas-id)
                           (assoc :event-date (utils/timestamp))

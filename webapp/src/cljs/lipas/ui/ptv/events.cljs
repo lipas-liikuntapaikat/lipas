@@ -489,8 +489,25 @@
 
 (rf/reg-event-db ::select-service-channels
   (fn [db [_ {:keys [lipas-id]} v]]
-    (let [org-id (-get-ptv-org-id db)]
-      (assoc-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))
+    (let [org-id (-get-ptv-org-id db)
+          new-id (first v)
+          sites (get-in db [:ptv :org org-id :data :sports-sites])
+          ;; Hard-block double-linking: refuse to bind this site to a
+          ;; service-location another loaded site already holds. Clearing the
+          ;; link (empty v) is always allowed — it's the remediation path.
+          conflict (when new-id
+                     (some (fn [[other-lipas-id site]]
+                             (when (and (not= other-lipas-id lipas-id)
+                                        (contains? (set (-> site :ptv :service-channel-ids)) new-id))
+                               {:lipas-id other-lipas-id
+                                :name (:name site)
+                                :service-channel-id new-id}))
+                           sites))]
+      (if conflict
+        (assoc-in db [:ptv :double-link-block lipas-id] conflict)
+        (-> db
+            (update-in [:ptv :double-link-block] dissoc lipas-id)
+            (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :service-channel-ids] v))))))
 
 (rf/reg-event-db ::select-service-integration
   (fn [db [_ {:keys [lipas-id]} v]]
@@ -1454,6 +1471,33 @@
   (fn [{:keys [db]} [_ lipas-id org-id resp]]
     {:db (-> db)}))
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
+
+;;; Double-link detection (single-site PTV tab) ;;;
+
+(rf/reg-event-fx ::check-double-link
+  ;; Ask the backend whether another sports-site is linked to the same PTV
+  ;; service-location. The single-site view can't detect this locally (it loads
+  ;; neither the org's channels nor its sibling sites).
+  (fn [{:keys [db]} [_ lipas-id service-channel-id]]
+    (let [token (-> db :user :login :token)]
+      {:fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/check-ptv-service-channel-link")
+              :params {:lipas-id lipas-id
+                       :service-channel-id service-channel-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::check-double-link-success lipas-id]
+              :on-failure [::check-double-link-failure lipas-id]}]]})))
+
+(rf/reg-event-db ::check-double-link-success
+  (fn [db [_ lipas-id resp]]
+    (assoc-in db [:ptv :double-link-check lipas-id] (:other-sites resp))))
+
+(rf/reg-event-db ::check-double-link-failure
+  (fn [db [_ lipas-id _resp]]
+    (update-in db [:ptv :double-link-check] dissoc lipas-id)))
 
 (rf/reg-event-fx ::set-manual-services
   (fn [{:keys [db]} [_ org-id source-ids subcategories]]

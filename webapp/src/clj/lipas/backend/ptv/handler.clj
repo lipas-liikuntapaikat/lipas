@@ -203,6 +203,19 @@
                                                    (-> req :parameters :body :org-id)
                                                    (-> req :parameters :body :service-channel-id))})}}]
 
+   ["/actions/check-ptv-service-channel-link"
+    {:post
+     {:require-privilege ptv-read-access?
+      :parameters {:body [:map
+                          [:lipas-id #'sports-sites-schema/lipas-id]
+                          [:service-channel-id :string]]}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/check-service-channel-link
+                db
+                (select-keys (-> req :parameters :body) [:lipas-id :service-channel-id]))})}}]
+
    ["/actions/save-ptv-service-location"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
@@ -213,14 +226,26 @@
           {:status 200
            :body (ptv-core/upsert-ptv-service-location! db ptv search (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
-            (if-let [ptv-err (ptv-core/parse-ptv-error e)]
+            (cond
+              ;; A different sports-site already owns this service-location.
+              (= :double-link (:type (ex-data e)))
               (do
+                (log/warnf "save-ptv-service-location rejected (double-link, lipas-id: %s): %s"
+                           (-> req :parameters :body :lipas-id)
+                           (pr-str (ex-data e)))
+                {:status 409
+                 :body (ex-data e)})
+
+              (ptv-core/parse-ptv-error e)
+              (let [ptv-err (ptv-core/parse-ptv-error e)]
                 (log/warnf "save-ptv-service-location failed (lipas-id: %s, org: %s): %s"
                            (-> req :parameters :body :lipas-id)
                            (-> req :parameters :body :org-id)
                            (pr-str ptv-err))
                 {:status 409
                  :body ptv-err})
+
+              :else
               (throw e)))))}}]
 
    ["/actions/save-ptv-meta"
@@ -229,8 +254,16 @@
       :parameters {:body [:map-of :int #'ptv-schema/ptv-meta]}
       :handler
       (fn [req]
-        {:status 200
-         :body (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))})}}]
+        (try
+          {:status 200
+           :body (ptv-core/save-ptv-integration-definitions db search (:identity req) (-> req :parameters :body))}
+          (catch clojure.lang.ExceptionInfo e
+            (if (= :double-link (:type (ex-data e)))
+              (do
+                (log/warnf "save-ptv-meta rejected (double-link): %s" (pr-str (ex-data e)))
+                {:status 409
+                 :body (ex-data e)})
+              (throw e)))))}}]
 
    ["/actions/save-ptv-audit"
     {:post

@@ -213,6 +213,7 @@
           channel-id (first (:service-channel-ids site))
           channel-name (:service-channel-name site)
           name-conflict (:name-conflict site)
+          double-link-block (<== [::subs/double-link-block (:lipas-id site)])
           sync-status (:sync-status site)
           needs-sync? (contains? #{:out-of-date :content-drift} sync-status)]
       [:> Stack {:spacing 2}
@@ -311,6 +312,16 @@
                              {:lipas-id (:lipas-id site)}
                              [(:service-channel-id name-conflict)]])}
            (tr :ptv.wizard/attach-to-conflicting-service-channel)]])
+
+       ;; Double-link block: the user tried to attach a service-location that
+       ;; another site already owns. The link was refused (not set); explain why.
+       (when double-link-block
+         [:> Alert {:severity "error" :variant "outlined"}
+          [:> AlertTitle (tr :ptv.double-link/warning-title)]
+          [:> Typography {:variant "body2"}
+           (tr :ptv.double-link/blocked (:name double-link-block))]
+          [:> Typography {:variant "body2" :sx #js {:mt 1}}
+           (tr :ptv.double-link/explanation)]])
 
        ;; AI generate + translate buttons
        (let [from-lang @selected-tab
@@ -595,6 +606,7 @@
           sites (<== [::subs/sports-sites org-id])
           filtered-sites (filter-sites sites @search-text @status-filter)
           sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
+          double-linked-ids (<== [::subs/double-linked-lipas-ids org-id])
 
           ;; Audit status component
           audit-status-cell (fn [site]
@@ -765,7 +777,11 @@
 
                 ;; Name
                   [:> TableCell
-                   (:name site)]
+                   [:> Stack {:direction "row" :spacing 0.5 :align-items "center"}
+                    (when (contains? double-linked-ids (:lipas-id site))
+                      [:> Tooltip {:title (tr :ptv.double-link/warning-title)}
+                       [:> WarningIcon {:color "warning" :sx #js {:fontSize "1rem"}}]])
+                    [:span (:name site)]]]
 
                 ;; Type
                   [:> TableCell

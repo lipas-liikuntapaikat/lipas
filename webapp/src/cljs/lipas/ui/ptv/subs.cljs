@@ -390,6 +390,40 @@
       {:service-channel-id (:id m)
        :name (ptv-data/resolve-service-channel-name m)})))
 
+(rf/reg-sub ::double-link-others
+  ;; Other sports-sites linked to this site's PTV service-location, as resolved
+  ;; by the backend check (see ::events/check-double-link). Empty/nil = no
+  ;; double-link.
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:double-link-check lipas-id])))
+
+(rf/reg-sub ::double-link-block
+  ;; A blocked attempt to link this site to a service-location another site
+  ;; already owns (see ::events/select-service-channels). nil = no block.
+  :<- [::ptv]
+  (fn [ptv [_ lipas-id]]
+    (get-in ptv [:double-link-block lipas-id])))
+
+(rf/reg-sub ::channel-id->lipas-ids
+  ;; {service-channel-id #{lipas-id ...}} across the org's loaded sites.
+  :<- [::ptv]
+  (fn [ptv [_ org-id]]
+    (let [sites (get-in ptv [:org org-id :data :sports-sites])]
+      (reduce (fn [m [lipas-id site]]
+                (reduce (fn [m cid] (update m cid (fnil conj #{}) lipas-id))
+                        m
+                        (-> site :ptv :service-channel-ids)))
+              {}
+              sites))))
+
+(rf/reg-sub ::double-linked-lipas-ids
+  ;; Set of lipas-ids that share a PTV service-location with at least one other
+  ;; loaded site — used to flag double-linked rows in the table.
+  (fn [[_ org-id]] (rf/subscribe [::channel-id->lipas-ids org-id]))
+  (fn [idx _]
+    (->> idx vals (filter #(> (count %) 1)) (apply concat) set)))
+
 (rf/reg-sub ::sports-sites
   (fn [[_ org-id]]
     [(rf/subscribe [::ptv])

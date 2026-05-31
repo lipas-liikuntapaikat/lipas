@@ -149,6 +149,16 @@
          (sports-site/get-latest-by-city-code db-spec)
          (map sports-site/unmarshall))))
 
+(defn get-sports-sites-by-ptv-service-channel-id
+  "Returns [{:lipas-id _ :name _} ...] for current sports-site revisions whose
+  PTV :service-channel-ids contain `service-channel-id`. Used to detect
+  double-linking (more than one site bound to the same PTV service-location)."
+  [db-spec service-channel-id]
+  (->> (sports-site/get-lipas-ids-by-ptv-service-channel-id
+        db-spec {:service_channel_id service-channel-id})
+       (map (fn [{:keys [lipas_id name]}]
+              {:lipas-id lipas_id :name name}))))
+
 (defn get-users-drafts [db user]
   (let [params {:author-id (:id user) :status "draft"}]
     (->> params
