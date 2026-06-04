@@ -18,6 +18,7 @@
             [lipas.backend.gis :as gis]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.newsletter :as newsletter]
+            [lipas.backend.org :as org]
             [lipas.backend.s3 :as s3]
             [lipas.backend.search :as search]
             [lipas.data-model-export :as data-model-export]
@@ -313,6 +314,28 @@
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
+(def org-type->owner
+  "Maps an org's :type to the site :owner enum it implies. When a site is
+  org-owned its :owner is locked to this value (org-management §4.6 / OQ2)."
+  {"city"                  "city"
+   "municipal-consortium"  "municipal-consortium"
+   "state"                 "state"
+   "private"               "company-ltd"
+   "sports-federation"     "registered-association"})
+
+(defn check-owner-lock!
+  "When a site is org-owned, its :owner enum is locked to the value implied by
+  the owning org's :type. Throws :owner-locked if the site's :owner diverges.
+  No-op for non-org-owned (legacy) sites — zero cost on the common path."
+  [db {:keys [owner owner-org-id] :as _sports-site}]
+  (when owner-org-id
+    (when-let [expected (some-> (org/get-org db owner-org-id) :type org-type->owner)]
+      (when (and owner (not= owner expected))
+        (throw (ex-info (str "Site :owner is locked to '" expected
+                             "' because the site is owned by an organization of type")
+                        {:type :owner-locked :expected expected :got owner
+                         :owner-org-id (str owner-org-id)}))))))
+
 (defn- check-sports-site-exists! [db lipas-id]
   (when (empty? (db/get-sports-site db lipas-id))
     (throw (ex-info "Sports site not found"
@@ -350,12 +373,64 @@
    (upsert-sports-site! db user sports-site false))
   ([db user sports-site draft?]
    (check-permissions! user sports-site draft?)
+   (check-owner-lock! db sports-site)
    (when-let [lipas-id (:lipas-id sports-site)]
      (check-sports-site-exists! db lipas-id))
    (let [resp (upsert-sports-site!* db user sports-site draft?)]
      (when (new? sports-site)
        (ensure-permission! db user resp))
      resp)))
+
+(declare index!)
+
+(defn- set-site-edit-grants!
+  "Append a site revision setting :edit-grants to `grants`, acting on behalf of
+  `acting-org-id`, and reindex. Trusted path — the caller authorizes (owner-org
+  admin only)."
+  [db search user lipas-id grants acting-org-id]
+  (let [site    (get-sports-site db lipas-id)
+        updated (assoc site
+                       :edit-grants (vec (distinct (map str grants)))
+                       :acting-org-id (some-> acting-org-id str))
+        resp    (upsert-sports-site!* db user updated)]
+    (index! search resp)
+    resp))
+
+(defn grant-site-edit!
+  "Grant another org edit access to a site (cross-org collaboration)."
+  [db search user lipas-id grantee-org-id acting-org-id]
+  (let [site   (get-sports-site db lipas-id)
+        grants (conj (set (map str (:edit-grants site))) (str grantee-org-id))]
+    (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
+
+(defn revoke-site-edit!
+  "Revoke an org's edit access to a site."
+  [db search user lipas-id grantee-org-id acting-org-id]
+  (let [site   (get-sports-site db lipas-id)
+        grants (disj (set (map str (:edit-grants site))) (str grantee-org-id))]
+    (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
+
+(defn invite-org-member!
+  "Org-admin invite (separate from the lipas-admin user-management plane). The
+  assignment is hard-validated against the org's catalog BEFORE any side effect.
+  If the email has no account, one is created (active, random password) and the
+  invitee is emailed a magic login link. The member is added to the org document
+  with the (catalog-bounded) assignment. Never touches account.permissions.roles.
+  Returns {:user-id .. :new-account? bool}."
+  [db emailer org-id {:keys [email] :as assignment} author-id login-url]
+  ;; Ceiling check first — reject out-of-catalog assignments before creating
+  ;; anything (the structural guarantee is in derive-org-roles; this is early UX).
+  (org/validate-assignment! db org-id assignment)
+  (let [existing (db/get-user-by-email db {:email email})
+        new?     (nil? existing)
+        _        (when new? (add-user! db {:email email :username email}))
+        user     (or existing (db/get-user-by-email db {:email email}))]
+    (org/add-member! db org-id (:id user) assignment author-id)
+    (when new?
+      (let [magic (create-magic-link login-url user)]
+        (email/send-org-invitation-email!
+          emailer email (assoc magic :org-name (:name (org/get-org db org-id))))))
+    {:user-id (str (:id user)) :new-account? new?}))
 
 (defn get-sports-sites-by-type-code
   ([db type-code]
@@ -476,9 +551,20 @@
                         compute-renovations
                         compute-renovation-years)
 
+        ;; org-management: a site's editor orgs = owner org + any orgs granted
+        ;; edit. Indexed for the reverse/bulk direction (Q1 "facilities owned by
+        ;; org X" and the :org-editor ES filter in wrap-es-query).
+        owner-org-id (some-> sports-site :owner-org-id str)
+        editor-org-ids (some-> (concat (some-> sports-site :owner-org-id vector)
+                                       (:edit-grants sports-site))
+                               (->> (map str))
+                               distinct vec not-empty)
+
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
                      :owner {:name (-> sports-site :owner owners)}
+                     :owner-org-id owner-org-id
+                     :editor-org-ids editor-org-ids
                      :audits {:latest-audit-date latest-audit}
                      :location
                      {:wgs84-point start-coords

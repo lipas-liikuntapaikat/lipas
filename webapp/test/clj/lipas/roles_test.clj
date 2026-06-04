@@ -6,7 +6,8 @@
   (is (= {:lipas-id 1
           :type-code 101
           :city-code 837
-          :activity nil}
+          :activity nil
+          :org-id nil}
          (sut/site-roles-context {:lipas-id 1
                                   :type {:type-code 101}
                                   :location {:city {:city-code 837}}
@@ -15,11 +16,25 @@
   (is (= {:lipas-id 1
           :type-code 101
           :city-code 837
-          :activity #{"fishing"}}
+          :activity #{"fishing"}
+          :org-id nil}
          (sut/site-roles-context {:lipas-id 1
                                   :type {:type-code 101}
                                   :location {:city {:city-code 837}}
-                                  :activities {:fishing {:foo "bar"}}}))))
+                                  :activities {:fishing {:foo "bar"}}})))
+
+  (testing ":org-id is the set of a site's editor orgs (owner + grants), as strings"
+    (is (= #{"11111111-1111-1111-1111-111111111111"}
+           (:org-id (sut/site-roles-context
+                      {:lipas-id 1 :owner-org-id "11111111-1111-1111-1111-111111111111"}))))
+    (is (= #{"11111111-1111-1111-1111-111111111111"
+             "22222222-2222-2222-2222-222222222222"}
+           (:org-id (sut/site-roles-context
+                      {:lipas-id 1
+                       :owner-org-id "11111111-1111-1111-1111-111111111111"
+                       :edit-grants ["22222222-2222-2222-2222-222222222222"]}))))
+    ;; no owner, no grants -> nil (legacy sites carry no org context)
+    (is (nil? (:org-id (sut/site-roles-context {:lipas-id 1}))))))
 
 (deftest check-privilege-test
   ;; site-roles-context includes all the context keys always, so most test
@@ -199,4 +214,14 @@
                                    :city-code #{91 92 49}}
                                   {:role :site-manager
                                    :lipas-id #{1}}]}}
-           :site/create-edit))))
+           :site/create-edit)))
+
+  (testing ":org-editor compiles to an editor-org-ids terms filter"
+    (is (= {:bool {:must [{:a 1}
+                          {:bool {:should [{:terms {:search-meta.editor-org-ids
+                                                    #{"11111111-1111-1111-1111-111111111111"}}}]}}]}}
+           (sut/wrap-es-query-site-has-privilege
+             {:a 1}
+             {:permissions {:roles [{:role :org-editor
+                                     :org-id #{"11111111-1111-1111-1111-111111111111"}}]}}
+             :site/create-edit)))))

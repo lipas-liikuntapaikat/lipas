@@ -1,6 +1,7 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [lipas.backend.analysis.heatmap :as heatmap]
+            [lipas.backend.auth :as auth]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
@@ -9,6 +10,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
+            [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
             [lipas.jobs.handler :as jobs-handler]
@@ -332,7 +334,7 @@
                              [:org-id org-schema/org-id]]}}
         [""
          {;; Only org-admins can update org details
-          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
           :put
           {:parameters {:body org-schema/org}
            :handler (fn [req]
@@ -349,14 +351,14 @@
                                   ;; Allow if user is admin OR has org/member privilege
                                   (or (roles/check-role user :admin)
                                       (roles/check-privilege user
-                                                             {:org-id (str (-> req :parameters :path :org-id))}
+                                                             {:org-id #{(str (-> req :parameters :path :org-id))}}
                                                              :org/member))))
            :handler (fn [req]
                       {:status 200
                        :body (org/get-org-users db (-> req :parameters :path :org-id))})}
           :post
           {;; Only org-admins can modify users
-           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+           :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
            :parameters {:body org-schema/user-updates}
            :handler (fn [req]
                       (org/update-org-users! db
@@ -366,7 +368,7 @@
                        :body {}})}}]
         ["/add-user-by-email"
          {;; Only org-admins can add users
-          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
+          :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
           :post
           {:parameters {:body [:map
                                [:email :string]
@@ -388,7 +390,138 @@
                             ptv-config (-> req :parameters :body)]
                         (org/update-org-ptv-config! db org-id ptv-config)
                         {:status 200
-                         :body {:message "PTV configuration updated successfully"}}))}}]]]
+                         :body {:message "PTV configuration updated successfully"}}))}}]
+
+        ;; --- Role-template catalog (the ceiling): lipas-admin only ---
+        ["/role-templates"
+         {:require-privilege :users/manage
+          :put
+          {:parameters {:body [:map [:role-templates [:map-of :keyword :any]]]}
+           :handler (fn [req]
+                      (org/update-catalog! db
+                                           (-> req :parameters :path :org-id)
+                                           (-> req :parameters :body :role-templates)
+                                           (-> req :identity :id))
+                      {:status 200 :body {}})}}]
+
+        ;; --- Org-admin self-service: invite a member by email (separate from the
+        ;; lipas-admin user-management plane). Catalog-validated; creates an
+        ;; account + sends the custom invitation email for unknown emails. ---
+        ["/invite"
+         {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+          :post
+          {:parameters {:body [:map
+                               [:email :string]
+                               [:org-role {:optional true} [:enum "admin" "member"]]
+                               [:templates {:optional true} [:vector :string]]
+                               [:login-url handler-schema/magic-link-login-url]]}
+           :handler (fn [req]
+                      (let [{:keys [login-url] :as body} (-> req :parameters :body)
+                            result (core/invite-org-member!
+                                    db emailer
+                                    (-> req :parameters :path :org-id)
+                                    (select-keys body [:email :org-role :templates])
+                                    (-> req :identity :id)
+                                    login-url)]
+                        {:status 200 :body result}))}}]
+
+        ;; --- Member management (org-admin, own org) ---
+        ["/members/:user-id"
+         {:parameters {:path [:map [:user-id :uuid]]}}
+         [""
+          {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+           :delete
+           {:handler (fn [req]
+                       (org/remove-member! db
+                                           (-> req :parameters :path :org-id)
+                                           (-> req :parameters :path :user-id)
+                                           (-> req :identity :id))
+                       {:status 200 :body {}})}}]
+         ["/role"
+          {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+           :put
+           {:parameters {:body [:map [:org-role [:enum "admin" "member"]]]}
+            :handler (fn [req]
+                       (org/set-member-org-role! db
+                                                 (-> req :parameters :path :org-id)
+                                                 (-> req :parameters :path :user-id)
+                                                 (-> req :parameters :body :org-role)
+                                                 (-> req :identity :id))
+                       {:status 200 :body {}})}}]
+         ["/templates"
+          {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+           :put
+           {:parameters {:body [:map [:templates [:vector :string]]]}
+            :handler (fn [req]
+                       (org/set-member-templates! db
+                                                  (-> req :parameters :path :org-id)
+                                                  (-> req :parameters :path :user-id)
+                                                  (-> req :parameters :body :templates)
+                                                  (-> req :identity :id))
+                       {:status 200 :body {}})}}]]
+
+        ;; --- Cross-org edit grants on owned sites (org-admin of the owner org) ---
+        ["/site-edit-grants"
+         {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+          :post
+          {:parameters {:body [:map [:lipas-id :int] [:grantee-org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            {:keys [lipas-id grantee-org-id]} (-> req :parameters :body)]
+                        ;; only the owning org may grant edit on its site
+                        (when-not (= (str org-id)
+                                     (str (:owner-org-id (core/get-sports-site db lipas-id))))
+                          (throw (ex-info "Site is not owned by this organization"
+                                          {:type :not-site-owner})))
+                        (core/grant-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
+                        {:status 200 :body {}}))}
+          :delete
+          {:parameters {:body [:map [:lipas-id :int] [:grantee-org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      (let [org-id (-> req :parameters :path :org-id)
+                            {:keys [lipas-id grantee-org-id]} (-> req :parameters :body)]
+                        (core/revoke-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
+                        {:status 200 :body {}}))}}]
+
+        ;; --- Take-over: an org requests to claim the sites matching its rule ---
+        ["/takeover-request"
+         {:require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
+          :post
+          {:handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/create-request! db
+                                                           (-> req :parameters :path :org-id)
+                                                           (-> req :identity :id))})}}]]]
+
+      ;; --- Take-over approvals: lipas-admin reviews requested claims ---
+      ["/actions/org-takeover-requests"
+       {:get
+        {:no-doc true
+         :require-privilege :org/admin
+         :handler (fn [req]
+                    {:status 200
+                     :body (org-takeover/list-requests db (-> req :parameters :query :status))})}
+        :parameters {:query [:map [:status {:optional true} [:enum "requested" "approved" "denied"]]]}}]
+      ["/actions/org-takeover-requests/:request-id/approve"
+       {:parameters {:path [:map [:request-id :uuid]]}
+        :post
+        {:no-doc true
+         :require-privilege :org/admin
+         :handler (fn [req]
+                    {:status 200
+                     :body (org-takeover/approve! db search
+                                                  (-> req :parameters :path :request-id)
+                                                  (:identity req))})}}]
+      ["/actions/org-takeover-requests/:request-id/deny"
+       {:parameters {:path [:map [:request-id :uuid]]}
+        :post
+        {:no-doc true
+         :require-privilege :org/admin
+         :handler (fn [req]
+                    {:status 200
+                     :body (org-takeover/deny! db
+                                               (-> req :parameters :path :request-id)
+                                               (:identity req))})}}]
 
       ["/actions/gdpr-remove-user"
        {:post
@@ -489,7 +622,8 @@
          :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
-           (let [user (core/get-user! db (-> identity :id))]
+           (let [user (->> (core/get-user! db (-> identity :id))
+                           (auth/enrich-org-roles db))]
              {:status 200
               :body (merge (dissoc user :password)
                            {:token (jwt/create-token user)})}))}}]
