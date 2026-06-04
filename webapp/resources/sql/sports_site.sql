@@ -15,7 +15,8 @@ INSERT INTO public.sports_site (
   document,
   author_id,
   type_code,
-  city_code
+  city_code,
+  acting_org_id
 )
 VALUES (
   :event_date ::timestamptz,
@@ -24,7 +25,8 @@ VALUES (
   :document,
   :author_id ::uuid,
   :type_code,
-  :city_code
+  :city_code,
+  :acting_org_id ::uuid
 );
 
 -- :name get

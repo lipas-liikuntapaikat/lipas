@@ -2,9 +2,14 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [integrant.core :as ig]
             [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
+            [lipas.backend.org-takeover :as org-takeover]
             [lipas.test-utils :as test-utils]
+            [lipas.utils :as utils]
+            [next.jdbc :as jdbc]
+            [next.jdbc.result-set :as rs]
             [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
@@ -20,6 +25,7 @@
 ;;; Helper Functions ;;;
 
 (defn test-db [] (:lipas/db @test-system))
+(defn test-search [] (:lipas/search @test-system))
 (defn test-app [req] ((:lipas/app @test-system) req))
 
 (defn- create-test-orgs
@@ -177,15 +183,13 @@
       (is (= 200 (:status resp)))
       (is (coll? body))
 
-      ;; Verify we get back users who belong to this org
+      ;; Membership now lives in the org document: get-org-users returns member
+      ;; accounts augmented with their :org-role / :templates (not account roles).
       (is (some (fn [user]
-                  (some (fn [role]
-                          (and (= "org-user" (:role role))
-                               (when (:org-id role)
-                                 (.contains (:org-id role) (str org-id)))))
-                        (get-in user [:permissions :roles])))
+                  (and (= (str (:id target-user)) (str (:id user)))
+                       (= "member" (:org-role user))))
                 body)
-          "At least one user should have org-user role for this specific organization"))))
+          "The added user should be returned as a 'member' of this organization"))))
 
 (deftest remove-user-from-org-test
   (testing "update-org-users! 'remove' actually drops the matching role entry"
@@ -495,6 +499,155 @@
       (is (= 200 (:status resp)))
       (is (coll? body))
       (is (empty? body) "Regular user with no org memberships should see empty list"))))
+
+;;; Org-admin invite: permission-bound safety tests (org-management §3.5/§10) ;;;
+;;; These guarantee an org-admin can only ever hand out authority the
+;;; lipas-admin defined in the catalog, scoped to their own org.
+
+(defn- catalog-org!
+  "Create an org with a role-template catalog and return its id."
+  [catalog]
+  (let [org (first (create-test-orgs))]
+    (backend-org/update-catalog! (test-db) (:id org) catalog nil)
+    (:id org)))
+
+(def ^:private editor+ptv-catalog
+  {:editor {:label "Muokkaaja" :roles [{:role "org-editor"}]}
+   :ptv    {:label "PTV"       :roles [{:role "ptv-manager" :city-code [91]}]}})
+
+(deftest org-admin-invite-catalog-bound-test
+  (testing "An assignment within the catalog is accepted"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          user   (test-utils/gen-regular-user :db-component (test-db))
+          _      (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                          {:email (:email user) :org-role "member" :templates ["editor"]}
+                                          nil "http://login")
+          member (->> (backend-org/get-org-users (test-db) org-id)
+                      (filter #(= (str (:id user)) (str (:id %)))) first)]
+      (is (= "member" (:org-role member)))
+      (is (= ["editor"] (:templates member)))))
+
+  (testing "An out-of-catalog template is rejected"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          user   (test-utils/gen-regular-user :db-component (test-db))
+          ex     (try (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                               {:email (:email user) :templates ["editor" "not-in-catalog"]}
+                                               nil "http://login")
+                      :no-throw
+                      (catch Exception e (:type (ex-data e))))]
+      (is (= :templates-outside-catalog ex))
+      (is (empty? (backend-org/get-org-users (test-db) org-id))
+          "No member should have been added when the assignment is rejected")))
+
+  (testing "Even a forged out-of-catalog assignment yields no derived role (structural ceiling)"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          ;; Project an assignment that names a template NOT in the catalog.
+          roles  (backend-org/derive-org-roles
+                  "u1"
+                  [{:id org-id
+                    :role-templates editor+ptv-catalog
+                    :members [{:user-id "u1" :org-role "member" :templates ["forged" "editor"]}]}])
+          role-ks (set (map :role roles))]
+      ;; "editor" expands; "forged" vanishes. No :users/manage or other escalation.
+      (is (contains? role-ks "org-editor"))
+      (is (contains? role-ks "org-user"))
+      (is (not-any? #{"admin" "users-manage" "forged"} role-ks)))))
+
+(deftest org-admin-cannot-invite-into-other-org-test
+  (testing "An org-admin of org A cannot invite into org B (endpoint authz)"
+    (let [org-a   (catalog-org! editor+ptv-catalog)
+          org-b   (catalog-org! editor+ptv-catalog)
+          a-admin (test-utils/gen-org-admin-user org-a :db-component (test-db))
+          token   (jwt/create-token a-admin)
+          invitee (test-utils/gen-regular-user :db-component (test-db))
+          resp    (test-app (-> (mock/request :post (str "/api/orgs/" org-b "/invite"))
+                                (mock/json-body {:email (:email invitee)
+                                                 :org-role "member"
+                                                 :templates ["editor"]
+                                                 :login-url "https://localhost/login"})
+                                (test-utils/token-header token)))]
+      (is (= 403 (:status resp)) "Cross-org invite must be forbidden")
+      (is (empty? (backend-org/get-org-users (test-db) org-b))
+          "No member added to the foreign org"))))
+
+(deftest invited-member-derived-roles-exact-test
+  (testing "A member's derived roles are exactly their catalog templates — no escalation, no foreign org"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          other   (catalog-org! editor+ptv-catalog)
+          user    (test-utils/gen-regular-user :db-component (test-db))
+          _       (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                           {:email (:email user) :org-role "member" :templates ["editor"]}
+                                           nil "http://login")
+          derived (backend-org/derive-user-org-roles (test-db) (:id user))
+          role-ks (set (map :role derived))
+          org-ids (set (mapcat #(map str (:org-id %)) (filter :org-id derived)))]
+      (is (= #{"org-user" "org-editor"} role-ks)
+          "Exactly the membership role + the editor template role")
+      (is (not (contains? role-ks "users-manage")))
+      (is (= #{(str org-id)} org-ids) "All org-scoped roles are scoped to this org only")
+      (is (not (contains? org-ids (str other))) "No roles leak to a foreign org"))))
+
+(deftest org-admin-invite-new-account-test
+  (testing "Inviting an unknown email creates an active account and sends the invitation email"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          emailer (test-utils/create-test-emailer)
+          email   (str "invitee-" (System/currentTimeMillis) "@example.com")
+          result  (core/invite-org-member! (test-db) emailer org-id
+                                           {:email email :org-role "member" :templates ["editor"]}
+                                           nil "http://localhost/login")
+          account (core/get-user (test-db) email)
+          sent    @(:sent-emails emailer)]
+      (is (:new-account? result))
+      (is (some? account) "A new account is created for the invitee")
+      (is (= "active" (:status account)))
+      (is (= 1 (count sent)) "Exactly one invitation email is sent")
+      (is (= email (:to (first sent))))
+      ;; the new account is a member with the assigned template
+      (is (= ["editor"] (->> (backend-org/get-org-users (test-db) org-id)
+                             (filter #(= (str (:id account)) (str (:id %)))) first :templates))))))
+
+(deftest org-takeover-approve-test
+  (testing "Approving a take-over claims the matching sites via append-only revisions"
+    (let [admin   (test-utils/gen-admin-user :db-component (test-db))
+          org     (first (create-test-orgs))
+          org-id  (:id org)
+          ;; org owns city 91, ownertype "city"
+          _       (backend-org/update-org! (test-db) org-id
+                                           (assoc (backend-org/get-org (test-db) org-id)
+                                                  :type "city"
+                                                  :ownership {:city-codes [91] :owners ["city"]})
+                                           nil)
+          ;; a matching site (city 91, owner "city") and a non-matching one (owner "state")
+          match-id    9990001
+          nomatch-id  9990002
+          mk-site (fn [lid owner]
+                    (-> (test-utils/gen-sports-site)
+                        (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid :owner owner)
+                        (assoc-in [:location :city :city-code] 91)))
+          _ (core/upsert-sports-site!* (test-db) admin (mk-site match-id "city"))
+          _ (core/upsert-sports-site!* (test-db) admin (mk-site nomatch-id "state"))
+          ;; request + approve
+          req     (org-takeover/create-request! (test-db) org-id (:id admin))
+          result  (org-takeover/approve! (test-db) (test-search) (:id req) admin)
+          claimed (core/get-sports-site (test-db) match-id)
+          untouched (core/get-sports-site (test-db) nomatch-id)]
+      (is (= "approved" (:status result)))
+      (is (pos? (:sites-claimed result)))
+      (is (= (str org-id) (str (:owner-org-id claimed))) "Matching site is now owned by the org")
+      (is (= "city" (:owner claimed)) "Owner enum locked to the org type's owner")
+      ;; acting_org_id is persisted on the revision (audit), read from the table
+      ;; directly (it is intentionally not surfaced via the current-snapshot view)
+      (is (= (str org-id)
+             (str (:acting-org-id
+                   (jdbc/execute-one! (test-db)
+                                      ["SELECT acting_org_id FROM sports_site
+                                        WHERE lipas_id=? ORDER BY event_date DESC, created_at DESC LIMIT 1"
+                                       match-id]
+                                      {:builder-fn rs/as-unqualified-kebab-maps}))))
+          "Revision records the acting org on behalf of which the edit was made")
+      (is (nil? (:owner-org-id untouched)) "Non-matching site (owner 'state') is untouched")
+      ;; request is marked decided
+      (is (= "approved" (:status (org-takeover/get-request (test-db) (:id req))))))))
 
 (comment
   ;; Cross org tests are currently failing

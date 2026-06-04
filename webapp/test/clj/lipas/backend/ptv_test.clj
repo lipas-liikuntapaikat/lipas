@@ -43,6 +43,10 @@
                                     :permissions {:roles [{:role :ptv-manager
                                                            :city-code [91]
                                                            :org-id [(str org-id)]}]}})
+          ;; PTV managers of an org are its members who hold :ptv/manage;
+          ;; membership now lives in the org document.
+          _ (backend-org/update-org-users! (test-db) org-id
+                                           [{:user-id (:id ptv-manager) :change "add" :role "org-user"}])
           auditor (tu/gen-user {:db? true :admin? true
                                 :db-component (test-db)
                                 :permissions {:roles [{:role :ptv-auditor}]}})

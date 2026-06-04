@@ -39,19 +39,48 @@
 ;; Standalone schema for org name form validation
 (def org-name (m/schema [:string {:min 1 :max 128}]))
 
+(def org-type
+  [:enum "city" "municipal-consortium" "state" "private" "sports-federation" "other"])
+
+(def role-templates
+  "The per-org role-template catalog (the ceiling). Each entry maps a name to a
+  label + a vector of role-specs (the existing role vocabulary)."
+  [:map-of :keyword
+   [:map
+    [:label {:optional true} :string]
+    [:roles [:vector [:map [:role :string]]]]]])
+
+(def ownership
+  [:map {:optional true}
+   [:city-codes {:optional true} [:vector [:int {:min 1 :max 999}]]]
+   [:owners {:optional true} [:vector :string]]])
+
+(def members
+  [:vector
+   [:map
+    [:user-id [:or :uuid :string]]
+    [:org-role [:enum "admin" "member"]]
+    [:templates {:optional true} [:vector :string]]]])
+
 (def org
   (m/schema
     [:map
      [:id org-id]
      [:name [:string {:min 1 :max 128}]]
-     [:data [:map {:optional true}
-             [:primary-contact {:optional true}
-              [:map
-               [:phone {:optional true} [:maybe sites/phone-number]]
-               [:email {:optional true} [:maybe sites/email]]
-               [:website {:optional true} [:maybe sites/www]]
-               [:reservations-link {:optional true} [:maybe sites/reservations-link]]]]]]
-     [:ptv-data ptv-data]]))
+     [:data {:optional true}
+      [:map
+       [:primary-contact {:optional true}
+        [:map
+         [:phone {:optional true} [:maybe sites/phone-number]]
+         [:email {:optional true} [:maybe sites/email]]
+         [:website {:optional true} [:maybe sites/www]]
+         [:reservations-link {:optional true} [:maybe sites/reservations-link]]]]]]
+     [:ptv-data {:optional true} [:maybe ptv-data]]
+     ;; --- org-management (opt-in; absent for legacy orgs) ---
+     [:type {:optional true} org-type]
+     [:role-templates {:optional true} role-templates]
+     [:ownership {:optional true} ownership]
+     [:members {:optional true} members]]))
 
 (def new-org
   (m/schema (mu/dissoc org :id)))
