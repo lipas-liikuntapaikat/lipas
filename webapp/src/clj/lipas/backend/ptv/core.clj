@@ -1,6 +1,8 @@
 (ns lipas.backend.ptv.core
-  (:require [clojure.java.jdbc :as jdbc]
+  (:require [cheshire.core :as json]
+            [clojure.java.jdbc :as jdbc]
             [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
@@ -14,25 +16,60 @@
             [lipas.utils :as utils]
             [taoensso.timbre :as log]))
 
+(defn parse-ptv-error
+  "Extract structured error info from a PTV API ExceptionInfo. Returns nil
+  if `e` doesn't carry a PTV HTTP response in its ex-data."
+  [^Exception e]
+  (let [data (ex-data e)
+        resp-body (get-in data [:resp :body])
+        status (get-in data [:resp :status])]
+    (when (and status resp-body)
+      {:ptv-status status
+       :ptv-error (if (string? resp-body)
+                    (try (json/parse-string resp-body true)
+                         (catch Exception _ {:raw resp-body}))
+                    resp-body)})))
+
 (defn get-ptv-integration-candidates
   [search criteria]
   (ptv/get-eligible-sites search criteria))
 
 (defn generate-ptv-descriptions
   [{:keys [client indices] :as _search}
-   lipas-id]
+   lipas-id & [{:keys [reference]}]]
   (let [idx (get-in indices [:sports-site :search])
         doc (-> (search/fetch-document client idx lipas-id)
                 :body
                 :_source)]
-    (-> (ai/generate-ptv-descriptions doc)
+    (-> (ai/generate-ptv-descriptions doc {:reference reference})
+        :message
+        :content)))
+
+(defn generate-ptv-descriptions-batch
+  "Generate PTV descriptions for multiple same-type sports sites in one Gemini call.
+
+  opts keys:
+    :lipas-ids  — seq of integer lipas ids (same type, ≤10 recommended)
+    :reference  — optional {:summary :description} (Finnish) anchoring style across
+                  partitioned batches
+
+  Returns {:sites [{:lipas-id :summary :description :user-instruction} ...]}"
+  [{:keys [client indices] :as _search}
+   {:keys [lipas-ids reference]}]
+  (let [idx   (get-in indices [:sports-site :search])
+        docs  (mapv (fn [lipas-id]
+                      (-> (search/fetch-document client idx lipas-id)
+                          :body
+                          :_source))
+                    lipas-ids)]
+    (-> (ai/generate-ptv-descriptions-batch docs {:reference reference})
         :message
         :content)))
 
 (defn generate-ptv-descriptions-from-data
-  [doc]
+  [doc & [{:keys [reference]}]]
   (let [doc (core/enrich doc)]
-    (-> (ai/generate-ptv-descriptions doc)
+    (-> (ai/generate-ptv-descriptions doc {:reference reference})
         :message
         :content)))
 
@@ -52,6 +89,28 @@
    :sports-facilities (for [site sites]
                         {:type (-> site :search-meta :type :name :fi)})})
 
+(defn- nil-safe-frequencies
+  "Like frequencies but replaces nil keys with \"unknown\"."
+  [coll]
+  (into {} (map (fn [[k v]] [(if (nil? k) "unknown" k) v]))
+        (frequencies coll)))
+
+(defn make-aggregate-overview
+  [sites {:keys [free-use? surface-materials? lighting?]}]
+  (let [base {:city-name    (->> sites first :search-meta :location :city :name)
+              :service-name (->> sites first :search-meta :type :sub-category :name)
+              :total-count  (count sites)
+              :by-type      (nil-safe-frequencies (map #(-> % :search-meta :type :name :fi) sites))}]
+    (cond-> base
+      free-use?
+      (assoc :free-use (nil-safe-frequencies (map #(get-in % [:properties :free-use?]) sites)))
+
+      surface-materials?
+      (assoc :surface-materials (nil-safe-frequencies (mapcat #(get-in % [:properties :surface-material]) sites)))
+
+      lighting?
+      (assoc :lighting (nil-safe-frequencies (map #(get-in % [:properties :ligthing?]) sites))))))
+
 (defn generate-ptv-service-descriptions
   [search
    {:keys [sub-category-id city-codes overview]}]
@@ -66,20 +125,187 @@
         :message
         :content)))
 
+(defn- ptv-list-has-content?
+  "Check if a PTV-style list of {:type :language :value} maps has any
+   non-placeholder content. Returns false for lists where all values
+   are empty/placeholder."
+  [items]
+  (boolean (some (fn [item]
+                   (let [v (:value item)]
+                     (and (string? v)
+                          (not (str/blank? v))
+                          (not= v "-"))))
+                 items)))
+
+(defn- localized-list?
+  "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
+   PTV for descriptions, names, requirements, etc."
+  [v]
+  (and (sequential? v)
+       (seq v)
+       (every? map? v)
+       (every? #(contains? % :value) v)))
+
+(defn- strip-blank-localized-entries
+  "PTV's PUT endpoint rejects localized list entries with blank :value
+   (400 'The Value field is required.'). The GET response can include
+   such entries — e.g. :requirements with empty per-language slots — so
+   strip them before round-tripping."
+  [m]
+  (reduce-kv (fn [acc k v]
+               (cond-> acc
+                 (localized-list? v)
+                 (assoc k (filterv #(not (str/blank? (:value %))) v))))
+             m
+             m))
+
+(def ^:private get-only-service-fields
+  "Fields present in the GET response but not accepted by the PUT endpoint,
+   either because they're response-only metadata or because the GET shape
+   differs from the PUT shape entirely. :organizations is the worst offender:
+   GET returns `[{:organization {:id ...} :roleType ...}]` but PUT expects
+   `:mainResponsibleOrganization` (UUID string) which LIPAS sets explicitly."
+  #{:id :modified :organizations :serviceChannels})
+
+(defn- drop-nil-vals [m]
+  (into {} (remove (fn [[_ v]] (nil? v))) m))
+
+(defn- normalize-ptv-service-for-update
+  "Convert PTV GET response enriched objects back to the input format
+   expected by the PUT endpoint. The GET returns rich objects (with names,
+   descriptions, parents) plus response-only metadata, but PUT expects
+   simplified input (URIs, codes) and rejects unknown/wrong-shape fields."
+  [service]
+  (-> service
+      ;; ontologyTerms: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :ontologyTerms (fn [terms] (mapv :uri terms)))
+      ;; serviceClasses: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :serviceClasses (fn [classes] (mapv :uri classes)))
+      ;; targetGroups: GET returns [{:uri ... :name [...] ...}], PUT expects just URIs
+      (update :targetGroups (fn [groups] (mapv :uri groups)))
+      ;; areas: GET returns [{:type :municipalities [{:code "425" :name [...]}]}]
+      ;; PUT expects [{:type "Municipality" :areaCodes ["425"]}]
+      (update :areas (fn [areas]
+                       (mapv (fn [area]
+                               {:type (:type area)
+                                :areaCodes (mapv :code (:municipalities area))})
+                             areas)))
+      (as-> $ (apply dissoc $ get-only-service-fields))
+      drop-nil-vals
+      strip-blank-localized-entries))
+
+(defn- merge-ptv-lists
+  "Merge two PTV-style lists keyed by [:type :language]. Existing items
+   are kept; new items from LIPAS are added for missing type+language combos.
+   Items with actual content from LIPAS overwrite existing items."
+  [existing-items lipas-items]
+  (let [existing-by-key (into {} (map (fn [item]
+                                        [((juxt :type :language) item) item])
+                                      existing-items))
+        lipas-by-key (into {} (map (fn [item]
+                                     [((juxt :type :language) item) item])
+                                   lipas-items))]
+    (vals (reduce-kv (fn [acc k lipas-item]
+                       (if (contains? acc k)
+                         ;; Existing item: only overwrite if LIPAS has real content
+                         (let [v (:value lipas-item)]
+                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
+                             (assoc acc k lipas-item)
+                             acc))
+                         ;; Missing language: only add if LIPAS has real content
+                         (let [v (:value lipas-item)]
+                           (if (and (string? v) (not (str/blank? v)) (not= v "-"))
+                             (assoc acc k lipas-item)
+                             acc))))
+                     existing-by-key
+                     lipas-by-key))))
+
+(defn- merge-service-data
+  "Merge LIPAS-generated service data on top of existing PTV service.
+   Only overwrites fields that LIPAS actually provides meaningful content for.
+   This preserves PTV-managed data (ontology, classes, names) for
+   adopted services while allowing LIPAS to update descriptions."
+  [existing lipas-data]
+  (reduce-kv (fn [acc k v]
+               (cond
+                 (nil? v) acc
+                 ;; Empty collections: don't overwrite
+                 (and (coll? v) (empty? v)) acc
+                 ;; PTV-style lists (serviceNames, serviceDescriptions):
+                 ;; merge at item level to preserve existing + add missing languages
+                 (and (sequential? v)
+                      (seq v)
+                      (map? (first v))
+                      (contains? (first v) :value))
+                 (assoc acc k (merge-ptv-lists (get acc k) v))
+                 :else (assoc acc k v)))
+             existing
+             lipas-data))
+
+(def ^:private lipas-managed-service-fields
+  "Fields that LIPAS actively manages on a service. Other fields
+   (ontologyTerms, serviceClasses, targetGroups, etc.) are either
+   derived from sub-category or are defaults and should not overwrite
+   existing PTV data when adopting a service."
+  #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
+
 (defn upsert-ptv-service!
-  [ptv {:keys [source-id] :as m}]
-  (let [data (ptv-data/->ptv-service m)]
-    ;; We have the source-id always?
-    ; (if source-id
-    ;   (ptv/update-service ptv source-id data)
-    ;   (ptv/create-service ptv data))
-    ;; PTV update using sourceId gives 404 if the sourceId doesn't exist yet
-    (try
-      (ptv/update-service ptv source-id data)
-      (catch clojure.lang.ExceptionInfo e
-        (if (= 404 (:status (:resp (ex-data e))))
-          (ptv/create-service ptv data)
-          (throw e))))))
+  [ptv {:keys [org-id source-id service-id] :as m}]
+  (let [;; Adoption path: always use the adopted-source-id pattern
+        ;; (lipas-{org}-ptv-{service-id}). The standard sub-category
+        ;; pattern (lipas-{org}-{sub-cat}) collides with prior LIPAS-managed
+        ;; services that were soft-archived in PTV — archived services keep
+        ;; their sourceId, and PTV's PUT crashes with a 500 ('An unexpected
+        ;; error occurred. Trace id: ...') on the collision rather than
+        ;; returning a clean 409. The adopted pattern uses the unique PTV
+        ;; service UUID, sidestepping the collision entirely.
+        m (cond-> m
+            service-id (assoc :source-id
+                              (ptv-data/->adopted-service-source-id org-id service-id)))
+        lipas-data (ptv-data/->ptv-service m)]
+    (if service-id
+      ;; Adoption: fetch existing PTV service and overwrite ONLY LIPAS-managed
+      ;; fields (names, descriptions, languages, publishingStatus, sourceId).
+      ;; Everything else — targetGroups, ontologyTerms, serviceClasses,
+      ;; industrialClasses, areas, generalDescriptionId, etc. — must be left
+      ;; intact, otherwise PTV's cross-validation breaks. Concrete failure
+      ;; mode: when the existing service has a generalDescriptionId whose GD
+      ;; lists KR2 without sub-targets, replacing the service's full target
+      ;; groups (which include KR2.x children) with LIPAS's hardcoded [KR1]
+      ;; trips the SubTargetGroupRequired check (ServiceValidator.cs:225).
+      ;; sub-category-id is still useful upstream (source-id, app-db
+      ;; mapping), but it must not drive payload overrides on adoption.
+      (let [existing (-> (ptv/get-service ptv org-id service-id)
+                         (normalize-ptv-service-for-update))
+            lipas-data (select-keys lipas-data lipas-managed-service-fields)
+            merged (merge-service-data existing lipas-data)
+            ;; PTV requires names for all supported languages — use Finnish as fallback
+            fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
+                                 (:value %))
+                              (:serviceNames merged))
+                        "")
+            required-langs (set (map name (:languages merged)))
+            existing-name-langs (set (map :language (:serviceNames merged)))
+            missing-name-langs (clojure.set/difference required-langs existing-name-langs)
+            data (-> merged
+                     (update :serviceDescriptions (fn [items] (filterv #(not (str/blank? (:value %))) items)))
+                     ;; Fill empty name values with Finnish fallback
+                     (update :serviceNames (fn [items]
+                                             (let [filled (mapv #(if (str/blank? (:value %))
+                                                                   (assoc % :value fi-name)
+                                                                   %)
+                                                                items)]
+                                               ;; Add entries for completely missing languages
+                                               (into filled (for [lang missing-name-langs]
+                                                              {:type "Name" :language lang :value fi-name}))))))]
+        (ptv/update-service-by-id ptv service-id data))
+      ;; New service: try update by source-id, create if not found
+      (try
+        (ptv/update-service ptv source-id lipas-data)
+        (catch clojure.lang.ExceptionInfo e
+          (if (= 404 (:status (:resp (ex-data e))))
+            (ptv/create-service ptv lipas-data)
+            (throw e)))))))
 
 (defn fetch-ptv-org
   [ptv org-id]
@@ -94,6 +320,10 @@
   (ptv/get-org-services ptv org-id))
 
 (defn fetch-ptv-service-channels
+  "Fetch the org's service channels from PTV with full entity data.
+   Uses the /list/organization endpoint which returns complete channel
+   entities (descriptions, sourceId, publishingStatus etc.) needed for
+   drift detection and status warnings."
   [ptv org-id]
   (ptv/get-org-service-channels ptv org-id))
 
@@ -101,21 +331,20 @@
   [ptv org-id service-channel-id]
   (ptv/get-org-service-channel ptv org-id service-channel-id))
 
-(def persisted-ptv-keys [:languages
-                         :summary
-                         :description
-                         :last-sync
-                         :org-id
-                         :sync-enabled
-                         :service-integration
-                         :descriptions-integration
-                         :service-channel-integration
-                         :service-ids
-                         :service-channel-ids])
+;; Single source of truth lives in lipas.data.ptv so the sync path and the
+;; no-sync meta path persist exactly the same editable keys.
+(def persisted-ptv-keys ptv-data/persisted-ptv-keys)
 
 (defn upsert-ptv-service-location!*
   [ptv-component {:keys [org-id site ptv archive?] :as _m}]
   (let [id (-> ptv :service-channel-ids first)
+        ;; Languages are determined by the org's live PTV config at sync time —
+        ;; we don't trust the site's persisted :languages because it may be a
+        ;; snapshot from an older org config. See calc-derived-fields archaeology.
+        org-config (ptv/get-org-ptv-config-with-fallback ptv-component org-id)
+        org-langs (or (:supported-languages org-config)
+                      ptv-data/fallback-languages)
+        ptv (assoc ptv :languages org-langs)
         ;; merge or just replace?
         site (update site :ptv merge ptv)
         ;; Use the same TS for sourceId, ptv last-sync and site event-date
@@ -125,10 +354,19 @@
                archive? (assoc :publishingStatus "Deleted"))
         ;; Note: Update request doesn't update Service connections!
 
-        ;; TODO: Would be nice to avoid this, by getting the previous
-        ;; :ptv :service-ids value here.
+        ;; Fetch the stored channel for service-connection diffing below.
+        ;; Drift detection in `sports-site->ptv-input` uses a separately
+        ;; cached channel snapshot, not this fetch.
+        ;; A previously-archived channel (publishing-status "Deleted") 404s on
+        ;; every PTV read endpoint but is still addressable for a PUT — so a
+        ;; resurrect (re-publish) must tolerate the 404 here and proceed.
         old-service-location (when id
-                               (ptv/get-org-service-channel ptv-component org-id id))
+                               (try
+                                 (ptv/get-org-service-channel ptv-component org-id id)
+                                 (catch clojure.lang.ExceptionInfo e
+                                   (if (= 404 (-> e ex-data :resp :status))
+                                     nil
+                                     (throw e)))))
 
         ptv-resp (if id
                    (ptv/update-service-location ptv-component id data)
@@ -143,12 +381,26 @@
                   removed-services (set/difference old-services new-services)
                   new-services (set/difference new-services old-services)
                   service-channel-id (first (:service-channel-ids (:ptv site)))]
-              (log/infof "Update PTV service-location, add services %s, remove services %s"
-                         new-services removed-services)
+              (log/infof "Update service-location connections: +%s -%s" new-services removed-services)
               (doseq [service-id removed-services]
                 (ptv/update-service-connections ptv-component org-id service-id #(disj % service-channel-id)))
               (doseq [service-id new-services]
                 (ptv/update-service-connections ptv-component org-id service-id #(conj % service-channel-id)))))
+        ;; Refetch the channel via GET so the FE caches the canonical
+        ;; post-sync shape (the same shape /list/organization returns and
+        ;; that drift detection in `compute-service-channel-drift` expects).
+        ;; The PUT response is captured BEFORE the separate
+        ;; update-service-connections calls land, so its :services list
+        ;; can be stale on updates. Without refetching, drift detection
+        ;; sees a stale :services list and reports :content-drift instead
+        ;; of :ok — that's why the green chip didn't appear immediately
+        ;; after sync (tester feedback). Tolerate refetch failures
+        ;; (transient PTV errors) by falling back to the PUT response.
+        ptv-resp (try
+                   (ptv/get-org-service-channel ptv-component org-id (:id ptv-resp))
+                   (catch Exception e
+                     (log/warnf e "Failed to refetch channel %s after sync; using PUT response" (:id ptv-resp))
+                     ptv-resp))
         ;; Store the new PTV info to Lipas DB
         new-ptv-data (-> ptv
                          (select-keys persisted-ptv-keys)
@@ -167,16 +419,51 @@
                                 ;; Take the created ID from ptv response and store to Lipas DB right away.
                                 ;; TODO: Is there a case where this could be multiple ids?
                                 :service-channel-ids [(:id ptv-resp)])
+                         ;; Keep :source-id and :service-channel-ids on archive so
+                         ;; the LIPAS↔PTV link survives. :publishing-status is
+                         ;; stored as "Deleted" (from ptv-resp) above, so
+                         ;; is-sent-to-ptv? stays false and nothing re-archives;
+                         ;; but a later re-activation re-publishes the SAME PTV
+                         ;; channel (PUT Published) instead of creating a
+                         ;; duplicate that collides with PTV's unique-name rule.
+                         ;; Clear only the one-shot :delete-existing flag.
                          (cond->
-                          archive? (dissoc :source-id
-                                           :service-channel-ids
-                                           :delete-existing)))]
+                           archive? (dissoc :delete-existing)))]
 
-    (log/infof "Resp %s" ptv-resp)
-
-    (log/infof "Upserted (Lipas status: %s, updated: %s) service-location %s: %s" (:status site) (boolean id) data new-ptv-data)
+    (log/infof "Upserted service-location %s (status: %s, update: %s, channel: %s)"
+               (:lipas-id site) (:status site) (boolean id) (:id ptv-resp))
 
     [ptv-resp new-ptv-data]))
+
+(defn assert-no-double-link!
+  "Guards the PTV invariant of one service-location per sports-site: throws an
+  ex-info {:type :double-link ...} when `service-channel-id` is already bound to
+  a sports-site other than `lipas-id`. Two LIPAS sites sharing one PTV
+  service-location corrupt each other — their one-way syncs overwrite the
+  channel and archiving one archives the shared channel. A blank/nil channel-id
+  (a fresh create or a deliberate unlink) is always allowed. Re-syncing a site's
+  own channel is allowed because the current `lipas-id` is excluded."
+  [db lipas-id service-channel-id]
+  (when-not (str/blank? service-channel-id)
+    (let [others (->> (db/get-sports-sites-by-ptv-service-channel-id db service-channel-id)
+                      (remove #(= lipas-id (:lipas-id %))))]
+      (when (seq others)
+        (throw (ex-info "PTV service-location already linked to another sports-site"
+                        {:type :double-link
+                         :service-channel-id service-channel-id
+                         :lipas-id lipas-id
+                         :other-sites (vec others)}))))))
+
+(defn check-service-channel-link
+  "Returns the OTHER sports-sites currently linked to `service-channel-id`,
+  excluding `lipas-id`. The single-site PTV view uses this to warn about a
+  pre-existing double-link, which it can't detect locally (it loads neither the
+  org's channels nor its sibling sites)."
+  [db {:keys [lipas-id service-channel-id]}]
+  {:service-channel-id service-channel-id
+   :other-sites (->> (db/get-sports-sites-by-ptv-service-channel-id db service-channel-id)
+                     (remove #(= lipas-id (:lipas-id %)))
+                     vec)})
 
 (defn upsert-ptv-service-location!
   [db ptv-component search user {:keys [lipas-id org-id ptv archive?]}]
@@ -186,6 +473,9 @@
   (jdbc/with-db-transaction [tx db]
     (let [site (db/get-sports-site db lipas-id)
           _ (assert (some? site) (str "Sports site " lipas-id " not found in DB"))
+          ;; Reject linking to a service-location another site already owns
+          ;; before we touch PTV (a fresh create / unlink has no id and passes).
+          _ (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
 
           [ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
                                                                  {:org-id org-id
@@ -205,13 +495,9 @@
 
       {;; Return the updated :ptv meta for sports-site, to for the app-db
        :ptv new-ptv-data
-       ;; Return :id :name, same as the list endpoint that is used in the UI to show the Palvelupaikka autocomplete
-       :ptv-resp {:id (:id ptv-resp)
-                  :name (some (fn [x]
-                                (when (and (= "Name" (:type x))
-                                           (= "fi" (:language x)))
-                                  (:value x)))
-                              (:serviceChannelNames ptv-resp))}})))
+       ;; Return full PTV response so frontend can update service-channels cache
+       ;; (needed for drift detection and PTV link)
+       :ptv-resp ptv-resp})))
 
 (comment
   (require '[integrant.repl.state :as state])
@@ -223,82 +509,104 @@
          (utils/index-by :sourceId)
          keys)))
 
+(def ^:private removal-statuses
+  "Statuses that mean the facility is genuinely gone — the only status
+  transition that auto-archives a previously-published PTV service-location."
+  #{"incorrect-data" "out-of-service-permanently"})
+
+(defn to-archive?
+  "Should saving `sports-site` archive its PTV service-location
+  (publishingStatus \"Deleted\")? Only for a genuine removal of a
+  previously-published site: its status set to permanently-out / incorrect-data,
+  or an explicit `:delete-existing` request in `ptv`. Owner/type changes and
+  incomplete (not ptv-ready?) texts never archive."
+  [sports-site ptv]
+  (boolean
+    (and (ptv-data/is-sent-to-ptv? sports-site)
+         (or (contains? removal-statuses (:status sports-site))
+             (:delete-existing ptv)))))
+
 ;; Used through resolve due to circular dep
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn sync-ptv! [tx search ptv-component user {:keys [sports-site ptv org-id lipas-id]}]
   (try
-    (let [type-code (-> sports-site :type :type-code)
+    (let [ready? (ptv-data/ptv-ready? sports-site)
+          archive? (to-archive? sports-site ptv)]
+      (if (and (not archive?) (not ready?))
+        ;; Safety guard. Reached only for integration-enabled sites (others
+        ;; never get here). The PTV data is incomplete/invalid, so pushing it
+        ;; would fail PTV validation — don't create or update, leave any
+        ;; existing PTV record frozen. No new revision is written here; the
+        ;; site itself was already saved by the caller.
+        (do
+          (log/infof "Skipping PTV sync for %d: PTV data not ready and not archiving" lipas-id)
+          {:ptv ptv :event-date (:event-date sports-site)})
+        (let [type-code (-> sports-site :type :type-code)
+              type-code-changed? (not= type-code (:previous-type-code ptv))
+              ptv (if type-code-changed?
+                    (let [types types/all
+                           ;; Figure out what services are available in PTV for the site organization
+                          services (:itemList (ptv/get-org-services ptv-component org-id))
+                          source-id->service (->> services
+                                                  (utils/index-by :sourceId))
 
-          previous-sent? (ptv-data/is-sent-to-ptv? sports-site)
-          candidate-now? (and (ptv-data/ptv-candidate? sports-site)
-                              (ptv-data/ptv-ready? sports-site))
+                           ;; Check if services for the current/new site type-code exist
+                          missing-services-input [{:service-ids #{}
+                                                   :sub-category-id (-> sports-site :type :type-code types :sub-category)
+                                                   :sub-cateogry (-> sports-site :search-meta :type :sub-category :name :fi)}]
+                          missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
 
-          ;; If it looks like site that was previously sent to PTV is no longer
-          ;; a candidate, mark for it archival.
-          ;; The other function will mark the document Deleted when archive flag is true
-          to-archive? (and previous-sent?
-                           (or (not candidate-now?)
-                               (:delete-existing ptv)))
+                           ;; FE doesn't update the :ptv :service-ids, that is still handled here.
+                           ;; This code just presumes the user has created the possibly missing Sercices
+                           ;; in the FE first.
 
-          type-code-changed? (not= type-code (:previous-type-code ptv))
-          ptv (if type-code-changed?
-                (let [types types/all
-                       ;; Figure out what services are available in PTV for the site organization
-                      services (:itemList (ptv/get-org-services ptv-component org-id))
-                      source-id->service (->> services
-                                              (utils/index-by :sourceId))
+                          _ (when (seq missing-services)
+                              (throw (ex-info "Site needs a PTV Service that doesn't exists"
+                                              {:missing-services missing-services})))
 
-                       ;; Check if services for the current/new site type-code exist
-                      missing-services-input [{:service-ids #{}
-                                               :sub-category-id (-> sports-site :type :type-code types :sub-category)
-                                               :sub-cateogry (-> sports-site :search-meta :type :sub-category :name :fi)}]
-                      missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
+                           ;; Remove old service-ids from :ptv data and add the new.
+                           ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
+                           ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
+                           ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
+                          old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
+                          old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
+                          new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
+                      (log/infof "Site %d type changed %s => %s, service-ids %s => %s"
+                                 lipas-id (:previous-type-code ptv) type-code
+                                 old-service-ids new-service-ids)
+                      (update ptv :service-ids (fn [ids]
+                                                 (let [x (set ids)
+                                                       x (apply disj x old-service-ids)
+                                                       x (into x new-service-ids)]
+                                                   (vec x)))))
+                    ptv)
 
-                       ;; FE doesn't update the :ptv :service-ids, that is still handled here.
-                       ;; This code just presumes the user has created the possibly missing Sercices
-                       ;; in the FE first.
+              [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
+                                                                      {:org-id org-id
+                                                                       :ptv ptv
+                                                                       :site sports-site
+                                                                       :archive? archive?})]
 
-                      _ (when (seq missing-services)
-                          (throw (ex-info "Site needs a PTV Service that doesn't exists"
-                                          {:missing-services missing-services})))
-
-                       ;; Remove old service-ids from :ptv data and add the new.
-                       ;; Don't touch other service-ids in the data, those could have be added manually in UI or in PTV.
-                       ;; NOTE: OK, PTV updates are likely lost, because our :ptv :service-ids is what the create/update from
-                       ;; Lipas previously returned, so if PTV ServiceLocation was modified after that in PTV, we lose those changes.
-                      old-sports-site (assoc-in sports-site [:type :type-code] (:previous-type-code ptv))
-                      old-service-ids (ptv-data/sports-site->service-ids types source-id->service old-sports-site)
-                      new-service-ids (ptv-data/sports-site->service-ids types source-id->service sports-site)]
-                  (log/infof "Site type changed %s => %s, service-ids updated %s => %s"
-                             (:previous-type-code ptv) type-code
-                             old-service-ids new-service-ids)
-                  (update ptv :service-ids (fn [ids]
-                                             (let [x (set ids)
-                                                   x (apply disj x old-service-ids)
-                                                   x (into x new-service-ids)]
-                                               (vec x)))))
-                ptv)
-
-          [_ptv-resp new-ptv-data] (upsert-ptv-service-location!* ptv-component
-                                                                  {:org-id org-id
-                                                                   :ptv ptv
-                                                                   :site sports-site
-                                                                   :archive? to-archive?})]
-
-      (let [resp (core/upsert-sports-site! tx
-                                           user
-                                           (assoc sports-site
-                                                  :event-date (:last-sync new-ptv-data)
-                                                  :ptv new-ptv-data)
-                                           false)]
-        (core/index! search resp :sync))
-
-      new-ptv-data)
+          (let [resp (core/upsert-sports-site! tx
+                                               user
+                                               (assoc sports-site
+                                                      :event-date (:last-sync new-ptv-data)
+                                                      :ptv new-ptv-data)
+                                               false)]
+            (core/index! search resp :sync)
+            ;; Return both :ptv and :event-date so the caller's outer index!
+            ;; reindexes the same revision we just wrote.
+            {:ptv new-ptv-data :event-date (:event-date resp)}))))
     (catch Exception e
-      (let [new-ptv-data (assoc ptv :error {:message (.getMessage e)
-                                            :data (ex-data e)})]
-        (log/infof e "Sports site updated but PTV integration had an error")
+      ;; Don't store (ex-data e) directly — clj-http's response includes a
+      ;; live `HttpClient` Java object that Cheshire can't serialize to the
+      ;; JSONB column, and `(ex-data e) :req :headers` carries the PTV
+      ;; bearer token. The parsed `:ptv-status`/`:ptv-error` covers
+      ;; everything the frontend and operators actually need.
+      (let [new-ptv-data (assoc ptv :error (merge {:message (.getMessage e)}
+                                                  (parse-ptv-error e)))]
+        (log/errorf e "Sports site %d updated but PTV sync failed" lipas-id)
         (let [resp (core/upsert-sports-site! tx
                                              user
                                              (-> sports-site
@@ -306,7 +614,9 @@
                                                  (assoc :ptv new-ptv-data))
                                              false)]
           (core/index! search resp :sync)
-          (:ptv resp))))))
+          ;; Failure path also wrote a new revision (with :error captured
+          ;; on :ptv). Return the same :event-date so DB and ES match.
+          {:ptv (:ptv resp) :event-date (:event-date resp)})))))
 
 (defn save-ptv-integration-definitions
   "Saves ptv definitions under key :ptv. Does not notify webhooks,
@@ -315,18 +625,30 @@
   [db search user lipas-id->ptv-meta]
   (jdbc/with-db-transaction [tx db]
     (doseq [[lipas-id ptv] lipas-id->ptv-meta]
-      ;; TODO take when-let -> let and add assert
-      (when-let [site (-> (core/get-sports-site tx lipas-id)
-                          (assoc :event-date (utils/timestamp))
-                          (assoc :ptv ptv))]
-        (core/upsert-sports-site! tx user site)
-        (core/index! search site :sync))))
+      ;; Meta-save can persist :service-channel-ids without a sync, so guard the
+      ;; one-service-location-per-site invariant here too.
+      (assert-no-double-link! tx lipas-id (-> ptv :service-channel-ids first))
+      (when-let [existing (core/get-sports-site tx lipas-id)]
+        ;; Persist the same editable keys the sync path does (persisted-ptv-keys
+        ;; from the payload), and explicitly preserve the server-owned lifecycle
+        ;; keys from the existing record — there's no PTV response here to
+        ;; re-derive them, and a blanket (assoc :ptv ptv) would wipe them and
+        ;; break the reversible-archive bookkeeping (is-sent-to-ptv?).
+        (let [old-ptv (:ptv existing)
+              new-ptv (-> (select-keys ptv persisted-ptv-keys)
+                          (assoc :source-id          (:source-id old-ptv)
+                                 :publishing-status  (:publishing-status old-ptv)
+                                 :previous-type-code (:previous-type-code old-ptv)))
+              site (assoc existing
+                          :event-date (utils/timestamp)
+                          :ptv new-ptv)]
+          (core/upsert-sports-site! tx user site)
+          (core/index! search site :sync)))))
   {:status "OK"})
 
 (defn save-ptv-audit
   "Saves PTV audit information for a sports site."
   [db search user {:keys [lipas-id audit]}]
-  (tap> user)
   (jdbc/with-db-transaction [tx db]
     (when-let [site (core/get-sports-site tx lipas-id)]
       ;; Add timestamp and auditor information to the audit data
@@ -397,9 +719,9 @@
 
 (comment
   (generate-ptv-service-descriptions
-   (user/search)
-   {:sub-category-id 2200
-    :city-codes [992 #_92]})
+    (user/search)
+    {:sub-category-id 2200
+     :city-codes [992 #_92]})
 
   (def s1 (core/get-sports-site (repl/db) 612967))
   (def s2 (core/get-sports-site (repl/db) 506032))
@@ -410,5 +732,4 @@
   (generate-ptv-descriptions-from-data (assoc s1 :comment "Luistinrata ylläpidetään lumisena aikana viikottain. Pukukopit käytössä aukioloaikoina. Kentälle on saatavissa pieniä jääkiekkomaaleja pelien järjestämistä ja lajitaitojen harjoittelua varten."))
   (generate-ptv-descriptions-from-data s2)
 
-  *1
-  )
+  *1)

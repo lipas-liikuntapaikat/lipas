@@ -493,6 +493,254 @@
       (is (= 403 (:status save-meta-resp))
           "PTV auditor should not be able to save PTV meta data"))))
 
+;;; PTV service-channel double-link detection ;;;
+
+;; Realistic PTV organisation + service-location channel UUIDs (PTV uses UUIDs
+;; for both). Two of the seeded sites share `rink-channel`, which is the
+;; double-link scenario.
+(def ^:private ptv-org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5")
+(def ^:private rink-channel "a1b2c3d4-0001-4abc-9def-000000000001")
+(def ^:private pool-channel "a1b2c3d4-0002-4abc-9def-000000000002")
+
+(defn- seed-ptv-site!
+  "Seeds a realistic, PTV-synced sports-site bound to `channel-ids`."
+  [user {:keys [name type-code city-code address postal-code postal-office coords channel-ids]}]
+  (core/upsert-sports-site!*
+   (test-db) user
+   {:status "active"
+    :event-date "2025-01-01T00:00:00.000Z"
+    :name name
+    :owner "city"
+    :admin "city-sports"
+    :type {:type-code type-code}
+    :location {:city {:city-code city-code}
+               :address address
+               :postal-code postal-code
+               :postal-office postal-office
+               :geometries {:type "FeatureCollection"
+                            :features [{:type "Feature"
+                                        :geometry {:type "Point"
+                                                   :coordinates coords}}]}}
+    :ptv {:org-id ptv-org-id
+          :sync-enabled true
+          :last-sync "2025-01-02T00:00:00.000Z"
+          :summary {:fi "Kuvaus" :se "Beskrivning" :en "Summary"}
+          :description {:fi "Pidempi kuvaus" :se "Beskrivning" :en "Description"}
+          :service-ids []
+          :service-channel-ids channel-ids}}))
+
+(defn- check-link
+  "Calls the check endpoint as `token` and returns parsed body."
+  [token lipas-id service-channel-id]
+  (-> (test-app (-> (mock/request :post "/api/actions/check-ptv-service-channel-link")
+                    (mock/content-type "application/json")
+                    (mock/body (tu/->json {:lipas-id lipas-id
+                                           :service-channel-id service-channel-id}))
+                    (tu/token-header token)))))
+
+(defn- seed-double-link-scenario!
+  "Seeds Oulunkylän tekojää + Helsingin jäähalli (both on `rink-channel`) and
+  Yrjönkadun uimahalli (on `pool-channel`). Returns their lipas-ids."
+  [user]
+  {:rink-a (:lipas-id (seed-ptv-site! user {:name "Oulunkylän tekojää"
+                                            :type-code 2510 :city-code 91
+                                            :address "Käärmetie 8" :postal-code "00640"
+                                            :postal-office "Helsinki" :coords [24.9612 60.2289]
+                                            :channel-ids [rink-channel]}))
+   :rink-b (:lipas-id (seed-ptv-site! user {:name "Helsingin jäähalli"
+                                            :type-code 2520 :city-code 91
+                                            :address "Nordenskiöldinkatu 11-13" :postal-code "00250"
+                                            :postal-office "Helsinki" :coords [24.9226 60.1872]
+                                            :channel-ids [rink-channel]}))
+   :pool (:lipas-id (seed-ptv-site! user {:name "Yrjönkadun uimahalli"
+                                          :type-code 3110 :city-code 91
+                                          :address "Yrjönkatu 21 b" :postal-code "00100"
+                                          :postal-office "Helsinki" :coords [24.9384 60.1677]
+                                          :channel-ids [pool-channel]}))})
+
+(deftest check-service-channel-link-no-conflict-test
+  (testing "Channel held only by the queried site returns no other sites"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [pool]} (seed-double-link-scenario! admin)
+          resp (check-link token pool pool-channel)
+          body (tu/safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (= pool-channel (:service-channel-id body)))
+      (is (= [] (:other-sites body))))))
+
+(deftest check-service-channel-link-single-sibling-test
+  (testing "A channel shared with one other site returns that sibling, excluding self"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [rink-a rink-b]} (seed-double-link-scenario! admin)
+          body (tu/safe-parse-json (check-link token rink-a rink-channel))
+          others (:other-sites body)]
+      (is (= 1 (count others)))
+      (is (= rink-b (-> others first :lipas-id)))
+      (is (= "Helsingin jäähalli" (-> others first :name)))
+      ;; self is excluded
+      (is (not (contains? (set (map :lipas-id others)) rink-a))))))
+
+(deftest check-service-channel-link-multiple-siblings-test
+  (testing "A channel shared with several other sites returns all of them"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [rink-a rink-b]} (seed-double-link-scenario! admin)
+          ;; a third site joins the same rink channel
+          rink-c (:lipas-id (seed-ptv-site! admin {:name "Pirkkolan jäähalli"
+                                                   :type-code 2520 :city-code 91
+                                                   :address "Pirkkolan metsätie 4" :postal-code "00630"
+                                                   :postal-office "Helsinki" :coords [24.9046 60.2389]
+                                                   :channel-ids [rink-channel]}))
+          body (tu/safe-parse-json (check-link token rink-a rink-channel))
+          other-ids (set (map :lipas-id (:other-sites body)))]
+      (is (= #{rink-b rink-c} other-ids))
+      (is (not (contains? other-ids rink-a))))))
+
+(deftest check-service-channel-link-unknown-channel-test
+  (testing "An unused channel id returns no sites"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [rink-a]} (seed-double-link-scenario! admin)
+          body (tu/safe-parse-json (check-link token rink-a "ffffffff-ffff-ffff-ffff-ffffffffffff"))]
+      (is (= [] (:other-sites body))))))
+
+(deftest check-service-channel-link-requires-ptv-access-test
+  (testing "Regular users without PTV privileges get 403"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          regular (tu/gen-user {:db? true :db-component (test-db) :admin? false})
+          token (jwt/create-token regular)
+          {:keys [rink-a]} (seed-double-link-scenario! admin)
+          resp (check-link token rink-a rink-channel)]
+      (is (= 403 (:status resp))))))
+
+;;; Double-link enforcement at the persistence boundary ;;;
+
+(deftest save-ptv-meta-rejects-double-link-test
+  (testing "Saving meta that binds a site to a channel another site owns is rejected with 409"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          ;; rink-b already owns rink-channel
+          {:keys [rink-b]} (seed-double-link-scenario! admin)
+          ;; an unrelated site tries to grab the same channel
+          intruder (:lipas-id (seed-ptv-site! admin {:name "Malmin jäähalli"
+                                                     :type-code 2520 :city-code 91
+                                                     :address "Pekanraitti 4" :postal-code "00700"
+                                                     :postal-office "Helsinki" :coords [25.0103 60.2503]
+                                                     :channel-ids []}))
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {intruder {:org-id ptv-org-id
+                                                              :sync-enabled true
+                                                              :service-ids []
+                                                              :service-channel-ids [rink-channel]
+                                                              :summary {:fi "Test summary"}
+                                                              :description {:fi "Test description"}}}))
+                             (tu/token-header token)))
+          body (tu/safe-parse-json resp)]
+      (is (= 409 (:status resp)))
+      (is (= "double-link" (:type body)))
+      (is (= rink-channel (:service-channel-id body)))
+      (is (contains? (set (map :lipas-id (:other-sites body))) rink-b)))))
+
+(deftest save-ptv-meta-allows-own-channel-test
+  (testing "Re-saving meta for the site that already owns the channel is allowed (self excluded)"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [pool]} (seed-double-link-scenario! admin)
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {pool {:org-id ptv-org-id
+                                                          :sync-enabled true
+                                                          :service-ids []
+                                                          :service-channel-ids [pool-channel]
+                                                          :summary {:fi "Test summary"}
+                                                          :description {:fi "Test description"}}}))
+                             (tu/token-header token)))]
+      (is (= 200 (:status resp))))))
+
+(deftest save-ptv-meta-preserves-lifecycle-keys-test
+  (testing "save-ptv-meta turns sync off without wiping server-owned lifecycle keys"
+    ;; Contract the Liikuntapaikat-tab toggle relies on: turning the switch off
+    ;; persists sync-enabled=false via save-ptv-meta (no PTV call) AND keeps the
+    ;; channel link plus the lifecycle keys (:source-id, :publishing-status,
+    ;; :previous-type-code) the sync path owns. A blanket :ptv replace used to
+    ;; wipe those, breaking is-sent-to-ptv? and the reversible-archive flow.
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          channel "b0000000-0000-4000-8000-000000000abc"
+          source-id (str "lipas-" ptv-org-id "-700001-2026-01-01T00-00-00.000Z")
+          texts {:summary {:fi "Kesäkäyttöinen urheilukenttä."}
+                 :description {:fi "Limingan keskustan urheilukenttä."}}
+          ;; A published, synced site carrying the full lifecycle meta.
+          site (core/upsert-sports-site!*
+                (test-db) admin
+                {:status "active"
+                 :event-date "2026-01-02T00:00:00.000Z"
+                 :name "Limingan urheilukenttä"
+                 :owner "city" :admin "city-sports"
+                 :type {:type-code 1210}
+                 :location {:city {:city-code 425}
+                            :address "Kentäntie 1" :postal-code "91900" :postal-office "Liminka"
+                            :geometries {:type "FeatureCollection"
+                                         :features [{:type "Feature"
+                                                     :geometry {:type "Point" :coordinates [25.41 64.81]}}]}}
+                 :ptv (merge texts
+                             {:org-id ptv-org-id
+                              :sync-enabled true
+                              :last-sync "2026-01-02T00:00:00.000Z"
+                              :source-id source-id
+                              :publishing-status "Published"
+                              :previous-type-code 1210
+                              :service-ids []
+                              :service-channel-ids [channel]})})
+          lipas-id (:lipas-id site)
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {lipas-id (merge texts
+                                                                    {:org-id ptv-org-id
+                                                                     :sync-enabled false
+                                                                     :service-ids []
+                                                                     :service-channel-ids [channel]})}))
+                             (tu/token-header token)))
+          after (:ptv (core/get-sports-site (test-db) lipas-id))]
+      (is (= 200 (:status resp)))
+      ;; editable key updated
+      (is (false? (:sync-enabled after)))
+      ;; server-owned lifecycle keys preserved (not wiped)
+      (is (= source-id (:source-id after)))
+      (is (= "Published" (:publishing-status after)))
+      (is (= 1210 (:previous-type-code after)))
+      ;; channel link preserved (frozen in PTV, not unlinked)
+      (is (= [channel] (:service-channel-ids after))))))
+
+(deftest save-ptv-service-location-rejects-double-link-test
+  (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          {:keys [rink-b]} (seed-double-link-scenario! admin)
+          intruder (:lipas-id (seed-ptv-site! admin {:name "Kontulan jäähalli"
+                                                     :type-code 2520 :city-code 91
+                                                     :address "Kontulankaari 11" :postal-code "00940"
+                                                     :postal-office "Helsinki" :coords [25.0732 60.2419]
+                                                     :channel-ids []}))
+          resp (test-app (-> (mock/request :post "/api/actions/save-ptv-service-location")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:lipas-id intruder
+                                                    :org-id ptv-org-id
+                                                    :ptv {:org-id ptv-org-id
+                                                          :sync-enabled true
+                                                          :service-ids []
+                                                          :service-channel-ids [rink-channel]
+                                                          :summary {:fi "Test summary"}
+                                                          :description {:fi "Test description"}}}))
+                             (tu/token-header token)))
+          body (tu/safe-parse-json resp)]
+      (is (= 409 (:status resp)))
+      (is (= "double-link" (:type body)))
+      (is (contains? (set (map :lipas-id (:other-sites body))) rink-b)))))
+
 (comment
   (clojure.test/run-tests *ns*)
   (clojure.test/run-test-var #'save-ptv-audit-success-test)

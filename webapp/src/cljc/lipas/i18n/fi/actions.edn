@@ -4,6 +4,8 @@
  :browse-to-map "Siirry kartalle",
  :browse-to-portal "Siirry portaaliin",
  :cancel "Peruuta",
+ :show-all "Näytä kaikki",
+ :show-less "Näytä vähemmän",
  :clear-selections "Poista valinnat",
  :close "Sulje",
  :delete "Poista",

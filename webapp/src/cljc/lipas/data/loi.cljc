@@ -186,8 +186,8 @@
      {:label {:fi "Infotaulu" :se "Informationsstavla" :en "Information board"}
       :value "information-board"
       :props (merge
-              common-props
-              accessibility-props)}
+               common-props
+               accessibility-props)}
 
      :parking-spot
      {:label {:fi "Pysäköintipaikka" :se "Parkeringsplats" :en "Parking spot"}
@@ -409,6 +409,28 @@
       :value "bridge"
       :props (merge common-props)}}}
 
+   "trail-conditions"
+   {:label {:fi "Reittiolosuhteet" :se "Ruttförhållanden" :en "Trail conditions"}
+    :types
+    {:fall-hazard
+     {:label {:fi "Putoamisvaara" :se "Fallrisk" :en "Fall hazard"}
+      :value "fall-hazard"
+      :props (merge common-props
+                    {:itrs-exposure
+                     {:schema (into [:enum] ["1" "2" "3" "4"])
+                      :field
+                      {:type "select"
+                       :label {:fi "Putoamisvaara"
+                               :se "Fallrisk"
+                               :en "Fall Hazard"}
+                       :description {:fi "Normaalista poikkeava vaaranpaikka. Putoamisvaaran luokittelun voi tehdä pyöräilyssä käytettävän ITRS-luokittelun mukaisesti. Luokitteluun vaikuttaa putoamisesta mahdollisesti aiheutuvat seuraukset."
+                                     :se "En plats med ovanlig risk för fall, kan klassificeras enligt ITRS exponering."
+                                     :en "Atypical danger caused by the risk of falling; may be classified using ITRS Exposure categories."}
+                       :opts {"1" {:fi "1 - Normaali loukkaantumisriski" :se "1 - Normal skaderisk" :en "1 - Normal injury risk"}
+                              "2" {:fi "2 - Vakava loukkaantumisriski" :se "2 - Hög risk för allvarliga skador" :en "2 - High risk of serious injury"}
+                              "3" {:fi "3 - Hengenvaaralliset seuraukset" :se "3 - Livshotande konsekvenser" :en "3 - Life-threatening consequences"}
+                              "4" {:fi "4 - Kuolemaan johtavat seuraukset" :se "4 - Dödliga konsekvenser" :en "4 - Fatal consequences"}}}}})}}}
+
    "natural-attractions-and-geo-objects"
    {:label {:fi "Luonnonnähtävyydet / geokohteet" :se "Natursevärdheter / Geologiska platser" :en "Natural Attractions / Geological sites"}
     :types
@@ -494,27 +516,27 @@
 (def csv-data
   (into [csv-headers]
         (for [[category-code category] categories
-            [_ type] (:types category)
-            [prop-k prop] (:props type)]
-        [category-code
-         (get-in category [:label :fi])
-         (get-in category [:label :se])
-         (get-in category [:label :en])
-         (get-in category [:description :fi])
-         (get-in category [:description :se])
-         (get-in category [:description :en])
-         (:value type)
-         (:value type)
-         (get-in type [:label :fi])
-         (get-in type [:label :se])
-         (get-in type [:label :en])
-         (get-in type [:description :fi])
-         (get-in type [:description :se])
-         (get-in type [:description :en])
-         (name prop-k)
-         (get-in prop [:field :label :fi])
-         (get-in prop [:field :label :se])
-         (get-in prop [:field :label :en])
-         (get-in prop [:field :description :fi])
-         (get-in prop [:field :description :se])
-         (get-in prop [:field :description :en])])))
+              [_ type] (:types category)
+              [prop-k prop] (:props type)]
+          [category-code
+           (get-in category [:label :fi])
+           (get-in category [:label :se])
+           (get-in category [:label :en])
+           (get-in category [:description :fi])
+           (get-in category [:description :se])
+           (get-in category [:description :en])
+           (:value type)
+           (:value type)
+           (get-in type [:label :fi])
+           (get-in type [:label :se])
+           (get-in type [:label :en])
+           (get-in type [:description :fi])
+           (get-in type [:description :se])
+           (get-in type [:description :en])
+           (name prop-k)
+           (get-in prop [:field :label :fi])
+           (get-in prop [:field :label :se])
+           (get-in prop [:field :label :en])
+           (get-in prop [:field :description :fi])
+           (get-in prop [:field :description :se])
+           (get-in prop [:field :description :en])])))

@@ -16,6 +16,7 @@
    [lipas.data.types :as types]
    [lipas.backend.api.v1.transform :as legacy-transform]
    [lipas.utils :as utils]
+   [next.jdbc :as jdbc]
    [qbits.spandex :as es]
    [taoensso.timbre :as log]))
 
@@ -131,16 +132,52 @@
             (recur db client idx-name (rest types) users))
        (print-results results)))))
 
+;; Batch size must stay <= spandex bulk-chan flush-threshold (100), otherwise
+;; bulk-index! reads only the first flush response and reports incomplete stats.
+;; The hard ceiling is ES http.max_content_length (default 100mb): one big body
+;; either gets a 413 (silently swallowed) or hangs the async HTTP client.
+(def ^:private analytics-batch-size 100)
+
+(def ^:private analytics-bulk-timeout-ms (* 5 60 1000))
+
+(defn- flush-analytics-batch!
+  [client idx-name type-code batch]
+  (when (seq batch)
+    (let [result (-> (->> batch
+                          (search/->bulk idx-name :id)
+                          (search/bulk-index! client))
+                     (deref analytics-bulk-timeout-ms ::timed-out))]
+      (when (= ::timed-out result)
+        (throw (ex-info "Analytics bulk-index timed out"
+                        {:type-code type-code
+                         :batch-size (count batch)
+                         :idx-name idx-name}))))))
+
 (defn index-analytics2!
   [db client idx-name types users]
-  (let [query-opts {:raw? true :revs "all"}]
-    (doseq [type-code types]
-      (log/info "Starting to re-index type" type-code)
-      (->> (core/get-sports-sites-by-type-code db type-code query-opts)
-           (keep (partial enrich-for-analytics users))
-           (search/->bulk idx-name :id)
-           (search/bulk-index! client)
-           deref))))
+  (doseq [type-code types]
+    (log/info "Starting to re-index type" type-code)
+    ;; Stream rows via next.jdbc/plan + a server-side cursor so we never hold
+    ;; the full type's revisions in memory. Type 4412 alone has ~9300 revs ~1.5GB
+    ;; of parsed maps and would OOM the previous (core/get-sports-sites-by-type-code ...)
+    ;; vector load.
+    (jdbc/with-transaction [tx db]
+      (let [tail (reduce
+                  (fn [batch row]
+                    (let [m (select-keys row [:id :document :author_id :status :created_at])]
+                      (if-let [enriched (enrich-for-analytics users m)]
+                        (let [batch+ (conj batch enriched)]
+                          (if (>= (count batch+) analytics-batch-size)
+                            (do (flush-analytics-batch! client idx-name type-code batch+)
+                                [])
+                            batch+))
+                        batch)))
+                  []
+                  (jdbc/plan tx
+                             ["SELECT id, document, author_id, status, created_at, type_code
+                               FROM sports_site WHERE type_code = ?" type-code]
+                             {:fetch-size 500}))]
+        (flush-analytics-batch! client idx-name type-code tail)))))
 
 (defn read-csv->maps* [path]
   (->> path

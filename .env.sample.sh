@@ -102,5 +102,8 @@ export PTV_ENV="test"
 # Open AI
 export OPEN_AI_API_KEY=***FILL_THIS***
 
+# Gemini
+export GEMINI_API_KEY=***FILL_THIS***
+
 # Yhteentoimivuusalusta
 export YTI_API_KEY=***FILL_THIS***

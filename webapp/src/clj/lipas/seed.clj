@@ -47,6 +47,23 @@
     :lastname            "Halli"
     :permissions-request "Haluan oikeudet päivittää Äänekosken Vesivelhon tietoja."}})
 
+;; City-manager demo: a municipality user with access to all facility
+;; types in a single municipality. This is the most common real-world
+;; municipality role and the primary fixture for create/update e2e
+;; scenarios. Liminka (city-code 425) is chosen because it's also in
+;; the PTV test-org set, so PTV-touching scenarios compose cleanly.
+(def liminka-demo
+  {:email    "liminka@lipas.fi"
+   :status   "active"
+   :username "limindemo"
+   :password "liminka"
+   :permissions {:roles [{:role :city-manager
+                          :city-code #{425}}]}
+   :user-data
+   {:firstname           "Liminka"
+    :lastname            "Demo"
+    :permissions-request "Kaikki Limingan liikuntapaikat."}})
+
 ;; Admin is a person who can login and act as a 'human'
 (def admin
   {:email    "admin@lipas.fi"
@@ -170,9 +187,11 @@
   (log/info "Seeding done!"))
 
 (defn seed-demo-users! [db]
-  (log/info "Seeding demo users 'jhdemo' and 'uhdemo'")
+  (log/info "Seeding demo users: jhdemo, sbdemo, uhdemo, limindemo")
   (core/add-user! db jh-demo)
+  (core/add-user! db sb-demo)
   (core/add-user! db uh-demo)
+  (core/add-user! db liminka-demo)
   (log/info "Seeding done!"))
 
 (defn gen-sports-site

@@ -187,6 +187,33 @@
                 body)
           "At least one user should have org-user role for this specific organization"))))
 
+(deftest remove-user-from-org-test
+  (testing "update-org-users! 'remove' actually drops the matching role entry"
+    (let [target-user (test-utils/gen-regular-user :db-component (test-db))
+          [org1 _] (create-test-orgs)
+          org-id (:id org1)
+          db (test-db)
+
+          _ (backend-org/update-org-users! db org-id
+                                           [{:user-id (:id target-user)
+                                             :change "add"
+                                             :role "org-user"}])
+          users-after-add (backend-org/get-org-users db org-id)
+
+          _ (backend-org/update-org-users! db org-id
+                                           [{:user-id (:id target-user)
+                                             :change "remove"
+                                             :role "org-user"}])
+          users-after-remove (backend-org/get-org-users db org-id)
+
+          target-id (:id target-user)
+          present? (fn [users]
+                     (some #(= target-id (:id %)) users))]
+      (is (present? users-after-add)
+          "Target user should appear in org members after add")
+      (is (not (present? users-after-remove))
+          "Target user should be gone from org members after remove"))))
+
 (deftest cross-org-add-user-by-email-test
   (testing "Org admin of org A cannot add users to org B"
     ;; Setup: Create two organizations

@@ -136,13 +136,17 @@ The Getting Started Wizard guides administrators through enabling PTV integratio
     │ descriptions      │                    │                    │                  │
     │ ─────────────────>│                    │                    │                  │
     │                   │                    │                    │                  │
-    │                   │ 15. generate-ptv-descriptions           │                  │
+    │                   │ 15. generate-ptv-descriptions(-batch)   │                  │
     │                   │ ──────────────────>│                    │                  │
     │                   │                    │                    │                  │
-    │                   │                    │ 16. OpenAI API call│                  │
+    │                   │                    │ 16. Gemini API call│                  │
+    │                   │                    │ (batch: up to 10   │                  │
+    │                   │                    │  same-type sites)  │                  │
     │                   │                    │ ═══════════════════╪═══>              │
     │                   │                    │                    │                  │
     │                   │                    │ 17. AI response    │                  │
+    │                   │                    │ (with retry on     │                  │
+    │                   │                    │  missing sites)    │                  │
     │                   │                    │ <═══════════════════╪═══               │
     │                   │                    │                    │                  │
     │                   │ 18. Generated summary/description       │                  │
@@ -656,10 +660,11 @@ Transforms Lipas sports site data into PTV ServiceChannel format.
 
 | Endpoint | Method | Purpose | Required Privilege |
 |----------|--------|---------|-------------------|
-| `/actions/generate-ptv-descriptions` | POST | Generate descriptions from lipas-id | `:ptv/manage` |
-| `/actions/generate-ptv-descriptions-from-data` | POST | Generate from provided data | `:ptv/manage` |
-| `/actions/generate-ptv-service-descriptions` | POST | Generate service descriptions | `:ptv/manage` |
-| `/actions/translate-to-other-langs` | POST | Translate descriptions | `:ptv/manage` |
+| `/actions/generate-ptv-descriptions` | POST | Generate descriptions for one site by lipas-id | `:ptv/manage` |
+| `/actions/generate-ptv-descriptions-from-data` | POST | Generate from an in-flight edit (not yet saved) | `:ptv/manage` |
+| `/actions/generate-ptv-descriptions-batch` | POST | Generate descriptions for multiple same-type sites in one call, with optional style-reference chaining across batches | `:ptv/manage` |
+| `/actions/generate-ptv-service-descriptions` | POST | Generate service-category descriptions | `:ptv/manage` |
+| `/actions/translate-to-other-langs` | POST | Translate descriptions between languages | `:ptv/manage` |
 
 ---
 

@@ -6,7 +6,6 @@
    [lipas.data.admins :as admins]
    [lipas.data.owners :as owners]
    [lipas.data.types :as types]
-   [lipas.data.types-old :as types-old]
    [lipas.utils :as utils]))
 
 ;; Surface materials mapping (moved from sports-place.clj)
@@ -111,7 +110,7 @@
    :name (:name sports-place)
    :marketingName (:marketingName sports-place)
    :type {:typeCode (-> sports-place :type :typeCode)
-          :name (-> (types-old/all
+          :name (-> (types/all
                      (-> sports-place :type :typeCode))
                     :name)}
    :schoolUse (:schoolUse sports-place)

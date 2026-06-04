@@ -102,6 +102,10 @@
                           [:activity [:set (into [:enum] activity-values)]]
                           [:city-code {:optional true} [:set (into [:enum] city-codes)]]
                           [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+    [:itrs-assessor [:map
+                     [:role [:= :itrs-assessor]]
+                     [:city-code {:optional true} [:set (into [:enum] city-codes)]]
+                     [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
     [:floorball-manager [:map
                          [:role [:= :floorball-manager]]
                          [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]

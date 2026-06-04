@@ -172,12 +172,12 @@
   "Removes nil values and empty entries recursively from maps."
   [m]
   (walk/postwalk
-    (fn [x]
-      (cond
-        (map? x) (not-empty (into {} (filter (comp some? val)) x))
-        (and (coll? x) (empty? x)) nil
-        :else x))
-    m))
+   (fn [x]
+     (cond
+       (map? x) (not-empty (into {} (filter (comp some? val)) x))
+       (and (coll? x) (empty? x)) nil
+       :else x))
+   m))
 
 (defn- make-comparable [rev]
   (-> rev
@@ -241,6 +241,10 @@
 (defn make-saveable [sports-site]
   (-> sports-site
 
+      ;; :renovations is the source of truth; :renovation-years is
+      ;; recomputed by the backend's enrichment shim.
+      (dissoc :renovation-years)
+
       (update-in [:location :geometries :features] vec)
 
       ;; Swimming pools
@@ -268,7 +272,7 @@
       ;; duplicates from :location :geometries and can be dereferenced
       ;; using :fids
       (cond->
-        (:activities sports-site)
+       (:activities sports-site)
         (update :activities (fn [activities]
                               (into (empty activities)
                                     (map (fn [[k v]]
@@ -279,6 +283,23 @@
         (update :ptv dissoc :error))
 
       clean))
+
+(defn- ensure-route-ids
+  "Ensure all routes in activities have an :id field"
+  [activities]
+  (when activities
+    (reduce-kv
+     (fn [acc activity-k activity-v]
+       (if-let [routes (:routes activity-v)]
+         (assoc-in acc [activity-k :routes]
+                   (mapv (fn [route]
+                           (if (:id route)
+                             route
+                             (assoc route :id (str (random-uuid)))))
+                         routes))
+         (assoc acc activity-k activity-v)))
+     {}
+     activities)))
 
 (defn make-editable [sports-site]
   (-> sports-site
@@ -301,7 +322,10 @@
       (update-in [:locker-rooms] ->indexed-map)
 
       ;; Audits
-      (update-in [:audits] ->indexed-map)))
+      (update-in [:audits] ->indexed-map)
+
+      ;; Activities routes
+      (update :activities ensure-route-ids)))
 
 ;; TODO used only in legacy energy consumption view
 ;; Should be removed
@@ -354,13 +378,13 @@
 
 (defn ->excel-row [headers m]
   (reduce
-    (fn [res [k _]]
-      (let [v (get m k)]
-        (conj res {:value v
-                   :type  (if (number? v)
-                            "number"
-                            "string")})))
-    [] headers))
+   (fn [res [k _]]
+     (let [v (get m k)]
+       (conj res {:value v
+                  :type  (if (number? v)
+                           "number"
+                           "string")})))
+   [] headers))
 
 (defn ->excel-data [headers coll]
   (let [header-row (->excel-row headers (into {} headers))]
@@ -433,8 +457,8 @@
 (defn link? [x]
   (and (string? x)
        (or
-         (str/starts-with? x "http")
-         (str/starts-with? x "www"))))
+        (str/starts-with? x "http")
+        (str/starts-with? x "www"))))
 
 (defn link-strict? [x]
   (and (string? x) (str/starts-with? x "http")))

@@ -48,7 +48,6 @@
                       :dispatch-n
                       [(when (and extent width) [:lipas.ui.search.events/submit-search])
                        (when (and extent width) [:lipas.ui.loi.events/search])
-        ;; Auto-refresh heatmap when map view changes (zoom, pan)
                        (when (and extent width) [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
 
 ;; Map displaying events ;;
@@ -134,12 +133,21 @@
                    (assoc-in db [:map :mode :elevation] nil)))
 
 (rf/reg-event-db ::show-sports-site*
+                 ;; Reset the tab to "perustiedot" only when switching to a
+                 ;; *different* sports-site. The save flow routes through
+                 ;; `nil → X` to make the map refocus on updated entries
+                 ;; (see ::save-edits below), which would otherwise clobber
+                 ;; the user's current tab — confusing if e.g. they were on
+                 ;; the PTV tab when a sync error needs surfacing.
                  (fn [db [_ lipas-id]]
-                   (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))]
-                     (-> db
-                         (assoc-in [:map :mode :lipas-id] lipas-id)
-                         (assoc-in [:map :drawer-open?] drawer-open?)
-                         (assoc-in [:map :selected-sports-site-tab] 0)))))
+                   (let [drawer-open? (or lipas-id (-> db :screen-size #{"sm" "xs"} boolean not))
+                         last-shown (-> db :map :last-shown-lipas-id)
+                         different? (and lipas-id (not= last-shown lipas-id))]
+                     (cond-> db
+                       true       (assoc-in [:map :mode :lipas-id] lipas-id)
+                       true       (assoc-in [:map :drawer-open?] drawer-open?)
+                       lipas-id   (assoc-in [:map :last-shown-lipas-id] lipas-id)
+                       different? (assoc-in [:map :selected-sports-site-tab] 0)))))
 
 ;; Geom editing events ;;
 
@@ -415,10 +423,12 @@
                                   (not= 3 (:selected-sports-site-tab (:map db))))
                          [::select-sports-site-tab 3])]})))
 
-(defn- on-success-default [{:keys [lipas-id]}]
-  [[::stop-editing]
-   [:lipas.ui.search.events/submit-search]
-   [:lipas.ui.map.events/show-sports-site lipas-id]])
+(defn- on-success-default [{:keys [lipas-id]} & [result]]
+  (cond-> [[::stop-editing]
+           [:lipas.ui.search.events/submit-search]
+           [:lipas.ui.map.events/show-sports-site lipas-id]]
+    (some-> result :ptv :error)
+    (conj [:lipas.ui.ptv.events/notify-if-sync-failed result])))
 
 (defn- on-failure-default [{:keys [lipas-id]}]
   [[:lipas.ui.map.events/show-sports-site lipas-id]])
@@ -895,6 +905,17 @@
                                              (if (seq v)
                                                (update-feature-properties fs fid assoc :route-part-difficulty v)
                                                (update-feature-properties fs fid dissoc :route-part-difficulty)))))]
+                     {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
+
+(rf/reg-event-fx ::set-itrs-technical
+                 (fn [{:keys [db]} [_ lipas-id fid v]]
+                   (let [geoms (-> db
+                                   (get-in [:map :mode :geoms])
+                                   (update :features
+                                           (fn [fs]
+                                             (if (seq v)
+                                               (update-feature-properties fs fid assoc :itrs-technical v)
+                                               (update-feature-properties fs fid dissoc :itrs-technical)))))]
                      {:fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
 ;; Reverse geocoding

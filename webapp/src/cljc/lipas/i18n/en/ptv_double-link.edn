@@ -1,0 +1,8 @@
+{:warning-title "Service location shared by several sports facilities",
+ :linked-also-to "This PTV service location is also linked to: {1}.",
+ :explanation
+ "A service location can belong to only one sports facility. Linking two facilities to the same service location causes conflicts: their syncs overwrite each other and archiving affects the shared location.",
+ :remediation
+ "Unlink and sync to create a separate PTV service location for this facility.",
+ :blocked
+ "The service location is already linked to {1}, so it can't be linked to this facility."}

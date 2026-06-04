@@ -72,8 +72,7 @@
                                                  (into (empty roles)
                                                        (remove (fn [x]
                                                                  (and (= (keyword role) (:role x))
-                                                                    ;; Should always a vector with one item...
-                                                                      (= [(str org-id)] (:org-id x))))
+                                                                      (contains? (set (:org-id x)) (str org-id))))
                                                                roles)))))]
         (db/update-user-permissions! tx updated-user)))))
 

@@ -32,6 +32,11 @@
   (fn  [_]
     (js/window.scrollTo 0 0)))
 
+(rf/reg-fx ::copy-to-clipboard!
+  (fn [text]
+    (-> (js/navigator.clipboard.writeText text)
+        (.catch #(js/console.error "Copy to clipboard failed:" %)))))
+
 (rf/reg-fx ::download-excel!
   (fn  [config]
     (zipcelx (clj->js config))))

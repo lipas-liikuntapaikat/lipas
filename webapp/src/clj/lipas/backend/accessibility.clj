@@ -83,15 +83,17 @@
      (client/generate-query-string
       (assoc params "checksum" (calc-checksum config params))))))
 
-(defn get-statements [lipas-id]
-  (let [url (str
-             (:base-url config)
-             "/api/v1/accessibility/servicepoints/"
-             (:system-id config)
-             "/"
-             lipas-id
-             "/sentences")]
-    (:body (client/get url {:as :json}))))
+(defn get-statements [_lipas-id]
+  ;; TODO: Re-enable when accessibility register integration is revived
+  #_(let [url (str
+               (:base-url config)
+               "/api/v1/accessibility/servicepoints/"
+               (:system-id config)
+               "/"
+               _lipas-id
+               "/sentences")]
+      (:body (client/get url {:as :json})))
+  [])
 
 (comment
   (make-app-url

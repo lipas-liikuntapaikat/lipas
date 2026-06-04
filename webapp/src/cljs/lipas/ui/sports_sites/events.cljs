@@ -1,6 +1,5 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
-            [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
             [lipas.ui.utils :as utils]
@@ -26,15 +25,14 @@
 (defn calc-derived-fields [db sports-site]
   (-> sports-site
       (calc-derived-fields-for-type)
-      ;; IF has :ptv key, initialize the default parameters to that map
+      ;; IF has :ptv key, initialize the default parameters to that map.
+      ;; :languages is intentionally NOT stamped here — the backend derives it
+      ;; from the live org config at sync time. Historical note: a stale
+      ;; hardcoded lookup here caused multi-language orgs to export Finnish-only.
       ;; NOTE: Does add extra slowness to any ::edit-field calls...
       (cond->
         (:ptv sports-site)
-        (update :ptv (fn [v]
-                       (let [org-langs (ptv-data/org-id->languages (:org-id v))]
-                         (merge (:default-settings (:ptv db))
-                                {:languages org-langs}
-                                v))))
+        (update :ptv #(merge (:default-settings (:ptv db)) %))
 
         (and (:sync-enabled (:ptv sports-site))
              (:delete-existing (:ptv sports-site)))

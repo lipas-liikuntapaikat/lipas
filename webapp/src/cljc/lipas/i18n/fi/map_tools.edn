@@ -6,6 +6,7 @@
  :importing-tooltip "Tuontityökalu valittu",
  :restore-backup-tooltip "Palauta varmuuskopio",
  :route-part-difficulty-tooltip "Reittiosan vaativuus työkalu valittu",
+ :itrs-segment-tooltip "ITRS-luokitustyökalu valittu",
  :selecting "Valintatyökalu valittu",
  :simplify "Yksinkertaista",
  :simplifying "Yksinkertaistutyökalu valittu",

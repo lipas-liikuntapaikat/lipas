@@ -8,6 +8,7 @@
             ["recharts/es6/component/Legend" :refer [Legend]]
             ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
+            [lipas.data.ptv :as ptv-data]
             [lipas.ui.charts :as charts]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
@@ -37,6 +38,7 @@
             [lipas.ui.sports-sites.subs :as subs]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.sports-sites.pools :as pools]
+            [lipas.ui.sports-sites.renovations :as renovations]
             [lipas.ui.sports-sites.slides :as slides]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [lipas.schema.sports-sites :as sites-schema]
@@ -166,7 +168,7 @@
                     :value (-> edit-data :marketing-name)
                     :on-change #(on-change :marketing-name %)}]}
 
-     ;; Construction year
+     ;; Construction year (renamed to "Perustamisvuosi")
      {:label (tr :lipas.sports-site/construction-year)
       :value (-> display-data :construction-year)
       ;; NOTE: This causes some MUI warnings if the value
@@ -174,15 +176,15 @@
       :form-field [autocompletes/year-selector
                    {:value (-> edit-data :construction-year)
                     :on-change #(on-change :construction-year %)
+                    :helper-text (tr :lipas.sports-site/construction-year-helper-text)
                     :deselect? true}]}
 
-     ;; Renovation years
-     {:label (tr :lipas.sports-site/renovation-years)
-      :value (-> display-data :renovation-years)
-      :form-field [selects/year-selector
-                   {:multi? true
-                    :value (-> edit-data :renovation-years)
-                    :on-change #(on-change :renovation-years %)}]}
+     ;; Renovations
+     [renovations/renovations-field
+      {:tr tr
+       :read-only? read-only?
+       :value (-> (if read-only? display-data edit-data) :renovations)
+       :on-change #(on-change :renovations %)}]
 
      ;; Comment
      {:label (tr :lipas.sports-site/comment)
@@ -268,7 +270,8 @@
   [{:keys [tr edit-data display-data cities on-change read-only?
            sub-headings? address-required? address-locator-component]
     :or {address-required? true}}]
-  (r/with-let [no-address? (r/atom (= "-" (:address display-data)))]
+  (r/with-let [no-address? (r/atom (and (not address-required?)
+                                        (= "-" (:address display-data))))]
     (let [locale (tr)
           editing? (not read-only?)
           lipas-id (when editing? (<== [:lipas.ui.map.subs/editing-lipas-id]))
@@ -1087,7 +1090,15 @@
         [selects/year-selector
          {:label (tr :time/year)
           :value year
-          :on-change #(==> [::events/select-delete-year %])}])]]))
+          :on-change #(==> [::events/select-delete-year %])}])
+
+      ;; If this facility is integrated to PTV, a permanently-out / incorrect-data
+      ;; deletion also archives the PTV service-location. Surface it here, where
+      ;; the user is consciously marking the facility gone.
+      (when (and (contains? #{"out-of-service-permanently" "incorrect-data"} status)
+                 (ptv-data/is-sent-to-ptv? data))
+        [:> Alert {:severity "info" :sx #js {:mt 2}}
+         (tr :ptv/delete-will-archive)])]]))
 
 (defn site-view [{:keys [title on-close close-label bottom-actions lipas-id]}
                  & contents]

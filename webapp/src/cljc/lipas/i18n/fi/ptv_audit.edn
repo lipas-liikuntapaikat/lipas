@@ -22,4 +22,11 @@
  :audited "auditoitua",
  :notification-sent-success "Ilmoitus lähetetty %1$s käyttäjälle",
  :no-recipients-found "Ei vastaanottajia löytynyt",
- :notification-sent "Ilmoitus lähetetty"}
+ :notification-sent "Ilmoitus lähetetty",
+ :issues-found "Auditoinnissa havaittu ongelmia",
+ :both-fields-need-changes "Sekä tiivistelmä että kuvaus vaativat muutoksia. Katso tarkemmat kommentit kenttien alta.",
+ :summary-needs-changes "Tiivistelmä vaatii muutoksia. Katso tarkemmat kommentit kentän alta.",
+ :description-needs-changes "Kuvaus vaatii muutoksia. Katso tarkemmat kommentit kentän alta.",
+ :auditor-feedback "Auditoijan palaute",
+ :auditor-feedback-changes-requested "Auditoijan palaute - vaatii muutoksia",
+ :auditor-feedback-approved "Auditoijan palaute - hyväksytty"}

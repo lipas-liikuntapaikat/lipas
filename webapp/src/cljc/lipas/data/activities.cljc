@@ -1,14 +1,11 @@
 (ns lipas.data.activities
   (:require
-   #?(:clj [cheshire.core :as json])
-   #?(:clj [clojure.data.csv :as csv])
    [clojure.string :as str]
    [lipas.data.materials :as materials]
    [lipas.data.types :as types]
    [lipas.schema.common :as common-schema]
    [lipas.utils :as utils]
    [malli.core :as m]
-   [malli.json-schema :as json-schema]
    [malli.util :as mu]))
 
 (defn collect-schema
@@ -909,6 +906,121 @@
                                           :se "Avsnittets svårighetsgrad"
                                           :en "Section difficulty"})
 
+(def itrs-technical-options
+  {"1a" {:label {:fi "1a - Siirtymä"
+                 :se "1a - Övergång"
+                 :en "1a - Transition"}
+         :description {:fi "päällystetie"
+                       :se "asfalterad väg"
+                       :en "paved road"}
+         :color "purple"}
+   "1b" {:label {:fi "1b - Erittäin helppo (Beginner)"
+                 :se "1b - Mycket lätt (Beginner)"
+                 :en "1b - Very easy (Beginner)"}
+         :description {:fi "yli 1 metrin levyinen ja pääosin tasainen osuus"
+                       :se "över 1 meter bred och huvudsakligen jämn sektion"
+                       :en "over 1 meter wide and mostly smooth section"}
+         :color "green"}
+   "2" {:label {:fi "2 - Helppo (Intermediate)"
+                :se "2 - Lätt (Intermediate)"
+                :en "2 - Easy (Intermediate)"}
+        :description {:fi "0,6 - 1 metrin levyinen ja/tai yliajettavia epätasaisuuksia sisältävä osuus"
+                      :se "0,6 - 1 meter bred och/eller sektion med körbara ojämnheter"
+                      :en "0.6 - 1 meter wide and/or section containing rideable unevenness"}
+        :color "blue"}
+   "3" {:label {:fi "3 - Keskivaativa (Advanced)"
+                :se "3 - Medel (Advanced)"
+                :en "3 - Intermediate (Advanced)"}
+        :description {:fi "0,3 - 0,6 metrin levyinen ja/tai huomattavia epätasaisuuksia sisältävä osuus"
+                      :se "0,3 - 0,6 meter bred och/eller sektion med betydande ojämnheter"
+                      :en "0.3 - 0.6 meter wide and/or section containing significant unevenness"}
+        :color "red"}
+   "4" {:label {:fi "4 - Vaativa (Expert)"
+                :se "4 - Svår (Expert)"
+                :en "4 - Difficult (Expert)"}
+        :description {:fi "alle 0,3 metrin levyinen ja/tai suuria epätasaisuuksia sisältävä osuus"
+                      :se "under 0,3 meter bred och/eller sektion med stora ojämnheter"
+                      :en "less than 0.3 meter wide and/or section containing large unevenness"}
+        :color "black"}
+   "5" {:label {:fi "5 - Erittäin vaativa (Extreme)"
+                :se "5 - Extremt svår (Extreme)"
+                :en "5 - Extremely difficult (Extreme)"}
+        :description {:fi "alle 0,3 metrin levyinen, erittäin epätasainen ja jyrkkä osuus"
+                      :se "under 0,3 meter bred, mycket ojämn och brant sektion"
+                      :en "less than 0.3 meter wide, very uneven and steep section"}
+        :color "orange"}})
+
+(def itrs-technical-order
+  {"1a" 0, "1b" 1, "2" 2, "3" 3, "4" 4, "5" 5})
+
+(defn itrs-technical-max
+  "Returns the highest ITRS technical value from a seq of values."
+  [values]
+  (->> values
+       (filter some?)
+       (sort-by itrs-technical-order)
+       last))
+
+(def itrs-technical-route-options
+  (into {} (map (fn [[k v]] [k (:label v)]) itrs-technical-options)))
+
+(def itrs-exposure-options
+  {"1" {:label {:fi "1 - Normaali loukkaantumisriski"
+                :se "1 - Normal skaderisk"
+                :en "1 - Normal injury risk"}
+        :description {:fi "Normaali loukkaantumisriski"
+                      :se "Normal skaderisk"
+                      :en "Normal injury risk"}}
+   "2" {:label {:fi "2 - Vakava loukkaantumisriski"
+                :se "2 - Hög risk för allvarliga skador"
+                :en "2 - High risk of serious injury"}
+        :description {:fi "Vakava loukkaantumisriski"
+                      :se "Hög risk för allvarliga skador"
+                      :en "High risk of serious injury"}}
+   "3" {:label {:fi "3 - Hengenvaaralliset seuraukset"
+                :se "3 - Livshotande konsekvenser"
+                :en "3 - Life-threatening consequences"}
+        :description {:fi "Hengenvaaralliset seuraukset"
+                      :se "Livshotande konsekvenser"
+                      :en "Life-threatening consequences"}}
+   "4" {:label {:fi "4 - Kuolemaan johtavat seuraukset"
+                :se "4 - Dödliga konsekvenser"
+                :en "4 - Fatal consequences"}
+        :description {:fi "Kuolemaan johtavat seuraukset"
+                      :se "Dödliga konsekvenser"
+                      :en "Fatal consequences"}}})
+
+(def itrs-endurance-options
+  {"1" {:fi "1 - Normaali liikunnallisuus"
+        :se "1 - Normal fysisk aktivitet"
+        :en "1 - Normal physical activity"}
+   "2" {:fi "2 - Satunnaista liikuntaa ja pyöräilyä"
+        :se "2 - Sporadisk motion och cykling"
+        :en "2 - Occasional exercise and cycling"}
+   "3" {:fi "3 - Säännöllistä pyöräilyä ja muuta urheilua"
+        :se "3 - Regelbunden cykling och annan idrott"
+        :en "3 - Regular cycling and other sports"}
+   "4" {:fi "4 - Aktiivista pyöräilyn lajiharjoittelua"
+        :se "4 - Aktiv cykelträning"
+        :en "4 - Active cycling training"}
+   "5" {:fi "5 - Ammattimaista pyöräilyn lajiharjoittelua"
+        :se "5 - Professionell cykelträning"
+        :en "5 - Professional cycling training"}})
+
+(def itrs-wilderness-options
+  {"1" {:fi "1 - Kaupunki- tai taajama-alue"
+        :se "1 - Stads- eller tätortsområde"
+        :en "1 - Urban or built-up area"}
+   "2" {:fi "2 - Maaseutu- tai luontoympäristö"
+        :se "2 - Landsbygd eller naturmiljö"
+        :en "2 - Rural or natural environment"}
+   "3" {:fi "3 - Syrjäinen luontoympäristö"
+        :se "3 - Avlägsen naturmiljö"
+        :en "3 - Remote natural environment"}
+   "4" {:fi "4 - Erämaa-alue"
+        :se "4 - Vildmarksområde"
+        :en "4 - Wilderness area"}})
+
 (def cycling
   {:label       {:fi "Pyöräily"
                  :se "Cykling"
@@ -927,6 +1039,9 @@
                  :duration
                  :cycling-difficulty
                  :cycling-route-difficulty
+                 :itrs-endurance
+                 :itrs-wilderness
+                 :itrs-technical-route
                  :surface-material
                  :unpaved-percentage
                  :trail-percentage
@@ -972,6 +1087,12 @@
                 [:unpaved-percentage {:optional true} common-schema/percentage]
                 [:trail-percentage {:optional true} common-schema/percentage]
                 [:cyclable-percentage {:optional true} common-schema/percentage]
+                [:itrs-endurance {:optional true}
+                 (into [:enum] (keys itrs-endurance-options))]
+                [:itrs-wilderness {:optional true}
+                 (into [:enum] (keys itrs-wilderness-options))]
+                [:itrs-technical-route {:optional true}
+                 (into [:enum] (keys itrs-technical-options))]
                 pilgrimage-key-schema])]
      :field
      {:type        "routes"
@@ -1033,6 +1154,39 @@
           :label       {:fi "Haastavuus"
                         :se "Utmaning"
                         :en "Difficulty"}}}
+
+        :itrs-endurance
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Fyysisen kunnon vaatimus"
+                        :se "ITRS Uthållighetskrav"
+                        :en "ITRS Endurance Requirement"}
+          :description {:fi "Reitin pituuden sekä mäkien nousu- ja laskumetrien mukaan määrittyvä fyysisen kunnon vaatimus."
+                        :se "Krav på fysisk kondition beroende på rutlängd och höjdmeter upp/ned."
+                        :en "Physical fitness requirement determined by route length and total ascent/descent."}
+          :opts        itrs-endurance-options}}
+
+        :itrs-wilderness
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Sijainti"
+                        :se "ITRS Läge"
+                        :en "ITRS Location"}
+          :description {:fi "Reitin sijainti suhteessa vaadittavaan ennakkovalmistautumiseen ja palveluihin, esim. matkapuhelimen kuuluvuus, ympäröivän tieverkoston laatu."
+                        :se "Ledens läge i förhållande till nödvändig förberedelse och tjänster, t.ex. mobiltäckning, kvaliteten på det omgivande vägnätet."
+                        :en "Route location in relation to required advance preparation and services, e.g., mobile coverage, quality of the surrounding road network."}
+          :opts        itrs-wilderness-options}}
+
+        :itrs-technical-route
+        {:field
+         {:type        "select"
+          :label       {:fi "ITRS Reitin tekninen luokitus"
+                        :se "ITRS Teknisk svårighetsgrad (lednivå)"
+                        :en "ITRS Technical Difficulty (Route)"}
+          :description {:fi "Reitin edellyttämä taitotaso, jota edellytetään haastavimpien osuuksien ajamiseen. Vaativin reittiosa tai luokittelijan määrittelemä reitin luokitustaso."
+                        :se "Den färdighetsnivå som krävs för att klara de svåraste delarna av hela leden."
+                        :en "Skill level required to ride the most difficult parts of the entire route."}
+          :opts        itrs-technical-route-options}}
 
         :duration
         {:field
@@ -1804,22 +1958,7 @@
 (comment
   (m/schema activities-schema)
   (require '[clojure.pprint :as pprint])
-  (pprint/pprint activities-schema)
-
-  (require '[malli.json-schema :as json-schema])
-  (json-schema/transform activities-schema)
-
-  (require '[cheshire.core :as json])
-
-  (println (-> activities-schema json-schema/transform json/encode)))
-
-(defn gen-json-schema
-  []
-  (-> activities-schema
-      json-schema/transform
-      #?(:clj (json/encode {:pretty true})
-         :cljs clj->js)
-      println))
+  (pprint/pprint activities-schema))
 
 (def by-types
   (utils/index-by :type-codes [outdoor-recreation-areas
@@ -1870,13 +2009,6 @@
            (get-in prop [:field :description :se])
            (get-in prop [:field :description :en])])))
 
-(declare gen-csv)
-
-#?(:clj
-   (defn gen-csv
-     []
-     (csv/write-csv *out* csv-data)))
-
 (def by-type-code
   (->> by-types
        (mapcat (fn [[type-codes v]]
@@ -1886,12 +2018,3 @@
 
 (def activities (->> by-types vals (utils/index-by :value)))
 
-(defn -main [& args]
-  (if (= "csv" (first args))
-    (gen-csv)
-    (gen-json-schema)))
-
-(comment
-
-  (json-schema/transform birdwatching-schema)
-  (json-schema/transform activities-schema))

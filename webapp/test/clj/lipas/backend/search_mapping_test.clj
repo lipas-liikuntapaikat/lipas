@@ -11,8 +11,8 @@
       (testing "Has strict dynamic mode"
         (is (= "strict" (:dynamic (:mappings mapping)))))
 
-      (testing "Has field limit of 350"
-        (is (= 350 (get-in mapping [:settings :index :mapping :total_fields :limit]))))
+      (testing "Has field limit matching total-fields-limit"
+        (is (= search/total-fields-limit (get-in mapping [:settings :index :mapping :total_fields :limit]))))
 
       (testing "Has max_result_window of 60000"
         (is (= 60000 (get-in mapping [:settings :max_result_window]))))
@@ -26,7 +26,7 @@
           prop-type-keys (set (keys prop-types/all))]
 
       (testing "Total property count matches"
-        (is (= 181 (count prop-type-keys))))
+        (is (= 182 (count prop-type-keys))))
 
       (testing "Each prop-type field has a mapping"
         (doseq [[prop-key prop-def] prop-types/all]
@@ -65,7 +65,7 @@
       (testing "Enum-coll properties map to keyword"
         (let [enum-coll-props (filter #(= "enum-coll" (get-in % [1 :data-type])) prop-types/all)
               sample-key (keyword (str "properties." (name (ffirst enum-coll-props))))]
-          (is (= 3 (count enum-coll-props)))
+          (is (= 4 (count enum-coll-props)))
           (is (= "keyword" (:type (get properties sample-key))))))))
 
   (testing "Geographic fields have correct types"

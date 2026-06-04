@@ -10,21 +10,21 @@
    [:map
     [:name category-name]
     [:factor common/number]
-    [:type-codes [:vector {:min 1} types-schema/type-code-with-legacy]]]))
+    [:type-codes [:sequential {:min 1} types-schema/type-code-with-legacy]]]))
 
 (def category-preset
   (m/schema
    [:map
     [:name category-name]
-    [:categories [:vector {:min 1} category]]]))
+    [:categories [:sequential {:min 1} category]]]))
 
 (def category-presets
-  (m/schema [:vector category-preset]))
+  (m/schema [:sequential category-preset]))
 
 (def diversity-indices-req
   (m/schema
    [:map
-    [:categories [:vector {:min 1} category]]
+    [:categories [:sequential {:min 1} category]]
     [:analysis-area-fcoll [:map
                            [:type [:enum "FeatureCollection"]]
                            [:features [:sequential [:map

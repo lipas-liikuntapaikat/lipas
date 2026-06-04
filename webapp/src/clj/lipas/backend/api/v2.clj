@@ -23,6 +23,7 @@
    "name-localized"
    "construction-year"
    "renovation-years"
+   "renovations"
    "owner"
    "location"
    "properties"

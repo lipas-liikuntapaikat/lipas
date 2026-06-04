@@ -3,6 +3,7 @@
             [cognitect.transit :as t]
             [lipas.roles :as roles]
             [lipas.ui.bulk-operations.events :as bulk-ops-events]
+            [lipas.utils :as utils]
             [re-frame.core :as rf]
             [reitit.frontend.easy :as rfe]))
 
@@ -53,6 +54,22 @@
                        :on-success [::get-all-users-success]
                        :on-failure [::failure]}})))
 
+(defn- init-ptv-data
+  "Ensure ptv-data has explicit defaults for fields the strict
+  `ptv-config-update` schema requires. Without these defaults the
+  Save button stays disabled — either because legacy rows lack
+  :sync-enabled, or because selectors render a default value
+  (:owners) that never gets written to app-db until the user
+  actively interacts with them."
+  [ptv-data]
+  (merge {:sync-enabled false
+          :owners ["city" "city-main-owner"]}
+         ptv-data))
+
+(defn- init-org [org]
+  (when org
+    (update org :ptv-data init-ptv-data)))
+
 (rf/reg-event-fx ::init-view
                  (fn [{:keys [db]} [_ org-id]]
                    (let [user-data (get-in db [:user :login])
@@ -63,11 +80,11 @@
                                        {:id (random-uuid)
                                         :name ""
                                         :data {:primary-contact {}}
-                                        :ptv-data {}}
+                                        :ptv-data (init-ptv-data {})}
                                        (when user-orgs
                                          (some (fn [o]
                                                  (when (= org-id (str (:id o)))
-                                                   o))
+                                                   (init-org o)))
                                                user-orgs)))
                          fx (cond-> []
                               (not is-new?) (conj [:dispatch [::get-org-users org-id]])
@@ -90,7 +107,7 @@
         ;; If we have orgs or exceeded retries, find the org
                        (let [current-org (some (fn [o]
                                                  (when (= org-id (str (:id o)))
-                                                   o))
+                                                   (init-org o)))
                                                user-orgs)]
                          {:db (assoc-in db [:org :editing-org] current-org)})
         ;; Otherwise wait and retry
@@ -109,8 +126,8 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :add-user-form])
                          user-id (:user-id form)
-                         role (:role form)]
-                     (if (and user-id role)
+                         role (or (:role form) "org-user")]
+                     (if user-id
                        {:fx [[:dispatch [::org-user-update org-id user-id role "add"]]
                              [:dispatch [::clear-add-user-form]]]}
                        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
@@ -129,8 +146,8 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :add-user-email-form])
                          email (:email form)
-                         role (:role form)]
-                     (if (and email role)
+                         role (or (:role form) "org-user")]
+                     (if email
                        (let [token (-> db :user :login :token)]
                          {:http-xhrio
                           {:method :post
@@ -233,18 +250,24 @@
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success
-                 (fn [{:keys [db]} [_ resp]]
-                   (let [tr (:translator db)]
-                     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
-                                       {:message "PTV configuration saved successfully"
-                                        :success? true}]]]})))
+                 (fn [{:keys [db]} [_ org-id ptv-config resp]]
+                   {:db (update-in db [:user :orgs]
+                                   (fn [orgs]
+                                     (mapv (fn [org]
+                                             (if (= (:id org) org-id)
+                                               (assoc org :ptv-data ptv-config)
+                                               org))
+                                           orgs)))
+                    :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                                     {:message "PTV configuration saved successfully"
+                                      :success? true}]]]}))
 
 (rf/reg-event-fx ::save-ptv-config
                  (fn [{:keys [db]} [_]]
                    (let [token (-> db :user :login :token)
                          org (get-in db [:org :editing-org])
                          org-id (:id org)
-                         ptv-config (:ptv-data org)]
+                         ptv-config (utils/clean (:ptv-data org))]
                      {:http-xhrio
                       {:method :put
                        :uri (str (:backend-url db) "/orgs/" org-id "/ptv-config")
@@ -252,7 +275,7 @@
                        :params ptv-config
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
-                       :on-success [::save-ptv-config-success]
+                       :on-success [::save-ptv-config-success org-id ptv-config]
                        :on-failure [::failure]}})))
 
  ;; Generic failure handler

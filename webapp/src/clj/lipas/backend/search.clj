@@ -42,6 +42,8 @@
    {}
    prop-types/all))
 
+(def total-fields-limit 450)
+
 (defn generate-explicit-mapping
   "Generates explicit Elasticsearch mapping for sports_sites_current index.
 
@@ -127,6 +129,7 @@
          :www {:enabled false}
          :reservations-link {:enabled false}
          :renovation-years {:enabled false}
+         :renovations {:enabled false}
          :name-localized {:enabled false}
          :fields {:enabled false}
          :locker-rooms {:enabled false}
@@ -190,7 +193,7 @@
 
     {:settings
      {:max_result_window 60000
-      :index {:mapping {:total_fields {:limit 350}}}}
+      :index {:mapping {:total_fields {:limit total-fields-limit}}}}
      :mappings
      {:dynamic "strict"
       :date_detection false
@@ -202,7 +205,7 @@
   revision data."
   []
   (-> (generate-explicit-mapping)
-      (assoc-in [:settings :index :mapping :total_fields :limit] 400)
+      (assoc-in [:settings :index :mapping :total_fields :limit] (+ total-fields-limit 50))
       (update-in [:mappings :properties] merge
                  {:id         {:type "keyword"}
                   :doc-status {:type "keyword"}
@@ -288,21 +291,30 @@
   ([client data]
    ;; Return a future to keep consistent with previous impl
    (future
-     (let [{:keys [input-ch output-ch]}
-           (es/bulk-chan client {:flush-threshold         100
-                                 :flush-interval          5000
-                                 :max-concurrent-requests 3})]
+     ;; Short-circuit on empty data: spandex would still send a request with
+     ;; an empty body, which ES rejects with 400 "request body is required".
+     (if (empty? data)
+       {}
+       (let [{:keys [input-ch output-ch]}
+             (es/bulk-chan client {:flush-threshold         100
+                                   :flush-interval          5000
+                                   :max-concurrent-requests 3})]
 
-       (async/put! input-ch data)
-       (async/close! input-ch)
+         (async/put! input-ch data)
+         (async/close! input-ch)
 
-       (when-let [[_job resp] (async/<!! output-ch)]
-         (async/close! output-ch)
-         (->> resp
-              :body
-              :items
-              (map (comp :result second first))
-              frequencies))))))
+         (when-let [[_job resp] (async/<!! output-ch)]
+           (async/close! output-ch)
+           (when (instance? Throwable resp)
+             (throw (ex-info "Bulk index request failed"
+                             {:status (when (instance? clojure.lang.IExceptionInfo resp)
+                                        (-> resp ex-data :status))}
+                             resp)))
+           (->> resp
+                :body
+                :items
+                (map (comp :result second first))
+                frequencies)))))))
 
 (defn bulk-index-sync!
   ([client data]

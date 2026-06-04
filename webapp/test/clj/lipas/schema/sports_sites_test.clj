@@ -165,6 +165,53 @@
     (is (not (m/validate sports-sites/renovation-years #{2020}))) ; set, not sequential
     (is (not (m/validate sports-sites/renovation-years nil)))))
 
+(deftest renovation-type-test
+  (testing "Valid renovation types"
+    (is (m/validate sports-sites/renovation-type "major-renovation"))
+    (is (m/validate sports-sites/renovation-type "other-maintenance")))
+
+  (testing "Invalid renovation types"
+    (is (not (m/validate sports-sites/renovation-type "unknown")))
+    (is (not (m/validate sports-sites/renovation-type "")))
+    (is (not (m/validate sports-sites/renovation-type nil)))))
+
+(deftest renovation-entry-test
+  (testing "Valid renovation entries"
+    (is (m/validate sports-sites/renovation-entry
+                    {:year 2020 :type "major-renovation"}))
+    (is (m/validate sports-sites/renovation-entry
+                    {:year 2020 :type "other-maintenance"
+                     :description {:fi "Katon uusiminen"}}))
+    (is (m/validate sports-sites/renovation-entry
+                    {:year 1900 :type "major-renovation"
+                     :description {:fi "Remontti" :en "Renovation" :se "Renovering"}})))
+
+  (testing "Invalid renovation entries"
+    (is (not (m/validate sports-sites/renovation-entry
+                         {:year 2020}))) ; missing type
+    (is (not (m/validate sports-sites/renovation-entry
+                         {:type "major-renovation"}))) ; missing year
+    (is (not (m/validate sports-sites/renovation-entry
+                         {:year 1799 :type "major-renovation"}))) ; year too old
+    (is (not (m/validate sports-sites/renovation-entry
+                         {:year 2020 :type "unknown-type"})))))
+
+(deftest renovations-test
+  (testing "Valid renovations"
+    (is (m/validate sports-sites/renovations []))
+    (is (m/validate sports-sites/renovations
+                    [{:year 2020 :type "major-renovation"}]))
+    (is (m/validate sports-sites/renovations
+                    [{:year 2020 :type "major-renovation"}
+                     {:year 2022 :type "other-maintenance"
+                      :description {:fi "Pintaremontti"}}])))
+
+  (testing "Invalid renovations"
+    (is (not (m/validate sports-sites/renovations nil)))
+    (is (not (m/validate sports-sites/renovations
+                         [{:year 2020}]))) ; missing type
+    (is (not (m/validate sports-sites/renovations "not-a-vector")))))
+
 (deftest owner-test
   (testing "Valid owner values"
     (is (m/validate sports-sites/owner "city"))
@@ -309,7 +356,7 @@
           form (m/form schema)
           optional-fields #{:marketing-name :name-localized :email :www
                             :reservations-link :phone-number :comment
-                            :construction-year :renovation-years}]
+                            :construction-year :renovation-years :renovations}]
       (doseq [field (drop 2 form)]
         (when (optional-fields (first field))
           (is (true? (-> field second :optional))
@@ -777,7 +824,7 @@
   (testing "Property: Optional fields are consistently marked across type codes"
     (let [optional-fields #{:marketing-name :name-localized :email :www
                             :reservations-link :phone-number :comment
-                            :construction-year :renovation-years}
+                            :construction-year :renovation-years :renovations}
           multi-form (m/form sports-sites/sports-site)
           type-codes (take 10 (map first (drop 2 multi-form)))]
       (doseq [type-code type-codes]

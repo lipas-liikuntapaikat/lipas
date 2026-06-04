@@ -369,6 +369,23 @@
     #js [(if hover? hover-style edit-style)
          label-style]))
 
+(defn itrs-segment-style-fn
+  [feature _tr hover? _selected?]
+  (let [technical (if-let [x (.get feature "itrs-technical")]
+                    (str "T" x)
+                    "-")
+        label (str "ITRS: " technical)
+        label-style (.clone route-part-label-style)
+        _ (.. label-style
+              (getText)
+              (setText label))]
+    (when hover?
+      (.. label-style
+          (getText)
+          (setBackgroundStroke hover-stroke)))
+    #js [(if hover? hover-style edit-style)
+         label-style]))
+
 (def population-grid-radius
   "Population grid is 250x250m"
   (/ (* 250 (Math/sqrt 2)) 2))

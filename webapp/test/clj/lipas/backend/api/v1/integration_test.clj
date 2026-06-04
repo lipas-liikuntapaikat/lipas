@@ -201,18 +201,18 @@
           (is (= "Polygon" geom-type)
               "Area should have Polygon geometry"))))
 
-    (testing "Another sports park with different ID"
-      ;; Note: Golf course (1650) is a new type not in legacy types-old data,
-      ;; so we use another sports park instance to test area handling
-      (let [site (test-utils/make-sports-park-site 300002
-                                                   :name "Liikuntapuisto 2"
-                                                   :playground? false
-                                                   :ligthing? true)
+    (testing "Golf course (type 1650)"
+      (let [site (test-utils/make-golf-course-site 300002
+                                                   :name "Golfkenttä"
+                                                   :holes-count 18
+                                                   :range? true)
             _ (save-and-index! site)
             {:keys [status body]} (query-legacy-api "/v1/sports-places/300002")]
 
         (is (= 200 status))
-        (is (= 1110 (-> body :type :typeCode)))))
+        (is (= 1650 (-> body :type :typeCode)))
+        (is (= "Polygon"
+               (-> body :location :geometries :features first :geometry :type)))))
 
     (testing "Outdoor recreation area (type 103)"
       (let [site (test-utils/make-outdoor-recreation-area-site 300003
@@ -531,12 +531,10 @@
             (is (not (re-find #"-" (name k)))
                 (str "Property key should be camelCase: " k))))))
 
-    (testing "Area properties (sports park)"
-      ;; Note: Golf course (1650) is a new type not in legacy types-old data,
-      ;; so we use sports park (1110) which exists in both systems
-      (let [site (test-utils/make-sports-park-site 800003
-                                                   :playground? true
-                                                   :ligthing? true)
+    (testing "Area properties (golf course)"
+      (let [site (test-utils/make-golf-course-site 800003
+                                                   :holes-count 18
+                                                   :range? true)
             _ (save-and-index! site)
             {:keys [status body]} (query-legacy-api "/v1/sports-places/800003")]
         (is (= 200 status))

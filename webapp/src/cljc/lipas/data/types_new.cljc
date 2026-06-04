@@ -2,7 +2,7 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the outcome of the changes."
   (:require
-   [lipas.utils :as utils]))
+    [lipas.utils :as utils]))
 
 (def main-categories
   {0
@@ -2878,7 +2878,7 @@
    103
    {:description
     {:fi
-     "Voivat sijaita taajaman reunoilla, vyöhykkeittäin taajaman sisällä tai taajaman ulkopuolella. Kohteissa voi olla myös taajamasta lähteviä tai taajamaan palaavia reittejä tai polku- ja reittiverkosto. Kohteet sisältävät vaihtelevaa maastoa ja luonnonmukaisia tai puistomaisia alueita. Kohteet voivat myös sijaita vesialuiden lähellä kuten rannoilla tai saarissa. Kohteiden pääasiallinen käyttö on retkeilyä ja luonnossa virkistäytymistä, mutta niitä voidaan käyttää monipuolisesti erilaisen liikunnan kuten hiihdon, lenkkeilyn tai uinnin harrastamiseen. Kaavamerkintä esim. VR. HUOM! Uusien liikunta- ja ulkoilupaikkojen lisäksi Ulkoilu-/virkistysalueluokka sisältää ennen vuotta 2025 Ulkoilualue- ja Retkeilyalue-tyyppiluokkiin lisätyt olosuhteet",
+     "Voivat sijaita taajaman reunoilla, vyöhykkeittäin taajaman sisällä tai taajaman ulkopuolella. Kohteissa voi olla myös taajamasta lähteviä tai taajamaan palaavia reittejä tai polku- ja reittiverkosto. Kohteet sisältävät vaihtelevaa maastoa ja luonnonmukaisia tai puistomaisia alueita. Kohteet voivat myös sijaita vesialueiden lähellä, kuten rannoilla tai saarissa. Kohteiden pääasiallinen käyttö on retkeilyä ja luonnossa virkistäytymistä, mutta niitä voidaan käyttää monipuolisesti erilaisen liikunnan kuten hiihdon, lenkkeilyn tai uinnin harrastamiseen. Kaavamerkintä esim. VR. HUOM! Uusien liikunta- ja ulkoilupaikkojen lisäksi Ulkoilu-/virkistysalueluokka sisältää ennen vuotta 2025 Ulkoilualue- ja Retkeilyalue-tyyppiluokkiin lisätyt olosuhteet.",
      :se
      "Området befinner sig i utkanten av tätorter eller i zoner inom tätorten. På 1-10 kilometers avstånd från bebyggelse. Friluftsområdet används för t.ex. promenader, skidning, joggning, simning. Serverar oftast friluftsaktiviteter för en kommun. Området erbjuder en stor variation av motions möjligheter. Området kan bestå av skog, kärr, åkrar, naturenliga områden och parkliknande delar. Planbeteckning VR.",
      :en
@@ -4093,7 +4093,8 @@
      :ligthing? {:priority 70},
      :playground? {:priority 80},
      :school-use? {:priority 0},
-     :exercise-machines-count {:priority 80}}},
+     :exercise-machines-count {:priority 80},
+     :outdoor-exercise-structures {:priority 85}}},
    5120
    {:description
     {:fi "Pysyvästi purjehdusta varten varustettu alue.",
@@ -4722,5 +4723,4 @@
   #?(:clj (spit "/tmp/types.edn" (with-out-str (pprint/pprint all))))
   #?(:clj (spit "/tmp/sub-cats.edn" (with-out-str (pprint/pprint sub-categories))))
   #?(:clj (spit "/tmp/main-cats.edn" (with-out-str (pprint/pprint main-categories))))
-  (->> all vals (map :status) distinct)
-  )
+  (->> all vals (map :status) distinct))

@@ -67,13 +67,13 @@
       (into [:> Select props
              (when deselect?
                [:> MenuItem {:key   "deselect"
-                               :value nil}
+                             :value nil}
                 "-"])]
             (for [i (sort-by sort-fn sort-cmp items)]
               (let [value (value-fn i)
                     label (label-fn i)]
                 [:> MenuItem {:key   (pr-str value)
-                                :value (pr-str value)}
+                              :value (pr-str value)}
                  label])))
       (when helper-text [:> FormHelperText helper-text])]]))
 
@@ -90,9 +90,9 @@
   (let [sort-fn (or sort-fn label-fn)]
     [:> Tooltip {:title tooltip}
      [:> FormControl {:fullWidth fullWidth
-                        :required  required
-                        :error     (error? spec value required)
-                        :variant   "standard"}
+                      :required  required
+                      :error     (error? spec value required)
+                      :variant   "standard"}
       (when label [:> InputLabel label])
       [:> Select
        (merge (dissoc props :label :value-fn :label-fn :sort-fn :sort-cmp)
@@ -311,7 +311,7 @@
       :label-fn  (comp locale :name second)
       :on-change on-change}]))
 
-(defn city-selector [{:keys [value on-change cities disabled]}]
+(defn city-selector [{:keys [value on-change cities disabled required]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         cities (or cities
@@ -321,6 +321,7 @@
      {:items     cities
       :disabled  disabled
       :multi?    true
+      :required  required
       :value     value
       :style     select-style
       :label     (tr :stats/select-city)
@@ -386,7 +387,7 @@
       :value-fn  first
       :on-change on-change}]))
 
-(defn owner-selector [{:keys [value on-change label disabled]}]
+(defn owner-selector [{:keys [value on-change label disabled required]}]
   (let [tr     (<== [:lipas.ui.subs/translator])
         locale (tr)
         items  (<== [:lipas.ui.sports-sites.subs/owners])]
@@ -396,6 +397,7 @@
       :value     value
       :disabled  disabled
       :multi?    true
+      :required  required
       :deselect? true
       :label     (or label (tr :search/search))
       :items     items

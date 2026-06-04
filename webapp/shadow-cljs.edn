@@ -8,15 +8,20 @@
   {:target     :browser
    :asset-path "js/compiled"
    :output-dir "resources/public/js/compiled"
+   ;; Renders resources/public/index.html from index.html.tmpl on every build,
+   ;; substituting the resolved (hashed) bundle filename.
+   :build-hooks [(lipas.build.cache-bust/render-index)]
    :dev
    {:closure-defines
     {re-frame.trace.trace-enabled? true}}
+   :release
+   ;; 8-char MD5 prefix is plenty for collision-resistance on a single bundle
+   {:module-hash-names 8}
    :modules
    {:app
     {:init-fn lipas.ui.core/init}}
    ;; TODO: Consider moving e.g. recharts to its own module,
    ;; load when navigation to tilastot.
-   ;; TODO: module-hash-names
    :devtools
    {:preloads   [devtools.preload
                  ;; Not compatible with React 19 currently

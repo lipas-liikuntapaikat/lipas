@@ -107,6 +107,18 @@ SELECT *
 FROM sports_site_current
 WHERE lipas_id IN (:v*:lipas_ids)
 
+-- :name get-lipas-ids-by-ptv-service-channel-id
+-- :command :query
+-- :result :many
+-- :doc Lipas-ids (and names) of current revisions whose PTV service-channel-ids
+-- :doc array contains :service_channel_id. Used to detect double-linking (more
+-- :doc than one sports-site bound to the same PTV service-location). The :ptv
+-- :doc subtree is not indexed in Elasticsearch ({:enabled false}), so this JSONB
+-- :doc query against the source of truth is the authoritative lookup.
+SELECT lipas_id, document ->> 'name' AS name
+FROM sports_site_current
+WHERE document #> '{ptv,service-channel-ids}' @> to_jsonb(:service_channel_id ::text)
+
 -- :name invalidate-since!
 -- :command :execute
 -- :result :affected

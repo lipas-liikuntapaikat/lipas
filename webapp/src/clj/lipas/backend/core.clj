@@ -34,7 +34,7 @@
             [lipas.utils :as utils]
             [taoensso.timbre :as log])
   (:import
-   [java.io OutputStreamWriter]))
+    [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -394,6 +394,43 @@
              (comp gis/repair-self-intersecting-polygon
                    gis/dedupe-polygon-coords)))
 
+(defn compute-renovations
+  "Materializes :renovations from legacy :renovation-years entries. For
+  each year in :renovation-years not already covered by a :renovations
+  entry (any type), synthesizes {:year y :type \"major-renovation\"}.
+  Lets legacy data appear in the structured renovations UI without a
+  one-off DB migration."
+  [sports-site]
+  (let [covered-years (->> (:renovations sports-site) (map :year) set)
+        synthesized (->> (:renovation-years sports-site)
+                         (remove covered-years)
+                         (map (fn [y] {:year y :type "major-renovation"})))
+        merged (->> (concat (:renovations sports-site) synthesized)
+                    (sort-by :year)
+                    vec)]
+    (cond-> sports-site
+      (seq merged)
+      (assoc :renovations merged))))
+
+(defn compute-renovation-years
+  "Computes :renovation-years by merging existing values with years from
+  \"major-renovation\" entries in :renovations. Used for backwards
+  compatibility so that old API consumers still see renovation years
+  derived from the new structured renovations data. Pairs with
+  compute-renovations as the inverse direction."
+  [sports-site]
+  (let [major-renovation-years (->> (:renovations sports-site)
+                                    (filter #(= "major-renovation" (:type %)))
+                                    (map :year))
+        computed (->> (concat (:renovation-years sports-site)
+                              major-renovation-years)
+                      distinct
+                      sort
+                      vec)]
+    (cond-> sports-site
+      (seq computed)
+      (assoc :renovation-years computed))))
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
   is useful for searching."
@@ -435,6 +472,10 @@
         activity-keys (when-let [activities (:activities sports-site)]
                         (when (seq activities)
                           (vec (keys activities))))
+        sports-site (-> sports-site
+                        compute-renovations
+                        compute-renovation-years)
+
         search-meta {:name (utils/->sortable-name (:name sports-site))
                      :admin {:name (-> sports-site :admin admins)}
                      :owner {:name (-> sports-site :owner owners)}
@@ -463,8 +504,8 @@
           area-m2 (-> building :total-ice-area-m2)]
       (-> ice-stadium
           (cond->
-           smaterial (assoc-in [:properties :surface-material] [smaterial])
-           area-m2 (assoc-in [:properties :area-m2] area-m2))
+            smaterial (assoc-in [:properties :surface-material] [smaterial])
+            area-m2 (assoc-in [:properties :area-m2] area-m2))
           utils/clean
           enrich*)))
 
@@ -501,11 +542,14 @@
   ([search sports-site]
    (index-legacy-sports-place! search sports-site false))
   ([{:keys [indices client]} sports-site sync?]
-   (let [legacy-data (-> (legacy-transform/->old-lipas-sports-site* sports-site)
+   (let [legacy-data (-> sports-site
+                         compute-renovation-years
+                         (dissoc :renovations)
+                         legacy-transform/->old-lipas-sports-site*
                          (assoc :id (:lipas-id sports-site))
                          (legacy-sports-place/format-sports-place
-                          :all
-                          legacy-locations/format-location))
+                           :all
+                           legacy-locations/format-location))
 
          idx-name (get-in indices [:legacy-sports-site :search])]
      ;; Use :sportsPlaceId as the id-fn since the data is in legacy camelCase format
@@ -570,73 +614,84 @@
    (let [correlation-id (jobs/gen-correlation-id)]
      (jobs/with-correlation-context correlation-id
        (fn []
-         (jdbc/with-db-transaction [tx db]
-           (let [resp (upsert-sports-site! tx user sports-site draft?)
-                 route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
+         ;; Phase 1: All DB operations inside the transaction.
+         ;; ES indexing is deliberately outside the transaction so that
+         ;; a failure in indexing cannot roll back committed DB data.
+         ;; Worst case: data in DB but not in ES, fixable by reindexing.
+         (let [resp
+               (jdbc/with-db-transaction [tx db]
+                 (let [resp (upsert-sports-site! tx user sports-site draft?)
+                       route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
-             (when-not draft?
-               (log/info "Saving sports site with background jobs"
-                         {:lipas-id (:lipas-id resp)
-                          :is-route? route?
-                          :user (:email user)})
+                   (when-not draft?
+                     (log/info "Saving sports site with background jobs"
+                               {:lipas-id (:lipas-id resp)
+                                :is-route? route?
+                                :user (:email user)})
 
-               ;; NOTE: routes will be re-indexed after elevation has been
-               ;; resolved.
-               (index! search resp :sync)
+                     (when route?
+                       (jobs/enqueue-job! tx "elevation"
+                                          {:lipas-id (:lipas-id resp)}
+                                          {:correlation-id correlation-id
+                                           :priority 70}))
 
-               ;; Sync to legacy API index - keep it in sync with the main index
-               (if (should-be-in-legacy-index? resp)
-                 (index-legacy-sports-place! search resp :sync)
-                 ;; Delete from legacy index if status changed to inactive
-                 (delete-from-legacy-index! search (:lipas-id resp)))
+                     ;; Analysis doesn't require elevation information
+                     (jobs/enqueue-job! tx "analysis"
+                                        {:lipas-id (:lipas-id resp)}
+                                        {:correlation-id correlation-id
+                                         :priority 80})
 
-               (when route?
-                 (jobs/enqueue-job! tx "elevation"
-                                    {:lipas-id (:lipas-id resp)}
-                                    {:correlation-id correlation-id
-                                     :priority 70}))
+                     ;; Webhook Notification
 
-               ;; Analysis doesn't require elevation information
-               (jobs/enqueue-job! tx "analysis"
-                                  {:lipas-id (:lipas-id resp)}
-                                  {:correlation-id correlation-id
-                                   :priority 80})
+                     ;; NOTE: Webhook is disabled until UTP or someone else
+                     ;; starts using it again.
 
-               ;; Webhook Notification
+                     #_(jobs/enqueue-job! tx "webhook"
+                                          {:lipas-ids [(:lipas-id resp)]
+                                           :operation-type (if (new? sports-site) "create" "update")
+                                           :initiated-by (:id user)}
+                                          {:correlation-id correlation-id
+                                           :priority 85}))
 
-               ;; NOTE: Webhook is disabled until UTP or someone else
-               ;; starts using it again.
+                   ;; Sync the site to PTV if
+                   ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+                   ;; - it is PTV candidate now
+                   ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+                   ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+                   ;; that doesn't trigger update if sync-enabled is false.
+                   (if (and (not draft?)
+                            (or (:sync-enabled (:ptv resp))
+                                (:delete-existing (:ptv resp)))
+                            ;; TODO: Check privilage :ptv/basic or such
+                            (or (ptv-data/ptv-candidate? resp)
+                                (ptv-data/is-sent-to-ptv? resp)))
+                     ;; NOTE:  this will create a new sports-site rev.
+                     ;; Make it instead update the sports-site already created in the tx?
+                     ;; Otherwise each save-sports-site! will create two sports-site revs.
+                     (let [{new-ptv :ptv new-event-date :event-date}
+                           (sync-ptv! tx search ptv user
+                                      {:sports-site resp
+                                       :org-id (:org-id (:ptv resp))
+                                       :lipas-id (:lipas-id resp)
+                                       :ptv (:ptv resp)})]
+                       (log/infof "Sports site updated and PTV integration enabled")
+                       ;; sync-ptv! wrote a new revision (success or failure)
+                       ;; and returned the event-date it used. Adopt both so
+                       ;; the outer index! below reindexes that exact
+                       ;; revision rather than the pre-sync resp.
+                       (-> resp
+                           (assoc :event-date new-event-date)
+                           (assoc :ptv new-ptv)))
+                     resp)))]
 
-               #_(jobs/enqueue-job! tx "webhook"
-                                    {:lipas-ids [(:lipas-id resp)]
-                                     :operation-type (if (new? sports-site) "create" "update")
-                                     :initiated-by (:id user)}
-                                    {:correlation-id correlation-id
-                                     :priority 85}))
+           ;; Phase 2: ES indexing after transaction has committed.
+           (when-not draft?
+             (index! search resp :sync)
+             (if (should-be-in-legacy-index? resp)
+               (index-legacy-sports-place! search resp :sync)
+               (delete-from-legacy-index! search (:lipas-id resp))))
 
-             ;; Sync the site to PTV if
-             ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
-             ;; - it is PTV candidate now
-             ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
-             ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
-             ;; that doesn't trigger update if sync-enabled is false.
-             (if (and (not draft?)
-                      (or (:sync-enabled (:ptv resp))
-                          (:delete-existing (:ptv resp)))
-                      ;; TODO: Check privilage :ptv/basic or such
-                      (or (ptv-data/ptv-candidate? resp)
-                          (ptv-data/is-sent-to-ptv? resp)))
-               ;; NOTE:  this will create a new sports-site rev.
-               ;; Make it instead update the sports-site already created in the tx?
-               ;; Otherwise each save-sports-site! will create two sports-site revs.
-               (let [new-ptv-data (sync-ptv! tx search ptv user
-                                             {:sports-site resp
-                                              :org-id (:org-id (:ptv resp))
-                                              :lipas-id (:lipas-id resp)
-                                              :ptv (:ptv resp)})]
-                 (log/infof "Sports site updated and PTV integration enabled")
-                 (assoc resp :ptv new-ptv-data))
-               resp))))))))
+           resp))))))
 
 ;;; Cities ;;;
 
@@ -645,10 +700,10 @@
    (get-cities db false))
   ([db no-cache]
    (or
-    (and (not no-cache) (:all-cities @cache))
-    (->> (db/get-cities db)
-         (swap! cache assoc :all-cities)
-         :all-cities))))
+     (and (not no-cache) (:all-cities @cache))
+     (->> (db/get-cities db)
+          (swap! cache assoc :all-cities)
+          :all-cities))))
 
 (defn get-populations
   [{:keys [indices client]} year]
@@ -689,10 +744,10 @@
                       (if-let [page (async/<! in-chan)]
                         (recur (-> page :body :hits :hits
                                    (->>
-                                    (map (comp (partial reports/->row fields)
-                                               (partial i18n/localize locale)
-                                               :_source))
-                                    (into res))))
+                                     (map (comp (partial reports/->row fields)
+                                                (partial i18n/localize locale)
+                                                :_source))
+                                     (into res))))
                         res)))]
     (->> (async/<!! data-chan)
          (excel/create-workbook "lipas")
@@ -712,15 +767,15 @@
         (when-let [page (async/<!! in-chan)]
           (let [ms (-> page :body :hits :hits)
                 feats (mapcat
-                       (fn [m]
-                         (let [props (-> m
-                                         :_source
-                                         localize
-                                         ->row
-                                         (->> (zipmap headers)))]
-                           (->> m :_source :location :geometries :features
-                                (map (fn [f] (assoc f :properties props))))))
-                       ms)]
+                        (fn [m]
+                          (let [props (-> m
+                                          :_source
+                                          localize
+                                          ->row
+                                          (->> (zipmap headers)))]
+                            (->> m :_source :location :geometries :features
+                                 (map (fn [f] (assoc f :properties props))))))
+                        ms)]
             (loop [feat-num 0
                    f (first feats)
                    fs (rest feats)]
@@ -866,11 +921,11 @@
                  :must_not {:term {:lipas-id lipas-id}}}}}
         resp (search search-cli query)]
     (merge
-     {:status (if (-> resp :body :hits :total :value (>= 1))
-                :conflict
-                :ok)}
-     (when-let [conflict (-> resp :body :hits :hits first :_source)]
-       {:conflict conflict}))))
+      {:status (if (-> resp :body :hits :total :value (>= 1))
+                 :conflict
+                 :ok)}
+      (when-let [conflict (-> resp :body :hits :hits first :_source)]
+        {:conflict conflict}))))
 
 (defn presign-upload-url
   [{:keys [s3-bucket s3-bucket-prefix region credentials-provider]}

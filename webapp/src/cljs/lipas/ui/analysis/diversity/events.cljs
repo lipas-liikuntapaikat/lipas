@@ -267,7 +267,7 @@
 (defn ->seasonal
   [categories seasons-pred]
   (->> categories
-       (map (fn [c] (update c :type-codes #(filter (comp seasons-pred seasonalities) %))))
+       (map (fn [c] (update c :type-codes #(into [] (filter (comp seasons-pred seasonalities)) %))))
        (remove (fn [c] (empty? (:type-codes c))))
        vec))
 

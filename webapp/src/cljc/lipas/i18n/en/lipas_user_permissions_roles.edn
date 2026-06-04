@@ -20,6 +20,7 @@
   :analysis-user "Analysis tool user",
   :org-admin "Organization admin",
   :type-manager "Type Manager",
+  :itrs-assessor "ITRS Assessor",
   :floorball-manager "Floorball Editor",
   :site-manager "Site Manager",
   :city-manager "City Manager",

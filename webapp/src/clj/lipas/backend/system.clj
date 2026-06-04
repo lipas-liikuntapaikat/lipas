@@ -77,6 +77,10 @@
 
 (defmethod ig/halt-key! :lipas/open-ai [_ _m])
 
+(defmethod ig/init-key :lipas/gemini [_ _config])
+
+(defmethod ig/halt-key! :lipas/gemini [_ _m])
+
 (defmethod ig/init-key :lipas/ptv [_ config]
   (let [db (:db config)
         get-config-fn (fn [ptv-org-id]
@@ -122,6 +126,7 @@
     (case mode
       "server"
       (do
+        (log/set-min-level! :info)
         (println "Starting LIPAS server...")
         (reset! current-system (start-system! config/system-config)))
 

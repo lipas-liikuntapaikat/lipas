@@ -20,6 +20,7 @@
   :analysis-user "Analysverktygsanvändare",
   :org-admin "Organisationsadministratör",
   :type-manager "Typadministratör",
+  :itrs-assessor "ITRS-bedömare",
   :floorball-manager "Innebandyredigerare",
   :site-manager "Platsadministratör",
   :city-manager "Stadsadministratör",

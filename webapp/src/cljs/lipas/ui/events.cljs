@@ -77,6 +77,11 @@
                         :on-cancel     close}]
       (assoc db :active-confirmation confirmation))))
 
+(rf/reg-event-fx ::copy-to-clipboard!
+  (fn [_ [_ text]]
+    {:lipas.ui.effects/copy-to-clipboard! text
+     :dispatch [::set-active-notification {:message "Copied to clipboard" :success? true}]}))
+
 (rf/reg-event-fx ::navigate
   (fn [_ [_ path & opts]]
     {:lipas.ui.effects/navigate! (into [path] opts)}))

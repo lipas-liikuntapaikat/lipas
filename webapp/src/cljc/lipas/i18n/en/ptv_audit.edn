@@ -22,4 +22,11 @@
  :audited "audited",
  :notification-sent-success "Notification sent to %1$s users",
  :no-recipients-found "No recipients found",
- :notification-sent "Notification sent"}
+ :notification-sent "Notification sent",
+ :issues-found "Audit found issues",
+ :both-fields-need-changes "Both summary and description need changes. See comments below each field.",
+ :summary-needs-changes "Summary needs changes. See comments below the field.",
+ :description-needs-changes "Description needs changes. See comments below the field.",
+ :auditor-feedback "Auditor feedback",
+ :auditor-feedback-changes-requested "Auditor feedback — changes requested",
+ :auditor-feedback-approved "Auditor feedback — approved"}
