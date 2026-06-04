@@ -65,6 +65,7 @@
             ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
+            [lipas.ui.org.views :as org-views]
             [lipas.ui.ptv.site-view :as ptv-site]
             [lipas.ui.ptv.views :as ptv]
             [lipas.ui.reminders.views :as reminders]
@@ -1142,7 +1143,14 @@
           [:> Tab
            {:style {:min-width 0}
             :value 7
-            :label (tr :lipas.sports-site.images/headline)}])]
+            :label (tr :lipas.sports-site.images/headline)}])
+
+        ;; Org-management: editing rights — only for org-owned sites
+        (when (:owner-org-id display-data)
+          [:> Tab
+           {:style {:min-width 0}
+            :value 8
+            :label (tr :lipas.org/editing-rights)}])]
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
@@ -1263,7 +1271,14 @@
              {:lipas-id lipas-id
               :display-data display-data
               :edit-data edit-data
-              :read-only? (or (not editing?) (not edit-images?))}]])]
+              :read-only? (or (not editing?) (not edit-images?))}]]
+
+         ;; Editing rights (org-management)
+         8 [:> Grid {:item true :xs 12}
+            [org-views/editing-rights-panel
+             {:tr tr
+              :lipas-id lipas-id
+              :owner-org-id (:owner-org-id display-data)}]])]
 
 ;; "Landing bay" for floating tools
       [:> Grid {:item true :xs 12 :style {:height "3em"}}]

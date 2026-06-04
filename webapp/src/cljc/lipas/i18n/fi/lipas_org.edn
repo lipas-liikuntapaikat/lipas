@@ -19,4 +19,81 @@
  :ptv-tab "PTV"
  :reservations-link "Varauslinkki"
  :users "Organisaation käyttäjät"
- :website "Verkkosivu"}
+ :website "Verkkosivu"
+
+ ;; --- org-management UI ---
+ :overview-tab "Yleistiedot"
+ :roles-templates-tab "Roolit ja mallit"
+ :our-sites-tab "Kohteemme"
+ :history-tab "Historia"
+
+ ;; invite / members
+ :invite-member "Kutsu jäsen"
+ :invite "Kutsu"
+ :admin "Ylläpitäjä"
+ :member "Jäsen"
+ :assigned-templates "Määritetyt roolit"
+ :select-templates "Valitse roolit"
+ :member-col "Jäsen"
+ :no-members "Ei jäseniä"
+ :remove-member-confirm "Poista jäsen organisaatiosta?"
+ :permissions-refresh-note
+ "Oikeudet päivittyvät käyttäjän seuraavalla kirjautumisella (enintään 6 h)."
+
+ ;; roles & templates catalog
+ :catalog-readonly-note
+ "Roolimallit (oikeuksien katto) määrittää LIPAS-ylläpitäjä. Voit jakaa näitä jäsenille."
+ :template-label "Malli"
+ :template-grants "Antaa oikeuden"
+ :members-assigned "Jäseniä"
+ :add-template "Lisää malli"
+ :no-templates "Ei roolimalleja"
+ :grants-org-editor "Tämän organisaation kohteiden muokkaus"
+ :grants-activity "Aktiviteetin muokkaus"
+ :grants-ptv "PTV-hallinta"
+ :grants-unknown "Tuntematon oikeus"
+
+ ;; overview
+ :org-type "Organisaatiotyyppi"
+ :type-locked-note "Tyypin ja omistussäännön asettaa LIPAS-ylläpitäjä."
+ :ownership-rule "Omistussääntö"
+ :ownership-rule-help "Määrittää mitä kohteita organisaatio voi omistaa."
+ :type-city "Kunta"
+ :type-municipal-consortium "Kuntayhtymä"
+ :type-state "Valtio"
+ :type-private "Yksityinen"
+ :type-sports-federation "Lajiliitto"
+ :type-other "Muu"
+
+ ;; our sites
+ :owned "Omistetut"
+ :editable "Muokattavat"
+ :type-col "Tyyppi"
+ :city "Kunta"
+ :last-edited "Muokattu"
+ :completeness "Tila"
+ :who-can-edit "Kuka voi muokata"
+ :owner-org "Omistajaorganisaatio"
+ :grantee-orgs "Muokkausoikeus myönnetty"
+ :activity-editors "Aktiviteettimuokkaajat"
+ :legacy-users "Suorat käyttäjät"
+ :grant-edit "Myönnä muokkausoikeus"
+ :revoke-edit "Peru muokkausoikeus"
+ :grant-to-org "Myönnä organisaatiolle"
+ :claim-ownership "Lunasta kohteet"
+ :claim-ownership-desc "Lunasta omistussääntöä vastaavat kohteet"
+ :no-sites "Ei kohteita"
+
+ ;; history
+ :no-history "Ei historiaa"
+ :changed-by "Muuttaja"
+ :event-date "Päivämäärä"
+
+ ;; take-over approvals
+ :takeover-requests "Lunastuspyynnöt"
+ :approve "Hyväksy"
+ :deny "Hylkää"
+ :pending-approvals "Odottavat hyväksynnät"
+
+ ;; site-page editing rights
+ :editing-rights "Muokkausoikeudet"}
