@@ -649,6 +649,74 @@
       ;; request is marked decided
       (is (= "approved" (:status (org-takeover/get-request (test-db) (:id req))))))))
 
+;;; Phase C — dashboard read endpoints (org-sites, site-editors, history) ;;;
+
+(deftest org-history-test
+  (testing "get-history returns append-only revisions with computed diffs"
+    (let [org     (first (create-test-orgs))
+          org-id  (:id org)
+          _       (backend-org/update-org! (test-db) org-id
+                                           (assoc (backend-org/get-org (test-db) org-id)
+                                                  :name "Renamed Org")
+                                           nil)
+          history (backend-org/get-history (test-db) org-id)]
+      (is (>= (count history) 2) "Create + rename ⇒ at least two revisions")
+      (is (= "Renamed Org" (:name (backend-org/get-org (test-db) org-id))))
+      (is (some (fn [rev] (some #(re-find #"Nimi" %) (:changes rev))) history)
+          "A revision records the name change")
+      (is (some (fn [rev] (some #(re-find #"luotu" %) (:changes rev))) history)
+          "The first revision is recorded as creation"))))
+
+(deftest org-sites-test
+  (testing "org-sites returns owned vs editable sites via ES term filters"
+    (let [admin        (test-utils/gen-admin-user :db-component (test-db))
+          org-id       (:id (first (create-test-orgs)))
+          owned-id     9991001
+          granted-id   9991002
+          unrelated-id 9991003
+          mk           (fn [lid extra]
+                         (-> (test-utils/gen-sports-site)
+                             (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid)
+                             (merge extra)))
+          sites        [(mk owned-id {:owner-org-id (str org-id)})
+                        (mk granted-id {:owner-org-id (str (java.util.UUID/randomUUID))
+                                        :edit-grants  [(str org-id)]})
+                        (mk unrelated-id {})]]
+      (doseq [s sites]
+        (core/upsert-sports-site!* (test-db) admin s)
+        (core/index! (test-search) s true))
+      (let [owned-ids    (set (map :lipas-id (:sites (core/org-sites (test-search) org-id "owned"))))
+            editable-ids (set (map :lipas-id (:sites (core/org-sites (test-search) org-id "editable"))))]
+        (is (contains? owned-ids owned-id) "Owned filter returns the owned site")
+        (is (not (contains? owned-ids granted-id)) "Owned filter excludes the merely-granted site")
+        (is (contains? editable-ids owned-id) "Editable includes owned")
+        (is (contains? editable-ids granted-id) "Editable includes granted")
+        (is (not (contains? editable-ids unrelated-id)) "Unrelated site excluded from both")))))
+
+(deftest site-editors-test
+  (testing "site-editors composes owner + grantee + activity-editor orgs"
+    (let [admin                (test-utils/gen-admin-user :db-component (test-db))
+          [owner-org grantee-org] (create-test-orgs)
+          owner-id             (:id owner-org)
+          grantee-id           (:id grantee-org)
+          _                    (backend-org/update-catalog!
+                                (test-db) grantee-id
+                                {:melonta {:label "Melonta"
+                                           :roles [{:role "activities-manager" :activity ["melonta"]}]}}
+                                nil)
+          lid                  9992001
+          site                 (-> (test-utils/gen-sports-site)
+                                   (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid
+                                          :owner-org-id (str owner-id)
+                                          :edit-grants  [(str grantee-id)]
+                                          :activities   {:melonta {}}))
+          _                    (core/upsert-sports-site!* (test-db) admin site)
+          editors              (core/site-editors (test-db) lid)]
+      (is (= (str owner-id) (:id (:owner-org editors))) "Owner org resolved")
+      (is (contains? (set (map :id (:grantee-orgs editors))) (str grantee-id)) "Grantee org listed")
+      (is (contains? (set (map :id (:activity-editor-orgs editors))) (str grantee-id))
+          "Org whose catalog grants the site's activity (melonta) is listed"))))
+
 (comment
   ;; Cross org tests are currently failing
   (clojure.test/run-test-var #'cross-org-view-users-test)

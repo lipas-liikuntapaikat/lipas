@@ -1,5 +1,6 @@
 (ns lipas.backend.core
   (:require [buddy.hashers :as hashers]
+            [clojure.set :as set]
             [cheshire.core :as json]
             [clojure.core.async :as async]
             [clojure.data.csv :as csv]
@@ -665,6 +666,64 @@
   [{:keys [indices client]} params]
   (let [idx-name (get-in indices [:sports-site :search])]
     (search/search client idx-name params)))
+
+(defn org-sites
+  "Sites an org owns (filter \"owned\") or may edit (filter \"editable\" = owned ∪
+  granted). A thin ES `term` query on the indexed search-meta org fields (Q1).
+  Returns flat rows for the org dashboard / card site-count badge."
+  [search-comp org-id filter]
+  (let [field (if (= "editable" filter)
+                "search-meta.editor-org-ids"
+                "search-meta.owner-org-id")
+        params {:size 2000
+                :track_total_hits true
+                :_source ["lipas-id" "name" "event-date"
+                          "search-meta.type.name" "search-meta.location.city.name"]
+                :query {:bool {:filter [{:term {field (str org-id)}}]}}}
+        resp (search search-comp params)]
+    {:total (get-in resp [:body :hits :total :value])
+     :sites (->> resp :body :hits :hits
+                 (mapv (fn [h]
+                         (let [src (:_source h)]
+                           {:lipas-id   (:lipas-id src)
+                            :name       (:name src)
+                            :event-date (:event-date src)
+                            :type-name  (get-in src [:search-meta :type :name :fi])
+                            :city-name  (get-in src [:search-meta :location :city :name :fi])}))))}))
+
+(defn site-editors
+  "\"Who can edit site Z\" (Q2, design-spec §6): owner org + grantee orgs (off the
+  site document) ∪ activity-editor orgs (org catalogs granting an activity the
+  site has). Legacy direct-user scan is the honest unindexed caveat — deferred."
+  [db lipas-id]
+  (let [site         (get-sports-site db lipas-id)
+        owner-org-id (some-> site :owner-org-id str)
+        grant-ids    (->> (:edit-grants site) (map str) set)
+        all-orgs     (org/all-orgs db)
+        org-by-id    (into {} (map (juxt #(str (:id %)) identity)) all-orgs)
+        owner-org    (when-let [o (and owner-org-id (org-by-id owner-org-id))]
+                       {:id owner-org-id :name (:name o)})
+        grantee-orgs (for [gid grant-ids
+                           :let [o (org-by-id gid)]
+                           :when o]
+                       {:id gid :name (:name o)})
+        site-acts    (some->> site :activities keys (map name) set)
+        activity-editor-orgs
+        (when (seq site-acts)
+          (for [o all-orgs
+                :let [acts (->> (vals (:role-templates o))
+                                (mapcat :roles)
+                                (filter #(= "activities-manager" (:role %)))
+                                (mapcat :activity)
+                                (map str)
+                                set)
+                      hit  (set/intersection acts site-acts)]
+                :when (seq hit)]
+            {:id (str (:id o)) :name (:name o) :activities (vec hit)}))]
+    {:owner-org            owner-org
+     :grantee-orgs         (vec grantee-orgs)
+     :activity-editor-orgs (vec activity-editor-orgs)
+     :legacy-users         []}))
 
 (defn search-fields
   [{:keys [indices client]}

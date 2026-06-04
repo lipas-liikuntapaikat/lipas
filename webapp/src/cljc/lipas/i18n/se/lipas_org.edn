@@ -19,4 +19,81 @@
  :ptv-tab "PTV"
  :reservations-link "Bokningslänk"
  :users "Organisationens användare"
- :website "Webbsida"}
+ :website "Webbsida"
+
+ ;; --- org-management UI ---
+ :overview-tab "Översikt"
+ :roles-templates-tab "Roller och mallar"
+ :our-sites-tab "Våra anläggningar"
+ :history-tab "Historik"
+
+ ;; invite / members
+ :invite-member "Bjud in medlem"
+ :invite "Bjud in"
+ :admin "Administratör"
+ :member "Medlem"
+ :assigned-templates "Tilldelade roller"
+ :select-templates "Välj roller"
+ :member-col "Medlem"
+ :no-members "Inga medlemmar"
+ :remove-member-confirm "Ta bort medlem från organisationen?"
+ :permissions-refresh-note
+ "Behörigheterna uppdateras vid medlemmens nästa inloggning (högst 6 h)."
+
+ ;; roles & templates catalog
+ :catalog-readonly-note
+ "Rollmallarna (behörighetstaket) ställs in av LIPAS-administratören. Du kan tilldela dem till medlemmar."
+ :template-label "Mall"
+ :template-grants "Ger rätt till"
+ :members-assigned "Medlemmar"
+ :add-template "Lägg till mall"
+ :no-templates "Inga rollmallar"
+ :grants-org-editor "Redigering av denna organisations anläggningar"
+ :grants-activity "Redigering av aktivitet"
+ :grants-ptv "PTV-hantering"
+ :grants-unknown "Okänd behörighet"
+
+ ;; overview
+ :org-type "Organisationstyp"
+ :type-locked-note "Typ och ägarregel ställs in av LIPAS-administratören."
+ :ownership-rule "Ägarregel"
+ :ownership-rule-help "Bestämmer vilka anläggningar organisationen kan äga."
+ :type-city "Kommun"
+ :type-municipal-consortium "Kommunalförbund"
+ :type-state "Stat"
+ :type-private "Privat"
+ :type-sports-federation "Specialidrottsförbund"
+ :type-other "Annat"
+
+ ;; our sites
+ :owned "Ägda"
+ :editable "Redigerbara"
+ :type-col "Typ"
+ :city "Kommun"
+ :last-edited "Redigerad"
+ :completeness "Status"
+ :who-can-edit "Vem kan redigera"
+ :owner-org "Ägarorganisation"
+ :grantee-orgs "Redigeringsrätt beviljad"
+ :activity-editors "Aktivitetsredigerare"
+ :legacy-users "Direkta användare"
+ :grant-edit "Bevilja redigeringsrätt"
+ :revoke-edit "Återkalla redigeringsrätt"
+ :grant-to-org "Bevilja till organisation"
+ :claim-ownership "Gör anspråk på anläggningar"
+ :claim-ownership-desc "Gör anspråk på anläggningar som matchar ägarregeln"
+ :no-sites "Inga anläggningar"
+
+ ;; history
+ :no-history "Ingen historik"
+ :changed-by "Ändrad av"
+ :event-date "Datum"
+
+ ;; take-over approvals
+ :takeover-requests "Anspråksförfrågningar"
+ :approve "Godkänn"
+ :deny "Avslå"
+ :pending-approvals "Väntande godkännanden"
+
+ ;; site-page editing rights
+ :editing-rights "Redigeringsrättigheter"}
