@@ -162,6 +162,18 @@
     :assignable true
     :privileges #{:org/member}
     :required-context-keys [:org-id]
+    :optional-context-keys []}
+
+   ;; Ownership-scoped edit. Never hand-assigned; only ever projected from an
+   ;; org role-template (see lipas.backend.org/derive-org-roles). The :org-id
+   ;; context is matched (set-intersection) against a site's editor orgs
+   ;; (owner-org-id + edit-grants), so a member of an owning/granted org can
+   ;; edit that site.
+   :org-editor
+   {:sort 62
+    :assignable false
+    :privileges basic
+    :required-context-keys [:org-id]
     :optional-context-keys []}})
 
 (defn role-sort-fn
@@ -201,9 +213,12 @@
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
                  (contains? (:lipas-id role) (:lipas-id role-context)))
+             ;; A resource (site) can have several editor orgs (owner +
+             ;; edit-grants), so :org-id is multi-valued like :activity:
+             ;; the role matches if its org set intersects the context's.
              (or (nil? (:org-id role))
                  (= ::any (:org-id role-context))
-                 (contains? (:org-id role) (:org-id role-context))))
+                 (seq (set/intersection (:org-id role) (:org-id role-context)))))
     (:role role)))
 
 (defn check-privilege
@@ -238,7 +253,15 @@
    ;; Sites SHOULD usually just have one activity type
    :activity (some->> (keys (:activities site))
                       (map name)
-                      set)})
+                      set)
+   ;; A site's editor orgs = owner org + any orgs granted edit. Multi-valued,
+   ;; matched against an :org-editor role's :org-id via set-intersection.
+   ;; org-ids are compared as strings (roles carry stringified uuids).
+   :org-id (some-> (concat (some-> site :owner-org-id vector)
+                           (:edit-grants site))
+                   (->> (map str))
+                   set
+                   not-empty)})
 
 (defn check-role
   "Check if user has the given role USUALLY
@@ -285,7 +308,8 @@
         ;; The the role-context keys are applied later into the ES query itself.
         ctx {:type-code ::any
              :city-code ::any
-             :lipas-id ::any}
+             :lipas-id ::any
+             :org-id ::any}
         affecting-roles (->> user :permissions :roles
                              (filter (fn [role]
                                        (and (contains? (:privileges (get roles (:role role))) required-privilege)
@@ -300,15 +324,18 @@
       ;; Combine wrapped query AND new roles query
       {:bool {:must [query
                      ;; role1 OR role2 OR ...
-                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
+                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id org-id] :as _role}]
                                              ;; query for each role is role-context1 AND role-context2
                                              ;; using sets/collections for a term checks if the
                                              ;; document matches any value for the term collection.
+                                             ;; :org-id (org-editor) matches a site's editor orgs
+                                             ;; (owner + grants), indexed at search-meta.editor-org-ids.
                                              (reduce es-add-terms
                                                      {}
                                                      [[:location.city.city-code city-code]
                                                       [:type.type-code type-code]
-                                                      [:lipas-id lipas-id]]))
+                                                      [:lipas-id lipas-id]
+                                                      [:search-meta.editor-org-ids org-id]]))
                                            affecting-roles)}}]}}
 
       ;; User doesn't have edit roles? No filtering

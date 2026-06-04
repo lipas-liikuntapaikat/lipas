@@ -39,19 +39,19 @@
   [{:keys [host port user pass from]}
    {:keys [to subject plain html]}]
   (postal/send-message
-   (merge
-    {:host host}
-    (when port {:port port})
-    (when (and (not-empty user) (not-empty pass))
-      {:user user :pass pass :ssl true}))
-   {:from    from
-    :to      to
-    :subject subject
-    :body    (cond-> [:alternative]
-               (not-empty plain) (conj {:type "text/plain" :content plain})
-               (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
+    (merge
+      {:host host}
+      (when port {:port port})
+      (when (and (not-empty user) (not-empty pass))
+        {:user user :pass pass :ssl true}))
+    {:from    from
+     :to      to
+     :subject subject
+     :body    (cond-> [:alternative]
+                (not-empty plain) (conj {:type "text/plain" :content plain})
+                (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
                ;; Fallback if both are empty to avoid NPE
-               (and (empty? plain) (empty? html)) (conj {:type "text/plain" :content ""}))}))
+                (and (empty? plain) (empty? html)) (conj {:type "text/plain" :content ""}))}))
 
 (defn send-reset-password-email!
   [emailer to {:keys [link]}]
@@ -104,6 +104,30 @@
                                 :html
                                 (str/replace "{{link}}" link)
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
+
+(defn send-org-invitation-email!
+  "Custom organization-invitation email: notifies a user they've been added to an
+  organization and gives them a magic login link (to set a password / access org
+  features). Trilingual (fi/se/en) since the invitee's locale is unknown."
+  [emailer to {:keys [org-name link valid-days]}]
+  (let [vd (str valid-days)]
+    (.send! emailer
+            {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
+             :to      to
+             :plain   (str "Sinut on lisätty organisaatioon \"" org-name "\" LIPAS-palvelussa.\n"
+                           "Kirjaudu sisään ja aseta salasanasi tästä linkistä (voimassa " vd " päivää):\n" link "\n\n"
+                           "Du har lagts till i organisationen \"" org-name "\" i LIPAS.\n"
+                           "Logga in och ange ditt lösenord via länken (giltig i " vd " dagar):\n" link "\n\n"
+                           "You have been added to the organization \"" org-name "\" in LIPAS.\n"
+                           "Log in and set your password via this link (valid for " vd " days):\n" link "\n")
+             :html    (str "<html><body>"
+                           "<p>Sinut on lisätty organisaatioon <b>" org-name "</b> LIPAS-palvelussa. "
+                           "<a href=\"" link "\">Kirjaudu sisään ja aseta salasanasi</a> (voimassa " vd " päivää).</p>"
+                           "<p>Du har lagts till i organisationen <b>" org-name "</b> i LIPAS. "
+                           "<a href=\"" link "\">Logga in och ange ditt lösenord</a> (giltig i " vd " dagar).</p>"
+                           "<p>You have been added to the organization <b>" org-name "</b> in LIPAS. "
+                           "<a href=\"" link "\">Log in and set your password</a> (valid for " vd " days).</p>"
+                           "</body></html>")})))
 
 (defn send-reminder-email!
   [emailer to {:keys [link valid-days]} {:keys [message]}]
@@ -165,7 +189,6 @@
 (defrecord TestEmailer []
   Emailer
   (send! [_ message] {:status "OK"}))
-
 
 (comment
   (require '[lipas.backend.config :as config])
