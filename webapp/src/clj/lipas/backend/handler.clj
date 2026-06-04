@@ -366,6 +366,35 @@
                                              (-> req :parameters :body :changes))
                       {:status 200
                        :body {}})}}]
+        ;; --- Org dashboard: owned / editable sites (Q1) — members may view ---
+        ["/sites"
+         {:get
+          {:require-privilege (fn [req]
+                                (let [user (:identity req)]
+                                  (or (roles/check-role user :admin)
+                                      (roles/check-privilege user
+                                                             {:org-id #{(str (-> req :parameters :path :org-id))}}
+                                                             :org/member))))
+           :parameters {:query [:map [:filter {:optional true} [:enum "owned" "editable"]]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/org-sites search
+                                             (-> req :parameters :path :org-id)
+                                             (or (-> req :parameters :query :filter) "owned"))})}}]
+
+        ;; --- Org history (the append-only org revisions) — members may view ---
+        ["/history"
+         {:get
+          {:require-privilege (fn [req]
+                                (let [user (:identity req)]
+                                  (or (roles/check-role user :admin)
+                                      (roles/check-privilege user
+                                                             {:org-id #{(str (-> req :parameters :path :org-id))}}
+                                                             :org/member))))
+           :handler (fn [req]
+                      {:status 200
+                       :body (org/get-history db (-> req :parameters :path :org-id))})}}]
+
         ["/add-user-by-email"
          {;; Only org-admins can add users
           :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :path :org-id))}}) :org/manage]
@@ -492,6 +521,17 @@
                        :body (org-takeover/create-request! db
                                                            (-> req :parameters :path :org-id)
                                                            (-> req :identity :id))})}}]]]
+
+      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+      ["/sites/:lipas-id/editors"
+       {:parameters {:path [:map [:lipas-id :int]]}
+        :get
+        {:no-doc false
+         :require-privilege nil
+         :middleware [mw/token-auth mw/auth]
+         :handler (fn [req]
+                    {:status 200
+                     :body (core/site-editors db (-> req :parameters :path :lipas-id))})}}]
 
       ;; --- Take-over approvals: lipas-admin reviews requested claims ---
       ["/actions/org-takeover-requests"

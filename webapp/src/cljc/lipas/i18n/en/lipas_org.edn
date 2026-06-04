@@ -19,4 +19,81 @@
  :ptv-tab "PTV"
  :reservations-link "Reservation link"
  :users "Organization users"
- :website "Website"}
+ :website "Website"
+
+ ;; --- org-management UI ---
+ :overview-tab "Overview"
+ :roles-templates-tab "Roles & templates"
+ :our-sites-tab "Our sites"
+ :history-tab "History"
+
+ ;; invite / members
+ :invite-member "Invite member"
+ :invite "Invite"
+ :admin "Admin"
+ :member "Member"
+ :assigned-templates "Assigned roles"
+ :select-templates "Select roles"
+ :member-col "Member"
+ :no-members "No members"
+ :remove-member-confirm "Remove member from the organization?"
+ :permissions-refresh-note
+ "Permissions take effect at the member's next login (within 6 h)."
+
+ ;; roles & templates catalog
+ :catalog-readonly-note
+ "Role templates (the permission ceiling) are set by the LIPAS admin. You can assign them to members."
+ :template-label "Template"
+ :template-grants "Grants"
+ :members-assigned "Members"
+ :add-template "Add template"
+ :no-templates "No role templates"
+ :grants-org-editor "Editing of this organization's sites"
+ :grants-activity "Activity editing"
+ :grants-ptv "PTV management"
+ :grants-unknown "Unknown grant"
+
+ ;; overview
+ :org-type "Organization type"
+ :type-locked-note "Type and ownership rule are set by the LIPAS admin."
+ :ownership-rule "Ownership rule"
+ :ownership-rule-help "Defines which sites this organization may own."
+ :type-city "Municipality"
+ :type-municipal-consortium "Municipal consortium"
+ :type-state "State"
+ :type-private "Private"
+ :type-sports-federation "Sports federation"
+ :type-other "Other"
+
+ ;; our sites
+ :owned "Owned"
+ :editable "Editable"
+ :type-col "Type"
+ :city "Municipality"
+ :last-edited "Last edited"
+ :completeness "Status"
+ :who-can-edit "Who can edit"
+ :owner-org "Owner organization"
+ :grantee-orgs "Edit granted to"
+ :activity-editors "Activity editors"
+ :legacy-users "Direct users"
+ :grant-edit "Grant edit"
+ :revoke-edit "Revoke edit"
+ :grant-to-org "Grant to organization"
+ :claim-ownership "Claim sites"
+ :claim-ownership-desc "Claim sites matching the ownership rule"
+ :no-sites "No sites"
+
+ ;; history
+ :no-history "No history"
+ :changed-by "Changed by"
+ :event-date "Date"
+
+ ;; take-over approvals
+ :takeover-requests "Take-over requests"
+ :approve "Approve"
+ :deny "Deny"
+ :pending-approvals "Pending approvals"
+
+ ;; site-page editing rights
+ :editing-rights "Editing rights"}

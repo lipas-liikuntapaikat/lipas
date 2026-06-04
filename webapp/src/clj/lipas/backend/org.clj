@@ -129,6 +129,77 @@
                    (let [m (get by-uid (str (:id user)))]
                      (assoc user :org-role (:org-role m) :templates (:templates m)))))))))
 
+;;; history (the append-only org log IS the audit trail) ;;;
+
+(defn- member-by-uid [doc]
+  (into {} (map (fn [m] [(str (:user-id m)) m])) (:members doc)))
+
+(defn- diff-org-docs
+  "Human-readable summary of what changed between two consecutive org documents.
+  `prev` nil means the org's first revision."
+  [prev doc]
+  (if (nil? prev)
+    ["Organisaatio luotu"]
+    (let [changes (volatile! [])
+          add! (fn [s] (vswap! changes conj s))]
+      (when (not= (:name prev) (:name doc))
+        (add! (str "Nimi: " (:name prev) " → " (:name doc))))
+      (when (not= (:type prev) (:type doc))
+        (add! (str "Tyyppi: " (:type prev) " → " (:type doc))))
+      (when (not= (:primary-contact prev) (:primary-contact doc))
+        (add! "Yhteystiedot päivitetty"))
+      (when (not= (:role-templates prev) (:role-templates doc))
+        (add! "Roolimallit päivitetty"))
+      (when (not= (:ownership prev) (:ownership doc))
+        (add! "Omistussääntö päivitetty"))
+      (when (not= (:ptv-data prev) (:ptv-data doc))
+        (add! "PTV-asetukset päivitetty"))
+      (let [pm (member-by-uid prev)
+            dm (member-by-uid doc)
+            added (set/difference (set (keys dm)) (set (keys pm)))
+            removed (set/difference (set (keys pm)) (set (keys dm)))
+            common (set/intersection (set (keys pm)) (set (keys dm)))]
+        (doseq [uid added] (add! (str "Jäsen lisätty: " uid)))
+        (doseq [uid removed] (add! (str "Jäsen poistettu: " uid)))
+        (doseq [uid common
+                :let [a (get pm uid) b (get dm uid)]]
+          (when (not= (:org-role a) (:org-role b))
+            (add! (str "Rooli muuttui: " uid " " (:org-role a) " → " (:org-role b))))
+          (when (not= (set (:templates a)) (set (:templates b)))
+            (add! (str "Roolit muuttuivat: " uid)))))
+      (let [result @changes]
+        (if (seq result) result ["Muutos"])))))
+
+(defn get-history
+  "All revisions of an org (newest first), each with a computed summary of the
+  changes vs. the previous revision. Pure read over the append-only `org` table."
+  [db org-id]
+  (let [rows (jdbc/execute! db
+                            ["SELECT id, org_id, event_date, author_id, status, document
+                              FROM org WHERE org_id = ? ORDER BY event_date ASC, created_at ASC"
+                             (->uuid org-id)]
+                            {:builder-fn rs/as-unqualified-kebab-maps})
+        author-ids (->> rows (keep :author-id) distinct)
+        authors (when (seq author-ids)
+                  (->> (sql/query db (hsql/format {:select [:id :email :username]
+                                                   :from   [:account]
+                                                   :where  [:in :id author-ids]})
+                                  {:builder-fn rs/as-unqualified-kebab-maps})
+                       (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
+                       (into {})))]
+    (->> rows
+         (map-indexed
+           (fn [i row]
+             (let [doc  (:document row)
+                   prev (when (pos? i) (:document (nth rows (dec i))))]
+               {:id          (str (:id row))
+                :event-date  (str (:event-date row))
+                :author-name (get authors (str (:author-id row)))
+                :status      (:status row)
+                :changes     (diff-org-docs prev doc)})))
+         reverse
+         vec)))
+
 ;;; writes ;;;
 
 (defn create-org

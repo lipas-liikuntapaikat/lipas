@@ -391,7 +391,12 @@
              :name         (-> city :name locale)
              :neighborhood (-> latest :location :city :neighborhood)}}
 
-           :building (:building latest)}
+           :building (:building latest)
+
+           ;; org-management: surface ownership so the site-page editing-rights
+           ;; tab (map/views) can gate on it
+           :owner-org-id (-> latest :owner-org-id)
+           :edit-grants  (-> latest :edit-grants)}
 
         ;; TODO put type-specific stuff behind a multi-method
 
