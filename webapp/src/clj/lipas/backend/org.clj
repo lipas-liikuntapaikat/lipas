@@ -15,6 +15,9 @@
             [honey.sql :as hsql]
             [lipas.backend.db.db :as db]
             [lipas.backend.db.utils :as db-utils]
+            [lipas.schema.org :as org-schema]
+            [malli.core :as m]
+            [malli.error :as me]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [next.jdbc.sql :as sql]))
@@ -309,9 +312,25 @@
                        :catalog (vec catalog)})))
     true))
 
+(defn validate-catalog!
+  "Throw unless `role-templates` conforms to the catalog schema — every spec must
+  name a real, catalog-assignable role and carry well-typed context. This is the
+  guard that makes a catalog payload always make sense: it rejects unknown roles
+  and structurally malformed entries (e.g. a non-seq `:roles`) that would
+  otherwise be silently dropped at projection — or, worse, throw at login and
+  lock the org's members out. Belt-and-suspenders on top of the endpoint's
+  request coercion; also protects REPL/internal callers."
+  [role-templates]
+  (when-not (m/validate org-schema/role-templates role-templates)
+    (throw (ex-info "Invalid role-template catalog"
+                    {:type :invalid-catalog
+                     :errors (me/humanize (m/explain org-schema/role-templates role-templates))})))
+  true)
+
 (defn update-catalog!
   "Replace the org's role-template catalog (lipas-admin only — the ceiling)."
   [db org-id role-templates author-id]
+  (validate-catalog! role-templates)
   (update-document! db org-id author-id #(assoc % :role-templates role-templates)))
 
 (defn add-member!

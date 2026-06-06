@@ -4,24 +4,30 @@
             [re-frame.core :as rf]))
 
 (rf/reg-event-fx ::init
-  (fn [{:keys [db]} [_ {:keys [on-success]}]]
-    (let [already-initialized? (seq (get-in db [:bulk-operations :editable-sites]))]
+  ;; Bulk update is an org operation — always launched with an org-id.
+  (fn [{:keys [db]} [_ {:keys [org-id on-success]}]]
+    (let [already-initialized? (and (= org-id (get-in db [:bulk-operations :org-id]))
+                                    (seq (get-in db [:bulk-operations :editable-sites])))]
       (if already-initialized?
-                       ;; If already initialized, don't reset the state
+                       ;; Same org already loaded — don't reset the state
         {:dispatch (when on-success [on-success])}
-                       ;; Otherwise, initialize fresh
-        {:db (assoc-in db [:bulk-operations] db/default-db)
+                       ;; Otherwise, initialize fresh for this org
+        {:db (-> db
+                 (assoc-in [:bulk-operations] db/default-db)
+                 (assoc-in [:bulk-operations :org-id] org-id))
          :dispatch-n [[::get-editable-sites]
                       (when on-success [on-success])]}))))
 
 (rf/reg-event-fx ::get-editable-sites
   (fn [{:keys [db]} _]
-    (let [token (-> db :user :login :token)]
+    (let [token (-> db :user :login :token)
+          org-id (get-in db [:bulk-operations :org-id])]
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
-       {:method :get
-        :uri (str (:backend-url db) "/actions/get-editable-sports-sites")
+       {:method :post
+        :uri (str (:backend-url db) "/actions/org-sites-for-bulk")
         :headers {:Authorization (str "Token " token)}
+        :params {:org-id org-id}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::get-editable-sites-success]
@@ -89,9 +95,10 @@
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
        {:method :post
-        :uri (str (:backend-url db) "/actions/mass-update-sports-sites")
+        :uri (str (:backend-url db) "/actions/mass-update-org-sites")
         :headers {:Authorization (str "Token " token)}
-        :params {:lipas-ids (vec selected-sites)
+        :params {:org-id (get-in db [:bulk-operations :org-id])
+                 :lipas-ids (vec selected-sites)
                  :updates filtered-updates}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})

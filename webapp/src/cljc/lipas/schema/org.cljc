@@ -1,5 +1,6 @@
 (ns lipas.schema.org
-  (:require [lipas.schema.common :as common]
+  (:require [lipas.roles :as roles]
+            [lipas.schema.common :as common]
             [lipas.schema.sports-sites :as sites]
             [malli.core :as m]
             [malli.util :as mu]))
@@ -42,18 +43,52 @@
 (def org-type
   [:enum "city" "municipal-consortium" "state" "private" "sports-federation" "other"])
 
+(def catalog-role-names
+  "Role names a catalog template may reference: the catalog-assignable subset of
+  the role vocabulary (`:org-editor`, `:ptv-manager`, `:activities-manager`, …).
+  Stored as strings, since catalog specs carry stringified role names. This is
+  the vocabulary the LIPAS admin builds the per-org ceiling from."
+  (->> roles/roles
+       (filter (comp :catalog-assignable val))
+       (mapv (comp name key))
+       sort
+       vec))
+
+(def role-spec
+  "One role-spec inside a catalog template. `:role` MUST name a real,
+  catalog-assignable role — this is what stops a malformed/unknown role from
+  being stored (and then silently dropped, or worse, throwing at projection).
+  Context keys are optional and `:sequential` (the transit FE may send seqs;
+  jsonb normalizes them to arrays). `:org-id` is injected at projection, not
+  stored, but tolerated here for round-trip safety."
+  [:map
+   [:role (into [:enum] catalog-role-names)]
+   [:city-code {:optional true} [:sequential [:int {:min 1 :max 999}]]]
+   [:type-code {:optional true} [:sequential :int]]
+   [:activity {:optional true} [:sequential :string]]
+   [:lipas-id {:optional true} [:sequential :int]]
+   [:org-id {:optional true} [:sequential [:or :uuid :string]]]])
+
 (def role-templates
   "The per-org role-template catalog (the ceiling). Each entry maps a name to a
-  label + a vector of role-specs (the existing role vocabulary)."
+  label + a vector of role-specs drawn from the catalog-assignable vocabulary.
+  Strict: every spec must name a known role (see `role-spec`)."
   [:map-of :keyword
    [:map
     [:label {:optional true} :string]
-    [:roles [:vector [:map [:role :string]]]]]])
+    [:roles [:vector role-spec]]]])
 
 (def ownership
+  "The take-over claim rule: up to four optional, AND-combined matching axes
+  (require ≥1 to match anything). Generalizes beyond the municipality case.
+  Axes are `:sequential` (not `:vector`) because the transit FE may send seqs
+  as well as vectors — same reason `ptv-config-update` does; jsonb normalizes
+  them to arrays on store."
   [:map {:optional true}
-   [:city-codes {:optional true} [:vector [:int {:min 1 :max 999}]]]
-   [:owners {:optional true} [:vector :string]]])
+   [:city-codes {:optional true} [:sequential [:int {:min 1 :max 999}]]]
+   [:owners {:optional true} [:sequential :string]]
+   [:type-codes {:optional true} [:sequential :int]]
+   [:activities {:optional true} [:sequential :string]]])
 
 (def members
   [:vector

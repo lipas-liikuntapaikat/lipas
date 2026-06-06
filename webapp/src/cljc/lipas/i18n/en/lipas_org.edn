@@ -24,12 +24,47 @@
  ;; --- org-management UI ---
  :overview-tab "Overview"
  :roles-templates-tab "Roles & templates"
+ :permissions-ownership-tab "Permissions & ownership"
  :our-sites-tab "Our sites"
  :history-tab "History"
+
+ ;; role-template catalog editor
+ :template-key "key"
+ :add-role "Add role"
+ :save-ownership "Save ownership rule"
+ :ownership-lock-note
+ "Note: claimed sites' owner is locked to the value implied by the org type."
+
+ ;; claim impact warning
+ :claim-impact-title "Confirm claim"
+ :claim-impact-affects "Sites matching the rule"
+ :claim-impact-assign "Sites will be assigned to"
+ :claim-impact-lock "Owner class will be locked to"
+ :claim-impact-sample "Sites to be reclaimed"
+ :claim-impact-confirm "Send claim request"
+ :approve-impact-confirm "Approve and claim"
+ :reclaim-now-confirm "Reclaim sites now"
+ :reclaiming "Reclaiming… this may take a moment"
+ :cancel "Cancel"
+
+ ;; setup checklist (LIPAS-admin one-time org setup)
+ :setup-title "Organization setup"
+ :setup-step-type "Type & ownership rule"
+ :setup-step-roles "Role models"
+ :setup-step-reclaim "Reclaim sites"
+ :preview-and-reclaim "Preview & reclaim matching sites"
+ :current-owner "Current owner"
 
  ;; invite / members
  :invite-member "Invite member"
  :invite "Invite"
+ :add-member-action "Add member"
+ :send-invitation-action "Send invitation"
+ :invite-checking "Checking…"
+ :invite-status-existing
+ "Existing LIPAS user — will be added to the organization and notified by email."
+ :invite-status-new
+ "New user — an account will be created and a login link emailed."
  :admin "Admin"
  :member "Member"
  :assigned-templates "Assigned roles"
@@ -46,6 +81,11 @@
  :template-label "Template"
  :template-grants "Grants"
  :members-assigned "Members"
+ :template-in-use "{1} member(s)"
+ :template-in-use-warning
+ "This template is assigned to {1} member(s). Changing its roles or removing it affects their permissions at their next login."
+ :catalog-removed-in-use-warning
+ "You are removing templates that are assigned to members. Saving will strip these permissions from them:"
  :add-template "Add template"
  :no-templates "No role templates"
  :grants-org-editor "Editing of this organization's sites"
@@ -68,6 +108,9 @@
  ;; our sites
  :owned "Owned"
  :editable "Editable"
+ :all-sites "All"
+ :shared-with-us "Shared with us"
+ :ownership-filter "Ownership"
  :type-col "Type"
  :city "Municipality"
  :last-edited "Last edited"

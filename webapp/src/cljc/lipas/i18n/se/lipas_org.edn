@@ -24,12 +24,47 @@
  ;; --- org-management UI ---
  :overview-tab "Översikt"
  :roles-templates-tab "Roller och mallar"
+ :permissions-ownership-tab "Behörigheter och ägande"
  :our-sites-tab "Våra anläggningar"
  :history-tab "Historik"
+
+ ;; role-template catalog editor
+ :template-key "nyckel"
+ :add-role "Lägg till roll"
+ :save-ownership "Spara ägarregel"
+ :ownership-lock-note
+ "Obs: ägaren till anspråkstagna anläggningar låses enligt organisationstypen."
+
+ ;; claim impact warning
+ :claim-impact-title "Bekräfta anspråk"
+ :claim-impact-affects "Anläggningar som matchar regeln"
+ :claim-impact-assign "Anläggningarna tilldelas"
+ :claim-impact-lock "Ägarklassen låses till"
+ :claim-impact-sample "Anläggningar som tas över"
+ :claim-impact-confirm "Skicka anspråksförfrågan"
+ :approve-impact-confirm "Godkänn och ta över"
+ :reclaim-now-confirm "Ta över objekt nu"
+ :reclaiming "Tar över… det här kan ta en stund"
+ :cancel "Avbryt"
+
+ ;; setup checklist (LIPAS-admin one-time org setup)
+ :setup-title "Ta i bruk organisationen"
+ :setup-step-type "Typ & ägarregel"
+ :setup-step-roles "Rollmallar"
+ :setup-step-reclaim "Ta över objekt"
+ :preview-and-reclaim "Förhandsgranska och ta över matchande objekt"
+ :current-owner "Nuvarande ägare"
 
  ;; invite / members
  :invite-member "Bjud in medlem"
  :invite "Bjud in"
+ :add-member-action "Lägg till medlem"
+ :send-invitation-action "Skicka inbjudan"
+ :invite-checking "Kontrollerar…"
+ :invite-status-existing
+ "Befintlig LIPAS-användare — läggs till i organisationen och meddelas via e-post."
+ :invite-status-new
+ "Ny användare — ett konto skapas och en inloggningslänk skickas via e-post."
  :admin "Administratör"
  :member "Medlem"
  :assigned-templates "Tilldelade roller"
@@ -46,6 +81,11 @@
  :template-label "Mall"
  :template-grants "Ger rätt till"
  :members-assigned "Medlemmar"
+ :template-in-use "{1} medlem(mar)"
+ :template-in-use-warning
+ "Den här mallen är tilldelad {1} medlem(mar). Att ändra dess roller eller ta bort den påverkar deras behörigheter vid nästa inloggning."
+ :catalog-removed-in-use-warning
+ "Du tar bort mallar som är tilldelade medlemmar. Om du sparar förlorar de dessa behörigheter:"
  :add-template "Lägg till mall"
  :no-templates "Inga rollmallar"
  :grants-org-editor "Redigering av denna organisations anläggningar"
@@ -68,6 +108,9 @@
  ;; our sites
  :owned "Ägda"
  :editable "Redigerbara"
+ :all-sites "Alla"
+ :shared-with-us "Delad med oss"
+ :ownership-filter "Ägarförhållande"
  :type-col "Typ"
  :city "Kommun"
  :last-edited "Redigerad"

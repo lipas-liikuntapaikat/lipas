@@ -24,12 +24,47 @@
  ;; --- org-management UI ---
  :overview-tab "Yleistiedot"
  :roles-templates-tab "Roolit ja mallit"
+ :permissions-ownership-tab "Oikeudet ja omistus"
  :our-sites-tab "Kohteemme"
  :history-tab "Historia"
+
+ ;; role-template catalog editor
+ :template-key "avain"
+ :add-role "Lisää rooli"
+ :save-ownership "Tallenna omistussääntö"
+ :ownership-lock-note
+ "Huom: lunastettujen kohteiden omistaja lukitaan organisaatiotyypin mukaiseksi."
+
+ ;; claim impact warning
+ :claim-impact-title "Vahvista lunastus"
+ :claim-impact-affects "Sääntöä vastaavia kohteita"
+ :claim-impact-assign "Kohteiden omistajaksi asetetaan"
+ :claim-impact-lock "Omistajaluokka lukitaan arvoon"
+ :claim-impact-sample "Lunastettavat kohteet"
+ :claim-impact-confirm "Lähetä lunastuspyyntö"
+ :approve-impact-confirm "Hyväksy ja lunasta"
+ :reclaim-now-confirm "Lunasta kohteet nyt"
+ :reclaiming "Lunastetaan… tämä voi kestää hetken"
+ :cancel "Peruuta"
+
+ ;; setup checklist (LIPAS-admin one-time org setup)
+ :setup-title "Organisaation käyttöönotto"
+ :setup-step-type "Tyyppi & omistussääntö"
+ :setup-step-roles "Roolimallit"
+ :setup-step-reclaim "Lunasta kohteet"
+ :preview-and-reclaim "Esikatsele ja lunasta vastaavat kohteet"
+ :current-owner "Nykyinen omistaja"
 
  ;; invite / members
  :invite-member "Kutsu jäsen"
  :invite "Kutsu"
+ :add-member-action "Lisää jäsen"
+ :send-invitation-action "Lähetä kutsu"
+ :invite-checking "Tarkistetaan…"
+ :invite-status-existing
+ "Olemassa oleva LIPAS-käyttäjä — lisätään organisaatioon ja hänelle ilmoitetaan sähköpostitse."
+ :invite-status-new
+ "Uusi käyttäjä — luodaan tili ja lähetetään kirjautumislinkki sähköpostitse."
  :admin "Ylläpitäjä"
  :member "Jäsen"
  :assigned-templates "Määritetyt roolit"
@@ -46,6 +81,11 @@
  :template-label "Malli"
  :template-grants "Antaa oikeuden"
  :members-assigned "Jäseniä"
+ :template-in-use "{1} jäsenellä"
+ :template-in-use-warning
+ "Tämä malli on liitetty {1} jäsenelle. Roolien muuttaminen tai mallin poistaminen vaikuttaa heidän oikeuksiinsa seuraavan kirjautumisen yhteydessä."
+ :catalog-removed-in-use-warning
+ "Olet poistamassa malleja, jotka on liitetty jäsenille. Tallennus poistaa heiltä nämä oikeudet:"
  :add-template "Lisää malli"
  :no-templates "Ei roolimalleja"
  :grants-org-editor "Tämän organisaation kohteiden muokkaus"
@@ -68,6 +108,9 @@
  ;; our sites
  :owned "Omistetut"
  :editable "Muokattavat"
+ :all-sites "Kaikki"
+ :shared-with-us "Jaettu meille"
+ :ownership-filter "Omistussuhde"
  :type-col "Tyyppi"
  :city "Kunta"
  :last-edited "Muokattu"

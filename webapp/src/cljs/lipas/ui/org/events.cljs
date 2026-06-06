@@ -17,9 +17,10 @@
                  (fn [{:keys [db]} _]
                    (let [token (-> db :user :login :token)]
                      {:http-xhrio
-                      {:method :get
-                       :uri (str (:backend-url db) "/current-user-orgs")
+                      {:method :post
+                       :uri (str (:backend-url db) "/actions/current-user-orgs")
                        :headers {:Authorization (str "Token " token)}
+                       :params {}
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-user-orgs-success]
@@ -33,9 +34,10 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [token (-> db :user :login :token)]
                      {:http-xhrio
-                      {:method :get
-                       :uri (str (:backend-url db) "/orgs/" org-id "/users")
+                      {:method :post
+                       :uri (str (:backend-url db) "/actions/org-members")
                        :headers {:Authorization (str "Token " token)}
+                       :params {:org-id org-id}
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-org-users-success]
@@ -92,6 +94,8 @@
                               (not is-new?) (conj [:dispatch [::get-org-users org-id]])
                               is-lipas-admin? (conj [:dispatch [::get-all-users]])
                               is-lipas-admin? (conj [:dispatch [::get-takeover-requests "requested"]])
+                              ;; owned-site count drives the setup-checklist step ③
+                              (and is-lipas-admin? (not is-new?)) (conj [:dispatch [::get-org-sites org-id "owned"]])
                               (and (nil? user-orgs) (not is-new?)) (conj [:dispatch [::get-user-orgs-then-init org-id]]))]
                      {:fx fx
                       :db (assoc db :org {:org-id org-id
@@ -117,72 +121,6 @@
                        {:dispatch-later [{:ms 100
                                           :dispatch [::wait-for-orgs-then-init org-id (inc retry-count)]}]}))))
 
-(rf/reg-event-db ::set-add-user-form
-                 (fn [db [_ path value]]
-                   (assoc-in db (into [:org :add-user-form] path) value)))
-
-(rf/reg-event-db ::clear-add-user-form
-                 (fn [db _]
-                   (assoc-in db [:org :add-user-form] {})))
-
-(rf/reg-event-fx ::add-user-to-org
-                 (fn [{:keys [db]} [_ org-id]]
-                   (let [form (get-in db [:org :add-user-form])
-                         user-id (:user-id form)
-                         role (or (:role form) "org-user")]
-                     (if user-id
-                       {:fx [[:dispatch [::org-user-update org-id user-id role "add"]]
-                             [:dispatch [::clear-add-user-form]]]}
-                       {:fx [[:dispatch [:lipas.ui.events/set-active-notification
-                                         {:message "Valitse käyttäjä ja rooli"
-                                          :success? false}]]]}))))
-
-(rf/reg-event-db ::set-add-user-email-form
-                 (fn [db [_ path value]]
-                   (assoc-in db (into [:org :add-user-email-form] path) value)))
-
-(rf/reg-event-db ::clear-add-user-email-form
-                 (fn [db _]
-                   (assoc-in db [:org :add-user-email-form] {})))
-
-(rf/reg-event-fx ::add-user-by-email
-                 (fn [{:keys [db]} [_ org-id]]
-                   (let [form (get-in db [:org :add-user-email-form])
-                         email (:email form)
-                         role (or (:role form) "org-user")]
-                     (if email
-                       (let [token (-> db :user :login :token)]
-                         {:http-xhrio
-                          {:method :post
-                           :uri (str (:backend-url db) "/orgs/" org-id "/add-user-by-email")
-                           :headers {:Authorization (str "Token " token)}
-                           :params {:email email :role role}
-                           :format (ajax/json-request-format)
-                           :response-format (ajax/json-response-format {:keywords? true})
-                           :on-success [::add-user-by-email-success org-id]
-                           :on-failure [::add-user-by-email-failure]}})
-                       {:fx [[:dispatch [:lipas.ui.events/set-active-notification
-                                         {:message "Valitse sähköposti ja rooli"
-                                          :success? false}]]]}))))
-
-(rf/reg-event-fx ::add-user-by-email-success
-                 (fn [{:keys [db]} [_ org-id resp]]
-                   (let [tr (:translator db)]
-                     {:fx [[:dispatch [::get-org-users org-id]]
-                           [:dispatch [::clear-add-user-email-form]]
-                           [:dispatch [:lipas.ui.events/set-active-notification
-                                       {:message (or (:message resp) "Käyttäjä lisätty organisaatioon")
-                                        :success? true}]]]})))
-
-(rf/reg-event-fx ::add-user-by-email-failure
-                 (fn [{:keys [db]} [_ resp]]
-                   (let [error-msg (or (get-in resp [:response :message])
-                                       (get-in resp [:response :error])
-                                       "Virhe käyttäjän lisäämisessä")]
-                     {:fx [[:dispatch [:lipas.ui.events/set-active-notification
-                                       {:message error-msg
-                                        :success? false}]]]})))
-
 (rf/reg-event-db ::edit-org
                  (fn [db [_ path value]]
                    (assoc-in db (into [:org :editing-org] path) value)))
@@ -196,10 +134,12 @@
                        (assoc :dispatch [::bulk-ops-events/init {}])
 
                        ;; Lazily load data for the new org-management tabs
+                       ;; The Our-sites list is driven by bulk-ops' editable-sites
+                       ;; (owned ∪ granted, with :owned?); the "owned" fetch stays
+                       ;; only for the card / setup-checklist counts.
                        (= tab "our-sites")
-                       (assoc :fx [[:dispatch [::bulk-ops-events/init {}]]
-                                   [:dispatch [::get-org-sites org-id "owned"]]
-                                   [:dispatch [::get-org-sites org-id "editable"]]])
+                       (assoc :fx [[:dispatch [::bulk-ops-events/init {:org-id org-id}]]
+                                   [:dispatch [::get-org-sites org-id "owned"]]])
 
                        (= tab "history")
                        (assoc :dispatch [::get-org-history org-id])
@@ -228,15 +168,19 @@
           ;; Clean up the org data before sending
                          body (-> org
                    ;; Remove old phone field if it exists in data
-                                  (update :data #(dissoc % :phone)))
+                                  (update :data #(dissoc % :phone))
+                   ;; org-schema/org requires :id as a uuid; the loaded org carries
+                   ;; it as a string (JSON), so coerce before sending (transit
+                   ;; round-trips a real uuid).
+                                  (update :id #(if (string? %) (uuid %) %)))
           ;; Check if we're on the "new" route
                          org-id (get-in db [:org :org-id])
                          new? (= "new" org-id)]
                      {:http-xhrio
-                      {:method (if new? :post :put)
+                      {:method :post
                        :uri (if new?
-                              (str (:backend-url db) "/orgs")
-                              (str (:backend-url db) "/orgs/" (:id org)))
+                              (str (:backend-url db) "/actions/create-org")
+                              (str (:backend-url db) "/actions/update-org"))
                        :headers {:Authorization (str "Token " token)}
                        :params body
                        :format (ajax/transit-request-format)
@@ -244,26 +188,11 @@
                        :on-success [::save-org-success org new?]
                        :on-failure [::failure]}})))
 
-(rf/reg-event-fx ::org-user-update
-                 (fn [{:keys [db]} [_ org-id user-id role change]]
-                   (let [token (-> db :user :login :token)]
-                     {:http-xhrio
-                      {:method :post
-                       :uri (str (:backend-url db) "/orgs/" org-id "/users")
-                       :headers {:Authorization (str "Token " token)}
-                       :params {:changes [{:user-id user-id
-                                           :change change
-                                           :role role}]}
-                       :format (ajax/json-request-format)
-                       :response-format (ajax/json-response-format {:keywords? true})
-                       :on-success [::get-org-users org-id]
-                       :on-failure [::TODO]}})))
-
 ;; Bulk operations integration
 (rf/reg-event-fx ::init-bulk-operations
                  (fn [{:keys [db]} [_ org-id]]
                    {:db (assoc-in db [:org :current-org-id] org-id)
-                    :dispatch [::bulk-ops-events/init {}]}))
+                    :dispatch [::bulk-ops-events/init {:org-id org-id}]}))
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success
@@ -286,10 +215,10 @@
                          org-id (:id org)
                          ptv-config (utils/clean (:ptv-data org))]
                      {:http-xhrio
-                      {:method :put
-                       :uri (str (:backend-url db) "/orgs/" org-id "/ptv-config")
+                      {:method :post
+                       :uri (str (:backend-url db) "/actions/update-org-ptv-config")
                        :headers {:Authorization (str "Token " token)}
-                       :params ptv-config
+                       :params {:org-id org-id :ptv-config ptv-config}
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::save-ptv-config-success org-id ptv-config]
@@ -321,56 +250,94 @@
 
 (defn- auth-headers [db] {:Authorization (str "Token " (token db))})
 
+(defn- ->uuid
+  "Org ids loaded from JSON are strings; transit bodies preserve types and the
+  backend :uuid coercion won't string→uuid, so coerce before sending."
+  [x]
+  (if (string? x) (uuid x) x))
+
 (rf/reg-event-db ::set-invite-member-form
                  (fn [db [_ path value]]
                    (assoc-in db (into [:org :invite-member-form] path) value)))
+
+;; Email is the single source of truth (no separate user-id path). Editing it
+;; invalidates any prior existence verdict so stale status never lingers.
+(rf/reg-event-db ::set-invite-email
+                 (fn [db [_ email]]
+                   (update-in db [:org :invite-member-form]
+                              assoc :email email :existing? nil :checking? false)))
 
 (rf/reg-event-db ::clear-invite-member-form
                  (fn [db _]
                    (assoc-in db [:org :invite-member-form] {})))
 
+(def ^:private email-re #".+@.+\..+")
+
+;; Live "is this already a LIPAS account?" check (org-scoped, GDPR-safe — see
+;; the backend endpoint). Drives the invite form's inline status + button label.
+(rf/reg-event-fx ::check-existing-user
+                 (fn [{:keys [db]} [_ org-id]]
+                   (let [email (some-> (get-in db [:org :invite-member-form :email]) str/trim)]
+                     (if (and email (re-matches email-re email))
+                       {:db (assoc-in db [:org :invite-member-form :checking?] true)
+                        :http-xhrio
+                        {:method :post
+                         :uri (str (:backend-url db) "/actions/check-is-existing-user")
+                         :headers (auth-headers db)
+                         :params {:org-id org-id :email email}
+                         :format (ajax/json-request-format)
+                         :response-format (ajax/json-response-format {:keywords? true})
+                         :on-success [::check-existing-user-success]
+                         :on-failure [::failure]}}
+                       {}))))
+
+(rf/reg-event-db ::check-existing-user-success
+                 (fn [db [_ resp]]
+                   (update-in db [:org :invite-member-form]
+                              assoc :checking? false :existing? (:exists resp))))
+
 (rf/reg-event-fx ::invite-member
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :invite-member-form])
                          email (some-> (:email form) str/trim)
-                         user-id (:user-id form) ;; lipas-admin convenience (existing account)
                          org-role (or (:org-role form) "member")
                          templates (vec (:templates form))]
-                     (if (or (seq email) user-id)
+                     (if (seq email)
                        {:http-xhrio
                         {:method :post
-                         :uri (str (:backend-url db) "/orgs/" org-id "/invite")
+                         :uri (str (:backend-url db) "/actions/invite-org-member")
                          :headers (auth-headers db)
-                         :params (cond-> {:org-role org-role
-                                          :templates templates
-                                          :login-url (str (ui-utils/base-url) "/#/kirjaudu")}
-                                   (seq email) (assoc :email email)
-                                   ;; lipas-admin picked an existing account by id;
-                                   ;; resolve its email from the loaded all-users list
-                                   (and user-id (not (seq email)))
-                                   (assoc :email (->> (get-in db [:org :all-users])
-                                                      (some (fn [u] (when (= (:id u) user-id) (:email u)))))))
+                         :params {:org-id org-id
+                                  :email email
+                                  :org-role org-role
+                                  :templates templates
+                                  :login-url (str (ui-utils/base-url) "/#/kirjaudu")}
                          :format (ajax/json-request-format)
                          :response-format (ajax/json-response-format {:keywords? true})
-                         :on-success [::invite-member-success org-id]
+                         :on-success [::invite-member-success org-id email]
                          :on-failure [::failure]}}
                        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
                                          {:message "Anna sähköpostiosoite" :success? false}]]]}))))
 
 (rf/reg-event-fx ::invite-member-success
-                 (fn [{:keys [db]} [_ org-id _resp]]
+                 ;; The response's :new-account? tells us what actually happened,
+                 ;; so the toast is accurate whether we invited or added.
+                 (fn [{:keys [db]} [_ org-id email resp]]
                    {:fx [[:dispatch [::get-org-users org-id]]
                          [:dispatch [::clear-invite-member-form]]
                          [:dispatch [:lipas.ui.events/set-active-notification
-                                     {:message "Jäsen kutsuttu" :success? true}]]]}))
+                                     {:message (if (:new-account? resp)
+                                                 (str "Kutsu lähetettiin osoitteeseen " email)
+                                                 (str "Käyttäjä " email " lisättiin organisaatioon ja hänelle ilmoitettiin sähköpostitse"))
+                                      :success? true}]]]}))
 
 (rf/reg-event-fx ::set-member-org-role
                  (fn [{:keys [db]} [_ org-id user-id org-role]]
                    {:http-xhrio
-                    {:method :put
-                     :uri (str (:backend-url db) "/orgs/" org-id "/members/" user-id "/role")
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/set-org-member-role")
                      :headers (auth-headers db)
-                     :params {:org-role org-role}
+                     :params {:org-id org-id :user-id user-id :org-role org-role}
                      :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-users org-id]
@@ -379,10 +346,10 @@
 (rf/reg-event-fx ::set-member-templates
                  (fn [{:keys [db]} [_ org-id user-id templates]]
                    {:http-xhrio
-                    {:method :put
-                     :uri (str (:backend-url db) "/orgs/" org-id "/members/" user-id "/templates")
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/set-org-member-templates")
                      :headers (auth-headers db)
-                     :params {:templates (vec templates)}
+                     :params {:org-id org-id :user-id user-id :templates (vec templates)}
                      :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-users org-id]
@@ -391,34 +358,90 @@
 (rf/reg-event-fx ::remove-member
                  (fn [{:keys [db]} [_ org-id user-id]]
                    {:http-xhrio
-                    {:method :delete
-                     :uri (str (:backend-url db) "/orgs/" org-id "/members/" user-id)
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/remove-org-member")
                      :headers (auth-headers db)
+                     :params {:org-id org-id :user-id user-id}
                      :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-users org-id]
                      :on-failure [::failure]}}))
 
-;; --- Catalog editor (lipas-admin) ---
+;; --- Catalog editor (lipas-admin): a local map {key {:label :roles [specs]}}
+;; seeded on tab switch (::set-current-tab), saved via ::edit-template-catalog ---
 (rf/reg-event-db ::init-catalog-editor
                  (fn [db [_ catalog]]
                    (assoc-in db [:org :catalog-editor] (or catalog {}))))
 
-(rf/reg-event-db ::set-catalog-editor
-                 (fn [db [_ catalog]]
-                   (assoc-in db [:org :catalog-editor] catalog)))
+(defn- gen-template-key
+  "A unique catalog key. Prefers `preferred` when free, else rooli-N."
+  [catalog preferred]
+  (if (and preferred (not (contains? catalog preferred)))
+    preferred
+    (->> (range 1 1000)
+         (map #(keyword (str "rooli-" %)))
+         (remove (set (keys catalog)))
+         first)))
+
+(rf/reg-event-db ::add-template
+                 (fn [db [_ {:keys [key label roles]}]]
+                   (let [catalog (get-in db [:org :catalog-editor] {})
+                         k (gen-template-key catalog key)]
+                     (assoc-in db [:org :catalog-editor k]
+                               {:label (or label "") :roles (or roles [{}])}))))
+
+(rf/reg-event-db ::remove-template
+                 (fn [db [_ tkey]]
+                   (update-in db [:org :catalog-editor] dissoc tkey)))
+
+(rf/reg-event-db ::set-template-label
+                 (fn [db [_ tkey label]]
+                   (assoc-in db [:org :catalog-editor tkey :label] label)))
+
+(rf/reg-event-db ::add-template-role
+                 (fn [db [_ tkey]]
+                   (update-in db [:org :catalog-editor tkey :roles] (fnil conj []) {})))
+
+(rf/reg-event-db ::remove-template-role
+                 (fn [db [_ tkey idx]]
+                   (update-in db [:org :catalog-editor tkey :roles]
+                              (fn [roles] (vec (concat (subvec roles 0 idx)
+                                                       (subvec roles (inc idx))))))))
+
+(rf/reg-event-db ::set-template-role
+                 ;; role changed → reset to {:role <name>} (drop stale context keys)
+                 (fn [db [_ tkey idx role-kw]]
+                   (assoc-in db [:org :catalog-editor tkey :roles idx]
+                             (if role-kw {:role (name role-kw)} {}))))
+
+(rf/reg-event-db ::set-template-role-context
+                 (fn [db [_ tkey idx k vals]]
+                   (let [path [:org :catalog-editor tkey :roles idx]]
+                     (if (seq vals)
+                       (update-in db path assoc k (vec vals))
+                       (update-in db path dissoc k)))))
+
+(defn- sanitize-catalog
+  "Drop half-filled role-specs (no `:role` yet) before saving so the working
+  editor copy — which seeds new rows as empty `{}` — never fails the strict
+  catalog schema on the backend."
+  [catalog]
+  (into {} (map (fn [[k entry]]
+                  [k (update entry :roles #(vec (filter :role %)))]))
+        catalog))
 
 (rf/reg-event-fx ::edit-template-catalog
                  (fn [{:keys [db]} [_ org-id role-templates]]
-                   {:http-xhrio
-                    {:method :put
-                     :uri (str (:backend-url db) "/orgs/" org-id "/role-templates")
-                     :headers (auth-headers db)
-                     :params {:role-templates role-templates}
-                     :format (ajax/transit-request-format)
-                     :response-format (ajax/transit-response-format)
-                     :on-success [::edit-template-catalog-success org-id role-templates]
-                     :on-failure [::failure]}}))
+                   (let [role-templates (sanitize-catalog role-templates)]
+                     {:http-xhrio
+                      {:method :post
+                       :uri (str (:backend-url db) "/actions/update-org-role-templates")
+                       :headers (auth-headers db)
+                       :params {:org-id (->uuid org-id) :role-templates role-templates}
+                       :format (ajax/transit-request-format)
+                       :response-format (ajax/transit-response-format)
+                       :on-success [::edit-template-catalog-success org-id role-templates]
+                       :on-failure [::failure]}})))
 
 (rf/reg-event-fx ::edit-template-catalog-success
                  (fn [{:keys [db]} [_ org-id role-templates _resp]]
@@ -442,9 +465,11 @@
 (rf/reg-event-fx ::get-org-sites
                  (fn [{:keys [db]} [_ org-id flt]]
                    {:http-xhrio
-                    {:method :get
-                     :uri (str (:backend-url db) "/orgs/" org-id "/sites?filter=" flt)
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/org-sites")
                      :headers (auth-headers db)
+                     :params {:org-id org-id :filter flt}
+                     :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-sites-success flt]
                      :on-failure [::failure]}}))
@@ -456,9 +481,11 @@
 (rf/reg-event-fx ::get-site-editors
                  (fn [{:keys [db]} [_ lipas-id]]
                    {:http-xhrio
-                    {:method :get
-                     :uri (str (:backend-url db) "/sites/" lipas-id "/editors")
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/site-editors")
                      :headers (auth-headers db)
+                     :params {:lipas-id lipas-id}
+                     :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-site-editors-success lipas-id]
                      :on-failure [::failure]}}))
@@ -467,9 +494,9 @@
                  (fn [{:keys [db]} [_ org-id lipas-id grantee-org-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/orgs/" org-id "/site-edit-grants")
+                     :uri (str (:backend-url db) "/actions/grant-site-edit")
                      :headers (auth-headers db)
-                     :params {:lipas-id lipas-id :grantee-org-id grantee-org-id}
+                     :params {:org-id (->uuid org-id) :lipas-id lipas-id :grantee-org-id (->uuid grantee-org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::site-edit-grant-success org-id lipas-id]
@@ -478,10 +505,10 @@
 (rf/reg-event-fx ::revoke-site-edit
                  (fn [{:keys [db]} [_ org-id lipas-id grantee-org-id]]
                    {:http-xhrio
-                    {:method :delete
-                     :uri (str (:backend-url db) "/orgs/" org-id "/site-edit-grants")
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/revoke-site-edit")
                      :headers (auth-headers db)
-                     :params {:lipas-id lipas-id :grantee-org-id grantee-org-id}
+                     :params {:org-id (->uuid org-id) :lipas-id lipas-id :grantee-org-id (->uuid grantee-org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::site-edit-grant-success org-id lipas-id]
@@ -493,20 +520,99 @@
                          [:dispatch [:lipas.ui.events/set-active-notification
                                      {:message "Muokkausoikeus päivitetty" :success? true}]]]}))
 
+;; --- Claim impact warning: fetch preview, show dialog, confirm ---
+(rf/reg-event-db ::get-takeover-preview-success
+                 (fn [db [_ resp]]
+                   (assoc-in db [:org :takeover-preview] resp)))
+
+(rf/reg-event-fx ::get-takeover-preview
+                 (fn [{:keys [db]} [_ org-id]]
+                   {:http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/org-takeover-preview")
+                     :headers (auth-headers db)
+                     :params {:org-id org-id}
+                     :format (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success [::get-takeover-preview-success]
+                     :on-failure [::failure]}}))
+
+(rf/reg-event-fx ::open-claim-dialog
+                 ;; dialog = {:mode "request"|"approve" :org-id .. :request-id ..}
+                 (fn [{:keys [db]} [_ dialog]]
+                   {:db (-> db
+                            (assoc-in [:org :claim-dialog] dialog)
+                            (update :org dissoc :takeover-preview))
+                    :dispatch [::get-takeover-preview (:org-id dialog)]}))
+
+(rf/reg-event-db ::close-claim-dialog
+                 (fn [db _]
+                   (update db :org dissoc :claim-dialog :takeover-preview :reclaiming?)))
+
+;; reclaim/approve can take tens of seconds (≈350ms/site, synchronous); keep the
+;; dialog open with a spinner until the server responds, rather than firing and
+;; forgetting. nginx /api and Jetty both allow 300s — match that on the client.
+(def ^:private reclaim-timeout-ms 300000)
+
+(rf/reg-event-fx ::confirm-claim
+                 ;; approve  → decide an existing request (lipas-admin queue)
+                 ;; reclaim  → lipas-admin applies directly, no queue round-trip
+                 ;; request  → org-admin self-service → goes to the approval queue
+                 (fn [{:keys [db]} _]
+                   (let [{:keys [mode org-id request-id]} (get-in db [:org :claim-dialog])
+                         lipas-admin? (roles/check-privilege (get-in db [:user :login]) {} :users/manage)]
+                     ;; mark in-flight (drives the dialog spinner); the success
+                     ;; handler closes the dialog, a failure clears the flag
+                     {:db (assoc-in db [:org :reclaiming?] true)
+                      :dispatch (cond
+                                  (= mode "approve") [::decide-takeover request-id "approve"]
+                                  lipas-admin?       [::reclaim-now org-id]
+                                  :else              [::request-takeover org-id])})))
+
+;; clears the in-flight flag (leaving the dialog open so the error is visible)
+(rf/reg-event-fx ::claim-failure
+                 (fn [{:keys [db]} [_ resp]]
+                   {:db (assoc-in db [:org :reclaiming?] false)
+                    :dispatch [::failure resp]}))
+
 (rf/reg-event-fx ::request-takeover
                  (fn [{:keys [db]} [_ org-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/orgs/" org-id "/takeover-request")
+                     :uri (str (:backend-url db) "/actions/request-org-takeover")
                      :headers (auth-headers db)
+                     :params {:org-id (->uuid org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::request-takeover-success]
-                     :on-failure [::failure]}}))
+                     :on-failure [::claim-failure]}}))
+
+(rf/reg-event-fx ::reclaim-now
+                 (fn [{:keys [db]} [_ org-id]]
+                   {:http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/reclaim-org-sites")
+                     :headers (auth-headers db)
+                     :params {:org-id (->uuid org-id)}
+                     :timeout reclaim-timeout-ms
+                     :format (ajax/transit-request-format)
+                     :response-format (ajax/transit-response-format)
+                     :on-success [::reclaim-now-success org-id]
+                     :on-failure [::claim-failure]}}))
+
+(rf/reg-event-fx ::reclaim-now-success
+                 (fn [_ [_ org-id resp]]
+                   {:fx [[:dispatch [::close-claim-dialog]]
+                         [:dispatch [::get-org-sites org-id "owned"]]
+                         [:dispatch [::get-org-sites org-id "editable"]]
+                         [:dispatch [:lipas.ui.events/set-active-notification
+                                     {:message (str "Lunastettu " (:sites-claimed resp) " kohdetta")
+                                      :success? true}]]]}))
 
 (rf/reg-event-fx ::request-takeover-success
                  (fn [_ [_ _resp]]
-                   {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+                   {:fx [[:dispatch [::close-claim-dialog]]
+                         [:dispatch [:lipas.ui.events/set-active-notification
                                      {:message "Lunastuspyyntö lähetetty" :success? true}]]]}))
 
 ;; =====================================================================
@@ -520,9 +626,11 @@
 (rf/reg-event-fx ::get-org-history
                  (fn [{:keys [db]} [_ org-id]]
                    {:http-xhrio
-                    {:method :get
-                     :uri (str (:backend-url db) "/orgs/" org-id "/history")
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/org-history")
                      :headers (auth-headers db)
+                     :params {:org-id org-id}
+                     :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-history-success]
                      :on-failure [::failure]}}))
@@ -534,28 +642,33 @@
 (rf/reg-event-fx ::get-takeover-requests
                  (fn [{:keys [db]} [_ status]]
                    {:http-xhrio
-                    {:method :get
-                     :uri (str (:backend-url db) "/actions/org-takeover-requests"
-                               (when status (str "?status=" status)))
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/org-takeover-requests")
                      :headers (auth-headers db)
+                     :params (cond-> {} status (assoc :status status))
+                     :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-takeover-requests-success]
                      :on-failure [::failure]}}))
 
 (rf/reg-event-fx ::decide-takeover
+                 ;; decision is "approve" | "deny" → /actions/approve-org-takeover etc.
                  (fn [{:keys [db]} [_ request-id decision]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/org-takeover-requests/"
-                               request-id "/" decision)
+                     :uri (str (:backend-url db) "/actions/" decision "-org-takeover")
                      :headers (auth-headers db)
+                     :params {:request-id (->uuid request-id)}
+                     ;; approve applies ownership site-by-site → can be slow
+                     :timeout reclaim-timeout-ms
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::decide-takeover-success]
-                     :on-failure [::failure]}}))
+                     :on-failure [::claim-failure]}}))
 
 (rf/reg-event-fx ::decide-takeover-success
                  (fn [_ [_ _resp]]
-                   {:fx [[:dispatch [::get-takeover-requests "requested"]]
+                   {:fx [[:dispatch [::close-claim-dialog]]
+                         [:dispatch [::get-takeover-requests "requested"]]
                          [:dispatch [:lipas.ui.events/set-active-notification
                                      {:message "Pyyntö käsitelty" :success? true}]]]}))
