@@ -24,5 +24,6 @@
   :floorball-manager "Innebandyredigerare",
   :site-manager "Platsadministratör",
   :city-manager "Stadsadministratör",
-  :org-user "Organisationsanvändare"},
+  :org-user "Organisationsanvändare",
+  :org-editor "Organisationsredigerare"},
  :roles "Roller"}

@@ -5,6 +5,11 @@
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/FormControl$default" :as FormControl]
@@ -19,19 +24,29 @@
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Select$default" :as Select]
             ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Step$default" :as Step]
+            ["@mui/material/StepButton$default" :as StepButton]
+            ["@mui/material/StepLabel$default" :as StepLabel]
+            ["@mui/material/Stepper$default" :as Stepper]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Table$default" :as Table]
             ["@mui/material/TableBody$default" :as TableBody]
             ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/TableSortLabel$default" :as TableSortLabel]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
+            [lipas.data.owners :as owners]
+            [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
             [lipas.schema.sports-sites :as sites-schema]
+            [lipas.ui.bulk-operations.events :as bulk-ops-events]
+            [lipas.ui.bulk-operations.subs :as bulk-ops-subs]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
+            [lipas.ui.roles.editor :as role-editor]
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
@@ -251,24 +266,7 @@
         :disabled (not can-contact?)
         :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :primary-contact :reservations-link] x]))}]
 
-      ;; Ownership rule (the ceiling for ownership claims) — lipas-admin only
-      [:> Divider {:sx {:my 1}}]
-      [:> Typography {:variant "h6"} (tr :lipas.org/ownership-rule)]
-      [:> Typography {:variant "body2" :color "text.secondary"}
-       (tr :lipas.org/ownership-rule-help)]
-      (when-not can-type?
-        [:> Typography {:variant "caption" :color "text.secondary"}
-         (tr :lipas.org/type-locked-note)])
-      [selects/city-selector
-       {:label (tr :lipas.org.ptv/cities-label)
-        :value (get-in org [:ownership :city-codes] [])
-        :disabled (not can-type?)
-        :on-change (fn [v] (rf/dispatch [::events/edit-org [:ownership :city-codes] v]))}]
-      [selects/owner-selector
-       {:label (tr :lipas.org.ptv/owners-label)
-        :value (get-in org [:ownership :owners] [])
-        :disabled (not can-type?)
-        :on-change (fn [v] (rf/dispatch [::events/edit-org [:ownership :owners] v]))}]
+      ;; Ownership rule moved to the "Oikeudet ja omistus" tab (ownership-editor).
 
       (when (or can-contact? can-type?)
         [:> Button
@@ -284,31 +282,43 @@
 ;; Members tab
 ;; ---------------------------------------------------------------------------
 
-(defn invite-member [tr org-id]
+(defn invite-member
+  "One email-based invite path for both lipas-admins and org-admins. As soon as a
+  valid email loses focus we ask the (org-scoped) backend whether it's already a
+  LIPAS account, and reflect that inline + in the button — so the admin knows
+  whether they're adding an existing user or sending a fresh invitation. The
+  backend does the right thing either way; the user is always notified by email."
+  [tr org-id]
   (let [form @(rf/subscribe [::subs/invite-member-form])
         template-opts @(rf/subscribe [::subs/member-template-options])
-        is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
-        all-users @(rf/subscribe [::subs/all-users-options])]
+        email (:email form)
+        existing? (:existing? form)
+        checking? (:checking? form)
+        valid-email? (boolean (and email (re-matches #".+@.+\..+" email)))]
     [:> Box {:sx {:display "flex" :flex-direction "row" :flex-wrap "wrap"
                   :gap 1 :align-items "flex-start" :mb 2}}
-     ;; Email (canonical path)
-     [text-fields/text-field-controlled
-      {:label (tr :lipas.org/email)
-       :value (:email form)
-       :type "email"
-       :spec sites-schema/email
-       :on-change #(rf/dispatch [::events/set-invite-member-form [:email] %])
-       :sx {:min-width 220}}]
+     ;; Email — the single, canonical path for everyone
+     [:> Box {:sx {:display "flex" :flex-direction "column" :min-width 280}}
+      [text-fields/text-field-controlled
+       {:label (tr :lipas.org/email)
+        :value email
+        :type "email"
+        :spec sites-schema/email
+        :on-change #(rf/dispatch [::events/set-invite-email %])
+        :on-blur (fn [_] (rf/dispatch [::events/check-existing-user org-id]))}]
+      ;; live existence status (only meaningful for a well-formed email)
+      (cond
+        checking?
+        [:> Typography {:variant "caption" :color "text.secondary" :sx {:mt 0.5}}
+         (tr :lipas.org/invite-checking)]
 
-     ;; lipas-admin convenience: pick an existing account
-     (when is-lipas-admin?
-       (r/as-element
-         [ac/autocomplete2
-          {:sx #js {:minWidth 220}
-           :label (tr :lipas.user/email)
-           :options all-users
-           :value (:user-id form)
-           :onChange (fn [_e v] (rf/dispatch [::events/set-invite-member-form [:user-id] (ac/safe-value v)]))}]))
+        (and valid-email? (true? existing?))
+        [:> Typography {:variant "caption" :color "success.main" :sx {:mt 0.5}}
+         (tr :lipas.org/invite-status-existing)]
+
+        (and valid-email? (false? existing?))
+        [:> Typography {:variant "caption" :color "info.main" :sx {:mt 0.5}}
+         (tr :lipas.org/invite-status-new)])]
 
      ;; Org-role
      [:> FormControl {:sx {:min-width 140}}
@@ -332,8 +342,12 @@
 
      [:> Button
       {:variant "contained" :color "primary" :sx {:mt 1}
+       :disabled (not valid-email?)
        :on-click #(rf/dispatch [::events/invite-member org-id])}
-      (tr :lipas.org/invite)]]))
+      (cond
+        (true? existing?)  (tr :lipas.org/add-member-action)
+        (false? existing?) (tr :lipas.org/send-invitation-action)
+        :else              (tr :lipas.org/invite-member))]]))
 
 (defn member-templates-cell
   "Template chips for one member with an add-menu, all gated by can-manage?."
@@ -430,83 +444,130 @@
        (mapcat :templates)
        (frequencies)))
 
-(defn catalog-editor
-  "lipas-admin editor for the role-template catalog. Edits a local copy in
-  app-db; the Save button (in roles-templates-tab) PUTs the whole catalog."
-  [tr _org-id]
-  (let [catalog @(rf/subscribe [::subs/catalog-editor])]
-    [:> Box
-     (for [[k entry] catalog]
-       [:> Paper {:key (name k) :variant "outlined" :sx {:p 2 :mb 1}}
-        [:> Box {:sx {:display "flex" :align-items "center" :gap 1}}
-         [:> Typography {:variant "subtitle1" :sx {:flex 1}}
-          (str (or (:label entry) (name k)) " (" (name k) ")")]
-         [:> IconButton
-          {:size "small" :color "error"
-           :on-click #(rf/dispatch [::events/set-catalog-editor (dissoc catalog k)])}
-          [:> DeleteIcon]]]
-        [:> Typography {:variant "body2" :color "text.secondary"}
-         (template-grants-text tr entry)]])]))
+(def catalog-roles
+  "Role vocabulary a LIPAS admin may put in an org's template catalog (the
+  ceiling). Differs from admin's `:assignable` set: includes `:org-editor`
+  (assignable false, but projected) and excludes org-admin/org-user/admin."
+  (->> roles/roles
+       (filter (comp :catalog-assignable val))
+       (sort-by (comp :sort val))
+       (mapv key)))
 
-(defn add-template-form [tr]
-  (let [draft (r/atom {:key "" :label "" :role "org-editor" :city-codes [] :activities ""})]
-    (fn [_tr]
-      (let [d @draft
-            role (:role d)]
-        [:> Paper {:variant "outlined" :sx {:p 2 :mt 2}}
-         [:> Typography {:variant "subtitle1" :sx {:mb 1}} (tr :lipas.org/add-template)]
-         [:> Stack {:spacing 1}
-          [text-fields/text-field-controlled
-           {:label "key" :value (:key d)
-            :on-change #(swap! draft assoc :key %)}]
-          [text-fields/text-field-controlled
-           {:label (tr :lipas.org/template-label) :value (:label d)
-            :on-change #(swap! draft assoc :label %)}]
-          [:> FormControl
-           [:> InputLabel {:id "tmpl-role"} (tr :lipas.org/template-grants)]
-           [:> Select {:labelId "tmpl-role" :value role
-                       :label (tr :lipas.org/template-grants)
-                       :onChange (fn [e] (swap! draft assoc :role (.. e -target -value)))}
-            [:> MenuItem {:value "org-editor"} (tr :lipas.org/grants-org-editor)]
-            [:> MenuItem {:value "ptv-manager"} (tr :lipas.org/grants-ptv)]
-            [:> MenuItem {:value "activities-manager"} (tr :lipas.org/grants-activity)]]]
-          (when (= role "ptv-manager")
-            [selects/city-selector
-             {:label (tr :lipas.org.ptv/cities-label)
-              :value (:city-codes d)
-              :on-change #(swap! draft assoc :city-codes %)}])
-          (when (= role "activities-manager")
-            [text-fields/text-field-controlled
-             {:label (tr :lipas.org/activity-editors)
-              :value (:activities d)
-              :helper-text "esim. melonta, retkeily"
-              :on-change #(swap! draft assoc :activities %)}])
-          [:> Button
-           {:variant "contained" :color "primary"
-            :disabled (str/blank? (:key d))
-            :on-click
-            (fn []
-              (let [role-spec (cond-> {:role role}
-                                (= role "ptv-manager")
-                                (assoc :city-code (vec (:city-codes d)))
-                                (= role "activities-manager")
-                                (assoc :activity (->> (str/split (:activities d) #",")
-                                                      (map str/trim)
-                                                      (remove str/blank?)
-                                                      vec)))
-                    entry {:label (:label d) :roles [role-spec]}
-                    catalog @(rf/subscribe [::subs/catalog-editor])]
-                (rf/dispatch [::events/set-catalog-editor
-                              (assoc catalog (keyword (:key d)) entry)])
-                (reset! draft {:key "" :label "" :role "org-editor" :city-codes [] :activities ""})))}
-           (tr :lipas.org/add-template)]]]))))
+(def catalog-presets
+  "Common templates, one click to drop in and then tweak. Labels are editable."
+  [{:key :editor   :label "Muokkaaja"     :roles [{:role "org-editor"}]}
+   {:key :ptv      :label "PTV"           :roles [{:role "ptv-manager" :city-code []}]}
+   {:key :activity :label "Aktiviteetti"  :roles [{:role "activities-manager" :activity []}]}
+   {:key :routes   :label "Reittien lisäys" :roles [{:role "type-manager" :type-code []}]}])
+
+(defn catalog-template-editor
+  "One template = a human-readable label + 1..N role-specs built with the shared
+  role editor (org-id hidden — injected at projection). `member-count` is how
+  many of the org's members currently have this template assigned — surfaced so
+  the admin sees that editing/removing it affects real users."
+  [tr tkey entry member-count]
+  [:> Paper {:variant "outlined" :sx {:p 2 :mb 2}}
+   [:> Box {:sx {:display "flex" :align-items "center" :gap 1}}
+    [text-fields/text-field-controlled
+     {:label (tr :lipas.org/template-label)
+      :value (:label entry)
+      :on-change #(rf/dispatch [::events/set-template-label tkey %])}]
+    [:> Typography {:variant "caption" :color "text.secondary" :sx {:flex 1}}
+     (str (tr :lipas.org/template-key) ": " (name tkey))]
+    (when (pos? member-count)
+      [:> Tooltip {:title (tr :lipas.org/template-in-use member-count)}
+       [:> Chip {:size "small" :color "warning" :variant "outlined"
+                 :icon (r/as-element [:> Icon {:fontSize "small"} "group"])
+                 :label member-count}]])
+    [:> IconButton {:color "error"
+                    :on-click #(rf/dispatch [::events/remove-template tkey])}
+     [:> DeleteIcon]]]
+   (when (pos? member-count)
+     [:> Alert {:severity "warning" :sx {:mt 1}}
+      (tr :lipas.org/template-in-use-warning member-count)])
+   (doall
+     (map-indexed
+       (fn [idx spec]
+         [:> Box {:key idx :sx {:display "flex" :gap 1 :align-items "flex-start" :mt 1}}
+          [:> Box {:sx {:flex 1}}
+           [role-editor/role-spec-editor
+            {:spec spec
+             :roles catalog-roles
+             :hide-context-keys #{:org-id}
+             :on-role-change (fn [role] (rf/dispatch [::events/set-template-role tkey idx role]))
+             :on-context-change (fn [k vals] (rf/dispatch [::events/set-template-role-context tkey idx k vals]))
+             :tr tr}]]
+          [:> IconButton {:size "small" :color "error"
+                          :on-click #(rf/dispatch [::events/remove-template-role tkey idx])}
+           [:> DeleteIcon]]])
+       (:roles entry)))
+   [:> Button {:size "small" :sx {:mt 1}
+               :on-click #(rf/dispatch [::events/add-template-role tkey])}
+    [:> Icon {:sx {:mr 0.5} :fontSize "small"} "add"]
+    (tr :lipas.org/add-role)]])
+
+(defn ownership-editor
+  "The ownership/claim rule (the ceiling for what an org may take over). Four
+  optional, AND-combined axes; lipas-admin only. Saved with the org details."
+  [tr org-id]
+  (let [org @(rf/subscribe [::subs/editing-org])
+        can? @(rf/subscribe [::subs/can? :org/edit-type+ownership org-id])
+        ownership (:ownership org)]
+    (when can?
+      [:> Box {:sx {:mt 4}}
+       [:> Divider {:sx {:mb 2}}]
+       [:> Typography {:variant "h6"} (tr :lipas.org/ownership-rule)]
+       [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 1}}
+        (tr :lipas.org/ownership-rule-help)]
+       [:> Alert {:severity "warning" :sx {:mb 2}}
+        (tr :lipas.org/ownership-lock-note)]
+       [:> Stack {:spacing 2 :sx {:max-width 600}}
+        [selects/city-selector
+         {:label (tr :lipas.org.ptv/cities-label)
+          :value (:city-codes ownership [])
+          :on-change #(rf/dispatch [::events/edit-org [:ownership :city-codes] %])}]
+        [selects/owner-selector
+         {:label (tr :lipas.org.ptv/owners-label)
+          :value (:owners ownership [])
+          :on-change #(rf/dispatch [::events/edit-org [:ownership :owners] %])}]
+        [role-editor/type-code-select
+         {:tr tr
+          :value (:type-codes ownership [])
+          :on-change #(rf/dispatch [::events/edit-org [:ownership :type-codes] %])}]
+        [role-editor/activity-select
+         {:tr tr
+          :value (:activities ownership [])
+          :on-change #(rf/dispatch [::events/edit-org [:ownership :activities] %])}]
+        [:> Box {:sx {:display "flex" :gap 1 :flex-wrap "wrap"}}
+         [:> Button
+          {:variant "contained" :color "secondary"
+           :on-click #(rf/dispatch [::events/save-org org])}
+          [:> Icon {:sx {:mr 1}} "save"]
+          (tr :lipas.org/save-ownership)]
+         ;; act on the rule right where it's defined (uses the saved rule)
+         (when (some #(seq (get ownership %)) [:city-codes :owners :type-codes :activities])
+           [:> Button
+            {:variant "outlined" :color "secondary"
+             :on-click #(rf/dispatch [::events/open-claim-dialog
+                                      {:mode "request" :org-id org-id}])}
+            [:> Icon {:sx {:mr 1}} "flag"]
+            (tr :lipas.org/preview-and-reclaim)])]]])))
 
 (defn roles-templates-tab [tr org-id]
   (let [catalog @(rf/subscribe [::subs/org-templates])
         org-users @(rf/subscribe [::subs/org-users])
         counts (template-member-counts org-users)
         can-edit? @(rf/subscribe [::subs/can? :org/edit-catalog org-id])
-        editor @(rf/subscribe [::subs/catalog-editor])]
+        editor @(rf/subscribe [::subs/catalog-editor])
+        ;; saved templates that members still hold but the admin has removed from
+        ;; the working editor copy → saving will strip those members' grants.
+        removed-in-use (->> (keys catalog)
+                            (map name)
+                            (remove (set (map name (keys editor))))
+                            (filter #(pos? (get counts % 0)))
+                            (map (fn [k] {:key k
+                                          :label (or (:label (get catalog (keyword k))) k)
+                                          :count (get counts k 0)})))]
     [:> Box {:sx {:p 2}}
      (when-not can-edit?
        [:> Alert {:severity "info" :sx {:mb 2}}
@@ -515,13 +576,43 @@
      (if can-edit?
        ;; --- editable view (lipas-admin); seeded on tab switch in ::set-current-tab ---
        [:> Box
-        [catalog-editor tr org-id]
-        [add-template-form tr]
+        [:> Typography {:variant "h6" :sx {:mb 1}} (tr :lipas.org/roles-templates-tab)]
+
+        ;; presets + add custom
+        [:> Box {:sx {:display "flex" :gap 1 :flex-wrap "wrap" :mb 2}}
+         (for [p catalog-presets]
+           [:> Button {:key (name (:key p)) :size "small" :variant "outlined"
+                       :on-click #(rf/dispatch [::events/add-template p])}
+            (str "+ " (:label p))])
+         [:> Button {:size "small" :variant "contained"
+                     :on-click #(rf/dispatch [::events/add-template {:label ""}])}
+          [:> Icon {:sx {:mr 0.5} :fontSize "small"} "add"]
+          (tr :lipas.org/add-template)]]
+
+        (doall
+          (for [[tkey entry] (sort-by (comp name key) editor)]
+            ^{:key (name tkey)}
+            [catalog-template-editor tr tkey entry (get counts (name tkey) 0)]))
+
+        (when (empty? editor)
+          [:> Typography {:color "text.secondary" :sx {:mb 2}} (tr :lipas.org/no-templates)])
+
+        ;; warn before saving away templates members still depend on
+        (when (seq removed-in-use)
+          [:> Alert {:severity "warning" :sx {:mt 1 :mb 1}}
+           [:> Typography {:variant "body2" :sx {:font-weight "bold"}}
+            (tr :lipas.org/catalog-removed-in-use-warning)]
+           [:ul {:style {:margin "4px 0 0 0"}}
+            (for [{:keys [key label count]} removed-in-use]
+              [:li {:key key} (str label " — " (tr :lipas.org/template-in-use count))])]])
+
         [:> Button
-         {:variant "contained" :color "secondary" :sx {:mt 2}
-          :on-click #(rf/dispatch [::events/edit-template-catalog org-id (or editor catalog)])}
+         {:variant "contained" :color "secondary" :sx {:mt 1}
+          :on-click #(rf/dispatch [::events/edit-template-catalog org-id editor])}
          [:> Icon {:sx {:mr 1}} "save"]
-         (tr :actions/save)]]
+         (tr :actions/save)]
+
+        [ownership-editor tr org-id]]
 
        ;; --- read-only view (org-admin / member) ---
        (if (seq catalog)
@@ -603,80 +694,183 @@
                           (reset! grant-target nil))}
              (tr :lipas.org/grant-edit)]])]))))
 
+(defn sortable-th
+  "A clickable header cell. `sort*` is the current {:col :dir} state; clicking
+  toggles direction on the active column or switches to this one (asc)."
+  [{:keys [sort* on-sort col label align]}]
+  (let [active? (= (:col sort*) col)]
+    [:> TableCell (when align {:align align})
+     [:> TableSortLabel
+      {:active active?
+       :direction (if active? (name (:dir sort*)) "asc")
+       :onClick #(on-sort col)}
+      label]]))
+
 (defn our-sites-tab [_tr _org-id]
-  (let [expanded (r/atom nil)]
+  (let [expanded (r/atom nil)
+        ;; column sort state for the sites table (client-side)
+        sort* (r/atom {:col :name :dir :asc})]
     (fn [tr org-id]
-      (let [flt @(rf/subscribe [::subs/our-sites-filter])
-            sites @(rf/subscribe [::subs/our-sites])
-            org @(rf/subscribe [::subs/editing-org])
-            can-grant? @(rf/subscribe [::subs/can? :org/grant-site-edit org-id])
-            ownership-rule (:ownership org)]
+      ;; One dataset drives everything: the org's editable sites (owned ∪ granted)
+      ;; from bulk-operations, each row flagged `:owned?`. Browsing, the owned vs
+      ;; shared split, content filtering, and bulk-edit selection are all facets
+      ;; of this single list — no separate "owned" vs "editable" fetches.
+      (let [filters       @(rf/subscribe [::bulk-ops-subs/sites-filters])
+            ownership-flt  (:ownership filters)
+            editable       @(rf/subscribe [::bulk-ops-subs/editable-sites])
+            sites          @(rf/subscribe [::bulk-ops-subs/filtered-editable-sites])
+            selected       @(rf/subscribe [::bulk-ops-subs/selected-sites])
+            current-step   @(rf/subscribe [::bulk-ops-subs/current-step])
+            types          @(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
+            cities         @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+            locale         (tr)
+            bulk-editing?  (pos? current-step)
+            ;; counts label the owned/shared/all segments (the "is it working?" cue)
+            all-count      (count editable)
+            owned-count    (count (filter :owned? editable))
+            shared-count   (- all-count owned-count)
+            ;; client-side column sort; accessors resolve the same display values
+            ;; the cells render (type/city names come from the registry subs)
+            sort-state     @sort*
+            accessor       {:name        :name
+                            :type        #(get-in types [(get-in % [:type :type-code]) :name locale])
+                            :city        #(get-in cities [(get-in % [:location :city :city-code]) :name locale])
+                            :last-edited :event-date}
+            sort-key-fn    (fn [s] (str/lower-case (str ((accessor (:col sort-state)) s))))
+            sorted-sites   (cond->> (sort-by sort-key-fn sites)
+                             (= (:dir sort-state) :desc) reverse)
+            on-sort        (fn [col]
+                             (swap! sort* (fn [{c :col d :dir}]
+                                            (if (= c col)
+                                              {:col col :dir (if (= d :asc) :desc :asc)}
+                                              {:col col :dir :asc}))))
+            site-ids       (map :lipas-id sites)
+            all-selected?  (and (seq site-ids) (every? selected site-ids))]
         ;; min-width 0 + overflow-x auto keeps wide children (table, bulk-ops)
         ;; from widening the whole page
         [:> Box {:sx {:p 2 :min-width 0 :overflow-x "auto"}}
-         ;; filter toggle
-         [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center"}}
-          [:> Button {:variant (if (= flt "owned") "contained" "outlined")
-                      :size "small"
-                      :on-click #(rf/dispatch [::events/set-our-sites-filter "owned"])}
-           (tr :lipas.org/owned)]
-          [:> Button {:variant (if (= flt "editable") "contained" "outlined")
-                      :size "small"
-                      :on-click #(rf/dispatch [::events/set-our-sites-filter "editable"])}
-           (tr :lipas.org/editable)]
+         (if bulk-editing?
+           ;; Bulk-edit mode: selection happened in the list, so the wizard runs
+           ;; in external-selection mode (Enter info → Summary). Done/Back/cancel
+           ;; reset the bulk state, returning to the list below.
+           [bulk-ops-views/main
+            {:title (tr :lipas.org/bulk-operations)
+             :external-selection? true
+             :on-cancel #(rf/dispatch [::bulk-ops-events/reset])}]
 
-          ;; claim ownership
-          (when (and can-grant? (seq (:city-codes ownership-rule)) (seq (:owners ownership-rule)))
-            [:> Button {:variant "outlined" :color "secondary" :size "small"
-                        :sx {:ml "auto"}
-                        :on-click #(rf/dispatch [::events/request-takeover org-id])}
-             [:> Icon {:sx {:mr 1}} "flag"]
-             (tr :lipas.org/claim-ownership)])]
+           [:<>
+            ;; ownership segment (with live counts) — the now-correct owned vs
+            ;; granted-by-another-org split (shared = editable minus owned)
+            [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center" :flex-wrap "wrap"}}
+             [:> Button {:variant (if (str/blank? (str ownership-flt)) "contained" "outlined")
+                         :size "small"
+                         :on-click #(rf/dispatch [::bulk-ops-events/set-sites-filter :ownership nil])}
+              (str (tr :lipas.org/all-sites) " (" all-count ")")]
+             [:> Button {:variant (if (= ownership-flt "owned") "contained" "outlined")
+                         :size "small"
+                         :on-click #(rf/dispatch [::bulk-ops-events/set-sites-filter :ownership "owned"])}
+              (str (tr :lipas.org/owned) " (" owned-count ")")]
+             [:> Button {:variant (if (= ownership-flt "granted") "contained" "outlined")
+                         :size "small"
+                         :on-click #(rf/dispatch [::bulk-ops-events/set-sites-filter :ownership "granted"])}
+              (str (tr :lipas.org/shared-with-us) " (" shared-count ")")]]
 
-         (if (seq sites)
-           [:> Box {:sx {:overflow-x "auto" :width "100%"}}
-            [:> Table {:size "small"}
-             [:> TableHead
-              [:> TableRow
-               [:> TableCell (tr :lipas.org/name)]
-               [:> TableCell (tr :lipas.org/type-col)]
-               [:> TableCell (tr :lipas.org/city)]
-               [:> TableCell (tr :lipas.org/last-edited)]
-               [:> TableCell {:align "right"} (tr :lipas.org/who-can-edit)]]]
-             (into
-               [:> TableBody]
-               (mapcat
-                 (fn [site]
-                   (let [lipas-id (:lipas-id site)
-                         open? (= @expanded lipas-id)]
-                     (cond-> [[:> TableRow {:key lipas-id}
-                               [:> TableCell (:name site)]
-                               [:> TableCell (:type-name site)]
-                               [:> TableCell (:city-name site)]
-                               [:> TableCell (some-> (:event-date site) (.substring 0 10))]
-                               [:> TableCell {:align "right"}
-                                [:> IconButton
-                                 {:size "small"
-                                  :on-click (fn []
-                                              (if open?
-                                                (reset! expanded nil)
-                                                (do (reset! expanded lipas-id)
-                                                    (rf/dispatch [::events/get-site-editors lipas-id]))))}
-                                 [:> Icon (if open? "expand_less" "expand_more")]]]]]
-                       open?
-                       (conj [:> TableRow {:key (str lipas-id "-detail")}
-                              [:> TableCell {:colSpan 5 :sx {:p 0}}
-                               [site-editors-detail tr org-id site]]]))))
-                 sites))]]
-           [:> Typography {:color "text.secondary"} (tr :lipas.org/no-sites)])
+            ;; content filters — find sites to view / bulk-edit
+            [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center" :flex-wrap "wrap"}}
+             [:> Box {:sx {:min-width 200}}
+              [text-fields/text-field-controlled
+               {:label (tr :search/search)
+                :value (:search-text filters)
+                :on-change #(rf/dispatch [::bulk-ops-events/set-sites-filter :search-text %])}]]
+             [:> Box {:sx {:min-width 200}}
+              (r/as-element
+                [ac/type-selector
+                 {:value (:type-code filters)
+                  :label (tr :type/name)
+                  :onChange (fn [_ {:keys [value]}]
+                              (rf/dispatch [::bulk-ops-events/set-sites-filter :type-code value]))}])]
+             ;; no owner filter: take-over locks :owner to the org type's enum, so
+             ;; all of an org's sites share one owner value — filtering by it is moot
+             [:> Box {:sx {:min-width 200}}
+              (r/as-element
+                [ac/admin-selector
+                 {:value (:admin filters)
+                  :label (tr :lipas.sports-site/admin)
+                  :onChange (fn [_ {:keys [value]}]
+                              (rf/dispatch [::bulk-ops-events/set-sites-filter :admin value]))}])]]
 
-         ;; Bulk operations (folded in)
-         [:> Divider {:sx {:my 3}}]
-         [:> Typography {:variant "h6" :sx {:mb 1}} (tr :lipas.org/bulk-operations)]
-         [bulk-ops-views/main
-          {:title nil
-           :description nil
-           :on-cancel #(rf/dispatch [::events/set-current-tab "overview"])}]]))))
+            ;; selection action bar — launches the bulk-edit wizard for the
+            ;; checked sites (the headline "edit contact info on many sites")
+            (when (seq selected)
+              [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center"
+                            :p 1 :bgcolor "action.hover" :border-radius 1}}
+               [:> Typography {:variant "body2"}
+                (tr :lipas.bulk-operations/n-sites-selected (count selected))]
+               [:> Button {:variant "contained" :size "small" :sx {:ml "auto"}
+                           :on-click #(rf/dispatch [::bulk-ops-events/set-current-step 1])}
+                [:> Icon {:sx {:mr 1}} "edit"]
+                (tr :lipas.org/bulk-operations)]
+               [:> Button {:variant "text" :size "small"
+                           :on-click #(rf/dispatch [::bulk-ops-events/deselect-all-sites])}
+                (tr :actions/deselect-all)]])
+
+            (if (seq sites)
+              [:> Box {:sx {:overflow-x "auto" :width "100%"}}
+               [:> Table {:size "small"}
+                [:> TableHead
+                 [:> TableRow
+                  [:> TableCell {:padding "checkbox"}
+                   [:> Checkbox {:checked all-selected?
+                                 :indeterminate (boolean (and (not all-selected?)
+                                                              (some selected site-ids)))
+                                 :on-change #(if all-selected?
+                                               (rf/dispatch [::bulk-ops-events/deselect-all-sites])
+                                               (rf/dispatch [::bulk-ops-events/select-all-sites site-ids]))}]]
+                  [sortable-th {:sort* sort-state :on-sort on-sort :col :name
+                                :label (tr :lipas.org/name)}]
+                  [sortable-th {:sort* sort-state :on-sort on-sort :col :type
+                                :label (tr :lipas.org/type-col)}]
+                  [sortable-th {:sort* sort-state :on-sort on-sort :col :city
+                                :label (tr :lipas.org/city)}]
+                  [sortable-th {:sort* sort-state :on-sort on-sort :col :last-edited
+                                :label (tr :lipas.org/last-edited)}]
+                  [:> TableCell {:align "right"} (tr :lipas.org/who-can-edit)]]]
+                (into
+                  [:> TableBody]
+                  (mapcat
+                    (fn [site]
+                      (let [lipas-id (:lipas-id site)
+                            open? (= @expanded lipas-id)]
+                        (cond-> [[:> TableRow {:key lipas-id
+                                               :selected (boolean (selected lipas-id))}
+                                  [:> TableCell {:padding "checkbox"}
+                                   [:> Checkbox {:checked (boolean (selected lipas-id))
+                                                 :on-change #(rf/dispatch [::bulk-ops-events/toggle-site-selection lipas-id])}]]
+                                  [:> TableCell
+                                   [:> Box {:sx {:display "flex" :align-items "center" :gap 1}}
+                                    [:span (:name site)]
+                                    ;; mark sites we can edit but don't own
+                                    (when-not (:owned? site)
+                                      [:> Chip {:size "small" :variant "outlined" :color "secondary"
+                                                :label (tr :lipas.org/shared-with-us)}])]]
+                                  [:> TableCell (get-in types [(get-in site [:type :type-code]) :name locale])]
+                                  [:> TableCell (get-in cities [(get-in site [:location :city :city-code]) :name locale])]
+                                  [:> TableCell (some-> (:event-date site) (.substring 0 10))]
+                                  [:> TableCell {:align "right"}
+                                   [:> IconButton
+                                    {:size "small"
+                                     :on-click (fn []
+                                                 (if open?
+                                                   (reset! expanded nil)
+                                                   (do (reset! expanded lipas-id)
+                                                       (rf/dispatch [::events/get-site-editors lipas-id]))))}
+                                    [:> Icon (if open? "expand_less" "expand_more")]]]]]
+                          open?
+                          (conj [:> TableRow {:key (str lipas-id "-detail")}
+                                 [:> TableCell {:colSpan 6 :sx {:p 0}}
+                                  [site-editors-detail tr org-id site]]]))))
+                    sorted-sites))]]
+              [:> Typography {:color "text.secondary"} (tr :lipas.org/no-sites)])])]))))
 
 ;; ---------------------------------------------------------------------------
 ;; History tab
@@ -719,6 +913,129 @@
      [site-editors-detail tr (str owner-org-id) {:lipas-id lipas-id}]]))
 
 ;; ---------------------------------------------------------------------------
+;; Claim impact warning (shown before requesting OR approving a take-over)
+;; ---------------------------------------------------------------------------
+
+(def ^:private claim-page-size 10)
+
+(defn claim-impact-dialog [_tr]
+  (let [page (r/atom 0)]
+    (fn [tr]
+      (let [dialog @(rf/subscribe [::subs/claim-dialog])
+            preview @(rf/subscribe [::subs/takeover-preview])
+            is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
+            reclaiming? @(rf/subscribe [::subs/reclaiming?])
+            locale (tr)
+            ;; localized owner-class label (fall back to the raw enum, then "–")
+            owner-label (fn [enum] (or (get-in owners/all [enum locale]) enum "–"))
+            sites (vec (:sites preview))
+            total (count sites)
+            pages (max 1 (js/Math.ceil (/ total claim-page-size)))
+            cur (min @page (dec pages))
+            from (* cur claim-page-size)
+            to (min (+ from claim-page-size) total)
+            ;; don't allow closing mid-reclaim (the op keeps running server-side)
+            close! (fn [] (when-not reclaiming?
+                            (reset! page 0)
+                            (rf/dispatch [::events/close-claim-dialog])))]
+        [:> Dialog {:open (boolean dialog)
+                    :maxWidth "sm" :fullWidth true
+                    :onClose close!}
+         [:> DialogTitle (tr :lipas.org/claim-impact-title)]
+         [:> DialogContent
+          (if (nil? preview)
+            [:> Typography "…"]
+            [:> Box
+             [:> Typography {:variant "h6" :sx {:mb 1}}
+              (str (tr :lipas.org/claim-impact-affects) ": " (:count preview))]
+             ;; what the reclaim does: (1) assign ownership to this org, and
+             ;; (2) lock the owner class to the org type's owner (shown as label)
+             [:> Alert {:severity "warning" :sx {:my 1}}
+              [:> Box {:component "ul" :sx {:m 0 :pl 2}}
+               [:> Box {:component "li"}
+                (str (tr :lipas.org/claim-impact-assign) ": "
+                     (or (:owner-org-name preview) "—"))]
+               [:> Box {:component "li"}
+                (str (tr :lipas.org/claim-impact-lock) ": "
+                     (owner-label (:owner-enum preview)))]]]
+             (when (pos? total)
+               [:> Box {:sx {:mt 2}}
+                [:> Typography {:variant "subtitle2" :sx {:mb 1}}
+                 (tr :lipas.org/claim-impact-sample)]
+                [:> Table {:size "small"}
+                 [:> TableHead
+                  [:> TableRow
+                   [:> TableCell (tr :lipas.org/name)]
+                   [:> TableCell (tr :lipas.org/current-owner)]]]
+                 [:> TableBody
+                  (for [s (subvec sites from to)]
+                    [:> TableRow {:key (:lipas-id s)}
+                     [:> TableCell (:name s)]
+                     [:> TableCell (owner-label (:current-owner s))]])]]
+                (when (> pages 1)
+                  [:> Box {:sx {:display "flex" :align-items "center"
+                                :justify-content "flex-end" :gap 1 :mt 1}}
+                   [:> Typography {:variant "caption" :color "text.secondary"}
+                    (str (inc from) "–" to " / " total)]
+                   [:> IconButton {:size "small" :disabled (<= cur 0)
+                                   :on-click #(swap! page dec)}
+                    [:> Icon "chevron_left"]]
+                   [:> IconButton {:size "small" :disabled (>= cur (dec pages))
+                                   :on-click #(swap! page inc)}
+                    [:> Icon "chevron_right"]]])])])]
+         [:> DialogActions
+          (when reclaiming?
+            [:> Typography {:variant "caption" :color "text.secondary" :sx {:mr "auto" :ml 1}}
+             (tr :lipas.org/reclaiming)])
+          [:> Button {:on-click close! :disabled reclaiming?}
+           (tr :lipas.org/cancel)]
+          [:> Button {:variant "contained" :color "secondary"
+                      :disabled (or (nil? preview) (zero? (:count preview 0)) reclaiming?)
+                      :startIcon (when reclaiming?
+                                   (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
+                      :on-click #(rf/dispatch [::events/confirm-claim])}
+           (tr (cond
+                 (= "approve" (:mode dialog)) :lipas.org/approve-impact-confirm
+                 ;; lipas-admin applies directly (no request→self-approve round-trip)
+                 is-lipas-admin? :lipas.org/reclaim-now-confirm
+                 :else :lipas.org/claim-impact-confirm))]]]))))
+
+;; ---------------------------------------------------------------------------
+;; Setup checklist (LIPAS-admin one-time org setup)
+;; ---------------------------------------------------------------------------
+
+(defn setup-checklist
+  "Action-oriented orientation for the rare, one-time setup a LIPAS admin does:
+  set type+ownership rule → create role models → reclaim the org's sites. Steps
+  are derived from the loaded org doc + owned-site count; the banner auto-hides
+  once all three are satisfied. Non-blocking — each step jumps to where the work
+  actually happens (no separate wizard screens to maintain)."
+  [tr org-id]
+  (let [is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
+        org @(rf/subscribe [::subs/editing-org])
+        owned-count @(rf/subscribe [::subs/owned-sites-count])
+        rule (:ownership org)
+        step1-done? (and (boolean (:type org))
+                         (boolean (some #(seq (get rule %)) [:city-codes :owners :type-codes :activities])))
+        step2-done? (boolean (seq (:role-templates org)))
+        step3-done? (pos? owned-count)]
+    (when (and is-lipas-admin? (not (and step1-done? step2-done? step3-done?)))
+      [:> Paper {:variant "outlined" :sx {:p 2 :mb 3 :bgcolor "action.hover"}}
+       [:> Typography {:variant "subtitle1" :sx {:mb 1 :font-weight "bold"}}
+        (tr :lipas.org/setup-title)]
+       [:> Stepper {:nonLinear true :alternativeLabel true}
+        [:> Step {:completed step1-done?}
+         [:> StepButton {:onClick #(rf/dispatch [::events/set-current-tab "roles-templates"])}
+          [:> StepLabel (tr :lipas.org/setup-step-type)]]]
+        [:> Step {:completed step2-done?}
+         [:> StepButton {:onClick #(rf/dispatch [::events/set-current-tab "roles-templates"])}
+          [:> StepLabel (tr :lipas.org/setup-step-roles)]]]
+        [:> Step {:completed step3-done?}
+         [:> StepButton {:onClick #(rf/dispatch [::events/open-claim-dialog
+                                                 {:mode "request" :org-id org-id}])}
+          [:> StepLabel (tr :lipas.org/setup-step-reclaim)]]]]])))
+
+;; ---------------------------------------------------------------------------
 ;; Org detail view (tabbed)
 ;; ---------------------------------------------------------------------------
 
@@ -733,10 +1050,14 @@
     ;; hidden clamps it to the column width so wide tab content (Our sites table,
     ;; bulk-ops) scrolls within its own container instead of widening the page.
     [:> Paper {:sx {:p 3 :m 2 :min-width 0 :overflow-x "hidden"}}
+     [claim-impact-dialog tr]
      [:> Typography {:variant "h4" :sx {:mb 3}}
       (if is-new?
         (tr :lipas.org/new-organization)
         (:name org))]
+
+     (when-not is-new?
+       [setup-checklist tr org-id])
 
      (when-not is-new?
        [:> Tabs {:value current-tab
@@ -746,7 +1067,7 @@
                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
         [:> Tab {:label (tr :lipas.org/overview-tab) :value "overview"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
-        [:> Tab {:label (tr :lipas.org/roles-templates-tab) :value "roles-templates"}]
+        [:> Tab {:label (tr :lipas.org/permissions-ownership-tab) :value "roles-templates"}]
         [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
         [:> Tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]
         [:> Tab {:label (tr :lipas.org/history-tab) :value "history"}]])
@@ -785,7 +1106,10 @@
             [:> TableCell (count (:lipas-ids req))]
             [:> TableCell {:align "right"}
              [:> Button {:size "small" :color "primary"
-                         :on-click #(rf/dispatch [::events/decide-takeover (:id req) "approve"])}
+                         :on-click #(rf/dispatch [::events/open-claim-dialog
+                                                  {:mode "approve"
+                                                   :org-id (str (:org-id req))
+                                                   :request-id (:id req)}])}
               (tr :lipas.org/approve)]
              [:> Button {:size "small" :color "error"
                          :on-click #(rf/dispatch [::events/decide-takeover (:id req) "deny"])}
@@ -816,6 +1140,7 @@
         user-orgs @(rf/subscribe [::subs/user-orgs])
         is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])]
     [:> Paper {:sx {:p 3 :m 2}}
+     [claim-impact-dialog tr]
      [:> Typography {:variant "h4" :sx {:mb 3}}
       (tr :lipas.admin/organizations)]
 

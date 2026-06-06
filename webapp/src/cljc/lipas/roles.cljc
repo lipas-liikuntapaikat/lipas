@@ -79,6 +79,7 @@
    :type-manager
    {:sort 10
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:type-code]
     :optional-context-keys [:city-code]}
@@ -86,6 +87,7 @@
    :city-manager
    {:sort 11
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:city-code]
     :optional-context-keys [:type-code]}
@@ -93,6 +95,7 @@
    :site-manager
    {:sort 12
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:lipas-id]
     :optional-context-keys []}
@@ -100,6 +103,7 @@
    :activities-manager
    {:sort 20
     :assignable true
+    :catalog-assignable true
     :privileges #{:activity/view
                   :activity/edit
                   :site/save-api
@@ -112,6 +116,7 @@
    :itrs-assessor
    {:sort 25
     :assignable true
+    :catalog-assignable true
     :privileges #{:itrs/edit :site/save-api}
     :required-context-keys []
     :optional-context-keys [:city-code :type-code]}
@@ -119,6 +124,7 @@
    :floorball-manager
    {:sort 30
     :assignable true
+    :catalog-assignable true
     :privileges #{:floorball/view :floorball/view-extended :floorball/edit :site/save-api}
     :required-context-keys []
     :optional-context-keys [:type-code]}
@@ -126,6 +132,7 @@
    :analysis-user
    {:sort 40
     :assignable true
+    :catalog-assignable true
     :privileges #{:analysis-tool/use}
     :required-context-keys []
     :optional-context-keys []}
@@ -133,6 +140,7 @@
    :analysis-experimental-user
    {:sort 45
     :assignable true
+    :catalog-assignable true
     :privileges #{:analysis-tool/use :analysis-tool/experimental}
     :required-context-keys []
     :optional-context-keys []}
@@ -140,6 +148,7 @@
    :ptv-manager
    {:sort 50
     :assignable true
+    :catalog-assignable true
     :privileges #{:ptv/manage}
     :required-context-keys [:city-code]
     :optional-context-keys []}
@@ -172,6 +181,7 @@
    :org-editor
    {:sort 62
     :assignable false
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:org-id]
     :optional-context-keys []}})

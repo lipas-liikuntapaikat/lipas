@@ -34,7 +34,11 @@
   ;; compute-renovation-years) then merge them in surprising ways for
   ;; tests that don't care. Tests that DO care should assoc explicit
   ;; values.
-  (cond-> (dissoc site :renovation-years :renovations)
+  ;; Likewise strip the org-ownership fields: the schema marks them optional,
+  ;; so mg/generate randomly assigns ownership/grants, making ownership
+  ;; assertions flaky by seed. A generated site is un-owned by default; tests
+  ;; that care assoc explicit :owner-org-id / :edit-grants.
+  (cond-> (dissoc site :renovation-years :renovations :owner-org-id :edit-grants)
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))

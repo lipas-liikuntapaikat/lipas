@@ -72,14 +72,6 @@
             :label email})
          users)))
 
-(rf/reg-sub ::add-user-form
-  (fn [db _]
-    (get-in db [:org :add-user-form])))
-
-(rf/reg-sub ::add-user-email-form
-  (fn [db _]
-    (get-in db [:org :add-user-email-form])))
-
 (rf/reg-sub ::is-lipas-admin
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user _]
@@ -154,6 +146,17 @@
   (fn [db _]
     (get-in db [:org :sites :editable])))
 
+(rf/reg-sub ::owned-sites-count
+  :<- [::org-owned-sites]
+  (fn [owned _]
+    (or (:total owned) (count (:sites owned)) 0)))
+
+;; in-flight flag for the (slow, synchronous) reclaim/approve op → drives the
+;; dialog spinner + button disabling
+(rf/reg-sub ::reclaiming?
+  (fn [db _]
+    (boolean (get-in db [:org :reclaiming?]))))
+
 (rf/reg-sub ::our-sites-filter
   (fn [db _]
     (get-in db [:org :sites :filter] "owned")))
@@ -179,3 +182,12 @@
 (rf/reg-sub ::takeover-requests
   (fn [db _]
     (get-in db [:org :takeover-requests])))
+
+;; --- Claim impact warning dialog ---
+(rf/reg-sub ::claim-dialog
+  (fn [db _]
+    (get-in db [:org :claim-dialog])))
+
+(rf/reg-sub ::takeover-preview
+  (fn [db _]
+    (get-in db [:org :takeover-preview])))

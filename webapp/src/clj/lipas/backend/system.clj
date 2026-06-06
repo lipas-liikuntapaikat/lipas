@@ -57,7 +57,12 @@
   (handler/create-app config))
 
 (defmethod ig/init-key :lipas/server [_ {:keys [app port]}]
-  (jetty/run-jetty app {:port port :join? false}))
+  ;; :max-idle-time bumped from the adapter default (200000) to match nginx's
+  ;; /api proxy_read_timeout (300s). Long-running synchronous one-time ops (e.g.
+  ;; org site-reclaim, which is ~350ms/site) hold the connection idle the whole
+  ;; time, so the connection idle timeout is the real ceiling — keep it aligned
+  ;; with nginx so neither hop kills the request before the other.
+  (jetty/run-jetty app {:port port :join? false :max-idle-time 300000}))
 
 (defmethod ig/halt-key! :lipas/server [_ server]
   (.stop server))
