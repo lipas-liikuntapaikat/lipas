@@ -1,5 +1,6 @@
 (ns lipas.backend.org-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [integrant.core :as ig]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
@@ -78,7 +79,7 @@
                                :city-codes [91]
                                :owners ["city"]
                                :supported-languages ["fi"]}}
-          resp (test-app (-> (mock/request :post "/api/orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/create-org")
                              (mock/content-type "application/json")
                              (mock/body (test-utils/->json org-data))
                              (test-utils/token-header token)))
@@ -96,61 +97,11 @@
           token (jwt/create-token admin-user)
           invalid-org {:name "" ; Invalid: empty name
                        :data {:primary-contact {:email "invalid-email"}}} ; Invalid: bad email
-          resp (test-app (-> (mock/request :post "/api/orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/create-org")
                              (mock/content-type "application/json")
                              (mock/body (test-utils/->json invalid-org))
                              (test-utils/token-header token)))]
       (is (= 400 (:status resp))))))
-
-(deftest add-user-by-email-success-test
-  (testing "Successfully adds existing user to organization by email"
-    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
-          target-user (test-utils/gen-regular-user :db-component (test-db))
-          [org1 _] (create-test-orgs)
-          org-id (:id org1)
-          token (jwt/create-token admin-user)
-          email (:email target-user)
-          user-data {:email email :role "org-user"}
-          resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                             (mock/content-type "application/json")
-                             (mock/body (test-utils/->json user-data))
-                             (test-utils/token-header token)))
-          body (test-utils/safe-parse-json resp)]
-      (is (= 200 (:status resp)))
-      (is (:success? body))
-      (is (contains? body :message)))))
-
-(deftest add-user-by-email-user-not-found-test
-  (testing "Returns helpful error when user email doesn't exist (GDPR-compliant)"
-    (let [admin-user (test-utils/gen-admin-user :db-component (test-db))
-          [org1 _] (create-test-orgs)
-          org-id (:id org1)
-          token (jwt/create-token admin-user)
-          nonexistent-email "nonexistent@example.com"
-          user-data {:email nonexistent-email :role "org-user"}
-          resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                             (mock/content-type "application/json")
-                             (mock/body (test-utils/->json user-data))
-                             (test-utils/token-header token)))
-          body (test-utils/safe-parse-json resp)]
-      (is (= 400 (:status resp)))
-      (is (false? (:success? body)))
-      (is (string? (:message body)))
-      (is (.contains (:message body) "No user found"))
-      (is (.contains (:message body) "register an account")))))
-
-(deftest add-user-by-email-privilege-test
-  (testing "Requires org admin or LIPAS admin privilege"
-    (let [regular-user (test-utils/gen-regular-user :db-component (test-db))
-          [org1 _] (create-test-orgs)
-          org-id (:id org1)
-          token (jwt/create-token regular-user)
-          user-data {:email "test@example.com" :role "org-user"}
-          resp (test-app (-> (mock/request :post (str "/api/orgs/" org-id "/add-user-by-email"))
-                             (mock/content-type "application/json")
-                             (mock/body (test-utils/->json user-data))
-                             (test-utils/token-header token)))]
-      (is (= 403 (:status resp))))))
 
 (deftest lipas-admin-can-view-org-users-test
   (testing "LIPAS admin can view users of any organization"
@@ -159,7 +110,9 @@
           ;; LIPAS admin - not a member of this org
           admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
-          resp (test-app (-> (mock/request :get (str "/api/orgs/" org-id "/users"))
+          resp (test-app (-> (mock/request :post "/api/actions/org-members")
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json {:org-id org-id}))
                              (test-utils/token-header token)))]
       (is (= 200 (:status resp)) "LIPAS admin should be able to view org users"))))
 
@@ -177,7 +130,9 @@
                                              :change "add"
                                              :role "org-user"}])
 
-          resp (test-app (-> (mock/request :get (str "/api/orgs/" org-id "/users"))
+          resp (test-app (-> (mock/request :post "/api/actions/org-members")
+                             (mock/content-type "application/json")
+                             (mock/body (test-utils/->json {:org-id org-id}))
                              (test-utils/token-header token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -218,79 +173,6 @@
       (is (not (present? users-after-remove))
           "Target user should be gone from org members after remove"))))
 
-(deftest cross-org-add-user-by-email-test
-  (testing "Org admin of org A cannot add users to org B"
-    ;; Setup: Create two organizations
-    (let [[org-a org-b] (create-test-orgs)
-          org-a-id (:id org-a)
-          org-b-id (:id org-b)
-
-          ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
-          org-a-admin-token (jwt/create-token org-a-admin)
-
-          ;; Create a target user to add
-          target-user (test-utils/gen-regular-user :db-component (test-db))
-          email (:email target-user)
-          user-data {:email email :role "org-user"}
-
-          ;; Try to add user to org B (should fail)
-          resp-org-b (test-app (-> (mock/request :post (str "/api/orgs/" org-b-id "/add-user-by-email"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json user-data))
-                                   (test-utils/token-header org-a-admin-token)))
-
-          ;; Try to add user to org A (should succeed)
-          resp-org-a (test-app (-> (mock/request :post (str "/api/orgs/" org-a-id "/add-user-by-email"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json user-data))
-                                   (test-utils/token-header org-a-admin-token)))
-
-          body-org-a (test-utils/safe-parse-json resp-org-a)]
-
-      ;; Assert org admin cannot add to org B
-      (is (= 403 (:status resp-org-b)) "Org admin should not be able to add users to another org")
-
-      ;; Assert org admin can add to org A
-      (is (= 200 (:status resp-org-a)) "Org admin should be able to add users to their own org")
-      (is (:success? body-org-a)))))
-
-(deftest cross-org-update-users-test
-  (testing "Org admin of org A cannot update users in org B"
-    ;; Setup: Create two organizations
-    (let [[org-a org-b] (create-test-orgs)
-          org-a-id (:id org-a)
-          org-b-id (:id org-b)
-
-          ;; Create org admin for org A only
-          org-a-admin (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
-          org-a-admin-token (jwt/create-token org-a-admin)
-
-          ;; Create a regular user
-          target-user (test-utils/gen-regular-user :db-component (test-db))
-
-          ;; Try to update users in org B (should fail)
-          resp-org-b (test-app (-> (mock/request :post (str "/api/orgs/" org-b-id "/users"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
-                                                                             :change "add"
-                                                                             :role "org-user"}]}))
-                                   (test-utils/token-header org-a-admin-token)))
-
-          ;; Try to update users in org A (should succeed)
-          resp-org-a (test-app (-> (mock/request :post (str "/api/orgs/" org-a-id "/users"))
-                                   (mock/content-type "application/json")
-                                   (mock/body (test-utils/->json {:changes [{:user-id (:id target-user)
-                                                                             :change "add"
-                                                                             :role "org-user"}]}))
-                                   (test-utils/token-header org-a-admin-token)))]
-
-      ;; Assert org admin cannot update users in org B
-      (is (= 403 (:status resp-org-b)) "Org admin should not be able to update users in another org")
-
-      ;; Assert org admin can update users in org A
-      (is (= 200 (:status resp-org-a)) "Org admin should be able to update users in their own org"))))
-
 (deftest cross-org-update-org-data-test
   (testing "Org admin of org A cannot update org B's information"
     ;; Setup: Create two organizations
@@ -313,14 +195,14 @@
                                    :owners ["city"]
                                    :supported-languages ["fi"]}}
 
-          ;; Try to update org B (should fail)
-          resp-org-b (test-app (-> (mock/request :put (str "/api/orgs/" org-b-id))
+          ;; Try to update org B (should fail) — org identity travels in :id
+          resp-org-b (test-app (-> (mock/request :post "/api/actions/update-org")
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json updated-data))
                                    (test-utils/token-header org-a-admin-token)))
 
           ;; Try to update org A (should succeed)
-          resp-org-a (test-app (-> (mock/request :put (str "/api/orgs/" org-a-id))
+          resp-org-a (test-app (-> (mock/request :post "/api/actions/update-org")
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json (assoc updated-data :id org-a-id)))
                                    (test-utils/token-header org-a-admin-token)))]
@@ -343,11 +225,15 @@
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Try to view users in org B (should fail)
-          resp-org-b (test-app (-> (mock/request :get (str "/api/orgs/" org-b-id "/users"))
+          resp-org-b (test-app (-> (mock/request :post "/api/actions/org-members")
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json {:org-id org-b-id}))
                                    (test-utils/token-header org-a-admin-token)))
 
           ;; Try to view users in org A (should succeed)
-          resp-org-a (test-app (-> (mock/request :get (str "/api/orgs/" org-a-id "/users"))
+          resp-org-a (test-app (-> (mock/request :post "/api/actions/org-members")
+                                   (mock/content-type "application/json")
+                                   (mock/body (test-utils/->json {:org-id org-a-id}))
                                    (test-utils/token-header org-a-admin-token)))]
 
       ;; Assert org admin cannot view users in org B
@@ -372,9 +258,9 @@
                       :supported-languages ["fi" "se" "en"]
                       :sync-enabled true}
 
-          resp (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+          resp (test-app (-> (mock/request :post "/api/actions/update-org-ptv-config")
                              (mock/content-type "application/json")
-                             (mock/body (test-utils/->json ptv-config))
+                             (mock/body (test-utils/->json {:org-id org-id :ptv-config ptv-config}))
                              (test-utils/token-header admin-token)))]
 
       (is (= 200 (:status resp)) "Admin should be able to update PTV config")
@@ -407,15 +293,15 @@
                       :sync-enabled false}
 
           ;; Try with org admin
-          resp-org-admin (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+          resp-org-admin (test-app (-> (mock/request :post "/api/actions/update-org-ptv-config")
                                        (mock/content-type "application/json")
-                                       (mock/body (test-utils/->json ptv-config))
+                                       (mock/body (test-utils/->json {:org-id org-id :ptv-config ptv-config}))
                                        (test-utils/token-header org-admin-token)))
 
           ;; Try with regular user
-          resp-regular (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+          resp-regular (test-app (-> (mock/request :post "/api/actions/update-org-ptv-config")
                                      (mock/content-type "application/json")
-                                     (mock/body (test-utils/->json ptv-config))
+                                     (mock/body (test-utils/->json {:org-id org-id :ptv-config ptv-config}))
                                      (test-utils/token-header regular-token)))]
 
       (is (= 403 (:status resp-org-admin)) "Org admin should not be able to update PTV config")
@@ -434,9 +320,9 @@
                           :supported-languages ["xx"] ; Invalid language code
                           :sync-enabled "not-a-boolean"} ; Should be boolean
 
-          resp (test-app (-> (mock/request :put (str "/api/orgs/" org-id "/ptv-config"))
+          resp (test-app (-> (mock/request :post "/api/actions/update-org-ptv-config")
                              (mock/content-type "application/json")
-                             (mock/body (test-utils/->json invalid-config))
+                             (mock/body (test-utils/->json {:org-id org-id :ptv-config invalid-config}))
                              (test-utils/token-header admin-token)))]
 
       (is (= 400 (:status resp)) "Invalid config should be rejected"))))
@@ -446,7 +332,7 @@
     (let [[org-a org-b] (create-test-orgs)
           admin-user (test-utils/gen-admin-user :db-component (test-db))
           admin-token (jwt/create-token admin-user)
-          resp (test-app (-> (mock/request :get "/api/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
                              (test-utils/token-header admin-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -464,7 +350,7 @@
                                              :admin? false
                                              :permissions {:roles [{:role :ptv-auditor}]}})
           auditor-token (jwt/create-token auditor-user)
-          resp (test-app (-> (mock/request :get "/api/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
                              (test-utils/token-header auditor-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -480,7 +366,7 @@
           ;; Create user that's a member of org-a only
           org-member (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           member-token (jwt/create-token org-member)
-          resp (test-app (-> (mock/request :get "/api/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
                              (test-utils/token-header member-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -493,7 +379,7 @@
     (let [_orgs (create-test-orgs)
           regular-user (test-utils/gen-regular-user :db-component (test-db))
           regular-token (jwt/create-token regular-user)
-          resp (test-app (-> (mock/request :get "/api/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
                              (test-utils/token-header regular-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -514,6 +400,150 @@
 (def ^:private editor+ptv-catalog
   {:editor {:label "Muokkaaja" :roles [{:role "org-editor"}]}
    :ptv    {:label "PTV"       :roles [{:role "ptv-manager" :city-code [91]}]}})
+
+(deftest catalog-validation-test
+  (testing "A valid catalog is stored"
+    (let [org-id (catalog-org! editor+ptv-catalog)]
+      (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :editor))))
+
+  (testing "An unknown role name is rejected (no revision written)"
+    (let [org (first (create-test-orgs))
+          ex  (try (backend-org/update-catalog! (test-db) (:id org)
+                                                {:bad {:roles [{:role "super-admin"}]}} nil)
+                   :no-throw
+                   (catch Exception e (:type (ex-data e))))]
+      (is (= :invalid-catalog ex))
+      (is (not (contains? (:role-templates (backend-org/get-org (test-db) (:id org))) :bad))
+          "The bogus catalog must not have been persisted")))
+
+  (testing "A structurally malformed catalog is rejected"
+    (let [org (first (create-test-orgs))
+          ex  (try (backend-org/update-catalog! (test-db) (:id org)
+                                                {:bad {:roles 5}} nil)
+                   :no-throw
+                   (catch Exception e (:type (ex-data e))))]
+      (is (= :invalid-catalog ex)))))
+
+;;; --- The ceiling is lipas-admin-only (authorization, HTTP edge) -------------
+;;; These guard against accidentally opening a path for an org to elevate its
+;;; own permission ceiling (the role-template catalog) or take-over ceiling
+;;; (`:type`/`:ownership`). They hit the real routes through `test-app`, unlike
+;;; the function-level catalog tests above which call `update-catalog!` directly.
+
+(deftest only-lipas-admin-can-set-catalog-test
+  (let [[org-a _]       (create-test-orgs)
+        org-id          (:id org-a)
+        admin-token     (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+        org-admin-token (jwt/create-token (test-utils/gen-org-admin-user org-id :db-component (test-db)))
+        regular-token   (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
+        catalog         {:editor {:label "Muokkaaja" :roles [{:role "org-editor"}]}}
+        post            (fn [token]
+                          ;; transit, like the FE — the catalog is a :map-of :keyword body
+                          (test-app (-> (mock/request :post "/api/actions/update-org-role-templates")
+                                        (mock/content-type "application/transit+json")
+                                        (mock/header "Accept" "application/transit+json")
+                                        (mock/body (test-utils/->transit {:org-id org-id :role-templates catalog}))
+                                        (test-utils/token-header token))))]
+    (testing "LIPAS admin can set the catalog (the ceiling)"
+      (is (= 200 (:status (post admin-token))))
+      (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :editor)
+          "Catalog set by the lipas-admin must persist"))
+
+    (testing "Org admin cannot set the catalog"
+      (is (= 403 (:status (post org-admin-token)))))
+
+    (testing "Regular user cannot set the catalog"
+      (is (= 403 (:status (post regular-token)))))))
+
+(deftest check-is-existing-user-endpoint-test
+  ;; The invite-form existence probe is org-scoped on purpose: you may only ask
+  ;; within an org you administer, so it can't be used to harvest valid emails
+  ;; or enumerate the user directory. It returns ONLY a boolean.
+  (let [[org-a org-b]   (create-test-orgs)
+        org-id          (:id org-a)
+        target          (test-utils/gen-regular-user :db-component (test-db)) ; a known account
+        known-email     (:email target)
+        unknown-email   "nobody-zz@example.invalid"
+        admin-token     (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+        org-admin-token (jwt/create-token (test-utils/gen-org-admin-user org-id :db-component (test-db)))
+        other-org-admin (jwt/create-token (test-utils/gen-org-admin-user (:id org-b) :db-component (test-db)))
+        regular-token   (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
+        check           (fn [token email]
+                          (test-app (-> (mock/request :post "/api/actions/check-is-existing-user")
+                                        (mock/content-type "application/json")
+                                        (mock/header "Accept" "application/json")
+                                        (mock/body (test-utils/->json {:org-id org-id :email email}))
+                                        (test-utils/token-header token))))]
+    (testing "LIPAS admin gets an accurate boolean"
+      (let [hit       (check admin-token known-email)
+            hit-body  (test-utils/<-json (:body hit)) ; body is a single-use stream — decode once
+            miss      (check admin-token unknown-email)
+            miss-body (test-utils/<-json (:body miss))]
+        (is (= 200 (:status hit)))
+        (is (true? (:exists hit-body)))
+        (is (= 200 (:status miss)))
+        (is (false? (:exists miss-body)) "Unknown email must report not-existing")
+        (is (= #{:exists} (set (keys hit-body)))
+            "Response must leak nothing beyond the boolean")))
+
+    (testing "Org admin may probe within their own org"
+      (let [resp (check org-admin-token known-email)]
+        (is (= 200 (:status resp)))
+        (is (true? (:exists (test-utils/<-json (:body resp)))))))
+
+    (testing "An admin of a DIFFERENT org cannot probe this org (no cross-org harvesting)"
+      (is (= 403 (:status (check other-org-admin known-email)))))
+
+    (testing "A non-member cannot probe at all"
+      (is (= 403 (:status (check regular-token known-email)))))))
+
+(deftest org-admin-cannot-change-type-or-ownership-test
+  (testing "Org admin's :type/:ownership edits are ignored; lipas-admin's persist"
+    (let [[org-a _]       (create-test-orgs)
+          org-id          (:id org-a)
+          ;; A lipas-admin first sets a real ownership rule + type — the ceiling.
+          admin-token     (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+          org-admin-token (jwt/create-token (test-utils/gen-org-admin-user org-id :db-component (test-db)))
+          update-org      (fn [token body]
+                            (test-app (-> (mock/request :post "/api/actions/update-org")
+                                          (mock/content-type "application/json")
+                                          (mock/body (test-utils/->json body))
+                                          (test-utils/token-header token))))
+          base            {:id org-id :name "Helsinki"}
+          _               (update-org admin-token (assoc base
+                                                         :type "city"
+                                                         :ownership {:city-codes [91] :owners ["city"]}))
+          before          (backend-org/get-org (test-db) org-id)
+
+          ;; Org admin now tries to widen the ceiling while renaming the org.
+          resp-org-admin  (update-org org-admin-token
+                                      {:id org-id
+                                       :name "Org-admin renamed this"
+                                       :type "state"
+                                       :ownership {:city-codes [999] :owners ["state"]}})
+          after-org-admin (backend-org/get-org (test-db) org-id)]
+
+      ;; The request succeeds and the allowed field (name) is written...
+      (is (= 200 (:status resp-org-admin)))
+      (is (= "Org-admin renamed this" (:name after-org-admin)))
+      ;; ...but the ceiling fields are unchanged — the attempted values did NOT take.
+      (is (= (:type before) (:type after-org-admin))
+          "Org admin must not be able to change the org type")
+      (is (not= "state" (:type after-org-admin)))
+      (is (= (:ownership before) (:ownership after-org-admin))
+          "Org admin must not be able to widen the ownership rule")
+      (is (not= [999] (:city-codes (:ownership after-org-admin))))
+
+      ;; A lipas-admin, by contrast, may change them.
+      (let [resp-admin  (update-org admin-token {:id org-id
+                                                 :name "Helsinki"
+                                                 :type "state"
+                                                 :ownership {:city-codes [49] :owners ["state"]}})
+            after-admin (backend-org/get-org (test-db) org-id)]
+        (is (= 200 (:status resp-admin)))
+        (is (= "state" (:type after-admin)))
+        (is (= [49] (:city-codes (:ownership after-admin))))
+        (is (= ["state"] (:owners (:ownership after-admin))))))))
 
 (deftest org-admin-invite-catalog-bound-test
   (testing "An assignment within the catalog is accepted"
@@ -560,8 +590,9 @@
           a-admin (test-utils/gen-org-admin-user org-a :db-component (test-db))
           token   (jwt/create-token a-admin)
           invitee (test-utils/gen-regular-user :db-component (test-db))
-          resp    (test-app (-> (mock/request :post (str "/api/orgs/" org-b "/invite"))
-                                (mock/json-body {:email (:email invitee)
+          resp    (test-app (-> (mock/request :post "/api/actions/invite-org-member")
+                                (mock/json-body {:org-id org-b
+                                                 :email (:email invitee)
                                                  :org-role "member"
                                                  :templates ["editor"]
                                                  :login-url "https://localhost/login"})
@@ -649,6 +680,79 @@
       ;; request is marked decided
       (is (= "approved" (:status (org-takeover/get-request (test-db) (:id req))))))))
 
+(deftest reclaim-org-sites-endpoint-test
+  (testing "LIPAS admin reclaims matching sites in one step (no approval queue)"
+    (let [admin   (test-utils/gen-admin-user :db-component (test-db))
+          token   (jwt/create-token admin)
+          org     (first (create-test-orgs))
+          org-id  (:id org)
+          _       (backend-org/update-org! (test-db) org-id
+                                           (assoc (backend-org/get-org (test-db) org-id)
+                                                  :type "city"
+                                                  :ownership {:city-codes [91] :owners ["city"]})
+                                           nil)
+          match-id 9995001
+          mk-site (fn [lid owner]
+                    (-> (test-utils/gen-sports-site)
+                        (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid :owner owner)
+                        (assoc-in [:location :city :city-code] 91)))
+          _       (core/upsert-sports-site!* (test-db) admin (mk-site match-id "city"))
+          resp    (test-app (-> (mock/request :post "/api/actions/reclaim-org-sites")
+                                (mock/json-body {:org-id org-id})
+                                (test-utils/token-header token)))
+          body    (test-utils/safe-parse-json resp)
+          claimed (core/get-sports-site (test-db) match-id)]
+      (is (= 200 (:status resp)))
+      (is (= "approved" (:status body)))
+      (is (pos? (:sites-claimed body)) "At least the matching site is claimed")
+      (is (= (str org-id) (str (:owner-org-id claimed))) "Matching site is owned by the org")))
+
+  (testing "A non-lipas-admin cannot reclaim (403)"
+    (let [org     (first (create-test-orgs))
+          org-id  (:id org)
+          ;; org-admin has :org/manage but not :org/admin (lipas-admin)
+          oa      (test-utils/gen-org-admin-user org-id :db-component (test-db))
+          token   (jwt/create-token oa)
+          resp    (test-app (-> (mock/request :post "/api/actions/reclaim-org-sites")
+                                (mock/json-body {:org-id org-id})
+                                (test-utils/token-header token)))]
+      (is (= 403 (:status resp)) "Direct reclaim is lipas-admin only"))))
+
+(deftest reclaim-idempotent-test
+  (testing "Re-running a reclaim only claims not-yet-owned sites (no redundant revisions)"
+    (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+          org      (first (create-test-orgs))
+          org-id   (:id org)
+          _        (backend-org/update-org! (test-db) org-id
+                                            (assoc (backend-org/get-org (test-db) org-id)
+                                                   :type "city"
+                                                   :ownership {:city-codes [91] :owners ["city"]})
+                                            nil)
+          lid      9996001
+          _        (core/upsert-sports-site!* (test-db) admin
+                                              (-> (test-utils/gen-sports-site)
+                                                  (assoc :event-date (utils/timestamp) :status "active"
+                                                         :lipas-id lid :owner "city")
+                                                  (assoc-in [:location :city :city-code] 91)))
+          rev-count (fn [] (:n (jdbc/execute-one! (test-db)
+                                                  ["SELECT count(*) AS n FROM sports_site WHERE lipas_id=?" lid]
+                                                  {:builder-fn rs/as-unqualified-kebab-maps})))
+          ;; first reclaim
+          r1       (org-takeover/reclaim-now! (test-db) (test-search) org-id admin)
+          revs-after-1 (rev-count)
+          ;; second reclaim — nothing left to claim
+          preview2 (org-takeover/preview (test-db) org-id)
+          r2       (org-takeover/reclaim-now! (test-db) (test-search) org-id admin)
+          revs-after-2 (rev-count)]
+      (is (pos? (:sites-claimed r1)) "First run claims the matching site")
+      (is (zero? (:count preview2)) "Preview shows nothing left to claim after a full claim")
+      (is (empty? (:sites preview2)))
+      (is (zero? (:sites-claimed r2)) "Second run claims nothing (already owned)")
+      (is (= revs-after-1 revs-after-2)
+          "No new revision is written for the already-claimed site on re-run")
+      (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) lid))))
+          "Site remains owned by the org"))))
+
 ;;; Phase C — dashboard read endpoints (org-sites, site-editors, history) ;;;
 
 (deftest org-history-test
@@ -717,17 +821,69 @@
       (is (contains? (set (map :id (:activity-editor-orgs editors))) (str grantee-id))
           "Org whose catalog grants the site's activity (melonta) is listed"))))
 
+;;; Generalized ownership/claim rule (city / owners / type-codes / activities) ;;;
+
+(deftest matching-lipas-ids-axes-test
+  (testing "matching-lipas-ids supports each axis and AND-combines them"
+    (let [admin (test-utils/gen-admin-user :db-component (test-db))
+          mk    (fn [lid {:keys [city type owner activities]}]
+                  (cond-> (-> (test-utils/gen-sports-site)
+                              (assoc :event-date (utils/timestamp) :status "active"
+                                     :lipas-id lid :owner owner)
+                              (assoc-in [:location :city :city-code] city)
+                              (assoc-in [:type :type-code] type))
+                    activities (assoc :activities activities)))
+          ;; cycling route (4411) in city 91, owner city, with cycling activity
+          a 9993001
+          ;; ice stadium (2520) in city 91, owner state
+          b 9993002
+          ;; cycling route (4412) in city 49, owner city
+          c 9993003]
+      (core/upsert-sports-site!* (test-db) admin (mk a {:city 91 :type 4411 :owner "city" :activities {:cycling {}}}))
+      (core/upsert-sports-site!* (test-db) admin (mk b {:city 91 :type 2520 :owner "state"}))
+      (core/upsert-sports-site!* (test-db) admin (mk c {:city 49 :type 4412 :owner "city"}))
+      (let [ids (fn [rule] (set (org-takeover/matching-lipas-ids (test-db) rule)))]
+        (is (= #{a b} (set/intersection #{a b c} (ids {:city-codes [91]})))
+            "city axis: both city-91 sites")
+        (is (contains? (ids {:type-codes [4411 4412]}) a) "type axis includes cycling route a")
+        (is (contains? (ids {:type-codes [4411 4412]}) c) "type axis includes cycling route c")
+        (is (not (contains? (ids {:type-codes [4411 4412]}) b)) "type axis excludes ice stadium")
+        (is (contains? (ids {:activities ["cycling"]}) a) "activity axis includes the cycling site")
+        (is (not (contains? (ids {:activities ["cycling"]}) c)) "activity axis excludes route without activity")
+        (is (= #{a} (set/intersection #{a b c} (ids {:type-codes [4411 4412] :city-codes [91]})))
+            "AND of type+city narrows to a only")
+        (is (nil? (org-takeover/matching-lipas-ids (test-db) {})) "empty rule matches nothing")))))
+
+(deftest takeover-preview-test
+  (testing "preview reports count, owner-enum + org name, and the full site list"
+    (let [admin   (test-utils/gen-admin-user :db-component (test-db))
+          org     (first (create-test-orgs))
+          org-id  (:id org)
+          _       (backend-org/update-org! (test-db) org-id
+                                           (assoc (backend-org/get-org (test-db) org-id)
+                                                  :type "sports-federation"
+                                                  :ownership {:type-codes [4411]})
+                                           nil)
+          lid     9994001
+          _       (core/upsert-sports-site!* (test-db) admin
+                                             (-> (test-utils/gen-sports-site)
+                                                 (assoc :event-date (utils/timestamp) :status "active"
+                                                        :lipas-id lid :owner "city")
+                                                 (assoc-in [:type :type-code] 4411)))
+          p       (org-takeover/preview (test-db) org-id)]
+      (is (pos? (:count p)) "matches at least the seeded cycling route")
+      (is (= "registered-association" (:owner-enum p))
+          "owner-enum derives from the org type (sports-federation)")
+      (is (= (:name org) (:owner-org-name p)) "preview carries the target org name")
+      (is (= (str org-id) (:owner-org-id p)))
+      (is (some #(= lid (:lipas-id %)) (:sites p)) "site list includes the seeded site")
+      (is (= "city" (:current-owner (first (filter #(= lid (:lipas-id %)) (:sites p)))))
+          "list shows the site's current owner enum before relabel"))))
+
 (comment
-  ;; Cross org tests are currently failing
   (clojure.test/run-test-var #'cross-org-view-users-test)
   (clojure.test/run-test-var #'cross-org-update-org-data-test)
-  (clojure.test/run-test-var #'cross-org-update-users-test)
-  (clojure.test/run-test-var #'cross-org-add-user-by-email-test)
-
   (clojure.test/run-test-var #'get-org-users-test)
-  (clojure.test/run-test-var #'add-user-by-email-privilege-test)
-  (clojure.test/run-test-var #'add-user-by-email-user-not-found-test)
-  (clojure.test/run-test-var #'add-user-by-email-success-test)
   (clojure.test/run-test-var #'create-org-invalid-data-test)
   (clojure.test/run-test-var #'create-org-success-test)
   (clojure.test/run-test-var #'update-org-ptv-config-test))

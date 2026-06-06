@@ -410,6 +410,13 @@
         grants (disj (set (map str (:edit-grants site))) (str grantee-org-id))]
     (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
 
+(defn email-registered?
+  "True iff an account exists for `email`. Returns ONLY a boolean — never the
+  account — so it can back the invite-form existence check without exposing user
+  data (GDPR). Reachable only through the org-scoped invite flow, never openly."
+  [db email]
+  (boolean (db/get-user-by-email db {:email email})))
+
 (defn invite-org-member!
   "Org-admin invite (separate from the lipas-admin user-management plane). The
   assignment is hard-validated against the org's catalog BEFORE any side effect.
@@ -424,12 +431,17 @@
   (let [existing (db/get-user-by-email db {:email email})
         new?     (nil? existing)
         _        (when new? (add-user! db {:email email :username email}))
-        user     (or existing (db/get-user-by-email db {:email email}))]
+        user     (or existing (db/get-user-by-email db {:email email}))
+        org-name (:name (org/get-org db org-id))]
     (org/add-member! db org-id (:id user) assignment author-id)
-    (when new?
+    ;; Both cases get an email: new accounts a magic login link to set a password;
+    ;; existing accounts a plain "you've been added to org X" notification.
+    (if new?
       (let [magic (create-magic-link login-url user)]
         (email/send-org-invitation-email!
-          emailer email (assoc magic :org-name (:name (org/get-org db org-id))))))
+          emailer email (assoc magic :org-name org-name)))
+      (email/send-org-added-email!
+        emailer email {:org-name org-name :link login-url}))
     {:user-id (str (:id user)) :new-account? new?}))
 
 (defn get-sports-sites-by-type-code

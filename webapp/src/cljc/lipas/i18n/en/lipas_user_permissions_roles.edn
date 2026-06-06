@@ -24,5 +24,6 @@
   :floorball-manager "Floorball Editor",
   :site-manager "Site Manager",
   :city-manager "City Manager",
-  :org-user "Organization user"},
+  :org-user "Organization user",
+  :org-editor "Organization editor"},
  :roles "Roles"}

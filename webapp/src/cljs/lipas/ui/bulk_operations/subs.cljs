@@ -33,8 +33,15 @@
   :<- [::editable-sites]
   :<- [::sites-filters]
   (fn [[sites filters] _]
-    (let [{:keys [type-code admin owner search-text]} filters]
+    (let [{:keys [type-code admin owner search-text ownership]} filters]
       (cond->> sites
+        ;; org-specific: owned vs granted (cross-org edit grant)
+        (= ownership "owned")
+        (filter :owned?)
+
+        (= ownership "granted")
+        (filter (complement :owned?))
+
         type-code
         (filter #(= type-code (get-in % [:type :type-code])))
 

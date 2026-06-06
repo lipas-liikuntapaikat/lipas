@@ -22,69 +22,51 @@
               [:www {:optional true} [:maybe sites-schema/www]]
               [:reservations-link {:optional true} [:maybe sites-schema/reservations-link]]]]])
 
-(defn get-editable-sites
-  "Get all sites user can edit using existing roles system"
-  [search user]
-  (let [;; Check if user has admin role
-        is-admin? (roles/check-role user :admin)
-        user-roles (get-in user [:permissions :roles])
+(defn get-org-editable-sites
+  "Bulk-update candidates for an org: the sites it may edit (owned ∪ granted),
+  i.e. `search-meta.editor-org-ids` contains the org-id. Each result carries an
+  `:owned?` flag (owner-org-id = org) so the UI can filter owned vs granted.
 
-        ;; For non-admin users, build ES query with role filters
-        base-query (if is-admin?
-                     {:query {:match_all {}}}
-                     (let [city-manager-terms (for [role user-roles
-                                                    :when (= (name (:role role)) "city-manager")
-                                                    city-code (if (coll? (:city-code role))
-                                                                (:city-code role)
-                                                                [(:city-code role)])]
-                                                {:term {:location.city.city-code city-code}})
-                           site-manager-terms (for [role user-roles
-                                                    :when (= (name (:role role)) "site-manager")
-                                                    lipas-id (if (coll? (:lipas-id role))
-                                                               (:lipas-id role)
-                                                               [(:lipas-id role)])]
-                                                {:term {:lipas-id lipas-id}})
-                           all-terms (concat city-manager-terms site-manager-terms)]
-                       (if (seq all-terms)
-                         {:query {:bool {:should all-terms}}}
-                         {:query {:match_none {}}})))
+  Replaces the old per-user, hand-rolled role query: bulk update is now an org
+  operation, so the candidate set is simply the org's editable sites and the
+  caller is already gated by `:site/create-edit` for the org (org-editor)."
+  [search org-id]
+  (let [org-id (str org-id)
+        query {:query {:bool {:filter [{:term {:search-meta.editor-org-ids org-id}}]}}
+               :size 10000
+               :_source {:includes ["lipas-id"
+                                    "event-date"
+                                    "location.city.city-code"
+                                    "location.city.city-name"
+                                    "name"
+                                    "type.type-code"
+                                    "type.name"
+                                    "admin"
+                                    "owner"
+                                    "email"
+                                    "phone-number"
+                                    "www"
+                                    "reservations-link"
+                                    "search-meta.owner-org-id"]}}
+        search-index (get-in search [:indices :sports-site :search])
+        response (search/search (:client search) search-index query)]
+    (->> response
+         :body
+         :hits
+         :hits
+         (mapv (fn [hit]
+                 (let [src (:_source hit)]
+                   (-> src
+                       (assoc :owned? (= org-id (get-in src [:search-meta :owner-org-id])))
+                       (dissoc :search-meta))))))))
 
-        final-query (assoc base-query
-                           :size 10000
-                           :_source {:includes ["lipas-id"
-                                                "location.city.city-code"
-                                                "location.city.city-name"
-                                                "name"
-                                                "type.type-code"
-                                                "type.name"
-                                                "admin"
-                                                "owner"
-                                                "email"
-                                                "phone-number"
-                                                "www"
-                                                "reservations-link"]})]
-
-    (log/debug "ES Query for fetching editable sites"
-               {:user-id (:id user)
-                :user-roles user-roles
-                :is-admin? is-admin?
-                :query final-query})
-
-    (let [search-index (get-in search [:indices :sports-site :search])
-          response (search/search (:client search) search-index final-query)]
-      (->> response
-           :body
-           :hits
-           :hits
-           (mapv :_source)))))
-
-(defn mass-update-sports-sites-contacts
-  "Mass update contact information for multiple sports sites using bulk operations"
-  [db search ptv user lipas-ids contact-updates]
-  (log/info "Starting mass update of sports sites"
-            {:user-id (:id user)
-             :lipas-ids lipas-ids
-             :updates (keys contact-updates)})
+(defn mass-update-org-sites-contacts!
+  "Mass-update contact info for an org's sites. The authorized set is the org's
+  editable sites (owned ∪ granted); any requested lipas-id outside it is
+  rejected. The caller must already hold `:site/create-edit` for the org."
+  [db search _ptv user org-id lipas-ids contact-updates]
+  (log/info "Starting org mass update of sports sites"
+            {:user-id (:id user) :org-id org-id :lipas-ids lipas-ids :updates (keys contact-updates)})
 
   ;; Validate contact updates against schema
   (when-not (m/validate mass-update-contact-payload {:lipas-ids lipas-ids :updates contact-updates})
@@ -92,8 +74,8 @@
                     {:type :invalid-payload
                      :error (me/humanize (m/explain mass-update-contact-payload {:lipas-ids lipas-ids :updates contact-updates}))})))
 
-  ;; Get all sites user can edit
-  (let [editable-sites (get-editable-sites search user)
+  ;; Authorize against the org's editable sites
+  (let [editable-sites (get-org-editable-sites search org-id)
         editable-lipas-ids (set (map :lipas-id editable-sites))
         authorized-ids (filter editable-lipas-ids lipas-ids)
         unauthorized-ids (remove editable-lipas-ids lipas-ids)]
@@ -103,7 +85,7 @@
                :authorized-ids authorized-ids
                :unauthorized-ids unauthorized-ids})
 
-    ;; Validate all requested sites are authorized
+    ;; Validate all requested sites are authorized (within the org's editable set)
     (when (seq unauthorized-ids)
       (throw (ex-info "Permission denied for sites"
                       {:unauthorized-lipas-ids unauthorized-ids})))
@@ -160,26 +142,26 @@
           ;; added here!
           ;;
           #_(let [correlation-id (jobs/gen-correlation-id)]
-            (jobs/with-correlation-context correlation-id
-              (fn []
-                (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
-                  (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
+              (jobs/with-correlation-context correlation-id
+                (fn []
+                  (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
+                    (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
 
-                    #_(when route?
-                      (jobs/enqueue-job! tx "elevation"
-                                         {:lipas-id lipas-id}
-                                         {:correlation-id correlation-id
-                                          :priority 70}))
+                      #_(when route?
+                          (jobs/enqueue-job! tx "elevation"
+                                             {:lipas-id lipas-id}
+                                             {:correlation-id correlation-id
+                                              :priority 70}))
 
-                    (when-not route?
+                      (when-not route?
                       ;; Integration queue (being phased out)
-                      (core/add-to-integration-out-queue! tx updated-site))
+                        (core/add-to-integration-out-queue! tx updated-site))
 
                     ;; Analysis job
-                    (jobs/enqueue-job! tx "analysis"
-                                       {:lipas-id lipas-id}
-                                       {:correlation-id correlation-id
-                                        :priority 80}))))))))
+                      (jobs/enqueue-job! tx "analysis"
+                                         {:lipas-id lipas-id}
+                                         {:correlation-id correlation-id
+                                          :priority 80}))))))))
 
       (log/info "Mass update completed"
                 {:updated-count (count updated-sites-data)

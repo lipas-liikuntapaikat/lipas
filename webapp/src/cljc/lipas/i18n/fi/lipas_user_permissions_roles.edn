@@ -27,5 +27,6 @@
   :site-manager "Paikkakäyttäjä",
   :city-manager "Kuntakäyttäjä",
   :analysis-experimental-user "Analyysityökalukehittäjä",
-  :org-user "Organisaatiokäyttäjä"},
+  :org-user "Organisaatiokäyttäjä",
+  :org-editor "Organisaation muokkaaja"},
  :roles "Roolit"}

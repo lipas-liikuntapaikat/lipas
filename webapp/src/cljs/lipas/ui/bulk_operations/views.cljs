@@ -14,6 +14,7 @@
             [lipas.ui.bulk-operations.events :as events]
             [lipas.ui.bulk-operations.subs :as subs]
             [lipas.ui.components.autocompletes :as ac]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
@@ -33,36 +34,44 @@
             [reagent.core :as r]))
 
 ;; Navigation buttons component
-(defn navigation-buttons [tr current-step selected-count selected-fields-count on-cancel]
-  [:> Box {:sx {:display "flex" :justify-content "space-between"}}
-   [:> Box
-    (when (pos? current-step)
-      [:> Button {:variant "outlined"
-                  :on-click #(rf/dispatch [::events/set-current-step (dec current-step)])}
-       (tr :actions/back)])]
+;; `on-back` (optional): when supplied, overrides the step-1 Back action — used
+;; in external-selection mode where step 0 (site selection) is the calling list,
+;; so Back must return there rather than to the (hidden) in-wizard select step.
+(defn navigation-buttons
+  ([tr current-step selected-count selected-fields-count on-cancel]
+   (navigation-buttons tr current-step selected-count selected-fields-count on-cancel nil))
+  ([tr current-step selected-count selected-fields-count on-cancel on-back]
+   [:> Box {:sx {:display "flex" :justify-content "space-between"}}
+    [:> Box
+     (when (pos? current-step)
+       [:> Button {:variant "outlined"
+                   :on-click (if (and on-back (= current-step 1))
+                               on-back
+                               #(rf/dispatch [::events/set-current-step (dec current-step)]))}
+        (tr :actions/back)])]
 
-   [:> Box {:sx {:display "flex" :gap 2}}
-    [:> Button {:variant "outlined"
-                :on-click on-cancel}
-     (tr :actions/cancel)]
+    [:> Box {:sx {:display "flex" :gap 2}}
+     [:> Button {:variant "outlined"
+                 :on-click on-cancel}
+      (tr :actions/cancel)]
 
-    (case current-step
-      0 [:> Button {:variant "contained"
-                    :color "primary"
-                    :disabled (zero? selected-count)
-                    :on-click #(rf/dispatch [::events/set-current-step 1])}
-         (tr :actions/next)]
+     (case current-step
+       0 [:> Button {:variant "contained"
+                     :color "primary"
+                     :disabled (zero? selected-count)
+                     :on-click #(rf/dispatch [::events/set-current-step 1])}
+          (tr :actions/next)]
 
-      1 [:> Button {:variant "contained"
-                    :color "primary"
-                    :disabled (zero? selected-fields-count)
-                    :on-click #(rf/dispatch [::events/execute-bulk-update
-                                             {:on-success (fn [_]
-                                                            (rf/dispatch [::events/get-editable-sites]))
-                                              :on-failure nil}])}
-         (str (tr :lipas.bulk-operations/update-n-sites selected-count))]
+       1 [:> Button {:variant "contained"
+                     :color "primary"
+                     :disabled (zero? selected-fields-count)
+                     :on-click #(rf/dispatch [::events/execute-bulk-update
+                                              {:on-success (fn [_]
+                                                             (rf/dispatch [::events/get-editable-sites]))
+                                               :on-failure nil}])}
+          (str (tr :lipas.bulk-operations/update-n-sites selected-count))]
 
-      nil)]])
+       nil)]]))
 
 ;; Step 1: Select sites
 (defn step-select-sites [tr selected-count on-cancel]
@@ -106,27 +115,37 @@
 
         [:> Grid {:item true :xs 12 :md 2}
          (r/as-element
-          [ac/type-selector
-           {:value (:type-code filters)
-            :label (tr :type/name)
-            :onChange (fn [_ {:keys [value]}]
-                        (rf/dispatch [::events/set-sites-filter :type-code value]))}])]
+           [ac/type-selector
+            {:value (:type-code filters)
+             :label (tr :type/name)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :type-code value]))}])]
 
         [:> Grid {:item true :xs 12 :md 3}
          (r/as-element
-          [ac/admin-selector
-           {:value (:admin filters)
-            :label (tr :lipas.sports-site/admin)
-            :onChange (fn [_ {:keys [value]}]
-                        (rf/dispatch [::events/set-sites-filter :admin value]))}])]
+           [ac/admin-selector
+            {:value (:admin filters)
+             :label (tr :lipas.sports-site/admin)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :admin value]))}])]
 
         [:> Grid {:item true :xs 12 :md 3}
          (r/as-element
-          [ac/owner-selector
-           {:value (:owner filters)
-            :label (tr :lipas.sports-site/owner)
-            :onChange (fn [_ {:keys [value]}]
-                        (rf/dispatch [::events/set-sites-filter :owner value]))}])]]]]
+           [ac/owner-selector
+            {:value (:owner filters)
+             :label (tr :lipas.sports-site/owner)
+             :onChange (fn [_ {:keys [value]}]
+                         (rf/dispatch [::events/set-sites-filter :owner value]))}])]
+
+        ;; org-specific: owned vs granted (cross-org edit grant)
+        [:> Grid {:item true :xs 12 :md 3}
+         [selects/select
+          {:label (tr :lipas.org/ownership-filter)
+           :value (:ownership filters)
+           :deselect? true
+           :items [{:value "owned" :label (tr :lipas.org/owned)}
+                   {:value "granted" :label (tr :lipas.org/grantee-orgs)}]
+           :on-change #(rf/dispatch [::events/set-sites-filter :ownership %])}]]]]]
 
      ;; Table container with its own horizontal scroll
      [:> TableContainer {:sx {:overflow-x "auto" :width "100%"}}
@@ -167,14 +186,14 @@
       [navigation-buttons tr 0 selected-count 0 on-cancel]]]))
 
 ;; Step 2: Enter contact information
-(defn step-enter-info [tr selected-count on-cancel]
+(defn step-enter-info [tr selected-count on-cancel on-back]
   (let [update-form @(rf/subscribe [::subs/bulk-update-form])
         selected-fields @(rf/subscribe [::subs/selected-fields])
         all-fields #{:email :phone-number :www :reservations-link}
         all-fields-selected? (= selected-fields all-fields)]
     [:> Box
      [:> Box {:sx {:mb 3}}
-      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel]]
+      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel on-back]]
 
      [:> Alert {:severity "info" :sx {:mb 3}}
       (tr :lipas.bulk-operations/selective-update-info)]
@@ -196,8 +215,8 @@
      [:> Grid {:container true :spacing 2}
       [:> Grid {:item true :xs 12 :md 6}
        [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :email) 2 1)
-                        :border-color (if (contains? selected-fields :email) "primary.main" "divider")
-                        :background-color (when-not (contains? selected-fields :email) "action.disabledBackground")}}
+                       :border-color (if (contains? selected-fields :email) "primary.main" "divider")
+                       :background-color (when-not (contains? selected-fields :email) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
           [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
@@ -219,8 +238,8 @@
 
       [:> Grid {:item true :xs 12 :md 6}
        [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :phone-number) 2 1)
-                        :border-color (if (contains? selected-fields :phone-number) "primary.main" "divider")
-                        :background-color (when-not (contains? selected-fields :phone-number) "action.disabledBackground")}}
+                       :border-color (if (contains? selected-fields :phone-number) "primary.main" "divider")
+                       :background-color (when-not (contains? selected-fields :phone-number) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
           [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
@@ -242,8 +261,8 @@
 
       [:> Grid {:item true :xs 12 :md 6}
        [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :www) 2 1)
-                        :border-color (if (contains? selected-fields :www) "primary.main" "divider")
-                        :background-color (when-not (contains? selected-fields :www) "action.disabledBackground")}}
+                       :border-color (if (contains? selected-fields :www) "primary.main" "divider")
+                       :background-color (when-not (contains? selected-fields :www) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
           [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
@@ -265,8 +284,8 @@
 
       [:> Grid {:item true :xs 12 :md 6}
        [:> Paper {:sx {:p 2 :border (if (contains? selected-fields :reservations-link) 2 1)
-                        :border-color (if (contains? selected-fields :reservations-link) "primary.main" "divider")
-                        :background-color (when-not (contains? selected-fields :reservations-link) "action.disabledBackground")}}
+                       :border-color (if (contains? selected-fields :reservations-link) "primary.main" "divider")
+                       :background-color (when-not (contains? selected-fields :reservations-link) "action.disabledBackground")}}
         [:> Box {:sx {:display "flex" :align-items "flex-start" :gap 1}}
          [:> Box {:sx {:pt 1}}
           [:> Tooltip {:title (tr :lipas.bulk-operations/check-to-update-field)}
@@ -292,7 +311,7 @@
             (tr :lipas.bulk-operations/selected-fields-count (count selected-fields)))]]
 
      [:> Box {:sx {:mt 3}}
-      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel]]]))
+      [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel on-back]]]))
 
 ;; Step 3: Summary
 (defn step-summary [tr on-cancel]
@@ -356,8 +375,11 @@
        (tr :lipas.bulk-operations/update-more-sites)]]]))
 
 ;; Main component with stepper
+;; `external-selection?`: site selection happens in the caller's list (the org
+;; "Our sites" tab), so the in-wizard "Select sites" step (0) is omitted — the
+;; wizard starts at "Enter info" (step 1) and Back from there exits via on-cancel.
 (defn main
-  [{:keys [title description on-submit on-cancel]}]
+  [{:keys [title description on-cancel external-selection?]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         current-step @(rf/subscribe [::subs/current-step])
         selected-count @(rf/subscribe [::subs/selected-sites-count])
@@ -382,13 +404,20 @@
      ;; Stepper
      [:> Grid {:item true :xs 12}
       [:> Paper {:sx {:p 3}}
-       [:> Stepper {:active-step current-step :sx {:mb 3}}
-        [:> Step
-         [:> StepLabel (tr :lipas.bulk-operations/step-select-sites)]]
-        [:> Step
-         [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
-        [:> Step
-         [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]]
+       (if external-selection?
+         ;; selection is external → 2-step flow (enter info → summary)
+         [:> Stepper {:active-step (dec current-step) :sx {:mb 3}}
+          [:> Step
+           [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
+          [:> Step
+           [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]]
+         [:> Stepper {:active-step current-step :sx {:mb 3}}
+          [:> Step
+           [:> StepLabel (tr :lipas.bulk-operations/step-select-sites)]]
+          [:> Step
+           [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
+          [:> Step
+           [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]])
 
        ;; Step content
        (if loading?
@@ -396,7 +425,10 @@
           [:> CircularProgress]]
 
          (case current-step
-           0 [step-select-sites tr selected-count on-cancel]
-           1 [step-enter-info tr selected-count on-cancel]
+           0 (when-not external-selection?
+               [step-select-sites tr selected-count on-cancel])
+           1 [step-enter-info tr selected-count on-cancel
+              ;; in external mode Back returns to the caller's list
+              (when external-selection? on-cancel)]
            2 [step-summary tr on-cancel]
            nil))]]]))

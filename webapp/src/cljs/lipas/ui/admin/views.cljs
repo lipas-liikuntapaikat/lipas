@@ -1,6 +1,5 @@
 (ns lipas.ui.admin.views
-  (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
@@ -22,6 +21,7 @@
             [malli.core :as m]
             [lipas.ui.admin.events :as events]
             [lipas.ui.admin.subs :as subs]
+            [lipas.ui.roles.editor :as role-editor]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.dialogs :as dialogs]
@@ -101,106 +101,16 @@
      (or permissions-request
          "-")]]])
 
-(def filter-ac (createFilterOptions))
-
-(r/defc site-select [{:keys [tr required data]}]
-  (let [sites @(rf/subscribe [::subs/sites-list])]
-    [ac/autocomplete2
-     {:options sites
-      :label (str (tr :lipas.user.permissions.roles.context-keys/lipas-id)
-                  (when required
-                    " *"))
-      :value (to-array (or (:lipas-id data) []))
-      :onChange (fn [_e v]
-                  (rf/dispatch [::events/set-role-context-value :lipas-id (mapv ac/safe-value v)]))
-      :multiple true
-      :selectOnFocus true
-      :clearOnBlue true
-      :handleHomeEndKeys true
-      :freeSolo true
-      :filterOptions (fn [options params]
-                           ;; The options only contains some x first sites in the system,
-                           ;; so the autocomplete doesn't work that well.
-                           ;; Allow inputting paikka-id numbers directly, show "Add x" option when
-                           ;; the input value doesn't match any options.
-                       (let [filtered (filter-ac options params)
-                             input-value (js/parseInt (.-inputValue params))
-                             input-value (when (pos? input-value)
-                                           input-value)
-                             is-existing (.some options (fn [x] (= input-value (:value x))))]
-                         (when (and input-value (not is-existing))
-                           (.push filtered {:value input-value
-                                            :label (str "Paikka-id \"" input-value "\"")}))
-                         filtered))}]))
-
-(r/defc type-code-select [{:keys [tr required data]}]
-  (let [types @(rf/subscribe [::subs/types-list (tr)])]
-    [ac/autocomplete2
-     {:options types
-      :label (str (tr :lipas.user.permissions/types)
-                  (when required
-                    " *"))
-      :value (to-array (or (:type-code data) []))
-      :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :type-code (mapv ac/safe-value v)]))
-      :multiple true}]))
-
-(r/defc city-code-select [{:keys [tr required data]}]
-  (let [cities @(rf/subscribe [::subs/cities-list (tr)])]
-    [ac/autocomplete2
-     {:options cities
-      :label (str (tr :lipas.user.permissions/cities)
-                  (when required
-                    " *"))
-      :value (to-array (or (:city-code data) []))
-      :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :city-code (mapv ac/safe-value v)]))
-      :multiple true}]))
-
-(r/defc activity-select [{:keys [tr required data]}]
-  (let [activities @(rf/subscribe [::subs/activities-list (tr)])]
-    [ac/autocomplete2
-     {:options activities
-      :label (str (tr :lipas.user.permissions/activities)
-                  (when required
-                    " *"))
-      :value (to-array (or (:activity data) []))
-      :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :activity (mapv ac/safe-value v)]))
-      :multiple true}]))
-
-(r/defc org-select [{:keys [tr required data]}]
-  (let [orgs @(rf/subscribe [::subs/orgs-options])]
-    [ac/autocomplete2
-     {:options orgs
-      :label (str (tr :lipas.user.permissions/orgs)
-                  (when required
-                    " *"))
-      :value (to-array (or (:org-id data) []))
-      :onChange (fn [_e v] (rf/dispatch [::events/set-role-context-value :org-id (mapv ac/safe-value v)]))
-      :multiple true}]))
-
-(r/defc context-key-edit [{:keys [k] :as props}]
-  (case k
-    :lipas-id
-    [site-select props]
-
-    :type-code
-    [type-code-select props]
-
-    :city-code
-    [city-code-select props]
-
-    :activity
-    [activity-select props]
-
-    :org-id
-    [org-select props]))
-
+;; Assign a role instance to a user. Thin adapter over the shared
+;; role-spec editor (lipas.ui.roles.editor); admin keeps its own
+;; [:admin …] state + events.
 (r/defc role-form [{:keys [tr]}]
-  (let [data @(rf/subscribe [::subs/edit-role])
+  (let [data (<== [::subs/edit-role])
         editing? (:editing? data)
-
-        role (:role data)
-        required-context-keys (:required-context-keys (get roles/roles role))
-        optional-context-keys (:optional-context-keys (get roles/roles role))]
+        assignable-roles (->> roles/roles
+                              (filter (comp :assignable val))
+                              (sort-by (comp :sort val))
+                              (map key))]
     [:> Stack
      {:direction "column"
       :sx #js {:gap 1}}
@@ -210,44 +120,23 @@
         (tr :lipas.user.permissions.roles.edit-role/edit-header)
         (tr :lipas.user.permissions.roles.edit-role/new-header))]
 
-     [ac/autocomplete2
-      {:options (for [[k {:keys [assignable]}] roles/roles
-                      :when assignable]
-                  {:value k
-                   :label (tr (keyword :lipas.user.permissions.roles.role-names k))})
-       :readOnly editing?
-       :label (tr :lipas.user.permissions.roles/role)
-       :value (:role data)
-       :onChange (fn [_e v] (rf/dispatch [::events/set-new-role (ac/safe-value v)]))}]
-
-     (when-not (:role data)
-       [:> Typography
-        (tr :lipas.user.permissions.roles.edit-role/choose-role)])
-
-     (for [k required-context-keys]
-       [context-key-edit
-        {:key k
-         :k k
-         :required data
-         :tr tr
-         :data data}])
-
-     (for [k optional-context-keys]
-       [context-key-edit
-        {:key k
-         :k k
-         :tr tr
-         :data data}])
+     [role-editor/role-spec-editor
+      {:spec data
+       :roles assignable-roles
+       :role-read-only? editing?
+       :on-role-change (fn [role] (==> [::events/set-new-role role]))
+       :on-context-change (fn [k vals] (==> [::events/set-role-context-value k vals]))
+       :tr tr}]
 
      [:> Stack
       {:direction "row"
        :sx #js {:gap 1}}
       (if editing?
         [:> Button
-         {:onClick (fn [_e] (rf/dispatch [::events/stop-edit]))}
+         {:onClick (fn [_e] (==> [::events/stop-edit]))}
          (tr :lipas.user.permissions.roles.edit-role/stop-editing)]
         [:> Button
-         {:onClick (fn [_e] (rf/dispatch [::events/add-new-role]))}
+         {:onClick (fn [_e] (==> [::events/add-new-role]))}
          (tr :lipas.user.permissions.roles.edit-role/add)])]]))
 
 (r/defc role-context [{:keys [tr k v]}]
