@@ -18,7 +18,7 @@
                    (let [token (-> db :user :login :token)]
                      {:http-xhrio
                       {:method :post
-                       :uri (str (:backend-url db) "/actions/current-user-orgs")
+                       :uri (str (:backend-url db) "/actions/get-current-user-orgs")
                        :headers {:Authorization (str "Token " token)}
                        :params {}
                        :format (ajax/json-request-format)
@@ -35,7 +35,7 @@
                    (let [token (-> db :user :login :token)]
                      {:http-xhrio
                       {:method :post
-                       :uri (str (:backend-url db) "/actions/org-members")
+                       :uri (str (:backend-url db) "/actions/get-org-members")
                        :headers {:Authorization (str "Token " token)}
                        :params {:org-id org-id}
                        :format (ajax/json-request-format)
@@ -468,7 +468,7 @@
                  (fn [{:keys [db]} [_ org-id flt]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/org-sites")
+                     :uri (str (:backend-url db) "/actions/get-org-sites")
                      :headers (auth-headers db)
                      :params {:org-id org-id :filter flt}
                      :format (ajax/json-request-format)
@@ -484,7 +484,7 @@
                  (fn [{:keys [db]} [_ lipas-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/site-editors")
+                     :uri (str (:backend-url db) "/actions/get-site-editors")
                      :headers (auth-headers db)
                      :params {:lipas-id lipas-id}
                      :format (ajax/json-request-format)
@@ -500,7 +500,7 @@
                  (fn [{:keys [db]} [_ lipas-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/site-edit-history")
+                     :uri (str (:backend-url db) "/actions/get-site-edit-history")
                      :headers (auth-headers db)
                      :params {:lipas-id lipas-id}
                      :format (ajax/json-request-format)
@@ -547,7 +547,7 @@
                  (fn [{:keys [db]} [_ org-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/org-takeover-preview")
+                     :uri (str (:backend-url db) "/actions/preview-org-takeover")
                      :headers (auth-headers db)
                      :params {:org-id org-id}
                      :format (ajax/json-request-format)
@@ -645,7 +645,7 @@
                  (fn [{:keys [db]} [_ org-id]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/org-history")
+                     :uri (str (:backend-url db) "/actions/get-org-history")
                      :headers (auth-headers db)
                      :params {:org-id org-id}
                      :format (ajax/json-request-format)
@@ -661,7 +661,7 @@
                  (fn [{:keys [db]} [_ status]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/org-takeover-requests")
+                     :uri (str (:backend-url db) "/actions/list-org-takeover-requests")
                      :headers (auth-headers db)
                      :params (cond-> {} status (assoc :status status))
                      :format (ajax/json-request-format)

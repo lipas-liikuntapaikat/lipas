@@ -25,7 +25,7 @@
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
        {:method :post
-        :uri (str (:backend-url db) "/actions/org-sites-for-bulk")
+        :uri (str (:backend-url db) "/actions/get-org-sites-for-bulk")
         :headers {:Authorization (str "Token " token)}
         :params {:org-id org-id}
         :format (ajax/json-request-format)

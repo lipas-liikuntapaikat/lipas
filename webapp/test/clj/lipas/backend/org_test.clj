@@ -111,7 +111,7 @@
           ;; LIPAS admin - not a member of this org
           admin-user (test-utils/gen-admin-user :db-component (test-db))
           token (jwt/create-token admin-user)
-          resp (test-app (-> (mock/request :post "/api/actions/org-members")
+          resp (test-app (-> (mock/request :post "/api/actions/get-org-members")
                              (mock/content-type "application/json")
                              (mock/body (test-utils/->json {:org-id org-id}))
                              (test-utils/token-header token)))]
@@ -131,7 +131,7 @@
                                              :change "add"
                                              :role "org-user"}])
 
-          resp (test-app (-> (mock/request :post "/api/actions/org-members")
+          resp (test-app (-> (mock/request :post "/api/actions/get-org-members")
                              (mock/content-type "application/json")
                              (mock/body (test-utils/->json {:org-id org-id}))
                              (test-utils/token-header token)))
@@ -226,13 +226,13 @@
           org-a-admin-token (jwt/create-token org-a-admin)
 
           ;; Try to view users in org B (should fail)
-          resp-org-b (test-app (-> (mock/request :post "/api/actions/org-members")
+          resp-org-b (test-app (-> (mock/request :post "/api/actions/get-org-members")
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json {:org-id org-b-id}))
                                    (test-utils/token-header org-a-admin-token)))
 
           ;; Try to view users in org A (should succeed)
-          resp-org-a (test-app (-> (mock/request :post "/api/actions/org-members")
+          resp-org-a (test-app (-> (mock/request :post "/api/actions/get-org-members")
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json {:org-id org-a-id}))
                                    (test-utils/token-header org-a-admin-token)))]
@@ -333,7 +333,7 @@
     (let [[org-a org-b] (create-test-orgs)
           admin-user (test-utils/gen-admin-user :db-component (test-db))
           admin-token (jwt/create-token admin-user)
-          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/get-current-user-orgs")
                              (test-utils/token-header admin-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -351,7 +351,7 @@
                                              :admin? false
                                              :permissions {:roles [{:role :ptv-auditor}]}})
           auditor-token (jwt/create-token auditor-user)
-          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/get-current-user-orgs")
                              (test-utils/token-header auditor-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -367,7 +367,7 @@
           ;; Create user that's a member of org-a only
           org-member (test-utils/gen-org-admin-user org-a-id :db-component (test-db))
           member-token (jwt/create-token org-member)
-          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/get-current-user-orgs")
                              (test-utils/token-header member-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -380,7 +380,7 @@
     (let [_orgs (create-test-orgs)
           regular-user (test-utils/gen-regular-user :db-component (test-db))
           regular-token (jwt/create-token regular-user)
-          resp (test-app (-> (mock/request :post "/api/actions/current-user-orgs")
+          resp (test-app (-> (mock/request :post "/api/actions/get-current-user-orgs")
                              (test-utils/token-header regular-token)))
           body (test-utils/safe-parse-json resp)]
       (is (= 200 (:status resp)))
@@ -796,7 +796,7 @@
           member-tok  (jwt/create-token (test-utils/gen-org-user org-id :db-component (test-db)))
           regular-tok (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
           call        (fn [token]
-                        (test-app (-> (mock/request :post "/api/actions/org-history")
+                        (test-app (-> (mock/request :post "/api/actions/get-org-history")
                                       (mock/content-type "application/json")
                                       (mock/body (test-utils/->json {:org-id org-id}))
                                       (test-utils/token-header token))))]
