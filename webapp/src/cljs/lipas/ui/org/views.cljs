@@ -690,6 +690,38 @@
        [:> Tooltip {:title tooltip :arrow true} chip]
        chip)]))
 
+(def ^:private edit-history-display-limit 50)
+
+(defn site-edit-history-section
+  "Per-revision edit history (timestamp + editor email) for the expanded site,
+  lazily fetched on expand and cached per lipas-id. Capped to the most recent
+  revisions to keep the accordion DOM bounded on long-lived sites."
+  [tr lipas-id]
+  (let [history @(rf/subscribe [::subs/site-edit-history lipas-id])
+        total   (count history)
+        shown   (take edit-history-display-limit history)]
+    [:<>
+     [:> Divider {:sx {:my 2}}]
+     [:> Typography {:variant "subtitle2" :sx {:mb 1}}
+      (str (tr :lipas.org/edit-history) " (" total ")")]
+     (if (seq history)
+       [:<>
+        [:> Table {:size "small"}
+         [:> TableHead
+          [:> TableRow
+           [:> TableCell (tr :lipas.org/edit-history-when)]
+           [:> TableCell (tr :lipas.org/edit-history-who)]]]
+         [:> TableBody
+          (for [[i row] (map-indexed vector shown)]
+            [:> TableRow {:key i}
+             [:> TableCell (some-> (:event-date row) (subs 0 16))]
+             [:> TableCell (or (:author row) "–")]])]]
+        (when (> total edit-history-display-limit)
+          [:> Typography {:variant "caption" :color "text.secondary"}
+           (tr :lipas.org/edit-history-truncated)])]
+       [:> Typography {:variant "body2" :color "text.secondary"}
+        (tr :lipas.org/edit-history-empty)])]))
+
 (defn site-editors-detail [_tr _org-id _site]
   (let [grant-target (r/atom nil)]
     (fn [tr org-id site]
@@ -749,7 +781,10 @@
                :on-click (fn []
                            (rf/dispatch [::events/grant-site-edit org-id lipas-id @grant-target])
                            (reset! grant-target nil))}
-              (tr :lipas.org/grant-edit)]]])]))))
+              (tr :lipas.org/grant-edit)]]])
+
+         ;; edit history (timestamp + editor) for the members maintaining the data
+         [site-edit-history-section tr lipas-id]]))))
 
 (defn sortable-th
   "A clickable header cell. `sort*` is the current {:col :dir} state; clicking
@@ -920,7 +955,8 @@
                                                  (if open?
                                                    (reset! expanded nil)
                                                    (do (reset! expanded lipas-id)
-                                                       (rf/dispatch [::events/get-site-editors lipas-id]))))}
+                                                       (rf/dispatch [::events/get-site-editors lipas-id])
+                                                       (rf/dispatch [::events/get-site-edit-history lipas-id]))))}
                                     [:> Icon (if open? "expand_less" "expand_more")]]]]]
                           open?
                           (conj [:> TableRow {:key (str lipas-id "-detail")}
