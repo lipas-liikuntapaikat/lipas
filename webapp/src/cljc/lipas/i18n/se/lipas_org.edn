@@ -73,7 +73,7 @@
  "Ny användare — ett konto skapas och en inloggningslänk skickas via e-post."
  :admin "Administratör"
  :member "Medlem"
- :assigned-templates "Tilldelade roller"
+ :assigned-templates "Åtkomsträttigheter"
  :select-templates "Välj roller"
  :member-col "Medlem"
  :no-members "Inga medlemmar"
