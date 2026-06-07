@@ -73,7 +73,7 @@
  "New user — an account will be created and a login link emailed."
  :admin "Admin"
  :member "Member"
- :assigned-templates "Assigned roles"
+ :assigned-templates "Access rights"
  :select-templates "Select roles"
  :member-col "Member"
  :no-members "No members"

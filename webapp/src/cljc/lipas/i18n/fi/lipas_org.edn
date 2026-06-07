@@ -73,7 +73,7 @@
  "Uusi käyttäjä — luodaan tili ja lähetetään kirjautumislinkki sähköpostitse."
  :admin "Ylläpitäjä"
  :member "Jäsen"
- :assigned-templates "Määritetyt roolit"
+ :assigned-templates "Käyttöoikeudet"
  :select-templates "Valitse roolit"
  :member-col "Jäsen"
  :no-members "Ei jäseniä"
