@@ -745,6 +745,32 @@
      :activity-editor-orgs (vec activity-editor-orgs)
      :legacy-users         legacy-users}))
 
+(defn- resolve-account-names
+  "Batch-resolve account ids → email (fallback username) in one query. Returns a
+  map keyed by string id; ids absent from `account` are simply missing."
+  [db ids]
+  (let [ids (->> ids (remove nil?) distinct vec)]
+    (when (seq ids)
+      (let [placeholders (str/join "," (repeat (count ids) "?"))
+            sql (str "SELECT id, email, username FROM account WHERE id IN (" placeholders ")")]
+        (->> (jdbc/query db (into [sql] ids))
+             (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
+             (into {}))))))
+
+(defn site-edit-history
+  "Per-revision edit history for a site (org Kohteet drawer): each revision's
+  timestamp + the editor's email (resolved from author-id), newest first. Reads
+  only event-date/author-id/status — no documents — so it stays light even for
+  long-lived sites."
+  [db lipas-id]
+  (let [rows  (db/get-sports-site-edit-history db lipas-id)
+        names (resolve-account-names db (map :author_id rows))]
+    (mapv (fn [r]
+            {:event-date (str (:event_date r))
+             :status     (:status r)
+             :author     (get names (str (:author_id r)))})
+          rows)))
+
 (defn search-fields
   [{:keys [indices client]}
    {:keys [field-types]}]

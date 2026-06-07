@@ -437,6 +437,18 @@
                     {:status 200
                      :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
 
+      ;; --- Site edit history (timestamp + editor email) — any authenticated user,
+      ;; surfaced in the org Kohteet drawer for the members maintaining the data ---
+      ["/actions/site-edit-history"
+       {:post
+        {:no-doc true
+         :require-privilege nil
+         :middleware [mw/token-auth mw/auth]
+         :parameters {:body [:map [:lipas-id :int]]}
+         :handler (fn [req]
+                    {:status 200
+                     :body (core/site-edit-history db (-> req :parameters :body :lipas-id))})}}]
+
       ;; --- Commands --------------------------------------------------------
 
       ;; Create org (lipas-admin only)

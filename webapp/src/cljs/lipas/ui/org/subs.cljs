@@ -188,6 +188,10 @@
   (fn [db [_ lipas-id]]
     (get-in db [:org :site-editors lipas-id])))
 
+(rf/reg-sub ::site-edit-history
+  (fn [db [_ lipas-id]]
+    (get-in db [:org :site-edit-history lipas-id])))
+
 ;; --- History (Phase E) ---
 (rf/reg-sub ::org-history
   (fn [db _]
