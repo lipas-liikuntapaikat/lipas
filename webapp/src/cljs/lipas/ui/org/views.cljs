@@ -678,13 +678,17 @@
 
 (defn- editor-row
   "One line in the unified who-can-edit list: name on the left, a reason tag chip
-  on the right (the chip carries the revoke action for shared grants)."
-  [{:keys [label tag color on-delete]}]
-  [:> Box {:sx {:display "flex" :align-items "center" :justify-content "space-between"
-                :py 0.5 :gap 1}}
-   [:> Typography {:variant "body2"} label]
-   [:> Chip {:label tag :size "small" :variant "outlined" :color (or color "default")
-             :on-delete on-delete}]])
+  on the right (the chip carries the revoke action for shared grants; the tag
+  explains in a tooltip how the access is granted)."
+  [{:keys [label tag color tooltip on-delete]}]
+  (let [chip [:> Chip {:label tag :size "small" :variant "outlined" :color (or color "default")
+                       :on-delete on-delete}]]
+    [:> Box {:sx {:display "flex" :align-items "center" :justify-content "space-between"
+                  :py 0.5 :gap 1}}
+     [:> Typography {:variant "body2"} label]
+     (if tooltip
+       [:> Tooltip {:title tooltip :arrow true} chip]
+       chip)]))
 
 (defn site-editors-detail [_tr _org-id _site]
   (let [grant-target (r/atom nil)]
@@ -701,19 +705,23 @@
             rows (concat
                    (when-let [o (:owner-org editors)]
                      [{:key (str "owner-" (:id o)) :label (:name o)
-                       :tag (tr :lipas.org/role-owner) :color "primary"}])
+                       :tag (tr :lipas.org/role-owner) :color "primary"
+                       :tooltip (tr :lipas.org/role-owner-tooltip)}])
                    (for [g (:grantee-orgs editors)]
                      {:key (str "grant-" (:id g)) :label (:name g)
                       :tag (tr :lipas.org/role-shared)
+                      :tooltip (tr :lipas.org/role-shared-tooltip)
                       :on-delete (when can-grant?
                                    (fn [] (rf/dispatch [::events/revoke-site-edit
                                                         org-id lipas-id (str (:id g))])))})
                    (for [a (:activity-editor-orgs editors)]
                      {:key (str "act-" (:id a)) :label (:name a)
-                      :tag (tr :lipas.org/role-activity)})
+                      :tag (tr :lipas.org/role-activity)
+                      :tooltip (tr :lipas.org/role-activity-tooltip)})
                    (for [u (:legacy-users editors)]
                      {:key (str "legacy-" (:email u)) :label (:email u)
-                      :tag (tr :lipas.org/role-direct)}))]
+                      :tag (tr :lipas.org/role-direct)
+                      :tooltip (tr :lipas.org/role-direct-tooltip)}))]
         [:> Box {:sx {:p 2 :bgcolor "action.hover"}}
          [:> Typography {:variant "subtitle2" :sx {:mb 1}}
           (tr :lipas.org/who-can-edit-site)]
