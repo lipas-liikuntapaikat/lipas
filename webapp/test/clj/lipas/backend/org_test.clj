@@ -7,6 +7,7 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.org-takeover :as org-takeover]
+            [lipas.roles :as roles]
             [lipas.test-utils :as test-utils]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
@@ -804,6 +805,35 @@
       (is (= 403 (:status (call member-tok))) "Plain member may not see history")
       (is (= 403 (:status (call regular-tok))) "Non-member may not see history"))))
 
+;;; --- Org instructions (org-admin writes localized member guidance) ----------
+
+(deftest org-instructions-test
+  (testing "Instructions round-trip and survive a details update without wiping members"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          member (test-utils/gen-regular-user :db-component (test-db))
+          _      (backend-org/add-member! (test-db) org-id (:id member)
+                                          {:org-role "member" :templates ["editor"]} nil)
+          _      (backend-org/update-org! (test-db) org-id
+                                          (assoc (backend-org/get-org (test-db) org-id)
+                                                 :instructions {:fi "Ohje" :en "Guide" :se "Anvisning"})
+                                          nil)
+          o      (backend-org/get-org (test-db) org-id)]
+      (is (= {:fi "Ohje" :en "Guide" :se "Anvisning"} (:instructions o)))
+      (is (= 1 (count (:members o))) "Members preserved through a details update"))))
+
+(deftest org-admin-can-set-instructions-test
+  (testing "An org-admin may set instructions via the update-org route (not pinned like type/ownership)"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          oadmin (jwt/create-token (test-utils/gen-org-admin-user org-id :db-component (test-db)))
+          resp   (test-app (-> (mock/request :post "/api/actions/update-org")
+                               (mock/content-type "application/json")
+                               (mock/body (test-utils/->json
+                                            (assoc (backend-org/get-org (test-db) org-id)
+                                                   :instructions {:fi "Jäsenohje"})))
+                               (test-utils/token-header oadmin)))]
+      (is (= 200 (:status resp)))
+      (is (= "Jäsenohje" (-> (backend-org/get-org (test-db) org-id) :instructions :fi))))))
+
 (deftest org-sites-test
   (testing "org-sites returns owned vs editable sites via ES term filters"
     (let [admin        (test-utils/gen-admin-user :db-component (test-db))
@@ -853,6 +883,32 @@
       (is (contains? (set (map :id (:grantee-orgs editors))) (str grantee-id)) "Grantee org listed")
       (is (contains? (set (map :id (:activity-editor-orgs editors))) (str grantee-id))
           "Org whose catalog grants the site's activity (melonta) is listed"))))
+
+(deftest site-editors-legacy-users-test
+  (testing "Legacy direct-permission users are found; admins excluded; result == naive scan"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          city   837
+          lid    9992050
+          site   (-> (test-utils/gen-sports-site)
+                     (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid)
+                     (assoc-in [:location :city :city-code] city)
+                     (assoc-in [:type :type-code] 1530))
+          _      (core/upsert-sports-site!* (test-db) admin site)
+          editor (test-utils/gen-city-manager-user city :db-component (test-db)) ; direct edit role for the city
+          other  (test-utils/gen-city-manager-user 91 :db-component (test-db))   ; different city
+          admin2 (test-utils/gen-admin-user :db-component (test-db))             ; admin (must be excluded)
+          emails (set (map :email (:legacy-users (core/site-editors (test-db) lid))))
+          ;; exhaustive oracle: scan every active user with the exact matcher
+          rc     (roles/site-roles-context (core/get-sports-site (test-db) lid))
+          naive  (->> (core/get-users (test-db))
+                      (filter (fn [u] (and (= "active" (:status u))
+                                           (not (roles/check-role u :admin))
+                                           (roles/check-privilege u rc :site/create-edit))))
+                      (map :email) set)]
+      (is (contains? emails (:email editor)) "Direct city-manager for the site's city is listed")
+      (is (not (contains? emails (:email other))) "User scoped to a different city is not listed")
+      (is (not (contains? emails (:email admin2))) "Admins are excluded (they can edit everything)")
+      (is (= emails naive) "Candidate pre-filter matches the exhaustive naive scan exactly"))))
 
 ;;; Generalized ownership/claim rule (city / owners / type-codes / activities) ;;;
 

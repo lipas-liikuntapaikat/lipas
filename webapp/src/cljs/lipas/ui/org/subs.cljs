@@ -118,7 +118,7 @@
 
       ;; lipas-admin or org-admin
       (:org/edit-contact :org/edit-ptv :org/manage-members :org/grant-site-edit
-                         :org/view-history)
+                         :org/view-history :org/edit-instructions)
       (boolean (or lipas-admin? org-admin?))
 
       ;; any member

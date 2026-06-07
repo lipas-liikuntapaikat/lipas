@@ -35,6 +35,7 @@
    :type            (or (:type org) "city")
    :primary-contact (or (:primary-contact org)
                         (get-in org [:data :primary-contact]))
+   :instructions    (:instructions org)
    :ptv-data        (:ptv-data org)
    :role-templates  (or (:role-templates org) {})
    :ownership       (or (:ownership org) {:city-codes [] :owners []})
@@ -52,6 +53,7 @@
      :ptv-data        (:ptv-data document)
      :type            (:type document)
      :primary-contact (:primary-contact document)
+     :instructions    (:instructions document)
      :role-templates  (:role-templates document)
      :ownership       (:ownership document)
      :members         (:members document)}))
@@ -153,6 +155,8 @@
         (add! (str "Tyyppi: " (:type prev) " → " (:type doc))))
       (when (not= (:primary-contact prev) (:primary-contact doc))
         (add! "Yhteystiedot päivitetty"))
+      (when (not= (:instructions prev) (:instructions doc))
+        (add! "Ohjeet päivitetty"))
       (when (not= (:role-templates prev) (:role-templates doc))
         (add! "Roolimallit päivitetty"))
       (when (not= (:ownership prev) (:ownership doc))
@@ -232,7 +236,8 @@
    (update-document! db org-id author-id
                      (fn [doc]
                        (merge doc (select-keys (marshall org)
-                                               [:name :type :primary-contact :ptv-data :ownership]))))))
+                                               [:name :type :primary-contact :instructions
+                                                :ptv-data :ownership]))))))
 
 (defn update-org-ptv-config!
   "Update only the org's PTV configuration."

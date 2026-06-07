@@ -214,6 +214,48 @@
 ;; Overview tab (was Contact)
 ;; ---------------------------------------------------------------------------
 
+(def ^:private instruction-langs [[:fi "Suomi"] [:se "Svenska"] [:en "English"]])
+
+(defn instructions-tab
+  "Org admin (and lipas-admin) write localized instructions for members; members
+  see them read-only. Stored in the org payload under :instructions {fi se en}.
+  The language variants are shown as sub-tabs, one editable text area at a time."
+  [tr org-id]
+  (r/with-let [lang (r/atom :fi)]
+    (let [org          @(rf/subscribe [::subs/editing-org])
+          is-new?      (= "new" org-id)
+          can-edit?    (or is-new? @(rf/subscribe [::subs/can? :org/edit-instructions org-id]))
+          instructions (:instructions org)
+          empty?       (every? str/blank? (vals (select-keys instructions [:fi :se :en])))
+          selected     @lang]
+      [:> Box {:sx {:p 2}}
+       [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 2 :max-width 800}}
+        (tr :lipas.org/instructions-helper)]
+       (if (and (not can-edit?) empty?)
+         [:> Typography {:color "text.secondary"} (tr :lipas.org/no-instructions)]
+         [:> Box {:sx {:max-width 800}}
+          (into [:> Tabs {:value     selected
+                          :on-change (fn [_ v] (reset! lang v))
+                          :sx        {:mb 2}}]
+                (for [[loc label] instruction-langs]
+                  [:> Tab {:key loc :label label :value loc}]))
+          ^{:key selected}
+          [text-fields/text-field-controlled
+           {:label     (tr (keyword "lipas.org" (str "instructions-" (name selected))))
+            :value     (get instructions selected)
+            :multiline true
+            :rows      10
+            :disabled  (not can-edit?)
+            :on-change #(rf/dispatch [::events/edit-org [:instructions selected] %])}]
+          (when can-edit?
+            [:> Button
+             {:variant  "contained"
+              :color    "secondary"
+              :on-click #(rf/dispatch [::events/save-org org])
+              :sx       {:mt 2 :display "block"}}
+             [:> Icon {:sx {:mr 1}} "save"]
+             (tr :actions/save)])])])))
+
 (defn overview-tab [tr org-id]
   (let [org @(rf/subscribe [::subs/editing-org])
         org-valid? @(rf/subscribe [::subs/org-valid?])
@@ -634,65 +676,72 @@
 ;; Our sites tab
 ;; ---------------------------------------------------------------------------
 
+(defn- editor-row
+  "One line in the unified who-can-edit list: name on the left, a reason tag chip
+  on the right (the chip carries the revoke action for shared grants)."
+  [{:keys [label tag color on-delete]}]
+  [:> Box {:sx {:display "flex" :align-items "center" :justify-content "space-between"
+                :py 0.5 :gap 1}}
+   [:> Typography {:variant "body2"} label]
+   [:> Chip {:label tag :size "small" :variant "outlined" :color (or color "default")
+             :on-delete on-delete}]])
+
 (defn site-editors-detail [_tr _org-id _site]
   (let [grant-target (r/atom nil)]
     (fn [tr org-id site]
-      (let [lipas-id (:lipas-id site)
-            editors @(rf/subscribe [::subs/site-editors lipas-id])
-            can-grant? @(rf/subscribe [::subs/can? :org/grant-site-edit org-id])
-            user-orgs @(rf/subscribe [::subs/user-orgs])
-            grantees (:grantee-orgs editors)
+      (let [lipas-id      (:lipas-id site)
+            editors       @(rf/subscribe [::subs/site-editors lipas-id])
+            can-grant?    @(rf/subscribe [::subs/can? :org/grant-site-edit org-id])
+            user-orgs     @(rf/subscribe [::subs/user-orgs])
             grant-options (->> user-orgs
                                (remove #(= (str (:id %)) (str org-id)))
-                               (map (fn [o] {:value (str (:id o)) :label (:name o)})))]
+                               (map (fn [o] {:value (str (:id o)) :label (:name o)})))
+            ;; One scannable list answering "who can edit", each entry tagged by
+            ;; WHY it has access (owner / shared grant / activity / direct user).
+            rows (concat
+                   (when-let [o (:owner-org editors)]
+                     [{:key (str "owner-" (:id o)) :label (:name o)
+                       :tag (tr :lipas.org/role-owner) :color "primary"}])
+                   (for [g (:grantee-orgs editors)]
+                     {:key (str "grant-" (:id g)) :label (:name g)
+                      :tag (tr :lipas.org/role-shared)
+                      :on-delete (when can-grant?
+                                   (fn [] (rf/dispatch [::events/revoke-site-edit
+                                                        org-id lipas-id (str (:id g))])))})
+                   (for [a (:activity-editor-orgs editors)]
+                     {:key (str "act-" (:id a)) :label (:name a)
+                      :tag (tr :lipas.org/role-activity)})
+                   (for [u (:legacy-users editors)]
+                     {:key (str "legacy-" (:email u)) :label (:email u)
+                      :tag (tr :lipas.org/role-direct)}))]
         [:> Box {:sx {:p 2 :bgcolor "action.hover"}}
-         [:> Typography {:variant "subtitle2"} (tr :lipas.org/who-can-edit)]
-         [:> Typography {:variant "body2"}
-          (str (tr :lipas.org/owner-org) ": "
-               (or (:name (:owner-org editors)) "–"))]
+         [:> Typography {:variant "subtitle2" :sx {:mb 1}}
+          (tr :lipas.org/who-can-edit-site)]
 
-         ;; grantee orgs (with revoke)
-         [:> Box {:sx {:mt 1}}
-          [:> Typography {:variant "body2"} (tr :lipas.org/grantee-orgs) ":"]
-          (if (seq grantees)
-            [:> Box {:sx {:display "flex" :flex-wrap "wrap" :gap 0.5 :mt 0.5}}
-             (for [g grantees]
-               [:> Chip {:key (str (:id g))
-                         :label (:name g)
-                         :size "small"
-                         :on-delete (when can-grant?
-                                      (fn [] (rf/dispatch [::events/revoke-site-edit
-                                                           org-id lipas-id (str (:id g))])))}])]
-            [:> Typography {:variant "caption" :color "text.secondary"} "–"])]
+         (into [:> Box {:sx {:max-width 480}}]
+               (for [row rows]
+                 ^{:key (:key row)} [editor-row row]))
 
-         ;; activity editors
-         (when (seq (:activity-editor-orgs editors))
-           [:> Typography {:variant "body2" :sx {:mt 1}}
-            (str (tr :lipas.org/activity-editors) ": "
-                 (str/join ", " (map :name (:activity-editor-orgs editors))))])
-
-         ;; legacy users
-         (when (seq (:legacy-users editors))
-           [:> Typography {:variant "body2" :sx {:mt 1}}
-            (str (tr :lipas.org/legacy-users) ": "
-                 (str/join ", " (map :email (:legacy-users editors))))])
-
-         ;; grant control
+         ;; share edit access with another org
          (when (and can-grant? (seq grant-options))
-           [:> Box {:sx {:display "flex" :gap 1 :align-items "flex-end" :mt 2}}
-            [:> Box {:sx {:min-width 220}}
-             [selects/select
-              {:label (tr :lipas.org/grant-to-org)
-               :value @grant-target
-               :items grant-options
-               :on-change #(reset! grant-target %)}]]
-            [:> Button
-             {:variant "outlined" :size "small"
-              :disabled (nil? @grant-target)
-              :on-click (fn []
-                          (rf/dispatch [::events/grant-site-edit org-id lipas-id @grant-target])
-                          (reset! grant-target nil))}
-             (tr :lipas.org/grant-edit)]])]))))
+           [:<>
+            [:> Divider {:sx {:my 2}}]
+            [:> Typography {:variant "caption" :color "text.secondary"}
+             (tr :lipas.org/share-edit-access)]
+            [:> Box {:sx {:display "flex" :gap 1 :align-items "flex-end" :mt 1}}
+             [:> Box {:sx {:min-width 220}}
+              [selects/select
+               {:label (tr :lipas.org/grant-to-org)
+                :value @grant-target
+                :items grant-options
+                :on-change #(reset! grant-target %)}]]
+             [:> Button
+              {:variant "outlined" :size "small"
+               :disabled (nil? @grant-target)
+               :on-click (fn []
+                           (rf/dispatch [::events/grant-site-edit org-id lipas-id @grant-target])
+                           (reset! grant-target nil))}
+              (tr :lipas.org/grant-edit)]]])]))))
 
 (defn sortable-th
   "A clickable header cell. `sort*` is the current {:col :dir} state; clicking
@@ -1065,6 +1114,7 @@
                  :scrollButtons "auto"
                  :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
+        [:> Tab {:label (tr :lipas.org/instructions-tab) :value "instructions"}]
         [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
         [:> Tab {:label (tr :lipas.org/overview-tab) :value "overview"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
@@ -1074,6 +1124,7 @@
           [:> Tab {:label (tr :lipas.org/history-tab) :value "history"}])])
 
      (case (if is-new? "overview" current-tab)
+       "instructions" [instructions-tab tr org-id]
        "overview" [overview-tab tr org-id]
        "members" [members-tab tr org-id]
        "roles-templates" [roles-templates-tab tr org-id]
