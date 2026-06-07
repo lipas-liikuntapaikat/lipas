@@ -314,14 +314,9 @@
     (throw (ex-info "User doesn't have enough permissions!"
                     {:type :no-permission}))))
 
-(def org-type->owner
-  "Maps an org's :type to the site :owner enum it implies. When a site is
-  org-owned its :owner is locked to this value (org-management §4.6 / OQ2)."
-  {"city"                  "city"
-   "municipal-consortium"  "municipal-consortium"
-   "state"                 "state"
-   "private"               "company-ltd"
-   "sports-federation"     "registered-association"})
+;; Moved to lipas.data.owners so the FE form can derive the same locked :owner
+;; when an org is selected as a site's owner. Aliased here for existing callers.
+(def org-type->owner owners/org-type->owner)
 
 (defn check-owner-lock!
   "When a site is org-owned, its :owner enum is locked to the value implied by

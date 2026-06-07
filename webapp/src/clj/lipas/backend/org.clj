@@ -139,8 +139,10 @@
 
 (defn- diff-org-docs
   "Human-readable summary of what changed between two consecutive org documents.
-  `prev` nil means the org's first revision."
-  [prev doc]
+  `prev` nil means the org's first revision. `name-of` resolves a member
+  user-id (string) to a human-readable label (email/username), falling back to
+  the raw id."
+  [name-of prev doc]
   (if (nil? prev)
     ["Organisaatio luotu"]
     (let [changes (volatile! [])
@@ -162,14 +164,14 @@
             added (set/difference (set (keys dm)) (set (keys pm)))
             removed (set/difference (set (keys pm)) (set (keys dm)))
             common (set/intersection (set (keys pm)) (set (keys dm)))]
-        (doseq [uid added] (add! (str "Jäsen lisätty: " uid)))
-        (doseq [uid removed] (add! (str "Jäsen poistettu: " uid)))
+        (doseq [uid added] (add! (str "Jäsen lisätty: " (name-of uid))))
+        (doseq [uid removed] (add! (str "Jäsen poistettu: " (name-of uid))))
         (doseq [uid common
                 :let [a (get pm uid) b (get dm uid)]]
           (when (not= (:org-role a) (:org-role b))
-            (add! (str "Rooli muuttui: " uid " " (:org-role a) " → " (:org-role b))))
+            (add! (str "Rooli muuttui: " (name-of uid) " " (:org-role a) " → " (:org-role b))))
           (when (not= (set (:templates a)) (set (:templates b)))
-            (add! (str "Roolit muuttuivat: " uid)))))
+            (add! (str "Roolit muuttuivat: " (name-of uid))))))
       (let [result @changes]
         (if (seq result) result ["Muutos"])))))
 
@@ -182,14 +184,20 @@
                               FROM org WHERE org_id = ? ORDER BY event_date ASC, created_at ASC"
                              (->uuid org-id)]
                             {:builder-fn rs/as-unqualified-kebab-maps})
-        author-ids (->> rows (keep :author-id) distinct)
-        authors (when (seq author-ids)
-                  (->> (sql/query db (hsql/format {:select [:id :email :username]
-                                                   :from   [:account]
-                                                   :where  [:in :id author-ids]})
-                                  {:builder-fn rs/as-unqualified-kebab-maps})
-                       (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
-                       (into {})))]
+        ;; Resolve every referenced account — both revision authors and members
+        ;; appearing in any document — to an email/username so the audit log is
+        ;; human-readable instead of bare UUIDs.
+        member-ids (->> rows (mapcat (comp :members :document)) (keep :user-id) (map str))
+        author-ids (->> rows (keep :author-id) (map str))
+        all-ids    (->> (concat author-ids member-ids) distinct (keep ->uuid))
+        accounts   (when (seq all-ids)
+                     (->> (sql/query db (hsql/format {:select [:id :email :username]
+                                                      :from   [:account]
+                                                      :where  [:in :id (vec all-ids)]})
+                                     {:builder-fn rs/as-unqualified-kebab-maps})
+                          (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
+                          (into {})))
+        name-of    (fn [uid] (get accounts (str uid) (str uid)))]
     (->> rows
          (map-indexed
            (fn [i row]
@@ -197,9 +205,9 @@
                    prev (when (pos? i) (:document (nth rows (dec i))))]
                {:id          (str (:id row))
                 :event-date  (str (:event-date row))
-                :author-name (get authors (str (:author-id row)))
+                :author-name (when-let [aid (:author-id row)] (get accounts (str aid)))
                 :status      (:status row)
-                :changes     (diff-org-docs prev doc)})))
+                :changes     (diff-org-docs name-of prev doc)})))
          reverse
          vec)))
 
