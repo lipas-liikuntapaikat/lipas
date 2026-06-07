@@ -624,14 +624,14 @@
                          [:dispatch [::get-org-sites org-id "owned"]]
                          [:dispatch [::get-org-sites org-id "editable"]]
                          [:dispatch [:lipas.ui.events/set-active-notification
-                                     {:message (str "Lunastettu " (:sites-claimed resp) " kohdetta")
+                                     {:message (str "Siirretty " (:sites-claimed resp) " kohdetta omistukseen")
                                       :success? true}]]]}))
 
 (rf/reg-event-fx ::request-takeover-success
                  (fn [_ [_ _resp]]
                    {:fx [[:dispatch [::close-claim-dialog]]
                          [:dispatch [:lipas.ui.events/set-active-notification
-                                     {:message "Lunastuspyyntö lähetetty" :success? true}]]]}))
+                                     {:message "Siirtopyyntö lähetetty" :success? true}]]]}))
 
 ;; =====================================================================
 ;; History + take-over approvals (UX-P3 / Phase E)
