@@ -537,6 +537,34 @@ consecutive revisions and resolves all referenced account ids to email/username.
    guarantee.)
 8. **Existing-site ownership immutability** — FE-gated + middleware-authz'd, not
    enforced server-side against raw API (§6.10). Add the core guard if desired.
+9. **Per-site ownership-claim requests (correction / cross-org transfer)** — today
+   an org-admin has **no reachable claim trigger at all**: both entry points (the
+   ownership-rule editor button and setup-checklist step ③) are lipas-admin-only,
+   and claim scope is fixed to the org's ownership rule (rule itself is lipas-admin
+   only). The `org_takeover_request` state machine *does* support an org-admin
+   `request` path (`POST /actions/request-org-takeover`, `:org/manage`) — it just
+   has no UI. Two follow-ups, sharing that existing machine:
+   - **(a) Surface the org-admin bulk-request trigger** — a "request claim" button
+     in Kohteet for `:org/manage` that opens the impact dialog in `request` mode.
+     Closes the half-wired request→approve loop with no new backend.
+   - **(b) Per-site claim of a site the org doesn't own** — for *wrong owner entered*
+     and *private → municipality* transfers. A request row with a hand-picked
+     `lipas-id` instead of a rule-expansion (same table, same approval queue, same
+     `approve!` apply path; owner-enum lock relabels `:owner` to the org type in the
+     same revision — exactly the private→city semantic). New design surface, all
+     about what replaces the rule's ceiling:
+     - *Contested vs un-owned* — claiming a **legacy/un-owned** site is a low-risk
+       correction; claiming one **owned by another org** is a transfer *away* from
+       org A → that owner should be notified (or consent), not silently reassigned.
+     - *Guardrail* — fully open (admin judgment) vs a soft check that the site's
+       city-code is one the requesting org plausibly governs (catches fat-finger
+       requests for the wrong municipality).
+     - *Entry point* — the site's who-can-edit drawer (`site-editors-detail`) or the
+       site-form ownership section: a "Pyydä omistajuutta" action when an org-admin
+       does **not** own the site.
+     - *Request payload* — tag the row (`kind` / explicit `lipas-ids`) so the queue
+       renders "bulk rule claim (N)" vs "single-site request: «name»", and the
+       approver sees the current owner for the contested case.
 
 ---
 
