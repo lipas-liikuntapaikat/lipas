@@ -243,6 +243,13 @@
     {:properties
      {:location.coordinates.wgs84 {:type "geo_point"}
       :location.geom-coll         {:type "geo_shape"}
+      ;; Raw GeoJSON FeatureCollection is display-only here (geometry is
+      ;; indexed via location.geom-coll / location.coordinates.wgs84). Disable
+      ;; it so ES never dynamically maps the variable-shape
+      ;; features.geometry.coordinates arrays — left dynamic, ES infers a type
+      ;; from the first doc (e.g. dense_vector) and later differently-shaped
+      ;; geometries fail to index. Mirrors the main sports-site mapping.
+      :location.geometries        {:enabled false}
       :lastModified               {:type   "date"
                                    :format legacy-date-format}}}}})
 
