@@ -153,6 +153,12 @@
     (->> (sports-site/get-history db-spec params)
          (map sports-site/unmarshall))))
 
+(defn get-sports-site-edit-history
+  "Lightweight per-revision edit history (event-date + author-id + status, no
+  documents) for a single sports-site, newest first."
+  [db-spec lipas-id]
+  (sports-site/get-edit-history db-spec {:lipas_id lipas-id}))
+
 (defn get-sports-sites-by-type-code
   [db-spec type-code {:keys [revs raw?] :or {revs "latest" raw? false}}]
   (let [db-fn (cond

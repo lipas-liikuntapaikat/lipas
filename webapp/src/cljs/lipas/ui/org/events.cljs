@@ -492,6 +492,22 @@
                      :on-success [::get-site-editors-success lipas-id]
                      :on-failure [::failure]}}))
 
+(rf/reg-event-db ::get-site-edit-history-success
+                 (fn [db [_ lipas-id resp]]
+                   (assoc-in db [:org :site-edit-history lipas-id] resp)))
+
+(rf/reg-event-fx ::get-site-edit-history
+                 (fn [{:keys [db]} [_ lipas-id]]
+                   {:http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/site-edit-history")
+                     :headers (auth-headers db)
+                     :params {:lipas-id lipas-id}
+                     :format (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success [::get-site-edit-history-success lipas-id]
+                     :on-failure [::failure]}}))
+
 (rf/reg-event-fx ::grant-site-edit
                  (fn [{:keys [db]} [_ org-id lipas-id grantee-org-id]]
                    {:http-xhrio
