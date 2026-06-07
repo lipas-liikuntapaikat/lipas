@@ -66,7 +66,7 @@
     (let [org-id (java.util.UUID/randomUUID)
           {:keys [owned1 owned2 granted unrelated]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user org-id))
-          resp ((test-app) (-> (mock/request :post "/api/actions/org-sites-for-bulk")
+          resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                (mock/content-type "application/json")
                                (mock/body (test-utils/->json {:org-id org-id}))
                                (test-utils/token-header token)))
@@ -112,7 +112,7 @@
     (let [org-id (java.util.UUID/randomUUID)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
-          get-resp ((test-app) (-> (mock/request :post "/api/actions/org-sites-for-bulk")
+          get-resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                    (mock/content-type "application/json")
                                    (mock/body (test-utils/->json {:org-id org-id}))
                                    (test-utils/token-header token)))
@@ -129,7 +129,7 @@
           other-id (java.util.UUID/randomUUID)
           {:keys [owned1]} (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user other-id))
-          resp ((test-app) (-> (mock/request :post "/api/actions/org-sites-for-bulk")
+          resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                (mock/content-type "application/json")
                                (mock/body (test-utils/->json {:org-id org-id}))
                                (test-utils/token-header token)))]
@@ -152,7 +152,7 @@
 (deftest auth-required-test
   (testing "endpoints require authentication"
     (let [org-id (java.util.UUID/randomUUID)]
-      (is (= 401 (:status ((test-app) (-> (mock/request :post "/api/actions/org-sites-for-bulk")
+      (is (= 401 (:status ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                           (mock/content-type "application/json")
                                           (mock/body (test-utils/->json {:org-id org-id}))))))))))
 

@@ -562,7 +562,7 @@
       {:http-xhrio
        {:method :post
         :headers {:Authorization (str "Token " token)}
-        :uri (str (:backend-url db) "/actions/all-orgs")
+        :uri (str (:backend-url db) "/actions/get-all-orgs")
         :params {}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})

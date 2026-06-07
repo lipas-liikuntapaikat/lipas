@@ -338,7 +338,7 @@
 
       ;; --- Queries ---------------------------------------------------------
 
-      ["/actions/current-user-orgs"
+      ["/actions/get-current-user-orgs"
        {:post
         {:no-doc true
            ;; Doesn't require privileges, no :org/member just means no orgs.
@@ -362,7 +362,7 @@
                                (org/user-orgs db (parse-uuid (:id user))))}))}}]
 
       ;; All orgs (lipas-admin only)
-      ["/actions/all-orgs"
+      ["/actions/get-all-orgs"
        {:post
         {:no-doc true
          :require-privilege :org/admin
@@ -371,7 +371,7 @@
                      :body (org/all-orgs db)})}}]
 
       ;; Org members — both org-admins and org-members (and lipas-admins) may view
-      ["/actions/org-members"
+      ["/actions/get-org-members"
        {:post
         {:no-doc true
          :require-privilege org-member-or-admin?
@@ -381,7 +381,7 @@
                      :body (org/get-org-users db (-> req :parameters :body :org-id))})}}]
 
       ;; --- Org dashboard: owned / editable sites (Q1) — members may view ---
-      ["/actions/org-sites"
+      ["/actions/get-org-sites"
        {:post
         {:no-doc true
          :require-privilege org-member-or-admin?
@@ -395,7 +395,7 @@
                                            (or (-> req :parameters :body :filter) "owned"))})}}]
 
       ;; --- Org history (the append-only org revisions) — members may view ---
-      ["/actions/org-history"
+      ["/actions/get-org-history"
        {:post
         {:no-doc true
          ;; History/audit is admin-only (lipas-admin or org-admin), not members.
@@ -407,7 +407,7 @@
 
       ;; --- Bulk contact update candidates (org-only). Gated by :site/create-edit
       ;; for the org (admits admin + org-editor members). ---
-      ["/actions/org-sites-for-bulk"
+      ["/actions/get-org-sites-for-bulk"
        {:post
         {:no-doc true
          :require-privilege [org-scope-from-body :site/create-edit]
@@ -417,7 +417,7 @@
                      :body (bulk-ops/get-org-editable-sites search (-> req :parameters :body :org-id))})}}]
 
       ;; --- Take-over claim impact preview (count + owner relabel + sample) ---
-      ["/actions/org-takeover-preview"
+      ["/actions/preview-org-takeover"
        {:post
         {:no-doc true
          :require-privilege [org-scope-from-body :org/manage]
@@ -427,7 +427,7 @@
                      :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
 
       ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
-      ["/actions/site-editors"
+      ["/actions/get-site-editors"
        {:post
         {:no-doc true
          :require-privilege nil
@@ -439,7 +439,7 @@
 
       ;; --- Site edit history (timestamp + editor email) — any authenticated user,
       ;; surfaced in the org Kohteet drawer for the members maintaining the data ---
-      ["/actions/site-edit-history"
+      ["/actions/get-site-edit-history"
        {:post
         {:no-doc true
          :require-privilege nil
@@ -681,7 +681,7 @@
                                                       (:identity req))})}}]
 
       ;; --- Take-over approvals: lipas-admin reviews requested claims ---
-      ["/actions/org-takeover-requests"
+      ["/actions/list-org-takeover-requests"
        {:post
         {:no-doc true
          :require-privilege :org/admin
