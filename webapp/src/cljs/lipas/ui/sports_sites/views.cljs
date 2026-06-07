@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.views
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require [clojure.string :as str]
+            ["@mui/material/Alert$default" :as Alert]
             ["mdi-material-ui/Calculator$default" :as Calculator]
             ["recharts/es6/cartesian/Area" :refer [Area]]
             ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
@@ -46,6 +47,7 @@
             [lipas.schema.ice-stadiums :as ice-schema]
             [lipas.schema.swimming-pools :as pools-schema]
             [lipas.data.prop-types :as prop-types]
+            [lipas.data.owners :as owners-data]
             [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
@@ -70,9 +72,81 @@
     (= (:status display-data) (tr (keyword :status "planned")))
     (= (:status display-data) (tr (keyword :status "planned")))))
 
+(defn- ownership-fields
+  "Owner inputs for the Omistajuus section. Cases:
+   - Editable owner-org autocomplete (pre-filled when exactly one ownable org;
+     selecting an org hides the legacy Omistaja and locks :owner to the org-type
+     enum; clearing brings Omistaja back). Shown on NEW sites for anyone who can
+     own a site, and on ANY site for a lipas-admin — who may freely assign,
+     change or clear ownership (same authority as take-over).
+   - Org-owned site, non-admin (existing, or any read-only view): the owning org
+     shown read-only; legacy :owner enum hidden but preserved (locked on save).
+     A non-admin can't change it here — claiming goes through the take-over flow,
+     enforced by the backend too.
+   - Otherwise: the normal legacy Omistaja select."
+  [{:keys [tr locale owners edit-data display-data on-change read-only? new?]}]
+  (let [editing?       (not read-only?)
+        lipas-admin?   (<== [:lipas.ui.org.subs/is-lipas-admin])
+        ;; Editable owner-org picker: new sites for any owner-capable user, plus
+        ;; any site for a lipas-admin.
+        editable-owner-org? (and editing? (or new? lipas-admin?))
+        ownable-orgs   (when editable-owner-org? (<== [:lipas.ui.org.subs/ownable-orgs]))
+        owner-org-id   (if editing? (:owner-org-id edit-data) (:owner-org-id display-data))
+        owning-org     (when owner-org-id (<== [:lipas.ui.org.subs/user-org-by-id owner-org-id]))
+        owner-org-name (or (:name owning-org) owner-org-id)
+        select-owner-org
+        (fn [org-id]
+          ;; autocomplete yields "" (not nil) on clear; treat blank as legacy.
+          (if (not (str/blank? org-id))
+            (let [org (some #(when (= (str (:id %)) (str org-id)) %) ownable-orgs)]
+              (on-change :owner-org-id org-id)
+              (on-change :owner (owners-data/org-type->owner (:type org))))
+            (do (on-change :owner-org-id nil)
+                (on-change :owner nil))))
+        legacy-owner-field
+        {:label (tr :lipas.sports-site/owner)
+         :value (-> display-data :owner)
+         :form-field [selects/select
+                      {:value (-> edit-data :owner)
+                       :required true
+                       :helper-text (tr :lipas.sports-site/owner-helper-text)
+                       :spec sites-schema/owner
+                       :items owners
+                       :value-fn first
+                       :label-fn (comp locale second)
+                       :on-change #(on-change :owner %)}]}]
+    (cond
+      ;; Editable org autocomplete (legacy field shows when no org set).
+      (and editable-owner-org? (seq ownable-orgs))
+      (into [:<>
+             {:label (tr :lipas.org/owner-org)
+              :value owner-org-name
+              :form-field [autocompletes/autocomplete
+                           {:value owner-org-id
+                            :items ownable-orgs
+                            :value-fn :id
+                            :label-fn :name
+                            :deselect? true
+                            :helper-text (tr :lipas.org/owner-org-helper-text)
+                            :on-change select-owner-org}]}]
+            (when-not owner-org-id [legacy-owner-field]))
+
+      ;; Org-owned (existing site or read-only view): owner org, read-only.
+      owner-org-id
+      {:label (tr :lipas.org/owner-org)
+       :value owner-org-name
+       :form-field [text-fields/text-field
+                    {:value owner-org-name
+                     :disabled true
+                     :on-change #()}]}
+
+      ;; Legacy.
+      :else
+      legacy-owner-field)))
+
 (defn form
   [{:keys [tr display-data edit-data types size-categories admins
-           owners on-change read-only? sub-headings? lipas-id status-read-only?]}]
+           owners on-change read-only? sub-headings? lipas-id status-read-only? new?]}]
 
   (let [locale (tr)
         name-conflict? (<== [::subs/sports-site-name-conflict?])]
@@ -240,18 +314,16 @@
      (when sub-headings?
        [misc/sub-heading {:label (tr :lipas.sports-site/ownership)}])
 
-     ;; Owner
-     {:label (tr :lipas.sports-site/owner)
-      :value (-> display-data :owner)
-      :form-field [selects/select
-                   {:value (-> edit-data :owner)
-                    :required true
-                    :helper-text (tr :lipas.sports-site/owner-helper-text)
-                    :spec sites-schema/owner
-                    :items owners
-                    :value-fn first
-                    :label-fn (comp locale second)
-                    :on-change #(on-change :owner %)}]}
+     ;; Owner — org-owned (show org) or legacy (Omistaja select). See helper.
+     (ownership-fields
+       {:tr tr
+        :locale locale
+        :owners owners
+        :edit-data edit-data
+        :display-data display-data
+        :on-change on-change
+        :read-only? read-only?
+        :new? new?})
 
      ;; Admin
      {:label (tr :lipas.sports-site/admin)

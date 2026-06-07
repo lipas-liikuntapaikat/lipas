@@ -1065,12 +1065,13 @@
                  :scrollButtons "auto"
                  :on-change (fn [_ value] (rf/dispatch [::events/set-current-tab value]))
                  :sx {:mb 3 :border-bottom 1 :border-color "divider"}}
+        [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
         [:> Tab {:label (tr :lipas.org/overview-tab) :value "overview"}]
         [:> Tab {:label (tr :lipas.org/members-tab) :value "members"}]
         [:> Tab {:label (tr :lipas.org/permissions-ownership-tab) :value "roles-templates"}]
-        [:> Tab {:label (tr :lipas.org/our-sites-tab) :value "our-sites"}]
         [:> Tab {:label (tr :lipas.org/ptv-tab) :value "ptv"}]
-        [:> Tab {:label (tr :lipas.org/history-tab) :value "history"}]])
+        (when @(rf/subscribe [::subs/can? :org/view-history org-id])
+          [:> Tab {:label (tr :lipas.org/history-tab) :value "history"}])])
 
      (case (if is-new? "overview" current-tab)
        "overview" [overview-tab tr org-id]
@@ -1078,7 +1079,8 @@
        "roles-templates" [roles-templates-tab tr org-id]
        "our-sites" [our-sites-tab tr org-id]
        "ptv" [ptv-tab]
-       "history" [history-tab tr org-id]
+       "history" (when @(rf/subscribe [::subs/can? :org/view-history org-id])
+                   [history-tab tr org-id])
        ;; legacy routes
        "contact" [overview-tab tr org-id]
        "bulk-operations" [our-sites-tab tr org-id]

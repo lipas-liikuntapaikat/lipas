@@ -123,6 +123,21 @@
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
 
+(defn- owner-org-assignment-authorized?
+  "Boolean privilege fn for the sports-site save route. When the body claims an
+  :owner-org-id, the actor must hold :site/create-edit on that org (i.e. be an
+  org-editor of it, or a lipas-admin). Legacy saves (no :owner-org-id) pass
+  through untouched — the site-level edit permission is still enforced in core
+  (`check-permissions!`). This only gates the org-ownership dimension: you may
+  never point a site's ownership at an org you have no rights to."
+  [req]
+  (let [user (:identity req)
+        owner-org-id (-> req :parameters :body :owner-org-id)]
+    (or (nil? owner-org-id)
+        (roles/check-privilege user
+                               {:org-id #{(str owner-org-id)}}
+                               :site/create-edit))))
+
 (defn create-app
   [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
   (ring/ring-handler
@@ -173,7 +188,11 @@
        {:post
         {:no-doc false
          :middleware [mw/token-auth mw/auth]
-           ;; NOTE: privilege checked in the core code
+           ;; NOTE: site-level edit privilege is checked in the core code
+           ;; (content-dependent: city/type/lipas-id). This gate only enforces
+           ;; the org-ownership dimension — a claimed :owner-org-id must be an
+           ;; org the actor has rights to.
+         :require-privilege owner-org-assignment-authorized?
          :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
                      400 {:body [:map {:closed false}]}}
          :parameters
@@ -379,7 +398,8 @@
       ["/actions/org-history"
        {:post
         {:no-doc true
-         :require-privilege org-member-or-admin?
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
+         :require-privilege [org-scope-from-body :org/manage]
          :parameters {:body [:map [:org-id org-schema/org-id]]}
          :handler (fn [req]
                     {:status 200

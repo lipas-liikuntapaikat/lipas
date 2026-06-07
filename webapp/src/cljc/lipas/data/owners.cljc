@@ -29,6 +29,17 @@
                              :en "Unknown"
                              :se "Okänt"}})
 
+(def org-type->owner
+  "Maps an org's :type to the site :owner enum it implies. When a site is
+  org-owned its :owner is locked to this value (org-management §4.6 / OQ2).
+  Shared by the backend lock (`core/check-owner-lock!`) and the FE form, which
+  derives the hidden :owner when an org is selected as the site's owner."
+  {"city"                  "city"
+   "municipal-consortium"  "municipal-consortium"
+   "state"                 "state"
+   "private"               "company-ltd"
+   "sports-federation"     "registered-association"})
+
 (def csv-headers
   ["Arvo" "Nimi fi" "Nimi Se" "Nimi En"])
 
