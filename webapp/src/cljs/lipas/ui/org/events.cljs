@@ -94,8 +94,10 @@
                               (not is-new?) (conj [:dispatch [::get-org-users org-id]])
                               is-lipas-admin? (conj [:dispatch [::get-all-users]])
                               is-lipas-admin? (conj [:dispatch [::get-takeover-requests "requested"]])
-                              ;; owned-site count drives the setup-checklist step ③
-                              (and is-lipas-admin? (not is-new?)) (conj [:dispatch [::get-org-sites org-id "owned"]])
+                              ;; Land on the default "our-sites" tab and load its
+                              ;; data via the normal tab path (also fetches the
+                              ;; owned-site count for the setup-checklist step ③).
+                              (not is-new?) (conj [:dispatch [::set-current-tab "our-sites"]])
                               (and (nil? user-orgs) (not is-new?)) (conj [:dispatch [::get-user-orgs-then-init org-id]]))]
                      {:fx fx
                       :db (assoc db :org {:org-id org-id

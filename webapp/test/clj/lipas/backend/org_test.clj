@@ -573,10 +573,10 @@
     (let [org-id (catalog-org! editor+ptv-catalog)
           ;; Project an assignment that names a template NOT in the catalog.
           roles  (backend-org/derive-org-roles
-                  "u1"
-                  [{:id org-id
-                    :role-templates editor+ptv-catalog
-                    :members [{:user-id "u1" :org-role "member" :templates ["forged" "editor"]}]}])
+                   "u1"
+                   [{:id org-id
+                     :role-templates editor+ptv-catalog
+                     :members [{:user-id "u1" :org-role "member" :templates ["forged" "editor"]}]}])
           role-ks (set (map :role roles))]
       ;; "editor" expands; "forged" vanishes. No :users/manage or other escalation.
       (is (contains? role-ks "org-editor"))
@@ -670,11 +670,11 @@
       ;; directly (it is intentionally not surfaced via the current-snapshot view)
       (is (= (str org-id)
              (str (:acting-org-id
-                   (jdbc/execute-one! (test-db)
-                                      ["SELECT acting_org_id FROM sports_site
+                    (jdbc/execute-one! (test-db)
+                                       ["SELECT acting_org_id FROM sports_site
                                         WHERE lipas_id=? ORDER BY event_date DESC, created_at DESC LIMIT 1"
-                                       match-id]
-                                      {:builder-fn rs/as-unqualified-kebab-maps}))))
+                                        match-id]
+                                       {:builder-fn rs/as-unqualified-kebab-maps}))))
           "Revision records the acting org on behalf of which the edit was made")
       (is (nil? (:owner-org-id untouched)) "Non-matching site (owner 'state') is untouched")
       ;; request is marked decided
@@ -771,6 +771,39 @@
       (is (some (fn [rev] (some #(re-find #"luotu" %) (:changes rev))) history)
           "The first revision is recorded as creation"))))
 
+(deftest org-history-resolves-member-emails-test
+  (testing "Member user-ids in the audit diff resolve to emails, not raw UUIDs"
+    (let [org-id   (catalog-org! editor+ptv-catalog)
+          member   (test-utils/gen-regular-user :db-component (test-db))
+          _        (backend-org/add-member! (test-db) org-id (:id member)
+                                            {:org-role "member" :templates ["editor"]} nil)
+          add-line (->> (backend-org/get-history (test-db) org-id)
+                        (mapcat :changes)
+                        (filter #(re-find #"Jäsen lisätty" %))
+                        first)]
+      (is (some? add-line) "An 'added member' line exists")
+      (is (clojure.string/includes? add-line (:email member))
+          "The added-member line shows the email")
+      (is (not (clojure.string/includes? add-line (str (:id member))))
+          "The raw user-id UUID must not appear"))))
+
+(deftest org-history-authz-test
+  (testing "History endpoint is admin-only (lipas-admin or org-admin), not members"
+    (let [org-id      (catalog-org! editor+ptv-catalog)
+          admin-token (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+          oadmin-tok  (jwt/create-token (test-utils/gen-org-admin-user org-id :db-component (test-db)))
+          member-tok  (jwt/create-token (test-utils/gen-org-user org-id :db-component (test-db)))
+          regular-tok (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))
+          call        (fn [token]
+                        (test-app (-> (mock/request :post "/api/actions/org-history")
+                                      (mock/content-type "application/json")
+                                      (mock/body (test-utils/->json {:org-id org-id}))
+                                      (test-utils/token-header token))))]
+      (is (= 200 (:status (call admin-token))) "LIPAS admin may see history")
+      (is (= 200 (:status (call oadmin-tok))) "Org admin may see their org's history")
+      (is (= 403 (:status (call member-tok))) "Plain member may not see history")
+      (is (= 403 (:status (call regular-tok))) "Non-member may not see history"))))
+
 (deftest org-sites-test
   (testing "org-sites returns owned vs editable sites via ES term filters"
     (let [admin        (test-utils/gen-admin-user :db-component (test-db))
@@ -804,10 +837,10 @@
           owner-id             (:id owner-org)
           grantee-id           (:id grantee-org)
           _                    (backend-org/update-catalog!
-                                (test-db) grantee-id
-                                {:melonta {:label "Melonta"
-                                           :roles [{:role "activities-manager" :activity ["melonta"]}]}}
-                                nil)
+                                 (test-db) grantee-id
+                                 {:melonta {:label "Melonta"
+                                            :roles [{:role "activities-manager" :activity ["melonta"]}]}}
+                                 nil)
           lid                  9992001
           site                 (-> (test-utils/gen-sports-site)
                                    (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid
@@ -880,7 +913,57 @@
       (is (= "city" (:current-owner (first (filter #(= lid (:lipas-id %)) (:sites p)))))
           "list shows the site's current owner enum before relabel"))))
 
+;;; --- Site ownership assignment authz (POST /sports-sites) -------------------
+;;; The save route gates the org-ownership dimension in middleware
+;;; (`owner-org-assignment-authorized?`): a claimed :owner-org-id must name an
+;;; org the actor holds :site/create-edit on. Site-level edit perms are still
+;;; enforced in core; here we isolate the ownership-claim boundary.
+
+(defn- editor-of-org!
+  "Make a user an org-editor of `org-id` (member assigned the :editor template)
+  and return a token carrying the derived roles, exactly as login bakes them."
+  [org-id]
+  (let [user (test-utils/gen-regular-user :db-component (test-db))]
+    (backend-org/add-member! (test-db) org-id (:id user)
+                             {:org-role "member" :templates ["editor"]} nil)
+    (jwt/create-token
+      (assoc-in user [:permissions :roles]
+                (backend-org/derive-user-org-roles (test-db) (:id user))))))
+
+(defn- post-site [token site]
+  (test-app (-> (mock/request :post "/api/sports-sites")
+                (mock/content-type "application/json")
+                (mock/body (test-utils/->json site))
+                (test-utils/token-header token))))
+
+(deftest owner-org-assignment-authz-test
+  (let [org-id   (catalog-org! editor+ptv-catalog)        ; org the user can edit
+        other    (:id (first (create-test-orgs)))         ; an org the user can't
+        token    (editor-of-org! org-id)
+        new-site (fn [owner-org-id]
+                   ;; When claiming an org, set :owner to the org-type-locked
+                   ;; enum, mirroring the FE (else check-owner-lock! would 400).
+                   (let [owner (some-> owner-org-id
+                                       (->> (backend-org/get-org (test-db)))
+                                       :type core/org-type->owner)]
+                     (cond-> (-> (test-utils/gen-sports-site)
+                                 (assoc :status "active")
+                                 (dissoc :lipas-id))
+                       owner-org-id (assoc :owner-org-id (str owner-org-id))
+                       owner        (assoc :owner owner))))]
+
+    (testing "An org-editor may create a site owned by their own org"
+      (is (= 201 (:status (post-site token (new-site org-id))))))
+
+    (testing "Claiming a DIFFERENT org the actor has no rights to is forbidden"
+      (is (= 403 (:status (post-site token (new-site other))))))
+
+    (testing "A user with no org rights cannot claim any org"
+      (let [regular (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))]
+        (is (= 403 (:status (post-site regular (new-site org-id)))))))))
+
 (comment
+  (clojure.test/run-test-var #'owner-org-assignment-authz-test)
   (clojure.test/run-test-var #'cross-org-view-users-test)
   (clojure.test/run-test-var #'cross-org-update-org-data-test)
   (clojure.test/run-test-var #'get-org-users-test)

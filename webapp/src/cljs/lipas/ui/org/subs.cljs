@@ -14,6 +14,19 @@
   (fn [orgs _]
     (into {} (map (juxt :id identity) orgs))))
 
+;; Orgs the user may set as a site's owner: those where they hold
+;; :site/create-edit (org-editor of the org, or lipas-admin). Drives the
+;; owner-org autocomplete in the sports-site form. Mirrors the backend gate
+;; `owner-org-assignment-authorized?`.
+(rf/reg-sub ::ownable-orgs
+  :<- [::user-orgs]
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [[orgs user] _]
+    (filterv (fn [{:keys [id]}]
+               ;; :org-id role-context must be a set (set-intersection matcher)
+               (roles/check-privilege user {:org-id #{(str id)}} :site/create-edit))
+             orgs)))
+
 (rf/reg-sub ::user-org-by-id
   :<- [::user-orgs-by-id]
   (fn [orgs [_ id]]
@@ -54,7 +67,8 @@
 
 (rf/reg-sub ::current-tab
   (fn [db _]
-    (get-in db [:org :current-tab] "overview")))
+    ;; Default to the most-used "Kohteet" (our-sites) tab, which is shown first.
+    (get-in db [:org :current-tab] "our-sites")))
 
 (rf/reg-sub ::org-users
   (fn [db _]
@@ -103,7 +117,8 @@
       (boolean lipas-admin?)
 
       ;; lipas-admin or org-admin
-      (:org/edit-contact :org/edit-ptv :org/manage-members :org/grant-site-edit)
+      (:org/edit-contact :org/edit-ptv :org/manage-members :org/grant-site-edit
+                         :org/view-history)
       (boolean (or lipas-admin? org-admin?))
 
       ;; any member

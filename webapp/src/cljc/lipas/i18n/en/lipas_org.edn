@@ -24,8 +24,8 @@
  ;; --- org-management UI ---
  :overview-tab "Overview"
  :roles-templates-tab "Roles & templates"
- :permissions-ownership-tab "Permissions & ownership"
- :our-sites-tab "Our sites"
+ :permissions-ownership-tab "Access rights"
+ :our-sites-tab "Sites"
  :history-tab "History"
 
  ;; role-template catalog editor
@@ -117,6 +117,7 @@
  :completeness "Status"
  :who-can-edit "Who can edit"
  :owner-org "Owner organization"
+ :owner-org-helper-text "The organization that owns this site. Clear the selection to record a non-org owner (e.g. an association or company)."
  :grantee-orgs "Edit granted to"
  :activity-editors "Activity editors"
  :legacy-users "Direct users"

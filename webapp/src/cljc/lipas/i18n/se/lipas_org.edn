@@ -24,8 +24,8 @@
  ;; --- org-management UI ---
  :overview-tab "Översikt"
  :roles-templates-tab "Roller och mallar"
- :permissions-ownership-tab "Behörigheter och ägande"
- :our-sites-tab "Våra anläggningar"
+ :permissions-ownership-tab "Åtkomsträttigheter"
+ :our-sites-tab "Anläggningar"
  :history-tab "Historik"
 
  ;; role-template catalog editor
@@ -117,6 +117,7 @@
  :completeness "Status"
  :who-can-edit "Vem kan redigera"
  :owner-org "Ägarorganisation"
+ :owner-org-helper-text "Organisationen som äger objektet. Rensa valet för att ange en annan ägare (t.ex. förening eller företag)."
  :grantee-orgs "Redigeringsrätt beviljad"
  :activity-editors "Aktivitetsredigerare"
  :legacy-users "Direkta användare"

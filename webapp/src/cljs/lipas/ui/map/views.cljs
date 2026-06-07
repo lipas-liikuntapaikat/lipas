@@ -1917,6 +1917,7 @@
                     :owners owners
                     :on-change set-field
                     :sub-headings? true
+                    :new? true
                     :lipas-id 0}]
 
                   [sports-sites/location-form
