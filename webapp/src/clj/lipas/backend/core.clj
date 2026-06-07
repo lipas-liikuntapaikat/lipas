@@ -5,6 +5,8 @@
             [clojure.core.async :as async]
             [clojure.data.csv :as csv]
             [clojure.java.jdbc :as jdbc]
+            [next.jdbc :as next-jdbc]
+            [next.jdbc.result-set :as rs]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.api.v1.locations :as legacy-locations]
@@ -754,7 +756,8 @@
     (when (seq ids)
       (let [placeholders (str/join "," (repeat (count ids) "?"))
             sql (str "SELECT id, email, username FROM account WHERE id IN (" placeholders ")")]
-        (->> (jdbc/query db (into [sql] ids))
+        (->> (next-jdbc/execute! db (into [sql] ids)
+                                 {:builder-fn rs/as-unqualified-kebab-maps})
              (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
              (into {}))))))
 
