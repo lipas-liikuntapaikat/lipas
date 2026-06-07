@@ -727,11 +727,24 @@
                                 set)
                       hit  (set/intersection acts site-acts)]
                 :when (seq hit)]
-            {:id (str (:id o)) :name (:name o) :activities (vec hit)}))]
+            {:id (str (:id o)) :name (:name o) :activities (vec hit)}))
+        ;; Legacy direct-permission users (the only unindexed part of Q2): a
+        ;; jsonb-containment candidate pre-filter narrows the account table to a
+        ;; handful, then the exact check-privilege confirms. Admins are excluded
+        ;; (they can edit everything — listing them under every site is noise).
+        rc           (roles/site-roles-context site)
+        legacy-users (->> (db/users-with-permissions-matching
+                            db {:city-code  (:city-code rc)
+                                :type-code  (:type-code rc)
+                                :lipas-id   (:lipas-id rc)
+                                :activities (:activity rc)})
+                          (filter (fn [u] (and (not (roles/check-role u :admin))
+                                               (roles/check-privilege u rc :site/create-edit))))
+                          (mapv (fn [u] {:email (:email u) :username (:username u)})))]
     {:owner-org            owner-org
      :grantee-orgs         (vec grantee-orgs)
      :activity-editor-orgs (vec activity-editor-orgs)
-     :legacy-users         []}))
+     :legacy-users         legacy-users}))
 
 (defn search-fields
   [{:keys [indices client]}

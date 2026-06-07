@@ -1,17 +1,18 @@
 (ns lipas.backend.db.db
   {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
-   [clojure.java.jdbc :as jdbc]
-   [hikari-cp.core :as hikari]
-   [lipas.backend.db.city :as city]
-   [lipas.backend.db.loi :as loi]
-   [lipas.backend.db.reminder :as reminder]
-   [lipas.backend.db.sports-site :as sports-site]
-   [lipas.backend.db.subsidy :as subsidy]
-   [lipas.backend.db.user :as user]
-   [lipas.backend.db.utils :as db-utils]
-   [lipas.backend.db.versioned-data :as versioned-data]
-   [lipas.utils :as utils]))
+    [clojure.java.jdbc :as jdbc]
+    [clojure.string :as str]
+    [hikari-cp.core :as hikari]
+    [lipas.backend.db.city :as city]
+    [lipas.backend.db.loi :as loi]
+    [lipas.backend.db.reminder :as reminder]
+    [lipas.backend.db.sports-site :as sports-site]
+    [lipas.backend.db.subsidy :as subsidy]
+    [lipas.backend.db.user :as user]
+    [lipas.backend.db.utils :as db-utils]
+    [lipas.backend.db.versioned-data :as versioned-data]
+    [lipas.utils :as utils]))
 
 ;; User ;;
 
@@ -19,6 +20,30 @@
   (->> (user/all-users db-spec)
        (map user/unmarshall)
        (map #(dissoc % :password))))
+
+(defn users-with-permissions-matching
+  "Active users whose stored roles reference any of the given context values — a
+  candidate pre-filter for the \"who can edit site Z\" legacy-user lookup
+  (design-spec §6 step 4). Filters with jsonb containment on `account.permissions`
+  (both `city-code`/`city_code` key spellings, since the raw column carries both;
+  the app only normalizes on read), narrowing the table to a small candidate set
+  the caller then confirms with the exact `check-privilege`. Containment params
+  are Clojure maps — `ISQLValue` turns them into jsonb, so no string building.
+  Backed by the `account_permissions_gin` index for the selective predicates.
+  Returns unmarshalled users (kebab-normalized + conformed permissions)."
+  [db-spec {:keys [city-code type-code lipas-id activities]}]
+  (let [contain (fn [k v] {:roles [{k [v]}]})
+        params  (concat
+                  (when city-code (for [k [:city-code :city_code]] (contain k city-code)))
+                  (when type-code (for [k [:type-code :type_code]] (contain k type-code)))
+                  (when lipas-id  (for [k [:lipas-id :lipas_id]] (contain k lipas-id)))
+                  (for [a activities] (contain :activity a)))]
+    (when (seq params)
+      (let [sql (str "SELECT * FROM account WHERE status = 'active' AND ("
+                     (str/join " OR " (repeat (count params) "permissions @> ?")) ")")]
+        (->> (jdbc/query db-spec (into [sql] params))
+             (map user/unmarshall)
+             (map #(dissoc % :password)))))))
 
 (comment
   (get-users (:lipas/db integrant.repl.state/system))
@@ -155,7 +180,7 @@
   double-linking (more than one site bound to the same PTV service-location)."
   [db-spec service-channel-id]
   (->> (sports-site/get-lipas-ids-by-ptv-service-channel-id
-        db-spec {:service_channel_id service-channel-id})
+         db-spec {:service_channel_id service-channel-id})
        (map (fn [{:keys [lipas_id name]}]
               {:lipas-id lipas_id :name name}))))
 
