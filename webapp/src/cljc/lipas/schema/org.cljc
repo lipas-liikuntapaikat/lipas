@@ -97,6 +97,14 @@
     [:org-role [:enum "admin" "member"]]
     [:templates {:optional true} [:vector :string]]]])
 
+(def instructions
+  "Free-text guidance an org-admin writes for their members, localized. Each
+  locale is optional; the whole map is optional (absent for legacy orgs)."
+  [:map
+   [:fi {:optional true} [:maybe [:string {:max 10000}]]]
+   [:se {:optional true} [:maybe [:string {:max 10000}]]]
+   [:en {:optional true} [:maybe [:string {:max 10000}]]]])
+
 (def org
   (m/schema
     [:map
@@ -113,6 +121,7 @@
      [:ptv-data {:optional true} [:maybe ptv-data]]
      ;; --- org-management (opt-in; absent for legacy orgs) ---
      [:type {:optional true} org-type]
+     [:instructions {:optional true} [:maybe instructions]]
      [:role-templates {:optional true} role-templates]
      [:ownership {:optional true} ownership]
      [:members {:optional true} members]]))
