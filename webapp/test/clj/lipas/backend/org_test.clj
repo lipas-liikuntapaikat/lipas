@@ -1104,6 +1104,73 @@
       (let [regular (jwt/create-token (test-utils/gen-regular-user :db-component (test-db)))]
         (is (= 403 (:status (post-site regular (new-site org-id)))))))))
 
+(defn- seed-site!
+  "Persist an existing site with `attrs` via the trusted path (bypasses the
+  authz under test), and return its lipas-id."
+  [attrs]
+  (let [admin (test-utils/gen-admin-user :db-component (test-db))
+        resp  (core/upsert-sports-site!* (test-db) admin
+                                         (merge (assoc (test-utils/gen-sports-site)
+                                                       :status "active")
+                                                attrs))]
+    (:lipas-id resp)))
+
+(defn- owner-enum-for [org-id]
+  (core/org-type->owner (:type (backend-org/get-org (test-db) org-id))))
+
+(deftest site-save-ownership-grant-rule-test
+  ;; The business rule (core/ownership-change-authorized? +
+  ;; edit-grant-change-authorized?) is enforced on the generic save path against
+  ;; the STORED site — not the submitted body.
+  (let [org-x   (catalog-org! editor+ptv-catalog)
+        org-y   (:id (first (create-test-orgs)))
+        editor  (editor-of-org! org-x)                 ; token: org-editor of X only
+        foreign (seed-site! {})                        ; legacy site editor can't touch
+        owned   (seed-site! {:owner-org-id (str org-x) :owner (owner-enum-for org-x)})
+        fetch   (fn [id] (core/get-sports-site (test-db) id))]
+
+    (testing "injecting :edit-grants cannot self-authorize editing a foreign site"
+      (let [resp  (post-site editor (assoc (fetch foreign) :edit-grants [(str org-x)]))
+            after (fetch foreign)]
+        (is (= 403 (:status resp)) "escalation attempt must be forbidden")
+        (is (empty? (:edit-grants after)) "no grant was persisted")))
+
+    (testing "an org-editor may edit content of their own org's site"
+      (is (= 201 (:status (post-site editor (fetch owned))))))
+
+    (testing "an org-editor may NOT add an edit-grant (not an org admin)"
+      (let [resp  (post-site editor (assoc (fetch owned) :edit-grants [(str org-y)]))
+            after (fetch owned)]
+        (is (= 403 (:status resp)))
+        (is (not (contains? (set (map str (:edit-grants after))) (str org-y)))
+            "grant not persisted")))
+
+    (testing "an org-editor may NOT change ownership of an existing site"
+      (is (= 403 (:status (post-site editor (assoc (fetch owned)
+                                                   :owner-org-id (str org-y)))))))))
+
+(deftest grant-revoke-edit-authz-test
+  ;; #19: revoke must be as restricted as grant — only the owning org's admin (or
+  ;; a LIPAS admin). Enforced in core so both endpoints share the rule.
+  (let [org-b   (catalog-org! editor+ptv-catalog)
+        org-a   (:id (first (create-test-orgs)))
+        site-id (seed-site! {:owner-org-id (str org-b) :owner (owner-enum-for org-b)})
+        ;; conform roles exactly as the JWT backend does before they reach core
+        conform (fn [u] (update-in u [:permissions :roles] roles/conform-roles))
+        b-admin (conform (test-utils/gen-org-admin-user org-b :db-component (test-db)))
+        a-admin (conform (test-utils/gen-org-admin-user org-a :db-component (test-db)))
+        grants  #(set (map str (:edit-grants (core/get-sports-site (test-db) site-id))))]
+    (testing "an admin of a non-owning org can neither grant nor revoke"
+      (is (thrown-with-msg? Exception #"Not authorized"
+                            (core/grant-site-edit! (test-db) (test-search) a-admin site-id org-a nil)))
+      (is (thrown-with-msg? Exception #"Not authorized"
+                            (core/revoke-site-edit! (test-db) (test-search) a-admin site-id org-a nil))))
+    (testing "the owning org's admin may grant, then revoke"
+      (core/grant-site-edit! (test-db) (test-search) b-admin site-id org-a (str org-b))
+      (is (contains? (grants) (str org-a)) "grant added by owner admin")
+      (core/revoke-site-edit! (test-db) (test-search) b-admin site-id org-a (str org-b))
+      (is (not (contains? (grants) (str org-a))) "grant revoked by owner admin"))))
+
 (comment
   (clojure.test/run-test-var #'owner-org-assignment-authz-test)
   (clojure.test/run-test-var #'cross-org-view-users-test)

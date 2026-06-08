@@ -333,6 +333,48 @@
                         {:type :owner-locked :expected expected :got owner
                          :owner-org-id (str owner-org-id)}))))))
 
+;;; --- Ownership & edit-grant authorization (business rules) ------------------
+;;; Single source of truth for WHO may change a site's `:owner-org-id` and
+;;; `:edit-grants`. These two fields are security-sensitive (they decide cross-org
+;;; edit access), yet they ride on the same document as ordinary content, so the
+;;; generic save endpoint could otherwise be used to grant oneself access. Pure
+;;; predicates over the acting user and the site's CURRENT (stored) ownership —
+;;; never the submitted body. Consulted by both the save path
+;;; (`upsert-sports-site!`) and the dedicated grant/revoke endpoints, so the rule
+;;; lives in exactly one place (unit-tested in business-logic-test).
+
+(defn lipas-admin?
+  "True if the user holds the global :users/manage privilege (LIPAS admin)."
+  [user]
+  (roles/check-privilege user {} :users/manage))
+
+(defn owns-site-org?
+  "True if the user is an admin (:org/manage) of the org `owner-org-id` — i.e. an
+  admin of the org that owns the site."
+  [user owner-org-id]
+  (boolean
+    (and owner-org-id
+         (roles/check-privilege user {:org-id #{(str owner-org-id)}} :org/manage))))
+
+(defn ownership-change-authorized?
+  "May `user` move a site's owner-org from `prev` to `next`?
+   - unchanged          → always ok (no-op)
+   - creating a site    → may claim an org they can `:site/create-edit` on (or none)
+   - existing site change → LIPAS admin only; everyone else uses the take-over flow."
+  [user creating? prev next]
+  (cond
+    (= (some-> prev str) (some-> next str)) true
+    creating? (or (nil? next)
+                  (roles/check-privilege user {:org-id #{(str next)}} :site/create-edit))
+    :else (lipas-admin? user)))
+
+(defn edit-grant-change-authorized?
+  "May `user` change a site's `:edit-grants`? Only a LIPAS admin or an admin of
+  the org that owns the site (`owner-org-id`)."
+  [user owner-org-id]
+  (or (lipas-admin? user)
+      (owns-site-org? user owner-org-id)))
+
 (defn- check-sports-site-exists! [db lipas-id]
   (when (empty? (db/get-sports-site db lipas-id))
     (throw (ex-info "Sports site not found"
@@ -369,14 +411,41 @@
   ([db user sports-site]
    (upsert-sports-site! db user sports-site false))
   ([db user sports-site draft?]
-   (check-permissions! user sports-site draft?)
-   (check-owner-lock! db sports-site)
-   (when-let [lipas-id (:lipas-id sports-site)]
-     (check-sports-site-exists! db lipas-id))
-   (let [resp (upsert-sports-site!* db user sports-site draft?)]
-     (when (new? sports-site)
-       (ensure-permission! db user resp))
-     resp)))
+   (let [lipas-id  (:lipas-id sports-site)
+         ;; Authoritative current state. nil ⇒ no such revision (a create, or an
+         ;; edit of a not-yet-existing id — the latter 404s after authz below).
+         stored    (when lipas-id (not-empty (get-sports-site db lipas-id)))
+         creating? (nil? stored)]
+     ;; 1. Content-edit permission — against the STORED site for an existing edit
+     ;;    (NEVER the submitted body, else a caller could grant themselves access
+     ;;    by injecting :owner-org-id/:edit-grants). Falls back to the body when
+     ;;    there is no stored revision, preserving the legacy permission check
+     ;;    (and its 403-before-404 ordering) for a posted-but-missing lipas-id.
+     (check-permissions! user (or stored sports-site) draft?)
+     ;; 2. Ownership & edit-grant invariants: a body that changes either
+     ;;    security-sensitive field must be authorized to do so (business rule).
+     (let [prev-owner  (:owner-org-id stored)
+           next-owner  (:owner-org-id sports-site)
+           prev-grants (set (map str (:edit-grants stored)))
+           next-grants (set (map str (:edit-grants sports-site)))]
+       (when-not (ownership-change-authorized? user creating? prev-owner next-owner)
+         (throw (ex-info "Not authorized to change site ownership"
+                         {:type :no-permission :reason :ownership-change
+                          :prev-owner-org-id (some-> prev-owner str)
+                          :next-owner-org-id (some-> next-owner str)})))
+       (when (and (not= prev-grants next-grants)
+                  (not (edit-grant-change-authorized? user prev-owner)))
+         (throw (ex-info "Not authorized to change site edit-grants"
+                         {:type :no-permission :reason :edit-grant-change}))))
+     ;; 3. An edit (lipas-id given) of a site that doesn't exist ⇒ 404 — after
+     ;;    authz, matching the pre-existing ordering.
+     (when (and lipas-id creating?)
+       (check-sports-site-exists! db lipas-id))
+     (check-owner-lock! db sports-site)
+     (let [resp (upsert-sports-site!* db user sports-site draft?)]
+       (when creating?
+         (ensure-permission! db user resp))
+       resp))))
 
 (declare index!)
 
@@ -393,17 +462,30 @@
     (index! search resp)
     resp))
 
+(defn- check-edit-grant-authorized!
+  "Authorize a grant/revoke against the site's CURRENT owner (business rule):
+  only a LIPAS admin or an admin of the owning org may change edit-grants."
+  [user site]
+  (when-not (edit-grant-change-authorized? user (:owner-org-id site))
+    (throw (ex-info "Not authorized to change edit access on this site"
+                    {:type :no-permission :reason :edit-grant-change
+                     :lipas-id (:lipas-id site)}))))
+
 (defn grant-site-edit!
-  "Grant another org edit access to a site (cross-org collaboration)."
+  "Grant another org edit access to a site (cross-org collaboration). Only the
+  owning org's admin (or a LIPAS admin) may grant — enforced here, not in the
+  route, so every caller goes through the same rule."
   [db search user lipas-id grantee-org-id acting-org-id]
   (let [site   (get-sports-site db lipas-id)
+        _      (check-edit-grant-authorized! user site)
         grants (conj (set (map str (:edit-grants site))) (str grantee-org-id))]
     (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
 
 (defn revoke-site-edit!
-  "Revoke an org's edit access to a site."
+  "Revoke an org's edit access to a site. Same authority as granting."
   [db search user lipas-id grantee-org-id acting-org-id]
   (let [site   (get-sports-site db lipas-id)
+        _      (check-edit-grant-authorized! user site)
         grants (disj (set (map str (:edit-grants site))) (str grantee-org-id))]
     (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
 
