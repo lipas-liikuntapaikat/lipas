@@ -284,44 +284,13 @@
   (fn [db _]
     (-> db :admin :orgs)))
 
+;; Resolves an org-id (role context value) to its org for name display in the
+;; user roles list — see lipas.ui.user.subs/context-value-name. Org roles are no
+;; longer hand-assigned, but this keeps any historical org-id context readable.
 (rf/reg-sub ::org
   :<- [::orgs]
   (fn [orgs [_ id]]
     (get orgs id)))
-
-(rf/reg-sub ::orgs-list
-  :<- [::orgs]
-  (fn [orgs _]
-    (vals orgs)))
-
-(rf/reg-sub ::orgs-options
-  :<- [::orgs-list]
-  (fn [orgs _]
-    (->> orgs
-         (map (fn [{:keys [id name]}]
-                {:value id
-                 :label name}))
-         (sort-by :label))))
-
-(rf/reg-sub ::editing-org
-  (fn [db _]
-    (get-in db [:admin :editing-org])))
-
-(rf/reg-sub ::add-user-to-org-dialog-open?
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :dialog-open?])))
-
-(rf/reg-sub ::add-user-to-org-dialog-org-id
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :org-id])))
-
-(rf/reg-sub ::add-user-to-org-email
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :email])))
-
-(rf/reg-sub ::add-user-to-org-role
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :role])))
 
 ;; Site History subscriptions
 

@@ -117,24 +117,17 @@
       :onChange (fn [_e v] (on-change (mapv ac/safe-value v)))
       :multiple true}]))
 
-(r/defc org-select [{:keys [tr required value on-change]}]
-  ;; org-id is admin-only context (the org catalog hides it); options come from
-  ;; the admin user-management screen's loaded org list.
-  (let [orgs @(rf/subscribe [:lipas.ui.admin.subs/orgs-options])]
-    [ac/autocomplete2
-     {:options orgs
-      :label (str (tr :lipas.user.permissions/orgs) (when required " *"))
-      :value (to-array (or value []))
-      :onChange (fn [_e v] (on-change (mapv ac/safe-value v)))
-      :multiple true}]))
-
+;; NOTE: no :org-id context editor here on purpose. Org-scoped roles
+;; (org-admin/org-user/org-editor) are never hand-assigned onto an account — they
+;; come only from org membership (projected at login). The catalog editor that
+;; builds org-editor templates passes `:hide-context-keys #{:org-id}` (the org-id
+;; is injected at projection), so no caller ever needs an org-id selector.
 (r/defc context-key-edit [{:keys [k] :as props}]
   (case k
     :lipas-id  [site-select props]
     :type-code [type-code-select props]
     :city-code [city-code-select props]
     :activity  [activity-select props]
-    :org-id    [org-select props]
     nil))
 
 ;; ---------------------------------------------------------------------------

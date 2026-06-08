@@ -159,16 +159,21 @@
     :privileges #{:ptv/audit}
     :required-context-keys []}
 
+   ;; Org membership is the single source for org-scoped roles: org-admin and
+   ;; org-user are NEVER hand-assigned onto an account — they are projected at
+   ;; login from the org document (membership ⇒ org-user baseline; the reserved
+   ;; "admin" member role ⇒ org-admin; see lipas.backend.org/member->roles).
+   ;; Hence :assignable false — they don't appear in the admin role editor.
    :org-admin
    {:sort 60
-    :assignable true
+    :assignable false
     :privileges #{:org/manage :org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}
 
    :org-user
    {:sort 61
-    :assignable true
+    :assignable false
     :privileges #{:org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}
