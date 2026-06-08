@@ -130,27 +130,29 @@
                            "</body></html>")})))
 
 (defn send-org-added-email!
-  "Notify an EXISTING user that they've been added to an organization. No magic
-  link (they already have an account) — just a heads-up and a pointer to log in.
+  "Notify an EXISTING user that they've been added to an organization. Includes a
+  magic login link (one-click login that lands them authenticated with the fresh
+  token carrying the new org role) — mirrors send-permissions-updated-email!.
   Trilingual (fi/se/en); the user's locale is unknown."
-  [emailer to {:keys [org-name link]}]
-  (.send! emailer
-          {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
-           :to      to
-           :plain   (str "Sinut on lisätty organisaatioon \"" org-name "\" LIPAS-palvelussa.\n"
-                         "Oikeutesi päivittyvät seuraavalla kirjautumisella: " link "\n\n"
-                         "Du har lagts till i organisationen \"" org-name "\" i LIPAS.\n"
-                         "Dina behörigheter uppdateras vid nästa inloggning: " link "\n\n"
-                         "You have been added to the organization \"" org-name "\" in LIPAS.\n"
-                         "Your permissions update at your next login: " link "\n")
-           :html    (str "<html><body>"
-                         "<p>Sinut on lisätty organisaatioon <b>" org-name "</b> LIPAS-palvelussa. "
-                         "<a href=\"" link "\">Kirjaudu sisään</a> — oikeutesi päivittyvät seuraavalla kirjautumisella.</p>"
-                         "<p>Du har lagts till i organisationen <b>" org-name "</b> i LIPAS. "
-                         "<a href=\"" link "\">Logga in</a> — dina behörigheter uppdateras vid nästa inloggning.</p>"
-                         "<p>You have been added to the organization <b>" org-name "</b> in LIPAS. "
-                         "<a href=\"" link "\">Log in</a> — your permissions update at your next login.</p>"
-                         "</body></html>")}))
+  [emailer to {:keys [org-name link valid-days]}]
+  (let [vd (str valid-days)]
+    (.send! emailer
+            {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
+             :to      to
+             :plain   (str "Sinut on lisätty organisaatioon \"" org-name "\" LIPAS-palvelussa.\n"
+                           "Kirjaudu sisään tästä linkistä — oikeutesi päivittyvät heti (linkki voimassa " vd " päivää):\n" link "\n\n"
+                           "Du har lagts till i organisationen \"" org-name "\" i LIPAS.\n"
+                           "Logga in via länken — dina behörigheter uppdateras genast (giltig i " vd " dagar):\n" link "\n\n"
+                           "You have been added to the organization \"" org-name "\" in LIPAS.\n"
+                           "Log in via this link — your permissions update immediately (valid for " vd " days):\n" link "\n")
+             :html    (str "<html><body>"
+                           "<p>Sinut on lisätty organisaatioon <b>" org-name "</b> LIPAS-palvelussa. "
+                           "<a href=\"" link "\">Kirjaudu sisään</a> — oikeutesi päivittyvät heti (linkki voimassa " vd " päivää).</p>"
+                           "<p>Du har lagts till i organisationen <b>" org-name "</b> i LIPAS. "
+                           "<a href=\"" link "\">Logga in</a> — dina behörigheter uppdateras genast (giltig i " vd " dagar).</p>"
+                           "<p>You have been added to the organization <b>" org-name "</b> in LIPAS. "
+                           "<a href=\"" link "\">Log in</a> — your permissions update immediately (valid for " vd " days).</p>"
+                           "</body></html>")})))
 
 (defn send-reminder-email!
   [emailer to {:keys [link valid-days]} {:keys [message]}]

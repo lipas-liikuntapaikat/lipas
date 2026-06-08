@@ -522,12 +522,15 @@
     ;; reset its password / be re-invited.
     (let [email-sent?
           (try
-            (if new?
-              (let [magic (create-magic-link login-url user)]
+            (let [magic (create-magic-link login-url user)]
+              (if new?
                 (email/send-org-invitation-email!
-                  emailer email (assoc magic :org-name org-name)))
-              (email/send-org-added-email!
-                emailer email {:org-name org-name :link login-url}))
+                  emailer email (assoc magic :org-name org-name))
+                ;; Existing accounts also get a magic link (one-click login that
+                ;; lands them already authenticated, with the fresh token carrying
+                ;; the new org role) — mirrors send-permissions-updated-email!.
+                (email/send-org-added-email!
+                  emailer email (assoc magic :org-name org-name))))
             true
             (catch Exception e
               (log/error e "Failed to send org-invitation email"
