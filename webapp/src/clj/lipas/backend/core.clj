@@ -369,7 +369,12 @@
           new-site? (new? sports-site)
           current (when-not new-site?
                     (not-empty (db/get-sports-site db (:lipas-id sports-site))))
-          can-save-api? (roles/check-privilege user ctx :site/save-api)
+          ;; Save endpoint gate: a general editor (:site/create-edit) OR an
+          ;; aspect-specific editor (:site/save-api — activities/floorball/itrs)
+          ;; may persist a change. The OR lets general editors carry just
+          ;; create-edit (no redundant save-api); see lipas.roles/basic.
+          can-save? (or (roles/check-privilege user ctx :site/save-api)
+                        (roles/check-privilege user ctx :site/create-edit))
           can-edit-images? (roles/check-privilege user ctx :site/edit-images)
           images-changed? (if new-site?
                             (boolean (seq (:images sports-site)))
@@ -377,15 +382,16 @@
           no-permission! #(throw (ex-info "User doesn't have enough permissions!"
                                           {:type :no-permission}))]
       ;; Changing :images always requires the dedicated privilege, regardless
-      ;; of other save rights. :site/save-api alone is not enough; this keeps
-      ;; the image-links pilot scoped to explicitly assigned roles.
+      ;; of other save rights. :site/save-api / :site/create-edit alone is not
+      ;; enough; this keeps the image-links pilot scoped to explicitly assigned
+      ;; roles.
       (when (and images-changed? (not can-edit-images?))
         (no-permission!))
       (when-not new-site?
         (if (images-only-diff? sports-site current)
-          (when-not (or can-save-api? can-edit-images?)
+          (when-not (or can-save? can-edit-images?)
             (no-permission!))
-          (when-not can-save-api?
+          (when-not can-save?
             (no-permission!)))))))
 
 ;; Moved to lipas.data.owners so the FE form can derive the same locked :owner
