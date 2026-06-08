@@ -91,6 +91,7 @@
  :template-label "Mall"
  :template-grants "Ger rätt till"
  :members-assigned "Medlemmar"
+ :sites-owned "Objekt"
  :template-in-use "{1} medlem(mar)"
  :template-in-use-warning
  "Den här mallen är tilldelad {1} medlem(mar). Att ändra dess roller eller ta bort den påverkar deras behörigheter vid nästa inloggning."

@@ -91,6 +91,7 @@
  :template-label "Template"
  :template-grants "Grants"
  :members-assigned "Members"
+ :sites-owned "Sites"
  :template-in-use "{1} member(s)"
  :template-in-use-warning
  "This template is assigned to {1} member(s). Changing its roles or removing it affects their permissions at their next login."

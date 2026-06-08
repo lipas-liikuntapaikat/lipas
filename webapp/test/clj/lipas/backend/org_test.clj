@@ -971,6 +971,55 @@
         (is (contains? editable-ids granted-id) "Editable includes granted")
         (is (not (contains? editable-ids unrelated-id)) "Unrelated site excluded from both")))))
 
+(deftest org-owned-site-counts-test
+  (testing "owned-site counts: one ES terms agg, keyed by org-id, granted sites excluded"
+    (let [admin      (test-utils/gen-admin-user :db-component (test-db))
+          [org-a org-b] (create-test-orgs)
+          org-a-id   (:id org-a)
+          org-b-id   (:id org-b)
+          mk         (fn [lid extra]
+                       (-> (test-utils/gen-sports-site)
+                           (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid)
+                           (merge extra)))
+          sites      [(mk 9993001 {:owner-org-id (str org-a-id)})
+                      (mk 9993002 {:owner-org-id (str org-a-id)})
+                      ;; merely granted to org-a — NOT owned, must not be counted
+                      (mk 9993003 {:owner-org-id (str (java.util.UUID/randomUUID))
+                                   :edit-grants  [(str org-a-id)]})]]
+      (doseq [s sites]
+        (core/upsert-sports-site!* (test-db) admin s)
+        (core/index! (test-search) s true))
+      (let [counts (core/org-owned-site-counts (test-search))]
+        (is (= 2 (get counts (str org-a-id))) "org-a owns exactly its two owned sites (grant excluded)")
+        (is (nil? (get counts (str org-b-id))) "org-b owns nothing → absent from the agg buckets")
+        (testing "matches org-sites :total (single source of truth)"
+          (is (= (:total (core/org-sites (test-search) org-a-id "owned"))
+                 (get counts (str org-a-id)))))))))
+
+(deftest current-user-orgs-site-count-test
+  (testing "get-current-user-orgs annotates each org with :site-count (0 when none owned)"
+    (let [admin      (test-utils/gen-admin-user :db-component (test-db))
+          admin-tok  (jwt/create-token admin)
+          [org-a org-b] (create-test-orgs)
+          org-a-id   (:id org-a)
+          mk         (fn [lid extra]
+                       (-> (test-utils/gen-sports-site)
+                           (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid)
+                           (merge extra)))
+          sites      [(mk 9994001 {:owner-org-id (str org-a-id)})
+                      (mk 9994002 {:owner-org-id (str org-a-id)})]]
+      (doseq [s sites]
+        (core/upsert-sports-site!* (test-db) admin s)
+        (core/index! (test-search) s true))
+      (let [resp (test-app (-> (mock/request :post "/api/actions/get-current-user-orgs")
+                               (test-utils/token-header admin-tok)))
+            body (test-utils/safe-parse-json resp)
+            by-id (into {} (map (juxt #(str (:id %)) identity)) body)]
+        (is (= 200 (:status resp)))
+        (is (= 2 (:site-count (get by-id (str org-a-id)))) "org-a reports its two owned sites")
+        (is (= 0 (:site-count (get by-id (str (:id org-b)))))
+            "org-b owns nothing → :site-count defaults to 0, never nil")))))
+
 (deftest site-editors-test
   (testing "site-editors composes owner + grantee + activity-editor orgs"
     (let [admin                (test-utils/gen-admin-user :db-component (test-db))
