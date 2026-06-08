@@ -1,8 +1,9 @@
 # Organization Management — Design, UX & Implementation
 
 Status: **Implemented** on branch `feat/org-management` (backend P1–P3, UI P1–P3,
-dashboard read endpoints, site-form ownership, instructions, legacy-editor
-lookup). This document consolidates and supersedes the three earlier working
+dashboard read endpoints, site-form ownership, instructions, legacy-editor lookup,
+**unified `:roles` model + membership-only org roles + post-review security
+hardening**). This document consolidates and supersedes the three earlier working
 docs (`org-management-design-spec.md`, `org-management-ux-plan.md`,
 `org-management-ux-followup.md`).
 
@@ -10,15 +11,21 @@ Scope: data model + permission engine + the org-management UI. It records the
 decisions already made, the model as built, where reality diverged from the
 original plan, and the open items.
 
-> **In-progress design change (role-model unification).** The codebase currently
-> stores a member's authority as a **split** — `:org-role` (`:admin`/`:member`,
-> management capability) **plus** `:templates` (data-edit grants from the catalog).
-> That split is being collapsed into **one assigned-role list** per member (§3.2,
-> §4.1), because downstream both already reduce to the same flat set of
-> `{:role :org-id}` maps matched by one rule (the split only ever existed at the
-> assignment/storage layer). The sections below describe the **unified target
-> model**; §13 is the concrete refactor plan and lists what still reflects the old
-> split in code. Safe to do now — still pre-production.
+> **Role model: unified `:roles` list — IMPLEMENTED.** A member's authority is a
+> single **`:roles`** list (§3.2, §4.1), drawn from `#{:admin}` ∪ catalog keys —
+> the earlier `:org-role` + `:templates` split is gone. Org-scoped roles
+> (`:org-admin` / `:org-user` / `:org-editor`) come **only** from membership: they
+> are `:assignable false`, never hand-assigned onto an account, and a follow-up
+> migration stripped the legacy `:org-admin` / `:org-user` account roles (§8). So
+> there are now two clean planes — **direct account roles** (the legacy default,
+> for everything non-org) and **org membership** (opt-in). §13 records the
+> completed refactor; the sections below describe the model as built.
+>
+> **Post-review hardening — IMPLEMENTED.** A branch review hardened the
+> security-sensitive site fields: ownership and edit-grant changes are now
+> authorized in **core** against the *stored* site (not the request body) — see
+> §4.5. This replaces the earlier save-route middleware gate and closes the
+> deferred caveat that was in §6.10.
 
 ---
 
@@ -216,11 +223,13 @@ at login from the member's `:roles` list (or, for the baseline, from mere member
  :optional-context-keys []}
 
 :org-admin                         ; reserved management role — :roles [:admin] projects this
-{:privileges #{:org/manage :org/member}
+{:assignable false                 ; membership-only; never hand-assigned to an account
+ :privileges #{:org/manage :org/member}
  :required-context-keys [:org-id]} ; org-scoped (org-id injected at projection)
 
 :org-user                          ; the view baseline — projected from mere membership, never assigned
-{:privileges #{:org/member}
+{:assignable false
+ :privileges #{:org/member}
  :required-context-keys [:org-id]}
 ```
 
@@ -228,6 +237,10 @@ at login from the member's `:roles` list (or, for the baseline, from mere member
 (ownership-scoped edit). UTP reuses `:activities-manager`; PTV reuses `:ptv-manager`.
 `:admin` is a **reserved role key** (engine-level, not in any org's catalog) so a
 catalog edit can never remove it; `:org-user` is the floor conferred by membership.
+All three org-scoped roles are **`:assignable false`** — they exist only as
+projections of membership, so the admin role editor never offers them and they can't
+be granted on an account directly. (The legacy account `:org-admin`/`:org-user` roles
+were stripped by a migration; see §8.)
 
 ### 3.6 Owner-enum locking
 
@@ -306,6 +319,41 @@ In basic-auth / login / token-refresh, before `jwt/create-token`:
 - `enrich*` indexes `search-meta.owner-org-id` and `search-meta.editor-org-ids`.
 - `wrap-es-query-site-has-privilege` has an `:org-id` term branch, so an `:org-editor`
   role compiles to `owner-org-id OR edit-grants` term filters.
+
+### 4.5 Ownership & edit-grant authorization (the business rule)
+
+`:owner-org-id` and `:edit-grants` are security-sensitive (they decide cross-org edit
+access) yet live on the same site document as ordinary content, so the generic save
+endpoint must not let them be used to grant access. The rule is one place — pure
+predicates in `lipas.backend.core`, authorized against the **stored** site (the
+current revision), never the submitted body:
+
+```clojure
+(lipas-admin? user)                                   ; :users/manage
+(owns-site-org? user owner-org-id)                    ; :org/manage on the OWNING org
+(ownership-change-authorized? user creating? prev next)
+  ;; unchanged → ok; creating → may claim an org you can :site/create-edit on (or none);
+  ;; existing-site change → LIPAS admin only (others use the take-over flow, §6.5)
+(edit-grant-change-authorized? user owner-org-id)     ; lipas-admin OR owning-org admin
+```
+
+- **`upsert-sports-site!`** loads the stored site and (a) checks content-edit
+  permission against the **stored** context — so a caller can't manufacture
+  `:site/save-api` by injecting their org into the body's `:owner-org-id`/`:edit-grants`
+  (the matcher's `:org-id` set comes from the stored site); and (b) rejects any
+  unauthorized change to `:owner-org-id`/`:edit-grants`. Permission is checked before
+  the existence check, so a posted-but-missing `lipas-id` still 403s before 404.
+- **`grant-site-edit!` / `revoke-site-edit!`** both gate through
+  `edit-grant-change-authorized?`, so granting and revoking share one rule (the route
+  no longer does a bespoke owner check).
+- The earlier `owner-org-assignment-authorized?` save-route middleware was **removed**:
+  it couldn't see stored state (so it couldn't enforce existing-site immutability) and
+  it falsely rejected legacy city/type editors of org-owned sites. Core is authoritative.
+
+Invariants (exhaustively unit-tested in `business-logic-test`, with handler regression
+tests in `org-test`): only a LIPAS admin changes an existing site's owner; only the
+owning-org admin (or LIPAS admin) changes grants; a new site may be owner-claimed for
+an org the creator can edit; org-editors edit content but cannot alter ownership/grants.
 
 ---
 
@@ -386,7 +434,10 @@ Base files: `src/cljs/lipas/ui/org/{views,events,subs}.cljs`. Reagent 2.0 `r/def
 | edit **direct** user-level roles (separate user-mgmt UI) | ✓ | – | – |
 
 Direct user-permission editing stays in the existing admin user-management screen —
-the *other* plane, intentionally not part of the org UI.
+the *other* plane, intentionally not part of the org UI. That card is labelled **"Suorat
+käyttöoikeudet"** with a pointer to the Organisaatiot view, and its role picker no
+longer offers the org-scoped roles (they are membership-only, §3.5). The vestigial
+admin-panel "add user to org" dialog was removed.
 
 ### 6.3 Tabs (`org-view`)
 
@@ -450,6 +501,13 @@ roles org admins assign from, made explicit. The reserved **Ylläpitäjä** (`:a
 role is shown here too for transparency but is **not catalog-editable** (engine-level),
 so a catalog edit can never remove it.
 
+`update-catalog!` validates each spec beyond structural conformance: a context-scoped
+role must include its required context key (e.g. a `:ptv-manager` spec must carry
+`:city-code`), else it is rejected (`:invalid-catalog`). Without the key the role would
+project an unscoped, org-wide grant — `select-role` treats an *absent* context key as
+"matches anything". A present-but-empty value is allowed (it matches nothing; the admin
+fills it in later). `:org-id` is excepted — it's injected at projection.
+
 ### 6.8 Kohteet (our sites) + who-can-edit
 
 - One dataset: the org's **editable sites** (owned ∪ granted, each flagged `:owned?`),
@@ -505,14 +563,14 @@ The site form's ownership section (`lipas.ui.sports-sites.views/ownership-fields
   clears it to record a legacy/non-org owner (e.g. a private rink a city worker
   maintains on behalf of others). `::init-new-site` sets it; skipped when a template
   fixes `:owner` (analysis/planning sites).
-- **Backend authz** (`owner-org-assignment-authorized?` middleware on
-  `POST /sports-sites`): a claimed `:owner-org-id` requires `:site/create-edit` on
-  that org (org-editor of it, or lipas-admin). Legacy saves (no owner-org-id) pass
-  through; site-level edit is still enforced in core.
-- **Deferred caveat:** the middleware can't see current site state, so it doesn't
-  enforce existing-site ownership immutability against a hand-crafted API call (the FE
-  doesn't expose it; not an escalation — they could already edit the site). A ~3-line
-  "compare to current revision" core guard could add defense-in-depth later.
+- **Backend authz** — enforced in **core** against the stored site, not the request
+  body (§4.5). A new site may be claimed for an org the creator can `:site/create-edit`;
+  an existing site's owner can only be changed by a LIPAS admin (others use take-over);
+  `:edit-grants` change only by the owning-org admin / LIPAS admin. Content edits are
+  authorized against the stored site, so the body can't grant itself access. The former
+  save-route middleware gate was removed (it couldn't see stored state). **The earlier
+  "deferred caveat" — existing-site ownership immutability not enforced server-side —
+  is now resolved.**
 
 ### 6.11 Re-frame surface (selected)
 
@@ -543,12 +601,12 @@ Subs: `::can? ::user-orgs ::ownable-orgs ::org-templates ::org-history
 | `POST /actions/get-site-editors` | (site-scoped) | Q2: owner + grantees + activity orgs + **legacy users** |
 | `POST /actions/get-site-edit-history` | (any authenticated) | per-revision timestamp + editor email (Kohteet drawer) |
 | `POST /actions/get-org-history` | `:org/manage` | revisions + computed diff (admin-only) |
-| `POST /actions/grant-site-edit`, `revoke-site-edit` | `:org/manage` (owner org) | cross-org grant / revoke |
+| `POST /actions/grant-site-edit`, `revoke-site-edit` | `:org/manage` + core rule | cross-org grant / revoke; core authorizes against the **owning** org (§4.5) |
 | `POST /actions/preview-org-takeover` | `:org/manage` | claim impact preview (count + relabel + sample) |
 | `POST /actions/request-org-takeover` | `:org/manage` | org-admin requests to claim matching sites |
 | `POST /actions/reclaim-org-sites` | `:org/admin` | lipas-admin direct reclaim (create+approve) |
-| `POST /actions/list-org-takeover-requests`, `approve-org-takeover`, `deny-org-takeover` | `:org/admin` | lipas-admin queue |
-| `POST /sports-sites` | (site authz in core) + `owner-org-assignment-authorized?` | save; gates claimed `:owner-org-id` |
+| `POST /actions/list-org-takeover-requests`, `approve-org-takeover`, `deny-org-takeover` | `:org/admin` | lipas-admin queue; approve/deny require a still-`requested` row (guarded `requested→decided`; re-approve/double-claim → 409 `:invalid-takeover-state`) |
+| `POST /sports-sites` | authenticated; **all authz in core** | save; core authorizes content + `:owner-org-id`/`:edit-grants` against the stored site (§4.5) |
 | `POST /actions/update-org-ptv-config` | `:users/manage` | unchanged |
 
 `:login-url` for invites must start with a known LIPAS domain
@@ -558,14 +616,20 @@ Subs: `::can? ::user-orgs ::ownable-orgs ::org-templates ::org-history
 
 ## 8. Database changes
 
-1. **`org` revision table + `org_current` view** — `org_id` == old `org.id` to
-   preserve references. GIN index on `document` for the login reverse-membership
-   query. Seeded one revision per existing org; member backfill from legacy
-   `:org-admin`/`:org-user` account roles (→ member `:roles ["admin"]` / `[]`).
-   A follow-up **role-unify migration** (self-contained jsonb reshape, *no* `org/*`
-   calls — §13) rewrites any old-shape members `{:org-role :templates}` →
-   `{:roles}` by appending one revision per org (`:roles` = `templates` ∪
-   `["admin"]` when org-role was admin).
+1. **`org` revision table + `org_current` view** (`20260604120000-org-event-log`) —
+   `org_id` == old `org.id` to preserve references. GIN index on `document` for the
+   login reverse-membership query. Seeded one revision per existing org; member
+   backfill from legacy `:org-admin`/`:org-user` account roles.
+   - **`20260608120000-org-roles-unify`** (self-contained jsonb reshape, *no* `org/*`
+     calls — §13) rewrites old-shape members `{:org-role :templates}` → `{:roles}`
+     by appending one revision per org (`:roles` = `templates` ∪ `["admin"]` when
+     org-role was admin). Idempotent (skips members already in `:roles` shape).
+   - **`20260608130000-org-roles-account-cleanup`** strips the now-redundant
+     `:org-admin`/`:org-user`/`:org-editor` roles from `account.permissions.roles`
+     (membership is the single source). Defensive: a role is dropped only when current
+     membership covers all its org-ids; uncovered ones are kept + logged. Verified the
+     event-log backfill is sound first (every account org-role reproduced by
+     membership; effective access identical across down/up).
 2. **Site document fields** — `:owner-org-id`, `:edit-grants` (jsonb; no schema
    migration). Added to the malli site schema. ES mapping gains
    `search-meta.owner-org-id` / `editor-org-ids` (reindex).
@@ -574,9 +638,10 @@ Subs: `::can? ::user-orgs ::ownable-orgs ::org-templates ::org-history
 4. **`acting_org_id`** on site revisions ("on whose behalf") — on the table; not in
    `sports_site_current` (blocked by dependent views; query the table for history).
 
-No destructive change to `account`. The legacy account `:org-admin`/`:org-user`
-roles are removed only in a *follow-up* migration after derive-at-login is verified
-in production (until then they coexist and are deduped at login).
+No schema change to `account`. The legacy account `:org-admin`/`:org-user` roles are
+now removed by `20260608130000-org-roles-account-cleanup` (above) — membership is the
+single source for org-scoped roles. (Other direct account roles — admin, type/city/
+ptv managers, etc. — are untouched and remain first-class.)
 
 ---
 
@@ -616,8 +681,10 @@ consecutive revisions and resolves all referenced account ids to email/username.
 7. **Catalog editing scope** — lipas-admin-only (current). Keep, or allow a "lead"
    org-admin within a lipas-admin-set boundary? (Recommend keep — it's the ceiling
    guarantee.)
-8. **Existing-site ownership immutability** — FE-gated + middleware-authz'd, not
-   enforced server-side against raw API (§6.10). Add the core guard if desired.
+8. **Existing-site ownership immutability** — ✅ **RESOLVED.** Enforced server-side in
+   core against the stored site (§4.5): only a LIPAS admin may change an existing
+   site's owner; `:edit-grants` only by the owning-org admin / LIPAS admin; content
+   edits authorized against stored state (no body-injection escalation).
 9. **Per-site ownership-claim requests (correction / cross-org transfer)** — today
    an org-admin has **no reachable claim trigger at all**: both entry points (the
    ownership-rule editor button and setup-checklist step ③) are lipas-admin-only,
@@ -646,6 +713,11 @@ consecutive revisions and resolves all referenced account ids to email/username.
      - *Request payload* — tag the row (`kind` / explicit `lipas-ids`) so the queue
        renders "bulk rule claim (N)" vs "single-site request: «name»", and the
        approver sees the current owner for the contested case.
+10. **Org-site list result caps** — `get-org-sites` (`:size 2000`) and the bulk
+    editable-sites query (`:size 10000`) silently truncate for a very large org
+    (`:total` stays accurate via `track_total_hits`, but the returned list — and thus
+    the bulk-edit authorized set — is capped). Edge case at current scale; add
+    pagination or at least log truncation when it matters.
 
 ---
 
@@ -682,11 +754,24 @@ Real dev stack (2 346 accounts, ~2 021 with roles, 57 030 sites):
 
 ### 11.4 Test coverage
 
-`bb test-ns lipas.roles-test lipas.backend.org-test` — green. Org-test includes:
-owner-org assignment authz (own org ✓ / other 403 / non-member 403); history authz
-(member 403); history member-email resolution; org instructions round-trip + route;
-site-editors composition; site-editors legacy-users (direct user found, admin
-excluded, candidate == naive scan).
+`bb test-ns lipas.roles-test lipas.backend.org-test lipas.backend.business-logic-test`
+— green. Coverage includes:
+- **Ownership/edit-grant business rule (§4.5)** — `business-logic-test` exhaustively
+  unit-tests the four predicates (unchanged / create / existing-change × admin /
+  owner-admin / editor / nobody, incl. nil-owner edges); `org-test` adds handler
+  regressions: an org-editor cannot self-authorize a foreign-site edit by injecting
+  `:edit-grants`, cannot change ownership/grants of an existing site, but can edit its
+  own org's site; grant *and* revoke require the owning-org admin.
+- **Role unification** — member fixtures/endpoints use `:roles`; projection baseline +
+  reserved `:admin` + ceiling; a catalog edit can't strip `:admin`; invite `:roles []`
+  (plain member) and `:roles ["admin"]` (first admin).
+- **Catalog validation** — a context-scoped role missing its required key is rejected;
+  present-but-empty is accepted.
+- **Take-over** — approve claims matching sites; re-approving or denying a decided
+  request is rejected (`:invalid-takeover-state`).
+- Plus: owner-org assignment authz; history authz + member-email resolution; org
+  instructions round-trip; site-editors composition + legacy-user lookup (candidate ==
+  naive scan, admin excluded).
 
 ---
 
@@ -702,20 +787,26 @@ excluded, candidate == naive scan).
 
 ---
 
-## 13. Refactor plan — unify `:org-role` + `:templates` into one `:roles` list
+## 13. Role-model unification — DONE (record)
 
-The agreed simplification (§3.2). Goal: a member has **one** `:roles` list drawn from
-`#{:admin}` ∪ catalog keys; `:org/member` is the membership baseline; nothing else
-changes in the matching engine (it already treats every projected `{:role :org-id}`
-uniformly — the split only ever lived at the assignment layer). The roles engine
-needs **no** behavioural change beyond adding `:org-admin` to `org-scoped-roles`.
+Status: **implemented** (the unified `:roles` model the rest of this doc describes).
+A member has **one** `:roles` list drawn from `#{:admin}` ∪ catalog keys; `:org/member`
+is the membership baseline; the matching engine was unchanged beyond adding `:org-admin`
+to `org-scoped-roles`. Catalog edits still can't strip admins (`:admin` is reserved,
+engine-level); the ceiling still holds; FE capability gating reads
+`check-privilege … :org/manage` / `:org/member`, not raw roles.
 
-**Why now / why safe.** Pre-production. Catalog edits still can't strip admins
-(`:admin` is reserved, engine-level — not in the deletable catalog). Membership still
-implies view (baseline). Ceiling still holds (a key in neither the reserved set nor
-the catalog expands to nothing). FE capability gating already reads
-`check-privilege … :org/manage` / `:org/member`, **not** raw `:org-role`
-(`subs.cljs::is-org-admin?`/`::is-org-member?`), so it is unaffected.
+**Two follow-ons shipped after the initial unification:**
+- **Membership-only consolidation** — `:org-admin`/`:org-user` made `:assignable false`,
+  the legacy account org-roles stripped by `20260608130000-org-roles-account-cleanup`
+  (§8), and the vestigial admin-panel "add user to org" dialog removed. Result: org
+  roles come *only* from membership; the admin panel's direct-role card is relabelled
+  "Suorat käyttöoikeudet" with a pointer to the Organisaatiot view.
+- **Post-review hardening** — the ownership/edit-grant business rule (§4.5) and assorted
+  review fixes (takeover approve/deny state guard, invite-email best-effort, catalog
+  required-context validation, `update-org` `:ptv-data` pinning, dead-code/typo cleanup).
+
+The touch points below are kept as the record of what the unification changed.
 
 ### Touch points (by layer)
 
