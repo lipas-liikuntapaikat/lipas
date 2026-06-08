@@ -793,6 +793,20 @@
                             :type-name  (get-in src [:search-meta :type :name :fi])
                             :city-name  (get-in src [:search-meta :location :city :name :fi])}))))}))
 
+(defn org-owned-site-counts
+  "Owned-site count per org, as `{org-id-str -> count}`, from one ES `terms`
+  aggregation over `search-meta.owner-org-id` (single round trip for all orgs,
+  independent of site count). Powers the orgs-list site-count chip. Counts are
+  exact (single-shard index); `:size` covers the org-count ceiling (§11.2)."
+  [search-comp]
+  (let [resp (search search-comp
+                     {:size 0
+                      :track_total_hits false
+                      :aggs {:by_org {:terms {:field "search-meta.owner-org-id"
+                                              :size 1000}}}})]
+    (->> (get-in resp [:body :aggregations :by_org :buckets])
+         (into {} (map (juxt :key :doc_count))))))
+
 (defn site-editors
   "\"Who can edit site Z\" (Q2, design-spec §6): owner org + grantee orgs (off the
   site document) ∪ activity-editor orgs (org catalogs granting an activity the

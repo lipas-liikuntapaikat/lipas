@@ -337,20 +337,26 @@
            ;; Need to mount the auth manually when no :require-privilege enabled
          :middleware [mw/token-auth mw/auth]
          :handler (fn [req]
-                    (let [user (:identity req)]
-                      {:status 200
-                       :body (cond
+                    (let [user (:identity req)
+                          orgs (cond
                                  ;; Admins see all organizations
-                               (roles/check-role user :admin)
-                               (org/all-orgs db)
+                                 (roles/check-role user :admin)
+                                 (org/all-orgs db)
 
                                  ;; PTV auditors see all organizations (they need to audit any org)
-                               (roles/check-privilege user {} :ptv/audit)
-                               (org/all-orgs db)
+                                 (roles/check-privilege user {} :ptv/audit)
+                                 (org/all-orgs db)
 
                                  ;; Regular users see only their assigned organizations
-                               :else
-                               (org/user-orgs db (parse-uuid (:id user))))}))}}]
+                                 :else
+                                 (org/user-orgs db (parse-uuid (:id user))))
+                          ;; One ES terms agg for all orgs (owned-site counts) — the
+                          ;; orgs-list site-count chip. Cheap & exact (see core docstring).
+                          counts (core/org-owned-site-counts search)]
+                      {:status 200
+                       :body (mapv (fn [o]
+                                     (assoc o :site-count (get counts (str (:id o)) 0)))
+                                   orgs)}))}}]
 
       ;; All orgs (lipas-admin only)
       ["/actions/get-all-orgs"

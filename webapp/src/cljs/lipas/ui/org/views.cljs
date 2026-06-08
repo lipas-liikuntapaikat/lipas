@@ -1239,7 +1239,9 @@
         [:> Chip {:size "small" :variant "outlined"
                   :label (org-type-label tr (:type org))}])
       [:> Chip {:size "small" :variant "outlined"
-                :label (str (count (:members org)) " " (tr :lipas.org/members-assigned))}]]]))
+                :label (str (count (:members org)) " " (tr :lipas.org/members-assigned))}]
+      [:> Chip {:size "small" :variant "outlined"
+                :label (str (:site-count org 0) " " (tr :lipas.org/sites-owned))}]]]))
 
 (defn orgs-list-view []
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])

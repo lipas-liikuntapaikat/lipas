@@ -91,6 +91,7 @@
  :template-label "Malli"
  :template-grants "Antaa oikeuden"
  :members-assigned "Jäseniä"
+ :sites-owned "Kohdetta"
  :template-in-use "{1} jäsenellä"
  :template-in-use-warning
  "Tämä malli on liitetty {1} jäsenelle. Roolien muuttaminen tai mallin poistaminen vaikuttaa heidän oikeuksiinsa seuraavan kirjautumisen yhteydessä."
