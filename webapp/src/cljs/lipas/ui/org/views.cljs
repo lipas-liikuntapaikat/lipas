@@ -92,6 +92,26 @@
        (remove str/blank?)
        (str/join "; ")))
 
+;; A member holds a single `:roles` list drawn from the reserved engine role
+;; "admin" plus the org's catalog keys. These helpers build the assignment
+;; vocabulary (shared by the invite form and the members table) and label one
+;; role key for display.
+
+(defn role-options
+  "Multi-select options for a member's roles: the reserved \"admin\" role first,
+  then the org's catalog templates."
+  [tr template-opts]
+  (into [{:value "admin" :label (tr :lipas.org/role-admin)}]
+        template-opts))
+
+(defn role-label
+  "Human label for one role key — the reserved admin label or the catalog
+  template's label, falling back to the raw key."
+  [tr catalog rkey]
+  (if (= "admin" rkey)
+    (tr :lipas.org/role-admin)
+    (or (:label (get catalog (keyword rkey))) rkey)))
+
 ;; ---------------------------------------------------------------------------
 ;; PTV tab (unchanged)
 ;; ---------------------------------------------------------------------------
@@ -333,6 +353,7 @@
   [tr org-id]
   (let [form @(rf/subscribe [::subs/invite-member-form])
         template-opts @(rf/subscribe [::subs/member-template-options])
+        role-opts (role-options tr template-opts)
         email (:email form)
         existing? (:existing? form)
         checking? (:checking? form)
@@ -362,25 +383,14 @@
         [:> Typography {:variant "caption" :color "info.main" :sx {:mt 0.5}}
          (tr :lipas.org/invite-status-new)])]
 
-     ;; Org-role
-     [:> FormControl {:sx {:min-width 140}}
-      [:> InputLabel {:id "invite-org-role"} (tr :lipas.org/org-role)]
-      [:> Select
-       {:labelId "invite-org-role"
-        :value (or (:org-role form) "member")
-        :label (tr :lipas.org/org-role)
-        :onChange (fn [e] (rf/dispatch [::events/set-invite-member-form [:org-role] (.. e -target -value)]))}
-       [:> MenuItem {:value "member"} (tr :lipas.org/member)]
-       [:> MenuItem {:value "admin"} (tr :lipas.org/admin)]]]
-
-     ;; Templates (catalog only)
-     (when (seq template-opts)
-       [:> Box {:sx {:min-width 220}}
-        [selects/multi-select
-         {:label (tr :lipas.org/assigned-templates)
-          :value (vec (:templates form))
-          :items template-opts
-          :on-change #(rf/dispatch [::events/set-invite-member-form [:templates] (vec %)])}]])
+     ;; Roles (reserved "admin" + catalog templates). Defaults to empty = a
+     ;; plain member (membership confers the :org/member baseline).
+     [:> Box {:sx {:min-width 220}}
+      [selects/multi-select
+       {:label (tr :lipas.org/roles)
+        :value (vec (:roles form))
+        :items role-opts
+        :on-change #(rf/dispatch [::events/set-invite-member-form [:roles] (vec %)])}]]
 
      [:> Button
       {:variant "contained" :color "primary" :sx {:mt 1}
@@ -391,25 +401,30 @@
         (false? existing?) (tr :lipas.org/send-invitation-action)
         :else              (tr :lipas.org/invite-member))]]))
 
-(defn member-templates-cell
-  "Template chips for one member with an add-menu, all gated by can-manage?."
+(defn member-roles-cell
+  "Role chips for one member with an add-menu, all gated by can-manage?. The role
+  vocabulary is the reserved \"admin\" role plus the org's catalog keys; edits
+  replace the member's whole `:roles` list via ::set-member-roles."
   [_props]
   (let [anchor (r/atom nil)]
     (fn [{:keys [tr org-id member catalog can-manage?]}]
-      (let [assigned (vec (:templates member))
-            user-id (:id member)
-            unassigned (remove (set assigned) (map name (keys catalog)))]
+      (let [assigned   (vec (:roles member))
+            user-id    (:id member)
+            all-keys   (cons "admin" (map name (keys catalog)))
+            unassigned (remove (set assigned) all-keys)]
         [:> Box {:sx {:display "flex" :flex-wrap "wrap" :gap 0.5 :align-items "center"}}
-         (for [tkey assigned
-               :let [entry (get catalog (keyword tkey))]]
-           [:> Tooltip {:key tkey :title (template-grants-text tr entry)}
+         (for [rkey assigned
+               :let [entry (get catalog (keyword rkey))]]
+           [:> Tooltip {:key rkey :title (if (= "admin" rkey)
+                                           (tr :lipas.org/grants-admin)
+                                           (template-grants-text tr entry))}
             [:> Chip
-             (cond-> {:label (or (:label entry) tkey)
+             (cond-> {:label (role-label tr catalog rkey)
                       :size "small"}
                can-manage?
                (assoc :on-delete
-                      (fn [] (rf/dispatch [::events/set-member-templates org-id user-id
-                                           (vec (remove #(= % tkey) assigned))]))))]])
+                      (fn [] (rf/dispatch [::events/set-member-roles org-id user-id
+                                           (vec (remove #(= % rkey) assigned))]))))]])
          (when (and can-manage? (seq unassigned))
            [:<>
             [:> IconButton {:size "small"
@@ -418,15 +433,14 @@
             [:> Menu {:open (boolean @anchor)
                       :anchorEl @anchor
                       :onClose (fn [] (reset! anchor nil))}
-             (for [tkey unassigned
-                   :let [entry (get catalog (keyword tkey))]]
+             (for [rkey unassigned]
                [:> MenuItem
-                {:key tkey
+                {:key rkey
                  :onClick (fn []
-                            (rf/dispatch [::events/set-member-templates org-id user-id
-                                          (conj assigned tkey)])
+                            (rf/dispatch [::events/set-member-roles org-id user-id
+                                          (conj assigned rkey)])
                             (reset! anchor nil))}
-                (or (:label entry) tkey)])]])]))))
+                (role-label tr catalog rkey)])]])]))))
 
 (defn members-tab [tr org-id]
   (let [org-users @(rf/subscribe [::subs/org-users])
@@ -444,8 +458,7 @@
         [:> TableHead
          [:> TableRow
           [:> TableCell (tr :lipas.org/member-col)]
-          [:> TableCell (tr :lipas.org/org-role)]
-          [:> TableCell (tr :lipas.org/assigned-templates)]
+          [:> TableCell (tr :lipas.org/roles)]
           (when can-manage?
             [:> TableCell {:align "right"} (tr :actions/actions)])]]
         [:> TableBody
@@ -453,20 +466,8 @@
            [:> TableRow {:key (:id member)}
             [:> TableCell (or (:email member) (:username member))]
             [:> TableCell
-             (if can-manage?
-               [:> Select
-                {:value (or (:org-role member) "member")
-                 :size "small"
-                 :variant "standard"
-                 :onChange (fn [e] (rf/dispatch [::events/set-member-org-role
-                                                 org-id (:id member) (.. e -target -value)]))}
-                [:> MenuItem {:value "member"} (tr :lipas.org/member)]
-                [:> MenuItem {:value "admin"} (tr :lipas.org/admin)]]
-               (tr (if (= "admin" (:org-role member))
-                     :lipas.org/admin :lipas.org/member)))]
-            [:> TableCell
-             [member-templates-cell {:tr tr :org-id org-id :member member
-                                     :catalog catalog :can-manage? can-manage?}]]
+             [member-roles-cell {:tr tr :org-id org-id :member member
+                                 :catalog catalog :can-manage? can-manage?}]]
             (when can-manage?
               [:> TableCell {:align "right"}
                [:> IconButton
@@ -480,10 +481,12 @@
 ;; ---------------------------------------------------------------------------
 
 (defn template-member-counts
-  "Map template-key (string) -> number of members currently assigned it."
+  "Map role-key (string) -> number of members currently assigned it. Includes the
+  reserved \"admin\" key; catalog-usage views only ever look up catalog keys, so
+  it's harmless there."
   [org-users]
   (->> org-users
-       (mapcat :templates)
+       (mapcat :roles)
        (frequencies)))
 
 (def catalog-roles

@@ -116,10 +116,9 @@
        (mapv unmarshall)))
 
 (defn get-org-users
-  "Member accounts of the org, each augmented with their `:org-role` and
-  `:templates` from the membership document. Returns full account maps (incl.
-  `:permissions`) so callers that filter on direct roles (e.g. PTV managers)
-  keep working."
+  "Member accounts of the org, each augmented with their `:roles` from the
+  membership document. Returns full account maps (incl. `:permissions`) so
+  callers that filter on direct roles (e.g. PTV managers) keep working."
   [db org-id]
   (let [members (:members (current-document db org-id))
         by-uid  (into {} (map (juxt :user-id identity)) members)
@@ -132,7 +131,7 @@
            (map db-utils/->kebab-case-keywords)
            (mapv (fn [user]
                    (let [m (get by-uid (str (:id user)))]
-                     (assoc user :org-role (:org-role m) :templates (:templates m)))))))))
+                     (assoc user :roles (:roles m)))))))))
 
 ;;; history (the append-only org log IS the audit trail) ;;;
 
@@ -172,10 +171,9 @@
         (doseq [uid removed] (add! (str "Jäsen poistettu: " (name-of uid))))
         (doseq [uid common
                 :let [a (get pm uid) b (get dm uid)]]
-          (when (not= (:org-role a) (:org-role b))
-            (add! (str "Rooli muuttui: " (name-of uid) " " (:org-role a) " → " (:org-role b))))
-          (when (not= (set (:templates a)) (set (:templates b)))
-            (add! (str "Roolit muuttuivat: " (name-of uid))))))
+          (when (not= (set (:roles a)) (set (:roles b)))
+            (add! (str "Roolit muuttui: " (name-of uid) " "
+                       (vec (:roles a)) " → " (vec (:roles b)))))))
       (let [result @changes]
         (if (seq result) result ["Muutos"])))))
 
@@ -247,10 +245,10 @@
 
 ;;; membership ops ;;;
 
-(defn- upsert-member [members user-id org-role]
+(defn- upsert-member [members user-id roles]
   (if (some #(= (:user-id %) user-id) members)
-    (mapv (fn [m] (if (= (:user-id m) user-id) (assoc m :org-role org-role) m)) members)
-    (conj (vec members) {:user-id user-id :org-role org-role :templates []})))
+    (mapv (fn [m] (if (= (:user-id m) user-id) (assoc m :roles roles) m)) members)
+    (conj (vec members) {:user-id user-id :roles roles})))
 
 (defn- drop-member [members user-id]
   (vec (remove #(= (:user-id %) user-id) members)))
@@ -271,12 +269,12 @@
               (str (:id user)))))
 
 (defn- apply-member-change [db doc {:keys [change role] :as spec}]
-  (let [uid      (resolve-user-id db spec)
-        org-role (case role "org-admin" "admin" "org-user" "member" "member")]
+  (let [uid   (resolve-user-id db spec)
+        roles (case role "org-admin" ["admin"] "org-user" [] [])]
     (update doc :members
             (fn [members]
               (case change
-                "add"    (upsert-member members uid org-role)
+                "add"    (upsert-member members uid roles)
                 "remove" (drop-member members uid)
                 members)))))
 
@@ -292,14 +290,14 @@
 ;;; template-aware member & catalog ops (self-service, §10) ;;;
 
 (defn- upsert-member-full
-  "Add or update a member with full assignment (org-role + templates)."
-  [members user-id org-role templates]
+  "Add or update a member with a full role assignment (one `:roles` list)."
+  [members user-id roles]
   (if (some #(= (:user-id %) user-id) members)
     (mapv (fn [m] (if (= (:user-id m) user-id)
-                    (assoc m :org-role org-role :templates templates)
+                    (assoc m :roles roles)
                     m))
           members)
-    (conj (vec members) {:user-id user-id :org-role org-role :templates templates})))
+    (conj (vec members) {:user-id user-id :roles roles})))
 
 (defn catalog-template-keys
   "The set of template names (strings) defined in the org's role-template catalog
@@ -308,20 +306,18 @@
   (set (map name (keys (:role-templates (get-org db org-id))))))
 
 (defn validate-assignment!
-  "Throw unless `:org-role` ∈ {admin member} (when present) and `:templates` ⊆ the
-  org's catalog. Belt-and-suspenders on top of the structural ceiling in
-  derive-org-roles — the real guarantee is that projection only expands catalog
-  templates, but rejecting early is better UX and defense in depth."
-  [db org-id {:keys [org-role templates]}]
-  (let [catalog (catalog-template-keys db org-id)
-        tmpl    (set (map name (or templates [])))]
-    (when (and org-role (not (#{"admin" "member"} (name org-role))))
-      (throw (ex-info "Invalid org-role (must be admin or member)"
-                      {:type :invalid-org-role :org-role org-role})))
-    (when-not (set/subset? tmpl catalog)
-      (throw (ex-info "Templates must be a subset of the org's role-template catalog"
-                      {:type :templates-outside-catalog
-                       :invalid (vec (set/difference tmpl catalog))
+  "Throw unless `:roles` ⊆ `#{\"admin\"}` ∪ the org's catalog keys. Belt-and-
+  suspenders on top of the structural ceiling in derive-org-roles — the real
+  guarantee is that projection only expands reserved + catalog keys, but
+  rejecting early is better UX and defense in depth."
+  [db org-id {:keys [roles]}]
+  (let [catalog  (catalog-template-keys db org-id)
+        allowed  (conj catalog "admin")
+        assigned (set (map name (or roles [])))]
+    (when-not (set/subset? assigned allowed)
+      (throw (ex-info "Roles must be a subset of {admin} ∪ the org's role-template catalog"
+                      {:type :roles-outside-catalog
+                       :invalid (vec (set/difference assigned allowed))
                        :catalog (vec catalog)})))
     true))
 
@@ -355,29 +351,19 @@
                     (fn [doc]
                       (update doc :members upsert-member-full
                               (str user-id)
-                              (name (or (:org-role assignment) "member"))
-                              (mapv name (or (:templates assignment) []))))))
+                              (mapv name (or (:roles assignment) []))))))
 
-(defn set-member-org-role!
-  "Promote/demote a member (admin <-> member). Org-admins may promote (OQ6)."
-  [db org-id user-id org-role author-id]
-  (validate-assignment! db org-id {:org-role org-role})
+(defn set-member-roles!
+  "Replace a member's role list (validated ⊆ `#{admin}` ∪ catalog). Collapses the
+  old admin/member promotion and template-assignment ops into one. Org-admins may
+  manage their org's members (OQ6)."
+  [db org-id user-id roles author-id]
+  (validate-assignment! db org-id {:roles roles})
   (update-document! db org-id author-id
                     (fn [doc]
                       (update doc :members
                               (fn [ms] (mapv (fn [m] (if (= (:user-id m) (str user-id))
-                                                       (assoc m :org-role (name org-role)) m))
-                                             ms))))))
-
-(defn set-member-templates!
-  "Assign/replace a member's templates (validated ⊆ catalog)."
-  [db org-id user-id templates author-id]
-  (validate-assignment! db org-id {:templates templates})
-  (update-document! db org-id author-id
-                    (fn [doc]
-                      (update doc :members
-                              (fn [ms] (mapv (fn [m] (if (= (:user-id m) (str user-id))
-                                                       (assoc m :templates (mapv name (or templates []))) m))
+                                                       (assoc m :roles (mapv name (or roles []))) m))
                                              ms))))))
 
 (defn remove-member!
@@ -389,27 +375,35 @@
 
 (def org-scoped-roles
   "Roles whose context is the org itself (org-id injected at projection)."
-  #{:org-editor})
+  #{:org-editor :org-admin})
+
+(def reserved-roles
+  "Engine-level roles a member may hold that are NOT part of the per-org catalog.
+  Reserved here (in code) so a catalog edit can never strip them. `:admin` (the
+  string \"admin\" on the wire) projects org-admin (`:org/manage`); its `:org-id`
+  is injected at projection like any other org-scoped role."
+  {:admin {:role "org-admin"}})
 
 (defn- member->roles
   "Project one org membership into raw role-data (string role, vector org-id —
-  the stored wire shape, conformed downstream). The structural ceiling lives in
-  the `(get catalog ...)` keep: a template the lipas-admin didn't define expands
-  to nothing, so an org-admin can never project authority beyond the catalog."
+  the stored wire shape, conformed downstream). Every member gets the `org-user`
+  baseline (membership ⟺ `:org/member`). Each key in the member's single `:roles`
+  list expands via the reserved-role table (engine-level, un-strippable) or the
+  org's catalog. The structural ceiling lives in that expansion: a key that is
+  neither reserved nor in the catalog expands to nothing, so an org-admin can
+  never project authority beyond `#{admin}` ∪ the catalog."
   [org-id catalog member]
   (let [org-id-vec (vector (str org-id))
-        org-role   (case (keyword (:org-role member))
-                     :admin  {:role "org-admin" :org-id org-id-vec}
-                     :member {:role "org-user" :org-id org-id-vec}
-                     nil)
-        assigned   (->> (:templates member)
-                        (keep #(get catalog (keyword %))) ; <- ceiling enforced here
-                        (mapcat :roles))]
-    (->> (cons org-role
-               (for [spec assigned]
-                 (cond-> spec
-                   (org-scoped-roles (keyword (:role spec))) (assoc :org-id org-id-vec))))
-         (remove nil?))))
+        baseline   {:role "org-user" :org-id org-id-vec}
+        assigned   (->> (:roles member)
+                        (mapcat (fn [k]
+                                  (or (some-> (reserved-roles (keyword k)) vector)
+                                      (:roles (get catalog (keyword k)))))) ; <- ceiling here
+                        (remove nil?))]
+    (->> (cons baseline assigned)
+         (map (fn [spec]
+                (cond-> spec
+                  (org-scoped-roles (keyword (:role spec))) (assoc :org-id org-id-vec)))))))
 
 (defn derive-org-roles
   "Pure projection: for each org the user belongs to, expand that user's member
