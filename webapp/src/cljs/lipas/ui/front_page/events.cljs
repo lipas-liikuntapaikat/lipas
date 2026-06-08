@@ -25,6 +25,29 @@
              (assoc-in [:front-page :newsletter :in-progress?] false)
              (assoc-in [:front-page :newsletter :error] resp))}))
 
+(rf/reg-event-fx ::get-front-page-stats
+  (fn [{:keys [db]}]
+    {:db (assoc-in db [:front-page :stats :in-progress?] true)
+     :http-xhrio
+     {:method          :post
+      :uri             (str (:backend-url db) "/actions/get-front-page-stats")
+      :format          (ajax/transit-request-format)
+      :response-format (ajax/transit-response-format)
+      :on-success      [::get-front-page-stats-success]
+      :on-failure      [::get-front-page-stats-failure]}}))
+
+(rf/reg-event-fx ::get-front-page-stats-success
+  (fn [{:keys [db]} [_ resp]]
+    {:db (-> db
+             (assoc-in [:front-page :stats :in-progress?] false)
+             (assoc-in [:front-page :stats :data] resp))}))
+
+(rf/reg-event-fx ::get-front-page-stats-failure
+  (fn [{:keys [db]} [_ resp]]
+    {:db (-> db
+             (assoc-in [:front-page :stats :in-progress?] false)
+             (assoc-in [:front-page :stats :error] resp))}))
+
 (rf/reg-event-fx ::subscribe-newsletter
   (fn [{:keys [db]} [_ params]]
     {:http-xhrio

@@ -1,5 +1,6 @@
 (ns lipas.ui.front-page.views
-  (:require [lipas.schema.users :as users-schema]
+  (:require [clojure.string :as str]
+            [lipas.schema.users :as users-schema]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
@@ -187,15 +188,15 @@
     :or {xs 12 md 6 lg 6 xl 6}} & children]
   [:> Grid {:item true :xs xs :md md :lg lg :xl xl}
    [:> Paper {:square true
-               :style
-               (merge
-                 {:background-color "rgb(250, 250, 250)"
-                  :font-size "1.25em"
-                  :height "360px"
-                  :opacity 0.95
-                  :margin "8px"
-                  :padding "16px 10px 0 16px"}
-                 style)}
+              :style
+              (merge
+                {:background-color "rgb(250, 250, 250)"
+                 :font-size "1.25em"
+                 :height "360px"
+                 :opacity 0.95
+                 :margin "8px"
+                 :padding "16px 10px 0 16px"}
+                style)}
 
     [:> Grid
      {:container true
@@ -354,6 +355,91 @@
           :href "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
           :target "_blank"}
          (tr :help/privacy-policy)]]]]]))
+
+(defn- format-number [n]
+  (when n
+    (->> (str n)
+         reverse
+         (partition-all 3)
+         (map #(apply str (reverse %)))
+         reverse
+         (str/join "\u00A0"))))
+
+(defn- days-since [date-str]
+  (when date-str
+    (let [date-part (first (str/split date-str #"T"))
+          then (.getTime (js/Date. date-part))
+          now (.getTime (js/Date.))
+          diff-ms (- now then)]
+      (Math/floor (/ diff-ms (* 1000 60 60 24))))))
+
+(defn- stat-item [{:keys [value label]}]
+  [:> Grid {:item true :xs 6 :sm 6 :md "auto"
+            :style {:text-align "center" :padding "1em 2em"}}
+   [:> Typography {:variant "h3"
+                   :component "div"
+                   :style {:font-weight 700
+                           :color mui/secondary
+                           :line-height 1.2}}
+    value]
+   [:> Typography {:variant "body1"
+                   :component "div"
+                   :style {:opacity 0.85
+                           :margin-top "0.25em"
+                           :color "white"}}
+    label]])
+
+(defn lipas-in-numbers [tr]
+  (let [stats-data (<== [::subs/stats-data])
+        in-progress? (<== [::subs/stats-in-progress?])]
+    (when (or stats-data in-progress?)
+      [:> Grid
+       {:container true
+        :style {:background-color mui/primary
+                :color "white"
+                :padding "2em 1em"}}
+
+       ;; Heading
+       [:> Grid {:item true :xs 12
+                 :style {:text-align "center" :margin-bottom "1em"}}
+        [:> Typography {:variant "h4"
+                        :component "h2"
+                        :style {:font-weight 600
+                                :color "white"}}
+         (tr :lipas-in-numbers/headline)]]
+
+       (if in-progress?
+         ;; Loading
+         [:> Grid {:item true :xs 12 :style {:text-align "center"}}
+          [:> CircularProgress {:style {:color "white"}}]]
+
+         ;; Stats
+         (when stats-data
+           [:<>
+            [:> Grid {:item true :xs 12}
+             [:> Grid {:container true
+                       :justify-content "center"
+                       :align-items "flex-start"}
+              [stat-item {:value (format-number (:total-count stats-data))
+                          :label (tr :lipas-in-numbers/sports-facilities)}]
+              [stat-item {:value (format-number (:city-count stats-data))
+                          :label (tr :lipas-in-numbers/municipalities)}]
+              [stat-item {:value (format-number (:updated-last-year stats-data))
+                          :label (tr :lipas-in-numbers/updated-last-year)}]
+              [stat-item {:value (format-number (:route-length-km stats-data))
+                          :label (tr :lipas-in-numbers/km-of-routes)}]]]
+
+            ;; Last updated line
+            (when-let [d (days-since (:last-updated stats-data))]
+              [:> Grid {:item true :xs 12
+                        :style {:text-align "center" :margin-top "1em"}}
+               [:> Typography {:variant "body2"
+                               :style {:opacity 0.7 :color "white"}}
+                (str (tr :lipas-in-numbers/last-updated) " "
+                     (case d
+                       0 (tr :lipas-in-numbers/today)
+                       1 (tr :lipas-in-numbers/yesterday)
+                       (str/replace (tr :lipas-in-numbers/days-ago) "{1}" (str d))))]])]))])))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
@@ -545,6 +631,9 @@
                 :subject (tr :data-users/email-subject)
                 :body (tr :data-users/email-body)})}
             (tr :data-users/tell-us)]]]]]
+
+       ;; LIPAS in numbers
+       [lipas-in-numbers tr]
 
        ;;Partner logos
        [footer {:title (tr :partners/headline)

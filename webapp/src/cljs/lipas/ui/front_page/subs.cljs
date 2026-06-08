@@ -26,3 +26,17 @@
   :<- [::newsletter]
   (fn [newsletter _]
     (:error newsletter)))
+
+(rf/reg-sub ::stats
+  (fn [db _]
+    (get-in db [:front-page :stats])))
+
+(rf/reg-sub ::stats-data
+  :<- [::stats]
+  (fn [stats _]
+    (:data stats)))
+
+(rf/reg-sub ::stats-in-progress?
+  :<- [::stats]
+  (fn [stats _]
+    (:in-progress? stats)))

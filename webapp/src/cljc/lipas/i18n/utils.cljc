@@ -19,6 +19,12 @@
    :help
    :home-page
    :ice
+   :ice-comparison
+   :ice-energy
+   :ice-form
+   :ice-resurfacer-fuels
+   :ice-rinks
+   :lipas-in-numbers
    :lipas.admin
    :lipas.bulk-operations
    :lipas.floorball
