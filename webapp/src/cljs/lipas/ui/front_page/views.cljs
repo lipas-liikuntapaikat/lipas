@@ -373,73 +373,102 @@
           diff-ms (- now then)]
       (Math/floor (/ diff-ms (* 1000 60 60 24))))))
 
-(defn- stat-item [{:keys [value label]}]
-  [:> Grid {:item true :xs 6 :sm 6 :md "auto"
-            :style {:text-align "center" :padding "1em 2em"}}
-   [:> Typography {:variant "h3"
+(defn- stat-item [{:keys [value label vertical?]}]
+  [:> Grid {:item true
+            :xs (if vertical? 12 6)
+            :sm (if vertical? 12 6)
+            :md (if vertical? 12 "auto")
+            :style {:text-align "center"
+                    :padding (if vertical? "0.5em 1em" "1em 2em")}}
+   [:> Typography {:variant (if vertical? "h4" "h3")
                    :component "div"
                    :style {:font-weight 700
                            :color mui/secondary
                            :line-height 1.2}}
     value]
-   [:> Typography {:variant "body1"
+   [:> Typography {:variant (if vertical? "body2" "body1")
                    :component "div"
                    :style {:opacity 0.85
-                           :margin-top "0.25em"
+                           :margin-top "0.15em"
                            :color "white"}}
     label]])
 
-(defn lipas-in-numbers [tr]
-  (let [stats-data (<== [::subs/stats-data])
-        in-progress? (<== [::subs/stats-in-progress?])]
-    (when (or stats-data in-progress?)
-      [:> Grid
-       {:container true
-        :style {:background-color mui/primary
-                :color "white"
-                :padding "2em 1em"}}
+(defn- stat-items [tr stats-data vertical?]
+  [:<>
+   [stat-item {:vertical? vertical?
+               :value (format-number (:total-count stats-data))
+               :label (tr :lipas-in-numbers/sports-facilities)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:city-count stats-data))
+               :label (tr :lipas-in-numbers/municipalities)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:updated-last-year stats-data))
+               :label (tr :lipas-in-numbers/updated-last-year)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:updaters-last-year stats-data))
+               :label (tr :lipas-in-numbers/updaters-last-year)}]])
 
-       ;; Heading
-       [:> Grid {:item true :xs 12
-                 :style {:text-align "center" :margin-bottom "1em"}}
-        [:> Typography {:variant "h4"
-                        :component "h2"
-                        :style {:font-weight 600
-                                :color "white"}}
-         (tr :lipas-in-numbers/headline)]]
+(defn- last-updated-text [tr stats-data]
+  (when-let [d (days-since (:last-updated stats-data))]
+    (str (tr :lipas-in-numbers/last-updated) " "
+         (case d
+           0 (tr :lipas-in-numbers/today)
+           1 (tr :lipas-in-numbers/yesterday)
+           (str/replace (tr :lipas-in-numbers/days-ago) "{1}" (str d))))))
 
-       (if in-progress?
-         ;; Loading
-         [:> Grid {:item true :xs 12 :style {:text-align "center"}}
-          [:> CircularProgress {:style {:color "white"}}]]
+;; Two layouts share one data fetch:
+;;  :banner - full-width horizontal row (small/medium screens)
+;;  :card   - compact vertical card that fills the empty top-right column on
+;;            large screens
+(defn lipas-in-numbers
+  ([tr] (lipas-in-numbers tr :banner))
+  ([tr variant]
+   (let [stats-data   (<== [::subs/stats-data])
+         in-progress? (<== [::subs/stats-in-progress?])
+         card?        (= variant :card)]
+     (when (or stats-data in-progress?)
+       [:> Grid
+        {:container true
+         :direction (if card? "column" "row")
+         :style (merge {:background-color mui/primary
+                        :color "white"}
+                       (if card?
+                         {:padding "1.5em 1em" :border-radius "8px"}
+                         {:padding "2em 1em"}))}
 
-         ;; Stats
-         (when stats-data
-           [:<>
-            [:> Grid {:item true :xs 12}
-             [:> Grid {:container true
-                       :justify-content "center"
-                       :align-items "flex-start"}
-              [stat-item {:value (format-number (:total-count stats-data))
-                          :label (tr :lipas-in-numbers/sports-facilities)}]
-              [stat-item {:value (format-number (:city-count stats-data))
-                          :label (tr :lipas-in-numbers/municipalities)}]
-              [stat-item {:value (format-number (:updated-last-year stats-data))
-                          :label (tr :lipas-in-numbers/updated-last-year)}]
-              [stat-item {:value (format-number (:route-length-km stats-data))
-                          :label (tr :lipas-in-numbers/km-of-routes)}]]]
+        ;; Heading
+        [:> Grid {:item true :xs 12
+                  :style {:text-align "center"
+                          :margin-bottom (if card? "0.5em" "1em")}}
+         [:> Typography {:variant (if card? "h6" "h4")
+                         :component "h2"
+                         :style {:font-weight 600
+                                 :color "white"}}
+          (tr :lipas-in-numbers/headline)]]
 
-            ;; Last updated line
-            (when-let [d (days-since (:last-updated stats-data))]
-              [:> Grid {:item true :xs 12
-                        :style {:text-align "center" :margin-top "1em"}}
-               [:> Typography {:variant "body2"
-                               :style {:opacity 0.7 :color "white"}}
-                (str (tr :lipas-in-numbers/last-updated) " "
-                     (case d
-                       0 (tr :lipas-in-numbers/today)
-                       1 (tr :lipas-in-numbers/yesterday)
-                       (str/replace (tr :lipas-in-numbers/days-ago) "{1}" (str d))))]])]))])))
+        (if in-progress?
+          ;; Loading
+          [:> Grid {:item true :xs 12 :style {:text-align "center"}}
+           [:> CircularProgress {:style {:color "white"}}]]
+
+          ;; Stats
+          (when stats-data
+            [:<>
+             [:> Grid {:item true :xs 12}
+              [:> Grid {:container true
+                        :direction (if card? "column" "row")
+                        :justify-content "center"
+                        :align-items (if card? "stretch" "flex-start")}
+               [stat-items tr stats-data card?]]]
+
+             ;; Last updated line
+             (when-let [text (last-updated-text tr stats-data)]
+               [:> Grid {:item true :xs 12
+                         :style {:text-align "center"
+                                 :margin-top (if card? "0.5em" "1em")}}
+                [:> Typography {:variant "body2"
+                                :style {:opacity 0.7 :color "white"}}
+                 text]])]))]))))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
@@ -603,6 +632,13 @@
               [:> Icon "group_add"]]
              [:> ListItemText (tr :register/link)]]]]]]
 
+        ;; LIPAS in numbers — compact card filling the empty top-right column.
+        ;; Large screens only; smaller screens get the full-width banner below.
+        [:> Grid {:item true :xs 12 :lg 4
+                  :sx {:display {:xs "none" :lg "block"}}
+                  :style {:padding "8px"}}
+         [lipas-in-numbers tr :card]]
+
         ;; [grid-card {:md 6 :lg 4}
         ;;  [fb-plugin]]
 
@@ -632,8 +668,11 @@
                 :body (tr :data-users/email-body)})}
             (tr :data-users/tell-us)]]]]]
 
-       ;; LIPAS in numbers
-       [lipas-in-numbers tr]
+       ;; LIPAS in numbers — full-width banner for small/medium screens.
+       ;; Large screens show the compact card in the hero's top-right instead.
+       [:> Grid {:item true :xs 12
+                 :sx {:display {:xs "block" :lg "none"}}}
+        [lipas-in-numbers tr :banner]]
 
        ;;Partner logos
        [footer {:title (tr :partners/headline)
