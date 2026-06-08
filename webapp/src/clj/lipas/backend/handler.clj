@@ -61,6 +61,8 @@
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
    :invalid-payload (exception-handler 400 :invalid-payload)
+   :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
+   :invalid-catalog (exception-handler 400 :invalid-catalog)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -526,15 +528,14 @@
          :parameters {:body [:map
                              [:org-id org-schema/org-id]
                              [:email :string]
-                             [:org-role {:optional true} [:enum "admin" "member"]]
-                             [:templates {:optional true} [:vector :string]]
+                             [:roles {:optional true} [:vector :string]]
                              [:login-url handler-schema/magic-link-login-url]]}
          :handler (fn [req]
                     (let [{:keys [org-id login-url] :as body} (-> req :parameters :body)
                           result (core/invite-org-member!
                                   db emailer
                                   org-id
-                                  (select-keys body [:email :org-role :templates])
+                                  (select-keys body [:email :roles])
                                   (-> req :identity :id)
                                   login-url)]
                       {:status 200 :body result}))}}]
@@ -570,36 +571,20 @@
                                         (-> req :identity :id))
                     {:status 200 :body {}})}}]
 
-      ["/actions/set-org-member-role"
+      ["/actions/set-org-member-roles"
        {:post
         {:no-doc true
          :require-privilege [org-scope-from-body :org/manage]
          :parameters {:body [:map
                              [:org-id org-schema/org-id]
                              [:user-id :uuid]
-                             [:org-role [:enum "admin" "member"]]]}
+                             [:roles [:vector :string]]]}
          :handler (fn [req]
-                    (org/set-member-org-role! db
-                                              (-> req :parameters :body :org-id)
-                                              (-> req :parameters :body :user-id)
-                                              (-> req :parameters :body :org-role)
-                                              (-> req :identity :id))
-                    {:status 200 :body {}})}}]
-
-      ["/actions/set-org-member-templates"
-       {:post
-        {:no-doc true
-         :require-privilege [org-scope-from-body :org/manage]
-         :parameters {:body [:map
-                             [:org-id org-schema/org-id]
-                             [:user-id :uuid]
-                             [:templates [:vector :string]]]}
-         :handler (fn [req]
-                    (org/set-member-templates! db
-                                               (-> req :parameters :body :org-id)
-                                               (-> req :parameters :body :user-id)
-                                               (-> req :parameters :body :templates)
-                                               (-> req :identity :id))
+                    (org/set-member-roles! db
+                                           (-> req :parameters :body :org-id)
+                                           (-> req :parameters :body :user-id)
+                                           (-> req :parameters :body :roles)
+                                           (-> req :identity :id))
                     {:status 200 :body {}})}}]
 
       ;; --- Cross-org edit grants on owned sites (org-admin of the owner org) ---

@@ -140,12 +140,13 @@
       (is (coll? body))
 
       ;; Membership now lives in the org document: get-org-users returns member
-      ;; accounts augmented with their :org-role / :templates (not account roles).
+      ;; accounts augmented with their :roles (not account roles). A user added
+      ;; via the legacy "org-user" path is a plain member (:roles []).
       (is (some (fn [user]
                   (and (= (str (:id target-user)) (str (:id user)))
-                       (= "member" (:org-role user))))
+                       (= [] (:roles user))))
                 body)
-          "The added user should be returned as a 'member' of this organization"))))
+          "The added user should be returned as a plain member of this organization"))))
 
 (deftest remove-user-from-org-test
   (testing "update-org-users! 'remove' actually drops the matching role entry"
@@ -551,22 +552,21 @@
     (let [org-id (catalog-org! editor+ptv-catalog)
           user   (test-utils/gen-regular-user :db-component (test-db))
           _      (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
-                                          {:email (:email user) :org-role "member" :templates ["editor"]}
+                                          {:email (:email user) :roles ["editor"]}
                                           nil "http://login")
           member (->> (backend-org/get-org-users (test-db) org-id)
                       (filter #(= (str (:id user)) (str (:id %)))) first)]
-      (is (= "member" (:org-role member)))
-      (is (= ["editor"] (:templates member)))))
+      (is (= ["editor"] (:roles member)))))
 
   (testing "An out-of-catalog template is rejected"
     (let [org-id (catalog-org! editor+ptv-catalog)
           user   (test-utils/gen-regular-user :db-component (test-db))
           ex     (try (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
-                                               {:email (:email user) :templates ["editor" "not-in-catalog"]}
+                                               {:email (:email user) :roles ["editor" "not-in-catalog"]}
                                                nil "http://login")
                       :no-throw
                       (catch Exception e (:type (ex-data e))))]
-      (is (= :templates-outside-catalog ex))
+      (is (= :roles-outside-catalog ex))
       (is (empty? (backend-org/get-org-users (test-db) org-id))
           "No member should have been added when the assignment is rejected")))
 
@@ -577,7 +577,7 @@
                    "u1"
                    [{:id org-id
                      :role-templates editor+ptv-catalog
-                     :members [{:user-id "u1" :org-role "member" :templates ["forged" "editor"]}]}])
+                     :members [{:user-id "u1" :roles ["forged" "editor"]}]}])
           role-ks (set (map :role roles))]
       ;; "editor" expands; "forged" vanishes. No :users/manage or other escalation.
       (is (contains? role-ks "org-editor"))
@@ -594,8 +594,7 @@
           resp    (test-app (-> (mock/request :post "/api/actions/invite-org-member")
                                 (mock/json-body {:org-id org-b
                                                  :email (:email invitee)
-                                                 :org-role "member"
-                                                 :templates ["editor"]
+                                                 :roles ["editor"]
                                                  :login-url "https://localhost/login"})
                                 (test-utils/token-header token)))]
       (is (= 403 (:status resp)) "Cross-org invite must be forbidden")
@@ -608,7 +607,7 @@
           other   (catalog-org! editor+ptv-catalog)
           user    (test-utils/gen-regular-user :db-component (test-db))
           _       (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
-                                           {:email (:email user) :org-role "member" :templates ["editor"]}
+                                           {:email (:email user) :roles ["editor"]}
                                            nil "http://login")
           derived (backend-org/derive-user-org-roles (test-db) (:id user))
           role-ks (set (map :role derived))
@@ -625,7 +624,7 @@
           emailer (test-utils/create-test-emailer)
           email   (str "invitee-" (System/currentTimeMillis) "@example.com")
           result  (core/invite-org-member! (test-db) emailer org-id
-                                           {:email email :org-role "member" :templates ["editor"]}
+                                           {:email email :roles ["editor"]}
                                            nil "http://localhost/login")
           account (core/get-user (test-db) email)
           sent    @(:sent-emails emailer)]
@@ -636,7 +635,94 @@
       (is (= email (:to (first sent))))
       ;; the new account is a member with the assigned template
       (is (= ["editor"] (->> (backend-org/get-org-users (test-db) org-id)
-                             (filter #(= (str (:id account)) (str (:id %)))) first :templates))))))
+                             (filter #(= (str (:id account)) (str (:id %)))) first :roles))))))
+
+;;; --- Unified :roles model: baseline, reserved admin, ceiling, endpoint -------
+
+(defn- privileged?
+  "Does a member with `member-roles` (the document `:roles` list) hold
+  `privilege` in `org-id`'s context once their roles are projected & conformed?"
+  [org-id catalog member-roles privilege]
+  (let [derived (backend-org/derive-org-roles
+                  "u1" [{:id org-id :role-templates catalog
+                         :members [{:user-id "u1" :roles member-roles}]}])
+        user    {:permissions {:roles (roles/conform-roles derived)}}]
+    (roles/check-privilege user {:org-id #{(str org-id)}} privilege)))
+
+(deftest membership-baseline-test
+  (testing "Any member — even with :roles [] — gets the :org/member baseline, not :org/manage"
+    (let [org-id (catalog-org! editor+ptv-catalog)]
+      (is (privileged? org-id editor+ptv-catalog [] :org/member)
+          "An empty role list still views the org (membership ⟺ :org/member)")
+      (is (not (privileged? org-id editor+ptv-catalog [] :org/manage))
+          "A plain member cannot manage the org"))))
+
+(deftest reserved-admin-grants-manage-test
+  (testing "The reserved \"admin\" role projects org-admin (:org/manage + :org/member)"
+    (let [org-id (catalog-org! editor+ptv-catalog)]
+      (is (privileged? org-id editor+ptv-catalog ["admin"] :org/manage))
+      (is (privileged? org-id editor+ptv-catalog ["admin"] :org/member)))))
+
+(deftest roles-ceiling-test
+  (testing "A role key in neither the reserved set nor the catalog expands to nothing"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          derived (backend-org/derive-org-roles
+                    "u1" [{:id org-id :role-templates editor+ptv-catalog
+                           :members [{:user-id "u1" :roles ["bogus"]}]}])
+          role-ks (set (map :role derived))]
+      ;; only the baseline survives; "bogus" vanishes
+      (is (= #{"org-user"} role-ks)))))
+
+(deftest catalog-edit-cannot-strip-admin-test
+  (testing "Wiping every data role from the catalog never removes a member's reserved :admin"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          member  (test-utils/gen-regular-user :db-component (test-db))
+          _       (backend-org/add-member! (test-db) org-id (:id member)
+                                           {:roles ["admin" "editor"]} nil)
+          ;; lipas-admin wholesale-replaces the catalog with an empty one
+          _       (backend-org/update-catalog! (test-db) org-id {} nil)
+          derived (backend-org/derive-user-org-roles (test-db) (:id member))
+          role-ks (set (map :role derived))]
+      (is (contains? role-ks "org-admin") "admin survives a catalog wipe")
+      (is (not (contains? role-ks "org-editor")) "the data role (editor) is gone with the catalog")
+      (is (contains? role-ks "org-user") "baseline still present"))))
+
+(deftest set-org-member-roles-endpoint-test
+  (testing "set-org-member-roles replaces a member's whole role list (org-admin only)"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          admin   (test-utils/gen-org-admin-user org-id :db-component (test-db))
+          token   (jwt/create-token admin)
+          member  (test-utils/gen-regular-user :db-component (test-db))
+          _       (backend-org/add-member! (test-db) org-id (:id member) {:roles ["editor"]} nil)
+          call    (fn [roles]
+                    (test-app (-> (mock/request :post "/api/actions/set-org-member-roles")
+                                  (mock/json-body {:org-id org-id :user-id (:id member) :roles roles})
+                                  (test-utils/token-header token))))
+          roles-of (fn [] (->> (backend-org/get-org-users (test-db) org-id)
+                               (filter #(= (str (:id member)) (str (:id %)))) first :roles))]
+      (is (= 200 (:status (call ["admin" "ptv"]))))
+      (is (= #{"admin" "ptv"} (set (roles-of))) "roles replaced wholesale")
+      (testing "an out-of-catalog role is rejected (400) and leaves roles untouched"
+        (is (= 400 (:status (call ["editor" "not-in-catalog"]))))
+        (is (= #{"admin" "ptv"} (set (roles-of))))))))
+
+(deftest invite-plain-member-and-first-admin-test
+  (testing "Invite with :roles [] makes a plain member (only :org/member)"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          user   (test-utils/gen-regular-user :db-component (test-db))
+          _      (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                          {:email (:email user) :roles []}
+                                          nil "http://login")
+          derived (backend-org/derive-user-org-roles (test-db) (:id user))]
+      (is (= #{"org-user"} (set (map :role derived))))))
+  (testing "Invite with :roles [\"admin\"] creates a first admin in one step"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          user   (test-utils/gen-regular-user :db-component (test-db))
+          _      (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                          {:email (:email user) :roles ["admin"]}
+                                          nil "http://login")
+          derived (backend-org/derive-user-org-roles (test-db) (:id user))]
+      (is (contains? (set (map :role derived)) "org-admin")))))
 
 (deftest org-takeover-approve-test
   (testing "Approving a take-over claims the matching sites via append-only revisions"
@@ -777,7 +863,7 @@
     (let [org-id   (catalog-org! editor+ptv-catalog)
           member   (test-utils/gen-regular-user :db-component (test-db))
           _        (backend-org/add-member! (test-db) org-id (:id member)
-                                            {:org-role "member" :templates ["editor"]} nil)
+                                            {:roles ["editor"]} nil)
           add-line (->> (backend-org/get-history (test-db) org-id)
                         (mapcat :changes)
                         (filter #(re-find #"Jäsen lisätty" %))
@@ -812,7 +898,7 @@
     (let [org-id (catalog-org! editor+ptv-catalog)
           member (test-utils/gen-regular-user :db-component (test-db))
           _      (backend-org/add-member! (test-db) org-id (:id member)
-                                          {:org-role "member" :templates ["editor"]} nil)
+                                          {:roles ["editor"]} nil)
           _      (backend-org/update-org! (test-db) org-id
                                           (assoc (backend-org/get-org (test-db) org-id)
                                                  :instructions {:fi "Ohje" :en "Guide" :se "Anvisning"})
@@ -981,7 +1067,7 @@
   [org-id]
   (let [user (test-utils/gen-regular-user :db-component (test-db))]
     (backend-org/add-member! (test-db) org-id (:id user)
-                             {:org-role "member" :templates ["editor"]} nil)
+                             {:roles ["editor"]} nil)
     (jwt/create-token
       (assoc-in user [:permissions :roles]
                 (backend-org/derive-user-org-roles (test-db) (:id user))))))

@@ -91,11 +91,16 @@
    [:activities {:optional true} [:sequential :string]]])
 
 (def members
+  "Each member carries a single `:roles` list drawn from `#{\"admin\"}` ∪ the keys
+  of the org's `:role-templates` catalog. `\"admin\"` is the reserved engine role
+  (org management); membership itself confers the `:org/member` baseline, so a
+  member with `:roles []` is a plain member. Validated ⊆ catalog at the
+  assignment layer (`org/validate-assignment!`); the structural ceiling lives in
+  projection (`org/member->roles`)."
   [:vector
    [:map
     [:user-id [:or :uuid :string]]
-    [:org-role [:enum "admin" "member"]]
-    [:templates {:optional true} [:vector :string]]]])
+    [:roles {:optional true} [:vector :string]]]])
 
 (def instructions
   "Free-text guidance an org-admin writes for their members, localized. Each

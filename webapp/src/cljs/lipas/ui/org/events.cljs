@@ -302,8 +302,7 @@
                  (fn [{:keys [db]} [_ org-id]]
                    (let [form (get-in db [:org :invite-member-form])
                          email (some-> (:email form) str/trim)
-                         org-role (or (:org-role form) "member")
-                         templates (vec (:templates form))]
+                         roles (vec (:roles form))]
                      (if (seq email)
                        {:http-xhrio
                         {:method :post
@@ -311,8 +310,7 @@
                          :headers (auth-headers db)
                          :params {:org-id org-id
                                   :email email
-                                  :org-role org-role
-                                  :templates templates
+                                  :roles roles
                                   :login-url (str (ui-utils/base-url) "/#/kirjaudu")}
                          :format (ajax/json-request-format)
                          :response-format (ajax/json-response-format {:keywords? true})
@@ -333,25 +331,13 @@
                                                  (str "Käyttäjä " email " lisättiin organisaatioon ja hänelle ilmoitettiin sähköpostitse"))
                                       :success? true}]]]}))
 
-(rf/reg-event-fx ::set-member-org-role
-                 (fn [{:keys [db]} [_ org-id user-id org-role]]
+(rf/reg-event-fx ::set-member-roles
+                 (fn [{:keys [db]} [_ org-id user-id roles]]
                    {:http-xhrio
                     {:method :post
-                     :uri (str (:backend-url db) "/actions/set-org-member-role")
+                     :uri (str (:backend-url db) "/actions/set-org-member-roles")
                      :headers (auth-headers db)
-                     :params {:org-id org-id :user-id user-id :org-role org-role}
-                     :format (ajax/json-request-format)
-                     :response-format (ajax/json-response-format {:keywords? true})
-                     :on-success [::get-org-users org-id]
-                     :on-failure [::failure]}}))
-
-(rf/reg-event-fx ::set-member-templates
-                 (fn [{:keys [db]} [_ org-id user-id templates]]
-                   {:http-xhrio
-                    {:method :post
-                     :uri (str (:backend-url db) "/actions/set-org-member-templates")
-                     :headers (auth-headers db)
-                     :params {:org-id org-id :user-id user-id :templates (vec templates)}
+                     :params {:org-id org-id :user-id user-id :roles (vec roles)}
                      :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-users org-id]
