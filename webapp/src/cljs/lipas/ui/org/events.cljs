@@ -406,10 +406,12 @@
 (defn- sanitize-catalog
   "Drop half-filled role-specs (no `:role` yet) before saving so the working
   editor copy — which seeds new rows as empty `{}` — never fails the strict
-  catalog schema on the backend."
+  catalog schema on the backend. Also collapse exact-duplicate specs so a
+  template never carries the same grant twice (it would render twice and grant
+  nothing extra)."
   [catalog]
   (into {} (map (fn [[k entry]]
-                  [k (update entry :roles #(vec (filter :role %)))]))
+                  [k (update entry :roles #(vec (distinct (filter :role %))))]))
         catalog))
 
 (rf/reg-event-fx ::edit-template-catalog
