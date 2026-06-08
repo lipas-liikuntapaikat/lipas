@@ -651,6 +651,24 @@
       (is (= ["editor"] (->> (backend-org/get-org-users (test-db) org-id)
                              (filter #(= (str (:id account)) (str (:id %)))) first :roles))))))
 
+(deftest org-admin-invite-existing-account-magic-link-test
+  (testing "Inviting an EXISTING account sends a one-click magic login link (token in URL)"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          emailer (test-utils/create-test-emailer)
+          user    (test-utils/gen-regular-user :db-component (test-db))
+          result  (core/invite-org-member! (test-db) emailer org-id
+                                           {:email (:email user) :roles ["editor"]}
+                                           nil "https://localhost/login")
+          sent    @(:sent-emails emailer)
+          email   (first sent)]
+      (is (false? (:new-account? result)) "Existing account, not newly created")
+      (is (= 1 (count sent)) "Exactly one email is sent")
+      (is (= (:email user) (:to email)))
+      (is (re-find #"https://localhost/login\?token=" (:plain email))
+          "Plain body carries a magic login link with a token")
+      (is (re-find #"token=" (:html email))
+          "HTML body carries the magic login link too"))))
+
 ;;; --- Unified :roles model: baseline, reserved admin, ceiling, endpoint -------
 
 (defn- privileged?
