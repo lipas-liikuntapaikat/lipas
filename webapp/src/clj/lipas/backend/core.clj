@@ -310,11 +310,17 @@
   (nil? (:lipas-id sports-site)))
 
 (defn- check-permissions! [user sports-site draft?]
-  (when-not (or draft?
-                (new? sports-site)
-                (roles/check-privilege user (roles/site-roles-context sports-site) :site/save-api))
-    (throw (ex-info "User doesn't have enough permissions!"
-                    {:type :no-permission}))))
+  (let [ctx (roles/site-roles-context sports-site)]
+    (when-not (or draft?
+                  (new? sports-site)
+                  ;; Save endpoint gate: a general editor (:site/create-edit) OR an
+                  ;; aspect-specific editor (:site/save-api — activities/floorball/itrs)
+                  ;; may persist a change. The OR lets general editors carry just
+                  ;; create-edit (no redundant save-api); see lipas.roles/basic.
+                  (roles/check-privilege user ctx :site/save-api)
+                  (roles/check-privilege user ctx :site/create-edit))
+      (throw (ex-info "User doesn't have enough permissions!"
+                      {:type :no-permission})))))
 
 ;; Moved to lipas.data.owners so the FE form can derive the same locked :owner
 ;; when an org is selected as a site's owner. Aliased here for existing callers.

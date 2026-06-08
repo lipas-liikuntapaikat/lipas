@@ -44,8 +44,13 @@
 
    :itrs/edit {:doc "Oikeus muokata ITRS-luokitustietoja"}})
 
+;; NOTE: :site/save-api is intentionally NOT here. The save endpoint gate
+;; (lipas.backend.core/check-permissions!) accepts :site/create-edit OR
+;; :site/save-api, so a general editor (which has create-edit) needs no
+;; separate save-api grant. :site/save-api remains only on the aspect-specific
+;; editor roles (activities/floorball/itrs) that can persist a partial edit
+;; WITHOUT being general editors.
 (def basic #{:site/create-edit
-             :site/save-api
              :activity/view
              :analysis-tool/use})
 
