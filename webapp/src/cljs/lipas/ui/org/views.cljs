@@ -1005,7 +1005,11 @@
   "Mounted as a tab on the sports-site page: owner org + derived editors, with
   the inline grant control for the owner-org admin. Reuses site-editors-detail."
   [{:keys [tr lipas-id owner-org-id]}]
-  (r/with-let [_ (rf/dispatch [::events/get-site-editors lipas-id])]
+  ;; site-editors-detail renders site-edit-history-section, which reads
+  ;; ::site-edit-history — so this panel must fetch BOTH (the our-sites tab
+  ;; fetches edit-history itself; this standalone mount has to as well).
+  (r/with-let [_ (do (rf/dispatch [::events/get-site-editors lipas-id])
+                     (rf/dispatch [::events/get-site-edit-history lipas-id]))]
     [:> Box {:sx {:p 2}}
      [:> Typography {:variant "h6" :sx {:mb 1}} (tr :lipas.org/editing-rights)]
      [site-editors-detail tr (str owner-org-id) {:lipas-id lipas-id}]]))

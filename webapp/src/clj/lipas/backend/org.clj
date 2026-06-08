@@ -15,6 +15,7 @@
             [honey.sql :as hsql]
             [lipas.backend.db.db :as db]
             [lipas.backend.db.utils :as db-utils]
+            [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
             [malli.core :as m]
             [malli.error :as me]
@@ -334,6 +335,23 @@
     (throw (ex-info "Invalid role-template catalog"
                     {:type :invalid-catalog
                      :errors (me/humanize (m/explain org-schema/role-templates role-templates))})))
+  ;; Beyond structural validity: a context-scoped role whose required key is
+  ;; *absent* would project an UNSCOPED, org-wide grant — `select-role` treats a
+  ;; missing context key as "always active" (e.g. a `ptv-manager` spec with no
+  ;; `:city-code` ⇒ PTV management everywhere). Require the key to be present
+  ;; (an empty value is fine — it simply matches nothing). `:org-id` is excepted;
+  ;; it is injected at projection, never stored in the catalog.
+  (doseq [[tname {tmpl-roles :roles}] role-templates
+          spec tmpl-roles
+          :let [req (remove #{:org-id}
+                            (:required-context-keys (get roles/roles (keyword (:role spec)))))]
+          :when (seq req)]
+    (when-not (every? #(contains? spec %) req)
+      (throw (ex-info "Role-template spec is missing a required context key"
+                      {:type :invalid-catalog
+                       :template tname
+                       :role (:role spec)
+                       :required (vec req)}))))
   true)
 
 (defn update-catalog!

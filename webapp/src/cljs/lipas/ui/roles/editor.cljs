@@ -75,7 +75,7 @@
       :onChange (fn [_e v] (on-change (mapv ac/safe-value v)))
       :multiple true
       :selectOnFocus true
-      :clearOnBlue true
+      :clearOnBlur true
       :handleHomeEndKeys true
       :freeSolo true
       :filterOptions (fn [options params]

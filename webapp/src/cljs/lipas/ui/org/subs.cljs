@@ -153,13 +153,12 @@
     (get-in db [:org :catalog-editor])))
 
 ;; --- Our sites (Phase D) ---
+;; The Our-sites tab is driven by bulk-ops' editable-sites; only the "owned"
+;; count survives here (card + setup-checklist). The former :editable / filtered
+;; our-sites subs are gone with that rewrite.
 (rf/reg-sub ::org-owned-sites
   (fn [db _]
     (get-in db [:org :sites :owned])))
-
-(rf/reg-sub ::org-editable-sites
-  (fn [db _]
-    (get-in db [:org :sites :editable])))
 
 (rf/reg-sub ::owned-sites-count
   :<- [::org-owned-sites]
@@ -171,18 +170,6 @@
 (rf/reg-sub ::reclaiming?
   (fn [db _]
     (boolean (get-in db [:org :reclaiming?]))))
-
-(rf/reg-sub ::our-sites-filter
-  (fn [db _]
-    (get-in db [:org :sites :filter] "owned")))
-
-(rf/reg-sub ::our-sites
-  :<- [::our-sites-filter]
-  :<- [::org-owned-sites]
-  :<- [::org-editable-sites]
-  (fn [[flt owned editable] _]
-    ;; org-sites endpoint returns {:total .. :sites [..]}
-    (:sites (if (= flt "editable") editable owned))))
 
 (rf/reg-sub ::site-editors
   (fn [db [_ lipas-id]]

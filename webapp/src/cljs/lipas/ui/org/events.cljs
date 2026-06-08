@@ -24,7 +24,7 @@
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-user-orgs-success]
-                       :on-failure [::todo]}})))
+                       :on-failure [::failure]}})))
 
 (rf/reg-event-db ::get-org-users-success
                  (fn [db [_ resp]]
@@ -41,7 +41,7 @@
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-org-users-success]
-                       :on-failure [::todo]}})))
+                       :on-failure [::failure]}})))
 
 (rf/reg-event-db ::get-all-users-success
                  (fn [db [_ users]]
@@ -237,12 +237,6 @@
                                   :success? false}]})))
 
  ;; TODO placeholder handler - logs error for now
-(rf/reg-event-fx ::todo
-                 (fn [_ [_ resp]]
-                   (js/console.error "Unhandled error response:" resp)
-                   {}))
-
-(rf/reg-event-fx ::TODO ::todo) ; Alias for consistency
 
 ;; =====================================================================
 ;; Org-management self-service (UX-P1 / Phase A)
@@ -442,10 +436,6 @@
 ;; Our sites (UX-P2 / Phase D)
 ;; =====================================================================
 
-(rf/reg-event-db ::set-our-sites-filter
-                 (fn [db [_ flt]]
-                   (assoc-in db [:org :sites :filter] flt)))
-
 (rf/reg-event-db ::get-org-sites-success
                  (fn [db [_ flt resp]]
                    (assoc-in db [:org :sites (keyword flt)] resp)))
@@ -608,7 +598,6 @@
                  (fn [_ [_ org-id resp]]
                    {:fx [[:dispatch [::close-claim-dialog]]
                          [:dispatch [::get-org-sites org-id "owned"]]
-                         [:dispatch [::get-org-sites org-id "editable"]]
                          [:dispatch [:lipas.ui.events/set-active-notification
                                      {:message (str "Siirretty " (:sites-claimed resp) " kohdetta omistukseen")
                                       :success? true}]]]}))
