@@ -447,6 +447,8 @@
         catalog @(rf/subscribe [::subs/org-templates])
         can-manage? @(rf/subscribe [::subs/can? :org/manage-members org-id])]
     [:> Box {:sx {:p 2}}
+     [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 2}}
+      (tr :lipas.org/members-plane-note)]
      (when can-manage?
        [:> Box {:sx {:mb 1}}
         [invite-member tr org-id]
