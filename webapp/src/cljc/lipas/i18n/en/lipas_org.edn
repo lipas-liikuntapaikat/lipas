@@ -80,6 +80,8 @@
  :member-col "Member"
  :no-members "No members"
  :remove-member-confirm "Remove member from the organization?"
+ :members-plane-note
+ "These roles apply only within this organization and are based on membership (permissions via the organization)."
  :permissions-refresh-note
  "Permissions take effect at the member's next login (within 6 h)."
 

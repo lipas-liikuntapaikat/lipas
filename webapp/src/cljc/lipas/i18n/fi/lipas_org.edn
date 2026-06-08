@@ -80,6 +80,8 @@
  :member-col "Jäsen"
  :no-members "Ei jäseniä"
  :remove-member-confirm "Poista jäsen organisaatiosta?"
+ :members-plane-note
+ "Nämä roolit ovat voimassa vain tässä organisaatiossa ja perustuvat jäsenyyteen (organisaation kautta saadut oikeudet)."
  :permissions-refresh-note
  "Oikeudet päivittyvät käyttäjän seuraavalla kirjautumisella (enintään 6 h)."
 

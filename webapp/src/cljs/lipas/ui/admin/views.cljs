@@ -13,7 +13,6 @@
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
-            ["react" :as react]
             [clojure.string :as str]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
@@ -167,7 +166,10 @@
      [:> Card
       {:square true}
       [:> CardHeader
-       {:title "Roolit"}]
+       {:title "Suorat käyttöoikeudet"
+        :subheader (str "LIPAS-ylläpitäjän käyttäjälle suoraan myöntämät roolit. "
+                        "Organisaation kautta saadut oikeudet (jäsenyydet) "
+                        "hallitaan Organisaatiot-näkymässä.")}]
       [:> CardContent
        [:> FormGroup
 
@@ -558,100 +560,6 @@
         :sort-fn :email
         :items users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))
-
-(defn add-user-to-org-dialog [tr]
-  (let [open? @(rf/subscribe [::subs/add-user-to-org-dialog-open?])
-        org-id @(rf/subscribe [::subs/add-user-to-org-dialog-org-id])
-        email @(rf/subscribe [::subs/add-user-to-org-email])
-        role @(rf/subscribe [::subs/add-user-to-org-role])]
-    [dialogs/dialog
-     {:open? open?
-      :title (tr :lipas.org/add-user)
-      :on-close #(rf/dispatch [::events/close-add-user-to-org-dialog])
-      :save-enabled? (and (seq email) role)
-      :save-label (tr :actions/add)
-      :cancel-label (tr :actions/cancel)
-      :on-save #(rf/dispatch [::events/add-user-to-org email role org-id])}
-
-     [:> FormGroup
-      [text-fields/text-field
-       {:label (tr :lipas.user/email)
-        :value email
-        :required true
-        :on-change #(rf/dispatch [::events/set-add-user-to-org-email %])}]
-      [selects/select
-       {:label (tr :lipas.org/org-role)
-        :value role
-        :required true
-        :items [{:value "org-user" :label (tr :lipas.user.permissions.roles.role-names/org-user)}
-                {:value "org-admin" :label (tr :lipas.user.permissions.roles.role-names/org-admin)}]
-        :on-change #(rf/dispatch [::events/set-add-user-to-org-role %])}]]]))
-
-(defn org-dialog [tr]
-  (let [edit-id @(rf/subscribe [::ui-subs/query-param :edit-id])
-        org @(rf/subscribe [::subs/editing-org])
-        org-users @(rf/subscribe [::subs/org-users-table-data edit-id])]
-    (react/useEffect (fn []
-                       (rf/dispatch [::events/set-org-to-edit edit-id])
-                       (when (and edit-id (not= "new" edit-id))
-                         (rf/dispatch [::events/get-org-users edit-id]))
-                       (fn []
-                         (rf/dispatch [::events/set-org-to-edit nil])))
-                     #js [edit-id])
-    [dialogs/full-screen-dialog
-     {:open? (boolean edit-id)
-      :title (or (:name org)
-                 "-")
-      :close-label (tr :actions/close)
-      :on-close (fn [] (rfe/set-query #(dissoc % :edit-id)))
-      :bottom-actions
-      [[:> Button
-        {:variant "contained"
-         :color "secondary"
-         :on-click #(rf/dispatch [::events/save-org org])}
-        [:> Icon {:sx {:mr 1}} "save"]
-        (tr :actions/save)]]}
-
-     [add-user-to-org-dialog tr]
-
-     ;; Reuse lipas.ui.org.views
-     [:> Grid {:container true :spacing 1}
-      [layouts/card {:title (tr :lipas.org/details)
-                     :xs 12
-                     :md 12
-                     :lg 12}
-       [:> FormGroup
-        [text-fields/text-field
-         {:label (tr :lipas.org/name)
-          :value (:name org)
-          :on-change #(rf/dispatch [::events/edit-org [:name] %])}]
-        [text-fields/text-field
-         {:label (tr :lipas.org/phone)
-          :value (:phone (:data org))
-          :on-change (fn [x] (rf/dispatch [::events/edit-org [:data :phone] x]))}]]]
-
-       ;; TODO: Ptv data fields
-
-      [layouts/card {:title (tr :lipas.org/users)
-                     :xs 12
-                     :md 12
-                     :lg 12}
-       [:> Grid {:container true :spacing 2 :align-items "flex-end"}
-        [:> Grid {:item true :xs true}
-         [tables/table
-          {:headers
-           [[:email (tr :lipas.user/email)]
-            [:username (tr :lipas.user/username)]
-            [:role (tr :lipas.org/org-role)]]
-           :sort-fn :email
-           :items org-users
-           :hide-action-btn? true}]]
-        [:> Grid {:item true}
-         [:> Fab
-          {:color "secondary"
-           :size "small"
-           :on-click #(rf/dispatch [::events/open-add-user-to-org-dialog edit-id])}
-          [:> Icon "person_add"]]]]]]]))
 
 (defn job-details-dialog [tr]
   (let [open? (<== [::subs/job-details-dialog-open?])
