@@ -799,7 +799,7 @@
          :handler
          (fn [_]
            {:status 200
-            :body (core/get-front-page-stats search)})}}]
+            :body (core/get-front-page-stats db search)})}}]
 
       ;; Get newsletter
       ["/actions/get-newsletter"
