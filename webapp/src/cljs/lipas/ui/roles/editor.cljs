@@ -11,10 +11,21 @@
   (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
             [lipas.roles :as roles]
             [lipas.ui.components.autocompletes :as ac]
             [re-frame.core :as rf]
             [reagent.core :as r]))
+
+(defn privilege-description
+  "Human, translated description for a privilege key. Privilege keys are
+  namespaced (`:site/create-edit`); the i18n catalog stores them with `/`→`.`
+  (tongue drops a namespaced leaf's namespace). Falls back to the raw key so a
+  new privilege never renders blank."
+  [tr privilege]
+  (let [munged (str/replace (subs (str privilege) 1) "/" ".")
+        s (tr (keyword "lipas.user.permissions.roles.privilege-descriptions" munged))]
+    (if (str/starts-with? s "{Missing") (subs (str privilege) 1) s)))
 
 ;; ---------------------------------------------------------------------------
 ;; Option-list subs — pure derivations over the canonical sports-sites data
@@ -153,6 +164,18 @@
 
      (when-not role-kw
        [:> Typography (tr :lipas.user.permissions.roles.edit-role/choose-role)])
+
+     ;; Make the role's grants explicit so the admin doesn't have to remember
+     ;; what each role confers (data-driven from the role registry).
+     (when-let [privs (and role-kw (seq (sort (:privileges rdef))))]
+       [:> Stack {:direction "column" :sx #js {:gap 0}}
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :lipas.user.permissions.roles/privileges-label)]
+        (into [:ul {:style #js {:margin "2px 0 4px 0" :paddingLeft "18px"}}]
+              (for [p privs]
+                [:li {:key (str p)}
+                 [:> Typography {:variant "caption" :color "text.secondary"}
+                  (privilege-description tr p)]]))])
 
      (for [k req]
        [context-key-edit

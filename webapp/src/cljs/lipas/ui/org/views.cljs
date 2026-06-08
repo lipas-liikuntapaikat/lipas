@@ -75,14 +75,19 @@
   (some (fn [[k tr-key]] (when (= k type) (tr tr-key))) org-type-options))
 
 (defn role-grant-text
-  "Plain-language description of a single catalog role-spec."
+  "Plain-language description of a single catalog role-spec. Data-driven from the
+  role's i18n grant description (defined alongside the role catalog), falling back
+  to the role's display name so a role without a curated description never renders
+  as \"unknown\". Appends the role's scoped activities when present."
   [tr {:keys [role activity]}]
-  (case role
-    "org-editor" (tr :lipas.org/grants-org-editor)
-    "ptv-manager" (tr :lipas.org/grants-ptv)
-    "activities-manager" (str (tr :lipas.org/grants-activity)
-                              (when (seq activity) (str ": " (str/join ", " activity))))
-    (tr :lipas.org/grants-unknown)))
+  (when role
+    (let [desc (tr (keyword "lipas.user.permissions.roles.role-descriptions" role))
+          ;; tongue returns "{Missing key …}" for an undescribed role → fall back
+          ;; to its translated name.
+          desc (if (str/starts-with? desc "{Missing")
+                 (tr (keyword "lipas.user.permissions.roles.role-names" role))
+                 desc)]
+      (str desc (when (seq activity) (str ": " (str/join ", " activity)))))))
 
 (defn template-grants-text
   "Plain-language description of everything a catalog template grants."
@@ -505,7 +510,7 @@
   [{:key :editor   :label "Muokkaaja"     :roles [{:role "org-editor"}]}
    {:key :ptv      :label "PTV"           :roles [{:role "ptv-manager" :city-code []}]}
    {:key :activity :label "Aktiviteetti"  :roles [{:role "activities-manager" :activity []}]}
-   {:key :routes   :label "Reittien lisäys" :roles [{:role "type-manager" :type-code []}]}])
+   {:key :type     :label "Tyyppi"        :roles [{:role "type-manager" :type-code []}]}])
 
 (defn catalog-template-editor
   "One template = a human-readable label + 1..N role-specs built with the shared

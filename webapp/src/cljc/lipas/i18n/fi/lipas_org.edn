@@ -100,10 +100,6 @@
  :add-template "Lisää malli"
  :no-templates "Ei roolimalleja"
  :grants-admin "Organisaation hallinta"
- :grants-org-editor "Tämän organisaation kohteiden muokkaus"
- :grants-activity "Aktiviteetin muokkaus"
- :grants-ptv "PTV-hallinta"
- :grants-unknown "Tuntematon oikeus"
 
  ;; overview
  :org-type "Organisaatiotyyppi"

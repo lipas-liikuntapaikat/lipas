@@ -100,10 +100,6 @@
  :add-template "Lägg till mall"
  :no-templates "Inga rollmallar"
  :grants-admin "Organisationshantering"
- :grants-org-editor "Redigering av denna organisations anläggningar"
- :grants-activity "Redigering av aktivitet"
- :grants-ptv "PTV-hantering"
- :grants-unknown "Okänd behörighet"
 
  ;; overview
  :org-type "Organisationstyp"
