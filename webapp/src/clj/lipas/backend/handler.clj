@@ -125,21 +125,6 @@
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
 
-(defn- owner-org-assignment-authorized?
-  "Boolean privilege fn for the sports-site save route. When the body claims an
-  :owner-org-id, the actor must hold :site/create-edit on that org (i.e. be an
-  org-editor of it, or a lipas-admin). Legacy saves (no :owner-org-id) pass
-  through untouched — the site-level edit permission is still enforced in core
-  (`check-permissions!`). This only gates the org-ownership dimension: you may
-  never point a site's ownership at an org you have no rights to."
-  [req]
-  (let [user (:identity req)
-        owner-org-id (-> req :parameters :body :owner-org-id)]
-    (or (nil? owner-org-id)
-        (roles/check-privilege user
-                               {:org-id #{(str owner-org-id)}}
-                               :site/create-edit))))
-
 (defn create-app
   [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
   (ring/ring-handler
@@ -190,11 +175,14 @@
        {:post
         {:no-doc false
          :middleware [mw/token-auth mw/auth]
-           ;; NOTE: site-level edit privilege is checked in the core code
-           ;; (content-dependent: city/type/lipas-id). This gate only enforces
-           ;; the org-ownership dimension — a claimed :owner-org-id must be an
-           ;; org the actor has rights to.
-         :require-privilege owner-org-assignment-authorized?
+           ;; All authorization for save lives in core (it needs the STORED site
+           ;; to authorize content edits and to gate the security-sensitive
+           ;; :owner-org-id / :edit-grants fields — see core/upsert-sports-site!
+           ;; and the ownership/edit-grant business rules). The route only
+           ;; authenticates; doing the org-ownership check here (without the
+           ;; current revision) was both insufficient and a false-reject for
+           ;; legacy city/type editors of org-owned sites.
+         :require-privilege nil
          :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
                      400 {:body [:map {:closed false}]}}
          :parameters
@@ -597,12 +585,9 @@
                              [:lipas-id :int]
                              [:grantee-org-id org-schema/org-id]]}
          :handler (fn [req]
+                    ;; Authorization (owning-org admin or LIPAS admin) is enforced
+                    ;; in core/grant-site-edit! so every caller shares one rule.
                     (let [{:keys [org-id lipas-id grantee-org-id]} (-> req :parameters :body)]
-                      ;; only the owning org may grant edit on its site
-                      (when-not (= (str org-id)
-                                   (str (:owner-org-id (core/get-sports-site db lipas-id))))
-                        (throw (ex-info "Site is not owned by this organization"
-                                        {:type :not-site-owner})))
                       (core/grant-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
                       {:status 200 :body {}}))}}]
 
