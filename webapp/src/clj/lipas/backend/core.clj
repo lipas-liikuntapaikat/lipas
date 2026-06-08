@@ -514,14 +514,25 @@
         org-name (:name (org/get-org db org-id))]
     (org/add-member! db org-id (:id user) assignment author-id)
     ;; Both cases get an email: new accounts a magic login link to set a password;
-    ;; existing accounts a plain "you've been added to org X" notification.
-    (if new?
-      (let [magic (create-magic-link login-url user)]
-        (email/send-org-invitation-email!
-          emailer email (assoc magic :org-name org-name)))
-      (email/send-org-added-email!
-        emailer email {:org-name org-name :link login-url}))
-    {:user-id (str (:id user)) :new-account? new?}))
+    ;; existing accounts a plain "you've been added to org X" notification. The
+    ;; membership is already committed, so a delivery failure must NOT fail the
+    ;; whole operation (which would leave a member added but report an error).
+    ;; Report delivery status instead; a new account without its link can still
+    ;; reset its password / be re-invited.
+    (let [email-sent?
+          (try
+            (if new?
+              (let [magic (create-magic-link login-url user)]
+                (email/send-org-invitation-email!
+                  emailer email (assoc magic :org-name org-name)))
+              (email/send-org-added-email!
+                emailer email {:org-name org-name :link login-url}))
+            true
+            (catch Exception e
+              (log/error e "Failed to send org-invitation email"
+                         {:email email :org-id (str org-id) :new-account? new?})
+              false))]
+      {:user-id (str (:id user)) :new-account? new? :email-sent? email-sent?})))
 
 (defn get-sports-sites-by-type-code
   ([db type-code]

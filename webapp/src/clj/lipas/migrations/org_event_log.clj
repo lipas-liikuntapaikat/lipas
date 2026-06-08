@@ -12,7 +12,8 @@
     `org-admin` / `org-user` role becomes a member entry in the owning org's
     document. The legacy account roles are left in place; a later migration drops
     them once derive-at-login is verified in production."
-  (:require [next.jdbc :as jdbc]
+  (:require [lipas.backend.db.utils] ; jsonb <-> Clojure protocol extensions
+            [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [taoensso.timbre :as log]))
 

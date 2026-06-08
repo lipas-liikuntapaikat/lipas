@@ -63,6 +63,7 @@
    :invalid-payload (exception-handler 400 :invalid-payload)
    :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
    :invalid-catalog (exception-handler 400 :invalid-catalog)
+   :invalid-takeover-state (exception-handler 409 :invalid-takeover-state)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -470,8 +471,15 @@
                           admin? (roles/check-privilege (:identity req) {} :users/manage)
                           body   (if admin?
                                    body
+                                   ;; :type/:ownership are the take-over ceiling and
+                                   ;; :ptv-data is lipas-admin-only (its own endpoint
+                                   ;; is :users/manage) — pin all three to current so
+                                   ;; an org-admin's details edit can't widen them.
                                    (let [cur (org/get-org db (:id body))]
-                                     (assoc body :type (:type cur) :ownership (:ownership cur))))]
+                                     (assoc body
+                                            :type (:type cur)
+                                            :ownership (:ownership cur)
+                                            :ptv-data (:ptv-data cur))))]
                       (org/update-org! db (:id body) body))
                     {:status 200 :body {}})}}]
 
