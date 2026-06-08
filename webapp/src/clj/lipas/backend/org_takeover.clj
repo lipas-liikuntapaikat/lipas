@@ -130,6 +130,11 @@
   deciding user (becomes the site author)."
   [db search request-id actor]
   (let [req        (get-request db request-id)
+        _          (when-not (= "requested" (:status req))
+                     ;; only a pending request can be approved — never re-run a
+                     ;; claim for an already-approved or denied request
+                     (throw (ex-info "Takeover request is not awaiting a decision"
+                                     {:type :invalid-takeover-state :status (:status req)})))
         org-id     (:org-id req)
         owner-enum (core/org-type->owner (:type (org/get-org db org-id)))
         ;; recompute at approval time, excluding sites already owned by this org
@@ -141,6 +146,16 @@
     ;; clojure.java.jdbc tx (re-entrant: the nested with-db-transaction inside
     ;; db/upsert-sports-site! reuses it) — same mechanism as bulk-ops mass-update.
     (jdbc-old/with-db-transaction [tx db]
+      ;; Flip the status FIRST, guarded on the current state. 0 rows ⇒ a
+      ;; concurrent approval already won the row — throw to roll back so the
+      ;; claim runs exactly once.
+      (when (zero? (first (jdbc-old/execute! tx
+                                             ["UPDATE org_takeover_request
+                                               SET status='approved', decided_by=?, decided_at=now()
+                                               WHERE id=? AND status='requested'"
+                                              (some-> actor :id ->uuid) (->uuid request-id)])))
+        (throw (ex-info "Takeover request already decided"
+                        {:type :invalid-takeover-state})))
       (let [updated (doall
                      (for [lid lipas-ids]
                        (->> (cond-> (assoc (core/get-sports-site tx lid)
@@ -153,11 +168,7 @@
         (when (seq updated)
           (let [idx (get-in search [:indices :sports-site :search])]
             (search/bulk-index-sync! (:client search)
-                                     (search/->bulk idx :lipas-id (map core/enrich updated)))))
-        (jdbc-old/execute! tx
-                           ["UPDATE org_takeover_request
-                             SET status='approved', decided_by=?, decided_at=now() WHERE id=?"
-                            (some-> actor :id ->uuid) (->uuid request-id)])))
+                                     (search/->bulk idx :lipas-id (map core/enrich updated)))))))
     {:status "approved" :org-id (str org-id) :sites-claimed (count lipas-ids)}))
 
 (defn reclaim-now!
@@ -171,8 +182,13 @@
 
 (defn deny!
   [db request-id actor]
-  (jdbc/execute-one! db
-                     ["UPDATE org_takeover_request
-                       SET status='denied', decided_by=?, decided_at=now() WHERE id=?"
-                      (some-> actor :id ->uuid) (->uuid request-id)])
-  {:status "denied"})
+  ;; Guarded like approve! — only a pending request can be denied.
+  (let [res (jdbc/execute-one! db
+                               ["UPDATE org_takeover_request
+                                 SET status='denied', decided_by=?, decided_at=now()
+                                 WHERE id=? AND status='requested'"
+                                (some-> actor :id ->uuid) (->uuid request-id)])]
+    (when (zero? (:next.jdbc/update-count res))
+      (throw (ex-info "Takeover request is not awaiting a decision"
+                      {:type :invalid-takeover-state})))
+    {:status "denied"}))

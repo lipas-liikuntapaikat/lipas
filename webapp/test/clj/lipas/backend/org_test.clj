@@ -424,7 +424,21 @@
                                                 {:bad {:roles 5}} nil)
                    :no-throw
                    (catch Exception e (:type (ex-data e))))]
-      (is (= :invalid-catalog ex)))))
+      (is (= :invalid-catalog ex))))
+
+  (testing "A context-scoped role missing its required key is rejected (would project org-wide)"
+    (let [org (first (create-test-orgs))
+          ex  (try (backend-org/update-catalog! (test-db) (:id org)
+                                                ;; ptv-manager requires :city-code; omitting it
+                                                ;; would grant PTV management everywhere
+                                                {:ptv {:roles [{:role "ptv-manager"}]}} nil)
+                   :no-throw
+                   (catch Exception e (:type (ex-data e))))]
+      (is (= :invalid-catalog ex))))
+
+  (testing "A present-but-empty context key is allowed (matches nothing; admin fills it later)"
+    (let [org-id (catalog-org! {:ptv {:roles [{:role "ptv-manager" :city-code []}]}})]
+      (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :ptv)))))
 
 ;;; --- The ceiling is lipas-admin-only (authorization, HTTP edge) -------------
 ;;; These guard against accidentally opening a path for an org to elevate its
@@ -765,7 +779,18 @@
           "Revision records the acting org on behalf of which the edit was made")
       (is (nil? (:owner-org-id untouched)) "Non-matching site (owner 'state') is untouched")
       ;; request is marked decided
-      (is (= "approved" (:status (org-takeover/get-request (test-db) (:id req))))))))
+      (is (= "approved" (:status (org-takeover/get-request (test-db) (:id req)))))
+      ;; re-approving the same (already-approved) request is rejected, not re-run
+      (is (= :invalid-takeover-state
+             (try (org-takeover/approve! (test-db) (test-search) (:id req) admin)
+                  :no-throw
+                  (catch Exception e (:type (ex-data e)))))
+          "A decided request cannot be approved again")
+      ;; ...and denying a decided request is likewise rejected
+      (is (= :invalid-takeover-state
+             (try (org-takeover/deny! (test-db) (:id req) admin)
+                  :no-throw
+                  (catch Exception e (:type (ex-data e)))))))))
 
 (deftest reclaim-org-sites-endpoint-test
   (testing "LIPAS admin reclaims matching sites in one step (no approval queue)"
