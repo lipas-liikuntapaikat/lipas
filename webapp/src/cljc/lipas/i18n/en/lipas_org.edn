@@ -100,10 +100,6 @@
  :add-template "Add template"
  :no-templates "No role templates"
  :grants-admin "Organization management"
- :grants-org-editor "Editing of this organization's sites"
- :grants-activity "Activity editing"
- :grants-ptv "PTV management"
- :grants-unknown "Unknown grant"
 
  ;; overview
  :org-type "Organization type"
