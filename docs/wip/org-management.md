@@ -425,6 +425,23 @@ the list. Members see the roster read-only. **No "pending invitations" table by
 design** — there is no invitation table; an invited-but-not-logged-in user is just an
 account member (optionally surface via login status later).
 
+**Adding a member (the invite flow, after unification).**
+1. Inviter types an email; an existence probe (`POST /actions/check-is-existing-user`)
+   decides the account path: an **unknown** address gets an account created on the fly
+   and a magic-link email; a **known** one is simply added. *This probe + account
+   creation + email path is unchanged by the role unification* — only the role payload
+   collapses.
+2. The roles multi-select **starts empty**. Empty = a **plain member** (the
+   `:org/member` view baseline that membership alone confers). The old "member" default
+   on the org-role select **disappears** — "member" is no longer a pickable value, it is
+   what you are by being in the org.
+3. The inviter may grant any roles up front, **including `Ylläpitäjä` (`:admin`)** — so
+   a lipas-admin can create an org's first admin in one step, and an org-admin can
+   invite another admin, all through the same control. `:roles []` is a valid
+   submission (membership-only viewer).
+4. Submit → `POST /actions/invite-org-member` with `{:email :roles}`
+   (catalog-validated: `:roles` ⊆ `#{:admin}` ∪ catalog keys).
+
 ### 6.7 Käyttöoikeudet (role catalog)
 
 Read for everyone, write for lipas-admin (`:org/edit-catalog`). Lists each catalog
@@ -729,6 +746,11 @@ the catalog expands to nothing). FE capability gating already reads
    `lipas.ui.admin.{views,events,subs}`):
    - members table + invite form → a single **roles** multi-select (options =
      `Ylläpitäjä` (`:admin`) + catalog roles); remove the org-role `Select`.
+   - **invite UX** (§6.6): roles select **defaults to empty** (= plain member; the old
+     `"member"` default goes away, baseline is implicit); `:roles []` must be a valid
+     submission; `:admin` is offered as an option (first-admin creation in one step).
+     The existence probe (`check-is-existing-user`) + account creation + magic-link
+     email path is **unchanged** — only `::invite-member`'s payload becomes `:roles`.
    - events `::set-member-org-role` + `::set-member-templates` → `::set-member-roles`;
      `::invite-member` payload `:roles`.
    - subs `::is-org-admin?`/`::is-org-member?` unchanged.
@@ -742,7 +764,8 @@ the catalog expands to nothing). FE capability gating already reads
    over existing dev/staging DBs alike.
 8. **Tests** (`org-test`, `roles-test`): member fixtures + endpoint bodies → `:roles`;
    projection assertions for baseline + reserved `:admin` + ceiling; add a case proving
-   a catalog edit cannot remove `:admin`.
+   a catalog edit cannot remove `:admin`; invite cases for `:roles []` (plain member,
+   gets `:org/member` only) and `:roles ["admin"]` (first-admin creation).
 
 ### Sequencing
 
