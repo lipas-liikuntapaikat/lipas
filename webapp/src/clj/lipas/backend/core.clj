@@ -848,9 +848,13 @@
       (let [query {:size 0
                    :track_total_hits true
                    :query {:bool {:filter [{:terms {:status ["active" "out-of-service-temporarily"]}}]}}
-                   :aggs {:cities {:cardinality {:field :location.city.city-code}}
-                          :latest {:max {:field :event-date}}
-                          :updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}}}}
+                   ;; The municipality count is scoped to the last 12 months
+                   ;; (distinct cities with a site updated in the window) rather
+                   ;; than all-time — the all-time figure is essentially every
+                   ;; municipality in Finland and never moves.
+                   :aggs {:latest {:max {:field :event-date}}
+                          :updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}
+                                              :aggs {:cities {:cardinality {:field :location.city.city-code}}}}}}
             result (-> (search search* query) :body)
             total  (get-in result [:hits :total :value])
             aggs   (:aggregations result)
@@ -861,11 +865,11 @@
                                           FROM sports_site
                                           WHERE event_date >= now() - interval '12 months'"])
                          first :n)
-            data   {:total-count        total
-                    :city-count         (get-in aggs [:cities :value])
-                    :updated-last-year  (get-in aggs [:updated-last-year :doc_count])
-                    :updaters-last-year updaters
-                    :last-updated       (get-in aggs [:latest :value_as_string])}]
+            data   {:total-count               total
+                    :cities-updated-last-year  (get-in aggs [:updated-last-year :cities :value])
+                    :updated-last-year         (get-in aggs [:updated-last-year :doc_count])
+                    :updaters-last-year        updaters
+                    :last-updated              (get-in aggs [:latest :value_as_string])}]
         (swap! cache assoc cache-key {:data data :timestamp now})
         data))))
 

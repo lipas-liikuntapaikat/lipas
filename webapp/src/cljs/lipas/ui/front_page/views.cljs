@@ -379,18 +379,18 @@
             :sm (if vertical? 12 6)
             :md (if vertical? 12 "auto")
             :style {:text-align "center"
-                    :padding (if vertical? "0.5em 1em" "1em 2em")}}
+                    :padding (if vertical? "0.4em 1em" "1em 2em")}}
    [:> Typography {:variant (if vertical? "h4" "h3")
                    :component "div"
                    :style {:font-weight 700
-                           :color mui/secondary
+                           :color mui/primary
                            :line-height 1.2}}
     value]
    [:> Typography {:variant (if vertical? "body2" "body1")
                    :component "div"
-                   :style {:opacity 0.85
+                   :style {:font-weight 700
                            :margin-top "0.15em"
-                           :color "white"}}
+                           :color "rgba(0, 0, 0, 0.8)"}}
     label]])
 
 (defn- stat-items [tr stats-data vertical?]
@@ -399,7 +399,7 @@
                :value (format-number (:total-count stats-data))
                :label (tr :lipas-in-numbers/sports-facilities)}]
    [stat-item {:vertical? vertical?
-               :value (format-number (:city-count stats-data))
+               :value (format-number (:cities-updated-last-year stats-data))
                :label (tr :lipas-in-numbers/municipalities)}]
    [stat-item {:vertical? vertical?
                :value (format-number (:updated-last-year stats-data))
@@ -430,11 +430,19 @@
        [:> Grid
         {:container true
          :direction (if card? "column" "row")
-         :style (merge {:background-color mui/primary
-                        :color "white"}
+         ;; Translucent near-white backing so the Finland map shows through
+         ;; (less "peittävä"), themed to match the surrounding cards: orange
+         ;; headline, navy numbers, black labels.
+         :style (merge {:background-color "rgba(250, 250, 250, 0.88)"}
                        (if card?
-                         {:padding "1.5em 1em" :border-radius "8px"}
-                         {:padding "2em 1em"}))}
+                         ;; Compact, content-sized, pushed to the right edge so
+                         ;; more of the map stays visible.
+                         {:padding "1.25em 1em"
+                          :border-radius "8px"
+                          :max-width "320px"
+                          :margin-left "auto"
+                          :box-shadow "0 1px 6px rgba(0, 0, 0, 0.15)"}
+                         {:padding "1.5em 1em" :border-radius "8px"}))}
 
         ;; Heading
         [:> Grid {:item true :xs 12
@@ -442,14 +450,14 @@
                           :margin-bottom (if card? "0.5em" "1em")}}
          [:> Typography {:variant (if card? "h6" "h4")
                          :component "h2"
-                         :style {:font-weight 600
-                                 :color "white"}}
+                         :style {:font-weight 700
+                                 :color mui/secondary}}
           (tr :lipas-in-numbers/headline)]]
 
         (if in-progress?
           ;; Loading
           [:> Grid {:item true :xs 12 :style {:text-align "center"}}
-           [:> CircularProgress {:style {:color "white"}}]]
+           [:> CircularProgress {:style {:color mui/secondary}}]]
 
           ;; Stats
           (when stats-data
@@ -467,7 +475,7 @@
                          :style {:text-align "center"
                                  :margin-top (if card? "0.5em" "1em")}}
                 [:> Typography {:variant "body2"
-                                :style {:opacity 0.7 :color "white"}}
+                                :style {:color "rgba(0, 0, 0, 0.6)"}}
                  text]])]))]))))
 
 (defn create-panel [tr]
