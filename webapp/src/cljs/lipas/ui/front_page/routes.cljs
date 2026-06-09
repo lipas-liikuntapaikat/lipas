@@ -10,4 +10,5 @@
     :view   views/main
     :controllers
     [{:start (fn [& params]
-               (==> [::events/get-newsletter]))}]}])
+               (==> [::events/get-newsletter])
+               (==> [::events/get-front-page-stats]))}]}])

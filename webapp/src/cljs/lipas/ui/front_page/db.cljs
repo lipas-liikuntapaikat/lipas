@@ -4,4 +4,8 @@
   {:newsletter
    {:data         nil
     :in-progress? false
+    :error        nil}
+   :stats
+   {:data         nil
+    :in-progress? false
     :error        nil}})

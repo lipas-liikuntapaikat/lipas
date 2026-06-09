@@ -838,6 +838,39 @@
       (reports/calculate-stats-by-city aggs-data pop-data)
       (reports/calculate-stats-by-type aggs-data pop-data city-codes))))
 
+(defn get-front-page-stats
+  [db search*]
+  (let [cache-key :front-page-stats
+        cached    (get @cache cache-key)
+        now       (System/currentTimeMillis)]
+    (if (and cached (< (- now (:timestamp cached)) (* 5 60 1000)))
+      (:data cached)
+      (let [query {:size 0
+                   :track_total_hits true
+                   :query {:bool {:filter [{:terms {:status ["active" "out-of-service-temporarily"]}}]}}
+                   ;; The municipality count is scoped to the last 12 months
+                   ;; (distinct cities with a site updated in the window) rather
+                   ;; than all-time — the all-time figure is essentially every
+                   ;; municipality in Finland and never moves.
+                   :aggs {:updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}
+                                              :aggs {:cities {:cardinality {:field :location.city.city-code}}}}}}
+            result (-> (search search* query) :body)
+            total  (get-in result [:hits :total :value])
+            aggs   (:aggregations result)
+            ;; Distinct people who edited any site in the last 12 months.
+            ;; The author lives in the append-only event log (source of truth),
+            ;; not in the enriched ES index, so this comes from the database.
+            updaters (-> (jdbc/query db ["SELECT COUNT(DISTINCT author_id) AS n
+                                          FROM sports_site
+                                          WHERE event_date >= now() - interval '12 months'"])
+                         first :n)
+            data   {:total-count               total
+                    :cities-updated-last-year  (get-in aggs [:updated-last-year :cities :value])
+                    :updated-last-year         (get-in aggs [:updated-last-year :doc_count])
+                    :updaters-last-year        updaters}]
+        (swap! cache assoc cache-key {:data data :timestamp now})
+        data))))
+
 (defn data-model-report
   [out]
   (data-model-export/create-excel out))

@@ -1,5 +1,6 @@
 (ns lipas.ui.front-page.views
-  (:require [lipas.schema.users :as users-schema]
+  (:require [clojure.string :as str]
+            [lipas.schema.users :as users-schema]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
@@ -187,15 +188,15 @@
     :or {xs 12 md 6 lg 6 xl 6}} & children]
   [:> Grid {:item true :xs xs :md md :lg lg :xl xl}
    [:> Paper {:square true
-               :style
-               (merge
-                 {:background-color "rgb(250, 250, 250)"
-                  :font-size "1.25em"
-                  :height "360px"
-                  :opacity 0.95
-                  :margin "8px"
-                  :padding "16px 10px 0 16px"}
-                 style)}
+              :style
+              (merge
+                {:background-color "rgb(250, 250, 250)"
+                 :font-size "1.25em"
+                 :height "360px"
+                 :opacity 0.95
+                 :margin "8px"
+                 :padding "16px 10px 0 16px"}
+                style)}
 
     [:> Grid
      {:container true
@@ -354,6 +355,102 @@
           :href "/pdf/tietosuojailmoitus_lipas_uutiskirje.pdf"
           :target "_blank"}
          (tr :help/privacy-policy)]]]]]))
+
+(defn- format-number [n]
+  (when n
+    (->> (str n)
+         reverse
+         (partition-all 3)
+         (map #(apply str (reverse %)))
+         reverse
+         (str/join "\u00A0"))))
+
+(defn- stat-item [{:keys [value label vertical?]}]
+  [:> Grid {:item true
+            :xs (if vertical? 12 6)
+            :sm (if vertical? 12 6)
+            :md (if vertical? 12 "auto")
+            :style {:text-align "center"
+                    :padding (if vertical? "0.4em 1em" "1em 2em")}}
+   [:> Typography {:variant (if vertical? "h4" "h3")
+                   :component "div"
+                   :style {:font-weight 700
+                           :color mui/primary
+                           :line-height 1.2}}
+    value]
+   [:> Typography {:variant (if vertical? "body2" "body1")
+                   :component "div"
+                   :style {:font-weight 700
+                           :margin-top "0.15em"
+                           :color "rgba(0, 0, 0, 0.8)"}}
+    label]])
+
+(defn- stat-items [tr stats-data vertical?]
+  [:<>
+   [stat-item {:vertical? vertical?
+               :value (format-number (:total-count stats-data))
+               :label (tr :lipas-in-numbers/sports-facilities)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:cities-updated-last-year stats-data))
+               :label (tr :lipas-in-numbers/municipalities)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:updated-last-year stats-data))
+               :label (tr :lipas-in-numbers/updated-last-year)}]
+   [stat-item {:vertical? vertical?
+               :value (format-number (:updaters-last-year stats-data))
+               :label (tr :lipas-in-numbers/updaters-last-year)}]])
+
+;; Two layouts share one data fetch:
+;;  :banner - full-width horizontal row (small/medium screens)
+;;  :card   - compact vertical card that fills the empty top-right column on
+;;            large screens
+(defn lipas-in-numbers
+  ([tr] (lipas-in-numbers tr :banner))
+  ([tr variant]
+   (let [stats-data   (<== [::subs/stats-data])
+         in-progress? (<== [::subs/stats-in-progress?])
+         card?        (= variant :card)]
+     (when (or stats-data in-progress?)
+       [:> Grid
+        {:container true
+         :direction (if card? "column" "row")
+         ;; Translucent near-white backing so the Finland map shows through
+         ;; (less "peittävä"), themed to match the surrounding cards: orange
+         ;; headline, navy numbers, black labels.
+         :style (merge {:background-color "rgba(250, 250, 250, 0.88)"}
+                       (if card?
+                         ;; Compact, content-sized, pushed to the right edge so
+                         ;; more of the map stays visible.
+                         {:padding "1.25em 1em"
+                          :border-radius "8px"
+                          :max-width "320px"
+                          :margin-left "auto"
+                          :box-shadow "0 1px 6px rgba(0, 0, 0, 0.15)"}
+                         {:padding "1.5em 1em" :border-radius "8px"}))}
+
+        ;; Heading
+        [:> Grid {:item true :xs 12
+                  :style {:text-align "center"
+                          :margin-bottom (if card? "0.5em" "1em")}}
+         [:> Typography {:variant (if card? "h6" "h4")
+                         :component "h2"
+                         :style {:font-weight 700
+                                 :color mui/secondary}}
+          (tr :lipas-in-numbers/headline)]]
+
+        (if in-progress?
+          ;; Loading
+          [:> Grid {:item true :xs 12 :style {:text-align "center"}}
+           [:> CircularProgress {:style {:color mui/secondary}}]]
+
+          ;; Stats
+          (when stats-data
+            [:> Grid {:item true :xs 12}
+             [:> Grid {:container true
+                       :direction (if card? "column" "row")
+                       :justify-content "center"
+                       :align-items (if card? "stretch" "flex-start")}
+              [stat-items tr stats-data card?]]]))]))))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
@@ -517,6 +614,13 @@
               [:> Icon "group_add"]]
              [:> ListItemText (tr :register/link)]]]]]]
 
+        ;; LIPAS in numbers — compact card filling the empty top-right column.
+        ;; Large screens only; smaller screens get the full-width banner below.
+        [:> Grid {:item true :xs 12 :lg 4
+                  :sx {:display {:xs "none" :lg "block"}}
+                  :style {:padding "8px"}}
+         [lipas-in-numbers tr :card]]
+
         ;; [grid-card {:md 6 :lg 4}
         ;;  [fb-plugin]]
 
@@ -545,6 +649,12 @@
                 :subject (tr :data-users/email-subject)
                 :body (tr :data-users/email-body)})}
             (tr :data-users/tell-us)]]]]]
+
+       ;; LIPAS in numbers — full-width banner for small/medium screens.
+       ;; Large screens show the compact card in the hero's top-right instead.
+       [:> Grid {:item true :xs 12
+                 :sx {:display {:xs "block" :lg "none"}}}
+        [lipas-in-numbers tr :banner]]
 
        ;;Partner logos
        [footer {:title (tr :partners/headline)
