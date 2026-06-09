@@ -852,8 +852,7 @@
                    ;; (distinct cities with a site updated in the window) rather
                    ;; than all-time — the all-time figure is essentially every
                    ;; municipality in Finland and never moves.
-                   :aggs {:latest {:max {:field :event-date}}
-                          :updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}
+                   :aggs {:updated-last-year {:filter {:range {:event-date {:gte "now-365d"}}}
                                               :aggs {:cities {:cardinality {:field :location.city.city-code}}}}}}
             result (-> (search search* query) :body)
             total  (get-in result [:hits :total :value])
@@ -868,8 +867,7 @@
             data   {:total-count               total
                     :cities-updated-last-year  (get-in aggs [:updated-last-year :cities :value])
                     :updated-last-year         (get-in aggs [:updated-last-year :doc_count])
-                    :updaters-last-year        updaters
-                    :last-updated              (get-in aggs [:latest :value_as_string])}]
+                    :updaters-last-year        updaters}]
         (swap! cache assoc cache-key {:data data :timestamp now})
         data))))
 

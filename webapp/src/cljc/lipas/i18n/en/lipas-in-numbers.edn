@@ -2,8 +2,4 @@
  :sports-facilities "Sports or outdoor facilities"
  :municipalities "Municipalities with data updated in the past year"
  :updated-last-year "Sites maintained in the past year"
- :updaters-last-year "Data maintainers in the past year"
- :last-updated "Latest site updated"
- :today "today"
- :yesterday "yesterday"
- :days-ago "{1} days ago"}
+ :updaters-last-year "Data maintainers in the past year"}

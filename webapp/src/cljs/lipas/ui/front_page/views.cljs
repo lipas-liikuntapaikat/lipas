@@ -365,14 +365,6 @@
          reverse
          (str/join "\u00A0"))))
 
-(defn- days-since [date-str]
-  (when date-str
-    (let [date-part (first (str/split date-str #"T"))
-          then (.getTime (js/Date. date-part))
-          now (.getTime (js/Date.))
-          diff-ms (- now then)]
-      (Math/floor (/ diff-ms (* 1000 60 60 24))))))
-
 (defn- stat-item [{:keys [value label vertical?]}]
   [:> Grid {:item true
             :xs (if vertical? 12 6)
@@ -407,14 +399,6 @@
    [stat-item {:vertical? vertical?
                :value (format-number (:updaters-last-year stats-data))
                :label (tr :lipas-in-numbers/updaters-last-year)}]])
-
-(defn- last-updated-text [tr stats-data]
-  (when-let [d (days-since (:last-updated stats-data))]
-    (str (tr :lipas-in-numbers/last-updated) " "
-         (case d
-           0 (tr :lipas-in-numbers/today)
-           1 (tr :lipas-in-numbers/yesterday)
-           (str/replace (tr :lipas-in-numbers/days-ago) "{1}" (str d))))))
 
 ;; Two layouts share one data fetch:
 ;;  :banner - full-width horizontal row (small/medium screens)
@@ -461,22 +445,12 @@
 
           ;; Stats
           (when stats-data
-            [:<>
-             [:> Grid {:item true :xs 12}
-              [:> Grid {:container true
-                        :direction (if card? "column" "row")
-                        :justify-content "center"
-                        :align-items (if card? "stretch" "flex-start")}
-               [stat-items tr stats-data card?]]]
-
-             ;; Last updated line
-             (when-let [text (last-updated-text tr stats-data)]
-               [:> Grid {:item true :xs 12
-                         :style {:text-align "center"
-                                 :margin-top (if card? "0.5em" "1em")}}
-                [:> Typography {:variant "body2"
-                                :style {:color "rgba(0, 0, 0, 0.6)"}}
-                 text]])]))]))))
+            [:> Grid {:item true :xs 12}
+             [:> Grid {:container true
+                       :direction (if card? "column" "row")
+                       :justify-content "center"
+                       :align-items (if card? "stretch" "flex-start")}
+              [stat-items tr stats-data card?]]]))]))))
 
 (defn create-panel [tr]
   (r/with-let [snack-open? (r/atom true)]
