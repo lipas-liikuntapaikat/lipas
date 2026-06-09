@@ -15,6 +15,7 @@
   standards."
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
             [honey.sql :as sql]
@@ -24,6 +25,7 @@
             [lipas.backend.system :as system]
             [lipas.data.types :as types]
             [lipas.wfs.mappings :as mappings]
+            [lipas.wfs.sld :as sld]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))
@@ -346,6 +348,101 @@
   (let [url (str (:root-url geoserver-config) "/styles.json")
         response (http/get url (:default-http-opts geoserver-config))]
     (get-in response [:body :styles :style])))
+
+(defn style-exists?
+  "True if a workspace-scoped style with this name exists in GeoServer."
+  [style-name]
+  (let [url (str (:root-url geoserver-config) "/workspaces/"
+                 (:workspace-name geoserver-config) "/styles/" style-name ".json")]
+    (try
+      (http/get url (:default-http-opts geoserver-config))
+      true
+      (catch Exception ex
+        (if (= 404 (:status (ex-data ex)))
+          false
+          (throw ex))))))
+
+(defn publish-style!
+  "Creates or updates a workspace-scoped GeoServer style with the given SLD body.
+
+  Existing layers that reference the named style (e.g. lipas:tyyli_pisteet) pick
+  up the new rules immediately - no layer changes needed. GeoServer validates the
+  SLD on write and rejects malformed documents with a 400.
+
+  - style-name: GeoServer style name, e.g. \"tyyli_pisteet\"
+  - sld-xml:    SLD 1.0.0 document string"
+  [style-name sld-xml]
+  (let [base (str (:root-url geoserver-config) "/workspaces/"
+                  (:workspace-name geoserver-config) "/styles")
+        opts (merge (:default-http-opts geoserver-config)
+                    {:body sld-xml
+                     :content-type "application/vnd.ogc.sld+xml"})]
+    (if (style-exists? style-name)
+      (do (log/info "Updating style" style-name)
+          (http/put (str base "/" style-name) opts))
+      (do (log/info "Creating style" style-name)
+          (http/post (str base "?name=" style-name) opts)))))
+
+(defn publish-all-styles!
+  "Regenerates the three shared named styles (tyyli_pisteet, tyyli_reitit,
+  tyyli_alueet_2) from `lipas.data.styles` and publishes them to GeoServer."
+  []
+  (log/info "Publishing legacy WFS/WMS styles from lipas.data.styles")
+  (doseq [[style-name sld-xml] (sld/all-slds)]
+    (publish-style! style-name sld-xml))
+  (log/info "All styles published."))
+
+(defn get-style-sld
+  "Fetches the current SLD XML body of a workspace-scoped style from GeoServer."
+  [style-name]
+  (let [url  (str (:root-url geoserver-config) "/workspaces/"
+                  (:workspace-name geoserver-config) "/styles/" style-name ".sld")
+        opts (-> (:default-http-opts geoserver-config)
+                 (dissoc :as :accept)
+                 (assoc :headers {"Accept" "application/vnd.ogc.sld+xml"}))]
+    (:body (http/get url opts))))
+
+(defn backup-styles!
+  "Downloads the current SLD of each shared named style (tyyli_pisteet,
+  tyyli_reitit, tyyli_alueet_2) from GeoServer and writes each to a .sld file
+  under a timestamped directory. Run this before overwriting styles with
+  `publish-all-styles!`; the saved files are directly re-publishable via
+  `publish-style!`.
+
+  - dir: target directory (created if missing), defaults to \"/tmp\"
+
+  Returns the seq of written file paths."
+  ([] (backup-styles! "/tmp"))
+  ([dir]
+   (let [ts     (.format (java.time.LocalDateTime/now)
+                         (java.time.format.DateTimeFormatter/ofPattern "yyyyMMdd-HHmmss"))
+         target (io/file dir (str "geoserver-styles-backup-" ts))]
+     (.mkdirs target)
+     (log/info "Backing up GeoServer styles to" (.getPath target))
+     (doall
+      (for [{:keys [style-name]} sld/style-defs]
+        (let [f (io/file target (str style-name ".sld"))]
+          (spit f (get-style-sld style-name))
+          (log/info "Wrote" (.getPath f))
+          (.getPath f)))))))
+
+(comment
+  ;;; Style workflow ;;;
+
+  ;; Back up the live styles before overwriting (writes to /tmp by default).
+  (def backup-paths (backup-styles!))
+
+  ;; Regenerate all three named styles from lipas.data.styles and publish.
+  (publish-all-styles!)
+
+  ;; Rollback: re-publish a saved .sld from a backup directory.
+  (publish-style! "tyyli_pisteet"
+                  (slurp "/tmp/geoserver-styles-backup-20260609-121847/tyyli_pisteet.sld"))
+  ;; ...or roll back everything from a backup dir:
+  (doseq [path backup-paths]
+    (let [style-name (subs (.getName (io/file path)) 0
+                           (- (count (.getName (io/file path))) 4))] ; strip ".sld"
+      (publish-style! style-name (slurp path)))))
 
 (defn publish-layer
   "Publishes a new vector layer from an existing datastore.
