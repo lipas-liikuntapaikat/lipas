@@ -1026,10 +1026,16 @@
           [:> TableCell (tr :lipas.org/changed-by)]
           [:> TableCell "Muutokset"]]]
         [:> TableBody
-         (for [{:keys [event-date author-name changes] :as rev} history]
+         (for [{:keys [event-date author-name author-role changes] :as rev} history]
            [:> TableRow {:key (str event-date "-" (:id rev))}
             [:> TableCell (some-> event-date (.substring 0 19) (str/replace "T" " "))]
-            [:> TableCell (or author-name "–")]
+            ;; :author-name (email) only for lipas-admins; org admins get the
+            ;; coarse role label (same keys as the site edit history, F38)
+            [:> TableCell (cond
+                            author-name author-name
+                            author-role (tr (keyword :lipas.org
+                                                     (str "history-role-" author-role)))
+                            :else       "–")]
             [:> TableCell
              (if (seq changes)
                [:> Box {:sx {:display "flex" :flex-direction "column"}}

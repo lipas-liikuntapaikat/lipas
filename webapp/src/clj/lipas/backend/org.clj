@@ -257,33 +257,47 @@
 
 (defn get-history
   "All revisions of an org (newest first), each with a computed summary of the
-  changes vs. the previous revision. Pure read over the append-only `org` table."
-  [db org-id]
-  (let [rows (jdbc/execute! db
-                            ["SELECT id, org_id, event_date, author_id, status, document
+  changes vs. the previous revision. Pure read over the append-only `org` table.
+
+  Two author modes, branched on `emails?` (the route gates it on :users/manage):
+  - emails? true  → rows carry :author-name (the author's email — lipas-admin
+    person view)
+  - otherwise     → rows carry :author-role (coarse current-role label,
+    \"admin\"/\"municipality\"/\"organization\"/\"other\" — same classification
+    and FE i18n keys as site-edit-history, F38): org admins see WHO-class +
+    WHEN, never a person identifier. Member references inside the change
+    summaries keep emails in both modes — they are this org's own members,
+    already visible to every member on the Jäsenet tab."
+  ([db org-id] (get-history db org-id false))
+  ([db org-id emails?]
+   (let [rows (jdbc/execute! db
+                             ["SELECT id, org_id, event_date, author_id, status, document
                               FROM org WHERE org_id = ? ORDER BY event_date ASC, created_at ASC"
-                             (utils/->uuid-safe org-id)]
-                            {:builder-fn rs/as-unqualified-kebab-maps})
-        ;; Resolve every referenced account — both revision authors and members
-        ;; appearing in any document — so the audit log is human-readable
-        ;; instead of bare UUIDs. emails? true: this endpoint is admin-only
-        ;; (:org/manage), so emails are fine here.
-        member-ids (->> rows (mapcat (comp :members :document)) (keep :user-id))
-        author-ids (->> rows (keep :author-id))
-        accounts   (resolve-account-names db (concat author-ids member-ids) true)
-        name-of    (fn [uid] (get accounts (str uid) (str uid)))]
-    (->> rows
-         (map-indexed
-           (fn [i row]
-             (let [doc  (:document row)
-                   prev (when (pos? i) (:document (nth rows (dec i))))]
-               {:id          (str (:id row))
-                :event-date  (str (:event-date row))
-                :author-name (when-let [aid (:author-id row)] (get accounts (str aid)))
-                :status      (:status row)
-                :changes     (diff-org-docs name-of prev doc)})))
-         reverse
-         vec)))
+                              (utils/->uuid-safe org-id)]
+                             {:builder-fn rs/as-unqualified-kebab-maps})
+         member-ids   (->> rows (mapcat (comp :members :document)) (keep :user-id))
+         author-ids   (->> rows (keep :author-id))
+         accounts     (resolve-account-names db (concat author-ids member-ids) true)
+         name-of      (fn [uid] (get accounts (str uid) (str uid)))
+         author-roles (when-not emails?
+                        (resolve-author-role-labels db author-ids))]
+     (->> rows
+          (map-indexed
+            (fn [i row]
+              (let [doc  (:document row)
+                    prev (when (pos? i) (:document (nth rows (dec i))))]
+                (cond-> {:id         (str (:id row))
+                         :event-date (str (:event-date row))
+                         :status     (:status row)
+                         :changes    (diff-org-docs name-of prev doc)}
+                  emails?       (assoc :author-name
+                                       (when-let [aid (:author-id row)]
+                                         (get accounts (str aid))))
+                  (not emails?) (assoc :author-role
+                                       (when-let [aid (:author-id row)]
+                                         (get author-roles (str aid))))))))
+          reverse
+          vec))))
 
 ;;; writes ;;;
 
