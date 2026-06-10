@@ -136,6 +136,7 @@
  :role-activity-tooltip "Organisationen får redigera objektets aktivitetsuppgifter via sina ansvarsaktiviteter."
  :role-direct "Direkt rätt"
  :role-direct-tooltip "Redigeringsrätt som beviljats personen direkt av LIPAS-administrationen."
+ :role-direct-activity-tooltip "Rätt att redigera aktivitetsuppgifter som beviljats personen direkt av LIPAS-administrationen."
  :share-edit-access "Dela redigeringsrätt med en annan organisation"
  :edit-history "Redigeringshistorik"
  :edit-history-when "Tidpunkt"

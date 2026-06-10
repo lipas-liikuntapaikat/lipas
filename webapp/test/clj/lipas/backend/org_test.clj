@@ -1196,7 +1196,20 @@
         (is (true? (roles/check-privilege user rc :activity/edit))
             "Member can edit activities on the UTP-empty site (fails on old)")
         (is (true? (roles/check-privilege user rc :site/save-api))
-            "Member can call the save API for the site (fails on old)")))))
+            "Member can call the save API for the site (fails on old)"))
+      ;; An INDIVIDUAL with a direct activity-only role is listed too — under
+      ;; :legacy-activity-users, not :legacy-users (no :site/create-edit)
+      (let [direct   (test-utils/gen-user {:db? true
+                                           :db-component (test-db)
+                                           :permissions {:roles [{:role "activities-manager"
+                                                                  :activity ["cycling"]}]}})
+            editors' (core/site-editors (test-db) lid)]
+        (is (contains? (set (map :email (:legacy-activity-users editors')))
+                       (:email direct))
+            "Direct activity-only user listed as activity editor (fails on old: key absent)")
+        (is (not (contains? (set (map :email (:legacy-users editors')))
+                            (:email direct)))
+            "Activity-only user is NOT a general editor")))))
 
 (deftest site-edit-history-role-privacy-test
   (testing "Edit-history shows timestamp + coarse role label to non-admins — never a

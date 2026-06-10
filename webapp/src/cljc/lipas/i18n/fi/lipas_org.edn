@@ -136,6 +136,7 @@
  :role-activity-tooltip "Organisaatio saa muokata kohteen aktiviteettitietoja vastuuaktiviteettiensa kautta."
  :role-direct "Suora oikeus"
  :role-direct-tooltip "LIPAS-ylläpidon suoraan henkilölle myöntämä muokkausoikeus."
+ :role-direct-activity-tooltip "LIPAS-ylläpidon suoraan henkilölle myöntämä aktiviteettitietojen muokkausoikeus."
  :share-edit-access "Jaa muokkausoikeus toiselle organisaatiolle"
  :edit-history "Muokkaushistoria"
  :edit-history-when "Ajankohta"

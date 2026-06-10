@@ -968,19 +968,28 @@
         ;; jsonb-containment candidate pre-filter narrows the account table to a
         ;; handful, then the exact check-privilege confirms. Admins are excluded
         ;; (they can edit everything — listing them under every site is noise).
-        legacy-users (->> (db/users-with-permissions-matching
-                            db {:city-code  (:city-code rc)
-                                :type-code  (:type-code rc)
-                                :lipas-id   (:lipas-id rc)
-                                :activities (:activity rc)})
-                          (filter (fn [u] (and (not (roles/check-role u :admin))
-                                               (roles/check-privilege u rc :site/create-edit))))
-                          (mapv (fn [u] {:email (:email u) :username (:username u)})))]
-    {:owner-org            owner-org
-     :grantee-orgs         (vec grantee-orgs)
-     :catalog-editor-orgs  (vec catalog-editor-orgs)
-     :activity-editor-orgs (vec activity-editor-orgs)
-     :legacy-users         legacy-users}))
+        legacy-candidates (->> (db/users-with-permissions-matching
+                                 db {:city-code  (:city-code rc)
+                                     :type-code  (:type-code rc)
+                                     :lipas-id   (:lipas-id rc)
+                                     :activities (:activity rc)})
+                               (remove (fn [u] (roles/check-role u :admin))))
+        legacy-users (->> legacy-candidates
+                          (filter (fn [u] (roles/check-privilege u rc :site/create-edit)))
+                          (mapv (fn [u] {:email (:email u) :username (:username u)})))
+        ;; Direct activity-only users: may edit the site's UTP data but not the
+        ;; site itself — listed separately so the drawer tags them with the
+        ;; same Aktiviteetti label as activity-editor orgs.
+        legacy-activity-users (->> legacy-candidates
+                                   (remove (fn [u] (roles/check-privilege u rc :site/create-edit)))
+                                   (filter (fn [u] (roles/check-privilege u rc :activity/edit)))
+                                   (mapv (fn [u] {:email (:email u) :username (:username u)})))]
+    {:owner-org             owner-org
+     :grantee-orgs          (vec grantee-orgs)
+     :catalog-editor-orgs   (vec catalog-editor-orgs)
+     :activity-editor-orgs  (vec activity-editor-orgs)
+     :legacy-users          legacy-users
+     :legacy-activity-users legacy-activity-users}))
 
 (defn site-edit-history
   "Per-revision edit history for a site (org Kohteet drawer), newest first.
