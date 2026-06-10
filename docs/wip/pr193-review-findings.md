@@ -41,13 +41,38 @@ File:line references are against the branch head at review time (2ac31c4c).
   minted an impossible JWT (org-editor without the org-user baseline that real
   projection always adds) — fixtures must carry both; cleaned 11 leftover test
   indices from dev ES that broke handler-test fixtures.
+- 2026-06-10 manual-review items 2/3/5 (F35, F36, F37): org type enum
+  sports-federation→association (+ in-place event-log migration, ran on dev:
+  3 revisions rewritten, idempotent re-run 0), org Kohteet list refetched on
+  every entry/tab activation, navbar "Organisaatiot" crumb always links to the
+  orgs list. Gate green: bb test-ns org/business-logic/handler 0 failures;
+  cljs compile {:status :ok}, zero warnings. NOTE: lipas-dev has orgs with the
+  old type value — the migration runs on deploy.
+- 2026-06-10 manual-review item 4 (F34): site-roles-context `:activity` now unions
+  doc UTP keys with the type-derived activity (by-type-code) so activities-managers
+  can bootstrap UTP data on fresh typed sites and show up in who-can-edit. No ES
+  mapping change and NO reindex implication (enrich/search-meta.activities left
+  doc-derived on purpose — content filters, not permission filters; activity roles
+  are not compiled into ES "editable sites" filters at all). Gate green:
+  bb test-ns roles/org/business-logic/bulk-ops/handler 126 tests / 489 assertions /
+  0 failures; cljs compile {:status :ok}, zero warnings.
+- 2026-06-10 manual-review item 1 (F38): site edit-history now shows timestamp +
+  coarse role label (admin/municipality/organization/other, classified at read time,
+  batched — no N+1) to everyone without :users/manage; person view (email) kept for
+  lipas-admins. REPL-verified both modes on dev data (505987; 500-author bucket
+  sweep + org-member sweep hit all 4 buckets). New route-level
+  site-edit-history-role-privacy-test empirically fails on old impl. Gate green:
+  bb test-ns org/handler 107 tests / 392 assertions / 0 failures; cljs compile
+  {:status :ok}, zero warnings.
 
 **Remaining follow-ups (out of scope for this effort)**
 - DEPLOY: full search reindex REQUIRED after deploy (strict ES mapping gained
   search-meta.owner-org-name; without reindex, saves fail with
   strict_dynamic_mapping_exception). Dev/test indices already done.
-- PM/DPO: legacy accounts whose USERNAME is their email still show it to
-  non-admins in edit-history/site-editors (pre-existing policy caveat).
+- PM/DPO: the username-is-email caveat is RESOLVED for edit-history (F38: non-admins
+  see no usernames at all anymore, only role labels) but still applies to
+  get-site-editors, whose legacy-user rows expose email+username to any
+  authenticated user (pre-existing policy caveat).
 - F20: site-editors still scans full documents of catalog-bearing orgs per
   request — revisit if org count grows (index-backed narrowing).
 - F18: org-sites non-count path keeps :size 2000 — latent truncation if a future
@@ -93,6 +118,8 @@ File:line references are against the branch head at review time (2ac31c4c).
   old returned `(or email username)` to every caller). `resolve-account-names` takes an
   `emails?` flag; route passes `{:emails? (check-privilege identity {} :users/manage)}` —
   non-admins get usernames only. Response shape unchanged (FE drawer reads `:author`).
+  NOTE: superseded by F38 — non-admins now get role labels, no usernames at all; the
+  test was replaced by site-edit-history-role-privacy-test.
   Caveat: legacy accounts whose USERNAME is their email still leak it to non-admins
   (~same caveat as the site-editors policy; PM/DPO follow-up).
   `/actions/get-site-edit-history` has `:require-privilege nil` (any authenticated user, any
@@ -350,6 +377,99 @@ File:line references are against the branch head at review time (2ac31c4c).
   Regression test fails on old gate 3 ways (list 403, empty id-set; verified by
   temporarily restoring the old gate); write-stays-403 + doc-untouched assertions
   pass on both.
+
+- [x] **F34 — Activity rights invisible & unusable on UTP-less typed sites** (manual
+  review feedback item 4): `webapp/src/cljc/lipas/roles.cljc:274`
+  ✅ 2026-06-10: `site-roles-context` derived `:activity` ONLY from the document's
+  UTP keys (`(keys (:activities site))`). A cycling route (4411/4412) with no UTP
+  data yet got `:activity nil`, so an `:activities-manager` scoped to
+  `{:activity #{"cycling"}}` could never edit it (`:activity/edit` → false) —
+  chicken-and-egg: they could never ADD the first UTP data — and the org never
+  appeared in the who-can-edit drawer (site-editors evaluates the same context).
+  Fix: `:activity` is now the UNION of the doc's activity keys and the
+  type-derived activity (`lipas.data.activities/by-type-code` `[type-code :value]`);
+  empty → nil contract preserved. Dependency check: nothing under `lipas.data.*`
+  (or transitively via types/materials/schema.common/utils) requires `lipas.roles`,
+  so the new require is acyclic; cljs compile `{:status :ok}`, zero warnings.
+  Consumers align automatically (save-path `check-permissions!`, `core/site-editors`,
+  FE permission subs — all go through the shared cljc fn; grep found no independent
+  doc-key derivations in src/cljs). ES/enrich deliberately UNCHANGED — no reindex
+  needed: `wrap-es-query-site-has-privilege` compiles only
+  city-code/type-code/lipas-id/org-id (activities-manager has no `:site/create-edit`,
+  so activity roles never enter ES filters at all — pre-existing, orthogonal), and
+  `search-meta.activities` consumers (heatmap aggs, api/v2 activity filter) are
+  CONTENT filters ("has UTP data") where adding type-derived values would be wrong.
+  Tests: roles_test typed-but-empty → `#{"cycling"}`, manager can edit/save,
+  doc∪type union, unmapped type unchanged (REPL-verified 5 failures with the old
+  fn restored, 0 after); org_test `site-editors-typed-utp-empty-activity-test`
+  (catalog activities-manager(cycling) org + invited member, type-4412 site with
+  NO `:activities`) → org listed in `:activity-editor-orgs`, member's projected
+  roles pass `:activity/edit` + `:site/save-api` — fails on old by the same nil-ctx
+  mechanism. Gate: bb test-ns roles/org/business-logic/bulk-ops/handler →
+  126 tests / 489 assertions / 0 failures.
+
+- [x] **F35 — Org type "Lajiliitto" should be the broader "Yhdistys"** (manual review
+  item 2): `webapp/src/cljc/lipas/schema/org.cljc:44`
+  ✅ 2026-06-10: enum value `sports-federation` renamed to `association` (unreleased in
+  this PR, so a rename is allowed) across schema, `owners/org-type->owner` (still →
+  `registered-association`), FE option list + i18n (`:type-association` fi "Yhdistys" /
+  se "Förening" / en "Association"); new in-place migration
+  `20260610120000-org-type-association` rewrites ALL `org` event-log revisions
+  (org_current is a view over the same rows) — ran on dev (3 revisions rewritten,
+  0 sports-federation rows remain) and is idempotent (verified: second run rewrote 0,
+  plus org-type-association-migration-test runs it twice against the test DB).
+  `migrations/ptv_organizations.clj` checked: frozen to the pre-event-log single-row
+  schema, never references org `:type` — unaffected. NOTE: lipas-dev has orgs with the
+  old value — the migration runs on deploy. Grep-proof: zero `sports-federation` refs
+  in src/ + resources/ outside the migration itself (+ its test, which seeds old rows
+  on purpose); zero dangling i18n keys.
+
+- [x] **F36 — Org Kohteet list stale until browser refresh** (manual review item 3):
+  `webapp/src/cljs/lipas/ui/bulk_operations/events.cljs:6`
+  ✅ 2026-06-10: `::bulk-ops/init` no longer skips the fetch when the same org's list
+  is already in app-db — it ALWAYS dispatches `::get-editable-sites` (same-org entry
+  keeps selections/filters and shows the old list + loading flag while refetching; an
+  org switch still resets state). Every entry path refetches: route controller
+  (`::init-view` → `::set-current-tab "our-sites"`, which also re-dispatches the
+  owned-count fetch `::get-org-sites "owned"` unconditionally), tab activation, and
+  the legacy bulk-ops route/tab (the legacy tab now passes the org-id instead of `{}`).
+  Reitit controller identity is the org-id: leaving the org route drops the
+  controller, so re-entering always re-fires `:start` — the no-refire case (same
+  route, same params, no exit) can't occur, and tab activation covers in-page paths.
+  Residual: ~1s ES indexing lag after a save can still show the pre-save list if the
+  user returns instantly — unfixable at FE level (ES is a read cache), acceptable.
+
+- [x] **F37 — Navbar "Organisaatiot" crumb not always a link** (manual review item 5):
+  `webapp/src/cljs/lipas/ui/navbar.cljs:249`
+  ✅ 2026-06-10: the org views never had their own Breadcrumbs component — the
+  inconsistent crumb is the navbar sub-page header ("LIPAS > Organisaatiot"), which
+  rendered href-less (plain text) on org detail/bulk-ops because their parameterized
+  routes set `:no-navbar-link? true`, while the orgs list rendered a Link.
+  `:no-navbar-link?` (org routes were its only users) replaced with `:navbar-link`:
+  the crumb hrefs to the declared parent route, so org detail + all its sub-tabs and
+  the legacy bulk-ops route now always link back to `:lipas.ui.routes/orgs`; on the
+  list page itself the crumb keeps linking to the list (self, harmless). Other routes
+  unchanged (`(rfe/href name)` as before).
+
+- [x] **F38 — GDPR: site edit-history shows timestamp + role, not the person** (manual
+  review item 1): `webapp/src/clj/lipas/backend/core.clj:986`
+  ✅ 2026-06-10: viewers WITHOUT `:users/manage` now get per-revision
+  `{:event-date :status :author-role}` where `:author-role` ∈
+  `"admin"/"municipality"/"organization"/"other"` — NO person identifier (the F5
+  username mode is gone for this endpoint); `:users/manage` holders keep the person
+  view (`:author` = email, unchanged). The label is classified at read time from the
+  author's CURRENT state (role-at-edit-time isn't stored — documented in the code):
+  admin role → admin; any city-scoped stored role → municipality; else org membership
+  (ONE batched `jsonb_array_elements` containment query over `org_current` for all
+  author ids — `org/org-member-ids`; catalog-projected org roles never live on the
+  account) → organization; else other. New `org/resolve-author-role-labels` does the
+  whole batch in 2 queries; `resolve-account-names` untouched (org/get-history keeps
+  using it). FE `site-edit-history-section` branches on which key is present; i18n
+  `:history-role-*` keys added fi/se/en. Route-level
+  `site-edit-history-role-privacy-test` (replaces the F5 test, covers all 4 buckets):
+  non-admin body has no `@`, not even the seeded username, correct ordered role
+  labels; admin body unchanged — empirically fails on the old impl (3 failures:
+  nil `:author-role`s, `:author` present, username leaked).
 
 ---
 

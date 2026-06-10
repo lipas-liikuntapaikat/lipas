@@ -41,7 +41,7 @@
 (def org-name (m/schema [:string {:min 1 :max 128}]))
 
 (def org-type
-  [:enum "city" "municipal-consortium" "state" "private" "sports-federation" "other"])
+  [:enum "city" "municipal-consortium" "state" "private" "association" "other"])
 
 (def catalog-role-names
   "Role names a catalog template may reference: the catalog-assignable subset of

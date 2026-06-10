@@ -983,23 +983,36 @@
      :legacy-users         legacy-users}))
 
 (defn site-edit-history
-  "Per-revision edit history for a site (org Kohteet drawer): each revision's
-  timestamp + the editor (resolved from author-id), newest first. Reads only
-  event-date/author-id/status — no documents — so it stays light even for
-  long-lived sites. `:emails?` true resolves authors to their email address —
-  pass it ONLY for callers holding :users/manage (the route gates this);
-  everyone else gets usernames so the open endpoint can't be used to harvest
-  emails (F5)."
+  "Per-revision edit history for a site (org Kohteet drawer), newest first.
+  Reads only event-date/author-id/status — no documents — so it stays light
+  even for long-lived sites.
+
+  Two payload modes, branched on `:emails?` (the route gates it on
+  :users/manage), so the FE can branch on which key is present:
+  - :emails? true  → rows {:event-date :status :author} where :author is the
+    editor's email (lipas-admin person view)
+  - otherwise      → rows {:event-date :status :author-role} where
+    :author-role ∈ \"admin\"/\"municipality\"/\"organization\"/\"other\" — a
+    coarse role label, NO person identifier (GDPR, F38; supersedes the F5
+    username mode for this endpoint). The label reflects the author's CURRENT
+    permissions/org membership, not role-at-edit-time (not stored)."
   ([db lipas-id] (site-edit-history db lipas-id {}))
   ([db lipas-id {:keys [emails?]}]
-   (let [rows  (db/get-sports-site-edit-history db lipas-id)
-         ;; shared resolver — the email-masking rule lives in ONE place (F25)
-         names (org/resolve-account-names db (map :author_id rows) emails?)]
-     (mapv (fn [r]
-             {:event-date (str (:event_date r))
-              :status     (:status r)
-              :author     (get names (str (:author_id r)))})
-           rows))))
+   (let [rows       (db/get-sports-site-edit-history db lipas-id)
+         author-ids (map :author_id rows)]
+     (if emails?
+       (let [names (org/resolve-account-names db author-ids true)]
+         (mapv (fn [r]
+                 {:event-date (str (:event_date r))
+                  :status     (:status r)
+                  :author     (get names (str (:author_id r)))})
+               rows))
+       (let [labels (org/resolve-author-role-labels db author-ids)]
+         (mapv (fn [r]
+                 {:event-date  (str (:event_date r))
+                  :status      (:status r)
+                  :author-role (get labels (str (:author_id r)) "other")})
+               rows))))))
 
 (defn search-fields
   [{:keys [indices client]}

@@ -111,7 +111,7 @@
  :type-municipal-consortium "Kommunalförbund"
  :type-state "Stat"
  :type-private "Privat"
- :type-sports-federation "Specialidrottsförbund"
+ :type-association "Förening"
  :type-other "Annat"
 
  ;; our sites
@@ -142,6 +142,10 @@
  :edit-history-who "Redigerare"
  :edit-history-empty "Ingen redigeringshistorik"
  :edit-history-truncated "Visar endast de senaste ändringarna"
+ :history-role-admin "Administratör"
+ :history-role-municipality "Kommun"
+ :history-role-organization "Organisation"
+ :history-role-other "Övrig"
  :owner-org "Ägarorganisation"
  :owner-org-helper-text "Organisationen som äger objektet. Rensa valet för att ange en annan ägare (t.ex. förening eller företag)."
  :grantee-orgs "Redigeringsrätt beviljad"

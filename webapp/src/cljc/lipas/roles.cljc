@@ -1,5 +1,6 @@
 (ns lipas.roles
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [lipas.data.activities :as activities-data]))
 
 ;; :doc here is just a developer comment, translations are elsewhere (if we even need
 ;; translations for privileges)
@@ -270,10 +271,19 @@
   {:lipas-id (:lipas-id site)
    :type-code (-> site :type :type-code)
    :city-code (-> site :location :city :city-code)
-   ;; Sites SHOULD usually just have one activity type
-   :activity (some->> (keys (:activities site))
-                      (map name)
-                      set)
+   ;; Sites SHOULD usually just have one activity type.
+   ;; Union of the document's UTP activity keys AND the activity implied by
+   ;; the site's type-code (lipas.data.activities/by-type-code). The
+   ;; type-derived part matters for sites that don't have UTP data yet:
+   ;; without it an :activities-manager could never add the FIRST activity
+   ;; data to e.g. a fresh cycling route (chicken-and-egg), and such sites
+   ;; wouldn't show activity editors in who-can-edit listings.
+   :activity (let [doc-activities (map name (keys (:activities site)))
+                   type-activity (get-in activities-data/by-type-code
+                                         [(-> site :type :type-code) :value])]
+               (not-empty
+                 (cond-> (set doc-activities)
+                   type-activity (conj type-activity))))
    ;; A site's editor orgs = owner org + any orgs granted edit. Multi-valued,
    ;; matched against an :org-editor role's :org-id via set-intersection.
    ;; org-ids are compared as strings (roles carry stringified uuids).

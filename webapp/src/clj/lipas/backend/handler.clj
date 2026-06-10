@@ -453,10 +453,10 @@
                       {:status 200
                        :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
 
-      ;; --- Site edit history (timestamp + editor) — any authenticated user,
-      ;; surfaced in the org Kohteet drawer for the members maintaining the data.
-      ;; Author emails are PII and shown only to :users/manage holders (same
-      ;; policy as legacy-user emails); everyone else sees usernames. ---
+      ;; --- Site edit history — any authenticated user, surfaced in the org
+      ;; Kohteet drawer for the members maintaining the data. The author is a
+      ;; person identifier (email) ONLY for :users/manage holders; everyone
+      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
         ["/actions/get-site-edit-history"
          {:post
           {:no-doc true

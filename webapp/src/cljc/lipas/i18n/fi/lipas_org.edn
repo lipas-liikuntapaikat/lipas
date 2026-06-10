@@ -111,7 +111,7 @@
  :type-municipal-consortium "Kuntayhtymä"
  :type-state "Valtio"
  :type-private "Yksityinen"
- :type-sports-federation "Lajiliitto"
+ :type-association "Yhdistys"
  :type-other "Muu"
 
  ;; our sites
@@ -142,6 +142,10 @@
  :edit-history-who "Muokkaaja"
  :edit-history-empty "Ei muokkaushistoriaa"
  :edit-history-truncated "Näytetään vain uusimmat muutokset"
+ :history-role-admin "Ylläpito"
+ :history-role-municipality "Kunta"
+ :history-role-organization "Organisaatio"
+ :history-role-other "Muu"
  :owner-org "Omistajaorganisaatio"
  :owner-org-helper-text "Organisaatio, joka omistaa kohteen. Tyhjennä valinta, jos haluat merkitä muun omistajan (esim. yhdistys tai yritys)."
  :grantee-orgs "Muokkausoikeus myönnetty"
