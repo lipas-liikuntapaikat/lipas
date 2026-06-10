@@ -67,6 +67,8 @@
    :already-member (exception-handler 409 :already-member)
    :invalid-catalog (exception-handler 400 :invalid-catalog)
    :invalid-takeover-state (exception-handler 409 :invalid-takeover-state)
+   ;; curated take-over selection contains ids outside the org's rule matches
+   :invalid-selection (exception-handler 400 :invalid-selection)
    ;; site :owner enum is locked by the owning org's type — conflict, like
    ;; :invalid-takeover-state
    :owner-locked (exception-handler 409 :owner-locked)
@@ -654,29 +656,38 @@
                                  org-id
                                  lipas-ids updates)}))}}]
 
-      ;; --- Take-over: an org requests to claim the sites matching its rule ---
+      ;; --- Take-over: an org requests to claim the sites matching its rule.
+      ;; Optional :lipas-ids = curated picker subset (must ⊆ the rule's
+      ;; matches, else 400 :invalid-selection); approval applies exactly the
+      ;; stored set. ---
         ["/actions/request-org-takeover"
          {:post
           {:no-doc true
            :require-privilege [org-scope-from-body :org/manage]
-           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids {:optional true} [:vector {:min 1} :int]]]}
            :handler (fn [req]
-                      {:status 200
-                       :body (org-takeover/create-request! db
-                                                           (-> req :parameters :body :org-id)
-                                                           (-> req :identity :id))})}}]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/create-request! db org-id
+                                                             (-> req :identity :id)
+                                                             :lipas-ids lipas-ids)}))}}]
 
       ;; --- LIPAS-admin direct reclaim (no approval queue round-trip) ---
         ["/actions/reclaim-org-sites"
          {:post
           {:no-doc true
            :require-privilege :org/admin
-           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids {:optional true} [:vector {:min 1} :int]]]}
            :handler (fn [req]
-                      {:status 200
-                       :body (org-takeover/reclaim-now! db search
-                                                        (-> req :parameters :body :org-id)
-                                                        (:identity req))})}}]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/reclaim-now! db search org-id
+                                                          (:identity req)
+                                                          :lipas-ids lipas-ids)}))}}]
 
       ;; --- Take-over approvals: lipas-admin reviews requested claims ---
         ["/actions/list-org-takeover-requests"
@@ -687,6 +698,18 @@
            :handler (fn [req]
                       {:status 200
                        :body (org-takeover/list-requests db (-> req :parameters :body :status))})}}]
+      ;; the approver's preview: the request's STORED selection snapshot
+      ;; (count + lightweight site rows), not a live rule re-run — approval
+      ;; applies exactly this set
+        ["/actions/preview-org-takeover-request"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map [:request-id :uuid]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/request-preview db
+                                                           (-> req :parameters :body :request-id))})}}]
         ["/actions/approve-org-takeover"
          {:post
           {:no-doc true

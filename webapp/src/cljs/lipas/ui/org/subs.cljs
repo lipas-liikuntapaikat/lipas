@@ -197,3 +197,9 @@
 (rf/reg-sub ::takeover-preview
   (fn [db _]
     (get-in db [:org :takeover-preview])))
+
+;; the curated picker: set of lipas-ids checked in the claim dialog
+;; (initialized to all matching sites when the preview loads)
+(rf/reg-sub ::claim-selection
+  (fn [db _]
+    (get-in db [:org :claim-selection] #{})))

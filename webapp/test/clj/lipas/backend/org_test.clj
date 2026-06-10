@@ -905,6 +905,158 @@
       (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) lid))))
           "Site remains owned by the org"))))
 
+;;; Curated subset take-over (F39, Uuvi case) — the request stores the
+;;; explicitly selected lipas-ids (validated ⊆ rule matches) and approval
+;;; applies EXACTLY that snapshot, never a rule re-run. ;;;
+
+(defn- takeover-org!
+  "Test org with type 'city' and ownership rule {city 91, owner 'city'}."
+  []
+  (let [org-id (:id (first (create-test-orgs)))]
+    (backend-org/update-org! (test-db) org-id
+                             (assoc (backend-org/get-org (test-db) org-id)
+                                    :type "city"
+                                    :ownership {:city-codes [91] :owners ["city"]})
+                             nil)
+    org-id))
+
+(defn- rule-matching-site!
+  "Site matching takeover-org!'s rule (city 91, owner enum). Returns lipas-id."
+  [admin lipas-id & {:keys [owner] :or {owner "city"}}]
+  (core/upsert-sports-site!* (test-db) admin
+                             (-> (test-utils/gen-sports-site)
+                                 (assoc :event-date (utils/timestamp) :status "active"
+                                        :lipas-id lipas-id :owner owner)
+                                 (assoc-in [:location :city :city-code] 91)))
+  lipas-id)
+
+(deftest takeover-subset-claim-test
+  (testing "Approval claims exactly the curated subset; deselected matches stay untouched"
+    (let [admin   (test-utils/gen-admin-user :db-component (test-db))
+          org-id  (takeover-org!)
+          [a b c] (mapv #(rule-matching-site! admin %) [9997001 9997002 9997003])
+          req     (org-takeover/create-request! (test-db) org-id (:id admin) :lipas-ids [a b])
+          ;; the approver's preview resolves the STORED selection, not the rule
+          pre     (org-takeover/request-preview (test-db) (:id req))
+          result  (org-takeover/approve! (test-db) (test-search) (:id req) admin)]
+      (is (= [a b] (:lipas-ids req)) "The request stores the explicit selection")
+      (is (= 2 (:count pre) (:requested-count pre)))
+      (is (= #{a b} (set (map :lipas-id (:sites pre))))
+          "Approver's preview shows the stored selection only")
+      (is (= 2 (:sites-claimed result)))
+      (is (zero? (:sites-skipped result)))
+      (doseq [lid [a b]]
+        (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) lid))))
+            "Selected site is owned by the org")
+        (is (= "city" (:owner (core/get-sports-site (test-db) lid)))
+            "Owner enum locked to the org type's owner"))
+      (is (nil? (:owner-org-id (core/get-sports-site (test-db) c)))
+          "Deselected matching site is untouched")
+      ;; a deselected site is not a remembered exclusion — it simply reappears
+      ;; as claimable in the next preview
+      (is (= [c] (mapv :lipas-id (:sites (org-takeover/preview (test-db) org-id))))))))
+
+(deftest takeover-subset-validation-test
+  (testing "A selection containing an id outside the rule's matches is rejected whole"
+    (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+          org-id   (takeover-org!)
+          a        (rule-matching-site! admin 9997101)
+          ;; same city but owner 'state' → not a rule match
+          outsider (rule-matching-site! admin 9997102 :owner "state")
+          req-count (fn [] (:n (jdbc/execute-one! (test-db)
+                                                  ["SELECT count(*) AS n FROM org_takeover_request WHERE org_id=?" org-id]
+                                                  {:builder-fn rs/as-unqualified-kebab-maps})))
+          before   (req-count)
+          ex-data* (try (org-takeover/create-request! (test-db) org-id (:id admin)
+                                                      :lipas-ids [a outsider])
+                        nil
+                        (catch Exception e (ex-data e)))]
+      (is (= :invalid-selection (:type ex-data*)))
+      (is (= [outsider] (:invalid-lipas-ids ex-data*)) "The offending ids are reported")
+      (is (= before (req-count)) "No request row is stored")))
+  (testing "The endpoint maps :invalid-selection to 400"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          token  (jwt/create-token admin)
+          org-id (takeover-org!)
+          resp   (test-app (-> (mock/request :post "/api/actions/request-org-takeover")
+                               (mock/json-body {:org-id org-id :lipas-ids [123456789]})
+                               (test-utils/token-header token)))]
+      (is (= 400 (:status resp)))
+      (is (= "invalid-selection" (:type (test-utils/safe-parse-json resp)))))))
+
+(deftest takeover-snapshot-closes-drift-test
+  (testing "Approval applies the request-time snapshot — a site that started matching after the request is NOT claimed"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          org-id (takeover-org!)
+          a      (rule-matching-site! admin 9997201)
+          ;; full-rule request (no explicit selection) snapshots the matches
+          req    (org-takeover/create-request! (test-db) org-id (:id admin))
+          ;; d starts matching only AFTER the request was made
+          d      (rule-matching-site! admin 9997202)
+          result (org-takeover/approve! (test-db) (test-search) (:id req) admin)]
+      (is (= [a] (:lipas-ids req)) "Full-rule request snapshots the request-time matches")
+      (is (= 1 (:sites-claimed result)))
+      (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) a)))))
+      (is (nil? (:owner-org-id (core/get-sports-site (test-db) d)))
+          "The post-request site is not silently claimed (drift closed)")
+      (is (= [d] (mapv :lipas-id (:sites (org-takeover/preview (test-db) org-id))))
+          "…but it shows up as claimable in the next preview"))))
+
+(deftest takeover-subset-idempotent-test
+  (testing "A selected site already owned by the org at approval time is skipped (no duplicate revision)"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          org-id (takeover-org!)
+          a      (rule-matching-site! admin 9997301)
+          b      (rule-matching-site! admin 9997302)
+          req    (org-takeover/create-request! (test-db) org-id (:id admin) :lipas-ids [a b])
+          ;; a gets claimed between request and approval (e.g. by a direct edit)
+          _      (core/upsert-sports-site!* (test-db) admin
+                                            (assoc (core/get-sports-site (test-db) a)
+                                                   :event-date (utils/timestamp)
+                                                   :owner-org-id (str org-id)))
+          rev-count (fn [lid] (:n (jdbc/execute-one! (test-db)
+                                                     ["SELECT count(*) AS n FROM sports_site WHERE lipas_id=?" lid]
+                                                     {:builder-fn rs/as-unqualified-kebab-maps})))
+          a-revs (rev-count a)
+          result (org-takeover/approve! (test-db) (test-search) (:id req) admin)]
+      (is (= 1 (:sites-claimed result)) "Only the not-yet-owned site is claimed")
+      (is (= 1 (:sites-skipped result)) "The already-owned site is reported as skipped")
+      (is (= a-revs (rev-count a)) "No redundant revision for the already-owned site")
+      (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) b))))))))
+
+(deftest takeover-missing-site-skipped-test
+  (testing "A selected site deleted between request and approval is skipped; the rest are claimed"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          org-id (takeover-org!)
+          a      (rule-matching-site! admin 9997401)
+          b      (rule-matching-site! admin 9997402)
+          req    (org-takeover/create-request! (test-db) org-id (:id admin) :lipas-ids [a b])
+          ;; b vanishes before the decision
+          _      (jdbc/execute! (test-db) ["DELETE FROM sports_site WHERE lipas_id=?" b])
+          result (org-takeover/approve! (test-db) (test-search) (:id req) admin)]
+      (is (= "approved" (:status result)) "Approval succeeds for the remaining sites")
+      (is (= 1 (:sites-claimed result)))
+      (is (= 1 (:sites-skipped result)) "The missing site is reported as skipped")
+      (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) a))))))))
+
+(deftest takeover-request-preview-endpoint-test
+  (testing "The approver's preview endpoint returns the stored selection (count + lightweight rows)"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          token  (jwt/create-token admin)
+          org-id (takeover-org!)
+          [a b]  (mapv #(rule-matching-site! admin %) [9997501 9997502])
+          _      (rule-matching-site! admin 9997503) ;; matches but not selected
+          req    (org-takeover/create-request! (test-db) org-id (:id admin) :lipas-ids [a b])
+          resp   (test-app (-> (mock/request :post "/api/actions/preview-org-takeover-request")
+                               (mock/json-body {:request-id (:id req)})
+                               (test-utils/token-header token)))
+          body   (test-utils/safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (= 2 (:count body) (:requested-count body)))
+      (is (= #{a b} (set (map :lipas-id (:sites body)))))
+      (is (every? #(and (:name %) (:current-owner %)) (:sites body))
+          "Rows carry the lightweight name + current owner shape"))))
+
 ;;; Phase C — dashboard read endpoints (org-sites, site-editors, history) ;;;
 
 (deftest org-history-test
