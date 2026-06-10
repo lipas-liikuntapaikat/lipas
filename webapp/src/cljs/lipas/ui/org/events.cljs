@@ -105,7 +105,7 @@
                      (cond-> {:db (assoc-in db [:org :current-tab] tab)}
                        ;; Initialize bulk operations when switching to that tab
                        (= tab "bulk-operations")
-                       (assoc :dispatch [::bulk-ops-events/init {}])
+                       (assoc :dispatch [::bulk-ops-events/init {:org-id org-id}])
 
                        ;; Lazily load data for the new org-management tabs
                        ;; The Our-sites list is driven by bulk-ops' editable-sites

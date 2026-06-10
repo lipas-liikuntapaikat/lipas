@@ -12,6 +12,7 @@
   the document's concern, and the roles a membership confers are projected at
   login (see `derive-org-roles` / `derive-user-org-roles`)."
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [honey.sql :as hsql]
             [lipas.backend.db.utils :as db-utils]
             [lipas.roles :as roles]
@@ -154,6 +155,61 @@
                                          (or (:email a) (:username a))
                                          (:username a))]))
            (into {})))))
+
+(defn org-member-ids
+  "Subset of account `ids` that are a member of at least one org. ONE query for
+  the whole batch (no N+1): unnests every org's members and intersects with the
+  candidate ids. Returns a set of string ids. NB: catalog-projected org roles
+  live in the org documents, not on the account — this is the authoritative
+  membership source."
+  [db ids]
+  (let [ids (->> ids (keep utils/->uuid-safe) (map str) distinct vec)]
+    (if (empty? ids)
+      #{}
+      (->> (jdbc/execute! db
+                          (into [(str "SELECT DISTINCT m->>'user-id' AS user_id"
+                                      " FROM org_current,"
+                                      " jsonb_array_elements(document->'members') m"
+                                      " WHERE m->>'user-id' IN ("
+                                      (str/join "," (repeat (count ids) "?")) ")")]
+                                ids)
+                          {:builder-fn rs/as-unqualified-kebab-maps})
+           (map :user-id)
+           set))))
+
+(defn resolve-author-role-labels
+  "Batch-classify account ids → coarse role label for the site edit-history
+  shown to viewers WITHOUT :users/manage (F38, GDPR): \"admin\" /
+  \"municipality\" / \"organization\" / \"other\" — never a person identifier.
+
+  The label is derived AT READ TIME from each author's CURRENT stored
+  permissions and CURRENT org membership; role-at-edit-time is not recorded,
+  which is acceptable for this transparency view. Two queries total for the
+  whole batch (account permissions + org membership), no N+1. Returns a map
+  keyed by string id (nil when `ids` is empty); ids absent from `account` are
+  simply missing — callers fall back to \"other\"."
+  [db ids]
+  (let [ids (->> ids (keep utils/->uuid-safe) distinct vec)]
+    (when (seq ids)
+      (let [accounts (->> (sql/query db (hsql/format {:select [:id :permissions]
+                                                      :from   [:account]
+                                                      :where  [:in :id ids]})
+                                     {:builder-fn rs/as-unqualified-kebab-maps})
+                          ;; raw permissions carry both city-code/city_code key
+                          ;; spellings — normalize + conform like user/unmarshall
+                          (map db-utils/->kebab-case-keywords)
+                          (map (fn [a] (update a :permissions
+                                               #(cond-> % (:roles %) (update :roles roles/conform-roles))))))
+            in-org?  (org-member-ids db ids)]
+        (->> accounts
+             (map (fn [{:keys [id permissions]}]
+                    [(str id)
+                     (cond
+                       (roles/check-role {:permissions permissions} :admin) "admin"
+                       (some :city-code (:roles permissions))               "municipality"
+                       (contains? in-org? (str id))                         "organization"
+                       :else                                                "other")]))
+             (into {}))))))
 
 ;;; history (the append-only org log IS the audit trail) ;;;
 

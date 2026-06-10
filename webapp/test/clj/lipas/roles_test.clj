@@ -3,6 +3,7 @@
             [lipas.roles :as sut]))
 
 (deftest site-roles-context
+  ;; type-code 101 has no activity mapping -> behaves as before
   (is (= {:lipas-id 1
           :type-code 101
           :city-code 837
@@ -22,6 +23,42 @@
                                   :type {:type-code 101}
                                   :location {:city {:city-code 837}}
                                   :activities {:fishing {:foo "bar"}}})))
+
+  (testing ":activity is derived from the type-code even without UTP data (PR #193 F34)"
+    ;; A fresh cycling route has no :activities doc data yet, but an
+    ;; activities-manager must still be able to add the FIRST activity data.
+    (is (= #{"cycling"}
+           (:activity (sut/site-roles-context {:lipas-id 1
+                                               :type {:type-code 4412}
+                                               :location {:city {:city-code 837}}}))))
+    (is (= #{"cycling"}
+           (:activity (sut/site-roles-context {:lipas-id 1
+                                               :type {:type-code 4411}
+                                               :activities {}}))))
+
+    (testing "activities-manager can edit a typed-but-UTP-empty site"
+      (let [rc (sut/site-roles-context {:lipas-id 1
+                                        :type {:type-code 4412}
+                                        :location {:city {:city-code 837}}})]
+        (is (true? (sut/check-privilege
+                     {:permissions {:roles [{:role :activities-manager :activity #{"cycling"}}]}}
+                     rc
+                     :activity/edit)))
+        (is (true? (sut/check-privilege
+                     {:permissions {:roles [{:role :activities-manager :activity #{"cycling"}}]}}
+                     rc
+                     :site/save-api)))
+        ;; manager scoped to a different activity still gets nothing
+        (is (false? (sut/check-privilege
+                      {:permissions {:roles [{:role :activities-manager :activity #{"fishing"}}]}}
+                      rc
+                      :activity/edit))))))
+
+  (testing ":activity is the union of doc activities and the type-derived activity"
+    (is (= #{"cycling" "fishing"}
+           (:activity (sut/site-roles-context {:lipas-id 1
+                                               :type {:type-code 4412}
+                                               :activities {:fishing {:foo "bar"}}})))))
 
   (testing ":org-id is the set of a site's editor orgs (owner + grants), as strings"
     (is (= #{"11111111-1111-1111-1111-111111111111"}

@@ -7,7 +7,10 @@
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.org-takeover :as org-takeover]
+            [lipas.migrations.org-type-association :as org-type-association]
             [lipas.roles :as roles]
+            [lipas.schema.org :as org-schema]
+            [malli.core :as m]
             [lipas.test-utils :as test-utils]
             [lipas.utils :as utils]
             [next.jdbc :as jdbc]
@@ -1161,36 +1164,94 @@
       (is (not (contains? (set (map :id (:catalog-editor-orgs editors))) (str act-org-id)))
           "activities-manager grants no :site/create-edit — never a full editor"))))
 
-(deftest site-edit-history-email-privacy-test
-  (testing "Edit-history authors: usernames for everyone, emails only for :users/manage (F5)"
-    (let [db      (test-db)
-          author  (-> (test-utils/gen-user)
-                      (assoc :email "f5-author@example.com" :username "f5-author"))
-          _       (core/add-user! db author)
-          author  (core/get-user db "f5-author@example.com")
-          lid     9992072
+(deftest site-editors-typed-utp-empty-activity-test
+  (testing "Activity rights work on typed sites WITHOUT UTP data (F34): a fresh
+            cycling route's :activity context is derived from the type-code, so a
+            catalog activities-manager org is listed as an activity editor and its
+            member can add the FIRST activity data"
+    (let [admin   (test-utils/gen-admin-user :db-component (test-db))
+          org-id  (catalog-org!
+                    {:cycling {:label "Pyöräily"
+                               :roles [{:role "activities-manager" :activity ["cycling"]}]}})
+          member  (test-utils/gen-regular-user :db-component (test-db))
+          _       (core/invite-org-member! (test-db) (test-utils/create-test-emailer) org-id
+                                           {:email (:email member) :roles ["cycling"]}
+                                           nil "http://login")
+          lid     9992090
+          ;; cycling route type, NO :activities UTP data on the document
           site    (-> (test-utils/gen-sports-site)
-                      (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid))
-          _       (core/upsert-sports-site!* db author site)
-          regular (test-utils/gen-regular-user :db-component db)
-          admin   (test-utils/gen-admin-user :db-component db)
-          call    (fn [user]
-                    (let [resp (test-app (-> (mock/request :post "/api/actions/get-site-edit-history")
-                                             (mock/content-type "application/json")
-                                             (mock/body (test-utils/->json {:lipas-id lid}))
-                                             (test-utils/token-header (jwt/create-token user))))]
-                      [(:status resp) (test-utils/safe-parse-json resp)]))
+                      (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid)
+                      (assoc-in [:type :type-code] 4412)
+                      (dissoc :activities))
+          _       (core/upsert-sports-site!* (test-db) admin site)
+          editors (core/site-editors (test-db) lid)]
+      (is (contains? (set (map :id (:activity-editor-orgs editors))) (str org-id))
+          "Org whose catalog grants activities-manager(cycling) is listed even though
+           the document has no UTP data yet (fails on old: :activity ctx was nil)")
+      ;; The assigned member's projected roles actually grant editing on the site
+      (let [derived (backend-org/derive-user-org-roles (test-db) (:id member))
+            user    {:permissions {:roles (roles/conform-roles derived)}}
+            rc      (roles/site-roles-context (core/get-sports-site (test-db) lid))]
+        (is (= #{"cycling"} (:activity rc)) "Context activity derived from type-code 4412")
+        (is (true? (roles/check-privilege user rc :activity/edit))
+            "Member can edit activities on the UTP-empty site (fails on old)")
+        (is (true? (roles/check-privilege user rc :site/save-api))
+            "Member can call the save API for the site (fails on old)")))))
+
+(deftest site-edit-history-role-privacy-test
+  (testing "Edit-history shows timestamp + coarse role label to non-admins — never a
+            person identifier (F38, supersedes the F5 username mode); :users/manage
+            callers keep the person view (emails)"
+    (let [db          (test-db)
+          [org1 _]    (create-test-orgs)
+          ;; one author per classification bucket; permissions pinned so the
+          ;; generators' random roles can't bleed into the classification
+          plain       (-> (test-utils/gen-user)
+                          (assoc :email "f38-author@example.com" :username "f38-author")
+                          (assoc-in [:permissions :roles] []))
+          _           (core/add-user! db plain)
+          plain       (core/get-user db "f38-author@example.com")
+          admin-auth  (test-utils/gen-admin-user :db-component db)
+          city-auth   (test-utils/gen-city-manager-user 91 :db-component db)
+          org-auth    (test-utils/gen-org-user (:id org1) :db-component db
+                                               :permissions {:roles []})
+          lid         9992072
+          base        (-> (test-utils/gen-sports-site)
+                          (assoc :status "active" :lipas-id lid))
+          _           (doseq [[author ts] [[plain      "2026-01-01T00:00:00.000Z"]
+                                           [admin-auth "2026-01-02T00:00:00.000Z"]
+                                           [city-auth  "2026-01-03T00:00:00.000Z"]
+                                           [org-auth   "2026-01-04T00:00:00.000Z"]]]
+                        (core/upsert-sports-site!* db author (assoc base :event-date ts)))
+          regular     (test-utils/gen-regular-user :db-component db)
+          admin       (test-utils/gen-admin-user :db-component db)
+          call        (fn [user]
+                        (let [resp (test-app (-> (mock/request :post "/api/actions/get-site-edit-history")
+                                                 (mock/content-type "application/json")
+                                                 (mock/body (test-utils/->json {:lipas-id lid}))
+                                                 (test-utils/token-header (jwt/create-token user))))]
+                          [(:status resp) (test-utils/safe-parse-json resp)]))
           [s1 body1] (call regular)
           [s2 body2] (call admin)]
       (is (= 200 s1))
       (is (= 200 s2))
-      (is (contains? (set (map :author body1)) "f5-author")
-          "Non-admin caller sees the author's username")
-      (is (not-any? #(and % (re-find #"@" %)) (map :author body1))
-          "Non-admin response carries no email addresses
-           (old code returned (or email username) for everyone — fails on old)")
-      (is (contains? (set (map :author body2)) "f5-author@example.com")
-          ":users/manage caller still gets emails"))))
+      ;; newest first: org-member, city-manager, admin, plain
+      (is (= ["organization" "municipality" "admin" "other"]
+             (mapv :author-role body1))
+          "Non-admin rows carry a coarse :author-role classified from the author's
+           current permissions/org membership
+           (old code returned :author usernames and no :author-role — fails on old)")
+      (is (not-any? :author body1)
+          "Non-admin rows carry NO person identifier")
+      (let [s (pr-str body1)]
+        (is (not (re-find #"@" s))
+            "Non-admin response carries no email addresses anywhere")
+        (is (not (re-find #"f38-author" s))
+            "Non-admin response carries no usernames anywhere (fails on old)"))
+      (is (contains? (set (map :author body2)) "f38-author@example.com")
+          ":users/manage caller keeps the person view (emails) — unchanged")
+      (is (not-any? :author-role body2)
+          "Admin rows are the person view, not role labels"))))
 
 (deftest enrich-denormalizes-owner-org-name-test
   (testing "Enriched ES doc carries the owner org's name in search-meta (F15)"
@@ -1245,7 +1306,7 @@
           org-id  (:id org)
           _       (backend-org/update-org! (test-db) org-id
                                            (assoc (backend-org/get-org (test-db) org-id)
-                                                  :type "sports-federation"
+                                                  :type "association"
                                                   :ownership {:type-codes [4411]})
                                            nil)
           lid     9994001
@@ -1257,7 +1318,7 @@
           p       (org-takeover/preview (test-db) org-id)]
       (is (pos? (:count p)) "matches at least the seeded cycling route")
       (is (= "registered-association" (:owner-enum p))
-          "owner-enum derives from the org type (sports-federation)")
+          "owner-enum derives from the org type (association)")
       (is (= (:name org) (:owner-org-name p)) "preview carries the target org name")
       (is (= (str org-id) (:owner-org-id p)))
       (is (some #(= lid (:lipas-id %)) (:sites p)) "site list includes the seeded site")
@@ -1725,6 +1786,52 @@
                                       (test-utils/token-header token))))))
     (is (= (repeat 3 (str (:id admin))) (authors))
         "every org write revision carries the caller as author")))
+
+;;; --- F35: org type "sports-federation" -> "association" rename --------------
+
+(deftest org-type-association-migration-test
+  (testing "migration rewrites sports-federation -> association across all org revisions, idempotently"
+    (let [org    (first (create-test-orgs))
+          org-id (:id org)
+          ;; Seed two raw revisions carrying the pre-rename enum value, mimicking
+          ;; what lipas-dev rows look like (the value never shipped to prod).
+          _ (dotimes [_ 2]
+              (jdbc/execute! (test-db)
+                             ["INSERT INTO org (org_id, author_id, status, document)
+                               SELECT org_id, NULL, 'active',
+                                      jsonb_set(document, '{type}', '\"sports-federation\"')
+                               FROM org_current WHERE org_id = ?" org-id]))
+          count-type (fn [t]
+                       (-> (jdbc/execute-one!
+                             (test-db)
+                             ["SELECT count(*) AS n FROM org
+                               WHERE org_id = ? AND document->>'type' = ?" org-id t]
+                             {:builder-fn rs/as-unqualified-kebab-maps})
+                           :n))]
+      (is (= 2 (count-type "sports-federation")) "old-value revisions seeded")
+      (org-type-association/migrate-up {:db (test-db)})
+      (is (zero? (count-type "sports-federation")) "no sports-federation revisions remain")
+      (is (<= 2 (count-type "association")) "revisions rewritten in place")
+      ;; Idempotent: a second run is a no-op and leaves the same end state.
+      (org-type-association/migrate-up {:db (test-db)})
+      (is (zero? (count-type "sports-federation")))
+      (is (<= 2 (count-type "association")))
+      (let [migrated (backend-org/get-org (test-db) org-id)]
+        (is (= "association" (:type migrated)) "org_current view serves the migrated value")
+        (is (= "registered-association" (core/org-type->owner (:type migrated)))
+            "owner-lock enum derives from the renamed type")))))
+
+(deftest org-type-association-schema-test
+  (testing "type \"association\" passes the org schema; the retired value does not"
+    (let [org  (first (create-test-orgs))
+          base (backend-org/get-org (test-db) (:id org))]
+      (is (m/validate org-schema/org (assoc base :type "association")))
+      (is (not (m/validate org-schema/org (assoc base :type "sports-federation")))
+          "the retired enum value no longer validates")
+      ;; update path accepts the new value end-to-end
+      (backend-org/update-org! (test-db) (:id org)
+                               (assoc base :type "association") nil)
+      (is (= "association" (:type (backend-org/get-org (test-db) (:id org))))))))
 
 (comment
   (clojure.test/run-test-var #'owner-org-assignment-authz-test)

@@ -6,17 +6,19 @@
 (rf/reg-event-fx ::init
   ;; Bulk update is an org operation — always launched with an org-id.
   (fn [{:keys [db]} [_ {:keys [org-id on-success]}]]
-    (let [already-initialized? (and (= org-id (get-in db [:bulk-operations :org-id]))
-                                    (seq (get-in db [:bulk-operations :editable-sites])))]
-      (if already-initialized?
-                       ;; Same org already loaded — don't reset the state
-        {:dispatch (when on-success [on-success])}
-                       ;; Otherwise, initialize fresh for this org
-        {:db (-> db
+    (let [same-org? (and (= org-id (get-in db [:bulk-operations :org-id]))
+                         (seq (get-in db [:bulk-operations :editable-sites])))]
+      ;; Always refetch the list — it goes stale in app-db when org sites are
+      ;; created/edited elsewhere in the app (F36). For the same org we keep
+      ;; selections/filters and let the view show the old list (+ loading flag)
+      ;; while the refetch is in flight; an org switch resets the state fresh.
+      {:db (if same-org?
+             db
+             (-> db
                  (assoc-in [:bulk-operations] db/default-db)
-                 (assoc-in [:bulk-operations :org-id] org-id))
-         :dispatch-n [[::get-editable-sites]
-                      (when on-success [on-success])]}))))
+                 (assoc-in [:bulk-operations :org-id] org-id)))
+       :dispatch-n [[::get-editable-sites]
+                    (when on-success [on-success])]})))
 
 (rf/reg-event-fx ::get-editable-sites
   (fn [{:keys [db]} _]

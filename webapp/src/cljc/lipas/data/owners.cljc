@@ -38,7 +38,7 @@
    "municipal-consortium"  "municipal-consortium"
    "state"                 "state"
    "private"               "company-ltd"
-   "sports-federation"     "registered-association"
+   "association"           "registered-association"
    "other"                 "other"})
 
 (def csv-headers

@@ -111,7 +111,7 @@
  :type-municipal-consortium "Municipal consortium"
  :type-state "State"
  :type-private "Private"
- :type-sports-federation "Sports federation"
+ :type-association "Association"
  :type-other "Other"
 
  ;; our sites
@@ -142,6 +142,10 @@
  :edit-history-who "Edited by"
  :edit-history-empty "No edit history"
  :edit-history-truncated "Showing only the most recent changes"
+ :history-role-admin "Administrator"
+ :history-role-municipality "Municipality"
+ :history-role-organization "Organization"
+ :history-role-other "Other"
  :owner-org "Owner organization"
  :owner-org-helper-text "The organization that owns this site. Clear the selection to record a non-org owner (e.g. an association or company)."
  :grantee-orgs "Edit granted to"

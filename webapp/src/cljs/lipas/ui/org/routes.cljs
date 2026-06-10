@@ -7,7 +7,7 @@
   ["organisaatio/:org-id"
    {:name :lipas.ui.routes/org
     :tr-key :lipas.org/headline
-    :no-navbar-link? true
+    :navbar-link :lipas.ui.routes/orgs
     :view #'views/org-view
     :parameters {:path [:map
                         [:org-id :string]]}
@@ -32,7 +32,7 @@
   ["organisaatiot/:org-id/massa-paivitys"
    {:name :lipas.ui.routes/org-bulk-operations
     :tr-key :lipas.org/bulk-operations
-    :no-navbar-link? true
+    :navbar-link :lipas.ui.routes/orgs
     :view #'views/bulk-operations-view
     :parameters {:path [:map
                         [:org-id :string]]}

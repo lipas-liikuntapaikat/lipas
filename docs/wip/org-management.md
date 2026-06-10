@@ -134,7 +134,7 @@ audit log.
 
 ```clojure
 {:name "Oulun kaupunki"
- :type :city                  ; :city | :municipal-consortium | :state | :private | :sports-federation
+ :type :city                  ; :city | :municipal-consortium | :state | :private | :association | :other
                               ; drives owner-enum locking (§3.6) and UI defaults
 
  :primary-contact {:phone .. :email .. :website .. :reservations-link ..}
@@ -242,7 +242,8 @@ and FE so the form derives the same value):
 | `municipal-consortium` | `municipal-consortium` |
 | `state` | `state` |
 | `private` | `company-ltd` |
-| `sports-federation` | `registered-association` |
+| `association` | `registered-association` |
+| `other` | `other` |
 
 Enforced on save by `core/check-owner-lock!` (throws `:owner-locked` on divergence;
 no-op for non-org-owned sites).

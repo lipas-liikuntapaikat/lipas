@@ -68,7 +68,7 @@
    ["municipal-consortium" :lipas.org/type-municipal-consortium]
    ["state" :lipas.org/type-state]
    ["private" :lipas.org/type-private]
-   ["sports-federation" :lipas.org/type-sports-federation]
+   ["association" :lipas.org/type-association]
    ["other" :lipas.org/type-other]])
 
 (defn org-type-label [tr type]
@@ -703,10 +703,12 @@
 (def ^:private edit-history-display-limit 50)
 
 (defn site-edit-history-section
-  "Per-revision edit history (timestamp + editor) for the expanded site,
-  lazily fetched on expand and cached per lipas-id. The editor shows as a
-  username (email only for lipas-admins — backend policy). Capped to the most
-  recent revisions to keep the accordion DOM bounded on long-lived sites."
+  "Per-revision edit history for the expanded site, lazily fetched on expand
+  and cached per lipas-id. Branches on which key the backend sent (GDPR, F38):
+  rows carry `:author` (email, lipas-admins with :users/manage only) OR
+  `:author-role` (coarse role label — admin/municipality/organization/other —
+  no person identifier, everyone else). Capped to the most recent revisions to
+  keep the accordion DOM bounded on long-lived sites."
   [tr lipas-id]
   (let [history @(rf/subscribe [::subs/site-edit-history lipas-id])
         total   (count history)
@@ -726,7 +728,12 @@
           (for [[i row] (map-indexed vector shown)]
             [:> TableRow {:key i}
              [:> TableCell (some-> (:event-date row) (subs 0 16))]
-             [:> TableCell (or (:author row) "–")]])]]
+             [:> TableCell
+              (cond
+                (:author row)      (:author row)
+                (:author-role row) (tr (keyword "lipas.org"
+                                                (str "history-role-" (:author-role row))))
+                :else              "–")]])]]
         (when (> total edit-history-display-limit)
           [:> Typography {:variant "caption" :color "text.secondary"}
            (tr :lipas.org/edit-history-truncated)])]

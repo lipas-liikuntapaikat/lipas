@@ -248,11 +248,14 @@
 
 (defn get-sub-page [route tr]
   (let [name (-> route :data :name)
-        tr-key (-> route :data :tr-key)]
+        tr-key (-> route :data :tr-key)
+        ;; Parameterized routes can't build an href from their bare name; they
+        ;; declare `:navbar-link` to point the crumb at a parent route instead
+        ;; (e.g. org detail -> orgs list), so the crumb is always clickable.
+        link-name (or (-> route :data :navbar-link) name)]
     (when name
       {:text (tr tr-key)
-       :href (when (not (-> route :data :no-navbar-link?))
-               (rfe/href name))})))
+       :href (rfe/href link-name)})))
 
 (defn menu-button [{:keys [tr]}]
   [:> IconButton
