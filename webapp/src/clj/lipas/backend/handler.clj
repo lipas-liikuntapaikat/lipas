@@ -413,11 +413,14 @@
          {:post
           {:no-doc true
          ;; History/audit is admin-only (lipas-admin or org-admin), not members.
+         ;; Author identity (email) only for :users/manage; org admins get a
+         ;; coarse role label instead (same GDPR rule as site edit history).
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map [:org-id org-schema/org-id]]}
            :handler (fn [req]
                       {:status 200
-                       :body (org/get-history db (-> req :parameters :body :org-id))})}}]
+                       :body (org/get-history db (-> req :parameters :body :org-id)
+                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
 
       ;; --- Bulk contact update candidates (org-only). Read-only candidate
       ;; listing is member-visible (same gate as /actions/get-org-sites) so the

@@ -1108,6 +1108,44 @@
       (is (= 403 (:status (call member-tok))) "Plain member may not see history")
       (is (= 403 (:status (call regular-tok))) "Non-member may not see history"))))
 
+(deftest org-history-author-privacy-test
+  (testing "Org admins see a coarse role label for revision authors, never the
+            author's email; LIPAS admins (:users/manage) keep the person view
+            (same GDPR rule as site edit history, F38)"
+    (let [org-id      (catalog-org! editor+ptv-catalog)
+          lipas-admin (test-utils/gen-admin-user :db-component (test-db))
+          ;; an authored revision: the lipas-admin adds a member
+          member      (test-utils/gen-regular-user :db-component (test-db))
+          _           (backend-org/add-member! (test-db) org-id (:id member)
+                                               {:roles ["editor"]} (:id lipas-admin))
+          oadmin      (test-utils/gen-org-admin-user org-id :db-component (test-db))
+          call        (fn [token]
+                        (-> (test-app (-> (mock/request :post "/api/actions/get-org-history")
+                                          (mock/content-type "application/json")
+                                          (mock/body (test-utils/->json {:org-id org-id}))
+                                          (test-utils/token-header token)))
+                            test-utils/safe-parse-json))
+          oadmin-hist (call (jwt/create-token oadmin))
+          admin-hist  (call (jwt/create-token lipas-admin))
+          authored    (fn [rows k] (->> rows (keep k) set))]
+      ;; org-admin mode: role labels only, no author identifiers anywhere
+      (is (contains? (authored oadmin-hist :author-role) "admin")
+          "Org admin sees the author's coarse role label")
+      (is (empty? (authored oadmin-hist :author-name))
+          "Org admin response carries no :author-name")
+      (is (not-any? #(clojure.string/includes? (str %) (:email lipas-admin))
+                    (map :author-name oadmin-hist))
+          "The lipas-admin author's email never appears for org admins")
+      ;; member references in change summaries stay readable (own-org members)
+      (is (some (fn [rev] (some #(clojure.string/includes? % (:email member)) (:changes rev)))
+                oadmin-hist)
+          "Member references in change lines keep emails (visible in Jäsenet anyway)")
+      ;; lipas-admin mode: unchanged person view
+      (is (contains? (authored admin-hist :author-name) (:email lipas-admin))
+          "LIPAS admin still sees author emails")
+      (is (empty? (authored admin-hist :author-role))
+          "LIPAS admin response carries no :author-role"))))
+
 ;;; --- Org instructions (org-admin writes localized member guidance) ----------
 
 (deftest org-instructions-test

@@ -61,6 +61,12 @@ File:line references are against the branch head at review time (2ac31c4c).
   Aktiviteetti tag in drawer; activity-only users excluded from :legacy-users).
   Extended site-editors-typed-utp-empty-activity-test (fails on old: key absent).
   Gate: org+handler test-ns 107/394/0, compile clean.
+- 2026-06-10 F38 follow-up (live org-admin testing): org Muutoshistoria also
+  showed author emails to org admins (get-history hardcoded emails? true).
+  Now branches like site edit history: :users/manage → :author-name (email),
+  org admins → :author-role label; member references in change lines keep
+  emails (own-org members, visible in Jäsenet). Test:
+  org-history-author-privacy-test. Gate: org+handler 114/433/0, compile clean.
 - 2026-06-10 manual-review item 1 (F38): site edit-history now shows timestamp +
   coarse role label (admin/municipality/organization/other, classified at read time,
   batched — no N+1) to everyone without :users/manage; person view (email) kept for
