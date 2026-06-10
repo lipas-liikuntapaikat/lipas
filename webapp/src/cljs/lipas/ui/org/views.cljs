@@ -777,7 +777,13 @@
                    (for [u (:legacy-users editors)]
                      {:key (str "legacy-" (:email u)) :label (:email u)
                       :tag (tr :lipas.org/role-direct)
-                      :tooltip (tr :lipas.org/role-direct-tooltip)}))]
+                      :tooltip (tr :lipas.org/role-direct-tooltip)})
+                   ;; direct activity-only users: can edit the site's UTP data
+                   ;; but not the site itself (same tag as activity orgs)
+                   (for [u (:legacy-activity-users editors)]
+                     {:key (str "legacy-act-" (:email u)) :label (:email u)
+                      :tag (tr :lipas.org/role-activity)
+                      :tooltip (tr :lipas.org/role-direct-activity-tooltip)}))]
         [:> Box {:sx {:p 2 :bgcolor "action.hover"}}
          [:> Typography {:variant "subtitle2" :sx {:mb 1}}
           (tr :lipas.org/who-can-edit-site)]

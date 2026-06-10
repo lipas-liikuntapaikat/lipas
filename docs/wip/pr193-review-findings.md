@@ -56,6 +56,11 @@ File:line references are against the branch head at review time (2ac31c4c).
   are not compiled into ES "editable sites" filters at all). Gate green:
   bb test-ns roles/org/business-logic/bulk-ops/handler 126 tests / 489 assertions /
   0 failures; cljs compile {:status :ok}, zero warnings.
+- 2026-06-10 F34 follow-up: who-can-edit drawer now also lists INDIVIDUAL users
+  with direct activity-only roles (new :legacy-activity-users in site-editors,
+  Aktiviteetti tag in drawer; activity-only users excluded from :legacy-users).
+  Extended site-editors-typed-utp-empty-activity-test (fails on old: key absent).
+  Gate: org+handler test-ns 107/394/0, compile clean.
 - 2026-06-10 manual-review item 1 (F38): site edit-history now shows timestamp +
   coarse role label (admin/municipality/organization/other, classified at read time,
   batched — no N+1) to everyone without :users/manage; person view (email) kept for
