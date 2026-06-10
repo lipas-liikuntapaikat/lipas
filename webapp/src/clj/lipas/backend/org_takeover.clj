@@ -7,6 +7,11 @@
   marked acting on behalf of the org."
   (:require [clojure.java.jdbc :as jdbc-old]
             [honey.sql :as hsql]
+            ;; Registers :-> / :->> etc. as infix ops in HoneySQL's runtime
+            ;; registry. Without this require the ownership-rule queries render
+            ;; as `->>(document, 'x')` → PG "operator does not exist: ->> record"
+            ;; whenever lipas.wfs.core (the only other requirer) isn't loaded.
+            [honey.sql.pg-ops]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.org :as org]
