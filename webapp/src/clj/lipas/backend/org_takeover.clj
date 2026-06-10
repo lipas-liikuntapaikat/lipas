@@ -8,12 +8,12 @@
   (:require [clojure.java.jdbc :as jdbc-old]
             [honey.sql :as hsql]
             [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
             [lipas.backend.org :as org]
             [lipas.backend.search :as search]
+            [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]))
-
-(defn- ->uuid [x] (if (string? x) (parse-uuid x) x))
 
 (defn- ownership-clauses
   "HoneySQL where-clauses for the ownership rule's up-to-four AND-combined axes
@@ -104,7 +104,7 @@
                        ["INSERT INTO org_takeover_request
                          (org_id, status, ownership_rule, lipas_ids, requested_by)
                          VALUES (?,?,?,?,?) RETURNING *"
-                        (->uuid org-id) "requested" rule (or lipas-ids []) (some-> requested-by ->uuid)]
+                        (utils/->uuid-safe org-id) "requested" rule (or lipas-ids []) (utils/->uuid-safe requested-by)]
                        {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (defn list-requests
@@ -118,7 +118,7 @@
                   {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (defn get-request [db request-id]
-  (jdbc/execute-one! db ["SELECT * FROM org_takeover_request WHERE id = ?" (->uuid request-id)]
+  (jdbc/execute-one! db ["SELECT * FROM org_takeover_request WHERE id = ?" (utils/->uuid-safe request-id)]
                      {:builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn approve!
@@ -153,12 +153,24 @@
                                              ["UPDATE org_takeover_request
                                                SET status='approved', decided_by=?, decided_at=now()
                                                WHERE id=? AND status='requested'"
-                                              (some-> actor :id ->uuid) (->uuid request-id)])))
+                                              (utils/->uuid-safe (:id actor)) (utils/->uuid-safe request-id)])))
         (throw (ex-info "Takeover request already decided"
                         {:type :invalid-takeover-state})))
-      (let [updated (doall
+      (let [;; one IN-query for all current revisions instead of a SELECT per
+            ;; lipas-id (F17 — Helsinki scale ≈ 3700 sites ⇒ ~3700 round trips
+            ;; saved). The rows come back unmarshalled; enrich-activities is
+            ;; reapplied per doc so each one is exactly what
+            ;; core/get-sports-site used to return here.
+            stored-by-id (->> (db/get-sports-sites-by-lipas-ids tx lipas-ids)
+                              (map core/enrich-activities)
+                              (utils/index-by :lipas-id))
+            updated (doall
                      (for [lid lipas-ids]
-                       (->> (cond-> (assoc (core/get-sports-site tx lid)
+                       ;; fresh :event-date — reusing the stored one would create
+                       ;; a duplicate (lipas-id, event-date) revision pair (FE
+                       ;; history keys by event-date) and misdate the claim
+                       (->> (cond-> (assoc (stored-by-id lid)
+                                           :event-date    (utils/timestamp)
                                            :owner-org-id  (str org-id)
                                            :acting-org-id (str org-id))
                               owner-enum (assoc :owner owner-enum))
@@ -166,9 +178,13 @@
         ;; one bulk index for all of them (refresh=wait_for, so the immediate
         ;; "our sites" refresh after a reclaim sees the freshly-claimed sites)
         (when (seq updated)
-          (let [idx (get-in search [:indices :sports-site :search])]
+          (let [idx (get-in search [:indices :sports-site :search])
+                ;; resolved once per batch — owner just changed, so the docs
+                ;; must carry the new owner org's name (F15)
+                org-names (core/org-names db)]
             (search/bulk-index-sync! (:client search)
-                                     (search/->bulk idx :lipas-id (map core/enrich updated)))))))
+                                     (search/->bulk idx :lipas-id
+                                                    (map #(core/enrich % org-names) updated)))))))
     {:status "approved" :org-id (str org-id) :sites-claimed (count lipas-ids)}))
 
 (defn reclaim-now!
@@ -187,7 +203,7 @@
                                ["UPDATE org_takeover_request
                                  SET status='denied', decided_by=?, decided_at=now()
                                  WHERE id=? AND status='requested'"
-                                (some-> actor :id ->uuid) (->uuid request-id)])]
+                                (utils/->uuid-safe (:id actor)) (utils/->uuid-safe request-id)])]
     (when (zero? (:next.jdbc/update-count res))
       (throw (ex-info "Takeover request is not awaiting a decision"
                       {:type :invalid-takeover-state})))

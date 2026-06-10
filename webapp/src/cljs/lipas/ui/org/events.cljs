@@ -1,20 +1,24 @@
 (ns lipas.ui.org.events
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
-            [cognitect.transit :as t]
             [lipas.roles :as roles]
             [lipas.ui.bulk-operations.events :as bulk-ops-events]
             [lipas.ui.utils :as ui-utils]
             [lipas.utils :as utils]
-            [re-frame.core :as rf]
-            [reitit.frontend.easy :as rfe]))
+            [re-frame.core :as rf]))
 
-(rf/reg-event-db ::get-user-orgs-success
-                 (fn [db [_ resp]]
-                   (assoc-in db [:user :orgs] resp)))
+(rf/reg-event-fx ::get-user-orgs-success
+                 (fn [{:keys [db]} [_ then resp]]
+                   ;; `(or resp [])` so [:user :orgs] is always non-nil after a
+                   ;; fetch — ::init-view re-fetches only while it's nil, so the
+                   ;; `:then` continuation can't loop.
+                   (cond-> {:db (assoc-in db [:user :orgs] (or resp []))}
+                     then (assoc :dispatch then))))
 
 (rf/reg-event-fx ::get-user-orgs
-                 (fn [{:keys [db]} _]
+                 ;; Optional `{:then [event ...]}` is dispatched after the orgs
+                 ;; land in app-db (continuation, e.g. re-running ::init-view).
+                 (fn [{:keys [db]} [_ {:keys [then]}]]
                    (let [token (-> db :user :login :token)]
                      {:http-xhrio
                       {:method :post
@@ -23,7 +27,7 @@
                        :params {}
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
-                       :on-success [::get-user-orgs-success]
+                       :on-success [::get-user-orgs-success then]
                        :on-failure [::failure]}})))
 
 (rf/reg-event-db ::get-org-users-success
@@ -41,21 +45,6 @@
                        :format (ajax/json-request-format)
                        :response-format (ajax/json-response-format {:keywords? true})
                        :on-success [::get-org-users-success]
-                       :on-failure [::failure]}})))
-
-(rf/reg-event-db ::get-all-users-success
-                 (fn [db [_ users]]
-                   (assoc-in db [:org :all-users] users)))
-
-(rf/reg-event-fx ::get-all-users
-                 (fn [{:keys [db]} [_ _]]
-                   (let [token (-> db :user :login :token)]
-                     {:http-xhrio
-                      {:method :get
-                       :headers {:Authorization (str "Token " token)}
-                       :uri (str (:backend-url db) "/users")
-                       :response-format (ajax/json-response-format {:keywords? true})
-                       :on-success [::get-all-users-success]
                        :on-failure [::failure]}})))
 
 (defn- init-ptv-data
@@ -92,36 +81,19 @@
                                                user-orgs)))
                          fx (cond-> []
                               (not is-new?) (conj [:dispatch [::get-org-users org-id]])
-                              is-lipas-admin? (conj [:dispatch [::get-all-users]])
                               is-lipas-admin? (conj [:dispatch [::get-takeover-requests "requested"]])
                               ;; Land on the default "our-sites" tab and load its
                               ;; data via the normal tab path (also fetches the
                               ;; owned-site count for the setup-checklist step ③).
                               (not is-new?) (conj [:dispatch [::set-current-tab "our-sites"]])
-                              (and (nil? user-orgs) (not is-new?)) (conj [:dispatch [::get-user-orgs-then-init org-id]]))]
+                              ;; Orgs not loaded yet (e.g. direct navigation /
+                              ;; page refresh) → fetch them and re-init once
+                              ;; they've landed in app-db.
+                              (and (nil? user-orgs) (not is-new?))
+                              (conj [:dispatch [::get-user-orgs {:then [::init-view org-id]}]]))]
                      {:fx fx
                       :db (assoc db :org {:org-id org-id
                                           :editing-org current-org})})))
-
-(rf/reg-event-fx ::get-user-orgs-then-init
-                 (fn [{:keys [db]} [_ org-id]]
-                   {:dispatch-n [[::get-user-orgs]
-                                 [::wait-for-orgs-then-init org-id]]}))
-
-(rf/reg-event-fx ::wait-for-orgs-then-init
-                 (fn [{:keys [db]} [_ org-id retry-count]]
-                   (let [user-orgs (-> db :user :orgs)
-                         retry-count (or retry-count 0)]
-                     (if (or user-orgs (> retry-count 10))
-        ;; If we have orgs or exceeded retries, find the org
-                       (let [current-org (some (fn [o]
-                                                 (when (= org-id (str (:id o)))
-                                                   (init-org o)))
-                                               user-orgs)]
-                         {:db (assoc-in db [:org :editing-org] current-org)})
-        ;; Otherwise wait and retry
-                       {:dispatch-later [{:ms 100
-                                          :dispatch [::wait-for-orgs-then-init org-id (inc retry-count)]}]}))))
 
 (rf/reg-event-db ::edit-org
                  (fn [db [_ path value]]
@@ -192,9 +164,8 @@
 
 ;; Bulk operations integration
 (rf/reg-event-fx ::init-bulk-operations
-                 (fn [{:keys [db]} [_ org-id]]
-                   {:db (assoc-in db [:org :current-org-id] org-id)
-                    :dispatch [::bulk-ops-events/init {:org-id org-id}]}))
+                 (fn [_ [_ org-id]]
+                   {:dispatch [::bulk-ops-events/init {:org-id org-id}]}))
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success
@@ -245,12 +216,6 @@
 (defn- token [db] (-> db :user :login :token))
 
 (defn- auth-headers [db] {:Authorization (str "Token " (token db))})
-
-(defn- ->uuid
-  "Org ids loaded from JSON are strings; transit bodies preserve types and the
-  backend :uuid coercion won't string→uuid, so coerce before sending."
-  [x]
-  (if (string? x) (uuid x) x))
 
 (rf/reg-event-db ::set-invite-member-form
                  (fn [db [_ path value]]
@@ -309,9 +274,22 @@
                          :format (ajax/json-request-format)
                          :response-format (ajax/json-response-format {:keywords? true})
                          :on-success [::invite-member-success org-id email]
-                         :on-failure [::failure]}}
+                         :on-failure [::invite-member-failure]}}
                        {:fx [[:dispatch [:lipas.ui.events/set-active-notification
                                          {:message "Anna sähköpostiosoite" :success? false}]]]}))))
+
+(rf/reg-event-fx ::invite-member-failure
+                 ;; The backend rejects inviting an existing member with 409
+                 ;; {:type "already-member"} (a re-invite would silently reset
+                 ;; their roles) — show a localized toast for that case instead
+                 ;; of the server's English message.
+                 (fn [{:keys [db]} [_ resp]]
+                   (let [tr (:translator db)]
+                     (if (= "already-member" (-> resp :response :type))
+                       {:fx [[:dispatch [:lipas.ui.events/set-active-notification
+                                         {:message (tr :lipas.org/already-member)
+                                          :success? false}]]]}
+                       {:fx [[:dispatch [::failure resp]]]}))))
 
 (rf/reg-event-fx ::invite-member-success
                  ;; The response's :new-account? tells us what actually happened,
@@ -351,10 +329,6 @@
 
 ;; --- Catalog editor (lipas-admin): a local map {key {:label :roles [specs]}}
 ;; seeded on tab switch (::set-current-tab), saved via ::edit-template-catalog ---
-(rf/reg-event-db ::init-catalog-editor
-                 (fn [db [_ catalog]]
-                   (assoc-in db [:org :catalog-editor] (or catalog {}))))
-
 (defn- gen-template-key
   "A unique catalog key. Prefers `preferred` when free, else rooli-N."
   [catalog preferred]
@@ -421,7 +395,7 @@
                       {:method :post
                        :uri (str (:backend-url db) "/actions/update-org-role-templates")
                        :headers (auth-headers db)
-                       :params {:org-id (->uuid org-id) :role-templates role-templates}
+                       :params {:org-id (utils/->uuid-safe org-id) :role-templates role-templates}
                        :format (ajax/transit-request-format)
                        :response-format (ajax/transit-response-format)
                        :on-success [::edit-template-catalog-success org-id role-templates]
@@ -443,12 +417,14 @@
                    (assoc-in db [:org :sites (keyword flt)] resp)))
 
 (rf/reg-event-fx ::get-org-sites
+                 ;; count-only: the FE consumes only the :total (the card /
+                 ;; setup-checklist owned-count) — no need to ship 2000 docs.
                  (fn [{:keys [db]} [_ org-id flt]]
                    {:http-xhrio
                     {:method :post
                      :uri (str (:backend-url db) "/actions/get-org-sites")
                      :headers (auth-headers db)
-                     :params {:org-id org-id :filter flt}
+                     :params {:org-id org-id :filter flt :count-only true}
                      :format (ajax/json-request-format)
                      :response-format (ajax/json-response-format {:keywords? true})
                      :on-success [::get-org-sites-success flt]
@@ -492,7 +468,7 @@
                     {:method :post
                      :uri (str (:backend-url db) "/actions/grant-site-edit")
                      :headers (auth-headers db)
-                     :params {:org-id (->uuid org-id) :lipas-id lipas-id :grantee-org-id (->uuid grantee-org-id)}
+                     :params {:org-id (utils/->uuid-safe org-id) :lipas-id lipas-id :grantee-org-id (utils/->uuid-safe grantee-org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::site-edit-grant-success org-id lipas-id]
@@ -504,7 +480,7 @@
                     {:method :post
                      :uri (str (:backend-url db) "/actions/revoke-site-edit")
                      :headers (auth-headers db)
-                     :params {:org-id (->uuid org-id) :lipas-id lipas-id :grantee-org-id (->uuid grantee-org-id)}
+                     :params {:org-id (utils/->uuid-safe org-id) :lipas-id lipas-id :grantee-org-id (utils/->uuid-safe grantee-org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::site-edit-grant-success org-id lipas-id]
@@ -577,7 +553,7 @@
                     {:method :post
                      :uri (str (:backend-url db) "/actions/request-org-takeover")
                      :headers (auth-headers db)
-                     :params {:org-id (->uuid org-id)}
+                     :params {:org-id (utils/->uuid-safe org-id)}
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::request-takeover-success]
@@ -589,7 +565,7 @@
                     {:method :post
                      :uri (str (:backend-url db) "/actions/reclaim-org-sites")
                      :headers (auth-headers db)
-                     :params {:org-id (->uuid org-id)}
+                     :params {:org-id (utils/->uuid-safe org-id)}
                      :timeout reclaim-timeout-ms
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
@@ -653,7 +629,7 @@
                     {:method :post
                      :uri (str (:backend-url db) "/actions/" decision "-org-takeover")
                      :headers (auth-headers db)
-                     :params {:request-id (->uuid request-id)}
+                     :params {:request-id (utils/->uuid-safe request-id)}
                      ;; approve applies ownership site-by-site → can be slow
                      :timeout reclaim-timeout-ms
                      :format (ajax/transit-request-format)

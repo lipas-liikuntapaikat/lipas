@@ -73,6 +73,7 @@
  "Befintlig LIPAS-användare — läggs till i organisationen och meddelas via e-post."
  :invite-status-new
  "Ny användare — ett konto skapas och en inloggningslänk skickas via e-post."
+ :already-member "Användaren är redan medlem i organisationen"
  :admin "Administratör"
  :member "Medlem"
  :assigned-templates "Åtkomsträttigheter"
@@ -129,6 +130,8 @@
  :role-owner-tooltip "Personer som hör till denna organisation får redigeringsrätt via organisationen."
  :role-shared "Delad"
  :role-shared-tooltip "Ägarorganisationen har delat redigeringsrätten med denna organisation."
+ :role-catalog "Rollmall"
+ :role-catalog-tooltip "Organisationens medlemmar kan få redigeringsrätt via organisationens rollmallar."
  :role-activity "Aktivitet"
  :role-activity-tooltip "Organisationen får redigera objektets aktivitetsuppgifter via sina ansvarsaktiviteter."
  :role-direct "Direkt rätt"
@@ -150,6 +153,7 @@
  :claim-ownership "Överför anläggningar"
  :claim-ownership-desc "Överför anläggningar som matchar ägarregeln"
  :no-sites "Inga anläggningar"
+ :sites-load-failed "Det gick inte att läsa in anläggningarna. Försök igen senare."
 
  ;; history
  :no-history "Ingen historik"

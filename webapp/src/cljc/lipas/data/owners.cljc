@@ -38,7 +38,8 @@
    "municipal-consortium"  "municipal-consortium"
    "state"                 "state"
    "private"               "company-ltd"
-   "sports-federation"     "registered-association"})
+   "sports-federation"     "registered-association"
+   "other"                 "other"})
 
 (def csv-headers
   ["Arvo" "Nimi fi" "Nimi Se" "Nimi En"])
