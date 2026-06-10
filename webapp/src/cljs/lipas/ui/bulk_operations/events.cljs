@@ -22,7 +22,10 @@
   (fn [{:keys [db]} _]
     (let [token (-> db :user :login :token)
           org-id (get-in db [:bulk-operations :org-id])]
-      {:db (assoc-in db [:bulk-operations :loading?] true)
+      ;; clear any stale fetch error — the view renders [:bulk-operations :error]
+      {:db (-> db
+               (update :bulk-operations dissoc :error)
+               (assoc-in [:bulk-operations :loading?] true))
        :http-xhrio
        {:method :post
         :uri (str (:backend-url db) "/actions/get-org-sites-for-bulk")

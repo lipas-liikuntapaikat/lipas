@@ -45,8 +45,7 @@
                                                            :org-id [(str org-id)]}]}})
           ;; PTV managers of an org are its members who hold :ptv/manage;
           ;; membership now lives in the org document.
-          _ (backend-org/update-org-users! (test-db) org-id
-                                           [{:user-id (:id ptv-manager) :change "add" :role "org-user"}])
+          _ (backend-org/add-member! (test-db) org-id (:id ptv-manager) {:roles []} nil)
           auditor (tu/gen-user {:db? true :admin? true
                                 :db-component (test-db)
                                 :permissions {:roles [{:role :ptv-auditor}]}})
@@ -84,6 +83,41 @@
                                  (mock/json-body {:org-id org-id :stats stats})
                                  (tu/token-header token)))]
         (is (= 403 (:status resp)))))))
+
+(deftest get-ptv-managers-catalog-grant-test
+  (t/testing "Catalog-granted ptv-manager is included alongside direct-role managers (F10)"
+    ;; Catalog grants are projection-only (JWT, never persisted to
+    ;; account.permissions) — the old implementation filtered stored account
+    ;; roles only, so the catalog-granted member below was invisible (this
+    ;; test's second assertion fails on the old code).
+    (let [org (create-org! {:name "Catalog PTV Org"
+                            :ptv-data {:org-id nil
+                                       :city-codes [889]}})
+          org-id (:id org)
+          _ (backend-org/update-catalog!
+              (test-db) org-id
+              {:ptv {:label "PTV" :roles [{:role "ptv-manager" :city-code [889]}]}}
+              nil)
+          ;; direct (stored account role) manager — the pre-catalog mechanism
+          direct (tu/gen-user {:db? true :db-component (test-db)
+                               :permissions {:roles [{:role :ptv-manager
+                                                      :city-code [889]}]}})
+          _ (backend-org/add-member! (test-db) org-id (:id direct) {:roles []} nil)
+          ;; catalog-granted manager — nothing on the account, only the
+          ;; membership's template assignment
+          catalog-user (tu/gen-user {:db? true :db-component (test-db)
+                                     :permissions {:roles []}})
+          _ (backend-org/add-member! (test-db) org-id (:id catalog-user) {:roles ["ptv"]} nil)
+          ;; plain member — must NOT be listed
+          plain (tu/gen-user {:db? true :db-component (test-db)
+                              :permissions {:roles []}})
+          _ (backend-org/add-member! (test-db) org-id (:id plain) {:roles []} nil)
+          managers (ptv-core/get-ptv-managers (test-db) org-id)
+          emails (set (map :email managers))]
+      (is (contains? emails (:email direct)) "Direct-role manager still found")
+      (is (contains? emails (:email catalog-user))
+          "Catalog-granted manager found (old code: stored roles only — fails on old)")
+      (is (not (contains? emails (:email plain))) "Plain member is not a manager"))))
 
 ;; This test requires PTV training environment to be operational.
 ;; It's up only on weekdays between 8-17 Finnish time...

@@ -130,6 +130,9 @@
          :search-meta.activities {:type "keyword"}
          ;; org-management: ownership / editor-org filtering (Q1 + :org-editor)
          :search-meta.owner-org-id {:type "keyword"}
+         ;; denormalized owner org display name (F15) — so any viewer sees a
+         ;; name instead of a raw org UUID
+         :search-meta.owner-org-name text-with-keyword
          :search-meta.editor-org-ids {:type "keyword"}}
 
         ;; Disabled fields - stored in _source but not indexed (display-only)

@@ -93,7 +93,12 @@
         ownable-orgs   (when editable-owner-org? (<== [:lipas.ui.org.subs/ownable-orgs]))
         owner-org-id   (if editing? (:owner-org-id edit-data) (:owner-org-id display-data))
         owning-org     (when owner-org-id (<== [:lipas.ui.org.subs/user-org-by-id owner-org-id]))
-        owner-org-name (or (:name owning-org) owner-org-id)
+        ;; name resolution chain: user's own org → denormalized name from the
+        ;; ES doc's search-meta (works for non-members/anonymous, F15) → raw
+        ;; UUID only when neither is available (e.g. un-reindexed doc)
+        owner-org-name (or (:name owning-org)
+                           (:owner-org-name display-data)
+                           owner-org-id)
         select-owner-org
         (fn [org-id]
           ;; autocomplete yields "" (not nil) on clear; treat blank as legacy.
@@ -116,7 +121,9 @@
                        :label-fn (comp locale second)
                        :on-change #(on-change :owner %)}]}]
     (cond
-      ;; Editable org autocomplete (legacy field shows when no org set).
+      ;; Editable org autocomplete (legacy field shows when no org set, or when
+      ;; the org's type maps to no :owner enum — e.g. "other"/nil-typed orgs —
+      ;; so the required :owner can still be picked manually).
       (and editable-owner-org? (seq ownable-orgs))
       (into [:<>
              {:label (tr :lipas.org/owner-org)
@@ -129,16 +136,22 @@
                             :deselect? true
                             :helper-text (tr :lipas.org/owner-org-helper-text)
                             :on-change select-owner-org}]}]
-            (when-not owner-org-id [legacy-owner-field]))
+            (when (or (not owner-org-id) (nil? (:owner edit-data)))
+              [legacy-owner-field]))
 
       ;; Org-owned (existing site or read-only view): owner org, read-only.
+      ;; If the required :owner is missing (org type has no enum mapping),
+      ;; still show the legacy select so the form isn't unsaveable.
       owner-org-id
-      {:label (tr :lipas.org/owner-org)
-       :value owner-org-name
-       :form-field [text-fields/text-field
-                    {:value owner-org-name
-                     :disabled true
-                     :on-change #()}]}
+      (into [:<>
+             {:label (tr :lipas.org/owner-org)
+              :value owner-org-name
+              :form-field [text-fields/text-field
+                           {:value owner-org-name
+                            :disabled true
+                            :on-change #()}]}]
+            (when (and editing? (nil? (:owner edit-data)))
+              [legacy-owner-field]))
 
       ;; Legacy.
       :else

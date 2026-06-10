@@ -73,6 +73,7 @@
  "Olemassa oleva LIPAS-käyttäjä — lisätään organisaatioon ja hänelle ilmoitetaan sähköpostitse."
  :invite-status-new
  "Uusi käyttäjä — luodaan tili ja lähetetään kirjautumislinkki sähköpostitse."
+ :already-member "Käyttäjä on jo organisaation jäsen"
  :admin "Ylläpitäjä"
  :member "Jäsen"
  :assigned-templates "Käyttöoikeudet"
@@ -129,6 +130,8 @@
  :role-owner-tooltip "Tähän organisaatioon kuuluvat henkilöt saavat muokkausoikeuden organisaation kautta."
  :role-shared "Jaettu"
  :role-shared-tooltip "Omistajaorganisaatio on jakanut muokkausoikeuden tälle organisaatiolle."
+ :role-catalog "Roolimalli"
+ :role-catalog-tooltip "Organisaation jäsenet voivat saada muokkausoikeuden organisaation roolimallien kautta."
  :role-activity "Aktiviteetti"
  :role-activity-tooltip "Organisaatio saa muokata kohteen aktiviteettitietoja vastuuaktiviteettiensa kautta."
  :role-direct "Suora oikeus"
@@ -150,6 +153,7 @@
  :claim-ownership "Siirrä kohteet omistukseen"
  :claim-ownership-desc "Siirrä omistussääntöä vastaavat kohteet organisaation omistukseen"
  :no-sites "Ei kohteita"
+ :sites-load-failed "Kohteiden lataaminen epäonnistui. Yritä myöhemmin uudelleen."
 
  ;; history
  :no-history "Ei historiaa"

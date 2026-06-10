@@ -1,6 +1,5 @@
 (ns lipas.backend.core
   (:require [buddy.hashers :as hashers]
-            [clojure.set :as set]
             [cheshire.core :as json]
             [clojure.core.async :as async]
             [clojure.data.csv :as csv]
@@ -421,13 +420,30 @@
          ;; Authoritative current state. nil ⇒ no such revision (a create, or an
          ;; edit of a not-yet-existing id — the latter 404s after authz below).
          stored    (when lipas-id (not-empty (get-sports-site db lipas-id)))
-         creating? (nil? stored)]
-     ;; 1. Content-edit permission — against the STORED site for an existing edit
-     ;;    (NEVER the submitted body, else a caller could grant themselves access
-     ;;    by injecting :owner-org-id/:edit-grants). Falls back to the body when
-     ;;    there is no stored revision, preserving the legacy permission check
-     ;;    (and its 403-before-404 ordering) for a posted-but-missing lipas-id.
+         creating? (nil? stored)
+         ;; The server owns :owner-org-id / :edit-grants: when the submitted
+         ;; body OMITS the key entirely (clients that don't round-trip them —
+         ;; integrations, GET-modify-POST scripts), carry the stored value
+         ;; forward instead of treating absence as removal. An explicit nil
+         ;; (key present) is a genuine removal attempt and is authorized below.
+         sports-site (if stored
+                       (merge (select-keys stored [:owner-org-id :edit-grants])
+                              sports-site)
+                       sports-site)]
+     ;; 1. Content-edit permission. For an existing site the privilege must hold
+     ;;    for BOTH the stored revision (a scoped editor can't touch sites
+     ;;    outside their scope, and org-owned-site editors keep edit rights via
+     ;;    the stored :owner-org-id even when the body changes content) AND the
+     ;;    submitted document (the editor can't relocate/retype a site out of —
+     ;;    or into — a scope they don't hold). Note the body is checked AFTER
+     ;;    the carry-forward above, so injected :owner-org-id/:edit-grants can't
+     ;;    grant access (any change to them is separately authorized in step 2).
+     ;;    For a create (no stored revision) the body alone is checked,
+     ;;    preserving the legacy permission check (and its 403-before-404
+     ;;    ordering) for a posted-but-missing lipas-id.
      (check-permissions! user (or stored sports-site) draft?)
+     (when stored
+       (check-permissions! user sports-site draft?))
      ;; 2. Ownership & edit-grant invariants: a body that changes either
      ;;    security-sensitive field must be authorized to do so (business rule).
      (let [prev-owner  (:owner-org-id stored)
@@ -453,7 +469,7 @@
          (ensure-permission! db user resp))
        resp))))
 
-(declare index!)
+(declare index! org-names)
 
 (defn- set-site-edit-grants!
   "Append a site revision setting :edit-grants to `grants`, acting on behalf of
@@ -462,10 +478,14 @@
   [db search user lipas-id grants acting-org-id]
   (let [site    (get-sports-site db lipas-id)
         updated (assoc site
+                       ;; fresh timestamp — reusing the stored :event-date would
+                       ;; collide with the previous revision (FE keys history by
+                       ;; event-date) and misdate the grant in the event log
+                       :event-date (utils/timestamp)
                        :edit-grants (vec (distinct (map str grants)))
                        :acting-org-id (some-> acting-org-id str))
         resp    (upsert-sports-site!* db user updated)]
-    (index! search resp)
+    (index! search resp false (org-names db))
     resp))
 
 (defn- check-edit-grant-authorized!
@@ -477,12 +497,22 @@
                     {:type :no-permission :reason :edit-grant-change
                      :lipas-id (:lipas-id site)}))))
 
+(defn- get-existing-site!
+  "Current revision of `lipas-id`, or throw :site-not-found (404). Guards the
+  grant/revoke paths from upserting a fragment revision for an unknown id
+  (which would allocate a fresh lipas-id from the sequence and blow up on a
+  NOT NULL constraint)."
+  [db lipas-id]
+  (or (not-empty (get-sports-site db lipas-id))
+      (throw (ex-info "Site not found"
+                      {:type :site-not-found :lipas-id lipas-id}))))
+
 (defn grant-site-edit!
   "Grant another org edit access to a site (cross-org collaboration). Only the
   owning org's admin (or a LIPAS admin) may grant — enforced here, not in the
   route, so every caller goes through the same rule."
   [db search user lipas-id grantee-org-id acting-org-id]
-  (let [site   (get-sports-site db lipas-id)
+  (let [site   (get-existing-site! db lipas-id)
         _      (check-edit-grant-authorized! user site)
         grants (conj (set (map str (:edit-grants site))) (str grantee-org-id))]
     (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
@@ -490,7 +520,7 @@
 (defn revoke-site-edit!
   "Revoke an org's edit access to a site. Same authority as granting."
   [db search user lipas-id grantee-org-id acting-org-id]
-  (let [site   (get-sports-site db lipas-id)
+  (let [site   (get-existing-site! db lipas-id)
         _      (check-edit-grant-authorized! user site)
         grants (disj (set (map str (:edit-grants site))) (str grantee-org-id))]
     (set-site-edit-grants! db search user lipas-id grants acting-org-id)))
@@ -510,38 +540,48 @@
   with the (catalog-bounded) assignment. Never touches account.permissions.roles.
   Returns {:user-id .. :new-account? bool}."
   [db emailer org-id {:keys [email] :as assignment} author-id login-url]
-  ;; Ceiling check first — reject out-of-catalog assignments before creating
-  ;; anything (the structural guarantee is in derive-org-roles; this is early UX).
-  (org/validate-assignment! db org-id assignment)
-  (let [existing (db/get-user-by-email db {:email email})
-        new?     (nil? existing)
-        _        (when new? (add-user! db {:email email :username email}))
-        user     (or existing (db/get-user-by-email db {:email email}))
-        org-name (:name (org/get-org db org-id))]
-    (org/add-member! db org-id (:id user) assignment author-id)
-    ;; Both cases get an email: new accounts a magic login link to set a password;
-    ;; existing accounts a plain "you've been added to org X" notification. The
-    ;; membership is already committed, so a delivery failure must NOT fail the
-    ;; whole operation (which would leave a member added but report an error).
-    ;; Report delivery status instead; a new account without its link can still
-    ;; reset its password / be re-invited.
-    (let [email-sent?
-          (try
-            (let [magic (create-magic-link login-url user)]
-              (if new?
-                (email/send-org-invitation-email!
-                  emailer email (assoc magic :org-name org-name))
-                ;; Existing accounts also get a magic link (one-click login that
-                ;; lands them already authenticated, with the fresh token carrying
-                ;; the new org role) — mirrors send-permissions-updated-email!.
-                (email/send-org-added-email!
-                  emailer email (assoc magic :org-name org-name))))
-            true
-            (catch Exception e
-              (log/error e "Failed to send org-invitation email"
-                         {:email email :org-id (str org-id) :new-account? new?})
-              false))]
-      {:user-id (str (:id user)) :new-account? new? :email-sent? email-sent?})))
+  (let [org (org/get-org db org-id)]
+    ;; Ceiling check first — reject out-of-catalog assignments before creating
+    ;; anything (the structural guarantee is in derive-org-roles; this is early UX).
+    (org/validate-assignment! org assignment)
+    (let [existing (db/get-user-by-email db {:email email})]
+      ;; An invite must never silently REPLACE an existing member's roles (the
+      ;; form defaults to [], so a re-invite would demote e.g. an org-admin to a
+      ;; plain member). Reject; role changes go through set-member-roles!.
+      (when (and existing
+                 (some #(= (str (:id existing)) (str (:user-id %))) (:members org)))
+        (throw (ex-info "User is already a member of this organization"
+                        {:type   :already-member
+                         :email  email
+                         :org-id (str org-id)})))
+      (let [new?     (nil? existing)
+            _        (when new? (add-user! db {:email email :username email}))
+            user     (or existing (db/get-user-by-email db {:email email}))
+            org-name (:name org)]
+        (org/add-member! db org-id (:id user) assignment author-id)
+        ;; Both cases get an email: new accounts a magic login link to set a password;
+        ;; existing accounts a plain "you've been added to org X" notification. The
+        ;; membership is already committed, so a delivery failure must NOT fail the
+        ;; whole operation (which would leave a member added but report an error).
+        ;; Report delivery status instead; a new account without its link can still
+        ;; reset its password / be re-invited.
+        (let [email-sent?
+              (try
+                (let [magic (create-magic-link login-url user)]
+                  (if new?
+                    (email/send-org-invitation-email!
+                      emailer email (assoc magic :org-name org-name))
+                    ;; Existing accounts also get a magic link (one-click login that
+                    ;; lands them already authenticated, with the fresh token carrying
+                    ;; the new org role) — mirrors send-permissions-updated-email!.
+                    (email/send-org-added-email!
+                      emailer email (assoc magic :org-name org-name))))
+                true
+                (catch Exception e
+                  (log/error e "Failed to send org-invitation email"
+                             {:email email :org-id (str org-id) :new-account? new?})
+                  false))]
+          {:user-id (str (:id user)) :new-account? new? :email-sent? email-sent?})))))
 
 (defn get-sports-sites-by-type-code
   ([db type-code]
@@ -617,84 +657,100 @@
       (seq computed)
       (assoc :renovation-years computed))))
 
+(defn org-names
+  "org-id (string) → org name for every org. Used to denormalize the owner
+  org's name into :search-meta on (re)index so anonymous/non-member viewers
+  see a name instead of a raw UUID (F15). One small query (org counts are
+  tens); bulk index paths resolve this once per batch."
+  [db]
+  (into {} (map (juxt (comp str :id) :name)) (org/all-orgs db)))
+
 (defn enrich*
   "Enriches sports-site map with :search-meta key where we add data that
-  is useful for searching."
-  [sports-site]
-  (let [sports-site (fix-geoms sports-site)
-        fcoll (-> sports-site :location :geometries)
-        geom (-> fcoll :features first :geometry)
-        start-coords (case (:type geom)
-                       "Point" (-> geom :coordinates)
-                       "LineString" (-> geom :coordinates first)
-                       "Polygon" (-> geom :coordinates first first))
+  is useful for searching. `org-name-by-id` ({org-id-str → name}, see
+  `org-names`) resolves the owner org's display name; without it the
+  indexed doc simply lacks :search-meta :owner-org-name (FE falls back to
+  the UUID) until the next full reindex."
+  ([sports-site] (enrich* sports-site nil))
+  ([sports-site org-name-by-id]
+   (let [sports-site (fix-geoms sports-site)
+         fcoll (-> sports-site :location :geometries)
+         geom (-> fcoll :features first :geometry)
+         start-coords (case (:type geom)
+                        "Point" (-> geom :coordinates)
+                        "LineString" (-> geom :coordinates first)
+                        "Polygon" (-> geom :coordinates first first))
 
-        center-coords (try (-> fcoll gis/centroid :coordinates)
-                           (catch Exception ex
-                             (log/warn ex "Failed to calc centroid for lipas-id"
-                                       (:lipas-id sports-site) "fcoll" fcoll)
-                             nil))
+         center-coords (try (-> fcoll gis/centroid :coordinates)
+                            (catch Exception ex
+                              (log/warn ex "Failed to calc centroid for lipas-id"
+                                        (:lipas-id sports-site) "fcoll" fcoll)
+                              nil))
 
-        geom2 (-> fcoll :features last :geometry)
-        end-coords (case (:type geom2)
-                     "Point" (-> geom2 :coordinates)
-                     "LineString" (-> geom2 :coordinates last)
-                     "Polygon" (-> geom2 :coordinates last last))
+         geom2 (-> fcoll :features last :geometry)
+         end-coords (case (:type geom2)
+                      "Point" (-> geom2 :coordinates)
+                      "LineString" (-> geom2 :coordinates last)
+                      "Polygon" (-> geom2 :coordinates last last))
 
-        city-code (-> sports-site :location :city :city-code)
-        province (-> city-code cities :province-id cities/provinces)
-        avi-area (-> city-code cities :avi-id cities/avi-areas)
+         city-code (-> sports-site :location :city :city-code)
+         province (-> city-code cities :province-id cities/provinces)
+         avi-area (-> city-code cities :avi-id cities/avi-areas)
 
-        type-code (-> sports-site :type :type-code)
-        main-category (-> type-code types :main-category types/main-categories)
-        sub-category (-> type-code types :sub-category types/sub-categories)
-        field-types (->> sports-site :fields (map :type) distinct)
-        latest-audit (some-> sports-site
-                             :audits
-                             (->> (sort-by :audit-date utils/reverse-cmp))
-                             first
-                             :audit-date)
-        ;; Extract activity keys for search filtering
-        activity-keys (when-let [activities (:activities sports-site)]
-                        (when (seq activities)
-                          (vec (keys activities))))
-        sports-site (-> sports-site
-                        compute-renovations
-                        compute-renovation-years)
+         type-code (-> sports-site :type :type-code)
+         main-category (-> type-code types :main-category types/main-categories)
+         sub-category (-> type-code types :sub-category types/sub-categories)
+         field-types (->> sports-site :fields (map :type) distinct)
+         latest-audit (some-> sports-site
+                              :audits
+                              (->> (sort-by :audit-date utils/reverse-cmp))
+                              first
+                              :audit-date)
+         ;; Extract activity keys for search filtering
+         activity-keys (when-let [activities (:activities sports-site)]
+                         (when (seq activities)
+                           (vec (keys activities))))
+         sports-site (-> sports-site
+                         compute-renovations
+                         compute-renovation-years)
 
-        ;; org-management: a site's editor orgs = owner org + any orgs granted
-        ;; edit. Indexed for the reverse/bulk direction (Q1 "facilities owned by
-        ;; org X" and the :org-editor ES filter in wrap-es-query).
-        owner-org-id (some-> sports-site :owner-org-id str)
-        editor-org-ids (some-> (concat (some-> sports-site :owner-org-id vector)
-                                       (:edit-grants sports-site))
-                               (->> (map str))
-                               distinct vec not-empty)
+         ;; org-management: a site's editor orgs = owner org + any orgs granted
+         ;; edit. Indexed for the reverse/bulk direction (Q1 "facilities owned by
+         ;; org X" and the :org-editor ES filter in wrap-es-query).
+         owner-org-id (some-> sports-site :owner-org-id str)
+         editor-org-ids (some-> (concat (some-> sports-site :owner-org-id vector)
+                                        (:edit-grants sports-site))
+                                (->> (map str))
+                                distinct vec not-empty)
 
-        search-meta {:name (utils/->sortable-name (:name sports-site))
-                     :admin {:name (-> sports-site :admin admins)}
-                     :owner {:name (-> sports-site :owner owners)}
-                     :owner-org-id owner-org-id
-                     :editor-org-ids editor-org-ids
-                     :audits {:latest-audit-date latest-audit}
-                     :location
-                     {:wgs84-point start-coords
-                      :wgs84-center center-coords
-                      :wgs84-end end-coords
-                      :geometries (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
-                      :city {:name (-> city-code cities :name)}
-                      :province {:name (:name province)}
-                      :avi-area {:name (:name avi-area)}
-                      :simple-geoms (gis/simplify-safe fcoll)}
-                     :type
-                     {:name (-> type-code types :name)
-                      :tags (-> type-code types :tags)
-                      :main-category {:name (:name main-category)}
-                      :sub-category {:name (:name sub-category)}}
-                     :fields
-                     {:field-types field-types}
-                     :activities activity-keys}]
-    (assoc sports-site :search-meta search-meta)))
+         search-meta {:name (utils/->sortable-name (:name sports-site))
+                      :admin {:name (-> sports-site :admin admins)}
+                      :owner {:name (-> sports-site :owner owners)}
+                      :owner-org-id owner-org-id
+                      ;; Denormalized owner org name so every viewer (incl.
+                      ;; anonymous) sees a name instead of a raw UUID (F15).
+                      :owner-org-name (when owner-org-id
+                                        (get org-name-by-id owner-org-id))
+                      :editor-org-ids editor-org-ids
+                      :audits {:latest-audit-date latest-audit}
+                      :location
+                      {:wgs84-point start-coords
+                       :wgs84-center center-coords
+                       :wgs84-end end-coords
+                       :geometries (feature-coll->geom-coll (gis/strip-z-fcoll fcoll))
+                       :city {:name (-> city-code cities :name)}
+                       :province {:name (:name province)}
+                       :avi-area {:name (:name avi-area)}
+                       :simple-geoms (gis/simplify-safe fcoll)}
+                      :type
+                      {:name (-> type-code types :name)
+                       :tags (-> type-code types :tags)
+                       :main-category {:name (:name main-category)}
+                       :sub-category {:name (:name sub-category)}}
+                      :fields
+                      {:field-types field-types}
+                      :activities activity-keys}]
+     (assoc sports-site :search-meta search-meta))))
 
 #_(defn enrich-ice-stadium [{:keys [envelope building] :as ice-stadium}]
     (let [smaterial (-> envelope :base-floor-structure)
@@ -712,25 +768,34 @@
         utils/clean
         enrich*))
 
-(defn enrich-cycling-route [sports-site]
-  (-> sports-site
-      (update-in [:location :geometries] gis/sequence-features)
-      enrich*))
+(defn enrich-cycling-route
+  ([sports-site] (enrich-cycling-route sports-site nil))
+  ([sports-site org-name-by-id]
+   (-> sports-site
+       (update-in [:location :geometries] gis/sequence-features)
+       (enrich* org-name-by-id))))
 
-(defmulti enrich (comp :type-code :type))
-(defmethod enrich :default [sports-site] (enrich* sports-site))
-(defmethod enrich 4412 [sports-site] (enrich-cycling-route sports-site))
+(defmulti enrich (fn [sports-site & _] (-> sports-site :type :type-code)))
+(defmethod enrich :default [sports-site & [org-name-by-id]]
+  (enrich* sports-site org-name-by-id))
+(defmethod enrich 4412 [sports-site & [org-name-by-id]]
+  (enrich-cycling-route sports-site org-name-by-id))
 #_(defmethod enrich 2510 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 2520 [sports-site] (enrich-ice-stadium sports-site))
 #_(defmethod enrich 3110 [sports-site] (enrich-swimming-pool sports-site))
 #_(defmethod enrich 3130 [sports-site] (enrich-swimming-pool sports-site))
 
 (defn index!
+  "`org-name-by-id` (see `org-names`) denormalizes the owner org's name into
+  :search-meta — pass it whenever a db handle is in scope; without it the doc
+  is indexed without :owner-org-name (UUID shown until the next reindex)."
   ([search sports-site]
    (index! search sports-site false))
-  ([{:keys [indices client]} sports-site sync?]
+  ([search sports-site sync?]
+   (index! search sports-site sync? nil))
+  ([{:keys [indices client]} sports-site sync? org-name-by-id]
    (let [idx-name (get-in indices [:sports-site :search])
-         data (enrich sports-site)]
+         data (enrich sports-site org-name-by-id)]
      (search/index! client idx-name :lipas-id data sync?))))
 
 (defn index-legacy-sports-place!
@@ -781,26 +846,33 @@
 (defn org-sites
   "Sites an org owns (filter \"owned\") or may edit (filter \"editable\" = owned ∪
   granted). A thin ES `term` query on the indexed search-meta org fields (Q1).
-  Returns flat rows for the org dashboard / card site-count badge."
-  [search-comp org-id filter]
-  (let [field (if (= "editable" filter)
-                "search-meta.editor-org-ids"
-                "search-meta.owner-org-id")
-        params {:size 2000
-                :track_total_hits true
-                :_source ["lipas-id" "name" "event-date"
-                          "search-meta.type.name" "search-meta.location.city.name"]
-                :query {:bool {:filter [{:term {field (str org-id)}}]}}}
-        resp (search search-comp params)]
-    {:total (get-in resp [:body :hits :total :value])
-     :sites (->> resp :body :hits :hits
-                 (mapv (fn [h]
-                         (let [src (:_source h)]
-                           {:lipas-id   (:lipas-id src)
-                            :name       (:name src)
-                            :event-date (:event-date src)
-                            :type-name  (get-in src [:search-meta :type :name :fi])
-                            :city-name  (get-in src [:search-meta :location :city :name :fi])}))))}))
+  Returns flat rows for the org dashboard / card site-count badge.
+
+  With `:count-only? true` no documents are fetched (`:size 0`) — the response
+  keeps its `{:total n :sites []}` shape but costs a count, not 2000 docs
+  (F18). The FE's owned-sites flow only ever consumes `:total`."
+  ([search-comp org-id filter] (org-sites search-comp org-id filter nil))
+  ([search-comp org-id filter {:keys [count-only?]}]
+   (let [field (if (= "editable" filter)
+                 "search-meta.editor-org-ids"
+                 "search-meta.owner-org-id")
+         params (merge {:track_total_hits true
+                        :query {:bool {:filter [{:term {field (str org-id)}}]}}}
+                       (if count-only?
+                         {:size 0}
+                         {:size 2000
+                          :_source ["lipas-id" "name" "event-date"
+                                    "search-meta.type.name" "search-meta.location.city.name"]}))
+         resp (search search-comp params)]
+     {:total (get-in resp [:body :hits :total :value])
+      :sites (->> resp :body :hits :hits
+                  (mapv (fn [h]
+                          (let [src (:_source h)]
+                            {:lipas-id   (:lipas-id src)
+                             :name       (:name src)
+                             :event-date (:event-date src)
+                             :type-name  (get-in src [:search-meta :type :name :fi])
+                             :city-name  (get-in src [:search-meta :location :city :name :fi])}))))})))
 
 (defn org-owned-site-counts
   "Owned-site count per org, as `{org-id-str -> count}`, from one ES `terms`
@@ -816,40 +888,86 @@
     (->> (get-in resp [:body :aggregations :by_org :buckets])
          (into {} (map (juxt :key :doc_count))))))
 
+(defn- orgs-relevant-to-site
+  "Targeted org fetch for site-editors (F20): the given orgs (the site's
+  owner/grantees, by id) plus every org with a non-empty role-template catalog.
+  An org with no catalog cannot project site privileges to its members beyond
+  the owner/grantee mechanism, so it can never appear in the answer — this
+  keeps the per-request scan proportional to catalog-bearing orgs instead of
+  all orgs. (Today org counts are small either way; the jsonb predicate is the
+  cheap insurance, not a full index-backed solution — F20 partially addressed.)"
+  [db org-ids]
+  (let [ids (->> org-ids (keep utils/->uuid-safe) distinct vec)
+        ;; `->` returns NULL for a missing key, so no jsonb `?` operator is
+        ;; needed (it would collide with JDBC parameter markers).
+        catalog-pred "(document->'role-templates' IS NOT NULL AND document->'role-templates' <> '{}'::jsonb)"
+        sql (if (seq ids)
+              (str "SELECT org_id, document FROM org_current WHERE org_id IN ("
+                   (str/join "," (repeat (count ids) "?")) ") OR " catalog-pred)
+              (str "SELECT org_id, document FROM org_current WHERE " catalog-pred))]
+    (->> (next-jdbc/execute! db (into [sql] ids)
+                             {:builder-fn rs/as-unqualified-kebab-maps})
+         (mapv org/unmarshall))))
+
+(defn- catalog-template-roles
+  "Project the roles a hypothetical member holding catalog template
+  `template-key` in `org` would get — via the exact projection the login path
+  bakes into the JWT (org/derive-org-roles; not a reimplementation) — and
+  conform them for roles/check-privilege."
+  [org template-key]
+  (let [uid "00000000-0000-0000-0000-000000000000"]
+    (-> (org/derive-org-roles
+          uid [(assoc org :members [{:user-id uid :roles [(name template-key)]}])])
+        roles/conform-roles)))
+
 (defn site-editors
-  "\"Who can edit site Z\" (Q2, design-spec §6): owner org + grantee orgs (off the
-  site document) ∪ activity-editor orgs (org catalogs granting an activity the
-  site has). Legacy direct-user scan is the honest unindexed caveat — deferred."
+  "\"Who can edit site Z\" (Q2, design-spec §6): owner org + grantee orgs (off
+  the site document) ∪ orgs whose role-template catalog grants editing on this
+  site. Catalogs are interpreted through the SAME machinery enforcement uses:
+  each template is projected like login would project it and asked
+  roles/check-privilege in this site's context (F16) — so catalog
+  city/type/site-manager grants are found, and city/type-scoped templates
+  are only listed for matching sites. Legacy direct-user scan is the honest
+  unindexed caveat — deferred."
   [db lipas-id]
   (let [site         (get-sports-site db lipas-id)
         owner-org-id (some-> site :owner-org-id str)
         grant-ids    (->> (:edit-grants site) (map str) set)
-        all-orgs     (org/all-orgs db)
-        org-by-id    (into {} (map (juxt #(str (:id %)) identity)) all-orgs)
+        orgs         (orgs-relevant-to-site db (cons owner-org-id grant-ids))
+        org-by-id    (into {} (map (juxt #(str (:id %)) identity)) orgs)
         owner-org    (when-let [o (and owner-org-id (org-by-id owner-org-id))]
                        {:id owner-org-id :name (:name o)})
         grantee-orgs (for [gid grant-ids
                            :let [o (org-by-id gid)]
                            :when o]
                        {:id gid :name (:name o)})
-        site-acts    (some->> site :activities keys (map name) set)
+        rc           (roles/site-roles-context site)
+        org-grants?  (fn [org privilege]
+                       (some (fn [template-key]
+                               (roles/check-privilege
+                                 {:permissions {:roles (catalog-template-roles org template-key)}}
+                                 rc privilege))
+                             (keys (:role-templates org))))
+        listed-ids   (into grant-ids (when owner-org-id [owner-org-id]))
+        ;; Orgs whose catalog grants FULL edit (:site/create-edit) on this site.
+        ;; Owner/grantees are excluded — they are already listed above and their
+        ;; org-editor templates match precisely via the owner/grant mechanism.
+        catalog-editor-orgs
+        (for [o orgs
+              :let [oid (str (:id o))]
+              :when (and (not (listed-ids oid))
+                         (org-grants? o :site/create-edit))]
+          {:id oid :name (:name o)})
+        ;; Orgs whose catalog grants activity editing (:activity/edit) on this
+        ;; site (activities-managers are not general editors).
         activity-editor-orgs
-        (when (seq site-acts)
-          (for [o all-orgs
-                :let [acts (->> (vals (:role-templates o))
-                                (mapcat :roles)
-                                (filter #(= "activities-manager" (:role %)))
-                                (mapcat :activity)
-                                (map str)
-                                set)
-                      hit  (set/intersection acts site-acts)]
-                :when (seq hit)]
-            {:id (str (:id o)) :name (:name o) :activities (vec hit)}))
+        (for [o orgs
+              :when (org-grants? o :activity/edit)]
+          {:id (str (:id o)) :name (:name o)})
         ;; Legacy direct-permission users (the only unindexed part of Q2): a
         ;; jsonb-containment candidate pre-filter narrows the account table to a
         ;; handful, then the exact check-privilege confirms. Admins are excluded
         ;; (they can edit everything — listing them under every site is noise).
-        rc           (roles/site-roles-context site)
         legacy-users (->> (db/users-with-permissions-matching
                             db {:city-code  (:city-code rc)
                                 :type-code  (:type-code rc)
@@ -860,35 +978,28 @@
                           (mapv (fn [u] {:email (:email u) :username (:username u)})))]
     {:owner-org            owner-org
      :grantee-orgs         (vec grantee-orgs)
+     :catalog-editor-orgs  (vec catalog-editor-orgs)
      :activity-editor-orgs (vec activity-editor-orgs)
      :legacy-users         legacy-users}))
 
-(defn- resolve-account-names
-  "Batch-resolve account ids → email (fallback username) in one query. Returns a
-  map keyed by string id; ids absent from `account` are simply missing."
-  [db ids]
-  (let [ids (->> ids (remove nil?) distinct vec)]
-    (when (seq ids)
-      (let [placeholders (str/join "," (repeat (count ids) "?"))
-            sql (str "SELECT id, email, username FROM account WHERE id IN (" placeholders ")")]
-        (->> (next-jdbc/execute! db (into [sql] ids)
-                                 {:builder-fn rs/as-unqualified-kebab-maps})
-             (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
-             (into {}))))))
-
 (defn site-edit-history
   "Per-revision edit history for a site (org Kohteet drawer): each revision's
-  timestamp + the editor's email (resolved from author-id), newest first. Reads
-  only event-date/author-id/status — no documents — so it stays light even for
-  long-lived sites."
-  [db lipas-id]
-  (let [rows  (db/get-sports-site-edit-history db lipas-id)
-        names (resolve-account-names db (map :author_id rows))]
-    (mapv (fn [r]
-            {:event-date (str (:event_date r))
-             :status     (:status r)
-             :author     (get names (str (:author_id r)))})
-          rows)))
+  timestamp + the editor (resolved from author-id), newest first. Reads only
+  event-date/author-id/status — no documents — so it stays light even for
+  long-lived sites. `:emails?` true resolves authors to their email address —
+  pass it ONLY for callers holding :users/manage (the route gates this);
+  everyone else gets usernames so the open endpoint can't be used to harvest
+  emails (F5)."
+  ([db lipas-id] (site-edit-history db lipas-id {}))
+  ([db lipas-id {:keys [emails?]}]
+   (let [rows  (db/get-sports-site-edit-history db lipas-id)
+         ;; shared resolver — the email-masking rule lives in ONE place (F25)
+         names (org/resolve-account-names db (map :author_id rows) emails?)]
+     (mapv (fn [r]
+             {:event-date (str (:event_date r))
+              :status     (:status r)
+              :author     (get names (str (:author_id r)))})
+           rows))))
 
 (defn search-fields
   [{:keys [indices client]}
@@ -920,7 +1031,13 @@
   ([db search ptv user sports-site]
    (save-sports-site! db search ptv user sports-site false))
   ([db search ptv user sports-site draft?]
-   (let [correlation-id (jobs/gen-correlation-id)]
+   ;; :acting-org-id is per-revision audit metadata ("on whose behalf") that
+   ;; only trusted internal paths may stamp (set-site-edit-grants!, takeover
+   ;; approve! — they call upsert-sports-site!* directly). This fn serves the
+   ;; user-facing save endpoint, so strip it here to keep the audit column
+   ;; unforgeable via POST /sports-sites (the save schema is :closed false).
+   (let [sports-site    (dissoc sports-site :acting-org-id)
+         correlation-id (jobs/gen-correlation-id)]
      (jobs/with-correlation-context correlation-id
        (fn []
          ;; Phase 1: All DB operations inside the transaction.
@@ -995,7 +1112,7 @@
 
            ;; Phase 2: ES indexing after transaction has committed.
            (when-not draft?
-             (index! search resp :sync)
+             (index! search resp :sync (org-names db))
              (if (should-be-in-legacy-index? resp)
                (index-legacy-sports-place! search resp :sync)
                (delete-from-legacy-index! search (:lipas-id resp))))

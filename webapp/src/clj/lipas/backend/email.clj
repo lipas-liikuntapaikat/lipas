@@ -105,54 +105,71 @@
                                 (str/replace "{{link}}" link)
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
-(defn send-org-invitation-email!
-  "Custom organization-invitation email: notifies a user they've been added to an
-  organization and gives them a magic login link (to set a password / access org
-  features). Trilingual (fi/se/en) since the invitee's locale is unknown."
-  [emailer to {:keys [org-name link valid-days]}]
-  (let [vd (str valid-days)]
+;; --- "You've been added to an org" emails -----------------------------------
+;; One trilingual scaffold (subject + per-language intro), two variants that
+;; differ only in the per-language action sentence: :invitation (new account,
+;; set a password) and :added (existing account, one-click login).
+
+(def ^:private org-membership-intros
+  "Per-language shared intro sentence ({{org-name}} placeholder)."
+  {:fi {:plain "Sinut on lisätty organisaatioon \"{{org-name}}\" LIPAS-palvelussa."
+        :html  "Sinut on lisätty organisaatioon <b>{{org-name}}</b> LIPAS-palvelussa."}
+   :se {:plain "Du har lagts till i organisationen \"{{org-name}}\" i LIPAS."
+        :html  "Du har lagts till i organisationen <b>{{org-name}}</b> i LIPAS."}
+   :en {:plain "You have been added to the organization \"{{org-name}}\" in LIPAS."
+        :html  "You have been added to the organization <b>{{org-name}}</b> in LIPAS."}})
+
+(def ^:private org-membership-actions
+  "Per-variant, per-language action sentence ({{link}}/{{valid-days}} placeholders)."
+  {:invitation
+   {:fi {:plain "Kirjaudu sisään ja aseta salasanasi tästä linkistä (voimassa {{valid-days}} päivää):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Kirjaudu sisään ja aseta salasanasi</a> (voimassa {{valid-days}} päivää)."}
+    :se {:plain "Logga in och ange ditt lösenord via länken (giltig i {{valid-days}} dagar):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Logga in och ange ditt lösenord</a> (giltig i {{valid-days}} dagar)."}
+    :en {:plain "Log in and set your password via this link (valid for {{valid-days}} days):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Log in and set your password</a> (valid for {{valid-days}} days)."}}
+   :added
+   {:fi {:plain "Kirjaudu sisään tästä linkistä — oikeutesi päivittyvät heti (linkki voimassa {{valid-days}} päivää):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Kirjaudu sisään</a> — oikeutesi päivittyvät heti (linkki voimassa {{valid-days}} päivää)."}
+    :se {:plain "Logga in via länken — dina behörigheter uppdateras genast (giltig i {{valid-days}} dagar):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Logga in</a> — dina behörigheter uppdateras genast (giltig i {{valid-days}} dagar)."}
+    :en {:plain "Log in via this link — your permissions update immediately (valid for {{valid-days}} days):\n{{link}}"
+         :html  "<a href=\"{{link}}\">Log in</a> — your permissions update immediately (valid for {{valid-days}} days)."}}})
+
+(defn- send-org-membership-email!
+  "Build and send one of the trilingual (fi/se/en — the recipient's locale is
+  unknown) org-membership emails; `variant` selects the action sentence."
+  [emailer to variant {:keys [org-name link valid-days]}]
+  (let [fill  (fn [s] (-> s
+                          (str/replace "{{org-name}}" (str org-name))
+                          (str/replace "{{link}}" (str link))
+                          (str/replace "{{valid-days}}" (str valid-days))))
+        langs [:fi :se :en]
+        block (fn [kind lang]
+                (str (fill (get-in org-membership-intros [lang kind]))
+                     ({:plain "\n" :html " "} kind)
+                     (fill (get-in org-membership-actions [variant lang kind]))))]
     (.send! emailer
             {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
              :to      to
-             :plain   (str "Sinut on lisätty organisaatioon \"" org-name "\" LIPAS-palvelussa.\n"
-                           "Kirjaudu sisään ja aseta salasanasi tästä linkistä (voimassa " vd " päivää):\n" link "\n\n"
-                           "Du har lagts till i organisationen \"" org-name "\" i LIPAS.\n"
-                           "Logga in och ange ditt lösenord via länken (giltig i " vd " dagar):\n" link "\n\n"
-                           "You have been added to the organization \"" org-name "\" in LIPAS.\n"
-                           "Log in and set your password via this link (valid for " vd " days):\n" link "\n")
+             :plain   (str (str/join "\n\n" (map #(block :plain %) langs)) "\n")
              :html    (str "<html><body>"
-                           "<p>Sinut on lisätty organisaatioon <b>" org-name "</b> LIPAS-palvelussa. "
-                           "<a href=\"" link "\">Kirjaudu sisään ja aseta salasanasi</a> (voimassa " vd " päivää).</p>"
-                           "<p>Du har lagts till i organisationen <b>" org-name "</b> i LIPAS. "
-                           "<a href=\"" link "\">Logga in och ange ditt lösenord</a> (giltig i " vd " dagar).</p>"
-                           "<p>You have been added to the organization <b>" org-name "</b> in LIPAS. "
-                           "<a href=\"" link "\">Log in and set your password</a> (valid for " vd " days).</p>"
+                           (apply str (map #(str "<p>" (block :html %) "</p>") langs))
                            "</body></html>")})))
+
+(defn send-org-invitation-email!
+  "Custom organization-invitation email: notifies a user they've been added to an
+  organization and gives them a magic login link (to set a password / access org
+  features)."
+  [emailer to opts]
+  (send-org-membership-email! emailer to :invitation opts))
 
 (defn send-org-added-email!
   "Notify an EXISTING user that they've been added to an organization. Includes a
   magic login link (one-click login that lands them authenticated with the fresh
-  token carrying the new org role) — mirrors send-permissions-updated-email!.
-  Trilingual (fi/se/en); the user's locale is unknown."
-  [emailer to {:keys [org-name link valid-days]}]
-  (let [vd (str valid-days)]
-    (.send! emailer
-            {:subject "Sinut on lisätty organisaatioon LIPAS-palvelussa / Du har lagts till i en organisation / You've been added to an organization in LIPAS"
-             :to      to
-             :plain   (str "Sinut on lisätty organisaatioon \"" org-name "\" LIPAS-palvelussa.\n"
-                           "Kirjaudu sisään tästä linkistä — oikeutesi päivittyvät heti (linkki voimassa " vd " päivää):\n" link "\n\n"
-                           "Du har lagts till i organisationen \"" org-name "\" i LIPAS.\n"
-                           "Logga in via länken — dina behörigheter uppdateras genast (giltig i " vd " dagar):\n" link "\n\n"
-                           "You have been added to the organization \"" org-name "\" in LIPAS.\n"
-                           "Log in via this link — your permissions update immediately (valid for " vd " days):\n" link "\n")
-             :html    (str "<html><body>"
-                           "<p>Sinut on lisätty organisaatioon <b>" org-name "</b> LIPAS-palvelussa. "
-                           "<a href=\"" link "\">Kirjaudu sisään</a> — oikeutesi päivittyvät heti (linkki voimassa " vd " päivää).</p>"
-                           "<p>Du har lagts till i organisationen <b>" org-name "</b> i LIPAS. "
-                           "<a href=\"" link "\">Logga in</a> — dina behörigheter uppdateras genast (giltig i " vd " dagar).</p>"
-                           "<p>You have been added to the organization <b>" org-name "</b> in LIPAS. "
-                           "<a href=\"" link "\">Log in</a> — your permissions update immediately (valid for " vd " days).</p>"
-                           "</body></html>")})))
+  token carrying the new org role) — mirrors send-permissions-updated-email!."
+  [emailer to opts]
+  (send-org-membership-email! emailer to :added opts))
 
 (defn send-reminder-email!
   [emailer to {:keys [link valid-days]} {:keys [message]}]

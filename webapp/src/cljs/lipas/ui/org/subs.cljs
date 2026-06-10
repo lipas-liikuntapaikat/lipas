@@ -74,18 +74,6 @@
   (fn [db _]
     (:users (:org db))))
 
-(rf/reg-sub ::all-users
-  (fn [db _]
-    (:all-users (:org db))))
-
-(rf/reg-sub ::all-users-options
-  :<- [::all-users]
-  (fn [users _]
-    (map (fn [{:keys [id email]}]
-           {:value id
-            :label email})
-         users)))
-
 (rf/reg-sub ::is-lipas-admin
   :<- [:lipas.ui.user.subs/user-data]
   (fn [user _]
@@ -101,6 +89,17 @@
 (rf/reg-sub ::is-org-member?
   (fn [[_ org-id] _]
     (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id #{org-id}} :org/member]))
+  (fn [v _]
+    v))
+
+;; Bulk-edit ACTIONS (selection checkboxes + "Massapäivitys") require
+;; :site/create-edit on the org (org-editor template or lipas-admin). Plain
+;; members (e.g. an org-admin without an editor template) still SEE the
+;; read-only sites list — they just can't launch the mass-update. Mirrors the
+;; backend gate on /actions/mass-update-org-sites.
+(rf/reg-sub ::can-bulk-edit?
+  (fn [[_ org-id] _]
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id #{org-id}} :site/create-edit]))
   (fn [v _]
     v))
 
@@ -160,10 +159,11 @@
   (fn [db _]
     (get-in db [:org :sites :owned])))
 
+;; ::get-org-sites fetches count-only — the response is {:total n :sites []}
 (rf/reg-sub ::owned-sites-count
   :<- [::org-owned-sites]
   (fn [owned _]
-    (or (:total owned) (count (:sites owned)) 0)))
+    (or (:total owned) 0)))
 
 ;; in-flight flag for the (slow, synchronous) reclaim/approve op → drives the
 ;; dialog spinner + button disabling

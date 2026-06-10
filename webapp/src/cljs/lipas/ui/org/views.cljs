@@ -703,9 +703,10 @@
 (def ^:private edit-history-display-limit 50)
 
 (defn site-edit-history-section
-  "Per-revision edit history (timestamp + editor email) for the expanded site,
-  lazily fetched on expand and cached per lipas-id. Capped to the most recent
-  revisions to keep the accordion DOM bounded on long-lived sites."
+  "Per-revision edit history (timestamp + editor) for the expanded site,
+  lazily fetched on expand and cached per lipas-id. The editor shows as a
+  username (email only for lipas-admins — backend policy). Capped to the most
+  recent revisions to keep the accordion DOM bounded on long-lived sites."
   [tr lipas-id]
   (let [history @(rf/subscribe [::subs/site-edit-history lipas-id])
         total   (count history)
@@ -756,6 +757,12 @@
                       :on-delete (when can-grant?
                                    (fn [] (rf/dispatch [::events/revoke-site-edit
                                                         org-id lipas-id (str (:id g))])))})
+                   ;; orgs whose role-template catalog grants full edit on this
+                   ;; site (catalog city/type/site-manager templates, F16)
+                   (for [c (:catalog-editor-orgs editors)]
+                     {:key (str "cat-" (:id c)) :label (:name c)
+                      :tag (tr :lipas.org/role-catalog)
+                      :tooltip (tr :lipas.org/role-catalog-tooltip)})
                    (for [a (:activity-editor-orgs editors)]
                      {:key (str "act-" (:id a)) :label (:name a)
                       :tag (tr :lipas.org/role-activity)
@@ -823,6 +830,10 @@
             sites          @(rf/subscribe [::bulk-ops-subs/filtered-editable-sites])
             selected       @(rf/subscribe [::bulk-ops-subs/selected-sites])
             current-step   @(rf/subscribe [::bulk-ops-subs/current-step])
+            sites-error    @(rf/subscribe [::bulk-ops-subs/error])
+            ;; members without :site/create-edit get a read-only list: no
+            ;; selection checkboxes, no mass-update launcher
+            can-bulk-edit? @(rf/subscribe [::subs/can-bulk-edit? org-id])
             types          @(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
             cities         @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
             locale         (tr)
@@ -903,7 +914,7 @@
 
             ;; selection action bar — launches the bulk-edit wizard for the
             ;; checked sites (the headline "edit contact info on many sites")
-            (when (seq selected)
+            (when (and can-bulk-edit? (seq selected))
               [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center"
                             :p 1 :bgcolor "action.hover" :border-radius 1}}
                [:> Typography {:variant "body2"}
@@ -916,18 +927,26 @@
                            :on-click #(rf/dispatch [::bulk-ops-events/deselect-all-sites])}
                 (tr :actions/deselect-all)]])
 
-            (if (seq sites)
+            (cond
+              ;; list fetch failed — say so instead of showing an empty list
+              ;; under a badge with a non-zero count
+              sites-error
+              [:> Alert {:severity "error"}
+               (tr :lipas.org/sites-load-failed)]
+
+              (seq sites)
               [:> Box {:sx {:overflow-x "auto" :width "100%"}}
                [:> Table {:size "small"}
                 [:> TableHead
                  [:> TableRow
-                  [:> TableCell {:padding "checkbox"}
-                   [:> Checkbox {:checked all-selected?
-                                 :indeterminate (boolean (and (not all-selected?)
-                                                              (some selected site-ids)))
-                                 :on-change #(if all-selected?
-                                               (rf/dispatch [::bulk-ops-events/deselect-all-sites])
-                                               (rf/dispatch [::bulk-ops-events/select-all-sites site-ids]))}]]
+                  (when can-bulk-edit?
+                    [:> TableCell {:padding "checkbox"}
+                     [:> Checkbox {:checked all-selected?
+                                   :indeterminate (boolean (and (not all-selected?)
+                                                                (some selected site-ids)))
+                                   :on-change #(if all-selected?
+                                                 (rf/dispatch [::bulk-ops-events/deselect-all-sites])
+                                                 (rf/dispatch [::bulk-ops-events/select-all-sites site-ids]))}]])
                   [sortable-th {:sort* sort-state :on-sort on-sort :col :name
                                 :label (tr :lipas.org/name)}]
                   [sortable-th {:sort* sort-state :on-sort on-sort :col :type
@@ -945,9 +964,10 @@
                             open? (= @expanded lipas-id)]
                         (cond-> [[:> TableRow {:key lipas-id
                                                :selected (boolean (selected lipas-id))}
-                                  [:> TableCell {:padding "checkbox"}
-                                   [:> Checkbox {:checked (boolean (selected lipas-id))
-                                                 :on-change #(rf/dispatch [::bulk-ops-events/toggle-site-selection lipas-id])}]]
+                                  (when can-bulk-edit?
+                                    [:> TableCell {:padding "checkbox"}
+                                     [:> Checkbox {:checked (boolean (selected lipas-id))
+                                                   :on-change #(rf/dispatch [::bulk-ops-events/toggle-site-selection lipas-id])}]])
                                   [:> TableCell
                                    [:> Box {:sx {:display "flex" :align-items "center" :gap 1}}
                                     [:span (:name site)]
@@ -970,9 +990,11 @@
                                     [:> Icon (if open? "expand_less" "expand_more")]]]]]
                           open?
                           (conj [:> TableRow {:key (str lipas-id "-detail")}
-                                 [:> TableCell {:colSpan 6 :sx {:p 0}}
+                                 [:> TableCell {:colSpan (if can-bulk-edit? 6 5) :sx {:p 0}}
                                   [site-editors-detail tr org-id site]]]))))
                     sorted-sites))]]
+
+              :else
               [:> Typography {:color "text.secondary"} (tr :lipas.org/no-sites)])])]))))
 
 ;; ---------------------------------------------------------------------------

@@ -73,6 +73,7 @@
  "Existing LIPAS user — will be added to the organization and notified by email."
  :invite-status-new
  "New user — an account will be created and a login link emailed."
+ :already-member "User is already a member of this organization"
  :admin "Admin"
  :member "Member"
  :assigned-templates "Access rights"
@@ -129,6 +130,8 @@
  :role-owner-tooltip "People belonging to this organization get edit access through the organization."
  :role-shared "Shared"
  :role-shared-tooltip "The owner organization has shared edit access with this organization."
+ :role-catalog "Role template"
+ :role-catalog-tooltip "Members of the organization can get edit access through the organization's role templates."
  :role-activity "Activity"
  :role-activity-tooltip "The organization may edit this site's activity data through its responsible activities."
  :role-direct "Direct access"
@@ -150,6 +153,7 @@
  :claim-ownership "Claim sites"
  :claim-ownership-desc "Claim sites matching the ownership rule"
  :no-sites "No sites"
+ :sites-load-failed "Loading the sites failed. Please try again later."
 
  ;; history
  :no-history "No history"

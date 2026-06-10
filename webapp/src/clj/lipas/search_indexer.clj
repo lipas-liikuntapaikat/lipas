@@ -78,12 +78,15 @@
   ([db client idx-name types]
    (index-search-sports-sites! db client idx-name types []))
   ([db client idx-name types results]
-   (let [type-code (first types)]
+   (let [type-code (first types)
+         ;; resolved once per type batch; denormalizes the owner org's name
+         ;; into :search-meta (F15)
+         org-names (when type-code (core/org-names db))]
      (log/info "Starting to re-index type" type-code)
      (if type-code
        (->> type-code
             (core/get-sports-sites-by-type-code db)
-            (map core/enrich)
+            (map #(core/enrich % org-names))
             (search/->bulk idx-name :lipas-id)
             (search/bulk-index! client)
             (wait-one)

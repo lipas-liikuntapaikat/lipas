@@ -234,10 +234,13 @@
                            (filter (fn [{:keys [id]}]
                                      (roles/check-privilege
                                        user {:org-id #{(str id)}} :site/create-edit)))))
-          owner-org (when (= 1 (count ownable)) (first ownable))
-          data      (cond-> data
-                      owner-org (assoc :owner-org-id (str (:id owner-org))
-                                       :owner (owners-data/org-type->owner (:type owner-org))))]
+          owner-org  (when (= 1 (count ownable)) (first ownable))
+          ;; nil when the org's type has no :owner enum mapping — leave :owner
+          ;; unset so the form's legacy owner select stays visible.
+          owner-enum (when owner-org (owners-data/org-type->owner (:type owner-org)))
+          data       (cond-> data
+                       owner-org  (assoc :owner-org-id (str (:id owner-org)))
+                       owner-enum (assoc :owner owner-enum))]
       {:db (-> db
                (update-in [:new-sports-site :data] cutils/deep-merge data)
                (update :new-sports-site dissoc :template))})))

@@ -971,8 +971,11 @@
         user (gen-user (merge opts {:db? db? :db-component db-component :admin? false}))]
     (if (and db? db-component)
       (do
-        (backend-org/update-org-users! db-component org-id
-                                       [{:user-id (:id user) :change "add" :role org-role}])
+        ;; the real membership path: "org-admin" is the reserved "admin" role,
+        ;; "org-user" a plain member (empty role list)
+        (backend-org/add-member! db-component org-id (:id user)
+                                 {:roles (if (= org-role "org-admin") ["admin"] [])}
+                                 nil)
         (assoc-in user [:permissions :roles]
                   (backend-org/derive-user-org-roles db-component (:id user))))
       ;; no DB: fall back to an explicit role so authz still works off the token

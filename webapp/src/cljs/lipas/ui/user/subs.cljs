@@ -30,7 +30,8 @@
     (into {} (filter (fn [[city-code _v]]
                        (roles/check-privilege user
                                               {:city-code city-code
-                                               :type-code ::roles/any}
+                                               :type-code ::roles/any
+                                               :org-id ::roles/any}
                                               :site/create-edit))
                      all-cities))))
 
@@ -41,7 +42,8 @@
     (into {} (filter (fn [[type-code _v]]
                        (roles/check-privilege user
                                               {:type-code type-code
-                                               :city-code ::roles/any}
+                                               :city-code ::roles/any
+                                               :org-id ::roles/any}
                                               :site/create-edit))
                      all-types))))
 
@@ -53,7 +55,8 @@
 (rf/reg-sub ::can-add-sports-sites?
   :<- [::check-privilege
        {:type-code ::roles/any
-        :city-code ::roles/any}
+        :city-code ::roles/any
+        :org-id ::roles/any}
        :site/create-edit]
   (fn [x _]
     x))
@@ -63,7 +66,8 @@
        ;; Usually given with activities-manager, but should ignore role-context
        {:city-code ::roles/any
         :type-code ::roles/any
-        :activity ::roles/any}
+        :activity ::roles/any
+        :org-id ::roles/any}
        :loi/create-edit]
   (fn [x _]
     x))

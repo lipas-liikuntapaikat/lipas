@@ -13,18 +13,15 @@
   login (see `derive-org-roles` / `derive-user-org-roles`)."
   (:require [clojure.set :as set]
             [honey.sql :as hsql]
-            [lipas.backend.db.db :as db]
             [lipas.backend.db.utils :as db-utils]
             [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
+            [lipas.utils :as utils]
             [malli.core :as m]
             [malli.error :as me]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [next.jdbc.sql :as sql]))
-
-(defn- ->uuid [x]
-  (if (string? x) (parse-uuid x) x))
 
 ;;; marshalling between the external org map and the revision document ;;;
 
@@ -63,7 +60,7 @@
 
 (defn- current-row [db org-id]
   (jdbc/execute-one! db ["SELECT org_id, document FROM org_current WHERE org_id = ?"
-                         (->uuid org-id)]
+                         (utils/->uuid-safe org-id)]
                      {:builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn- current-document [db org-id]
@@ -74,7 +71,7 @@
   [db org-id document author-id status]
   (jdbc/execute-one! db
                      ["INSERT INTO org (org_id, author_id, status, document) VALUES (?,?,?,?)"
-                      (->uuid org-id) (some-> author-id ->uuid) (or status "active") document]
+                      (utils/->uuid-safe org-id) (utils/->uuid-safe author-id) (or status "active") document]
                      {:builder-fn rs/as-unqualified-kebab-maps}))
 
 (defn- update-document!
@@ -123,8 +120,8 @@
   [db org-id]
   (let [members (:members (current-document db org-id))
         by-uid  (into {} (map (juxt :user-id identity)) members)
-        ids     (keep (comp ->uuid :user-id) members)]
-    (when (seq ids)
+        ids     (keep (comp utils/->uuid-safe :user-id) members)]
+    (if (seq ids)
       (->> (sql/query db (hsql/format {:select [:id :email :username :permissions]
                                        :from   [:account]
                                        :where  [:in :id ids]})
@@ -132,7 +129,31 @@
            (map db-utils/->kebab-case-keywords)
            (mapv (fn [user]
                    (let [m (get by-uid (str (:id user)))]
-                     (assoc user :roles (:roles m)))))))))
+                     (assoc user :roles (:roles m))))))
+      ;; Always a vector — a memberless org must serialize as [] (an empty
+      ;; response body is not valid JSON and breaks the members view).
+      [])))
+
+;;; account-name resolution (shared by org history + site edit history) ;;;
+
+(defn resolve-account-names
+  "Batch-resolve account ids → display label in one query. Returns a map keyed
+  by string id (nil when `ids` is empty); ids absent from `account` are simply
+  missing. Emails are PII: they are included only when `emails?` is set —
+  callers gate it on an admin-grade privilege (`:users/manage` for the open
+  site-edit-history endpoint; org history is `:org/manage`-gated); everyone
+  else gets the username. The ONE place the masking rule lives (F25)."
+  [db ids emails?]
+  (let [ids (->> ids (keep utils/->uuid-safe) distinct vec)]
+    (when (seq ids)
+      (->> (sql/query db (hsql/format {:select [:id :email :username]
+                                       :from   [:account]
+                                       :where  [:in :id ids]})
+                      {:builder-fn rs/as-unqualified-kebab-maps})
+           (map (fn [a] [(str (:id a)) (if emails?
+                                         (or (:email a) (:username a))
+                                         (:username a))]))
+           (into {})))))
 
 ;;; history (the append-only org log IS the audit trail) ;;;
 
@@ -185,21 +206,15 @@
   (let [rows (jdbc/execute! db
                             ["SELECT id, org_id, event_date, author_id, status, document
                               FROM org WHERE org_id = ? ORDER BY event_date ASC, created_at ASC"
-                             (->uuid org-id)]
+                             (utils/->uuid-safe org-id)]
                             {:builder-fn rs/as-unqualified-kebab-maps})
         ;; Resolve every referenced account — both revision authors and members
-        ;; appearing in any document — to an email/username so the audit log is
-        ;; human-readable instead of bare UUIDs.
-        member-ids (->> rows (mapcat (comp :members :document)) (keep :user-id) (map str))
-        author-ids (->> rows (keep :author-id) (map str))
-        all-ids    (->> (concat author-ids member-ids) distinct (keep ->uuid))
-        accounts   (when (seq all-ids)
-                     (->> (sql/query db (hsql/format {:select [:id :email :username]
-                                                      :from   [:account]
-                                                      :where  [:in :id (vec all-ids)]})
-                                     {:builder-fn rs/as-unqualified-kebab-maps})
-                          (map (fn [a] [(str (:id a)) (or (:email a) (:username a))]))
-                          (into {})))
+        ;; appearing in any document — so the audit log is human-readable
+        ;; instead of bare UUIDs. emails? true: this endpoint is admin-only
+        ;; (:org/manage), so emails are fine here.
+        member-ids (->> rows (mapcat (comp :members :document)) (keep :user-id))
+        author-ids (->> rows (keep :author-id))
+        accounts   (resolve-account-names db (concat author-ids member-ids) true)
         name-of    (fn [uid] (get accounts (str uid) (str uid)))]
     (->> rows
          (map-indexed
@@ -225,18 +240,52 @@
      (append-revision! db org-id (marshall org) author-id "active")
      (get-org db org-id))))
 
+(defn- merge-org-details
+  "Merge the marshalled details of `org` into the current document `doc`,
+  touching only the keys of `ks` the payload actually carries. `marshall`
+  always emits every key (defaulting absent ones to nil/empty), so merging
+  blindly would wipe stored values on a partial payload — presence in the
+  INPUT map decides what gets written. `:primary-contact` also counts as
+  present via the legacy `:data {:primary-contact ..}` shape."
+  [doc org ks]
+  (let [present? (fn [k]
+                   (if (= k :primary-contact)
+                     (or (contains? org :primary-contact)
+                         (contains? (:data org) :primary-contact))
+                     (contains? org k)))]
+    (merge doc (select-keys (marshall org) (filterv present? ks)))))
+
+(def ^:private full-org-details-keys
+  [:name :type :primary-contact :instructions :ptv-data :ownership])
+
+(def ^:private admin-editable-org-details-keys
+  "The org-admin self-service ceiling: details an org-admin may edit. Excludes
+  `:type`/`:ownership` (the take-over ceiling) and `:ptv-data` (lipas-admin
+  only — it has its own `:users/manage`-gated endpoint)."
+  [:name :primary-contact :instructions])
+
 (defn update-org!
-  "Update org details (name/type/contact/ptv/ownership) by appending a revision.
-  Members and the role-template catalog are preserved from the current revision
-  — they are managed through their own member/catalog operations, never wiped by
-  a details edit."
+  "Privileged FULL details update (name/type/contact/instructions/ptv/ownership)
+  by appending a revision. For lipas-admin callers, seeds, migrations and tests
+  — HTTP routes must dispatch on caller privilege and use `update-org-details!`
+  for non-lipas-admins (see /actions/update-org). Only keys present in the
+  payload are written; members and the role-template catalog are preserved from
+  the current revision — they are managed through their own member/catalog
+  operations, never wiped by a details edit."
   ([db org-id org] (update-org! db org-id org nil))
   ([db org-id org author-id]
    (update-document! db org-id author-id
-                     (fn [doc]
-                       (merge doc (select-keys (marshall org)
-                                               [:name :type :primary-contact :instructions
-                                                :ptv-data :ownership]))))))
+                     #(merge-org-details % org full-org-details-keys))))
+
+(defn update-org-details!
+  "Org-admin self-service details update. Merges ONLY the admin-editable
+  whitelist (name/contact/instructions); `:type`/`:ownership` (the take-over
+  ceiling) and `:ptv-data` in the payload are ignored, so an org-admin can
+  never widen their own ownership rule or PTV config — enforced here in the
+  business layer so every caller shares the rule."
+  [db org-id org author-id]
+  (update-document! db org-id author-id
+                    #(merge-org-details % org admin-editable-org-details-keys)))
 
 (defn update-org-ptv-config!
   "Update only the org's PTV configuration."
@@ -244,9 +293,11 @@
   ([db org-id ptv-config author-id]
    (update-document! db org-id author-id #(assoc % :ptv-data ptv-config))))
 
-;;; membership ops ;;;
+;;; membership & catalog ops (self-service, §10) ;;;
 
-(defn- upsert-member [members user-id roles]
+(defn- upsert-member
+  "Add or update a member with a full role assignment (one `:roles` list)."
+  [members user-id roles]
   (if (some #(= (:user-id %) user-id) members)
     (mapv (fn [m] (if (= (:user-id m) user-id) (assoc m :roles roles) m)) members)
     (conj (vec members) {:user-id user-id :roles roles})))
@@ -254,73 +305,34 @@
 (defn- drop-member [members user-id]
   (vec (remove #(= (:user-id %) user-id) members)))
 
-(defn- resolve-user-id
-  "Resolve a change spec to an existing account id (string). Throws if an email
-  references no account (legacy endpoint behavior; the P3 invite endpoint creates
-  accounts instead)."
-  [db {:keys [user-id email]}]
-  (cond
-    user-id (str (->uuid user-id))
-    email   (let [user (db/get-user-by-email db {:email email})]
-              (when (nil? user)
-                (throw (ex-info (str "No user found with email address: " email ". "
-                                     "The user must first register an account with LIPAS "
-                                     "before they can be added to an organization.")
-                                {:type :user-not-found :email email})))
-              (str (:id user)))))
-
-(defn- apply-member-change [db doc {:keys [change role] :as spec}]
-  (let [uid   (resolve-user-id db spec)
-        roles (case role "org-admin" ["admin"] "org-user" [] [])]
-    (update doc :members
-            (fn [members]
-              (case change
-                "add"    (upsert-member members uid roles)
-                "remove" (drop-member members uid)
-                members)))))
-
-(defn update-org-users!
-  "Apply a batch of member add/remove changes by appending a single org revision.
-  Membership now lives in the org document; account roles are not touched."
-  ([db org-id changes] (update-org-users! db org-id changes nil))
-  ([db org-id changes author-id]
-   (update-document! db org-id author-id
-                     (fn [doc]
-                       (reduce (fn [doc change] (apply-member-change db doc change)) doc changes)))))
-
-;;; template-aware member & catalog ops (self-service, §10) ;;;
-
-(defn- upsert-member-full
-  "Add or update a member with a full role assignment (one `:roles` list)."
-  [members user-id roles]
-  (if (some #(= (:user-id %) user-id) members)
-    (mapv (fn [m] (if (= (:user-id m) user-id)
-                    (assoc m :roles roles)
-                    m))
-          members)
-    (conj (vec members) {:user-id user-id :roles roles})))
-
 (defn catalog-template-keys
-  "The set of template names (strings) defined in the org's role-template catalog
-  — the ceiling an org-admin may assign from."
-  [db org-id]
-  (set (map name (keys (:role-templates (get-org db org-id))))))
+  "The set of template names (strings) defined in an org's role-template catalog
+  — the ceiling an org-admin may assign from. Takes any map carrying the org's
+  `:role-templates` (a revision document or an unmarshalled org)."
+  [org-doc]
+  (set (map name (keys (:role-templates org-doc)))))
 
 (defn validate-assignment!
   "Throw unless `:roles` ⊆ `#{\"admin\"}` ∪ the org's catalog keys. Belt-and-
   suspenders on top of the structural ceiling in derive-org-roles — the real
   guarantee is that projection only expands reserved + catalog keys, but
-  rejecting early is better UX and defense in depth."
-  [db org-id {:keys [roles]}]
-  (let [catalog  (catalog-template-keys db org-id)
-        allowed  (conj catalog "admin")
-        assigned (set (map name (or roles [])))]
-    (when-not (set/subset? assigned allowed)
-      (throw (ex-info "Roles must be a subset of {admin} ∪ the org's role-template catalog"
-                      {:type :roles-outside-catalog
-                       :invalid (vec (set/difference assigned allowed))
-                       :catalog (vec catalog)})))
-    true))
+  rejecting early is better UX and defense in depth.
+
+  Validates against the given org document (any map carrying `:role-templates`)
+  so callers that already hold the current document validate and write against
+  the SAME revision; the db+org-id arity fetches it first."
+  ([db org-id assignment]
+   (validate-assignment! (current-document db org-id) assignment))
+  ([org-doc {:keys [roles]}]
+   (let [catalog  (catalog-template-keys org-doc)
+         allowed  (conj catalog "admin")
+         assigned (set (map name (or roles [])))]
+     (when-not (set/subset? assigned allowed)
+       (throw (ex-info "Roles must be a subset of {admin} ∪ the org's role-template catalog"
+                       {:type :roles-outside-catalog
+                        :invalid (vec (set/difference assigned allowed))
+                        :catalog (vec catalog)})))
+     true)))
 
 (defn validate-catalog!
   "Throw unless `role-templates` conforms to the catalog schema — every spec must
@@ -354,35 +366,57 @@
                        :required (vec req)}))))
   true)
 
+(defn- normalize-catalog
+  "Server-side mirror of the FE's sanitize-catalog (F31): per template, drop
+  role-less specs (half-filled editor rows / sloppy direct-API payloads) and
+  collapse exact-duplicate specs — a duplicate grants nothing extra, it only
+  renders twice and would creep back in via API callers if only the FE deduped.
+  Touches `:roles` only when it is actually a sequence; anything else falls
+  through untouched for validate-catalog! to reject as before."
+  [role-templates]
+  (into {}
+        (map (fn [[k entry]]
+               [k (cond-> entry
+                    (sequential? (:roles entry))
+                    (update :roles #(vec (distinct (filter :role %)))))]))
+        role-templates))
+
 (defn update-catalog!
-  "Replace the org's role-template catalog (lipas-admin only — the ceiling)."
+  "Replace the org's role-template catalog (lipas-admin only — the ceiling).
+  The payload is normalized (deduped, role-less specs dropped) before
+  validation and storage."
   [db org-id role-templates author-id]
-  (validate-catalog! role-templates)
-  (update-document! db org-id author-id #(assoc % :role-templates role-templates)))
+  (let [role-templates (normalize-catalog role-templates)]
+    (validate-catalog! role-templates)
+    (update-document! db org-id author-id #(assoc % :role-templates role-templates))))
 
 (defn add-member!
   "Add/update a member with a validated assignment. `user-id` must reference an
-  existing account (the invite endpoint creates the account first)."
+  existing account (the invite endpoint creates the account first). Fetches the
+  current document once and both validates and writes against it."
   [db org-id user-id assignment author-id]
-  (validate-assignment! db org-id assignment)
-  (update-document! db org-id author-id
-                    (fn [doc]
-                      (update doc :members upsert-member-full
-                              (str user-id)
-                              (mapv name (or (:roles assignment) []))))))
+  (let [doc     (current-document db org-id)
+        _       (validate-assignment! doc assignment)
+        new-doc (update doc :members upsert-member
+                        (str user-id)
+                        (mapv name (or (:roles assignment) [])))]
+    (append-revision! db org-id new-doc author-id "active")
+    new-doc))
 
 (defn set-member-roles!
   "Replace a member's role list (validated ⊆ `#{admin}` ∪ catalog). Collapses the
   old admin/member promotion and template-assignment ops into one. Org-admins may
-  manage their org's members (OQ6)."
+  manage their org's members (OQ6). Fetches the current document once and both
+  validates and writes against it."
   [db org-id user-id roles author-id]
-  (validate-assignment! db org-id {:roles roles})
-  (update-document! db org-id author-id
-                    (fn [doc]
-                      (update doc :members
-                              (fn [ms] (mapv (fn [m] (if (= (:user-id m) (str user-id))
-                                                       (assoc m :roles (mapv name (or roles []))) m))
-                                             ms))))))
+  (let [doc     (current-document db org-id)
+        _       (validate-assignment! doc {:roles roles})
+        new-doc (update doc :members
+                        (fn [ms] (mapv (fn [m] (if (= (:user-id m) (str user-id))
+                                                 (assoc m :roles (mapv name (or roles []))) m))
+                                       ms)))]
+    (append-revision! db org-id new-doc author-id "active")
+    new-doc))
 
 (defn remove-member!
   [db org-id user-id author-id]
@@ -441,22 +475,6 @@
   Called at token-creation time (login / refresh) to enrich the user's roles."
   [db user-id]
   (derive-org-roles user-id (user-orgs db user-id)))
-
-(defn add-org-user-by-email!
-  "Add an existing user to an org by email. For org admins who can't see all
-  users. Returns {:success? :message}."
-  ([db org-id email role] (add-org-user-by-email! db org-id email role nil))
-  ([db org-id email role author-id]
-   (try
-     (update-org-users! db org-id [{:email email :change "add" :role role}] author-id)
-     {:success? true :message "User successfully added to organization"}
-     (catch Exception e
-       (if (= (:type (ex-data e)) :user-not-found)
-         {:success? false
-          :message (str "No user found with email address: " email ". "
-                        "The user must first register an account with LIPAS "
-                        "before they can be added to an organization.")}
-         (throw e))))))
 
 (comment
   (all-orgs (:lipas/db integrant.repl.state/system))

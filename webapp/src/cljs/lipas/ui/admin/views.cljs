@@ -222,10 +222,10 @@
 
 (defn user-dialog [tr]
   (let [locale (tr)
-        cities (<== [::subs/cities-list locale])
-        types (<== [::subs/types-list locale])
-        sites (<== [::subs/sites-list])
-        activities (<== [::subs/activities-list locale])
+        cities (<== [::role-editor/cities-list locale])
+        types (<== [::role-editor/types-list locale])
+        sites (<== [::role-editor/sites-list])
+        activities (<== [::role-editor/activities-list locale])
         user (<== [::subs/editing-user])
         history (<== [::subs/user-history])
         existing? (some? (:id user))]

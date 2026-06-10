@@ -4,10 +4,8 @@
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.search :as search]
-            [lipas.data.types :as types]
-            [lipas.jobs.core :as jobs]
-            [lipas.roles :as roles]
             [lipas.schema.sports-sites :as sites-schema]
+            [lipas.utils :as utils]
             [malli.core :as m]
             [malli.error :as me]
             [taoensso.timbre :as log]))
@@ -60,10 +58,34 @@
                        (assoc :owned? (= org-id (get-in src [:search-meta :owner-org-id])))
                        (dissoc :search-meta))))))))
 
+(def ^:private contact-update-keys
+  "The only document fields a bulk contact update may touch."
+  [:email :phone-number :www :reservations-link])
+
 (defn mass-update-org-sites-contacts!
   "Mass-update contact info for an org's sites. The authorized set is the org's
   editable sites (owned ∪ granted); any requested lipas-id outside it is
-  rejected. The caller must already hold `:site/create-edit` for the org."
+  rejected. The caller must already hold `:site/create-edit` for the org.
+
+  ES (`get-org-editable-sites`) is used for CANDIDATE LISTING only. The write
+  path is sourced and authorized from the DB:
+
+  - the stored current revisions are batch-loaded from the DB and the contact
+    updates are merged onto THEM (never onto the stale ES `_source`, which can
+    lag behind the DB — e.g. a just-approved takeover not yet reindexed),
+  - the org's editability (owner ∪ edit-grants) is checked against those DB
+    revisions, so a grant revoked in the DB blocks the update even when ES
+    still lists the site as editable,
+  - each save goes through `core/upsert-sports-site!` — the same enforcement
+    point as the regular save endpoint (per-user privilege over stored AND
+    submitted docs, ownership/edit-grant invariants, owner lock). The merged
+    doc is submitted WITHOUT :owner-org-id/:edit-grants so the server-side
+    carry-forward keeps the freshest stored values authoritative.
+
+  All-or-nothing: any unauthorized lipas-id rejects the whole request (the
+  existing handler/FE contract), and the DB writes share one transaction. ES
+  is bulk-indexed AFTER the transaction commits, from the documents that were
+  actually written to the DB."
   [db search _ptv user org-id lipas-ids contact-updates]
   (log/info "Starting org mass update of sports sites"
             {:user-id (:id user) :org-id org-id :lipas-ids lipas-ids :updates (keys contact-updates)})
@@ -74,98 +96,76 @@
                     {:type :invalid-payload
                      :error (me/humanize (m/explain mass-update-contact-payload {:lipas-ids lipas-ids :updates contact-updates}))})))
 
-  ;; Authorize against the org's editable sites
-  (let [editable-sites (get-org-editable-sites search org-id)
-        editable-lipas-ids (set (map :lipas-id editable-sites))
-        authorized-ids (filter editable-lipas-ids lipas-ids)
-        unauthorized-ids (remove editable-lipas-ids lipas-ids)]
+  (let [org-id (str org-id)
+        ;; User-input boundary: the payload map is open (malli/route maps are
+        ;; not :closed), so whitelist the contact fields — nothing else may
+        ;; ride into the document.
+        contact-updates (select-keys contact-updates contact-update-keys)
+        lipas-ids (vec (distinct lipas-ids))
+        ;; Authoritative current state from the DB — NOT the ES cache.
+        stored-by-id (->> (db/get-sports-sites-by-lipas-ids db lipas-ids)
+                          (utils/index-by :lipas-id))
+        org-may-edit? (fn [site]
+                        (and site
+                             (or (= org-id (some-> site :owner-org-id str))
+                                 (contains? (set (map str (:edit-grants site))) org-id))))
+        unauthorized-ids (vec (remove (comp org-may-edit? stored-by-id) lipas-ids))]
 
-    (log/info "Permission check results"
-              {:editable-count (count editable-sites)
-               :authorized-ids authorized-ids
+    (log/info "Permission check results (against DB state)"
+              {:requested-count (count lipas-ids)
                :unauthorized-ids unauthorized-ids})
 
-    ;; Validate all requested sites are authorized (within the org's editable set)
+    ;; Validate all requested sites are authorized (within the org's editable
+    ;; set per the DB's current revisions)
     (when (seq unauthorized-ids)
       (throw (ex-info "Permission denied for sites"
                       {:unauthorized-lipas-ids unauthorized-ids})))
 
-    ;; Batch fetch all sites from ES for efficiency
-    (let [sites-query {:query {:terms {:lipas-id authorized-ids}}
-                       :size (count authorized-ids)
-                       :_source {:excludes ["search-meta"]}}
-          sites-response (core/search search sites-query)
-          sites-by-id (->> sites-response
-                           :body
-                           :hits
-                           :hits
-                           (map (fn [hit] [(:lipas-id (:_source hit)) (:_source hit)]))
-                           (into {}))
+    ;; Save through core/upsert-sports-site! (single enforcement point) inside
+    ;; one transaction; collect what was actually written for ES indexing.
+    (let [saved-sites
+          (jdbc/with-db-transaction [tx db]
+            (mapv (fn [lipas-id]
+                    (let [updated-site
+                          (-> (stored-by-id lipas-id)
+                              (merge contact-updates)
+                              (assoc
+                               ;; fresh per-revision timestamp — reusing the
+                               ;; stored :event-date would collide with the
+                               ;; previous revision (FE keys history by it)
+                               :event-date (utils/timestamp)
+                               ;; audit: on whose behalf the bulk op runs.
+                               ;; Stamped by this trusted path AFTER the
+                               ;; user-input whitelist above.
+                               :acting-org-id org-id)
+                              ;; let core's carry-forward keep the stored
+                              ;; (freshest) ownership fields authoritative
+                              (dissoc :owner-org-id :edit-grants))]
+                      (log/debug "Updating site contact info"
+                                 {:lipas-id lipas-id :changes contact-updates})
+                      (core/upsert-sports-site! tx user updated-site)))
+                  lipas-ids))]
 
-          ;; Update each site in memory
-          updated-sites-data (for [lipas-id authorized-ids
-                                   :let [current-site (get sites-by-id lipas-id)]
-                                   :when current-site]
-                               (let [;; Merge contact updates into current site
-                                     updated-site (merge current-site contact-updates)]
+      ;; Bulk index to ES outside the transaction (an ES failure must not roll
+      ;; back committed DB data; worst case ES lags and is fixed by reindexing)
+      ;; using the documents as they were written to the DB.
+      (let [search-index (get-in search [:indices :sports-site :search])
+            ;; resolved once per batch; keeps :search-meta :owner-org-name
+            ;; (F15) present on re-indexed org-owned docs
+            org-names (core/org-names db)
+            enriched-sites (map #(core/enrich % org-names) saved-sites)
+            bulk-data (search/->bulk search-index :lipas-id enriched-sites)]
+        (log/debug "Bulk indexing" (count enriched-sites) "sports sites")
+        (search/bulk-index-sync! (:client search) bulk-data))
 
-                                 (log/debug "Updating site contact info"
-                                            {:lipas-id lipas-id
-                                             :changes contact-updates})
-
-                                 {:lipas-id lipas-id
-                                  :updated-site updated-site}))]
-
-      ;; Use transaction for database updates and bulk indexing for ES
-      (jdbc/with-db-transaction [tx db]
-        ;; Save all sites to database
-        (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
-          ;; Update in database (using existing method for now)
-          (db/upsert-sports-site! tx user updated-site false))
-
-        ;; Prepare bulk index data for Elasticsearch
-        (let [search-index (get-in search [:indices :sports-site :search])
-              enriched-sites (map #(core/enrich (:updated-site %)) updated-sites-data)
-              bulk-data (search/->bulk search-index :lipas-id enriched-sites)]
-
-          ;; Perform bulk indexing
-          (log/debug "Bulk indexing" (count enriched-sites) "sports sites")
-          (search/bulk-index-sync! (:client search) bulk-data)
-
-          ;; Process background jobs for all updated sites
-
-          ;; NOTE: Disabled for now, because current background
-          ;; processes are relevant only, if geoms change and bulk-ops
-          ;; don't touch geoms.
-          ;;
-          ;; TODO: If/when webhooks are enabled again, they need to be
-          ;; added here!
-          ;;
-          #_(let [correlation-id (jobs/gen-correlation-id)]
-              (jobs/with-correlation-context correlation-id
-                (fn []
-                  (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
-                    (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
-
-                      #_(when route?
-                          (jobs/enqueue-job! tx "elevation"
-                                             {:lipas-id lipas-id}
-                                             {:correlation-id correlation-id
-                                              :priority 70}))
-
-                      (when-not route?
-                      ;; Integration queue (being phased out)
-                        (core/add-to-integration-out-queue! tx updated-site))
-
-                    ;; Analysis job
-                      (jobs/enqueue-job! tx "analysis"
-                                         {:lipas-id lipas-id}
-                                         {:correlation-id correlation-id
-                                          :priority 80}))))))))
+      ;; NOTE: Background jobs deliberately not enqueued: current background
+      ;; processes are relevant only if geoms change and bulk-ops don't touch
+      ;; geoms. TODO: If/when webhooks are enabled again, they need to be
+      ;; added here!
 
       (log/info "Mass update completed"
-                {:updated-count (count updated-sites-data)
+                {:updated-count (count saved-sites)
                  :total-requested (count lipas-ids)})
 
-      {:updated-sites (mapv :lipas-id updated-sites-data)
-       :total-updated (count updated-sites-data)})))
+      {:updated-sites (mapv :lipas-id saved-sites)
+       :total-updated (count saved-sites)})))

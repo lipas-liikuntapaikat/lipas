@@ -125,11 +125,8 @@
           admin-user (test-utils/gen-org-admin-user org-id :db-component (test-db))
           token (jwt/create-token admin-user)
 
-          ;; First add a user to the org
-          _ (backend-org/update-org-users! (test-db) org-id
-                                           [{:user-id (:id target-user)
-                                             :change "add"
-                                             :role "org-user"}])
+          ;; First add a user to the org as a plain member (empty role list)
+          _ (backend-org/add-member! (test-db) org-id (:id target-user) {:roles []} nil)
 
           resp (test-app (-> (mock/request :post "/api/actions/get-org-members")
                              (mock/content-type "application/json")
@@ -140,8 +137,8 @@
       (is (coll? body))
 
       ;; Membership now lives in the org document: get-org-users returns member
-      ;; accounts augmented with their :roles (not account roles). A user added
-      ;; via the legacy "org-user" path is a plain member (:roles []).
+      ;; accounts augmented with their :roles (not account roles). A member
+      ;; added with an empty role list is a plain member (:roles []).
       (is (some (fn [user]
                   (and (= (str (:id target-user)) (str (:id user)))
                        (= [] (:roles user))))
@@ -149,22 +146,16 @@
           "The added user should be returned as a plain member of this organization"))))
 
 (deftest remove-user-from-org-test
-  (testing "update-org-users! 'remove' actually drops the matching role entry"
+  (testing "remove-member! actually drops the matching member entry"
     (let [target-user (test-utils/gen-regular-user :db-component (test-db))
           [org1 _] (create-test-orgs)
           org-id (:id org1)
           db (test-db)
 
-          _ (backend-org/update-org-users! db org-id
-                                           [{:user-id (:id target-user)
-                                             :change "add"
-                                             :role "org-user"}])
+          _ (backend-org/add-member! db org-id (:id target-user) {:roles []} nil)
           users-after-add (backend-org/get-org-users db org-id)
 
-          _ (backend-org/update-org-users! db org-id
-                                           [{:user-id (:id target-user)
-                                             :change "remove"
-                                             :role "org-user"}])
+          _ (backend-org/remove-member! db org-id (:id target-user) nil)
           users-after-remove (backend-org/get-org-users db org-id)
 
           target-id (:id target-user)
@@ -439,6 +430,34 @@
   (testing "A present-but-empty context key is allowed (matches nothing; admin fills it later)"
     (let [org-id (catalog-org! {:ptv {:roles [{:role "ptv-manager" :city-code []}]}})]
       (is (contains? (:role-templates (backend-org/get-org (test-db) org-id)) :ptv)))))
+
+(deftest catalog-normalized-on-save-test
+  ;; F31: the backend mirrors the FE's sanitize-catalog on save, so a direct
+  ;; API caller can't reintroduce the gunk the FE strips. Fails on the old
+  ;; impl two ways: duplicates were stored verbatim, and the role-less {}
+  ;; spec was rejected with :invalid-catalog instead of dropped.
+  (testing "Duplicate role-specs are collapsed and role-less specs dropped on save"
+    (let [org-id (:id (first (create-test-orgs)))
+          _      (backend-org/update-catalog!
+                   (test-db) org-id
+                   {:editor {:label "Muokkaaja"
+                             :roles [{:role "org-editor"}
+                                     {:role "org-editor"} ;; exact duplicate
+                                     {}]}}                ;; half-filled editor row
+                   nil)
+          stored (:role-templates (backend-org/get-org (test-db) org-id))]
+      (is (= [{:role "org-editor"}] (get-in stored [:editor :roles]))
+          "Stored catalog carries the spec exactly once; role-less spec dropped")
+      (is (= "Muokkaaja" (get-in stored [:editor :label]))
+          "Normalization touches only :roles — the label survives")))
+
+  (testing "Normalization does not mask validation: a malformed :roles still 400s"
+    (let [org (first (create-test-orgs))
+          ex  (try (backend-org/update-catalog! (test-db) (:id org)
+                                                {:bad {:roles "not-a-vector"}} nil)
+                   :no-throw
+                   (catch Exception e (:type (ex-data e))))]
+      (is (= :invalid-catalog ex)))))
 
 ;;; --- The ceiling is lipas-admin-only (authorization, HTTP edge) -------------
 ;;; These guard against accidentally opening a path for an org to elevate its
@@ -987,7 +1006,26 @@
         (is (not (contains? owned-ids granted-id)) "Owned filter excludes the merely-granted site")
         (is (contains? editable-ids owned-id) "Editable includes owned")
         (is (contains? editable-ids granted-id) "Editable includes granted")
-        (is (not (contains? editable-ids unrelated-id)) "Unrelated site excluded from both")))))
+        (is (not (contains? editable-ids unrelated-id)) "Unrelated site excluded from both"))
+
+      (testing "count-only mode: same :total, no documents fetched (F18)"
+        (let [full (core/org-sites (test-search) org-id "owned")
+              cnt  (core/org-sites (test-search) org-id "owned" {:count-only? true})]
+          (is (pos? (:total cnt)))
+          (is (= (:total full) (:total cnt)) "Count-only total must match the full query's total")
+          (is (= [] (:sites cnt)) ":size 0 — the FE owned-count flow needs no docs")))
+
+      (testing "the get-org-sites route accepts :count-only (F18)"
+        (let [token (jwt/create-token admin)
+              resp  (test-app (-> (mock/request :post "/api/actions/get-org-sites")
+                                  (mock/json-body {:org-id (str org-id)
+                                                   :filter "owned"
+                                                   :count-only true})
+                                  (test-utils/token-header token)))
+              body  (test-utils/safe-parse-json resp)]
+          (is (= 200 (:status resp)))
+          (is (= 1 (:total body)) "The one owned site is counted")
+          (is (= [] (:sites body))))))))
 
 (deftest org-owned-site-counts-test
   (testing "owned-site counts: one ES terms agg, keyed by org-id, granted sites excluded"
@@ -1087,6 +1125,85 @@
       (is (not (contains? emails (:email other))) "User scoped to a different city is not listed")
       (is (not (contains? emails (:email admin2))) "Admins are excluded (they can edit everything)")
       (is (= emails naive) "Candidate pre-filter matches the exhaustive naive scan exactly"))))
+
+(deftest site-editors-catalog-enforcement-test
+  (testing "Catalog interpretation goes through check-privilege, matching enforcement (F16)"
+    (let [admin       (test-utils/gen-admin-user :db-component (test-db))
+          [org1 org2] (create-test-orgs)
+          cm-org-id   (:id org1) ; catalog: city-manager scoped to the site's city
+          act-org-id  (:id org2) ; catalog: activities-manager scoped to a DIFFERENT city
+          city        837
+          _ (backend-org/update-catalog!
+              (test-db) cm-org-id
+              {:muokkaajat {:label "Muokkaajat"
+                            :roles [{:role "city-manager" :city-code [city]}]}}
+              nil)
+          _ (backend-org/update-catalog!
+              (test-db) act-org-id
+              {:melonta {:label "Melonta"
+                         :roles [{:role "activities-manager"
+                                  :activity ["melonta"]
+                                  :city-code [91]}]}}
+              nil)
+          lid  9992071
+          site (-> (test-utils/gen-sports-site)
+                   (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid
+                          :activities {:melonta {}})
+                   (assoc-in [:location :city :city-code] city))
+          _       (core/upsert-sports-site!* (test-db) admin site)
+          editors (core/site-editors (test-db) lid)]
+      (is (contains? (set (map :id (:catalog-editor-orgs editors))) (str cm-org-id))
+          "Org whose catalog grants city-manager for the site's city is a (full) editor
+           (old code never found catalog city/type/site-managers — fails on old)")
+      (is (not (contains? (set (map :id (:activity-editor-orgs editors))) (str act-org-id)))
+          "activities-manager scoped to a different city is NOT listed
+           (old code string-matched only the activity — fails on old)")
+      (is (not (contains? (set (map :id (:catalog-editor-orgs editors))) (str act-org-id)))
+          "activities-manager grants no :site/create-edit — never a full editor"))))
+
+(deftest site-edit-history-email-privacy-test
+  (testing "Edit-history authors: usernames for everyone, emails only for :users/manage (F5)"
+    (let [db      (test-db)
+          author  (-> (test-utils/gen-user)
+                      (assoc :email "f5-author@example.com" :username "f5-author"))
+          _       (core/add-user! db author)
+          author  (core/get-user db "f5-author@example.com")
+          lid     9992072
+          site    (-> (test-utils/gen-sports-site)
+                      (assoc :event-date (utils/timestamp) :status "active" :lipas-id lid))
+          _       (core/upsert-sports-site!* db author site)
+          regular (test-utils/gen-regular-user :db-component db)
+          admin   (test-utils/gen-admin-user :db-component db)
+          call    (fn [user]
+                    (let [resp (test-app (-> (mock/request :post "/api/actions/get-site-edit-history")
+                                             (mock/content-type "application/json")
+                                             (mock/body (test-utils/->json {:lipas-id lid}))
+                                             (test-utils/token-header (jwt/create-token user))))]
+                      [(:status resp) (test-utils/safe-parse-json resp)]))
+          [s1 body1] (call regular)
+          [s2 body2] (call admin)]
+      (is (= 200 s1))
+      (is (= 200 s2))
+      (is (contains? (set (map :author body1)) "f5-author")
+          "Non-admin caller sees the author's username")
+      (is (not-any? #(and % (re-find #"@" %)) (map :author body1))
+          "Non-admin response carries no email addresses
+           (old code returned (or email username) for everyone — fails on old)")
+      (is (contains? (set (map :author body2)) "f5-author@example.com")
+          ":users/manage caller still gets emails"))))
+
+(deftest enrich-denormalizes-owner-org-name-test
+  (testing "Enriched ES doc carries the owner org's name in search-meta (F15)"
+    (let [[org1 _] (create-test-orgs)
+          site     (-> (test-utils/gen-sports-site)
+                       (assoc :event-date (utils/timestamp) :status "active"
+                              :lipas-id 9992073
+                              :owner-org-id (str (:id org1))))
+          enriched (core/enrich site (core/org-names (test-db)))]
+      (is (= (:name org1) (get-in enriched [:search-meta :owner-org-name]))
+          "Owner org name resolved into search-meta
+           (old enrich produced no :owner-org-name — fails on old)")
+      (is (= (str (:id org1)) (get-in enriched [:search-meta :owner-org-id]))))))
 
 ;;; Generalized ownership/claim rule (city / owners / type-codes / activities) ;;;
 
@@ -1198,12 +1315,18 @@
 
 (defn- seed-site!
   "Persist an existing site with `attrs` via the trusted path (bypasses the
-  authz under test), and return its lipas-id."
+  authz under test), and return its lipas-id. The generated :lipas-id is
+  dropped (the sequence assigns a valid one — mg can generate 0, which the
+  analysis-job payload schema rejects) and :event-date is stamped 'now' (the
+  generated one can be in the future, hiding later revisions from the
+  sports_site_current view)."
   [attrs]
   (let [admin (test-utils/gen-admin-user :db-component (test-db))
         resp  (core/upsert-sports-site!* (test-db) admin
-                                         (merge (assoc (test-utils/gen-sports-site)
-                                                       :status "active")
+                                         (merge (-> (test-utils/gen-sports-site)
+                                                    (dissoc :lipas-id)
+                                                    (assoc :status "active"
+                                                           :event-date (utils/timestamp)))
                                                 attrs))]
     (:lipas-id resp)))
 
@@ -1262,6 +1385,346 @@
       (is (contains? (grants) (str org-a)) "grant added by owner admin")
       (core/revoke-site-edit! (test-db) (test-search) b-admin site-id org-a (str org-b))
       (is (not (contains? (grants) (str org-a))) "grant revoked by owner admin"))))
+
+;;; --- PR #193 review regressions: save-path integrity (F1/F6/F8/F11/F12/F14) -
+
+(defn- seed-site-in-city!
+  "Persist a generated active site in `city-code` (merged with `attrs`) via the
+  trusted path and return the stored site. Like seed-site!, normalizes the
+  generated :lipas-id (sequence-assigned) and :event-date (now)."
+  [city-code attrs]
+  (let [admin (test-utils/gen-admin-user :db-component (test-db))]
+    (core/upsert-sports-site!* (test-db) admin
+                               (-> (test-utils/gen-sports-site)
+                                   (dissoc :lipas-id)
+                                   (assoc :status "active"
+                                          :event-date (utils/timestamp))
+                                   (assoc-in [:location :city :city-code] city-code)
+                                   (merge attrs)))))
+
+(defn- revisions
+  "All raw revisions of a site, oldest first (the sports_site table is the
+  event log; sports_site_by_year would collapse same-year revisions)."
+  [lipas-id]
+  (jdbc/execute! (test-db)
+                 ["SELECT event_date, acting_org_id FROM sports_site
+                   WHERE lipas_id=? ORDER BY event_date ASC, created_at ASC"
+                  lipas-id]
+                 {:builder-fn rs/as-unqualified-kebab-maps}))
+
+(defn- conformed
+  "Conform a generated user's roles exactly as the JWT/auth backend does before
+  they reach core (needed when calling core fns directly, without HTTP)."
+  [user]
+  (update-in user [:permissions :roles] roles/conform-roles))
+
+(deftest save-scope-escape-test
+  ;; F1: on the save path :site/create-edit must hold for BOTH the stored
+  ;; revision and the submitted document — a scoped editor can neither edit a
+  ;; site outside their scope nor relocate a site out of (or into) a scope they
+  ;; don't hold.
+  (let [site  (seed-site-in-city! 889 {})
+        lid   (:lipas-id site)
+        cm    (jwt/create-token (test-utils/gen-city-manager-user 889 :db-component (test-db)))
+        fetch #(core/get-sports-site (test-db) lid)]
+
+    (testing "in-scope content edit still succeeds"
+      (is (= 201 (:status (post-site cm (assoc (fetch) :name "Edited in scope"))))))
+
+    (testing "relocating the site outside the manager's scope is forbidden"
+      (let [resp (post-site cm (assoc-in (fetch) [:location :city :city-code] 91))]
+        (is (= 403 (:status resp)))
+        (is (= 889 (-> (fetch) :location :city :city-code)) "site was not moved")))
+
+    (testing "an out-of-scope manager cannot pull the site into their scope"
+      (let [cm-91 (jwt/create-token (test-utils/gen-city-manager-user 91 :db-component (test-db)))
+            resp  (post-site cm-91 (assoc-in (fetch) [:location :city :city-code] 91))]
+        (is (= 403 (:status resp)))
+        (is (= 889 (-> (fetch) :location :city :city-code)) "site was not claimed")))))
+
+(deftest save-preserves-ownership-fields-when-absent-test
+  ;; F6: a body that OMITS :owner-org-id / :edit-grants is a pure content edit —
+  ;; the server carries the stored values forward instead of treating absence as
+  ;; a removal attempt (which 403'd integrations that don't round-trip them).
+  (let [org-x  (catalog-org! editor+ptv-catalog)
+        org-y  (:id (first (create-test-orgs)))
+        site   (seed-site-in-city! 91 {:owner-org-id (str org-x)
+                                       :owner        (owner-enum-for org-x)
+                                       :edit-grants  [(str org-y)]})
+        lid    (:lipas-id site)
+        editor (editor-of-org! org-x)
+        fetch  #(core/get-sports-site (test-db) lid)]
+
+    (testing "org-editor content edit without round-tripping the ownership keys"
+      (let [body  (-> (fetch)
+                      (dissoc :owner-org-id :edit-grants)
+                      (assoc :name "Renamed by org editor"))
+            resp  (post-site editor body)
+            after (fetch)]
+        (is (= 201 (:status resp)))
+        (is (= "Renamed by org editor" (:name after)))
+        (is (= (str org-x) (str (:owner-org-id after)))
+            "stored owner-org-id carried forward")
+        (is (= #{(str org-y)} (set (map str (:edit-grants after))))
+            "stored edit-grants carried forward")))
+
+    (testing "explicit nil (key present) is still an authorization-checked removal"
+      (let [user (test-utils/gen-regular-user :db-component (test-db))
+            _    (backend-org/add-member! (test-db) org-x (:id user) {:roles ["editor"]} nil)
+            user (conformed
+                   (assoc-in user [:permissions :roles]
+                             (backend-org/derive-user-org-roles (test-db) (:id user))))
+            ex   (try (core/upsert-sports-site! (test-db) user
+                                                (assoc (fetch) :owner-org-id nil))
+                      :no-throw
+                      (catch Exception e (:type (ex-data e))))]
+        (is (= :no-permission ex))
+        (is (= (str org-x) (str (:owner-org-id (fetch)))) "owner not removed")))))
+
+(deftest grant-stamps-fresh-event-date-test
+  ;; F8 (grant path): the grant revision must get its own :event-date instead of
+  ;; reusing the stored one (FE keys history by event-date; duplicates clobber).
+  ;; Also re-verifies (F14 flip side) that the trusted path still persists the
+  ;; acting_org_id audit column.
+  (let [org-b   (catalog-org! editor+ptv-catalog)
+        org-a   (:id (first (create-test-orgs)))
+        site    (seed-site-in-city! 91 {:owner-org-id (str org-b)
+                                        :owner        (owner-enum-for org-b)})
+        lid     (:lipas-id site)
+        before  (:event-date site)
+        b-admin (conformed (test-utils/gen-org-admin-user org-b :db-component (test-db)))]
+    (core/grant-site-edit! (test-db) (test-search) b-admin lid org-a (str org-b))
+    (let [revs    (revisions lid)
+          current (core/get-sports-site (test-db) lid)]
+      (is (= 2 (count revs)) "grant appended a new revision")
+      (is (apply distinct? (map :event-date revs))
+          "every revision keeps a distinct event-date")
+      (is (pos? (compare (:event-date current) before))
+          "grant revision is stamped with a fresh, later timestamp")
+      (is (= #{(str org-a)} (set (map str (:edit-grants current))))
+          "the current revision (latest by event-date) carries the grant")
+      (is (= (str org-b) (str (:acting-org-id (last revs))))
+          "trusted grant path still records the acting org"))))
+
+(deftest takeover-stamps-fresh-event-date-test
+  ;; F8 (takeover path): approve! must stamp claimed sites with a fresh
+  ;; :event-date, not the timestamp of the revision it claims.
+  (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+        org    (first (create-test-orgs))
+        org-id (:id org)
+        _      (backend-org/update-org! (test-db) org-id
+                                        (assoc (backend-org/get-org (test-db) org-id)
+                                               :type "city"
+                                               :ownership {:city-codes [91] :owners ["city"]})
+                                        nil)
+        site   (seed-site-in-city! 91 {:owner "city"})
+        lid    (:lipas-id site)
+        before (:event-date site)]
+    (org-takeover/reclaim-now! (test-db) (test-search) org-id admin)
+    (let [revs    (revisions lid)
+          current (core/get-sports-site (test-db) lid)]
+      (is (= (str org-id) (str (:owner-org-id current))) "site was claimed")
+      (is (= 2 (count revs)) "claim appended a new revision")
+      (is (apply distinct? (map :event-date revs))
+          "claim revision has its own event-date")
+      (is (pos? (compare (:event-date current) before))
+          "claim revision is stamped with a fresh, later timestamp"))))
+
+(deftest owner-locked-returns-conflict-test
+  ;; F11: violating the org-type-locked :owner enum must surface as 409
+  ;; (conflict, like :invalid-takeover-state) — not a 500.
+  (let [org    (first (create-test-orgs))
+        org-id (:id org)
+        _      (backend-org/update-org! (test-db) org-id
+                                        (assoc (backend-org/get-org (test-db) org-id)
+                                               :type "city")
+                                        nil)
+        site   (seed-site-in-city! 91 {:owner-org-id (str org-id) :owner "city"})
+        token  (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+        resp   (post-site token (assoc (core/get-sports-site (test-db) (:lipas-id site))
+                                       :owner "state"))]
+    (is (= 409 (:status resp)))
+    (is (= "owner-locked" (:type (test-utils/safe-parse-json resp))))))
+
+(deftest grant-on-unknown-lipas-id-404-test
+  ;; F12: granting/revoking on a nonexistent lipas-id must 404 — not upsert a
+  ;; phantom site fragment (allocating a lipas-id and dying on NOT NULL → 500).
+  (let [org-b (catalog-org! editor+ptv-catalog)
+        org-a (:id (first (create-test-orgs)))
+        admin (test-utils/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        bogus 88888888
+        resp  (test-app (-> (mock/request :post "/api/actions/grant-site-edit")
+                            (mock/content-type "application/json")
+                            (mock/body (test-utils/->json {:org-id (str org-b)
+                                                           :lipas-id bogus
+                                                           :grantee-org-id (str org-a)}))
+                            (test-utils/token-header token)))]
+    (is (= 404 (:status resp)))
+    (is (empty? (core/get-sports-site (test-db) bogus))
+        "no phantom revision was created")
+    (is (= :site-not-found
+           (try (core/revoke-site-edit! (test-db) (test-search) (conformed admin)
+                                        bogus org-a (str org-b))
+                :no-throw
+                (catch Exception e (:type (ex-data e)))))
+        "revoke on an unknown id throws :site-not-found as well")))
+
+(deftest acting-org-id-not-forgeable-via-save-test
+  ;; F14: :acting-org-id is per-revision audit metadata; the user-facing save
+  ;; path must strip it (the save schema is open) so the audit column can only
+  ;; be set by trusted internal paths.
+  (let [org-x  (catalog-org! editor+ptv-catalog)
+        site   (seed-site-in-city! 91 {:owner-org-id (str org-x)
+                                       :owner        (owner-enum-for org-x)})
+        lid    (:lipas-id site)
+        editor (editor-of-org! org-x)
+        resp   (post-site editor (assoc (core/get-sports-site (test-db) lid)
+                                        :name "Forgery attempt"
+                                        :acting-org-id (str org-x)))]
+    (is (= 201 (:status resp)))
+    (is (= "Forgery attempt" (:name (core/get-sports-site (test-db) lid)))
+        "the content edit itself went through")
+    (is (nil? (:acting-org-id (last (revisions lid))))
+        "audit column cannot be forged from a user payload")))
+
+(deftest get-org-users-empty-org-test
+  ;; F7: a memberless org must yield [] (not nil) — nil serialized to an empty
+  ;; response body, which is not valid JSON and broke the FE members tab on
+  ;; every freshly created org.
+  (let [[org1 _] (create-test-orgs)
+        org-id   (:id org1)]
+    (is (= [] (backend-org/get-org-users (test-db) org-id))
+        "get-org-users returns an empty vector, never nil")
+    (let [token (jwt/create-token (test-utils/gen-admin-user :db-component (test-db)))
+          resp  (test-app (-> (mock/request :post "/api/actions/get-org-members")
+                              (mock/json-body {:org-id org-id})
+                              (test-utils/token-header token)))]
+      (is (= 200 (:status resp)))
+      (is (= [] (test-utils/safe-parse-json resp))
+          "the members endpoint emits a parseable empty JSON array"))))
+
+(deftest invite-existing-member-conflict-test
+  ;; F3: re-inviting an email that is already a member must not silently
+  ;; replace their roles (the invite form defaults to [], so an org-admin
+  ;; would get demoted to a plain member) — reject with :already-member.
+  (testing "Function level: rejected, roles intact, no 'you've been added' email"
+    (let [org-id  (catalog-org! editor+ptv-catalog)
+          emailer (test-utils/create-test-emailer)
+          user    (test-utils/gen-regular-user :db-component (test-db))
+          _       (backend-org/add-member! (test-db) org-id (:id user)
+                                           {:roles ["admin" "editor"]} nil)
+          ex      (try (core/invite-org-member! (test-db) emailer org-id
+                                                {:email (:email user) :roles []}
+                                                nil "http://login")
+                       :no-throw
+                       (catch Exception e (:type (ex-data e))))]
+      (is (= :already-member ex))
+      (is (= #{"admin" "editor"}
+             (->> (backend-org/get-org-users (test-db) org-id)
+                  (filter #(= (str (:id user)) (str (:id %)))) first :roles set))
+          "The existing member's roles are untouched")
+      (is (empty? @(:sent-emails emailer))
+          "No misleading 'you've been added' email is sent")))
+  (testing "Route level: maps to HTTP 409"
+    (let [org-id (catalog-org! editor+ptv-catalog)
+          oadmin (test-utils/gen-org-admin-user org-id :db-component (test-db))
+          token  (jwt/create-token oadmin)
+          resp   (test-app (-> (mock/request :post "/api/actions/invite-org-member")
+                               (mock/json-body {:org-id org-id
+                                                :email (:email oadmin)
+                                                :roles []
+                                                :login-url "https://localhost/login"})
+                               (test-utils/token-header token)))]
+      (is (= 409 (:status resp)))
+      (is (= "already-member" (:type (test-utils/safe-parse-json resp)))))))
+
+(deftest update-org-partial-payload-preserves-fields-test
+  ;; F13b: marshall always emits every detail key (defaulting absent ones), so
+  ;; update-org! used to wipe stored :type/:instructions/:ownership/:ptv-data
+  ;; on a payload that simply omitted them. Only present keys may be written.
+  (let [org-id (catalog-org! editor+ptv-catalog)
+        _      (backend-org/update-org! (test-db) org-id
+                                        {:name "Full"
+                                         :type "other"
+                                         :instructions {:fi "Ohje"}
+                                         :ownership {:city-codes [91] :owners ["city"]}}
+                                        nil)
+        before (backend-org/get-org (test-db) org-id)
+        ;; partial payload: only the name travels
+        _      (backend-org/update-org! (test-db) org-id {:name "Renamed"} nil)
+        after  (backend-org/get-org (test-db) org-id)]
+    (is (= "Renamed" (:name after)))
+    (is (= "other" (:type after)) "absent :type is not re-defaulted to \"city\"")
+    (is (= {:fi "Ohje"} (:instructions after)) "absent :instructions is not nilled")
+    (is (= (:ownership before) (:ownership after)) "absent :ownership is not emptied")
+    (is (= (:ptv-data before) (:ptv-data after)) "absent :ptv-data is not nilled")
+    (is (= (:primary-contact before) (:primary-contact after)))))
+
+(deftest update-org-details-whitelist-test
+  ;; F32: the org-admin ceiling lives in the business layer now —
+  ;; update-org-details! merges only name/contact/instructions; :type/
+  ;; :ownership/:ptv-data in the payload are ignored for EVERY caller.
+  (let [org-id (catalog-org! editor+ptv-catalog)
+        _      (backend-org/update-org! (test-db) org-id
+                                        {:name "Before"
+                                         :type "city"
+                                         :ownership {:city-codes [91] :owners ["city"]}}
+                                        nil)
+        before (backend-org/get-org (test-db) org-id)
+        _      (backend-org/update-org-details! (test-db) org-id
+                                                {:name "After"
+                                                 :primary-contact {:email "after@example.com"}
+                                                 :instructions {:fi "Uusi ohje"}
+                                                 :type "state"
+                                                 :ownership {:city-codes [999] :owners ["state"]}
+                                                 :ptv-data {:org-id (str (random-uuid))}}
+                                                nil)
+        after  (backend-org/get-org (test-db) org-id)]
+    (is (= "After" (:name after)))
+    (is (= "after@example.com" (-> after :primary-contact :email)))
+    (is (= {:fi "Uusi ohje"} (:instructions after)) "instructions ARE org-admin-editable")
+    (is (= (:type before) (:type after)) "the take-over ceiling :type is ignored")
+    (is (= (:ownership before) (:ownership after)) ":ownership is ignored")
+    (is (= (:ptv-data before) (:ptv-data after)) ":ptv-data is ignored")
+    (is (= (:members before) (:members after)))
+    (is (= (:role-templates before) (:role-templates after)))))
+
+(deftest org-write-routes-record-author-test
+  ;; F13a: create-org / update-org / update-org-ptv-config must record the
+  ;; caller as the revision author — author_id NULL leaves the org History tab
+  ;; without an editor name.
+  (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+        token    (jwt/create-token admin)
+        org-data {:name (str "Author Org " (System/currentTimeMillis))
+                  :data {:primary-contact {:email "author@example.com"}}}
+        create-resp (test-app (-> (mock/request :post "/api/actions/create-org")
+                                  (mock/json-body org-data)
+                                  (test-utils/token-header token)))
+        org-id   (:id (test-utils/safe-parse-json create-resp))
+        authors  (fn []
+                   (->> (jdbc/execute! (test-db)
+                                       ["SELECT author_id FROM org WHERE org_id = ?
+                                         ORDER BY event_date ASC, created_at ASC"
+                                        (parse-uuid (str org-id))]
+                                       {:builder-fn rs/as-unqualified-kebab-maps})
+                        (mapv (comp str :author-id))))]
+    (is (= 200 (:status create-resp)))
+    (is (= [(str (:id admin))] (authors)) "create-org records the creator")
+    (is (= 200 (:status (test-app (-> (mock/request :post "/api/actions/update-org")
+                                      (mock/json-body (assoc (backend-org/get-org (test-db) org-id)
+                                                             :name "Renamed by admin"))
+                                      (test-utils/token-header token))))))
+    (is (= 200 (:status (test-app (-> (mock/request :post "/api/actions/update-org-ptv-config")
+                                      (mock/json-body {:org-id org-id
+                                                       :ptv-config {:org-id (str (random-uuid))
+                                                                    :city-codes [91]
+                                                                    :owners ["city"]
+                                                                    :supported-languages ["fi"]
+                                                                    :sync-enabled false}})
+                                      (test-utils/token-header token))))))
+    (is (= (repeat 3 (str (:id admin))) (authors))
+        "every org write revision carries the caller as author")))
 
 (comment
   (clojure.test/run-test-var #'owner-org-assignment-authz-test)

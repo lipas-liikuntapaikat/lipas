@@ -165,6 +165,38 @@
                  {}
                  :site/save-api)))))
 
+(deftest org-id-role-context-test
+  ;; Pins the select-role semantic the FE permission subs rely on (PR #193
+  ;; review finding F4): an org-id-scoped role activates only when the
+  ;; context carries :org-id — "can the user do this anywhere" checks must
+  ;; pass :org-id ::sut/any or org-scoped roles silently never match.
+  (let [org-id "11111111-1111-1111-1111-111111111111"
+        user {:permissions {:roles [{:role :org-editor :org-id #{org-id}}]}}]
+
+    (testing "org-id-scoped role does not activate when context lacks :org-id"
+      (is (false? (sut/check-privilege
+                    user
+                    {:type-code ::sut/any :city-code ::sut/any}
+                    :site/create-edit))))
+
+    (testing "org-id-scoped role activates with :org-id ::any"
+      (is (true? (sut/check-privilege
+                   user
+                   {:type-code ::sut/any :city-code ::sut/any :org-id ::sut/any}
+                   :site/create-edit))))
+
+    (testing "org-id-scoped role activates for a matching concrete org-id"
+      (is (true? (sut/check-privilege
+                   user
+                   {:org-id #{org-id}}
+                   :site/create-edit))))
+
+    (testing "org-id-scoped role does not activate for a different org"
+      (is (false? (sut/check-privilege
+                    user
+                    {:org-id #{"22222222-2222-2222-2222-222222222222"}}
+                    :site/create-edit))))))
+
 (deftest roles-conform-test
   (is (= [{:role :city-manager
            :type-code #{1620}

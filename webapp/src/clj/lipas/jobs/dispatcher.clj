@@ -67,7 +67,7 @@
         (-> current
             (assoc-in [:location :geometries] fcoll)
             (->> (core/upsert-sports-site!* db user))
-            (as-> $ (core/index! search $ :sync)))
+            (as-> $ (core/index! search $ :sync (core/org-names db))))
         (log/info "Elevation enrichment completed for lipas-id" lipas-id))
 
       (do
