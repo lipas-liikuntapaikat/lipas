@@ -36,6 +36,7 @@
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/TableSortLabel$default" :as TableSortLabel]
             ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
@@ -1061,24 +1062,44 @@
 (def ^:private claim-page-size 10)
 
 (defn claim-impact-dialog [_tr]
-  (let [page (r/atom 0)]
+  (let [page (r/atom 0)
+        name-filter (r/atom "")]
     (fn [tr]
       (let [dialog @(rf/subscribe [::subs/claim-dialog])
             preview @(rf/subscribe [::subs/takeover-preview])
+            selection @(rf/subscribe [::subs/claim-selection])
             is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
             reclaiming? @(rf/subscribe [::subs/reclaiming?])
             locale (tr)
             ;; localized owner-class label (fall back to the raw enum, then "–")
             owner-label (fn [enum] (or (get-in owners/all [enum locale]) enum "–"))
+            ;; request/reclaim modes get the curated picker (checkboxes);
+            ;; approve mode shows the request's STORED selection read-only —
+            ;; the requester curates, the approver verifies
+            picker? (not= "approve" (:mode dialog))
             sites (vec (:sites preview))
             total (count sites)
-            pages (max 1 (js/Math.ceil (/ total claim-page-size)))
+            n-selected (count selection)
+            ;; client-side name filter — narrows the table AND what the header
+            ;; select-all/none toggles; selection outside the filter is kept
+            filter-text (str/trim @name-filter)
+            visible (if (str/blank? filter-text)
+                      sites
+                      (filterv #(str/includes? (str/lower-case (str (:name %)))
+                                               (str/lower-case filter-text))
+                               sites))
+            n-visible (count visible)
+            visible-ids (mapv :lipas-id visible)
+            all-visible? (and (pos? n-visible) (every? selection visible-ids))
+            some-visible? (boolean (some selection visible-ids))
+            pages (max 1 (js/Math.ceil (/ n-visible claim-page-size)))
             cur (min @page (dec pages))
             from (* cur claim-page-size)
-            to (min (+ from claim-page-size) total)
+            to (min (+ from claim-page-size) n-visible)
             ;; don't allow closing mid-reclaim (the op keeps running server-side)
             close! (fn [] (when-not reclaiming?
                             (reset! page 0)
+                            (reset! name-filter "")
                             (rf/dispatch [::events/close-claim-dialog])))]
         [:> Dialog {:open (boolean dialog)
                     :maxWidth "sm" :fullWidth true
@@ -1089,7 +1110,13 @@
             [:> Typography "…"]
             [:> Box
              [:> Typography {:variant "h6" :sx {:mb 1}}
-              (str (tr :lipas.org/claim-impact-affects) ": " (:count preview))]
+              (str (tr (if picker?
+                         :lipas.org/claim-impact-affects
+                         :lipas.org/claim-impact-requested)) ": "
+                   (if (and picker? (< n-selected total))
+                     ;; a curated subset is active — make the boundary explicit
+                     (str n-selected " / " total " " (tr :lipas.org/claim-selected))
+                     (:count preview)))]
              ;; what the reclaim does: (1) assign ownership to this org, and
              ;; (2) lock the owner class to the org type's owner (shown as label)
              [:> Alert {:severity "warning" :sx {:my 1}}
@@ -1104,21 +1131,42 @@
                [:> Box {:sx {:mt 2}}
                 [:> Typography {:variant "subtitle2" :sx {:mb 1}}
                  (tr :lipas.org/claim-impact-sample)]
+                [:> TextField {:size "small" :fullWidth true :sx {:mb 1}
+                               :placeholder (tr :lipas.org/claim-filter-by-name)
+                               :value @name-filter
+                               :on-change (fn [e]
+                                            (reset! name-filter (.. e -target -value))
+                                            (reset! page 0))}]
                 [:> Table {:size "small"}
                  [:> TableHead
                   [:> TableRow
+                   (when picker?
+                     [:> TableCell {:padding "checkbox"}
+                      [:> Checkbox {:size "small"
+                                    :checked all-visible?
+                                    :indeterminate (and some-visible? (not all-visible?))
+                                    :disabled (or reclaiming? (zero? n-visible))
+                                    :on-change #(rf/dispatch [::events/select-claim-sites
+                                                              visible-ids (not all-visible?)])}]])
                    [:> TableCell (tr :lipas.org/name)]
                    [:> TableCell (tr :lipas.org/current-owner)]]]
                  [:> TableBody
-                  (for [s (subvec sites from to)]
+                  (for [s (subvec visible from to)]
                     [:> TableRow {:key (:lipas-id s)}
+                     (when picker?
+                       [:> TableCell {:padding "checkbox"}
+                        [:> Checkbox {:size "small"
+                                      :checked (contains? selection (:lipas-id s))
+                                      :disabled reclaiming?
+                                      :on-change #(rf/dispatch [::events/toggle-claim-site
+                                                                (:lipas-id s)])}]])
                      [:> TableCell (:name s)]
                      [:> TableCell (owner-label (:current-owner s))]])]]
                 (when (> pages 1)
                   [:> Box {:sx {:display "flex" :align-items "center"
                                 :justify-content "flex-end" :gap 1 :mt 1}}
                    [:> Typography {:variant "caption" :color "text.secondary"}
-                    (str (inc from) "–" to " / " total)]
+                    (str (inc from) "–" to " / " n-visible)]
                    [:> IconButton {:size "small" :disabled (<= cur 0)
                                    :on-click #(swap! page dec)}
                     [:> Icon "chevron_left"]]
@@ -1132,7 +1180,11 @@
           [:> Button {:on-click close! :disabled reclaiming?}
            (tr :lipas.org/cancel)]
           [:> Button {:variant "contained" :color "secondary"
-                      :disabled (or (nil? preview) (zero? (:count preview 0)) reclaiming?)
+                      :disabled (or (nil? preview)
+                                    reclaiming?
+                                    (if picker?
+                                      (zero? n-selected)
+                                      (zero? (:count preview 0))))
                       :startIcon (when reclaiming?
                                    (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
                       :on-click #(rf/dispatch [::events/confirm-claim])}
@@ -1156,6 +1208,7 @@
   (let [is-lipas-admin? @(rf/subscribe [::subs/is-lipas-admin])
         org @(rf/subscribe [::subs/editing-org])
         owned-count @(rf/subscribe [::subs/owned-sites-count])
+        claim-dialog @(rf/subscribe [::subs/claim-dialog])
         rule (:ownership org)
         step1-done? (and (boolean (:type org))
                          (boolean (some #(seq (get rule %)) [:city-codes :owners :type-codes :activities])))
@@ -1173,7 +1226,10 @@
          [:> StepButton {:onClick #(rf/dispatch [::events/set-current-tab "roles-templates"])}
           [:> StepLabel (tr :lipas.org/setup-step-roles)]]]
         [:> Step {:completed step3-done?}
-         [:> StepButton {:onClick #(rf/dispatch [::events/open-claim-dialog
+         ;; disabled while the dialog is open: a click that closes the dialog
+         ;; must not be able to re-open it through this button underneath
+         [:> StepButton {:disabled (some? claim-dialog)
+                         :onClick #(rf/dispatch [::events/open-claim-dialog
                                                  {:mode "request" :org-id org-id}])}
           [:> StepLabel (tr :lipas.org/setup-step-reclaim)]]]]])))
 

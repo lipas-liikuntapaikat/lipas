@@ -125,6 +125,40 @@ facilities, which ones) before anything happens. A LIPAS administrator can apply
 such a claim directly; an organization administrator's request goes into an
 approval queue that a LIPAS administrator reviews.
 
+### Claiming a curated subset
+
+The ownership rule is axis-based (municipalities × owner label × types ×
+activities), which fits organizations whose estate *is* a rule — "everything the
+city owns". Some organizations' estates are inherently enumerated instead: an
+association may own a hundred specific recreation sites across several
+municipalities, but not the neighboring sites that match the same axes
+(case: Uudenmaan virkistysalueyhdistys Uuvi).
+
+For these, the preview doubles as a picker: every matching facility has a
+checkbox (all checked by default, with select-all/none and a name filter), so
+the rule narrows the candidate pool and the person making the claim draws the
+exact boundary by hand. The semantics differ deliberately from a full-rule
+claim:
+
+- **A curated claim is a one-shot snapshot, not a standing rule.** The claim
+  request stores the explicitly selected facility ids, and approving it applies
+  ownership to exactly that set — never to whatever happens to match the rule
+  at approval time. (This also closes a drift window the full-rule flow had:
+  what the approver saw in the preview is precisely what gets claimed.)
+  Deselected facilities simply reappear in later previews; they are not
+  remembered as exclusions.
+- **The requester curates, the approver verifies.** The organization
+  administrator picks the subset when creating the request; the LIPAS
+  administrator's approval view shows that stored selection (count + list)
+  and approves or rejects it as-is.
+- **The selection is validated against the rule** — a request may only contain
+  facilities that match the organization's ownership rule at request time —
+  and the existing safeguards (already-owned facilities are skipped, claims
+  are idempotent, the owner label is aligned and locked) apply unchanged.
+
+New facilities an organization creates are owned at creation via the facility
+form, so curated estates do not need recurring re-claims.
+
 ## Setting ownership when creating a facility
 
 When someone who belongs to an owner-capable organization creates a new facility,

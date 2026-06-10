@@ -476,6 +476,30 @@ File:line references are against the branch head at review time (2ac31c4c).
   labels; admin body unchanged — empirically fails on the old impl (3 failures:
   nil `:author-role`s, `:author` present, username leaked).
 
+- [x] **F39 — curated takeover subset (PM request, Uuvi case)**:
+  `webapp/src/clj/lipas/backend/org_takeover.clj`
+  ✅ 2026-06-10: the takeover preview is now a picker (checkboxes, default
+  all-checked, header select-all/none over the name-filtered rows, client-side
+  name filter, "N / M valittu" summary). `create-request!` accepts optional
+  `:lipas-ids` (validated ⊆ rule matches, else `:invalid-selection` → 400) and
+  stores them in the EXISTING `lipas_ids` snapshot column — no migration needed.
+  `approve!` now applies EXACTLY the stored snapshot (curated or full-rule) —
+  never a rule re-run — keeping the already-owned skip + reporting skips
+  (owned/deleted since request) via new `:sites-skipped`; this closes the old
+  drift where approval silently claimed sites that started matching after the
+  request (direct lipas-admin reclaims snapshot at claim time → behavior
+  unchanged, now subset-capable too). New `/actions/preview-org-takeover-request`
+  resolves the stored selection for the approver's dialog (count + lightweight
+  rows). i18n keys fi/se/en. Tests (lipas.backend.org-test): subset-claim,
+  subset-validation (unit + 400 endpoint), snapshot-closes-drift,
+  subset-idempotent, missing-site-skipped, request-preview-endpoint — 6 tests /
+  33 assertions green; drift test empirically fails on the HEAD impl (re-ran it
+  against `git show HEAD:` org_takeover.clj loaded into the ns: 3 failures —
+  sites-claimed 2, post-request site claimed, preview empty). Full gate:
+  `bb test-ns lipas.backend.org-test lipas.backend.handler-test
+  lipas.backend.business-logic-test` → 118 tests, 464 assertions, 0 failures;
+  `(user/compile-cljs)` `{:status :ok}` no warnings.
+
 ---
 
 ## Refuted during review (no action)

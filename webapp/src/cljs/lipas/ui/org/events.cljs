@@ -495,7 +495,32 @@
 ;; --- Claim impact warning: fetch preview, show dialog, confirm ---
 (rf/reg-event-db ::get-takeover-preview-success
                  (fn [db [_ resp]]
-                   (assoc-in db [:org :takeover-preview] resp)))
+                   (-> db
+                       (assoc-in [:org :takeover-preview] resp)
+                       ;; curated picker default: everything checked
+                       (assoc-in [:org :claim-selection]
+                                 (into #{} (map :lipas-id) (:sites resp))))))
+
+;; --- Curated subset picker (checkboxes in the claim preview) ---
+(rf/reg-event-db ::toggle-claim-site
+                 (fn [db [_ lipas-id]]
+                   (update-in db [:org :claim-selection]
+                              (fn [sel]
+                                (let [sel (or sel #{})]
+                                  (if (contains? sel lipas-id)
+                                    (disj sel lipas-id)
+                                    (conj sel lipas-id)))))))
+
+;; header select-all/none — operates on the given ids (the currently
+;; name-filtered rows), leaving rows outside the filter untouched
+(rf/reg-event-db ::select-claim-sites
+                 (fn [db [_ lipas-ids selected?]]
+                   (update-in db [:org :claim-selection]
+                              (fn [sel]
+                                (let [sel (or sel #{})]
+                                  (if selected?
+                                    (into sel lipas-ids)
+                                    (apply disj sel lipas-ids)))))))
 
 (rf/reg-event-fx ::get-takeover-preview
                  (fn [{:keys [db]} [_ org-id]]
@@ -511,15 +536,32 @@
 
 (rf/reg-event-fx ::open-claim-dialog
                  ;; dialog = {:mode "request"|"approve" :org-id .. :request-id ..}
+                 ;; approve mode previews the request's STORED selection (what
+                 ;; approval will apply); request/reclaim preview the live rule
                  (fn [{:keys [db]} [_ dialog]]
                    {:db (-> db
                             (assoc-in [:org :claim-dialog] dialog)
-                            (update :org dissoc :takeover-preview))
-                    :dispatch [::get-takeover-preview (:org-id dialog)]}))
+                            (update :org dissoc :takeover-preview :claim-selection))
+                    :dispatch (if-let [request-id (:request-id dialog)]
+                                [::get-takeover-request-preview request-id]
+                                [::get-takeover-preview (:org-id dialog)])}))
+
+(rf/reg-event-fx ::get-takeover-request-preview
+                 (fn [{:keys [db]} [_ request-id]]
+                   {:http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/preview-org-takeover-request")
+                     :headers (auth-headers db)
+                     :params {:request-id request-id}
+                     :format (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success [::get-takeover-preview-success]
+                     :on-failure [::failure]}}))
 
 (rf/reg-event-db ::close-claim-dialog
                  (fn [db _]
-                   (update db :org dissoc :claim-dialog :takeover-preview :reclaiming?)))
+                   (update db :org dissoc :claim-dialog :takeover-preview
+                           :claim-selection :reclaiming?)))
 
 ;; reclaim/approve can take tens of seconds (≈350ms/site, synchronous); keep the
 ;; dialog open with a spinner until the server responds, rather than firing and
@@ -532,14 +574,22 @@
                  ;; request  → org-admin self-service → goes to the approval queue
                  (fn [{:keys [db]} _]
                    (let [{:keys [mode org-id request-id]} (get-in db [:org :claim-dialog])
-                         lipas-admin? (roles/check-privilege (get-in db [:user :login]) {} :users/manage)]
+                         lipas-admin? (roles/check-privilege (get-in db [:user :login]) {} :users/manage)
+                         sites        (get-in db [:org :takeover-preview :sites])
+                         selection    (get-in db [:org :claim-selection])
+                         ;; send the curated ids only for a strict subset — a full
+                         ;; selection keeps full-rule semantics (the backend
+                         ;; snapshots the matches either way)
+                         subset       (when (and (seq sites)
+                                                 (< (count selection) (count sites)))
+                                        (vec (sort selection)))]
                      ;; mark in-flight (drives the dialog spinner); the success
                      ;; handler closes the dialog, a failure clears the flag
                      {:db (assoc-in db [:org :reclaiming?] true)
                       :dispatch (cond
                                   (= mode "approve") [::decide-takeover request-id "approve"]
-                                  lipas-admin?       [::reclaim-now org-id]
-                                  :else              [::request-takeover org-id])})))
+                                  lipas-admin?       [::reclaim-now org-id subset]
+                                  :else              [::request-takeover org-id subset])})))
 
 ;; clears the in-flight flag (leaving the dialog open so the error is visible)
 (rf/reg-event-fx ::claim-failure
@@ -548,24 +598,28 @@
                     :dispatch [::failure resp]}))
 
 (rf/reg-event-fx ::request-takeover
-                 (fn [{:keys [db]} [_ org-id]]
+                 ;; lipas-ids (optional) = curated subset from the picker
+                 (fn [{:keys [db]} [_ org-id lipas-ids]]
                    {:http-xhrio
                     {:method :post
                      :uri (str (:backend-url db) "/actions/request-org-takeover")
                      :headers (auth-headers db)
-                     :params {:org-id (utils/->uuid-safe org-id)}
+                     :params (cond-> {:org-id (utils/->uuid-safe org-id)}
+                               (seq lipas-ids) (assoc :lipas-ids lipas-ids))
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
                      :on-success [::request-takeover-success]
                      :on-failure [::claim-failure]}}))
 
 (rf/reg-event-fx ::reclaim-now
-                 (fn [{:keys [db]} [_ org-id]]
+                 ;; lipas-ids (optional) = curated subset from the picker
+                 (fn [{:keys [db]} [_ org-id lipas-ids]]
                    {:http-xhrio
                     {:method :post
                      :uri (str (:backend-url db) "/actions/reclaim-org-sites")
                      :headers (auth-headers db)
-                     :params {:org-id (utils/->uuid-safe org-id)}
+                     :params (cond-> {:org-id (utils/->uuid-safe org-id)}
+                               (seq lipas-ids) (assoc :lipas-ids lipas-ids))
                      :timeout reclaim-timeout-ms
                      :format (ajax/transit-request-format)
                      :response-format (ajax/transit-response-format)
