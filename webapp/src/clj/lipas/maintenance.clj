@@ -19,7 +19,6 @@
    [lipas.data.types-old :as old-types]
    [lipas.schema.sports-sites :as sports-site-schema]
    [lipas.schema.sports-sites.types :as types-schema]
-   [lipas.schema.sports-sites.location :as location-schema]
    [lipas.utils :as utils]
    [malli.core :as m]
    [taoensso.timbre :as log]))
@@ -169,7 +168,7 @@
 (defn ->subsidy-db-entry [m]
   (-> m
       (assoc :city-code (-> m :city-name city-lookup))
-      (update :type-codes #(-> % (str/split #";") (->> (mapv utils/->int)) set))
+      (update :type-codes #(-> % (str/split #";") (->> (keep utils/->int)) set))
       (update :year utils/->int)
       (update :lipas-ids #(-> % (str/split #";") (->> (mapv utils/->int) (remove nil?))))
       (update :owner owner-lookup)
@@ -179,11 +178,16 @@
                          %))
       (update :amount utils/->number)))
 
+;; Subsidies reference the municipality at grant time, so abolished
+;; city codes are valid here (unlike location-schema/city-code).
+(def subsidy-city-code-schema
+  (into [:enum] (map :city-code) cities/all))
+
 (def subsidy-db-entry-schema
   [:map
    [:year [:int {:min 1990 :max 2666}]]
    [:amount [number?]]
-   [:city-code location-schema/city-code]
+   [:city-code subsidy-city-code-schema]
    [:type-codes types-schema/type-codes-with-legacy]
    [:owner sports-site-schema/owner]
    [:issuer [:enum "AVI" "OKM"]]
