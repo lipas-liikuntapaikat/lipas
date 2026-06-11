@@ -57,6 +57,20 @@
  :reclaim-now-confirm "Överför objekt nu"
  :reclaiming "Överför… det här kan ta en stund"
  :cancel "Avbryt"
+ :claim-contested-count "objekt ägs redan av en annan organisation — överföringen tar bort dem från den nuvarande ägaren"
+ :claim-contested-tooltip "Objektet ägs för närvarande av en annan organisation. Överföringen tar bort ägarskapet från den nuvarande organisationen."
+
+ ;; release ownership (org gives up its sites)
+ :release-ownership "Avstå från ägarskapet"
+ :release-impact-title "Bekräfta avstående från ägarskap"
+ :release-impact-affects "Objekt som avstås"
+ :release-impact-unassign "Ägarorganisationen tas bort från objekten"
+ :release-impact-grants "Delade redigeringsrättigheter som tas bort"
+ :release-not-owned-skipped "valda objekt ägs inte av organisationen och hoppas över"
+ :release-owner-select "Ägarklass efter avståendet"
+ :release-owner-keep "Behåll nuvarande värde"
+ :release-confirm "Avstå från ägarskapet"
+ :releasing "Avstår från ägarskapet… det här kan ta en stund"
 
  ;; setup checklist (LIPAS-admin one-time org setup)
  :setup-title "Ta i bruk organisationen"

@@ -57,6 +57,20 @@
  :reclaim-now-confirm "Reclaim sites now"
  :reclaiming "Reclaiming… this may take a moment"
  :cancel "Cancel"
+ :claim-contested-count "sites are already owned by another organization — claiming transfers them away from the current owner"
+ :claim-contested-tooltip "This site is currently owned by another organization. Claiming transfers ownership away from it."
+
+ ;; release ownership (org gives up its sites)
+ :release-ownership "Release ownership"
+ :release-impact-title "Confirm releasing ownership"
+ :release-impact-affects "Sites to release"
+ :release-impact-unassign "The owner organization is removed from the sites"
+ :release-impact-grants "Shared edit rights to be removed"
+ :release-not-owned-skipped "selected sites are not owned by the organization and will be skipped"
+ :release-owner-select "Owner class after release"
+ :release-owner-keep "Keep current value"
+ :release-confirm "Release ownership"
+ :releasing "Releasing ownership… this may take a moment"
 
  ;; setup checklist (LIPAS-admin one-time org setup)
  :setup-title "Organization setup"

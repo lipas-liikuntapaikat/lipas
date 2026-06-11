@@ -57,6 +57,20 @@
  :reclaim-now-confirm "Siirrä kohteet omistukseen"
  :reclaiming "Siirretään omistukseen… tämä voi kestää hetken"
  :cancel "Peruuta"
+ :claim-contested-count "kohdetta on jo toisen organisaation omistuksessa — siirto poistaa ne nykyiseltä omistajalta"
+ :claim-contested-tooltip "Kohde on tällä hetkellä toisen organisaation omistuksessa. Siirto poistaa omistajuuden nykyiseltä organisaatiolta."
+
+ ;; release ownership (org gives up its sites)
+ :release-ownership "Luovu omistajuudesta"
+ :release-impact-title "Vahvista omistajuudesta luopuminen"
+ :release-impact-affects "Luovutettavat kohteet"
+ :release-impact-unassign "Kohteilta poistetaan omistajaorganisaatio"
+ :release-impact-grants "Poistuvat jaetut muokkausoikeudet"
+ :release-not-owned-skipped "valittua kohdetta ei ole organisaation omistuksessa ja ne ohitetaan"
+ :release-owner-select "Omistajaluokka luovutuksen jälkeen"
+ :release-owner-keep "Säilytä nykyinen arvo"
+ :release-confirm "Luovu omistajuudesta"
+ :releasing "Luovutaan omistajuudesta… tämä voi kestää hetken"
 
  ;; setup checklist (LIPAS-admin one-time org setup)
  :setup-title "Organisaation käyttöönotto"
