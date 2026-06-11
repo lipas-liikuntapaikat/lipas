@@ -12,12 +12,19 @@ works for any sports site.
 
 For each image attached to a sports site:
 
-| Field          | Type                      | Description                                   |
-|----------------|---------------------------|-----------------------------------------------|
-| `:url`         | string (http/https URL)   | Direct URL to the image file in the bank.     |
-| `:alt-text`    | localized string (fi/se/en) | Accessibility description.                  |
-| `:copyright`   | localized string          | Photographer, source, license, date.          |
-| `:description` | localized string          | Free-form caption.                            |
+| Field          | Type                        | Required | Description                                            |
+|----------------|-----------------------------|----------|--------------------------------------------------------|
+| `:url`         | string (https URL)          | yes      | Direct URL to the image file in the bank.              |
+| `:alt-text`    | localized string (fi/se/en) | yes¹     | Accessibility description (EU Accessibility Directive).|
+| `:copyright`   | localized string            | yes¹     | Image source/owner org, photographer, license, date.   |
+| `:description` | localized string            | no       | Free-form caption.                                     |
+
+¹ At least one language version must be non-empty.
+
+A bare URL is **not** accepted — URL, alt-text and source/copyright form a
+bound unit, enforced both in the UI dialog and in the malli schema that
+validates API saves. Only `https://` URLs are accepted: LIPAS itself is served
+over https and browsers refuse to render mixed-content (`http://`) images.
 
 Schema: `src/cljc/lipas/schema/sports_sites/images.cljc`.
 
@@ -41,6 +48,22 @@ the LIPAS API may reuse it freely with attribution.
 The **image files** themselves are not covered by this license. They are
 subject to whatever terms the image bank sets. LIPAS consumers who render the
 images in a UI are responsible for respecting those terms.
+
+### Obligations for API consumers (no caching / hotlink only)
+
+Consumers that display the images in their own services must **embed
+(hotlink) the image directly from the source URL**. Downloading the image
+files and storing, caching or re-hosting them on the consumer's own servers
+is **not permitted**, and neither is redistributing or modifying the files.
+
+This is what makes the link model safe: when the source organisation removes
+an image (GDPR erasure request, copyright takedown, or routine cleanup), the
+removal takes effect immediately in every downstream application, because all
+of them render the file straight from the source. A cached copy would defeat
+that guarantee.
+
+This restriction belongs in the LIPAS open-data API Terms of Use; updating
+the terms is a legal/process task tracked outside this repository.
 
 ## Authorization
 
@@ -86,7 +109,12 @@ In the sports-site edit view, a tab labeled *"Kuvalinkit" / "Bildlänkar" /
 
 The tab shows a table of existing images with inline preview on row hover.
 Add/edit opens a dialog for URL, alt-text, copyright and caption. The dialog
-displays the CC BY 4.0 notice and a live preview of the URL if it loads.
+displays the CC BY 4.0 notice and a live preview of the URL if it loads. Save
+stays disabled until URL, alt-text and copyright are all filled in.
+
+Broken links never render the browser's broken-image icon: both the dialog
+preview and the hover preview replace a failed image load with a neutral
+text placeholder.
 
 ## Rollout notes
 

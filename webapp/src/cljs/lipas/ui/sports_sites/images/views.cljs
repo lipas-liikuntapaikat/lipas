@@ -7,15 +7,18 @@
   Loimaa). LIPAS stores only the metadata (url/alt-text/copyright/description)
   under CC BY 4.0."
   (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Popper$default" :as Popper]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
+            [lipas.schema.sports-sites.images :as images-schema]
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as lui-tf]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]
             [reagent.core :as r]))
 
 (defn- lang-selector
@@ -30,10 +33,33 @@
    [:> Tab {:value "en" :label "English"}]])
 
 (defn- valid-url? [s]
-  (and (string? s)
-       (let [lower (str/lower-case s)]
-         (or (str/starts-with? lower "https://")
-             (str/starts-with? lower "http://")))))
+  (images-schema/valid-url? (some-> s str/trim)))
+
+(defn- clean-localized
+  "Drops blank entries from a localized-string map; nil when nothing remains."
+  [m]
+  (not-empty
+   (into {} (filter (fn [[_ v]] (and (string? v) (not (str/blank? v))))) m)))
+
+(defn- ->image
+  "Normalizes dialog form data into an image map: trims the URL and drops
+  blank localized entries."
+  [data]
+  (let [alt (clean-localized (:alt-text data))
+        copyright (clean-localized (:copyright data))
+        description (clean-localized (:description data))]
+    (cond-> {:url (some-> (:url data) str/trim)}
+      alt (assoc :alt-text alt)
+      copyright (assoc :copyright copyright)
+      description (assoc :description description))))
+
+(defn- image-valid? [data]
+  (m/validate images-schema/image (->image data)))
+
+(defn- preview-placeholder [tr]
+  [:> Paper {:variant "outlined" :style {:padding "1em"}}
+   [:> Typography {:variant "body2" :color "text.secondary"}
+    (tr :lipas.sports-site.images/preview-error)]])
 
 (defn image-dialog
   [{:keys [tr locale dialog-state on-save]}]
@@ -44,7 +70,7 @@
     :open? (:open? @dialog-state)
     :on-save on-save
     :on-close #(swap! dialog-state assoc :open? false)
-    :save-enabled? (valid-url? (-> @dialog-state :data :url))
+    :save-enabled? (image-valid? (:data @dialog-state))
     :save-label "Ok"
     :cancel-label (tr :actions/cancel)}
    [:> Grid {:container true :spacing 2}
@@ -61,7 +87,9 @@
       {:fullWidth true
        :required true
        :value (-> @dialog-state :data :url)
-       :on-change #(swap! dialog-state assoc-in [:data :url] %)
+       :on-change #(swap! dialog-state (fn [s] (-> s
+                                                   (assoc-in [:data :url] %)
+                                                   (assoc :preview-error? false))))
        :label (tr :lipas.sports-site.images/url)
        :helper-text (tr :lipas.sports-site.images/url-helper)
        :variant "outlined"
@@ -70,12 +98,17 @@
 
     (when (valid-url? (-> @dialog-state :data :url))
       [:> Grid {:item true :xs 12}
-       [:img {:style {:max-width "100%"}
-              :src (-> @dialog-state :data :url)}]])
+       (if (:preview-error? @dialog-state)
+         [preview-placeholder tr]
+         [:img {:style {:max-width "100%"}
+                :alt (-> @dialog-state :data :alt-text locale)
+                :on-error #(swap! dialog-state assoc :preview-error? true)
+                :src (-> @dialog-state :data :url)}])])
 
     [:> Grid {:item true :xs 12}
      [lui-tf/text-field
       {:fullWidth true
+       :required true
        :value (-> @dialog-state :data :alt-text locale)
        :on-change #(swap! dialog-state assoc-in [:data :alt-text locale] %)
        :label (tr :lipas.sports-site.images/alt-text)
@@ -87,6 +120,7 @@
     [:> Grid {:item true :xs 12}
      [lui-tf/text-field
       {:fullWidth true
+       :required true
        :value (-> @dialog-state :data :copyright locale)
        :on-change #(swap! dialog-state assoc-in [:data :copyright locale] %)
        :label (tr :lipas.sports-site.images/copyright)
@@ -130,8 +164,9 @@
          :locale locale
          :dialog-state dialog-state
          :on-save (fn []
-                    (let [data (:data @dialog-state)]
-                      (swap! state assoc (:id data) data))
+                    (let [data (:data @dialog-state)
+                          image (assoc (->image data) :id (:id data))]
+                      (swap! state assoc (:id data) image))
                     (commit!)
                     (reset! dialog-state dialog-init))}]
 
@@ -140,8 +175,12 @@
          :placement "right"
          :anchor-el (:anchor-el @popper-state)
          :modifiers [{:name "offset" :options {:offset [0 20]}}]}
-        [:img {:style {:max-width "400px"}
-               :src (:url @popper-state)}]]
+        (if (:error? @popper-state)
+          [preview-placeholder tr]
+          [:img {:style {:max-width "400px"}
+                 :alt (get-in @popper-state [:alt-text locale])
+                 :on-error #(swap! popper-state assoc :error? true)
+                 :src (:url @popper-state)}])]
 
        [:> Grid {:item true :xs 12}
         [:> Typography {:variant "caption"}
@@ -169,7 +208,8 @@
           :on-custom-hover-in (fn [evt item]
                                 (reset! popper-state {:open? true
                                                       :anchor-el (.-currentTarget evt)
-                                                      :url (:url item)}))
+                                                      :url (:url item)
+                                                      :alt-text (:alt-text item)}))
           :on-custom-hover-out (fn [_ _]
                                  (swap! popper-state assoc :open? false))
           :on-user-sort (fn [items]
