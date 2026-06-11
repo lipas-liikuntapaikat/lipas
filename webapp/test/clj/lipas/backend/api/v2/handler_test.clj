@@ -138,7 +138,8 @@
             ;; Attach images only to the first site so we cover both branches.
             site (cond-> base
                    (= i 1) (assoc :images [{:url "https://loimaa.fi/img/list.jpg"
-                                            :alt-text {:fi "Alt"}}]))]
+                                            :alt-text {:fi "Alt"}
+                                            :copyright {:fi "© Loimaa"}}]))]
         (create-sports-site! site)))
 
     (let [resp ((test-app) (mock/request :get "/v2/sports-sites"))
@@ -160,7 +161,8 @@
       (testing ":images surface in list items when set"
         (let [with-images (first (filter #(= 20001 (:lipas-id %)) (:items body)))]
           (is (= [{:url "https://loimaa.fi/img/list.jpg"
-                   :alt-text {:fi "Alt"}}]
+                   :alt-text {:fi "Alt"}
+                   :copyright {:fi "© Loimaa"}}]
                  (:images with-images))))))))
 
 (deftest list-sports-sites-pagination-test
@@ -276,7 +278,9 @@
                      :alt-text {:fi "Kenttä" :se "Plan" :en "Field"}
                      :copyright {:fi "© 2026 Loimaa CC BY 4.0"}
                      :description {:fi "Pääkenttä"}}
-                    {:url "https://loimaa.fi/img/b.jpg"}]
+                    {:url "https://loimaa.fi/img/b.jpg"
+                     :alt-text {:fi "Katsomo"}
+                     :copyright {:fi "© Loimaa"}}]
             site (-> (test-utils/make-point-site 12346
                                                  :name "Test Football Field"
                                                  :type-code 1310)
@@ -304,8 +308,10 @@
             (is (= "Field" (-> img :alt-text :en)))
             (is (= "© 2026 Loimaa CC BY 4.0" (-> img :copyright :fi)))
             (is (= "Pääkenttä" (-> img :description :fi))))
-          (testing "optional metadata fields may be omitted"
-            (is (= "https://loimaa.fi/img/b.jpg" (-> body :images second :url)))))))))
+          (testing "optional :description may be omitted"
+            (let [img (-> body :images second)]
+              (is (= "https://loimaa.fi/img/b.jpg" (:url img)))
+              (is (nil? (:description img))))))))))
 
 ;;; Tests for different geometry types in v2 ;;;
 
