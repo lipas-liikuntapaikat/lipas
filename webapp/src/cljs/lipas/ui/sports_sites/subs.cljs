@@ -391,7 +391,11 @@
              :name         (-> city :name locale)
              :neighborhood (-> latest :location :city :neighborhood)}}
 
-           :building (:building latest)}
+           :building (:building latest)
+
+           ;; Site-level image links: shown as-is in the Kuvat tab (and gates
+           ;; the tab's visibility for users without :site/edit-images).
+           :images (:images latest)}
 
         ;; TODO put type-specific stuff behind a multi-method
 
