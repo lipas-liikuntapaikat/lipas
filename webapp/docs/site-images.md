@@ -67,19 +67,27 @@ the terms is a legal/process task tracked outside this repository.
 
 ## Authorization
 
-Editing image links requires the `:site/edit-images` privilege. Two roles
-currently grant it:
+Changing image links requires the `:site/edit-images` privilege — having
+broad save rights (`:site/save-api`) is **not** enough. The backend enforces
+both directions by diffing the incoming revision against the persisted one
+(see `check-permissions!` in `src/clj/lipas/backend/core.clj`):
+
+- If `:images` changed, the user must hold `:site/edit-images` for the site.
+- If anything else changed, the user must hold `:site/save-api` as before.
+  Saves that merely round-trip *unchanged* images (the UI posts the full
+  document) do not require the images privilege.
+
+Two roles currently grant `:site/edit-images`:
 
 - `:admin` — can edit anything.
 - `:images-manager` — a narrow role scoped by `:city-code` (required) and
-  optionally `:type-code`. This role **cannot** save changes to any other
-  field of a sports site. The backend enforces this by diffing the incoming
-  revision against the persisted one and rejecting the save if any non-image
-  field differs (see `check-permissions!` in `src/clj/lipas/backend/core.clj`).
+  optionally `:type-code`. On its own this role cannot change any other field
+  of a sports site.
 
-Other roles that already grant `:site/save-api` (e.g. `:city-manager`,
-`:activities-manager`) can also edit images, because image edits flow through
-the regular save endpoint.
+This means e.g. a `:city-manager` can edit image links only if they are
+*additionally* granted `:images-manager` (the intended pilot setup: assign the
+role on top of the existing editor rights). Rolling the feature out to a new
+municipality is purely a role assignment — no code changes.
 
 ### Assigning the role
 

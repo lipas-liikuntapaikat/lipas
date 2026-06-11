@@ -321,27 +321,36 @@
   images-only."
   [new-site current-site]
   (boolean
-   (when current-site
-     (let [strip (fn [m] (apply dissoc m revision-noise-keys))
-           a (strip new-site)
-           b (strip current-site)]
-       (= (dissoc a :images) (dissoc b :images))))))
+    (when current-site
+      (let [strip (fn [m] (apply dissoc m revision-noise-keys))
+            a (strip new-site)
+            b (strip current-site)]
+        (= (dissoc a :images) (dissoc b :images))))))
 
 (defn- check-permissions! [db user sports-site draft?]
-  (let [ctx (roles/site-roles-context sports-site)
-        has-save-api? (roles/check-privilege user ctx :site/save-api)
-        images-only-save?
-        (and (not has-save-api?)
-             (not (new? sports-site))
-             (roles/check-privilege user ctx :site/edit-images)
-             (images-only-diff? sports-site
-                                (db/get-sports-site db (:lipas-id sports-site))))]
-    (when-not (or draft?
-                  (new? sports-site)
-                  has-save-api?
-                  images-only-save?)
-      (throw (ex-info "User doesn't have enough permissions!"
-                      {:type :no-permission})))))
+  (when-not draft?
+    (let [ctx (roles/site-roles-context sports-site)
+          new-site? (new? sports-site)
+          current (when-not new-site?
+                    (not-empty (db/get-sports-site db (:lipas-id sports-site))))
+          can-save-api? (roles/check-privilege user ctx :site/save-api)
+          can-edit-images? (roles/check-privilege user ctx :site/edit-images)
+          images-changed? (if new-site?
+                            (boolean (seq (:images sports-site)))
+                            (not= (:images sports-site) (:images current)))
+          no-permission! #(throw (ex-info "User doesn't have enough permissions!"
+                                          {:type :no-permission}))]
+      ;; Changing :images always requires the dedicated privilege, regardless
+      ;; of other save rights. :site/save-api alone is not enough; this keeps
+      ;; the image-links pilot scoped to explicitly assigned roles.
+      (when (and images-changed? (not can-edit-images?))
+        (no-permission!))
+      (when-not new-site?
+        (if (images-only-diff? sports-site current)
+          (when-not (or can-save-api? can-edit-images?)
+            (no-permission!))
+          (when-not can-save-api?
+            (no-permission!)))))))
 
 (defn- check-sports-site-exists! [db lipas-id]
   (when (empty? (db/get-sports-site db lipas-id))

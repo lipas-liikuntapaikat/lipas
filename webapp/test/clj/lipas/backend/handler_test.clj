@@ -523,12 +523,13 @@
                              (tu/token-header token)))]
       (is (= 403 (:status resp)))))
 
-  (testing "a user with :site/save-api can save images through the normal flow"
+  (testing "a user with :site/save-api but without :site/edit-images cannot change images"
     (let [city-code 430
           admin (tu/gen-admin-user :db-component (test-db))
           site (-> (tu/gen-sports-site)
                    (assoc :status "active")
-                   (assoc-in [:location :city :city-code] city-code))
+                   (assoc-in [:location :city :city-code] city-code)
+                   (dissoc :images))
           saved (core/upsert-sports-site!* (test-db) admin site)
           manager (tu/gen-city-manager-user city-code :db-component (test-db))
           token (jwt/create-token manager)
@@ -537,6 +538,28 @@
                          :images [{:url "https://loimaa.fi/img/city-manager.jpg"
                                    :alt-text {:fi "alt"}
                                    :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}])
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 403 (:status resp)))))
+
+  (testing "a user with :site/save-api can still edit other fields of a site that has images"
+    (let [city-code 430
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] city-code)
+                   (assoc :images [{:url "https://loimaa.fi/img/existing.jpg"
+                                    :alt-text {:fi "alt"}
+                                    :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}]))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-city-manager-user city-code :db-component (test-db))
+          token (jwt/create-token manager)
+          ;; UI round-trips the full document incl. the unchanged :images
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :name "Renamed by city-manager")
           resp (test-app (-> (mock/request :post "/api/sports-sites")
                              (mock/content-type "application/json")
                              (mock/body (->json updated))
