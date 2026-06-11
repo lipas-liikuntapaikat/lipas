@@ -236,6 +236,11 @@
       [:> Typography {:variant "h6"}
        (tr :lipas.sports-site.images/headline)]]
      [:> Grid {:item true :xs 12}
+      ;; `images` derives internal table state from :value at mount only
+      ;; (r/with-let), so remount whenever the source changes: read-only
+      ;; toggles (display-data vs edit-data), another site is selected, or
+      ;; the saved value changes under the component.
+      ^{:key (str lipas-id "-" (boolean read-only?) "-" (hash value))}
       [images
        {:value value
         :locale locale
