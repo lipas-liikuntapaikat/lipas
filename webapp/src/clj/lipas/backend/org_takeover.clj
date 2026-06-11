@@ -71,10 +71,11 @@
             (mapv :lipas-id))))))
 
 (defn matching-sites
-  "Lightweight rows for matching sites (lipas-id + name + current owner enum),
-  name-sorted, in a single query — no full-document loads, so it scales to the
-  thousands of sites a big municipality's rule can match. nil for an empty rule.
-  With `exclude-org-id`, sites already owned by that org are left out."
+  "Lightweight rows for matching sites (lipas-id + name + current owner enum +
+  current owner org, when org-owned), name-sorted, in a single query — no
+  full-document loads, so it scales to the thousands of sites a big
+  municipality's rule can match. nil for an empty rule. With `exclude-org-id`,
+  sites already owned by that org are left out."
   ([db rule] (matching-sites db rule nil))
   ([db rule exclude-org-id]
    (let [clauses (ownership-clauses rule)]
@@ -83,12 +84,27 @@
                       (hsql/format
                        {:select   [:lipas_id
                                    [[:->> :document [:inline "name"]] :name]
-                                   [[:->> :document [:inline "owner"]] :current-owner]]
+                                   [[:->> :document [:inline "owner"]] :current-owner]
+                                   [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
                         :from     [:sports_site_current]
                         :where    (into [:and] (cond-> clauses
                                                  exclude-org-id (conj (not-owned-by-clause exclude-org-id))))
                         :order-by [[[:->> :document [:inline "name"]] :asc]]})
                       {:builder-fn rs/as-unqualified-kebab-maps})))))
+
+(defn- with-owner-org-names
+  "Attach :current-owner-org-name to rows currently owned by an org, so a
+  contested claim (a transfer away from another org) is visible in the preview
+  instead of looking identical to an un-owned legacy site."
+  [db sites]
+  (if (some :current-owner-org-id sites)
+    (let [names (core/org-names db)]
+      (mapv (fn [row]
+              (cond-> row
+                (:current-owner-org-id row)
+                (assoc :current-owner-org-name (get names (:current-owner-org-id row)))))
+            sites))
+    (vec sites)))
 
 (defn preview
   "Impact preview for a take-over claim: the org the sites will be assigned to,
@@ -100,7 +116,7 @@
         rule       (:ownership org)
         ;; only sites that would actually be (re)claimed — excludes ones this org
         ;; already owns, so after a full claim the preview correctly shows 0
-        sites      (vec (matching-sites db rule org-id))]
+        sites      (with-owner-org-names db (matching-sites db rule org-id))]
     {:count          (count sites)
      :owner-enum     (core/org-type->owner (:type org))
      :owner-org-id   (str org-id)
@@ -159,7 +175,8 @@
                    (hsql/format
                     {:select   [:lipas_id
                                 [[:->> :document [:inline "name"]] :name]
-                                [[:->> :document [:inline "owner"]] :current-owner]]
+                                [[:->> :document [:inline "owner"]] :current-owner]
+                                [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
                      :from     [:sports_site_current]
                      :where    (cond-> [:and [:in :lipas_id (vec lipas-ids)]]
                                  exclude-org-id (conj (not-owned-by-clause exclude-org-id)))
@@ -176,7 +193,7 @@
   [db request-id]
   (let [{:keys [org-id lipas-ids status ownership-rule]} (get-request db request-id)
         org   (org/get-org db org-id)
-        sites (vec (sites-by-lipas-ids db lipas-ids org-id))]
+        sites (with-owner-org-names db (sites-by-lipas-ids db lipas-ids org-id))]
     {:count           (count sites)
      :requested-count (count lipas-ids)
      :owner-enum      (core/org-type->owner (:type org))
@@ -290,3 +307,90 @@
       (throw (ex-info "Takeover request is not awaiting a decision"
                       {:type :invalid-takeover-state})))
     {:status "denied"}))
+
+;;; --- Release: an org gives up ownership of its sites -------------------------
+;;; The inverse of a take-over, but authority-SHEDDING — the org admin gives up
+;;; power and gains nothing — so it is self-service (no approval queue). Applying
+;;; it is the same append-only mechanic as approve!: a revision per site, one
+;;; transaction, one ES bulk request. The released sites become un-owned (legacy)
+;;; sites; another org can later claim them through the normal take-over flow.
+
+(defn- owned-site-rows
+  "Lightweight rows for the subset of `lipas-ids` currently owned by `org-id`
+  (lipas-id + name + current owner enum + edit-grant count), name-sorted.
+  Drives the release preview: ids not owned by the org simply don't come back."
+  [db org-id lipas-ids]
+  (when (seq lipas-ids)
+    (jdbc/execute! db
+                   (hsql/format
+                    {:select   [:lipas_id
+                                [[:->> :document [:inline "name"]] :name]
+                                [[:->> :document [:inline "owner"]] :current-owner]
+                                [[:case
+                                  [:= [:jsonb_typeof [:-> :document [:inline "edit-grants"]]]
+                                   [:inline "array"]]
+                                  [:jsonb_array_length [:-> :document [:inline "edit-grants"]]]
+                                  :else [:inline 0]]
+                                 :edit-grant-count]]
+                     :from     [:sports_site_current]
+                     :where    [:and
+                                [:in :lipas_id (vec lipas-ids)]
+                                [:= [:->> :document [:inline "owner-org-id"]] (str org-id)]]
+                     :order-by [[[:->> :document [:inline "name"]] :asc]]})
+                   {:builder-fn rs/as-unqualified-kebab-maps})))
+
+(defn preview-release
+  "Impact preview for a release: which of the selected sites will actually be
+  released (only ones the org currently owns), and how many cross-org edit
+  grants get dropped with them. Drives the explicit confirmation the org admin
+  sees before releasing (`:count` < `:requested-count` ⇒ stale selection rows
+  that will be skipped)."
+  [db org-id lipas-ids]
+  (let [org   (org/get-org db org-id)
+        sites (vec (owned-site-rows db org-id lipas-ids))]
+    {:count               (count sites)
+     :requested-count     (count lipas-ids)
+     :org-id              (str org-id)
+     :org-name            (:name org)
+     :edit-grants-dropped (transduce (map :edit-grant-count) + 0 sites)
+     :sites               sites}))
+
+(defn release!
+  "Release ownership of the given sites: a new revision per site clearing
+  :owner-org-id AND :edit-grants — the grants were the owner's to manage, and
+  without an owner org nobody (below LIPAS admin) could revoke them. Optional
+  `owner` relabels the legacy :owner enum in the same revision (the org-type
+  lock vanishes with the org); without it each site keeps its current value.
+  Only sites currently owned by the org are touched — others (claimed by
+  someone else / deleted since the preview) are skipped and reported, mirroring
+  approve!. One transaction, one ES bulk request. `actor` becomes the site
+  author; the revisions are marked acting on behalf of the releasing org."
+  [db search org-id actor & {:keys [lipas-ids owner]}]
+  (let [released-count
+        (jdbc-old/with-db-transaction [tx db]
+          (let [owned   (->> (db/get-sports-sites-by-lipas-ids tx lipas-ids)
+                             (map core/enrich-activities)
+                             (filter #(= (str org-id) (some-> (:owner-org-id %) str))))
+                updated (doall
+                         (for [site owned]
+                           ;; fresh :event-date — reusing the stored one would
+                           ;; collide with the previous revision (FE history keys
+                           ;; by event-date) and misdate the release
+                           (->> (cond-> (-> site
+                                            (dissoc :owner-org-id :edit-grants)
+                                            (assoc :event-date    (utils/timestamp)
+                                                   :acting-org-id (str org-id)))
+                                  owner (assoc :owner owner))
+                                (core/upsert-sports-site!* tx actor))))]
+            (when (seq updated)
+              (let [idx       (get-in search [:indices :sports-site :search])
+                    org-names (core/org-names db)]
+                (search/bulk-index-sync! (:client search)
+                                         (search/->bulk idx :lipas-id
+                                                        (map #(core/enrich % org-names) updated)))))
+            (count updated)))]
+    {:org-id         (str org-id)
+     :sites-released released-count
+     ;; not-owned + no-longer-existing — surfaced so the admin can see when the
+     ;; applied set ended up smaller than the selected one
+     :sites-skipped  (- (count (distinct lipas-ids)) released-count)}))

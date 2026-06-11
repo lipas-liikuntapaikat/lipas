@@ -96,11 +96,15 @@
     (is (true? (core/ownership-change-authorized? lipas-admin false org-a org-b)))
     (is (false? (core/ownership-change-authorized? admin-of-a false org-a org-b)) "even owner admin")
     (is (false? (core/ownership-change-authorized? editor-of-a false org-a org-b))))
-  (testing "claiming a legacy (unowned) existing site, or clearing ownership, is admin-only"
+  (testing "claiming a legacy (unowned) existing site is admin-only"
     (is (true? (core/ownership-change-authorized? lipas-admin false nil org-a)))
-    (is (false? (core/ownership-change-authorized? editor-of-a false nil org-a)))
+    (is (false? (core/ownership-change-authorized? editor-of-a false nil org-a))))
+  (testing "release (clearing ownership): owning-org admin or LIPAS admin — shedding authority is self-service, gaining is not"
     (is (true? (core/ownership-change-authorized? lipas-admin false org-a nil)))
-    (is (false? (core/ownership-change-authorized? admin-of-a false org-a nil)))))
+    (is (true? (core/ownership-change-authorized? admin-of-a false org-a nil)) "owner-org admin")
+    (is (false? (core/ownership-change-authorized? admin-of-a false org-b nil)) "admin of ANOTHER org")
+    (is (false? (core/ownership-change-authorized? editor-of-a false org-a nil)) "editor is not admin")
+    (is (false? (core/ownership-change-authorized? nobody false org-a nil)))))
 
 (deftest edit-grant-change-authorized?-test
   (testing "only LIPAS admin or an admin of the OWNING org may change grants"

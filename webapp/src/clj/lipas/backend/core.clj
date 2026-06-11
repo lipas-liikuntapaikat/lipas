@@ -365,12 +365,16 @@
   "May `user` move a site's owner-org from `prev` to `next`?
    - unchanged          → always ok (no-op)
    - creating a site    → may claim an org they can `:site/create-edit` on (or none)
+   - release (next nil) → LIPAS admin or an admin of the owning org — shedding
+                          authority is self-service, gaining it is not
    - existing site change → LIPAS admin only; everyone else uses the take-over flow."
   [user creating? prev next]
   (cond
     (= (some-> prev str) (some-> next str)) true
     creating? (or (nil? next)
                   (roles/check-privilege user {:org-id #{(str next)}} :site/create-edit))
+    (nil? next) (or (lipas-admin? user)
+                    (owns-site-org? user prev))
     :else (lipas-admin? user)))
 
 (defn edit-grant-change-authorized?

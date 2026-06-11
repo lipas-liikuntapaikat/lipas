@@ -559,9 +559,12 @@
                      :on-failure [::failure]}}))
 
 (rf/reg-event-db ::close-claim-dialog
+                 ;; the preview + selection are kept through MUI's exit fade —
+                 ;; clearing them here flips the still-mounted dialog content to
+                 ;; the "…" loading state mid-fade-out (looks like a reopen).
+                 ;; ::open-claim-dialog resets both before the next preview.
                  (fn [db _]
-                   (update db :org dissoc :claim-dialog :takeover-preview
-                           :claim-selection :reclaiming?)))
+                   (update db :org dissoc :claim-dialog :reclaiming?)))
 
 ;; reclaim/approve can take tens of seconds (≈350ms/site, synchronous); keep the
 ;; dialog open with a spinner until the server responds, rather than firing and
@@ -639,6 +642,85 @@
                    {:fx [[:dispatch [::close-claim-dialog]]
                          [:dispatch [:lipas.ui.events/set-active-notification
                                      {:message "Siirtopyyntö lähetetty" :success? true}]]]}))
+
+;; --- Release ownership: an org gives up selected owned sites (authority-
+;; shedding ⇒ self-service for the org admin, no approval queue). Preview →
+;; dialog → confirm, mirroring the claim flow. ---
+
+(rf/reg-event-db ::get-release-preview-success
+                 (fn [db [_ resp]]
+                   (assoc-in db [:org :release-preview] resp)))
+
+(rf/reg-event-fx ::get-release-preview
+                 (fn [{:keys [db]} [_ org-id lipas-ids]]
+                   {:http-xhrio
+                    {:method :post
+                     :uri (str (:backend-url db) "/actions/preview-org-release")
+                     :headers (auth-headers db)
+                     :params {:org-id org-id :lipas-ids lipas-ids}
+                     :format (ajax/json-request-format)
+                     :response-format (ajax/json-response-format {:keywords? true})
+                     :on-success [::get-release-preview-success]
+                     :on-failure [::failure]}}))
+
+(rf/reg-event-fx ::open-release-dialog
+                 ;; lipas-ids = the list selection; the preview narrows it to the
+                 ;; sites the org actually owns (the rest get skipped server-side)
+                 (fn [{:keys [db]} [_ org-id lipas-ids]]
+                   {:db (-> db
+                            (assoc-in [:org :release-dialog] {:org-id org-id
+                                                              :lipas-ids (vec lipas-ids)
+                                                              :owner nil})
+                            (update :org dissoc :release-preview))
+                    :dispatch [::get-release-preview org-id (vec lipas-ids)]}))
+
+(rf/reg-event-db ::set-release-owner
+                 ;; nil = keep each site's current :owner value
+                 (fn [db [_ owner]]
+                   (assoc-in db [:org :release-dialog :owner] owner)))
+
+(rf/reg-event-db ::close-release-dialog
+                 ;; :release-preview is kept through MUI's exit fade (mirrors
+                 ;; ::close-claim-dialog); ::open-release-dialog resets it.
+                 (fn [db _]
+                   (update db :org dissoc :release-dialog :releasing?)))
+
+(rf/reg-event-fx ::confirm-release
+                 (fn [{:keys [db]} _]
+                   (let [{:keys [org-id lipas-ids owner]} (get-in db [:org :release-dialog])]
+                     ;; mark in-flight (drives the dialog spinner); success closes
+                     ;; the dialog, failure clears the flag (error stays visible)
+                     {:db (assoc-in db [:org :releasing?] true)
+                      :http-xhrio
+                      {:method :post
+                       :uri (str (:backend-url db) "/actions/release-org-sites")
+                       :headers (auth-headers db)
+                       :params (cond-> {:org-id (utils/->uuid-safe org-id)
+                                        :lipas-ids lipas-ids}
+                                 owner (assoc :owner owner))
+                       ;; release applies revisions site-by-site → can be slow
+                       :timeout reclaim-timeout-ms
+                       :format (ajax/transit-request-format)
+                       :response-format (ajax/transit-response-format)
+                       :on-success [::release-success org-id]
+                       :on-failure [::release-failure]}})))
+
+(rf/reg-event-fx ::release-failure
+                 (fn [{:keys [db]} [_ resp]]
+                   {:db (assoc-in db [:org :releasing?] false)
+                    :dispatch [::failure resp]}))
+
+(rf/reg-event-fx ::release-success
+                 (fn [_ [_ org-id resp]]
+                   {:fx [[:dispatch [::close-release-dialog]]
+                         [:dispatch [:lipas.ui.bulk-operations.events/deselect-all-sites]]
+                         ;; the Kohteet list + owned-count badge both go stale
+                         [:dispatch [:lipas.ui.bulk-operations.events/get-editable-sites]]
+                         [:dispatch [::get-org-sites org-id "owned"]]
+                         [:dispatch [:lipas.ui.events/set-active-notification
+                                     {:message (str "Luovuttiin " (:sites-released resp)
+                                                    " kohteen omistajuudesta")
+                                      :success? true}]]]}))
 
 ;; =====================================================================
 ;; History + take-over approvals (UX-P3 / Phase E)

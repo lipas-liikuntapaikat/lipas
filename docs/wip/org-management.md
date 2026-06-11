@@ -321,6 +321,8 @@ current revision), never the submitted body:
 (owns-site-org? user owner-org-id)                    ; :org/manage on the OWNING org
 (ownership-change-authorized? user creating? prev next)
   ;; unchanged → ok; creating → may claim an org you can :site/create-edit on (or none);
+  ;; release (next nil) → LIPAS admin OR the owning org's admin (shedding authority
+  ;;   is self-service, gaining it is not — see the release flow, §6.8);
   ;; existing-site change → LIPAS admin only (others use the take-over flow, §6.5)
 (edit-grant-change-authorized? user owner-org-id)     ; lipas-admin OR owning-org admin
 ```
@@ -525,7 +527,22 @@ and their privileges from i18n data, not hardcoded per-role cases:
   fetched per expand via `POST /actions/get-site-edit-history` (any authenticated user).
 - **Claim ownership** → `request-org-takeover` (org-admin) / `reclaim-org-sites`
   (lipas-admin direct); lipas-admin approval queue via `list-org-takeover-requests` +
-  `approve-org-takeover` / `deny-org-takeover`.
+  `approve-org-takeover` / `deny-org-takeover`. **Contested matches are flagged**:
+  preview rows carry `current-owner-org-id`/`-name` when a matching site is already
+  owned by another org, rendered as a warning chip + a bold summary bullet — a claim
+  that transfers ownership away from another org is visible, never a silent grab.
+- **Release ownership** (the inverse of a claim) — an org-admin selects owned sites
+  and gives them up via a **"Luovu omistajuudesta"** action in the selection bar
+  (`:org/release-sites` capability: lipas-admin or org-admin; selection checkboxes
+  appear for org-admins even without editor rights). Authority-shedding ⇒
+  self-service, no approval queue. The impact dialog (`preview-org-release`) shows
+  the owned-only count, dropped edit-grants, skipped stale rows, and an optional
+  legacy `:owner` relabel ("keep current" default) — the org-type lock vanishes with
+  the org, and relabeling lets the releasing admin set the value the *next* owner's
+  claim rule matches on (release → re-claim is the v1 transfer path). Apply clears
+  `:owner-org-id` **and** `:edit-grants` (the owner's grants go with the owner),
+  one revision per site with `acting_org_id`, one transaction, one ES bulk request;
+  non-owned ids are skipped and reported (mirrors `approve!`).
 
 ### 6.9 Historia (audit) — admin-only
 
@@ -590,8 +607,10 @@ Subs: `::can? ::user-orgs ::ownable-orgs ::org-templates ::org-history
 | `POST /actions/get-site-edit-history` | (any authenticated) | per-revision timestamp + editor email (Kohteet drawer) |
 | `POST /actions/get-org-history` | `:org/manage` | revisions + computed diff (admin-only) |
 | `POST /actions/grant-site-edit`, `revoke-site-edit` | `:org/manage` + core rule | cross-org grant / revoke; core authorizes against the **owning** org (§4.5) |
-| `POST /actions/preview-org-takeover` | `:org/manage` | claim impact preview (count + relabel + sample) |
+| `POST /actions/preview-org-takeover` | `:org/manage` | claim impact preview (count + relabel + sample; contested rows carry current owner org) |
 | `POST /actions/request-org-takeover` | `:org/manage` | org-admin requests to claim matching sites |
+| `POST /actions/preview-org-release` | `:org/manage` | release impact preview (owned-only count + dropped edit-grants) |
+| `POST /actions/release-org-sites` | `:org/manage` + core rule | org gives up ownership of selected sites; clears `:owner-org-id`/`:edit-grants`, optional `:owner` relabel |
 | `POST /actions/reclaim-org-sites` | `:org/admin` | lipas-admin direct reclaim (create+approve) |
 | `POST /actions/list-org-takeover-requests`, `approve-org-takeover`, `deny-org-takeover` | `:org/admin` | lipas-admin queue; approve/deny require a still-`requested` row (guarded `requested→decided`; re-approve/double-claim → 409 `:invalid-takeover-state`) |
 | `POST /sports-sites` | authenticated; **all authz in core** | save; core authorizes content + `:owner-org-id`/`:edit-grants` against the stored site (§4.5) |
@@ -630,7 +649,7 @@ Other direct account roles (admin, type/city/ptv managers, etc.) are first-class
 | Rename / contact / instructions / PTV / **catalog** edit | new `org` revision | `author_id` |
 | Member add / remove / role assignment (incl. `:admin`) | new `org` revision (members in document) | `author_id` |
 | Org archival | new `org` revision, `status 'archived'` | `author_id` |
-| Site ownership take-over / transfer | new **site** revision (`:owner-org-id`) | site `author_id` |
+| Site ownership take-over / transfer / **release** | new **site** revision (`:owner-org-id`) | site `author_id` (+ `acting_org_id`) |
 | Cross-org edit grant / revoke | new **site** revision (`:edit-grants`) | site `author_id` |
 | "On whose behalf" | optional `acting_org_id` on the site revision | — |
 
@@ -677,6 +696,12 @@ member role change renders as a single **"Roolit muuttui: «name» [a] → [b]"*
      - *Contested vs un-owned* — claiming a **legacy/un-owned** site is a low-risk
        correction; claiming one **owned by another org** is a transfer *away* from
        org A → that owner should be notified (or consent), not silently reassigned.
+       *Resolved (2026-06-11):* contested matches are now **visible** in both claim
+       previews (current owner org flagged per row + summary count, §6.8), and that
+       was judged sufficient — **no separate consent/notification flow**; the
+       approver's judgment is the gate. The shipped **release flow** (§6.8) also
+       gives a cooperative transfer path that never contests: A releases (relabeling
+       `:owner` to match B's rule), then B claims the now-unowned sites.
      - *Guardrail* — fully open (admin judgment) vs a soft check that the site's
        city-code is one the requesting org plausibly governs (catches fat-finger
        requests for the wrong municipality).
@@ -732,7 +757,15 @@ Real dev stack (2 346 accounts, ~2 021 with roles, 57 030 sites):
 - **Catalog validation** — a context-scoped role missing its required key is rejected;
   present-but-empty is accepted.
 - **Take-over** — approve claims matching sites; re-approving or denying a decided
-  request is rejected (`:invalid-takeover-state`).
+  request is rejected (`:invalid-takeover-state`); contested matches carry the
+  current owner org (id + resolved name) in both the live-rule and stored-request
+  previews.
+- **Release** — owner-org admin releases via the endpoint (ownership + edit-grants
+  cleared, optional `:owner` relabel, `acting_org_id` recorded, foreign-owned
+  selection rows skipped + reported); without `:owner` the enum is kept; a foreign
+  org's admin and a plain member both 403; predicate arms (owner-admin may clear,
+  editor/foreign-admin/nobody may not, gaining still admin-only) in
+  `business-logic-test`.
 - Plus: owner-org assignment authz; history authz + member-email resolution; org
   instructions round-trip; site-editors composition + legacy-user lookup (candidate ==
   naive scan, admin excluded).

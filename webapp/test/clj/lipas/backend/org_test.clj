@@ -1057,6 +1057,126 @@
       (is (every? #(and (:name %) (:current-owner %)) (:sites body))
           "Rows carry the lightweight name + current owner shape"))))
 
+(deftest takeover-contested-preview-test
+  (testing "A rule match owned by ANOTHER org is flagged with the current owner org in previews"
+    (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+          org-id   (takeover-org!)                     ;; the claimer
+          other    (first (create-test-orgs))          ;; the current owner
+          other-id (:id other)
+          a        (rule-matching-site! admin 9997601) ;; un-owned legacy match
+          b        (rule-matching-site! admin 9997602) ;; owned by `other`
+          _        (core/upsert-sports-site!* (test-db) admin
+                                              (assoc (core/get-sports-site (test-db) b)
+                                                     :event-date (utils/timestamp)
+                                                     :owner-org-id (str other-id)))
+          pre      (org-takeover/preview (test-db) org-id)
+          by-id    (into {} (map (juxt :lipas-id identity)) (:sites pre))]
+      (is (nil? (:current-owner-org-id (get by-id a)))
+          "An un-owned legacy site carries no current-owner-org")
+      (is (= (str other-id) (:current-owner-org-id (get by-id b)))
+          "A contested site carries the current owner's org id")
+      (is (= (:name other) (:current-owner-org-name (get by-id b)))
+          "…resolved to the org's name, so the claim is visibly a transfer away")
+      ;; the approver's stored-request preview carries the same flags
+      (let [req  (org-takeover/create-request! (test-db) org-id (:id admin) :lipas-ids [a b])
+            rpre (org-takeover/request-preview (test-db) (:id req))
+            rby  (into {} (map (juxt :lipas-id identity)) (:sites rpre))]
+        (is (= (str other-id) (:current-owner-org-id (get rby b))))
+        (is (= (:name other) (:current-owner-org-name (get rby b))))))))
+
+;;; Release — an org gives up ownership of its sites (the inverse of a
+;;; take-over; authority-shedding, so self-service for the org admin) ;;;
+
+(deftest release-org-sites-test
+  (testing "Org admin releases owned sites: ownership + edit-grants cleared, owner relabeled when given"
+    (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+          org-id   (takeover-org!)
+          other-id (:id (first (create-test-orgs)))
+          oa       (test-utils/gen-org-admin-user org-id :db-component (test-db))
+          token    (jwt/create-token oa)
+          [a b]    (mapv #(rule-matching-site! admin %) [9998001 9998002])
+          foreign  (rule-matching-site! admin 9998003)
+          ;; the org owns a (with a cross-org grant) and b; `foreign` belongs to another org
+          _        (org-takeover/reclaim-now! (test-db) (test-search) org-id admin :lipas-ids [a b])
+          _        (core/upsert-sports-site!* (test-db) admin
+                                              (assoc (core/get-sports-site (test-db) a)
+                                                     :event-date (utils/timestamp)
+                                                     :edit-grants [(str other-id)]))
+          _        (core/upsert-sports-site!* (test-db) admin
+                                              (assoc (core/get-sports-site (test-db) foreign)
+                                                     :event-date (utils/timestamp)
+                                                     :owner-org-id (str other-id)))
+          pre-resp (test-app (-> (mock/request :post "/api/actions/preview-org-release")
+                                 (mock/json-body {:org-id org-id :lipas-ids [a b foreign]})
+                                 (test-utils/token-header token)))
+          pre      (test-utils/safe-parse-json pre-resp)
+          resp     (test-app (-> (mock/request :post "/api/actions/release-org-sites")
+                                 (mock/json-body {:org-id org-id :lipas-ids [a b foreign]
+                                                  :owner "registered-association"})
+                                 (test-utils/token-header token)))
+          body     (test-utils/safe-parse-json resp)
+          a'       (core/get-sports-site (test-db) a)
+          b'       (core/get-sports-site (test-db) b)
+          f'       (core/get-sports-site (test-db) foreign)]
+      (is (= 200 (:status pre-resp)))
+      (is (= 2 (:count pre)) "Preview includes only the sites the org owns")
+      (is (= 3 (:requested-count pre)) "…and reports the stale selection rows")
+      (is (= 1 (:edit-grants-dropped pre)) "Grants to be dropped are counted")
+      (is (= 200 (:status resp)))
+      (is (= 2 (:sites-released body)))
+      (is (= 1 (:sites-skipped body)) "The foreign-owned site is skipped, not touched")
+      (doseq [s [a' b']]
+        (is (nil? (:owner-org-id s)) "Ownership cleared")
+        (is (nil? (:edit-grants s)) "The owner's grants go with the owner")
+        (is (= "registered-association" (:owner s)) "Owner enum relabeled as chosen"))
+      (is (= (str other-id) (str (:owner-org-id f'))) "Another org's site is untouched")
+      ;; the release revision records the acting org (audit)
+      (is (= (str org-id)
+             (str (:acting-org-id
+                    (jdbc/execute-one! (test-db)
+                                       ["SELECT acting_org_id FROM sports_site
+                                        WHERE lipas_id=? ORDER BY event_date DESC, created_at DESC LIMIT 1" a]
+                                       {:builder-fn rs/as-unqualified-kebab-maps}))))))))
+
+(deftest release-keeps-owner-enum-test
+  (testing "Without :owner the released site keeps its current owner enum"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          org-id (takeover-org!)
+          a      (rule-matching-site! admin 9998101)
+          _      (org-takeover/reclaim-now! (test-db) (test-search) org-id admin :lipas-ids [a])
+          result (org-takeover/release! (test-db) (test-search) org-id admin :lipas-ids [a])
+          a'     (core/get-sports-site (test-db) a)]
+      (is (= 1 (:sites-released result)))
+      (is (nil? (:owner-org-id a')))
+      (is (= "city" (:owner a')) "The org-type-implied enum stays unless relabeled"))))
+
+(deftest release-foreign-org-admin-403-test
+  (testing "An admin of ANOTHER org cannot release this org's sites"
+    (let [admin    (test-utils/gen-admin-user :db-component (test-db))
+          org-id   (takeover-org!)
+          other-id (:id (first (create-test-orgs)))
+          oa-other (test-utils/gen-org-admin-user other-id :db-component (test-db))
+          token    (jwt/create-token oa-other)
+          a        (rule-matching-site! admin 9998201)
+          _        (org-takeover/reclaim-now! (test-db) (test-search) org-id admin :lipas-ids [a])
+          resp     (test-app (-> (mock/request :post "/api/actions/release-org-sites")
+                                 (mock/json-body {:org-id org-id :lipas-ids [a]})
+                                 (test-utils/token-header token)))]
+      (is (= 403 (:status resp)))
+      (is (= (str org-id) (str (:owner-org-id (core/get-sports-site (test-db) a))))
+          "Ownership is untouched")))
+  (testing "A plain member of the org cannot release either (:org/manage required)"
+    (let [admin  (test-utils/gen-admin-user :db-component (test-db))
+          org-id (takeover-org!)
+          member (test-utils/gen-org-user org-id :db-component (test-db))
+          token  (jwt/create-token member)
+          a      (rule-matching-site! admin 9998301)
+          _      (org-takeover/reclaim-now! (test-db) (test-search) org-id admin :lipas-ids [a])
+          resp   (test-app (-> (mock/request :post "/api/actions/release-org-sites")
+                               (mock/json-body {:org-id org-id :lipas-ids [a]})
+                               (test-utils/token-header token)))]
+      (is (= 403 (:status resp))))))
+
 ;;; Phase C — dashboard read endpoints (org-sites, site-editors, history) ;;;
 
 (deftest org-history-test

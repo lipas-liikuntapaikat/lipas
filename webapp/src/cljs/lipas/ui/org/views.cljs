@@ -829,6 +829,112 @@
        :onClick #(on-sort col)}
       label]]))
 
+;; ---------------------------------------------------------------------------
+;; Release impact warning (shown before an org gives up ownership of sites)
+;; ---------------------------------------------------------------------------
+
+(def ^:private release-page-size 10)
+
+(defn release-impact-dialog [_tr]
+  (let [page (r/atom 0)]
+    (fn [tr]
+      (let [dialog @(rf/subscribe [::subs/release-dialog])
+            preview @(rf/subscribe [::subs/release-preview])
+            releasing? @(rf/subscribe [::subs/releasing?])
+            locale (tr)
+            owner-label (fn [enum] (or (get-in owners/all [enum locale]) enum "–"))
+            sites (vec (:sites preview))
+            total (count sites)
+            ;; selection rows the org doesn't own (stale list) — skipped on apply
+            skipped (- (:requested-count preview 0) (:count preview 0))
+            pages (max 1 (js/Math.ceil (/ total release-page-size)))
+            cur (min @page (dec pages))
+            from (* cur release-page-size)
+            to (min (+ from release-page-size) total)
+            ;; don't allow closing mid-release (the op keeps running server-side)
+            close! (fn [] (when-not releasing?
+                            (reset! page 0)
+                            (rf/dispatch [::events/close-release-dialog])))]
+        [:> Dialog {:open (boolean dialog)
+                    :maxWidth "sm" :fullWidth true
+                    :onClose close!}
+         [:> DialogTitle (tr :lipas.org/release-impact-title)]
+         [:> DialogContent
+          (if (nil? preview)
+            [:> Typography "…"]
+            [:> Box
+             [:> Typography {:variant "h6" :sx {:mb 1}}
+              (str (tr :lipas.org/release-impact-affects) ": " total)]
+             [:> Alert {:severity "warning" :sx {:my 1}}
+              [:> Box {:component "ul" :sx {:m 0 :pl 2}}
+               [:> Box {:component "li"}
+                (str (tr :lipas.org/release-impact-unassign) ": "
+                     (or (:org-name preview) "—"))]
+               ;; the grants were the owner's to manage — they go with the owner
+               (when (pos? (:edit-grants-dropped preview 0))
+                 [:> Box {:component "li"}
+                  (str (tr :lipas.org/release-impact-grants) ": "
+                       (:edit-grants-dropped preview))])
+               (when (pos? skipped)
+                 [:> Box {:component "li"}
+                  (str skipped " " (tr :lipas.org/release-not-owned-skipped))])]]
+             ;; the legacy :owner value the released sites keep/get — the
+             ;; org-type lock vanishes with the org, so the admin may relabel
+             ;; (e.g. to what the NEXT owner's claim rule matches on)
+             ;; "keep" is a UI-only sentinel (→ nil in app-db / omitted from the
+             ;; request) — a real value, so the closed select shows its label
+             ;; instead of MUI's hidden-empty-value blank
+             [:> FormControl {:fullWidth true :size "small" :sx {:mt 2}}
+              [:> InputLabel {:id "release-owner-label"}
+               (tr :lipas.org/release-owner-select)]
+              [:> Select {:labelId "release-owner-label"
+                          :label (tr :lipas.org/release-owner-select)
+                          :value (or (:owner dialog) "keep")
+                          :disabled releasing?
+                          :on-change (fn [e]
+                                       (let [v (.. e -target -value)]
+                                         (rf/dispatch [::events/set-release-owner
+                                                       (when (not= v "keep") v)])))}
+               [:> MenuItem {:value "keep"} (tr :lipas.org/release-owner-keep)]
+               (for [[k v] owners/all]
+                 [:> MenuItem {:key k :value k} (get v locale)])]]
+             (when (pos? total)
+               [:> Box {:sx {:mt 2}}
+                [:> Table {:size "small"}
+                 [:> TableHead
+                  [:> TableRow
+                   [:> TableCell (tr :lipas.org/name)]
+                   [:> TableCell (tr :lipas.org/current-owner)]]]
+                 [:> TableBody
+                  (for [s (subvec sites from to)]
+                    [:> TableRow {:key (:lipas-id s)}
+                     [:> TableCell (:name s)]
+                     [:> TableCell (owner-label (:current-owner s))]])]]
+                (when (> pages 1)
+                  [:> Box {:sx {:display "flex" :align-items "center"
+                                :justify-content "flex-end" :gap 1 :mt 1}}
+                   [:> Typography {:variant "caption" :color "text.secondary"}
+                    (str (inc from) "–" to " / " total)]
+                   [:> IconButton {:size "small" :disabled (<= cur 0)
+                                   :on-click #(swap! page dec)}
+                    [:> Icon "chevron_left"]]
+                   [:> IconButton {:size "small" :disabled (>= cur (dec pages))
+                                   :on-click #(swap! page inc)}
+                    [:> Icon "chevron_right"]]])])])]
+         [:> DialogActions
+          (when releasing?
+            [:> Typography {:variant "caption" :color "text.secondary"
+                            :sx {:mr "auto" :ml 1}}
+             (tr :lipas.org/releasing)])
+          [:> Button {:on-click close! :disabled releasing?}
+           (tr :lipas.org/cancel)]
+          [:> Button {:variant "contained" :color "secondary"
+                      :disabled (or (nil? preview) releasing? (zero? total))
+                      :startIcon (when releasing?
+                                   (r/as-element [:> CircularProgress {:size 16 :color "inherit"}]))
+                      :on-click #(rf/dispatch [::events/confirm-release])}
+           (tr :lipas.org/release-confirm)]]]))))
+
 (defn our-sites-tab [_tr _org-id]
   (let [expanded (r/atom nil)
         ;; column sort state for the sites table (client-side)
@@ -848,6 +954,10 @@
             ;; members without :site/create-edit get a read-only list: no
             ;; selection checkboxes, no mass-update launcher
             can-bulk-edit? @(rf/subscribe [::subs/can-bulk-edit? org-id])
+            ;; releasing ownership is an org-admin action, independent of editor
+            ;; rights — an admin without an editor role still needs checkboxes
+            can-release?   @(rf/subscribe [::subs/can? :org/release-sites org-id])
+            selectable?    (or can-bulk-edit? can-release?)
             types          @(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
             cities         @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
             locale         (tr)
@@ -927,16 +1037,25 @@
                               (rf/dispatch [::bulk-ops-events/set-sites-filter :admin value]))}])]]
 
             ;; selection action bar — launches the bulk-edit wizard for the
-            ;; checked sites (the headline "edit contact info on many sites")
-            (when (and can-bulk-edit? (seq selected))
+            ;; checked sites (the headline "edit contact info on many sites"),
+            ;; plus the org-admin "release ownership" action
+            (when (and selectable? (seq selected))
               [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center"
                             :p 1 :bgcolor "action.hover" :border-radius 1}}
                [:> Typography {:variant "body2"}
                 (tr :lipas.bulk-operations/n-sites-selected (count selected))]
-               [:> Button {:variant "contained" :size "small" :sx {:ml "auto"}
-                           :on-click #(rf/dispatch [::bulk-ops-events/set-current-step 1])}
-                [:> Icon {:sx {:mr 1}} "edit"]
-                (tr :lipas.org/bulk-operations)]
+               [:> Box {:sx {:flex 1}}]
+               (when can-release?
+                 [:> Button {:variant "outlined" :color "secondary" :size "small"
+                             :on-click #(rf/dispatch [::events/open-release-dialog
+                                                      org-id (vec selected)])}
+                  [:> Icon {:sx {:mr 1}} "remove_circle_outline"]
+                  (tr :lipas.org/release-ownership)])
+               (when can-bulk-edit?
+                 [:> Button {:variant "contained" :size "small"
+                             :on-click #(rf/dispatch [::bulk-ops-events/set-current-step 1])}
+                  [:> Icon {:sx {:mr 1}} "edit"]
+                  (tr :lipas.org/bulk-operations)])
                [:> Button {:variant "text" :size "small"
                            :on-click #(rf/dispatch [::bulk-ops-events/deselect-all-sites])}
                 (tr :actions/deselect-all)]])
@@ -953,7 +1072,7 @@
                [:> Table {:size "small"}
                 [:> TableHead
                  [:> TableRow
-                  (when can-bulk-edit?
+                  (when selectable?
                     [:> TableCell {:padding "checkbox"}
                      [:> Checkbox {:checked all-selected?
                                    :indeterminate (boolean (and (not all-selected?)
@@ -978,7 +1097,7 @@
                             open? (= @expanded lipas-id)]
                         (cond-> [[:> TableRow {:key lipas-id
                                                :selected (boolean (selected lipas-id))}
-                                  (when can-bulk-edit?
+                                  (when selectable?
                                     [:> TableCell {:padding "checkbox"}
                                      [:> Checkbox {:checked (boolean (selected lipas-id))
                                                    :on-change #(rf/dispatch [::bulk-ops-events/toggle-site-selection lipas-id])}]])
@@ -1004,7 +1123,7 @@
                                     [:> Icon (if open? "expand_less" "expand_more")]]]]]
                           open?
                           (conj [:> TableRow {:key (str lipas-id "-detail")}
-                                 [:> TableCell {:colSpan (if can-bulk-edit? 6 5) :sx {:p 0}}
+                                 [:> TableCell {:colSpan (if selectable? 6 5) :sx {:p 0}}
                                   [site-editors-detail tr org-id site]]]))))
                     sorted-sites))]]
 
@@ -1085,6 +1204,9 @@
             picker? (not= "approve" (:mode dialog))
             sites (vec (:sites preview))
             total (count sites)
+            ;; sites already owned by ANOTHER org — claiming transfers them away
+            ;; from that owner, which must be visible, not look like a no-op
+            n-contested (count (filter :current-owner-org-id sites))
             n-selected (count selection)
             ;; client-side name filter — narrows the table AND what the header
             ;; select-all/none toggles; selection outside the filter is kept
@@ -1132,7 +1254,10 @@
                      (or (:owner-org-name preview) "—"))]
                [:> Box {:component "li"}
                 (str (tr :lipas.org/claim-impact-lock) ": "
-                     (owner-label (:owner-enum preview)))]]]
+                     (owner-label (:owner-enum preview)))]
+               (when (pos? n-contested)
+                 [:> Box {:component "li" :sx {:font-weight "bold"}}
+                  (str n-contested " " (tr :lipas.org/claim-contested-count))])]]
              (when (pos? total)
                [:> Box {:sx {:mt 2}}
                 [:> Typography {:variant "subtitle2" :sx {:mb 1}}
@@ -1167,7 +1292,15 @@
                                       :on-change #(rf/dispatch [::events/toggle-claim-site
                                                                 (:lipas-id s)])}]])
                      [:> TableCell (:name s)]
-                     [:> TableCell (owner-label (:current-owner s))]])]]
+                     [:> TableCell
+                      [:> Box {:sx {:display "flex" :align-items "center" :gap 1}}
+                       [:span (owner-label (:current-owner s))]
+                       ;; owned by another org → claiming is a transfer away
+                       ;; from it, flagged with the current owner's name
+                       (when (:current-owner-org-name s)
+                         [:> Tooltip {:title (tr :lipas.org/claim-contested-tooltip)}
+                          [:> Chip {:size "small" :color "warning"
+                                    :label (:current-owner-org-name s)}]])]]])]]
                 (when (> pages 1)
                   [:> Box {:sx {:display "flex" :align-items "center"
                                 :justify-content "flex-end" :gap 1 :mt 1}}
@@ -1255,6 +1388,7 @@
     ;; bulk-ops) scrolls within its own container instead of widening the page.
     [:> Paper {:sx {:p 3 :m 2 :min-width 0 :overflow-x "hidden"}}
      [claim-impact-dialog tr]
+     [release-impact-dialog tr]
      [:> Typography {:variant "h4" :sx {:mb 3}}
       (if is-new?
         (tr :lipas.org/new-organization)

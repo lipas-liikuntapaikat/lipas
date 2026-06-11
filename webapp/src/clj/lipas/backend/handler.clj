@@ -692,6 +692,38 @@
                                                           (:identity req)
                                                           :lipas-ids lipas-ids)}))}}]
 
+      ;; --- Release: an org gives up ownership of selected sites (authority-
+      ;; shedding ⇒ self-service for the org admin, no approval queue). The
+      ;; preview drives the explicit confirmation (count + dropped edit-grants);
+      ;; release! applies revisions clearing :owner-org-id/:edit-grants, with an
+      ;; optional :owner relabel now that the org-type lock vanishes. ---
+        ["/actions/preview-org-release"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids [:vector {:min 1} :int]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/preview-release db org-id lipas-ids)}))}}]
+        ["/actions/release-org-sites"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids [:vector {:min 1} :int]]
+                               [:owner {:optional true} sports-site-schema/owner]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids owner]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/release! db search org-id
+                                                      (:identity req)
+                                                      :lipas-ids lipas-ids
+                                                      :owner owner)}))}}]
+
       ;; --- Take-over approvals: lipas-admin reviews requested claims ---
         ["/actions/list-org-takeover-requests"
          {:post

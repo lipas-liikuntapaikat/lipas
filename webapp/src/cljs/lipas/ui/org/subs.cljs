@@ -117,7 +117,7 @@
 
       ;; lipas-admin or org-admin
       (:org/edit-contact :org/edit-ptv :org/manage-members :org/grant-site-edit
-                         :org/view-history :org/edit-instructions)
+                         :org/view-history :org/edit-instructions :org/release-sites)
       (boolean (or lipas-admin? org-admin?))
 
       ;; any member
@@ -203,3 +203,16 @@
 (rf/reg-sub ::claim-selection
   (fn [db _]
     (get-in db [:org :claim-selection] #{})))
+
+;; --- Release ownership dialog (the inverse of a claim) ---
+(rf/reg-sub ::release-dialog
+  (fn [db _]
+    (get-in db [:org :release-dialog])))
+
+(rf/reg-sub ::release-preview
+  (fn [db _]
+    (get-in db [:org :release-preview])))
+
+(rf/reg-sub ::releasing?
+  (fn [db _]
+    (boolean (get-in db [:org :releasing?]))))
