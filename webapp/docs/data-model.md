@@ -114,9 +114,10 @@ A **sports site** is the core entity representing any sports or recreational fac
 **Site-level `:images` vs. activity-level images.** Two independent image
 collections exist:
 
-- `:images` (site-level) — describes the *facility* itself. Editable by any
-  user with site-save privileges, or by a narrow role (`:images-manager`) that
-  can save image-only revisions. Applies to all sports-site types.
+- `:images` (site-level) — describes the *facility* itself. Changing it
+  requires the `:site/edit-images` privilege (granted by `:admin` and the
+  narrow `:images-manager` role); broad site-save rights alone are not
+  enough. Applies to all sports-site types.
 - `:activities.<activity>.images` — describes the *activity* (UTP/Luontoon.fi
   content). Scoped to activity-based sites only.
 
