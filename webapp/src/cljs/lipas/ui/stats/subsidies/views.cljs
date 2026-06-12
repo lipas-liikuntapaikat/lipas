@@ -101,7 +101,7 @@
        [:> Grid {:item true}
         [years-selector
          {:tr        tr
-          :years     (range 2002 (inc 2024))
+          :years     (range 2002 (inc 2025))
           :value     years
           :on-change #(==> [::events/select-years %])}]]
 
