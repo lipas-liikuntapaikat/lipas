@@ -30,11 +30,8 @@
 (defn- append-euclid-distances [pop-data site-data]
   (for [pop-entry pop-data
         :let []]
-    (let [g1 (-> pop-entry
-                 :_source
-                 :coords
-                 gis/wkt-point->coords
-                 (->> (apply gis/->point)))]
+    (let [[lon lat] (-> pop-entry :_source :coords gis/wkt-point->coords)
+          g1 (gis/->point lat lon)]
       (assoc pop-entry :sports-sites (map
                                       (fn [site]
                                         (let [g2 (-> site

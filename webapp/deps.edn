@@ -17,8 +17,6 @@
         metosin/ring-http-response {:mvn/version "0.9.5"},
         cheshire/cheshire {:mvn/version "6.1.0"},
         buddy/buddy {:mvn/version "2.0.0"},
-        ;; Override transitive deps to fix Clojure 1.11+ shadowing warnings
-        org.clojure/math.numeric-tower {:mvn/version "0.1.1"},
         funcool/cuerdas {:mvn/version "2026.415"},
         ;; Legacy
         org.clojure/java.jdbc {:mvn/version "0.7.12"}
@@ -39,16 +37,12 @@
         dk.ative/docjure {:mvn/version "1.22.0"},
         tea-time/tea-time {:mvn/version "1.0.1"},
         clj-http/clj-http {:mvn/version "3.13.1"},
-        factual/geo {:mvn/version "3.0.1"},
-        org.apache.commons/commons-math3 {:mvn/version "3.6.1"},
-        org.apache.commons/commons-lang3 {:mvn/version "3.20.0"},
-        org.apache.commons/commons-math {:mvn/version "2.2"},
-        org.locationtech.geowave/geowave-analytic-api
-        {:mvn/version "2.0.1",
-         :exclusions [org.slf4j/slf4j-log4j12
-                      log4j/log4j
-                      org.locationtech.geowave/geowave-adapter-raster
-                      org.locationtech.geowave/geowave-adapter-vector]}}
+        org.locationtech.jts/jts-core {:mvn/version "1.20.0"},
+        org.locationtech.proj4j/proj4j {:mvn/version "1.4.1"},
+        org.locationtech.proj4j/proj4j-epsg {:mvn/version "1.4.1"},
+        org.wololo/jts2geojson {:mvn/version "0.18.1"},
+        ;; Version pin above Apache POI's transitive 3.16.0 (via docjure)
+        org.apache.commons/commons-lang3 {:mvn/version "3.20.0"}}
 
  :aliases {;; Frontend build/runtime deps — kept out of base :deps so the
            ;; backend uberjar (built from base deps only) doesn't ship the

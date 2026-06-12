@@ -248,8 +248,8 @@
                                   (apply shell "clojure" "-M:dev:test"
                                          (mapcat (fn [ns] ["--focus" ns]) namespaces))
                                   (do (println "Usage: bb test-specific <ns> [<ns> ...]")
-                                      (println "Example: bb test-specific lipas.gis-test")
-                                      (println "Example: bb test-specific lipas.gis-test lipas.backend.core-test"))))}
+                                      (println "Example: bb test-specific lipas.backend.gis-test")
+                                      (println "Example: bb test-specific lipas.backend.gis-test lipas.backend.org-test"))))}
 
          test-ns {:doc "Alias to test-specific"
                   :task (run 'test-specific)}
@@ -260,8 +260,8 @@
                              (apply shell "clojure" "-M:dev:test"
                                     (mapcat (fn [v] ["--focus" v]) vars))
                              (do (println "Usage: bb test-var <var> [<var> ...]")
-                                 (println "Example: bb test-var lipas.gis-test/test-sequence-features")
-                                 (println "Example: bb test-var lipas.gis-test/test-sequence-features lipas.roles-test/admin-test"))))}
+                                 (println "Example: bb test-var lipas.backend.gis-test/centroid-test")
+                                 (println "Example: bb test-var lipas.backend.gis-test/centroid-test lipas.roles-test/admin-test"))))}
 
          i18n-unused {:doc "Find unused translation keys. Use --remove to delete them, --dry-run to preview."
                       :task (apply shell "bb" "scripts/unused_translations.bb" *command-line-args*)}
