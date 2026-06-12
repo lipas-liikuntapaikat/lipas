@@ -46,8 +46,6 @@
     (core/upsert-sports-site!* (test-db) admin site)
     (core/index! (test-search) site :sync)
     (core/index-legacy-sports-place! (test-search) site :sync)
-    ;; Give ES a moment to index
-    (Thread/sleep 100)
     site))
 
 ;;; Response parsing helpers ;;;
@@ -342,8 +340,6 @@
         deleted-site (assoc site :status "out-of-service-permanently")]
     (core/upsert-sports-site!* (test-db) admin deleted-site)
     (core/index! (test-search) deleted-site :sync)
-    ;; Give ES a moment to index
-    (Thread/sleep 100)
     deleted-site))
 
 (deftest deleted-sports-places-test
