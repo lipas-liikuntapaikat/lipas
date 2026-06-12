@@ -35,7 +35,6 @@
         ring/ring-jetty-adapter {:mvn/version "1.15.3"},
         org.clojure/data.csv {:mvn/version "1.1.1"},
         dk.ative/docjure {:mvn/version "1.22.0"},
-        tea-time/tea-time {:mvn/version "1.0.1"},
         clj-http/clj-http {:mvn/version "3.13.1"},
         org.locationtech.jts/jts-core {:mvn/version "1.20.0"},
         org.locationtech.proj4j/proj4j {:mvn/version "1.4.1"},
