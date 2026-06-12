@@ -3,7 +3,6 @@
   (:require
     [clojure.core.async :as async]
     [clojure.tools.namespace.repl]
-    [shadow.cljs.devtools.api :as shadow]
     [integrant.repl :refer [reset-all halt go]]
     [integrant.repl.state]
     [lipas.wfs.core :as wfs]
@@ -187,14 +186,18 @@
   []
   (clojure.tools.namespace.repl/refresh-all))
 
+;; shadow-cljs lives in the :frontend alias (kept off the backend test/uberjar
+;; classpath), so resolve it lazily — these fns only work in the shadow-launched
+;; dev JVM, which has the alias via shadow-cljs.edn.
+
 (defn browser-repl
   []
-  (shadow/repl :app))
+  ((requiring-resolve 'shadow.cljs.devtools.api/repl) :app))
 
 (defn compile-cljs
   []
-  (let [_status (shadow/watch-compile! :app)
-        worker (shadow.cljs.devtools.api/get-worker :app)
+  (let [_status ((requiring-resolve 'shadow.cljs.devtools.api/watch-compile!) :app)
+        worker ((requiring-resolve 'shadow.cljs.devtools.api/get-worker) :app)
         build-state (-> worker :state-ref deref :build-state)
         warnings (-> build-state
                      :shadow.build/build-info

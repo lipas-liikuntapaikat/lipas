@@ -22,7 +22,7 @@
     [clojure.java.io :as io]
     [clojure.string :as str]
     [cheshire.core :as json]
-    [geo.jts :as jts]
+    [lipas.backend.gis :as gis]
     [lipas.backend.db.db :as db]
     [lipas.data.cities :as cities]
     [lipas.data.types :as types]
@@ -50,7 +50,7 @@
       (let [reader (WKTReader.)
             geom (.read reader wkt-str)
             _ (.setSRID geom tm35fin-srid)
-            transformed (jts/transform-geom geom tm35fin-srid wgs84-srid)
+            transformed (gis/transform-crs geom tm35fin-srid wgs84-srid)
             n (.getNumGeometries transformed)]
         (mapv (fn [i]
                 (let [ls (.getGeometryN transformed i)

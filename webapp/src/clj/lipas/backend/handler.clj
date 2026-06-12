@@ -100,7 +100,7 @@
     exception-handlers)))
 
 (defn create-app
-  [{:keys [db emailer search mailchimp aws ptv] :as ctx}]
+  [{:keys [db emailer search mailchimp ptv] :as ctx}]
   (ring/ring-handler
    (ring/router
 
@@ -859,18 +859,6 @@
          (fn [{:keys [body-params]}]
            {:status 200
             :body (core/check-sports-site-name search body-params)})}}]
-
-      ["/actions/create-upload-url"
-       {:post
-        {:no-doc false
-         ;; TODO: role, :activity/edit?
-         :middleware [mw/token-auth mw/auth]
-         :parameters
-         {:body handler-schema/create-upload-url-payload}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body (core/presign-upload-url aws (assoc body-params :user identity))})}}]
 
       ["/actions/upload-utp-image"
        {:post

@@ -8,17 +8,17 @@
    The coordinates in the CSV are in ETRS-TM35FIN (EPSG:3067) projection
    and need to be converted to WGS84 (EPSG:4326) for LIPAS."
   (:require
-   [clojure.data.csv :as csv]
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [cheshire.core :as json]
-   [geo.jts :as jts]
-   [lipas.data.types :as types]
-   [lipas.data.loi :as loi]
-   [malli.core :as m]
-   [malli.error :as me]
-   [lipas.schema.sports-sites :as sports-site-schema]
-   [lipas.schema.lois :as loi-schema]))
+    [clojure.data.csv :as csv]
+    [clojure.java.io :as io]
+    [clojure.string :as str]
+    [cheshire.core :as json]
+    [lipas.backend.gis :as gis]
+    [lipas.data.types :as types]
+    [lipas.data.loi :as loi]
+    [malli.core :as m]
+    [malli.error :as me]
+    [lipas.schema.sports-sites :as sports-site-schema]
+    [lipas.schema.lois :as loi-schema]))
 
 ;; Coordinate transformation constants
 (def tm35fin-srid 3067)
@@ -29,10 +29,10 @@
    Input: [easting northing] in meters
    Output: [longitude latitude] in degrees"
   [[easting northing]]
-  (let [transformed (jts/transform-geom
-                     (jts/point northing easting) ; JTS uses lat/lon order internally
-                     tm35fin-srid
-                     wgs84-srid)]
+  (let [transformed (gis/transform-crs
+                      (gis/->jts-point easting northing)
+                      tm35fin-srid
+                      wgs84-srid)]
     [(.getX transformed) (.getY transformed)]))
 
 ;; Owner mapping: VIRMA ownerclass -> LIPAS owner
@@ -481,6 +481,4 @@
     (doseq [m (:lois result)]
       (println "Saving" (:fi (:name m)))
       (db/upsert-loi! db robot m))
-    (println "All Lois saved!"))
-
-  )
+    (println "All Lois saved!")))

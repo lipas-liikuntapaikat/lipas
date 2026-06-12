@@ -1,41 +1,87 @@
 (ns lipas.backend.gis
   (:require
-   [cheshire.core :as json]
-   [clojure.string :as str]
-   [geo.crs :as crs]
-   [geo.io :as gio]
-   [geo.jts :as jts]
-   [geo.spatial :as geo]
-   [taoensso.timbre :as log])
+    [cheshire.core :as json]
+    [clojure.string :as str]
+    [taoensso.timbre :as log])
   (:import
-   [org.locationtech.geowave.analytic GeometryHullTool]
-   [org.locationtech.geowave.analytic.distance CoordinateEuclideanDistanceFn]
-   [org.locationtech.jts.algorithm ConvexHull]
-   [org.locationtech.jts.geom GeometryFactory Coordinate]
-   [org.locationtech.jts.geom.util GeometryCombiner]
-   [org.locationtech.jts.io WKTReader WKTWriter]
-   [org.locationtech.jts.operation.buffer BufferOp]
-   [org.locationtech.jts.operation.distance DistanceOp]
-   [org.locationtech.jts.operation.linemerge LineSequencer]
-   [org.locationtech.jts.simplify DouglasPeuckerSimplifier]))
+    [org.locationtech.jts.algorithm.hull ConcaveHull]
+    [org.locationtech.jts.geom Coordinate CoordinateFilter Geometry GeometryFactory PrecisionModel]
+    [org.locationtech.jts.geom.util GeometryCombiner]
+    [org.locationtech.jts.io WKTReader]
+    [org.locationtech.jts.operation.buffer BufferOp]
+    [org.locationtech.jts.operation.distance DistanceOp]
+    [org.locationtech.jts.operation.linemerge LineSequencer]
+    [org.locationtech.jts.simplify DouglasPeuckerSimplifier]
+    [org.locationtech.proj4j BasicCoordinateTransform CoordinateReferenceSystem CRSFactory ProjCoordinate]
+    [org.wololo.jts2geojson GeoJSONReader GeoJSONWriter]))
 
 (def srid 4326) ;; WGS84
 (def tm35fin-srid 3067)
-(def wgs84->tm35fin-xform (crs/create-transform srid tm35fin-srid))
-(def tm35fin->wgs84-xform (crs/create-transform tm35fin-srid srid))
 (def default-simplify-tolerance 0.001) ; ~111m
 
-(def hull-tool
-  (doto (GeometryHullTool.)
-    (.setDistanceFnForCoordinate (CoordinateEuclideanDistanceFn.))))
+;;; CRS transforms (proj4j) ;;;
 
-(defn- simplify-geom [m tolerance]
-  (update m :geometry #(-> %
-                           (DouglasPeuckerSimplifier/simplify tolerance)
-                           (jts/set-srid srid))))
+(def ^:private crs-factory (CRSFactory.))
 
-(defn- dummy-props [m]
-  (assoc m :properties {}))
+(def ^:private crs-cache (atom {}))
+
+(defn- crs
+  "CoordinateReferenceSystem for an EPSG code. CRS objects are immutable
+  and expensive to parse, so they're cached. Transforms are NOT cached
+  because proj4j BasicCoordinateTransform is not thread-safe."
+  ^CoordinateReferenceSystem [epsg-code]
+  (or (@crs-cache epsg-code)
+      (let [c (.createFromName crs-factory (str "EPSG:" epsg-code))]
+        (swap! crs-cache assoc epsg-code c)
+        c)))
+
+(defn- transform-geom
+  "Returns a copy of `geom` with all coordinates transformed from
+  `from-epsg` to `to-epsg` and SRID set to `to-epsg`."
+  ^Geometry [^Geometry geom from-epsg to-epsg]
+  (let [xform (BasicCoordinateTransform. (crs from-epsg) (crs to-epsg))
+        src (ProjCoordinate.)
+        dst (ProjCoordinate.)
+        out (.copy geom)]
+    (.apply out
+            (reify CoordinateFilter
+              (filter [_ c]
+                (set! (.-x src) (.-x c))
+                (set! (.-y src) (.-y c))
+                (.transform xform src dst)
+                (set! (.-x c) (.-x dst))
+                (set! (.-y c) (.-y dst)))))
+    (.geometryChanged out)
+    (.setSRID out to-epsg)
+    out))
+
+;;; JTS construction & GeoJSON IO ;;;
+
+(def ^:private geometry-factories (atom {}))
+
+(defn- gf
+  ^GeometryFactory [srid*]
+  (or (@geometry-factories srid*)
+      (let [f (GeometryFactory. (PrecisionModel.) srid*)]
+        (swap! geometry-factories assoc srid* f)
+        f)))
+
+(defn ->jts-point [lon lat]
+  (.createPoint (gf srid) (Coordinate. lon lat)))
+
+(def ^:private geojson-reader (GeoJSONReader.))
+(def ^:private geojson-writer (GeoJSONWriter.))
+
+(defn- geom-map->jts
+  "GeoJSON geometry map -> JTS Geometry."
+  (^Geometry [m] (geom-map->jts m srid))
+  (^Geometry [m srid*]
+   (.read geojson-reader ^String (json/encode m) (gf srid*))))
+
+(defn- jts->geom-map
+  "JTS Geometry -> GeoJSON geometry map (keywordized)."
+  [^Geometry g]
+  (-> (.write geojson-writer g) str (json/decode keyword)))
 
 (defn point->dummy-area
   [fcoll]
@@ -58,23 +104,18 @@
   "Returns centroids of `m` where `m` is a map representing
   GeoJSON FeatureCollection."
   [m]
-  (-> m
-      (update :features #(map dummy-props %))
-      json/encode
-      (gio/read-geojson srid)
-      (->> (map :geometry))
-      jts/geometry-collection
-      jts/centroid
-      (jts/set-srid srid)
-      gio/to-geojson
-      (json/decode keyword)))
+  (let [geoms (map (comp geom-map->jts :geometry) (:features m))]
+    (-> (.createGeometryCollection (gf srid) (into-array Geometry geoms))
+        (.getCentroid)
+        (doto (.setSRID srid))
+        jts->geom-map)))
 
 (defn wgs84->tm35fin [[lon lat]]
-  (let [transformed (jts/transform-geom (jts/point lat lon) wgs84->tm35fin-xform)]
+  (let [transformed (transform-geom (->jts-point lon lat) srid tm35fin-srid)]
     {:easting (.getX transformed) :northing (.getY transformed)}))
 
 (defn wgs84->tm35fin-no-wrap [[lon lat]]
-  (let [transformed (jts/transform-geom (jts/point lat lon) wgs84->tm35fin-xform)]
+  (let [transformed (transform-geom (->jts-point lon lat) srid tm35fin-srid)]
     [(.getX transformed) (.getY transformed)]))
 
 (defn epsg3067-point->envelope [[e n] delta]
@@ -82,8 +123,8 @@
 
 (defn epsg3067-point->wgs84-envelope [coords delta]
   (let [envelope (epsg3067-point->envelope coords delta)]
-    (mapv (fn [[lon lat]]
-            (let [transformed (jts/transform-geom (jts/point lat lon) tm35fin->wgs84-xform)]
+    (mapv (fn [[e n]]
+            (let [transformed (transform-geom (->jts-point e n) tm35fin-srid srid)]
               [(.getX transformed) (.getY transformed)]))
           envelope)))
 
@@ -91,30 +132,47 @@
   ([f]
    (->jts-geom f srid))
   ([f srid]
-   (-> f (update :features #(map dummy-props %))
-       json/encode
-       (gio/read-geojson srid)
-       (->> (map :geometry))
-       (GeometryCombiner.)
-       (.combine))))
+   (let [geoms (map (comp #(geom-map->jts % srid) :geometry) (:features f))]
+     (.combine (GeometryCombiner. geoms)))))
 
 (defn wgs84wkt->tm35fin-geom [s]
-  (-> s
-      gio/read-wkt
-      (jts/transform-geom wgs84->tm35fin-xform)))
+  (-> (.read (WKTReader. (gf srid)) ^String s)
+      (transform-geom srid tm35fin-srid)))
 
 (defn transform-crs
-  ([geom] (jts/transform-geom geom wgs84->tm35fin-xform))
+  ([geom] (transform-geom geom srid tm35fin-srid))
   ([geom from-crs to-crs]
-   (jts/transform-geom geom from-crs to-crs)))
+   (transform-geom geom from-crs to-crs)))
 
 (defn shortest-distance [g1 g2]
   (DistanceOp/distance g1 g2))
 
-(def ->point geo/point)
+(defn ->point
+  "JTS point from latitude and longitude (x=lon, y=lat).
 
-(defn distance-point [p1 p2]
-  (geo/distance p1 p2))
+  NOTE: takes (lat lon) for backwards compatibility with the removed
+  geo.spatial/point. Unlike its spatial4j predecessor, the result is a
+  JTS geometry, so it works with `nearest-points` & friends."
+  [lat lon]
+  (->jts-point lon lat))
+
+(def ^:private earth-mean-radius-m
+  "Mean earth radius (meters), same constant spatial4j used."
+  6371008.7714)
+
+(defn distance-point
+  "Geodesic (haversine) distance in meters between two points
+  (anything with getX/getY where x=lon, y=lat)."
+  [p1 p2]
+  (let [lat1 (Math/toRadians (.getY p1))
+        lat2 (Math/toRadians (.getY p2))
+        sin-dlat (Math/sin (/ (- lat2 lat1) 2))
+        sin-dlon (Math/sin (/ (- (Math/toRadians (.getX p2))
+                                 (Math/toRadians (.getX p1)))
+                              2))
+        a (+ (* sin-dlat sin-dlat)
+             (* (Math/cos lat1) (Math/cos lat2) sin-dlon sin-dlon))]
+    (* 2 earth-mean-radius-m (Math/asin (Math/sqrt (min 1.0 a))))))
 
 (defn nearest-points [g1 g2]
   (DistanceOp/nearestPoints g1 g2))
@@ -143,21 +201,21 @@
        :features
        (map :geometry)
        (reduce
-        (fn [res g]
-          (case (:type g)
+         (fn [res g]
+           (case (:type g)
 
-            "Point"
-            (conj res (-> g :coordinates strip-z))
+             "Point"
+             (conj res (-> g :coordinates strip-z))
 
-            "LineString"
-            (into res (map strip-z) (:coordinates g))
+             "LineString"
+             (into res (map strip-z) (:coordinates g))
 
-            ("Polygon" "MultiLineString")
-            (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
+             ("Polygon" "MultiLineString")
+             (into res (->> g :coordinates (filter seq) (mapcat strip-z) (filter seq)))
 
-            ("MultiPolygon")
-            (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
-        [])
+             ("MultiPolygon")
+             (into res (->> g :coordinates  (mapcat identity) (mapcat strip-z) (filter seq)))))
+         [])
        (into [] #_(distinct))))
 
 (defn contains-coords? [fcoll]
@@ -165,16 +223,20 @@
 
 (defn simplify
   "Returns simplified version of `m` where `m` is a map representing
-  GeoJSON FeatureCollection."
+  GeoJSON FeatureCollection. Feature properties are not preserved."
   ([m] (simplify m default-simplify-tolerance))
   ([m tolerance]
-   (-> m
-       (update :features #(map dummy-props %))
-       json/encode
-       (gio/read-geojson srid)
-       (->> (map #(simplify-geom % tolerance)))
-       gio/to-geojson-feature-collection
-       (json/decode keyword))))
+   {:type "FeatureCollection"
+    :features (mapv (fn [feature]
+                      (let [geom (-> feature
+                                     :geometry
+                                     geom-map->jts
+                                     (DouglasPeuckerSimplifier/simplify tolerance)
+                                     (doto (.setSRID srid)))]
+                        {:type "Feature"
+                         :properties {}
+                         :geometry (jts->geom-map geom)}))
+                    (:features m))}))
 
 (defn simplify-safe
   "Returns simplified version of `m` where `m` is a map representing
@@ -192,18 +254,13 @@
        (log/warn ex "Failed to simplify fcoll" fcoll)
        fcoll))))
 
-(defn ->jts-point [lon lat]
-  (geo/jts-point lat lon))
-
 (defn ->jts-multi-point [coords]
-  (->> coords
-       (map #(geo/jts-point (second %) (first %)))
-       (GeometryCombiner.)
-       (.combine)))
+  (.createMultiPointFromCoords
+    (gf srid)
+    (into-array Coordinate (map (fn [[lon lat]] (Coordinate. lon lat)) coords))))
 
 (defn wkt-point->coords [s]
-  (let [coord (-> s
-                  gio/read-wkt
+  (let [coord (-> (.read (WKTReader. (gf srid)) ^String s)
                   (.getCoordinate))]
     [(.getX coord) (.getY coord)]))
 
@@ -213,17 +270,24 @@
 (defn calc-buffer [fcoll distance-m]
   (-> fcoll
       (->jts-geom)
-      (jts/transform-geom wgs84->tm35fin-xform)
+      (transform-geom srid tm35fin-srid)
       (BufferOp.)
       (.getResultGeometry distance-m)
-      (jts/transform-geom tm35fin->wgs84-xform)
-      gio/to-geojson
-      (json/decode keyword)))
+      (transform-geom tm35fin-srid srid)
+      jts->geom-map))
+
+(def ^:private concave-hull-length-ratio
+  "Tightness of the concave hull: 0 = maximally concave, 1 = convex
+  hull. 0.2 produces hulls of similar tightness to the removed geowave
+  GeometryHullTool (~0.8 of the convex hull area on reference data;
+  geowave was ~0.78)."
+  0.2)
 
 (defn concave-hull [fcoll]
-  (let [points (-> fcoll ->flat-coords ->jts-multi-point)
-        convex (-> points ConvexHull. .getConvexHull)]
-    (.concaveHull hull-tool convex (into [] (.getCoordinates points)))))
+  (-> fcoll
+      ->flat-coords
+      ->jts-multi-point
+      (ConcaveHull/concaveHullByLengthRatio concave-hull-length-ratio)))
 
 (defn ->single-linestring-coords [fcoll]
   (-> fcoll
@@ -248,9 +312,9 @@
   (update fcoll :features
           (fn [fs]
             (map
-             (fn [f]
-               (update-in f [:geometry :coordinates] #(map dedupe %)))
-             fs))))
+              (fn [f]
+                (update-in f [:geometry :coordinates] #(map dedupe %)))
+              fs))))
 
 (defn repair-self-intersecting-polygon
   "Repairs a self-intersecting polygon using the buffer(0) technique.
@@ -260,39 +324,37 @@
   (let [features (:features fcoll)
         repaired-features
         (mapcat
-         (fn [feature]
-           (let [geom-type (get-in feature [:geometry :type])]
-             (if (= "Polygon" geom-type)
-               (let [jts-geom (->jts-geom {:type "FeatureCollection" :features [feature]})]
-                 (if (.isValid jts-geom)
-                   [feature]  ; Already valid, keep as-is
-                   (let [geom-srid (.getSRID jts-geom)
-                         fixed-jts (doto (.buffer jts-geom 0.0)
-                                     (.setSRID geom-srid))
-                         fixed-type (.getGeometryType fixed-jts)]
-                     (log/info "Repaired self-intersecting polygon, result type:" fixed-type
-                               "lipas-id:" (:lipas-id (:properties feature)))
-                     (if (= "MultiPolygon" fixed-type)
+          (fn [feature]
+            (let [geom-type (get-in feature [:geometry :type])]
+              (if (= "Polygon" geom-type)
+                (let [jts-geom (->jts-geom {:type "FeatureCollection" :features [feature]})]
+                  (if (.isValid jts-geom)
+                    [feature]  ; Already valid, keep as-is
+                    (let [geom-srid (.getSRID jts-geom)
+                          fixed-jts (doto (.buffer jts-geom 0.0)
+                                      (.setSRID geom-srid))
+                          fixed-type (.getGeometryType fixed-jts)]
+                      (log/info "Repaired self-intersecting polygon, result type:" fixed-type
+                                "lipas-id:" (:lipas-id (:properties feature)))
+                      (if (= "MultiPolygon" fixed-type)
                        ;; Decompose MultiPolygon into multiple Polygon features
-                       (for [i (range (.getNumGeometries fixed-jts))]
-                         (let [poly (.getGeometryN fixed-jts i)
-                               _ (.setSRID poly geom-srid)
-                               poly-geom (-> (gio/to-geojson poly)
-                                             (json/parse-string true))]
-                           (cond-> {:type "Feature"
-                                    :id (str (:id feature) "-" i)
-                                    :geometry poly-geom}
-                             (contains? feature :properties)
-                             (assoc :properties (:properties feature)))))
+                        (for [i (range (.getNumGeometries fixed-jts))]
+                          (let [poly (.getGeometryN fixed-jts i)
+                                _ (.setSRID poly geom-srid)
+                                poly-geom (jts->geom-map poly)]
+                            (cond-> {:type "Feature"
+                                     :id (str (:id feature) "-" i)
+                                     :geometry poly-geom}
+                              (contains? feature :properties)
+                              (assoc :properties (:properties feature)))))
                        ;; Single Polygon result
-                       [(cond-> {:type "Feature"
-                                 :id (:id feature)
-                                 :geometry (-> (gio/to-geojson fixed-jts)
-                                               (json/parse-string true))}
-                          (contains? feature :properties)
-                          (assoc :properties (:properties feature)))]))))
-               [feature])))  ; Not a Polygon, keep as-is
-         features)]
+                        [(cond-> {:type "Feature"
+                                  :id (:id feature)
+                                  :geometry (jts->geom-map fixed-jts)}
+                           (contains? feature :properties)
+                           (assoc :properties (:properties feature)))]))))
+                [feature])))  ; Not a Polygon, keep as-is
+          features)]
     (assoc fcoll :features (vec repaired-features))))
 
 (defn ->fcoll [features]
@@ -309,8 +371,8 @@
    (let [envelope (-> fcoll
                       ->jts-geom
                       .getEnvelope
-                      (jts/transform-geom wgs84->tm35fin-xform)
-                      jts/get-envelope-internal
+                      (transform-geom srid tm35fin-srid)
+                      .getEnvelopeInternal
                       (doto (.expandBy buff-m)))]
      {:max-x (.getMaxX envelope)
       :max-y (.getMaxY envelope)
@@ -321,8 +383,8 @@
   ([jts-geom]
    (get-envelope jts-geom 0))
   ([jts-geom buff-m]
-   (let [envelope (-> jts-geom
-                      jts/get-envelope-internal
+   (let [envelope (-> ^Geometry jts-geom
+                      .getEnvelopeInternal
                       (doto (.expandBy buff-m)))]
      {:max-x (.getMaxX envelope)
       :max-y (.getMaxY envelope)
@@ -331,13 +393,15 @@
 
 (defn intersects-envelope?
   [{:keys [min-x max-x min-y max-y]} jts-geom]
-  (let [jts-envelope (-> [(jts/coordinate min-x min-y)
-                          (jts/coordinate min-x max-y)
-                          (jts/coordinate max-x max-y)
-                          (jts/coordinate max-x min-y)
-                          (jts/coordinate min-x min-y)]
-                         (jts/linear-ring tm35fin-srid)
-                         jts/polygon)]
+  (let [factory (gf tm35fin-srid)
+        jts-envelope (->> [(Coordinate. min-x min-y)
+                           (Coordinate. min-x max-y)
+                           (Coordinate. max-x max-y)
+                           (Coordinate. max-x min-y)
+                           (Coordinate. min-x min-y)]
+                          (into-array Coordinate)
+                          (.createLinearRing factory)
+                          (.createPolygon factory))]
     (.intersects jts-envelope jts-geom)))
 
 (defn chunk-envelope
@@ -404,10 +468,10 @@
   "Create a map of features with their indices and JTS geometries"
   [features]
   (into {} (keep-indexed
-            (fn [idx feature]
-              [idx {:feature feature
-                    :jts-geom (extract-linestring-from-feature feature)}])
-            features)))
+             (fn [idx feature]
+               [idx {:feature feature
+                     :jts-geom (extract-linestring-from-feature feature)}])
+             features)))
 
 (defn find-matching-feature-index
   "Find the index of a feature that matches the given geometry"
@@ -419,19 +483,19 @@
 
     ;; Find a feature with matching start and end coordinates
     (first
-     (for [[idx {:keys [jts-geom]}] feature-map
-           :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
-                               (.getCoordinateN jts-geom i))
-                 feat-start (first feat-coords)
-                 feat-end (last feat-coords)]
-           :when (or
+      (for [[idx {:keys [jts-geom]}] feature-map
+            :let [feat-coords (for [i (range (.getNumPoints jts-geom))]
+                                (.getCoordinateN jts-geom i))
+                  feat-start (first feat-coords)
+                  feat-end (last feat-coords)]
+            :when (or
                   ;; Match in same direction
-                  (and (.equals2D start-coord feat-start)
-                       (.equals2D end-coord feat-end))
+                    (and (.equals2D start-coord feat-start)
+                         (.equals2D end-coord feat-end))
                   ;; Match in reverse direction
-                  (and (.equals2D start-coord feat-end)
-                       (.equals2D end-coord feat-start)))]
-       idx))))
+                    (and (.equals2D start-coord feat-end)
+                         (.equals2D end-coord feat-start)))]
+        idx))))
 
 (defn sequence-features
   "Sequence LineString features using JTS LineSequencer"
@@ -511,7 +575,7 @@
       ->flat-coords
       (->> (map wgs84->tm35fin-no-wrap))
       ->jts-multi-point
-      jts/get-envelope-internal
+      .getEnvelopeInternal
       (doto (.expandBy 1)))
   ;; "Env[434354.5312499977 : 434356.5312499977, 6943965.504886635 : 6943967.504886635]"
   ;; "Env[434355.5312499977 : 434355.5312499977, 6943966.504886635 : 6943966.504886635]"
@@ -539,10 +603,10 @@
   (def buff (calc-buffer test-point 10))
 
   (json/encode
-   {:type "FeatureCollection"
-    :features
-    [{:type "Feature"
-      :geometry buff}]})
+    {:type "FeatureCollection"
+     :features
+     [{:type "Feature"
+       :geometry buff}]})
 
   (centroid test-point)
 
@@ -579,25 +643,22 @@
 
   (into [] coords)
 
-  (def convex (.getConvexHull (ConvexHull. mp)))
+  (def convex (.getConvexHull (org.locationtech.jts.algorithm.ConvexHull. mp)))
 
   (.getSRID convex)
 
-  (.setDistanceFnForCoordinate hull-tool)
-  (.getDistanceFnForCoordinate hull-tool)
-
-  hull-tool
-
-  (def concave (.concaveHull hull-tool convex (into [] coords)))
+  (def concave (concave-hull test-route))
 
   concave
 
-  (->> [{:geometry concave :properties {}}]
-       gio/to-geojson-feature-collection
+  (->> {:type "FeatureCollection"
+        :features [(->feature (jts->geom-map concave))]}
+       json/encode
        (spit "/Users/tipo/Desktop/concave.json"))
 
-  (->> [{:geometry convex :properties {}}]
-       gio/to-geojson-feature-collection
+  (->> {:type "FeatureCollection"
+        :features [(->feature (jts->geom-map convex))]}
+       json/encode
        (spit "/Users/tipo/Desktop/convex.json"))
 
   (->> test-route
@@ -654,8 +715,6 @@
        {:type        "Point",
         :coordinates [19.720539797408946,
                       65.62057217751676]}}]})
-
-  (geo/bounding-box test-point2)
 
   (calc-buffer test-point2 100)
 

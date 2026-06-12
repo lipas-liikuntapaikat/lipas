@@ -50,12 +50,6 @@
     :list-id (env! :mailchimp-list-id)
     :newsletter-interest-id (env! :mailchimp-newsletter-interest-id)
     :campaign-folder-id (env! :mailchimp-campaign-folder-id)}
-   :aws
-   {:access-key-id (env! :aws-access-key-id)
-    :secret-access-key (env! :aws-secret-access-key)
-    :region (env! :aws-region)
-    :s3-bucket (env! :aws-s3-bucket)
-    :s3-bucket-prefix (env! :aws-s3-bucket-prefix)}
    :ptv
    (let [test-env? (= "test" (:ptv-env e/env "prod"))]
      {:env (:ptv-env e/env "prod")
@@ -79,7 +73,6 @@
     :emailer (ig/ref :lipas/emailer)
     :search (ig/ref :lipas/search)
     :mailchimp (ig/ref :lipas/mailchimp)
-    :aws (ig/ref :lipas/aws)
     :ptv (ig/ref :lipas/ptv)
     :utp
     {:cms-api-url (env! :utp-cms-api-url)
