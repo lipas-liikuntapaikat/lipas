@@ -11,9 +11,7 @@
    [lipas.backend.org :as org]
    [nrepl.server :as nrepl]
    [ring.adapter.jetty :as jetty]
-   [taoensso.timbre :as log])
-  (:import
-   (software.amazon.awssdk.auth.credentials DefaultCredentialsProvider)))
+   [taoensso.timbre :as log]))
 
 (defmethod ig/init-key :lipas/db [_ db-spec]
   (if (:dev db-spec)
@@ -68,11 +66,6 @@
 (defmethod ig/halt-key! :lipas/nrepl [_ server]
   (nrepl/stop-server server))
 
-(defmethod ig/init-key :lipas/aws [_ config]
-  (assoc config :credentials-provider (DefaultCredentialsProvider/create)))
-
-(defmethod ig/halt-key! :lipas/aws [_ _m])
-
 (defmethod ig/init-key :lipas/open-ai [_ _config])
 
 (defmethod ig/halt-key! :lipas/open-ai [_ _m])
@@ -111,9 +104,7 @@
                  (update-in [:lipas/search :pass] mask)
                  (update-in [:lipas/mailchimp :api-key] mask)
                  (update-in [:lipas/app :accessibility-register :secret-key] mask)
-                 (update-in [:lipas/app :mml-api :api-key] mask)
-                 (update-in [:lipas/aws :access-key-id] mask)
-                 (update-in [:lipas/aws :secret-access-key] mask)))
+                 (update-in [:lipas/app :mml-api :api-key] mask)))
      system)))
 
 (def current-system (atom nil))

@@ -32,13 +32,6 @@
     [:field-types [:vector {:distinct true}
                    [:enum "football-field" "floorball-field"]]]]))
 
-;; Create upload URL
-(def create-upload-url-payload
-  (m/schema
-   [:map
-    [:lipas-id sports-sites-schema/lipas-id]
-    [:extension [:enum "png" "jpeg" "webp"]]]))
-
 ;; Report schemas
 (def report-field (m/schema (into [:enum] (keys reports/fields))))
 

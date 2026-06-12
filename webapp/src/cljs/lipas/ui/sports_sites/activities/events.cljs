@@ -1,8 +1,6 @@
 (ns lipas.ui.sports-sites.activities.events
   (:require [ajax.core :as ajax]
-            [clojure.string :as str]
             [goog.object :as gobj]
-            [goog.string.path :as gpath]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -76,12 +74,6 @@
                         new-routes]]
             [:dispatch [:lipas.ui.map.events/clear-highlight]]]})))
 
-(defn parse-ext [file]
-  (-> file
-      (gobj/get "name" "")
-      gpath/extension
-      str/lower-case))
-
 (rf/reg-event-fx ::upload-utp-image
   (fn [{:keys [db]} [_ files lipas-id cb]]
     (let [file      (aget files 0)
@@ -105,60 +97,6 @@
     {}))
 
 (rf/reg-event-fx ::upload-utp-image-failure
-  (fn [{:keys [db]} [event-k resp]]
-    (let [tr           (:translator db)
-          notification {:message  (tr :notifications/save-failed)
-                        :success? false}]
-      {:dispatch [:lipas.ui.events/set-active-notification notification]})))
-
-(rf/reg-event-fx ::upload-image
-  (fn [{:keys [db]} [_ files lipas-id cb]]
-    (let [file  (aget files 0)
-          ext   (parse-ext file)
-          ext   (if (= "jpg" ext) "jpeg" ext)
-          token (-> db :user :login :token)]
-      {:http-xhrio
-       {:method          :post
-        :uri             (str (:backend-url db) "/actions/create-upload-url")
-        :headers         {:Authorization (str "Token " token)}
-        :params          {:extension ext
-                          :lipas-id  lipas-id}
-        :format          (ajax/transit-request-format)
-        :response-format (ajax/transit-response-format)
-        :on-success      [::upload-image-success file ext cb]
-        :on-failure      [::upload-image-failure]}})))
-
-(rf/reg-event-fx ::upload-image-failure
-  (fn [{:keys [db]} _]
-    (let [tr           (:translator db)
-          notification {:message  (tr :notifications/save-failed)
-                        :success? false}]
-      {:dispatch [:lipas.ui.events/set-active-notification notification]})))
-
-(rf/reg-event-fx ::upload-image-success
-  (fn [{:keys [db]} [_ file ext cb resp]]
-    (let [eventual-file-url (-> resp
-                                :presigned-url
-                                (str/split "?")
-                                first)]
-      {:http-xhrio
-       {:method          :put
-        :uri             (:presigned-url resp)
-        :headers         (merge
-                           {:Content-type (str "image/" ext)}
-                           (:meta resp))
-        :body            file
-        :format          :raw
-        :response-format (ajax/text-response-format)
-        :on-success      [::upload-image-s3-success cb eventual-file-url]
-        :on-failure      [::upload-image-s3-failure]}})))
-
-(rf/reg-event-fx ::upload-image-s3-success
-  (fn [{:keys [_db]} [_ cb file-url _resp]]
-    (cb file-url)
-    {}))
-
-(rf/reg-event-fx ::upload-image-s3-failure
   (fn [{:keys [db]} [event-k resp]]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/save-failed)
