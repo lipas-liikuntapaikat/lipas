@@ -13,6 +13,8 @@
     [lipas.backend.core :as core]
     [lipas.backend.search :as search]
     [lipas.test-utils :as test-utils]
+    [qbits.spandex :as es]
+    [qbits.spandex.utils :as es-utils]
     [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
@@ -238,6 +240,44 @@
       (let [{:keys [status]} (query-legacy-api "/v1/sports-places/2000006")]
         (is (= 404 status)
             "Inactive site should return 404 from legacy API")))))
+
+(deftest long-route-does-not-poison-legacy-mapping-test
+  (testing "a long route indexed first does not break later sites"
+    ;; ES 8.11+ dynamic mapping guesses an all-float array of 128+ elements as
+    ;; dense_vector. A LineString with 200 points flattens to 400 floats, so
+    ;; without the explicit location.geometries mapping the first-indexed
+    ;; route would lock the coordinates field to dense_vector and every
+    ;; following doc with different geometry would fail to index.
+    (let [coords (vec (for [i (range 200)]
+                        [(+ 25.0001 (* i 0.0001))
+                         (+ 60.2001 (* i 0.0001))]))
+          route (test-utils/make-route-site 2000007
+                                            :name "Long Route"
+                                            :type-code 4401
+                                            :segments [coords])
+          point (test-utils/make-point-site 2000008 :name "Point After Route")]
+      (create-site-in-db! route)
+      (save-site! route)
+      (create-site-in-db! point)
+      (save-site! point)
+      (Thread/sleep 200)
+
+      (is (legacy-doc-exists? 2000007)
+          "Long route should exist in legacy index")
+      (is (legacy-doc-exists? 2000008)
+          "Point site indexed after a long route should exist in legacy index")
+
+      (let [{:keys [client indices]} (test-search)
+            idx-name (get-in indices [:legacy-sports-site :search])
+            mapping (-> (es/request client {:method :get
+                                            :url (es-utils/url [idx-name :_mapping])})
+                        :body vals first)
+            geometries (get-in mapping [:mappings :properties :location
+                                        :properties :geometries])]
+        (is (false? (:enabled geometries))
+            "location.geometries must stay un-indexed")
+        (is (nil? (:properties geometries))
+            "No dynamic submappings should appear under location.geometries")))))
 
 (comment
   ;; Run all tests in this namespace
