@@ -318,7 +318,10 @@ services:
   frontend-build:
     extends:
       service: backend-base
-    command: clojure -M:dev -m shadow.cljs.devtools.cli release app
+    # :frontend alias carries shadow-cljs & cljs deps; this direct clojure
+    # invocation bypasses the npm launcher, so shadow-cljs.edn's :deps
+    # aliases don't apply here
+    command: clojure -M:frontend:dev -m shadow.cljs.devtools.cli release app
 
   postgres:
     image: postgis/postgis:17-3.5
