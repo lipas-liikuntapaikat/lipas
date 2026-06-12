@@ -233,9 +233,24 @@
                      {:type "geo_shape"}}}}
    :legacy-sports-site
    {:mappings
-    {:properties
-     {:location.coordinates.wgs84 {:type "geo_point"}
+    {:date_detection false
+     :properties
+     {;; Raw GeoJSON kept in _source for API responses only. Must not be
+      ;; indexed: coordinates are float arrays and ES 8.11+ dynamic mapping
+      ;; guesses arrays of 128+ floats as dense_vector, after which docs
+      ;; with other geometries fail to index. Geo queries use the explicitly
+      ;; mapped fields below instead.
+      :location.geometries        {:type "object" :enabled false}
+      :location.coordinates.wgs84 {:type "geo_point"}
       :location.geom-coll         {:type "geo_shape"}
+      ;; Fields queried by the V1 API. Everything else (legacy camelCase
+      ;; properties etc.) is left to dynamic mapping because V1 search
+      ;; multi_matches against "*".
+      :sportsPlaceId              {:type "long"}
+      :type.typeCode              {:type "integer"}
+      :location.city.cityCode     {:type "integer"}
+      :properties.mayBeShownInExcursionMapFi   {:type "boolean"}
+      :properties.mayBeShownInHarrastuspassiFi {:type "boolean"}
       :lastModified               {:type   "date"
                                    :format legacy-date-format}}}}})
 
