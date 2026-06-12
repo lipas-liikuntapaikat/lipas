@@ -59,6 +59,10 @@
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
+           ;; Compiled frontend bundles are served by the proxy, not the jar.
+           ;; Local builds would otherwise sweep in dev output + stale hashed
+           ;; release bundles from resources/public/js/compiled (100MB+).
+           :exclude ["^public/js/compiled/.*"]
            :main 'clojure.main})
 
   (println (str "Uberjar created: " uber-file))

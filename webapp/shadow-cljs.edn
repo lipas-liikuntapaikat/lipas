@@ -1,4 +1,4 @@
-{:deps {:aliases [:dev]}
+{:deps {:aliases [:frontend :dev]}
  :dev-http {3449 "resources/public"}
  :nrepl {:port 7888 :init-ns user}
  ;; Node polyfills removed in shadow-cljs 3.x — provide explicit shims
