@@ -48,6 +48,11 @@
      :indices indices
      :mappings search/mappings}))
 
+(defmethod ig/halt-key! :lipas/search [_ search]
+  ;; Close the ES client so its connection pool and I/O-reactor threads are
+  ;; released on halt/reset instead of leaking until the JVM exits.
+  (some-> search :client search/close-cli))
+
 (defmethod ig/init-key :lipas/mailchimp [_ config]
   config)
 

@@ -16,6 +16,13 @@
               :http-client {:basic-auth {:user     user
                                          :password password}}}))
 
+(defn close-cli
+  "Close a client created by create-cli, releasing its connection pool and
+   background I/O-reactor threads. Without this the RestClient leaks those
+   resources on every system halt/reset (it is not reliably closed by GC)."
+  [client]
+  (es/close! client))
+
 ;; Helper functions for generating explicit ES mappings from prop-types
 
 (defn- prop-type->es-mapping
