@@ -472,6 +472,13 @@
 
 (defn- test-suffix [s] (str s "_test"))
 
+(defn- test-suffixed?
+  "True if `nm` carries the test marker added by test-suffix. Used to guard
+   destructive ops (drop-db!, reset-test-infra!) so they can only ever touch
+   test resources, never the real dev/prod database or indices."
+  [nm]
+  (str/ends-with? (str nm) (test-suffix "")))
+
 (def config (-> config/default-config
                 (select-keys [:db :app :search :mailchimp :ptv])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
@@ -583,7 +590,7 @@
      ;; Hard guard: only ever drop a database whose name was produced by
      ;; test-suffix. Dropping the real dev/prod DB would force the developer
      ;; to rebuild whatever state they had there.
-     (when-not (str/ends-with? (str dbname) (test-suffix ""))
+     (when-not (test-suffixed? dbname)
        (throw (ex-info (str "Refusing to drop '" dbname "': not a test database "
                             "(name must end with '" (test-suffix "") "'). "
                             "drop-db! only operates on the test database.")
@@ -772,6 +779,41 @@
             (throw ex)))))
     (prune-es! search)))
 
+(defn reset-test-infra!
+  "Nuclear reset of local test infrastructure: drop the test database AND
+   drop+recreate all Elasticsearch test indices, so the next test run rebuilds
+   both from the current branch's migrations and mappings.
+
+   Use after branch-hopping when you hit schema- or mapping-shaped failures
+   locally while CI (which always starts fresh) is green. The two kinds of
+   sticky local state this clears:
+
+   - Postgres: the test DB is persistent and migratus is forward-only, so the
+     schema is the high-water mark of every migration ever applied (see
+     drop-db!).
+   - Elasticsearch: prune-es! only empties documents and never re-maps an
+     existing index, so a stale dynamic mapping (e.g. location.geometries
+     auto-detected from a long route) sticks across runs (see hard-prune-es!).
+
+   Both halves are guarded by the test-suffix - the DB name (via drop-db!) and
+   every ES index name - so a misconfigured config can never destroy the real
+   dev/prod database or indices.
+
+   Optionally accepts a custom db config (defaults to the test config)."
+  ([search]
+   (reset-test-infra! search (:db config)))
+  ([search db-config]
+   ;; Guard every ES index name up front, before dropping anything. drop-db!
+   ;; applies the matching guard to the database name itself.
+   (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+     (when-not (test-suffixed? idx-name)
+       (throw (ex-info (str "Refusing to drop ES index '" idx-name "': not a "
+                            "test index (name must end with '" (test-suffix "")
+                            "'). reset-test-infra! only operates on test indices.")
+                       {:index idx-name}))))
+   (hard-prune-es! search)
+   (drop-db! db-config)))
+
 (comment
   (init-db!)
   ;; prune-es! now requires search component: (prune-es! search)
@@ -781,6 +823,8 @@
   ;; then init-db! rebuilds it fresh from the current branch's migrations.
   (drop-db!)
   (init-db!)
+  ;; Or reset both DB and ES test indices in one shot (needs a search component).
+  (reset-test-infra! search)
   (ex-data *e))
 
 (def test-user-password
