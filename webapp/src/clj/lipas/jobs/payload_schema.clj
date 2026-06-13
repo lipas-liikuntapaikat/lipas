@@ -1,6 +1,7 @@
 (ns lipas.jobs.payload-schema
   "Malli schemas for job payloads providing validation and documentation."
   (:require
+   [lipas.schema.sports-sites :as sports-sites-schema]
    [malli.core :as m]
    [malli.error :as me]
    [malli.transform :as mt]))
@@ -8,11 +9,11 @@
 ;; Individual job payload schemas
 (def analysis-payload-schema
   [:map
-   [:lipas-id pos-int?]])
+   [:lipas-id #'sports-sites-schema/lipas-id]])
 
 (def elevation-payload-schema
   [:map
-   [:lipas-id pos-int?]])
+   [:lipas-id #'sports-sites-schema/lipas-id]])
 
 (def email-payload-schema
   [:or
@@ -35,7 +36,7 @@
 
 (def webhook-payload-schema
   [:map
-   [:lipas-ids {:optional true} [:vector pos-int?]]
+   [:lipas-ids {:optional true} [:vector #'sports-sites-schema/lipas-id]]
    [:loi-ids {:optional true} [:vector pos-int?]]
    [:operation-type {:optional true} :string]
    [:initiated-by {:optional true} :string]

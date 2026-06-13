@@ -16,7 +16,11 @@
             [malli.core :as m]))
 
 (def lipas-id
-  (m/schema [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}]))
+  ;; Positive int: lipas-ids come from a Postgres sequence and are always >= 1.
+  ;; The jobs payload schema already encodes this (pos-int?); every save enqueues
+  ;; an analysis job validated as pos-int?, so a site with lipas-id 0 could never
+  ;; be saved. Reuse this canonical schema everywhere instead of re-spelling :int.
+  (m/schema [:int {:min 1 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}]))
 
 (def owner
   (m/schema (into [:enum {:description "Owner entity of the sports facility."}]
