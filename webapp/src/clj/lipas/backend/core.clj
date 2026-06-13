@@ -308,7 +308,28 @@
 (defn- new? [sports-site]
   (nil? (:lipas-id sports-site)))
 
-(defn- check-permissions! [user sports-site draft?]
+;; Map-level keys stripped before comparing revisions to decide whether a save
+;; is an "images-only" change. :event-date is always bumped per save.
+;; :search-meta can leak into the persisted document via UI round-trips (known
+;; issue) but gets recomputed on every save, so differences there don't
+;; reflect user intent. :author-id and :doc-status live on Clojure metadata,
+;; not the map, so they're irrelevant to = and not listed here.
+(def ^:private revision-noise-keys
+  #{:event-date :search-meta})
+
+(defn- images-only-diff?
+  "True when the incoming sports-site differs from the persisted one only in
+  the :images field. New sites (no persisted revision) are never considered
+  images-only."
+  [new-site current-site]
+  (boolean
+    (when current-site
+      (let [strip (fn [m] (apply dissoc m revision-noise-keys))
+            a (strip new-site)
+            b (strip current-site)]
+        (= (dissoc a :images) (dissoc b :images))))))
+
+(defn- check-permissions! [user sports-site draft? images-only?]
   (let [ctx (roles/site-roles-context sports-site)]
     (when-not (or draft?
                   (new? sports-site)
@@ -317,9 +338,29 @@
                   ;; may persist a change. The OR lets general editors carry just
                   ;; create-edit (no redundant save-api); see lipas.roles/basic.
                   (roles/check-privilege user ctx :site/save-api)
-                  (roles/check-privilege user ctx :site/create-edit))
+                  (roles/check-privilege user ctx :site/create-edit)
+                  ;; An images-only change may also be saved by an images
+                  ;; manager (:site/edit-images) without general edit rights.
+                  (and images-only?
+                       (roles/check-privilege user ctx :site/edit-images)))
       (throw (ex-info "User doesn't have enough permissions!"
                       {:type :no-permission})))))
+
+(defn- check-image-permissions!
+  "Changing :images always requires the dedicated :site/edit-images privilege,
+  regardless of other save rights. :site/save-api alone is not enough; this
+  keeps the image-links pilot scoped to explicitly assigned roles. `current`
+  is the stored revision (nil on create)."
+  [user sports-site current draft?]
+  (when-not draft?
+    (let [images-changed? (if current
+                            (not= (:images sports-site) (:images current))
+                            (boolean (seq (:images sports-site))))]
+      (when (and images-changed?
+                 (not (roles/check-privilege
+                        user (roles/site-roles-context sports-site) :site/edit-images)))
+        (throw (ex-info "User doesn't have enough permissions!"
+                        {:type :no-permission}))))))
 
 ;; Moved to lipas.data.owners so the FE form can derive the same locked :owner
 ;; when an org is selected as a site's owner. Aliased here for existing callers.
@@ -423,7 +464,9 @@
    (let [lipas-id  (:lipas-id sports-site)
          ;; Authoritative current state. nil ⇒ no such revision (a create, or an
          ;; edit of a not-yet-existing id — the latter 404s after authz below).
-         stored    (when lipas-id (not-empty (get-sports-site db lipas-id)))
+         ;; Raw db document (no activity enrichment) so the images-only diff
+         ;; below compares like with like.
+         stored    (when lipas-id (not-empty (db/get-sports-site db lipas-id)))
          creating? (nil? stored)
          ;; The server owns :owner-org-id / :edit-grants: when the submitted
          ;; body OMITS the key entirely (clients that don't round-trip them —
@@ -433,7 +476,10 @@
          sports-site (if stored
                        (merge (select-keys stored [:owner-org-id :edit-grants])
                               sports-site)
-                       sports-site)]
+                       sports-site)
+         ;; Computed AFTER the carry-forward so an omitted :owner-org-id /
+         ;; :edit-grants doesn't read as a content change.
+         images-only? (images-only-diff? sports-site stored)]
      ;; 1. Content-edit permission. For an existing site the privilege must hold
      ;;    for BOTH the stored revision (a scoped editor can't touch sites
      ;;    outside their scope, and org-owned-site editors keep edit rights via
@@ -445,9 +491,11 @@
      ;;    For a create (no stored revision) the body alone is checked,
      ;;    preserving the legacy permission check (and its 403-before-404
      ;;    ordering) for a posted-but-missing lipas-id.
-     (check-permissions! user (or stored sports-site) draft?)
+     (check-permissions! user (or stored sports-site) draft? images-only?)
      (when stored
-       (check-permissions! user sports-site draft?))
+       (check-permissions! user sports-site draft? images-only?))
+     ;; 1b. Any change to :images additionally requires :site/edit-images.
+     (check-image-permissions! user sports-site stored draft?)
      ;; 2. Ownership & edit-grant invariants: a body that changes either
      ;;    security-sensitive field must be authorized to do so (business rule).
      (let [prev-owner  (:owner-org-id stored)

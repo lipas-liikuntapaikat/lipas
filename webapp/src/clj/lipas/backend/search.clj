@@ -169,7 +169,9 @@
          :ventilation {:enabled false}
          ;; Other fields
          :energy-consumption {:enabled false}
-         :hall-id {:enabled false}}
+         :hall-id {:enabled false}
+         ;; Site-level image links (display-only, edited via :images-manager role)
+         :images {:enabled false}}
 
         ;; Legacy properties that exist in DB but are not in prop-types/all
         ;; Stored in _source but not indexed (display-only)

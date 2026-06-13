@@ -29,6 +29,7 @@
    :lipas.org.ptv
    :lipas.properties
    :lipas.sports-site
+   :lipas.sports-site.images
    :lipas.swimming-pool.facilities
    :lipas.swimming-pool.pool
    :lipas.swimming-pool.pools

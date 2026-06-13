@@ -452,6 +452,148 @@
                            (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
+(deftest upsert-sports-site-images-manager-test
+  (testing "images-manager can save an images-only revision"
+    (let [city-code 430 ; Loimaa
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] city-code)
+                   (dissoc :images))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-user
+                    {:db? true
+                     :db-component (test-db)
+                     :permissions {:roles [{:role "images-manager"
+                                            :city-code [city-code]}]}})
+          token (jwt/create-token manager)
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :images [{:url "https://loimaa.fi/img/a.jpg"
+                                   :alt-text {:fi "alt"}
+                                   :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}])
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 201 (:status resp)))))
+
+  (testing "images-manager cannot save non-images changes"
+    (let [city-code 430
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] city-code))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-user
+                    {:db? true
+                     :db-component (test-db)
+                     :permissions {:roles [{:role "images-manager"
+                                            :city-code [city-code]}]}})
+          token (jwt/create-token manager)
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :name "Renamed by images-manager")
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 403 (:status resp)))))
+
+  (testing "images-manager scoped to another city cannot save"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] 430))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-user
+                    {:db? true
+                     :db-component (test-db)
+                     :permissions {:roles [{:role "images-manager"
+                                            :city-code [999]}]}})
+          token (jwt/create-token manager)
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :images [{:url "https://loimaa.fi/img/a.jpg"
+                                   :alt-text {:fi "alt"}
+                                   :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}])
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 403 (:status resp)))))
+
+  (testing "a user with :site/save-api but without :site/edit-images cannot change images"
+    (let [city-code 430
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] city-code)
+                   (dissoc :images))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-city-manager-user city-code :db-component (test-db))
+          token (jwt/create-token manager)
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :images [{:url "https://loimaa.fi/img/city-manager.jpg"
+                                   :alt-text {:fi "alt"}
+                                   :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}])
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 403 (:status resp)))))
+
+  (testing "a user with :site/save-api can still edit other fields of a site that has images"
+    (let [city-code 430
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] city-code)
+                   (assoc :images [{:url "https://loimaa.fi/img/existing.jpg"
+                                    :alt-text {:fi "alt"}
+                                    :copyright {:fi "© 2026 Loimaa CC BY 4.0"}}]))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          manager (tu/gen-city-manager-user city-code :db-component (test-db))
+          token (jwt/create-token manager)
+          ;; UI round-trips the full document incl. the unchanged :images
+          updated (assoc saved
+                         :event-date (str (java.time.Instant/now))
+                         :name "Renamed by city-manager")
+          resp (test-app (-> (mock/request :post "/api/sports-sites")
+                             (mock/content-type "application/json")
+                             (mock/body (->json updated))
+                             (tu/token-header token)))]
+      (is (= 201 (:status resp)))))
+
+  (testing "incomplete or non-https image links are rejected"
+    (let [admin (tu/gen-admin-user :db-component (test-db))
+          site (-> (tu/gen-sports-site)
+                   (assoc :status "active")
+                   (assoc-in [:location :city :city-code] 430))
+          saved (core/upsert-sports-site!* (test-db) admin site)
+          token (jwt/create-token admin)
+          save! (fn [image]
+                  (-> (mock/request :post "/api/sports-sites")
+                      (mock/content-type "application/json")
+                      (mock/body (->json (assoc saved
+                                                :event-date (str (java.time.Instant/now))
+                                                :images [image])))
+                      (tu/token-header token)
+                      test-app
+                      :status))]
+      ;; URL, alt-text and copyright are a mandatory bound unit
+      (is (= 400 (save! {:url "https://loimaa.fi/img/bare.jpg"})))
+      (is (= 400 (save! {:url "https://loimaa.fi/img/a.jpg"
+                         :alt-text {:fi "alt"}})))
+      (is (= 400 (save! {:url "https://loimaa.fi/img/a.jpg"
+                         :alt-text {:fi ""}
+                         :copyright {:fi "© Loimaa"}})))
+      ;; https only
+      (is (= 400 (save! {:url "http://loimaa.fi/img/a.jpg"
+                         :alt-text {:fi "alt"}
+                         :copyright {:fi "© Loimaa"}}))))))
+
 (deftest get-sports-sites-by-type-code-test
   (let [user (tu/gen-admin-user :db-component (test-db))
         site (-> (tu/gen-sports-site-with-type 3110)

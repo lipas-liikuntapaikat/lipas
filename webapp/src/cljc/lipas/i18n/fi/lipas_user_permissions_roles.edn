@@ -16,6 +16,7 @@
  :role "Rooli",
  :role-names
  {:activities-manager "UTP-käyttäjä",
+  :images-manager "Kuvalinkkien muokkaaja",
   :ptv-manager "PTV-käyttäjä",
   :admin "Admin",
   :analysis-user "Analyysityökalukäyttäjä",

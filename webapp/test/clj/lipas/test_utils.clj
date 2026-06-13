@@ -40,7 +40,11 @@
   ;; so mg/generate randomly assigns ownership/grants, making ownership
   ;; assertions flaky by seed. A generated site is un-owned by default; tests
   ;; that care assoc explicit :owner-org-id / :edit-grants.
-  (cond-> (dissoc site :renovation-years :renovations :owner-org-id :edit-grants)
+  ;; Likewise :images: saving any :images change requires the dedicated
+  ;; :site/edit-images privilege, so a randomly generated :images makes
+  ;; saves by non-images-role users flaky by seed. Tests that care assoc
+  ;; explicit :images.
+  (cond-> (dissoc site :renovation-years :renovations :owner-org-id :edit-grants :images)
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))
