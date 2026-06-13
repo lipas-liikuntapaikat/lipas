@@ -15,6 +15,7 @@
  :role "Role",
  :role-names
  {:activities-manager "UTP Manager",
+  :images-manager "Image links editor",
   :ptv-manager "PTV Manager",
   :admin "Admin",
   :analysis-user "Analysis tool user",

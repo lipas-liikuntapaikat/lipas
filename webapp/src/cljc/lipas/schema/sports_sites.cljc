@@ -8,6 +8,7 @@
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.schema.sports-sites.images :as images-schema]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.common :as common]
             [lipas.data.types :as types]
@@ -15,7 +16,11 @@
             [malli.core :as m]))
 
 (def lipas-id
-  (m/schema [:int {:min 0 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}]))
+  ;; Positive int: lipas-ids come from a Postgres sequence and are always >= 1.
+  ;; The jobs payload schema already encodes this (pos-int?); every save enqueues
+  ;; an analysis job validated as pos-int?, so a site with lipas-id 0 could never
+  ;; be saved. Reuse this canonical schema everywhere instead of re-spelling :int.
+  (m/schema [:int {:min 1 :label "Lipas-id" :description "Unique identifier of sports facility in LIPAS system."}]))
 
 (def owner
   (m/schema (into [:enum {:description "Owner entity of the sports facility."}]
@@ -133,6 +138,7 @@
              [:construction-year {:optional true} #'construction-year]
              [:renovation-years {:optional true} #'renovation-years]
              [:renovations {:optional true} #'renovations]
+             [:images {:optional true} #'images-schema/images]
              [:type
               [:map
                ;; Add :encode/json identity in compat mode to prevent conversion to string

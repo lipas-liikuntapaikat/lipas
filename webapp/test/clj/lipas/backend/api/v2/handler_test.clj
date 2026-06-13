@@ -132,7 +132,13 @@
 (deftest list-sports-sites-with-results-test
   (testing "GET /v2/sports-sites returns items with pagination"
     (doseq [i (range 1 4)]
-      (create-sports-site! (test-utils/make-point-site (+ 20000 i) :name (str "V2 Test Site " i))))
+      (let [base (test-utils/make-point-site (+ 20000 i) :name (str "V2 Test Site " i))
+            ;; Attach images only to the first site so we cover both branches.
+            site (cond-> base
+                   (= i 1) (assoc :images [{:url "https://loimaa.fi/img/list.jpg"
+                                            :alt-text {:fi "Alt"}
+                                            :copyright {:fi "© Loimaa"}}]))]
+        (create-sports-site! site)))
 
     (let [resp ((test-app) (mock/request :get "/v2/sports-sites"))
           body (parse-json-body resp)]
@@ -148,7 +154,14 @@
           (is (string? (:status item)))
           (is (map? (:type item)))
           (is (integer? (-> item :type :type-code)))
-          (is (map? (:location item))))))))
+          (is (map? (:location item)))))
+
+      (testing ":images surface in list items when set"
+        (let [with-images (first (filter #(= 20001 (:lipas-id %)) (:items body)))]
+          (is (= [{:url "https://loimaa.fi/img/list.jpg"
+                   :alt-text {:fi "Alt"}
+                   :copyright {:fi "© Loimaa"}}]
+                 (:images with-images))))))))
 
 (deftest list-sports-sites-pagination-test
   (testing "GET /v2/sports-sites pagination"
@@ -259,11 +272,19 @@
         (is (map? (:location body)))))
 
     (testing "returns correct v2 field format"
-      (let [site (-> (test-utils/make-point-site 12346
+      (let [images [{:url "https://loimaa.fi/img/a.jpg"
+                     :alt-text {:fi "Kenttä" :se "Plan" :en "Field"}
+                     :copyright {:fi "© 2026 Loimaa CC BY 4.0"}
+                     :description {:fi "Pääkenttä"}}
+                    {:url "https://loimaa.fi/img/b.jpg"
+                     :alt-text {:fi "Katsomo"}
+                     :copyright {:fi "© Loimaa"}}]
+            site (-> (test-utils/make-point-site 12346
                                                  :name "Test Football Field"
                                                  :type-code 1310)
                      (assoc :construction-year 2010
-                            :event-date "2024-06-15T10:30:00.000Z"))
+                            :event-date "2024-06-15T10:30:00.000Z"
+                            :images images))
             _ (create-sports-site! site)
             resp ((test-app) (mock/request :get "/v2/sports-sites/12346"))
             body (parse-json-body resp)]
@@ -274,7 +295,21 @@
         (is (integer? (-> body :type :type-code)))
         (is (string? (:event-date body)))
         (is (= 2010 (:construction-year body)))
-        (is (map? (-> body :location :city)))))))
+        (is (map? (-> body :location :city)))
+
+        (testing ":images round-trips all metadata fields"
+          (is (vector? (:images body)))
+          (is (= 2 (count (:images body))))
+          (let [img (-> body :images first)]
+            (is (= "https://loimaa.fi/img/a.jpg" (:url img)))
+            (is (= "Kenttä" (-> img :alt-text :fi)))
+            (is (= "Field" (-> img :alt-text :en)))
+            (is (= "© 2026 Loimaa CC BY 4.0" (-> img :copyright :fi)))
+            (is (= "Pääkenttä" (-> img :description :fi))))
+          (testing "optional :description may be omitted"
+            (let [img (-> body :images second)]
+              (is (= "https://loimaa.fi/img/b.jpg" (:url img)))
+              (is (nil? (:description img))))))))))
 
 ;;; Tests for different geometry types in v2 ;;;
 

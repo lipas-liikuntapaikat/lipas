@@ -2,6 +2,7 @@
   "HTTP routes for bulk operations"
   (:require [lipas.backend.bulk-operations.core :as bulk-ops]
             [lipas.backend.middleware :as mw]
+            [lipas.schema.sports-sites :as sports-sites-schema]
             [reitit.coercion.malli]))
 
 (defn routes [{:keys [db search ptv] :as ctx}]
@@ -11,7 +12,7 @@
       :middleware [mw/token-auth mw/auth]
       :coercion reitit.coercion.malli/coercion
       :parameters {:body [:map
-                          [:lipas-ids [:vector :int]]
+                          [:lipas-ids [:vector #'sports-sites-schema/lipas-id]]
                           [:updates [:map
                                      [:email {:optional true} [:maybe [:string {:min 1 :max 200}]]]
                                      [:phone-number {:optional true} [:maybe [:string {:min 1 :max 50}]]]
@@ -38,7 +39,7 @@
       :middleware [mw/token-auth mw/auth]
       :coercion reitit.coercion.malli/coercion
       :responses {200 {:body [:vector [:map
-                                       [:lipas-id :int]
+                                       [:lipas-id #'sports-sites-schema/lipas-id]
                                        [:name :string]
                                        [:type [:map
                                                [:type-code :int]

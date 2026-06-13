@@ -36,7 +36,8 @@
    "circumstances"
    "fields"
    "locker-rooms"
-   "audits"])
+   "audits"
+   "images"])
 
 (defn decode-heisenparam
   "Normalizes query parameters into a collection by handling different input formats:

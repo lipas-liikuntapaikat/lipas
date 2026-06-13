@@ -148,7 +148,33 @@
     (is (true? (sut/check-privilege
                  {:permissions {:roles [{:role :itrs-assessor}]}}
                  {}
-                 :site/save-api)))))
+                 :site/save-api))))
+
+  (testing "images-manager role"
+    ;; Scoped to a city-code, grants :site/edit-images
+    (is (true? (sut/check-privilege
+                 {:permissions {:roles [{:role :images-manager :city-code #{430}}]}}
+                 {:city-code 430}
+                 :site/edit-images)))
+
+    ;; Wrong city-code denies
+    (is (false? (sut/check-privilege
+                  {:permissions {:roles [{:role :images-manager :city-code #{430}}]}}
+                  {:city-code 431}
+                  :site/edit-images)))
+
+    ;; Does NOT imply :site/save-api — the backend's check-permissions! must
+    ;; additionally verify the incoming diff is images-only.
+    (is (false? (sut/check-privilege
+                  {:permissions {:roles [{:role :images-manager :city-code #{430}}]}}
+                  {:city-code 430}
+                  :site/save-api)))
+
+    ;; Does NOT grant edit on other narrow privileges
+    (is (false? (sut/check-privilege
+                  {:permissions {:roles [{:role :images-manager :city-code #{430}}]}}
+                  {:city-code 430}
+                  :activity/edit)))))
 
 (deftest roles-conform-test
   (is (= [{:role :city-manager
@@ -165,7 +191,12 @@
   (is (= [{:role :activities-manager
            :activity #{"fishing"}}]
          (sut/conform-roles [{:role "activities-manager"
-                              :activity ["fishing"]}]))))
+                              :activity ["fishing"]}])))
+
+  (is (= [{:role :images-manager
+           :city-code #{430}}]
+         (sut/conform-roles [{:role "images-manager"
+                              :city-code [430]}]))))
 
 (deftest wrap-es-query-site-has-privileget-test
   (is (= {:a 1}

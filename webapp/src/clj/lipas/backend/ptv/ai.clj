@@ -592,6 +592,9 @@ Description: %s")
     [:vector
      [:map
       {:closed true}
+      ;; NOT the canonical sports-sites-schema/lipas-id: a var ref
+      ;; transforms to a JSON-schema $ref, which Gemini structured output
+      ;; doesn't support. LLM only echoes the id, so plain :int is fine.
       [:lipas-id :int]
       [:summary (localized-string-schema nil)]
       [:description (localized-string-schema nil)]
