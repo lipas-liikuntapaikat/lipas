@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.workbench
   (:require [lipas.backend.ptv.ai :as ai]
+            [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
             [lipas.backend.search :as search]
@@ -95,7 +96,7 @@
      {:require-privilege :users/manage
       :parameters {:body [:map
                           [:flow [:enum :service-location :service]]
-                          [:lipas-id {:optional true} :int]
+                          [:lipas-id {:optional true} #'sports-sites-schema/lipas-id]
                           [:city-code {:optional true} :int]
                           [:sub-category-id {:optional true} :int]
                           [:overview-mode {:optional true} [:enum :list :aggregate]]

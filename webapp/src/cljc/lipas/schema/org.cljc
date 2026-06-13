@@ -66,7 +66,7 @@
    [:city-code {:optional true} [:sequential [:int {:min 1 :max 999}]]]
    [:type-code {:optional true} [:sequential :int]]
    [:activity {:optional true} [:sequential :string]]
-   [:lipas-id {:optional true} [:sequential :int]]
+   [:lipas-id {:optional true} [:sequential #'sites/lipas-id]]
    [:org-id {:optional true} [:sequential [:or :uuid :string]]]])
 
 (def role-templates

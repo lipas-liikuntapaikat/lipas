@@ -43,7 +43,7 @@
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
-                          [:lipas-id :int]
+                          [:lipas-id #'sports-sites-schema/lipas-id]
                           [:reference {:optional true}
                            [:maybe [:map
                                     [:summary :string]
@@ -72,7 +72,7 @@
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       :parameters {:body [:map
-                          [:lipas-ids [:vector :int]]
+                          [:lipas-ids [:vector #'sports-sites-schema/lipas-id]]
                           [:reference {:optional true}
                            [:maybe [:map
                                     [:summary :string]
