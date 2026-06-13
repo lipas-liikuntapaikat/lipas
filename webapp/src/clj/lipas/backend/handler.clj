@@ -454,7 +454,7 @@
           {:no-doc true
            :require-privilege nil
            :middleware [mw/token-auth mw/auth]
-           :parameters {:body [:map [:lipas-id :int]]}
+           :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
                        :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
@@ -468,7 +468,7 @@
           {:no-doc true
            :require-privilege nil
            :middleware [mw/token-auth mw/auth]
-           :parameters {:body [:map [:lipas-id :int]]}
+           :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
            :handler (fn [req]
                       {:status 200
                        :body (core/site-edit-history
@@ -616,7 +616,7 @@
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-id :int]
+                               [:lipas-id #'sports-site-schema/lipas-id]
                                [:grantee-org-id org-schema/org-id]]}
            :handler (fn [req]
                     ;; Authorization (owning-org admin or LIPAS admin) is enforced
@@ -631,7 +631,7 @@
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-id :int]
+                               [:lipas-id #'sports-site-schema/lipas-id]
                                [:grantee-org-id org-schema/org-id]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-id grantee-org-id]} (-> req :parameters :body)]
@@ -646,7 +646,7 @@
            :require-privilege [org-scope-from-body :site/create-edit]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-ids [:vector :int]]
+                               [:lipas-ids [:vector #'sports-site-schema/lipas-id]]
                                [:updates [:map
                                           [:email {:optional true} [:maybe [:string {:min 1 :max 200}]]]
                                           [:phone-number {:optional true} [:maybe [:string {:min 1 :max 50}]]]
@@ -670,7 +670,7 @@
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-ids {:optional true} [:vector {:min 1} :int]]]}
+                               [:lipas-ids {:optional true} [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
                         {:status 200
@@ -685,7 +685,7 @@
            :require-privilege :org/admin
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-ids {:optional true} [:vector {:min 1} :int]]]}
+                               [:lipas-ids {:optional true} [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
                         {:status 200
@@ -704,7 +704,7 @@
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-ids [:vector {:min 1} :int]]]}
+                               [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
                         {:status 200
@@ -715,7 +715,7 @@
            :require-privilege [org-scope-from-body :org/manage]
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
-                               [:lipas-ids [:vector {:min 1} :int]]
+                               [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]
                                [:owner {:optional true} sports-site-schema/owner]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-ids owner]} (-> req :parameters :body)]
