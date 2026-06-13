@@ -1,240 +1,247 @@
-# LIPAS Organizations Documentation
+# LIPAS Organizations
 
-## Overview
+## What this is
 
-The LIPAS organization functionality provides a system for managing organizations that own or operate sports facilities. This feature enables centralized management of contact information, user permissions, and bulk operations across multiple sports sites belonging to the same organization.
+LIPAS lets municipalities, consortia, the state, companies and sports
+federations be represented as **organizations**. An organization is a named
+group of people that can own sports facilities, decide who may edit them, and
+share its contact information and instructions with its members.
 
-### Key Benefits
-- **Centralized Contact Management**: Organizations can maintain contact information in one place rather than updating each sports site individually
-- **User Access Control**: Organizations can manage which users have permissions to edit their sports sites
-- **Bulk Operations**: Update contact information across multiple sports sites simultaneously
-- **PTV Integration**: Lipas admins can manage organizations PTV integration settings
+The goal is to let an organization run its own affairs — manage its people, look
+after its facilities, and collaborate with other organizations — without a LIPAS
+administrator having to step in for routine work.
 
-## Architecture
+Organizations are **opt-in and additive**. A user who belongs to no organization
+keeps working exactly as before; nothing about the existing login or editing
+experience changes for them. Everything described here only comes into play once
+someone is made a member of an organization.
 
-### Backend Architecture
+## Two ways permissions are granted
 
-The organization functionality is implemented in the backend with the following components:
+LIPAS now has two clear, independent ways a person can gain editing rights:
 
-#### Database Schema
-Organizations are stored in the `org` table with the following structure:
+1. **Direct permissions** — the long-standing system where a LIPAS administrator
+   grants an individual the right to edit, say, a particular municipality's
+   facilities or a particular activity. These are managed in the admin user-
+   management screen and are unchanged.
 
-```sql
-CREATE TABLE IF NOT EXISTS public.org (
-  id                uuid NOT NULL DEFAULT uuid_generate_v4(),
-  name              text COLLATE pg_catalog."default" NOT NULL,
-  data              jsonb,
-  ptv_data          jsonb,
+2. **Organization membership** — the new system described here. Being a member of
+   an organization, and the roles you are given inside it, determine what you can
+   do on that organization's behalf.
 
-  CONSTRAINT org_pkey PRIMARY KEY (id),
-  CONSTRAINT org_mail_key UNIQUE (name)
-)
-```
+The two planes don't interfere with each other. Org-related rights come *only*
+from membership; they are never hand-assigned to an individual account.
 
-- **id**: Unique identifier for the organization
-- **name**: Organization name (must be unique)
-- **data**: JSONB field storing organization details like contact information
-- **ptv_data**: JSONB field storing PTV integration data
+## What an organization holds
 
-#### Core Backend Module (`lipas.backend.org`)
+Each organization keeps:
 
-The main backend module provides the following functions:
+- **A name and a type** — city, municipal consortium, state, private company, or
+  sports federation. The type reflects what kind of body the organization is and
+  influences some defaults (for example, the owner label applied to its
+  facilities).
+- **Primary contact information** — phone, email, website and a reservations link,
+  maintained in one place.
+- **Instructions** for its members, written in Finnish, Swedish and English. Org
+  administrators write them; members read them. This is typically the first thing
+  a member sees.
+- **A catalog of roles** that can be assigned to members (see below).
+- **An ownership rule** describing which facilities the organization may claim as
+  its own.
+- **A list of members**, each with the roles they have been given.
 
-- **`all-orgs [db]`**: Retrieves all organizations from the database
-- **`create-org [db org]`**: Creates a new organization
-- **`update-org! [db org-id org]`**: Updates an existing organization
-- **`user-orgs [db user-id]`**: Gets all organizations a user belongs to
-- **`get-org-users [db org-id]`**: Gets all users belonging to an organization
-- **`update-org-users! [db org-id changes]`**: Adds or removes users from an organization
-- **`add-org-user-by-email! [db org-id email role]`**: Adds a user by email address
+## Roles inside an organization
 
-### Frontend Architecture
+Each member of an organization holds a single, flat list of **roles**. There are
+no longer separate "kinds" of membership to juggle — earlier versions had two
+special built-in roles (one for plain membership, one for organization
+administration) layered on top of editing rights; those have been collapsed into
+this one list.
 
-The frontend organization functionality is organized into several ClojureScript namespaces:
+Almost every role a member can hold comes from the organization's **role catalog**,
+which only a LIPAS administrator can define. There are just two things that don't:
 
-#### Routes (`lipas.ui.org.routes`)
-- `/organisaatiot` - Lists all organizations the user belongs to
-- `/organisaatio/:org-id` - Shows details and management interface for a specific organization
-- `/organisaatio/:org-id/massa-paivitys` - Bulk operations interface for updating multiple sports sites
+- **The view baseline** — being a member *at all* automatically grants the right to
+  view the organization (its details, facilities and roster). Nobody assigns it; it
+  comes free with membership, and it's why a member with no other roles can still
+  see their organization.
+- **Ylläpitäjä (Administrator)** — the management role, which lets a member edit the
+  organization's details, contact info and instructions, manage members and their
+  roles, and share editing rights on the organization's facilities. This role is
+  **reserved** — a LIPAS administrator or an organization administrator can *assign*
+  it to a member, but it is deliberately kept *outside* the editable catalog so that
+  editing the catalog can never accidentally strip an organization of all its
+  administrators.
 
-#### Views (`lipas.ui.org.views`)
-- **`orgs-list-view`**: Displays a list of organizations the user belongs to
-- **`org-view`**: Main organization management interface
-- **`bulk-operations-view`**: Interface for bulk updating sports site contact information
-- **`admin-user-management`**: User management component for LIPAS admins
-- **`org-admin-user-management`**: User management component for organization admins
+Everything else — the **data-editing roles** — comes from the catalog. These let a
+member edit facility data on the organization's behalf, and are assembled from a
+palette of role types, each scoped to what it applies to: editing this
+organization's facilities, the facilities of a particular municipality or facility
+type, specific named facilities, outdoor-recreation (UTP) data, PTV data, and so on.
 
-#### Events (`lipas.ui.org.events`)
-Handles all organization-related actions including:
-- Fetching organization data
-- Saving organization updates
-- Managing organization users
-- Initializing bulk operations
+The catalog acts as a **ceiling**: an organization's administrators can freely
+assign the roles in it, but only a LIPAS administrator can define or change the
+catalog itself. This means an organization can manage its own people day to day,
+while LIPAS administration retains control over how much power those roles can ever
+confer.
 
-#### Subscriptions (`lipas.ui.org.subs`)
-Provides reactive data queries for:
-- User's organizations
-- Organization details
-- Organization users
-- Form validation state
-- User permissions
+To make that control transparent, every role in the catalog **describes itself**:
+each one carries a plain-language summary and a spelled-out list of the exact
+access rights it includes. So whoever assembles the catalog — and whoever assigns
+from it — can see what a role grants without having to remember it, and no role is
+ever shown as an unexplained or unknown permission. (The same self-describing role
+form is reused in the direct-permissions admin screen.)
 
-## Data Model
+## Facilities: ownership and shared editing
 
-### Organization Structure
+Facilities can now be connected to organizations in two ways:
 
-```clojure
-{:id #uuid "..."
- :name "Organization Name"
- :data {:primary-contact {:phone "+358501234567"
-                         :email "contact@organization.fi"
-                         :website "https://organization.fi"
-                         :reservations-link "https://varaukset.organization.fi"}}
- :ptv_data {:org-id "PTV organization identifier"
-           ;; Additional PTV integration data
-           }}
-```
+- **Ownership** — a facility can be owned by one organization. Members of the
+  owning organization with an editing role can edit it.
+- **Shared editing (edit grants)** — the owning organization can grant another
+  organization the right to edit a facility, enabling cross-organization
+  collaboration without transferring ownership.
 
-### Contact Information Fields
-- **phone**: Primary contact phone number
-- **email**: Primary contact email address
-- **website**: Organization's website URL
-- **reservations-link**: Link to the organization's reservation system
+This makes two everyday questions easy to answer:
 
-## Roles and Permissions
+- **"Which facilities does this organization own (or may edit)?"** — shown in the
+  organization's own facilities view.
+- **"Who can edit this facility?"** — shown per facility, listing the owning
+  organization, any organizations it has been shared with, organizations that can
+  edit through a relevant activity, and any individuals who hold a direct
+  permission. Each entry explains *why* that party can edit.
 
-The organization system integrates with LIPAS's role-based access control:
+Ownership and shared-editing changes are security-sensitive, so they are guarded
+carefully: only a LIPAS administrator can change who owns an existing facility,
+and only the owning organization's administrator (or a LIPAS administrator) can
+change who it is shared with.
 
-### Organization-Specific Roles
+## Claiming ownership of facilities
 
-#### org-admin
-- Can manage organization details and contact information
-- Can add and remove users from the organization
-- Can perform bulk operations on organization's sports sites
-- Has all permissions of org-user
+An organization can take ownership of facilities that match its ownership rule —
+for example, all the sports facilities in a particular municipality. Because this
+affects many records at once, the flow always shows a concrete preview (how many
+facilities, which ones) before anything happens. A LIPAS administrator can apply
+such a claim directly; an organization administrator's request goes into an
+approval queue that a LIPAS administrator reviews.
 
-#### org-user
-- Can view organization details
-- Listed as a member of the organization
-- Can be granted additional permissions for specific sports sites
+### Claiming a curated subset
 
-### Permission Checks
+The ownership rule is axis-based (municipalities × owner label × types ×
+activities), which fits organizations whose estate *is* a rule — "everything the
+city owns". Some organizations' estates are inherently enumerated instead: an
+association may own a hundred specific recreation sites across several
+municipalities, but not the neighboring sites that match the same axes
+(case: Uudenmaan virkistysalueyhdistys Uuvi).
 
-The system uses the `lipas.roles` namespace to check permissions:
+For these, the preview doubles as a picker: every matching facility has a
+checkbox (all checked by default, with select-all/none and a name filter), so
+the rule narrows the candidate pool and the person making the claim draws the
+exact boundary by hand. The semantics differ deliberately from a full-rule
+claim:
 
-```clojure
-;; Check if user is an organization admin
-(roles/check-privilege user {:org-id org-id} :org/manage)
+- **A curated claim is a one-shot snapshot, not a standing rule.** The claim
+  request stores the explicitly selected facility ids, and approving it applies
+  ownership to exactly that set — never to whatever happens to match the rule
+  at approval time. (This also closes a drift window the full-rule flow had:
+  what the approver saw in the preview is precisely what gets claimed.)
+  Deselected facilities simply reappear in later previews; they are not
+  remembered as exclusions.
+- **The requester curates, the approver verifies.** The organization
+  administrator picks the subset when creating the request; the LIPAS
+  administrator's approval view shows that stored selection (count + list)
+  and approves or rejects it as-is.
+- **The selection is validated against the rule** — a request may only contain
+  facilities that match the organization's ownership rule at request time —
+  and the existing safeguards (already-owned facilities are skipped, claims
+  are idempotent, the owner label is aligned and locked) apply unchanged.
 
-;; Check if user is an organization member
-(roles/check-privilege user {:org-id org-id} :org/member)
-```
+New facilities an organization creates are owned at creation via the facility
+form, so curated estates do not need recurring re-claims.
 
-## User Management
+## Setting ownership when creating a facility
 
-### Adding Users to Organizations
+When someone who belongs to an owner-capable organization creates a new facility,
+the form offers to set the owning organization, pre-filling it when there's an
+obvious choice. Choosing an organization also aligns the facility's owner label
+with the organization's type. The choice can be cleared to record a non-
+organization (legacy) owner instead — useful, for instance, when a municipal
+worker maintains a privately owned rink.
 
-There are two methods for adding users:
+## The organization screens
 
-1. **For LIPAS Admins**: Can select from all registered users via autocomplete
-2. **For Organization Admins**: Can add users by email address
-   - User must already have a LIPAS account
-   - System will show an error if the email is not found
+Organizations are managed from a single set of screens. LIPAS administrators and
+organization administrators use the *same* interface — controls simply appear or
+become editable depending on what the viewer is allowed to do. The screens are
+organized into tabs:
 
-### Removing Users
+- **Ohjeet (Instructions)** — member-facing guidance, in three languages.
+- **Kohteet (Facilities)** — the organization's facilities (owned and shared),
+  with filtering, the per-facility "who can edit" view and its recent edit
+  history, bulk editing, sharing of editing rights, and ownership claims.
+- **Yleistiedot (Overview)** — name, type and contact information.
+- **Jäsenet (Members)** — the roster, inviting new members, and assigning roles.
+- **Käyttöoikeudet (Access rights)** — the role catalog, shown to everyone and
+  editable only by LIPAS administrators.
+- **PTV** — integration settings (see below).
+- **Historia (History)** — an audit timeline, visible to administrators only.
 
-Users can be removed by clicking the delete button next to their role in the users table. This removes the organization role from the user's permissions.
+## Inviting and managing members
 
-## Bulk Operations
+Members are added by email address. If the address already belongs to a LIPAS
+account, the person is simply added; if not, an account is created on the fly and
+the person receives a magic login link by email. During the invite, the inviter
+can grant any roles up front — including making the person an administrator — or
+none, in which case the person joins as a plain (view-only) member. Roles can be
+changed or revoked later from the members list.
 
-The bulk operations feature allows organizations to update contact information across multiple sports sites simultaneously.
+## Bulk operations
 
-### Workflow
-1. Navigate to the organization page
-2. Click "Bulk Operations" button
-3. Select sports sites to update using filters or individual checkboxes
-4. Enter new contact information (leaving fields empty will clear them)
-5. Preview and confirm changes
-6. System updates all selected sports sites
+From the facilities view, an organization can update contact information across
+many of its facilities at once, rather than editing each facility individually.
+As with ownership claims, the affected set is made explicit before changes are
+applied.
 
-### Available Fields for Bulk Update
-- Phone number
-- Email address
-- Website
-- Reservation system link
+## History and audit
 
-## PTV Integration
+Every meaningful change is recorded as part of an append-only history — renames,
+contact and instruction edits, catalog changes, members joining or leaving, role
+assignments, ownership take-overs and transfers, and sharing or revoking of
+editing rights. The organization's History tab presents this as a readable,
+reverse-chronological timeline with the people involved shown by name rather than
+internal identifiers. Facility ownership and sharing changes are likewise part of
+each facility's own history.
 
-Organizations can integrate with PTV (Palvelutietovaranto) - Finland's national service registry.
+## PTV integration
 
-### PTV Data Structure
-- **org-id**: The organization's identifier in PTV
-- Organizations can manage which sports sites are synchronized with PTV
-- Contact information from the organization can be used for PTV services
+Organizations can be connected to PTV (Palvelutietovaranto), Finland's national
+service registry. PTV settings live with the organization and are managed by LIPAS
+administrators. The organization's contact information feeds the PTV services it
+publishes.
 
-### Integration Points
-- Organization details can be mapped to PTV organization data
-- Sports sites inherit organization's PTV settings
-- Bulk operations can update PTV-synchronized sites
+## Design intent
 
-## API Endpoints
+A few principles shaped the feature and are worth keeping in mind when extending
+it:
 
-While specific REST endpoints are not explicitly defined in the code, the organization functionality is accessed through LIPAS's general API structure:
+- **Membership is the single source of org permissions.** What a membership grants
+  is worked out fresh each time a person logs in — there is no separately stored,
+  derivable permission state that could drift out of sync. Change a role catalog or
+  remove a member and the effect simply follows at the next login.
+- **The role catalog is the ceiling.** Organizations self-serve within boundaries
+  that only LIPAS administration can set.
+- **History is built in, not bolted on.** Both organization changes and facility
+  ownership/sharing changes ride existing append-only history, so the audit trail
+  is a natural by-product rather than a separate mechanism.
+- **Opt-in by construction.** The feature never alters how individuals or their
+  direct permissions work; an organization simply references its members.
 
-- **GET** `/api/user/orgs` - Get user's organizations
-- **GET** `/api/org/:id/users` - Get organization users
-- **POST** `/api/org` - Create organization (admin only)
-- **PUT** `/api/org/:id` - Update organization
-- **POST** `/api/org/:id/users` - Add user to organization
-- **DELETE** `/api/org/:id/users/:user-id` - Remove user from organization
+## Known open items
 
-## Usage Examples
-
-### Creating an Organization (Admin Only)
-```clojure
-(create-org db
-  {:name "Helsingin Liikuntavirasto"
-   :data {:primary-contact {:phone "+358901234567"
-                           :email "liikunta@hel.fi"
-                           :website "https://liikunta.hel.fi"}}})
-```
-
-### Adding a User by Email
-```clojure
-(add-org-user-by-email! db org-id "user@example.fi" "org-admin")
-```
-
-### Updating Organization Contact Info
-```clojure
-(update-org! db org-id
-  {:data {:primary-contact {:phone "+358901234568"
-                           :email "uusi@hel.fi"}}})
-```
-
-## Future Enhancements
-
-Based on the existing documentation (`llm-org-begin-state.md`), planned enhancements include:
-
-1. **Organization Dashboard**:
-   - Statistics about organization's sports sites
-   - Activity reports and usage analytics
-
-2. **Advanced Permissions**:
-   - Organization-level permissions
-
-## Error Handling
-
-The system includes error handling for common scenarios:
-
-- **User Not Found**: When adding a user by email that doesn't exist in LIPAS
-- **Permission Denied**: When non-admin users try to access admin functions
-- **Validation Errors**: Form validation for contact information fields
-- **Database Errors**: Transaction rollback for failed operations
-
-## Best Practices
-
-1. **Contact Information**: Keep organization contact information up-to-date as it may be inherited by sports sites
-2. **User Management**: Regularly review and update user permissions
-3. **Bulk Operations**: Always preview changes before applying bulk updates
-4. **PTV Integration**: Ensure PTV organization ID is correctly set before enabling integration
-5. **Email Addresses**: Verify email addresses before adding users to avoid errors
+A handful of product decisions are intentionally still open, including: whether to
+show how individuals' email addresses are presented in the "who can edit" lists
+(currently administrators only, pending data-protection guidance); whether to give
+organization administrators a self-service entry point for requesting ownership of
+individual facilities; and how to handle very large organizations whose facility
+lists exceed current display limits. These are tracked alongside the detailed
+design notes.

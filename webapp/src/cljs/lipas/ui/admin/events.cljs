@@ -560,9 +560,11 @@
   (fn [{:keys [db]} [_ _]]
     (let [token (-> db :user :login :token)]
       {:http-xhrio
-       {:method :get
+       {:method :post
         :headers {:Authorization (str "Token " token)}
-        :uri (str (:backend-url db) "/orgs")
+        :uri (str (:backend-url db) "/actions/get-all-orgs")
+        :params {}
+        :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::get-orgs-success]
         :on-failure [::failure]}})))

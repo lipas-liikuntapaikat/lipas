@@ -489,7 +489,7 @@
                                                   :event-date (:last-sync new-ptv-data)
                                                   :ptv new-ptv-data)
                                            false)]
-        (core/index! search resp :sync))
+        (core/index! search resp :sync (core/org-names db)))
 
       ;; No need to re-index for search after ptv change
 
@@ -594,7 +594,7 @@
                                                       :event-date (:last-sync new-ptv-data)
                                                       :ptv new-ptv-data)
                                                false)]
-            (core/index! search resp :sync)
+            (core/index! search resp :sync (core/org-names tx))
             ;; Return both :ptv and :event-date so the caller's outer index!
             ;; reindexes the same revision we just wrote.
             {:ptv new-ptv-data :event-date (:event-date resp)}))))
@@ -613,7 +613,7 @@
                                                  (assoc :event-date (utils/timestamp))
                                                  (assoc :ptv new-ptv-data))
                                              false)]
-          (core/index! search resp :sync)
+          (core/index! search resp :sync (core/org-names tx))
           ;; Failure path also wrote a new revision (with :error captured
           ;; on :ptv). Return the same :event-date so DB and ES match.
           {:ptv (:ptv resp) :event-date (:event-date resp)})))))
@@ -643,7 +643,7 @@
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]
           (core/upsert-sports-site! tx user site)
-          (core/index! search site :sync)))))
+          (core/index! search site :sync (core/org-names db))))))
   {:status "OK"})
 
 (defn save-ptv-audit
@@ -671,22 +671,30 @@
 
         ;; Save and index the updated site with original author preserved
         (core/upsert-sports-site!* tx original-author updated-site)
-        (core/index! search updated-site :sync)
+        (core/index! search updated-site :sync (core/org-names db))
 
         ;; Return the updated audit data
         (get-in updated-site [:ptv :audit])))))
 
 (defn get-ptv-managers
-  "Returns users who have :ptv/manage privilege for any of the organization's cities."
+  "Returns the org's members who hold the :ptv-manager role for any of the
+  organization's PTV cities — whether the role is stored directly on the
+  account OR granted via the org's role-template catalog. Catalog grants are
+  projection-only (JWT, never persisted to account.permissions), so they must
+  be projected here with the same fn the login path uses
+  (`backend-org/derive-org-roles`); filtering stored roles alone would miss
+  every catalog-granted manager (F10)."
   [db org-id]
   (let [org (backend-org/get-org db org-id)
         org-city-codes (-> org :ptv-data :city-codes set)
-        org-users (backend-org/get-org-users db org-id)]
+        org-users (backend-org/get-org-users db org-id)
+        ptv-manager? (fn [role]
+                       (and (= :ptv-manager (keyword (:role role)))
+                            (seq (set/intersection org-city-codes (set (:city-code role))))))]
     (filter (fn [user]
-              (some (fn [role]
-                      (and (= :ptv-manager (keyword (:role role)))
-                           (seq (set/intersection org-city-codes (set (:city-code role))))))
-                    (-> user :permissions :roles)))
+              (some ptv-manager?
+                    (concat (-> user :permissions :roles)
+                            (backend-org/derive-org-roles (:id user) [org]))))
             org-users)))
 
 (defn send-audit-notification!

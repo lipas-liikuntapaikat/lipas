@@ -1,5 +1,6 @@
 (ns lipas.roles
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [lipas.data.activities :as activities-data]))
 
 ;; :doc here is just a developer comment, translations are elsewhere (if we even need
 ;; translations for privileges)
@@ -12,6 +13,7 @@
    ;; TODO: Not yet checked anywhere
    :site/view {:doc "Oikeus nähdä liikuntapaikat ja niihin liittyvät perustiedot ja lisätiedot"}
    :site/edit-any-status {:doc "Oikeus muokata liikuntapaikkoja jotka esim. poistettu pysyvästi käytöstä"}
+   :site/edit-images {:doc "Oikeus muokata kohteen kuvalinkkejä (URL, alt-teksti, tekijänoikeustieto)"}
 
    :activity/view {:doc "Nähdä UTP tiedot"}
    :activity/edit {:doc "Oikeus muokata UTP tietoja"}
@@ -44,8 +46,13 @@
 
    :itrs/edit {:doc "Oikeus muokata ITRS-luokitustietoja"}})
 
+;; NOTE: :site/save-api is intentionally NOT here. The save endpoint gate
+;; (lipas.backend.core/check-permissions!) accepts :site/create-edit OR
+;; :site/save-api, so a general editor (which has create-edit) needs no
+;; separate save-api grant. :site/save-api remains only on the aspect-specific
+;; editor roles (activities/floorball/itrs) that can persist a partial edit
+;; WITHOUT being general editors.
 (def basic #{:site/create-edit
-             :site/save-api
              :activity/view
              :analysis-tool/use})
 
@@ -79,6 +86,7 @@
    :type-manager
    {:sort 10
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:type-code]
     :optional-context-keys [:city-code]}
@@ -86,6 +94,7 @@
    :city-manager
    {:sort 11
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:city-code]
     :optional-context-keys [:type-code]}
@@ -93,13 +102,26 @@
    :site-manager
    {:sort 12
     :assignable true
+    :catalog-assignable true
     :privileges basic
     :required-context-keys [:lipas-id]
     :optional-context-keys []}
 
+   ;; Narrow role: users can save sports-site revisions ONLY when the diff is
+   ;; limited to the :images field. Enforced in backend/core/check-permissions!
+   ;; Deliberately does NOT include :site/save-api, so it can't be used to
+   ;; bypass edit permissions on other fields.
+   :images-manager
+   {:sort 15
+    :assignable true
+    :privileges #{:site/edit-images}
+    :required-context-keys [:city-code]
+    :optional-context-keys [:type-code]}
+
    :activities-manager
    {:sort 20
     :assignable true
+    :catalog-assignable true
     :privileges #{:activity/view
                   :activity/edit
                   :site/save-api
@@ -112,6 +134,7 @@
    :itrs-assessor
    {:sort 25
     :assignable true
+    :catalog-assignable true
     :privileges #{:itrs/edit :site/save-api}
     :required-context-keys []
     :optional-context-keys [:city-code :type-code]}
@@ -119,6 +142,7 @@
    :floorball-manager
    {:sort 30
     :assignable true
+    :catalog-assignable true
     :privileges #{:floorball/view :floorball/view-extended :floorball/edit :site/save-api}
     :required-context-keys []
     :optional-context-keys [:type-code]}
@@ -126,6 +150,7 @@
    :analysis-user
    {:sort 40
     :assignable true
+    :catalog-assignable true
     :privileges #{:analysis-tool/use}
     :required-context-keys []
     :optional-context-keys []}
@@ -133,6 +158,7 @@
    :analysis-experimental-user
    {:sort 45
     :assignable true
+    :catalog-assignable true
     :privileges #{:analysis-tool/use :analysis-tool/experimental}
     :required-context-keys []
     :optional-context-keys []}
@@ -140,6 +166,7 @@
    :ptv-manager
    {:sort 50
     :assignable true
+    :catalog-assignable true
     :privileges #{:ptv/manage}
     :required-context-keys [:city-code]
     :optional-context-keys []}
@@ -150,17 +177,35 @@
     :privileges #{:ptv/audit}
     :required-context-keys []}
 
+   ;; Org membership is the single source for org-scoped roles: org-admin and
+   ;; org-user are NEVER hand-assigned onto an account — they are projected at
+   ;; login from the org document (membership ⇒ org-user baseline; the reserved
+   ;; "admin" member role ⇒ org-admin; see lipas.backend.org/member->roles).
+   ;; Hence :assignable false — they don't appear in the admin role editor.
    :org-admin
    {:sort 60
-    :assignable true
+    :assignable false
     :privileges #{:org/manage :org/member}
     :required-context-keys [:org-id]
     :optional-context-keys []}
 
    :org-user
    {:sort 61
-    :assignable true
+    :assignable false
     :privileges #{:org/member}
+    :required-context-keys [:org-id]
+    :optional-context-keys []}
+
+   ;; Ownership-scoped edit. Never hand-assigned; only ever projected from an
+   ;; org role-template (see lipas.backend.org/derive-org-roles). The :org-id
+   ;; context is matched (set-intersection) against a site's editor orgs
+   ;; (owner-org-id + edit-grants), so a member of an owning/granted org can
+   ;; edit that site.
+   :org-editor
+   {:sort 62
+    :assignable false
+    :catalog-assignable true
+    :privileges basic
     :required-context-keys [:org-id]
     :optional-context-keys []}})
 
@@ -201,9 +246,12 @@
              (or (nil? (:lipas-id role))
                  (= ::any (:lipas-id role-context))
                  (contains? (:lipas-id role) (:lipas-id role-context)))
+             ;; A resource (site) can have several editor orgs (owner +
+             ;; edit-grants), so :org-id is multi-valued like :activity:
+             ;; the role matches if its org set intersects the context's.
              (or (nil? (:org-id role))
                  (= ::any (:org-id role-context))
-                 (contains? (:org-id role) (:org-id role-context))))
+                 (seq (set/intersection (:org-id role) (:org-id role-context)))))
     (:role role)))
 
 (defn check-privilege
@@ -235,10 +283,27 @@
   {:lipas-id (:lipas-id site)
    :type-code (-> site :type :type-code)
    :city-code (-> site :location :city :city-code)
-   ;; Sites SHOULD usually just have one activity type
-   :activity (some->> (keys (:activities site))
-                      (map name)
-                      set)})
+   ;; Sites SHOULD usually just have one activity type.
+   ;; Union of the document's UTP activity keys AND the activity implied by
+   ;; the site's type-code (lipas.data.activities/by-type-code). The
+   ;; type-derived part matters for sites that don't have UTP data yet:
+   ;; without it an :activities-manager could never add the FIRST activity
+   ;; data to e.g. a fresh cycling route (chicken-and-egg), and such sites
+   ;; wouldn't show activity editors in who-can-edit listings.
+   :activity (let [doc-activities (map name (keys (:activities site)))
+                   type-activity (get-in activities-data/by-type-code
+                                         [(-> site :type :type-code) :value])]
+               (not-empty
+                 (cond-> (set doc-activities)
+                   type-activity (conj type-activity))))
+   ;; A site's editor orgs = owner org + any orgs granted edit. Multi-valued,
+   ;; matched against an :org-editor role's :org-id via set-intersection.
+   ;; org-ids are compared as strings (roles carry stringified uuids).
+   :org-id (some-> (concat (some-> site :owner-org-id vector)
+                           (:edit-grants site))
+                   (->> (map str))
+                   set
+                   not-empty)})
 
 (defn check-role
   "Check if user has the given role USUALLY
@@ -285,7 +350,8 @@
         ;; The the role-context keys are applied later into the ES query itself.
         ctx {:type-code ::any
              :city-code ::any
-             :lipas-id ::any}
+             :lipas-id ::any
+             :org-id ::any}
         affecting-roles (->> user :permissions :roles
                              (filter (fn [role]
                                        (and (contains? (:privileges (get roles (:role role))) required-privilege)
@@ -300,15 +366,18 @@
       ;; Combine wrapped query AND new roles query
       {:bool {:must [query
                      ;; role1 OR role2 OR ...
-                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id] :as _role}]
+                     {:bool {:should (mapv (fn [{:keys [city-code type-code lipas-id org-id] :as _role}]
                                              ;; query for each role is role-context1 AND role-context2
                                              ;; using sets/collections for a term checks if the
                                              ;; document matches any value for the term collection.
+                                             ;; :org-id (org-editor) matches a site's editor orgs
+                                             ;; (owner + grants), indexed at search-meta.editor-org-ids.
                                              (reduce es-add-terms
                                                      {}
                                                      [[:location.city.city-code city-code]
                                                       [:type.type-code type-code]
-                                                      [:lipas-id lipas-id]]))
+                                                      [:lipas-id lipas-id]
+                                                      [:search-meta.editor-org-ids org-id]]))
                                            affecting-roles)}}]}}
 
       ;; User doesn't have edit roles? No filtering

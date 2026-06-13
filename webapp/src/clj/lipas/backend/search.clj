@@ -69,6 +69,10 @@
          :construction-year {:type "integer"}  ; might be used for range queries
          :admin {:type "keyword"}  ; queried by V2 API filter
          :owner {:type "keyword"}  ; queried by V2 API filter
+         ;; org-management ownership fields carried in the document (the
+         ;; queryable copies live under search-meta.editor-org-ids/owner-org-id)
+         :owner-org-id {:type "keyword"}
+         :edit-grants {:type "keyword"}
          :name {:type "text" :fields {:keyword {:type "keyword"}}}  ; full-text search
          :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
@@ -123,7 +127,13 @@
          :search-meta.fields.field-types {:type "keyword"}
          :search-meta.audits.latest-audit-date {:type "date"}
          ;; NEW: Activity keys array for filtering
-         :search-meta.activities {:type "keyword"}}
+         :search-meta.activities {:type "keyword"}
+         ;; org-management: ownership / editor-org filtering (Q1 + :org-editor)
+         :search-meta.owner-org-id {:type "keyword"}
+         ;; denormalized owner org display name (F15) — so any viewer sees a
+         ;; name instead of a raw org UUID
+         :search-meta.owner-org-name text-with-keyword
+         :search-meta.editor-org-ids {:type "keyword"}}
 
         ;; Disabled fields - stored in _source but not indexed (display-only)
         disabled-fields
@@ -159,7 +169,9 @@
          :ventilation {:enabled false}
          ;; Other fields
          :energy-consumption {:enabled false}
-         :hall-id {:enabled false}}
+         :hall-id {:enabled false}
+         ;; Site-level image links (display-only, edited via :images-manager role)
+         :images {:enabled false}}
 
         ;; Legacy properties that exist in DB but are not in prop-types/all
         ;; Stored in _source but not indexed (display-only)

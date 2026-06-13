@@ -65,6 +65,7 @@
             ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
+            [lipas.ui.org.views :as org-views]
             [lipas.ui.ptv.site-view :as ptv-site]
             [lipas.ui.ptv.views :as ptv]
             [lipas.ui.reminders.views :as reminders]
@@ -73,6 +74,7 @@
             [lipas.ui.sports-sites.activities.views :as activities]
             [lipas.ui.sports-sites.events :as sports-site-events]
             [lipas.ui.sports-sites.floorball.views :as floorball]
+            [lipas.ui.sports-sites.images.views :as site-images]
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
@@ -995,6 +997,9 @@
         view-floorball? (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/view]))
         edit-floorball? (when floorball-type? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :floorball/edit]))
 
+        edit-images? (<== [:lipas.ui.user.subs/check-privilege role-site-ctx :site/edit-images])
+        view-images? (or edit-images? (seq (:images display-data)))
+
         hide-actions? (<== [::subs/hide-actions?])
 
         ;; FIXME: Bad pattern to combine n subs into one
@@ -1132,7 +1137,20 @@
           [:> Tab
            {:style {:min-width 0}
             :value 6
-            :label "PTV"}])]
+            :label "PTV"}])
+
+        ;; Org-management: editing rights — only for org-owned sites
+        (when (:owner-org-id display-data)
+          [:> Tab
+           {:style {:min-width 0}
+            :value 7
+            :label (tr :lipas.org/editing-rights)}])
+
+        (when view-images?
+          [:> Tab
+           {:style {:min-width 0}
+            :value 8
+            :label (tr :lipas.sports-site.images/headline)}])]
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
@@ -1246,7 +1264,21 @@
               :type-code type-code
               ; :display-data display-data
               :edit-data edit-data
-              :can-edit? can-publish?}]])]
+              :can-edit? can-publish?}]]
+
+         ;; Editing rights (org-management)
+         7 [:> Grid {:item true :xs 12}
+            [org-views/editing-rights-panel
+             {:tr tr
+              :lipas-id lipas-id
+              :owner-org-id (:owner-org-id display-data)}]]
+
+         8 [:> Grid {:item true :xs 12}
+            [site-images/view
+             {:lipas-id lipas-id
+              :display-data display-data
+              :edit-data edit-data
+              :read-only? (or (not editing?) (not edit-images?))}]])]
 
 ;; "Landing bay" for floating tools
       [:> Grid {:item true :xs 12 :style {:height "3em"}}]
@@ -1394,7 +1426,7 @@
                  [:> Fab
                   {:size "small"
                    :on-click #(==> [::events/show-analysis lipas-id])}
-                  [:> Icon "insights"]]])
+                  [:> Icon "insights"]]])]
 
            ;; ;; Import geom
            ;; (when (and editing? (#{"LineString"} geom-type))
@@ -1470,7 +1502,6 @@
            ;;     {:style
            ;;      {:font-size 24 :margin-left "4px" :margin-right "16px"}}
            ;;     "?"]])
-              ]
 
              (concat
            ;; FIXME: Just reagent elements, maybe :<>
@@ -1886,6 +1917,7 @@
                     :owners owners
                     :on-change set-field
                     :sub-headings? true
+                    :new? true
                     :lipas-id 0}]
 
                   [sports-sites/location-form

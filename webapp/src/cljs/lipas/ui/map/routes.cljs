@@ -1,5 +1,6 @@
 (ns lipas.ui.map.routes
-  (:require [lipas.ui.map.views :as views]
+  (:require [lipas.schema.sports-sites :as sports-sites-schema]
+            [lipas.ui.map.views :as views]
             [lipas.ui.utils :as utils :refer [==>]]))
 
 (def routes
@@ -31,7 +32,7 @@
 
    ["/:lipas-id"
     {:name       :lipas.ui.routes.map/details-view
-     :parameters {:path [:map [:lipas-id :int]]}
+     :parameters {:path [:map [:lipas-id #'sports-sites-schema/lipas-id]]}
      :controllers
      [{:identity
        (fn [match]

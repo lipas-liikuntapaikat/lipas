@@ -1,14 +1,16 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
             [lipas.backend.analysis.heatmap :as heatmap]
+            [lipas.backend.auth :as auth]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
-            [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
+            [lipas.backend.bulk-operations.core :as bulk-ops]
             [lipas.backend.core :as core]
             [lipas.backend.search :as search*]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
+            [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
             [lipas.jobs.handler :as jobs-handler]
@@ -59,6 +61,19 @@
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
    :invalid-payload (exception-handler 400 :invalid-payload)
+   :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
+   ;; inviting an email that is already a member must not silently replace
+   ;; their roles — conflict, like :username-conflict
+   :already-member (exception-handler 409 :already-member)
+   :invalid-catalog (exception-handler 400 :invalid-catalog)
+   :invalid-takeover-state (exception-handler 409 :invalid-takeover-state)
+   ;; curated take-over selection contains ids outside the org's rule matches
+   :invalid-selection (exception-handler 400 :invalid-selection)
+   ;; site :owner enum is locked by the owning org's type — conflict, like
+   ;; :invalid-takeover-state
+   :owner-locked (exception-handler 409 :owner-locked)
+   :site-not-found (exception-handler 404 :site-not-found)
+   :sports-site-not-found (exception-handler 404 :sports-site-not-found)
 
    :qbits.spandex/response-exception (exception-handler 500 :internal-server-error :print-stack)
 
@@ -84,10 +99,10 @@
                ;; humanized is a map like {:pageSize ["should be a positive int"]}
                ;; Convert to match production format where values are vectors of strings
                formatted (reduce-kv
-                          (fn [acc k v]
-                            (assoc acc k (if (sequential? v) v [v])))
-                          {}
-                          humanized)]
+                           (fn [acc k v]
+                             (assoc acc k (if (sequential? v) v [v])))
+                           {}
+                           humanized)]
            {:status 400
             :body {:errors formatted}})
          ;; Default format for other APIs
@@ -95,899 +110,1260 @@
 
 (def exceptions-mw
   (exception/create-exception-middleware
-   (merge
-    exception/default-handlers
-    exception-handlers)))
+    (merge
+      exception/default-handlers
+      exception-handlers)))
+
+;; --- CQRS org-action helpers ---------------------------------------------
+;; Every org-management endpoint is a POST /actions/<business-event> — commands
+;; and queries alike (see the other /actions/* routes). The identifier/predicate
+;; always travels in the request body, so the org-scoped privilege role-contexts
+;; read it from there. POST-for-reads keeps one consistent shape and lets a query
+;; grow a richer payload (filters, paging, id lists) without URL-encoding quirks.
+
+(defn- org-scope-from-body
+  "Role-context for an org-scoped privilege, keyed off :org-id in the body."
+  [req]
+  {:org-id #{(str (-> req :parameters :body :org-id))}})
+
+(defn- org-member-or-admin?
+  "Boolean privilege fn: LIPAS admin, or :org/member on the :org-id body param.
+  Used by the read-only org dashboard queries (members / sites / history)."
+  [req]
+  (let [user (:identity req)]
+    (or (roles/check-role user :admin)
+        (roles/check-privilege user
+                               {:org-id #{(str (-> req :parameters :body :org-id))}}
+                               :org/member))))
 
 (defn create-app
   [{:keys [db emailer search mailchimp ptv] :as ctx}]
   (ring/ring-handler
-   (ring/router
+    (ring/router
 
-    [["/favicon.ico"
-      {:get
-       {:no-doc true
-        :handler
-        (fn [_]
-          {:status 200
-           :headers {"Content-Type" "image/x-icon"}
-           :body (io/input-stream (io/resource "public/favicon.ico"))})}}]
+      [["/favicon.ico"
+        {:get
+         {:no-doc true
+          :handler
+          (fn [_]
+            {:status 200
+             :headers {"Content-Type" "image/x-icon"}
+             :body (io/input-stream (io/resource "public/favicon.ico"))})}}]
 
-     ["/index.html"
-      {:get
-       {:no-doc true
-        :handler
-        (fn [_]
-          {:status 200
-           :headers {"Content-Type" "text/html"}
-           :body (io/input-stream (io/resource "public/index.html"))})}}]
+       ["/index.html"
+        {:get
+         {:no-doc true
+          :handler
+          (fn [_]
+            {:status 200
+             :headers {"Content-Type" "text/html"}
+             :body (io/input-stream (io/resource "public/index.html"))})}}]
 
-     ["/api"
-      {:cors true
-       :no-doc true}
+       ["/api"
+        {:cors true
+         :no-doc true}
 
-      ["/swagger.json"
-       {:get
-        {:no-doc true
-         :swagger {:info {:title "Internal API"}
-                   :securityDefinitions
-                   {:token-auth
-                    {:type "apiKey"
-                     :in "header"
-                     :name "Authorization"}}}
-         :handler (swagger/create-swagger-handler)}}]
+        ["/swagger.json"
+         {:get
+          {:no-doc true
+           :swagger {:info {:title "Internal API"}
+                     :securityDefinitions
+                     {:token-auth
+                      {:type "apiKey"
+                       :in "header"
+                       :name "Authorization"}}}
+           :handler (swagger/create-swagger-handler)}}]
 
-      ["/health"
-       {:get
-        {:no-doc true
-         :handler
-         (fn [_]
-           {:status 200
-            :body {:status "OK"}})}}]
+        ["/health"
+         {:get
+          {:no-doc true
+           :handler
+           (fn [_]
+             {:status 200
+              :body {:status "OK"}})}}]
 
-      ["/sports-sites"
-       {:post
-        {:no-doc false
-         :middleware [mw/token-auth mw/auth]
-           ;; NOTE: privilege checked in the core code
-         :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
-                     400 {:body [:map {:closed false}]}}
-         :parameters
-         {:query [:map [:draft {:optional true} :boolean]]
-          :body #'sports-site-schema/new-or-existing-sports-site}
-         :handler
-         (fn [{:keys [body-params identity] :as req}]
-           (let [spec sports-site-schema/new-or-existing-sports-site
-                 draft? (-> req :parameters :query :draft utils/->bool)
-                 valid? (malli/validate spec body-params)]
-             (if valid?
-               {:status 201
-                :body (core/save-sports-site! db search ptv identity body-params draft?)}
-               {:status 400
-                :body (malli/explain spec body-params)})))}}]
+        ["/sports-sites"
+         {:post
+          {:no-doc false
+           :middleware [mw/token-auth mw/auth]
+           ;; All authorization for save lives in core (it needs the STORED site
+           ;; to authorize content edits and to gate the security-sensitive
+           ;; :owner-org-id / :edit-grants fields — see core/upsert-sports-site!
+           ;; and the ownership/edit-grant business rules). The route only
+           ;; authenticates; doing the org-ownership check here (without the
+           ;; current revision) was both insufficient and a false-reject for
+           ;; legacy city/type editors of org-owned sites.
+           :require-privilege nil
+           :responses {201 {:body sports-site-schema/new-or-existing-sports-site}
+                       400 {:body [:map {:closed false}]}}
+           :parameters
+           {:query [:map [:draft {:optional true} :boolean]]
+            :body #'sports-site-schema/new-or-existing-sports-site}
+           :handler
+           (fn [{:keys [body-params identity] :as req}]
+             (let [spec sports-site-schema/new-or-existing-sports-site
+                   draft? (-> req :parameters :query :draft utils/->bool)
+                   valid? (malli/validate spec body-params)]
+               (if valid?
+                 {:status 201
+                  :body (core/save-sports-site! db search ptv identity body-params draft?)}
+                 {:status 400
+                  :body (malli/explain spec body-params)})))}}]
 
-      ["/sports-sites/:lipas-id"
-       {:get
-        {:no-doc false
-         :parameters {:path {:lipas-id int?}
-                      :query [:map [:lang {:optional true} [:enum "fi" "en" "se" "all"]]]}
+        ["/sports-sites/:lipas-id"
+         {:get
+          {:no-doc false
+           :parameters {:path {:lipas-id int?}
+                        :query [:map [:lang {:optional true} [:enum "fi" "en" "se" "all"]]]}
          ;; Use compatibility schema to coerce type-codes and
          ;; city-codes as Long's. The default malli json transformer
          ;; turns them into strings (V2 API model).
-         :responses {200 {:body sports-site-schema/sports-site-compat}
-                     404 {:body [:map {:closed false}]}}
-         :handler
-         (fn [req]
-           (let [lipas-id (-> req :parameters :path :lipas-id)
-                 locale (or (-> req :parameters :query :lang keyword)
-                            :none)]
-             (if-let [res (core/get-sports-site2 search lipas-id locale)]
-               {:status 200 :body res}
-               {:status 404 :body {:message "Not found"}})))}}]
+           :responses {200 {:body sports-site-schema/sports-site-compat}
+                       404 {:body [:map {:closed false}]}}
+           :handler
+           (fn [req]
+             (let [lipas-id (-> req :parameters :path :lipas-id)
+                   locale (or (-> req :parameters :query :lang keyword)
+                              :none)]
+               (if-let [res (core/get-sports-site2 search lipas-id locale)]
+                 {:status 200 :body res}
+                 {:status 404 :body {:message "Not found"}})))}}]
 
-      ["/sports-sites/history/:lipas-id"
-       {:get
-        {:no-doc false
-         :parameters {:path {:lipas-id int?}}
-         :responses {200 {:body [:sequential sports-site-schema/sports-site-compat]}}
-         :handler
-         (fn [{{{:keys [lipas-id]} :path} :parameters}]
-           {:status 200
-            :body (core/get-sports-site-history db lipas-id)})}}]
-
-      ["/sports-sites/type/:type-code"
-       {:get
-        {:no-doc false
-         :responses {200 {:body [:sequential [:map {:closed false}]]}}
-         :parameters
-         {:path {:type-code #'types-schema/type-code-with-legacy}
-          :query handler-schema/sports-sites-query-params}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [type-code (-> parameters :path :type-code)
-                 #_#_revs (or (-> parameters :query :revs)
-                              "latest")
-                 locale (or (-> parameters :query :lang keyword)
-                            :none)]
+        ["/sports-sites/history/:lipas-id"
+         {:get
+          {:no-doc false
+           :parameters {:path {:lipas-id int?}}
+           :responses {200 {:body [:sequential sports-site-schema/sports-site-compat]}}
+           :handler
+           (fn [{{{:keys [lipas-id]} :path} :parameters}]
              {:status 200
-              :body (core/get-sports-sites-by-type-code db
-                                                        type-code
-                                                        {#_#_:revs revs
-                                                         :locale locale})}))}}]
+              :body (core/get-sports-site-history db lipas-id)})}}]
 
-      ["/lois"
-       {:get
-        {:no-doc false
-         :responses {200 {:body [:sequential loi-schema/loi]}}
-         :parameters {}
-         :handler
-         (fn []
-           (let [query {:size 10000 :query {:match_all {}}}]
+        ["/sports-sites/type/:type-code"
+         {:get
+          {:no-doc false
+           :responses {200 {:body [:sequential [:map {:closed false}]]}}
+           :parameters
+           {:path {:type-code #'types-schema/type-code-with-legacy}
+            :query handler-schema/sports-sites-query-params}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [type-code (-> parameters :path :type-code)
+                   #_#_revs (or (-> parameters :query :revs)
+                                "latest")
+                   locale (or (-> parameters :query :lang keyword)
+                              :none)]
+               {:status 200
+                :body (core/get-sports-sites-by-type-code db
+                                                          type-code
+                                                          {#_#_:revs revs
+                                                           :locale locale})}))}}]
+
+        ["/lois"
+         {:get
+          {:no-doc false
+           :responses {200 {:body [:sequential loi-schema/loi]}}
+           :parameters {}
+           :handler
+           (fn []
+             (let [query {:size 10000 :query {:match_all {}}}]
+               {:status 200
+                :body (core/search-lois search query)}))}}]
+
+        ["/lois/:loi-id"
+         {:get
+          {:no-doc false
+           :responses {200 {:body loi-schema/loi}}
+           :parameters {:path {:loi-id #'loi-schema/loi-id}}
+           :handler
+           (fn [{:keys [parameters]}]
              {:status 200
-              :body (core/search-lois search query)}))}}]
+              :body (core/get-loi search (get-in parameters [:path :loi-id]))})}}]
 
-      ["/lois/:loi-id"
-       {:get
-        {:no-doc false
-         :responses {200 {:body loi-schema/loi}}
-         :parameters {:path {:loi-id #'loi-schema/loi-id}}
-         :handler
-         (fn [{:keys [parameters]}]
-           {:status 200
-            :body (core/get-loi search (get-in parameters [:path :loi-id]))})}}]
+        ["/lois/type/:loi-type"
+         {:get
+          {:no-doc false
+           :responses {200 {:body [:sequential loi-schema/loi]}}
+           :parameters
+           {:path {:loi-type #'loi-schema/loi-type}
+            :query handler-schema/sports-sites-query-params}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [loi-type (-> parameters :path :loi-type)
+                   query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
+               {:status 200
+                :body (core/search-lois search query)}))}}]
 
-      ["/lois/type/:loi-type"
-       {:get
-        {:no-doc false
-         :responses {200 {:body [:sequential loi-schema/loi]}}
-         :parameters
-         {:path {:loi-type #'loi-schema/loi-type}
-          :query handler-schema/sports-sites-query-params}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [loi-type (-> parameters :path :loi-type)
-                 query {:size 10000 :query {:term {:loi-type.keyword loi-type}}}]
-             {:status 200
-              :body (core/search-lois search query)}))}}]
+        ["/lois/category/:loi-category"
+         {:get
+          {:no-doc false
+           :responses {200 {:body [:sequential loi-schema/loi]}}
+           :parameters
+           {:path {:loi-category #'loi-schema/loi-category}
+            :query handler-schema/sports-sites-query-params}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [loi-category (-> parameters :path :loi-category)
+                   query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
+               {:status 200
+                :body (core/search-lois search query)}))}}]
 
-      ["/lois/category/:loi-category"
-       {:get
-        {:no-doc false
-         :responses {200 {:body [:sequential loi-schema/loi]}}
-         :parameters
-         {:path {:loi-category #'loi-schema/loi-category}
-          :query handler-schema/sports-sites-query-params}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [loi-category (-> parameters :path :loi-category)
-                 query {:size 10000 :query {:term {:loi-category.keyword loi-category}}}]
-             {:status 200
-              :body (core/search-lois search query)}))}}]
+        ["/lois/status/:status"
+         {:get
+          {:no-doc false
+           :responses {200 {:body [:sequential loi-schema/loi]}}
+           :parameters
+           {:path {:status #'loi-schema/loi-status}
+            :query handler-schema/sports-sites-query-params}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [loi-status (-> parameters :path :status)
+                   query {:size 10000 :query {:term {:status.keyword loi-status}}}]
+               {:status 200
+                :body (core/search-lois search query)}))}}]
 
-      ["/lois/status/:status"
-       {:get
-        {:no-doc false
-         :responses {200 {:body [:sequential loi-schema/loi]}}
-         :parameters
-         {:path {:status #'loi-schema/loi-status}
-          :query handler-schema/sports-sites-query-params}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [loi-status (-> parameters :path :status)
-                 query {:size 10000 :query {:term {:status.keyword loi-status}}}]
-             {:status 200
-              :body (core/search-lois search query)}))}}]
-
-      ["/users"
-       {:get
-        {:no-doc true
-         :require-privilege :users/manage
-         :handler
-         (fn [_]
-           {:status 200
-            :body (core/get-users db)})}}]
-
-        ;; FIXME: Where should this be?
-      ["/current-user-orgs"
-       {:get
-        {:no-doc false
-           ;; Doesn't require privileges, no :org/member just means no orgs.
-         :require-privilege nil
-           ;; Need to mount the auth manually when no :require-privilege enabled
-         :middleware [mw/token-auth mw/auth]
-         :handler (fn [req]
-                    (let [user (:identity req)]
-                      {:status 200
-                       :body (cond
-                                 ;; Admins see all organizations
-                               (roles/check-role user :admin)
-                               (org/all-orgs db)
-
-                                 ;; PTV auditors see all organizations (they need to audit any org)
-                               (roles/check-privilege user {} :ptv/audit)
-                               (org/all-orgs db)
-
-                                 ;; Regular users see only their assigned organizations
-                               :else
-                               (org/user-orgs db (parse-uuid (:id user))))}))}}]
-
-      ["/orgs"
-       {:no-doc false}
-       [""
-        {;; Only admin users
-         :require-privilege :org/admin
-         :get
-         {:handler
-          (fn [_]
-            {:status 200
-             :body (org/all-orgs db)})}
-         :post
-         {:parameters {:body org-schema/new-org}
-          :handler
-          (fn [req]
-            {:status 200
-             :body (org/create-org db (-> req :parameters :body))})}}]
-       ["/:org-id"
-        {:parameters {:path [:map
-                             [:org-id org-schema/org-id]]}}
-        [""
-         {;; Only org-admins can update org details
-          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
-          :put
-          {:parameters {:body org-schema/org}
-           :handler (fn [req]
-                      (org/update-org! db
-                                       (-> req :parameters :path :org-id)
-                                       (-> req :parameters :body))
-                      {:status 200
-                       :body {}})}}]
         ["/users"
          {:get
-          {;; Both org-admins and org-members can view users
-           :require-privilege (fn [req]
-                                (let [user (:identity req)]
-                                  ;; Allow if user is admin OR has org/member privilege
-                                  (or (roles/check-role user :admin)
-                                      (roles/check-privilege user
-                                                             {:org-id (str (-> req :parameters :path :org-id))}
-                                                             :org/member))))
+          {:no-doc true
+           :require-privilege :users/manage
+           :handler
+           (fn [_]
+             {:status 200
+              :body (core/get-users db)})}}]
+
+      ;; =====================================================================
+      ;; Org management — CQRS actions (POST /actions/<command>,
+      ;; GET /actions/<query>). The org identity travels in the body
+      ;; (commands) / query string (queries), never the path.
+      ;; =====================================================================
+
+      ;; --- Queries ---------------------------------------------------------
+
+        ["/actions/get-current-user-orgs"
+         {:post
+          {:no-doc true
+           ;; Doesn't require privileges, no :org/member just means no orgs.
+           :require-privilege nil
+           ;; Need to mount the auth manually when no :require-privilege enabled
+           :middleware [mw/token-auth mw/auth]
            :handler (fn [req]
-                      {:status 200
-                       :body (org/get-org-users db (-> req :parameters :path :org-id))})}
-          :post
-          {;; Only org-admins can modify users
-           :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
-           :parameters {:body org-schema/user-updates}
-           :handler (fn [req]
-                      (org/update-org-users! db
-                                             (-> req :parameters :path :org-id)
-                                             (-> req :parameters :body :changes))
-                      {:status 200
-                       :body {}})}}]
-        ["/add-user-by-email"
-         {;; Only org-admins can add users
-          :require-privilege [(fn [req] {:org-id (str (-> req :parameters :path :org-id))}) :org/manage]
-          :post
-          {:parameters {:body [:map
-                               [:email :string]
-                               [:role [:enum "org-admin" "org-user"]]]}
-           :handler (fn [req]
-                      (let [org-id (-> req :parameters :path :org-id)
-                            email (-> req :parameters :body :email)
-                            role (-> req :parameters :body :role)
-                            result (org/add-org-user-by-email! db org-id email role)]
-                        {:status (if (:success? result) 200 400)
-                         :body result}))}}]
-        ["/ptv-config"
-         {;; Only LIPAS admins can configure PTV settings
-          :require-privilege :users/manage
-          :put
-          {:parameters {:body org-schema/ptv-config-update}
-           :handler (fn [req]
-                      (let [org-id (-> req :parameters :path :org-id)
-                            ptv-config (-> req :parameters :body)]
-                        (org/update-org-ptv-config! db org-id ptv-config)
+                      (let [user (:identity req)
+                            orgs (cond
+                                 ;; Admins see all organizations
+                                   (roles/check-role user :admin)
+                                   (org/all-orgs db)
+
+                                 ;; PTV auditors see all organizations (they need to audit any org)
+                                   (roles/check-privilege user {} :ptv/audit)
+                                   (org/all-orgs db)
+
+                                 ;; Regular users see only their assigned organizations
+                                   :else
+                                   (org/user-orgs db (parse-uuid (:id user))))
+                          ;; One ES terms agg for all orgs (owned-site counts) — the
+                          ;; orgs-list site-count chip. Cheap & exact (see core
+                          ;; docstring). Skipped entirely for the common zero-org
+                          ;; user (this route runs on every session init) (F19).
+                            counts (when (seq orgs)
+                                     (core/org-owned-site-counts search))]
                         {:status 200
-                         :body {:message "PTV configuration updated successfully"}}))}}]]]
+                         :body (mapv (fn [o]
+                                       (assoc o :site-count (get counts (str (:id o)) 0)))
+                                     orgs)}))}}]
 
-      ["/actions/gdpr-remove-user"
-       {:post
-        {:no-doc true
-         :require-privilege :users/manage
-         :handler
-         (fn [{:keys [body-params]}]
-           (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
-                                                              (:username body-params)
-                                                              (:email body-params)))]
-             (core/gdpr-remove-user! db user)
+      ;; All orgs (lipas-admin only)
+        ["/actions/get-all-orgs"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :handler (fn [_]
+                      {:status 200
+                       :body (org/all-orgs db)})}}]
+
+      ;; Org members — both org-admins and org-members (and lipas-admins) may view
+        ["/actions/get-org-members"
+         {:post
+          {:no-doc true
+           :require-privilege org-member-or-admin?
+           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org/get-org-users db (-> req :parameters :body :org-id))})}}]
+
+      ;; --- Org dashboard: owned / editable sites (Q1) — members may view ---
+        ["/actions/get-org-sites"
+         {:post
+          {:no-doc true
+           :require-privilege org-member-or-admin?
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:filter {:optional true} [:enum "owned" "editable"]]
+                               ;; count-only: same response shape, :size 0 query —
+                               ;; the FE owned-count flow needs no documents (F18)
+                               [:count-only {:optional true} :boolean]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/org-sites search
+                                             (-> req :parameters :body :org-id)
+                                             (or (-> req :parameters :body :filter) "owned")
+                                             {:count-only? (-> req :parameters :body :count-only)})})}}]
+
+      ;; --- Org history (the append-only org revisions) — members may view ---
+        ["/actions/get-org-history"
+         {:post
+          {:no-doc true
+         ;; History/audit is admin-only (lipas-admin or org-admin), not members.
+         ;; Author identity (email) only for :users/manage; org admins get a
+         ;; coarse role label instead (same GDPR rule as site edit history).
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org/get-history db (-> req :parameters :body :org-id)
+                                              (roles/check-privilege (:identity req) {} :users/manage))})}}]
+
+      ;; --- Bulk contact update candidates (org-only). Read-only candidate
+      ;; listing is member-visible (same gate as /actions/get-org-sites) so the
+      ;; org Kohteet tab works for org-admins without an editor template. The
+      ;; mass-update WRITE endpoint keeps its strict :site/create-edit gate and
+      ;; additionally re-authorizes per-user/per-site against DB state in
+      ;; bulk-operations.core (F2 fix). ---
+        ["/actions/get-org-sites-for-bulk"
+         {:post
+          {:no-doc true
+           :require-privilege org-member-or-admin?
+           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (bulk-ops/get-org-editable-sites search (-> req :parameters :body :org-id))})}}]
+
+      ;; --- Take-over claim impact preview (count + owner relabel + sample) ---
+        ["/actions/preview-org-takeover"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map [:org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/preview db (-> req :parameters :body :org-id))})}}]
+
+      ;; --- "Who can edit site Z" (Q2) — transparency, any authenticated user ---
+        ["/actions/get-site-editors"
+         {:post
+          {:no-doc true
+           :require-privilege nil
+           :middleware [mw/token-auth mw/auth]
+           :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/site-editors db (-> req :parameters :body :lipas-id))})}}]
+
+      ;; --- Site edit history — any authenticated user, surfaced in the org
+      ;; Kohteet drawer for the members maintaining the data. The author is a
+      ;; person identifier (email) ONLY for :users/manage holders; everyone
+      ;; else gets timestamp + a coarse role label (GDPR, F38). ---
+        ["/actions/get-site-edit-history"
+         {:post
+          {:no-doc true
+           :require-privilege nil
+           :middleware [mw/token-auth mw/auth]
+           :parameters {:body [:map [:lipas-id #'sports-site-schema/lipas-id]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (core/site-edit-history
+                               db (-> req :parameters :body :lipas-id)
+                               {:emails? (roles/check-privilege (:identity req) {} :users/manage)})})}}]
+
+      ;; --- Commands --------------------------------------------------------
+
+      ;; Create org (lipas-admin only)
+        ["/actions/create-org"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body org-schema/new-org}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org/create-org db
+                                             (-> req :parameters :body)
+                                             (-> req :identity :id))})}}]
+
+      ;; Update org details (org-admin of the org; :id carries the org identity)
+        ["/actions/update-org"
+         {:post
+          {:no-doc true
+           :require-privilege [(fn [req] {:org-id #{(str (-> req :parameters :body :id))}}) :org/manage]
+           :parameters {:body org-schema/org}
+           :handler (fn [req]
+                    ;; `:type`/`:ownership` (the take-over ceiling) and `:ptv-data`
+                    ;; (lipas-admin-only, has its own :users/manage endpoint) are
+                    ;; enforced in the org layer: lipas-admins get the privileged
+                    ;; full update, everyone else the admin-editable whitelist
+                    ;; (name/contact/instructions) — see org/update-org-details!.
+                      (let [body      (-> req :parameters :body)
+                            author-id (-> req :identity :id)]
+                        (if (roles/check-privilege (:identity req) {} :users/manage)
+                          (org/update-org! db (:id body) body author-id)
+                          (org/update-org-details! db (:id body) body author-id)))
+                      {:status 200 :body {}})}}]
+
+      ;; Update org PTV config (lipas-admin only). The LIPAS org id is :org-id;
+      ;; the PTV config (which has its own PTV :org-id) is nested under :ptv-config.
+        ["/actions/update-org-ptv-config"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:ptv-config org-schema/ptv-config-update]]}
+           :handler (fn [req]
+                      (org/update-org-ptv-config! db
+                                                  (-> req :parameters :body :org-id)
+                                                  (-> req :parameters :body :ptv-config)
+                                                  (-> req :identity :id))
+                      {:status 200
+                       :body {:message "PTV configuration updated successfully"}})}}]
+
+      ;; --- Role-template catalog (the ceiling): lipas-admin only ---
+        ["/actions/update-org-role-templates"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:role-templates org-schema/role-templates]]}
+           :handler (fn [req]
+                      (org/update-catalog! db
+                                           (-> req :parameters :body :org-id)
+                                           (-> req :parameters :body :role-templates)
+                                           (-> req :identity :id))
+                      {:status 200 :body {}})}}]
+
+      ;; --- Org-admin self-service: invite a member by email (separate from the
+      ;; lipas-admin user-management plane). Catalog-validated; creates an
+      ;; account + sends the custom invitation email for unknown emails. ---
+        ["/actions/invite-org-member"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:email :string]
+                               [:roles {:optional true} [:vector :string]]
+                               [:login-url handler-schema/magic-link-login-url]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id login-url] :as body} (-> req :parameters :body)
+                            result (core/invite-org-member!
+                                     db emailer
+                                     org-id
+                                     (select-keys body [:email :roles])
+                                     (-> req :identity :id)
+                                     login-url)]
+                        {:status 200 :body result}))}}]
+
+      ;; --- Invite-form helper: is this email already a LIPAS account? Org-scoped
+      ;; on purpose — you may only probe within an org you administer (same gate
+      ;; as invite), so it can't be used to harvest valid addresses or enumerate
+      ;; the user directory (GDPR). Returns ONLY a boolean. ---
+        ["/actions/check-is-existing-user"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:email :string]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body {:exists (core/email-registered?
+                                        db (-> req :parameters :body :email))}})}}]
+
+      ;; --- Member management (org-admin, own org) ---
+        ["/actions/remove-org-member"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:user-id :uuid]]}
+           :handler (fn [req]
+                      (org/remove-member! db
+                                          (-> req :parameters :body :org-id)
+                                          (-> req :parameters :body :user-id)
+                                          (-> req :identity :id))
+                      {:status 200 :body {}})}}]
+
+        ["/actions/set-org-member-roles"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:user-id :uuid]
+                               [:roles [:vector :string]]]}
+           :handler (fn [req]
+                      (org/set-member-roles! db
+                                             (-> req :parameters :body :org-id)
+                                             (-> req :parameters :body :user-id)
+                                             (-> req :parameters :body :roles)
+                                             (-> req :identity :id))
+                      {:status 200 :body {}})}}]
+
+      ;; --- Cross-org edit grants on owned sites (org-admin of the owner org) ---
+        ["/actions/grant-site-edit"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-id #'sports-site-schema/lipas-id]
+                               [:grantee-org-id org-schema/org-id]]}
+           :handler (fn [req]
+                    ;; Authorization (owning-org admin or LIPAS admin) is enforced
+                    ;; in core/grant-site-edit! so every caller shares one rule.
+                      (let [{:keys [org-id lipas-id grantee-org-id]} (-> req :parameters :body)]
+                        (core/grant-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
+                        {:status 200 :body {}}))}}]
+
+        ["/actions/revoke-site-edit"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-id #'sports-site-schema/lipas-id]
+                               [:grantee-org-id org-schema/org-id]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-id grantee-org-id]} (-> req :parameters :body)]
+                        (core/revoke-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
+                        {:status 200 :body {}}))}}]
+
+      ;; --- Bulk contact update (org-only): apply. Gated by :site/create-edit
+      ;; for the org (admits admin + org-editor members). ---
+        ["/actions/mass-update-org-sites"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :site/create-edit]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids [:vector #'sports-site-schema/lipas-id]]
+                               [:updates [:map
+                                          [:email {:optional true} [:maybe [:string {:min 1 :max 200}]]]
+                                          [:phone-number {:optional true} [:maybe [:string {:min 1 :max 50}]]]
+                                          [:www {:optional true} [:maybe [:string {:min 1 :max 500}]]]
+                                          [:reservations-link {:optional true} [:maybe [:string {:min 1 :max 500}]]]]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids updates]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (bulk-ops/mass-update-org-sites-contacts!
+                                 db search ptv (:identity req)
+                                 org-id
+                                 lipas-ids updates)}))}}]
+
+      ;; --- Take-over: an org requests to claim the sites matching its rule.
+      ;; Optional :lipas-ids = curated picker subset (must ⊆ the rule's
+      ;; matches, else 400 :invalid-selection); approval applies exactly the
+      ;; stored set. ---
+        ["/actions/request-org-takeover"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids {:optional true} [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/create-request! db org-id
+                                                             (-> req :identity :id)
+                                                             :lipas-ids lipas-ids)}))}}]
+
+      ;; --- LIPAS-admin direct reclaim (no approval queue round-trip) ---
+        ["/actions/reclaim-org-sites"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids {:optional true} [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/reclaim-now! db search org-id
+                                                          (:identity req)
+                                                          :lipas-ids lipas-ids)}))}}]
+
+      ;; --- Release: an org gives up ownership of selected sites (authority-
+      ;; shedding ⇒ self-service for the org admin, no approval queue). The
+      ;; preview drives the explicit confirmation (count + dropped edit-grants);
+      ;; release! applies revisions clearing :owner-org-id/:edit-grants, with an
+      ;; optional :owner relabel now that the org-type lock vanishes. ---
+        ["/actions/preview-org-release"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/preview-release db org-id lipas-ids)}))}}]
+        ["/actions/release-org-sites"
+         {:post
+          {:no-doc true
+           :require-privilege [org-scope-from-body :org/manage]
+           :parameters {:body [:map
+                               [:org-id org-schema/org-id]
+                               [:lipas-ids [:vector {:min 1} #'sports-site-schema/lipas-id]]
+                               [:owner {:optional true} sports-site-schema/owner]]}
+           :handler (fn [req]
+                      (let [{:keys [org-id lipas-ids owner]} (-> req :parameters :body)]
+                        {:status 200
+                         :body (org-takeover/release! db search org-id
+                                                      (:identity req)
+                                                      :lipas-ids lipas-ids
+                                                      :owner owner)}))}}]
+
+      ;; --- Take-over approvals: lipas-admin reviews requested claims ---
+        ["/actions/list-org-takeover-requests"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map [:status {:optional true} [:enum "requested" "approved" "denied"]]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/list-requests db (-> req :parameters :body :status))})}}]
+      ;; the approver's preview: the request's STORED selection snapshot
+      ;; (count + lightweight site rows), not a live rule re-run — approval
+      ;; applies exactly this set
+        ["/actions/preview-org-takeover-request"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map [:request-id :uuid]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/request-preview db
+                                                           (-> req :parameters :body :request-id))})}}]
+        ["/actions/approve-org-takeover"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map [:request-id :uuid]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/approve! db search
+                                                    (-> req :parameters :body :request-id)
+                                                    (:identity req))})}}]
+        ["/actions/deny-org-takeover"
+         {:post
+          {:no-doc true
+           :require-privilege :org/admin
+           :parameters {:body [:map [:request-id :uuid]]}
+           :handler (fn [req]
+                      {:status 200
+                       :body (org-takeover/deny! db
+                                                 (-> req :parameters :body :request-id)
+                                                 (:identity req))})}}]
+
+        ["/actions/gdpr-remove-user"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :handler
+           (fn [{:keys [body-params]}]
+             (let [{:keys [id] :as user} (core/get-user! db (or (:id body-params)
+                                                                (:username body-params)
+                                                                (:email body-params)))]
+               (core/gdpr-remove-user! db user)
+               {:status 200
+                :body (core/get-user db (str id))}))}}]
+
+        ["/actions/autocomplete-sports-site"
+         {:post
+          {:no-doc false
+           :handler
+           (fn [{:keys [body-params]}]
+             (let [s (some-> (:search-string body-params) str clojure.string/trim)
+                   idx (get-in search [:indices :sports-site :search])
+                   client (:client search)]
+               (if (or (empty? s) (< (count s) 2))
+                 {:status 200 :body []}
+                 (let [lipas-id-num (try (Long/parseLong s) (catch Exception _ nil))
+                       text-query {:multi_match
+                                   {:query s
+                                    :fields ["name^10" "search-meta.type.name.fi^3"
+                                             "search-meta.location.city.name.fi^2"]
+                                    :type "best_fields"
+                                    :operator "and"}}
+                       must-clause (if lipas-id-num
+                                     [{:bool {:should [text-query
+                                                       {:term {:lipas-id lipas-id-num}}]}}]
+                                     [text-query])
+                       resp (search*/search
+                              client idx
+                              {:size 15
+                               :_source ["lipas-id" "name"
+                                         "search-meta.type.name.fi"
+                                         "search-meta.location.city.name.fi"]
+                               :query
+                               {:bool
+                                {:must must-clause
+                                 :filter [{:terms {:status ["active"
+                                                            "out-of-service-temporarily"]}}]}}})
+                       hits (-> resp :body :hits :hits)]
+                   {:status 200
+                    :body (mapv (fn [h]
+                                  (let [src (:_source h)]
+                                    {:lipas-id (:lipas-id src)
+                                     :name (:name src)
+                                     :type-name (get-in src [:search-meta :type :name :fi])
+                                     :city-name (get-in src [:search-meta :location :city :name :fi])}))
+                                hits)}))))}}]
+
+        ["/actions/search"
+         {:post
+          {:no-doc false
+           :handler
+           (fn [{:keys [body-params]}]
+             (core/search search body-params))}}]
+
+        ["/actions/find-fields"
+         {:post
+          {:no-doc false
+           :parameters {:body handler-schema/find-fields-payload}
+           :responses {200 {:body [:sequential [:map {:closed false}]]}}
+           :handler
+           (fn [{:keys [body-params]}]
              {:status 200
-              :body (core/get-user db (str id))}))}}]
+              :body (core/search-fields search body-params)})}}]
 
-      ["/actions/autocomplete-sports-site"
-       {:post
-        {:no-doc false
-         :handler
-         (fn [{:keys [body-params]}]
-           (let [s (some-> (:search-string body-params) str clojure.string/trim)
-                 idx (get-in search [:indices :sports-site :search])
-                 client (:client search)]
-             (if (or (empty? s) (< (count s) 2))
-               {:status 200 :body []}
-               (let [lipas-id-num (try (Long/parseLong s) (catch Exception _ nil))
-                     text-query {:multi_match
-                                 {:query s
-                                  :fields ["name^10" "search-meta.type.name.fi^3"
-                                           "search-meta.location.city.name.fi^2"]
-                                  :type "best_fields"
-                                  :operator "and"}}
-                     must-clause (if lipas-id-num
-                                   [{:bool {:should [text-query
-                                                     {:term {:lipas-id lipas-id-num}}]}}]
-                                   [text-query])
-                     resp (search*/search
-                           client idx
-                           {:size 15
-                            :_source ["lipas-id" "name"
-                                      "search-meta.type.name.fi"
-                                      "search-meta.location.city.name.fi"]
-                            :query
-                            {:bool
-                             {:must must-clause
-                              :filter [{:terms {:status ["active"
-                                                         "out-of-service-temporarily"]}}]}}})
-                     hits (-> resp :body :hits :hits)]
-                 {:status 200
-                  :body (mapv (fn [h]
-                                (let [src (:_source h)]
-                                  {:lipas-id (:lipas-id src)
-                                   :name (:name src)
-                                   :type-name (get-in src [:search-meta :type :name :fi])
-                                   :city-name (get-in src [:search-meta :location :city :name :fi])}))
-                              hits)}))))}}]
+        ["/actions/register"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [req]
+             (let [user (-> req
+                            :body-params
+                            (dissoc :permissions))
+                   _ (core/register! db emailer user)]
+               {:status 201
+                :body {:status "OK"}}))}}]
 
-      ["/actions/search"
-       {:post
-        {:no-doc false
-         :handler
-         (fn [{:keys [body-params]}]
-           (core/search search body-params))}}]
+        ["/actions/login"
+         {:post
+          {:no-doc true
+           :middleware [(mw/basic-auth db) mw/auth]
+           :handler
+           (fn [{:keys [identity]}]
+             (core/login! db identity)
+             {:status 200 :body identity})}}]
 
-      ["/actions/find-fields"
-       {:post
-        {:no-doc false
-         :parameters {:body handler-schema/find-fields-payload}
-         :responses {200 {:body [:sequential [:map {:closed false}]]}}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/search-fields search body-params)})}}]
+        ["/actions/refresh-login"
+         {:get
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :handler
+           (fn [{:keys [identity]}]
+             (let [user (->> (core/get-user! db (-> identity :id))
+                             (auth/enrich-org-roles db))]
+               {:status 200
+                :body (merge (dissoc user :password)
+                             {:token (jwt/create-token user)})}))}}]
 
-      ["/actions/register"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [req]
-           (let [user (-> req
-                          :body-params
-                          (dissoc :permissions))
-                 _ (core/register! db emailer user)]
-             {:status 201
-              :body {:status "OK"}}))}}]
+        ["/actions/request-password-reset"
+         {:post
+          {:no-doc true
+           :parameters {:body {:email string?}}
+           :handler
+           (fn [{:keys [body-params]}]
+             (let [_ (core/send-password-reset-link! db emailer body-params)]
+               {:status 200
+                :body {:status "OK"}}))}}]
 
-      ["/actions/login"
-       {:post
-        {:no-doc true
-         :middleware [(mw/basic-auth db) mw/auth]
-         :handler
-         (fn [{:keys [identity]}]
-           (core/login! db identity)
-           {:status 200 :body identity})}}]
+        ["/actions/reset-password"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :parameters {:body {:password string?}}
+           :handler
+           (fn [req]
+             (let [user (-> req :identity)
+                   pass (-> req :parameters :body :password)
+                   _ (core/reset-password! db user pass)]
+               {:status 200
+                :body {:status "OK"}}))}}]
 
-      ["/actions/refresh-login"
-       {:get
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :handler
-         (fn [{:keys [identity]}]
-           (let [user (core/get-user! db (-> identity :id))]
+        ["/actions/update-user-permissions"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters
+           {:body
+            {:id string?
+             :login-url handler-schema/magic-link-login-url
+             :permissions users-schema/permissions-schema}}
+           :handler
+           (fn [req]
+             (let [params (-> req :parameters :body)
+                   _ (core/update-user-permissions! db emailer params)]
+               {:status 200
+                :body {:status "OK"}}))}}]
+
+        ["/actions/update-user-status"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters
+           {:body
+            {:id string?
+             :status users-schema/user-status}}
+           :handler
+           (fn [req]
              {:status 200
-              :body (merge (dissoc user :password)
-                           {:token (jwt/create-token user)})}))}}]
+              :body (core/update-user-status! db (-> req :parameters :body))})}}]
 
-      ["/actions/request-password-reset"
-       {:post
-        {:no-doc true
-         :parameters {:body {:email string?}}
-         :handler
-         (fn [{:keys [body-params]}]
-           (let [_ (core/send-password-reset-link! db emailer body-params)]
+        ["/actions/update-user-data"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :parameters
+           {:body users-schema/user-data-schema}
+           :handler
+           (fn [req]
+             (let [user-data (-> req :parameters :body)
+                   user (:identity req)]
+               {:status 200
+                :body (core/update-user-data! db user user-data)}))}}]
+
+        ["/actions/order-magic-link"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body
+            {:email users-schema/email-schema
+             :login-url handler-schema/magic-link-login-url
+             :variant handler-schema/email-variant}}
+           :handler
+           (fn [req]
+             (let [email (-> req :parameters :body :email)
+                   variant (-> req :parameters :body :variant keyword)
+                   user (core/get-user! db email)
+                   url (-> req :parameters :body :login-url)
+                   _ (core/send-magic-link! db emailer {:user user
+                                                        :login-url url
+                                                        :variant variant})]
+               {:status 200 :body {:status "OK"}}))}}]
+
+        ["/actions/send-magic-link"
+         {:post
+          {:no-doc true
+           :require-privilege :users/manage
+           :parameters
+           {:body
+            {:login-url string?
+             :variant handler-schema/email-variant
+             :user users-schema/new-user-schema}}
+           :handler
+           (fn [req]
+             (let [user (-> req :parameters :body :user)
+                   variant (-> req :parameters :body :variant keyword)
+                   user (or (core/get-user db (:email user))
+                            (do (core/add-user! db user)
+                                (core/get-user db (:email user))))
+                   url (-> req :parameters :body :login-url)
+                   params {:user user :variant variant :login-url url}
+                   _ (core/send-magic-link! db emailer params)]
+               {:status 200 :body {:status "OK"}}))}}]
+
+        ["/actions/add-reminder"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :parameters
+           {:body reminders-schema/new-reminder}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [reminder (:body parameters)]
+               {:status 200
+                :body (core/add-reminder! db identity reminder)}))}}]
+
+        ["/actions/update-reminder-status"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :parameters
+           {:body
+            {:id uuid?
+             :status reminders-schema/reminder-status}}
+           :handler
+           (fn [{:keys [identity parameters]}]
+             (let [params (:body parameters)]
+               {:status 200
+                :body (core/update-reminder-status! db identity params)}))}}]
+
+        ["/actions/get-upcoming-reminders"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :handler
+           (fn [{:keys [identity]}]
              {:status 200
-              :body {:status "OK"}}))}}]
+              :body (core/get-users-pending-reminders! db identity)})}}]
 
-      ["/actions/reset-password"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :parameters {:body {:password string?}}
-         :handler
-         (fn [req]
-           (let [user (-> req :identity)
-                 pass (-> req :parameters :body :password)
-                 _ (core/reset-password! db user pass)]
+        ["/actions/create-energy-report"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body handler-schema/energy-report-req}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [type-code (-> parameters :body :type-code)
+                   year (-> parameters :body :year)]
+               {:status 200
+                :body (core/energy-report db type-code year)}))}}]
+
+        ["/actions/create-sports-sites-report"
+         {:post
+          {:no-doc false
+           :parameters
+           {:body handler-schema/sports-site-report-req}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [query (-> parameters :body :search-query)
+                   fields (-> parameters :body :fields)
+                   locale (-> parameters :body :locale)
+                   format* (or (-> parameters :body :format) "xlsx")]
+               {:status 200
+                :headers (condp = format*
+                           "xlsx" {"Content-Type" (-> utils/content-type :xlsx)
+                                   "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+                           "geojson" {"Content-Type" "application/json"
+                                      "Content-Disposition" "inline; filename=\"lipas.geojson\""}
+                           "csv" {"Content-Type" "text/csv"
+                                  "Content-Disposition" "inline; filename=\"lipas.csv\""})
+                :body
+                (ring-io/piped-input-stream
+                  (fn [out]
+                    (condp = format*
+                      "xlsx" (core/sports-sites-report-excel search query fields locale out)
+                      "geojson" (core/sports-sites-report-geojson search query fields locale out)
+                      "csv" (core/sports-sites-report-csv search query fields locale out))))}))}}]
+
+        ["/actions/create-data-model-report"
+         {:post
+          {:no-doc false
+           :parameters {:body {}}
+           :handler
+           (fn [{:keys [_parameters]}]
              {:status 200
-              :body {:status "OK"}}))}}]
-
-      ["/actions/update-user-permissions"
-       {:post
-        {:no-doc true
-         :require-privilege :users/manage
-         :parameters
-         {:body
-          {:id string?
-           :login-url handler-schema/magic-link-login-url
-           :permissions users-schema/permissions-schema}}
-         :handler
-         (fn [req]
-           (let [params (-> req :parameters :body)
-                 _ (core/update-user-permissions! db emailer params)]
-             {:status 200
-              :body {:status "OK"}}))}}]
-
-      ["/actions/update-user-status"
-       {:post
-        {:no-doc true
-         :require-privilege :users/manage
-         :parameters
-         {:body
-          {:id string?
-           :status users-schema/user-status}}
-         :handler
-         (fn [req]
-           {:status 200
-            :body (core/update-user-status! db (-> req :parameters :body))})}}]
-
-      ["/actions/update-user-data"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :parameters
-         {:body users-schema/user-data-schema}
-         :handler
-         (fn [req]
-           (let [user-data (-> req :parameters :body)
-                 user (:identity req)]
-             {:status 200
-              :body (core/update-user-data! db user user-data)}))}}]
-
-      ["/actions/order-magic-link"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body
-          {:email users-schema/email-schema
-           :login-url handler-schema/magic-link-login-url
-           :variant handler-schema/email-variant}}
-         :handler
-         (fn [req]
-           (let [email (-> req :parameters :body :email)
-                 variant (-> req :parameters :body :variant keyword)
-                 user (core/get-user! db email)
-                 url (-> req :parameters :body :login-url)
-                 _ (core/send-magic-link! db emailer {:user user
-                                                      :login-url url
-                                                      :variant variant})]
-             {:status 200 :body {:status "OK"}}))}}]
-
-      ["/actions/send-magic-link"
-       {:post
-        {:no-doc true
-         :require-privilege :users/manage
-         :parameters
-         {:body
-          {:login-url string?
-           :variant handler-schema/email-variant
-           :user users-schema/new-user-schema}}
-         :handler
-         (fn [req]
-           (let [user (-> req :parameters :body :user)
-                 variant (-> req :parameters :body :variant keyword)
-                 user (or (core/get-user db (:email user))
-                          (do (core/add-user! db user)
-                              (core/get-user db (:email user))))
-                 url (-> req :parameters :body :login-url)
-                 params {:user user :variant variant :login-url url}
-                 _ (core/send-magic-link! db emailer params)]
-             {:status 200 :body {:status "OK"}}))}}]
-
-      ["/actions/add-reminder"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :parameters
-         {:body reminders-schema/new-reminder}
-         :handler
-         (fn [{:keys [identity parameters]}]
-           (let [reminder (:body parameters)]
-             {:status 200
-              :body (core/add-reminder! db identity reminder)}))}}]
-
-      ["/actions/update-reminder-status"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :parameters
-         {:body
-          {:id uuid?
-           :status reminders-schema/reminder-status}}
-         :handler
-         (fn [{:keys [identity parameters]}]
-           (let [params (:body parameters)]
-             {:status 200
-              :body (core/update-reminder-status! db identity params)}))}}]
-
-      ["/actions/get-upcoming-reminders"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :handler
-         (fn [{:keys [identity]}]
-           {:status 200
-            :body (core/get-users-pending-reminders! db identity)})}}]
-
-      ["/actions/create-energy-report"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body handler-schema/energy-report-req}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [type-code (-> parameters :body :type-code)
-                 year (-> parameters :body :year)]
-             {:status 200
-              :body (core/energy-report db type-code year)}))}}]
-
-      ["/actions/create-sports-sites-report"
-       {:post
-        {:no-doc false
-         :parameters
-         {:body handler-schema/sports-site-report-req}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [query (-> parameters :body :search-query)
-                 fields (-> parameters :body :fields)
-                 locale (-> parameters :body :locale)
-                 format* (or (-> parameters :body :format) "xlsx")]
-             {:status 200
-              :headers (condp = format*
-                         "xlsx" {"Content-Type" (-> utils/content-type :xlsx)
-                                 "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
-                         "geojson" {"Content-Type" "application/json"
-                                    "Content-Disposition" "inline; filename=\"lipas.geojson\""}
-                         "csv" {"Content-Type" "text/csv"
-                                "Content-Disposition" "inline; filename=\"lipas.csv\""})
-              :body
-              (ring-io/piped-input-stream
-               (fn [out]
-                 (condp = format*
-                   "xlsx" (core/sports-sites-report-excel search query fields locale out)
-                   "geojson" (core/sports-sites-report-geojson search query fields locale out)
-                   "csv" (core/sports-sites-report-csv search query fields locale out))))}))}}]
-
-      ["/actions/create-data-model-report"
-       {:post
-        {:no-doc false
-         :parameters {:body {}}
-         :handler
-         (fn [{:keys [_parameters]}]
-           {:status 200
-            :headers {"Content-Type" (-> utils/content-type :xlsx)
-                      "Content-Disposition" "inline; filename=\"lipas_tietomalli.xlsx\""}
-            :body (ring-io/piped-input-stream (fn [out] (core/data-model-report out)))})}}]
+              :headers {"Content-Type" (-> utils/content-type :xlsx)
+                        "Content-Disposition" "inline; filename=\"lipas_tietomalli.xlsx\""}
+              :body (ring-io/piped-input-stream (fn [out] (core/data-model-report out)))})}}]
 
       ;; Old simple db version
-      ["/actions/create-finance-report"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body handler-schema/finance-report-req}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [params (:body parameters)]
-             {:status 200
-              :body (core/finance-report db params)}))}}]
+        ["/actions/create-finance-report"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body handler-schema/finance-report-req}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [params (:body parameters)]
+               {:status 200
+                :body (core/finance-report db params)}))}}]
 
       ;; New version that uses ES backend
-      ["/actions/query-finance-report"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body [:map {:closed false}]}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [params (:body parameters)]
-             {:status 200
-              :body (core/query-finance-report search params)}))}}]
+        ["/actions/query-finance-report"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body [:map {:closed false}]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [params (:body parameters)]
+               {:status 200
+                :body (core/query-finance-report search params)}))}}]
 
       ;; Subsidies
-      ["/actions/query-subsidies"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body [:map {:closed false}]}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [params (:body parameters)]
-             {:status 200
-              :body (core/query-subsidies search params)}))}}]
+        ["/actions/query-subsidies"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body [:map {:closed false}]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [params (:body parameters)]
+               {:status 200
+                :body (core/query-subsidies search params)}))}}]
 
-      ["/actions/calculate-stats"
-       {:post
-        {:no-doc true
-         :parameters {:body handler-schema/calculate-stats-payload}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/calculate-stats db search body-params)})}}]
+        ["/actions/calculate-stats"
+         {:post
+          {:no-doc true
+           :parameters {:body handler-schema/calculate-stats-payload}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/calculate-stats db search body-params)})}}]
 
       ;; Accessibility
-      ["/actions/get-accessibility-statements"
-       {:post
-        {:no-doc true
-         :parameters {:lipas-id int?}
-         :handler
-         (fn [{:keys [body-params]}]
-           (let [lipas-id (-> body-params :lipas-id)]
-             {:status 200
-              :body (core/get-accessibility-statements lipas-id)}))}}]
+        ["/actions/get-accessibility-statements"
+         {:post
+          {:no-doc true
+           :parameters {:lipas-id int?}
+           :handler
+           (fn [{:keys [body-params]}]
+             (let [lipas-id (-> body-params :lipas-id)]
+               {:status 200
+                :body (core/get-accessibility-statements lipas-id)}))}}]
 
-      ["/actions/get-accessibility-app-url"
-       {:post
-        {:no-doc true
-         :middleware [mw/token-auth mw/auth]
-         :parameters {:lipas-id int?}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           (let [lipas-id (-> body-params :lipas-id)]
-             {:status 200
-              :body (core/get-accessibility-app-url db identity lipas-id)}))}}]
+        ["/actions/get-accessibility-app-url"
+         {:post
+          {:no-doc true
+           :middleware [mw/token-auth mw/auth]
+           :parameters {:lipas-id int?}
+           :handler
+           (fn [{:keys [body-params identity]}]
+             (let [lipas-id (-> body-params :lipas-id)]
+               {:status 200
+                :body (core/get-accessibility-app-url db identity lipas-id)}))}}]
 
       ;;; Analysis ;;;
 
       ;; Search Schools
-      ["/actions/search-schools"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [{:keys [body-params]}]
-           (core/search-schools search body-params))}}]
+        ["/actions/search-schools"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [{:keys [body-params]}]
+             (core/search-schools search body-params))}}]
 
       ;; Search population
-      ["/actions/search-population"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [{:keys [body-params]}]
-           (core/search-population search body-params))}}]
+        ["/actions/search-population"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [{:keys [body-params]}]
+             (core/search-population search body-params))}}]
 
       ;; Calc distances and travel-times
-      ["/actions/calc-distances-and-travel-times"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/calc-distances-and-travel-times search body-params)})}}]
+        ["/actions/calc-distances-and-travel-times"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/calc-distances-and-travel-times search body-params)})}}]
 
       ;; Create analysis report
-      ["/actions/create-analysis-report"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :headers {"Content-Type" (-> utils/content-type :xlsx)
-                      "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
-            :body
-            (ring-io/piped-input-stream
-             (fn [out]
-               (core/create-analysis-report body-params out)))})}}]
+        ["/actions/create-analysis-report"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :headers {"Content-Type" (-> utils/content-type :xlsx)
+                        "Content-Disposition" "inline; filename=\"lipas.xlsx\""}
+              :body
+              (ring-io/piped-input-stream
+                (fn [out]
+                  (core/create-analysis-report body-params out)))})}}]
 
       ;; Front page stats
-      ["/actions/get-front-page-stats"
-       {:post
-        {:no-doc true
-         :handler
-         (fn [_]
-           {:status 200
-            :body (core/get-front-page-stats db search)})}}]
+        ["/actions/get-front-page-stats"
+         {:post
+          {:no-doc true
+           :handler
+           (fn [_]
+             {:status 200
+              :body (core/get-front-page-stats db search)})}}]
 
       ;; Get newsletter
-      ["/actions/get-newsletter"
-       {:post
-        {:no-doc false
-         :handler
-         (fn [_]
-           {:status 200
-            :body (core/get-newsletter mailchimp)})}}]
+        ["/actions/get-newsletter"
+         {:post
+          {:no-doc false
+           :handler
+           (fn [_]
+             {:status 200
+              :body (core/get-newsletter mailchimp)})}}]
 
       ;; Subscribe newsletter
-      ["/actions/subscribe-newsletter"
-       {:post
-        {:no-doc false
-         :parameters
-         {:body
-          {:email users-schema/email-schema}}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/subscribe-newsletter mailchimp body-params)})}}]
+        ["/actions/subscribe-newsletter"
+         {:post
+          {:no-doc false
+           :parameters
+           {:body
+            {:email users-schema/email-schema}}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/subscribe-newsletter mailchimp body-params)})}}]
 
       ;; Calculate diversity indices
-      ["/actions/calc-diversity-indices"
-       {:post
-        {:no-doc true
-         :parameters {:body [:map {:closed false}]}
-         :handler
-         (fn [{:keys [parameters]}]
-           (let [body (:body parameters)]
-             (if (malli/validate diversity-schema/diversity-indices-req body)
-               {:status 200
-                :body (core/calc-diversity-indices search body)}
-               {:status 400
-                :body {:error (-> (malli/explain diversity-schema/diversity-indices-req body)
-                                  me/humanize)}})))}}]
+        ["/actions/calc-diversity-indices"
+         {:post
+          {:no-doc true
+           :parameters {:body [:map {:closed false}]}
+           :handler
+           (fn [{:keys [parameters]}]
+             (let [body (:body parameters)]
+               (if (malli/validate diversity-schema/diversity-indices-req body)
+                 {:status 200
+                  :body (core/calc-diversity-indices search body)}
+                 {:status 400
+                  :body {:error (-> (malli/explain diversity-schema/diversity-indices-req body)
+                                    me/humanize)}})))}}]
 
       ;; Send feedback
-      ["/actions/send-feedback"
-       {:post
-        {:no-doc false
-         :parameters
-         {:body feedback-schema/feedback-payload}
-         :handler
-         (fn [{:keys [body-params]}]
-           (core/send-feedback! emailer body-params)
-           {:status 200
-            :body {:status "OK"}})}}]
-
-      ;; Check sports-site name
-      ["/actions/check-sports-site-name"
-       {:post
-        {:no-doc true
-         :parameters
-         {:body handler-schema/check-sports-site-name-payload}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/check-sports-site-name search body-params)})}}]
-
-      ["/actions/upload-utp-image"
-       {:post
-        {:no-doc false
-         ;; TODO: role, :activity/edit?
-         :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
-         :parameters {:multipart {:file [:map
-                                         [:filename :string]
-                                         [:content-type :string]
-                                         [:tempfile :any]
-                                         [:size :int]]}}
-         :handler
-         (fn [{:keys [parameters multipart-params identity]}]
-           (let [params {:lipas-id (get multipart-params "lipas-id")
-                         :filename (-> parameters :multipart :file :filename)
-                         :data (-> parameters :multipart :file :tempfile)
-                         :user identity}]
+        ["/actions/send-feedback"
+         {:post
+          {:no-doc false
+           :parameters
+           {:body feedback-schema/feedback-payload}
+           :handler
+           (fn [{:keys [body-params]}]
+             (core/send-feedback! emailer body-params)
              {:status 200
-              :body (core/upload-utp-image! params)}))}}]
+              :body {:status "OK"}})}}]
 
-      ["/actions/save-loi"
-       {:post
-        {:no-doc false
-         :require-privilege [{:type-code ::roles/any
-                              :city-code ::roles/any
-                              :activity ::roles/any}
-                             :loi/create-edit]
-         :parameters
-         {:body loi-schema/loi}
-         :handler
-         (fn [{:keys [body-params identity]}]
-           {:status 200
-            :body (core/upsert-loi! db search identity body-params)})}}]
+        ;; Check sports-site name
+        ["/actions/check-sports-site-name"
+         {:post
+          {:no-doc true
+           :parameters
+           {:body handler-schema/check-sports-site-name-payload}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/check-sports-site-name search body-params)})}}]
 
-      ["/actions/search-lois"
-       {:post
-        {:no-doc false
+        ["/actions/upload-utp-image"
+         {:post
+          {:no-doc false
+           ;; TODO: role, :activity/edit?
+           :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
+           :parameters {:multipart {:file [:map
+                                           [:filename :string]
+                                           [:content-type :string]
+                                           [:tempfile :any]
+                                           [:size :int]]}}
+           :handler
+           (fn [{:keys [parameters multipart-params identity]}]
+             (let [params {:lipas-id (get multipart-params "lipas-id")
+                           :filename (-> parameters :multipart :file :filename)
+                           :data (-> parameters :multipart :file :tempfile)
+                           :user identity}]
+               {:status 200
+                :body (core/upload-utp-image! params)}))}}]
+
+        ["/actions/save-loi"
+         {:post
+          {:no-doc false
+           :require-privilege [{:type-code ::roles/any
+                                :city-code ::roles/any
+                                :activity ::roles/any}
+                               :loi/create-edit]
+           :parameters
+           {:body loi-schema/loi}
+           :handler
+           (fn [{:keys [body-params identity]}]
+             {:status 200
+              :body (core/upsert-loi! db search identity body-params)})}}]
+
+        ["/actions/search-lois"
+         {:post
+          {:no-doc false
          ;; TODO: Tests don't use auth for this endpoint now
                                         ; :require-privilege [{:type-code ::roles/any
                                         ;                      :city-code ::roles/any
                                         ;                      :activity ::roles/any}
                                         ;                     :loi/view]
-         :parameters {:body handler-schema/search-lois-payload}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/search-lois-with-params search body-params)})}}]
+           :parameters {:body handler-schema/search-lois-payload}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/search-lois-with-params search body-params)})}}]
 
-      ["/actions/save-help-data"
-       {:post
-        {:no-doc true
-         :require-privilege :help/manage
-         :parameters {:body help-schema/HelpData}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (core/save-help-data db body-params)})}}]
+        ["/actions/save-help-data"
+         {:post
+          {:no-doc true
+           :require-privilege :help/manage
+           :parameters {:body help-schema/HelpData}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (core/save-help-data db body-params)})}}]
 
-      ["/actions/get-help-data"
-       {:post
-        {:no-doc true
-         :responses {200 {:body help-schema/HelpData}}
-         :handler
-         (fn [_]
-           {:status 200
-            :body (core/get-help-data db)})}}]
+        ["/actions/get-help-data"
+         {:post
+          {:no-doc true
+           :responses {200 {:body help-schema/HelpData}}
+           :handler
+           (fn [_]
+             {:status 200
+              :body (core/get-help-data db)})}}]
 
       ;; Heatmap analysis
-      ["/actions/create-heatmap"
-       {:post
-        {:no-doc false
-         #_#_:require-privilege :analysis-tool/experimental
-         :parameters {:body heatmap/HeatmapParams}
-         :responses {200 {:body heatmap/CreateHeatmapResponse}}
-         :handler
-         (fn [req]
-           (let [params (:body-params req)
-                 data (heatmap/create ctx params)]
-             {:status 200
-              :body {:data data
-                     :metadata {:dimension (:dimension params)
-                                :weight-by (:weight-by params)
-                                :total-features (count data)}}}))}}]
+        ["/actions/create-heatmap"
+         {:post
+          {:no-doc false
+           #_#_:require-privilege :analysis-tool/experimental
+           :parameters {:body heatmap/HeatmapParams}
+           :responses {200 {:body heatmap/CreateHeatmapResponse}}
+           :handler
+           (fn [req]
+             (let [params (:body-params req)
+                   data (heatmap/create ctx params)]
+               {:status 200
+                :body {:data data
+                       :metadata {:dimension (:dimension params)
+                                  :weight-by (:weight-by params)
+                                  :total-features (count data)}}}))}}]
 
-      ["/actions/get-heatmap-facets"
-       {:post
-        {:no-doc false
-         #_#_:require-privilege :analysis-tool/experimental
-         :parameters {:body heatmap/FacetParams}
-         :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
-         :handler
-         (fn [req]
-           (let [params (:body-params req)]
-             {:status 200
-              :body (heatmap/get-facets ctx params)}))}}]
+        ["/actions/get-heatmap-facets"
+         {:post
+          {:no-doc false
+           #_#_:require-privilege :analysis-tool/experimental
+           :parameters {:body heatmap/FacetParams}
+           :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
+           :handler
+           (fn [req]
+             (let [params (:body-params req)]
+               {:status 200
+                :body (heatmap/get-facets ctx params)}))}}]
 
-      (bulk-ops-handler/routes ctx)
-      (ptv-handler/routes ctx)
-      (workbench-handler/routes ctx)
-      (jobs-handler/routes ctx)]
+        (ptv-handler/routes ctx)
+        (workbench-handler/routes ctx)
+        (jobs-handler/routes ctx)]
 
-     (v1/routes ctx)
-     (v2/routes ctx)]
+       (v1/routes ctx)
+       (v2/routes ctx)]
 
-    {:data
-     {:coercion reitit.coercion.malli/coercion
-      :muuntaja m/instance
-      :middleware [;; query-params & form-params
-                   params/wrap-params
+      {:data
+       {:coercion reitit.coercion.malli/coercion
+        :muuntaja m/instance
+        :middleware [;; query-params & form-params
+                     params/wrap-params
                    ;; content-negotiation
-                   muuntaja/format-negotiate-middleware
+                     muuntaja/format-negotiate-middleware
                    ;; encoding response body
-                   muuntaja/format-response-middleware
+                     muuntaja/format-response-middleware
                    ;; add cors headers and respond to OPTIONS requests,
                    ;; - before privilege check, so options request is handled first.
                    ;; - before exception handling, so error responses also get cors headers.
-                   mw/cors-middleware
+                     mw/cors-middleware
                    ;; exception handling
-                   exceptions-mw
+                     exceptions-mw
                    ;; decoding request body
-                   muuntaja/format-request-middleware
+                     muuntaja/format-request-middleware
                    ;; coercing response bodys
-                   coercion/coerce-response-middleware
+                     coercion/coerce-response-middleware
                    ;; coercing request parameters
-                   coercion/coerce-request-middleware
+                     coercion/coerce-request-middleware
                    ;; privilege check based on route-data,
                    ;; also enables token-auth and auth checks
                    ;; per route.
-                   mw/privilege-middleware]}})
-   (ring/routes
-    (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
-    (ring/create-default-handler))))
+                     mw/privilege-middleware]}})
+    (ring/routes
+      (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
+      (ring/create-default-handler))))

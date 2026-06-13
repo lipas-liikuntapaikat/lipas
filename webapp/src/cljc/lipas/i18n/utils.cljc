@@ -1,4 +1,4 @@
-(ns ^:dev/always lipas.i18n.utils
+(ns lipas.i18n.utils
   (:require
    #?(:clj [clojure.java.io :as io])
    [clojure.edn :as edn]
@@ -19,11 +19,6 @@
    :help
    :home-page
    :ice
-   :ice-comparison
-   :ice-energy
-   :ice-form
-   :ice-resurfacer-fuels
-   :ice-rinks
    :lipas-in-numbers
    :lipas.admin
    :lipas.bulk-operations
@@ -34,6 +29,7 @@
    :lipas.org.ptv
    :lipas.properties
    :lipas.sports-site
+   :lipas.sports-site.images
    :lipas.swimming-pool.facilities
    :lipas.swimming-pool.pool
    :lipas.swimming-pool.pools
@@ -96,16 +92,26 @@
 
 #?(:clj
    (defmacro deftranslations
-     "Defines a translations map at compile time by loading all EDN files"
+     "Defines a translations map at compile time by loading all EDN files.
+
+     When expanded by the ClojureScript compiler, reads files via
+     shadow.resource/slurp-resource so shadow-cljs records them as
+     compilation inputs of the consuming namespace and invalidates its
+     cache when they change. On the JVM side plain slurp is used and
+     shadow/cljs compiler namespaces are never loaded."
      [lang]
-     (let [translations-map
+     (let [cljs? (some? (:ns &env))
+           translations-map
            (reduce
             (fn [m kw]
               (let [safe-name (safe-filename (name kw))
                     path (str "lipas/i18n/" lang "/" safe-name ".edn")
                     resource (io/resource path)]
                 (if resource
-                  (let [content (-> resource slurp edn/read-string)]
+                  (let [content (edn/read-string
+                                 (if cljs?
+                                   ((requiring-resolve 'shadow.resource/slurp-resource) &env path)
+                                   (slurp resource)))]
                     (assoc m kw content))
                   (do
                     (println "WARNING: Missing translation file:" path)
