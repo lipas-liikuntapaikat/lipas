@@ -52,7 +52,6 @@
         site (ensure-int-city-code site)]
     (core/upsert-sports-site!* (test-db) admin site)
     (core/index! (test-search) site :sync)
-    (Thread/sleep 100)
     site))
 
 (def polygon-loi-types #{"nature-reserve" "other-area-with-movement-restrictions"})
@@ -77,7 +76,6 @@
   (let [admin (create-admin-user)
         loi (fix-loi-geometry loi)]
     (core/upsert-loi! (test-db) (test-search) admin loi)
-    (Thread/sleep 100)
     loi))
 
 ;;; Response parsing helpers ;;;

@@ -1,5 +1,6 @@
 (ns lipas.test-utils
-  (:require [cheshire.core :as j]
+  (:require [buddy.hashers :as hashers]
+            [cheshire.core :as j]
             [clojure.java.jdbc :as jdbc]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -17,6 +18,7 @@
             [malli.generator :as mg]
             [lipas.utils :as utils]
             [migratus.core :as migratus]
+            [qbits.spandex :as es]
             [ring.mock.request :as mock]
             [integrant.core :as ig]
             [clojure.test :as t]
@@ -473,6 +475,9 @@
 (def config (-> config/default-config
                 (select-keys [:db :app :search :mailchimp :ptv])
                 (assoc-in [:app :emailer] (email/->TestEmailer))
+                ;; prune-es! creates the indices (with test-friendly settings,
+                ;; see test-index-settings) - don't create them at system boot.
+                (assoc-in [:search :create-indices] false)
                 (update-in [:db :dbname] test-suffix)
                 (assoc-in [:db :dev] true) ;; No connection pool
                 (update-in [:search :indices :sports-site :search] test-suffix)
@@ -666,9 +671,36 @@
 ;;
 ;; See lipas.backend.org-test for a complete example.
 
+(def test-index-settings
+  "Test indices refresh every 25ms (default 1s) so that index! with
+   refresh=wait_for returns quickly instead of waiting for the next
+   1s refresh cycle. Test-only setting."
+  {:refresh_interval "25ms"})
+
+(defn- index-not-found? [ex]
+  (= "index_not_found_exception"
+     (-> ex ex-data :body :error :root_cause first :type)))
+
+(defn- delete-all-docs!
+  "Deletes all documents from an index, returning true if the index
+   exists, false if it doesn't."
+  [client idx-name]
+  (try
+    (es/request client {:method :post
+                        :url (str idx-name "/_delete_by_query")
+                        :query-string {:refresh "true" :conflicts "proceed"}
+                        :body {:query {:match_all {}}}})
+    true
+    (catch Exception ex
+      (if (index-not-found? ex)
+        false
+        (throw ex)))))
+
 (defn prune-es!
-  "Prune all Elasticsearch test indices and recreate them with proper mappings.
-   Requires the search component as an argument."
+  "Prune all Elasticsearch test indices. Indices with known mappings are
+   created on first use and emptied with delete-by-query between tests
+   (~20ms) instead of being dropped and recreated (~500ms). Unmapped
+   indices are emptied if they exist."
   [search]
   (let [client (:client search)
         mappings {(-> search :indices :sports-site :search) (:sports-site search/mappings)
@@ -677,14 +709,25 @@
                   (-> search :indices :lois :search) (:lois search/mappings)}]
 
     (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
+      (let [exists? (delete-all-docs! client idx-name)]
+        (when-let [mapping (and (not exists?) (mappings idx-name))]
+          (search/create-index! client idx-name
+                                (update mapping :settings
+                                        update :index merge test-index-settings)))))))
+
+(defn hard-prune-es!
+  "Drop and recreate all Elasticsearch test indices with fresh mappings.
+   Slower than prune-es! - use when a test pollutes index mappings
+   (e.g. via dynamic mapping) rather than just documents."
+  [search]
+  (let [client (:client search)]
+    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
       (try
         (search/delete-index! client idx-name)
         (catch Exception ex
-          (when (not= "index_not_found_exception"
-                      (-> ex ex-data :body :error :root_cause first :type))
-            (throw ex))))
-      (when-let [mapping (mappings idx-name)]
-        (search/create-index! client idx-name mapping)))))
+          (when-not (index-not-found? ex)
+            (throw ex)))))
+    (prune-es! search)))
 
 (comment
   (init-db!)
@@ -692,6 +735,17 @@
   ;; prune-db! can still be called without args if using test config
   (prune-db!)
   (ex-data *e))
+
+(def test-user-password
+  "All generated test users share this password so its bcrypt hash can be
+   computed once per JVM (hashing costs ~250ms per call). Tests that log
+   in with the generated user's :password are unaffected."
+  "lipas-test-password-1!")
+
+(def ^:private cached-encrypt
+  "bcrypt is intentionally slow. Test users don't need unique hashes,
+   so cache by plaintext."
+  (memoize hashers/encrypt))
 
 (defn gen-user
   "Generate a test user with optional persistence to database.
@@ -707,7 +761,7 @@
   ([{:keys [db? admin? status permissions db-component]
      :or {admin? false status "active"}}]
    (let [user (-> (mg/generate users-schema/user-schema)
-                  (assoc :password (str (gensym)) :status status)
+                  (assoc :password test-user-password :status status)
                   ;; Ensure :permissions is a map always, generate doesn't always add the key because it is optional in
                   ;; the user schema but required e.g. update-user-permissions endpoint.
                   (update :permissions (fn [generated-permissions]
@@ -723,7 +777,8 @@
          (when-not db-component
            (throw (ex-info "gen-user with db? true requires :db-component option. Use (gen-user {:db? true :db-component (test-db)})"
                            {:opts {:db? db? :admin? admin?}})))
-         (core/add-user! db-component user)
+         (with-redefs [hashers/encrypt cached-encrypt]
+           (core/add-user! db-component user))
          (assoc user :id (:id (core/get-user db-component (:email user)))))
        user))))
 
