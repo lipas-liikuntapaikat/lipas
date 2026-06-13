@@ -143,7 +143,16 @@
                [:type-code (if compat?
                              (into [:enum {:encode/json identity}] type-codes)
                              (into [:enum] type-codes))]]]
-             [:location location-schema]]
+             [:location location-schema]
+             ;; --- org-management ownership fields (opt-in; nil/absent for
+             ;; legacy sites). owner = the org that owns the site; edit-grants =
+             ;; other orgs granted edit by the owner (cross-org collaboration). ---
+             [:owner-org-id {:optional true
+                             :description "Id of the organization that owns this site"}
+              [:maybe #'common/uuid]]
+             [:edit-grants {:optional true
+                            :description "Org ids granted edit access by the owner"}
+              [:vector #'common/uuid]]]
             extras-entries)))))
 
 (defn- make-sports-site-multi-schema

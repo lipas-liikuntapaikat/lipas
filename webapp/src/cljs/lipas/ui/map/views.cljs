@@ -65,6 +65,7 @@
             ["@mui/material/Tooltip$default" :as Tooltip]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
+            [lipas.ui.org.views :as org-views]
             [lipas.ui.ptv.site-view :as ptv-site]
             [lipas.ui.ptv.views :as ptv]
             [lipas.ui.reminders.views :as reminders]
@@ -1132,7 +1133,14 @@
           [:> Tab
            {:style {:min-width 0}
             :value 6
-            :label "PTV"}])]
+            :label "PTV"}])
+
+        ;; Org-management: editing rights — only for org-owned sites
+        (when (:owner-org-id display-data)
+          [:> Tab
+           {:style {:min-width 0}
+            :value 7
+            :label (tr :lipas.org/editing-rights)}])]
 
        (when delete-dialog-open?
          [sports-sites/delete-dialog
@@ -1246,7 +1254,14 @@
               :type-code type-code
               ; :display-data display-data
               :edit-data edit-data
-              :can-edit? can-publish?}]])]
+              :can-edit? can-publish?}]]
+
+         ;; Editing rights (org-management)
+         7 [:> Grid {:item true :xs 12}
+            [org-views/editing-rights-panel
+             {:tr tr
+              :lipas-id lipas-id
+              :owner-org-id (:owner-org-id display-data)}]])]
 
 ;; "Landing bay" for floating tools
       [:> Grid {:item true :xs 12 :style {:height "3em"}}]
@@ -1886,6 +1901,7 @@
                     :owners owners
                     :on-change set-field
                     :sub-headings? true
+                    :new? true
                     :lipas-id 0}]
 
                   [sports-sites/location-form

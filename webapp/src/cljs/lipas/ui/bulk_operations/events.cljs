@@ -4,24 +4,35 @@
             [re-frame.core :as rf]))
 
 (rf/reg-event-fx ::init
-  (fn [{:keys [db]} [_ {:keys [on-success]}]]
-    (let [already-initialized? (seq (get-in db [:bulk-operations :editable-sites]))]
-      (if already-initialized?
-                       ;; If already initialized, don't reset the state
-        {:dispatch (when on-success [on-success])}
-                       ;; Otherwise, initialize fresh
-        {:db (assoc-in db [:bulk-operations] db/default-db)
-         :dispatch-n [[::get-editable-sites]
-                      (when on-success [on-success])]}))))
+  ;; Bulk update is an org operation — always launched with an org-id.
+  (fn [{:keys [db]} [_ {:keys [org-id on-success]}]]
+    (let [same-org? (and (= org-id (get-in db [:bulk-operations :org-id]))
+                         (seq (get-in db [:bulk-operations :editable-sites])))]
+      ;; Always refetch the list — it goes stale in app-db when org sites are
+      ;; created/edited elsewhere in the app (F36). For the same org we keep
+      ;; selections/filters and let the view show the old list (+ loading flag)
+      ;; while the refetch is in flight; an org switch resets the state fresh.
+      {:db (if same-org?
+             db
+             (-> db
+                 (assoc-in [:bulk-operations] db/default-db)
+                 (assoc-in [:bulk-operations :org-id] org-id)))
+       :dispatch-n [[::get-editable-sites]
+                    (when on-success [on-success])]})))
 
 (rf/reg-event-fx ::get-editable-sites
   (fn [{:keys [db]} _]
-    (let [token (-> db :user :login :token)]
-      {:db (assoc-in db [:bulk-operations :loading?] true)
+    (let [token (-> db :user :login :token)
+          org-id (get-in db [:bulk-operations :org-id])]
+      ;; clear any stale fetch error — the view renders [:bulk-operations :error]
+      {:db (-> db
+               (update :bulk-operations dissoc :error)
+               (assoc-in [:bulk-operations :loading?] true))
        :http-xhrio
-       {:method :get
-        :uri (str (:backend-url db) "/actions/get-editable-sports-sites")
+       {:method :post
+        :uri (str (:backend-url db) "/actions/get-org-sites-for-bulk")
         :headers {:Authorization (str "Token " token)}
+        :params {:org-id org-id}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::get-editable-sites-success]
@@ -89,9 +100,10 @@
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
        {:method :post
-        :uri (str (:backend-url db) "/actions/mass-update-sports-sites")
+        :uri (str (:backend-url db) "/actions/mass-update-org-sites")
         :headers {:Authorization (str "Token " token)}
-        :params {:lipas-ids (vec selected-sites)
+        :params {:org-id (get-in db [:bulk-operations :org-id])
+                 :lipas-ids (vec selected-sites)
                  :updates filtered-updates}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})

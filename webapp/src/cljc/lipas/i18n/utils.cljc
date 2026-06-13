@@ -1,4 +1,4 @@
-(ns ^:dev/always lipas.i18n.utils
+(ns lipas.i18n.utils
   (:require
    #?(:clj [clojure.java.io :as io])
    [clojure.edn :as edn]
@@ -19,11 +19,6 @@
    :help
    :home-page
    :ice
-   :ice-comparison
-   :ice-energy
-   :ice-form
-   :ice-resurfacer-fuels
-   :ice-rinks
    :lipas-in-numbers
    :lipas.admin
    :lipas.bulk-operations
@@ -95,17 +90,37 @@
   (str/replace filename "." "_"))
 
 #?(:clj
+   ;; Resolve shadow.resource/slurp-resource once, serialized. deftranslations
+   ;; expands concurrently for i18n.fi/se/en under shadow's parallel release
+   ;; compile; a bare (requiring-resolve ...) per call races on the half-loaded
+   ;; namespace and throws "unbound fn: #'shadow.resource/slurp-resource" on a
+   ;; cold build. The delay forces a single, ordered load and never runs on the
+   ;; JVM (which takes the plain-slurp path below).
+   (def ^:private slurp-resource!
+     (delay (requiring-resolve 'shadow.resource/slurp-resource))))
+
+#?(:clj
    (defmacro deftranslations
-     "Defines a translations map at compile time by loading all EDN files"
+     "Defines a translations map at compile time by loading all EDN files.
+
+     When expanded by the ClojureScript compiler, reads files via
+     shadow.resource/slurp-resource so shadow-cljs records them as
+     compilation inputs of the consuming namespace and invalidates its
+     cache when they change. On the JVM side plain slurp is used and
+     shadow/cljs compiler namespaces are never loaded."
      [lang]
-     (let [translations-map
+     (let [cljs? (some? (:ns &env))
+           translations-map
            (reduce
             (fn [m kw]
               (let [safe-name (safe-filename (name kw))
                     path (str "lipas/i18n/" lang "/" safe-name ".edn")
                     resource (io/resource path)]
                 (if resource
-                  (let [content (-> resource slurp edn/read-string)]
+                  (let [content (edn/read-string
+                                 (if cljs?
+                                   (@slurp-resource! &env path)
+                                   (slurp resource)))]
                     (assoc m kw content))
                   (do
                     (println "WARNING: Missing translation file:" path)

@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.events
   (:require [ajax.core :as ajax]
+            [lipas.data.owners :as owners-data]
             [lipas.roles :as roles]
             [lipas.ui.interceptors :as interceptors]
             [lipas.ui.utils :as utils]
@@ -221,7 +222,25 @@
                        :type       {:type-code type-code}
                        :location   {:geometries geoms
                                     :city       {:city-code city-code}}}
-                      template)]
+                      template)
+
+          ;; Pre-fill org ownership: if the creator can own sites for exactly
+          ;; one org, default the new site to that org (and lock :owner to the
+          ;; org-type enum). The form lets them clear it for the legacy path.
+          ;; Skipped when the template fixes :owner (e.g. analysis/planning).
+          user      (-> db :user :login)
+          ownable   (when-not (:owner template)
+                      (->> (-> db :user :orgs)
+                           (filter (fn [{:keys [id]}]
+                                     (roles/check-privilege
+                                       user {:org-id #{(str id)}} :site/create-edit)))))
+          owner-org  (when (= 1 (count ownable)) (first ownable))
+          ;; nil when the org's type has no :owner enum mapping — leave :owner
+          ;; unset so the form's legacy owner select stays visible.
+          owner-enum (when owner-org (owners-data/org-type->owner (:type owner-org)))
+          data       (cond-> data
+                       owner-org  (assoc :owner-org-id (str (:id owner-org)))
+                       owner-enum (assoc :owner owner-enum))]
       {:db (-> db
                (update-in [:new-sports-site :data] cutils/deep-merge data)
                (update :new-sports-site dissoc :template))})))

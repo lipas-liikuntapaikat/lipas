@@ -87,42 +87,9 @@
          (map #(update % :event-date prettify-timestamp))
          (sort-by :event-date cutils/reverse-cmp))))
 
-(defn ->list-entry
-  [locale [k v]]
-  {:value k
-   :label (str (get-in v [:name locale])
-               " "
-               k
-               (when (not= "active" (:status v))
-                 " POISTUNUT"))})
-
-(rf/reg-sub ::types-list
-  :<- [:lipas.ui.sports-sites.subs/all-types]
-  (fn [types [_ locale]]
-    (->> types
-         (map (partial ->list-entry locale))
-         (sort-by :label))))
-
-(rf/reg-sub ::cities-list
-  :<- [:lipas.ui.sports-sites.subs/cities-by-city-code]
-  (fn [cities [_ locale]]
-    (->> cities
-         (map (partial ->list-entry locale))
-         (sort-by :label))))
-
-(rf/reg-sub ::sites-list
-  :<- [:lipas.ui.sports-sites.subs/latest-sports-site-revs]
-  (fn [sites _]
-    (->> sites
-         (map (fn [[lipas-id s]] {:value lipas-id :label (:name s)}))
-         (sort-by :label))))
-
-(rf/reg-sub ::activities-list
-  :<- [:lipas.ui.sports-sites.activities.subs/data]
-  (fn [activities [_ locale]]
-    (->> activities
-         (map (fn [[k m]] {:value k :label (get-in m [:label locale])}))
-         (sort-by :label))))
+;; NOTE: the ::types-list/::cities-list/::sites-list/::activities-list option
+;; subs live in lipas.ui.roles.editor (the shared role-spec editor) — the
+;; copies that used to sit here are gone (F24).
 
 (rf/reg-sub ::magic-link-dialog-open?
   (fn [db _]
@@ -284,44 +251,13 @@
   (fn [db _]
     (-> db :admin :orgs)))
 
+;; Resolves an org-id (role context value) to its org for name display in the
+;; user roles list — see lipas.ui.user.subs/context-value-name. Org roles are no
+;; longer hand-assigned, but this keeps any historical org-id context readable.
 (rf/reg-sub ::org
   :<- [::orgs]
   (fn [orgs [_ id]]
     (get orgs id)))
-
-(rf/reg-sub ::orgs-list
-  :<- [::orgs]
-  (fn [orgs _]
-    (vals orgs)))
-
-(rf/reg-sub ::orgs-options
-  :<- [::orgs-list]
-  (fn [orgs _]
-    (->> orgs
-         (map (fn [{:keys [id name]}]
-                {:value id
-                 :label name}))
-         (sort-by :label))))
-
-(rf/reg-sub ::editing-org
-  (fn [db _]
-    (get-in db [:admin :editing-org])))
-
-(rf/reg-sub ::add-user-to-org-dialog-open?
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :dialog-open?])))
-
-(rf/reg-sub ::add-user-to-org-dialog-org-id
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :org-id])))
-
-(rf/reg-sub ::add-user-to-org-email
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :email])))
-
-(rf/reg-sub ::add-user-to-org-role
-  (fn [db _]
-    (get-in db [:admin :add-user-to-org :role])))
 
 ;; Site History subscriptions
 

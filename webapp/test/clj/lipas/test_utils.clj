@@ -8,6 +8,7 @@
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.config :as config]
             [lipas.backend.core :as core]
+            [lipas.backend.org :as backend-org]
             [lipas.backend.email :as email]
             [lipas.backend.search :as search]
             [lipas.backend.system :as sy]
@@ -35,7 +36,11 @@
   ;; compute-renovation-years) then merge them in surprising ways for
   ;; tests that don't care. Tests that DO care should assoc explicit
   ;; values.
-  (cond-> (dissoc site :renovation-years :renovations)
+  ;; Likewise strip the org-ownership fields: the schema marks them optional,
+  ;; so mg/generate randomly assigns ownership/grants, making ownership
+  ;; assertions flaky by seed. A generated site is un-owned by default; tests
+  ;; that care assoc explicit :owner-org-id / :edit-grants.
+  (cond-> (dissoc site :renovation-years :renovations :owner-org-id :edit-grants)
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))
@@ -955,14 +960,40 @@
                          :permissions {:roles [{:role "site-manager"
                                                 :lipas-id [lipas-id]}]}})))
 
+(defn- gen-org-member-user
+  "Generate a user, add them to the org document with the given org-role
+  (\"org-admin\" | \"org-user\"), and bake their org-derived roles into the
+  token permissions — exactly as login does. Membership lives in the org
+  document; the token carries the projected roles. Requires a persisted org.
+  `opts` is a map ({:db? :db-component})."
+  [org-id org-role opts]
+  (let [{:keys [db? db-component] :or {db? true}} opts
+        user (gen-user (merge opts {:db? db? :db-component db-component :admin? false}))]
+    (if (and db? db-component)
+      (do
+        ;; the real membership path: "org-admin" is the reserved "admin" role,
+        ;; "org-user" a plain member (empty role list)
+        (backend-org/add-member! db-component org-id (:id user)
+                                 {:roles (if (= org-role "org-admin") ["admin"] [])}
+                                 nil)
+        (assoc-in user [:permissions :roles]
+                  (backend-org/derive-user-org-roles db-component (:id user))))
+      ;; no DB: fall back to an explicit role so authz still works off the token
+      (assoc-in user [:permissions :roles]
+                [{:role (if (= org-role "org-admin") "org-admin" "org-user")
+                  :org-id [(str org-id)]}]))))
+
 (defn gen-org-admin-user
-  "Generate an organization admin for specific org.
+  "Generate an organization admin for specific org (member with :admin org-role).
    When db? is true (default), requires :db-component option."
-  [org-id & {:keys [db? db-component] :or {db? true} :as opts}]
-  (gen-user (merge opts {:db? db?
-                         :db-component db-component
-                         :permissions {:roles [{:role "org-admin"
-                                                :org-id [(str org-id)]}]}})))
+  [org-id & {:as opts}]
+  (gen-org-member-user org-id "org-admin" opts))
+
+(defn gen-org-user
+  "Generate a regular organization member for specific org (:member org-role).
+   When db? is true (default), requires :db-component option."
+  [org-id & {:as opts}]
+  (gen-org-member-user org-id "org-user" opts))
 
 (defn gen-ptv-auditor
   "Generate a PTV auditor user.

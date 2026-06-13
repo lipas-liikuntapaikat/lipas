@@ -1,0 +1,4 @@
+{:ns lipas.migrations.org-roles-account-cleanup
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}

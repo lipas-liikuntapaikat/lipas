@@ -14,6 +14,19 @@
   (fn [orgs _]
     (into {} (map (juxt :id identity) orgs))))
 
+;; Orgs the user may set as a site's owner: those where they hold
+;; :site/create-edit (org-editor of the org, or lipas-admin). Drives the
+;; owner-org autocomplete in the sports-site form. Mirrors the backend gate
+;; `owner-org-assignment-authorized?`.
+(rf/reg-sub ::ownable-orgs
+  :<- [::user-orgs]
+  :<- [:lipas.ui.user.subs/user-data]
+  (fn [[orgs user] _]
+    (filterv (fn [{:keys [id]}]
+               ;; :org-id role-context must be a set (set-intersection matcher)
+               (roles/check-privilege user {:org-id #{(str id)}} :site/create-edit))
+             orgs)))
+
 (rf/reg-sub ::user-org-by-id
   :<- [::user-orgs-by-id]
   (fn [orgs [_ id]]
@@ -54,31 +67,12 @@
 
 (rf/reg-sub ::current-tab
   (fn [db _]
-    (get-in db [:org :current-tab] "contact")))
+    ;; Default to the most-used "Kohteet" (our-sites) tab, which is shown first.
+    (get-in db [:org :current-tab] "our-sites")))
 
 (rf/reg-sub ::org-users
   (fn [db _]
     (:users (:org db))))
-
-(rf/reg-sub ::all-users
-  (fn [db _]
-    (:all-users (:org db))))
-
-(rf/reg-sub ::all-users-options
-  :<- [::all-users]
-  (fn [users _]
-    (map (fn [{:keys [id email]}]
-           {:value id
-            :label email})
-         users)))
-
-(rf/reg-sub ::add-user-form
-  (fn [db _]
-    (get-in db [:org :add-user-form])))
-
-(rf/reg-sub ::add-user-email-form
-  (fn [db _]
-    (get-in db [:org :add-user-email-form])))
 
 (rf/reg-sub ::is-lipas-admin
   :<- [:lipas.ui.user.subs/user-data]
@@ -87,12 +81,138 @@
 
 (rf/reg-sub ::is-org-admin?
   (fn [[_ org-id] _]
-    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id org-id} :org/manage]))
+    ;; :org-id role-context must be a set (set-intersection matcher, like :activity)
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id #{org-id}} :org/manage]))
   (fn [v _]
     v))
 
 (rf/reg-sub ::is-org-member?
   (fn [[_ org-id] _]
-    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id org-id} :org/member]))
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id #{org-id}} :org/member]))
   (fn [v _]
     v))
+
+;; Bulk-edit ACTIONS (selection checkboxes + "Massapäivitys") require
+;; :site/create-edit on the org (org-editor template or lipas-admin). Plain
+;; members (e.g. an org-admin without an editor template) still SEE the
+;; read-only sites list — they just can't launch the mass-update. Mirrors the
+;; backend gate on /actions/mass-update-org-sites.
+(rf/reg-sub ::can-bulk-edit?
+  (fn [[_ org-id] _]
+    (rf/subscribe [:lipas.ui.user.subs/check-privilege {:org-id #{org-id}} :site/create-edit]))
+  (fn [v _]
+    v))
+
+;; --- Capability gating (UX plan §2). Every new control gates through this. ---
+(rf/reg-sub ::can?
+  (fn [[_ _capability org-id] _]
+    [(rf/subscribe [::is-lipas-admin])
+     (rf/subscribe [::is-org-admin? org-id])
+     (rf/subscribe [::is-org-member? org-id])])
+  (fn [[lipas-admin? org-admin? org-member?] [_ capability _org-id]]
+    (case capability
+      ;; lipas-admin only — the ceiling
+      (:org/edit-type+ownership :org/edit-catalog :org/create)
+      (boolean lipas-admin?)
+
+      ;; lipas-admin or org-admin
+      (:org/edit-contact :org/edit-ptv :org/manage-members :org/grant-site-edit
+                         :org/view-history :org/edit-instructions :org/release-sites)
+      (boolean (or lipas-admin? org-admin?))
+
+      ;; any member
+      :org/view
+      (boolean (or lipas-admin? org-admin? org-member?))
+
+      false)))
+
+;; --- Role-template catalog (the org's ceiling) ---
+(rf/reg-sub ::org-templates
+  :<- [::editing-org]
+  (fn [org _]
+    (:role-templates org)))
+
+(rf/reg-sub ::member-template-options
+  :<- [::org-templates]
+  (fn [catalog _]
+    ;; catalog keys → {:value "<key>" :label "<label or key>"} for multi-select
+    (->> catalog
+         (map (fn [[k v]]
+                {:value (name k)
+                 :label (or (:label v) (name k))}))
+         (sort-by :label)
+         vec)))
+
+(rf/reg-sub ::invite-member-form
+  (fn [db _]
+    (get-in db [:org :invite-member-form] {})))
+
+(rf/reg-sub ::catalog-editor
+  (fn [db _]
+    (get-in db [:org :catalog-editor])))
+
+;; --- Our sites (Phase D) ---
+;; The Our-sites tab is driven by bulk-ops' editable-sites; only the "owned"
+;; count survives here (card + setup-checklist). The former :editable / filtered
+;; our-sites subs are gone with that rewrite.
+(rf/reg-sub ::org-owned-sites
+  (fn [db _]
+    (get-in db [:org :sites :owned])))
+
+;; ::get-org-sites fetches count-only — the response is {:total n :sites []}
+(rf/reg-sub ::owned-sites-count
+  :<- [::org-owned-sites]
+  (fn [owned _]
+    (or (:total owned) 0)))
+
+;; in-flight flag for the (slow, synchronous) reclaim/approve op → drives the
+;; dialog spinner + button disabling
+(rf/reg-sub ::reclaiming?
+  (fn [db _]
+    (boolean (get-in db [:org :reclaiming?]))))
+
+(rf/reg-sub ::site-editors
+  (fn [db [_ lipas-id]]
+    (get-in db [:org :site-editors lipas-id])))
+
+(rf/reg-sub ::site-edit-history
+  (fn [db [_ lipas-id]]
+    (get-in db [:org :site-edit-history lipas-id])))
+
+;; --- History (Phase E) ---
+(rf/reg-sub ::org-history
+  (fn [db _]
+    (get-in db [:org :history])))
+
+;; --- Take-over approval queue (Phase E, lipas-admin) ---
+(rf/reg-sub ::takeover-requests
+  (fn [db _]
+    (get-in db [:org :takeover-requests])))
+
+;; --- Claim impact warning dialog ---
+(rf/reg-sub ::claim-dialog
+  (fn [db _]
+    (get-in db [:org :claim-dialog])))
+
+(rf/reg-sub ::takeover-preview
+  (fn [db _]
+    (get-in db [:org :takeover-preview])))
+
+;; the curated picker: set of lipas-ids checked in the claim dialog
+;; (initialized to all matching sites when the preview loads)
+(rf/reg-sub ::claim-selection
+  (fn [db _]
+    (get-in db [:org :claim-selection] #{})))
+
+;; --- Release ownership dialog (the inverse of a claim) ---
+(rf/reg-sub ::release-dialog
+  (fn [db _]
+    (get-in db [:org :release-dialog])))
+
+(rf/reg-sub ::release-preview
+  (fn [db _]
+    (get-in db [:org :release-preview])))
+
+(rf/reg-sub ::releasing?
+  (fn [db _]
+    (boolean (get-in db [:org :releasing?]))))
