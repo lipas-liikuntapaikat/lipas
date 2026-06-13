@@ -9,12 +9,14 @@
 
 (deftest lipas-id-test
   (testing "Valid lipas-id values"
-    (is (m/validate sports-sites/lipas-id 0))
     (is (m/validate sports-sites/lipas-id 1))
     (is (m/validate sports-sites/lipas-id 12345))
     (is (m/validate sports-sites/lipas-id 999999)))
 
   (testing "Invalid lipas-id values"
+    ;; lipas-ids come from a Postgres sequence and are always >= 1; 0 is not a
+    ;; real id (the jobs payload schema has always rejected it as non-positive).
+    (is (not (m/validate sports-sites/lipas-id 0)))
     (is (not (m/validate sports-sites/lipas-id -1)))
     (is (not (m/validate sports-sites/lipas-id -100)))
     (is (not (m/validate sports-sites/lipas-id 3.14)))

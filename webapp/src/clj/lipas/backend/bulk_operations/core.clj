@@ -15,7 +15,7 @@
 ;; Schema for mass update payload
 (def mass-update-contact-payload
   [:map
-   [:lipas-ids [:vector :int]]
+   [:lipas-ids [:vector #'sites-schema/lipas-id]]
    [:updates [:map
               [:email {:optional true} [:maybe sites-schema/email]]
               [:phone-number {:optional true} [:maybe sites-schema/phone-number]]

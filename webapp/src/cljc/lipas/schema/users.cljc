@@ -1,6 +1,7 @@
 (ns lipas.schema.users
   (:require [lipas.data.activities :as activities]
             [lipas.data.cities :as cities]
+            [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.schema.common :as common]
@@ -96,7 +97,7 @@
                     [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
     [:site-manager [:map
                     [:role [:= :site-manager]]
-                    [:lipas-id [:set [:int {:min 0}]]]]]
+                    [:lipas-id [:set #'sports-sites-schema/lipas-id]]]]
     [:activities-manager [:map
                           [:role [:= :activities-manager]]
                           [:activity [:set (into [:enum] activity-values)]]

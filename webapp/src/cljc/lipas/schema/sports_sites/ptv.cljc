@@ -1,6 +1,7 @@
 (ns lipas.schema.sports-sites.ptv
   "Schema definitions for PTV (Palvelutietovaranto) integration in sports sites."
   (:require [lipas.data.ptv :as ptv-data]
+            [lipas.schema.sports-sites :as sports-sites-schema]
             [malli.core :as m]))
 
 (defn localized-string-schema
@@ -89,6 +90,6 @@
    [:map
     {:closed true}
     [:org-id :string]
-    [:lipas-id :int]
+    [:lipas-id #'sports-sites-schema/lipas-id]
     [:archive? {:optional true} :boolean]
     [:ptv ptv-meta]]))
