@@ -799,10 +799,40 @@
    every ES index name - so a misconfigured config can never destroy the real
    dev/prod database or indices.
 
+   Call it with no args for the standalone case - it builds its own ephemeral
+   Elasticsearch client from the test config, resets both subsystems, and
+   closes the client. This is the recommended way to run it from the REPL when
+   no test system is up:
+
+     (lipas.test-utils/reset-test-infra!)
+
+   Or pass an existing live search component (with a :client and suffixed
+   :indices). From with-test-system! that means dereffing the system atom -
+   (:lipas/search @system) - since the fixture hands your fn the atom, not the
+   system map.
+
    Optionally accepts a custom db config (defaults to the test config)."
+  ([]
+   ;; Standalone: spin up just an ES client (cheap - es/client is lazy and
+   ;; doesn't need ES reachable to construct), reset, then close it. No full
+   ;; system, no DB recreation, no system-atom deref footgun.
+   (let [search (ig/init-key :lipas/search (:search config))]
+     (try
+       (reset-test-infra! search)
+       (finally
+         (some-> search :client search/close-cli)))))
   ([search]
    (reset-test-infra! search (:db config)))
   ([search db-config]
+   ;; Fail fast on a missing/empty search component - otherwise the nil flows
+   ;; into prune-es!'s mappings literal and surfaces as a baffling
+   ;; "Duplicate key: null" (four index-name keys all collapse to nil).
+   (when-not (:client search)
+     (throw (ex-info (str "reset-test-infra! needs a live search component "
+                          "(got " (pr-str search) "). If it came from "
+                          "with-test-system!, deref the system atom: "
+                          "(:lipas/search @system).")
+                     {:search search})))
    ;; Guard every ES index name up front, before dropping anything. drop-db!
    ;; applies the matching guard to the database name itself.
    (doseq [idx-name (-> search :indices vals (->> (mapcat vals)))]
@@ -823,8 +853,14 @@
   ;; then init-db! rebuilds it fresh from the current branch's migrations.
   (drop-db!)
   (init-db!)
-  ;; Or reset both DB and ES test indices in one shot (needs a search component).
-  (reset-test-infra! search)
+  ;; Or reset both DB and ES test indices in one shot. Standalone (recommended):
+  ;; builds its own ephemeral ES client, resets, closes it.
+  (reset-test-infra!)
+  ;; If you already have a running system, pass its search component. Note
+  ;; with-test-system! hands `f` the system ATOM, so deref it:
+  (with-test-system!
+    (fn [system]
+      (reset-test-infra! (:lipas/search @system))))
   (ex-data *e))
 
 (def test-user-password
