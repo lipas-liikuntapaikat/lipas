@@ -91,6 +91,16 @@
   (str/replace filename "." "_"))
 
 #?(:clj
+   ;; Resolve shadow.resource/slurp-resource once, serialized. deftranslations
+   ;; expands concurrently for i18n.fi/se/en under shadow's parallel release
+   ;; compile; a bare (requiring-resolve ...) per call races on the half-loaded
+   ;; namespace and throws "unbound fn: #'shadow.resource/slurp-resource" on a
+   ;; cold build. The delay forces a single, ordered load and never runs on the
+   ;; JVM (which takes the plain-slurp path below).
+   (def ^:private slurp-resource!
+     (delay (requiring-resolve 'shadow.resource/slurp-resource))))
+
+#?(:clj
    (defmacro deftranslations
      "Defines a translations map at compile time by loading all EDN files.
 
@@ -110,7 +120,7 @@
                 (if resource
                   (let [content (edn/read-string
                                  (if cljs?
-                                   ((requiring-resolve 'shadow.resource/slurp-resource) &env path)
+                                   (@slurp-resource! &env path)
                                    (slurp resource)))]
                     (assoc m kw content))
                   (do
