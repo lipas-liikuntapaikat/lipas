@@ -164,7 +164,11 @@
           result (diversity/fetch-grid (test-search) test-fcoll 1)]
       (is (seq result))
       (is (every? #(contains? % :_source) result))
-      (is (= "250mN667175E38600" (-> result first :_source :grd_id))))))
+      ;; fetch-grid applies no sort, so ES returns the matching cells in
+      ;; arbitrary order - assert the full set, not (first result), or the
+      ;; test flakes when the segment layout flips which cell comes first.
+      (is (= #{"250mN667175E38600" "250mN667150E38600"}
+             (set (map #(-> % :_source :grd_id) result)))))))
 
 (deftest process-grid-item-test
   (testing "Processing single grid item calculates sports site distances"
