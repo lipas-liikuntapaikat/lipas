@@ -550,6 +550,49 @@
          (println "Migration failed:" (.getMessage e))
          (throw e))))))
 
+(defn drop-db!
+  "Drop the whole test database so the next init-db! rebuilds it from
+   scratch with the current branch's migrations.
+
+   Unlike prune-db! (which only TRUNCATEs data), this destroys the schema
+   itself. The test DB is persistent and migrations are forward-only:
+   init-db! creates it once and only ever applies *pending* migrations,
+   never rolling anything back. So the schema is the high-water mark of
+   every migration ever applied to it, on any branch.
+
+   That bites when you switch branches. A feature branch's migrations
+   (e.g. one that does ALTER TABLE org RENAME TO org_legacy + CREATE TABLE
+   org with a new shape) get applied and recorded while you're on that
+   branch. Switching back to master can't undo them - master's migration
+   set is now a strict subset of what's applied, so migratus reports
+   'up to date' and runs nothing, leaving the DB structurally incompatible
+   with master's code. Tests then fail locally with schema errors even
+   though CI (which always starts from an empty DB) is green.
+
+   Call this when you see schema-shaped test failures after hopping
+   between branches with diverging migrations. WITH (FORCE) terminates any
+   leftover connections (requires PostgreSQL 13+).
+
+   Destroys all data - test DB only. Optionally accepts a custom db config.
+   Refuses to run unless the target dbname carries the test-suffix (so a
+   misconfigured config can never drop the real dev/prod database)."
+  ([]
+   (drop-db! (:db config)))
+  ([db-config]
+   (let [dbname (:dbname db-config)]
+     ;; Hard guard: only ever drop a database whose name was produced by
+     ;; test-suffix. Dropping the real dev/prod DB would force the developer
+     ;; to rebuild whatever state they had there.
+     (when-not (str/ends-with? (str dbname) (test-suffix ""))
+       (throw (ex-info (str "Refusing to drop '" dbname "': not a test database "
+                            "(name must end with '" (test-suffix "") "'). "
+                            "drop-db! only operates on the test database.")
+                       {:dbname dbname})))
+     (jdbc/db-do-commands (assoc db-config :dbname "")
+                          false
+                          [(str "DROP DATABASE IF EXISTS " dbname
+                                " WITH (FORCE)")]))))
+
 (def tables
   ["account"
    "city"
@@ -734,6 +777,10 @@
   ;; prune-es! now requires search component: (prune-es! search)
   ;; prune-db! can still be called without args if using test config
   (prune-db!)
+  ;; Nuke the test DB after switching branches with diverging migrations,
+  ;; then init-db! rebuilds it fresh from the current branch's migrations.
+  (drop-db!)
+  (init-db!)
   (ex-data *e))
 
 (def test-user-password
