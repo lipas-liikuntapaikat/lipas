@@ -526,6 +526,32 @@
          (or (contains? removal-statuses (:status sports-site))
              (:delete-existing ptv)))))
 
+(defn- site->missing-services
+  "Services the site's sub-category still needs in PTV before it can sync;
+  a seq of missing services, empty when the site is satisfied.
+
+  A site is satisfied as soon as it references a service (`:ptv
+  :service-ids` non-empty). That deliberately covers all three kinds of
+  service: LIPAS sub-category-managed (`lipas-{org}-{sub-category}`),
+  adopted (`lipas-{org}-ptv-{id}`), and services the org created in PTV
+  directly (no LIPAS sourceId, so absent from `source-id->service`). The
+  presence of a service-id is the durable signal — we do NOT require a
+  `lipas-{org}-{sub-category}` service to exist.
+
+  History: the old call hard-coded `:service-ids #{}` and so only ever
+  recognized sub-category-managed services. That was correct when the BE
+  auto-created missing services (pre-62fb687a), but once creation moved to
+  the FE and adoption was added the check was never reconciled, wrongly
+  rejecting sites that reference an existing PTV service. The input shape
+  here mirrors what the FE feeds `resolve-missing-services` (full sites
+  with `:ptv`), so FE and BE agree on what 'missing' means."
+  [types source-id->service org-id sports-site]
+  (ptv-data/resolve-missing-services
+    org-id source-id->service
+    [{:ptv {:service-ids (-> sports-site :ptv :service-ids)}
+      :sub-category-id (-> sports-site :type :type-code types :sub-category)
+      :sub-category (-> sports-site :search-meta :type :sub-category :name :fi)}]))
+
 ;; Used through resolve due to circular dep
 ;; TODO: Check if code can be moved around to avoid this
 ^{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -551,15 +577,13 @@
                           source-id->service (->> services
                                                   (utils/index-by :sourceId))
 
-                           ;; Check if services for the current/new site type-code exist
-                          missing-services-input [{:service-ids #{}
-                                                   :sub-category-id (-> sports-site :type :type-code types :sub-category)
-                                                   :sub-cateogry (-> sports-site :search-meta :type :sub-category :name :fi)}]
-                          missing-services (ptv-data/resolve-missing-services org-id source-id->service missing-services-input)
-
-                           ;; FE doesn't update the :ptv :service-ids, that is still handled here.
-                           ;; This code just presumes the user has created the possibly missing Sercices
-                           ;; in the FE first.
+                           ;; Block only sites whose sub-category has NO service
+                           ;; at all. A site that already references a service
+                           ;; (LIPAS-managed, adopted, or created directly in
+                           ;; PTV by the org) is satisfied — see
+                           ;; site->missing-services. The FE is expected to have
+                           ;; created/linked the service first.
+                          missing-services (site->missing-services types source-id->service org-id sports-site)
 
                           _ (when (seq missing-services)
                               (throw (ex-info "Site needs a PTV Service that doesn't exists"
