@@ -2,10 +2,48 @@
   (:require [clojure.test :refer [deftest is testing]]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv]
-            [lipas.data.ptv :as ptv-data]))
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.types]))
 
 (def ^:private strip-blanks #'ptv-core/strip-blank-localized-entries)
 (def ^:private normalize #'ptv-core/normalize-ptv-service-for-update)
+(def ^:private site->missing-services #'ptv-core/site->missing-services)
+
+(deftest site->missing-services-test
+  ;; The sync-ptv! guard throws "Site needs a PTV Service that doesn't
+  ;; exists" iff this returns non-empty. Regression: it used to hard-code
+  ;; :service-ids #{} and so rejected sites that reference a service PTV
+  ;; created directly (no LIPAS sourceId) or an adopted service.
+  (let [org-id "7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5"
+        types lipas.data.types/all
+        ;; type-code 1370 -> sub-category 1300 (Pallokentät)
+        sub-cat-id (-> 1370 types :sub-category)
+        managed-source-id (ptv-data/->service-source-id org-id sub-cat-id)
+        ;; org's services keyed by :sourceId, as get-org-services returns them
+        no-managed-service {}
+        with-managed-service {managed-source-id {:id "managed-svc" :sourceId managed-source-id}}
+        site (fn [service-ids]
+               {:type {:type-code 1370}
+                :ptv {:org-id org-id :service-ids service-ids}})]
+
+    (testing "no service for the sub-category and site references none -> missing"
+      (let [missing (site->missing-services types no-managed-service org-id (site []))]
+        (is (= 1 (count missing)))
+        (is (= managed-source-id (-> missing first :source-id)))
+        (is (= sub-cat-id (-> missing first :sub-category-id)))))
+
+    (testing "site references an existing PTV-created service (no LIPAS sourceId) -> NOT missing"
+      ;; The native service isn't in source-id->service at all, yet the
+      ;; site is satisfied because it already carries a service-id.
+      (is (empty? (site->missing-services types no-managed-service org-id
+                                          (site ["77100eae-native-service"])))))
+
+    (testing "site references an adopted service -> NOT missing"
+      (is (empty? (site->missing-services types no-managed-service org-id
+                                          (site [(str "adopted-" org-id)])))))
+
+    (testing "LIPAS sub-category service exists, site references none yet -> NOT missing"
+      (is (empty? (site->missing-services types with-managed-service org-id (site [])))))))
 
 (deftest strip-blank-localized-entries-test
   (testing "strips blank-valued entries from localized list fields"
