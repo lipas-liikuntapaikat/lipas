@@ -743,3 +743,34 @@
       (is (= :ok (status (-> base
                              (assoc-in [:ptv :publishing-status] "Published")
                              (assoc-in [:ptv :sync-enabled] true))))))))
+
+(deftest resolve-missing-services-test
+  ;; Shared by the FE (wizard "missing services" list) and the BE
+  ;; (sync-ptv! guard). A sub-category needs a new service ONLY when the
+  ;; site has no service-id yet AND no LIPAS-managed service exists for it.
+  (let [org-id "org-1"
+        managed-source-id (sut/->service-source-id org-id 2100)
+        ;; services keyed by :sourceId (as get-org-services / app-db hold them).
+        ;; A service the org created in PTV directly has :sourceId nil.
+        services {managed-source-id {:id "managed" :sourceId managed-source-id}
+                  "native" {:id "native" :sourceId nil}}
+        site (fn [service-ids] {:ptv {:service-ids service-ids}
+                                :sub-category-id 2100
+                                :sub-category "Kuntoilukeskukset ja liikuntasalit"})]
+
+    (testing "site with no service-ids and no managed service -> reported missing"
+      (is (= [{:source-id managed-source-id
+               :sub-category "Kuntoilukeskukset ja liikuntasalit"
+               :sub-category-id 2100}]
+             (sut/resolve-missing-services org-id {} [(site [])]))))
+
+    (testing "site already referencing a service is never missing (origin-agnostic)"
+      ;; native (no LIPAS sourceId), managed, or any id all count as satisfied.
+      (is (empty? (sut/resolve-missing-services org-id services [(site ["native"])])))
+      (is (empty? (sut/resolve-missing-services org-id {} [(site ["any-existing-id"])]))))
+
+    (testing "managed service exists -> not missing even with no service-id on the site yet"
+      (is (empty? (sut/resolve-missing-services org-id services [(site [])]))))
+
+    (testing "dedups and only reports genuinely missing sub-categories"
+      (is (empty? (sut/resolve-missing-services org-id services [(site []) (site [])]))))))
