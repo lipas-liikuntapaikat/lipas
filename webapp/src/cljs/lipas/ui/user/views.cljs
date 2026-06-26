@@ -252,40 +252,6 @@
 
           [explain-orgs]]]]
 
-;; Promo card
-       [:> Grid {:item true :xs 12}
-        [:> Card card-props
-         [:> CardHeader {:title (tr :user/promo-headline)}]
-         [:> CardContent
-          [:> Button
-           {:variant "contained"
-            :color   "secondary"
-            :style   {:margin-top "1em"}
-            :href    (str "/pdf/lipas-vuosikatsaus-2023.pdf")
-            :target  "_blank"}
-           "LIPAS vuosikatsaus 2023 (.pdf)"]
-
-          #_[:ul {:dense true}
-             [:li "Liikuntapaikat, kaikki yhteensä"]
-             [:li "Liikuntapuistot, lähiliikuntapaikat, ulkokuntoilupaikat (1110, 1120, 1130)"]
-             [:li "Pallokentät (1310, 1320, 1330, 1340, 1370, 1380)"]
-             [:li "Jääurheilualueet (1510, 1520, 1530, 1550)"]
-             [:li "Kuntosalit (2120)"]
-             [:li "Liikuntasalit ja -hallit (2150, 2210, 2220, 2230, 2240)"]
-             [:li "Uimahallit, kylpylät ja maauimalat (3110, 3130, 3210)"]
-             [:li "Polut, ladut ja reitit (4401, 4402, 4403, 4404, 4405)"]]
-          #_[:> Typography {:style {:margin-top "1em" :margin-bottom "1em"}}
-             "Varmistattehan, että tietonne on päivitetty ajan tasalle 31.8.2020 mennessä."]
-          #_[:> Button
-             {:variant  "contained"
-              :color    "secondary"
-              :on-click (fn []
-                          (==> [:lipas.ui.search.events/clear-filters])
-                          (==> [:lipas.ui.search.events/set-filters-by-permissions])
-                          (==> [:lipas.ui.search.events/set-type-filter teaviisari-types])
-                          (==> [:lipas.ui.events/navigate :lipas.ui.routes.map/map]))}
-             (tr :user/promo1-link)]]]]
-
        [:> Grid {:item true :xs 12}
         [:> Card card-props
          [:> CardHeader {:title (tr :user/data-ownership)}]

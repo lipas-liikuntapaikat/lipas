@@ -1212,6 +1212,19 @@
   (let [can-edit?  @(rf/subscribe [::user-subs/check-privilege (roles/site-roles-context display-data) :floorball/edit])
         view-all-fields? @(rf/subscribe [::user-subs/check-privilege (roles/site-roles-context display-data) :floorball/view-extended])]
     [:<>
+     [:> Alert
+      {:severity "info"
+       :sx #js {:mt 1}}
+      (str "Olosuhteet-välilehdellä olevat tiedot liittyvät liikuntapaikan "
+           "lajiolosuhteisiin esim. ottelu- tai pelitapahtumien aikana. "
+           "Tiedot täydentävät liikuntapaikan muuta tietosisältöä esim. "
+           "lajiliiton ylläpitämällä tiedolla. Olosuhteet-välilehden tietoja "
+           "ei odoteta liikuntapaikan omistajan (esim. kunta) ylläpitävän "
+           "vaan sen ylläpidosta sovitaan erikseen tietoa tuottavan tahon "
+           "kanssa. Tieto rikastaa liikuntapaikan muuta tietosisältöä ja "
+           "palvelee tiedon tuottajan omaa toimintaa. Saatavilla oleva tieto "
+           "on avointa dataa ja vapaasti muiden käyttäjien hyödynnettävissä.")]
+
      (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
                 (not can-edit?))
        [:> Alert
