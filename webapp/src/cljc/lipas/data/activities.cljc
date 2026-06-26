@@ -336,9 +336,9 @@
               [:copyright {:optional true} common-schema/localized-string]]]
     :field
     {:type        "images"
-     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva ja ettei kuvan tiedostonimi sisällä ääkkösiä (esim. ä, ö, å)."
-                   :se "Lägg till foton som visar landskapet, naturen eller rekreationsförhållandena på platsen. Du kan bara lägga till bildfiler, inte URL-bildlänkar. Giltiga filformat är .jpg, .jpeg och .png. Se till att du har behörighet att lägga till bilden och att bildens filnamn inte innehåller bokstäverna å, ä eller ö."
-                   :en "Add photographs depicting the landscapes, nature, or conditions of activity of the place. You can add only image files, not URL links. Allowed file extensions are .jpg, .jpeg and .png. Make sure that you have a permission to add the photographs and that the image file name does not contain the letters å, ä or ö."}
+     :description {:fi "Lisää kohteen maisemia, luontoa tai harrastamisen olosuhteita esitteleviä valokuvia. Voit lisätä vain kuvatiedostoja, et URL-kuvalinkkejä. Kelvollisia tiedostomuotoja ovat .jpg, .jpeg ja .png. Varmista, että sinulla on oikeus lisätä kuva."
+                   :se "Lägg till foton som visar landskapet, naturen eller rekreationsförhållandena på platsen. Du kan bara lägga till bildfiler, inte URL-bildlänkar. Giltiga filformat är .jpg, .jpeg och .png. Se till att du har behörighet att lägga till bilden."
+                   :en "Add photographs depicting the landscapes, nature, or conditions of activity of the place. You can add only image files, not URL links. Allowed file extensions are .jpg, .jpeg and .png. Make sure that you have a permission to add the photographs."}
      :label       {:fi "Valokuvat"
                    :se "Foton"
                    :en "Photographs"}
