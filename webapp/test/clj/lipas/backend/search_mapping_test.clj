@@ -104,3 +104,43 @@
 
       (is (false? (:enabled (get properties :location.geometries))))
       (is (false? (:enabled (get properties :search-meta.location.simple-geoms)))))))
+
+(deftest folding-analysis-test
+  (testing "sports-site index has a diacritic-folding default analyzer"
+    (let [analyzer (get-in (:sports-site search/mappings)
+                           [:settings :index :analysis :analyzer :default])]
+      (is (= "custom" (:type analyzer)))
+      (is (some #{"asciifolding"} (:filter analyzer))
+          "asciifolding filter makes search diacritic-insensitive")
+      (is (some #{"lowercase"} (:filter analyzer)))))
+
+  (testing "analytics index inherits the folding analyzer"
+    (is (some #{"asciifolding"}
+              (get-in (:analytics search/mappings)
+                      [:settings :index :analysis :analyzer :default :filter]))))
+
+  (testing "lois index has the folding analyzer"
+    (is (some #{"asciifolding"}
+              (get-in (:lois search/mappings)
+                      [:settings :index :analysis :analyzer :default :filter])))))
+
+(deftest collation-sort-fields-test
+  (testing "sortable name fields have an icu_collation_keyword sort sub-field"
+    (let [properties (get-in (:sports-site search/mappings) [:mappings :properties])
+          ;; field -> expected ICU collation language
+          expected {:search-meta.name "fi"
+                    :search-meta.location.city.name.fi "fi"
+                    :search-meta.location.city.name.se "sv"
+                    :search-meta.location.city.name.en "en"
+                    :search-meta.type.name.fi "fi"
+                    :search-meta.type.name.se "sv"
+                    :search-meta.admin.name.fi "fi"
+                    :search-meta.owner.name.se "sv"}]
+      (doseq [[field lang] expected]
+        (let [sort-field (get-in properties [field :fields :sort])]
+          (is (= "icu_collation_keyword" (:type sort-field))
+              (str field " should have a collation sort sub-field"))
+          (is (= lang (:language sort-field))
+              (str field " should collate in " lang))
+          ;; keep the plain keyword sub-field for exact match / aggregations
+          (is (= "keyword" (get-in properties [field :fields :keyword :type]))))))))
