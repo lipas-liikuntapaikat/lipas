@@ -1528,7 +1528,11 @@
                  :opts        paddling-route-types}}
 
                :paddling-properties
-               {:field
+               ;; Hidden from the UI: paddling conditions UTP field that is
+               ;; not expected to be used. Kept in the schema so existing data
+               ;; stays valid.
+               {:show (fn [_] false)
+                :field
                 {:type        "multi-select"
                  :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia. HUOM! Tiedot eivät toistaiseksi siirry luontoon.fi-palveluun"
                                :se "Välj de punkter som beskriver ruttens egenskaper. OBS! Uppgifterna överförs inte till luonto.fi-tjänsten för tillfället."
