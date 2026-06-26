@@ -23,6 +23,43 @@
   [client]
   (es/close! client))
 
+;; Index analysis settings
+;;
+;; `folding-analysis` makes free-text search diacritic-insensitive: the custom
+;; `default` analyzer overrides the standard analyzer for every text field at
+;; both index- and search-time, so e.g. "Njalla" matches "Njálla" and
+;; "thorsteinn" matches "Þorsteinn". `asciifolding` is a Lucene core filter — no
+;; plugin required. It covers á→a, č→c, đ→d, Þ→th, etc.
+;;
+;; The `eng` char_filter handles the one case asciifolding gets "wrong" for our
+;; users: the Sami eng ŋ folds to "n" by default, but users type "ng"
+;; (Deatŋu → "deatngu"). The mapping runs before tokenization/folding.
+(def folding-analysis
+  {:char_filter
+   {:eng {:type "mapping" :mappings ["ŋ => ng" "Ŋ => NG"]}}
+   :analyzer
+   {:default
+    {:type        "custom"
+     :char_filter ["eng"]
+     :tokenizer   "standard"
+     :filter      ["lowercase" "asciifolding"]}}})
+
+(defn- collation-field
+  "An `icu_collation_keyword` sub-field for locale-correct sorting. Unlike a
+  plain keyword (raw Unicode code-point order, where 'Ä' sorts after 'Z') this
+  sorts accented letters in the given locale's collation order. Requires the
+  analysis-icu plugin (see elasticsearch/Dockerfile)."
+  [language]
+  {:type "icu_collation_keyword" :language language})
+
+(defn- text-with-sort
+  "Text field with a `keyword` sub-field (exact match / aggregations) plus a
+  `sort` sub-field collated for `language`, used by the UI for name sorting."
+  [language]
+  {:type   "text"
+   :fields {:keyword {:type "keyword"}
+            :sort    (collation-field language)}})
+
 ;; Helper functions for generating explicit ES mappings from prop-types
 
 (defn- prop-type->es-mapping
@@ -94,26 +131,29 @@
         ;; Name fields use text for case-insensitive search + keyword subfield for sorting
         text-with-keyword {:type "text" :fields {:keyword {:type "keyword"}}}
 
+        ;; Name fields the UI offers as sort columns get an icu_collation_keyword
+        ;; `sort` sub-field (see text-with-sort). LIPAS locale `se` is Swedish,
+        ;; hence the "sv" ICU collation.
         search-meta-fields
-        {:search-meta.name text-with-keyword
-         :search-meta.admin.name.fi text-with-keyword
-         :search-meta.admin.name.se text-with-keyword
-         :search-meta.admin.name.en text-with-keyword
-         :search-meta.owner.name.fi text-with-keyword
-         :search-meta.owner.name.se text-with-keyword
-         :search-meta.owner.name.en text-with-keyword
-         :search-meta.location.city.name.fi text-with-keyword
-         :search-meta.location.city.name.se text-with-keyword
-         :search-meta.location.city.name.en text-with-keyword
+        {:search-meta.name (text-with-sort "fi")
+         :search-meta.admin.name.fi (text-with-sort "fi")
+         :search-meta.admin.name.se (text-with-sort "sv")
+         :search-meta.admin.name.en (text-with-sort "en")
+         :search-meta.owner.name.fi (text-with-sort "fi")
+         :search-meta.owner.name.se (text-with-sort "sv")
+         :search-meta.owner.name.en (text-with-sort "en")
+         :search-meta.location.city.name.fi (text-with-sort "fi")
+         :search-meta.location.city.name.se (text-with-sort "sv")
+         :search-meta.location.city.name.en (text-with-sort "en")
          :search-meta.location.province.name.fi text-with-keyword
          :search-meta.location.province.name.se text-with-keyword
          :search-meta.location.province.name.en text-with-keyword
          :search-meta.location.avi-area.name.fi text-with-keyword
          :search-meta.location.avi-area.name.se text-with-keyword
          :search-meta.location.avi-area.name.en text-with-keyword
-         :search-meta.type.name.fi text-with-keyword
-         :search-meta.type.name.se text-with-keyword
-         :search-meta.type.name.en text-with-keyword
+         :search-meta.type.name.fi (text-with-sort "fi")
+         :search-meta.type.name.se (text-with-sort "sv")
+         :search-meta.type.name.en (text-with-sort "en")
          ;; Tags are multilingual arrays - keep as keyword for exact matching
          :search-meta.type.tags.fi {:type "keyword"}
          :search-meta.type.tags.se {:type "keyword"}
@@ -212,7 +252,8 @@
 
     {:settings
      {:max_result_window 60000
-      :index {:mapping {:total_fields {:limit total-fields-limit}}}}
+      :index {:mapping   {:total_fields {:limit total-fields-limit}}
+              :analysis  folding-analysis}}
      :mappings
      {:dynamic "strict"
       :date_detection false
@@ -241,7 +282,8 @@
   {:sports-site   (generate-explicit-mapping)
    :analytics     (generate-analytics-mapping)
    :lois          {:settings
-                   {:max_result_window 50000}
+                   {:max_result_window 50000
+                    :index {:analysis folding-analysis}}
                    :mappings
                    {:date_detection false
                     :properties

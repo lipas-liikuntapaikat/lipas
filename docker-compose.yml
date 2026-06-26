@@ -345,7 +345,12 @@ services:
       - ./db:/docker-entrypoint-initdb.d:z
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.9
+    # Stock Elasticsearch + analysis-icu plugin (locale-correct name sorting).
+    # See elasticsearch/Dockerfile. Rebuild with: docker compose build elasticsearch
+    build:
+      context: ./elasticsearch
+      dockerfile: Dockerfile
+    image: lipas/elasticsearch:8.19.9-icu
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s

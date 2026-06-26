@@ -14,15 +14,18 @@
   (update-in m [:query :function_score :query :bool :filter] conj filter))
 
 (defn ->sort-key [k locale]
+  ;; Name fields sort on the `.sort` sub-field (icu_collation_keyword), which
+  ;; orders accented letters in the locale's collation order instead of raw
+  ;; Unicode code-point order. See lipas.backend.search/text-with-sort.
   (case k
     (:lipas-id) :lipas-id
-    (:name) :search-meta.name.keyword
+    (:name) :search-meta.name.sort
     (:location.city.name
      :type.name
      :admin.name
      :owner.name) (-> k name
                       (->> (str "search-meta."))
-                      (str "." (name locale) ".keyword")
+                      (str "." (name locale) ".sort")
                       keyword)
     (:event-date
      :construction-year
