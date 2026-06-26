@@ -49,7 +49,7 @@
    {:img "img/partners/suh.png"}
    {:img "img/partners/syke.png" :full-height? true}
    {:img "img/partners/ukty.png"}
-   {:img "img/partners/avi.png"}
+   {:img "img/partners/lvv.png"}
    {:img "img/partners/helsinki.png"}])
 
 (def known-users
