@@ -254,10 +254,16 @@
 
      (log/info "Indexing data done!")
      (log/info "Swapping alias" alias "to point to index" idx-name)
-     (let [old-idxs (search/swap-alias! client {:new-idx idx-name :alias alias})]
-       (doseq [idx old-idxs]
-         (log/info "Deleting old index" idx)
-         (search/delete-index! client idx)))
+     (search/swap-alias! client {:new-idx idx-name :alias alias})
+     ;; Delete every stale index for this mode, not just the one the alias
+     ;; previously pointed to. This also reclaims orphans left by earlier runs
+     ;; that failed after the alias swap. Deletes are guarded individually so a
+     ;; single failure can't strand the rest.
+     (let [{:keys [deleted failed]} (search/delete-stale-indices! client mode idx-name)]
+       (doseq [idx deleted]
+         (log/info "Deleted stale index" idx))
+       (when (seq failed)
+         (log/error "Failed to delete stale indices" failed)))
      (log/info "All done!"))))
 
 (defn -main [& args]

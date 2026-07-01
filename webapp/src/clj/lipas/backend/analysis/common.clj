@@ -98,9 +98,10 @@
       (dissoc :WKT)))
 
 (defn *seed-population-grid-from-csv!
-  [{:keys [client]} csv-path idx-name idx-alias batch-size]
+  [{:keys [client]} csv-path idx-name idx-alias batch-size prefix]
   (assert idx-name "Index name is required")
   (assert batch-size "Batch size is required")
+  (assert prefix "Index prefix is required")
 
   (with-open [rdr (io/reader csv-path)]
     (log/info "Creating index" idx-name)
@@ -121,18 +122,28 @@
   (log/info "Swapping alias" idx-alias "to point to" idx-name)
   (search/swap-alias! client {:new-idx idx-name :alias idx-alias})
 
+  ;; Reclaim the previous grid index (and any orphans from failed runs),
+  ;; guarding each delete so a single failure can't strand the rest.
+  (let [{:keys [deleted failed]} (search/delete-stale-indices! client prefix idx-name)]
+    (doseq [idx deleted]
+      (log/info "Deleted stale index" idx))
+    (when (seq failed)
+      (log/error "Failed to delete stale indices" failed)))
+
   (log/info "All done!"))
 
 (defn seed-population-1km-grid-from-csv!
   [{:keys [indices] :as search} csv-path]
-  (let [idx-name   (str "population-1km-" (search/gen-idx-name))
+  (let [prefix     "population-1km"
+        idx-name   (str prefix "-" (search/gen-idx-name))
         idx-alias  (get-in indices [:analysis :population])
         batch-size 100]
-    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size)))
+    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size prefix)))
 
 (defn seed-population-250m-grid-from-csv!
   [{:keys [indices] :as search} csv-path]
-  (let [idx-name   (str "population-250m-" (search/gen-idx-name))
+  (let [prefix     "population-250m"
+        idx-name   (str prefix "-" (search/gen-idx-name))
         idx-alias  (get-in indices [:analysis :population-high-def])
         batch-size 1000]
-    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size)))
+    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size prefix)))
