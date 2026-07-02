@@ -273,7 +273,7 @@ services:
       options:
         max-size: "100m"
         max-file: "3"
-    entrypoint: clojure -M -m lipas.jobs.main
+    entrypoint: clojure -M -m lipas.backend.system worker
     links:
       - postgres
       - elasticsearch

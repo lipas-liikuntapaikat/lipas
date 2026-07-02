@@ -1,209 +1,234 @@
 (ns lipas.jobs.worker-test
+  "Tests for worker job execution: watchdog timeouts, retry/dead-letter
+  handling and thread-capacity-aware fetching.
+
+  Execution semantics are tested through worker/execute-job! against a real
+  database; only the job handler itself is redefined (there is no external
+  service to call in tests)."
   (:require
-   [clojure.test :refer [deftest testing is]]
+   [clojure.test :refer [deftest testing is use-fixtures]]
    [lipas.jobs.core :as jobs]
-   [lipas.jobs.worker :as worker])
+   [lipas.jobs.dispatcher :as dispatcher]
+   [lipas.jobs.registry :as registry]
+   [lipas.jobs.worker :as worker]
+   [lipas.test-utils :as test-utils])
   (:import
-   [java.util.concurrent Executors ThreadPoolExecutor]))
+   [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor]))
+
+(defonce test-system (atom nil))
+
+(let [{:keys [once each]} (test-utils/db-only-fixture test-system)]
+  (use-fixtures :once once)
+  (use-fixtures :each each))
+
+(defn test-db [] (:lipas/db @test-system))
+
+(defn with-watchdog [f]
+  (let [watchdog (Executors/newSingleThreadScheduledExecutor)]
+    (try
+      (f watchdog)
+      (finally
+        (.shutdownNow ^ScheduledExecutorService watchdog)))))
+
+(defn enqueue-and-fetch!
+  "Enqueue an email job and fetch it into processing state.
+  Returns the fetched job map."
+  [db & [opts]]
+  (jobs/enqueue-job! db "email" {:to "w@example.com" :subject "W" :body "B"} opts)
+  (let [[job] (jobs/fetch-next-jobs db {:limit 1})]
+    (is (some? job) "Job should be fetchable")
+    job))
+
+;; =============================================================================
+;; Execution semantics
+;; =============================================================================
+
+(deftest execute-job-success-test
+  (testing "Successful handler marks the job completed"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)
+              handled (atom nil)]
+          (with-redefs [dispatcher/handle-job (fn [_system j] (reset! handled (:id j)))]
+            (worker/execute-job! {:db db} watchdog job))
+
+          (is (= (:id job) @handled))
+          (is (= "completed" (:jobs/status (test-utils/get-job-by-id db (:id job))))))))))
+
+(deftest execute-job-failure-retry-test
+  (testing "Failing handler schedules a retry"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)]
+          (with-redefs [dispatcher/handle-job (fn [_ _] (throw (ex-info "boom" {})))]
+            (worker/execute-job! {:db db} watchdog job))
+
+          (let [after (test-utils/get-job-by-id db (:id job))]
+            (is (= "pending" (:jobs/status after)))
+            (is (= 1 (:jobs/attempts after)))
+            (is (= "boom" (:jobs/error_message after)))))))))
+
+(deftest execute-job-exhausted-dead-letter-test
+  (testing "Failing handler with no attempts left dead-letters the job"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db {:max-attempts 1})]
+          (with-redefs [dispatcher/handle-job (fn [_ _] (throw (ex-info "fatal" {})))]
+            (worker/execute-job! {:db db} watchdog job))
+
+          (is (nil? (test-utils/get-job-by-id db (:id job)))
+              "Dead jobs are removed from the jobs table")
+          (let [[dlj] (jobs/get-dead-letter-jobs db {:acknowledged false})]
+            (is (= "fatal" (:error-message dlj)))))))))
+
+(deftest execute-job-timeout-test
+  (testing "Job exceeding its timeout is interrupted and marked failed"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)
+              interrupted? (atom false)]
+          (with-redefs [registry/timeout-ms (fn [_] 200)
+                        dispatcher/handle-job (fn [_ _]
+                                                (try
+                                                  (Thread/sleep 5000)
+                                                  (catch InterruptedException _
+                                                    (reset! interrupted? true)
+                                                    (throw (InterruptedException.)))))]
+            (worker/execute-job! {:db db} watchdog job))
+
+          (is @interrupted? "Handler thread must actually be interrupted")
+          (let [after (test-utils/get-job-by-id db (:id job))]
+            (is (= "pending" (:jobs/status after)) "Timed-out job is retried")
+            (is (re-find #"timed out" (:jobs/error_message after))))))))
+
+  (testing "Timeout interrupt does not leak into subsequent jobs on the same thread"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              slow-job (enqueue-and-fetch! db)]
+          ;; First: a job that times out on this very thread
+          (with-redefs [registry/timeout-ms (fn [_] 100)
+                        dispatcher/handle-job (fn [_ _]
+                                                (try (Thread/sleep 3000)
+                                                     (catch InterruptedException _
+                                                       (throw (InterruptedException.)))))]
+            (worker/execute-job! {:db db} watchdog slow-job))
+
+          ;; Then: a normal job on the same thread must run undisturbed
+          (let [ok-job (enqueue-and-fetch! db)
+                completed? (atom false)]
+            (with-redefs [dispatcher/handle-job
+                          (fn [_ _]
+                            ;; A leaked interrupt flag would make sleep throw
+                            (Thread/sleep 50)
+                            (reset! completed? true))]
+              (worker/execute-job! {:db db} watchdog ok-job))
+
+            (is @completed? "Next job on the same thread runs normally")
+            (is (= "completed" (:jobs/status (test-utils/get-job-by-id db (:id ok-job))))))))))
+
+  (testing "Job finishing just under the timeout is not marked as timed out"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)]
+          (with-redefs [registry/timeout-ms (fn [_] 10000)
+                        dispatcher/handle-job (fn [_ _] (Thread/sleep 50))]
+            (worker/execute-job! {:db db} watchdog job))
+          (is (= "completed" (:jobs/status (test-utils/get-job-by-id db (:id job))))))))))
+
+(deftest execute-job-error-message-fallback-test
+  (testing "Exceptions without a message still produce a non-null error"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db {:max-attempts 1})]
+          (with-redefs [dispatcher/handle-job (fn [_ _] (throw (NullPointerException.)))]
+            (worker/execute-job! {:db db} watchdog job))
+          (let [[dlj] (jobs/get-dead-letter-jobs db {:acknowledged false})]
+            (is (string? (:error-message dlj)))
+            (is (seq (:error-message dlj)))))))))
+
+;; =============================================================================
+;; Full worker loop
+;; =============================================================================
+
+(deftest worker-loop-integration-test
+  (testing "Worker polls, executes and completes jobs end to end"
+    (let [db (test-db)
+          test-emailer (test-utils/create-test-emailer)
+          {:keys [id]} (jobs/enqueue-job! db "email" {:to "loop@example.com"
+                                                      :subject "Loop"
+                                                      :body "Hello"})]
+      (try
+        (worker/start-mixed-duration-worker!
+         {:db db :emailer test-emailer :search nil}
+         {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 200})
+
+        (is (test-utils/wait-for-condition
+             (fn [] (= "completed" (:jobs/status (test-utils/get-job-by-id db id))))
+             10000)
+            "Email job should complete")
+
+        (is (= 1 (count @(:sent-emails test-emailer))))
+        (is (= "loop@example.com" (:to (first @(:sent-emails test-emailer)))))
+
+        (finally
+          (worker/stop-mixed-duration-worker!))))))
+
+(deftest worker-double-start-guard-test
+  (testing "Starting an already-running worker is a no-op"
+    (let [db (test-db)]
+      (try
+        (worker/start-mixed-duration-worker! {:db db} {:poll-interval-ms 200})
+        (let [pools-before (:pools @worker/worker-state)]
+          (worker/start-mixed-duration-worker! {:db db} {:poll-interval-ms 200})
+          (is (identical? pools-before (:pools @worker/worker-state))
+              "Second start must not replace the running pools"))
+        (finally
+          (worker/stop-mixed-duration-worker!))))))
+
+;; =============================================================================
+;; Capacity-aware fetching
+;; =============================================================================
 
 (deftest thread-capacity-respect-test
-  "Critical test to prevent the thread capacity catastrophe bug.
-   Ensures fetch-and-process-jobs never exceeds thread pool capacity."
-  (testing "Worker respects thread pool capacity limits"
-    (let [;; Create small pools to test limits
-          pools (worker/create-worker-pools {:fast-threads 1 :general-threads 2})
-          config {:batch-size 10 :poll-interval-ms 1000}
-
-          ;; Mock system with a database that returns many jobs
-          mock-db (reify
-                    ;; This would be the database interface - we'll mock it
-                    Object
-                    (toString [_] "mock-db"))
-
-          system {:db mock-db}
-
-          job-fetch-count (atom 0)
-
-          ;; Mock the jobs/fetch-next-jobs to track calls and return fake jobs
-          original-fetch jobs/fetch-next-jobs]
-
-      ;; Test setup: Replace fetch function to track calls
-      (with-redefs [jobs/fetch-next-jobs
-                    (fn [db opts]
-                      (swap! job-fetch-count inc)
-                      (let [limit (:limit opts)]
-                        (println "fetch-next-jobs called with limit:" limit)
-                        ;; Return empty for this test to avoid actual processing
-                        []))]
-
-        ;; Simulate full thread pools by submitting blocking tasks
-        (let [{:keys [fast-pool general-pool]} pools]
-          ;; Fill fast pool (1 thread)
-          (.submit fast-pool ^Runnable #(Thread/sleep 100))
-
-          ;; Fill general pool (2 threads)
-          (.submit general-pool ^Runnable #(Thread/sleep 100))
-          (.submit general-pool ^Runnable #(Thread/sleep 100))
-
-          ;; Give threads time to start
-          (Thread/sleep 10)
-
-          ;; Now test fetch-and-process-jobs with full pools
-          (reset! job-fetch-count 0)
-          (worker/fetch-and-process-jobs system pools config)
-
-          ;; CRITICAL ASSERTION: Should not fetch any jobs when pools are full
-          (is (= 0 @job-fetch-count)
-              "Should not fetch any jobs when thread pools are at capacity")))
-
-      ;; Cleanup
-      (worker/shutdown-pools! pools)))
-
-  (testing "Worker fetches appropriate amounts when capacity available"
-    (let [pools (worker/create-worker-pools {:fast-threads 2 :general-threads 3})
-          config {:batch-size 10}
-          system {:db nil}
-          fetch-calls (atom [])]
-
-      (with-redefs [jobs/fetch-next-jobs
-                    (fn [db opts]
-                      (swap! fetch-calls conj opts)
-                      [])]
-
-        ;; Test with empty pools (full capacity)
-        (worker/fetch-and-process-jobs system pools config)
-
-        ;; Should make calls for both fast and general lanes
-        (let [calls @fetch-calls]
-          (is (= 2 (count calls)) "Should make 2 fetch calls")
-
-          ;; Fast jobs should batch up to capacity (2 threads available)
-          (is (some #(and (= 2 (:limit %)) (:job-types %)) calls)
-              "Should fetch fast jobs up to fast thread capacity")
-
-          ;; General jobs should fetch only 1 (slow job processing)
-          (is (some #(and (= 1 (:limit %)) (not (:job-types %))) calls)
-              "Should fetch only 1 general job at a time")))
-
-      (worker/shutdown-pools! pools))))
-
-(deftest broken-behavior-would-fail-test
-  "Test that demonstrates the old broken behavior would fail.
-   This test shows what the old code would have done wrong."
-  (testing "Old broken behavior example"
+  (testing "No jobs are fetched when thread pools are at capacity"
     (let [pools (worker/create-worker-pools {:fast-threads 1 :general-threads 2})
           config {:batch-size 10}
-          system {:db nil}
-          jobs-that-would-be-fetched (atom 0)]
+          fetch-count (atom 0)]
+      (try
+        (with-redefs [jobs/fetch-next-jobs (fn [_ _] (swap! fetch-count inc) [])]
+          ;; Fill both pools with blocking tasks
+          (let [{:keys [fast-pool general-pool]} pools]
+            (.submit ^ThreadPoolExecutor fast-pool ^Runnable #(Thread/sleep 200))
+            (.submit ^ThreadPoolExecutor general-pool ^Runnable #(Thread/sleep 200))
+            (.submit ^ThreadPoolExecutor general-pool ^Runnable #(Thread/sleep 200))
+            (Thread/sleep 50)
 
-      ;; Simulate the OLD broken behavior - always fetch batch-size jobs
-      (with-redefs [jobs/fetch-next-jobs
-                    (fn [db opts]
-                      (let [limit (:limit opts)]
-                        (swap! jobs-that-would-be-fetched + limit)
-                        ;; Old code would have fetched this many jobs
-                        (repeat limit {:id 1 :type "analysis"})))]
+            (worker/fetch-and-process-jobs {:db nil} pools nil config)
+            (is (= 0 @fetch-count)
+                "Must not fetch jobs when no thread capacity is available")))
+        (finally
+          (worker/shutdown-pools! pools)))))
 
-        ;; Fill the pools completely
-        (let [{:keys [fast-pool general-pool]} pools]
-          (.submit fast-pool ^Runnable #(Thread/sleep 50))
-          (.submit general-pool ^Runnable #(Thread/sleep 50))
-          (.submit general-pool ^Runnable #(Thread/sleep 50))
-          (Thread/sleep 10)
-
-          ;; With the old broken logic, this would have fetched jobs despite no capacity
-          ;; But our new code should fetch 0
-          (reset! jobs-that-would-be-fetched 0)
-          (worker/fetch-and-process-jobs system pools config)
-
-          ;; NEW CODE: Should fetch 0 jobs when no capacity
-          (is (= 0 @jobs-that-would-be-fetched)
-              "Fixed code should fetch 0 jobs when thread pools are full")
-
-          ;; OLD BROKEN CODE would have fetched batch-size (10) jobs here
-          ;; and caused the catastrophic bug we just fixed!
-          ))
-
-      (worker/shutdown-pools! pools))))
-
-(deftest regression-prevention-test
-  "Integration test to prevent regression of the 2025-07-01 catastrophic bug.
-   This test ensures we never again mark more jobs as 'processing' than we have threads."
-  (testing "Never exceed thread capacity when marking jobs as processing"
+  (testing "Fetch limits match free thread capacity"
     (let [pools (worker/create-worker-pools {:fast-threads 2 :general-threads 3})
-          config {:batch-size 20} ; Intentionally large batch size
-          system {:db nil}
-          processing-jobs (atom [])]
+          config {:batch-size 10}
+          fetch-calls (atom [])]
+      (try
+        (with-redefs [jobs/fetch-next-jobs (fn [_ opts] (swap! fetch-calls conj opts) [])]
+          (worker/fetch-and-process-jobs {:db nil} pools nil config)
 
-      ;; Mock jobs/fetch-next-jobs to return many jobs but track what gets processed
-      (with-redefs [jobs/fetch-next-jobs
-                    (fn [db opts]
-                      ;; Return more jobs than we have threads (simulating the original bug scenario)
-                      (let [limit (:limit opts)
-                            fake-jobs (for [i (range limit)]
-                                        {:id (+ 1000 i) :type "analysis" :attempts 1})]
-                        fake-jobs))
-
-                    ;; Mock process-job-batch to track jobs that would be marked as processing
-                    worker/process-job-batch
-                    (fn [system pools jobs lane-type config]
-                      (swap! processing-jobs concat jobs))]
-
-        ;; Test multiple iterations to ensure consistent behavior
-        (dotimes [_ 3]
-          (reset! processing-jobs [])
-          (worker/fetch-and-process-jobs system pools config)
-
-          ;; CRITICAL: Never process more jobs than thread capacity
-          (let [processed-count (count @processing-jobs)]
-            (is (<= processed-count 5) ; 2 fast + 3 general = 5 max
-                (str "Should never process more than 5 jobs simultaneously, got: " processed-count))
-
-            ;; Should process at most 3 general jobs (1 at a time * 3 threads)
-            (let [analysis-jobs (filter #(= "analysis" (:type %)) @processing-jobs)]
-              (is (<= (count analysis-jobs) 3)
-                  (str "Should never process more than 3 analysis jobs simultaneously, got: "
-                       (count analysis-jobs)))))))
-
-      (worker/shutdown-pools! pools))))
-
-(deftest worker-startup-recovery-test
-  "Test that worker startup properly recovers stuck jobs from crashes."
-  (testing "Worker startup resets stuck jobs"
-    (let [pools (worker/create-worker-pools {:fast-threads 1 :general-threads 1})
-          config {:batch-size 5 :stuck-job-timeout-minutes 0} ; 0 timeout = reset all
-          system {:db nil}
-          reset-call-count (atom 0)
-          reset-call-args (atom nil)]
-
-      ;; Mock the reset-stuck-jobs function to track calls
-      (with-redefs [jobs/reset-stuck-jobs!
-                    (fn [db timeout-minutes]
-                      (swap! reset-call-count inc)
-                      (reset! reset-call-args {:db db :timeout-minutes timeout-minutes})
-                      2)] ; Return that 2 jobs were reset
-
-        ;; Test worker startup recovery (simulated)
-        (let [timeout-minutes (get config :stuck-job-timeout-minutes 60)]
-          (jobs/reset-stuck-jobs! (:db system) timeout-minutes))
-
-        ;; Verify stuck job recovery was called
-        (is (= 1 @reset-call-count)
-            "Should call reset-stuck-jobs exactly once on startup")
-
-        (is (= 0 (:timeout-minutes @reset-call-args))
-            "Should use configured timeout value"))
-
-      (worker/shutdown-pools! pools))))
-
-(deftest stuck-job-timeout-configuration-test
-  "Test different timeout configurations for stuck job recovery."
-  (testing "Default timeout when not configured"
-    (let [config {}
-          timeout (get config :stuck-job-timeout-minutes 60)]
-      (is (= 60 timeout) "Should default to 60 minutes when not configured")))
-
-  (testing "Custom timeout when configured"
-    (let [config {:stuck-job-timeout-minutes 30}
-          timeout (get config :stuck-job-timeout-minutes 60)]
-      (is (= 30 timeout) "Should use configured timeout value"))))
+          (let [calls @fetch-calls]
+            (is (= 2 (count calls)) "One fetch per lane")
+            (is (some #(and (= 2 (:limit %)) (:job-types %)) calls)
+                "Fast lane fetches up to fast thread capacity")
+            (is (some #(and (= 3 (:limit %)) (not (:job-types %))) calls)
+                "General lane fetches up to general thread capacity")))
+        (finally
+          (worker/shutdown-pools! pools))))))

@@ -1110,88 +1110,84 @@
    ;; approve! — they call upsert-sports-site!* directly). This fn serves the
    ;; user-facing save endpoint, so strip it here to keep the audit column
    ;; unforgeable via POST /sports-sites (the save schema is :closed false).
-   (let [sports-site    (dissoc sports-site :acting-org-id)
-         correlation-id (jobs/gen-correlation-id)]
-     (jobs/with-correlation-context correlation-id
-       (fn []
-         ;; Phase 1: All DB operations inside the transaction.
-         ;; ES indexing is deliberately outside the transaction so that
-         ;; a failure in indexing cannot roll back committed DB data.
-         ;; Worst case: data in DB but not in ES, fixable by reindexing.
-         (let [resp
-               (jdbc/with-db-transaction [tx db]
-                 (let [resp (upsert-sports-site! tx user sports-site draft?)
-                       route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
+   (let [sports-site (dissoc sports-site :acting-org-id)]
+     ;; Phase 1: All DB operations inside the transaction.
+     ;; ES indexing is deliberately outside the transaction so that
+     ;; a failure in indexing cannot roll back committed DB data.
+     ;; Worst case: data in DB but not in ES, fixable by reindexing.
+     (let [resp
+           (jdbc/with-db-transaction [tx db]
+             (let [resp (upsert-sports-site! tx user sports-site draft?)
+                   route? (-> resp :type :type-code types/all :geometry-type #{"LineString"})]
 
-                   (when-not draft?
-                     (log/info "Saving sports site with background jobs"
-                               {:lipas-id (:lipas-id resp)
-                                :is-route? route?
-                                :user (:email user)})
+             (when-not draft?
+               (log/info "Saving sports site with background jobs"
+                         {:lipas-id (:lipas-id resp)
+                          :is-route? route?
+                          :user (:email user)})
 
-                     (when route?
-                       (jobs/enqueue-job! tx "elevation"
-                                          {:lipas-id (:lipas-id resp)}
-                                          {:correlation-id correlation-id
-                                           :priority 70}))
+               ;; Priority, dedup key and debounce delay come from
+               ;; the job registry: repeated saves of the same site
+               ;; coalesce into a single pending job per type.
+               (when route?
+                 (jobs/enqueue-job! tx "elevation"
+                                    {:lipas-id (:lipas-id resp)}
+                                    {:created-by (:email user)}))
 
-                     ;; Analysis doesn't require elevation information
-                     (jobs/enqueue-job! tx "analysis"
-                                        {:lipas-id (:lipas-id resp)}
-                                        {:correlation-id correlation-id
-                                         :priority 80})
+               ;; Analysis doesn't require elevation information
+               (jobs/enqueue-job! tx "analysis"
+                                  {:lipas-id (:lipas-id resp)}
+                                  {:created-by (:email user)})
 
-                     ;; Webhook Notification
+               ;; Webhook Notification
 
-                     ;; NOTE: Webhook is disabled until UTP or someone else
-                     ;; starts using it again.
+               ;; NOTE: Webhook is disabled until UTP or someone else
+               ;; starts using it again.
 
-                     #_(jobs/enqueue-job! tx "webhook"
-                                          {:lipas-ids [(:lipas-id resp)]
-                                           :operation-type (if (new? sports-site) "create" "update")
-                                           :initiated-by (:id user)}
-                                          {:correlation-id correlation-id
-                                           :priority 85}))
+               #_(jobs/enqueue-job! tx "webhook"
+                                    {:lipas-ids [(:lipas-id resp)]
+                                     :operation-type (if (new? sports-site) "create" "update")
+                                     :initiated-by (:id user)}))
 
-                   ;; Sync the site to PTV if
-                   ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
-                   ;; - it is PTV candidate now
-                   ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
-                   ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
-                   ;; that doesn't trigger update if sync-enabled is false.
-                   (if (and (not draft?)
-                            (or (:sync-enabled (:ptv resp))
-                                (:delete-existing (:ptv resp)))
-                            ;; TODO: Check privilage :ptv/basic or such
-                            (or (ptv-data/ptv-candidate? resp)
-                                (ptv-data/is-sent-to-ptv? resp)))
-                     ;; NOTE:  this will create a new sports-site rev.
-                     ;; Make it instead update the sports-site already created in the tx?
-                     ;; Otherwise each save-sports-site! will create two sports-site revs.
-                     (let [{new-ptv :ptv new-event-date :event-date}
-                           (sync-ptv! tx search ptv user
-                                      {:sports-site resp
-                                       :org-id (:org-id (:ptv resp))
-                                       :lipas-id (:lipas-id resp)
-                                       :ptv (:ptv resp)})]
-                       (log/infof "Sports site updated and PTV integration enabled")
-                       ;; sync-ptv! wrote a new revision (success or failure)
-                       ;; and returned the event-date it used. Adopt both so
-                       ;; the outer index! below reindexes that exact
-                       ;; revision rather than the pre-sync resp.
-                       (-> resp
-                           (assoc :event-date new-event-date)
-                           (assoc :ptv new-ptv)))
-                     resp)))]
+             ;; Sync the site to PTV if
+             ;; - it was previously sent to PTV (we might archive it now if it no longer looks like PTV candidate)
+             ;; - it is PTV candidate now
+             ;; - do nothing (keep the previous data in PTV if site was previously sent there) if sync-enabled is false
+             ;; Note: if site status or something is updated in Lipas, so that the site is no longer candidate,
+             ;; that doesn't trigger update if sync-enabled is false.
+             (if (and (not draft?)
+                      (or (:sync-enabled (:ptv resp))
+                          (:delete-existing (:ptv resp)))
+                      ;; TODO: Check privilage :ptv/basic or such
+                      (or (ptv-data/ptv-candidate? resp)
+                          (ptv-data/is-sent-to-ptv? resp)))
+               ;; NOTE:  this will create a new sports-site rev.
+               ;; Make it instead update the sports-site already created in the tx?
+               ;; Otherwise each save-sports-site! will create two sports-site revs.
+               (let [{new-ptv :ptv new-event-date :event-date}
+                     (sync-ptv! tx search ptv user
+                                {:sports-site resp
+                                 :org-id (:org-id (:ptv resp))
+                                 :lipas-id (:lipas-id resp)
+                                 :ptv (:ptv resp)})]
+                 (log/infof "Sports site updated and PTV integration enabled")
+                 ;; sync-ptv! wrote a new revision (success or failure)
+                 ;; and returned the event-date it used. Adopt both so
+                 ;; the outer index! below reindexes that exact
+                 ;; revision rather than the pre-sync resp.
+                 (-> resp
+                     (assoc :event-date new-event-date)
+                     (assoc :ptv new-ptv)))
+               resp)))]
 
-           ;; Phase 2: ES indexing after transaction has committed.
-           (when-not draft?
-             (index! search resp :sync (org-names db))
-             (if (should-be-in-legacy-index? resp)
-               (index-legacy-sports-place! search resp :sync)
-               (delete-from-legacy-index! search (:lipas-id resp))))
+       ;; Phase 2: ES indexing after transaction has committed.
+       (when-not draft?
+         (index! search resp :sync (org-names db))
+         (if (should-be-in-legacy-index? resp)
+           (index-legacy-sports-place! search resp :sync)
+           (delete-from-legacy-index! search (:lipas-id resp))))
 
-           resp))))))
+       resp))))
 
 ;;; Cities ;;;
 
@@ -1517,23 +1513,19 @@
 
 (defn upsert-loi!
   [db search user loi]
-  (let [correlation-id (jobs/gen-correlation-id)]
-    (jdbc/with-db-transaction [tx db]
-      (let [result (db/upsert-loi! tx user loi)]
-        (log/info "Saving LOI with background jobs"
-                  {:loi-id (:id loi)
-                   :user (:email user)})
+  (jdbc/with-db-transaction [tx db]
+    (let [result (db/upsert-loi! tx user loi)]
+      (log/info "Saving LOI with background jobs"
+                {:loi-id (:id loi)
+                 :user (:email user)})
 
-        ;; Disabled due to webhooks not being used atm
-        ;; Enqueue webhook with same correlation ID
-        #_(jobs/enqueue-job! tx "webhook"
-                             {:loi-ids [(:id loi)]
-                              :operation-type (if (nil? (:id loi)) "create" "update")
-                              :initiated-by (:id user)}
-                             {:correlation-id correlation-id
-                              :priority 85})
-        (index-loi! search loi :sync)
-        result))))
+      ;; Disabled due to webhooks not being used atm
+      #_(jobs/enqueue-job! tx "webhook"
+                           {:loi-ids [(:id loi)]
+                            :operation-type (if (nil? (:id loi)) "create" "update")
+                            :initiated-by (:id user)})
+      (index-loi! search loi :sync)
+      result)))
 
 (defn upload-utp-image!
   [{:keys [_filename _data _user] :as params}]

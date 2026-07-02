@@ -18,8 +18,8 @@ LIPAS uses PostgreSQL with extensive JSONB document storage. The schema follows 
 │  ───────────────           │  ─────────────────            │
 │  account                   │  jobs                         │
 │  org                       │  dead_letter_jobs             │
-│  city                      │  circuit_breakers             │
-│  subsidy                   │  job_metrics                  │
+│  city                      │                               │
+│  subsidy                   │                               │
 │  reminder                  │                               │
 │  versioned_data            │                               │
 └─────────────────────────────────────────────────────────────┘
@@ -203,7 +203,9 @@ JOIN (
 
 ## Job Queue System
 
-A unified job queue with reliability features.
+A unified job queue. State model: `pending -> processing -> completed`.
+Retries are pending jobs with a future `run_at`; permanently failed jobs
+live only in `dead_letter_jobs`. See `docs/async-jobs.md` (repo root).
 
 ### `jobs` - Main Job Queue
 
@@ -212,7 +214,7 @@ CREATE TABLE jobs (
   id             bigserial PRIMARY KEY,
   type           text NOT NULL,
   payload        jsonb DEFAULT '{}',
-  status         text DEFAULT 'pending',  -- pending/processing/completed/failed/dead
+  status         text DEFAULT 'pending',  -- pending/processing/completed
   priority       integer DEFAULT 100,      -- Higher = more urgent
   attempts       integer DEFAULT 0,
   max_attempts   integer DEFAULT 3,
@@ -220,84 +222,38 @@ CREATE TABLE jobs (
   started_at     timestamptz,
   completed_at   timestamptz,
   error_message  text,
-  correlation_id uuid DEFAULT uuid_generate_v4(),
-  parent_job_id  bigint REFERENCES jobs(id),
-  dedup_key      text,                     -- Prevents duplicate jobs
+  last_error     text,
+  last_error_at  timestamptz,
+  created_by     text,
+  dedup_key      text,                     -- Prevents duplicate pending jobs
   created_at     timestamptz DEFAULT now(),
   updated_at     timestamptz DEFAULT now()
 );
 
--- Processing performance index
-CREATE INDEX idx_jobs_processing ON jobs (status, run_at, priority)
-  WHERE status IN ('pending', 'failed');
+-- Fetch performance index
+CREATE INDEX idx_jobs_pending ON jobs (status, run_at, priority)
+  WHERE status = 'pending';
 
--- Deduplication constraint
-CREATE UNIQUE INDEX idx_jobs_dedup_unique ON jobs (type, dedup_key)
-  WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing');
+-- Deduplication applies to pending jobs only
+CREATE UNIQUE INDEX idx_jobs_dedup_pending ON jobs (type, dedup_key)
+  WHERE dedup_key IS NOT NULL AND status = 'pending';
 ```
 
 ### `dead_letter_jobs` - Failed Job Archive
 
-Jobs that exceed retry attempts are moved here for manual review.
+Jobs that exceed retry attempts are moved here (and deleted from `jobs`)
+for admin review. Acknowledged entries are purged after 90 days.
 
 ```sql
 CREATE TABLE dead_letter_jobs (
   id              bigserial PRIMARY KEY,
   original_job    jsonb NOT NULL,
   error_message   text NOT NULL,
-  error_details   jsonb,
-  correlation_id  uuid,
   died_at         timestamptz DEFAULT now(),
   acknowledged    boolean DEFAULT false,
   acknowledged_by text,
   acknowledged_at timestamptz
 );
-```
-
-### `circuit_breakers` - External Service Protection
-
-Prevents cascading failures when external services are down.
-
-```sql
-CREATE TABLE circuit_breakers (
-  service_name    text PRIMARY KEY,
-  state           text DEFAULT 'closed',  -- closed/open/half_open
-  failure_count   integer DEFAULT 0,
-  success_count   integer DEFAULT 0,
-  last_failure_at timestamptz,
-  opened_at       timestamptz,
-  half_opened_at  timestamptz,
-  updated_at      timestamptz DEFAULT now()
-);
-```
-
-### `job_metrics` - Performance Monitoring
-
-```sql
-CREATE TABLE job_metrics (
-  id             bigserial PRIMARY KEY,
-  job_type       text NOT NULL,
-  status         text NOT NULL,
-  duration_ms    bigint,
-  queue_time_ms  bigint,
-  correlation_id uuid,
-  recorded_at    timestamptz DEFAULT now()
-);
-```
-
-### `job_queue_health` - Monitoring View
-
-```sql
-CREATE VIEW job_queue_health AS
-SELECT
-  type, status,
-  COUNT(*) as count,
-  MIN(created_at) as oldest,
-  MAX(attempts) as max_attempts,
-  AVG(EXTRACT(EPOCH FROM (now() - created_at))) as avg_age_seconds
-FROM jobs
-WHERE status IN ('pending', 'processing', 'failed')
-GROUP BY type, status;
 ```
 
 ## JSONB Document Patterns
@@ -395,7 +351,6 @@ For complex data transformations:
 | `jobs`           | `(status, run_at, priority)` partial | Job fetching     |
 | `jobs`           | `(type, dedup_key)` unique partial   | Deduplication    |
 | `versioned_data` | `(type, event_date DESC)`            | Latest by type   |
-| `job_metrics`    | `(job_type, recorded_at)`            | Metrics queries  |
 
 ### JSONB Indexing
 

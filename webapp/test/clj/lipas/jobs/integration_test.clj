@@ -1,120 +1,78 @@
 (ns lipas.jobs.integration-test
-  "End-to-end integration tests for the unified job queue system.
-
-  Focuses on high-value testing with Malli validation instead of
-  manual assertions for better maintainability."
+  "End-to-end integration tests: scheduler + worker processing real jobs
+  against a real database."
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
+   [lipas.backend.core :as core]
+   [lipas.backend.db.db :as db]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.scheduler :as scheduler]
    [lipas.jobs.worker :as worker]
    [lipas.test-utils :as test-utils]
-   [malli.core :as m]))
+   [next.jdbc :as jdbc]))
 
-;; Test system setup
 (defonce test-system (atom nil))
 
 (let [{:keys [once each]} (test-utils/full-system-fixture test-system)]
   (use-fixtures :once once)
   (use-fixtures :each each))
 
-;; Malli schemas for test validation
-
-(def job-schema
-  [:map
-   [:jobs/id pos-int?]
-   [:jobs/type jobs/job-type-schema]
-   [:jobs/status jobs/job-status-schema]
-   [:jobs/payload map?]
-   [:jobs/priority [:>= 0]]
-   [:jobs/attempts [:>= 0]]
-   [:jobs/max_attempts pos-int?]
-   [:jobs/created_at inst?]])
-
-(def worker-stats-schema
-  [:map
-   [:running? boolean?]
-   [:active-futures nat-int?]
-   [:fast-pool-size {:optional true} nat-int?]
-   [:fast-active {:optional true} nat-int?]
-   [:general-pool-size {:optional true} nat-int?]
-   [:general-active {:optional true} nat-int?]])
-
-;; HIGH-VALUE END-TO-END TESTS
-
 (deftest ^:integration complete-job-lifecycle-test
-  (testing "Complete job lifecycle: enqueue → fetch → process → complete"
+  (testing "Enqueue -> worker fetch -> process -> complete"
     (let [db (:lipas/db @test-system)
-          test-emailer (test-utils/create-test-emailer)
-          worker-system {:db db :emailer test-emailer :search nil}]
+          test-emailer (test-utils/create-test-emailer)]
 
-      ;; 1. Enqueue jobs of different types and priorities
-      (let [email-job-result (jobs/enqueue-job! db "email"
-                                                {:to "test@example.com" :subject "Test" :body "Test message"}
-                                                {:priority 95})
-            email-job-id (:id email-job-result)
-            cleanup-job-result (jobs/enqueue-job! db "cleanup-jobs"
-                                                  {:days-old 30}
-                                                  {:priority 50})
-            cleanup-job-id (:id cleanup-job-result)]
+      (let [{email-id :id} (jobs/enqueue-job! db "email"
+                                              {:to "test@example.com"
+                                               :subject "Test"
+                                               :body "Test message"})]
+        (try
+          (worker/start-mixed-duration-worker!
+           {:db db :emailer test-emailer :search nil}
+           {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
 
-        ;; Validate job creation with Malli
-        (is (m/validate pos-int? email-job-id))
-        (is (m/validate pos-int? cleanup-job-id))
+          (is (test-utils/wait-for-condition
+               (fn []
+                 (= "completed" (:jobs/status (test-utils/get-job-by-id db email-id))))
+               10000)
+              "Email job should complete within timeout")
 
-        ;; 2. Start worker and let it process jobs
-        (worker/start-mixed-duration-worker!
-         worker-system
-         {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 500})
-
-        ;; 3. Wait for jobs to be processed
-        (is (test-utils/wait-for-condition
-             (fn []
-               (let [jobs (test-utils/get-all-jobs db)
-                     completed-count (count (filter #(= "completed" (:jobs/status %)) jobs))]
-                 (>= completed-count 2)))
-             10000) ; 10 second timeout
-            "Jobs should be processed within timeout")
-
-        ;; 4. Validate final state with Malli
-        (let [final-jobs (test-utils/get-all-jobs db)]
-          (is (m/validate [:sequential job-schema] final-jobs))
-
-          ;; Check that email was "sent"
           (is (= 1 (count @(:sent-emails test-emailer))))
-          (is (m/validate [:map [:to string?] [:subject string?]]
-                          (first @(:sent-emails test-emailer)))))
+          (is (= "test@example.com" (:to (first @(:sent-emails test-emailer)))))
 
-        ;; 5. Stop worker
-        (worker/stop-mixed-duration-worker!)))))
+          (finally
+            (worker/stop-mixed-duration-worker!)))))))
 
-(deftest ^:integration scheduler-integration-test
-  (testing "Scheduler automatically produces jobs at scheduled intervals"
-    (let [db (:lipas/db @test-system)]
+(deftest ^:integration reminders-end-to-end-test
+  (testing "Overdue reminder -> scheduler produces email job -> worker sends it"
+    (let [db (:lipas/db @test-system)
+          test-emailer (test-utils/create-test-emailer)]
 
-      ;; Start scheduler
-      (scheduler/start-scheduler! db)
+      ;; Create a user with an overdue reminder
+      (jdbc/execute! db
+                     ["INSERT INTO account (email, username, password, status, user_data, permissions)
+                       VALUES (?, ?, ?, ?, ?::jsonb, ?::jsonb)"
+                      "e2e-reminder@example.com" "e2euser" "test123" "active" "{}" "{}"])
+      (let [user (first (db/get-users db))]
+        (core/add-reminder! db user
+                            {:body {:message "E2E reminder" :title "E2E"}
+                             :event-date (java.sql.Timestamp/valueOf "2024-01-01 10:00:00")}))
 
-      ;; Wait for initial jobs to be produced
-      (is (test-utils/wait-for-condition
-           (fn [] (>= (count (test-utils/get-all-jobs db)) 2))
-           5000))
+      (try
+        (worker/start-mixed-duration-worker!
+         {:db db :emailer test-emailer :search nil}
+         {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
 
-      ;; Validate scheduled jobs
-      (let [scheduled-jobs (test-utils/get-all-jobs db)]
-        (is (m/validate [:sequential job-schema] scheduled-jobs))
+        ;; Scheduler tick (called directly for determinism)
+        (is (= 1 (scheduler/produce-reminder-emails! db)))
 
-        ;; Should have both reminder and cleanup jobs
-        (let [job-types (set (map :jobs/type scheduled-jobs))]
-          (is (contains? job-types "produce-reminders"))
-          (is (contains? job-types "cleanup-jobs"))))
+        (is (test-utils/wait-for-condition
+             (fn [] (= 1 (count @(:sent-emails test-emailer))))
+             10000)
+            "Reminder email should be sent")
 
-      ;; Stop scheduler
-      (scheduler/stop-scheduler!))))
+        (is (= "e2e-reminder@example.com"
+               (:to (first @(:sent-emails test-emailer)))))
 
-;; Note: The following tests have been removed as they are covered more thoroughly elsewhere:
-;; - job-retry-and-dead-letter-test -> resilience_test.clj (job-retry-logic-test, dead-letter-queue-test)
-;; - correlation-id-tracking-test -> correlation_test.clj (comprehensive correlation tests)
-
-(comment
-  (clojure.test/run-tests *ns*))
+        (finally
+          (worker/stop-mixed-duration-worker!))))))
