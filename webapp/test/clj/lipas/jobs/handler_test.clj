@@ -335,8 +335,67 @@
                                    (tu/token-header token)))]
           (is (= 400 (:status resp)) "Should reject timeframe > 1 week"))))))
 
+(deftest search-jobs-test
+  (let [db (test-db)
+        admin (tu/gen-user {:db? true :admin? true :db-component db})
+        token (jwt/create-token admin)
+        post! (fn [token params]
+                ((test-app) (-> (mock/request :post "/api/actions/search-jobs")
+                                (mock/content-type "application/json")
+                                (mock/body (->json params))
+                                (tu/token-header token))))]
+
+    ;; Seed: 2 pending emails, 1 processing analysis, 1 completed email
+    (jobs/enqueue-job! db "email" {:to "a@example.com" :subject "S" :body "Pending one"})
+    (jobs/enqueue-job! db "email" {:to "b@example.com" :subject "S" :body "Pending two"})
+    (let [{:keys [id]} (jobs/enqueue-job! db "analysis" {:lipas-id 12345})]
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" id]))
+    (let [{:keys [id]} (jobs/enqueue-job! db "email" {:to "c@example.com" :subject "S" :body "Completed one"})]
+      (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" id])
+      (jobs/mark-completed! db id))
+
+    (testing "filters by statuses"
+      (let [resp (post! token {:statuses ["pending" "processing"]})
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= 3 (count body)))
+        (is (= #{"pending" "processing"} (set (map :status body))))
+        (is (every? #(contains? % :payload) body))))
+
+    (testing "completed jobs only"
+      (let [resp (post! token {:statuses ["completed"]})
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= ["completed"] (distinct (map :status body))))
+        (is (= 1 (count body)))
+        (is (some? (:completed-at (first body))))))
+
+    (testing "limit is respected"
+      (let [resp (post! token {:statuses ["pending" "processing" "completed"]
+                               :limit 2})
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= 2 (count body)))))
+
+    (testing "invalid status is rejected"
+      (let [resp (post! token {:statuses ["bogus"]})]
+        (is (= 400 (:status resp)))))
+
+    (testing "requires jobs/manage privilege"
+      (let [user-token (jwt/create-token
+                        (tu/gen-user {:db? true :admin? false :db-component db}))
+            resp (post! user-token {:statuses ["pending"]})]
+        (is (= 403 (:status resp)))))
+
+    (testing "requires authentication"
+      (let [resp ((test-app) (-> (mock/request :post "/api/actions/search-jobs")
+                                 (mock/content-type "application/json")
+                                 (mock/body (->json {:statuses ["pending"]}))))]
+        (is (= 401 (:status resp)))))))
+
 (comment
   (clojure.test/run-test authorization-test)
   (clojure.test/run-test request-validation-test)
   (clojure.test/run-test job-health-accuracy-test)
-  (clojure.test/run-test timeframe-filtering-test))
+  (clojure.test/run-test timeframe-filtering-test)
+  (clojure.test/run-test search-jobs-test))

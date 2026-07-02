@@ -142,31 +142,82 @@ GROUP BY type, status
 ORDER BY type, status;
 
 -- :name get-hourly-throughput :? :*
--- :doc Get job throughput by hour within timeframe
+-- :doc Get job outcomes by hour: completed (first try), retried (completed after retries), dead_lettered
 SELECT
-    date_trunc('hour', created_at) as hour,
+    date_trunc('hour', completed_at) as hour,
     type,
-    status,
+    CASE WHEN attempts > 1 THEN 'retried' ELSE 'completed' END as status,
     count(*) as job_count
 FROM jobs
-WHERE created_at >= :from_timestamp
-  AND created_at <= :to_timestamp
-GROUP BY date_trunc('hour', created_at), type, status
+WHERE status = 'completed'
+  AND completed_at >= :from_timestamp
+  AND completed_at <= :to_timestamp
+GROUP BY 1, 2, 3
+UNION ALL
+SELECT
+    date_trunc('hour', died_at) as hour,
+    original_job->>'type' as type,
+    'dead_lettered' as status,
+    count(*) as job_count
+FROM dead_letter_jobs
+WHERE died_at >= :from_timestamp
+  AND died_at <= :to_timestamp
+GROUP BY 1, 2
 ORDER BY hour DESC, type;
+
+-- :name search-jobs :? :*
+-- :doc Search jobs by status. Completed jobs come newest first, queued jobs in run order.
+SELECT
+  id,
+  type,
+  payload,
+  status,
+  attempts,
+  max_attempts,
+  priority,
+  created_at,
+  run_at,
+  started_at,
+  completed_at,
+  last_error
+FROM jobs
+WHERE status = ANY(:statuses::text[])
+ORDER BY
+  completed_at DESC NULLS LAST,
+  started_at DESC NULLS LAST,
+  run_at ASC
+LIMIT :limit;
 
 -- Dead letter queue queries
 
 -- :name get-dead-letter-jobs :? :*
--- :doc Get dead letter jobs with optional filter for acknowledgment status
+-- :doc Get dead letter jobs with optional filter for acknowledgment status. Each entry carries the newest completed job of the same type + lipas-id that finished after the failure (superseded detection).
+WITH newest_completed AS (
+  SELECT DISTINCT ON (type, payload->>'lipas-id')
+         type,
+         payload->>'lipas-id' AS lipas_id,
+         id,
+         completed_at
+  FROM jobs
+  WHERE status = 'completed'
+    AND payload->>'lipas-id' IS NOT NULL
+  ORDER BY type, payload->>'lipas-id', completed_at DESC
+)
 SELECT
-  id,
-  original_job,
-  error_message,
-  died_at,
-  acknowledged,
-  acknowledged_by,
-  acknowledged_at
-FROM dead_letter_jobs
+  dlj.id,
+  dlj.original_job,
+  dlj.error_message,
+  dlj.died_at,
+  dlj.acknowledged,
+  dlj.acknowledged_by,
+  dlj.acknowledged_at,
+  newer.id AS superseded_by_job_id,
+  newer.completed_at AS superseded_by_completed_at
+FROM dead_letter_jobs dlj
+LEFT JOIN newest_completed newer
+  ON newer.type = dlj.original_job->>'type'
+ AND newer.lipas_id = dlj.original_job->'payload'->>'lipas-id'
+ AND newer.completed_at > dlj.died_at
 WHERE (:acknowledged::boolean IS NULL OR acknowledged = :acknowledged)
 ORDER BY died_at DESC;
 

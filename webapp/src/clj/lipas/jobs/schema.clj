@@ -21,6 +21,12 @@
   "Schema for get-jobs-health-status request"
   [:map])
 
+(def search-jobs-request-schema
+  "Schema for search-jobs request"
+  [:map
+   [:statuses [:vector job-status-schema]]
+   [:limit {:optional true} [:int {:min 1 :max 500}]]])
+
 ;; Response schemas
 
 (def current-stats-entry-schema
@@ -47,9 +53,12 @@
    [:longest_processing_minutes [:maybe :int]]])
 
 (def performance-metric-schema
+  ;; :type and :status are open strings: within the retention window the
+  ;; jobs table can hold rows of types/statuses that are no longer
+  ;; registered, and response coercion must not 500 on them.
   [:map
-   [:type job-type-schema]
-   [:status job-status-schema]
+   [:type :string]
+   [:status :string]
    [:job_count :int]
    [:avg_duration_seconds [:maybe number?]]
    [:p50_duration_seconds [:maybe number?]]
@@ -61,8 +70,8 @@
 (def hourly-throughput-entry-schema
   [:map
    [:hour :string]
-   [:type job-type-schema]
-   [:status job-status-schema]
+   [:type :string]
+   [:status [:enum "completed" "retried" "dead_lettered"]]
    [:job_count :int]])
 
 (def jobs-metrics-response-schema
@@ -79,6 +88,28 @@
 (def jobs-health-response-schema
   "Schema for get-jobs-health-status response"
   health-schema)
+
+(def job-row-schema
+  "A single row in the search-jobs response.
+  :type is an open string because the table can hold rows of job types
+  that are no longer registered (retention keeps completed jobs 30 days)."
+  [:map
+   [:id :int]
+   [:type :string]
+   [:status job-status-schema]
+   [:payload [:maybe map?]]
+   [:priority :int]
+   [:attempts :int]
+   [:max-attempts :int]
+   [:created-at inst?]
+   [:run-at inst?]
+   [:started-at [:maybe inst?]]
+   [:completed-at [:maybe inst?]]
+   [:last-error [:maybe :string]]])
+
+(def search-jobs-response-schema
+  "Schema for search-jobs response"
+  [:vector job-row-schema])
 
 ;; Validation helpers
 

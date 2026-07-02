@@ -12,6 +12,7 @@
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
    [lipas.jobs.registry :as registry]
+   [lipas.jobs.triage :as triage]
    [taoensso.timbre :as log]))
 
 (def job-type-schema registry/job-type-schema)
@@ -184,7 +185,8 @@
         to-timestamp (java.sql.Timestamp/from (.minus now to-hours-ago java.time.temporal.ChronoUnit/HOURS))]
     (->> (jobs-db/get-hourly-throughput db {:from_timestamp from-timestamp
                                             :to_timestamp to-timestamp})
-         (map #(update % :hour str)))))
+         ;; ISO instant so the browser parses the hour unambiguously
+         (map #(update % :hour (fn [^java.sql.Timestamp ts] (str (.toInstant ts))))))))
 
 (defn get-admin-metrics
   "Get comprehensive admin metrics for the monitoring dashboard."
@@ -197,14 +199,34 @@
    :slow-job-types (vec (sort registry/slow-job-types))
    :generated-at (str (java.time.Instant/now))})
 
+(defn search-jobs
+  "Search jobs by status for the admin UI.
+  opts: {:statuses [\"pending\" ...] :limit n}"
+  [db {:keys [statuses limit] :or {limit 100}}]
+  (mapv ->kebab-case-keywords
+        (jobs-db/search-jobs db {:statuses (into-array String statuses)
+                                 :limit limit})))
+
 ;; Dead letter queue management
 
+(defn- enrich-dead-letter-entry
+  "Add :error-class and :superseded-by to a kebab-cased dead letter row."
+  [{:keys [superseded-by-job-id superseded-by-completed-at] :as entry}]
+  (-> entry
+      (dissoc :superseded-by-job-id :superseded-by-completed-at)
+      (assoc :error-class (triage/classify-error (:error-message entry)))
+      (cond-> superseded-by-job-id
+        (assoc :superseded-by {:job-id superseded-by-job-id
+                               :completed-at superseded-by-completed-at}))))
+
 (defn get-dead-letter-jobs
-  "Get dead letter jobs with optional acknowledgment filter.
+  "Get dead letter jobs with optional acknowledgment filter, enriched
+  with :error-class and :superseded-by for triage.
   opts: {:acknowledged true/false/nil} - nil returns all"
   [db {:keys [acknowledged] :as _opts}]
-  (map ->kebab-case-keywords
-       (jobs-db/get-dead-letter-jobs db {:acknowledged acknowledged})))
+  (->> (jobs-db/get-dead-letter-jobs db {:acknowledged acknowledged})
+       (map ->kebab-case-keywords)
+       (mapv enrich-dead-letter-entry)))
 
 (defn reprocess-dead-letter-job!
   "Requeue a dead letter job and mark it acknowledged.
