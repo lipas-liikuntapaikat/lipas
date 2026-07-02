@@ -35,7 +35,7 @@
    {:doc "Enrich route geometries with elevation data from MML."
     :payload-schema [:map [:lipas-id #'sports-sites-schema/lipas-id]]
     :lane :slow
-    :timeout-min 15
+    :timeout-min 30
     :priority 70
     :max-attempts 3
     :dedup-key-fn (fn [payload] (str "elevation:" (:lipas-id payload)))

@@ -66,7 +66,7 @@ Current job types:
 | Type | Lane | Timeout | Dedup | Notes |
 |---|---|---|---|---|
 | `analysis` | slow | 60 min | per lipas-id, 30 s debounce | diversity grid recalc |
-| `elevation` | slow | 15 min | per lipas-id, 30 s debounce | MML elevation, circuit breaker |
+| `elevation` | slow | 30 min | per lipas-id, 30 s debounce | MML elevation, circuit breaker |
 | `email` | fast | 1 min | – | reminders + general mail |
 | `webhook` | fast | 2 min | – | **disabled**: producers commented out until UTP needs it again |
 
