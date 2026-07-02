@@ -1,25 +1,22 @@
 (ns lipas.jobs.patterns
-  "Enterprise reliability patterns for the job queue system.
-  
-  Provides exponential backoff, circuit breakers, timeouts, and retry logic
-  without external dependencies."
+  "Reliability patterns for the job queue: exponential backoff, per-item
+  timeouts and a simple in-memory circuit breaker."
   (:require
-   [lipas.jobs.db :as jobs-db]
    [taoensso.timbre :as log])
   (:import
-   [java.util.concurrent TimeUnit TimeoutException]
-   [java.util Random]))
+   [java.util Random]
+   [java.util.concurrent TimeoutException]))
 
 (def ^:private random (Random.))
 
 (defn exponential-backoff-ms
   "Calculate exponential backoff with jitter.
-  
+
   attempt: 0-based attempt number
   base-ms: base delay in milliseconds (default 1000)
   max-ms: maximum delay in milliseconds (default 300000 = 5 minutes)
   jitter: jitter factor 0.0-1.0 (default 0.1 = 10%)
-  
+
   Returns delay in milliseconds with formula:
   min(base * 2^attempt, max) * (1 ± jitter)"
   [attempt & {:keys [base-ms max-ms jitter]
@@ -31,34 +28,12 @@
         jitter-offset (- (* 2 (.nextDouble random) jitter-range) jitter-range)]
     (long (max 0 (+ exponential-delay jitter-offset)))))
 
-(defmacro with-timeout
-  "Execute body with timeout. Returns result or throws TimeoutException.
-
-  timeout-ms: timeout in milliseconds
-  body: expressions to execute
-
-  Example:
-  (with-timeout 5000
-    (fetch-external-data))"
-  [timeout-ms & body]
-  `(let [future# (future ~@body)
-         result# (deref future# ~timeout-ms ::timeout)]
-     (if (= result# ::timeout)
-       (do
-         (future-cancel future#)
-         (throw (TimeoutException. (str "Operation timed out after " ~timeout-ms "ms"))))
-       result#)))
-
 (defn deref-with-timeout
   "Deref a future with timeout. Returns result or throws TimeoutException.
 
   f: the future to deref
   timeout-ms: timeout in milliseconds
-  error-context: descriptive string for error message (e.g., 'elevation chunk 5')
-
-  Example:
-  (let [f (future (fetch-data))]
-    (deref-with-timeout f 5000 \"fetch data\"))"
+  error-context: descriptive string for error message (e.g., 'elevation chunk 5')"
   [f timeout-ms error-context]
   (let [result (deref f timeout-ms ::timeout)]
     (if (= result ::timeout)
@@ -69,136 +44,110 @@
       result)))
 
 (defn pmap-with-timeout
-  "Parallel map with per-item timeout. Launches all futures, then collects with timeout.
+  "Parallel map with per-item timeout. Launches all futures, then collects
+  with timeout.
 
   timeout-ms: timeout per item in milliseconds
   f: function to apply to each item
-  coll: collection of items
-
-  Example:
-  (pmap-with-timeout 5000 fetch-data urls)"
+  coll: collection of items"
   [timeout-ms f coll]
   (let [futures (mapv #(future (f %)) coll)]
     (mapv #(deref-with-timeout %1 timeout-ms (str "item " %2))
           futures (range))))
 
-(defn get-circuit-breaker
-  "Get current state of a circuit breaker from database."
-  [db service-name]
-  (jobs-db/get-circuit-breaker db {:service_name service-name}))
+;; In-memory circuit breaker
+;;
+;; Protects an external service from being hammered while it is down:
+;; after :failure-threshold consecutive failures the breaker opens and
+;; calls fail fast for :open-duration-ms, after which a single trial call
+;; is allowed through (half-open). Success closes the breaker.
+;;
+;; State is per-JVM which is sufficient: LIPAS runs a single worker
+;; process, and a fresh (closed) breaker after restart is harmless.
 
-(defn update-circuit-breaker!
-  "Update circuit breaker state in database."
-  [db service-name updates]
-  ;; Ensure breaker exists before updating
-  (jobs-db/ensure-circuit-breaker! db {:service_name service-name})
-  ;; Now update specific fields
-  (let [params (merge {:service_name service-name
-                       :state nil
-                       :failure_count nil
-                       :success_count nil
-                       :last_failure_at nil
-                       :opened_at nil
-                       :half_opened_at nil}
-                      updates)]
-    (jobs-db/update-circuit-breaker! db params)))
+(defonce ^:private breakers (atom {}))
 
-(defn circuit-breaker-state
-  "Determine if circuit breaker should allow request.
-  
-  Returns :closed, :open, or :half-open based on current state and timeouts."
-  [breaker {:keys [open-duration-ms failure-threshold]
-            :or {open-duration-ms 60000
-                 failure-threshold 5}}]
-  (let [{:keys [state failure_count opened_at]} breaker
-        now (System/currentTimeMillis)]
-    (cond
-      ;; Not in database yet - closed
-      (nil? breaker) :closed
+(defn reset-breakers!
+  "Reset all circuit breaker state. Intended for tests."
+  []
+  (reset! breakers {}))
 
-      ;; No state or closed state - closed
-      (or (nil? state) (= state "closed")) :closed
+(defn breaker-status
+  "Current state of all breakers, for monitoring/logging."
+  []
+  @breakers)
 
-      ;; Open but timeout expired - half-open
-      (and (= state "open")
-           opened_at
-           (> (- now (.getTime opened_at)) open-duration-ms))
-      :half-open
+(defn- now-ms [] (System/currentTimeMillis))
 
-      ;; Otherwise use current state
-      :else (keyword state))))
+(defn circuit-open-ex [service-name breaker]
+  (ex-info "Circuit breaker is open"
+           {:type ::circuit-breaker-open
+            :service service-name
+            :breaker breaker}))
+
+(defn circuit-breaker-open?
+  "True when ex is the fail-fast exception thrown by an open breaker."
+  [ex]
+  (= ::circuit-breaker-open (:type (ex-data ex))))
+
+(defn- on-success [service-name]
+  (swap! breakers assoc service-name {:state :closed :failure-count 0}))
+
+(defn- on-failure [service-name failure-threshold]
+  (let [breaker (-> (swap! breakers update service-name
+                           (fn [{:keys [failure-count] :as b}]
+                             (let [failures (inc (or failure-count 0))]
+                               (if (>= failures failure-threshold)
+                                 {:state :open
+                                  :failure-count failures
+                                  :opened-at (now-ms)}
+                                 (assoc b
+                                        :state :closed
+                                        :failure-count failures)))))
+                    (get service-name))]
+    (when (and (= :open (:state breaker))
+               (= (:failure-count breaker) failure-threshold))
+      (log/error "Circuit breaker opened"
+                 {:service service-name
+                  :failure-count (:failure-count breaker)}))))
 
 (defn with-circuit-breaker*
-  "Execute function with circuit breaker protection.
-  
+  "Execute f with circuit breaker protection.
+
   Options:
-  :failure-threshold - failures before opening (default 5)
-  :open-duration-ms - time to stay open (default 60000)
-  :on-open - callback when circuit opens
-  
-  Throws CircuitBreakerOpenException when circuit is open."
-  [db service-name opts f]
-  (let [breaker (get-circuit-breaker db service-name)
-        state (circuit-breaker-state breaker opts)]
-    (case state
-      :open
-      (throw (ex-info "Circuit breaker is open"
-                      {:type ::circuit-breaker-open
-                       :service service-name
-                       :breaker breaker}))
+  :failure-threshold - consecutive failures before opening (default 5)
+  :open-duration-ms  - how long to fail fast before a trial call (default 60000)
 
-      :half-open
-      ;; Single test request allowed
+  Throws the fail-fast exception (see circuit-breaker-open?) while open."
+  [service-name {:keys [failure-threshold open-duration-ms]
+                 :or {failure-threshold 5
+                      open-duration-ms 60000}}
+   f]
+  (let [{:keys [state opened-at] :as breaker} (get @breakers service-name)]
+    (if (and (= :open state)
+             (< (- (now-ms) opened-at) open-duration-ms))
+      (throw (circuit-open-ex service-name breaker))
+      ;; Closed, or open long enough for a (half-open) trial call
       (try
         (let [result (f)]
-          ;; Success - reset the breaker
-          (update-circuit-breaker! db service-name
-                                   {:state "closed"
-                                    :failure_count 0
-                                    :success_count 1})
+          (on-success service-name)
           result)
         (catch Exception e
-          ;; Failed - reopen
-          (update-circuit-breaker! db service-name
-                                   {:state "open"
-                                    :opened_at (java.sql.Timestamp. (System/currentTimeMillis))})
-          (throw e)))
-
-      :closed
-      ;; Normal operation with failure tracking
-      (try
-        (let [result (f)]
-          ;; Success - increment success count
-          (when breaker
-            (update-circuit-breaker! db service-name
-                                     {:success_count (inc (or (:success_count breaker) 0))}))
-          result)
-        (catch Exception e
-          ;; Ensure breaker exists
-          (jobs-db/ensure-circuit-breaker! db {:service_name service-name})
-          ;; Atomically increment failure count and check if we should open
-          (let [now (java.sql.Timestamp. (System/currentTimeMillis))
-                rows-updated (jobs-db/increment-circuit-breaker-failure!
-                              db {:service_name service-name
-                                  :last_failure_at now
-                                  :failure_threshold (:failure-threshold opts 5)
-                                  :opened_at now})]
-            ;; If no rows updated, circuit was already open or half-open
-            (when (> rows-updated 0)
-              ;; Check if we just opened the circuit
-              (let [updated-breaker (get-circuit-breaker db service-name)]
-                (when (and (= "open" (:state updated-breaker))
-                           (>= (:failure_count updated-breaker) (:failure-threshold opts 5)))
-                  (when-let [on-open (:on-open opts)]
-                    (on-open {:service service-name
-                              :failure-count (:failure_count updated-breaker)}))))))
-          (throw e))))))
+          (if (= :open state)
+            ;; Failed trial call - reopen immediately
+            (do (swap! breakers assoc service-name
+                       {:state :open
+                        :failure-count (:failure-count breaker)
+                        :opened-at (now-ms)})
+                (throw e))
+            (do (on-failure service-name failure-threshold)
+                (throw e))))))))
 
 (defmacro with-circuit-breaker
-  "Macro version of with-circuit-breaker* for inline code.
-  
+  "Macro version of with-circuit-breaker*.
+
   Example:
-  (with-circuit-breaker db \"email-service\" {}
-    (send-email! emailer message))"
-  [db service-name opts & body]
-  `(with-circuit-breaker* ~db ~service-name ~opts (fn [] ~@body)))
+  (with-circuit-breaker \"mml-elevation-service\" {:failure-threshold 5}
+    (fetch-elevations!))"
+  [service-name opts & body]
+  `(with-circuit-breaker* ~service-name ~opts (fn [] ~@body)))

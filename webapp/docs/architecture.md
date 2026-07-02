@@ -383,20 +383,25 @@ The job system handles async operations using PostgreSQL-backed queues:
 └────────────────────────────────────────────────────────────────┘
 ```
 
-**Job Types:**
-- `email` - Notification delivery
-- `webhook` - External system notifications
-- `analysis` - Reachability/diversity calculations
+**Job Types** (defined in `lipas.jobs.registry`, the single source of truth):
+- `email` - Notification delivery (reminder + general mail)
+- `analysis` - Diversity grid recalculation
 - `elevation` - Route elevation enrichment
-- `produce-reminders` - Generate facility update reminders
+- `webhook` - External system notifications (disabled; no live producers)
+
+Reminder production and queue cleanup are run directly by the scheduler,
+not through the queue.
 
 **Reliability Patterns:**
 
 1. **Atomic Claiming:** `SELECT FOR UPDATE SKIP LOCKED` prevents double-processing
-2. **Exponential Backoff:** Failed jobs retry with increasing delays
-3. **Circuit Breaker:** Prevents cascading failures to external services
-4. **Timeout Protection:** Per-job-type timeouts prevent hanging
-5. **Dead Letter Queue:** Jobs exceeding max attempts move to failed state
+2. **Dedup + Debounce:** repeated saves of the same site coalesce into one pending job
+3. **Exponential Backoff:** failed jobs retry as `pending` with a future `run_at`
+4. **Watchdog Timeouts:** per-job-type timeouts from the registry, enforced by thread interrupt
+5. **Dead Letter Queue:** jobs exceeding max attempts move to `dead_letter_jobs` (and out of `jobs`)
+6. **In-memory Circuit Breaker:** protects the MML elevation API
+
+See `docs/async-jobs.md` (repo root) for the full design.
 
 ---
 

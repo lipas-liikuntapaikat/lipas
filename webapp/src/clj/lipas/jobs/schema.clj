@@ -1,59 +1,52 @@
 (ns lipas.jobs.schema
-  "Malli schemas for job queue admin endpoints."
-  (:require [malli.core :as m]))
+  "Malli schemas for job queue admin endpoints.
+
+  Job type and payload schemas live in lipas.jobs.registry."
+  (:require
+   [lipas.jobs.registry :as registry]
+   [malli.core :as m]))
+
+(def job-type-schema registry/job-type-schema)
+(def job-status-schema registry/job-status-schema)
 
 ;; Request schemas
+
 (def jobs-metrics-request-schema
   "Schema for create-jobs-metrics-report request"
   [:map
    [:from-hours-ago {:optional true} [:int {:min 1 :max 168}]] ; max 1 week back
-   [:to-hours-ago {:optional true} [:int {:min 0 :max 167}]]]) ; can't be >= from-hours-ago
+   [:to-hours-ago {:optional true} [:int {:min 0 :max 167}]]])
 
 (def jobs-health-request-schema
   "Schema for get-jobs-health-status request"
   [:map])
 
-;; Job type schemas - canonical definitions for the jobs system
-
-(def job-type-schema
-  "Canonical job type enum. All valid job types must be listed here."
-  [:enum "analysis" "elevation" "email" "webhook"
-   "produce-reminders" "cleanup-jobs"])
-
-(def job-status-schema
-  [:enum "pending" "processing" "completed" "failed" "dead"])
-
 ;; Response schemas
+
 (def current-stats-entry-schema
-  "Schema for individual current stats entry"
   [:map
-   [:status {:optional true} :string] ; Changed from keyword? to :string
+   [:status {:optional true} :string]
    [:count :int]
    [:oldest_created_at [:maybe [:or :string inst?]]]
    [:oldest_minutes [:maybe number?]]])
 
 (def current-stats-schema
-  "Schema for current-stats section"
   [:map
    [:pending {:optional true} current-stats-entry-schema]
    [:processing {:optional true} current-stats-entry-schema]
    [:completed {:optional true} current-stats-entry-schema]
-   [:failed {:optional true} current-stats-entry-schema]
-   [:dead {:optional true} current-stats-entry-schema]
    [:total {:optional true} current-stats-entry-schema]])
 
 (def health-schema
-  "Schema for health metrics"
   [:map
    [:pending_count :int]
    [:processing_count :int]
-   [:failed_count :int]
+   [:retrying_count :int]
    [:dead_count :int]
    [:oldest_pending_minutes [:maybe :int]]
    [:longest_processing_minutes [:maybe :int]]])
 
 (def performance-metric-schema
-  "Schema for individual performance metric"
   [:map
    [:type job-type-schema]
    [:status job-status-schema]
@@ -66,7 +59,6 @@
    [:latest_job [:maybe :string]]])
 
 (def hourly-throughput-entry-schema
-  "Schema for hourly throughput entry"
   [:map
    [:hour :string]
    [:type job-type-schema]
@@ -80,8 +72,8 @@
    [:health health-schema]
    [:performance-metrics [:vector performance-metric-schema]]
    [:hourly-throughput [:vector hourly-throughput-entry-schema]]
-   [:fast-job-types [:vector :string]] ; Changed from [:set :string] to [:vector :string]
-   [:slow-job-types [:vector :string]] ; Changed from [:set :string] to [:vector :string]
+   [:fast-job-types [:vector :string]]
+   [:slow-job-types [:vector :string]]
    [:generated-at :string]])
 
 (def jobs-health-response-schema
@@ -89,11 +81,6 @@
   health-schema)
 
 ;; Validation helpers
-(defn valid-metrics-request? [data]
-  (m/validate jobs-metrics-request-schema data))
-
-(defn valid-health-request? [data]
-  (m/validate jobs-health-request-schema data))
 
 (defn valid-metrics-response? [data]
   (m/validate jobs-metrics-response-schema data))

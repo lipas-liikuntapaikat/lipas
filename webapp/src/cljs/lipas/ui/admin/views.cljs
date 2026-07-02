@@ -876,11 +876,11 @@
               [:> Typography {:variant "caption" :color "textSecondary"}
                (str "Longest: " longest " min")])]]
 
-          ;; Failed jobs
+          ;; Jobs waiting for a retry after a failed attempt
           [:> Grid2 {:size 12 :size/sm 6 :size/md 3}
-           [:> Paper {:sx #js{:p 2 :bgcolor (if (> (or (:failed_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
-            [:> Typography {:variant "h4"} (str (or (:failed_count health-data) 0))]
-            [:> Typography {:color "textSecondary"} "Failed"]]]
+           [:> Paper {:sx #js{:p 2 :bgcolor (if (> (or (:retrying_count health-data) 0) 0) "#fff3e0" "#f5f5f5")}}
+            [:> Typography {:variant "h4"} (str (or (:retrying_count health-data) 0))]
+            [:> Typography {:color "textSecondary"} "Retrying"]]]
 
           ;; Dead letter jobs
           [:> Grid2 {:size 12 :size/sm 6 :size/md 3}

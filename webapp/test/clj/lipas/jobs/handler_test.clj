@@ -126,8 +126,8 @@
                (:processing_count health))
             "Processing count should match test scenario")
 
-        (is (= 0 (:failed_count health)) ; No failed jobs, they're retrying
-            "Failed count should be 0 since jobs retry")
+        (is (= (:pending-webhooks expected) (:retrying_count health))
+            "Webhooks that failed once are counted as retrying")
 
         (is (= 0 (:dead_count health))
             "No jobs should be dead in this scenario"))
@@ -178,7 +178,8 @@
                 (:pending-webhooks expected))
              (:pending_count body)))
       (is (= (:processing-analysis expected) (:processing_count body)))
-      (is (= 0 (:failed_count body))) ; No failed, they're retrying
+      (is (= (:pending-webhooks expected) (:retrying_count body))
+          "Webhooks that failed once are counted as retrying")
       (is (= 0 (:dead_count body)))
 
       ;; Time-based metrics should be reasonable
@@ -208,7 +209,7 @@
           (let [health (:health body)]
             (is (= 0 (:pending_count health)))
             (is (= 0 (:processing_count health)))
-            (is (= 0 (:failed_count health)))
+            (is (= 0 (:retrying_count health)))
             (is (= 0 (:dead_count health))))))
 
       (testing "Health status with empty queue"
@@ -222,7 +223,7 @@
           (is (schema/valid-health-response? body))
           (is (every? zero? [(:pending_count body)
                              (:processing_count body)
-                             (:failed_count body)
+                             (:retrying_count body)
                              (:dead_count body)])))))))
 
 (deftest timeframe-filtering-test

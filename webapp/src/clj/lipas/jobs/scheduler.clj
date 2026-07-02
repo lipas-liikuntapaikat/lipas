@@ -1,7 +1,14 @@
 (ns lipas.jobs.scheduler
-  "Lightweight scheduler that produces jobs at regular intervals. "
+  "Lightweight scheduler for periodic queue maintenance.
+
+  Runs maintenance directly instead of routing it through the job queue:
+  producing ~300 no-op 'check reminders' job rows per day through the
+  queue machinery provided no value. Only real work (sending an email)
+  becomes a job."
   (:require
    [lipas.jobs.core :as jobs]
+   [lipas.jobs.monitoring :as monitoring]
+   [lipas.reminders :as reminders]
    [taoensso.timbre :as log])
   (:import
    [java.util.concurrent Executors ScheduledExecutorService TimeUnit]))
@@ -10,76 +17,78 @@
                                 :executor nil
                                 :scheduled-tasks []}))
 
+(defn produce-reminder-emails!
+  "Enqueue an email job for every overdue reminder. Returns the number of
+  reminders processed."
+  [db]
+  (let [overdue (reminders/get-overdue db)]
+    (doseq [reminder overdue]
+      (jobs/enqueue-job! db "email" (reminders/->email db reminder))
+      (reminders/mark-processed! db (:id reminder)))
+    (when (seq overdue)
+      (log/info "Produced reminder emails" {:count (count overdue)}))
+    (count overdue)))
+
 (def schedule-configs
-  "Configuration for periodic job producers."
-  {:check-overdue-reminders
-   {:job-type "produce-reminders"
-    :payload {}
-    :interval-seconds 300 ; Every 5 minutes
-    :priority 90}
+  "Periodic maintenance tasks. Each :task-fn takes the db and is isolated:
+  a failing run is logged and retried on the next tick."
+  {:produce-reminder-emails
+   {:interval-seconds 300
+    :task-fn produce-reminder-emails!}
 
-   :cleanup-old-jobs
-   {:job-type "cleanup-jobs"
-    :payload {:days-old 30}
-    :interval-seconds 86400 ; Daily
-    :priority 30}})
+   :recover-stuck-jobs
+   {:interval-seconds 600
+    :task-fn (fn [db] (jobs/recover-stuck-jobs! db jobs/stuck-job-timeout-minutes))}
 
-(defn schedule-job-producer
-  "Schedule a recurring job producer."
-  [^ScheduledExecutorService executor db job-key config]
-  (let [{:keys [job-type payload interval-seconds priority]} config
-        task-fn (fn []
-                  (try
-                    (log/debug "Producing scheduled job" {:type job-type})
-                    (jobs/enqueue-job! db job-type payload {:priority priority})
-                    (catch Exception ex
-                      (log/error ex "Error producing scheduled job" {:type job-type}))))]
+   :queue-health-check
+   {:interval-seconds 900
+    :task-fn (fn [db] (monitoring/log-queue-health! db))}
 
-    (log/info "Scheduling job producer" {:key job-key :config config})
+   :cleanup-jobs
+   {:interval-seconds 86400
+    :task-fn (fn [db] (jobs/cleanup-jobs! db))}})
 
-    (.scheduleAtFixedRate executor
-                          ^Runnable task-fn
-                          0 ; initial delay
-                          interval-seconds ; period
-                          TimeUnit/SECONDS)))
+(defn- schedule-task
+  [^ScheduledExecutorService executor db task-key {:keys [interval-seconds task-fn]}]
+  (log/info "Scheduling task" {:key task-key :interval-seconds interval-seconds})
+  (.scheduleAtFixedRate executor
+                        ^Runnable
+                        (fn []
+                          (try
+                            (task-fn db)
+                            (catch Exception ex
+                              (log/error ex "Scheduled task failed" {:key task-key}))))
+                        0
+                        (long interval-seconds)
+                        TimeUnit/SECONDS))
 
 (defn start-scheduler!
-  "Start the job scheduler with configured periodic tasks."
+  "Start the scheduler with all configured periodic tasks."
   [db]
-  (when (:running? @scheduler-state)
-    (log/warn "Scheduler already running")
-    nil)
-
-  (log/info "Starting job scheduler")
-
-  (let [executor (Executors/newScheduledThreadPool 2)]
-
-    (swap! scheduler-state assoc
-           :running? true
-           :executor executor)
-
-    ;; Schedule all configured job producers
-    (doseq [[job-key config] schedule-configs]
-      (let [scheduled-future (schedule-job-producer executor db job-key config)]
-        (swap! scheduler-state update :scheduled-tasks conj scheduled-future)))
-
-    (log/info "Job scheduler started with" (count schedule-configs) "scheduled tasks")
-
-    {:status :running :scheduled-count (count schedule-configs)}))
+  (if (:running? @scheduler-state)
+    (do (log/warn "Scheduler already running")
+        nil)
+    (let [executor (Executors/newScheduledThreadPool 1)]
+      (log/info "Starting job scheduler")
+      (swap! scheduler-state assoc
+             :running? true
+             :executor executor)
+      (doseq [[task-key config] schedule-configs]
+        (let [scheduled (schedule-task executor db task-key config)]
+          (swap! scheduler-state update :scheduled-tasks conj scheduled)))
+      (log/info "Job scheduler started" {:task-count (count schedule-configs)})
+      {:status :running :scheduled-count (count schedule-configs)})))
 
 (defn stop-scheduler!
-  "Stop the job scheduler and cancel all scheduled tasks."
+  "Stop the scheduler and cancel all scheduled tasks."
   []
   (log/info "Stopping job scheduler")
-
   (swap! scheduler-state assoc :running? false)
 
-  ;; Cancel all scheduled tasks
   (doseq [task (:scheduled-tasks @scheduler-state)]
     (when task
       (.cancel task false)))
 
-  ;; Shutdown executor
   (when-let [executor (:executor @scheduler-state)]
     (.shutdown ^ScheduledExecutorService executor)
     (when-not (.awaitTermination ^ScheduledExecutorService executor 10 TimeUnit/SECONDS)
@@ -99,14 +108,3 @@
     {:running? (:running? state)
      :scheduled-tasks-count (count (:scheduled-tasks state))
      :configs-count (count schedule-configs)}))
-
-(defn add-scheduled-job!
-  "Dynamically add a new scheduled job producer (for testing/admin use)."
-  [db job-key config]
-  (when-not (:running? @scheduler-state)
-    (throw (ex-info "Scheduler not running" {})))
-
-  (when-let [executor (:executor @scheduler-state)]
-    (let [scheduled-future (schedule-job-producer executor db job-key config)]
-      (swap! scheduler-state update :scheduled-tasks conj scheduled-future)
-      (log/info "Added dynamic scheduled job" {:key job-key :config config}))))
