@@ -86,48 +86,72 @@
     jobs))
 
 (defn mark-completed!
-  "Mark a job as successfully completed."
-  [db job-id]
-  (jobs-db/mark-job-completed! db {:id job-id}))
+  "Mark a job as successfully completed.
+
+  When the claimed attempts value is passed, the update is fenced to that
+  execution: a stale executor (e.g. a zombie thread whose job was already
+  finalized by the watchdog or recovered) updates zero rows. Returns the
+  number of rows updated."
+  [db job-id & [attempts]]
+  (let [n (jobs-db/mark-job-completed! db {:id job-id :attempts attempts})]
+    (when (and attempts (zero? n))
+      (log/warn "Stale execution tried to complete a job; ignored"
+                {:id job-id :attempts attempts}))
+    n))
 
 (defn move-to-dead-letter!
   "Move a permanently failed job to the dead letter queue.
-  The job row is removed from the jobs table."
-  [db job-id error-message]
+  The job row is removed from the jobs table. With :attempts the delete is
+  fenced to the claimed execution."
+  [db job-id error-message & [attempts]]
   (log/warn "Moving job to dead letter queue" {:id job-id :error error-message})
   (jobs-db/move-job-to-dead-letter! db {:id job-id
+                                        :attempts attempts
                                         :error_message error-message}))
 
 (defn fail-job!
-  "Handle a failed job: schedule a retry with exponential backoff, or move
-  it to the dead letter queue when attempts are exhausted.
+  "Handle a failed job: re-enqueue a retry with exponential backoff, or move
+  the job to the dead letter queue when attempts are exhausted.
+
+  The retry goes through the same dedup gate as a fresh enqueue: when a
+  newer pending job with the same (type, dedup_key) exists, the retry is
+  dropped as superseded - the successor does the same work on newer data.
 
   opts: :current-attempt (the attempt that just failed), :max-attempts,
-        :backoff-opts for exponential backoff config"
-  [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts]
+        :backoff-opts for exponential backoff config,
+        :attempts - claimed attempts fingerprint; when present, finalization
+                    is fenced so a stale executor is a no-op"
+  [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts attempts]
                                :or {backoff-opts {}}}]]
   (log/info "Job failed" {:id job-id
                           :error error-message
                           :attempt current-attempt
                           :max-attempts max-attempts})
   (if (and current-attempt max-attempts (>= current-attempt max-attempts))
-    (move-to-dead-letter! db job-id error-message)
+    (move-to-dead-letter! db job-id error-message attempts)
     (let [delay-ms (patterns/exponential-backoff-ms (or current-attempt 1) backoff-opts)
-          run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))]
-      (log/debug "Scheduling job retry" {:id job-id
-                                         :attempt current-attempt
-                                         :delay-ms delay-ms})
-      (jobs-db/update-job-retry! db {:id job-id
-                                     :error_message error-message
-                                     :run_at run-at}))))
+          run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))
+          n (jobs-db/retry-job! db {:id job-id
+                                    :attempts attempts
+                                    :error_message error-message
+                                    :run_at run-at})]
+      (if (pos? n)
+        (log/debug "Scheduled job retry" {:id job-id
+                                          :attempt current-attempt
+                                          :delay-ms delay-ms})
+        (log/info "Retry dropped (superseded by a newer pending job, or stale execution)"
+                  {:id job-id :attempt current-attempt}))
+      n)))
 
 (defn recover-stuck-jobs!
   "Recover jobs stuck in processing state (e.g. after a worker crash).
-  Jobs with attempts left return to pending; exhausted jobs move to the
-  dead letter queue. Returns {:recovered n :dead-lettered n}."
+  Exhausted jobs move to the dead letter queue; jobs with attempts left are
+  re-enqueued through the dedup gate, so a stuck job superseded by a newer
+  pending job is dropped instead of blocking the batch.
+  Returns {:recovered n :dead-lettered n}."
   [db timeout-minutes]
-  (let [recovered (jobs-db/recover-stuck-jobs! db {:timeout_minutes timeout-minutes})
-        dead (jobs-db/dead-letter-stuck-jobs! db {:timeout_minutes timeout-minutes})]
+  (let [dead (jobs-db/dead-letter-stuck-jobs! db {:timeout_minutes timeout-minutes})
+        recovered (jobs-db/recover-stuck-jobs! db {:timeout_minutes timeout-minutes})]
     (when (or (pos? recovered) (pos? dead))
       (log/warn "Recovered stuck jobs" {:recovered recovered
                                         :dead-lettered dead

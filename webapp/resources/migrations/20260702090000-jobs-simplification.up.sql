@@ -60,7 +60,9 @@ DROP INDEX IF EXISTS idx_jobs_processing;
 
 --;;
 
-CREATE INDEX IF NOT EXISTS idx_jobs_pending ON public.jobs (status, run_at, priority)
+-- Column order matches fetch-next-jobs' ORDER BY priority DESC, run_at ASC
+-- so the hot poll query is an ordered index scan that stops at its LIMIT
+CREATE INDEX IF NOT EXISTS idx_jobs_pending ON public.jobs (priority DESC, run_at ASC)
   WHERE status = 'pending';
 
 --;;

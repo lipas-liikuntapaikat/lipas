@@ -34,6 +34,23 @@ DROP INDEX IF EXISTS idx_jobs_dedup_pending;
 
 --;;
 
+-- The new model allows a pending and a processing job to share
+-- (type, dedup_key) - the old unique index below does not. Keep only the
+-- newest row's dedup key per group so the index can be created on live
+-- data; the other rows stay runnable, just without dedup protection.
+UPDATE jobs SET dedup_key = NULL
+WHERE id IN (
+  SELECT id FROM (
+    SELECT id,
+           row_number() OVER (PARTITION BY type, dedup_key
+                              ORDER BY created_at DESC, id DESC) AS rn
+    FROM jobs
+    WHERE dedup_key IS NOT NULL
+      AND status IN ('pending', 'processing')) ranked
+  WHERE rn > 1);
+
+--;;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_dedup_unique ON public.jobs (type, dedup_key)
   WHERE dedup_key IS NOT NULL AND status IN ('pending', 'processing');
 

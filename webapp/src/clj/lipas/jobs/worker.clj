@@ -6,9 +6,14 @@
 
   Jobs execute directly on the pool threads. A hard per-job-type timeout
   (from the registry) is enforced by a watchdog that interrupts the pool
-  thread; the job's status update runs only after the interrupt flag has
-  been cleared, so a timed-out job is marked failed exactly once and no
-  orphaned execution keeps running in the background."
+  thread. If the handler does not unwind within a grace period (e.g. it is
+  blocked in non-interruptible IO), the watchdog force-finalizes the job in
+  the DB and the still-running handler becomes a zombie: it keeps occupying
+  its pool thread until its IO returns, but every DB finalization is fenced
+  by (id, claimed attempts, status='processing'), so a zombie can never
+  clobber the state of a retry or of a recovered job - its late updates
+  affect zero rows. Zombies are counted in worker-stats and logged loudly;
+  handlers must set socket timeouts so they cannot hang forever."
   (:require
    [clojure.set :as set]
    [lipas.jobs.core :as jobs]
@@ -21,13 +26,20 @@
 (defonce worker-state (atom {:running? false
                              :pools nil
                              :watchdog nil
-                             :futures []}))
+                             :futures []
+                             :zombie-count 0}))
 
 (def default-config
   {:fast-threads 2
    :general-threads 2
    :batch-size 10
    :poll-interval-ms 3000})
+
+(def watchdog-grace-ms
+  "After interrupting the pool thread at the timeout, the watchdog waits
+  this long for the handler to unwind before force-finalizing the job in
+  the DB (leaving the handler behind as a zombie thread)."
+  60000)
 
 (defn- assert-handlers-registered!
   "Fail fast at startup when a registered job type has no dispatcher method."
@@ -62,12 +74,22 @@
   The watchdog interrupts this thread when the timeout elapses. The lock
   guarantees the interrupt is delivered only while the job body is running:
   after the body finishes (normally or not) the interrupt flag is cleared
-  before any DB status update, so retries can never race a still-running
-  execution of the same job."
+  before any DB status update.
+
+  If the handler has not unwound watchdog-grace-ms after the interrupt
+  (non-interruptible IO, swallowed interrupt), the watchdog finalizes the
+  job in the DB itself and this thread is left behind as a zombie. Every
+  finalization is fenced by the claimed attempts value, so whichever of
+  the pool thread and the watchdog finalizes first wins and the loser
+  updates zero rows - the job is finalized exactly once either way."
   [{:keys [db] :as system} ^ScheduledExecutorService watchdog job]
   (let [job-id (:id job)
         job-type (:type job)
+        attempts (:attempts job)
+        max-attempts (:max_attempts job)
         timeout-ms (registry/timeout-ms job-type)
+        timeout-msg (format "Job execution timed out after %d minutes"
+                            (long (/ timeout-ms 60000)))
         thread (Thread/currentThread)
         lock (Object.)
         state (atom :running)
@@ -79,10 +101,31 @@
                                        (.interrupt thread))))
                                  (long timeout-ms)
                                  TimeUnit/MILLISECONDS)
+        escalation-task (.schedule watchdog
+                                   ^Runnable
+                                   (fn []
+                                     (try
+                                       (let [n (jobs/fail-job! db job-id
+                                                               (str timeout-msg
+                                                                    " (handler did not respond to interrupt)")
+                                                               {:current-attempt attempts
+                                                                :max-attempts max-attempts
+                                                                :attempts attempts})]
+                                         (when (pos? n)
+                                           (let [zombies (:zombie-count (swap! worker-state update :zombie-count inc))]
+                                             (log/error "Watchdog force-finalized a job; its handler thread is a zombie occupying its lane until the blocking call returns"
+                                                        {:id job-id
+                                                         :type job-type
+                                                         :thread (.getName thread)
+                                                         :zombie-count zombies}))))
+                                       (catch Exception e
+                                         (log/error e "Watchdog escalation failed" {:id job-id}))))
+                                   (long (+ timeout-ms watchdog-grace-ms))
+                                   TimeUnit/MILLISECONDS)
         started-ms (System/currentTimeMillis)
         result (try
                  (log/with-context {:job-id job-id :job-type job-type}
-                   (log/debug "Processing job" {:type job-type :attempt (:attempts job)})
+                   (log/debug "Processing job" {:type job-type :attempt attempts})
                    (dispatcher/handle-job system job))
                  ::ok
                  (catch Throwable t t)
@@ -90,14 +133,18 @@
                    (locking lock
                      (compare-and-set! state :running :done))
                    (.cancel watchdog-task false)
+                   (.cancel escalation-task false)
                    ;; Clear the interrupt flag in case the watchdog fired
                    (Thread/interrupted)))
         duration-ms (- (System/currentTimeMillis) started-ms)]
     (cond
       (= ::ok result)
       (do
-        (jobs/mark-completed! db job-id)
-        (log/info "Job completed" {:id job-id :type job-type :duration-ms duration-ms}))
+        (when (= :timed-out @state)
+          (log/warn "Job returned normally after its timeout interrupt"
+                    {:id job-id :type job-type :duration-ms duration-ms}))
+        (when (pos? (jobs/mark-completed! db job-id attempts))
+          (log/info "Job completed" {:id job-id :type job-type :duration-ms duration-ms})))
 
       (= :timed-out @state)
       (do
@@ -106,18 +153,19 @@
                                     :timeout-ms timeout-ms
                                     :duration-ms duration-ms})
         (jobs/fail-job! db job-id
-                        (format "Job execution timed out after %d minutes"
-                                (long (/ timeout-ms 60000)))
-                        {:current-attempt (:attempts job)
-                         :max-attempts (:max_attempts job)}))
+                        timeout-msg
+                        {:current-attempt attempts
+                         :max-attempts max-attempts
+                         :attempts attempts}))
 
       :else
       (let [^Throwable ex result]
         (log/error ex "Job failed" {:id job-id :type job-type :duration-ms duration-ms})
         (jobs/fail-job! db job-id
                         (or (.getMessage ex) (str (class ex)))
-                        {:current-attempt (:attempts job)
-                         :max-attempts (:max_attempts job)})))))
+                        {:current-attempt attempts
+                         :max-attempts max-attempts
+                         :attempts attempts})))))
 
 (defn process-job-batch
   "Submit a batch of jobs to the appropriate thread pool."
@@ -245,7 +293,8 @@
         pools (:pools state)]
     (merge
      {:running? (:running? state)
-      :active-futures (count (:futures state))}
+      :active-futures (count (:futures state))
+      :zombie-count (:zombie-count state 0)}
      (when pools
        {:fast-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:fast-pool pools))
         :fast-active (.getActiveCount ^ThreadPoolExecutor (:fast-pool pools))

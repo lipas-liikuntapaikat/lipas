@@ -78,6 +78,36 @@
         (jobs/mark-completed! db id)
         (is (some? (jobs/enqueue-job! db "analysis" {:lipas-id 7})))))))
 
+(deftest sequential-execution-guard-test
+  (let [db (test-db)
+        now-ts #(java.sql.Timestamp/from (java.time.Instant/now))]
+
+    (testing "A pending successor is not claimable while its predecessor is processing"
+      (jobs/enqueue-job! db "analysis" {:lipas-id 42} {:run-at (now-ts)})
+      (let [[a] (jobs/fetch-next-jobs db {:limit 10})
+            successor (jobs/enqueue-job! db "analysis" {:lipas-id 42} {:run-at (now-ts)})]
+        (is (some? a))
+        (is (some? successor))
+        (is (empty? (jobs/fetch-next-jobs db {:limit 10}))
+            "Successor must wait until the processing job finishes")
+
+        (testing "Unrelated sites are not blocked by the guard"
+          (let [c (jobs/enqueue-job! db "analysis" {:lipas-id 43} {:run-at (now-ts)})
+                claimed (jobs/fetch-next-jobs db {:limit 10})]
+            (is (= [(:id c)] (map :id claimed)))))
+
+        (testing "Once the predecessor finalizes, the successor becomes claimable"
+          (jobs/mark-completed! db (:id a) (:attempts a))
+          (let [claimed (jobs/fetch-next-jobs db {:limit 10})]
+            (is (= [(:id successor)] (map :id claimed)))))))
+
+    (testing "Jobs without dedup keys are never serialized"
+      (test-utils/prune-db! db)
+      (jobs/enqueue-job! db "email" {:to "a@example.com" :subject "1" :body "B"})
+      (jobs/enqueue-job! db "email" {:to "b@example.com" :subject "2" :body "B"})
+      (is (= 2 (count (jobs/fetch-next-jobs db {:limit 10})))
+          "Both keyless jobs run concurrently"))))
+
 (deftest concurrent-dedup-race-test
   (testing "Concurrent enqueues of the same key produce exactly one job and no errors"
     (let [db (test-db)
