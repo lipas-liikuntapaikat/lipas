@@ -308,12 +308,6 @@
 
 ;;; Dead letters tab ;;;
 
-(defn- dlq-lipas-id [entry]
-  (get-in entry [:original-job :payload :lipas-id]))
-
-(defn- copy-edn! [job]
-  (.writeText (.-clipboard js/navigator) (pr-str job)))
-
 (r/defc sparkline
   "Tiny weekly-occurrence bars (8 weeks, oldest first)."
   [{:keys [values]}]
@@ -354,7 +348,7 @@
            [:span (fmt-ago (:died-at entry))]]]
          [:> TableCell (str (:id entry))]
          [:> TableCell (get-in entry [:original-job :type] "?")]
-         [:> TableCell [site-link {:lipas-id (dlq-lipas-id entry)}]]
+         [:> TableCell [site-link {:lipas-id (subs/dlq-lipas-id entry)}]]
          [:> TableCell (str (get-in entry [:original-job :attempts] "?")
                             "/"
                             (get-in entry [:original-job :max-attempts] "?"))]
@@ -473,7 +467,7 @@
 (r/defc job-details-dialog []
   (let [job @(rf/subscribe [::subs/selected-job-details])
         reprocessing? @(rf/subscribe [::subs/reprocessing?])
-        lipas-id (when job (dlq-lipas-id job))
+        lipas-id (when job (subs/dlq-lipas-id job))
         site-failures @(rf/subscribe [::subs/site-failure-count lipas-id])
         [max-attempts set-max-attempts] (hooks/use-state "")]
     ;; Clear the max-attempts override when another entry is opened
@@ -550,11 +544,8 @@
      [:> DialogActions
       (when job
         [:<>
-         [:> Button {:on-click (fn []
-                                 (copy-edn! job)
-                                 (rf/dispatch [:lipas.ui.events/set-active-notification
-                                               {:message "Job EDN copied to clipboard"
-                                                :success? true}]))}
+         [:> Button {:on-click #(rf/dispatch [:lipas.ui.events/copy-to-clipboard!
+                                              (pr-str job)])}
           "Copy EDN"]
          (when (and lipas-id (> (or site-failures 0) 1))
            [:> Button {:on-click (fn []
@@ -664,7 +655,11 @@
        [:> Button {:variant "contained"
                    :color "primary"
                    :size "small"
-                   :on-click #(rf/dispatch [::events/refresh-all])}
+                   ;; Manual refresh also refetches the metrics report,
+                   ;; which the 30 s poll deliberately skips
+                   :on-click (fn []
+                               (rf/dispatch [::events/refresh-all])
+                               (rf/dispatch [::events/fetch-metrics]))}
         [:> Icon {:sx #js{:mr 1}} "refresh"]
         "Refresh"]]
 

@@ -115,6 +115,33 @@
                   (catch Exception e e))]
       (is (patterns/circuit-breaker-open? ex)))))
 
+(deftest circuit-breaker-ignores-interrupts-test
+  (testing "Thread interrupts (watchdog timeouts) never count as service failures"
+    (dotimes [_ 5]
+      (is (thrown? InterruptedException
+                   (patterns/with-circuit-breaker "mml" {:failure-threshold 2}
+                     (throw (InterruptedException. "watchdog fired"))))))
+
+    ;; Way past the threshold, yet the breaker must still be closed
+    (is (= :ok (patterns/with-circuit-breaker "mml" {:failure-threshold 2} :ok))))
+
+  (testing "Interrupts wrapped in another exception are also ignored"
+    (dotimes [_ 5]
+      (is (thrown? Exception
+                   (patterns/with-circuit-breaker "mml2" {:failure-threshold 2}
+                     (throw (RuntimeException. "wrapped" (InterruptedException.)))))))
+    (is (= :ok (patterns/with-circuit-breaker "mml2" {:failure-threshold 2} :ok))))
+
+  (testing "Genuine failures still open the breaker"
+    (dotimes [_ 2]
+      (is (thrown? Exception
+                   (patterns/with-circuit-breaker "mml3" {:failure-threshold 2}
+                     (throw (ex-info "real outage" {}))))))
+    (let [ex (try (patterns/with-circuit-breaker "mml3" {:failure-threshold 2} :ok)
+                  nil
+                  (catch Exception e e))]
+      (is (patterns/circuit-breaker-open? ex)))))
+
 (deftest circuit-breaker-success-resets-failures-test
   (testing "A success resets the consecutive-failure count"
     (dotimes [_ 2]

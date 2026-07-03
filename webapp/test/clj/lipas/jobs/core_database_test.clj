@@ -171,6 +171,75 @@
           (is (= {:lipas-ids [123]} (get-in dlj [:original-job :payload]))))))))
 
 ;; =============================================================================
+;; Retry vs. successor (pending-only dedup collision)
+;; =============================================================================
+
+(deftest retry-superseded-by-successor-test
+  (let [db (test-db)]
+
+    (testing "A failing job whose successor is already pending is dropped, not retried"
+      (let [{a-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 100} {:run-at (now-ts)})
+            [a] (jobs/fetch-next-jobs db {:limit 1})
+            b (jobs/enqueue-job! db "analysis" {:lipas-id 100} {:run-at (now-ts)})]
+        (is (= a-id (:id a)))
+        (is (some? b) "Successor is enqueued while the predecessor is processing")
+
+        (let [n (jobs/fail-job! db a-id "boom"
+                                {:current-attempt (:attempts a)
+                                 :max-attempts (:max_attempts a)
+                                 :attempts (:attempts a)})]
+          (is (zero? n)
+              "Retry goes through the dedup gate and is dropped as superseded"))
+
+        (is (nil? (test-utils/get-job-by-id db a-id))
+            "The superseded job is removed")
+        (is (= "pending" (:jobs/status (test-utils/get-job-by-id db (:id b))))
+            "The successor remains the single pending job for the site")
+        (is (= 1 (count (test-utils/get-all-jobs db))))))
+
+    (testing "A failing job with no successor is retried with attempts preserved"
+      (test-utils/prune-db! db)
+      (let [{id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 200} {:run-at (now-ts)})
+            [a] (jobs/fetch-next-jobs db {:limit 1})
+            n (jobs/fail-job! db id "boom"
+                              {:current-attempt (:attempts a)
+                               :max-attempts (:max_attempts a)
+                               :attempts (:attempts a)})]
+        (is (pos? n))
+        (let [after (test-utils/get-job-by-id db id)]
+          (is (= "pending" (:jobs/status after)))
+          (is (= 1 (:jobs/attempts after)))
+          (is (= "analysis:200" (:jobs/dedup_key after))
+              "The retry keeps its dedup key and stays part of the dedup universe"))))))
+
+;; =============================================================================
+;; Fenced finalization
+;; =============================================================================
+
+(deftest fenced-finalization-test
+  (let [db (test-db)]
+    (testing "Finalizers with a stale attempts fingerprint are no-ops"
+      (let [{id :id} (jobs/enqueue-job! db "email" {:to "f@example.com" :subject "F" :body "B"})
+            [job] (jobs/fetch-next-jobs db {:limit 1})]
+        (is (= 1 (:attempts job)))
+
+        (is (zero? (jobs/mark-completed! db id 999))
+            "Stale completion updates zero rows")
+        (is (zero? (jobs/fail-job! db id "stale" {:current-attempt 1
+                                                  :max-attempts 3
+                                                  :attempts 999}))
+            "Stale retry updates zero rows")
+        (is (zero? (jobs/move-to-dead-letter! db id "stale" 999))
+            "Stale dead-lettering updates zero rows")
+
+        (is (= "processing" (:jobs/status (test-utils/get-job-by-id db id)))
+            "The claimed execution still owns the job")
+
+        (is (pos? (jobs/mark-completed! db id (:attempts job)))
+            "The rightful fingerprint finalizes normally")
+        (is (= "completed" (:jobs/status (test-utils/get-job-by-id db id))))))))
+
+;; =============================================================================
 ;; Stuck job recovery
 ;; =============================================================================
 
@@ -213,6 +282,45 @@
           (is (= 0 (:recovered result)))
           (is (= 0 (:dead-lettered result))))
         (is (= "processing" (:jobs/status (test-utils/get-job-by-id db id))))))))
+
+(deftest stuck-recovery-collision-test
+  (let [db (test-db)
+        backdate! (fn [id] (jdbc/execute! db ["UPDATE jobs SET started_at = now() - interval '3 hours' WHERE id = ?" id]))]
+
+    (testing "A stuck job superseded by a pending duplicate does not poison the recovery batch"
+      ;; A: stuck processing, with pending successor B carrying the same dedup key
+      (let [{a-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 1} {:run-at (now-ts)})
+            [a] (jobs/fetch-next-jobs db {:limit 1})
+            _ (is (= a-id (:id a)))
+            _ (backdate! a-id)
+            b (jobs/enqueue-job! db "analysis" {:lipas-id 1} {:run-at (now-ts)})
+
+            ;; C: unrelated stuck job with attempts left (B is blocked by the
+            ;; sequential guard while A is processing, so the fetch claims C)
+            {c-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 2} {:run-at (now-ts)})
+            [c] (jobs/fetch-next-jobs db {:limit 1})
+            _ (is (= c-id (:id c)))
+            _ (backdate! c-id)
+
+            ;; D: stuck job with attempts exhausted
+            {d-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 3} {:run-at (now-ts) :max-attempts 1})
+            [d] (jobs/fetch-next-jobs db {:limit 1})
+            _ (is (= d-id (:id d)))
+            _ (backdate! d-id)
+
+            result (jobs/recover-stuck-jobs! db 90)]
+
+        (is (= 1 (:recovered result)) "Only C is recovered")
+        (is (= 1 (:dead-lettered result)) "Only D is dead-lettered")
+
+        (is (nil? (test-utils/get-job-by-id db a-id))
+            "A is dropped: its pending successor already covers the work")
+        (is (= "pending" (:jobs/status (test-utils/get-job-by-id db (:id b))))
+            "B is untouched")
+        (is (= "pending" (:jobs/status (test-utils/get-job-by-id db c-id)))
+            "C went back to pending despite A's collision")
+        (is (nil? (test-utils/get-job-by-id db d-id)))
+        (is (= 1 (dead-letter-count db)))))))
 
 ;; =============================================================================
 ;; Retention

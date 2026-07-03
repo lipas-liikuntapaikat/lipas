@@ -56,6 +56,58 @@
       (is (some? (:errors result))))
     (is (not (:valid? (registry/validate-payload "email" {:no-to-field true}))))))
 
+(deftest save-triggers-test
+  (let [geo (fn [coords] {:type "FeatureCollection"
+                          :features [{:type "Feature"
+                                      :geometry {:type "LineString"
+                                                 :coordinates coords}}]})
+        ;; 4402 = hiking route, a LineString type
+        route-site {:status "active"
+                    :type {:type-code 4402}
+                    :location {:geometries (geo [[25.0 62.0] [25.1 62.1]])}
+                    :phone-number "123"}
+        moved (assoc-in route-site [:location :geometries]
+                        (geo [[25.0 62.0] [25.2 62.2]]))
+        with-z (assoc-in route-site [:location :geometries]
+                         (geo [[25.0 62.0 100.0] [25.1 62.1 101.0]]))]
+
+    (testing "Irrelevant edits (e.g. phone number) trigger neither job"
+      (let [new (assoc route-site :phone-number "456")]
+        (is (not (registry/should-enqueue? "analysis" route-site new)))
+        (is (not (registry/should-enqueue? "elevation" route-site new)))))
+
+    (testing "Geometry edits trigger both jobs"
+      (is (registry/should-enqueue? "analysis" route-site moved))
+      (is (registry/should-enqueue? "elevation" route-site moved)))
+
+    (testing "Type-code and status changes trigger analysis but not elevation"
+      (let [retyped (assoc-in route-site [:type :type-code] 4401)
+            deactivated (assoc route-site :status "out-of-service-permanently")]
+        (is (registry/should-enqueue? "analysis" route-site retyped))
+        (is (not (registry/should-enqueue? "elevation" route-site retyped)))
+        (is (registry/should-enqueue? "analysis" route-site deactivated))
+        (is (not (registry/should-enqueue? "elevation" route-site deactivated)))))
+
+    (testing "New sites (no previous revision) trigger everything applicable"
+      (is (registry/should-enqueue? "analysis" nil route-site))
+      (is (registry/should-enqueue? "elevation" nil route-site)))
+
+    (testing "Elevation applies only to route (LineString) types"
+      (is (not (registry/should-enqueue? "elevation" nil
+                                         (assoc-in route-site [:type :type-code] 1120)))))
+
+    (testing "A save that only adds z (enrichment-shaped) does not re-trigger"
+      (is (not (registry/should-enqueue? "elevation" route-site with-z))
+          "The 2D comparison makes enrichment output invisible to the diff")
+      (is (not (registry/should-enqueue? "analysis" route-site with-z))))
+
+    (testing "A save that loses previously-enriched z data re-triggers elevation"
+      (is (registry/should-enqueue? "elevation" with-z route-site)
+          "Re-enrichment restores the lost z coordinates"))
+
+    (testing "Types without a trigger-fn always enqueue"
+      (is (registry/should-enqueue? "email" route-site route-site)))))
+
 (deftest stuck-job-timeout-test
   (testing "Stuck-job threshold exceeds every registered job timeout"
     (let [longest (apply max (map :timeout-min (vals registry/job-types)))]

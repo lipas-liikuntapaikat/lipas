@@ -3,6 +3,21 @@
 -- State model: pending -> processing -> completed
 -- Retries are pending jobs with run_at in the future.
 -- Permanently failed jobs live only in dead_letter_jobs.
+--
+-- Invariants enforced here rather than by convention:
+--
+-- * One door into 'pending': every transition into pending (enqueue, retry,
+--   stuck recovery) goes through INSERT ... ON CONFLICT DO NOTHING against
+--   the pending-only dedup index. A conflict means the work is superseded
+--   by a newer pending job for the same entity and is dropped on purpose.
+-- * Fenced finalization: statements that finalize an execution take the
+--   claimed attempts value and match it together with status='processing',
+--   so a stale executor (zombie thread, double finalization) updates zero
+--   rows instead of clobbering a newer state. Passing the attempts param
+--   activates the fence; test fixtures may omit it.
+-- * Per-entity serial execution: fetch-next-jobs never claims a pending job
+--   while a processing job with the same (type, dedup_key) exists, so a
+--   successor always runs strictly after its predecessor finishes.
 
 -- :name enqueue-job! :<! :1
 -- :doc Add a job to the queue. With a dedup_key, inserting is a no-op when an equal pending job exists (returns no row).
@@ -12,45 +27,59 @@ VALUES (:type, :payload::jsonb, :priority, :run_at, :max_attempts, :created_by, 
 RETURNING id;
 
 -- :name fetch-next-jobs :? :*
--- :doc Fetch the next batch of runnable jobs, locking them atomically
+-- :doc Fetch the next batch of runnable jobs, locking them atomically. Skips jobs whose predecessor (same type + dedup_key) is still processing so per-entity execution is sequential.
 UPDATE jobs
 SET status = 'processing',
     started_at = now(),
     attempts = attempts + 1
 WHERE id IN (
-    SELECT id FROM jobs
-    WHERE status = 'pending'
-      AND run_at <= now()
-      AND (:job_types::text[] IS NULL OR type = ANY(:job_types::text[]))
-    ORDER BY priority DESC, run_at ASC
+    SELECT j.id FROM jobs j
+    WHERE j.status = 'pending'
+      AND j.run_at <= now()
+      AND (:job_types::text[] IS NULL OR j.type = ANY(:job_types::text[]))
+      AND NOT EXISTS (
+        SELECT 1 FROM jobs p
+        WHERE p.status = 'processing'
+          AND p.type = j.type
+          AND p.dedup_key IS NOT NULL
+          AND p.dedup_key = j.dedup_key)
+    ORDER BY j.priority DESC, j.run_at ASC
     LIMIT :limit
     FOR UPDATE SKIP LOCKED
 )
 RETURNING id, type, payload, priority, attempts, max_attempts, created_at;
 
 -- :name mark-job-completed! :! :n
--- :doc Mark a job as completed
+-- :doc Mark a job as completed. With :attempts, fenced to the claimed execution (no-op for stale executors).
 UPDATE jobs
 SET status = 'completed',
     completed_at = now(),
     error_message = NULL
-WHERE id = :id;
+WHERE id = :id
+--~ (when (:attempts params) "AND status = 'processing' AND attempts = :attempts")
+;
 
--- :name update-job-retry! :! :n
--- :doc Schedule a failed job for retry
-UPDATE jobs
-SET status = 'pending',
-    run_at = :run_at,
-    error_message = :error_message,
-    last_error = :error_message,
-    last_error_at = now()
-WHERE id = :id;
+-- :name retry-job! :! :n
+-- :doc Re-enqueue a failed job for retry via the dedup gate: when a newer pending job with the same (type, dedup_key) exists, the retry is dropped as superseded. With :attempts, fenced to the claimed execution. Returns 0 when dropped or fenced, 1 when the retry is scheduled.
+WITH failed AS (
+  DELETE FROM jobs
+  WHERE id = :id
+--~ (when (:attempts params) "AND status = 'processing' AND attempts = :attempts")
+  RETURNING *
+)
+INSERT INTO jobs (id, type, payload, status, priority, run_at, attempts, max_attempts,
+                  created_at, created_by, dedup_key, error_message, last_error, last_error_at)
+SELECT id, type, payload, 'pending', priority, :run_at, attempts, max_attempts,
+       created_at, created_by, dedup_key, :error_message, :error_message, now()
+FROM failed
+ON CONFLICT (type, dedup_key) WHERE dedup_key IS NOT NULL AND status = 'pending' DO NOTHING;
 
 -- :name move-job-to-dead-letter! :! :n
--- :doc Move a permanently failed job to the dead letter queue
+-- :doc Move a permanently failed job to the dead letter queue. With :attempts, fenced to the claimed execution.
 WITH moved AS (
   DELETE FROM jobs
   WHERE id = :id
+--~ (when (:attempts params) "AND status = 'processing' AND attempts = :attempts")
   RETURNING *
 )
 INSERT INTO dead_letter_jobs (original_job, error_message)
@@ -58,14 +87,21 @@ SELECT row_to_json(moved), :error_message
 FROM moved;
 
 -- :name recover-stuck-jobs! :! :n
--- :doc Return crashed processing jobs with attempts left back to pending
-UPDATE jobs
-SET status = 'pending',
-    last_error = 'Job stuck in processing state - recovered',
-    last_error_at = now()
-WHERE status = 'processing'
-  AND started_at < (now() - (:timeout_minutes || ' minutes')::interval)
-  AND attempts < max_attempts;
+-- :doc Re-enqueue crashed processing jobs with attempts left. Goes through the dedup gate per row: a stuck job superseded by a newer pending job is dropped instead of aborting the whole batch.
+WITH stuck AS (
+  DELETE FROM jobs
+  WHERE status = 'processing'
+    AND started_at < (now() - (:timeout_minutes || ' minutes')::interval)
+    AND attempts < max_attempts
+  RETURNING *
+)
+INSERT INTO jobs (id, type, payload, status, priority, run_at, attempts, max_attempts,
+                  created_at, created_by, dedup_key, error_message, last_error, last_error_at)
+SELECT id, type, payload, 'pending', priority, now(), attempts, max_attempts,
+       created_at, created_by, dedup_key, error_message,
+       'Job stuck in processing state - recovered', now()
+FROM stuck
+ON CONFLICT (type, dedup_key) WHERE dedup_key IS NOT NULL AND status = 'pending' DO NOTHING;
 
 -- :name dead-letter-stuck-jobs! :! :n
 -- :doc Move crashed processing jobs with no attempts left to the dead letter queue
@@ -120,7 +156,9 @@ SELECT
     (SELECT count(*) FROM dead_letter_jobs WHERE acknowledged = false) as dead_count,
     extract(epoch from (now() - min(created_at) FILTER (WHERE status = 'pending'))) / 60 as oldest_pending_minutes,
     extract(epoch from (now() - min(started_at) FILTER (WHERE status = 'processing'))) / 60 as longest_processing_minutes
-FROM jobs;
+FROM jobs
+-- Every metric concerns pending/processing rows; completed history is noise
+WHERE status IN ('pending', 'processing');
 
 -- :name get-performance-metrics :? :*
 -- :doc Get performance metrics by job type within timeframe
@@ -241,6 +279,15 @@ SET acknowledged = true,
     acknowledged_by = :acknowledged_by,
     acknowledged_at = now()
 WHERE id = :id;
+
+-- :name acknowledge-dead-letter-jobs! :! :n
+-- :doc Bulk acknowledge dead letter jobs in one statement. Skips already-acknowledged rows, so the count reflects newly acknowledged jobs only.
+UPDATE dead_letter_jobs
+SET acknowledged = true,
+    acknowledged_by = :acknowledged_by,
+    acknowledged_at = now()
+WHERE id = ANY(:ids::bigint[])
+  AND acknowledged = false;
 
 -- :name requeue-dead-letter-job! :<! :1
 -- :doc Requeue a dead letter job back to the main queue and mark it acknowledged

@@ -65,6 +65,10 @@
 
     (if still-valid?
       (do
+        ;; Deliberately writes back via the low-level upsert + direct
+        ;; index instead of core/save-sports-site!: the robot's enrichment
+        ;; revision must not enqueue new analysis/elevation jobs, or every
+        ;; completed elevation job would trigger another save-jobs cycle.
         (-> current
             (assoc-in [:location :geometries] fcoll)
             (->> (core/upsert-sports-site!* db user))

@@ -16,8 +16,12 @@ scheduler ───────────► email jobs        ├── fast 
 ```
 
 - **Producers** call `lipas.jobs.core/enqueue-job!`. The main producer is
-  `save-sports-site!`, which enqueues `analysis` (every save) and
-  `elevation` (route geometries).
+  `save-sports-site!`, which enqueues `analysis` and `elevation` (routes
+  only) **after its transaction commits**, and only when the save changed
+  the inputs the job consumes (registry `:trigger-fn`, see below). The
+  elevation handler writes its enriched revision back through the
+  low-level upsert on purpose — a robot save must not enqueue new jobs,
+  or every completed enrichment would trigger another cycle.
 - **The worker** (`lipas.jobs.worker`) polls the `jobs` table with
   `SELECT FOR UPDATE SKIP LOCKED` and runs handlers on two thread pools:
   a fast lane reserved for quick jobs and a general lane for everything.
@@ -44,6 +48,24 @@ in the future (exponential backoff with jitter). Permanently failed jobs
 live only in `dead_letter_jobs`, where admins can inspect, reprocess or
 acknowledge them via the admin UI.
 
+Three invariants are enforced by the SQL statements themselves
+(`resources/sql/jobs.sql`), not by convention:
+
+1. **One door into `pending`.** Every transition into `pending` — fresh
+   enqueue, retry, stuck recovery — is an `INSERT … ON CONFLICT DO
+   NOTHING` against the pending-only dedup index. A conflict is not an
+   error: it means a newer pending job for the same entity already covers
+   the work, and the retry/recovery is dropped as *superseded*.
+2. **Fenced finalization.** Claiming a job increments `attempts`, and
+   every finalizer (`completed`, retry, dead-letter) matches
+   `(id, attempts, status = 'processing')`. A stale executor — a zombie
+   thread, a double finalization — updates zero rows instead of
+   clobbering newer state. The database is the arbiter of ownership.
+3. **Per-entity sequential execution.** `fetch-next-jobs` never claims a
+   pending job while a processing job with the same `(type, dedup_key)`
+   exists, so a successor always runs strictly after its predecessor and
+   its fresher results can never be overwritten by a slower stale run.
+
 ## Job type registry
 
 `lipas.jobs.registry` is the single source of truth. Each entry defines:
@@ -57,6 +79,7 @@ acknowledge them via the admin UI.
 | `:max-attempts` | retries before dead-lettering |
 | `:dedup-key-fn` | optional — deduplicates pending jobs |
 | `:debounce-sec` | optional — delay before the job is runnable |
+| `:trigger-fn` | optional — `(fn [old-site new-site])`; save enqueues the job only when its inputs changed |
 
 Handlers are `defmethod`s on `lipas.jobs.dispatcher/handle-job`; the
 worker asserts at startup that every registered type has one.
@@ -73,32 +96,57 @@ Current job types:
 To add a job type: add a registry entry, add a `handle-job` defmethod,
 enqueue it somewhere. That's it.
 
-## Dedup and debounce
+## Change triggers, dedup and debounce
 
-Repeated saves of the same sports site coalesce: `analysis`/`elevation`
-carry a dedup key (`analysis:<lipas-id>`) and a 30-second debounce delay,
-so a burst of edits (or a bulk operation) produces one pending job per
-site instead of one per save.
+Three layers keep the expensive jobs from running needlessly:
 
-Deduplication applies to **pending** jobs only. If a job is already
-processing when a new edit arrives, a successor is enqueued — the running
-execution may have read pre-edit data, so suppressing the successor would
-lose the update. Concurrency is handled with a partial unique index +
-`ON CONFLICT DO NOTHING`; a losing `enqueue-job!` returns `nil`.
+1. **Change triggers.** A save enqueues `elevation` only when the 2D
+   geometries changed (or previously enriched z data was lost), and
+   `analysis` only when the type code, status or 2D geometries changed.
+   A phone-number edit — or a bulk property update across hundreds of
+   sites — enqueues nothing. Comparisons are conservative: no previous
+   revision or unrecognized shape means enqueue. The z coordinates that
+   elevation writes back are invisible to the diff, which also breaks
+   any enrichment feedback loop.
+2. **Dedup.** `analysis`/`elevation` carry a dedup key
+   (`analysis:<lipas-id>`), so a burst of edits produces one pending job
+   per site. Deduplication applies to **pending** jobs only: if a job is
+   already processing when a new edit arrives, a successor is enqueued —
+   the running execution may have read pre-edit data. Concurrency is
+   handled with a partial unique index + `ON CONFLICT DO NOTHING`; a
+   losing `enqueue-job!` returns `nil`.
+3. **Debounce.** A 30-second `run_at` delay coalesces rapid edit bursts
+   before the job becomes claimable.
+
+The running job is never cancelled when superseded: it completes, and
+the successor (serialized after it by the claim guard) recomputes with
+fresh data. In the other direction, a *failed* job whose successor is
+already pending is dropped instead of retried.
 
 ## Timeouts and stuck jobs
 
 Handlers run directly on worker pool threads. A single watchdog thread
 interrupts a pool thread when its job exceeds the registry timeout. The
 interrupt flag is cleared (under a lock) before the job's status is
-updated, so a timed-out job is failed exactly once and no orphaned
-execution races its own retry.
+updated.
+
+If the handler has not unwound one minute after the interrupt
+(`worker/watchdog-grace-ms`) — non-interruptible IO, a swallowed
+interrupt — the watchdog finalizes the job in the DB itself (retry or
+dead-letter) and the handler thread is left behind as a **zombie**: it
+keeps occupying its lane thread until its blocking call returns, but
+fenced finalization guarantees its late DB updates are no-ops. Zombies
+are logged loudly and counted in `worker-stats`; handlers must set
+socket timeouts so they cannot hang forever (the SMTP client sets
+`mail.smtp.*timeout`, the MML client sets HTTP timeouts).
 
 Crash recovery: jobs stuck in `processing` longer than
 `lipas.jobs.core/stuck-job-timeout-minutes` (longest registered timeout
 + 30 min margin) are recovered on worker startup and every 10 minutes by
-the scheduler — back to `pending` if attempts remain, otherwise to the
-dead letter queue.
+the scheduler — re-enqueued through the dedup gate if attempts remain
+(dropped when a newer pending job supersedes them), otherwise moved to
+the dead letter queue. Recovery is per-row: one superseded job never
+blocks the rest of the batch.
 
 ## Reliability patterns (`lipas.jobs.patterns`)
 
@@ -107,6 +155,8 @@ dead letter queue.
   consecutive failures, elevation jobs fail fast (and retry via the normal
   retry machinery) for 2 minutes instead of hammering a down service.
   State is per-JVM, which is sufficient for the single worker process.
+  Thread interrupts (the watchdog firing) are rethrown without counting
+  as failures — a slow job says nothing about the service's health.
 - **`pmap-with-timeout`** for per-chunk timeouts inside handlers.
 
 ## Retention

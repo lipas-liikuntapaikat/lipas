@@ -111,12 +111,30 @@
                  {:service service-name
                   :failure-count (:failure-count breaker)}))))
 
+(defn- interrupt?
+  "True when ex is (or was caused by) a thread interrupt, or the current
+  thread's interrupt flag is set. An interrupt comes from the worker's
+  watchdog timeout, not from the protected service, so it must not count
+  as a service failure."
+  [^Throwable ex]
+  (or (.isInterrupted (Thread/currentThread))
+      (loop [^Throwable e ex]
+        (cond
+          (nil? e) false
+          (instance? InterruptedException e) true
+          (instance? java.io.InterruptedIOException e) true
+          :else (recur (.getCause e))))))
+
 (defn with-circuit-breaker*
   "Execute f with circuit breaker protection.
 
   Options:
   :failure-threshold - consecutive failures before opening (default 5)
   :open-duration-ms  - how long to fail fast before a trial call (default 60000)
+
+  Thread interrupts (e.g. the job watchdog firing at the timeout) are
+  rethrown without being counted: they say nothing about the health of the
+  protected service.
 
   Throws the fail-fast exception (see circuit-breaker-open?) while open."
   [service-name {:keys [failure-threshold open-duration-ms]
@@ -133,13 +151,19 @@
           (on-success service-name)
           result)
         (catch Exception e
-          (if (= :open state)
+          (cond
+            (interrupt? e)
+            (throw e)
+
+            (= :open state)
             ;; Failed trial call - reopen immediately
             (do (swap! breakers assoc service-name
                        {:state :open
                         :failure-count (:failure-count breaker)
                         :opened-at (now-ms)})
                 (throw e))
+
+            :else
             (do (on-failure service-name failure-threshold)
                 (throw e))))))))
 

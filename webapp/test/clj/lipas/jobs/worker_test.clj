@@ -141,6 +141,78 @@
             (worker/execute-job! {:db db} watchdog job))
           (is (= "completed" (:jobs/status (test-utils/get-job-by-id db (:id job))))))))))
 
+(defn- uninterruptible-handler
+  "Simulates a handler stuck in non-interruptible IO: swallows interrupts
+  and keeps running for duration-ms, then returns normally."
+  [duration-ms]
+  (fn [_ _]
+    (let [deadline (+ (System/currentTimeMillis) duration-ms)]
+      (while (< (System/currentTimeMillis) deadline)
+        (try (Thread/sleep 20)
+             (catch InterruptedException _))))))
+
+(deftest watchdog-escalation-zombie-test
+  (testing "Handler ignoring the interrupt: watchdog finalizes at timeout+grace, late completion is a fenced no-op"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)
+              zombies-before (:zombie-count @worker/worker-state 0)]
+          (with-redefs [registry/timeout-ms (fn [_] 100)
+                        worker/watchdog-grace-ms 200
+                        dispatcher/handle-job (uninterruptible-handler 1200)]
+            ;; Blocks for the full 1200ms; the watchdog escalates at ~300ms
+            (worker/execute-job! {:db db} watchdog job))
+
+          (let [after (test-utils/get-job-by-id db (:id job))]
+            (is (= "pending" (:jobs/status after))
+                "The watchdog force-finalized the job as a retry, and the zombie's late completion could not overwrite it")
+            (is (re-find #"did not respond to interrupt" (:jobs/error_message after)))
+            (is (= 1 (:jobs/attempts after))))
+
+          (is (= (inc zombies-before) (:zombie-count @worker/worker-state))
+              "The zombie is counted in worker stats")))))
+
+  (testing "Same scenario with attempts exhausted: watchdog dead-letters the job"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db {:max-attempts 1})]
+          (with-redefs [registry/timeout-ms (fn [_] 100)
+                        worker/watchdog-grace-ms 200
+                        dispatcher/handle-job (uninterruptible-handler 1200)]
+            (worker/execute-job! {:db db} watchdog job))
+
+          (is (nil? (test-utils/get-job-by-id db (:id job)))
+              "The job left the jobs table at timeout+grace")
+          (let [[dlj] (jobs/get-dead-letter-jobs db {:acknowledged false})]
+            (is (re-find #"did not respond to interrupt" (:error-message dlj)))))))))
+
+(deftest watchdog-escalation-not-triggered-on-cooperative-handlers-test
+  (testing "A handler that unwinds promptly on interrupt is finalized by the pool thread, not the watchdog"
+    (with-watchdog
+      (fn [watchdog]
+        (let [db (test-db)
+              job (enqueue-and-fetch! db)
+              zombies-before (:zombie-count @worker/worker-state 0)]
+          (with-redefs [registry/timeout-ms (fn [_] 100)
+                        worker/watchdog-grace-ms 200
+                        dispatcher/handle-job (fn [_ _]
+                                                (try (Thread/sleep 3000)
+                                                     (catch InterruptedException _
+                                                       (throw (InterruptedException.)))))]
+            (worker/execute-job! {:db db} watchdog job))
+
+          ;; Give a cancelled escalation task time to (not) fire
+          (Thread/sleep 400)
+          (let [after (test-utils/get-job-by-id db (:id job))]
+            (is (= "pending" (:jobs/status after)))
+            (is (re-find #"timed out" (:jobs/error_message after)))
+            (is (not (re-find #"did not respond" (:jobs/error_message after)))
+                "The pool thread's finalization wins; escalation was cancelled"))
+          (is (= zombies-before (:zombie-count @worker/worker-state))
+              "No zombie is counted for a cooperative handler"))))))
+
 (deftest execute-job-error-message-fallback-test
   (testing "Exceptions without a message still produce a non-null error"
     (with-watchdog
