@@ -97,11 +97,13 @@
 
 (rf/reg-event-fx ::refresh-all
   (fn [{:keys [db]} _]
+    ;; The light queries only. The metrics report (4 aggregate queries
+    ;; feeding an hour-granularity chart) is fetched on mount, on manual
+    ;; refresh and on window change - not on every poll tick.
     {:db (-> db
              (assoc-in [:admin :jobs :loading?] true)
              (assoc-in [:admin :jobs :error] nil))
      :fx [[:dispatch [::fetch-health]]
-          [:dispatch [::fetch-metrics]]
           [:dispatch [::fetch-queue]]
           [:dispatch [::fetch-recent]]
           [:dispatch [::fetch-dead-letters]]]}))
@@ -118,6 +120,7 @@
                (assoc-in [:admin :jobs :polling?] true)
                (assoc-in [:admin :jobs :poll-token] token))
        :fx [[:dispatch [::refresh-all]]
+            [:dispatch [::fetch-metrics]]
             [:dispatch-later {:ms poll-interval-ms :dispatch [::poll token]}]]})))
 
 (rf/reg-event-fx ::poll

@@ -298,22 +298,14 @@
     results))
 
 (defn acknowledge-dead-letter-jobs!
-  "Acknowledge dead letter jobs without reprocessing them.
-  Returns map with :acknowledged count."
+  "Acknowledge dead letter jobs without reprocessing them, in a single
+  statement - the admin UI acknowledges whole triage groups at once.
+  Already-acknowledged and nonexistent ids are skipped.
+  Returns map with :acknowledged count of newly acknowledged jobs."
   [db dead-letter-ids user-email]
-  (let [n (reduce (fn [n id]
-                    (try
-                      (let [dlj (jobs-db/get-dead-letter-by-id db {:id id})]
-                        (if (and dlj (not (:acknowledged dlj)))
-                          (do
-                            (jobs-db/acknowledge-dead-letter! db
-                                                              {:id id
-                                                               :acknowledged_by user-email})
-                            (inc n))
-                          n))
-                      (catch Exception e
-                        (log/error e "Failed to acknowledge dead letter job" {:id id})
-                        n)))
-                  0
-                  dead-letter-ids)]
-    {:acknowledged n}))
+  {:acknowledged (if (seq dead-letter-ids)
+                   (jobs-db/acknowledge-dead-letter-jobs!
+                    db
+                    {:ids (long-array dead-letter-ids)
+                     :acknowledged_by user-email})
+                   0)})

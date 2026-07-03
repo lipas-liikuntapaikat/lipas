@@ -156,7 +156,9 @@ SELECT
     (SELECT count(*) FROM dead_letter_jobs WHERE acknowledged = false) as dead_count,
     extract(epoch from (now() - min(created_at) FILTER (WHERE status = 'pending'))) / 60 as oldest_pending_minutes,
     extract(epoch from (now() - min(started_at) FILTER (WHERE status = 'processing'))) / 60 as longest_processing_minutes
-FROM jobs;
+FROM jobs
+-- Every metric concerns pending/processing rows; completed history is noise
+WHERE status IN ('pending', 'processing');
 
 -- :name get-performance-metrics :? :*
 -- :doc Get performance metrics by job type within timeframe
@@ -277,6 +279,15 @@ SET acknowledged = true,
     acknowledged_by = :acknowledged_by,
     acknowledged_at = now()
 WHERE id = :id;
+
+-- :name acknowledge-dead-letter-jobs! :! :n
+-- :doc Bulk acknowledge dead letter jobs in one statement. Skips already-acknowledged rows, so the count reflects newly acknowledged jobs only.
+UPDATE dead_letter_jobs
+SET acknowledged = true,
+    acknowledged_by = :acknowledged_by,
+    acknowledged_at = now()
+WHERE id = ANY(:ids::bigint[])
+  AND acknowledged = false;
 
 -- :name requeue-dead-letter-job! :<! :1
 -- :doc Requeue a dead letter job back to the main queue and mark it acknowledged
