@@ -2,27 +2,54 @@
   "Mixed-duration job worker with fast lane and general lane processing.
 
   Prevents head-of-line blocking by reserving threads for fast jobs while
-  allowing slow jobs to run in the general pool."
+  slow jobs run in the general pool.
+
+  Jobs execute directly on the pool threads. A hard per-job-type timeout
+  (from the registry) is enforced by a watchdog that interrupts the pool
+  thread. If the handler does not unwind within a grace period (e.g. it is
+  blocked in non-interruptible IO), the watchdog force-finalizes the job in
+  the DB and the still-running handler becomes a zombie: it keeps occupying
+  its pool thread until its IO returns, but every DB finalization is fenced
+  by (id, claimed attempts, status='processing'), so a zombie can never
+  clobber the state of a retry or of a recovered job - its late updates
+  affect zero rows. Zombies are counted in worker-stats and logged loudly;
+  handlers must set socket timeouts so they cannot hang forever."
   (:require
+   [clojure.set :as set]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.dispatcher :as dispatcher]
-   [lipas.jobs.monitoring :as monitoring]
-   [lipas.jobs.patterns :as patterns]
+   [lipas.jobs.registry :as registry]
    [taoensso.timbre :as log])
   (:import
-   [java.util.concurrent Executors ThreadPoolExecutor TimeUnit]))
+   [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor TimeUnit]))
 
 (defonce worker-state (atom {:running? false
                              :pools nil
-                             :futures []}))
+                             :watchdog nil
+                             :futures []
+                             :zombie-count 0}))
 
 (def default-config
-  {:fast-threads 1
-   :general-threads 1
-   :batch-size 5
-   :poll-interval-ms 3000
-   :fast-timeout-minutes 2
-   :slow-timeout-minutes 30})
+  {:fast-threads 2
+   :general-threads 2
+   :batch-size 10
+   :poll-interval-ms 3000})
+
+(def watchdog-grace-ms
+  "After interrupting the pool thread at the timeout, the watchdog waits
+  this long for the handler to unwind before force-finalizing the job in
+  the DB (leaving the handler behind as a zombie thread)."
+  60000)
+
+(defn- assert-handlers-registered!
+  "Fail fast at startup when a registered job type has no dispatcher method."
+  []
+  (let [handled (set (keys (methods dispatcher/handle-job)))
+        registered (set (keys registry/job-types))
+        missing (set/difference registered handled)]
+    (when (seq missing)
+      (throw (ex-info "Job types registered without a dispatcher handler"
+                      {:missing missing})))))
 
 (defn create-worker-pools
   "Create separate thread pools for fast and general job processing."
@@ -41,90 +68,130 @@
     (.awaitTermination ^ThreadPoolExecutor general-pool 30 TimeUnit/SECONDS))
   (log/info "Thread pools shut down"))
 
+(defn execute-job!
+  "Run a single job on the current thread with a hard timeout.
+
+  The watchdog interrupts this thread when the timeout elapses. The lock
+  guarantees the interrupt is delivered only while the job body is running:
+  after the body finishes (normally or not) the interrupt flag is cleared
+  before any DB status update.
+
+  If the handler has not unwound watchdog-grace-ms after the interrupt
+  (non-interruptible IO, swallowed interrupt), the watchdog finalizes the
+  job in the DB itself and this thread is left behind as a zombie. Every
+  finalization is fenced by the claimed attempts value, so whichever of
+  the pool thread and the watchdog finalizes first wins and the loser
+  updates zero rows - the job is finalized exactly once either way."
+  [{:keys [db] :as system} ^ScheduledExecutorService watchdog job]
+  (let [job-id (:id job)
+        job-type (:type job)
+        attempts (:attempts job)
+        max-attempts (:max_attempts job)
+        timeout-ms (registry/timeout-ms job-type)
+        timeout-msg (format "Job execution timed out after %d minutes"
+                            (long (/ timeout-ms 60000)))
+        thread (Thread/currentThread)
+        lock (Object.)
+        state (atom :running)
+        watchdog-task (.schedule watchdog
+                                 ^Runnable
+                                 (fn []
+                                   (locking lock
+                                     (when (compare-and-set! state :running :timed-out)
+                                       (.interrupt thread))))
+                                 (long timeout-ms)
+                                 TimeUnit/MILLISECONDS)
+        escalation-task (.schedule watchdog
+                                   ^Runnable
+                                   (fn []
+                                     (try
+                                       (let [n (jobs/fail-job! db job-id
+                                                               (str timeout-msg
+                                                                    " (handler did not respond to interrupt)")
+                                                               {:current-attempt attempts
+                                                                :max-attempts max-attempts
+                                                                :attempts attempts})]
+                                         (when (pos? n)
+                                           (let [zombies (:zombie-count (swap! worker-state update :zombie-count inc))]
+                                             (log/error "Watchdog force-finalized a job; its handler thread is a zombie occupying its lane until the blocking call returns"
+                                                        {:id job-id
+                                                         :type job-type
+                                                         :thread (.getName thread)
+                                                         :zombie-count zombies}))))
+                                       (catch Exception e
+                                         (log/error e "Watchdog escalation failed" {:id job-id}))))
+                                   (long (+ timeout-ms watchdog-grace-ms))
+                                   TimeUnit/MILLISECONDS)
+        started-ms (System/currentTimeMillis)
+        result (try
+                 (log/with-context {:job-id job-id :job-type job-type}
+                   (log/debug "Processing job" {:type job-type :attempt attempts})
+                   (dispatcher/handle-job system job))
+                 ::ok
+                 (catch Throwable t t)
+                 (finally
+                   (locking lock
+                     (compare-and-set! state :running :done))
+                   (.cancel watchdog-task false)
+                   (.cancel escalation-task false)
+                   ;; Clear the interrupt flag in case the watchdog fired
+                   (Thread/interrupted)))
+        duration-ms (- (System/currentTimeMillis) started-ms)]
+    (cond
+      (= ::ok result)
+      (do
+        (when (= :timed-out @state)
+          (log/warn "Job returned normally after its timeout interrupt"
+                    {:id job-id :type job-type :duration-ms duration-ms}))
+        (when (pos? (jobs/mark-completed! db job-id attempts))
+          (log/info "Job completed" {:id job-id :type job-type :duration-ms duration-ms})))
+
+      (= :timed-out @state)
+      (do
+        (log/error "Job timed out" {:id job-id
+                                    :type job-type
+                                    :timeout-ms timeout-ms
+                                    :duration-ms duration-ms})
+        (jobs/fail-job! db job-id
+                        timeout-msg
+                        {:current-attempt attempts
+                         :max-attempts max-attempts
+                         :attempts attempts}))
+
+      :else
+      (let [^Throwable ex result]
+        (log/error ex "Job failed" {:id job-id :type job-type :duration-ms duration-ms})
+        (jobs/fail-job! db job-id
+                        (or (.getMessage ex) (str (class ex)))
+                        {:current-attempt attempts
+                         :max-attempts max-attempts
+                         :attempts attempts})))))
+
 (defn process-job-batch
-  "Process a batch of jobs using the appropriate thread pool with enhanced reliability."
-  [system pools jobs lane-type config]
+  "Submit a batch of jobs to the appropriate thread pool."
+  [system pools watchdog jobs lane-type]
   (let [pool (case lane-type
                :fast (:fast-pool pools)
-               :general (:general-pool pools))
-        {:keys [db]} system
-        ;; Use configuration values instead of hardcoded timeouts
-        base-timeout-ms (case lane-type
-                          :fast (* 60000 (:fast-timeout-minutes config 2))
-                          :general (* 60000 (:slow-timeout-minutes config 30)))
-        job-type-timeouts (:job-type-timeouts config {})]
-
+               :general (:general-pool pools))]
     (doseq [job jobs]
-      (.submit pool
+      (.submit ^ThreadPoolExecutor pool
                ^Runnable
                (fn []
-                 (let [correlation-id (:correlation_id job)
-                       job-id (:id job)
-                       job-type (:type job)
-                       started-at (java.sql.Timestamp. (System/currentTimeMillis))
-                       ;; Use job-type specific timeout if available
-                       timeout-ms (if-let [job-timeout (get job-type-timeouts job-type)]
-                                    (* 60000 job-timeout)
-                                    base-timeout-ms)]
-                   (try
-                     ;; Add correlation ID to logging context
-                     (log/with-context {:correlation-id correlation-id
-                                        :job-id job-id
-                                        :job-type job-type}
-                       (log/debug "Processing job" {:job job :timeout-ms timeout-ms})
-
-                       ;; Execute with timeout protection
-                       (patterns/with-timeout timeout-ms
-                         (dispatcher/dispatch-job system job))
-
-                       ;; Record success metrics
-                       (monitoring/record-job-metric! db job-type "completed"
-                                                      started-at (:created_at job) correlation-id))
-
-                     (catch java.util.concurrent.TimeoutException ex
-                       (log/error "Job timed out"
-                                  {:job-id job-id
-                                   :job-type job-type
-                                   :timeout-ms timeout-ms
-                                   :timeout-minutes (/ timeout-ms 60000)})
-                       (jobs/fail-job! db job-id "Job execution timed out"
-                                       {:current-attempt (:attempts job)
-                                        :max-attempts (:max_attempts job)
-                                        :correlation-id correlation-id})
-                       (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job) correlation-id))
-
-                     (catch OutOfMemoryError oom
-                       (log/error "Job failed with OutOfMemoryError"
-                                  {:job-id job-id
-                                   :job-type job-type})
-                       ;; Try to recover by forcing GC
-                       (System/gc)
-                       (jobs/fail-job! db job-id "java.lang.OutOfMemoryError: Java heap space"
-                                       {:current-attempt (:attempts job)
-                                        :max-attempts (:max_attempts job)
-                                        :correlation-id correlation-id})
-                       (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job) correlation-id))
-
-                     (catch Exception ex
-                       (log/error ex "Job processing failed" {:job job})
-                       (jobs/fail-job! db job-id (.getMessage ex)
-                                       {:current-attempt (:attempts job)
-                                        :max-attempts (:max_attempts job)
-                                        :correlation-id correlation-id})
-                       (monitoring/record-job-metric! db job-type "failed"
-                                                      started-at (:created_at job) correlation-id)))))))))
+                 (try
+                   (execute-job! system watchdog job)
+                   (catch Throwable t
+                     ;; execute-job! handles job failures itself; this only
+                     ;; triggers if the status update itself blew up
+                     (log/error t "Unexpected error finalizing job" {:id (:id job)}))))))))
 
 (defn fetch-and-process-jobs
-  "Fetch jobs and route them to appropriate thread pools.
-   Only fetch jobs that can actually be processed based on available thread capacity."
-  [system pools config]
+  "Fetch jobs and route them to thread pools. Only fetches as many jobs as
+  there are free threads, so fetched jobs start executing immediately."
+  [system pools watchdog config]
   (let [{:keys [batch-size]} config
         {:keys [db]} system
         {:keys [fast-pool general-pool]} pools
 
-        ;; Check available thread capacity first
         fast-active (.getActiveCount ^ThreadPoolExecutor fast-pool)
         fast-capacity (.getCorePoolSize ^ThreadPoolExecutor fast-pool)
         fast-available (max 0 (- fast-capacity fast-active))
@@ -133,113 +200,88 @@
         general-capacity (.getCorePoolSize ^ThreadPoolExecutor general-pool)
         general-available (max 0 (- general-capacity general-active))
 
-        ;; For fast jobs: batch up to available capacity
         fast-fetch-limit (min batch-size fast-available)
-        ;; For slow jobs: fetch one at a time to allow thread reuse
-        general-fetch-limit (min 1 general-available)]
+        general-fetch-limit (min batch-size general-available)
 
-    ;; Only log capacity when we have work to do or when pools are at capacity
-    (when (or (pos? fast-fetch-limit)
-              (pos? general-fetch-limit)
-              (and (zero? fast-available) (zero? general-available)))
-      (log/debug "Thread capacity check"
-                 {:fast-active fast-active :fast-available fast-available
-                  :general-active general-active :general-available general-available
-                  :fast-fetch-limit fast-fetch-limit :general-fetch-limit general-fetch-limit}))
+        fast-jobs (when (pos? fast-fetch-limit)
+                    (jobs/fetch-next-jobs db {:limit fast-fetch-limit
+                                              :job-types (vec registry/fast-job-types)}))
+        general-jobs (when (pos? general-fetch-limit)
+                       (jobs/fetch-next-jobs db {:limit general-fetch-limit}))]
 
-    ;; Fetch jobs for fast lane only if we have capacity
-    (let [fast-jobs (when (pos? fast-fetch-limit)
-                      (let [fast-job-types (vec (:fast jobs/job-duration-types))]
-                        (jobs/fetch-next-jobs db {:limit fast-fetch-limit
-                                                  :job-types fast-job-types})))
+    (when (seq fast-jobs)
+      (process-job-batch system pools watchdog fast-jobs :fast))
+    (when (seq general-jobs)
+      (process-job-batch system pools watchdog general-jobs :general))
 
-          ;; Fetch jobs for general lane only if we have capacity (one at a time)
-          general-jobs (when (pos? general-fetch-limit)
-                         (jobs/fetch-next-jobs db {:limit general-fetch-limit}))]
-
-      ;; Process fast jobs in fast lane
-      (when (seq fast-jobs)
-        (log/debug "Processing fast jobs" {:count (count fast-jobs)})
-        (process-job-batch system pools fast-jobs :fast config))
-
-      ;; Process general jobs in general lane
-      (when (seq general-jobs)
-        (log/debug "Processing general jobs" {:count (count general-jobs)})
-        (process-job-batch system pools general-jobs :general config))
-
-      ;; Return total processed
-      (+ (count (or fast-jobs [])) (count (or general-jobs []))))))
+    (+ (count fast-jobs) (count general-jobs))))
 
 (defn worker-loop
   "Main worker loop that polls for jobs and processes them."
-  [system pools config]
+  [system pools watchdog config]
   (log/info "Starting worker loop" config)
-
   (while (:running? @worker-state)
     (try
-      (let [processed-count (fetch-and-process-jobs system pools config)]
+      (let [processed-count (fetch-and-process-jobs system pools watchdog config)]
         (when (zero? processed-count)
-          ;; No jobs available, sleep before next poll
-          (Thread/sleep (:poll-interval-ms config))))
-
+          (Thread/sleep (long (:poll-interval-ms config)))))
       (catch InterruptedException _
         (log/info "Worker loop interrupted"))
       (catch Exception ex
         (log/error ex "Error in worker loop")
-        (Thread/sleep 5000)))) ; Brief pause on error
-
+        (Thread/sleep 5000))))
   (log/info "Worker loop stopped"))
 
 (defn start-mixed-duration-worker!
   "Start the mixed-duration worker with fast and general lanes."
   [system config]
-  (when (:running? @worker-state)
+  (if (:running? @worker-state)
     (log/warn "Worker already running")
-    nil)
+    (let [merged-config (merge default-config config)
+          pools (create-worker-pools merged-config)
+          watchdog (Executors/newSingleThreadScheduledExecutor)
+          {:keys [db]} system]
 
-  (let [merged-config (merge default-config config)
-        pools (create-worker-pools merged-config)
-        {:keys [db]} system]
+      (assert-handlers-registered!)
+      (log/info "Starting mixed-duration worker" merged-config)
 
-    (log/info "Starting mixed-duration worker" merged-config)
+      ;; Recover any jobs left in processing state by a previous crash
+      (try
+        (jobs/recover-stuck-jobs! db jobs/stuck-job-timeout-minutes)
+        (catch Exception e
+          (log/error e "Failed to recover stuck jobs during startup")))
 
-    ;; Reset any stuck jobs from previous run
-    (try
-      (jobs/reset-stuck-jobs! db (:stuck-job-timeout-minutes merged-config 30))
-      (log/info "Reset stuck jobs from previous run")
-      (catch Exception e
-        (log/error e "Failed to reset stuck jobs during startup")))
+      (swap! worker-state assoc
+             :running? true
+             :pools pools
+             :watchdog watchdog)
 
-    (swap! worker-state assoc
-           :running? true
-           :pools pools)
+      (let [worker-future (future (worker-loop system pools watchdog merged-config))]
+        (swap! worker-state update :futures conj worker-future))
 
-    ;; Start worker loop in background thread
-    (let [worker-future (future (worker-loop system pools merged-config))]
-      (swap! worker-state update :futures conj worker-future))
-
-    (log/info "Mixed-duration worker started successfully")))
+      (log/info "Mixed-duration worker started successfully"))))
 
 (defn stop-mixed-duration-worker!
-  "Stop the mixed-duration worker and cleanup resources."
+  "Stop the mixed-duration worker and clean up resources."
   []
   (log/info "Stopping mixed-duration worker")
-
   (swap! worker-state assoc :running? false)
 
-  ;; Wait for worker threads to finish
-  (doseq [future (:futures @worker-state)]
+  (doseq [f (:futures @worker-state)]
     (try
-      (deref future 10000 :timeout) ; Wait up to 10 seconds
+      (deref f 10000 :timeout)
       (catch Exception ex
         (log/warn ex "Error stopping worker thread"))))
 
-  ;; Shutdown thread pools
   (when-let [pools (:pools @worker-state)]
     (shutdown-pools! pools))
 
+  (when-let [watchdog (:watchdog @worker-state)]
+    (.shutdownNow ^ScheduledExecutorService watchdog))
+
   (swap! worker-state assoc
          :pools nil
+         :watchdog nil
          :futures [])
 
   (log/info "Mixed-duration worker stopped"))
@@ -251,7 +293,8 @@
         pools (:pools state)]
     (merge
      {:running? (:running? state)
-      :active-futures (count (:futures state))}
+      :active-futures (count (:futures state))
+      :zombie-count (:zombie-count state 0)}
      (when pools
        {:fast-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:fast-pool pools))
         :fast-active (.getActiveCount ^ThreadPoolExecutor (:fast-pool pools))

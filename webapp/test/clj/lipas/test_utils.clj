@@ -605,9 +605,7 @@
    "city"
    "jobs"
    "org"
-   "job_metrics"
    "dead_letter_jobs"
-   "circuit_breakers"
    "versioned_data"
    "reminder"
    "sports_site"
@@ -1161,32 +1159,28 @@
           :or {job-type "email"
                payload {:to "test@example.com" :template "welcome"}
                error-message "SMTP connection failed"}}]]
-  ;; Require jobs-db dynamically to avoid circular dependency
-  (let [jobs-db (requiring-resolve 'lipas.jobs.db/insert-dead-letter!)
-        ack-fn (requiring-resolve 'lipas.jobs.db/acknowledge-dead-letter!)
+  (let [ack-fn (requiring-resolve 'lipas.jobs.db/acknowledge-dead-letter!)
         get-fn (requiring-resolve 'lipas.jobs.db/get-dead-letter-by-id)
-        correlation-id (java.util.UUID/randomUUID)
         original-job {:id 999
                       :type job-type
                       :payload payload
-                      :status "failed"
+                      :status "processing"
                       :priority 100
                       :attempts 3
                       :max_attempts 3
-                      :scheduled_at (java.sql.Timestamp/from (java.time.Instant/now))
-                      :run_at (java.sql.Timestamp/from (java.time.Instant/now))
-                      :created_at (java.sql.Timestamp/from (java.time.Instant/now))
-                      :updated_at (java.sql.Timestamp/from (java.time.Instant/now))
-                      :correlation_id correlation-id}
-        dlj (jobs-db db
-                     {:original_job (j/generate-string original-job)
-                      :error_message error-message
-                      :error_details nil
-                      :correlation_id correlation-id})
+                      :run_at (str (java.time.Instant/now))
+                      :created_at (str (java.time.Instant/now))
+                      :updated_at (str (java.time.Instant/now))}
+        dlj (first
+             (next-jdbc/execute!
+              db
+              ["INSERT INTO dead_letter_jobs (original_job, error_message)
+                VALUES (?::jsonb, ?) RETURNING id"
+               (j/generate-string original-job)
+               error-message]))
+        dlj-id (:dead_letter_jobs/id dlj)
         ;; Support both :acknowledged (boolean) and :acknowledged-by (string)
         ack-user (or acknowledged-by (when acknowledged "system"))]
-    (if ack-user
-      (do
-        (ack-fn db {:id (:id dlj) :acknowledged_by ack-user})
-        (get-fn db {:id (:id dlj)}))
-      dlj)))
+    (when ack-user
+      (ack-fn db {:id dlj-id :acknowledged_by ack-user}))
+    (get-fn db {:id dlj-id})))

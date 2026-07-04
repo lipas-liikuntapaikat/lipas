@@ -1,78 +1,45 @@
 (ns lipas.jobs.core
-  "Unified job queue system for LIPAS background processing.
+  "Unified job queue for LIPAS background processing.
 
-  Provides a single unified jobs table with smart concurrency control
-  for all background tasks (analysis, elevation, email, webhooks, etc.)."
+  Single Postgres-backed jobs table with SELECT FOR UPDATE SKIP LOCKED
+  fetching, retries with exponential backoff and a dead letter queue.
+
+  State model: pending -> processing -> completed. A retry is a pending
+  job with a future run_at. Permanently failed jobs are moved to the
+  dead_letter_jobs table and removed from jobs."
   (:require
-   [cheshire.core]
    [lipas.backend.db.utils :refer [->kebab-case-keywords]]
    [lipas.jobs.db :as jobs-db]
    [lipas.jobs.patterns :as patterns]
-   [lipas.jobs.payload-schema :as payload-schema]
-   [lipas.jobs.schema :as schema]
-   [malli.core :as m]
-   [next.jdbc :as jdbc]
+   [lipas.jobs.registry :as registry]
+   [lipas.jobs.triage :as triage]
    [taoensso.timbre :as log]))
 
-;; Job type specifications - canonical definition in lipas.jobs.schema
+(def job-type-schema registry/job-type-schema)
+(def job-status-schema registry/job-status-schema)
 
-(def job-type-schema schema/job-type-schema)
-(def job-status-schema schema/job-status-schema)
-
-;; Job duration classifications for smart concurrency
-(def job-duration-types
-  "Classification of job types by expected duration.
-  Fast jobs get priority thread allocation to prevent blocking."
-  {:fast #{"email" "produce-reminders" "cleanup-jobs" "webhook"}
-   :slow #{"analysis" "elevation"}})
-
-(defn fast-job?
-  "Check if a job type is classified as fast."
-  [job-type]
-  (contains? (:fast job-duration-types) job-type))
-
-;; Validate that all job types are classified at load time
-(let [all-types (set (rest job-type-schema)) ; Extract types from [:enum "type1" "type2" ...]
-      classified (into #{} (concat (:fast job-duration-types)
-                                   (:slow job-duration-types)))]
-  (when-not (= all-types classified)
-    (let [unclassified (clojure.set/difference all-types classified)
-          extra (clojure.set/difference classified all-types)]
-      (throw (ex-info "Job type duration classification mismatch"
-                      {:unclassified unclassified
-                       :extra extra
-                       :all-types all-types
-                       :classified classified})))))
+(def stuck-job-timeout-minutes
+  "Processing jobs older than this are considered crashed and get recovered.
+  Derived from the longest registered job timeout plus a safety margin, so
+  a legitimately long-running job is never recovered while still running."
+  (+ 30 (apply max (map :timeout-min (vals registry/job-types)))))
 
 (defn enqueue-job!
   "Enqueue a job for processing with payload validation.
 
-  Parameters:
-  - db: Database connection
-  - job-type: String job type (see job-type-schema)
-  - payload: Map containing job-specific data (will be validated)
-  - opts: Optional map with:
-    :priority - Job priority (default 100)
-    :max-attempts - Max retry attempts (default 3)
-    :run-at - When to run (default now)
-    :correlation-id - UUID for tracking related jobs
-    :parent-job-id - ID of parent job
-    :created-by - Who created this job
-    :dedup-key - Deduplication key (prevents duplicate jobs)
+  Registry defaults (priority, max-attempts, dedup key, debounce delay)
+  are applied automatically and can be overridden via opts:
+    :priority     - job priority, higher runs first
+    :max-attempts - max attempts before dead-lettering
+    :run-at       - when to run (overrides registry debounce)
+    :created-by   - who created this job
+    :dedup-key    - deduplication key (overrides registry :dedup-key-fn)
 
-  Returns: Map with :id and :correlation-id
-  Throws: ex-info if validation fails"
-  [db job-type payload & [{:keys [priority max-attempts run-at correlation-id
-                                  parent-job-id created-by dedup-key]
-                           :or {priority 100
-                                max-attempts 3
-                                run-at (java.sql.Timestamp/from (java.time.Instant/now))
-                                correlation-id (java.util.UUID/randomUUID)}}]]
-  {:pre [(m/validate job-type-schema job-type)
-         (map? payload)]}
-
-  ;; Validate payload
-  (let [validation (payload-schema/validate-payload-for-type job-type payload)]
+  Returns {:id <job-id>} or nil when an equal pending job already exists
+  (deduplicated). Throws ex-info on unknown type or invalid payload."
+  [db job-type payload & [{:keys [priority max-attempts run-at created-by dedup-key]}]]
+  (let [job-def (registry/get-def job-type)
+        validation (registry/validate-payload job-type payload)]
     (when-not (:valid? validation)
       (log/error "Invalid job payload"
                  {:job-type job-type
@@ -81,134 +48,147 @@
       (throw (ex-info "Invalid job payload"
                       {:job-type job-type
                        :payload payload
-                       :errors (:errors validation)}))))
-
-  ;; Transform payload (applies defaults)
-  (let [transformed-payload (payload-schema/transform-payload job-type payload)]
-    (log/debug "Enqueuing job with correlation"
+                       :errors (:errors validation)})))
+    (let [dedup-key (or dedup-key
+                        (when-let [f (:dedup-key-fn job-def)]
+                          (f payload)))
+          run-at (or run-at
+                     (java.sql.Timestamp/from
+                      (.plusSeconds (java.time.Instant/now)
+                                    (long (:debounce-sec job-def 0)))))
+          row (jobs-db/enqueue-job!
+               db
                {:type job-type
-                :correlation-id correlation-id
-                :dedup-key dedup-key})
-
-    (jobs-db/enqueue-job-with-correlation!
-     db
-     {:type job-type
-      :payload transformed-payload
-      :priority priority
-      :max_attempts max-attempts
-      :run_at run-at
-      :correlation_id correlation-id
-      :parent_job_id parent-job-id
-      :created_by created-by
-      :dedup_key dedup-key})))
+                :payload payload
+                :priority (or priority (:priority job-def))
+                :max_attempts (or max-attempts (:max-attempts job-def))
+                :run_at run-at
+                :created_by created-by
+                :dedup_key dedup-key})]
+      (if row
+        (do (log/debug "Enqueued job" {:id (:id row) :type job-type})
+            {:id (:id row)})
+        (do (log/debug "Job deduplicated" {:type job-type :dedup-key dedup-key})
+            nil)))))
 
 (defn fetch-next-jobs
-  "Fetch the next batch of jobs to process, with atomic locking.
+  "Fetch the next batch of runnable jobs with atomic locking.
 
   Uses PostgreSQL SELECT FOR UPDATE SKIP LOCKED for safe concurrent access.
 
-  Parameters:
-  - db: Database connection
-  - opts: Map with :limit, :job-types (vector of allowed types)
-
-  Returns: Vector of job maps"
+  opts: :limit (default 5), :job-types (vector of allowed types)"
   [db {:keys [limit job-types] :or {limit 5}}]
-
   (let [jobs (jobs-db/fetch-next-jobs db {:limit limit
-                                          :job_types (when job-types (into-array String job-types))})]
+                                          :job_types (when job-types
+                                                       (into-array String job-types))})]
     (when (seq jobs)
       (log/debug "Fetched jobs" {:count (count jobs) :types (map :type jobs)}))
     jobs))
 
 (defn mark-completed!
-  "Mark a job as successfully completed."
-  [db job-id]
-  (log/debug "Marking job completed" {:id job-id})
-  (jobs-db/mark-job-completed! db {:id job-id}))
+  "Mark a job as successfully completed.
+
+  When the claimed attempts value is passed, the update is fenced to that
+  execution: a stale executor (e.g. a zombie thread whose job was already
+  finalized by the watchdog or recovered) updates zero rows. Returns the
+  number of rows updated."
+  [db job-id & [attempts]]
+  (let [n (jobs-db/mark-job-completed! db {:id job-id :attempts attempts})]
+    (when (and attempts (zero? n))
+      (log/warn "Stale execution tried to complete a job; ignored"
+                {:id job-id :attempts attempts}))
+    n))
 
 (defn move-to-dead-letter!
   "Move a permanently failed job to the dead letter queue.
-
-  Parameters:
-  - db: Database connection
-  - job-id: Job ID
-  - error-message: Final error description
-  - error-details: Optional map with additional error context"
-  [db job-id error-message & [error-details]]
-  (log/warn "Moving job to dead letter queue"
-            {:id job-id
-             :error error-message
-             :details error-details})
-  ;; The SQL query already handles both updating status to 'dead' 
-  ;; and inserting into dead_letter_jobs table
+  The job row is removed from the jobs table. With :attempts the delete is
+  fenced to the claimed execution."
+  [db job-id error-message & [attempts]]
+  (log/warn "Moving job to dead letter queue" {:id job-id :error error-message})
   (jobs-db/move-job-to-dead-letter! db {:id job-id
+                                        :attempts attempts
                                         :error_message error-message}))
 
 (defn fail-job!
-  "Mark a job as failed with exponential backoff retry scheduling.
+  "Handle a failed job: re-enqueue a retry with exponential backoff, or move
+  the job to the dead letter queue when attempts are exhausted.
 
-  Uses the patterns library to calculate next retry time.
-  Moves to dead letter queue if max attempts exceeded.
+  The retry goes through the same dedup gate as a fresh enqueue: when a
+  newer pending job with the same (type, dedup_key) exists, the retry is
+  dropped as superseded - the successor does the same work on newer data.
 
-  Parameters:
-  - db: Database connection
-  - job-id: Job ID
-  - error-message: Error description
-  - opts: Map with :backoff-opts for exponential backoff config,
-          :correlation-id for tracing,
-          :current-attempt (the attempt that just failed),
-          :max-attempts"
-  [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts correlation-id]
+  opts: :current-attempt (the attempt that just failed), :max-attempts,
+        :backoff-opts for exponential backoff config,
+        :attempts - claimed attempts fingerprint; when present, finalization
+                    is fenced so a stale executor is a no-op"
+  [db job-id error-message & [{:keys [backoff-opts current-attempt max-attempts attempts]
                                :or {backoff-opts {}}}]]
   (log/info "Job failed" {:id job-id
                           :error error-message
                           :attempt current-attempt
-                          :max-attempts max-attempts
-                          :correlation-id correlation-id})
-
-  ;; Note: current-attempt is the attempt that just failed (already incremented)
-  ;; So if current-attempt >= max-attempts, we've exhausted all retries
+                          :max-attempts max-attempts})
   (if (and current-attempt max-attempts (>= current-attempt max-attempts))
-    ;; Max attempts reached - move to dead letter
-    (do
-      (log/warn "Moving job to dead letter queue - max attempts exhausted"
-                {:id job-id
-                 :attempts current-attempt
-                 :max-attempts max-attempts
-                 :correlation-id correlation-id})
-      (move-to-dead-letter! db job-id error-message
-                            {:attempts current-attempt
-                             :max-attempts max-attempts
-                             :correlation-id correlation-id}))
-    ;; Schedule retry with exponential backoff
+    (move-to-dead-letter! db job-id error-message attempts)
     (let [delay-ms (patterns/exponential-backoff-ms (or current-attempt 1) backoff-opts)
-          run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))]
-      (log/debug "Scheduling job retry"
-                 {:id job-id
-                  :current-attempt current-attempt
-                  :delay-ms delay-ms
-                  :run-at run-at
-                  :correlation-id correlation-id})
-      (jobs-db/update-job-retry! db {:id job-id
-                                     :error_message error-message
-                                     :run_at run-at}))))
+          run-at (java.sql.Timestamp. (+ (System/currentTimeMillis) delay-ms))
+          n (jobs-db/retry-job! db {:id job-id
+                                    :attempts attempts
+                                    :error_message error-message
+                                    :run_at run-at})]
+      (if (pos? n)
+        (log/debug "Scheduled job retry" {:id job-id
+                                          :attempt current-attempt
+                                          :delay-ms delay-ms})
+        (log/info "Retry dropped (superseded by a newer pending job, or stale execution)"
+                  {:id job-id :attempt current-attempt}))
+      n)))
+
+(defn recover-stuck-jobs!
+  "Recover jobs stuck in processing state (e.g. after a worker crash).
+  Exhausted jobs move to the dead letter queue; jobs with attempts left are
+  re-enqueued through the dedup gate, so a stuck job superseded by a newer
+  pending job is dropped instead of blocking the batch.
+  Returns {:recovered n :dead-lettered n}."
+  [db timeout-minutes]
+  (let [dead (jobs-db/dead-letter-stuck-jobs! db {:timeout_minutes timeout-minutes})
+        recovered (jobs-db/recover-stuck-jobs! db {:timeout_minutes timeout-minutes})]
+    (when (or (pos? recovered) (pos? dead))
+      (log/warn "Recovered stuck jobs" {:recovered recovered
+                                        :dead-lettered dead
+                                        :timeout-minutes timeout-minutes}))
+    {:recovered recovered :dead-lettered dead}))
+
+(defn cleanup-jobs!
+  "Apply retention: delete completed jobs and acknowledged dead letter
+  entries older than the configured number of days."
+  [db & [{:keys [completed-days dead-letter-days]
+          :or {completed-days 30 dead-letter-days 90}}]]
+  (let [completed (jobs-db/cleanup-completed-jobs! db {:days completed-days})
+        dead (jobs-db/cleanup-dead-letter-jobs! db {:days dead-letter-days})]
+    (log/info "Jobs retention cleanup" {:completed-deleted completed
+                                        :dead-letter-deleted dead})
+    {:completed-deleted completed :dead-letter-deleted dead}))
+
+;; Monitoring
 
 (defn get-queue-stats
   "Get current queue statistics for monitoring."
   [db]
   (->> (jobs-db/get-job-stats db)
-       (group-by :status) ; Keep status as string from database
+       (group-by :status)
        (map (fn [[status entries]]
               [(keyword status) (first entries)]))
        (into {})))
 
-(defn get-job-stats-by-type
-  "Get job statistics grouped by type."
+(defn get-queue-health
+  "Get current queue health metrics."
   [db]
-  (jobs-db/get-job-stats-by-type db))
+  (-> (jobs-db/get-queue-health db)
+      (update :oldest_pending_minutes #(when % (Math/round (double %))))
+      (update :longest_processing_minutes #(when % (Math/round (double %))))))
 
 (defn get-performance-metrics
-  "Get detailed performance metrics by job type within timeframe."
+  "Get performance metrics by job type within timeframe."
   [db {:keys [from-hours-ago to-hours-ago]
        :or {from-hours-ago 24 to-hours-ago 0}}]
   (let [now (java.time.Instant/now)
@@ -229,96 +209,74 @@
         to-timestamp (java.sql.Timestamp/from (.minus now to-hours-ago java.time.temporal.ChronoUnit/HOURS))]
     (->> (jobs-db/get-hourly-throughput db {:from_timestamp from-timestamp
                                             :to_timestamp to-timestamp})
-         (map #(-> %
-                   (update :hour str))))))
-
-(defn get-queue-health
-  "Get current queue health metrics."
-  [db]
-  (-> (jobs-db/get-queue-health db)
-      (update :oldest_pending_minutes #(when % (Math/round (double %))))
-      (update :longest_processing_minutes #(when % (Math/round (double %))))))
+         ;; ISO instant so the browser parses the hour unambiguously
+         (map #(update % :hour (fn [^java.sql.Timestamp ts] (str (.toInstant ts))))))))
 
 (defn get-admin-metrics
-  "Get comprehensive admin metrics for monitoring dashboard."
-  [db {:keys [from-hours-ago to-hours-ago]
-       :or {from-hours-ago 24 to-hours-ago 0}
-       :as opts}]
+  "Get comprehensive admin metrics for the monitoring dashboard."
+  [db opts]
   {:current-stats (get-queue-stats db)
    :health (get-queue-health db)
    :performance-metrics (vec (get-performance-metrics db opts))
    :hourly-throughput (vec (get-hourly-throughput db opts))
-   :fast-job-types (vec (get job-duration-types :fast)) ; Convert set to vector
-   :slow-job-types (vec (get job-duration-types :slow)) ; Convert set to vector
+   :fast-job-types (vec (sort registry/fast-job-types))
+   :slow-job-types (vec (sort registry/slow-job-types))
    :generated-at (str (java.time.Instant/now))})
 
-(defn get-jobs-by-correlation
-  "Find all jobs with a given correlation ID.
+(defn search-jobs
+  "Search jobs by status for the admin UI.
+  opts: {:statuses [\"pending\" ...] :limit n}"
+  [db {:keys [statuses limit] :or {limit 100}}]
+  (mapv ->kebab-case-keywords
+        (jobs-db/search-jobs db {:statuses (into-array String statuses)
+                                 :limit limit})))
 
-  Useful for tracing related jobs through the system."
-  [db correlation-id]
-  (jobs-db/get-job-by-correlation db {:correlation_id correlation-id}))
+;; Dead letter queue management
 
-(defn get-metrics-by-correlation
-  "Get all metrics for jobs with a given correlation ID."
-  [db correlation-id]
-  (jobs-db/get-metrics-by-correlation db {:correlation_id correlation-id}))
-
-(defn get-correlation-trace
-  "Get a complete trace of all activity for a correlation ID.
-
-  Returns a unified timeline of jobs and metrics."
-  [db correlation-id]
-  (jobs-db/get-correlation-trace db {:correlation_id correlation-id}))
+(defn- enrich-dead-letter-entry
+  "Add :error-class and :superseded-by to a kebab-cased dead letter row."
+  [{:keys [superseded-by-job-id superseded-by-completed-at] :as entry}]
+  (-> entry
+      (dissoc :superseded-by-job-id :superseded-by-completed-at)
+      (assoc :error-class (triage/classify-error (:error-message entry)))
+      (cond-> superseded-by-job-id
+        (assoc :superseded-by {:job-id superseded-by-job-id
+                               :completed-at superseded-by-completed-at}))))
 
 (defn get-dead-letter-jobs
-  "Get dead letter jobs with optional acknowledgment filter.
-  
-  Parameters:
-  - db: Database connection
-  - opts: {:acknowledged true/false/nil} - nil returns all"
+  "Get dead letter jobs with optional acknowledgment filter, enriched
+  with :error-class and :superseded-by for triage.
+  opts: {:acknowledged true/false/nil} - nil returns all"
   [db {:keys [acknowledged] :as _opts}]
-  (map ->kebab-case-keywords
-       (jobs-db/get-dead-letter-jobs db {:acknowledged acknowledged})))
+  (->> (jobs-db/get-dead-letter-jobs db {:acknowledged acknowledged})
+       (map ->kebab-case-keywords)
+       (mapv enrich-dead-letter-entry)))
 
 (defn reprocess-dead-letter-job!
-  "Reprocess a dead letter job by requeuing it and marking as acknowledged.
-  
-  Parameters:
-  - db: Database connection  
-  - dead-letter-id: ID of the dead letter job
-  - user-email: Email of admin performing the action
-  - opts: Optional {:max-attempts 3}
-  
+  "Requeue a dead letter job and mark it acknowledged.
   Returns the newly created job or throws on error."
   [db dead-letter-id user-email & [{:keys [max-attempts] :or {max-attempts 3}}]]
-  ;; First verify the dead letter job exists
-  (when-not (jobs-db/get-dead-letter-by-id db {:id dead-letter-id})
-    (throw (ex-info "Dead letter job not found" {:id dead-letter-id})))
-
-  ;; Requeue the job (SQL query also sets acknowledged = true)
-  (let [new-job (jobs-db/requeue-dead-letter-job! db
-                                                  {:id dead-letter-id
-                                                   :max_attempts max-attempts
-                                                   :reprocessed_by user-email})]
-
-    (log/info "Reprocessed dead letter job"
-              {:dead-letter-id dead-letter-id
-               :new-job-id (:id new-job)
-               :user user-email})
-
-    (->kebab-case-keywords new-job)))
+  (let [dlj (jobs-db/get-dead-letter-by-id db {:id dead-letter-id})]
+    (when-not dlj
+      (throw (ex-info "Dead letter job not found" {:id dead-letter-id})))
+    ;; Guard against requeuing job types that are no longer registered
+    (let [job-type (get-in dlj [:original_job :type])]
+      (when-not (contains? registry/job-types job-type)
+        (throw (ex-info "Cannot reprocess: unknown job type"
+                        {:id dead-letter-id :job-type job-type}))))
+    (let [new-job (jobs-db/requeue-dead-letter-job! db
+                                                    {:id dead-letter-id
+                                                     :max_attempts max-attempts
+                                                     :reprocessed_by user-email})]
+      (log/info "Reprocessed dead letter job"
+                {:dead-letter-id dead-letter-id
+                 :new-job-id (:id new-job)
+                 :user user-email})
+      (->kebab-case-keywords new-job))))
 
 (defn reprocess-dead-letter-jobs!
-  "Bulk reprocess multiple dead letter jobs.
-  
-  Parameters:
-  - db: Database connection
-  - dead-letter-ids: Collection of dead letter job IDs
-  - user-email: Email of admin performing the action
-  - opts: Optional {:max-attempts 3}
-  
-  Returns map with :succeeded and :failed job IDs."
+  "Bulk reprocess dead letter jobs.
+  Returns map with :succeeded and :failed entries."
   [db dead-letter-ids user-email & [opts]]
   (let [results (reduce (fn [acc id]
                           (try
@@ -340,59 +298,14 @@
     results))
 
 (defn acknowledge-dead-letter-jobs!
-  "Acknowledge multiple dead letter jobs without reprocessing them.
-  
-  Parameters:
-  - db: Database connection
-  - dead-letter-ids: Collection of dead letter job IDs
-  - user-email: Email of admin performing the action
-  
-  Returns map with :acknowledged count."
+  "Acknowledge dead letter jobs without reprocessing them, in a single
+  statement - the admin UI acknowledges whole triage groups at once.
+  Already-acknowledged and nonexistent ids are skipped.
+  Returns map with :acknowledged count of newly acknowledged jobs."
   [db dead-letter-ids user-email]
-  (let [count (reduce (fn [count id]
-                        (try
-                          ;; First check if the job exists and is not already acknowledged
-                          (let [dlj (jobs-db/get-dead-letter-by-id db {:id id})]
-                            (if (and dlj (not (:acknowledged dlj)))
-                              (do
-                                (jobs-db/acknowledge-dead-letter! db
-                                                                  {:id id
-                                                                   :acknowledged_by user-email})
-                                (inc count))
-                              count))
-                          (catch Exception e
-                            (log/error e "Failed to acknowledge dead letter job" {:id id})
-                            count)))
-                      0
-                      dead-letter-ids)]
-    {:acknowledged count}))
-
-(defn gen-correlation-id
-  "Generate a new correlation ID for tracking related jobs."
-  []
-  (java.util.UUID/randomUUID))
-
-(defn with-correlation-context
-  "Execute a function with correlation ID in the logging context.
-
-  This ensures all log messages within the function execution
-  include the correlation ID for easier debugging."
-  [correlation-id f]
-  (log/with-context {:correlation-id correlation-id}
-    (f)))
-
-(defn cleanup-old-jobs!
-  "Remove completed and dead jobs older than specified days."
-  [db days]
-  (log/info "Cleaning up jobs older than" days "days")
-  (jobs-db/cleanup-old-jobs! db {:days days}))
-
-(defn reset-stuck-jobs!
-  "Reset jobs that have been stuck in processing state for too long.
-   This should be called on worker startup to recover from crashes."
-  [db timeout-minutes]
-  (let [result (jobs-db/reset-stuck-jobs! db {:timeout_minutes timeout-minutes})]
-    (when (pos? result)
-      (log/warn "Reset stuck jobs on startup" {:count result :timeout-minutes timeout-minutes}))
-    result))
-
+  {:acknowledged (if (seq dead-letter-ids)
+                   (jobs-db/acknowledge-dead-letter-jobs!
+                    db
+                    {:ids (long-array dead-letter-ids)
+                     :acknowledged_by user-email})
+                   0)})

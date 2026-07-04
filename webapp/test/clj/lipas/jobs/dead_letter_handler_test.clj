@@ -3,6 +3,7 @@
   (:require
    [clojure.test :refer [deftest testing is use-fixtures]]
    [lipas.backend.jwt :as jwt]
+   [lipas.jobs.core :as jobs]
    [lipas.jobs.db :as jobs-db]
    [lipas.test-utils :as test-utils]
    [next.jdbc :as jdbc]
@@ -61,6 +62,46 @@
               body (test-utils/<-transit (:body resp))]
           (is (= 200 (:status resp)))
           (is (= 3 (count body))))))))
+
+(deftest dead-letter-enrichment-test
+  (testing "GET /api/actions/get-dead-letter-jobs enriches entries with :error-class and :superseded-by"
+    (let [db (:lipas/db @test-system)
+          app (:lipas/app @test-system)]
+
+      ;; Superseded case: analysis job for a site dies, then a newer
+      ;; analysis job for the same site completes.
+      (let [{dead-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 111111})
+            _ (jobs/move-to-dead-letter! db dead-id "Job execution timed out after 60 minutes")
+            {newer-id :id} (jobs/enqueue-job! db "analysis" {:lipas-id 111111})]
+        (jdbc/execute! db ["UPDATE jobs SET status = 'processing', started_at = now() WHERE id = ?" newer-id])
+        (jobs/mark-completed! db newer-id)
+
+        ;; Not superseded: elevation job dies, no later completed job for the site.
+        (let [{lone-id :id} (jobs/enqueue-job! db "elevation" {:lipas-id 222222})]
+          (jobs/move-to-dead-letter! db lone-id "java.net.SocketException: Connection reset"))
+
+        (let [resp (app (-> (mock/request :get "/api/actions/get-dead-letter-jobs")
+                            (mock/content-type "application/transit+json")
+                            (mock/header "Accept" "application/transit+json")
+                            (mock/header "Authorization" (str "Token " (create-admin-token)))))
+              body (test-utils/<-transit (:body resp))
+              by-site (fn [lipas-id]
+                        (first (filter #(= lipas-id (get-in % [:original-job :payload :lipas-id]))
+                                       body)))
+              superseded (by-site 111111)
+              lone (by-site 222222)]
+          (is (= 200 (:status resp)))
+
+          (testing "superseded entry"
+            (is (some? superseded))
+            (is (= :timeout (:error-class superseded)))
+            (is (= newer-id (get-in superseded [:superseded-by :job-id])))
+            (is (some? (get-in superseded [:superseded-by :completed-at]))))
+
+          (testing "entry without a later completed job"
+            (is (some? lone))
+            (is (= :mml-api (:error-class lone)))
+            (is (nil? (:superseded-by lone)))))))))
 
 (deftest reprocess-dead-letter-jobs-endpoint-test
   (testing "POST /api/actions/reprocess-dead-letter-jobs"

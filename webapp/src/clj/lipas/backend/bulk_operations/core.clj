@@ -159,27 +159,18 @@
           ;; TODO: If/when webhooks are enabled again, they need to be
           ;; added here!
           ;;
-          #_(let [correlation-id (jobs/gen-correlation-id)]
-            (jobs/with-correlation-context correlation-id
-              (fn []
-                (doseq [{:keys [lipas-id updated-site]} updated-sites-data]
-                  (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
+          #_(doseq [{:keys [lipas-id updated-site]} updated-sites-data]
+              (let [route? (-> updated-site :type :type-code types/all :geometry-type #{"LineString"})]
 
-                    #_(when route?
-                      (jobs/enqueue-job! tx "elevation"
-                                         {:lipas-id lipas-id}
-                                         {:correlation-id correlation-id
-                                          :priority 70}))
+                (when route?
+                  (jobs/enqueue-job! tx "elevation" {:lipas-id lipas-id}))
 
-                    (when-not route?
-                      ;; Integration queue (being phased out)
-                      (core/add-to-integration-out-queue! tx updated-site))
+                (when-not route?
+                  ;; Integration queue (being phased out)
+                  (core/add-to-integration-out-queue! tx updated-site))
 
-                    ;; Analysis job
-                    (jobs/enqueue-job! tx "analysis"
-                                       {:lipas-id lipas-id}
-                                       {:correlation-id correlation-id
-                                        :priority 80}))))))))
+                ;; Analysis job
+                (jobs/enqueue-job! tx "analysis" {:lipas-id lipas-id})))))
 
       (log/info "Mass update completed"
                 {:updated-count (count updated-sites-data)
