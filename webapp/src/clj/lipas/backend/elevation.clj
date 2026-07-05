@@ -68,9 +68,12 @@
 (def merge-tile-min-chunks
   "Merge a tile into one request when it contains at least this many
   vertex chunks. Measured MML timings: one 250m chunk ~255ms, one
-  1000m tile (16 chunk areas) ~740ms, so 4+ chunks are cheaper (and
-  always fewer requests) fetched as a tile."
-  4)
+  1000m tile (16 chunk areas) ~740ms, so from 3 chunks up a tile
+  request costs MML no more server time and is always fewer requests.
+  On the 300-route sweep this threshold cut total requests 3.8x
+  (threshold 4 gave 3.0x; 2 gave 4.5x but doubles MML's per-area
+  server time on the merged pairs)."
+  3)
 
 (def vertex-buffer-m
   "Tolerance added around the vertices in single-envelope requests so

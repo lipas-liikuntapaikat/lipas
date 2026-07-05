@@ -171,7 +171,7 @@
       (is (= 1 (count plan)))
       (is (= #{[1600 27600] [1601 27600]} (set (:chunk-keys (first plan)))))))
 
-  (testing "Dense cluster (>= 4 chunks in a 1000m tile) merges into one tile request"
+  (testing "Dense cluster (>= 3 chunks in a 1000m tile) merges into one tile request"
     (let [verts [[400010.0 6900010.0] [400260.0 6900010.0]
                  [400510.0 6900010.0] [400760.0 6900010.0]]
           [{:keys [envelope chunk-keys]} :as plan] (elevation/plan-fetches verts)]
@@ -179,10 +179,10 @@
       (is (= {:min-x 400000 :max-x 401000 :min-y 6900000 :max-y 6901000} envelope))
       (is (= 4 (count chunk-keys)))))
 
-  (testing "Sparse chunks (< 4 per tile) are fetched individually"
-    (let [verts [[400010.0 6900010.0] [400260.0 6900010.0] [400510.0 6900010.0]]
+  (testing "Sparse chunks (< 3 per tile) are fetched individually"
+    (let [verts [[400010.0 6900010.0] [400510.0 6900010.0]]
           plan  (elevation/plan-fetches verts)]
-      (is (= 3 (count plan)))
+      (is (= 2 (count plan)))
       (is (every? #(= 1 (count (:chunk-keys %))) plan))
       (is (= {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250}
              (:envelope (first plan))))))
