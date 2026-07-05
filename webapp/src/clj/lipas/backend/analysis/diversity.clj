@@ -256,11 +256,9 @@
   2000)
 
 (def assignment-margin-m
-  "Extra slack in the euclidean cell<->site assignment. Compensates for
-  simple-geoms being a simplification of the exact geometries the old
-  per-cell ES radius query matched against. A site outside the margin
-  cannot matter: its route distance is at least its euclidean distance,
-  which already exceeds cell-radius-m."
+  "Extra slack in the cell<->site assignment. Compensates for
+  simple-geoms being a simplification (~111m tolerance) of the exact
+  geometries the per-cell ES radius query used to match against."
   250)
 
 (def tile-size-m
@@ -292,61 +290,46 @@
       (on-error {:site site :error e})
       [])))
 
-(defn- parse-coord-str [s]
-  (let [[lon lat] (str/split s #",")]
-    [(Double/parseDouble lon) (Double/parseDouble lat)]))
-
 (defn prepare-site-entry
-  "Precompute OSRM destination strings and numeric coords for a site.
-  Returns nil when the site has no usable geometry (it could never
-  contribute a distance to the index)."
+  "Precompute OSRM destination strings and a metric (TM35FIN) JTS
+  geometry for a site. Returns nil when the site has no usable
+  geometry (it could never contribute a distance to the index)."
   [site on-error]
-  (let [dests (into [] (distinct) (resolve-dests site on-error))]
-    (when (seq dests)
+  (let [dests (into [] (distinct) (resolve-dests site on-error))
+        geom (when (seq dests)
+               (try
+                 (-> site :_source :search-meta :location :simple-geoms
+                     gis/fcoll->tm35fin-geom)
+                 (catch Exception e
+                   (on-error {:site site :error e})
+                   nil)))]
+    (when geom
       {:id (:_id site)
        :type-code (-> site :_source :type :type-code)
        :status (-> site :_source :status)
        :dests dests
-       :coords (mapv parse-coord-str dests)})))
-
-(defn- coords-bbox
-  "Bounding box of [lon lat] coords expanded by margin-m meters."
-  [coords margin-m]
-  (let [lons (map first coords)
-        lats (map second coords)
-        min-lat (apply min lats)
-        max-lat (apply max lats)
-        dlat (/ margin-m 111320.0)
-        cos-lat (Math/cos (Math/toRadians (max (Math/abs (double min-lat))
-                                               (Math/abs (double max-lat)))))
-        dlon (/ margin-m (* 111320.0 (max 0.01 cos-lat)))]
-    {:min-lon (- (apply min lons) dlon)
-     :max-lon (+ (apply max lons) dlon)
-     :min-lat (- min-lat dlat)
-     :max-lat (+ max-lat dlat)}))
+       :geom-3067 geom})))
 
 (defn assign-sites
-  "For each cell coord, indices of site entries with at least one
-  destination vertex within radius-m (euclidean). Route distance can
-  never be shorter than euclidean distance, so this keeps every site
-  whose OSRM minimum could fall under radius-m. Returns a vector of
-  index vectors aligned with cell-coords."
-  [cell-coords site-entries radius-m]
-  (let [boxes (mapv #(coords-bbox (:coords %) radius-m) site-entries)]
-    (mapv (fn [[lon lat :as coord]]
-            (persistent!
-             (reduce
-              (fn [acc i]
-                (let [box (nth boxes i)]
-                  (if (and (<= (:min-lon box) lon (:max-lon box))
-                           (<= (:min-lat box) lat (:max-lat box))
-                           (some #(<= (gis/haversine coord %) radius-m)
-                                 (:coords (nth site-entries i))))
-                    (conj! acc i)
-                    acc)))
-              (transient [])
-              (range (count site-entries)))))
-          cell-coords)))
+  "For each cell (a TM35FIN JTS point), indices of site entries whose
+  simple-geoms geometry lies within radius-m. This mirrors the old
+  per-cell ES radius query against the exact geometries, to within the
+  simple-geoms simplification tolerance (covered by
+  assignment-margin-m). Returns a vector of index vectors aligned with
+  cell-points."
+  [cell-points site-entries radius-m]
+  (mapv (fn [point]
+          (persistent!
+           (reduce
+            (fn [acc i]
+              (if (gis/within-distance? (:geom-3067 (nth site-entries i))
+                                        radius-m
+                                        point)
+                (conj! acc i)
+                acc))
+            (transient [])
+            (range (count site-entries)))))
+        cell-points))
 
 (defn index-dests
   "Assign one OSRM table column per distinct destination string across
@@ -371,58 +354,73 @@
 
 (defn- fetch-table!
   "One OSRM table request per profile in parallel for sources x dests.
-  Returns {profile {:distances .. :durations ..}}; failed or timed out
-  profiles are omitted."
+  Failed profiles are retried once; still-failing profiles are omitted
+  from the result map."
   [sources dests]
-  (let [futures (mapv (fn [p]
-                        [p (future
-                             (osrm/get-data {:profile p
-                                             :sources sources
-                                             :destinations dests
-                                             :cache? false}))])
-                      osrm-profiles)]
-    (reduce (fn [res [p f]]
-              (let [result (deref f osrm-table-timeout-ms ::timeout)]
-                (cond
-                  (= result ::timeout)
-                  (do
-                    (future-cancel f)
-                    (log/warn "OSRM table request timed out for profile" p)
-                    res)
-
-                  (nil? result)
-                  res
-
-                  :else
-                  (assoc res p (select-keys result [:distances :durations])))))
-            {}
-            futures)))
+  (let [fetch (fn [profiles]
+                (-> {:profiles profiles
+                     :sources sources
+                     :destinations dests
+                     :cache? false
+                     :timeout-ms osrm-table-timeout-ms}
+                    osrm/get-distances-and-travel-times
+                    (update-vals #(select-keys % [:distances :durations]))
+                    (->> (into {} (filter (fn [[_ v]]
+                                            (and (:distances v)
+                                                 (:durations v))))))))
+        first-pass (fetch osrm-profiles)
+        missing (into [] (remove first-pass) osrm-profiles)]
+    (if (seq missing)
+      (merge first-pass (fetch missing))
+      first-pass)))
 
 (defn merge-table-chunks
   "Merge per-profile table results of consecutive destination chunks by
-  concatenating matrix columns. A profile missing from any chunk is
-  dropped entirely so partial data can't skew minimums."
-  [chunk-results]
-  (reduce (fn [acc p]
-            (if (every? #(and (get-in % [p :distances])
-                              (get-in % [p :durations]))
-                        chunk-results)
-              (assoc acc p
-                     {:distances (apply mapv (fn [& rows] (into [] cat rows))
-                                        (map #(get-in % [p :distances]) chunk-results))
-                      :durations (apply mapv (fn [& rows] (into [] cat rows))
-                                        (map #(get-in % [p :durations]) chunk-results))})
-              acc))
-          {}
-          osrm-profiles))
+  concatenating matrix columns. chunk-sizes gives each chunk's column
+  count and n-sources the row count, so a chunk whose request failed
+  for a profile is nil-filled and its column indices reported under
+  :failed-cols - sites touching those columns then omit the profile
+  instead of risking a wrong (partial) minimum."
+  [chunk-results chunk-sizes n-sources]
+  (let [offsets (vec (reductions + 0 chunk-sizes))
+        nil-rows (fn [n-cols]
+                   (vec (repeat n-sources (vec (repeat n-cols nil)))))]
+    (reduce
+     (fn [acc p]
+       (let [per-chunk (mapv #(get % p) chunk-results)]
+         (if (every? nil? per-chunk)
+           acc
+           (let [failed-cols (into (sorted-set)
+                                   (mapcat (fn [i]
+                                             (when (nil? (nth per-chunk i))
+                                               (range (nth offsets i)
+                                                      (+ (nth offsets i)
+                                                         (nth chunk-sizes i))))))
+                                   (range (count per-chunk)))
+                 concat-rows (fn [k]
+                               (apply mapv (fn [& rows] (into [] cat rows))
+                                      (map-indexed
+                                       (fn [i r]
+                                         (if r (k r) (nil-rows (nth chunk-sizes i))))
+                                       per-chunk)))]
+             (-> acc
+                 (assoc-in [:tables p] {:distances (concat-rows :distances)
+                                        :durations (concat-rows :durations)})
+                 (cond-> (seq failed-cols)
+                   (assoc-in [:failed-cols p] failed-cols)))))))
+     {:tables {} :failed-cols {}}
+     osrm-profiles)))
 
 (defn- fetch-tables!
   "Table matrices for sources x dests, chunking destinations so each
-  request stays within max-table-locations."
+  request stays within max-table-locations. Returns
+  {:tables {profile ..} :failed-cols {profile #{col ..}}}."
   [sources dests]
   (let [chunk-size (max 1 (- max-table-locations (count sources)))
-        chunks (partition-all chunk-size dests)]
-    (merge-table-chunks (mapv #(fetch-table! sources (vec %)) chunks))))
+        chunks (mapv vec (partition-all chunk-size dests))]
+    (merge-table-chunks (mapv #(fetch-table! sources %) chunks)
+                        (mapv count chunks)
+                        (count sources))))
 
 (defn min-finite [xs]
   (when-let [vs (seq (remove nil? xs))]
@@ -431,21 +429,24 @@
 (defn site-osrm-mins
   "Per-profile minimum distance/duration for one cell (matrix row) and
   one site (its matrix columns). Min distance and min duration are
-  taken independently, like the old per-site implementation did."
-  [tables row-idx cols]
+  taken independently, like the old per-site implementation did. A
+  profile whose failed columns overlap the site's columns is omitted
+  for this site (same footprint as the old per-site request failure)."
+  [tables failed-cols row-idx cols]
   (not-empty
    (reduce-kv
     (fn [res p {:keys [distances durations]}]
-      (let [drow (nth distances row-idx)
-            trow (nth durations row-idx)]
-        (assoc res p {:distance-m (min-finite (map #(nth drow %) cols))
-                      :duration-s (min-finite (map #(nth trow %) cols))})))
+      (if (some (or (get failed-cols p) #{}) cols)
+        res
+        (let [drow (nth distances row-idx)
+              trow (nth durations row-idx)]
+          (assoc res p {:distance-m (min-finite (map #(nth drow %) cols))
+                        :duration-s (min-finite (map #(nth trow %) cols))}))))
     {}
     tables)))
 
-(defn- tile-key [[lon lat]]
-  (let [[e n] (gis/wgs84->tm35fin-no-wrap [lon lat])]
-    [(quot (long e) tile-size-m) (quot (long n) tile-size-m)]))
+(defn- tile-key [[e n]]
+  [(quot (long e) tile-size-m) (quot (long n) tile-size-m)])
 
 (defn- process-tile!
   "Compute distances for one tile of cells and bulk index the resulting
@@ -456,8 +457,8 @@
         sources (mapv (fn [{:keys [coord]}] (str/join "," coord)) routed)
         [dests site->cols] (index-dests site-entries
                                         (into [] (distinct) (mapcat :site-idxs routed)))
-        tables (when (seq sources)
-                 (fetch-tables! sources dests))
+        {:keys [tables failed-cols]} (when (seq sources)
+                                       (fetch-tables! sources dests))
         chunk-size (max 1 (- max-table-locations (count sources)))
         n-requests (if (seq sources)
                      (* (count osrm-profiles)
@@ -469,7 +470,8 @@
                            :type-code (:type-code entry)
                            :status (:status entry)
                            :osrm (when (seq tables)
-                                   (site-osrm-mins tables row-idx (site->cols site-idx)))}))
+                                   (site-osrm-mins tables failed-cols row-idx
+                                                   (site->cols site-idx)))}))
         docs (concat
               (map-indexed
                (fn [row-idx {:keys [cell site-idxs]}]
@@ -495,16 +497,15 @@
   [{:keys [client] :as search} idx-name cells site-area-fcoll on-error]
   (let [cells (vec cells)
         cell-coords (mapv (comp gis/wkt-point->coords :WKT) cells)
-        site-hits (:hits (common/get-sports-site-data
+        cells-3067 (mapv gis/wgs84->tm35fin-no-wrap cell-coords)
+        cell-points (mapv gis/tm35fin-point cells-3067)
+        site-hits (:hits (common/get-sports-site-data-scrolled
                           search site-area-fcoll (/ cell-radius-m 1000)
                           all-type-codes statuses))
-        _ (when (<= 10000 (count site-hits))
-            ;; ES query size cap - process smaller cell batches if this hits
-            (log/warn "Sports site query returned 10k hits; results may be clipped"))
         site-entries (into [] (keep #(prepare-site-entry % on-error)) site-hits)
-        assignments (assign-sites cell-coords site-entries
+        assignments (assign-sites cell-points site-entries
                                   (+ cell-radius-m assignment-margin-m))
-        tiles (group-by #(tile-key (nth cell-coords %)) (range (count cells)))
+        tiles (group-by #(tile-key (nth cells-3067 %)) (range (count cells)))
         osrm-requests (volatile! 0)]
     (log/info (format "Processing %d cells / %d sites in %d tiles"
                       (count cells) (count site-entries) (count tiles)))

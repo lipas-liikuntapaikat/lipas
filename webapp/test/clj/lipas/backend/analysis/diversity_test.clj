@@ -292,6 +292,28 @@
               site (:sports-sites doc)]
         (is (= #{:car :foot} (set (keys (:osrm site)))))))))
 
+(deftest recalc-grid-chunk-failure-partial-degradation-test
+  (testing "A failed destination chunk only degrades sites in that chunk"
+    (seed-test-data! (test-search))
+    ;; max-table-locations 2 forces single-destination chunks whatever
+    ;; the tile layout (chunk-size = max 1 (- 2 n-sources)), so each
+    ;; site is its own chunk
+    (let [site-2-dest "24.945,60.167"
+          failing-mock (fn [{:keys [profile destinations] :as params}]
+                         (when-not (and (= :foot profile)
+                                        (some #{site-2-dest} destinations))
+                           (mock-osrm-matrix params)))
+          docs (with-redefs [diversity/max-table-locations 2]
+                 (run-recalc-capturing-bulk! failing-mock))]
+      (is (seq docs))
+      (doseq [[_ doc] docs
+              site (:sports-sites doc)]
+        (if (= "site-2" (:id site))
+          (is (= #{:car :bicycle} (set (keys (:osrm site))))
+              "site-2's foot chunk failed -> foot omitted for site-2 only")
+          (is (= #{:car :bicycle :foot} (set (keys (:osrm site))))
+              (str (:id site) " must keep all profiles")))))))
+
 (deftest recalc-grid-all-profiles-fail-test
   (testing "Total OSRM failure still indexes docs, with nil osrm per site"
     (seed-test-data! (test-search))

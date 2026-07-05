@@ -139,6 +139,30 @@
   (-> (.read (WKTReader. (gf srid)) ^String s)
       (transform-geom srid tm35fin-srid)))
 
+(defn fcoll->tm35fin-geom
+  "GeoJSON FeatureCollection (WGS84) -> JTS geometry in TM35FIN
+  (EPSG:3067), where distances are in meters."
+  ^Geometry [fcoll]
+  (transform-geom (->jts-geom fcoll) srid tm35fin-srid))
+
+(defn tm35fin-point
+  "JTS point from TM35FIN [easting northing]."
+  [[e n]]
+  (.createPoint (gf tm35fin-srid) (Coordinate. e n)))
+
+(defn within-distance?
+  "True when JTS geometry g2 lies within distance-m of g1. Both
+  geometries must be in a metric CRS (e.g. TM35FIN). An envelope
+  prefilter avoids the exact distance computation for far pairs."
+  [^Geometry g1 ^double distance-m ^Geometry g2]
+  (let [e1 (.getEnvelopeInternal g1)
+        e2 (.getEnvelopeInternal g2)]
+    (and (<= (- (.getMinX e1) distance-m) (.getMaxX e2))
+         (<= (.getMinX e2) (+ (.getMaxX e1) distance-m))
+         (<= (- (.getMinY e1) distance-m) (.getMaxY e2))
+         (<= (.getMinY e2) (+ (.getMaxY e1) distance-m))
+         (<= (.distance g1 g2) distance-m))))
+
 (defn transform-crs
   ([geom] (transform-geom geom srid tm35fin-srid))
   ([geom from-crs to-crs]

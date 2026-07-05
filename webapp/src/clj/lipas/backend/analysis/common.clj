@@ -1,5 +1,6 @@
 (ns lipas.backend.analysis.common
   (:require
+   [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -33,28 +34,44 @@
                     (:geometry geom))
         :relation "intersects"}}}}}})
 
+(defn- sports-site-query
+  [fcoll distance-km type-codes statuses]
+  (let [geom (-> fcoll :features first)]
+    (-> (build-query geom distance-km)
+        (assoc :_source [:name
+                         :status
+                         :type.type-code
+                         :search-meta.location.simple-geoms])
+        (update-in [:query :bool :filter :geo_shape] set/rename-keys
+                   {:coords :search-meta.location.geometries})
+        (cond->
+            (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
+            (seq type-codes) (update-in [:query :bool :must] conj
+                                        {:terms {:type.type-code type-codes}})
+            (seq statuses)   (update-in [:query :bool :must] conj
+                                        {:terms {:status statuses}})))))
+
 (defn get-sports-site-data
   ([search fcoll distance-km type-codes]
    (get-sports-site-data search fcoll distance-km type-codes default-statuses))
   ([{:keys [indices client]} fcoll distance-km type-codes statuses]
    (let [idx-name (get-in indices [:sports-site :search])
-         geom     (-> fcoll :features first)
-         query    (-> (build-query geom distance-km)
-                   (assoc :_source [:name
-                                    :status
-                                    :type.type-code
-                                    :search-meta.location.simple-geoms])
-                   (update-in [:query :bool :filter :geo_shape] set/rename-keys
-                              {:coords :search-meta.location.geometries})
-                   (cond->
-                       (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
-                       (seq type-codes) (update-in [:query :bool :must] conj
-                                                   {:terms {:type.type-code type-codes}})
-                       (seq statuses)   (update-in [:query :bool :must] conj
-                                                   {:terms {:status statuses}})))]
+         query (sports-site-query fcoll distance-km type-codes statuses)]
      (-> (search/search client idx-name query)
          :body
          :hits))))
+
+(defn get-sports-site-data-scrolled
+  "Like get-sports-site-data but scrolls through every hit, so results
+  aren't clipped by the query size cap."
+  [{:keys [indices client]} fcoll distance-km type-codes statuses]
+  (let [idx-name (get-in indices [:sports-site :search])
+        query (sports-site-query fcoll distance-km type-codes statuses)
+        in-chan (search/scroll client idx-name query)]
+    {:hits (loop [acc []]
+             (if-let [page (async/<!! in-chan)]
+               (recur (into acc (-> page :body :hits :hits)))
+               acc))}))
 
 (defn get-es-data*
   [idx-name client fcoll distance-km]

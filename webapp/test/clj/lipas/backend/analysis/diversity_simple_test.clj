@@ -28,7 +28,7 @@
                             :durations [[800.0 450.0 1000.0]]}
                   :foot {:distances [[1900.0 1100.0 900.0]]
                          :durations [[1368.0 792.0 648.0]]}}
-          result (diversity/site-osrm-mins tables 0 [0 1 2])]
+          result (diversity/site-osrm-mins tables {} 0 [0 1 2])]
       (is (= 1234.5 (-> result :car :distance-m)))
       (is (= 180.2 (-> result :car :duration-s)))
       (is (= 1500.0 (-> result :bicycle :distance-m)))
@@ -39,66 +39,83 @@
   (testing "Only the site's own columns are considered"
     (let [tables {:car {:distances [[100.0 900.0 50.0]]
                         :durations [[10.0 90.0 5.0]]}}
-          result (diversity/site-osrm-mins tables 0 [0 1])]
+          result (diversity/site-osrm-mins tables {} 0 [0 1])]
       (is (= 100.0 (-> result :car :distance-m)))
       (is (= 10.0 (-> result :car :duration-s)))))
 
   (testing "Row selected by cell index"
     (let [tables {:car {:distances [[100.0] [200.0]]
                         :durations [[10.0] [20.0]]}}]
-      (is (= 200.0 (-> (diversity/site-osrm-mins tables 1 [0]) :car :distance-m)))))
+      (is (= 200.0 (-> (diversity/site-osrm-mins tables {} 1 [0]) :car :distance-m)))))
 
   (testing "Min distance and min duration are independent (old apply-mins semantics)"
     (let [tables {:car {:distances [[2000.0 1000.0]]
                         :durations [[100.0 500.0]]}}
-          result (diversity/site-osrm-mins tables 0 [0 1])]
+          result (diversity/site-osrm-mins tables {} 0 [0 1])]
       (is (= 1000.0 (-> result :car :distance-m)))
       (is (= 100.0 (-> result :car :duration-s)))))
 
   (testing "Unroutable destinations (nils) don't crash and yield nil mins"
     (let [tables {:car {:distances [[nil nil]]
                         :durations [[nil nil]]}}
-          result (diversity/site-osrm-mins tables 0 [0 1])]
+          result (diversity/site-osrm-mins tables {} 0 [0 1])]
       (is (= {:distance-m nil :duration-s nil} (:car result)))))
 
+  (testing "A profile whose failed columns touch the site is omitted for the site"
+    (let [tables {:car {:distances [[100.0 nil]] :durations [[10.0 nil]]}
+                  :foot {:distances [[120.0 nil]] :durations [[90.0 nil]]}}
+          failed-cols {:foot (sorted-set 1)}
+          result (diversity/site-osrm-mins tables failed-cols 0 [0 1])]
+      ;; car untouched by failures
+      (is (= 100.0 (-> result :car :distance-m)))
+      ;; foot's failed chunk covers col 1 -> foot omitted for this site
+      (is (not (contains? result :foot))))
+
+    (testing "but kept for sites whose columns avoid the failed chunk"
+      (let [tables {:foot {:distances [[120.0 nil]] :durations [[90.0 nil]]}}
+            failed-cols {:foot (sorted-set 1)}
+            result (diversity/site-osrm-mins tables failed-cols 0 [0])]
+        (is (= 120.0 (-> result :foot :distance-m))))))
+
   (testing "No profile data yields nil"
-    (is (nil? (diversity/site-osrm-mins {} 0 [0])))))
+    (is (nil? (diversity/site-osrm-mins {} {} 0 [0])))))
+
+(defn- point-site [id type-code coords]
+  {:_id id
+   :_source {:status "active"
+             :type {:type-code type-code}
+             :search-meta
+             {:location
+              {:simple-geoms
+               {:type "FeatureCollection"
+                :features
+                [{:type "Feature"
+                  :geometry {:type "Point"
+                             :coordinates coords}}]}}}}})
+
+(defn- linestring-site [id type-code coords]
+  (assoc-in (point-site id type-code nil)
+            [:_source :search-meta :location :simple-geoms :features 0 :geometry]
+            {:type "LineString" :coordinates coords}))
+
+(defn- ->cell-point [coords]
+  (gis/tm35fin-point (gis/wgs84->tm35fin-no-wrap coords)))
 
 (deftest prepare-site-entry-test
-  (testing "Point site yields dest strings and numeric coords"
-    (let [site {:_id "site-1"
-                :_source {:status "active"
-                          :type {:type-code 1520}
-                          :search-meta
-                          {:location
-                           {:simple-geoms
-                            {:type "FeatureCollection"
-                             :features
-                             [{:type "Feature"
-                               :geometry {:type "Point"
-                                          :coordinates [24.9 60.17]}}]}}}}}
-          entry (diversity/prepare-site-entry site prn)]
+  (testing "Point site yields dest strings and a metric geometry"
+    (let [entry (diversity/prepare-site-entry (point-site "site-1" 1520 [24.9 60.17]) prn)]
       (is (= "site-1" (:id entry)))
       (is (= 1520 (:type-code entry)))
       (is (= "active" (:status entry)))
       (is (= ["24.9,60.17"] (:dests entry)))
-      (is (= [[24.9 60.17]] (:coords entry)))))
+      (is (some? (:geom-3067 entry)))))
 
   (testing "Duplicate vertices are deduped"
-    (let [site {:_id "site-2"
-                :_source {:status "active"
-                          :type {:type-code 4401}
-                          :search-meta
-                          {:location
-                           {:simple-geoms
-                            {:type "FeatureCollection"
-                             :features
-                             [{:type "Feature"
-                               :geometry {:type "LineString"
-                                          :coordinates [[24.9 60.17]
-                                                        [24.91 60.18]
-                                                        [24.9 60.17]]}}]}}}}}
-          entry (diversity/prepare-site-entry site prn)]
+    (let [entry (diversity/prepare-site-entry
+                 (linestring-site "site-2" 4401 [[24.9 60.17]
+                                                 [24.91 60.18]
+                                                 [24.9 60.17]])
+                 prn)]
       (is (= ["24.9,60.17" "24.91,60.18"] (:dests entry)))))
 
   (testing "Site without usable geometry yields nil"
@@ -107,11 +124,10 @@
                                               #(swap! errors conj %)))))))
 
 (deftest assign-sites-test
-  (let [cell [24.94 60.16]
-        near-site {:coords [[24.945 60.161]]} ; ~300 m
-        far-site {:coords [[25.05 60.16]]} ; ~6 km
-        multi-vertex-site {:coords [[25.05 60.16] ; far vertex
-                                    [24.95 60.162]]}] ; near vertex
+  (let [cell (->cell-point [24.94 60.16])
+        entry #(diversity/prepare-site-entry % prn)
+        near-site (entry (point-site "near" 1520 [24.945 60.161]))   ; ~300 m
+        far-site (entry (point-site "far" 1520 [25.05 60.16]))]      ; ~6 km
 
     (testing "Site within radius is assigned"
       (is (= [[0]] (diversity/assign-sites [cell] [near-site] 2250))))
@@ -119,16 +135,21 @@
     (testing "Site outside radius is not assigned"
       (is (= [[]] (diversity/assign-sites [cell] [far-site] 2250))))
 
-    (testing "One near vertex suffices"
-      (is (= [[0]] (diversity/assign-sites [cell] [multi-vertex-site] 2250))))
-
     (testing "Assignments align with cell order"
-      (let [far-cell [26.0 61.0]]
+      (let [far-cell (->cell-point [26.0 61.0])]
         (is (= [[0] []]
                (diversity/assign-sites [cell far-cell] [near-site] 2250)))))
 
-    (testing "Radius boundary respects haversine distance"
-      (let [d (gis/haversine [24.94 60.16] [24.945 60.161])]
+    (testing "Distance is to the geometry, not just its vertices"
+      ;; Long straight linestring passing right by the cell; both
+      ;; vertices are ~3km away. The old per-cell ES geo query included
+      ;; such sites and so must the assignment prefilter.
+      (let [trail (entry (linestring-site "trail" 4401 [[24.88 60.16]
+                                                        [25.00 60.16]]))]
+        (is (= [[0]] (diversity/assign-sites [cell] [trail] 2250)))))
+
+    (testing "Radius boundary respects metric distance"
+      (let [d (.distance (:geom-3067 near-site) cell)]
         (is (= [[0]] (diversity/assign-sites [cell] [near-site] (+ d 1))))
         (is (= [[]] (diversity/assign-sites [cell] [near-site] (- d 1))))))))
 
@@ -152,27 +173,48 @@
 
 (deftest merge-table-chunks-test
   (testing "Columns of consecutive chunks are concatenated per row"
-    (let [merged (diversity/merge-table-chunks
-                  [{:car {:distances [[1 2] [3 4]] :durations [[10 20] [30 40]]}}
-                   {:car {:distances [[5] [6]] :durations [[50] [60]]}}])]
-      (is (= [[1 2 5] [3 4 6]] (-> merged :car :distances)))
-      (is (= [[10 20 50] [30 40 60]] (-> merged :car :durations)))))
+    (let [{:keys [tables failed-cols]}
+          (diversity/merge-table-chunks
+           [{:car {:distances [[1 2] [3 4]] :durations [[10 20] [30 40]]}}
+            {:car {:distances [[5] [6]] :durations [[50] [60]]}}]
+           [2 1] 2)]
+      (is (= [[1 2 5] [3 4 6]] (-> tables :car :distances)))
+      (is (= [[10 20 50] [30 40 60]] (-> tables :car :durations)))
+      (is (= {} failed-cols))))
 
   (testing "Single chunk passes through"
-    (let [merged (diversity/merge-table-chunks
-                  [{:foot {:distances [[1.0]] :durations [[2.0]]}}])]
-      (is (= [[1.0]] (-> merged :foot :distances)))
-      (is (= [[2.0]] (-> merged :foot :durations)))))
+    (let [{:keys [tables failed-cols]}
+          (diversity/merge-table-chunks
+           [{:foot {:distances [[1.0]] :durations [[2.0]]}}]
+           [1] 1)]
+      (is (= [[1.0]] (-> tables :foot :distances)))
+      (is (= [[2.0]] (-> tables :foot :durations)))
+      (is (= {} failed-cols))))
 
-  (testing "Profile missing from any chunk is dropped entirely"
-    (let [merged (diversity/merge-table-chunks
-                  [{:car {:distances [[1]] :durations [[10]]}
-                    :foot {:distances [[1]] :durations [[10]]}}
-                   {:car {:distances [[2]] :durations [[20]]}}])]
-      (is (= #{:car} (set (keys merged))))))
+  (testing "A chunk missing a profile is nil-filled and its columns reported"
+    (let [{:keys [tables failed-cols]}
+          (diversity/merge-table-chunks
+           [{:car {:distances [[1 2]] :durations [[10 20]]}
+             :foot {:distances [[1 2]] :durations [[10 20]]}}
+            {:car {:distances [[3]] :durations [[30]]}}]
+           [2 1] 1)]
+      (is (= [[1 2 3]] (-> tables :car :distances)))
+      ;; foot kept with nil-filled columns for the failed chunk
+      (is (= [[1 2 nil]] (-> tables :foot :distances)))
+      (is (= [[10 20 nil]] (-> tables :foot :durations)))
+      (is (= {:foot #{2}} (update-vals failed-cols set)))))
 
-  (testing "All profiles missing yields empty map"
-    (is (= {} (diversity/merge-table-chunks [{}])))))
+  (testing "Profile missing from every chunk is omitted entirely"
+    (let [{:keys [tables failed-cols]}
+          (diversity/merge-table-chunks
+           [{:car {:distances [[1]] :durations [[10]]}} {}]
+           [1 1] 1)]
+      (is (= #{:car} (set (keys tables))))
+      (is (= {:car #{1}} (update-vals failed-cols set)))))
+
+  (testing "All profiles missing yields empty maps"
+    (is (= {:tables {} :failed-cols {}}
+           (diversity/merge-table-chunks [{}] [1] 1)))))
 
 (deftest resolve-dests-test
   (testing "Resolve dests extracts coordinates correctly"

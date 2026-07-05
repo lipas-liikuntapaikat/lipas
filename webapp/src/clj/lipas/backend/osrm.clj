@@ -26,25 +26,39 @@
   This allows buffer for 3 profiles x socket-timeout."
   45000)
 
-;; Cache statistics
+;; Cache statistics (cached lookups only)
 (defonce cache-stats
   (atom {:hits 0 :misses 0}))
 
+;; Actual HTTP requests issued, cached or not
+(defonce request-stats
+  (atom {:requests 0}))
+
 (defonce ^{:doc "Reusable connection pool shared by all OSRM requests.
   Keep-alive connections avoid a fresh TCP handshake per request, which
-  dominates latency when many table requests are made in sequence."}
+  dominates latency when many table requests are made in sequence.
+  Sized so interactive analyses don't queue behind batch precompute
+  jobs (which hold at most one connection per profile host at a time)."}
   connection-manager
-  (conn-mgr/make-reusable-conn-manager
-   {:timeout 30 ; Idle connection TTL (seconds)
-    :threads 12 ; Max connections total
-    :default-per-route 4})) ; Per profile server (car/bicycle/foot)
+  (doto (conn-mgr/make-reusable-conn-manager
+         {:timeout 30 ; Idle connection TTL (seconds)
+          :threads 30 ; Max connections total
+          :default-per-route 10}) ; Per profile server (car/bicycle/foot)
+    ;; Health-check connections that sat idle >1s before reuse, so a
+    ;; keep-alive connection the server closed doesn't surface as an
+    ;; IOException mid-request
+    (.setValidateAfterInactivity 1000)))
 
 (def http-options
   {:as :json ; Parse JSON directly, skipping string intermediate
    :throw-exceptions false ; Return error responses instead of throwing
    :connection-timeout 2000 ; 2 seconds to establish connection
    :socket-timeout 30000 ; 30 seconds for response
+   :connection-request-timeout 10000 ; 10 seconds to lease from the pool
    :connection-manager connection-manager
+   ;; OSRM GETs are idempotent - retry once on transient IO failures
+   ;; (e.g. a stale keep-alive connection that slipped past validation)
+   :retry-handler (fn [_ex try-count _ctx] (< try-count 2))
    ;; Standard options
    :decompress-body true ; OSRM typically uses gzip
    :accept :json
@@ -76,29 +90,39 @@
                                                  (count destinations))))}))))
 
 (defn get-data
-  "Fetch a distance/duration table from OSRM.
+  "Fetch a distance/duration table from OSRM. Returns nil on any
+  failure (HTTP error status, connection failure, timeout) so callers
+  degrade by omitting the profile instead of blowing up mid-batch.
 
   `:cache?` (default true) controls the URL-keyed TTL cache. Batch
   callers issuing large one-off table requests should pass false so
   multi-kB URLs don't churn the cache."
   [{:keys [sources destinations cache?] :or {cache? true} :as m}]
   (when (and (seq sources) (seq destinations))
-    (let [url (make-url m)
-          cached-value (when cache? (cache/lookup @osrm-cache url))]
-
+    (let [url (make-url m)]
       (if (and cache? (cache/has? @osrm-cache url))
         ;; Cache hit
         (do
           (swap! cache-stats update :hits inc)
           (log/debug "OSRM cache hit for URL:" url)
-          cached-value)
+          (cache/lookup @osrm-cache url))
 
         ;; Cache miss - fetch and cache
         (do
-          (swap! cache-stats update :misses inc)
-          (log/debug "OSRM cache miss for URL:" url)
-          (let [response (client/get url http-options)]
+          (when cache?
+            (swap! cache-stats update :misses inc))
+          (swap! request-stats update :requests inc)
+          (let [response (try
+                           (client/get url http-options)
+                           ;; :throw-exceptions false only suppresses
+                           ;; status exceptions - connection-level
+                           ;; failures still throw
+                           (catch java.io.IOException e
+                             (log/error "OSRM connection error:" (ex-message e))
+                             nil))]
             (cond
+              (nil? response) nil
+
               ;; Success - cache and return
               (= 200 (:status response))
               (let [result (:body response)]
@@ -112,28 +136,27 @@
                 (log/error "OSRM error:" (:status response) (:body response))
                 nil)
 
-              ;; Connection error or timeout
-              (:error response)
-              (do
-                (log/error "OSRM connection error:" (:error response))
-                nil)
-
               :else nil)))))))
 
 (defn get-distances-and-travel-times
   "Fetch distances and travel times for multiple profiles in parallel.
-  Returns partial results if some profiles timeout (logs warning instead of throwing)."
-  [{:keys [profiles]
-    :or {profiles [:car :bicycle :foot]}
+  Returns partial results if some profiles fail or time out (logs a
+  warning instead of throwing)."
+  [{:keys [profiles timeout-ms]
+    :or {profiles [:car :bicycle :foot]
+         timeout-ms osrm-parallel-timeout-ms}
     :as m}]
   (let [futures (->> profiles
                      (mapv (fn [p] [p (future (get-data (assoc m :profile p)))])))]
     (reduce (fn [res [profile f]]
-              (let [result (deref f osrm-parallel-timeout-ms ::timeout)]
+              (let [result (deref f timeout-ms ::timeout)]
                 (cond
                   (= result ::timeout)
+                  ;; Deliberately no future-cancel: interrupting a
+                  ;; request that holds a pooled connection risks
+                  ;; leaking it, and the socket timeout bounds the
+                  ;; request anyway
                   (do
-                    (future-cancel f)
                     (log/warn "OSRM request timed out for profile" profile)
                     res)
 
@@ -164,6 +187,7 @@
   []
   (reset! osrm-cache (cache/ttl-cache-factory {} :ttl (* 5 60 1000)))
   (reset! cache-stats {:hits 0 :misses 0})
+  (reset! request-stats {:requests 0})
   (log/info "OSRM cache cleared"))
 
 (comment
