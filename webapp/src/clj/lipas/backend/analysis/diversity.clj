@@ -263,7 +263,15 @@
 
 (def tile-size-m
   "Cells are grouped into square TM35FIN tiles; each tile shares one
-  multi-source OSRM table request per profile."
+  multi-source OSRM table request per profile.
+
+  Tile size balances two measured cost terms of OSRM /table (MLD):
+  ~20ms per DESTINATION (foot profile; backward searches, amortized
+  across all sources in the request) plus ~1ms per source x dest PAIR.
+  Small tiles repay the per-destination cost for every cell (a single
+  urban cell sees ~1000 destinations, so per-cell requests are ~20s of
+  foot compute EACH); huge tiles maximize pair count. 2km - matching
+  cell-radius-m - sits near the optimum for dense areas."
   2000)
 
 (def max-table-locations
@@ -272,11 +280,26 @@
   request URLs and response matrices moderate."
   1500)
 
+(def osrm-table-socket-timeout-ms
+  "Response timeout for batch table requests (2 minutes). Large
+  matrices - the foot profile in particular - can take well over the
+  default 30s to compute."
+  120000)
+
 (def osrm-table-timeout-ms
-  "Timeout per OSRM table request (60 seconds)."
-  60000)
+  "Deref timeout per OSRM table request. Slightly above the socket
+  timeout so the socket timeout, not the deref, is what bounds a slow
+  request."
+  150000)
 
 (def osrm-profiles [:car :bicycle :foot])
+
+(def tile-parallelism
+  "Tiles processed concurrently. Each tile issues at most one in-flight
+  request per profile server, so this also bounds concurrent requests
+  per server. The foot profile computes large tables much slower than
+  car/bicycle; overlapping tiles keeps cores busy during those."
+  3)
 
 (defn resolve-dests [site on-error]
   (try
@@ -362,6 +385,7 @@
                      :sources sources
                      :destinations dests
                      :cache? false
+                     :socket-timeout-ms osrm-table-socket-timeout-ms
                      :timeout-ms osrm-table-timeout-ms}
                     osrm/get-distances-and-travel-times
                     (update-vals #(select-keys % [:distances :durations]))
@@ -506,19 +530,24 @@
         assignments (assign-sites cell-points site-entries
                                   (+ cell-radius-m assignment-margin-m))
         tiles (group-by #(tile-key (nth cells-3067 %)) (range (count cells)))
-        osrm-requests (volatile! 0)]
+        osrm-requests (atom 0)]
     (log/info (format "Processing %d cells / %d sites in %d tiles"
                       (count cells) (count site-entries) (count tiles)))
-    (doseq [[tk idxs] tiles]
-      (try
-        (let [tile-cells (mapv (fn [i]
-                                 {:cell (nth cells i)
-                                  :coord (nth cell-coords i)
-                                  :site-idxs (nth assignments i)})
-                               idxs)]
-          (vswap! osrm-requests + (process-tile! client idx-name site-entries tile-cells)))
-        (catch Exception e
-          (log/error e "Failed to process tile" tk))))
+    (doseq [wave (partition-all tile-parallelism tiles)]
+      (->> wave
+           (mapv (fn [[tk idxs]]
+                   (future
+                     (try
+                       (let [tile-cells (mapv (fn [i]
+                                                {:cell (nth cells i)
+                                                 :coord (nth cell-coords i)
+                                                 :site-idxs (nth assignments i)})
+                                              idxs)]
+                         (swap! osrm-requests
+                                + (process-tile! client idx-name site-entries tile-cells)))
+                       (catch Exception e
+                         (log/error e "Failed to process tile" tk))))))
+           (run! deref)))
     {:cells (count cells)
      :sites (count site-entries)
      :tiles (count tiles)

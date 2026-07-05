@@ -56,9 +56,14 @@
    :socket-timeout 30000 ; 30 seconds for response
    :connection-request-timeout 10000 ; 10 seconds to lease from the pool
    :connection-manager connection-manager
-   ;; OSRM GETs are idempotent - retry once on transient IO failures
-   ;; (e.g. a stale keep-alive connection that slipped past validation)
-   :retry-handler (fn [_ex try-count _ctx] (< try-count 2))
+   ;; OSRM GETs are idempotent - retry once on connection-establishment
+   ;; failures (e.g. a stale keep-alive connection that slipped past
+   ;; validation). Deliberately NOT on SocketTimeoutException: retrying
+   ;; a slow request doubles the load on a server that is still
+   ;; computing the abandoned response.
+   :retry-handler (fn [ex try-count _ctx]
+                    (and (< try-count 2)
+                         (not (instance? java.net.SocketTimeoutException ex))))
    ;; Standard options
    :decompress-body true ; OSRM typically uses gzip
    :accept :json
@@ -96,8 +101,13 @@
 
   `:cache?` (default true) controls the URL-keyed TTL cache. Batch
   callers issuing large one-off table requests should pass false so
-  multi-kB URLs don't churn the cache."
-  [{:keys [sources destinations cache?] :or {cache? true} :as m}]
+  multi-kB URLs don't churn the cache.
+
+  `:socket-timeout-ms` overrides the default 30s response timeout -
+  large table matrices (especially the foot profile) can legitimately
+  take longer to compute."
+  [{:keys [sources destinations cache? socket-timeout-ms]
+    :or {cache? true} :as m}]
   (when (and (seq sources) (seq destinations))
     (let [url (make-url m)]
       (if (and cache? (cache/has? @osrm-cache url))
@@ -112,8 +122,10 @@
           (when cache?
             (swap! cache-stats update :misses inc))
           (swap! request-stats update :requests inc)
-          (let [response (try
-                           (client/get url http-options)
+          (let [opts (cond-> http-options
+                       socket-timeout-ms (assoc :socket-timeout socket-timeout-ms))
+                response (try
+                           (client/get url opts)
                            ;; :throw-exceptions false only suppresses
                            ;; status exceptions - connection-level
                            ;; failures still throw

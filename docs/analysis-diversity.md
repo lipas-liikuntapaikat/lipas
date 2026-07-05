@@ -104,9 +104,24 @@ OSRM response) are skipped; if nothing is routable the minimums are
 ## Typical High Scale Case
 
 - **Grid items per analysis**: 50-200 (depending on area size)
-- **Sports sites per grid item**: 150-300 (in urban areas)
+- **Sports sites per grid item**: 150-450 (in urban areas)
 - **OSRM table requests per analysis**: 3 per ~2km tile of cells
-  (typically 3-12 per job; more when destination chunking kicks in)
+  (typically 3-15 per job; more when destination chunking kicks in)
+
+Measured on a Helsinki-center point-site job (49 cells, 827 candidate
+sites, real local OSRM): the old per-site implementation made 50,193
+HTTP requests in ~324s; the tiled implementation makes 15 requests
+(~3,300x fewer) in ~160s on the same 4-core host. Wall time is bound
+by foot-profile table computation (~20ms per destination + ~1ms per
+source-destination pair), which is why tile size matters more than
+request count - see the `tile-size-m` docstring.
+
+Note on OSRM snapping: table values for coordinates that sit off the
+routable network (e.g. facilities inside parks) can differ slightly
+depending on the other coordinates in the same request. In an
+old-vs-new comparison of ~100k cell/site/profile values, exactly one
+pair differed for this reason (3.9m vs 3054m by car for a park
+facility - the larger value routes via the real road network).
 
 ## Configuration Parameters
 
