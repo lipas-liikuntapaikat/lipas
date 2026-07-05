@@ -139,6 +139,30 @@
   (-> (.read (WKTReader. (gf srid)) ^String s)
       (transform-geom srid tm35fin-srid)))
 
+(defn fcoll->tm35fin-geom
+  "GeoJSON FeatureCollection (WGS84) -> JTS geometry in TM35FIN
+  (EPSG:3067), where distances are in meters."
+  ^Geometry [fcoll]
+  (transform-geom (->jts-geom fcoll) srid tm35fin-srid))
+
+(defn tm35fin-point
+  "JTS point from TM35FIN [easting northing]."
+  [[e n]]
+  (.createPoint (gf tm35fin-srid) (Coordinate. e n)))
+
+(defn within-distance?
+  "True when JTS geometry g2 lies within distance-m of g1. Both
+  geometries must be in a metric CRS (e.g. TM35FIN). An envelope
+  prefilter avoids the exact distance computation for far pairs."
+  [^Geometry g1 ^double distance-m ^Geometry g2]
+  (let [e1 (.getEnvelopeInternal g1)
+        e2 (.getEnvelopeInternal g2)]
+    (and (<= (- (.getMinX e1) distance-m) (.getMaxX e2))
+         (<= (.getMinX e2) (+ (.getMaxX e1) distance-m))
+         (<= (- (.getMinY e1) distance-m) (.getMaxY e2))
+         (<= (.getMinY e2) (+ (.getMaxY e1) distance-m))
+         (<= (.distance g1 g2) distance-m))))
+
 (defn transform-crs
   ([geom] (transform-geom geom srid tm35fin-srid))
   ([geom from-crs to-crs]
@@ -160,19 +184,24 @@
   "Mean earth radius (meters), same constant spatial4j used."
   6371008.7714)
 
-(defn distance-point
-  "Geodesic (haversine) distance in meters between two points
-  (anything with getX/getY where x=lon, y=lat)."
-  [p1 p2]
-  (let [lat1 (Math/toRadians (.getY p1))
-        lat2 (Math/toRadians (.getY p2))
+(defn haversine
+  "Geodesic (haversine) distance in meters between [lon lat] pairs."
+  [[lon1 lat1] [lon2 lat2]]
+  (let [lat1 (Math/toRadians lat1)
+        lat2 (Math/toRadians lat2)
         sin-dlat (Math/sin (/ (- lat2 lat1) 2))
-        sin-dlon (Math/sin (/ (- (Math/toRadians (.getX p2))
-                                 (Math/toRadians (.getX p1)))
+        sin-dlon (Math/sin (/ (- (Math/toRadians lon2)
+                                 (Math/toRadians lon1))
                               2))
         a (+ (* sin-dlat sin-dlat)
              (* (Math/cos lat1) (Math/cos lat2) sin-dlon sin-dlon))]
     (* 2 earth-mean-radius-m (Math/asin (Math/sqrt (min 1.0 a))))))
+
+(defn distance-point
+  "Geodesic (haversine) distance in meters between two points
+  (anything with getX/getY where x=lon, y=lat)."
+  [p1 p2]
+  (haversine [(.getX p1) (.getY p1)] [(.getX p2) (.getY p2)]))
 
 (defn nearest-points [g1 g2]
   (DistanceOp/nearestPoints g1 g2))

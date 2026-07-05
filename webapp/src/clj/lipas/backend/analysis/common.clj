@@ -1,5 +1,6 @@
 (ns lipas.backend.analysis.common
   (:require
+   [clojure.core.async :as async]
    [clojure.data.csv :as csv]
    [clojure.java.io :as io]
    [clojure.set :as set]
@@ -33,28 +34,44 @@
                     (:geometry geom))
         :relation "intersects"}}}}}})
 
+(defn- sports-site-query
+  [fcoll distance-km type-codes statuses]
+  (let [geom (-> fcoll :features first)]
+    (-> (build-query geom distance-km)
+        (assoc :_source [:name
+                         :status
+                         :type.type-code
+                         :search-meta.location.simple-geoms])
+        (update-in [:query :bool :filter :geo_shape] set/rename-keys
+                   {:coords :search-meta.location.geometries})
+        (cond->
+            (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
+            (seq type-codes) (update-in [:query :bool :must] conj
+                                        {:terms {:type.type-code type-codes}})
+            (seq statuses)   (update-in [:query :bool :must] conj
+                                        {:terms {:status statuses}})))))
+
 (defn get-sports-site-data
   ([search fcoll distance-km type-codes]
    (get-sports-site-data search fcoll distance-km type-codes default-statuses))
   ([{:keys [indices client]} fcoll distance-km type-codes statuses]
    (let [idx-name (get-in indices [:sports-site :search])
-         geom     (-> fcoll :features first)
-         query    (-> (build-query geom distance-km)
-                   (assoc :_source [:name
-                                    :status
-                                    :type.type-code
-                                    :search-meta.location.simple-geoms])
-                   (update-in [:query :bool :filter :geo_shape] set/rename-keys
-                              {:coords :search-meta.location.geometries})
-                   (cond->
-                       (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
-                       (seq type-codes) (update-in [:query :bool :must] conj
-                                                   {:terms {:type.type-code type-codes}})
-                       (seq statuses)   (update-in [:query :bool :must] conj
-                                                   {:terms {:status statuses}})))]
+         query (sports-site-query fcoll distance-km type-codes statuses)]
      (-> (search/search client idx-name query)
          :body
          :hits))))
+
+(defn get-sports-site-data-scrolled
+  "Like get-sports-site-data but scrolls through every hit, so results
+  aren't clipped by the query size cap."
+  [{:keys [indices client]} fcoll distance-km type-codes statuses]
+  (let [idx-name (get-in indices [:sports-site :search])
+        query (sports-site-query fcoll distance-km type-codes statuses)
+        in-chan (search/scroll client idx-name query)]
+    {:hits (loop [acc []]
+             (if-let [page (async/<!! in-chan)]
+               (recur (into acc (-> page :body :hits :hits)))
+               acc))}))
 
 (defn get-es-data*
   [idx-name client fcoll distance-km]
@@ -98,9 +115,10 @@
       (dissoc :WKT)))
 
 (defn *seed-population-grid-from-csv!
-  [{:keys [client]} csv-path idx-name idx-alias batch-size]
+  [{:keys [client]} csv-path idx-name idx-alias batch-size prefix]
   (assert idx-name "Index name is required")
   (assert batch-size "Batch size is required")
+  (assert prefix "Index prefix is required")
 
   (with-open [rdr (io/reader csv-path)]
     (log/info "Creating index" idx-name)
@@ -121,18 +139,28 @@
   (log/info "Swapping alias" idx-alias "to point to" idx-name)
   (search/swap-alias! client {:new-idx idx-name :alias idx-alias})
 
+  ;; Reclaim the previous grid index (and any orphans from failed runs),
+  ;; guarding each delete so a single failure can't strand the rest.
+  (let [{:keys [deleted failed]} (search/delete-stale-indices! client prefix idx-name)]
+    (doseq [idx deleted]
+      (log/info "Deleted stale index" idx))
+    (when (seq failed)
+      (log/error "Failed to delete stale indices" failed)))
+
   (log/info "All done!"))
 
 (defn seed-population-1km-grid-from-csv!
   [{:keys [indices] :as search} csv-path]
-  (let [idx-name   (str "population-1km-" (search/gen-idx-name))
+  (let [prefix     "population-1km"
+        idx-name   (str prefix "-" (search/gen-idx-name))
         idx-alias  (get-in indices [:analysis :population])
         batch-size 100]
-    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size)))
+    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size prefix)))
 
 (defn seed-population-250m-grid-from-csv!
   [{:keys [indices] :as search} csv-path]
-  (let [idx-name   (str "population-250m-" (search/gen-idx-name))
+  (let [prefix     "population-250m"
+        idx-name   (str prefix "-" (search/gen-idx-name))
         idx-alias  (get-in indices [:analysis :population-high-def])
         batch-size 1000]
-    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size)))
+    (*seed-population-grid-from-csv! search csv-path idx-name idx-alias batch-size prefix)))

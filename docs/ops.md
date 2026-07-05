@@ -273,12 +273,15 @@ curl -X POST "localhost:9209/_aliases?pretty" -H 'Content-Type: application/json
 
 Diversity grid is calculated from the 250m population grid by  amending each grid item with distances and travel times to each sports facility within 2km radius. OSRM is used for calculating the distances and travel times.
 
-NOTE: Calculation takes about 8 hours
+NOTE: The July 2026 batching rewrite (tiled multi-source OSRM table
+requests, ~3000x fewer HTTP round-trips) replaced the implementation
+that took about 8 hours for a full-country seed. Expect the seed to be
+dominated by dense urban tiles' foot-profile tables; re-measure on the
+first full run and update this note.
 
 - Run lipas.backend.analysis.diversity/seed-new-grid-from-csv!
   - use 250m population grid as the input
     - sports facilities are queried from Elasticsearch, so make sure it contains up-to-date data from production
-  - Takes about 8 HOURS
 - Copy the reuslts using elasticdump to a new index in production
   - Open tunnel lipas-prod-tunnel-elastic
 

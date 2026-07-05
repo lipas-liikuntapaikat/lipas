@@ -430,6 +430,35 @@
                         :body   {:actions actions}})
     old-idxs))
 
+(defn indices-matching
+  "Returns a set of index names (strings) matching the pattern `<prefix>-*`.
+  Returns #{} when nothing matches or the request fails."
+  [client prefix]
+  (let [res (es/request client {:method            :get
+                                :url               (es-utils/url [(str prefix "-*") "_alias"])
+                                :exception-handler (constantly nil)})]
+    (into #{} (map name) (keys (:body res)))))
+
+(defn delete-stale-indices!
+  "Deletes every `<prefix>-*` index except `keep-idx`.
+
+  Unlike deleting only the index the alias previously pointed to, this reclaims
+  orphans left behind by earlier runs that failed after the alias swap (an
+  orphaned index is no longer on the alias, so nothing else would ever delete
+  it). Each delete is guarded so a single failure can't strand the rest of the
+  sweep or abort the surrounding re-index.
+
+  Returns `{:deleted [...] :failed [...]}` with the index names in each outcome."
+  [client prefix keep-idx]
+  (reduce (fn [acc idx]
+            (try
+              (delete-index! client idx)
+              (update acc :deleted conj idx)
+              (catch Exception _e
+                (update acc :failed conj idx))))
+          {:deleted [] :failed []}
+          (disj (indices-matching client prefix) keep-idx)))
+
 (defn create-alias!
   [client {:keys [alias idx-name]}]
   (es/request client {:method :post
