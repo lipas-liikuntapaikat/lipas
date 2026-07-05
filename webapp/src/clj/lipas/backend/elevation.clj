@@ -85,28 +85,44 @@
   "Upper bound on simultaneous MML requests. MML is an external,
   rate-limited API guarded by a circuit breaker in the job dispatcher;
   fetches proceed in bounded waves instead of launching every chunk
-  fetch at once."
+  fetch at once (the old implementation fired one concurrent request
+  per chunk, 165 for one benchmark route). Deliberate tradeoff: under
+  severe MML degradation a many-chunk route may now exceed its job
+  timeout and retry later via the queue, instead of 'winning' by
+  hammering the degraded API with hundreds of concurrent slow
+  requests."
   8)
 
-(defonce ^{:doc "Reusable connection pool shared by all MML requests.
-  Keep-alive connections avoid a fresh TCP+TLS handshake per request,
-  which matters when a route needs tens of chunk fetches."}
+(defonce ^{:doc "Reusable connection pool shared by all MML requests,
+  built lazily on first use. Keep-alive connections avoid a fresh
+  TCP+TLS handshake per request, which matters when a route needs tens
+  of chunk fetches. Sized well above max-concurrent-fetches so that
+  concurrently running elevation jobs (worker general lane has
+  multiple threads) and abandoned requests still holding leases
+  (a timed-out fetch blocks on its socket read until socket-timeout;
+  interrupts don't unblock it) can't starve each other of
+  connections."}
   connection-manager
-  (doto (conn-mgr/make-reusable-conn-manager
-         {:timeout 30 ; Idle connection TTL (seconds)
-          :threads max-concurrent-fetches
-          :default-per-route max-concurrent-fetches})
-    ;; Health-check connections that sat idle >1s before reuse, so a
-    ;; keep-alive connection the server closed doesn't surface as an
-    ;; IOException mid-request
-    (.setValidateAfterInactivity 1000)))
+  (delay
+    (doto (conn-mgr/make-reusable-conn-manager
+           {:timeout 30 ; Idle connection TTL (seconds)
+            :threads 32
+            :default-per-route 32})
+      ;; Health-check connections that sat idle >1s before reuse, so a
+      ;; keep-alive connection the server closed doesn't surface as an
+      ;; IOException mid-request
+      (.setValidateAfterInactivity 1000))))
 
 (def mml-http-options
-  "HTTP options for MML API requests."
+  "HTTP options for MML API requests. The shared `connection-manager`
+  is merged in by `get-elevation-coverage`."
   {:connection-timeout 5000     ;; 5 seconds to establish connection
    :socket-timeout 120000       ;; 2 minutes for response (large grids take time)
-   :connection-request-timeout 10000 ;; 10 seconds to lease from the pool
-   :connection-manager connection-manager
+   ;; Leasing from the pool must tolerate a full socket-timeout wait:
+   ;; failing the lease faster than in-flight requests can finish would
+   ;; turn MML slowness into job failures (and eventually a tripped
+   ;; circuit breaker) instead of slow jobs
+   :connection-request-timeout 130000
    :throw-exceptions false      ;; Handle errors explicitly
    :decompress-body true
    ;; GetCoverage GETs are idempotent - retry once on connection-
@@ -132,23 +148,6 @@
     (-> (client/get mml-coverage-url opts)
         :body)))
 
-(defn fit-to-coverage
-  "Returns an envelope that contains given envelope and 'matches' MML
-  2x2m coverage grid. Ensures that the returned envelope is within the
-  bounds of the coverage's envelope."
-  [{:keys [min-x min-y max-x max-y]} {:keys [envelope]}]
-  {:min-x (max (:min-x envelope) (let [n (Math/round (double min-x))] (if (odd? n) (dec n) n)))
-   :min-y (max (:min-y envelope) (let [n (Math/round (double min-y))] (if (odd? n) (dec n) n)))
-   :max-x (min (:max-x envelope) (let [n (Math/round (double max-x))] (if (odd? n) (dec n) n)))
-   :max-y (min (:max-y envelope) (let [n (Math/round (double max-y))] (if (odd? n) (dec n) n)))})
-
-(defn chunk-key
-  "Key [kx ky] of the fixed-grid chunk that contains the given TM35FIN
-  point. Chunk origins are multiples of `query-envelope-size-m`."
-  [[x y]]
-  [(long (Math/floor (/ x query-envelope-size-m)))
-   (long (Math/floor (/ y query-envelope-size-m)))])
-
 (defn- clamp-to-coverage
   "Clamp an already 2m-aligned envelope to the coverage envelope. An
   envelope fully outside the coverage becomes degenerate (min > max)
@@ -160,6 +159,30 @@
      :max-x (min (:max-x envelope) max-x)
      :min-y (max (:min-y envelope) min-y)
      :max-y (min (:max-y envelope) max-y)}))
+
+(defn fit-to-coverage
+  "Returns an envelope that contains given envelope and 'matches' MML
+  2x2m coverage grid. Ensures that the returned envelope is within the
+  bounds of the coverage's envelope."
+  [{:keys [min-x min-y max-x max-y]} _coverage-info]
+  (let [down-to-even (fn [v] (let [n (Math/round (double v))] (if (odd? n) (dec n) n)))]
+    (clamp-to-coverage {:min-x (down-to-even min-x)
+                        :min-y (down-to-even min-y)
+                        :max-x (down-to-even max-x)
+                        :max-y (down-to-even max-y)})))
+
+(defn chunk-key
+  "Key [kx ky] of the fixed-grid chunk that contains the given TM35FIN
+  point. Chunk origins are multiples of `query-envelope-size-m`. A
+  point exactly on the coverage envelope's max edge belongs to the
+  last chunk inside the coverage; `resolve-elevation`'s col/row cap
+  then reads its edge cell, like the old implementation did."
+  [[x y]]
+  (let [{:keys [envelope]} coverage-info
+        x (if (= (double x) (double (:max-x envelope))) (dec (double x)) x)
+        y (if (= (double y) (double (:max-y envelope))) (dec (double y)) y)]
+    [(long (Math/floor (/ x query-envelope-size-m)))
+     (long (Math/floor (/ y query-envelope-size-m)))]))
 
 (defn chunk-key->envelope
   "Envelope of fixed-grid chunk [kx ky], clamped to the coverage
@@ -224,72 +247,74 @@
              (sort-by (comp (juxt :min-x :min-y) :envelope))
              vec)))))
 
+(defn map-vertices
+  "Eagerly map f over every vertex coordinate of fcoll, rebuilding the
+  feature collection. Both vertex collection and z-appending go
+  through this single walk, so the walk order (and thereby the fetched
+  chunk set covering the resolved vertices) is structural, not a
+  documented invariant."
+  [f fcoll]
+  (update fcoll :features
+          (fn [fs]
+            (mapv
+             (fn [feat]
+               (update-in feat [:geometry :coordinates]
+                          (fn [coords]
+                            (condp = (-> feat :geometry :type)
+                              "Point"      (f coords)
+                              "LineString" (mapv f coords)
+                              "Polygon"    (mapv #(mapv f %) coords)
+                              (throw (ex-info "Encountered unexpected geometry type" feat))))))
+             fs))))
+
 (defn geometry-vertices
-  "All [lon lat] vertices of fcoll that `append-elevations` will resolve
-  an elevation for. Walks the geometry types exactly like
-  `append-elevations` so the fetched chunk set always covers the
-  resolved vertices."
+  "All vertex coordinates of fcoll that `append-elevations` will
+  resolve an elevation for, in walk order."
   [fcoll]
-  (into []
-        (mapcat
-         (fn [f]
-           (let [coords (-> f :geometry :coordinates)]
-             (condp = (-> f :geometry :type)
-               "Point"      [coords]
-               "LineString" coords
-               "Polygon"    (mapcat identity coords)
-               (throw (ex-info "Encountered unexpected geometry type" f))))))
-        (:features fcoll)))
+  (let [acc (volatile! (transient []))]
+    (map-vertices (fn [c] (vswap! acc conj! c) c) fcoll)
+    (persistent! @acc)))
 
 (defn resolve-elevation
-  [grid-index coords]
-  (let [[lon lat :as tm35] (gis/wgs84->tm35fin-no-wrap coords)
-        k (chunk-key tm35)
+  "Resolve the elevation of a TM35FIN point from the grid index. The
+  col/row cap keeps a point exactly on its grid's max edge in the edge
+  cell; anything further outside the grid means MML returned a grid
+  that doesn't cover the requested envelope, which must fail loudly
+  instead of silently resolving a wrong edge cell."
+  [grid-index [x y :as tm35]]
+  (let [k (chunk-key tm35)
 
         {:keys [headers rows]}
         (or (get grid-index k)
             (throw (ex-info "No elevation grid covers coordinate"
-                            {:coords coords :tm35fin tm35 :chunk-key k})))
+                            {:tm35fin tm35 :chunk-key k})))
+
+        {:keys [xllcorner yllcorner cellsize ncols nrows]} headers
 
         ;; Resolve col and row for the coords relative to the lower
         ;; left corner of the grid. Cap to max-bounds.
-        col (min (long (Math/floor
-                        (/ (- lon (:xllcorner headers))
-                           (:cellsize headers))))
-                 (dec (:ncols headers)))
-        row (min (long (Math/floor
-                        (/ (- lat (:yllcorner headers))
-                           (:cellsize headers))))
-                 (dec (:nrows headers)))]
+        col (long (Math/floor (/ (- x xllcorner) cellsize)))
+        row (long (Math/floor (/ (- y yllcorner) cellsize)))]
 
-    (-> rows (nth row) (nth col))))
+    (when-not (and (<= 0 col ncols) (<= 0 row nrows))
+      (throw (ex-info "Vertex outside its elevation grid"
+                      {:tm35fin tm35 :chunk-key k :headers headers})))
+
+    (-> rows
+        (nth (min row (dec nrows)))
+        (nth (min col (dec ncols))))))
 
 (defn append-elevations
-  [fcoll grid-index]
-  (update fcoll :features
-          (fn [fs]
-            (map
-             (fn [f]
-               (update-in f [:geometry :coordinates]
-                          (fn [coords]
-                            (condp = (-> f :geometry :type)
-                              "Point"      (let [[x y] coords]
-                                             [x y (resolve-elevation grid-index coords)])
-                              "LineString" (mapv
-                                            (fn [coords]
-                                              (let [[x y] coords]
-                                                [x y (resolve-elevation grid-index coords)]))
-                                            coords)
-                              "Polygon"    (mapv
-                                            (fn [coords]
-                                              (mapv
-                                               (fn [coords]
-                                                 (let [[x y] coords]
-                                                   [x y (resolve-elevation grid-index coords)]))
-                                               coords))
-                                            coords)
-                              (throw (ex-info "Encountered unexpected geometry type" f))))))
-             fs))))
+  "Append a z coordinate to every vertex, resolved from grid-index.
+  tm35-vertices must be the vertices of fcoll in walk order (as
+  returned by `geometry-vertices`, CRS-transformed once)."
+  [fcoll grid-index tm35-vertices]
+  (let [i (volatile! -1)]
+    (map-vertices
+     (fn [coords]
+       (let [[x y] coords]
+         [x y (resolve-elevation grid-index (nth tm35-vertices (vswap! i inc)))]))
+     fcoll)))
 
 (defn parse-ascii-grid-headers
   [lines]
@@ -320,6 +345,23 @@
     {:headers (parse-ascii-grid-headers header-lines)
      :data    (parse-ascii-grid-data data-lines)}))
 
+(defn validate-grid
+  "Throw when the parsed grid's dimensions don't match its headers.
+  Guards against a truncated or malformed MML response silently
+  resolving wrong cells: row indexing counts from the top of the grid,
+  so missing rows would shift every subsequent lookup. Throwing fails
+  the job, which retries via the queue."
+  [{:keys [headers data] :as grid} envelope]
+  (let [{:keys [ncols nrows]} headers]
+    (when-not (and (= nrows (count data))
+                   (every? #(= ncols (count %)) data))
+      (throw (ex-info "MML grid dimensions don't match headers"
+                      {:envelope     envelope
+                       :headers      headers
+                       :nrows-parsed (count data)
+                       :ncols-parsed (into (sorted-set) (map count) data)})))
+    grid))
+
 (defn index-grid
   "Prepare a parsed grid for O(1) vertex lookups: reverse the rows once
   so the lower left corner comes first and row/col math works in
@@ -337,13 +379,15 @@
 (defn get-elevation-coverage
   [envelope]
   (let [opts (merge mml-http-options
-                    {:query-params (make-query-params envelope)
+                    {:connection-manager @connection-manager
+                     :query-params (make-query-params envelope)
                      :basic-auth   (str mml-api-key ":")})]
     (log/info "Getting coverage with envelope" envelope)
     (let [response (client/get mml-coverage-url opts)]
       (cond
         (= 200 (:status response))
-        (parse-ascii-grid (:body response))
+        (-> (parse-ascii-grid (:body response))
+            (validate-grid envelope))
 
         (>= (:status response) 400)
         (throw (ex-info "MML API error"
@@ -383,9 +427,7 @@
         fetch-plan    (plan-fetches tm35-vertices)]
     (log/info "Fetching elevation data for" (count tm35-vertices) "vertices in"
               (count fetch-plan) "requests")
-    (-> fetch-plan
-        fetch-grids
-        (->> (append-elevations fcoll)))))
+    (append-elevations fcoll (fetch-grids fetch-plan) tm35-vertices)))
 
 (comment
   (->> (describe-coverage)

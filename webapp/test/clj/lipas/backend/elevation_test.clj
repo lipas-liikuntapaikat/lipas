@@ -124,6 +124,22 @@
                   "NCOLS 1\r\nNROWS 1\r\nXLLCORNER 0\r\nYLLCORNER 0\r\nCELLSIZE 2.0\r\n1.0\n\n")]
       (is (= [[1.0]] (:data parsed))))))
 
+(deftest validate-grid-test
+  (let [env  {:min-x 400000 :max-x 400004 :min-y 6900000 :max-y 6900004}
+        grid (elevation/parse-ascii-grid (synthetic-grid-body env))]
+    (testing "A well-formed grid passes through unchanged"
+      (is (= grid (elevation/validate-grid grid env))))
+
+    (testing "Missing rows (truncated response) throw"
+      (is (thrown-with-msg? ExceptionInfo #"MML grid dimensions"
+                            (elevation/validate-grid
+                             (update grid :data pop) env))))
+
+    (testing "A short row (truncated mid-row) throws"
+      (is (thrown-with-msg? ExceptionInfo #"MML grid dimensions"
+                            (elevation/validate-grid
+                             (update-in grid [:data 1] pop) env))))))
+
 (deftest chunk-key-test
   (testing "Chunk keys are quotients of the fixed 250m grid"
     (is (= [1600 27600] (elevation/chunk-key [400000.0 6900000.0])))
@@ -143,6 +159,15 @@
             {:keys [min-x max-x min-y max-y]} (elevation/chunk-key->envelope
                                                (elevation/chunk-key p))]
         (is (and (>= x min-x) (< x max-x) (>= y min-y) (< y max-y))))))
+
+  (testing "A point exactly on the coverage max edge maps to the last chunk inside"
+    (let [{:keys [envelope]} elevation/coverage-info
+          k (elevation/chunk-key [(:max-x envelope) (:max-y envelope)])
+          {:keys [min-x max-x min-y max-y]} (elevation/chunk-key->envelope k)]
+      (is (= [(dec (/ (:max-x envelope) 250)) (dec (/ (:max-y envelope) 250))] k))
+      ;; non-degenerate envelope whose max edge touches the coverage max
+      (is (and (< min-x max-x) (< min-y max-y)
+               (= max-x (:max-x envelope)) (= max-y (:max-y envelope))))))
 
   (testing "Chunk envelopes are clamped to the coverage envelope"
     (let [{:keys [envelope]} elevation/coverage-info]
@@ -254,8 +279,9 @@
 (deftest resolve-elevation-test
   ;; Reference case from the original implementation's comment block:
   ;; test-point resolves to 152.34 from this 2x2 grid.
-  (let [test-point [25.720539797408946 62.62057217751676] ;; tm35fin ~[434355.53 6943966.50]
-        k          (elevation/chunk-key (gis/wgs84->tm35fin-no-wrap test-point))
+  (let [test-point (gis/wgs84->tm35fin-no-wrap
+                    [25.720539797408946 62.62057217751676]) ;; ~[434355.53 6943966.50]
+        k          (elevation/chunk-key test-point)
         grid       {:headers {:ncols 2 :nrows 2 :xllcorner 434352.0
                               :yllcorner 6943964.0 :cellsize 2.0}
                     ;; rows top-down as parsed from the ascii grid
@@ -265,13 +291,17 @@
     (testing "Row/col math relative to the grid's lower left corner"
       (is (= 152.34 (elevation/resolve-elevation index test-point))))
 
-    (testing "Col and row are capped to the grid bounds (edge cells)"
-      (let [tiny  {k (elevation/index-grid
-                      {:headers {:ncols 1 :nrows 1 :xllcorner 434352.0
-                                 :yllcorner 6943964.0 :cellsize 2.0}
-                       :data [[152.55]]})}]
-        ;; col/row would compute to 1 but are capped to ncols-1 = 0
-        (is (= 152.55 (elevation/resolve-elevation tiny test-point)))))
+    (testing "A point exactly on the grid's max edge reads the edge cell"
+      (let [edge-point [434356.0 6943968.0] ;; == grid max corner
+            index      {(elevation/chunk-key edge-point) (elevation/index-grid grid)}]
+        ;; col/row compute to ncols/nrows and are capped to the edge cell
+        (is (= 152.34 (elevation/resolve-elevation index edge-point)))))
+
+    (testing "A point further outside its grid fails loudly"
+      (let [far-point [434360.5 6943970.5] ;; > 1 cell beyond the grid
+            index     {(elevation/chunk-key far-point) (elevation/index-grid grid)}]
+        (is (thrown-with-msg? ExceptionInfo #"Vertex outside its elevation grid"
+                              (elevation/resolve-elevation index far-point)))))
 
     (testing "NODATA value passes through unchanged"
       (let [nodata {k (elevation/index-grid
