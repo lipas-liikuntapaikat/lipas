@@ -2,8 +2,8 @@
   "Simple tests for diversity analysis that work without full system setup"
   (:require [clojure.test :refer [deftest testing is]]
             [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.gis :as gis]
             [lipas.backend.search :as search]
-            [lipas.backend.osrm :as osrm]
             [lipas.schema.diversity :as diversity-schema]
             [malli.core :as m]
             [malli.error :as me]
@@ -11,35 +11,168 @@
 
 ;;; Pure function tests ;;;
 
-(deftest apply-mins-test
-  (testing "Apply mins correctly extracts minimum distances and durations"
-    ;; Test with single destination
-    (let [single-dest {:car {:distances [[1234.5]] :durations [[180.2]]}
-                       :bicycle {:distances [[1500.0]] :durations [[450.0]]}
-                       :foot {:distances [[1100.0]] :durations [[792.0]]}}
-          result (diversity/apply-mins single-dest)]
-      (is (= 1234.5 (-> result :car :distance-m)))
-      (is (= 180.2 (-> result :car :duration-s)))
-      (is (= 1500.0 (-> result :bicycle :distance-m)))
-      (is (= 450.0 (-> result :bicycle :duration-s)))
-      (is (= 1100.0 (-> result :foot :distance-m)))
-      (is (= 792.0 (-> result :foot :duration-s))))
+(deftest min-finite-test
+  (testing "Minimum over non-nil values"
+    (is (= 3 (diversity/min-finite [5 nil 3])))
+    (is (= 900.0 (diversity/min-finite [1900.0 1100.0 900.0])))
+    (is (= 1234.5 (diversity/min-finite [1234.5]))))
+  (testing "Nil when no finite values (unroutable destinations)"
+    (is (nil? (diversity/min-finite [nil nil])))
+    (is (nil? (diversity/min-finite [])))))
 
-    ;; Test with multiple destinations - should pick minimum for each mode
-    (let [multi-dest {:car {:distances [[2000.0 1234.5 3000.0]]
-                            :durations [[300.0 180.2 400.0]]}
-                      :bicycle {:distances [[2500.0 1500.0 3500.0]]
-                                :durations [[800.0 450.0 1000.0]]}
-                      :foot {:distances [[1900.0 1100.0 900.0]]
-                             :durations [[1368.0 792.0 648.0]]}}
-          result (diversity/apply-mins multi-dest)]
-      ;; Each mode takes its minimum value
+(deftest site-osrm-mins-test
+  (testing "Per-profile minimums over the site's matrix columns"
+    (let [tables {:car {:distances [[2000.0 1234.5 3000.0]]
+                        :durations [[300.0 180.2 400.0]]}
+                  :bicycle {:distances [[2500.0 1500.0 3500.0]]
+                            :durations [[800.0 450.0 1000.0]]}
+                  :foot {:distances [[1900.0 1100.0 900.0]]
+                         :durations [[1368.0 792.0 648.0]]}}
+          result (diversity/site-osrm-mins tables 0 [0 1 2])]
       (is (= 1234.5 (-> result :car :distance-m)))
       (is (= 180.2 (-> result :car :duration-s)))
       (is (= 1500.0 (-> result :bicycle :distance-m)))
       (is (= 450.0 (-> result :bicycle :duration-s)))
       (is (= 900.0 (-> result :foot :distance-m)))
-      (is (= 648.0 (-> result :foot :duration-s))))))
+      (is (= 648.0 (-> result :foot :duration-s)))))
+
+  (testing "Only the site's own columns are considered"
+    (let [tables {:car {:distances [[100.0 900.0 50.0]]
+                        :durations [[10.0 90.0 5.0]]}}
+          result (diversity/site-osrm-mins tables 0 [0 1])]
+      (is (= 100.0 (-> result :car :distance-m)))
+      (is (= 10.0 (-> result :car :duration-s)))))
+
+  (testing "Row selected by cell index"
+    (let [tables {:car {:distances [[100.0] [200.0]]
+                        :durations [[10.0] [20.0]]}}]
+      (is (= 200.0 (-> (diversity/site-osrm-mins tables 1 [0]) :car :distance-m)))))
+
+  (testing "Min distance and min duration are independent (old apply-mins semantics)"
+    (let [tables {:car {:distances [[2000.0 1000.0]]
+                        :durations [[100.0 500.0]]}}
+          result (diversity/site-osrm-mins tables 0 [0 1])]
+      (is (= 1000.0 (-> result :car :distance-m)))
+      (is (= 100.0 (-> result :car :duration-s)))))
+
+  (testing "Unroutable destinations (nils) don't crash and yield nil mins"
+    (let [tables {:car {:distances [[nil nil]]
+                        :durations [[nil nil]]}}
+          result (diversity/site-osrm-mins tables 0 [0 1])]
+      (is (= {:distance-m nil :duration-s nil} (:car result)))))
+
+  (testing "No profile data yields nil"
+    (is (nil? (diversity/site-osrm-mins {} 0 [0])))))
+
+(deftest prepare-site-entry-test
+  (testing "Point site yields dest strings and numeric coords"
+    (let [site {:_id "site-1"
+                :_source {:status "active"
+                          :type {:type-code 1520}
+                          :search-meta
+                          {:location
+                           {:simple-geoms
+                            {:type "FeatureCollection"
+                             :features
+                             [{:type "Feature"
+                               :geometry {:type "Point"
+                                          :coordinates [24.9 60.17]}}]}}}}}
+          entry (diversity/prepare-site-entry site prn)]
+      (is (= "site-1" (:id entry)))
+      (is (= 1520 (:type-code entry)))
+      (is (= "active" (:status entry)))
+      (is (= ["24.9,60.17"] (:dests entry)))
+      (is (= [[24.9 60.17]] (:coords entry)))))
+
+  (testing "Duplicate vertices are deduped"
+    (let [site {:_id "site-2"
+                :_source {:status "active"
+                          :type {:type-code 4401}
+                          :search-meta
+                          {:location
+                           {:simple-geoms
+                            {:type "FeatureCollection"
+                             :features
+                             [{:type "Feature"
+                               :geometry {:type "LineString"
+                                          :coordinates [[24.9 60.17]
+                                                        [24.91 60.18]
+                                                        [24.9 60.17]]}}]}}}}}
+          entry (diversity/prepare-site-entry site prn)]
+      (is (= ["24.9,60.17" "24.91,60.18"] (:dests entry)))))
+
+  (testing "Site without usable geometry yields nil"
+    (let [errors (atom [])]
+      (is (nil? (diversity/prepare-site-entry {:_id "broken" :_source {}}
+                                              #(swap! errors conj %)))))))
+
+(deftest assign-sites-test
+  (let [cell [24.94 60.16]
+        near-site {:coords [[24.945 60.161]]} ; ~300 m
+        far-site {:coords [[25.05 60.16]]} ; ~6 km
+        multi-vertex-site {:coords [[25.05 60.16] ; far vertex
+                                    [24.95 60.162]]}] ; near vertex
+
+    (testing "Site within radius is assigned"
+      (is (= [[0]] (diversity/assign-sites [cell] [near-site] 2250))))
+
+    (testing "Site outside radius is not assigned"
+      (is (= [[]] (diversity/assign-sites [cell] [far-site] 2250))))
+
+    (testing "One near vertex suffices"
+      (is (= [[0]] (diversity/assign-sites [cell] [multi-vertex-site] 2250))))
+
+    (testing "Assignments align with cell order"
+      (let [far-cell [26.0 61.0]]
+        (is (= [[0] []]
+               (diversity/assign-sites [cell far-cell] [near-site] 2250)))))
+
+    (testing "Radius boundary respects haversine distance"
+      (let [d (gis/haversine [24.94 60.16] [24.945 60.161])]
+        (is (= [[0]] (diversity/assign-sites [cell] [near-site] (+ d 1))))
+        (is (= [[]] (diversity/assign-sites [cell] [near-site] (- d 1))))))))
+
+(deftest index-dests-test
+  (let [entries [{:dests ["1,1" "2,2"]}
+                 {:dests ["2,2" "3,3"]}
+                 {:dests ["4,4"]}]]
+
+    (testing "Shared destinations get a single column"
+      (let [[dests site->cols] (diversity/index-dests entries [0 1 2])]
+        (is (= ["1,1" "2,2" "3,3" "4,4"] dests))
+        (is (= {0 [0 1] 1 [1 2] 2 [3]} site->cols))))
+
+    (testing "Only requested sites are indexed"
+      (let [[dests site->cols] (diversity/index-dests entries [2])]
+        (is (= ["4,4"] dests))
+        (is (= {2 [0]} site->cols))))
+
+    (testing "Empty input"
+      (is (= [[] {}] (diversity/index-dests entries []))))))
+
+(deftest merge-table-chunks-test
+  (testing "Columns of consecutive chunks are concatenated per row"
+    (let [merged (diversity/merge-table-chunks
+                  [{:car {:distances [[1 2] [3 4]] :durations [[10 20] [30 40]]}}
+                   {:car {:distances [[5] [6]] :durations [[50] [60]]}}])]
+      (is (= [[1 2 5] [3 4 6]] (-> merged :car :distances)))
+      (is (= [[10 20 50] [30 40 60]] (-> merged :car :durations)))))
+
+  (testing "Single chunk passes through"
+    (let [merged (diversity/merge-table-chunks
+                  [{:foot {:distances [[1.0]] :durations [[2.0]]}}])]
+      (is (= [[1.0]] (-> merged :foot :distances)))
+      (is (= [[2.0]] (-> merged :foot :durations)))))
+
+  (testing "Profile missing from any chunk is dropped entirely"
+    (let [merged (diversity/merge-table-chunks
+                  [{:car {:distances [[1]] :durations [[10]]}
+                    :foot {:distances [[1]] :durations [[10]]}}
+                   {:car {:distances [[2]] :durations [[20]]}}])]
+      (is (= #{:car} (set (keys merged))))))
+
+  (testing "All profiles missing yields empty map"
+    (is (= {} (diversity/merge-table-chunks [{}])))))
 
 (deftest resolve-dests-test
   (testing "Resolve dests extracts coordinates correctly"
@@ -83,53 +216,6 @@
       (is (= 60 (:population-age-65- result)))
       (is (number? (:diversity-idx-mean result)))
       (is (number? (:diversity-idx-median result))))))
-
-(deftest process-grid-item-structure-test
-  (testing "Process grid item maintains data structure"
-    (with-redefs [lipas.backend.analysis.common/get-sports-site-data
-                  (fn [_ _ _ _ _]
-                    {:hits [{:_id "site-1"
-                             :_source {:name "Test Site"
-                                       :status "active"
-                                       :type {:type-code 1520}
-                                       :search-meta
-                                       {:location
-                                        {:simple-geoms
-                                         {:features
-                                          [{:geometry {:coordinates [24.95 60.17]
-                                                       :type "Point"}
-                                            :type "Feature"}]}}}}}]})
-                  osrm/get-data
-                  (fn [{:keys [profile]}]
-                    (case profile
-                      :car {:distances [[1000.0]] :durations [[120.0]]}
-                      :bicycle {:distances [[1200.0]] :durations [[360.0]]}
-                      :foot {:distances [[950.0]] :durations [[684.0]]}
-                      nil))]
-
-      (let [grid-item {:grd_id "test-123"
-                       :WKT "POINT (24.9477 60.1678)"
-                       :vaesto "100"
-                       :extra-field "preserved"}
-            mock-search {:client nil :indices {}}
-            result (diversity/process-grid-item mock-search 2 grid-item prn)]
-
-        ;; Original fields preserved
-        (is (= "test-123" (:grd_id result)))
-        (is (= "100" (:vaesto result)))
-        (is (= "preserved" (:extra-field result)))
-
-        ;; Sports sites added
-        (is (sequential? (:sports-sites result)))
-        (is (= 1 (count (:sports-sites result))))
-
-        ;; Check site structure
-        (let [site (first (:sports-sites result))]
-          (is (= "site-1" (:id site)))
-          (is (= 1520 (:type-code site)))
-          (is (= "active" (:status site)))
-          (is (= 1000.0 (-> site :osrm :car :distance-m)))
-          (is (= 120.0 (-> site :osrm :car :duration-s))))))))
 
 (deftest bulk-data-transformation-test
   (testing "Grid items are correctly transformed for bulk indexing"

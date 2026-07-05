@@ -1,9 +1,6 @@
 (ns lipas.search-indexer
   (:require
-   [clojure.core.async :as async]
-   [clojure.data.csv :as csv]
    [clojure.string :as str]
-   [clojure.walk :as walk]
    [lipas.backend.api.v1.locations :as legacy-locations]
    [lipas.backend.api.v1.sports-place :as legacy-sports-place]
    [lipas.backend.analysis.diversity :as diversity]
@@ -17,7 +14,6 @@
    [lipas.backend.api.v1.transform :as legacy-transform]
    [lipas.utils :as utils]
    [next.jdbc :as jdbc]
-   [qbits.spandex :as es]
    [taoensso.timbre :as log]))
 
 (def cities (utils/index-by :city-code cities/all))
@@ -179,54 +175,6 @@
                              {:fetch-size 500}))]
         (flush-analytics-batch! client idx-name type-code tail)))))
 
-(defn read-csv->maps* [path]
-  (->> path
-       slurp
-       csv/read-csv
-       utils/csv-data->maps))
-
-(defn read-csv->maps [path]
-  (->> path
-       read-csv->maps*
-       (map walk/keywordize-keys)))
-
-(def dist-km 2)
-
-(def lol-atom (atom []))
-
-(defn index-diversity!
-  [search csv-path index-name]
-  (log/info "Starting to index diversity")
-
-  (log/info "Creating index" index-name)
-  #_(search/create-index! search index-name diversity/mappings)
-  (log/info "Index created!")
-
-  (log/info "Parsing grid data")
-  (let [grid-data (read-csv->maps csv-path)
-        on-error prn
-
-        {:keys [input-ch output-ch]}
-        (es/bulk-chan search {:flush-threshold 100
-                              :flush-interval 5000
-                              :max-concurrent-requests 3})]
-
-    (log/info "Grid data parsed. Starting to calculate and index")
-
-    (doseq [batch (partition-all 300 grid-data)]
-      (log/info "Processing new batch of 300")
-      (doseq [grid batch]
-        (->> (diversity/process-grid-item search dist-km grid on-error)
-             (search/wrap-es-bulk index-name nil :grd_id)
-             (async/put! input-ch)))
-
-      (log/info "Waiting for batch indexing to finish...")
-      (async/<!! output-ch)
-      (async/<!! output-ch)
-      (async/<!! output-ch))
-
-    (log/info "Diversity indexing DONE!")))
-
 (defn main
   ([db search mode]
    (main nil db search mode))
@@ -279,9 +227,7 @@
         search (:lipas/search system)]
     (try
       (if (= "diversity" mode)
-        (let [csv-path (second args)
-              idx-name (str "diversity-" (search/gen-idx-name))]
-          (index-diversity! (:client search) csv-path idx-name))
+        (diversity/seed-new-grid-from-csv! search (second args))
         (main system db search mode))
       (catch Exception ex
         (log/error ex "Something terrible happened while indexing" mode "!"))
@@ -303,9 +249,7 @@
 
   (def csv-path "/Users/tipo/lipas/aineistot/vaestoruutu_250m/vaestoruutu_250m_2020_kp.csv")
 
-  (index-diversity! search csv-path "poni705")
-  (count @lol-atom)
-  (second @lol-atom)
+  (diversity/seed-new-grid-from-csv! search csv-path)
 
   (def dada (core/get-sports-sites-by-type-code db 4401))
   (first dada)

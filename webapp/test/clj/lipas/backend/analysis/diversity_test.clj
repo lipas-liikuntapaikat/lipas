@@ -1,13 +1,13 @@
 (ns lipas.backend.analysis.diversity-test
-  (:require [clojure.test :refer [deftest testing is use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest testing is use-fixtures]]
             [integrant.core :as ig]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.config :as config]
             [lipas.backend.gis :as gis]
-            [lipas.backend.search :as search]
             [lipas.backend.osrm :as osrm]
-            [lipas.test-utils :as test-utils]
-            [taoensso.timbre :as log]))
+            [lipas.backend.search :as search]
+            [lipas.test-utils :as test-utils]))
 
 ;;; Test system setup ;;;
 ;; Note: This test only needs :lipas/search component, not the full system
@@ -116,18 +116,6 @@
                 {:type "Point"
                  :coordinates [24.950 60.169]}}}}}])
 
-(def test-osrm-responses
-  "Realistic OSRM API responses"
-  {:car {:code "Ok"
-         :distances [[2036.6 2050.3 2500.1]]
-         :durations [[338.4 340.2 380.5]]}
-   :bicycle {:code "Ok"
-             :distances [[2350.0 2360.5 2800.2]]
-             :durations [[763.0 765.1 820.3]]}
-   :foot {:code "Ok"
-          :distances [[1987.2 2000.1 2400.3]]
-          :durations [[1432.6 1440.2 1600.1]]}})
-
 ;;; Helper functions for seeding test data ;;;
 
 (defn- seed-test-data! [search]
@@ -148,20 +136,79 @@
 
 ;;; Mock OSRM for deterministic tests ;;;
 
-(defn mock-osrm-call
-  "Mock for osrm/get-data that returns profile-specific data"
-  [{:keys [profile] :as _params}]
-  (get test-osrm-responses profile))
+(def profile-factors
+  "Route distance = haversine distance * factor in the mock, so expected
+  minimums can be computed independently in assertions."
+  {:car 1.0 :bicycle 1.1 :foot 1.25})
+
+(def profile-speeds-m-s
+  {:car 10.0 :bicycle 5.0 :foot 1.4})
+
+(defn- parse-coord [s]
+  (mapv #(Double/parseDouble %) (str/split s #",")))
+
+(defn mock-osrm-matrix
+  "Matrix-shaped mock for osrm/get-data: distances[i][j] is the haversine
+  distance from source i to destination j scaled by a per-profile factor."
+  [{:keys [profile sources destinations] :as _params}]
+  (let [factor (profile-factors profile)
+        speed (profile-speeds-m-s profile)]
+    {:code "Ok"
+     :distances (mapv (fn [src]
+                        (mapv (fn [dest]
+                                (* factor (gis/haversine (parse-coord src)
+                                                         (parse-coord dest))))
+                              destinations))
+                      sources)
+     :durations (mapv (fn [src]
+                        (mapv (fn [dest]
+                                (/ (* factor (gis/haversine (parse-coord src)
+                                                            (parse-coord dest)))
+                                   speed))
+                              destinations))
+                      sources)}))
+
+(def test-point-fcoll
+  (gis/->fcoll
+   [(gis/->feature {:type "Point"
+                    :coordinates [24.9477 60.1678]})]))
+
+(defn- run-recalc-capturing-bulk!
+  "Run recalc-grid! with bulk indexing captured instead of written.
+  Returns the indexed grid docs keyed by grd_id."
+  ([] (run-recalc-capturing-bulk! mock-osrm-matrix))
+  ([osrm-mock]
+   (let [bulk-calls (atom [])]
+     (with-redefs [osrm/get-data osrm-mock
+                   search/bulk-index-sync! (fn [_ data]
+                                             (swap! bulk-calls conj data)
+                                             {:created (count data)})]
+       (diversity/recalc-grid! (test-search) test-point-fcoll))
+     (->> @bulk-calls
+          (mapcat identity)
+          (filter :grd_id)
+          (reduce (fn [m doc] (assoc m (:grd_id doc) doc)) {})))))
+
+(defn- site-coords [site-id]
+  (->> test-sports-sites
+       (filter #(= site-id (:_id %)))
+       first
+       :_source :search-meta :location :geometries :coordinates))
+
+(defn- expected-distance [grid-item site-id profile]
+  (let [cell-coords (gis/wkt-point->coords (:WKT grid-item))]
+    (* (profile-factors profile)
+       (gis/haversine cell-coords (site-coords site-id)))))
+
+(defn- approx= [a b]
+  (and (number? a) (number? b) (< (Math/abs (- (double a) (double b))) 0.001)))
 
 ;;; Tests ;;;
 
 (deftest fetch-grid-test
   (testing "Fetching grid items within radius"
     (seed-test-data! (test-search))
-    (let [test-fcoll (gis/->fcoll
-                      [(gis/->feature {:type "Point"
-                                       :coordinates [24.9477 60.1678]})])
-          result (diversity/fetch-grid (test-search) test-fcoll 1)]
+    (let [result (diversity/fetch-grid (test-search) test-point-fcoll 1)]
       (is (seq result))
       (is (every? #(contains? % :_source) result))
       ;; fetch-grid applies no sort, so ES returns the matching cells in
@@ -170,129 +217,113 @@
       (is (= #{"250mN667175E38600" "250mN667150E38600"}
              (set (map #(-> % :_source :grd_id) result)))))))
 
-(deftest process-grid-item-test
-  (testing "Processing single grid item calculates sports site distances"
+(deftest recalc-grid-structure-test
+  (testing "Recalculated docs preserve cell fields and carry full site entries"
     (seed-test-data! (test-search))
-    (with-redefs [osrm/get-data mock-osrm-call]
-      (let [grid-item (first test-grid-items)
-            result (diversity/process-grid-item (test-search) 2 grid-item prn)]
+    (let [docs (run-recalc-capturing-bulk!)]
+      (is (= #{"250mN667175E38600" "250mN667150E38600"} (set (keys docs))))
 
-        ;; Check structure
-        (is (contains? result :sports-sites))
-        (is (coll? (:sports-sites result)))
-        (is (pos? (count (:sports-sites result))))
+      (doseq [[_ doc] docs]
+        ;; Original grid cell fields preserved
+        (is (string? (:WKT doc)))
+        (is (string? (:vaesto doc)))
+        (is (= "Helsinki" (:kunta doc)))
 
-        ;; Check each sports site has required fields
-        (doseq [site (:sports-sites result)]
-          (is (contains? site :id))
+        ;; All 3 test sites are within 2km of both test cells
+        (is (= #{"site-1" "site-2" "site-3"}
+               (set (map :id (:sports-sites doc)))))
+
+        (doseq [site (:sports-sites doc)]
           (is (contains? site :type-code))
           (is (contains? site :status))
-          (is (contains? site :osrm)))
+          (is (= #{:car :bicycle :foot} (set (keys (:osrm site)))))
+          (doseq [[_ mins] (:osrm site)]
+            (is (number? (:distance-m mins)))
+            (is (number? (:duration-s mins)))))))))
 
-        ;; Check OSRM data structure
-        (when (seq (:sports-sites result))
-          (let [first-site (first (:sports-sites result))]
-            (is (= #{:car :bicycle :foot} (set (keys (:osrm first-site)))))
-            (is (number? (-> first-site :osrm :car :distance-m)))
-            (is (number? (-> first-site :osrm :car :duration-s)))))))))
-
-(deftest apply-mins-test
-  (testing "Apply mins correctly extracts minimum distances and durations"
-    ;; Test with single destination
-    (let [single-dest {:car {:distances [[1234.5]] :durations [[180.2]]}
-                       :bicycle {:distances [[1500.0]] :durations [[450.0]]}
-                       :foot {:distances [[1100.0]] :durations [[792.0]]}}
-          result (diversity/apply-mins single-dest)]
-      (is (= 1234.5 (-> result :car :distance-m)))
-      (is (= 180.2 (-> result :car :duration-s)))
-      (is (= 1500.0 (-> result :bicycle :distance-m)))
-      (is (= 450.0 (-> result :bicycle :duration-s)))
-      (is (= 1100.0 (-> result :foot :distance-m)))
-      (is (= 792.0 (-> result :foot :duration-s))))
-
-    ;; Test with multiple destinations - should pick minimum for each mode
-    (let [multi-dest {:car {:distances [[2000.0 1234.5 3000.0]]
-                            :durations [[300.0 180.2 400.0]]}
-                      :bicycle {:distances [[2500.0 1500.0 3500.0]]
-                                :durations [[800.0 450.0 1000.0]]}
-                      :foot {:distances [[1900.0 1100.0 900.0]]
-                             :durations [[1368.0 792.0 648.0]]}}
-          result (diversity/apply-mins multi-dest)]
-      ;; Each mode takes its minimum value
-      (is (= 1234.5 (-> result :car :distance-m)))
-      (is (= 180.2 (-> result :car :duration-s)))
-      (is (= 1500.0 (-> result :bicycle :distance-m)))
-      (is (= 450.0 (-> result :bicycle :duration-s)))
-      (is (= 900.0 (-> result :foot :distance-m)))
-      (is (= 648.0 (-> result :foot :duration-s))))))
-
-(deftest recalc-grid-test
-  (testing "Full grid recalculation workflow"
+(deftest recalc-grid-distance-correctness-test
+  (testing "Stored minimums match independently computed expected distances"
     (seed-test-data! (test-search))
-    (with-redefs [osrm/get-data mock-osrm-call]
-      (let [test-fcoll (gis/->fcoll
-                        [(gis/->feature {:type "Point"
-                                         :coordinates [24.9477 60.1678]})])
-            ;; Capture bulk index calls
-            bulk-calls (atom [])
-            mock-bulk-index (fn [client data]
-                              (swap! bulk-calls conj data)
-                              {:created (count data)})]
+    (let [docs (run-recalc-capturing-bulk!)]
+      (doseq [grid-item test-grid-items
+              site-id ["site-1" "site-2" "site-3"]
+              profile [:car :bicycle :foot]]
+        (let [doc (get docs (:grd_id grid-item))
+              site (->> doc :sports-sites (filter #(= site-id (:id %))) first)
+              expected (expected-distance grid-item site-id profile)
+              actual (get-in site [:osrm profile :distance-m])]
+          (is (approx= expected actual)
+              (format "cell %s site %s profile %s: expected %.3f, got %s"
+                      (:grd_id grid-item) site-id (name profile)
+                      (double expected) (pr-str actual)))))
 
-        (with-redefs [search/bulk-index-sync! mock-bulk-index]
-          (diversity/recalc-grid! (test-search) test-fcoll)
+      (testing "durations are scaled by profile speed"
+        (let [doc (get docs "250mN667175E38600")
+              site (->> doc :sports-sites (filter #(= "site-1" (:id %))) first)]
+          (is (approx= (/ (expected-distance (first test-grid-items) "site-1" :foot)
+                          (profile-speeds-m-s :foot))
+                       (get-in site [:osrm :foot :duration-s]))))))))
 
-          ;; Verify bulk indexing was called
-          (is (seq @bulk-calls))
-
-          ;; Verify data structure
-          (let [indexed-data (first @bulk-calls)]
-            (is (every? #(or (contains? % :index) (contains? % :grd_id)) indexed-data))
-            (is (= (count indexed-data) (* 2 (count test-grid-items)))) ; 2 entries per item
-            (is (every? #(= "diversity_test" (-> % :index :_index))
-                        (filter #(contains? % :index) indexed-data)))))))))
-
-(deftest memory-usage-test
-  (testing "Processing doesn't accumulate excessive memory"
+(deftest recalc-grid-chunking-invariance-test
+  (testing "Tiny max-table-locations forces chunked requests with identical results"
     (seed-test-data! (test-search))
-    (let [test-fcoll (gis/->fcoll
-                      [(gis/->feature {:type "Point"
-                                       :coordinates [24.9477 60.1678]})])
-          runtime (Runtime/getRuntime)
-          ;; Force GC and measure baseline
-          _ (.gc runtime)
-          _ (Thread/sleep 100)
-          baseline-memory (.totalMemory runtime)]
+    (let [request-sizes (atom [])
+          counting-mock (fn [{:keys [sources destinations] :as params}]
+                          (swap! request-sizes conj (+ (count sources)
+                                                       (count destinations)))
+                          (mock-osrm-matrix params))
+          baseline (run-recalc-capturing-bulk!)
+          chunked (with-redefs [diversity/max-table-locations 3]
+                    (run-recalc-capturing-bulk! counting-mock))]
+      ;; Chunking actually happened: more than one request per profile
+      (is (> (count @request-sizes) 3))
+      ;; Results are unaffected by chunking
+      (is (= baseline chunked)))))
 
-      (with-redefs [osrm/get-data mock-osrm-call
-                    ;; Limit grid items for memory test
-                    diversity/fetch-grid (fn [_ _ _]
-                                           (take 5 (map #(hash-map :_source %) test-grid-items)))]
+(deftest recalc-grid-profile-failure-test
+  (testing "A failing profile is omitted; other profiles keep their data"
+    (seed-test-data! (test-search))
+    (let [failing-mock (fn [{:keys [profile] :as params}]
+                         (when-not (= :bicycle profile)
+                           (mock-osrm-matrix params)))
+          docs (run-recalc-capturing-bulk! failing-mock)]
+      (is (seq docs))
+      (doseq [[_ doc] docs
+              site (:sports-sites doc)]
+        (is (= #{:car :foot} (set (keys (:osrm site)))))))))
 
-        ;; Run multiple iterations
-        (dotimes [_ 3]
-          (diversity/recalc-grid! (test-search) test-fcoll))
+(deftest recalc-grid-all-profiles-fail-test
+  (testing "Total OSRM failure still indexes docs, with nil osrm per site"
+    (seed-test-data! (test-search))
+    (let [docs (run-recalc-capturing-bulk! (constantly nil))]
+      (is (= #{"250mN667175E38600" "250mN667150E38600"} (set (keys docs))))
+      (doseq [[_ doc] docs
+              site (:sports-sites doc)]
+        (is (nil? (:osrm site)))))))
 
-        ;; Force GC and measure
-        (.gc runtime)
-        (Thread/sleep 100)
-        (let [final-memory (.totalMemory runtime)
-              memory-increase (- final-memory baseline-memory)
-              ;; Allow up to 100MB increase (reasonable for test data)
-              max-allowed-increase (* 100 1024 1024)]
-
-          (is (< memory-increase max-allowed-increase)
-              (str "Memory increased by " (/ memory-increase 1024 1024) "MB")))))))
+(deftest recalc-grid-timeout-test
+  (testing "Slow OSRM requests time out and are treated as failed profiles"
+    (seed-test-data! (test-search))
+    (let [slow-mock (fn [params]
+                      (Thread/sleep 200)
+                      (mock-osrm-matrix params))
+          docs (with-redefs [diversity/osrm-table-timeout-ms 50]
+                 (run-recalc-capturing-bulk! slow-mock))]
+      ;; Docs are still indexed, but without OSRM data
+      (is (= #{"250mN667175E38600" "250mN667150E38600"} (set (keys docs))))
+      (doseq [[_ doc] docs
+              site (:sports-sites doc)]
+        (is (nil? (:osrm site)))))))
 
 (deftest concurrent-processing-test
-  (testing "Concurrent processing doesn't corrupt data"
+  (testing "Concurrent recalculations don't corrupt data"
     (seed-test-data! (test-search))
     (let [test-points [[24.9477 60.1678]
                        [24.9500 60.1700]
                        [24.9400 60.1650]]
           results (atom [])]
 
-      (with-redefs [osrm/get-data mock-osrm-call
+      (with-redefs [osrm/get-data mock-osrm-matrix
                     search/bulk-index-sync! (fn [_ data]
                                               (swap! results conj data)
                                               {:created (count data)})]
@@ -309,52 +340,16 @@
           ;; Wait for all to complete
           (doseq [f futures] @f)
 
-          ;; Verify all results were captured
-          (is (= (count test-points) (count @results)))
+          ;; Every recalc produced at least one bulk call (per tile)
+          (is (>= (count @results) (count test-points)))
 
           ;; Verify no data corruption
           (doseq [result @results]
             (is (seq result))
-            (is (every? #(or (contains? % :index) (contains? % :grd_id)) result))))))))
-
-;;; Timeout handling tests ;;;
-
-(deftest osrm-site-timeout-test
-  (testing "site timeout constant is defined and positive"
-    (is (pos? diversity/osrm-site-timeout-ms))
-    ;; Should be at least 30 seconds
-    (is (>= diversity/osrm-site-timeout-ms 30000))))
-
-(deftest process-sites-chunk-timeout-handling-test
-  (testing "handles OSRM timeout gracefully by returning nil for osrm field"
-    (let [;; Mock that simulates a timeout by sleeping longer than the timeout
-          slow-mock (fn [_params]
-                      (Thread/sleep 200) ; Simulate slow response
-                      {:distances [[100]] :durations [[10]]})]
-
-      (with-redefs [osrm/get-data slow-mock
-                    ;; Use very short timeout to trigger timeout behavior
-                    diversity/osrm-site-timeout-ms 50]
-        (let [test-site {:_id "test-site"
-                         :_source {:status "active"
-                                   :type {:type-code 1520}
-                                   :search-meta
-                                   {:location
-                                    {:simple-geoms
-                                     {:features
-                                      [{:geometry {:coordinates [24.948 60.168]
-                                                   :type "Point"}}]}}}}}
-              coords [24.9477 60.1678]
-              result (diversity/process-sites-chunk [test-site] coords prn)]
-          ;; Should return a result even if OSRM times out
-          (is (seq result))
-          (is (= "test-site" (:id (first result))))
-          ;; OSRM field should be nil due to timeout
-          (is (nil? (:osrm (first result)))))))))
+            (is (every? #(or (contains? % :index) (contains? % :grd_id)) result))
+            (doseq [doc (filter :grd_id result)]
+              (is (vector? (:sports-sites doc))))))))))
 
 (comment
-  (setup-test-system!)
-  (clojure.test/run-test-var #'process-grid-item-test)
-  (clojure.test/run-test-var #'osrm-site-timeout-test)
-  (clojure.test/run-test-var #'process-sites-chunk-timeout-handling-test)
+  (clojure.test/run-test-var #'recalc-grid-distance-correctness-test)
   (seed-test-data! (:lipas/search @test-system)))

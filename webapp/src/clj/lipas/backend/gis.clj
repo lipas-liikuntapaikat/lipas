@@ -160,19 +160,24 @@
   "Mean earth radius (meters), same constant spatial4j used."
   6371008.7714)
 
-(defn distance-point
-  "Geodesic (haversine) distance in meters between two points
-  (anything with getX/getY where x=lon, y=lat)."
-  [p1 p2]
-  (let [lat1 (Math/toRadians (.getY p1))
-        lat2 (Math/toRadians (.getY p2))
+(defn haversine
+  "Geodesic (haversine) distance in meters between [lon lat] pairs."
+  [[lon1 lat1] [lon2 lat2]]
+  (let [lat1 (Math/toRadians lat1)
+        lat2 (Math/toRadians lat2)
         sin-dlat (Math/sin (/ (- lat2 lat1) 2))
-        sin-dlon (Math/sin (/ (- (Math/toRadians (.getX p2))
-                                 (Math/toRadians (.getX p1)))
+        sin-dlon (Math/sin (/ (- (Math/toRadians lon2)
+                                 (Math/toRadians lon1))
                               2))
         a (+ (* sin-dlat sin-dlat)
              (* (Math/cos lat1) (Math/cos lat2) sin-dlon sin-dlon))]
     (* 2 earth-mean-radius-m (Math/asin (Math/sqrt (min 1.0 a))))))
+
+(defn distance-point
+  "Geodesic (haversine) distance in meters between two points
+  (anything with getX/getY where x=lon, y=lat)."
+  [p1 p2]
+  (haversine [(.getX p1) (.getY p1)] [(.getX p2) (.getY p2)]))
 
 (defn nearest-points [g1 g2]
   (DistanceOp/nearestPoints g1 g2))

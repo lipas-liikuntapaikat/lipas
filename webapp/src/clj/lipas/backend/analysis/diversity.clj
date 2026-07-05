@@ -1,7 +1,6 @@
 (ns lipas.backend.analysis.diversity
   (:require [clojure.data.csv :as csv]
             [clojure.java.io :as io]
-            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.walk :as walk]
             [lipas.backend.analysis.common :as common]
@@ -251,10 +250,35 @@
 
 (def all-type-codes (keys types/all))
 
-(def osrm-site-timeout-ms
-  "Timeout for OSRM request per site (60 seconds).
-  Conservative to handle complex routes with multiple destinations."
+(def cell-radius-m
+  "Radius around each grid cell centroid within which sports sites
+  contribute to the cell's precomputed distances."
+  2000)
+
+(def assignment-margin-m
+  "Extra slack in the euclidean cell<->site assignment. Compensates for
+  simple-geoms being a simplification of the exact geometries the old
+  per-cell ES radius query matched against. A site outside the margin
+  cannot matter: its route distance is at least its euclidean distance,
+  which already exceeds cell-radius-m."
+  250)
+
+(def tile-size-m
+  "Cells are grouped into square TM35FIN tiles; each tile shares one
+  multi-source OSRM table request per profile."
+  2000)
+
+(def max-table-locations
+  "Max sources + destinations per OSRM table request. Deployment runs
+  osrm-routed with --max-table-size 3000; staying well under keeps
+  request URLs and response matrices moderate."
+  1500)
+
+(def osrm-table-timeout-ms
+  "Timeout per OSRM table request (60 seconds)."
   60000)
+
+(def osrm-profiles [:car :bicycle :foot])
 
 (defn resolve-dests [site on-error]
   (try
@@ -268,148 +292,272 @@
       (on-error {:site site :error e})
       [])))
 
-(defn- resolve-min
-  [coll]
-  (let [min* (partial apply min)]
-    (->> coll (remove nil?) min*)))
+(defn- parse-coord-str [s]
+  (let [[lon lat] (str/split s #",")]
+    [(Double/parseDouble lon) (Double/parseDouble lat)]))
 
-(defn apply-mins [m]
-  (reduce-kv
-   (fn [res k v]
-     (assoc res k
-            (some-> v
-                    (update :distances #(-> % first not-empty (some-> resolve-min)))
-                    (update :durations #(-> % first not-empty (some-> resolve-min)))
-                    (dissoc :code)
-                    (set/rename-keys {:distances :distance-m
-                                      :durations :duration-s}))))
-   {}
-   m))
+(defn prepare-site-entry
+  "Precompute OSRM destination strings and numeric coords for a site.
+  Returns nil when the site has no usable geometry (it could never
+  contribute a distance to the index)."
+  [site on-error]
+  (let [dests (into [] (distinct) (resolve-dests site on-error))]
+    (when (seq dests)
+      {:id (:_id site)
+       :type-code (-> site :_source :type :type-code)
+       :status (-> site :_source :status)
+       :dests dests
+       :coords (mapv parse-coord-str dests)})))
 
-(defn process-sites-chunk
-  "Process a chunk of sites to control memory usage.
-  Uses timeout-protected deref to prevent stuck jobs."
-  [sites coords on-error]
-  (mapv (fn [site]
-          (let [dests (resolve-dests site on-error)]
-            (if (empty? dests)
-              {:id (:_id site)
-               :type-code (-> site :_source :type :type-code)
-               :status (-> site :_source :status)
-               :osrm nil}
-              ;; Create futures for just this site
-              (let [futures (mapv (fn [p]
-                                    [p (future
-                                         (osrm/get-data
-                                          {:profile p
-                                           :sources [(str/join "," coords)]
-                                           :destinations dests}))])
-                                  [:car :bicycle :foot])
-                    ;; Collect results with timeout to prevent stuck jobs
-                    osrm-results (reduce (fn [res [p f]]
-                                           (let [result (deref f osrm-site-timeout-ms ::timeout)]
-                                             (cond
-                                               (= result ::timeout)
-                                               (do
-                                                 (future-cancel f)
-                                                 (log/warn "OSRM request timed out for profile" p
-                                                           "site" (:_id site))
-                                                 res)
+(defn- coords-bbox
+  "Bounding box of [lon lat] coords expanded by margin-m meters."
+  [coords margin-m]
+  (let [lons (map first coords)
+        lats (map second coords)
+        min-lat (apply min lats)
+        max-lat (apply max lats)
+        dlat (/ margin-m 111320.0)
+        cos-lat (Math/cos (Math/toRadians (max (Math/abs (double min-lat))
+                                               (Math/abs (double max-lat)))))
+        dlon (/ margin-m (* 111320.0 (max 0.01 cos-lat)))]
+    {:min-lon (- (apply min lons) dlon)
+     :max-lon (+ (apply max lons) dlon)
+     :min-lat (- min-lat dlat)
+     :max-lat (+ max-lat dlat)}))
 
-                                               (nil? result)
-                                               res
+(defn assign-sites
+  "For each cell coord, indices of site entries with at least one
+  destination vertex within radius-m (euclidean). Route distance can
+  never be shorter than euclidean distance, so this keeps every site
+  whose OSRM minimum could fall under radius-m. Returns a vector of
+  index vectors aligned with cell-coords."
+  [cell-coords site-entries radius-m]
+  (let [boxes (mapv #(coords-bbox (:coords %) radius-m) site-entries)]
+    (mapv (fn [[lon lat :as coord]]
+            (persistent!
+             (reduce
+              (fn [acc i]
+                (let [box (nth boxes i)]
+                  (if (and (<= (:min-lon box) lon (:max-lon box))
+                           (<= (:min-lat box) lat (:max-lat box))
+                           (some #(<= (gis/haversine coord %) radius-m)
+                                 (:coords (nth site-entries i))))
+                    (conj! acc i)
+                    acc)))
+              (transient [])
+              (range (count site-entries)))))
+          cell-coords)))
 
-                                               :else
-                                               (assoc res p result))))
-                                         {}
-                                         futures)]
-                {:id (:_id site)
-                 :type-code (-> site :_source :type :type-code)
-                 :status (-> site :_source :status)
-                 :osrm (when (seq osrm-results)
-                         (apply-mins osrm-results))}))))
-        sites))
+(defn index-dests
+  "Assign one OSRM table column per distinct destination string across
+  the given site entries. Returns [dests site-idx->cols]."
+  [site-entries site-idxs]
+  (loop [[site-idx & more] (seq site-idxs)
+         dest->col {}
+         dests []
+         site->cols {}]
+    (if (nil? site-idx)
+      [dests site->cols]
+      (let [[dest->col dests cols]
+            (reduce (fn [[dest->col dests cols] dest]
+                      (if-let [col (dest->col dest)]
+                        [dest->col dests (conj cols col)]
+                        [(assoc dest->col dest (count dests))
+                         (conj dests dest)
+                         (conj cols (count dests))]))
+                    [dest->col dests []]
+                    (:dests (nth site-entries site-idx)))]
+        (recur more dest->col dests (assoc site->cols site-idx cols))))))
 
-(defn process-grid-item
-  [search dist-km m on-error & {:keys [site-chunk-size] :or {site-chunk-size 20}}]
-  (let [coords (-> m :WKT gis/wkt-point->coords)
-        point-fcoll (gis/->fcoll
-                     [(gis/->feature {:type "Point"
-                                      :coordinates coords})])
-        site-data (common/get-sports-site-data
-                   search
-                   point-fcoll
-                   dist-km
-                   all-type-codes
-                   statuses)
-        sites (:hits site-data)
-        ;; Process sites in chunks to control memory usage
-        site-chunks (partition-all site-chunk-size sites)
-        results (atom [])]
+(defn- fetch-table!
+  "One OSRM table request per profile in parallel for sources x dests.
+  Returns {profile {:distances .. :durations ..}}; failed or timed out
+  profiles are omitted."
+  [sources dests]
+  (let [futures (mapv (fn [p]
+                        [p (future
+                             (osrm/get-data {:profile p
+                                             :sources sources
+                                             :destinations dests
+                                             :cache? false}))])
+                      osrm-profiles)]
+    (reduce (fn [res [p f]]
+              (let [result (deref f osrm-table-timeout-ms ::timeout)]
+                (cond
+                  (= result ::timeout)
+                  (do
+                    (future-cancel f)
+                    (log/warn "OSRM table request timed out for profile" p)
+                    res)
 
-    ;; Process each chunk and immediately release futures
-    (doseq [chunk site-chunks]
-      (let [chunk-results (process-sites-chunk chunk coords on-error)]
-        (swap! results into chunk-results)))
+                  (nil? result)
+                  res
 
-    (assoc m :sports-sites @results)))
+                  :else
+                  (assoc res p (select-keys result [:distances :durations])))))
+            {}
+            futures)))
+
+(defn merge-table-chunks
+  "Merge per-profile table results of consecutive destination chunks by
+  concatenating matrix columns. A profile missing from any chunk is
+  dropped entirely so partial data can't skew minimums."
+  [chunk-results]
+  (reduce (fn [acc p]
+            (if (every? #(and (get-in % [p :distances])
+                              (get-in % [p :durations]))
+                        chunk-results)
+              (assoc acc p
+                     {:distances (apply mapv (fn [& rows] (into [] cat rows))
+                                        (map #(get-in % [p :distances]) chunk-results))
+                      :durations (apply mapv (fn [& rows] (into [] cat rows))
+                                        (map #(get-in % [p :durations]) chunk-results))})
+              acc))
+          {}
+          osrm-profiles))
+
+(defn- fetch-tables!
+  "Table matrices for sources x dests, chunking destinations so each
+  request stays within max-table-locations."
+  [sources dests]
+  (let [chunk-size (max 1 (- max-table-locations (count sources)))
+        chunks (partition-all chunk-size dests)]
+    (merge-table-chunks (mapv #(fetch-table! sources (vec %)) chunks))))
+
+(defn min-finite [xs]
+  (when-let [vs (seq (remove nil? xs))]
+    (reduce min vs)))
+
+(defn site-osrm-mins
+  "Per-profile minimum distance/duration for one cell (matrix row) and
+  one site (its matrix columns). Min distance and min duration are
+  taken independently, like the old per-site implementation did."
+  [tables row-idx cols]
+  (not-empty
+   (reduce-kv
+    (fn [res p {:keys [distances durations]}]
+      (let [drow (nth distances row-idx)
+            trow (nth durations row-idx)]
+        (assoc res p {:distance-m (min-finite (map #(nth drow %) cols))
+                      :duration-s (min-finite (map #(nth trow %) cols))})))
+    {}
+    tables)))
+
+(defn- tile-key [[lon lat]]
+  (let [[e n] (gis/wgs84->tm35fin-no-wrap [lon lat])]
+    [(quot (long e) tile-size-m) (quot (long n) tile-size-m)]))
+
+(defn- process-tile!
+  "Compute distances for one tile of cells and bulk index the resulting
+  grid docs. Returns the number of OSRM requests made."
+  [client idx-name site-entries tile-cells]
+  (let [routed (filterv (comp seq :site-idxs) tile-cells)
+        unrouted (remove (comp seq :site-idxs) tile-cells)
+        sources (mapv (fn [{:keys [coord]}] (str/join "," coord)) routed)
+        [dests site->cols] (index-dests site-entries
+                                        (into [] (distinct) (mapcat :site-idxs routed)))
+        tables (when (seq sources)
+                 (fetch-tables! sources dests))
+        chunk-size (max 1 (- max-table-locations (count sources)))
+        n-requests (if (seq sources)
+                     (* (count osrm-profiles)
+                        (long (Math/ceil (/ (count dests) (double chunk-size)))))
+                     0)
+        ->site-result (fn [row-idx site-idx]
+                        (let [entry (nth site-entries site-idx)]
+                          {:id (:id entry)
+                           :type-code (:type-code entry)
+                           :status (:status entry)
+                           :osrm (when (seq tables)
+                                   (site-osrm-mins tables row-idx (site->cols site-idx)))}))
+        docs (concat
+              (map-indexed
+               (fn [row-idx {:keys [cell site-idxs]}]
+                 (assoc cell :sports-sites (mapv #(->site-result row-idx %) site-idxs)))
+               routed)
+              (map (fn [{:keys [cell]}] (assoc cell :sports-sites []))
+                   unrouted))]
+    (->> docs
+         (search/->bulk idx-name :grd_id)
+         (search/bulk-index-sync! client))
+    n-requests))
+
+(defn process-cells!
+  "Compute sports-site OSRM distances for grid cells and bulk index the
+  resulting diversity grid docs into idx-name.
+
+  Fetches all candidate sports sites with one ES query over
+  site-area-fcoll (which must cover every cell buffered by
+  cell-radius-m), assigns sites to cells with a euclidean prefilter and
+  issues chunked multi-source OSRM table requests per tile of cells --
+  instead of one request per site per profile per cell like the old
+  implementation. Returns summary stats."
+  [{:keys [client] :as search} idx-name cells site-area-fcoll on-error]
+  (let [cells (vec cells)
+        cell-coords (mapv (comp gis/wkt-point->coords :WKT) cells)
+        site-hits (:hits (common/get-sports-site-data
+                          search site-area-fcoll (/ cell-radius-m 1000)
+                          all-type-codes statuses))
+        _ (when (<= 10000 (count site-hits))
+            ;; ES query size cap - process smaller cell batches if this hits
+            (log/warn "Sports site query returned 10k hits; results may be clipped"))
+        site-entries (into [] (keep #(prepare-site-entry % on-error)) site-hits)
+        assignments (assign-sites cell-coords site-entries
+                                  (+ cell-radius-m assignment-margin-m))
+        tiles (group-by #(tile-key (nth cell-coords %)) (range (count cells)))
+        osrm-requests (volatile! 0)]
+    (log/info (format "Processing %d cells / %d sites in %d tiles"
+                      (count cells) (count site-entries) (count tiles)))
+    (doseq [[tk idxs] tiles]
+      (try
+        (let [tile-cells (mapv (fn [i]
+                                 {:cell (nth cells i)
+                                  :coord (nth cell-coords i)
+                                  :site-idxs (nth assignments i)})
+                               idxs)]
+          (vswap! osrm-requests + (process-tile! client idx-name site-entries tile-cells)))
+        (catch Exception e
+          (log/error e "Failed to process tile" tk))))
+    {:cells (count cells)
+     :sites (count site-entries)
+     :tiles (count tiles)
+     :osrm-requests @osrm-requests}))
 
 (defn recalc-grid!
-  "Main entry point for recalculating diversity grid.
-   Optimized with batch processing to control memory usage."
-  ([{:keys [indices client] :as search} fcoll]
+  "Main entry point for recalculating the precomputed diversity grid
+  around fcoll (2 km buffer)."
+  ([search fcoll]
    (recalc-grid! search fcoll {}))
-  ([{:keys [indices client] :as search} fcoll {:keys [batch-size gc-between-batches? site-chunk-size]
-                                               :or {batch-size 20
-                                                    gc-between-batches? true
-                                                    site-chunk-size 20}}]
+  ([{:keys [indices] :as search} fcoll
+    {:keys [on-error]
+     :or {on-error (fn [m] (log/debug (:error m) "Error processing site"))}}]
    (let [idx-name (get-in indices [:analysis :diversity])
-         on-error (fn [e] (log/debug e "Error processing site"))
          buffer-dist-km 2
-         buffer-geom (gis/calc-buffer fcoll (* buffer-dist-km 1000))
-         buffer-fcoll (gis/->fcoll [(gis/->feature buffer-geom)])
+         buffer-fcoll (-> fcoll
+                          (gis/calc-buffer (* buffer-dist-km 1000))
+                          gis/->feature
+                          vector
+                          gis/->fcoll)
          grid-items (fetch-grid search buffer-fcoll buffer-dist-km)
-         total-items (count grid-items)
-         batch-count (int (Math/ceil (/ total-items batch-size)))]
-
-     (log/info (format "Processing %d grid items in %d batches of %d (site chunk size: %d)"
-                       total-items batch-count batch-size site-chunk-size))
-
-     ;; Process in batches to control memory usage
-     (doseq [[batch-idx batch] (map-indexed vector (partition-all batch-size grid-items))]
-       (let [batch-num (inc batch-idx)
-             start-time (System/currentTimeMillis)]
-
-         (log/info (format "Processing batch %d/%d" batch-num batch-count))
-
-         (try
-           ;; Process batch with site chunking
-           (let [processed (->> batch
-                                (map :_source)
-                                (mapv #(process-grid-item search buffer-dist-km % on-error
-                                                          :site-chunk-size site-chunk-size))
-                                (search/->bulk idx-name :grd_id))]
-             (search/bulk-index-sync! client processed))
-
-           (catch Exception e
-             (log/error e "Failed to process batch" batch-num)))
-
-         ;; Optional GC between batches
-         (when (and gc-between-batches? (< batch-num batch-count))
-           (System/gc)
-           (Thread/sleep 100))
-
-         (log/debug (format "Batch %d completed in %.1f seconds"
-                            batch-num (/ (- (System/currentTimeMillis) start-time) 1000.0)))))
-
-     (log/info "All batches completed"))))
+         ;; Covers every fetched cell buffered by cell-radius-m
+         site-area-fcoll (-> fcoll
+                             (gis/calc-buffer (+ (* buffer-dist-km 1000) cell-radius-m))
+                             gis/->feature
+                             vector
+                             gis/->fcoll)
+         start-ms (System/currentTimeMillis)
+         stats (process-cells! search idx-name (mapv :_source grid-items)
+                               site-area-fcoll on-error)]
+     (log/info (format "Diversity grid recalculated in %.1fs: %s"
+                       (/ (- (System/currentTimeMillis) start-ms) 1000.0)
+                       (pr-str stats)))
+     stats)))
 
 (defn seed-new-grid-from-csv!
-  [{:keys [indices client] :as search} csv-path]
+  [{:keys [client] :as search} csv-path]
   (let [idx-name (str "diversity-" (search/gen-idx-name))
-        on-error #(log/error %)
-        batch-size 100
-        dist-km 2]
+        on-error (fn [m] (log/error (:error m) "Error processing site"))
+        batch-size 500]
 
     (with-open [rdr (io/reader csv-path)]
       (log/info "Creating index" idx-name)
@@ -419,16 +567,15 @@
       (doseq [part (->> (csv/read-csv rdr)
                         utils/csv-data->maps
                         (map walk/keywordize-keys)
-                        (partition-all batch-size)
-                        (doall))]
-
-        (let [ms (reduce (fn [res m]
-                           (conj res (process-grid-item search dist-km m on-error :site-chunk-size 20)))
-                         []
-                         part)]
-
-          (log/info "Writing batch of" batch-size "to" idx-name)
-          (->> ms
-               (search/->bulk idx-name :grd_id)
-               (search/bulk-index-sync! client))
-          (log/info "Writing batch DONE"))))))
+                        (partition-all batch-size))]
+        (let [coords (mapv (comp gis/wkt-point->coords :WKT) part)
+              area-fcoll (-> {:type "MultiPoint" :coordinates coords}
+                             gis/->feature
+                             vector
+                             gis/->fcoll
+                             (gis/calc-buffer cell-radius-m)
+                             gis/->feature
+                             vector
+                             gis/->fcoll)
+              stats (process-cells! search idx-name (vec part) area-fcoll on-error)]
+          (log/info "Batch done:" (pr-str stats)))))))

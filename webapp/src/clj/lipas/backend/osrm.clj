@@ -2,6 +2,7 @@
   (:require
    [cemerick.url :as url]
    [clj-http.client :as client]
+   [clj-http.conn-mgr :as conn-mgr]
    [clojure.core.cache :as cache]
    [clojure.string :as str]
    [environ.core :refer [env]]
@@ -29,13 +30,21 @@
 (defonce cache-stats
   (atom {:hits 0 :misses 0}))
 
+(defonce ^{:doc "Reusable connection pool shared by all OSRM requests.
+  Keep-alive connections avoid a fresh TCP handshake per request, which
+  dominates latency when many table requests are made in sequence."}
+  connection-manager
+  (conn-mgr/make-reusable-conn-manager
+   {:timeout 30 ; Idle connection TTL (seconds)
+    :threads 12 ; Max connections total
+    :default-per-route 4})) ; Per profile server (car/bicycle/foot)
+
 (def http-options
   {:as :json ; Parse JSON directly, skipping string intermediate
    :throw-exceptions false ; Return error responses instead of throwing
    :connection-timeout 2000 ; 2 seconds to establish connection
    :socket-timeout 30000 ; 30 seconds for response
-   ;; Disable connection pooling - create fresh connection each time
-   :connection-manager false
+   :connection-manager connection-manager
    ;; Standard options
    :decompress-body true ; OSRM typically uses gzip
    :accept :json
@@ -67,12 +76,17 @@
                                                  (count destinations))))}))))
 
 (defn get-data
-  [{:keys [sources destinations] :as m}]
+  "Fetch a distance/duration table from OSRM.
+
+  `:cache?` (default true) controls the URL-keyed TTL cache. Batch
+  callers issuing large one-off table requests should pass false so
+  multi-kB URLs don't churn the cache."
+  [{:keys [sources destinations cache?] :or {cache? true} :as m}]
   (when (and (seq sources) (seq destinations))
     (let [url (make-url m)
-          cached-value (cache/lookup @osrm-cache url)]
+          cached-value (when cache? (cache/lookup @osrm-cache url))]
 
-      (if (cache/has? @osrm-cache url)
+      (if (and cache? (cache/has? @osrm-cache url))
         ;; Cache hit
         (do
           (swap! cache-stats update :hits inc)
@@ -88,7 +102,8 @@
               ;; Success - cache and return
               (= 200 (:status response))
               (let [result (:body response)]
-                (swap! osrm-cache cache/miss url result)
+                (when cache?
+                  (swap! osrm-cache cache/miss url result))
                 result)
 
               ;; Error response
