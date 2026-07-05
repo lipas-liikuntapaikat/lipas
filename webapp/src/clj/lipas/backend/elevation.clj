@@ -164,7 +164,7 @@
   "Returns an envelope that contains given envelope and 'matches' MML
   2x2m coverage grid. Ensures that the returned envelope is within the
   bounds of the coverage's envelope."
-  [{:keys [min-x min-y max-x max-y]} _coverage-info]
+  [{:keys [min-x min-y max-x max-y]}]
   (let [down-to-even (fn [v] (let [n (Math/round (double v))] (if (odd? n) (dec n) n)))]
     (clamp-to-coverage {:min-x (down-to-even min-x)
                         :min-y (down-to-even min-y)
@@ -212,7 +212,7 @@
        :max-x (+ (reduce max (map first tm35-vertices)) vertex-buffer-m)
        :min-y (- (reduce min (map second tm35-vertices)) vertex-buffer-m)
        :max-y (+ (reduce max (map second tm35-vertices)) vertex-buffer-m)}
-      (fit-to-coverage coverage-info)))
+      fit-to-coverage))
 
 (defn plan-fetches
   "Plan the MML requests needed to resolve elevations for the given
@@ -249,10 +249,9 @@
 
 (defn map-vertices
   "Eagerly map f over every vertex coordinate of fcoll, rebuilding the
-  feature collection. Both vertex collection and z-appending go
-  through this single walk, so the walk order (and thereby the fetched
-  chunk set covering the resolved vertices) is structural, not a
-  documented invariant."
+  feature collection. Must visit vertices in the same order as
+  `reduce-vertices` (the test suite pins the two walks together), so
+  the fetched chunk set always covers the resolved vertices."
   [f fcoll]
   (update fcoll :features
           (fn [fs]
@@ -267,20 +266,34 @@
                               (throw (ex-info "Encountered unexpected geometry type" feat))))))
              fs))))
 
+(defn reduce-vertices
+  "Reduce rf over every vertex coordinate of fcoll without rebuilding
+  the collection, in the same order `map-vertices` visits them."
+  [rf init fcoll]
+  (reduce
+   (fn [acc feat]
+     (let [coords (-> feat :geometry :coordinates)]
+       (condp = (-> feat :geometry :type)
+         "Point"      (rf acc coords)
+         "LineString" (reduce rf acc coords)
+         "Polygon"    (reduce #(reduce rf %1 %2) acc coords)
+         (throw (ex-info "Encountered unexpected geometry type" feat)))))
+   init
+   (:features fcoll)))
+
 (defn geometry-vertices
   "All vertex coordinates of fcoll that `append-elevations` will
   resolve an elevation for, in walk order."
   [fcoll]
-  (let [acc (volatile! (transient []))]
-    (map-vertices (fn [c] (vswap! acc conj! c) c) fcoll)
-    (persistent! @acc)))
+  (persistent! (reduce-vertices conj! (transient []) fcoll)))
 
 (defn resolve-elevation
-  "Resolve the elevation of a TM35FIN point from the grid index. The
-  col/row cap keeps a point exactly on its grid's max edge in the edge
-  cell; anything further outside the grid means MML returned a grid
-  that doesn't cover the requested envelope, which must fail loudly
-  instead of silently resolving a wrong edge cell."
+  "Resolve the elevation of a TM35FIN point from the grid index. A
+  point exactly on its grid's max edge (a coverage-envelope max-edge
+  vertex, see `chunk-key`) caps into the edge cell; anything else
+  outside the grid means MML returned a grid that doesn't cover the
+  requested envelope, which must fail loudly instead of silently
+  resolving a wrong edge cell."
   [grid-index [x y :as tm35]]
   (let [k (chunk-key tm35)
 
@@ -292,11 +305,12 @@
         {:keys [xllcorner yllcorner cellsize ncols nrows]} headers
 
         ;; Resolve col and row for the coords relative to the lower
-        ;; left corner of the grid. Cap to max-bounds.
+        ;; left corner of the grid
         col (long (Math/floor (/ (- x xllcorner) cellsize)))
         row (long (Math/floor (/ (- y yllcorner) cellsize)))]
 
-    (when-not (and (<= 0 col ncols) (<= 0 row nrows))
+    (when-not (and (or (< -1 col ncols) (== (double x) (+ xllcorner (* ncols cellsize))))
+                   (or (< -1 row nrows) (== (double y) (+ yllcorner (* nrows cellsize)))))
       (throw (ex-info "Vertex outside its elevation grid"
                       {:tm35fin tm35 :chunk-key k :headers headers})))
 
@@ -383,7 +397,21 @@
                      :query-params (make-query-params envelope)
                      :basic-auth   (str mml-api-key ":")})]
     (log/info "Getting coverage with envelope" envelope)
-    (let [response (client/get mml-coverage-url opts)]
+    (let [response (try
+                     (client/get mml-coverage-url opts)
+                     ;; Socket/connect/pool-lease timeouts extend
+                     ;; InterruptedIOException, which the circuit
+                     ;; breaker's interrupt classifier would rethrow
+                     ;; without counting (it can't tell them from a job
+                     ;; watchdog interrupt). Rethrow as ex-info WITHOUT
+                     ;; the original as cause so MML slowness actually
+                     ;; trips the breaker.
+                     (catch java.net.SocketTimeoutException e
+                       (throw (ex-info (str "MML request timed out: " (ex-message e))
+                                       {:envelope envelope :error (str (class e))})))
+                     (catch org.apache.http.conn.ConnectTimeoutException e
+                       (throw (ex-info (str "MML request timed out: " (ex-message e))
+                                       {:envelope envelope :error (str (class e))}))))]
       (cond
         (= 200 (:status response))
         (-> (parse-ascii-grid (:body response))
@@ -423,7 +451,7 @@
 
 (defn enrich-elevation
   [fcoll]
-  (let [tm35-vertices (mapv gis/wgs84->tm35fin-no-wrap (geometry-vertices fcoll))
+  (let [tm35-vertices (gis/wgs84->tm35fin-coords (geometry-vertices fcoll))
         fetch-plan    (plan-fetches tm35-vertices)]
     (log/info "Fetching elevation data for" (count tm35-vertices) "vertices in"
               (count fetch-plan) "requests")

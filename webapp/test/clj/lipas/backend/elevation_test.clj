@@ -20,9 +20,11 @@
   "Deterministic, cell-unique elevation for the 2m cell with lower left
   corner [cx cy] (TM35FIN), as it would appear in the ascii grid body.
   cx + cy/1e7 is injective over the whole coverage envelope, so reading
-  the wrong cell always produces a different value."
+  the wrong cell always produces a different value. Formatted with an
+  explicit locale so decimal-comma JVM locales can't break parsing."
   [cx cy]
-  (format "%.7f" (+ cx (/ cy 1e7))))
+  (String/format java.util.Locale/ROOT "%.7f"
+                 (to-array [(+ cx (/ cy 1e7))])))
 
 (defn expected-z
   "The z value the synthetic coverage yields for a WGS84 coordinate:
@@ -72,20 +74,17 @@
   (testing "Rounds to even coordinates (2m cell alignment)"
     (is (= {:min-x 400000 :min-y 6900000 :max-x 400010 :max-y 6900012}
            (elevation/fit-to-coverage
-            {:min-x 400001.4 :min-y 6900000.6 :max-x 400010.5 :max-y 6900011.9}
-            elevation/coverage-info))))
+            {:min-x 400001.4 :min-y 6900000.6 :max-x 400010.5 :max-y 6900011.9}))))
 
   (testing "Even values pass through"
     (is (= {:min-x 400002 :min-y 6900004 :max-x 400006 :max-y 6900008}
            (elevation/fit-to-coverage
-            {:min-x 400002.0 :min-y 6900004.0 :max-x 400006.0 :max-y 6900008.0}
-            elevation/coverage-info))))
+            {:min-x 400002.0 :min-y 6900004.0 :max-x 400006.0 :max-y 6900008.0}))))
 
   (testing "Clamps to the coverage envelope"
     (let [{:keys [envelope]} elevation/coverage-info
           fitted (elevation/fit-to-coverage
-                  {:min-x 0.0 :min-y 0.0 :max-x 99999999.0 :max-y 99999999.0}
-                  elevation/coverage-info)]
+                  {:min-x 0.0 :min-y 0.0 :max-x 99999999.0 :max-y 99999999.0})]
       (is (= {:min-x (:min-x envelope) :min-y (:min-y envelope)
               :max-x (:max-x envelope) :max-y (:max-y envelope)}
              fitted)))))
@@ -274,7 +273,27 @@
                   {:type "FeatureCollection"
                    :features [{:type "Feature"
                                :geometry {:type "MultiPoint"
-                                          :coordinates [[25.7 62.6]]}}]})))))
+                                          :coordinates [[25.7 62.6]]}}]}))))
+
+  (testing "reduce-vertices and map-vertices visit vertices in the same order"
+    ;; append-elevations consumes the CRS-transformed vertex list by
+    ;; index, so the two walks must never diverge
+    (let [fcoll {:type "FeatureCollection"
+                 :features
+                 [{:type "Feature"
+                   :geometry {:type "LineString"
+                              :coordinates [[25.7 62.6] [25.8 62.7]]}}
+                  {:type "Feature"
+                   :geometry {:type "Point" :coordinates [25.9 62.8]}}
+                  {:type "Feature"
+                   :geometry {:type "Polygon"
+                              :coordinates
+                              [[[25.0 62.0] [25.1 62.0] [25.1 62.1] [25.0 62.0]]
+                               [[25.04 62.04] [25.06 62.04] [25.06 62.06] [25.04 62.04]]]}}]}
+          mapped (let [acc (volatile! [])]
+                   (elevation/map-vertices (fn [c] (vswap! acc conj c) c) fcoll)
+                   @acc)]
+      (is (= (elevation/geometry-vertices fcoll) mapped)))))
 
 (deftest resolve-elevation-test
   ;; Reference case from the original implementation's comment block:
@@ -296,6 +315,20 @@
             index      {(elevation/chunk-key edge-point) (elevation/index-grid grid)}]
         ;; col/row compute to ncols/nrows and are capped to the edge cell
         (is (= 152.34 (elevation/resolve-elevation index edge-point)))))
+
+    (testing "A point inside the max-edge cell's overshoot but not exactly on the edge fails"
+      ;; a grid one cell short of covering its vertex must not silently
+      ;; resolve the neighboring cell
+      (let [near-point [434356.9 6943966.5]
+            index      {(elevation/chunk-key near-point) (elevation/index-grid grid)}]
+        (is (thrown-with-msg? ExceptionInfo #"Vertex outside its elevation grid"
+                              (elevation/resolve-elevation index near-point)))))
+
+    (testing "A point below the grid's lower left corner fails loudly"
+      (let [low-point [434350.5 6943962.5]
+            index     {(elevation/chunk-key low-point) (elevation/index-grid grid)}]
+        (is (thrown-with-msg? ExceptionInfo #"Vertex outside its elevation grid"
+                              (elevation/resolve-elevation index low-point)))))
 
     (testing "A point further outside its grid fails loudly"
       (let [far-point [434360.5 6943970.5] ;; > 1 cell beyond the grid
@@ -384,9 +417,9 @@
         (testing "Feature order and properties are preserved"
           (is (= ["leg 1" "leg 2"]
                  (mapv #(-> % :properties :name) (:features enriched))))
-          (is (= (mapv #(mapv (fn [c] (subvec c 0 2)) (-> % :geometry :coordinates))
+          (is (= (mapv #(mapv gis/strip-z (-> % :geometry :coordinates))
                        (:features route-fcoll))
-                 (mapv #(mapv (fn [c] (subvec c 0 2)) (-> % :geometry :coordinates))
+                 (mapv #(mapv gis/strip-z (-> % :geometry :coordinates))
                        (vec (:features enriched))))))))))
 
 (deftest enrich-polygon-test
@@ -436,6 +469,24 @@
       (is (thrown-with-msg? ExceptionInfo #"Unexpected MML API response"
                             (elevation/get-elevation-coverage
                              {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
+
+  (testing "Socket timeouts are rethrown without an InterruptedIOException in the cause chain"
+    ;; SocketTimeoutException extends InterruptedIOException, which the
+    ;; circuit breaker's interrupt classifier rethrows WITHOUT counting;
+    ;; MML slowness must count as a service failure
+    (with-redefs [clj-http.client/get
+                  (fn [_url _opts] (throw (java.net.SocketTimeoutException. "Read timed out")))]
+      (let [ex (try
+                 (elevation/get-elevation-coverage
+                  {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})
+                 (catch Exception e e))]
+        (is (instance? ExceptionInfo ex))
+        (is (re-find #"MML request timed out" (ex-message ex)))
+        (is (nil? (loop [e ex]
+                    (cond
+                      (nil? e) nil
+                      (instance? java.io.InterruptedIOException e) e
+                      :else (recur (ex-cause e)))))))))
 
   (testing "HTTP 200 parses the grid"
     (with-redefs [clj-http.client/get
@@ -558,7 +609,7 @@
   (let [buff-m    8
         fcoll-jts (-> fcoll gis/->jts-geom gis/transform-crs)
         envelopes (-> (gis/get-envelope fcoll-jts buff-m)
-                      (elevation/fit-to-coverage elevation/coverage-info)
+                      (elevation/fit-to-coverage)
                       (gis/chunk-envelope elevation/query-envelope-size-m)
                       (->> (filter #(gis/intersects-envelope? % fcoll-jts))))]
     (->> envelopes
