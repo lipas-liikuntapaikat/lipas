@@ -154,6 +154,58 @@
       (let [env (elevation/chunk-key->envelope [0 27600])]
         (is (> (:min-x env) (:max-x env)))))))
 
+(deftest plan-fetches-test
+  (testing "No vertices -> no requests"
+    (is (= [] (elevation/plan-fetches []))))
+
+  (testing "Single vertex -> one small envelope around it"
+    (let [[{:keys [envelope chunk-keys]} :as plan]
+          (elevation/plan-fetches [[400010.3 6900020.7]])]
+      (is (= 1 (count plan)))
+      (is (= [[1600 27600]] chunk-keys))
+      ;; vertex +/- 8m buffer, fitted to even coordinates
+      (is (= {:min-x 400002 :max-x 400018 :min-y 6900012 :max-y 6900028} envelope))))
+
+  (testing "Small geometry straddling a chunk border -> still one request"
+    (let [plan (elevation/plan-fetches [[400240.0 6900010.0] [400260.0 6900030.0]])]
+      (is (= 1 (count plan)))
+      (is (= #{[1600 27600] [1601 27600]} (set (:chunk-keys (first plan)))))))
+
+  (testing "Dense cluster (>= 4 chunks in a 1000m tile) merges into one tile request"
+    (let [verts [[400010.0 6900010.0] [400260.0 6900010.0]
+                 [400510.0 6900010.0] [400760.0 6900010.0]]
+          [{:keys [envelope chunk-keys]} :as plan] (elevation/plan-fetches verts)]
+      (is (= 1 (count plan)))
+      (is (= {:min-x 400000 :max-x 401000 :min-y 6900000 :max-y 6901000} envelope))
+      (is (= 4 (count chunk-keys)))))
+
+  (testing "Sparse chunks (< 4 per tile) are fetched individually"
+    (let [verts [[400010.0 6900010.0] [400260.0 6900010.0] [400510.0 6900010.0]]
+          plan  (elevation/plan-fetches verts)]
+      (is (= 3 (count plan)))
+      (is (every? #(= 1 (count (:chunk-keys %))) plan))
+      (is (= {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250}
+             (:envelope (first plan))))))
+
+  (testing "Mixed: dense tile merges, distant chunk stays individual"
+    (let [verts [[400010.0 6900010.0] [400260.0 6900010.0]
+                 [400510.0 6900010.0] [400760.0 6900010.0]
+                 [450010.0 6950010.0]]
+          plan  (elevation/plan-fetches verts)]
+      (is (= 2 (count plan)))))
+
+  (testing "Every distinct chunk key appears in exactly one plan entry"
+    (let [verts (for [i (range 40)] [(+ 400010.0 (* i 130.0)) (+ 6900010.0 (* i 45.0))])
+          keys* (distinct (map elevation/chunk-key verts))
+          plan  (elevation/plan-fetches verts)]
+      (is (= (sort keys*) (sort (mapcat :chunk-keys plan))))
+      (testing "and each entry's envelope contains its chunk keys' vertices"
+        (doseq [{:keys [envelope chunk-keys]} plan
+                [x y] verts
+                :when (some #{(elevation/chunk-key [x y])} chunk-keys)]
+          (is (and (>= x (:min-x envelope)) (<= x (:max-x envelope))
+                   (>= y (:min-y envelope)) (<= y (:max-y envelope)))))))))
+
 (deftest geometry-vertices-test
   (testing "Point"
     (is (= [[25.7 62.6]]
@@ -370,6 +422,8 @@
   (let [in-flight     (atom 0)
         max-in-flight (atom 0)
         chunk-keys    (for [i (range 30)] [(+ 1600 i) 27600])
+        fetch-plan    (for [k chunk-keys]
+                        {:envelope (elevation/chunk-key->envelope k) :chunk-keys [k]})
         slow-fetch    (fn [_envelope]
                         (let [n (swap! in-flight inc)]
                           (swap! max-in-flight max n)
@@ -379,7 +433,7 @@
                                      :yllcorner 0.0 :cellsize 2.0}
                            :data    [[42.0]]}))]
     (with-redefs [elevation/get-elevation-coverage slow-fetch]
-      (let [grids (elevation/fetch-grids chunk-keys)]
+      (let [grids (elevation/fetch-grids fetch-plan)]
         (testing "All chunks fetched and indexed by their key"
           (is (= 30 (count grids)))
           (is (= (set chunk-keys) (set (keys grids)))))
@@ -387,6 +441,31 @@
           (is (<= @max-in-flight elevation/max-concurrent-fetches)))
         (testing "Fetches actually run in parallel"
           (is (> @max-in-flight 1)))))))
+
+(deftest enrich-dense-route-tile-merge-test
+  ;; ~3 km of vertices every ~25 m: enough chunk density that at
+  ;; least one 1000m tile merge kicks in.
+  (let [start    [25.7201 62.6201]
+        fcoll    {:type "FeatureCollection"
+                  :features
+                  [{:type "Feature"
+                    :geometry {:type "LineString"
+                               :coordinates (vec (for [i (range 120)]
+                                                   [(+ (first start) (* i 0.0005))
+                                                    (second start)]))}}]}
+        verts    (mapv gis/wgs84->tm35fin-no-wrap (elevation/geometry-vertices fcoll))
+        n-chunks (count (distinct (map elevation/chunk-key verts)))
+        plan     (elevation/plan-fetches verts)
+        requests (atom 0)]
+    (with-redefs [elevation/get-elevation-coverage (counting requests synthetic-coverage)]
+      (let [enriched (elevation/enrich-elevation fcoll)]
+        (testing "Dense chunks merge into tiles: fewer requests than chunks"
+          (is (< (count plan) n-chunks))
+          (is (some #(> (count (:chunk-keys %)) 1) plan))
+          (is (= (count plan) @requests)))
+        (testing "Merged grids resolve the exact same synthetic z values"
+          (doseq [[x y z] (-> enriched :features first :geometry :coordinates)]
+            (is (= (expected-z [x y]) z))))))))
 
 ;;; Old (pre vertex-driven) implementation, kept for equivalence tests ;;;
 

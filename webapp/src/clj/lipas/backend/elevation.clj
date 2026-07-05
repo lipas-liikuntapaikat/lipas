@@ -10,14 +10,23 @@
 ;; MML elevation coverage model consists of 2x2m squares that contain
 ;; the elevation information as meters above/below sea level. Elevation
 ;; is resolved per geometry vertex: we derive the set of fixed-grid
-;; 250x250m chunks that contain at least one vertex, request each chunk
-;; as an ESRI Ascii Grid text file from MML api (bounded concurrency)
-;; and resolve the elevation value for each vertex from an O(1) index
-;; over the fetched grids.
+;; 250x250m chunks that contain at least one vertex and plan the MML
+;; requests adaptively (`plan-fetches`):
 ;;
-;; Chunk corners are multiples of 250 and therefore aligned with the
-;; 2m coverage cell grid, so the value resolved for a vertex does not
-;; depend on which chunk framing served its cell.
+;;   - geometries spanning at most one chunk (points, most single
+;;     sports sites) fetch one small envelope around the vertices,
+;;     like the pre-optimization implementation did
+;;   - dense clusters of chunks are merged into 1000x1000m tile
+;;     requests (measured: a 16-chunk tile costs ~3x one chunk fetch)
+;;   - remaining chunks are fetched individually
+;;
+;; Each request returns an ESRI Ascii Grid text file. Requests run
+;; with bounded concurrency and each vertex resolves its elevation
+;; from an O(1) chunk-key index over the fetched grids.
+;;
+;; All requested envelopes have even (2m-aligned) corners, so the
+;; value resolved for a vertex does not depend on which envelope
+;; framing served its cell.
 
 ;; https://www.maanmittauslaitos.fi/ortokuvien-ja-korkeusmallien-kyselypalvelu/tekninen-kuvaus
 ;; https://en.wikipedia.org/wiki/Esri_grid
@@ -48,6 +57,26 @@
   ratio with MML api. Must be even so chunk corners align with the 2m
   coverage cells (the coverage envelope bounds are multiples of 250)."
   250)
+
+(def merge-tile-size-m
+  "Dense chunk clusters are merged into requests of this size. Must be
+  a multiple of `query-envelope-size-m`; the coverage envelope bounds
+  are also multiples of it. Sizes beyond 1000m get disproportionately
+  slow on the MML side (2500m ~2.9s, 5000m ~16s)."
+  1000)
+
+(def merge-tile-min-chunks
+  "Merge a tile into one request when it contains at least this many
+  vertex chunks. Measured MML timings: one 250m chunk ~255ms, one
+  1000m tile (16 chunk areas) ~740ms, so 4+ chunks are cheaper (and
+  always fewer requests) fetched as a tile."
+  4)
+
+(def vertex-buffer-m
+  "Tolerance added around the vertices in single-envelope requests so
+  that `fit-to-coverage` rounding can never leave an extreme vertex
+  outside the fetched grid. 8 meters was found via experimentation."
+  8)
 
 (def max-concurrent-fetches
   "Upper bound on simultaneous MML requests. MML is an external,
@@ -117,20 +146,80 @@
   [(long (Math/floor (/ x query-envelope-size-m)))
    (long (Math/floor (/ y query-envelope-size-m)))])
 
+(defn- clamp-to-coverage
+  "Clamp an already 2m-aligned envelope to the coverage envelope. An
+  envelope fully outside the coverage becomes degenerate (min > max)
+  and its MML request fails, which fails the whole job (same outcome
+  as the old implementation for out-of-coverage geometries)."
+  [{:keys [min-x max-x min-y max-y]}]
+  (let [{:keys [envelope]} coverage-info]
+    {:min-x (max (:min-x envelope) min-x)
+     :max-x (min (:max-x envelope) max-x)
+     :min-y (max (:min-y envelope) min-y)
+     :max-y (min (:max-y envelope) max-y)}))
+
 (defn chunk-key->envelope
   "Envelope of fixed-grid chunk [kx ky], clamped to the coverage
   envelope. Chunk corners are multiples of `query-envelope-size-m` and
-  hence already aligned with the 2m coverage cells; a chunk fully
-  outside the coverage yields a degenerate envelope whose MML request
-  fails, which fails the whole job (same outcome as the old
-  implementation for out-of-coverage geometries)."
+  hence already aligned with the 2m coverage cells."
   [[kx ky]]
-  (let [{:keys [envelope]} coverage-info
-        size query-envelope-size-m]
-    {:min-x (max (:min-x envelope) (* kx size))
-     :max-x (min (:max-x envelope) (* (inc kx) size))
-     :min-y (max (:min-y envelope) (* ky size))
-     :max-y (min (:max-y envelope) (* (inc ky) size))}))
+  (let [size query-envelope-size-m]
+    (clamp-to-coverage {:min-x (* kx size)
+                        :max-x (* (inc kx) size)
+                        :min-y (* ky size)
+                        :max-y (* (inc ky) size)})))
+
+(defn tile-key->envelope
+  "Envelope of the merge tile [tx ty], clamped to the coverage
+  envelope."
+  [[tx ty]]
+  (clamp-to-coverage {:min-x (* tx merge-tile-size-m)
+                      :max-x (* (inc tx) merge-tile-size-m)
+                      :min-y (* ty merge-tile-size-m)
+                      :max-y (* (inc ty) merge-tile-size-m)}))
+
+(defn- vertices-envelope
+  "Envelope of the TM35FIN vertices buffered by `vertex-buffer-m`,
+  fitted to the coverage grid."
+  [tm35-vertices]
+  (-> {:min-x (- (reduce min (map first tm35-vertices)) vertex-buffer-m)
+       :max-x (+ (reduce max (map first tm35-vertices)) vertex-buffer-m)
+       :min-y (- (reduce min (map second tm35-vertices)) vertex-buffer-m)
+       :max-y (+ (reduce max (map second tm35-vertices)) vertex-buffer-m)}
+      (fit-to-coverage coverage-info)))
+
+(defn plan-fetches
+  "Plan the MML requests needed to resolve elevations for the given
+  TM35FIN vertices. Returns [{:envelope e :chunk-keys [k ...]} ...]
+  where every distinct vertex chunk key appears in exactly one entry
+  and each entry's envelope covers all of its chunk keys' vertices.
+
+  Small geometries (all vertices within one chunk's span) get a single
+  envelope tightly around the vertices; otherwise chunks are fetched
+  individually except dense clusters, which are merged into
+  `merge-tile-size-m` tiles."
+  [tm35-vertices]
+  (if (empty? tm35-vertices)
+    []
+    (let [chunk-keys (distinct (map chunk-key tm35-vertices))
+          {:keys [min-x max-x min-y max-y] :as env} (vertices-envelope tm35-vertices)]
+      (if (and (<= (- max-x min-x) query-envelope-size-m)
+               (<= (- max-y min-y) query-envelope-size-m))
+        ;; Small geometry: one request around the vertices (like the
+        ;; pre-optimization implementation did for points and most
+        ;; single sports sites)
+        [{:envelope env :chunk-keys chunk-keys}]
+        (->> chunk-keys
+             (group-by (fn [[kx ky]]
+                         (let [factor (quot merge-tile-size-m query-envelope-size-m)]
+                           [(quot kx factor) (quot ky factor)])))
+             (mapcat (fn [[tile-key ks]]
+                       (if (>= (count ks) merge-tile-min-chunks)
+                         [{:envelope (tile-key->envelope tile-key) :chunk-keys ks}]
+                         (for [k ks]
+                           {:envelope (chunk-key->envelope k) :chunk-keys [k]}))))
+             (sort-by (comp (juxt :min-x :min-y) :envelope))
+             vec)))))
 
 (defn geometry-vertices
   "All [lon lat] vertices of fcoll that `append-elevations` will resolve
@@ -211,11 +300,14 @@
                (parse-double v))]))))
 
 (defn parse-ascii-grid-data
+  "Parse data rows into vectors of doubles. Splitting on whitespace is
+  ~2x faster than the regex scan this replaced and yields the same
+  values; `keep` drops empty tokens from leading whitespace."
   [lines]
   (into []
         (for [s     lines
               :when (not-empty s)]
-          (into [] (map parse-double) (re-seq #"-?\d+\.?\d*" s)))))
+          (into [] (keep parse-double) (str/split s #"\s+")))))
 
 (defn parse-ascii-grid
   [s]
@@ -262,31 +354,33 @@
                          :envelope envelope}))))))
 
 (defn fetch-grids
-  "Fetch and index the elevation grids for chunk-keys with bounded
-  concurrency (waves of `max-concurrent-fetches`). Returns a map of
-  chunk-key -> indexed grid. Any chunk failure propagates and fails the
-  whole enrichment: the job queue retries and the circuit breaker in
-  the dispatcher sees the failure."
-  [chunk-keys]
+  "Fetch and index the elevation grids for a `plan-fetches` plan with
+  bounded concurrency (waves of `max-concurrent-fetches`). Returns a
+  map of chunk-key -> indexed grid; an entry's grid is shared by all
+  the chunk keys it was fetched for. Any fetch failure propagates and
+  fails the whole enrichment: the job queue retries and the circuit
+  breaker in the dispatcher sees the failure."
+  [fetch-plan]
   (into {}
         (mapcat
          (fn [wave]
-           (mapv (fn [k grid] [k (index-grid grid)])
-                 wave
-                 (patterns/pmap-with-timeout
-                  elevation-chunk-timeout-ms
-                  (comp get-elevation-coverage chunk-key->envelope)
-                  wave))))
-        (partition-all max-concurrent-fetches chunk-keys)))
+           (mapcat (fn [{:keys [chunk-keys]} grid]
+                     (let [indexed (index-grid grid)]
+                       (map (fn [k] [k indexed]) chunk-keys)))
+                   wave
+                   (patterns/pmap-with-timeout
+                    elevation-chunk-timeout-ms
+                    (comp get-elevation-coverage :envelope)
+                    wave))))
+        (partition-all max-concurrent-fetches fetch-plan)))
 
 (defn enrich-elevation
   [fcoll]
-  (let [chunk-keys (->> (geometry-vertices fcoll)
-                        (map (comp chunk-key gis/wgs84->tm35fin-no-wrap))
-                        distinct
-                        sort)]
-    (log/info "Fetching elevation data for" (count chunk-keys) "grid chunks")
-    (-> chunk-keys
+  (let [tm35-vertices (mapv gis/wgs84->tm35fin-no-wrap (geometry-vertices fcoll))
+        fetch-plan    (plan-fetches tm35-vertices)]
+    (log/info "Fetching elevation data for" (count tm35-vertices) "vertices in"
+              (count fetch-plan) "requests")
+    (-> fetch-plan
         fetch-grids
         (->> (append-elevations fcoll)))))
 
