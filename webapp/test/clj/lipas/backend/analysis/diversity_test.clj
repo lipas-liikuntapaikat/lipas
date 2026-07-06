@@ -175,7 +175,9 @@
 
 (defn- run-recalc-capturing-bulk!
   "Run recalc-grid! with bulk indexing captured instead of written.
-  Returns the indexed grid docs keyed by grd_id."
+  Returns the indexed grid docs keyed by grd_id. The :sports-sites
+  vector is sorted by :id because its order follows the unsorted ES
+  site query, so it varies between runs."
   ([] (run-recalc-capturing-bulk! mock-osrm-matrix))
   ([osrm-mock]
    (let [bulk-calls (atom [])]
@@ -187,7 +189,10 @@
      (->> @bulk-calls
           (mapcat identity)
           (filter :grd_id)
-          (reduce (fn [m doc] (assoc m (:grd_id doc) doc)) {})))))
+          (reduce (fn [m doc]
+                    (assoc m (:grd_id doc)
+                           (update doc :sports-sites #(vec (sort-by :id %)))))
+                  {})))))
 
 (defn- site-coords [site-id]
   (->> test-sports-sites
