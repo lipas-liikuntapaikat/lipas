@@ -11,11 +11,18 @@
   (let [tr (:translator db)
         locale (when tr (name (tr)))
         route (some-> db :current-route :data :name str)
+        view (when route
+               (cond
+                 (str/includes? route "routes.map") "map view (karttanäkymä)"
+                 (str/includes? route "front-page") "front page"
+                 (str/includes? route "stats") "statistics view"
+                 :else nil))
         lipas-id (-> db :map :mode :lipas-id)
         edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))]
     (cond-> {}
       locale (assoc :locale locale)
       route (assoc :route route)
+      view (assoc :view view)
       lipas-id (assoc :site {:lipas-id lipas-id})
       edit-mode? (assoc :edit-mode? true))))
 
