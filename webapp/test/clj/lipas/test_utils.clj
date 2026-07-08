@@ -487,16 +487,18 @@
                 (assoc-in [:search :create-indices] false)
                 (update-in [:db :dbname] test-suffix)
                 (assoc-in [:db :dev] true) ;; No connection pool
-                (update-in [:search :indices :sports-site :search] test-suffix)
-                (update-in [:search :indices :sports-site :analytics] test-suffix)
-                (update-in [:search :indices :report :subsidies] test-suffix)
-                (update-in [:search :indices :report :city-stats] test-suffix)
-                (update-in [:search :indices :analysis :schools] test-suffix)
-                (update-in [:search :indices :analysis :population] test-suffix)
-                (update-in [:search :indices :analysis :population-high-def] test-suffix)
-                (update-in [:search :indices :analysis :diversity] test-suffix)
-                (update-in [:search :indices :lois :search] test-suffix)
-                (update-in [:search :indices :legacy-sports-site :search] test-suffix)))
+                ;; Suffix EVERY configured index, whatever gets added later.
+                ;; prune-es! empties all indices in the test system's config
+                ;; between tests — an unsuffixed entry here means tests wipe
+                ;; the real dev index (this happened with lipas_kb_v1).
+                (update-in [:search :indices]
+                           (fn [indices]
+                             (into {}
+                                   (map (fn [[group m]]
+                                          [group (into {}
+                                                       (map (fn [[k v]] [k (test-suffix v)]))
+                                                       m)]))
+                                   indices)))))
 
 ;; Enhanced database initialization with migration status checking
 (defn init-db!

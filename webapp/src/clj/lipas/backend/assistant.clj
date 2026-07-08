@@ -85,6 +85,13 @@
                                      :description "User's UI language"}}
                  :required ["query"]}}
 
+   {:name "get_kb_document"
+    :description "Fetch the FULL text of a knowledge-base entry by its id. search_kb returns truncated snippets — always fetch the full entry before answering a how-to question based on it."
+    :parameters {:type "object"
+                 :properties {:id {:type "string"
+                                   :description "Entry id from search_kb results"}}
+                 :required ["id"]}}
+
    {:name "lookup_type_code"
     :description "Resolve a sports facility type: by numeric type code or by free-text name (colloquial names work). Returns the official name, description, geometry and allowed properties."
     :parameters {:type "object"
@@ -194,6 +201,10 @@
                           :lang (or (:lang args) "fi")
                           :limit 5})
 
+    "get_kb_document"
+    (or (kb/get-doc search (:id args))
+        {:error "No entry with that id"})
+
     "lookup_type_code"
     (let [q (str/trim (str (:query args)))
           code (parse-long q)]
@@ -275,6 +286,7 @@
 
 RULES:
 - Answer ONLY from tool results. If the knowledge base has nothing relevant, say so honestly and offer to contact support with escalate_to_support. Never invent UI elements, menu names or type codes.
+- search_kb returns TRUNCATED snippets. Before answering a how-to question, fetch the most relevant entries in full with get_kb_document — the snippet alone is not grounds to conclude the guides lack the answer.
 - PARTIAL INFORMATION: when tool results cover the topic only partially, give exactly what they contain and link the source for the rest. Do NOT fill gaps from imagination — a numbered step, tab name, icon or button label that is not in a tool result must not appear in your answer.
 - NO COVERAGE: when search_kb returns nothing relevant to the question, do not answer from general knowledge — say the guides don't cover it and propose escalate_to_support.
 - Always answer in the user's language (see context; default Finnish).
