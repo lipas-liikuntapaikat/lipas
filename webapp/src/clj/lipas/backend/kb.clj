@@ -9,13 +9,15 @@
 
    Index mapping lives in lipas.backend.search/kb-mapping and the index
    is created by system startup like every other index."
-  (:require [clojure.set :as set]
+  (:require [clojure.java.io :as io]
+            [clojure.set :as set]
             [clojure.string :as str]
             [lipas.backend.db.db :as db]
             [lipas.backend.llm :as llm]
             [lipas.backend.search :as search]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
+            [lipas.roles :as roles]
             [taoensso.timbre :as log]))
 
 (def langs [:fi :se :en])
@@ -153,9 +155,92 @@
                            (mapv first))
        :review-status "reviewed"})))
 
+(def ^:private nav-docs
+  "Where-is-what map of the app. Hand-written but lives in code so it
+   stays next to the route definitions it describes (lipas.ui.*.routes);
+   update it when top-level navigation changes. Grounds the assistant's
+   'mistä löydän / missä näen' answers and its navigate_to_view tool."
+  [{:id "nav:structure:fi"
+    :title "Mistä löydän eri toiminnot? LIPAS-palvelun näkymät ja navigointi"
+    :body (str "LIPAS-palvelun päänäkymät:\n\n"
+               "- Etusivu (/etusivu): ajankohtaiset uutiset ja yleistä tietoa palvelusta.\n"
+               "- Liikuntapaikat eli karttanäkymä (/liikuntapaikat): liikuntapaikkojen haku, "
+               "tarkastelu ja tietojen muokkaus kartalla. Liikuntapaikkatietojen ylläpito "
+               "tapahtuu tässä näkymässä.\n"
+               "- Tilastot (/tilastot): valmiit tilastonäkymät, alavälilehdet: "
+               "Liikuntapaikat (/tilastot/liikuntapaikat), Rakennusvuodet "
+               "(/tilastot/rakennusvuodet), Kuntien vertailu (/tilastot/kunta), "
+               "Talous (/tilastot/talous) ja Avustukset (/tilastot/avustukset).\n"
+               "- Omat tiedot (/profiili): omat käyttäjätiedot ja käyttöoikeudet.\n"
+               "- Organisaatiot (/organisaatiot): oman organisaation tietojen hallinta "
+               "organisaation jäsenille.\n"
+               "- Ohjeet: ohjekeskus avautuu omaan ikkunaansa mistä tahansa näkymästä "
+               "(?ohje-linkit).")
+    :lang "fi"
+    :source-type "code-data"
+    :source-ref "nav:structure"
+    :deep-link nil
+    :type-codes []
+    :review-status "reviewed"}
+   {:id "nav:structure:en"
+    :title "Where do I find things? LIPAS views and navigation"
+    :body (str "Main views of the LIPAS service:\n\n"
+               "- Front page (/etusivu): news and general information about the service.\n"
+               "- Sports facilities i.e. the map view (/liikuntapaikat): search, view and "
+               "edit sports facility data on the map. Data maintenance happens in this view.\n"
+               "- Statistics (/tilastot): ready-made statistics views, tabs: "
+               "Sports facilities (/tilastot/liikuntapaikat), Construction years "
+               "(/tilastot/rakennusvuodet), City comparison (/tilastot/kunta), "
+               "Finance (/tilastot/talous) and Subsidies (/tilastot/avustukset).\n"
+               "- Profile (/profiili): your own user data and permissions.\n"
+               "- Organizations (/organisaatiot): organization management for its members.\n"
+               "- Help: the help center opens in its own dialog from any view (?ohje links).")
+    :lang "en"
+    :source-type "code-data"
+    :source-ref "nav:structure"
+    :deep-link nil
+    :type-codes []
+    :review-status "reviewed"}])
+
+(def ^:private role-i18n
+  "Official Finnish role and scoping names; single source: the UI
+   translation file."
+  (delay (-> (io/resource "lipas/i18n/fi/lipas_user_permissions_roles.edn")
+             slurp
+             read-string)))
+
+(defn- role->doc
+  "One doc per assignable role: what the role allows (privilege docs
+   from lipas.roles) and how it is scoped. Regenerated on every sync so
+   role changes in code can't go stale here."
+  [[role-kw {:keys [privileges required-context-keys assignable]}]]
+  (when assignable
+    (let [nm (get-in @role-i18n [:role-names role-kw] (name role-kw))
+          scope-names (keep #(get-in @role-i18n [:context-keys %]) required-context-keys)
+          privs (->> privileges
+                     (keep #(get-in roles/privileges [% :doc]))
+                     sort)]
+      {:id (str "role:" (name role-kw) ":fi")
+       :title (str "Käyttäjärooli " nm " — mitä se sallii?")
+       :body (str "Rooli " nm " (" (name role-kw) ") antaa seuraavat oikeudet:\n"
+                  (str/join "\n" (map #(str "- " %) privs))
+                  (if (seq scope-names)
+                    (str "\n\nRooli myönnetään rajattuna: "
+                         (str/join ", " scope-names)
+                         ". Oikeudet koskevat vain rajauksen mukaisia kohteita.")
+                    "\n\nRooli ei ole kunta- tai tyyppirajattu."))
+       :lang "fi"
+       :source-type "code-data"
+       :source-ref (str "role:" (name role-kw))
+       :deep-link nil
+       :type-codes []
+       :review-status "reviewed"})))
+
 (defn code-data->docs
   []
   (concat
+   nav-docs
+   (keep role->doc roles/roles)
    (for [lang langs, entry types/active
          :let [doc (type->doc lang entry)] :when doc]
      doc)

@@ -23,7 +23,8 @@ Backend (clj):
 |---|---|
 | `lipas.backend.llm` | Generic LLM plumbing extracted from `ptv.ai`: provider registry, `complete`/`gemini-complete` (+retry, OpenAI fallback), `embed`/`embed-one` (gemini-embedding-001, 768 dims, L2-renormalized). `ptv.ai` now wraps it with PTV-specific schema defaults. |
 | `lipas.backend.kb` | KB doc builders + sync + retrieval. `help-cms->docs`, `code-data->docs` (types incl. colloquial `:tags`, prop-types), `ingested->docs` (reads versioned_data type=`kb-ingest`), `sync!` (content-hash diff → embed only changed, delete orphans), `search-kb` (hybrid BM25+kNN, client-side RRF, cross-lingual kNN unfiltered, per-language dedup by source-ref), `get-doc` (full entry by id). |
-| `lipas.backend.assistant` | Agent: Gemini function-calling loop, **first turn forced to call a tool** (toolConfig ANY). Tools: `search_kb`, `get_kb_document`, `lookup_type_code`, `explain_field`, `list_stale_sites`, `list_sites_missing_data`, `get_site_summary`, `escalate_to_support` (draft-only). `editable-scope` from roles = *relevance default* for listing tools, not authorization (site data is public). Per-user in-memory rate limits (30 chat/h, 5 escalations/day). `chat!`/`escalate!` entrypoints, exchange logging to `assistant_logs`. `context-schema` (closed Malli map) validates the widget's app-db snapshot. |
+| `lipas.backend.assistant` | Agent: Gemini function-calling loop, **first turn forced to call a tool** (toolConfig ANY). Tools: `search_kb`, `get_kb_document`, `lookup_type_code`, `explain_field`, `list_stale_sites`, `list_sites_missing_data`, `get_site_summary`, `check_site_permission` (**authoritative verdict from `roles/check-privilege` + user's roles with official names — never LLM-reasoned**), `escalate_to_support` (draft-only), plus **UI-action tools** `apply_search`, `show_site_on_map`, `pan_map_to_location`, `navigate_to_view` (propose-only: validated via `lipas.schema.assistant`, returned as `:actions` in the response, rendered as buttons the user clicks — nothing auto-fires). `editable-scope` from roles = *relevance default* for listing tools, not authorization (site data is public). Per-user in-memory rate limits (30 chat/h, 5 escalations/day). `chat!`/`escalate!` entrypoints, exchange logging to `assistant_logs` (incl. proposed action types). `context-schema` (closed Malli map) validates the widget's app-db snapshot. |
+| `lipas.schema.assistant` (cljc) | **Closed action vocabulary**: Malli multi-schema for the 4 action types + `views` registry (id → description, feeds the `navigate_to_view` tool enum and the frontend route mapping). Reuses canonical `lipas-id`/`city-code`/`active-type-code` schemas. The model never produces re-frame event vectors — it calls an action tool, the backend validates against this schema, the frontend translates. |
 | `lipas.backend.handler` | Routes `/actions/assistant-chat`, `/actions/assistant-escalate` (both `:require-privilege :ai-assistant/use`); help CMS routes `save-help-draft`, `get-help-versions`, `get-help-version`. |
 | `lipas.backend.search` | `kb-mapping` (strict; finnish/swedish/english analyzer subfields, dense_vector 768 cosine), `assistant-logs-mapping`. Registered in `mappings` ⇒ auto-created at startup. |
 | `lipas.backend.config` | `:indices` gained `:kb {:kb "lipas_kb_v1"}` and `:assistant {:logs "assistant_logs"}`. |
@@ -34,7 +35,8 @@ Frontend (cljs):
 
 | File | What |
 |---|---|
-| `lipas.ui.assistant.{events,subs,views}` | Widget: Fab launcher + panel at app root (`lipas.ui.views/main-panel`), privilege-gated. Markdown answers (`?ohje=` links open help dialog in place, external links new tab), source chips, escalation confirmation card (editable summary, shows what's sent where), new-chat button. `db->context` builds the per-message app-db snapshot (route, readable view, locale, selected site's lipas-id, edit-mode). Stateless server: full history sent per request. |
+| `lipas.ui.assistant.{events,subs,views}` | Widget: Fab launcher + panel at app root (`lipas.ui.views/main-panel`), privilege-gated. Markdown answers (`?ohje=` links open help dialog in place, external links new tab), source chips, escalation confirmation card (editable summary, shows what's sent where), new-chat button. **Action buttons**: `::run-action` is the whitelist translator (action map → dispatches; unknown types inert), gated on map edit-mode (notification instead of navigating away from unsaved edits); executed buttons flip to disabled+✓. `apply-search` → navigate to map + `search/replace-filters`; `show-site` → `map/show-sports-site`; `pan-to-location` → digitransit geocode then `set-center`/`set-zoom` (12 for places, 14 for addresses); `navigate-to-view` → `view->route` map. `db->context` builds the per-message app-db snapshot (route, readable view, locale, selected site's lipas-id, edit-mode). Stateless server: full history sent per request. |
+| `lipas.ui.search.events/replace-filters` | Replace whole search spec (string + filters) from clean defaults in one event → single ES query with `:fit-view` (map pans to results). Used by assistant action buttons. |
 | `lipas.ui.help.*` | Deep links: `?ohje=section/page` synced via replaceState; `::navigate-to` resolves slugs (pending-slugs if data not loaded yet); dialog moved to app root; content loads at app init (`::help/init`, dispatch-sync in `core.cljs` *before* router start). Markdown text blocks (react-markdown) + `lipas.utils/localized` fi→en→se fallback. Editor: Save draft / Publish / History dialog (load any revision into editor; publishing it = rollback). |
 
 Dev tooling:
@@ -104,6 +106,27 @@ looks wrong or empty, just resync.
 - **Escalation is two-phase**: agent drafts, UI confirmation card, separate
   endpoint sends via the `email` job queue (user's address in body,
   conversation id in subject).
+- **Names from data only**: the model decorates bare codes with world
+  knowledge and gets them wrong (city 320 → "Muurame"; it's Kemijärvi). Every
+  code in the prompt or a tool result carries its resolved name
+  (`city-label`/`type-label`/`describe-roles`; role names read from the UI
+  i18n file). Prompt forbids inferring names from codes.
+- **Answer links are allow-listed server-side** (`sanitize-answer-links`):
+  `?ohje=` links must match a deep-link retrieved this conversation; only
+  http(s)/mailto pass otherwise; fabricated slugs and tool-call-scheme links
+  (`navigate_to_view:profile`) degrade to plain text. The model fabricated
+  all three kinds in testing.
+- **Permissions**: user's roles (official names + scopes) in USER CONTEXT;
+  per-site verdicts via `check_site_permission` (real permission engine);
+  role semantics as code-derived KB docs (privilege `:doc` strings). The
+  *process* content (how to request rights, org flows) is Lipasinfo-authored
+  KB material — still missing.
+- **UI actions are propose-only, closed-vocabulary**: the model calls an
+  action tool → backend validates against `lipas.schema.assistant` (canonical
+  city/type/lipas-id enums; city *names* resolved server-side; site existence
+  checked) → widget renders a button → the user clicks. The frontend
+  translator is the only place an action becomes a dispatch; edit-mode blocks
+  execution. Max 3 actions per answer reach the client.
 - **Ingestion is migration, not mirroring**: entries live in versioned_data,
   `review-status "machine"` until a human flips them; grounding verifier
   rejects unsupported claims at ingest time.
@@ -131,13 +154,33 @@ looks wrong or empty, just resync.
 
 ## Current dev state
 
-- KB: 1063 docs (6 seeded help-cms + 969 code-data + 87 ingested + 1 log).
-  Help CMS content is **my dev seed** (2 sections / 3 pages) — real content
+- KB: 1079 docs (7 seeded help-cms + 984 code-data incl. 2 nav-structure
+  docs fi/en and 13 role docs + 87 ingested + 1 log). Help CMS content is **my dev seed**
+  (2 sections / 4 pages, incl. "Miten kopioin liikuntapaikan?") — real content
   should be authored by Lipasinfo via the editor (draft → publish).
-- Eval: hybrid 41/41 hit@3. Assistant verified in-browser: grounded how-tos
-  with citations (incl. `&t=` video timestamps), context adaptation, type-code
-  disambiguation, out-of-scope refusal, stale-sites listing (Utajärvi),
-  two-turn escalation, chat logging.
+- Multi-intent lesson (seasonal luistelukenttä/pallokenttä case): the
+  two-separate-sites rule is answered perfectly out of the box (ingested jyu
+  doc has the literal example). But a *latent* second intent (copy feature
+  eases creating the second site) is only surfaced if content carries it: the
+  agent's searches follow the user's phrasing, and a WORK-SAVING FEATURES
+  prompt rule proved unreliable at thinkingLevel minimal (with feature names
+  in the rule the model tips **without retrieving** = provenance risk; without
+  names it skips the extra search). Robust fix is content-level: the canonical
+  seasonal CMS article should itself contain the copy tip / cross-link.
+  Direct "miten kopioin kohteen?" questions answer correctly from the seeded
+  article (cited as `?ohje=` deep link).
+- Eval: hybrid 40/41 hit@3. The 1 miss ("paikka missä voi heittää koreja" →
+  1310) is **pre-existing**, verified unrelated to the nav docs by
+  delete-and-requery; kNN alone ranks it #2, the RRF merge drops it to #5.
+  Prompt-iteration backlog, not a regression.
+- Assistant verified in-browser: grounded how-tos with citations (incl. `&t=`
+  video timestamps), context adaptation, type-code disambiguation,
+  out-of-scope refusal, stale-sites listing (Utajärvi), two-turn escalation,
+  chat logging. **UI actions verified end-to-end** (Playwright, fresh
+  session): "Mitä liikuntapaikkoja on Äänekoskella?" → button → 225 results +
+  map fit; "Missä näen kuntien taloustilastot?" → button → `/tilastot/talous`;
+  edit-mode gate refuses with notification. Unit tests:
+  `lipas.backend.assistant-test` (action schema + tool handlers).
 
 ## Remaining / next
 
@@ -145,7 +188,9 @@ looks wrong or empty, just resync.
 2. Deploy: `GEMINI_API_KEY` in prod env; first `help-kb-sync` runs via
    scheduler/publish; **run ingestion against prod DB** (87 entries live only
    in local versioned_data); real CMS content; then flip GA
-   (`:ai-assistant/use` → `roles/basic`).
+   (`:ai-assistant/use` → `roles/basic`). If `assistant_logs` already exists
+   in an env, PUT `_mapping` with `actions {:type "keyword"}` (strict mapping;
+   fresh indices get it automatically).
 3. Kibana views over `assistant_logs` (escalation rate = failure metric,
    top questions = content backlog).
 4. Prompt iteration from `assistant_logs` (watch for hedged invention, e.g.

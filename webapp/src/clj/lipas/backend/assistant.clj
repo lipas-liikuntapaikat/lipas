@@ -16,6 +16,7 @@
      boundary."
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [lipas.backend.kb :as kb]
             [lipas.backend.search :as search]
@@ -25,6 +26,10 @@
             [lipas.data.types :as types]
             [lipas.jobs.core :as jobs]
             [lipas.roles :as roles]
+            [lipas.schema.assistant :as assistant-schema]
+            [lipas.schema.sports-sites.types :as types-schema]
+            [malli.core :as m]
+            [malli.error :as me]
             [taoensso.timbre :as log]))
 
 (def context-schema
@@ -50,6 +55,38 @@
 (def chat-rate-limit {:window-ms (* 60 60 1000) :max 30})
 (def escalation-rate-limit {:window-ms (* 24 60 60 1000) :max 5})
 (def support-email "lipasinfo@jyu.fi")
+
+;;; ——— Names for codes ———————————————————————————————————————————————
+;;
+;; The model decorates bare codes with names from its world knowledge —
+;; and gets them wrong (city 320 is Kemijärvi, not Muurame). Every code
+;; that reaches the prompt or a tool result carries its name.
+
+(def ^:private role-i18n
+  "Official Finnish role names; single source: the UI translation file."
+  (delay (-> (io/resource "lipas/i18n/fi/lipas_user_permissions_roles.edn")
+             slurp
+             read-string)))
+
+(defn- city-label [code]
+  (str code " " (get-in cities/by-city-code [code :name :fi] "?")))
+
+(defn- type-label [code]
+  (str code " " (get-in types/all [code :name :fi] "?")))
+
+(defn- describe-roles
+  "The user's roles with official names and resolved scopes."
+  [user]
+  (->> (get-in user [:permissions :roles])
+       (mapv (fn [{:keys [role] :as r}]
+               (let [role-kw (keyword role)]
+                 (cond-> {:role (str (get-in @role-i18n [:role-names role-kw] (name role-kw))
+                                     " (" (name role-kw) ")")}
+                   (seq (:city-code r)) (assoc :cities (mapv city-label (sort (:city-code r))))
+                   (seq (:type-code r)) (assoc :types (mapv type-label (sort (:type-code r))))
+                   (seq (:lipas-id r)) (assoc :sites (vec (sort (:lipas-id r))))
+                   (seq (:activity r)) (assoc :activities (vec (sort (:activity r))))
+                   (seq (:org-id r)) (assoc :org-ids (vec (:org-id r)))))))))
 
 ;;; ——— User scope ————————————————————————————————————————————————————
 
@@ -136,8 +173,57 @@
                  :properties {:lipas-id {:type "integer"}}
                  :required ["lipas-id"]}}
 
+   {:name "check_site_permission"
+    :description "Authoritative check from the LIPAS permission engine: can the CURRENT user edit a given sports site? ALWAYS use this for questions like 'miksi en voi muokata tätä kohdetta' or 'saanko muokata kohteen X' — its verdict overrides any reasoning of your own. Also returns the user's roles with official names."
+    :parameters {:type "object"
+                 :properties {:lipas-id {:type "integer"}}
+                 :required ["lipas-id"]}}
+
+   {:name "apply_search"
+    :description "Propose a UI action: run a sports-site search in the map view on the user's behalf. The call does NOT execute anything — the user gets a button and clicks to run it. Use when the user asks to find/see/list sites (e.g. 'mitä liikuntapaikkoja on Äänekoskella?', 'näytä kohteet joita voin muokata'). Resolve free-text type names to codes with lookup_type_code first. The map also pans to the results."
+    :parameters {:type "object"
+                 :properties {:label {:type "string"
+                                      :description "Button text in the user's language, short and imperative, e.g. 'Hae: uimahallit Äänekoski'"}
+                              :search-text {:type "string"
+                                            :description "Free-text search words, only when searching by name/keyword"}
+                              :city-names {:type "array" :items {:type "string"}
+                                           :description "Municipality names, e.g. [\"Äänekoski\"] — resolved server-side"}
+                              :type-codes {:type "array" :items {:type "integer"}
+                                           :description "Facility type codes from lookup_type_code"}
+                              :only-editable {:type "boolean"
+                                              :description "true = only sites the user has rights to edit"}}
+                 :required ["label"]}}
+
+   {:name "show_site_on_map"
+    :description "Propose a UI action: open one sports site on the map (button; the user clicks to run it). Use when the conversation concerns a specific site whose lipas-id you know from a tool result."
+    :parameters {:type "object"
+                 :properties {:label {:type "string"
+                                      :description "Button text in the user's language, e.g. 'Näytä kartalla: Ounasvaaran latu'"}
+                              :lipas-id {:type "integer"}}
+                 :required ["label" "lipas-id"]}}
+
+   {:name "pan_map_to_location"
+    :description "Propose a UI action: pan/zoom the map to a named place — an address, area or municipality — without filtering the search (button; the user clicks to run it). For 'what sites are in X' prefer apply_search, which also fits the map to its results."
+    :parameters {:type "object"
+                 :properties {:label {:type "string"
+                                      :description "Button text in the user's language"}
+                              :location {:type "string"
+                                         :description "Place name or address to geocode, e.g. 'Äänekoski' or 'Nallikari, Oulu'"}}
+                 :required ["label" "location"]}}
+
+   {:name "navigate_to_view"
+    :description (str "Propose a UI action: open another view of the LIPAS app (button; the user clicks to run it). Use for 'missä näen/mistä löydän' navigation questions. Views: "
+                      (str/join "; " (map (fn [[k v]] (str k " = " v))
+                                          (sort assistant-schema/views))))
+    :parameters {:type "object"
+                 :properties {:label {:type "string"
+                                      :description "Button text in the user's language, e.g. 'Avaa tilastot'"}
+                              :view {:type "string"
+                                     :enum (vec (sort (keys assistant-schema/views)))}}
+                 :required ["label" "view"]}}
+
    {:name "escalate_to_support"
-    :description "When you cannot answer from the knowledge base, or the user asks for something requiring human support (account issues, data corrections you cannot guide, bugs): draft a support request. The user confirms before anything is sent."
+    :description "When you cannot answer from the knowledge base, or the user asks for something requiring human support (account issues, data corrections you cannot guide, bugs, wanting to talk to a human): draft a support request. The user confirms before anything is sent. ALWAYS write answer text alongside this call: tell the user an editable draft appears below your message and that pressing 'Lähetä tukipyyntö' sends it. If the user asked for a human without describing their issue, ask them to add what it concerns into the draft before sending."
     :parameters {:type "object"
                  :properties {:summary {:type "string"
                                         :description "Concise summary of the user's problem, in the user's language"}}
@@ -172,9 +258,8 @@
   (let [src (:_source hit)]
     {:lipas-id (:lipas-id src)
      :name (:name src)
-     :type (str (-> src :type :type-code) " "
-                (get-in types/all [(-> src :type :type-code) :name :fi]))
-     :city-code (-> src :location :city :city-code)
+     :type (type-label (-> src :type :type-code))
+     :city (city-label (-> src :location :city :city-code))
      :status (:status src)
      :last-updated (:event-date src)
      :link (str "https://www.lipas.fi/liikuntapaikat/" (:lipas-id src))}))
@@ -192,6 +277,17 @@
                          :status :event-date]})]
     {:total (-> resp :body :hits :total :value)
      :sites (mapv site-hit->summary (-> resp :body :hits :hits))}))
+
+(defn- ->client-action
+  "Validate a candidate UI action against the closed vocabulary in
+   lipas.schema.assistant. Valid → marker result the answer! loop
+   collects into the response; invalid → error the model can act on."
+  [action]
+  (if (assistant-schema/valid? action)
+    {:client-action action
+     :note "Offered to the user as a button they can click. Refer to it briefly in your answer; never claim it already ran."}
+    {:error (str "Invalid action: "
+                 (pr-str (me/humanize (assistant-schema/explain action))))}))
 
 (defn- run-tool*
   [{:keys [db search user scope]} tool-name args]
@@ -252,9 +348,8 @@
       (if src
         {:lipas-id (:lipas-id src)
          :name (:name src)
-         :type (str (-> src :type :type-code) " "
-                    (get-in types/all [(-> src :type :type-code) :name :fi]))
-         :city-code (-> src :location :city :city-code)
+         :type (type-label (-> src :type :type-code))
+         :city (city-label (-> src :location :city :city-code))
          :status (:status src)
          :last-updated (:event-date src)
          :construction-year (:construction-year src)
@@ -262,6 +357,77 @@
          :properties (:properties src)
          :link (str "https://www.lipas.fi/liikuntapaikat/" (:lipas-id args))}
         {:error "Site not found"}))
+
+    "check_site_permission"
+    (let [idx (get-in search [:indices :sports-site :search])
+          src (try (-> (search/fetch-document (:client search) idx (:lipas-id args))
+                       :body :_source)
+                   (catch Exception _ nil))]
+      (if src
+        (let [;; DB-loaded roles may carry string role keys; the engine
+              ;; looks roles up by keyword.
+              user* (update-in user [:permissions :roles]
+                               (fn [rs] (mapv #(update % :role keyword) rs)))
+              can-edit? (boolean (roles/check-privilege
+                                  user* (roles/site-roles-context src) :site/create-edit))]
+          {:can-edit? can-edit?
+           :site {:lipas-id (:lipas-id src)
+                  :name (:name src)
+                  :city (city-label (-> src :location :city :city-code))
+                  :type (type-label (-> src :type :type-code))}
+           :user-roles (describe-roles user)
+           :note (if can-edit?
+                   "Verdict from the permission engine: the user CAN edit this site."
+                   "Verdict from the permission engine: the user CANNOT edit this site. They can request access via escalate_to_support.")})
+        {:error "Site not found"}))
+
+    "apply_search"
+    (let [{:keys [label search-text city-names type-codes only-editable]} args
+          city-codes (when (seq city-names) (resolve-city-names city-names))
+          resolved (into #{} (map #(str/lower-case (get-in cities/by-city-code [% :name :fi] "")))
+                         city-codes)
+          unresolved (into [] (remove #(contains? resolved (str/lower-case %))) city-names)
+          bad-types (into [] (remove #(m/validate types-schema/active-type-code %)) type-codes)]
+      (cond
+        (seq unresolved)
+        {:error (str "Unknown municipalities: " (str/join ", " unresolved)
+                     ". Use official Finnish municipality names.")}
+
+        (seq bad-types)
+        {:error (str "Unknown or retired type codes: " (str/join ", " bad-types)
+                     ". Resolve them with lookup_type_code first.")}
+
+        :else
+        (->client-action
+         (cond-> {:type "apply-search" :label (str label)}
+           search-text (assoc :search-text search-text)
+           (seq city-codes) (assoc :city-codes (vec city-codes))
+           (seq type-codes) (assoc :type-codes (vec type-codes))
+           only-editable (assoc :only-editable true)))))
+
+    "show_site_on_map"
+    (let [idx (get-in search [:indices :sports-site :search])
+          exists? (try (some-> (search/fetch-document (:client search) idx (:lipas-id args))
+                               :body :found)
+                       ;; ES GET throws on 404 — a dead button is worse
+                       ;; than telling the model the id is wrong.
+                       (catch Exception _ false))]
+      (if exists?
+        (->client-action {:type "show-site"
+                          :label (str (:label args))
+                          :lipas-id (:lipas-id args)})
+        {:error (str "No sports site with lipas-id " (:lipas-id args)
+                     " — only offer this for ids seen in tool results.")}))
+
+    "pan_map_to_location"
+    (->client-action {:type "pan-to-location"
+                      :label (str (:label args))
+                      :location (str (:location args))})
+
+    "navigate_to_view"
+    (->client-action {:type "navigate-to-view"
+                      :label (str (:label args))
+                      :view (str (:view args))})
 
     "escalate_to_support"
     ;; Marker result only: answer! short-circuits on this tool and the
@@ -282,7 +448,7 @@
 (defn- system-prompt
   [{:keys [user scope context]}]
   (str
-   "You are the LIPAS assistant (LIPAS-avustaja), embedded in lipas.fi — Finland's national sports facility database. Users are registered maintainers (municipality employees and other data producers).
+   "You are Lipastaja, the LIPAS assistant embedded in lipas.fi — Finland's national sports facility database. Users are registered maintainers (municipality employees and other data producers).
 
 RULES:
 - Answer ONLY from tool results. If the knowledge base has nothing relevant, say so honestly and offer to contact support with escalate_to_support. Never invent UI elements, menu names or type codes.
@@ -295,6 +461,12 @@ RULES:
 - Keep answers short and task-focused; numbered steps for how-tos.
 - ADAPT guides to the user's situation. The user is always logged in (this assistant requires it) — never include registration or login steps. USER CONTEXT below tells you where they are right now: omit steps they have already completed (e.g. skip \"avaa karttanäkymä\" when the route shows they are on the map; skip \"valitse kohde\" when a site is already selected) and start from the first step that is actually left to do. Adapting means OMITTING or briefly acknowledging completed steps — never adding steps or details that are not in the sources.
 - For data-maintenance questions (\"mitkä kohteet kaipaavat päivitystä?\") use the listing tools; present results as a compact markdown list with links.
+- PERMISSIONS: the user's roles (official names + scopes) are in USER CONTEXT. For any question about editing rights on a specific site (\"miksi en voi muokata\", \"saanko muokata\") call check_site_permission — its verdict comes from the real permission engine and overrides your own reasoning. Never guess what a role allows: if the KB has no entry about it, say so.
+- NAMES FROM DATA ONLY: municipality, facility-type and role names must come from context or tool results — NEVER infer a name from a bare code using world knowledge.
+- Never write a support email address into an answer — escalation via the confirmation card handles delivery.
+- Help deep-links (?ohje=...) must be copied verbatim from tool results; never construct one yourself.
+- WORK-SAVING FEATURES: when your answer requires the user to do repetitive manual work (e.g. creating several similar sites, entering the same data twice), run ONE extra search_kb asking whether a LIPAS feature eases that work, BEFORE writing your answer. Mention such a feature ONLY if a retrieved entry documents it, cite that entry, and base every detail of the tip on it. Found nothing → no tip.
+- UI ACTIONS: apply_search, show_site_on_map, pan_map_to_location and navigate_to_view do NOT run anything — each successful call becomes a BUTTON the user may click. Offer one whenever the user asks to find/see sites, to locate a place on the map, or where something is in the app. Write label in the user's language, short and imperative. In your answer refer to the button briefly (\"paina alla olevaa painiketta\") — never claim the search/navigation already happened. The UI renders the button below your message: do not write the button label, any [bracketed pseudo-button], a link imitating a tool call, or a table of actions into the answer text — navigation/search happens ONLY by calling the action tools. At most 2 actions per answer. After your action tool calls return, ALWAYS still write a short normal answer — a button must never arrive with empty answer text.
 
 USER CONTEXT:
 "
@@ -303,7 +475,12 @@ USER CONTEXT:
      :editing-scope (cond
                       (:all? scope) "all municipalities and types (admin)"
                       (:none? scope) "no editing rights"
-                      :else scope)
+                      :else (cond-> {}
+                              (seq (:city-codes scope))
+                              (assoc :cities (mapv city-label (sort (:city-codes scope))))
+                              (seq (:type-codes scope))
+                              (assoc :types (mapv type-label (sort (:type-codes scope))))))
+     :roles (describe-roles user)
      :app-context context})))
 
 ;;; ——— Gemini chat with tools ———————————————————————————————————————
@@ -342,6 +519,32 @@ USER CONTEXT:
     (into sources (map #(select-keys % [:id :title :deep-link :source-type :lang]) result))
     sources))
 
+(def max-actions-per-answer 3)
+
+(defn- collect-actions
+  "Validated UI actions proposed via the action tools this turn."
+  [actions results]
+  (into actions (keep :client-action) results))
+
+(defn- sanitize-answer-links
+  "Keep only link targets the widget can handle: ?ohje= deep-links the
+   model actually retrieved this conversation, and normal web/mail
+   links. Everything else — invented ?ohje= slugs, fabricated tool-call
+   schemes like (navigate_to_view:profile) — degrades to plain text."
+  [answer-md sources]
+  (let [valid-ohje? (into #{} (keep :deep-link) sources)]
+    (str/replace (str answer-md)
+                 #"\[([^\]]*)\]\(([^)]*)\)"
+                 (fn [[_ title link]]
+                   (cond
+                     (str/starts-with? link "?ohje=")
+                     (if (valid-ohje? link) (str "[" title "](" link ")") title)
+
+                     (re-matches #"(?i)(https?://|mailto:).*" link)
+                     (str "[" title "](" link ")")
+
+                     :else title)))))
+
 (defn answer!
   "Run the assistant loop for one user message. Returns
    {:answer-md ... :sources [...] :escalation nil|{:summary ...}}."
@@ -354,7 +557,8 @@ USER CONTEXT:
            iter 0
            ;; First turn must ground itself in a tool call.
            mode "ANY"
-           sources []]
+           sources []
+           actions []]
       (let [resp (gemini-chat system contents mode)
             parts (or (-> resp :candidates first :content :parts) [])
             fcalls (keep :functionCall parts)
@@ -362,12 +566,16 @@ USER CONTEXT:
         (cond
           ;; Escalation proposed: stop, let the user confirm in the UI.
           (some #(= "escalate_to_support" (:name %)) fcalls)
-          (let [fc (first (filter #(= "escalate_to_support" (:name %)) fcalls))]
+          (let [fc (first (filter #(= "escalate_to_support" (:name %)) fcalls))
+                summary (-> fc :args :summary)]
             {:answer-md (if (str/blank? text)
-                          "Voin lähettää kysymyksesi LIPAS-tuelle. Saat vastauksen sähköpostiisi."
-                          text)
+                          "Voin lähettää kysymyksesi LIPAS-tuelle. Tarkista ja täydennä alla oleva tiivistelmä ja paina **Lähetä tukipyyntö** — saat vastauksen sähköpostiisi."
+                          (sanitize-answer-links text sources))
              :sources (vec (distinct sources))
-             :escalation {:summary (-> fc :args :summary)}})
+             :actions (->> actions distinct (take max-actions-per-answer) vec)
+             ;; A blank draft renders a confusing empty card — fall back to
+             ;; the user's own words.
+             :escalation {:summary (if (str/blank? summary) message summary)}})
 
           (and (seq fcalls) (< iter max-tool-iterations))
           (let [results (mapv (fn [fc] (run-tool ctx (:name fc) (:args fc))) fcalls)
@@ -384,14 +592,27 @@ USER CONTEXT:
                                         fcalls results)}])
                    (inc iter)
                    "AUTO"
-                   sources'))
+                   sources'
+                   (collect-actions actions results)))
 
           :else
-          {:answer-md (if (str/blank? text)
-                        "Pahoittelut — en osannut muodostaa vastausta. Yritä muotoilla kysymys uudelleen."
-                        text)
-           :sources (vec (distinct sources))
-           :escalation nil})))))
+          (let [actions' (->> actions distinct (take max-actions-per-answer) vec)]
+            {:answer-md (cond
+                          (not (str/blank? text)) (sanitize-answer-links text sources)
+                          ;; The model sometimes treats a proposed button as
+                          ;; the whole answer and returns no text — an apology
+                          ;; would contradict the working button below it.
+                          (= 1 (count actions'))
+                          "Voit jatkaa painamalla alla olevaa painiketta."
+
+                          (seq actions')
+                          "Voit jatkaa painamalla alla olevia painikkeita."
+
+                          :else
+                          "Pahoittelut — en osannut muodostaa vastausta. Yritä muotoilla kysymys uudelleen.")
+             :sources (vec (distinct sources))
+             :actions actions'
+             :escalation nil}))))))
 
 ;;; ——— Rate limiting ————————————————————————————————————————————————
 
@@ -442,6 +663,7 @@ USER CONTEXT:
                       :question (:message req)
                       :answer (:answer-md result)
                       :sources (mapv :id (:sources result))
+                      :actions (mapv :type (:actions result))
                       :escalated? (some? (:escalation result))
                       :context (json/encode (:context req))
                       :took-ms (- (System/currentTimeMillis) start)})
@@ -456,7 +678,7 @@ USER CONTEXT:
     {:status 429
      :body {:error "Tukipyyntöraja täynnä tälle päivälle."}}
     (let [conversation-id (str (random-uuid))
-          body (str "LIPAS-avustajan välittämä tukipyyntö\n"
+          body (str "Lipastajan (LIPAS-avustajan) välittämä tukipyyntö\n"
                     "Tunniste: " conversation-id "\n"
                     "Käyttäjä: " (:email user)
                     " (" (-> user :user-data :firstname) " "
@@ -470,6 +692,6 @@ USER CONTEXT:
                          (str/join "\n\n")))]
       (jobs/enqueue-job! db "email"
                          {:to support-email
-                          :subject (str "[LIPAS-avustaja] " (subs summary 0 (min 80 (count summary))))
+                          :subject (str "[Lipastaja] " (subs summary 0 (min 80 (count summary))))
                           :body body})
       {:status 200 :body {:sent true :conversation-id conversation-id}})))

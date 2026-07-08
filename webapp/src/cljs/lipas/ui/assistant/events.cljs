@@ -1,6 +1,8 @@
 (ns lipas.ui.assistant.events
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
+            [lipas.ui.map.events :as map-events]
+            [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
 (defn db->context
@@ -68,13 +70,97 @@
                 :on-failure      [::chat-failure]}]]}))))
 
 (rf/reg-event-db ::receive-answer
-  (fn [db [_ {:keys [answer-md sources escalation]}]]
+  (fn [db [_ {:keys [answer-md sources actions escalation]}]]
     (-> db
         (update-in [:assistant :messages] (fnil conj [])
-                   {:role "assistant" :text answer-md :sources sources})
+                   {:role "assistant" :text answer-md :sources sources
+                    :actions (vec actions)})
         (assoc-in [:assistant :thinking?] false)
         (assoc-in [:assistant :pending-escalation]
                   (when escalation (:summary escalation))))))
+
+;; ——— UI actions proposed by the assistant ————————————————————————————
+;;
+;; The backend validates every action against the closed vocabulary in
+;; lipas.schema.assistant before it reaches the widget; this translator
+;; is the only place an action becomes a re-frame dispatch. The model
+;; never produces event vectors.
+
+(def view->route
+  {"front-page" :lipas.ui.routes/front-page
+   "map" :lipas.ui.routes.map/map
+   "stats" :lipas.ui.routes.stats/front-page
+   "stats-sport" :lipas.ui.routes.stats/sport
+   "stats-age-structure" :lipas.ui.routes.stats/age-structure
+   "stats-city" :lipas.ui.routes.stats/city
+   "stats-finance" :lipas.ui.routes.stats/finance
+   "stats-subsidies" :lipas.ui.routes.stats/subsidies
+   "profile" :lipas.ui.routes/user})
+
+(defn- action->fx
+  "Whitelist translator: action map → dispatch vectors. Unknown action
+   types translate to nothing."
+  [{:keys [type] :as action}]
+  (case type
+    "apply-search"
+    [[:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]
+     [:dispatch [:lipas.ui.search.events/replace-filters
+                 {:search-text (:search-text action)
+                  :city-codes (:city-codes action)
+                  :type-codes (:type-codes action)
+                  :edit-permission? (:only-editable action)}]]]
+
+    "show-site"
+    [[:dispatch [:lipas.ui.map.events/show-sports-site (:lipas-id action)]]]
+
+    "pan-to-location"
+    [[:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]
+     [:dispatch [::pan-to-location (:location action)]]]
+
+    "navigate-to-view"
+    (when-let [route (view->route (:view action))]
+      [[:dispatch [:lipas.ui.events/navigate route]]])
+
+    nil))
+
+(rf/reg-event-fx ::run-action
+  (fn [{:keys [db]} [_ msg-idx action-idx action]]
+    (if (contains? #{:editing :drawing} (-> db :map :mode :name))
+      ;; Never navigate away from unsaved edits.
+      {:dispatch [:lipas.ui.events/set-active-notification
+                  {:message "Sulje ensin muokkaustila, niin avustaja voi ohjata näkymää."
+                   :success? false}]}
+      (when-let [fx (action->fx action)]
+        {:db (assoc-in db [:assistant :messages msg-idx :actions action-idx :executed?] true)
+         :fx (vec fx)}))))
+
+(rf/reg-event-fx ::pan-to-location
+  (fn [_ [_ location]]
+    {:http-xhrio
+     {:method :get
+      :uri (str "https://" (utils/domain)
+                "/digitransit/geocoding/v1/autocomplete?sources=oa,osm&text="
+                (js/encodeURIComponent location))
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success [::pan-to-location-success]
+      :on-failure [::pan-to-location-failure]}}))
+
+(rf/reg-event-fx ::pan-to-location-success
+  (fn [_ [_ resp]]
+    (let [f (-> resp :features first)]
+      (if-let [coords (-> f :geometry :coordinates)]
+        (let [{:keys [lat lon]} (map-events/wgs84->epsg3067 coords)
+              address? (contains? #{"address" "venue" "street"}
+                                  (-> f :properties :layer))]
+          {:fx [[:dispatch [:lipas.ui.map.events/set-center lat lon]]
+                [:dispatch [:lipas.ui.map.events/set-zoom (if address? 14 12)]]]})
+        {:dispatch [::pan-to-location-failure nil]}))))
+
+(rf/reg-event-fx ::pan-to-location-failure
+  (fn [_ _]
+    {:dispatch [:lipas.ui.events/set-active-notification
+                {:message "Paikkaa ei löytynyt kartalta."
+                 :success? false}]}))
 
 (rf/reg-event-db ::chat-failure
   (fn [db [_ resp]]

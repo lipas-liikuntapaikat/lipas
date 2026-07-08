@@ -317,6 +317,7 @@
      :question   {:type "text" :analyzer "finnish"}
      :answer     {:type "text" :analyzer "finnish"}
      :sources    {:type "keyword"}
+     :actions    {:type "keyword"}
      :escalated? {:type "boolean"}
      :context    {:type "keyword" :index false}
      :took-ms    {:type "integer"}}}})

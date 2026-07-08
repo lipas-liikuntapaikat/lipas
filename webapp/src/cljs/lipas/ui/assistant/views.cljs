@@ -2,6 +2,10 @@
   (:require
    ["@mui/icons-material/AddComment$default" :as AddCommentIcon]
    ["@mui/icons-material/Close$default" :as CloseIcon]
+   ["@mui/icons-material/Done$default" :as DoneIcon]
+   ["@mui/icons-material/ExpandLess$default" :as ExpandLessIcon]
+   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/PlayArrow$default" :as PlayArrowIcon]
    ["@mui/icons-material/Send$default" :as SendIcon]
    ["@mui/icons-material/SmartToy$default" :as SmartToyIcon]
    ["@mui/material/Box$default" :as Box]
@@ -10,6 +14,7 @@
    ["@mui/material/CardActions$default" :as CardActions]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/Chip$default" :as Chip]
+   ["@mui/material/Collapse$default" :as Collapse]
    ["@mui/material/CircularProgress$default" :as CircularProgress]
    ["@mui/material/Fab$default" :as Fab]
    ["@mui/material/IconButton$default" :as IconButton]
@@ -25,7 +30,8 @@
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [==>]]
    [re-frame.core :as rf]
-   [reagent.core :as r]))
+   [reagent.core :as r]
+   [reagent.hooks :as hooks]))
 
 (defn- md-link
   "Markdown link renderer: ?ohje= links open the in-app help center,
@@ -43,8 +49,9 @@
       (.-children props)])))
 
 (r/defc Message
-  [{:keys [message]}]
-  (let [{:keys [role text sources error?]} message
+  [{:keys [message idx]}]
+  (let [[sources-open? set-sources-open!] (hooks/use-state false)
+        {:keys [role text sources actions error?]} message
         user? (= "user" role)]
     [:> Box {:sx #js{:display "flex"
                      :justifyContent (if user? "flex-end" "flex-start")}}
@@ -63,16 +70,51 @@
                          "& ul, & ol" #js{:mt 0 :mb 1 :pl 2.5}
                          "& a" #js{:color "secondary.dark"}}}
          [:> ReactMarkdown {:components #js{:a md-link}} text]])
+      ;; Sources collapsed by default — they earn their space on demand.
       (when (seq sources)
+        (let [shown (take 4 sources)]
+          [:<>
+           [:> Button {:size "small"
+                       :variant "text"
+                       :sx #js{:textTransform "none"
+                               :color "text.secondary"
+                               :mt 0.5
+                               :p 0
+                               :minWidth 0}
+                       :endIcon (r/as-element
+                                 (if sources-open?
+                                   [:> ExpandLessIcon {:fontSize "small"}]
+                                   [:> ExpandMoreIcon {:fontSize "small"}]))
+                       :onClick #(set-sources-open! (not sources-open?))}
+            (str "Lähteet (" (count shown) ")")]
+           [:> Collapse {:in sources-open? :timeout 150}
+            [:> Stack {:direction "row" :spacing 0.5 :useFlexGap true
+                       :sx #js{:flexWrap "wrap" :mt 0.5}}
+             (for [{:keys [id title deep-link]} shown]
+               ^{:key id}
+               [:> Chip {:label title
+                         :size "small"
+                         :variant "outlined"
+                         :clickable true
+                         :onClick #(==> [::events/open-source deep-link])}])]]]))
+      ;; Actions the assistant proposes — nothing runs until clicked.
+      (when (seq actions)
         [:> Stack {:direction "row" :spacing 0.5 :useFlexGap true
                    :sx #js{:flexWrap "wrap" :mt 1}}
-         (for [{:keys [id title deep-link]} (take 4 sources)]
-           ^{:key id}
-           [:> Chip {:label title
-                     :size "small"
-                     :variant "outlined"
-                     :clickable true
-                     :onClick #(==> [::events/open-source deep-link])}])])]]))
+         (for [[action-idx {:keys [label executed?] :as action}]
+               (map-indexed vector actions)]
+           ^{:key action-idx}
+           [:> Button {:size "small"
+                       :variant (if executed? "text" "contained")
+                       :color "secondary"
+                       :disabled executed?
+                       :startIcon (r/as-element
+                                   (if executed?
+                                     [:> DoneIcon {:fontSize "small"}]
+                                     [:> PlayArrowIcon {:fontSize "small"}]))
+                       :sx #js{:textTransform "none"}
+                       :onClick #(==> [::events/run-action idx action-idx action])}
+            label])])]]))
 
 (r/defc EscalationCard []
   (let [summary @(rf/subscribe [::subs/pending-escalation])
@@ -110,7 +152,16 @@
 (r/defc Panel []
   (let [messages @(rf/subscribe [::subs/messages])
         input @(rf/subscribe [::subs/input])
-        thinking? @(rf/subscribe [::subs/thinking?])]
+        thinking? @(rf/subscribe [::subs/thinking?])
+        pending-escalation @(rf/subscribe [::subs/pending-escalation])
+        scroll-ref (hooks/use-ref nil)]
+    ;; Keep the newest message — and especially the escalation card, which
+    ;; appears below the answer — in view.
+    (hooks/use-effect
+     (fn []
+       (when-let [el (.-current scroll-ref)]
+         (set! (.-scrollTop el) (.-scrollHeight el))))
+     [(count messages) thinking? pending-escalation])
     [:> Paper
      {:elevation 8
       :sx #js{:position "fixed"
@@ -130,7 +181,7 @@
                       :color "primary.contrastText"}}
       [:> SmartToyIcon {:fontSize "small" :sx #js{:mr 1}}]
       [:> Typography {:variant "subtitle1" :sx #js{:flexGrow 1}}
-       "LIPAS-avustaja"]
+       "Lipastaja"]
       (when (seq messages)
         [:> Tooltip {:title "Uusi keskustelu"}
          [:> IconButton {:size "small"
@@ -143,7 +194,8 @@
        [:> CloseIcon {:fontSize "small"}]]]
 
      ;; Messages
-     [:> Stack {:spacing 1.5
+     [:> Stack {:ref scroll-ref
+                :spacing 1.5
                 :sx #js{:flexGrow 1
                         :overflowY "auto"
                         :p 1.5}}
@@ -154,7 +206,7 @@
           lähteet."])
       (for [[idx m] (map-indexed vector messages)]
         ^{:key idx}
-        [Message {:message m}])
+        [Message {:message m :idx idx}])
       (when thinking?
         [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
          [:> CircularProgress {:size 16}]
@@ -190,7 +242,7 @@
     (when can-use?
       [:<>
        (when open? [Panel])
-       [:> Tooltip {:title "LIPAS-avustaja"}
+       [:> Tooltip {:title "Lipastaja"}
         [:> Fab {:color "secondary"
                  :size "medium"
                  :sx #js{:position "fixed"
