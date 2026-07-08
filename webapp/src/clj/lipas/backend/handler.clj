@@ -926,6 +926,37 @@
            {:status 200
             :body (core/get-help-data db)})}}]
 
+      ["/actions/save-help-draft"
+       {:post
+        {:no-doc true
+         :require-privilege :help/manage
+         :parameters {:body help-schema/HelpData}
+         :handler
+         (fn [{:keys [body-params]}]
+           {:status 200
+            :body (core/save-help-draft db body-params)})}}]
+
+      ["/actions/get-help-versions"
+       {:post
+        {:no-doc true
+         :require-privilege :help/manage
+         :handler
+         (fn [_]
+           {:status 200
+            :body (core/get-help-versions db)})}}]
+
+      ["/actions/get-help-version"
+       {:post
+        {:no-doc true
+         :require-privilege :help/manage
+         :parameters {:body [:map [:id :string]]}
+         :handler
+         (fn [{:keys [body-params]}]
+           (if-let [version (core/get-help-version
+                              db (java.util.UUID/fromString (:id body-params)))]
+             {:status 200 :body version}
+             {:status 404 :body {:error "Version not found"}}))}}]
+
       ;; Heatmap analysis
       ["/actions/create-heatmap"
        {:post

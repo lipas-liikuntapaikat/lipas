@@ -24,3 +24,21 @@ FROM public.versioned_data
 WHERE status = :status AND type = :type
 ORDER BY event_date DESC
 LIMIT 1
+
+-- :name list-by-type
+-- :command :query
+-- :result :many
+-- :doc Lists version metadata (without body) for given type, newest first
+SELECT id, event_date, status, type
+FROM public.versioned_data
+WHERE type = :type
+ORDER BY event_date DESC
+LIMIT :limit
+
+-- :name get-by-id
+-- :command :query
+-- :result :one
+-- :doc Returns a single version by id
+SELECT *
+FROM public.versioned_data
+WHERE id = :id

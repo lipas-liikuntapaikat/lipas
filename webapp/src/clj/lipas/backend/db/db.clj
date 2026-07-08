@@ -271,6 +271,27 @@
        (versioned-data/insert! db-spec)
        (versioned-data/unmarshall)))
 
+(defn list-versioned-data
+  "Version metadata (id, event-date, status, type) without bodies,
+   newest first."
+  [db-spec type limit]
+  (->> (versioned-data/list-by-type db-spec {:type type :limit limit})
+       (mapv (fn [row]
+               {:id         (str (:id row))
+                :event-date (str (:event_date row))
+                :status     (:status row)
+                :type       (:type row)}))))
+
+(defn get-versioned-data-by-id
+  "Single version with body, or nil. Returns
+   {:id ... :event-date ... :status ... :body <unmarshalled>}."
+  [db-spec id]
+  (when-let [row (versioned-data/get-by-id db-spec {:id id})]
+    {:id         (str (:id row))
+     :event-date (str (:event_date row))
+     :status     (:status row)
+     :body       (versioned-data/unmarshall row)}))
+
 ;; DB connection pooling ;;
 
 (defn- ->hikari-opts [{:keys [dbtype dbname host user port password]}]
