@@ -1,0 +1,131 @@
+(ns lipas.ui.assistant.events
+  (:require [ajax.core :as ajax]
+            [clojure.string :as str]
+            [re-frame.core :as rf]))
+
+(defn db->context
+  "Snapshot of where the user is, sent with every message so the
+   assistant can ground answers in the current view. Only the site id is
+   sent — the agent fetches details with its own tools."
+  [db]
+  (let [tr (:translator db)
+        locale (when tr (name (tr)))
+        route (some-> db :current-route :data :name str)
+        lipas-id (-> db :map :mode :lipas-id)
+        edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))]
+    (cond-> {}
+      locale (assoc :locale locale)
+      route (assoc :route route)
+      lipas-id (assoc :site {:lipas-id lipas-id})
+      edit-mode? (assoc :edit-mode? true))))
+
+(rf/reg-event-db ::toggle-panel
+  (fn [db _]
+    (update-in db [:assistant :open?] not)))
+
+(rf/reg-event-db ::set-input
+  (fn [db [_ v]]
+    (assoc-in db [:assistant :input] v)))
+
+(rf/reg-event-fx ::send-message
+  (fn [{:keys [db]} _]
+    (let [message (str/trim (get-in db [:assistant :input] ""))
+          token (-> db :user :login :token)
+          history (->> (get-in db [:assistant :messages] [])
+                       (mapv #(select-keys % [:role :text])))]
+      (when-not (str/blank? message)
+        {:db (-> db
+                 (update-in [:assistant :messages] (fnil conj [])
+                            {:role "user" :text message})
+                 (assoc-in [:assistant :input] "")
+                 (assoc-in [:assistant :thinking?] true)
+                 (assoc-in [:assistant :pending-escalation] nil))
+         :fx [[:http-xhrio
+               {:method          :post
+                :headers         {:Authorization (str "Token " token)}
+                :uri             (str (:backend-url db) "/actions/assistant-chat")
+                :params          {:message message
+                                  :history history
+                                  :context (db->context db)}
+                :format          (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success      [::receive-answer]
+                :on-failure      [::chat-failure]}]]}))))
+
+(rf/reg-event-db ::receive-answer
+  (fn [db [_ {:keys [answer-md sources escalation]}]]
+    (-> db
+        (update-in [:assistant :messages] (fnil conj [])
+                   {:role "assistant" :text answer-md :sources sources})
+        (assoc-in [:assistant :thinking?] false)
+        (assoc-in [:assistant :pending-escalation]
+                  (when escalation (:summary escalation))))))
+
+(rf/reg-event-db ::chat-failure
+  (fn [db [_ resp]]
+    (let [msg (if (= 429 (:status resp))
+                (or (-> resp :response :error)
+                    "Viestiraja täynnä. Yritä myöhemmin uudelleen.")
+                "Avustajaan ei juuri nyt saada yhteyttä. Yritä hetken päästä uudelleen.")]
+      (-> db
+          (update-in [:assistant :messages] (fnil conj [])
+                     {:role "assistant" :text msg :error? true})
+          (assoc-in [:assistant :thinking?] false)))))
+
+(rf/reg-event-db ::edit-escalation
+  (fn [db [_ v]]
+    (assoc-in db [:assistant :pending-escalation] v)))
+
+(rf/reg-event-db ::dismiss-escalation
+  (fn [db _]
+    (assoc-in db [:assistant :pending-escalation] nil)))
+
+(rf/reg-event-fx ::confirm-escalation
+  (fn [{:keys [db]} _]
+    (let [summary (get-in db [:assistant :pending-escalation])
+          token (-> db :user :login :token)
+          transcript (->> (get-in db [:assistant :messages] [])
+                          (mapv #(select-keys % [:role :text])))]
+      {:db (assoc-in db [:assistant :escalation-in-progress?] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/assistant-escalate")
+              :params          {:summary summary
+                                :transcript transcript
+                                :context (db->context db)}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::escalation-sent]
+              :on-failure      [::escalation-failure]}]]})))
+
+(rf/reg-event-db ::escalation-sent
+  (fn [db _]
+    (-> db
+        (update-in [:assistant :messages] (fnil conj [])
+                   {:role "assistant"
+                    :text "Tukipyyntö on lähetetty LIPAS-tuelle. Saat vastauksen sähköpostiisi."})
+        (assoc-in [:assistant :pending-escalation] nil)
+        (assoc-in [:assistant :escalation-in-progress?] false))))
+
+(rf/reg-event-db ::escalation-failure
+  (fn [db [_ resp]]
+    (let [msg (if (= 429 (:status resp))
+                (or (-> resp :response :error)
+                    "Tukipyyntöraja täynnä tälle päivälle.")
+                "Tukipyynnön lähetys epäonnistui. Voit lähettää sähköpostia osoitteeseen lipasinfo@jyu.fi.")]
+      (-> db
+          (update-in [:assistant :messages] (fnil conj [])
+                     {:role "assistant" :text msg :error? true})
+          (assoc-in [:assistant :escalation-in-progress?] false)))))
+
+(rf/reg-fx ::open-window!
+  (fn [url]
+    (js/window.open url "_blank")))
+
+(rf/reg-event-fx ::open-source
+  (fn [_ [_ deep-link]]
+    (if (and deep-link (str/starts-with? deep-link "?ohje="))
+      (let [[section page] (-> deep-link (subs 6) (str/split #"/"))]
+        {:fx [[:dispatch [:lipas.ui.help.events/navigate-to section page]]]})
+      {::open-window! deep-link})))
