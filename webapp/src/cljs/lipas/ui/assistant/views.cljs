@@ -1,5 +1,6 @@
 (ns lipas.ui.assistant.views
   (:require
+   ["@mui/icons-material/AddComment$default" :as AddCommentIcon]
    ["@mui/icons-material/Close$default" :as CloseIcon]
    ["@mui/icons-material/Send$default" :as SendIcon]
    ["@mui/icons-material/SmartToy$default" :as SmartToyIcon]
@@ -130,6 +131,12 @@
       [:> SmartToyIcon {:fontSize "small" :sx #js{:mr 1}}]
       [:> Typography {:variant "subtitle1" :sx #js{:flexGrow 1}}
        "LIPAS-avustaja"]
+      (when (seq messages)
+        [:> Tooltip {:title "Uusi keskustelu"}
+         [:> IconButton {:size "small"
+                         :sx #js{:color "inherit"}
+                         :onClick #(==> [::events/new-chat])}
+          [:> AddCommentIcon {:fontSize "small"}]]])
       [:> IconButton {:size "small"
                       :sx #js{:color "inherit"}
                       :onClick #(==> [::events/toggle-panel])}
