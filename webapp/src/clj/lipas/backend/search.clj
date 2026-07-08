@@ -306,11 +306,27 @@
                        :index true
                        :similarity "cosine"}}}})
 
+(def assistant-logs-mapping
+  "One doc per AI-assistant exchange; feeds the Kibana views for
+   most-asked topics and escalation rate."
+  {:mappings
+   {:dynamic "strict"
+    :properties
+    {:user-hash  {:type "keyword"}
+     :created-at {:type "date"}
+     :question   {:type "text" :analyzer "finnish"}
+     :answer     {:type "text" :analyzer "finnish"}
+     :sources    {:type "keyword"}
+     :escalated? {:type "boolean"}
+     :context    {:type "keyword" :index false}
+     :took-ms    {:type "integer"}}}})
+
 (def mappings
   "All Elasticsearch index mappings. Used by system initialization and tests."
   {:sports-site   (generate-explicit-mapping)
    :analytics     (generate-analytics-mapping)
    :kb            kb-mapping
+   :assistant     assistant-logs-mapping
    :lois          {:settings
                    {:max_result_window 50000
                     :index {:analysis folding-analysis}}
