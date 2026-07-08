@@ -312,6 +312,17 @@
                           body)))
       (dissoc :body :score)))
 
+(defn get-doc
+  "Full KB entry (including untruncated body) by id, or nil."
+  [search id]
+  (let [idx (get-in search [:indices :kb :kb])
+        resp (search/search (:client search) idx
+                            {:size 1
+                             :query {:term {:id id}}
+                             :_source [:id :title :body :lang :source-type
+                                       :source-ref :deep-link :type-codes]})]
+    (-> resp :body :hits :hits first :_source)))
+
 (defn search-kb
   "Retrieve KB entries for a natural-language query. Hybrid BM25 + kNN
    with client-side reciprocal rank fusion by default; :method :bm25 or
