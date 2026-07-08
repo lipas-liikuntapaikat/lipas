@@ -163,6 +163,22 @@
          :let [doc (prop->doc lang entry)] :when doc]
      doc)))
 
+;;; ——— Ingested docs (jyu.fi PDFs, YouTube transcripts) ————————————
+;;
+;; One-off ingestion (dev/lipas/kb_ingest.clj) writes finished,
+;; doc-shaped entries into versioned_data as type "kb-ingest", so the
+;; index stays a deterministic function of Postgres + code and can be
+;; rebuilt from scratch at any time.
+
+(def ^:private ingested-doc-keys
+  [:id :title :body :lang :source-type :source-ref :deep-link
+   :type-codes :review-status])
+
+(defn ingested->docs
+  [db]
+  (->> (db/get-versioned-data db "kb-ingest" "active")
+       (map #(select-keys % ingested-doc-keys))))
+
 ;;; ——— Sync —————————————————————————————————————————————————————————
 
 (defn- existing-doc-hashes
@@ -192,7 +208,8 @@
         idx       (get-in search [:indices :kb :kb])
         now       (str (java.time.Instant/now))
         docs      (->> (concat (help-cms->docs (db/get-versioned-data db "help" "active"))
-                               (code-data->docs))
+                               (code-data->docs)
+                               (ingested->docs db))
                        (map #(assoc %
                                     :content-hash (content-hash %)
                                     :embedding-model embedding-model

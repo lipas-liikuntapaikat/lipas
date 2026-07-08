@@ -58,8 +58,14 @@
    ;; — Help-CMS task pages (seeded dev content) —
    {:q "miten lisään reitin?" :expect #{"tallentajille/reitin-lisaaminen"}}
    {:q "kuinka tuon gpx-tiedoston kartalle?" :expect #{"tallentajille/reitin-lisaaminen"}}
-   {:q "miten lisään uuden liikuntapaikan?" :expect #{"tallentajille/pisteen-lisaaminen"}}
-   {:q "saavutettavuusanalyysin tekeminen" :expect #{"tyokalut/saavutettavuustyokalu"}}
+   {:q "miten lisään uuden liikuntapaikan?"
+    :expect #{"tallentajille/pisteen-lisaaminen"
+              "lipas-liikuntapaikan-lisaaminen-ja-muokkaaminen-2023"
+              "cDaGW3EOrsI"}}
+   {:q "saavutettavuusanalyysin tekeminen"
+    :expect #{"tyokalut/saavutettavuustyokalu"
+              "lipas-saavutettavuustyokalu-2023"
+              "UiKjGeS4Yyg" "XoGxJfolAPY" "FADGfqvjyY4"}}
 
    ;; — Cross-lingual: question language ≠ document language —
    {:q "var lägger jag till en padelbana?" :lang "se" :expect #{"type:1390" "type:2295"}}
