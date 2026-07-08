@@ -83,10 +83,13 @@
 
         (testing "Scheduler tasks do not enqueue maintenance jobs"
           ;; The old design routed reminder checks and cleanup through the
-          ;; queue as job rows; the new design calls them directly
+          ;; queue as job rows; the new design calls them directly. Real
+          ;; work still becomes jobs: the nightly KB sync enqueues exactly
+          ;; one (deduplicated) help-kb-sync job on its startup tick.
           (Thread/sleep 500)
-          (is (empty? (test-utils/get-all-jobs db))
-              "No queue churn from scheduler ticks"))
+          (let [jobs (test-utils/get-all-jobs db)]
+            (is (= ["help-kb-sync"] (mapv :jobs/type jobs))
+                "No queue churn from scheduler ticks beyond the KB sync")))
 
         (finally
           (scheduler/stop-scheduler!)))

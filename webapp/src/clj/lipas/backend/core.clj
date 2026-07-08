@@ -1073,9 +1073,13 @@
   (db/get-versioned-data db "help" "active"))
 
 (defn save-help-data
-  "Publishes help content: becomes immediately visible to all users."
+  "Publishes help content: becomes immediately visible to all users.
+   Enqueues a knowledge-base sync so the AI assistant sees the new
+   content."
   [db help-data]
-  (db/add-versioned-data! db "help" "active" help-data))
+  (let [result (db/add-versioned-data! db "help" "active" help-data)]
+    (jobs/enqueue-job! db "help-kb-sync" {})
+    result))
 
 (defn save-help-draft
   [db help-data]
