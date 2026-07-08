@@ -1,6 +1,9 @@
 # LIPAS AI Assistant & Knowledge Base — Implementation Plan
 
-Status: agreed design, implementation started on `feat/ai-assistant` (July 2026).
+Status: agreed design; **implemented** — see
+[ai-assistant-implementation.md](./ai-assistant-implementation.md) for the
+as-built map, REPL recipes and remaining work. This doc stays as the design
+rationale.
 
 ## Goal
 
