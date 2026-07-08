@@ -1,70 +1,13 @@
 (ns lipas.backend.ptv.ai
+  "PTV-specific AI content generation: prompts, response schemas and
+   sports-site → prompt-doc shaping. Generic LLM plumbing (providers,
+   completion calls, retry/fallback, embeddings) lives in lipas.backend.llm."
   (:require [cheshire.core :as json]
-            [clj-http.client :as client]
             [clojure.string :as str]
-            [lipas.backend.config :as config]
+            [lipas.backend.llm :as llm]
             [lipas.data.ptv-service-guidance :as service-guidance]
             [malli.json-schema :as json-schema]
-            [malli.util :as mu]
-            [taoensso.timbre :as log]))
-
-;;; ——— Provider & model registry ———————————————————————————————————————
-;;
-;; Single source of truth for all provider/model configuration.
-;;
-;; :models          — set of model IDs this provider supports
-;; :default-params  — workbench defaults sent to the frontend
-;; :new-api-models  — (OpenAI) models using max_completion_tokens
-;; :no-sampling     — (OpenAI) models that reject top_p / presence_penalty
-
-(def providers
-  {:openai
-   {:models         #{"gpt-4.1-nano" "gpt-4.1-mini" "gpt-4.1" "gpt-4o-mini" "gpt-4o"
-                      "gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
-                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
-    :new-api-models #{"gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
-                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
-    :no-sampling    #{"gpt-5-nano" "gpt-5-mini" "gpt-5" "gpt-5.4"
-                      "o3-mini" "o4-mini" "o3" "o1" "o1-pro"}
-    :default-params {:model            "gpt-4.1-mini"
-                     :top-p            0.5
-                     :presence-penalty -2
-                     :max-tokens       4096
-                     :temperature      nil}}
-   :gemini
-   {:models         #{"gemini-3-flash-preview"}
-    :default-params {:model          "gemini-3-flash-preview"
-                     :top-p          0.90
-                     :temperature    1.0
-                     :max-tokens     8192
-                     :thinking-level "minimal"}}})
-
-(def model->provider
-  "Reverse lookup: model-id → provider keyword. Derived from `providers`."
-  (into {}
-        (for [[provider {:keys [models]}] providers
-              model models]
-          [model provider])))
-
-(def default-params
-  "Default workbench params (OpenAI). Sent to frontend on preview-data load."
-  (-> providers :openai :default-params))
-
-(def gemini-default-params
-  "Default Gemini model params. Use this instead of hardcoding model names."
-  (-> providers :gemini :default-params))
-
-;;; ——— API credentials ——————————————————————————————————————————————————
-
-(def openai-config
-  (get-in config/default-config [:open-ai]))
-
-(def gemini-config
-  (get-in config/default-config [:gemini]))
-
-(def default-headers
-  {:Authorization (str "Bearer " (:api-key openai-config))
-   :Content-Type  "application/json"})
+            [malli.util :as mu]))
 
 (def ptv-system-instruction-v2
   "You are an assistant who helps users produce content for the Service Information Repository (Palvelutietovaranto). You will be asked questions and should primarily use source material and secondarily your own knowledge to provide answers. Follow these style guidelines in your responses:
@@ -246,22 +189,15 @@ Source data:
 (comment
   (println ptv-system-instruction-v2))
 
-(defn localized-string-schema [string-props]
-  [:map
-   {:closed true}
-   [:fi [:string string-props]]
-   [:se [:string string-props]]
-   [:en [:string string-props]]])
-
 (def response-schema
   [:map
    {:closed true}
-   [:description (localized-string-schema nil)]
+   [:description (llm/localized-string-schema nil)]
    ;; Structured Outputs doesn't support maxLength
    ;; https://platform.openai.com/docs/guides/structured-outputs#some-type-specific-keywords-are-not-yet-supported
    ;; The prompt mentions summary should be max 150 chars
-   [:summary (localized-string-schema nil #_{:max 150})]
-   [:user-instruction (localized-string-schema nil)]])
+   [:summary (llm/localized-string-schema nil #_{:max 150})]
+   [:user-instruction (llm/localized-string-schema nil)]])
 
 (def Response
   (json-schema/transform response-schema))
@@ -271,142 +207,23 @@ Source data:
    which Gemini's API does not support."
   (json-schema/transform (mu/open-schema response-schema)))
 
-(defn complete-raw
-  "Returns the full OpenAI response including :choices, :usage, and :model."
-  [{:keys [completions-url model n temperature top-p presence-penalty message-format max-tokens]
-    :or   {n                1
-           top-p            0.5
-           presence-penalty -2
-           max-tokens       4096}}
-   system-instruction
-   prompt]
-  (let [message-format (or message-format
-                           {:type "json_schema"
-                            :json_schema {:name "Response"
-                                          :strict true
-                                          :schema Response}})
-        {:keys [new-api-models no-sampling]} (providers :openai)
-        new-api? (new-api-models model)
-        body   (cond-> {:model            model
-                        :n                n
-                        :response_format  message-format
-                        :messages         [{:role "system" :content system-instruction}
-                                           {:role "user" :content prompt}]}
-                 new-api?             (assoc :max_completion_tokens max-tokens)
-                 (not new-api?)       (assoc :max_tokens max-tokens)
-                 (not (no-sampling model))
-                 (-> (assoc :top_p top-p)
-                     (assoc :presence_penalty presence-penalty))
-                 temperature (assoc :temperature temperature))
-        _ (log/debugf "OpenAI prompt (%s, %d chars): %s" model (count prompt) prompt)
-        params {:headers default-headers
-                :body    (json/encode body)}]
-    (-> (client/post completions-url params)
-        :body
-        (json/decode keyword))))
-
-(defn gemini-complete-raw
-  "Calls Gemini API and normalizes the response to match OpenAI's shape."
-  [{:keys [base-url api-key model n temperature top-p max-tokens thinking-level response-schema]
-    :or   {n               1
-           top-p           0.90
-           temperature     1.0
-           max-tokens      8192
-           thinking-level  "minimal"
-           response-schema GeminiResponse}}
-   system-instruction
-   prompt]
-  (let [url  (str base-url "/models/" model ":generateContent")
-        body {:systemInstruction {:parts [{:text system-instruction}]}
-              :contents          [{:role "user" :parts [{:text prompt}]}]
-              :generationConfig  {:topP             top-p
-                                  :temperature      temperature
-                                  :maxOutputTokens  max-tokens
-                                  :candidateCount   n
-                                  :responseMimeType "application/json"
-                                  :responseSchema   response-schema
-                                  :thinkingConfig   {:thinkingLevel thinking-level}}}
-        _      (log/debugf "Gemini prompt (%s, %d chars): %s" model (count prompt) prompt)
-        params {:headers      {"x-goog-api-key" api-key
-                               "Content-Type"   "application/json"}
-                :body         (json/encode body)
-                :content-type :json}
-        resp   (-> (client/post url params)
-                   :body
-                   (json/decode keyword))
-        usage  (:usageMetadata resp)]
-    ;; Normalize to OpenAI shape
-    {:model   model
-     :choices (mapv (fn [candidate]
-                      (let [text (-> candidate :content :parts first :text)
-                            ;; Parse JSON content server-side so the frontend receives
-                            ;; a proper nested map. Falls back to raw string if Gemini
-                            ;; truncated the output or returned invalid JSON.
-                            content (try
-                                      (json/decode text keyword)
-                                      (catch Exception e
-                                        (log/warnf "Failed to parse Gemini JSON content: %s" (.getMessage e))
-                                        text))]
-                        {:message {:content content}}))
-                    (:candidates resp))
-     :usage   {:prompt_tokens     (:promptTokenCount usage 0)
-               :completion_tokens (:candidatesTokenCount usage 0)
-               :total_tokens      (:totalTokenCount usage 0)}}))
-
-(defn complete
-  [{:keys [completions-url model n #_temperature top-p presence-penalty message-format max-tokens]
-    :as config-map}
-   system-instruction
-   prompt]
-  (let [result (-> (complete-raw config-map system-instruction prompt)
-                   :choices
-                   first
-                   (update-in [:message :content] #(json/decode % keyword)))]
-    (log/infof "OpenAI complete (%s): %d tokens" model (get-in result [:usage :total_tokens] 0))
-    (log/debugf "OpenAI result: %s" result)
-    result))
-
-(defn- gemini-unavailable?
-  "True if the exception is a 503 (or 429) from Gemini indicating capacity issues."
-  [e]
-  (when-let [status (:status (ex-data e))]
-    (contains? #{503 429} status)))
+(def openai-response-format
+  "OpenAI response_format equivalent of GeminiResponse, used both by the
+   workbench and as the Gemini→OpenAI fallback format."
+  {:type "json_schema"
+   :json_schema {:name   "Response"
+                 :strict true
+                 :schema Response}})
 
 (defn gemini-complete
-  "Like `complete` but uses Gemini. Returns {:message {:content <map>}}.
-   Merges provider defaults for any missing params.
-   On 503/429 errors, retries once after 2s, then falls back to OpenAI."
+  "PTV-flavored llm/gemini-complete: defaults to the PTV response schema and
+   keeps the OpenAI fallback on the equivalent JSON schema."
   [config system-instruction prompt]
-  (let [config (merge gemini-default-params config)]
-    (try
-      (let [result (-> (gemini-complete-raw config system-instruction prompt)
-                       :choices
-                       first)]
-        (log/infof "Gemini complete (%s)" (:model config))
-        (log/debugf "Gemini result: %s" result)
-        result)
-      (catch Exception e
-        (if (gemini-unavailable? e)
-          (do
-            (log/warnf "Gemini unavailable (%s), retrying in 2s..." (.getMessage e))
-            (Thread/sleep 2000)
-            (try
-              (let [result (-> (gemini-complete-raw config system-instruction prompt)
-                               :choices
-                               first)]
-                (log/infof "Gemini retry succeeded (%s)" (:model config))
-                (log/debugf "Gemini result: %s" result)
-                result)
-              (catch Exception e2
-                (if (gemini-unavailable? e2)
-                  (let [fallback-model (:model default-params)]
-                    (log/warnf "Gemini still unavailable, falling back to OpenAI %s" fallback-model)
-                    (let [openai-cfg (merge default-params openai-config)
-                          result (complete openai-cfg system-instruction prompt)]
-                      (log/infof "OpenAI fallback complete (%s)" fallback-model)
-                      result))
-                  (throw e2)))))
-          (throw e))))))
+  (llm/gemini-complete (merge {:response-schema         GeminiResponse
+                               :fallback-message-format openai-response-format}
+                              config)
+                       system-instruction
+                       prompt))
 
 (def generate-utp-descriptions-prompt
   "Based on the JSON structure provided, create two multilingual descriptions (in Finnish, Swedish, and English) of the sports facility:
@@ -570,7 +387,7 @@ Description: %s")
                               (:summary reference)
                               (:description reference))
                       "")]
-    (gemini-complete gemini-config
+    (gemini-complete llm/gemini-config
                      ptv-system-instruction-v5
                      (format generate-utp-descriptions-prompt-v5
                              ref-section
@@ -597,9 +414,9 @@ Description: %s")
       ;; transforms to a JSON-schema $ref, which Gemini structured output
       ;; doesn't support. LLM only echoes the id, so plain :int is fine.
       [:lipas-id :int]
-      [:summary (localized-string-schema nil)]
-      [:description (localized-string-schema nil)]
-      [:user-instruction (localized-string-schema nil)]]]]])
+      [:summary (llm/localized-string-schema nil)]
+      [:description (llm/localized-string-schema nil)]
+      [:user-instruction (llm/localized-string-schema nil)]]]]])
 
 (def BatchGeminiResponse
   (json-schema/transform (mu/open-schema batch-response-schema)))
@@ -650,7 +467,7 @@ Source data:
                             (count prompt-docs)
                             ref-section
                             (json/encode prompt-docs))
-        config      (assoc gemini-config
+        config      (assoc llm/gemini-config
                            :response-schema BatchGeminiResponse
                            :max-tokens 32768)]
     (gemini-complete config ptv-system-instruction-v5 prompt)))
@@ -686,7 +503,7 @@ Source text:
 
 (defn translate-to-other-langs
   [{:keys [from to summary description user-instruction]}]
-  (gemini-complete gemini-config
+  (gemini-complete llm/gemini-config
                    ptv-system-instruction-v5
                    (format translate-to-other-langs-prompt
                            from
@@ -877,17 +694,6 @@ Source data:
                          (:user-instruction guidance)
                          (json/encode doc))
                  (format generate-utp-service-descriptions-prompt-v5 (json/encode doc)))]
-    (gemini-complete gemini-config
+    (gemini-complete llm/gemini-config
                      ptv-system-instruction-v5
                      prompt)))
-
-(defn get-models
-  [{:keys [_api-key models-url]}]
-  (let [params {:headers default-headers}]
-    (-> (client/get models-url params)
-        :body
-        (json/decode keyword))))
-
-(comment
-  (get-models openai-config)
-  (complete openai-config ptv-system-instruction "Why volcanoes erupt?"))

@@ -20,6 +20,7 @@
                       :system-prompt  my-improved-prompt}))"
   (:require [cheshire.core :as json]
             [clj-http.client :as client]
+            [lipas.backend.llm :as llm]
             [lipas.backend.ptv.ai :as ai]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-int]
@@ -63,14 +64,14 @@
   "Low-level Gemini API call with custom response schema.
    Returns {:content <parsed-json> :usage {...} :elapsed-ms <int> :model <str>}."
   [{:keys [model thinking-level top-p temperature max-tokens response-schema]
-    :or   {model          (:model ai/gemini-default-params)
-           thinking-level (:thinking-level ai/gemini-default-params)
-           top-p          (:top-p ai/gemini-default-params)
-           temperature    (:temperature ai/gemini-default-params)
-           max-tokens     (:max-tokens ai/gemini-default-params)}}
+    :or   {model          (:model llm/gemini-default-params)
+           thinking-level (:thinking-level llm/gemini-default-params)
+           top-p          (:top-p llm/gemini-default-params)
+           temperature    (:temperature llm/gemini-default-params)
+           max-tokens     (:max-tokens llm/gemini-default-params)}}
    system-prompt
    user-prompt]
-  (let [{:keys [base-url api-key]} ai/gemini-config
+  (let [{:keys [base-url api-key]} llm/gemini-config
         url    (str base-url "/models/" model ":generateContent")
         body   {:systemInstruction {:parts [{:text system-prompt}]}
                 :contents          [{:role "user" :parts [{:text user-prompt}]}]
@@ -383,8 +384,8 @@ Be specific — cite exact problematic phrases.")
   (json-schema/transform (mu/open-schema ai/response-schema)))
 
 (def default-generator-config
-  {:model          (:model ai/gemini-default-params)
-   :thinking-level (:thinking-level ai/gemini-default-params)
+  {:model          (:model llm/gemini-default-params)
+   :thinking-level (:thinking-level llm/gemini-default-params)
    :response-schema generation-schema})
 
 (defn- fetch-prompt-doc
@@ -421,7 +422,7 @@ Be specific — cite exact problematic phrases.")
   (json-schema/transform (mu/open-schema grading-response-schema)))
 
 (def default-grader-config
-  {:model          (:model ai/gemini-default-params)
+  {:model          (:model llm/gemini-default-params)
    :thinking-level "high"
    :temperature    0.5
    :top-p          0.90
@@ -509,7 +510,7 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
   (json-schema/transform (mu/open-schema grading-response-schema-v2)))
 
 (def grader-config-v2
-  {:model          (:model ai/gemini-default-params)
+  {:model          (:model llm/gemini-default-params)
    :thinking-level "high"
    :temperature    0.5
    :top-p          0.90
