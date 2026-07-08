@@ -519,8 +519,10 @@
         :on-click #(==> [::events/open-edit-mode])}
        (tr :help/manage-content)])))
 
-(r/defc view
-  [{:keys []}]
+(r/defc dialog
+  ;; Mounted once at app root (lipas.ui.views/main-panel) so ?ohje= deep
+  ;; links open the help center on any route.
+  []
   (let [sections @(rf/subscribe [::subs/help-data])
         mode @(rf/subscribe [::subs/mode])
         dialog-open? @(rf/subscribe [::subs/dialog-open?])
@@ -537,15 +539,7 @@
         tr @(rf/subscribe [:lipas.ui.subs/translator])
         locale-kw (tr)]
 
-    [:<>
-     ;; Help button in main UI
-     [:> Tooltip {:title (tr :help/headline)}
-      [:> IconButton {:size "large"
-                      :on-click #(==> [::events/open-dialog])}
-       [:> Help]]]
-
-     ;; Help dialog
-     [:> Dialog
+    [:> Dialog
       {:fullScreen true
        :keepMounted true
        :open dialog-open?
@@ -594,10 +588,18 @@
               (locale-kw (:title selected-section))])
 
            (when selected-page
-             [:> Link {:underline "hover"
-                       :color "inherit"
-                       :href "/"}
+             [:> Typography {:color "text.primary"}
               (locale-kw (:title selected-page))])]
 
           (when selected-section
-            [HelpSection selected-section])])]]]))
+            [HelpSection selected-section])])]]))
+
+(r/defc view
+  ;; Help icon button for the (mini-)navbar; the dialog itself is mounted
+  ;; at app root.
+  [{:keys []}]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Tooltip {:title (tr :help/headline)}
+     [:> IconButton {:size "large"
+                     :on-click #(==> [::events/open-dialog])}
+      [:> Help]]]))

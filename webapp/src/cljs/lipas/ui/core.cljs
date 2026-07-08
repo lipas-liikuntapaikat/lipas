@@ -3,6 +3,7 @@
             [lipas.ui.config :as config]
             [lipas.ui.effects]
             [lipas.ui.events :as events]
+            [lipas.ui.help.events :as help-events]
             [lipas.ui.interceptors]
             [lipas.ui.local-storage]
             [lipas.ui.project-devtools :as project-devtools]
@@ -35,6 +36,9 @@
 
 (defn init []
   (rf/dispatch-sync [::events/initialize-db])
+  ;; Sync so the ?ohje= deep-link param is read before the router's
+  ;; root-route redirect can rewrite the URL.
+  (rf/dispatch-sync [::help-events/init])
   (dev-setup)
   (qa-setup)
   (mount-root)
