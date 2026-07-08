@@ -468,6 +468,21 @@
                      {:db (update db :search merge defaults)
                       :dispatch [::filters-updated fit-view?]})))
 
+(rf/reg-event-fx ::replace-filters
+                 ;; Replace the whole search spec (string + filters) starting
+                 ;; from clean defaults and run a single search. Used by the
+                 ;; AI assistant's action buttons.
+                 (fn [{:keys [db]} [_ {:keys [search-text city-codes type-codes edit-permission?]}]]
+                   (let [defaults (-> (if (:logged-in? db) db/default-db-logged-in db/default-db)
+                                      (select-keys [:filters :sort :string]))
+                         spec (cond-> defaults
+                                search-text (assoc :string search-text)
+                                (seq city-codes) (assoc-in [:filters :city-codes] (set city-codes))
+                                (seq type-codes) (assoc-in [:filters :type-codes] (set type-codes))
+                                edit-permission? (assoc-in [:filters :edit-permission?] true))]
+                     {:db (update db :search merge spec)
+                      :dispatch [::filters-updated :fit-view]})))
+
 (rf/reg-event-fx ::create-report-from-current-search
                  (fn [{:keys [db]} [_ fmt]]
                    (let [params (-> db
