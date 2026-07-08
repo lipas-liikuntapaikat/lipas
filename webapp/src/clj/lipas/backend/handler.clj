@@ -4,6 +4,7 @@
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
             [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
+            [lipas.backend.assistant :as assistant]
             [lipas.backend.core :as core]
             [lipas.backend.search :as search*]
             [lipas.backend.jwt :as jwt]
@@ -956,6 +957,49 @@
                               db (java.util.UUID/fromString (:id body-params)))]
              {:status 200 :body version}
              {:status 404 :body {:error "Version not found"}}))}}]
+
+      ["/actions/assistant-chat"
+       {:post
+        {:no-doc true
+         :require-privilege :ai-assistant/use
+         :parameters {:body [:map
+                             [:message [:string {:min 1 :max 2000}]]
+                             [:history {:optional true}
+                              [:vector
+                               [:map
+                                [:role [:enum "user" "assistant"]]
+                                [:text :string]]]]
+                             [:context {:optional true} assistant/context-schema]]}
+         :handler
+         (fn [req]
+           (let [{:keys [message history context]} (:body-params req)]
+             (assistant/chat! {:db db
+                               :search search
+                               :user (:identity req)
+                               :message message
+                               :history (or history [])
+                               :context context})))}}]
+
+      ["/actions/assistant-escalate"
+       {:post
+        {:no-doc true
+         :require-privilege :ai-assistant/use
+         :parameters {:body [:map
+                             [:summary [:string {:min 1 :max 2000}]]
+                             [:transcript {:optional true}
+                              [:vector
+                               [:map
+                                [:role [:enum "user" "assistant"]]
+                                [:text :string]]]]
+                             [:context {:optional true} assistant/context-schema]]}
+         :handler
+         (fn [req]
+           (let [{:keys [summary transcript context]} (:body-params req)]
+             (assistant/escalate! {:db db
+                                   :user (:identity req)
+                                   :summary summary
+                                   :transcript (or transcript [])
+                                   :context context})))}}]
 
       ;; Heatmap analysis
       ["/actions/create-heatmap"

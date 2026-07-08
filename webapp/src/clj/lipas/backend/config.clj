@@ -45,7 +45,9 @@
       :population-high-def "vaestoruutu_250m"
       :diversity "diversity"}
      :kb
-     {:kb "lipas_kb_v1"}}}
+     {:kb "lipas_kb_v1"}
+     :assistant
+     {:logs "assistant_logs"}}}
    :mailchimp
    {:api-key (env! :mailchimp-api-key)
     :api-url (env! :mailchimp-api-url)
