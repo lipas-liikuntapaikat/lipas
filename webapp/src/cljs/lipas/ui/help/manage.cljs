@@ -7,6 +7,7 @@
    ["@mui/icons-material/Delete$default" :as DeleteIcon]
    ["@mui/icons-material/Download$default" :as DownloadIcon]
    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/History$default" :as HistoryIcon]
    ["@mui/icons-material/Image$default" :as ImageIcon]
    ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
    ["@mui/icons-material/Preview$default" :as PreviewIcon]
@@ -26,7 +27,11 @@
    ["@mui/material/DialogTitle$default" :as DialogTitle]
    ["@mui/material/FormControl$default" :as FormControl]
    ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/Chip$default" :as Chip]
    ["@mui/material/InputLabel$default" :as InputLabel]
+   ["@mui/material/List$default" :as MuiList]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemText$default" :as ListItemText]
    ["@mui/material/MenuItem$default" :as MenuItem]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Select$default" :as Select]
@@ -339,6 +344,83 @@
                               (assoc-in [:help :save-in-progress] false)
                               (assoc-in [:help :errors :save] resp))
                       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-fx ::save-draft
+                 (fn [{:keys [db]} _]
+                   (let [token (-> db :user :login :token)]
+                     {:db (assoc-in db [:help :save-in-progress] true)
+                      :fx [[:http-xhrio
+                            {:method          :post
+                             :headers         {:Authorization (str "Token " token)}
+                             :uri             (str (:backend-url db) "/actions/save-help-draft")
+                             :params          (get-in db [:help :edited-data])
+                             :format          (ajax/transit-request-format)
+                             :response-format (ajax/transit-response-format)
+                             :on-success      [::save-draft-success]
+                             :on-failure      [::save-failure]}]]})))
+
+(rf/reg-event-fx ::save-draft-success
+                 (fn [{:keys [db]} _]
+                   (let [tr           (:translator db)
+                         notification {:message  (tr :notifications/save-success)
+                                       :success? true}]
+                     {:db (assoc-in db [:help :save-in-progress] false)
+                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;; Version history
+
+(rf/reg-event-fx ::open-version-history
+                 (fn [{:keys [db]} _]
+                   {:db (assoc-in db [:help :versions :dialog-open?] true)
+                    :fx [[:dispatch [::get-versions]]]}))
+
+(rf/reg-event-db ::close-version-history
+                 (fn [db _]
+                   (assoc-in db [:help :versions :dialog-open?] false)))
+
+(rf/reg-event-fx ::get-versions
+                 (fn [{:keys [db]} _]
+                   (let [token (-> db :user :login :token)]
+                     {:fx [[:http-xhrio
+                            {:method          :post
+                             :headers         {:Authorization (str "Token " token)}
+                             :uri             (str (:backend-url db) "/actions/get-help-versions")
+                             :format          (ajax/transit-request-format)
+                             :response-format (ajax/transit-response-format)
+                             :on-success      [::get-versions-success]
+                             :on-failure      [::save-failure]}]]})))
+
+(rf/reg-event-db ::get-versions-success
+                 (fn [db [_ versions]]
+                   (assoc-in db [:help :versions :items] versions)))
+
+(rf/reg-event-fx ::load-version
+                 (fn [{:keys [db]} [_ id]]
+                   (let [token (-> db :user :login :token)]
+                     {:fx [[:http-xhrio
+                            {:method          :post
+                             :headers         {:Authorization (str "Token " token)}
+                             :uri             (str (:backend-url db) "/actions/get-help-version")
+                             :params          {:id (str id)}
+                             :format          (ajax/transit-request-format)
+                             :response-format (ajax/transit-response-format)
+                             :on-success      [::load-version-success]
+                             :on-failure      [::save-failure]}]]})))
+
+(rf/reg-event-fx ::load-version-success
+                 ;; Loads the version into the editor only — publishing it
+                 ;; (= rollback) is an explicit separate step.
+                 (fn [{:keys [db]} [_ version]]
+                   {:db (-> db
+                            (assoc-in [:help :edited-data] (:body version))
+                            (assoc-in [:help :versions :dialog-open?] false))
+                    :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                                     {:message  "Version loaded into editor. Publish to make it live."
+                                      :success? true}]]]}))
+
+(rf/reg-sub ::versions
+            (fn [db _]
+              (get-in db [:help :versions])))
 
 (rf/reg-sub
  ::edited-help-data
@@ -1094,23 +1176,73 @@
 
    [:> Stack {:direction "row" :spacing 1}
     [:> Button
+     {:variant "outlined"
+      :color "primary"
+      :startIcon (r/as-element [:> HistoryIcon {}])
+      :onClick #(rf/dispatch [::open-version-history])}
+     "History"]
+    [:> Button
      {:variant "contained"
       :color "primary"
       :startIcon (r/as-element [:> PreviewIcon {}])
       :onClick #(rf/dispatch [::apply-changes])}
      "Preview"]
     [:> Button
+     {:variant "outlined"
+      :color "secondary"
+      :startIcon (r/as-element [:> SaveIcon {}])
+      :onClick #(rf/dispatch [::save-draft])}
+     "Save draft"]
+    [:> Button
      {:variant "contained"
       :color "secondary"
       :startIcon (r/as-element [:> SaveIcon {}])
       :onClick #(rf/dispatch [::save-changes])}
-     "Save"]
+     "Publish"]
     [:> Button
      {:variant "outlined"
       :color "secondary"
       :sx #js{:ml 1}
       :onClick #(rf/dispatch [::events/close-edit-mode])}
      "Cancel"]]])
+
+(r/defc version-history-dialog []
+  (let [{:keys [dialog-open? items]} @(rf/subscribe [::versions])]
+    [:> Dialog
+     {:open (boolean dialog-open?)
+      :onClose #(rf/dispatch [::close-version-history])
+      :maxWidth "sm"
+      :fullWidth true}
+
+     [:> DialogTitle {} "Version history"]
+
+     [:> DialogContent {}
+      (if (empty? items)
+        [:> DialogContentText {} "No saved versions."]
+        [:> MuiList {}
+         (for [{:keys [id event-date status]} items]
+           ^{:key id}
+           [:> ListItem
+            {:secondaryAction
+             (r/as-element
+              [:> Button
+               {:size "small"
+                :variant "outlined"
+                :onClick #(rf/dispatch [::load-version id])}
+               "Load into editor"])}
+            [:> Chip {:size "small"
+                      :label status
+                      :color (if (= "active" status) "secondary" "default")
+                      :sx #js{:mr 2}}]
+            [:> ListItemText
+             ;; "2026-07-08 14:03:22.123456" → "2026-07-08 14:03"
+             {:primary (subs (str event-date) 0 16)}]])])]
+
+     [:> DialogActions {}
+      [:> Button
+       {:onClick #(rf/dispatch [::close-version-history])
+        :color "primary"}
+       "Close"]]]))
 
 (r/defc confirmation-dialog []
   (let [dialog @(rf/subscribe [::confirm-dialog])
@@ -1177,6 +1309,7 @@
     [:> Box {:sx #js{:p 2}}
      ;; Confirmation dialog always rendered but only shown when needed
      [confirmation-dialog {}]
+     [version-history-dialog {}]
      [editor-toolbar {}]
 
      [section-selector

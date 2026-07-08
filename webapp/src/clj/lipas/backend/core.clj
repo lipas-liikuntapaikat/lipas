@@ -1609,8 +1609,21 @@
   (db/get-versioned-data db "help" "active"))
 
 (defn save-help-data
+  "Publishes help content: becomes immediately visible to all users."
   [db help-data]
   (db/add-versioned-data! db "help" "active" help-data))
+
+(defn save-help-draft
+  [db help-data]
+  (db/add-versioned-data! db "help" "draft" help-data))
+
+(defn get-help-versions
+  [db]
+  (db/list-versioned-data db "help" 100))
+
+(defn get-help-version
+  [db id]
+  (db/get-versioned-data-by-id db id))
 
 (comment
   (get-categories)
