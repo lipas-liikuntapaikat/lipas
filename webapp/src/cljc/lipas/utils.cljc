@@ -234,3 +234,13 @@
          (assoc acc activity-k activity-v)))
      {}
      activities)))
+
+(defn localized
+  "Pick `locale` from a localized {:fi ... :se ... :en ...} map, falling
+   back fi → en → se when the requested language is missing or blank."
+  [locale m]
+  (when m
+    (or (not-empty (get m locale))
+        (not-empty (:fi m))
+        (not-empty (:en m))
+        (not-empty (:se m)))))
