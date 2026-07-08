@@ -118,6 +118,22 @@
   (let [transformed (transform-geom (->jts-point lon lat) srid tm35fin-srid)]
     [(.getX transformed) (.getY transformed)]))
 
+(defn wgs84->tm35fin-coords
+  "Batch version of `wgs84->tm35fin-no-wrap`: transforms every
+  [lon lat] with a single transform construction instead of one JTS
+  point + transform per coordinate. Applies the same per-coordinate
+  math, so results are identical to the single-point fn."
+  [coords]
+  (let [xform (BasicCoordinateTransform. (crs srid) (crs tm35fin-srid))
+        src (ProjCoordinate.)
+        dst (ProjCoordinate.)]
+    (mapv (fn [[lon lat]]
+            (set! (.-x src) (double lon))
+            (set! (.-y src) (double lat))
+            (.transform xform src dst)
+            [(.-x dst) (.-y dst)])
+          coords)))
+
 (defn epsg3067-point->envelope [[e n] delta]
   [[(- e delta) (+ n delta)] [(+ e delta) (- n delta)]])
 
