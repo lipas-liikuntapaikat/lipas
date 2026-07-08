@@ -34,6 +34,14 @@
   (fn [db [_ v]]
     (assoc-in db [:assistant :input] v)))
 
+(rf/reg-event-db ::new-chat
+  (fn [db _]
+    (update db :assistant merge {:messages []
+                                 :input ""
+                                 :thinking? false
+                                 :pending-escalation nil
+                                 :escalation-in-progress? false})))
+
 (rf/reg-event-fx ::send-message
   (fn [{:keys [db]} _]
     (let [message (str/trim (get-in db [:assistant :input] ""))
