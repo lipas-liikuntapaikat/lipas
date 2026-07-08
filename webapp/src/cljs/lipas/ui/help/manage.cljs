@@ -326,7 +326,7 @@
                    (let [tr           (:translator db)
                          notification {:message  (tr :notifications/save-success)
                                        :success? true}]
-                     {:db (-> db (assoc-in [:ptv :save-in-progress] false))
+                     {:db (-> db (assoc-in [:help :save-in-progress] false))
                       :fx [[:dispatch [::apply-changes]]
                            [:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
