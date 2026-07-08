@@ -41,6 +41,8 @@
    ["@mui/material/Toolbar$default" :as Toolbar]
    ["@mui/material/Tooltip$default" :as Tooltip]
    ["@mui/material/Typography$default" :as Typography]
+   ["react-markdown$default" :as ReactMarkdown]
+   [lipas.utils :as cutils]
    [lipas.ui.help.events :as events]
    [lipas.ui.help.manage :as manage]
    [lipas.ui.help.subs :as subs]
@@ -373,10 +375,15 @@
 (r/defc ContentBlock
   [{:keys [block]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
+        locale (partial cutils/localized (tr))]
     (case (:type block)
       :text
-      [:> Typography (locale (:content block))]
+      [:> Box {:sx #js{:typography "body1"
+                       "& p" #js{:mt 0 :mb 1.5}
+                       "& p:last-child" #js{:mb 0}
+                       "& a" #js{:color "secondary.main"}
+                       "& img" #js{:maxWidth "100%"}}}
+       [:> ReactMarkdown (locale (:content block))]]
 
       :video
       [YoutubeIframe {:video-id (:video-id block)
@@ -403,7 +410,7 @@
 (r/defc HelpContent
   [{:keys [title blocks]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
+        locale (partial cutils/localized (tr))]
     [:> Stack {:direction "column" :spacing 2 :sx #js{:pl 4 :flex 1}}
      [:> Typography {:variant :h6} (locale title)]
 
@@ -416,7 +423,7 @@
 (r/defc SummaryGrid
   [{:keys [pages on-page-select]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
+        locale (partial cutils/localized (tr))]
     [:> Grid {:container true :spacing 2 :sx #js{:pl 4 :flex 1}}
      [:> Grid {:item true :xs 12}
       [:> Typography
@@ -461,7 +468,7 @@
 (r/defc HelpMenu
   [{:keys [pages selected-page on-page-select]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
+        locale (partial cutils/localized (tr))]
     [:> Stack {:direction "column"}
      [:> List {:sx #js{:minWidth "200px"
                        :maxWidth "350px"
@@ -537,7 +544,7 @@
                                  (< selected-page-idx (count selected-pages)))
                         (nth selected-pages selected-page-idx))
         tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale-kw (tr)]
+        locale-kw (partial cutils/localized (tr))]
 
     [:> Dialog
       {:fullScreen true
