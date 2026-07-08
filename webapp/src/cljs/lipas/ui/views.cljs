@@ -1,5 +1,6 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.components.dialogs :as dialogs]
+  (:require [lipas.ui.assistant.views :as assistant]
+            [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.notifications :as notifications]
             [lipas.ui.events :as events]
             [lipas.ui.help.views :as help]
@@ -141,6 +142,9 @@
 
        ;; Reminders dialog
        [reminders/dialog]
+
+       ;; AI assistant launcher + panel (privilege-gated inside)
+       [assistant/view]
 
        ;; Global UI-blocking confirmation dialog
        (when confirmation
