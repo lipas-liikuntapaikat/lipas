@@ -97,6 +97,10 @@
                         (keep #(get-in prop-types/all [% :name lang]))
                         sort)
         body (->> [(get-in m [:description lang])
+                   ;; Colloquial synonyms — often the only bridge from how
+                   ;; users phrase things to the official type name.
+                   (when-let [tags (seq (get-in m [:tags lang]))]
+                     (str/join ", " tags))
                    (str (get-in labels [:main-category lang]) ": "
                         (get-in types/main-categories [(:main-category m) :name lang])
                         ". " (get-in labels [:sub-category lang]) ": "
@@ -213,10 +217,115 @@
       (log/info "KB sync complete" result)
       result)))
 
+;;; ——— Retrieval ————————————————————————————————————————————————————
+
+(def ^:private retrieval-source-fields
+  [:id :title :body :lang :source-type :source-ref :deep-link :type-codes])
+
+(def ^:private rrf-k
+  "Reciprocal-rank-fusion constant; the standard default. Higher values
+   flatten the difference between rank positions."
+  60)
+
+(defn- bm25-hits
+  [client idx query k]
+  (-> (search/search client idx
+                     {:size    k
+                      :query   {:multi_match
+                                {:query  query
+                                 :fields ["title^2" "title.se^2" "title.en^2"
+                                          "body" "body.se" "body.en"]}}
+                      :_source retrieval-source-fields})
+      :body :hits :hits))
+
+(defn- knn-hits
+  [client idx query-vector k]
+  (-> (search/search client idx
+                     {:knn     {:field          "embedding"
+                                :query_vector   query-vector
+                                :k              k
+                                :num_candidates 200}
+                      :size    k
+                      :_source retrieval-source-fields})
+      :body :hits :hits))
+
+(defn- rrf-merge
+  "Reciprocal rank fusion over one or more ranked hit lists.
+   Returns _source docs with :score, best first."
+  [hit-lists]
+  (->> hit-lists
+       (mapcat (fn [hits]
+                 (map-indexed (fn [i hit]
+                                {:id    (:_id hit)
+                                 :score (/ 1.0 (+ rrf-k i 1))
+                                 :doc   (:_source hit)})
+                              hits)))
+       (group-by :id)
+       vals
+       (map (fn [entries]
+              (assoc (:doc (first entries))
+                     :score (reduce + (map :score entries)))))
+       (sort-by :score >)))
+
+(defn- dedup-by-source-ref
+  "The same entry exists once per language; keep one doc per source-ref
+   (they rank adjacently), preferring the requested language."
+  [lang docs]
+  (let [{:keys [seen order]}
+        (reduce (fn [{:keys [seen order] :as acc} doc]
+                  (let [ref (:source-ref doc)]
+                    (if-let [kept (get seen ref)]
+                      (if (and (= lang (:lang doc))
+                               (not= lang (:lang kept)))
+                        (assoc-in acc [:seen ref]
+                                  (assoc doc :score (:score kept)))
+                        acc)
+                      {:seen  (assoc seen ref doc)
+                       :order (conj order ref)})))
+                {:seen {} :order []}
+                docs)]
+    (mapv seen order)))
+
+(defn- ->result
+  [doc]
+  (-> doc
+      (assoc :snippet (let [body (:body doc)]
+                        (if (> (count body) 400)
+                          (str (subs body 0 400) "…")
+                          body)))
+      (dissoc :body :score)))
+
+(defn search-kb
+  "Retrieve KB entries for a natural-language query. Hybrid BM25 + kNN
+   with client-side reciprocal rank fusion by default; :method :bm25 or
+   :knn restricts to one ranker (used by the retrieval eval).
+
+   kNN runs without a language filter — embeddings are cross-lingual, so
+   a Swedish question finds the Finnish-only entry; duplicates across
+   languages collapse in dedup, preferring `lang`."
+  [search {:keys [query lang limit method]
+           :or   {lang "fi" limit 5 method :hybrid}}]
+  (let [client (:client search)
+        idx    (get-in search [:indices :kb :kb])
+        k      20
+        lists  (cond-> []
+                 (#{:hybrid :bm25} method)
+                 (conj (bm25-hits client idx query k))
+                 (#{:hybrid :knn} method)
+                 (conj (knn-hits client idx
+                                 (llm/embed-one llm/gemini-config query)
+                                 k)))]
+    (->> (rrf-merge lists)
+         (dedup-by-source-ref lang)
+         (take limit)
+         (mapv ->result))))
+
 (comment
   (require '[integrant.repl.state :as state])
   (def db* (:lipas/db state/system))
   (def search* (:lipas/search state/system))
   (sync! db* search*)
   (count (code-data->docs))
-  (take 2 (help-cms->docs (db/get-versioned-data db* "help" "active"))))
+  (take 2 (help-cms->docs (db/get-versioned-data db* "help" "active")))
+  (search-kb search* {:query "mikä tyyppikoodi padel-kentälle?"})
+  (search-kb search* {:query "how do I add a route?" :lang "en"}))
