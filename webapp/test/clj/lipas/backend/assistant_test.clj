@@ -5,11 +5,28 @@
    not tested here — these are the deterministic parts around it."
   (:require [clojure.test :refer [deftest is testing]]
             [lipas.backend.assistant :as assistant]
-            [lipas.schema.assistant :as assistant-schema]))
+            [lipas.schema.assistant :as assistant-schema]
+            [malli.core :as m]))
 
 (def run-tool* #'assistant/run-tool*)
 (def describe-roles #'assistant/describe-roles)
 (def sanitize-answer-links #'assistant/sanitize-answer-links)
+
+(deftest context-schema-test
+  (testing "widget snapshot with an open PTV dialog validates"
+    (is (m/validate assistant/context-schema
+                    {:locale "fi"
+                     :route ":lipas.ui.routes.map/map"
+                     :view "PTV export dialog 'Vie Palvelutietovarantoon' (covers the map view)"
+                     :ptv {:open? true
+                           :org "Utajärven kunta"
+                           :tab "Käyttöönotto (ohjattu vienti PTV:hen)"
+                           :wizard-step "2. Luo PTV-palvelut"}})))
+  (testing "junk keys are refused — the map is closed at every level"
+    (is (not (m/validate assistant/context-schema
+                         {:ptv {:open? true :password "hunter2"}})))
+    (is (not (m/validate assistant/context-schema
+                         {:evil "payload"})))))
 
 (deftest describe-roles-test
   (testing "roles get official names and code→name resolved scopes"
