@@ -57,10 +57,13 @@
   (str "https://www.jyu.fi/fi/file/" slug))
 
 (def ptv-sources
-  "PTV-integration guides; :file under <dir>/txt/. Unlike the jyu.fi
-   guides these aren't publicly hosted, so :url points where the user
-   performs the task (deep links inside entry bodies still carry the
-   DVV/suomi.fi URLs present in the source text)."
+  "PTV-integration guides; :file under <dir>/txt/. MIGRATED to the help
+   CMS 2026-07-09: the extracted entries live as the fi \"ptv-integraatio\"
+   help section (canonical, ?ohje= deep links) and were removed from the
+   kb-ingest snapshot — do NOT re-ingest or you get duplicates. Kept for
+   provenance and for re-extracting if the source PDFs are revised.
+   These aren't publicly hosted, so :url points where the user performs
+   the task (entry bodies still carry the DVV/suomi.fi URLs)."
   [{:slug "lipas-ptv-kayttoliittymaohje-0526" :lang "fi" :kind :ptv-guide
     :doc "Ohje PTV-integraation käyttöönottoon LIPAS-järjestelmässä"
     :url "https://lipas.fi/liikuntapaikat"}
@@ -305,8 +308,8 @@ Produce one entry per distinct user task or question the source answers. Rules:
    Runs the whole corpus; returns {:docs [...] :rejected [...]}."
   [dir]
   (let [pdf-results
-        (ingest-txt-sources! dir (concat (map #(assoc % :kind :jyu) pdf-sources)
-                                         ptv-sources))
+        ;; ptv-sources intentionally NOT included — migrated to help CMS.
+        (ingest-txt-sources! dir (map #(assoc % :kind :jyu) pdf-sources))
         video-results
         (for [{:keys [id lang title] :as src} video-sources
               :let [f (io/file dir "subs" (str id "." lang ".vtt"))
