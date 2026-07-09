@@ -28,6 +28,7 @@
    [lipas.ui.assistant.events :as events]
    [lipas.ui.assistant.subs :as subs]
    [lipas.ui.help.subs :as help-subs]
+   [lipas.ui.ptv.subs :as ptv-subs]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [==>]]
    [re-frame.core :as rf]
@@ -271,13 +272,14 @@
   (let [can-use? @(rf/subscribe [::user-subs/check-privilege nil :ai-assistant/use])
         open? @(rf/subscribe [::subs/open?])
         map-route? @(rf/subscribe [::subs/map-route?])
-        help-open? @(rf/subscribe [::help-subs/dialog-open?])]
+        help-open? @(rf/subscribe [::help-subs/dialog-open?])
+        ptv-open? @(rf/subscribe [::ptv-subs/dialog-open?])]
     (when can-use?
       [:<>
        (when open? [Panel])
        ;; On the map route the launcher lives inside the bottom-right
-       ;; map-control container (see MapLauncher) — except when the
-       ;; fullscreen help dialog covers the map controls, in which case
-       ;; the floating Fab takes over again.
-       (when (or (not map-route?) help-open?)
+       ;; map-control container (see MapLauncher) — except when a
+       ;; fullscreen dialog (help center, PTV) covers the map controls,
+       ;; in which case the floating Fab takes over again.
+       (when (or (not map-route?) help-open? ptv-open?)
          [LauncherFab {:fixed? true}])])))
