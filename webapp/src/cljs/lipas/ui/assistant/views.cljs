@@ -20,13 +20,13 @@
    ["@mui/material/IconButton$default" :as IconButton]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/TextField$default" :as TextField]
    ["@mui/material/Tooltip$default" :as Tooltip]
    ["@mui/material/Typography$default" :as Typography]
    ["react-markdown$default" :as ReactMarkdown]
    [clojure.string :as str]
    [lipas.ui.assistant.events :as events]
    [lipas.ui.assistant.subs :as subs]
+   [lipas.ui.components.text-fields :as text-fields]
    [lipas.ui.help.subs :as help-subs]
    [lipas.ui.ptv.subs :as ptv-subs]
    [lipas.ui.user.subs :as user-subs]
@@ -128,14 +128,14 @@
        [:> CardContent {:sx #js{:pb 0}}
         [:> Typography {:variant "subtitle2" :gutterBottom true}
          "Tukipyyntö LIPAS-tuelle"]
-        [:> TextField {:value summary
-                       :onChange #(==> [::events/edit-escalation
-                                        (.. % -target -value)])
-                       :multiline true
-                       :minRows 2
-                       :maxRows 6
-                       :fullWidth true
-                       :size "small"}]
+        [text-fields/text-field
+         {:value summary
+          :on-change #(==> [::events/edit-escalation (or % "")])
+          :multiline true
+          :rows 4
+          :fullWidth true
+          :size "small"
+          :variant "outlined"}]
         [:> Typography {:variant "caption" :color "text.secondary"}
          (str "Kysymyksesi ja keskustelun tiivistelmä lähetetään LIPAS-tuelle "
               "(lipasinfo@jyu.fi). Saat vastauksen osoitteeseen " email ".")]]
@@ -219,20 +219,23 @@
           "Etsin vastausta…"]])
       [EscalationCard]]
 
-     ;; Input
+     ;; Input — the shared text-field routes typing through reagent's
+     ;; patched textarea (caret survives async re-render).
      [:> Box {:sx #js{:display "flex" :gap 1 :p 1.5 :pt 0.5}}
-      [:> TextField {:value input
-                     :onChange #(==> [::events/set-input (.. % -target -value)])
-                     :onKeyDown (fn [e]
-                                  (when (and (= "Enter" (.-key e))
-                                             (not (.-shiftKey e)))
-                                    (.preventDefault e)
-                                    (==> [::events/send-message])))
-                     :placeholder "Kirjoita kysymys…"
-                     :multiline true
-                     :maxRows 4
-                     :fullWidth true
-                     :size "small"}]
+      [text-fields/text-field
+       {:value input
+        :on-change #(==> [::events/set-input (or % "")])
+        :onKeyDown (fn [e]
+                     (when (and (= "Enter" (.-key e))
+                                (not (.-shiftKey e)))
+                       (.preventDefault e)
+                       (==> [::events/send-message])))
+        :placeholder "Kirjoita kysymys…"
+        :multiline true
+        :rows 2
+        :fullWidth true
+        :size "small"
+        :variant "outlined"}]
       [:> IconButton {:color "secondary"
                       :disabled (str/blank? input)
                       :onClick #(==> [::events/send-message])}
