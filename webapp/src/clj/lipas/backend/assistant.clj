@@ -526,6 +526,11 @@ USER CONTEXT:
 
 (def max-actions-per-answer 3)
 
+(def ^:private action-tool-names
+  "Propose-only tools: calling one produces a button, not information.
+   A turn that pairs answer text with only these calls is a final answer."
+  #{"apply_search" "show_site_on_map" "pan_map_to_location" "navigate_to_view"})
+
 (defn- collect-actions
   "Validated UI actions proposed via the action tools this turn."
   [actions results]
@@ -563,19 +568,25 @@ USER CONTEXT:
            ;; First turn must ground itself in a tool call.
            mode "ANY"
            sources []
-           actions []]
+           actions []
+           ;; Last non-blank text seen alongside tool calls. The model often
+           ;; emits its final answer and an action-tool call in the SAME
+           ;; turn; the follow-up turn then comes back empty. This keeps the
+           ;; real answer from degrading to a canned fallback.
+           pending-text ""]
       (let [resp (gemini-chat system contents mode)
             parts (or (-> resp :candidates first :content :parts) [])
             fcalls (keep :functionCall parts)
-            text (->> parts (keep :text) (str/join))]
+            text (->> parts (keep :text) (str/join))
+            best-text (if (str/blank? text) pending-text text)]
         (cond
           ;; Escalation proposed: stop, let the user confirm in the UI.
           (some #(= "escalate_to_support" (:name %)) fcalls)
           (let [fc (first (filter #(= "escalate_to_support" (:name %)) fcalls))
                 summary (-> fc :args :summary)]
-            {:answer-md (if (str/blank? text)
+            {:answer-md (if (str/blank? best-text)
                           "Voin lähettää kysymyksesi LIPAS-tuelle. Tarkista ja täydennä alla oleva tiivistelmä ja paina **Lähetä tukipyyntö** — saat vastauksen sähköpostiisi."
-                          (sanitize-answer-links text sources))
+                          (sanitize-answer-links best-text sources))
              :sources (vec (distinct sources))
              :actions (->> actions distinct (take max-actions-per-answer) vec)
              ;; A blank draft renders a confusing empty card — fall back to
@@ -586,24 +597,36 @@ USER CONTEXT:
           (let [results (mapv (fn [fc] (run-tool ctx (:name fc) (:args fc))) fcalls)
                 sources' (reduce (fn [acc [fc r]] (collect-sources acc (:name fc) r))
                                  sources
-                                 (map vector fcalls results))]
-            (recur (into contents
-                         [{:role "model" :parts (vec parts)}
-                          {:role "user"
-                           :parts (mapv (fn [fc r]
-                                          {:functionResponse
-                                           {:name (:name fc)
-                                            :response {:result r}}})
-                                        fcalls results)}])
-                   (inc iter)
-                   "AUTO"
-                   sources'
-                   (collect-actions actions results)))
+                                 (map vector fcalls results))
+                actions' (collect-actions actions results)]
+            (if (and (not (str/blank? text))
+                     (every? (comp action-tool-names :name) fcalls)
+                     (every? :client-action results))
+              ;; The model wrote its answer and proposed buttons in one
+              ;; turn. Every action validated — asking again only yields an
+              ;; empty follow-up, so this text IS the answer.
+              {:answer-md (sanitize-answer-links text sources')
+               :sources (vec (distinct sources'))
+               :actions (->> actions' distinct (take max-actions-per-answer) vec)
+               :escalation nil}
+              (recur (into contents
+                           [{:role "model" :parts (vec parts)}
+                            {:role "user"
+                             :parts (mapv (fn [fc r]
+                                            {:functionResponse
+                                             {:name (:name fc)
+                                              :response {:result r}}})
+                                          fcalls results)}])
+                     (inc iter)
+                     "AUTO"
+                     sources'
+                     actions'
+                     best-text)))
 
           :else
           (let [actions' (->> actions distinct (take max-actions-per-answer) vec)]
             {:answer-md (cond
-                          (not (str/blank? text)) (sanitize-answer-links text sources)
+                          (not (str/blank? best-text)) (sanitize-answer-links best-text sources)
                           ;; The model sometimes treats a proposed button as
                           ;; the whole answer and returns no text — an apology
                           ;; would contradict the working button below it.
