@@ -16,6 +16,19 @@
         (str/lower-case)
         (str/replace #"(\"|\(|\))" ""))))
 
+(defn ->slug
+  "URL-friendly slug from a title: lowercase, ä/å→a ö→o, whitespace→-,
+   other non-alphanumerics dropped. Returns \"\" for blank input."
+  [s]
+  (-> (or s "")
+      (str/lower-case)
+      (str/replace #"[äå]" "a")
+      (str/replace #"ö" "o")
+      (str/replace #"[^a-z0-9\s-]" "")
+      (str/trim)
+      (str/replace #"\s+" "-")
+      (str/replace #"-+" "-")))
+
 (defn index-by
   ([idx-fn coll]
    (index-by idx-fn identity coll))

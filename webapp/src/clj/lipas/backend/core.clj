@@ -1066,32 +1066,8 @@
   [type-code]
   (types/->type (types/active type-code)))
 
-;;; Help ;;;
-
-(defn get-help-data
-  [db]
-  (db/get-versioned-data db "help" "active"))
-
-(defn save-help-data
-  "Publishes help content: becomes immediately visible to all users.
-   Enqueues a knowledge-base sync so the AI assistant sees the new
-   content."
-  [db help-data]
-  (let [result (db/add-versioned-data! db "help" "active" help-data)]
-    (jobs/enqueue-job! db "help-kb-sync" {})
-    result))
-
-(defn save-help-draft
-  [db help-data]
-  (db/add-versioned-data! db "help" "draft" help-data))
-
-(defn get-help-versions
-  [db]
-  (db/list-versioned-data db "help" 100))
-
-(defn get-help-version
-  [db id]
-  (db/get-versioned-data-by-id db id))
+;; Help content lives in lipas.backend.help (v2: one versioned_data
+;; document per locale).
 
 (comment
   (get-categories)

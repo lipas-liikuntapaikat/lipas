@@ -48,7 +48,12 @@
      [:status {:optional true} [:string {:max 50}]]]]
    [:edit-mode? {:optional true} :boolean]
    [:active-tool {:optional true} [:string {:max 100}]]
-   [:search-filters {:optional true} [:string {:max 500}]]])
+   [:search-filters {:optional true} [:string {:max 500}]]
+   [:help {:optional true} ; open help-center page ("about this topic" questions)
+    [:map {:closed true}
+     [:section {:optional true} [:string {:max 200}]]
+     [:page {:optional true} [:string {:max 200}]]
+     [:title {:optional true} [:string {:max 300}]]]]])
 
 (def max-tool-iterations 6)
 (def max-history-messages 12)

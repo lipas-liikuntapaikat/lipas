@@ -23,6 +23,7 @@ Backend (clj):
 |---|---|
 | `lipas.backend.llm` | Generic LLM plumbing extracted from `ptv.ai`: provider registry, `complete`/`gemini-complete` (+retry, OpenAI fallback), `embed`/`embed-one` (gemini-embedding-001, 768 dims, L2-renormalized). `ptv.ai` now wraps it with PTV-specific schema defaults. |
 | `lipas.backend.kb` | KB doc builders + sync + retrieval. `help-cms->docs`, `code-data->docs` (types incl. colloquial `:tags`, prop-types), `ingested->docs` (reads versioned_data type=`kb-ingest`), `sync!` (content-hash diff → embed only changed, delete orphans), `search-kb` (hybrid BM25+kNN, client-side RRF, cross-lingual kNN unfiltered, per-language dedup by source-ref), `get-doc` (full entry by id). |
+| `lipas.backend.help` | Help content v2 storage: per-locale versioned_data docs (`help-v2-fi/-se/-en`), get/save/draft/versions per locale, `migrate-v1->v2!`. Schema in `lipas.schema.help` (cljc). |
 | `lipas.backend.assistant` | Agent: Gemini function-calling loop, **first turn forced to call a tool** (toolConfig ANY). Tools: `search_kb`, `get_kb_document`, `lookup_type_code`, `explain_field`, `list_stale_sites`, `list_sites_missing_data`, `get_site_summary`, `check_site_permission` (**authoritative verdict from `roles/check-privilege` + user's roles with official names — never LLM-reasoned**), `escalate_to_support` (draft-only), plus **UI-action tools** `apply_search`, `show_site_on_map`, `pan_map_to_location`, `navigate_to_view` (propose-only: validated via `lipas.schema.assistant`, returned as `:actions` in the response, rendered as buttons the user clicks — nothing auto-fires). `editable-scope` from roles = *relevance default* for listing tools, not authorization (site data is public). Per-user in-memory rate limits (30 chat/h, 5 escalations/day). `chat!`/`escalate!` entrypoints, exchange logging to `assistant_logs` (incl. proposed action types). `context-schema` (closed Malli map) validates the widget's app-db snapshot. |
 | `lipas.schema.assistant` (cljc) | **Closed action vocabulary**: Malli multi-schema for the 4 action types + `views` registry (id → description, feeds the `navigate_to_view` tool enum and the frontend route mapping). Reuses canonical `lipas-id`/`city-code`/`active-type-code` schemas. The model never produces re-frame event vectors — it calls an action tool, the backend validates against this schema, the frontend translates. |
 | `lipas.backend.handler` | Routes `/actions/assistant-chat`, `/actions/assistant-escalate` (both `:require-privilege :ai-assistant/use`); help CMS routes `save-help-draft`, `get-help-versions`, `get-help-version`. |
@@ -35,9 +36,9 @@ Frontend (cljs):
 
 | File | What |
 |---|---|
-| `lipas.ui.assistant.{events,subs,views}` | Widget: Fab launcher + panel at app root (`lipas.ui.views/main-panel`), privilege-gated. Markdown answers (`?ohje=` links open help dialog in place, external links new tab), source chips, escalation confirmation card (editable summary, shows what's sent where), new-chat button. **Action buttons**: `::run-action` is the whitelist translator (action map → dispatches; unknown types inert), gated on map edit-mode (notification instead of navigating away from unsaved edits); executed buttons flip to disabled+✓. `apply-search` → navigate to map + `search/replace-filters`; `show-site` → `map/show-sports-site`; `pan-to-location` → digitransit geocode then `set-center`/`set-zoom` (12 for places, 14 for addresses); `navigate-to-view` → `view->route` map. `db->context` builds the per-message app-db snapshot (route, readable view, locale, selected site's lipas-id, edit-mode). Stateless server: full history sent per request. |
+| `lipas.ui.assistant.{events,subs,views}` | Widget: Fab launcher + panel at app root (`lipas.ui.views/main-panel`), privilege-gated. Launcher placement: on the map route it's embedded in the bottom-right map-control container (`MapLauncher` in `map/views.cljs` — the corner is crowded there); elsewhere a fixed Fab bottom-right; when the fullscreen help dialog is open the fixed Fab always shows (zIndex 1350 > modal 1300, < snackbar 1400). Markdown answers (`?ohje=` links open help dialog in place, external links new tab), source chips, escalation confirmation card (editable summary, shows what's sent where), new-chat button. **Action buttons**: `::run-action` is the whitelist translator (action map → dispatches; unknown types inert), gated on map edit-mode (notification instead of navigating away from unsaved edits); executed buttons flip to disabled+✓. `apply-search` → navigate to map + `search/replace-filters`; `show-site` → `map/show-sports-site`; `pan-to-location` → digitransit geocode then `set-center`/`set-zoom` (12 for places, 14 for addresses); `navigate-to-view` → `view->route` map. `db->context` builds the per-message app-db snapshot (route, readable view, locale, selected site's lipas-id, edit-mode). Stateless server: full history sent per request. |
 | `lipas.ui.search.events/replace-filters` | Replace whole search spec (string + filters) from clean defaults in one event → single ES query with `:fit-view` (map pans to results). Used by assistant action buttons. |
-| `lipas.ui.help.*` | Deep links: `?ohje=section/page` synced via replaceState; `::navigate-to` resolves slugs (pending-slugs if data not loaded yet); dialog moved to app root; content loads at app init (`::help/init`, dispatch-sync in `core.cljs` *before* router start). Markdown text blocks (react-markdown) + `lipas.utils/localized` fi→en→se fallback. Editor: Save draft / Publish / History dialog (load any revision into editor; publishing it = rollback). |
+| `lipas.ui.help.*` | **v2 (see "Help center v2" below)**: docs-site read view (tree sidebar + content column), per-locale trees with fi fallback banner, nav search, mobile drawer. Deep links: `?ohje=section/page` synced via replaceState; `::navigate-to` resolves slugs *and aliases* (pending-slugs if data not loaded yet); dialog at app root; content loads at app init (`::help/init`, dispatch-sync in `core.cljs` *before* router start). Markdown text blocks (react-markdown). Editor: per-locale tabs, Save draft / Publish / History per locale, slug generate-from-title (+auto-alias). |
 
 Dev tooling:
 
@@ -182,12 +183,66 @@ looks wrong or empty, just resync.
   edit-mode gate refuses with notification. Unit tests:
   `lipas.backend.assistant-test` (action schema + tool handlers).
 
+## Help center v2 (2026-07-09)
+
+The built-in help was revamped in the same branch — the CMS is the KB's
+canonical source, so the two ship together.
+
+**Data model** (`lipas.schema.help`, storage `lipas.backend.help`): each
+locale (fi/se/en) has its own independent tree of sections → pages →
+blocks with **plain-string leaves** — replaces the v1 shared structure
+with `{:fi :se :en}` maps whose untranslated slots accumulated
+placeholder junk ("New Page", "Ny sida") that leaked into the UI and the
+KB. One versioned_data document per locale (`help-v2-fi/-se/-en`) so
+languages draft/publish/roll back independently. Nodes carry stable
+`:id`, human `:slug` (generated from title via `lipas.utils/->slug`),
+`:aliases` (old slugs keep resolving — deep-link/citation stability),
+optional `:summary` (landing lists + KB body) and `:translation-of`
+(reserved for future per-page fallback).
+
+**Migration**: `(lipas.backend.help/migrate-v1->v2! db)` — one-shot; fi
+gets everything with regenerated readable slugs (old timestamp slugs →
+aliases), se/en start empty (prod se/en content was placeholder junk or
+stale-seed lies like "Excel reports" over accessibility-tool content).
+v1 `"help"` rows stay untouched as history. Run once per environment.
+
+**Read view** (`lipas.ui.help.views` rewrite, docs-site pattern): tree
+sidebar (collapsible sections, sentence-case wrapping labels; the theme
+uppercases all heading variants so content titles set
+`textTransform "none"`), max-width content column, responsive 16:9
+video embeds, PDF document cards (title bar + open-in-new + 70vh
+preview), section landing lists (theme-colored — the v1 white-gradient
+cards were unreadable in dark mode), client-side search over the nav,
+mobile drawer, locale fallback to fi with an info banner
+(`:help/only-in-finnish`). `?ohje=` resolves slugs *and aliases* and
+rewrites the URL to canonical form.
+
+**Editor** (`lipas.ui.help.manage` rewrite): locale tabs (fi/se/en);
+Save draft / Publish / History act on the active locale only; plain
+TextFields (no per-field language tabs); slug field with
+generate-from-title button that auto-adds the old slug to aliases;
+summary fields.
+
+**KB**: `kb/help-cms->docs` walks the per-locale trees — the lang tag is
+trustworthy by construction and junk-language docs are impossible. Also
+fixed `block->text` emitting bare video/pdf URLs for languages with
+blank titles (with prod data this had produced 34 junk "New Page"
+docs). Page `:summary` is prepended to the doc body. Assistant context
+gained `:help {:section :page :title}` (open help page → "kysy tästä
+aiheesta" works through the universal Fab).
+
+Tests: `lipas.backend.help-test` (migration transform, slug util,
+help-cms->docs skip rules).
+
 ## Remaining / next
 
 1. **PR + code review** (branch has ~2.5k added lines; `/code-review` worth it).
-2. Deploy: `GEMINI_API_KEY` in prod env; first `help-kb-sync` runs via
-   scheduler/publish; **run ingestion against prod DB** (87 entries live only
-   in local versioned_data); real CMS content; then flip GA
+2. Deploy: `GEMINI_API_KEY` in prod env; **run help-v2 migration against
+   prod DB** (`(lipas.backend.help/migrate-v1->v2! db)`, once, before the
+   first v2 publish); first `help-kb-sync` runs via scheduler/publish;
+   **run ingestion against prod DB** (87 entries live only in local
+   versioned_data); real CMS content authoring (summaries + hand-tuned
+   slugs where wanted, se/en translations when they exist); then flip GA
    (`:ai-assistant/use` → `roles/basic`). If `assistant_logs` already exists
    in an env, PUT `_mapping` with `actions {:type "keyword"}` (strict mapping;
    fresh indices get it automatically).

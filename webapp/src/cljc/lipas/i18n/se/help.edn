@@ -1,4 +1,5 @@
-{:available-pages "Sidor i detta avsnitt",
+{:only-in-finnish "Detta innehåll är för närvarande endast tillgängligt på finska.",
+ :available-pages "Sidor i detta avsnitt",
  :headline "Hjälp",
  :manage-content "Redigera hjälpinnehåll",
  :privacy-policy "Privacy policy"

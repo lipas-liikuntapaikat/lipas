@@ -63,6 +63,7 @@
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
+            [lipas.ui.assistant.views :as assistant-views]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.ptv.site-view :as ptv-site]
@@ -2165,44 +2166,54 @@
        :right "3.5em"
        :background-color "transparent"}
 
-      [:> Grid2
-       {:container true
+      [:> Stack
+       {:direction "row"
         :spacing 1
-        :sx #js {:bgcolor mui/gray2
-                 :padding 1
-                 :justifyContent "center"
-                 :alignItems "center"
-                 :border-radius 4}
-        :wrap "nowrap"}
+        :alignItems "center"}
 
-       ;; Feedback btn
-       #_[:> Grid
-          [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-           [feedback/feedback-btn]]]
+       [:> Grid2
+        {:container true
+         :spacing 1
+         :sx #js {:bgcolor mui/gray2
+                  :padding 1
+                  :justifyContent "center"
+                  :alignItems "center"
+                  :border-radius 4}
+         :wrap "nowrap"}
 
-       ;; Zoom to users location btn
-       [:> Grid
-        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-         [user-location-btn {:tr tr}]]]
+        ;; Feedback btn
+        #_[:> Grid
+           [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+            [feedback/feedback-btn]]]
 
-       ;; Overlay selector
-       [:> Grid
-        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-         [overlay-selector {:tr tr}]]]
+        ;; Zoom to users location btn
+        [:> Grid
+         [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+          [user-location-btn {:tr tr}]]]
 
-       ;; Basemap opacity selector
-       [:> Grid
-        [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
-         [basemap-transparency-selector {:tr tr}]]]
+        ;; Overlay selector
+        [:> Grid
+         [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+          [overlay-selector {:tr tr}]]]
 
-       ;; Basemap switcher
-       [:> Grid
-        [:> Paper
-         {:elevation 1
-          :style
-          {:background-color "rgba(255,255,255,0.9)"
-           :padding-left "0.5em" :padding-right "0.5em"}}
-         [layer-switcher {:tr tr}]]]]]
+        ;; Basemap opacity selector
+        [:> Grid
+         [:> Paper {:style {:background-color "rgba(255,255,255,0.9)"}}
+          [basemap-transparency-selector {:tr tr}]]]
+
+        ;; Basemap switcher
+        [:> Grid
+         [:> Paper
+          {:elevation 1
+           :style
+           {:background-color "rgba(255,255,255,0.9)"
+            :padding-left "0.5em" :padding-right "0.5em"}}
+          [layer-switcher {:tr tr}]]]]
+
+       ;; AI assistant launcher — next to (not inside) the control
+       ;; cluster so it pops against the map; here rather than the
+       ;; viewport corner because the corner is already crowded
+       [assistant-views/MapLauncher]]]
 
      [popup
       {:popup-ref popup-ref}]

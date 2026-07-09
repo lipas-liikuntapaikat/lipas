@@ -1,9 +1,17 @@
 (ns lipas.ui.assistant.subs
-  (:require [re-frame.core :as rf]))
+  (:require [clojure.string :as str]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::assistant
   (fn [db _]
     (:assistant db)))
+
+(rf/reg-sub ::map-route?
+  ;; On the map the launcher is embedded in the bottom-right control
+  ;; container (the corner itself is crowded there) instead of floating.
+  (fn [db _]
+    (boolean (some-> db :current-route :data :name str
+                     (str/includes? "routes.map")))))
 
 (rf/reg-sub ::open?
   :<- [::assistant]

@@ -27,6 +27,7 @@
    [clojure.string :as str]
    [lipas.ui.assistant.events :as events]
    [lipas.ui.assistant.subs :as subs]
+   [lipas.ui.help.subs :as help-subs]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [==>]]
    [re-frame.core :as rf]
@@ -164,10 +165,13 @@
      [(count messages) thinking? pending-escalation])
     [:> Paper
      {:elevation 8
+      ;; bottom clears the map's bottom-right control cluster; zIndex
+      ;; above MUI modal (1300) so the assistant stays usable inside
+      ;; fullscreen dialogs (help center); below snackbar (1400).
       :sx #js{:position "fixed"
               :bottom 88
               :right 16
-              :zIndex 1250
+              :zIndex 1350
               :width #js{:xs "calc(100vw - 32px)" :sm 420}
               :height "min(600px, calc(100vh - 120px))"
               :display "flex"
@@ -233,21 +237,47 @@
                       :onClick #(==> [::events/send-message])}
        [:> SendIcon]]]]))
 
+(r/defc LauncherFab
+  ;; fixed? true = floating in the viewport corner; false = in normal
+  ;; flow (embedded in the map-control container). zIndex sits above MUI
+  ;; modal (1300) so the launcher works inside fullscreen dialogs (help
+  ;; center), below snackbar (1400).
+  [{:keys [fixed?]}]
+  [:> Tooltip {:title "Lipastaja"}
+   [:> Fab {:color "secondary"
+            :size "medium"
+            :sx (if fixed?
+                  #js{:position "fixed"
+                      :bottom 24
+                      :right 16
+                      :zIndex 1350}
+                  #js{})
+            :onClick #(==> [::events/toggle-panel])}
+    [:> SmartToyIcon]]])
+
+(r/defc MapLauncher
+  "Assistant launcher for the map view's bottom-right control container —
+   the corner itself is crowded there. Renders nothing without the
+   :ai-assistant/use privilege."
+  []
+  (let [can-use? @(rf/subscribe [::user-subs/check-privilege nil :ai-assistant/use])]
+    (when can-use?
+      [LauncherFab {:fixed? false}])))
+
 (r/defc view
   "Floating assistant launcher + chat panel. Mounted once at app root;
    rendered only for users with the :ai-assistant/use privilege."
   []
   (let [can-use? @(rf/subscribe [::user-subs/check-privilege nil :ai-assistant/use])
-        open? @(rf/subscribe [::subs/open?])]
+        open? @(rf/subscribe [::subs/open?])
+        map-route? @(rf/subscribe [::subs/map-route?])
+        help-open? @(rf/subscribe [::help-subs/dialog-open?])]
     (when can-use?
       [:<>
        (when open? [Panel])
-       [:> Tooltip {:title "Lipastaja"}
-        [:> Fab {:color "secondary"
-                 :size "medium"
-                 :sx #js{:position "fixed"
-                         :bottom 24
-                         :right 16
-                         :zIndex 1250}
-                 :onClick #(==> [::events/toggle-panel])}
-         [:> SmartToyIcon]]]])))
+       ;; On the map route the launcher lives inside the bottom-right
+       ;; map-control container (see MapLauncher) — except when the
+       ;; fullscreen help dialog covers the map controls, in which case
+       ;; the floating Fab takes over again.
+       (when (or (not map-route?) help-open?)
+         [LauncherFab {:fixed? true}])])))
