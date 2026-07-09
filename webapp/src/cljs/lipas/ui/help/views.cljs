@@ -692,7 +692,10 @@
      {:fullScreen true
       :keepMounted true
       :open dialog-open?
-      :onClose #(==> [::events/close-dialog])}
+      :onClose #(==> [::events/close-dialog])
+      ;; The assistant panel lives outside this dialog's portal — without
+      ;; this the modal focus trap steals every keystroke from it.
+      :disableEnforceFocus true}
 
      [:> AppBar {:sx #js{:position "relative"}}
       [:> Toolbar {}
