@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [lipas.ui.help.events :as help-events]
             [lipas.ui.map.events :as map-events]
+            [lipas.ui.ptv.events :as ptv-events]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -14,12 +15,16 @@
   (let [tr (:translator db)
         locale (when tr (name (tr)))
         route (some-> db :current-route :data :name str)
-        view (when route
-               (cond
-                 (str/includes? route "routes.map") "map view (karttanäkymä)"
-                 (str/includes? route "front-page") "front page"
-                 (str/includes? route "stats") "statistics view"
-                 :else nil))
+        ptv-ctx (ptv-events/dialog-context db)
+        view (cond
+               ;; A fullscreen dialog covers whatever the route renders —
+               ;; it is where the user actually is.
+               ptv-ctx "PTV export dialog 'Vie Palvelutietovarantoon' (covers the map view)"
+               (nil? route) nil
+               (str/includes? route "routes.map") "map view (karttanäkymä)"
+               (str/includes? route "front-page") "front page"
+               (str/includes? route "stats") "statistics view"
+               :else nil)
         lipas-id (-> db :map :mode :lipas-id)
         edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))
         help-ctx (help-events/dialog-context db)]
@@ -29,7 +34,8 @@
       view (assoc :view view)
       lipas-id (assoc :site {:lipas-id lipas-id})
       edit-mode? (assoc :edit-mode? true)
-      (seq help-ctx) (assoc :help help-ctx))))
+      (seq help-ctx) (assoc :help help-ctx)
+      (seq ptv-ctx) (assoc :ptv ptv-ctx))))
 
 (rf/reg-event-db ::toggle-panel
   (fn [db _]
