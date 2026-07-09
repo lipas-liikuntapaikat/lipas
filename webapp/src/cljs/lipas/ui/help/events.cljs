@@ -3,47 +3,76 @@
             [clojure.string :as str]
             [re-frame.core :as rf]))
 
-(defn- index-of-slug
-  [coll slug]
-  (when slug
-    (first (keep-indexed
-            (fn [idx x] (when (= (keyword slug) (:slug x)) idx))
-            coll))))
+;; Help content is v2: {:fi [sections] :se [...] :en [...]} — each
+;; locale has its own independent tree. The UI shows the user's locale
+;; when it has published content, otherwise falls back to Finnish.
+
+(defn- match-slug?
+  "Slug match including :aliases so old published ?ohje= links and KB
+   citations keep resolving after renames."
+  [{:keys [slug aliases]} target]
+  (let [t (name target)]
+    (boolean (or (= slug t) (some #(= t %) aliases)))))
+
+(defn find-section [tree slug]
+  (when (and tree slug)
+    (first (filter #(match-slug? % slug) tree))))
+
+(defn find-page [section slug]
+  (when (and section slug)
+    (first (filter #(match-slug? % slug) (:pages section)))))
+
+(defn display-tree
+  "The tree shown to the user: their locale's tree, or the fi tree when
+   their locale has no published content."
+  [db]
+  (let [locale ((:translator db))
+        data (get-in db [:help :data])
+        tree (get data locale)]
+    (if (seq tree) tree (:fi data))))
 
 (defn- resolve-selection
-  "Resolve section/page slugs (strings or keywords) against loaded help
-   data. Returns selection paths or nil when the section is unknown."
-  [data section-slug page-slug]
-  (when-let [section-idx (index-of-slug data section-slug)]
-    (let [pages    (get-in data [section-idx :pages])
-          page-idx (index-of-slug pages page-slug)]
-      {:section-idx  section-idx
-       :section-slug (get-in data [section-idx :slug])
-       :page-idx     page-idx
-       :page-slug    (when page-idx (get-in pages [page-idx :slug]))})))
+  "Resolve section/page slugs (strings, keywords or aliases) against the
+   display tree. Returns canonical slugs or nil when the section is
+   unknown."
+  [db section-slug page-slug]
+  (let [tree (display-tree db)]
+    (when-let [section (find-section tree section-slug)]
+      (let [page (find-page section page-slug)]
+        {:section-slug (:slug section)
+         :page-slug (:slug page)}))))
 
 (defn- apply-selection
-  [db {:keys [section-idx section-slug page-idx page-slug]}]
+  [db {:keys [section-slug page-slug]}]
   (-> db
-      (assoc-in [:help :dialog :selected-section-idx] section-idx)
       (assoc-in [:help :dialog :selected-section-slug] section-slug)
-      (assoc-in [:help :dialog :selected-page-idx] page-idx)
-      (assoc-in [:help :dialog :selected-page-slug] page-slug)))
+      (assoc-in [:help :dialog :selected-page-slug] page-slug)
+      (update-in [:help :dialog :expanded-sections] (fnil conj #{}) section-slug)))
 
 (defn- ohje-param
   "Current dialog selection as the ?ohje= query param value, or nil when
    the dialog is closed (nil removes the param from the URL)."
   [db]
   (when (get-in db [:help :dialog :open?])
-    (let [section-slug (or (get-in db [:help :dialog :selected-section-slug])
-                           (let [idx (get-in db [:help :dialog :selected-section-idx])]
-                             (when (number? idx)
-                               (get-in db [:help :data idx :slug]))))
-          page-slug    (get-in db [:help :dialog :selected-page-slug])]
+    (let [section-slug (get-in db [:help :dialog :selected-section-slug])
+          page-slug (get-in db [:help :dialog :selected-page-slug])]
       (cond
-        (and section-slug page-slug) (str (name section-slug) "/" (name page-slug))
-        section-slug                 (name section-slug)
-        :else                        ""))))
+        (and section-slug page-slug) (str section-slug "/" page-slug)
+        section-slug section-slug
+        :else ""))))
+
+(defn dialog-context
+  "Open help page for the assistant's context snapshot, or nil."
+  [db]
+  (when (get-in db [:help :dialog :open?])
+    (let [section-slug (get-in db [:help :dialog :selected-section-slug])
+          page-slug (get-in db [:help :dialog :selected-page-slug])
+          section (find-section (display-tree db) section-slug)
+          page (find-page section page-slug)]
+      (cond-> {}
+        section-slug (assoc :section section-slug)
+        page-slug (assoc :page page-slug)
+        (:title page) (assoc :title (:title page))))))
 
 (rf/reg-fx ::sync-url!
   (fn [param]
@@ -64,33 +93,47 @@
       {:db db ::sync-url! nil})))
 
 (rf/reg-event-fx ::select-section
-  (fn [{:keys [db]} [_ section-idx section-slug]]
-    (let [db (-> db
-                 (assoc-in [:help :dialog :selected-section-idx] section-idx)
-                 (assoc-in [:help :dialog :selected-section-slug] section-slug)
-                 (assoc-in [:help :dialog :selected-page-idx] nil)
-                 (assoc-in [:help :dialog :selected-page-slug] nil))]
+  (fn [{:keys [db]} [_ section-slug]]
+    (let [db (apply-selection db {:section-slug section-slug :page-slug nil})]
       {:db db ::sync-url! (ohje-param db)})))
 
 (rf/reg-event-fx ::select-page
-  (fn [{:keys [db]} [_ page-idx page-slug]]
-    (let [db (-> db
-                 (assoc-in [:help :dialog :selected-page-idx] page-idx)
-                 (assoc-in [:help :dialog :selected-page-slug] page-slug))]
+  (fn [{:keys [db]} [_ section-slug page-slug]]
+    (let [db (apply-selection db {:section-slug section-slug :page-slug page-slug})]
       {:db db ::sync-url! (ohje-param db)})))
+
+(rf/reg-event-fx ::go-home
+  (fn [{:keys [db]} _]
+    (let [db (-> db
+                 (assoc-in [:help :dialog :selected-section-slug] nil)
+                 (assoc-in [:help :dialog :selected-page-slug] nil))]
+      {:db db ::sync-url! (ohje-param db)})))
+
+(rf/reg-event-db ::toggle-section
+  (fn [db [_ section-slug]]
+    (update-in db [:help :dialog :expanded-sections]
+               (fn [expanded]
+                 (let [expanded (or expanded #{})]
+                   (if (contains? expanded section-slug)
+                     (disj expanded section-slug)
+                     (conj expanded section-slug)))))))
+
+(rf/reg-event-db ::set-search-term
+  (fn [db [_ term]]
+    (assoc-in db [:help :dialog :search-term] term)))
 
 (rf/reg-event-fx ::navigate-to
   (fn [{:keys [db]} [_ section-slug page-slug]]
     (let [data (get-in db [:help :data])
-          db   (assoc-in db [:help :dialog :open?] true)
-          db   (if (nil? data)
-                 ;; Data not loaded yet — remember the target, ::get-success
-                 ;; resolves it once content arrives.
-                 (assoc-in db [:help :dialog :pending-slugs]
-                           {:section section-slug :page page-slug})
-                 (if-let [selection (resolve-selection data section-slug page-slug)]
-                   (apply-selection db selection)
-                   db))]
+          db (assoc-in db [:help :dialog :open?] true)
+          db (if (nil? data)
+               ;; Data not loaded yet — remember the target, ::get-success
+               ;; resolves it once content arrives.
+               (assoc-in db [:help :dialog :pending-slugs]
+                         {:section section-slug :page page-slug})
+               (if-let [selection (resolve-selection db section-slug page-slug)]
+                 (apply-selection db selection)
+                 db))]
       {:db db ::sync-url! (ohje-param db)})))
 
 (rf/reg-event-fx ::open-edit-mode
@@ -130,7 +173,7 @@
                       (assoc-in [:help :data] help-data)
                       (update-in [:help :dialog] dissoc :pending-slugs))
           db      (if-let [selection (and pending
-                                          (resolve-selection help-data
+                                          (resolve-selection db
                                                              (:section pending)
                                                              (:page pending)))]
                     (apply-selection db selection)

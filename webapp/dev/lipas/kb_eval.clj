@@ -55,9 +55,18 @@
    {:q "katsomon kapasiteetti" :expect #{"prop:stand-capacity-person"}}
    {:q "reitin pituus kilometreinä" :expect #{"prop:route-length-km"}}
 
-   ;; — Help-CMS task pages (seeded dev content) —
-   {:q "miten lisään reitin?" :expect #{"tallentajille/reitin-lisaaminen"}}
-   {:q "kuinka tuon gpx-tiedoston kartalle?" :expect #{"tallentajille/reitin-lisaaminen"}}
+   ;; — Help-CMS task pages —
+   ;; CMS refs depend on which help content is loaded: dev-seed slugs
+   ;; (tallentajille/*) and migrated prod slugs are both listed as
+   ;; alternates so the eval works against either corpus.
+   {:q "miten lisään reitin?"
+    :expect #{"tallentajille/reitin-lisaaminen"
+              "liikunta-ja-ulkoilupaikan-tietojen-lisaaminen-ja-muokkaaminen/reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"
+              "lipas-reitin-lisaaminen-2023"
+              "XcZrIepjYe0"}}
+   {:q "kuinka tuon gpx-tiedoston kartalle?"
+    :expect #{"tallentajille/reitin-lisaaminen"
+              "DUa_aMbg9k0"}}
    {:q "miten lisään uuden liikuntapaikan?"
     :expect #{"tallentajille/pisteen-lisaaminen"
               "lipas-liikuntapaikan-lisaaminen-ja-muokkaaminen-2023"
@@ -69,7 +78,10 @@
 
    ;; — Cross-lingual: question language ≠ document language —
    {:q "var lägger jag till en padelbana?" :lang "se" :expect #{"type:1390" "type:2295"}}
-   {:q "how do I add a route?" :lang "en" :expect #{"tallentajille/reitin-lisaaminen"}}
+   {:q "how do I add a route?" :lang "en"
+    :expect #{"tallentajille/reitin-lisaaminen"
+              "liikunta-ja-ulkoilupaikan-tietojen-lisaaminen-ja-muokkaaminen/reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"
+              "lipas-reitin-lisaaminen-2023"}}
    {:q "swimming hall type code" :lang "en" :expect #{"type:3110"}}
    {:q "skidspår" :lang "se" :expect #{"type:4402"}}])
 

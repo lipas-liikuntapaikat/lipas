@@ -28,8 +28,10 @@
             [reitit.frontend.easy :as rfe]))
 
 (def links
-  {:help "https://www.jyu.fi/sport/fi/yhteistyo/lipas-liikuntapaikat.fi"
-   :privacy-policy "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"})
+  {:privacy-policy "https://lipas.fi/pdf/tietosuojailmoitus_lipas.pdf"})
+
+(defn open-help! []
+  (==> [:lipas.ui.help.events/open-dialog]))
 
 (defn logout! []
   (==> [:lipas.ui.login.events/logout]))
@@ -104,7 +106,7 @@
 
      ;; Help
      [:> MenuItem {:id "account-menu-item-help"
-                   :on-click (comp close #(navigate! (:help links)))}
+                   :on-click (comp close open-help!)}
       [:> ListItemIcon
        [:> Icon "help"]]
       [:> ListItemText {:primary (tr :help/headline)}]]
@@ -210,7 +212,7 @@
          [:> ListItemText {:primary (tr :lipas.admin/headline)}]])
 
       ;; Help
-      [:> ListItemButton {:on-click #(hide-and-navigate! (:help links))}
+      [:> ListItemButton {:on-click (comp close-drawer open-help!)}
        [:> ListItemIcon
         [:> Icon "help"]]
        [:> ListItemText {:primary (tr :help/headline)}]]

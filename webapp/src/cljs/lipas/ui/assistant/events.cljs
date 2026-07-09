@@ -1,6 +1,7 @@
 (ns lipas.ui.assistant.events
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
+            [lipas.ui.help.events :as help-events]
             [lipas.ui.map.events :as map-events]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
@@ -20,13 +21,15 @@
                  (str/includes? route "stats") "statistics view"
                  :else nil))
         lipas-id (-> db :map :mode :lipas-id)
-        edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))]
+        edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))
+        help-ctx (help-events/dialog-context db)]
     (cond-> {}
       locale (assoc :locale locale)
       route (assoc :route route)
       view (assoc :view view)
       lipas-id (assoc :site {:lipas-id lipas-id})
-      edit-mode? (assoc :edit-mode? true))))
+      edit-mode? (assoc :edit-mode? true)
+      (seq help-ctx) (assoc :help help-ctx))))
 
 (rf/reg-event-db ::toggle-panel
   (fn [db _]

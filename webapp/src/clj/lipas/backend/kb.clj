@@ -13,6 +13,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.backend.db.db :as db]
+            [lipas.backend.help :as help]
             [lipas.backend.llm :as llm]
             [lipas.backend.search :as search]
             [lipas.data.prop-types :as prop-types]
@@ -38,28 +39,37 @@
 ;;; ——— Help CMS → docs ———————————————————————————————————————————————
 
 (defn- block->text
-  [lang block]
+  ;; A block contributes only when it has real text — bare URLs
+  ;; (video/pdf) would otherwise make every page look non-blank and
+  ;; defeat the skip rule in help-cms->docs.
+  [block]
   (case (:type block)
-    :text  (get-in block [:content lang])
-    :video (str "Video: " (get-in block [:title lang] "")
-                " https://www.youtube.com/watch?v=" (:video-id block))
-    :image (get-in block [:caption lang])
-    :pdf   (when-let [title (get-in block [:title lang])]
-             (str "PDF: " title " " (:url block)))
+    :text  (:content block)
+    :video (when-not (str/blank? (:title block))
+             (str "Video: " (:title block)
+                  " https://www.youtube.com/watch?v=" (:video-id block)))
+    :image (:caption block)
+    :pdf   (when-not (str/blank? (:title block))
+             (str "PDF: " (:title block) " " (:url block)))
     nil))
 
 (defn help-cms->docs
-  "One doc per page per language. Languages whose title or entire body is
-   blank are skipped — retrieval should never surface an empty entry."
+  "One doc per page per language, from the v2 per-locale trees
+   ({:fi tree :se tree :en tree}). Pages whose title or entire body is
+   blank are skipped — retrieval should never surface an empty entry.
+   The language tag is trustworthy by construction: each locale's tree
+   contains only that locale's content."
   [help-data]
-  (for [section help-data
-        page    (:pages section)
-        lang    langs
-        :let [slug-path (str (name (:slug section)) "/" (name (:slug page)))
-              title     (get-in page [:title lang])
+  (for [[lang tree] help-data
+        section     tree
+        page        (:pages section)
+        :let [slug-path (str (:slug section) "/" (:slug page))
+              title     (:title page)
               body      (->> (:blocks page)
-                             (keep (partial block->text lang))
+                             (keep block->text)
                              (map str/trim)
+                             (remove str/blank?)
+                             (cons (:summary page))
                              (remove str/blank?)
                              (str/join "\n\n"))]
         :when (and (not (str/blank? title))
@@ -292,7 +302,7 @@
   (let [client    (:client search)
         idx       (get-in search [:indices :kb :kb])
         now       (str (java.time.Instant/now))
-        docs      (->> (concat (help-cms->docs (db/get-versioned-data db "help" "active"))
+        docs      (->> (concat (help-cms->docs (help/get-help-data db))
                                (code-data->docs)
                                (ingested->docs db))
                        (map #(assoc %
@@ -439,6 +449,6 @@
   (def search* (:lipas/search state/system))
   (sync! db* search*)
   (count (code-data->docs))
-  (take 2 (help-cms->docs (db/get-versioned-data db* "help" "active")))
+  (take 2 (help-cms->docs (help/get-help-data db*)))
   (search-kb search* {:query "mikä tyyppikoodi padel-kentälle?"})
   (search-kb search* {:query "how do I add a route?" :lang "en"}))

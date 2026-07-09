@@ -1,4 +1,5 @@
-{:available-pages "Sivut tässä osiossa",
+{:only-in-finnish "Tämä sisältö on saatavilla vain suomeksi.",
+ :available-pages "Sivut tässä osiossa",
  :headline "Ohjeet",
  :manage-content "Hallitse ohjesisältöä",
  :privacy-policy "Tietosuojailmoitus"
