@@ -53,7 +53,13 @@
     [:map {:closed true}
      [:section {:optional true} [:string {:max 200}]]
      [:page {:optional true} [:string {:max 200}]]
-     [:title {:optional true} [:string {:max 300}]]]]])
+     [:title {:optional true} [:string {:max 300}]]]]
+   [:ptv {:optional true} ; open PTV export dialog (covers the map view)
+    [:map {:closed true}
+     [:open? {:optional true} :boolean]
+     [:org {:optional true} [:string {:max 200}]]
+     [:tab {:optional true} [:string {:max 100}]]
+     [:wizard-step {:optional true} [:string {:max 100}]]]]])
 
 (def max-tool-iterations 6)
 (def max-history-messages 12)

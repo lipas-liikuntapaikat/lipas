@@ -171,8 +171,38 @@
   (fn [db [_ _]]
     (-> db
         (assoc-in [:ptv :dialog :open?] false)
-        (assoc-in [:ptv :selected-tag] "wizard")
+        (assoc-in [:ptv :selected-tab] "wizard")
         (update :ptv dissoc :candidates-search :selected-step))))
+
+(def ^:private assistant-tab-labels
+  "Dialog tab values → the labels the user sees (fi UI labels)."
+  {"wizard" "Käyttöönotto (ohjattu vienti PTV:hen)"
+   "services" "Palvelut"
+   "sports-sites" "Liikuntapaikat"
+   "audit" "Auditointi"})
+
+(def ^:private assistant-wizard-step-labels
+  ["1. Valitse liikuntapaikat"
+   "2. Luo PTV-palvelut"
+   "3. Luo liikuntapaikoista palvelupaikat"])
+
+(defn dialog-context
+  "Open PTV-export-dialog state for the assistant's context snapshot,
+   or nil when the dialog is closed."
+  [db]
+  (when (get-in db [:ptv :dialog :open?])
+    (let [ptv (:ptv db)
+          tab (:selected-tab ptv)]
+      (cond-> {:open? true}
+        (-> ptv :selected-org :name)
+        (assoc :org (-> ptv :selected-org :name))
+
+        tab
+        (assoc :tab (get assistant-tab-labels tab tab))
+
+        (= "wizard" tab)
+        (assoc :wizard-step (get assistant-wizard-step-labels
+                                 (:selected-step ptv 0)))))))
 
 (rf/reg-event-fx ::select-org
   (fn [{:keys [db]} [_ lipas-org]]
