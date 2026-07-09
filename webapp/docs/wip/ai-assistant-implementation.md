@@ -45,15 +45,15 @@ Dev tooling:
 | File | What |
 |---|---|
 | `dev/lipas/kb_eval.clj` | 41 golden questions, hit@3 runner, `compare-methods`. Current: bm25 78% / knn 100% / **hybrid 41/41**. Run before corpus/mapping/model changes. |
-| `dev/lipas/kb_ingest.clj` | One-off ingestion: extract (LLM → task-shaped entries) → grounding (separate verifier per source; 2/89 rejected) → type-code validation → docs saved to versioned_data `kb-ingest` → `kb/sync!`. VTT parsing with `[s=N]` markers → timestamped YouTube deep links; `gemini-video-transcript` fallback for the 9 caption-less videos. Corpus inventory (9 PDFs + all 21 Lipasinfo videos) is in the ns. |
+| `dev/lipas/kb_ingest.clj` | One-off ingestion: extract (LLM → task-shaped entries) → grounding (separate verifier per source; 2/89 rejected) → type-code validation → docs saved to versioned_data `kb-ingest` → `kb/sync!`. VTT parsing with `[s=N]` markers → timestamped YouTube deep links; `gemini-video-transcript` fallback for the 9 caption-less videos. Corpus inventory (9 PDFs + all 21 Lipasinfo videos + 3 PTV guides, see `ptv-sources`) is in the ns. PTV sources aren't publicly hosted → per-source `:url` overrides the deep link (lipas.fi/liikuntapaikat or the DVV instruction page); `ingest-ptv!` runs just that corpus and `add-ingested!` merges into the existing snapshot (replace-by-source-ref) instead of overwriting it. |
 
 ## Data flow
 
 ```
 help CMS (canonical, published only) ─┐
-lipas.data.types/prop-types (derived) ─┼─> kb/sync! ──> lipas_kb_v1 (1063 docs)
+lipas.data.types/prop-types (derived) ─┼─> kb/sync! ──> lipas_kb_v1
 versioned_data "kb-ingest" (one-off)  ─┘   (hash-diff,      │
-                                            orphan-delete)  ▼
+                                            orphan-delete)  ▼ (1102 docs)
 widget ──/actions/assistant-chat──> assistant loop ──tools──> search-kb / sites index
    ▲          (context snapshot)         │
    └── answer + sources + escalation? ◄──┘        exchanges ──> assistant_logs
@@ -155,8 +155,9 @@ looks wrong or empty, just resync.
 
 ## Current dev state
 
-- KB: 1079 docs (7 seeded help-cms + 984 code-data incl. 2 nav-structure
-  docs fi/en and 13 role docs + 87 ingested + 1 log). Help CMS content is **my dev seed**
+- KB: 1102 docs (17 help-cms + 983 code-data incl. 2 nav-structure
+  docs fi/en and 13 role docs + 102 ingested: 35 jyu + 52 youtube +
+  15 ptv-guide, 2026-07-09). Help CMS content is **my dev seed**
   (2 sections / 4 pages, incl. "Miten kopioin liikuntapaikan?") — real content
   should be authored by Lipasinfo via the editor (draft → publish).
 - Multi-intent lesson (seasonal luistelukenttä/pallokenttä case): the
@@ -240,7 +241,7 @@ help-cms->docs skip rules).
 2. Deploy: `GEMINI_API_KEY` in prod env; **run help-v2 migration against
    prod DB** (`(lipas.backend.help/migrate-v1->v2! db)`, once, before the
    first v2 publish); first `help-kb-sync` runs via scheduler/publish;
-   **run ingestion against prod DB** (87 entries live only in local
+   **run ingestion against prod DB** (102 entries live only in local
    versioned_data); real CMS content authoring (summaries + hand-tuned
    slugs where wanted, se/en translations when they exist); then flip GA
    (`:ai-assistant/use` → `roles/basic`). If `assistant_logs` already exists

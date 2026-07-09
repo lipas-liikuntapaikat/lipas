@@ -56,6 +56,23 @@
 (defn pdf-url [slug]
   (str "https://www.jyu.fi/fi/file/" slug))
 
+(def ptv-sources
+  "PTV-integration guides; :file under <dir>/txt/. Unlike the jyu.fi
+   guides these aren't publicly hosted, so :url points where the user
+   performs the task (deep links inside entry bodies still carry the
+   DVV/suomi.fi URLs present in the source text)."
+  [{:slug "lipas-ptv-kayttoliittymaohje-0526" :lang "fi" :kind :ptv-guide
+    :doc "Ohje PTV-integraation käyttöönottoon LIPAS-järjestelmässä"
+    :url "https://lipas.fi/liikuntapaikat"}
+   {:slug "dvv-ptv-toimintaohjeet-koulutus-2025" :lang "fi" :kind :ptv-guide
+    :doc "Toimintaohjeet pakollisiksi PTV:ssä – näin kirjoitat hyvät toimintaohjeet (DVV:n PTV-koulutus 31.10.2025)"
+    :url "https://kehittajille.suomi.fi/palvelut/palvelutietovaranto/sisallon-tuottaminen/palvelun-kuvaamisen-ohjeet/miten-taytan-palvelun-perustiedot#toimintaohjeet"
+    :note "The source is DVV's (Digi- ja väestötietovirasto) training deck for PTV users. Focus on guidance that stays true over time: what the Toimintaohjeet field is for, how to write good toimintaohjeet, and what the 3.3.2026 mandatory-field change means for organizations using the IN API integration (such as LIPAS municipalities). Skip event dates, course schedules and other announcements."}
+   {:slug "lipas-ptv-tekoalykuvaukset" :lang "fi" :kind :ptv-guide
+    :doc "Miten tekoäly laatii PTV-kuvaukset LIPAS-järjestelmässä"
+    :url "https://lipas.fi/liikuntapaikat"
+    :note "Audience: LIPAS users who want to understand how the AI-drafted PTV descriptions work — what data the AI reads, what it produces, that a human always reviews before publishing. Skip developer-only details (model names and parameters, JSON schema internals, API endpoints, code references)."}])
+
 (def video-sources
   "Lipasinfo channel (@lipasinfo7382), full inventory 2026-07;
    corpus boundary confirmed by the team. Subtitles under <dir>/subs/."
@@ -167,7 +184,7 @@ Produce one entry per distinct user task or question the source answers. Rules:
 - Each entry must be SELF-CONTAINED: understandable without the other entries or the source. No \"kuten edellä\", no unresolved references.
 - title: the task or question phrased the way a user would ask it (e.g. \"Reitin tuonti GPX-tiedostosta\").
 - body: 100-400 words of markdown. Concrete steps as numbered lists. Prerequisites (login, edit rights) stated when the source states them.
-- Write in the SAME LANGUAGE as the source.
+- Write in the language stated in the Source header (translate faithfully if the source material is written in another language).
 - ONLY facts from the source. Do not invent UI elements, menu names or type codes not present in the source. Auto-generated transcripts contain recognition errors — fix obvious ones from context, and OMIT anything you cannot confidently reconstruct.
 - Skip marketing, greetings, presenter introductions and anything that is not actionable guidance. A short intro video may yield just one overview entry; a dense guide may yield many.
 - start-seconds: for video transcripts, the [s=N] marker closest to where the entry's topic starts; 0 for PDFs or if unsure.")
@@ -184,7 +201,7 @@ Produce one entry per distinct user task or question the source answers. Rules:
         [:issues :string]]]]])))
 
 (def ^:private ground-system-prompt
-  "You are a strict fact-checker. You get SOURCE MATERIAL and ENTRIES derived from it. For each entry decide whether every substantive claim (steps, UI elements, names, codes, constraints) is supported by the source. Transcript wording may be paraphrased or cleaned up — that is fine. Adding facts that are not in the source is not. Report grounded=false with the offending claims in issues when the entry invents anything.")
+  "You are a strict fact-checker. You get SOURCE MATERIAL and ENTRIES derived from it. For each entry decide whether every substantive claim (steps, UI elements, names, codes, constraints) is supported by the source. Wording may be paraphrased, cleaned up or translated into another language — that is fine. Adding facts that are not in the source is not. Report grounded=false with the offending claims in issues when the entry invents anything.")
 
 (defn- gemini-json
   [system-prompt prompt schema]
@@ -196,8 +213,10 @@ Produce one entry per distinct user task or question the source answers. Rules:
       (get-in [:message :content])))
 
 (defn extract-entries
-  [{:keys [doc title lang]} source-text]
-  (let [header (str "Source: " (or doc title) " (language: " lang ")\n\n")]
+  [{:keys [doc title lang note]} source-text]
+  (let [header (str "Source: " (or doc title) " (language: " lang ")\n"
+                    (when note (str "Note: " note "\n"))
+                    "\n")]
     (:entries (gemini-json extract-system-prompt
                            (str header source-text)
                            extract-schema))))
@@ -240,11 +259,12 @@ Produce one entry per distinct user task or question the source answers. Rules:
      :lang          lang
      :source-type   (name kind)
      :source-ref    slug
-     :deep-link     (case kind
-                      :jyu (pdf-url slug)
-                      :youtube (if (pos? (or start-seconds 0))
-                                 (video-url slug start-seconds)
-                                 (video-url slug)))
+     :deep-link     (or (:url source)
+                        (case kind
+                          :jyu (pdf-url slug)
+                          :youtube (if (pos? (or start-seconds 0))
+                                     (video-url slug start-seconds)
+                                     (video-url slug))))
      :type-codes    valid
      :review-status "machine"
      ;; review metadata — stripped before indexing by kb/ingested->docs
@@ -265,16 +285,28 @@ Produce one entry per distinct user task or question the source answers. Rules:
 
 ;;; ——— Drivers ———————————————————————————————————————————————————————
 
+(defn- ingest-txt-sources!
+  [dir sources]
+  (for [{:keys [slug] :as src} sources
+        :let [f (io/file dir "txt" (str slug ".txt"))]
+        :when (.exists f)]
+    (ingest-source! src (slurp f))))
+
+(defn ingest-ptv!
+  "PTV corpus only (ptv-sources); dir layout as in ingest-all!.
+   Returns {:docs [...] :rejected [...]}."
+  [dir]
+  (let [results (ingest-txt-sources! dir ptv-sources)]
+    {:docs (vec (mapcat :docs results))
+     :rejected (vec (mapcat :rejected results))}))
+
 (defn ingest-all!
   "dir = directory with txt/<slug>.txt and subs/<id>.<lang>.vtt.
    Runs the whole corpus; returns {:docs [...] :rejected [...]}."
   [dir]
   (let [pdf-results
-        (for [{:keys [slug lang] :as src} pdf-sources
-              :let [f (io/file dir "txt" (str slug ".txt"))]
-              :when (.exists f)]
-          (ingest-source! (assoc src :kind :jyu :slug slug :lang lang)
-                          (slurp f)))
+        (ingest-txt-sources! dir (concat (map #(assoc % :kind :jyu) pdf-sources)
+                                         ptv-sources))
         video-results
         (for [{:keys [id lang title] :as src} video-sources
               :let [f (io/file dir "subs" (str id "." lang ".vtt"))
@@ -298,14 +330,31 @@ Produce one entry per distinct user task or question the source answers. Rules:
    :by-source (->> docs (map :source-ref) frequencies)})
 
 (defn save-ingested!
-  "Persists accepted docs to versioned_data and resyncs the KB index."
+  "Persists accepted docs to versioned_data and resyncs the KB index.
+   NOTE: replaces the whole snapshot — use add-ingested! to extend it."
   [db search docs]
   (db/add-versioned-data! db "kb-ingest" "active"
                           (mapv #(dissoc % :grounded :issues :unknown-codes) docs))
   (kb/sync! db search))
 
+(defn add-ingested!
+  "Merges docs into the existing kb-ingest snapshot — replaces docs from
+   the same sources (:source-ref), keeps everything else — and resyncs
+   the KB index."
+  [db search docs]
+  (let [clean    (mapv #(dissoc % :grounded :issues :unknown-codes) docs)
+        refs     (set (map :source-ref clean))
+        existing (remove #(contains? refs (:source-ref %))
+                         (db/get-versioned-data db "kb-ingest" "active"))]
+    (save-ingested! db search (vec (concat existing clean)))))
+
 (comment
   (def dir "/private/tmp/claude-501/-Users-tipo-lipas-lipas/8045ae23-5da4-4056-ba5c-c74d5956ff56/scratchpad/kb-ingest")
   (def result (ingest-all! dir))
   (report result)
-  (save-ingested! (user/db) (user/search) (:docs result)))
+  (save-ingested! (user/db) (user/search) (:docs result))
+
+  ;; PTV corpus incrementally on top of an existing snapshot
+  (def ptv-result (ingest-ptv! dir))
+  (report ptv-result)
+  (add-ingested! (user/db) (user/search) (:docs ptv-result)))
