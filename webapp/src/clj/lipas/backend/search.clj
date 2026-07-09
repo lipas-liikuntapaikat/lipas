@@ -277,10 +277,57 @@
                                 :status      {:type "keyword"}
                                 :permissions {:enabled false}}}})))
 
+(def kb-mapping
+  "Knowledge base for the AI help assistant: task-shaped per-language
+   entries with Gemini embeddings for hybrid BM25 + kNN retrieval.
+   Strict mapping — never let ES guess field types here (see the
+   dense_vector comment on :legacy-sports-site below)."
+  {:mappings
+   {:dynamic "strict"
+    :properties
+    {:id              {:type "keyword"}
+     :title           {:type "text" :analyzer "finnish"
+                       :fields {:se {:type "text" :analyzer "swedish"}
+                                :en {:type "text" :analyzer "english"}}}
+     :body            {:type "text" :analyzer "finnish"
+                       :fields {:se {:type "text" :analyzer "swedish"}
+                                :en {:type "text" :analyzer "english"}}}
+     :lang            {:type "keyword"}
+     :source-type     {:type "keyword"}
+     :source-ref      {:type "keyword"}
+     :deep-link       {:type "keyword" :index false}
+     :type-codes      {:type "integer"}
+     :updated-at      {:type "date"}
+     :content-hash    {:type "keyword"}
+     :embedding-model {:type "keyword"}
+     :review-status   {:type "keyword"}
+     :embedding       {:type "dense_vector"
+                       :dims 768
+                       :index true
+                       :similarity "cosine"}}}})
+
+(def assistant-logs-mapping
+  "One doc per AI-assistant exchange; feeds the Kibana views for
+   most-asked topics and escalation rate."
+  {:mappings
+   {:dynamic "strict"
+    :properties
+    {:user-hash  {:type "keyword"}
+     :created-at {:type "date"}
+     :question   {:type "text" :analyzer "finnish"}
+     :answer     {:type "text" :analyzer "finnish"}
+     :sources    {:type "keyword"}
+     :actions    {:type "keyword"}
+     :escalated? {:type "boolean"}
+     :context    {:type "keyword" :index false}
+     :took-ms    {:type "integer"}}}})
+
 (def mappings
   "All Elasticsearch index mappings. Used by system initialization and tests."
   {:sports-site   (generate-explicit-mapping)
    :analytics     (generate-analytics-mapping)
+   :kb            kb-mapping
+   :assistant     assistant-logs-mapping
    :lois          {:settings
                    {:max_result_window 50000
                     :index {:analysis folding-analysis}}

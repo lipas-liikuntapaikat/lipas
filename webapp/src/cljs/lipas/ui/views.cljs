@@ -1,7 +1,9 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.components.dialogs :as dialogs]
+  (:require [lipas.ui.assistant.views :as assistant]
+            [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.notifications :as notifications]
             [lipas.ui.events :as events]
+            [lipas.ui.help.views :as help]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
@@ -74,6 +76,9 @@
               [:> Typography {:variant "body2"}
                disclaimer]]]])])
 
+      ;; Help center dialog — global so ?ohje= deep links work on any route
+      [help/dialog]
+
       [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
        ;; Main panel
@@ -82,6 +87,9 @@
 
        ;; Reminders dialog
        [reminders/dialog]
+
+       ;; AI assistant launcher + panel (privilege-gated inside)
+       [assistant/view]
 
        ;; Global UI-blocking confirmation dialog
        (when confirmation

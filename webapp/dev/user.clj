@@ -532,27 +532,16 @@
                         (set (keys prop-types-new/all))
                         (set (keys prop-types-old/all))))
 
-  (require '[lipas.data.help :as help-data])
-  (require '[lipas.backend.core :as core])
-  (core/save-help-data (db) help-data/sections)
-  *1
+  ;; Help content v2: one versioned_data doc per locale
+  (require '[lipas.backend.help :as help*])
+  (help*/get-help-data (db))                ; {:fi [...] :se [...] :en [...]}
+  (help*/migrate-v1->v2! (db))              ; one-shot v1 → v2 (fi gets all)
+  (help*/save-help-data (db) :fi [])        ; publish one locale
 
   (require '[malli.core :as m])
   (require '[malli.error :as me])
   (require '[lipas.schema.help :as help-schema])
-
-  (me/humanize (m/explain help-schema/HelpData (core/get-help-data (db))))
-
-  (def help-dada (core/get-help-data (db)))
-
-  (m/validate help-schema/HelpData help-dada)
-
-  (require '[lipas.schema.help :as help-schema])
-
-  (def help-dada-v2
-    (-> (core/get-help-data (db)) help-schema/transform-old-to-new-format))
-
-  (core/save-help-data (db) help-dada-v2)
+  (me/humanize (m/explain help-schema/HelpData (help*/get-help-data (db))))
 
   (lipas.backend.core/process-elevation-queue! (db) (search))
   (reindex-search!)
