@@ -2669,9 +2669,9 @@
    5320
    {:description
     {:fi
-     "Pääasiassa moottoripyöräilyä varten rakennettu, luonnonmukainen ei-asfalttipintainen alue (esim. enduroreitit ja trial-harjoittelualueet maastoliikennealueilla).",
-     :se "Huvudsakligen för motorcykelsport.",
-     :en "Mainly for motorcycling."},
+     "Pääasiassa moottoripyöräilyä varten rakennettu, luonnonmukainen ei-asfalttipintainen alue (esim. enduroreitit, motocrossradat ja trial-harjoittelualueet maastoliikennealueilla).",
+     :se "Ett område som huvudsakligen byggts för motorcykelsport, med naturenlig, icke-asfalterad yta (t.ex. enduroleder, motocrossbanor och övningsområden för trial på terrängtrafikområden).",
+     :en "An area built mainly for motorcycling, with a natural, non-asphalt surface (e.g. enduro trails, motocross tracks and trial practice areas in off-road traffic areas)."},
     :tags {:fi ["motocross"]},
     :name
     {:fi "Moottoripyöräilyalue",

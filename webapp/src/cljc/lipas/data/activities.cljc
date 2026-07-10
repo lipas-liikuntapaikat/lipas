@@ -320,9 +320,9 @@
               [:description {:optional true} common-schema/localized-string]]]
     :field
     {:type        "videos"
-     :description {:fi "Lisää URL-linkki web-palvelussa olevaan kohteen maisemia, luontoa tai harrastamisen olosuhteita esittelevään videoon. Varmista, että sinulla on oikeus lisätä video."
-                   :se "Lägg till en URL-länk till en video i webbtjänsten som presenterar landskapet, naturen eller förhållandena på platsen. Se till att du har behörighet att lägga till videon."
-                   :en "Add a URL link to a video depicting the landscapes, nature, or conditions of activity of the place. Make sure you have a permission to add the video."}
+     :description {:fi "Lisää URL-linkki Youtubessa olevaan kohteen maisemia, luontoa tai harrastamisen olosuhteita esittelevään videoon. Osoitteen tulee olla muotoa https://youtu.be/QgwKnIFnIgA?si=W91XmrPQUHw2HfRq - osoitteen saa kopioitua Youtuben jaa-toiminnon avulla. Varmista, että sinulla on oikeus lisätä video."
+                   :se "Lägg till en URL-länk till en video på YouTube som presenterar landskapet, naturen eller förhållandena på platsen. Adressen ska vara i formen https://youtu.be/QgwKnIFnIgA?si=W91XmrPQUHw2HfRq – du kan kopiera adressen med hjälp av YouTubes dela-funktion. Se till att du har behörighet att lägga till videon."
+                   :en "Add a URL link to a video on YouTube depicting the landscapes, nature, or conditions of activity of the place. The address must be in the form https://youtu.be/QgwKnIFnIgA?si=W91XmrPQUHw2HfRq – you can copy the address using YouTube's share function. Make sure you have a permission to add the video."}
      :label       {:fi "Videot"
                    :se "Videoinspelningar"
                    :en "Videos"}}}
@@ -1528,7 +1528,11 @@
                  :opts        paddling-route-types}}
 
                :paddling-properties
-               {:field
+               ;; Hidden from the UI: paddling conditions UTP field that is
+               ;; not expected to be used. Kept in the schema so existing data
+               ;; stays valid.
+               {:show (fn [_] false)
+                :field
                 {:type        "multi-select"
                  :description {:fi "Valitse kohdat, jotka kuvaavat reitin ominaisuuksia. HUOM! Tiedot eivät toistaiseksi siirry luontoon.fi-palveluun"
                                :se "Välj de punkter som beskriver ruttens egenskaper. OBS! Uppgifterna överförs inte till luonto.fi-tjänsten för tillfället."

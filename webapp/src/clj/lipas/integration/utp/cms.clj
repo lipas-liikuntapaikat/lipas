@@ -2,7 +2,9 @@
   (:require [cemerick.url :as url]
             [cheshire.core :as json]
             [clj-http.client :as client]
-            [lipas.backend.config :as config]))
+            [clojure.string :as str]
+            [lipas.backend.config :as config])
+  (:import [java.text Normalizer Normalizer$Form]))
 
 (def api-url (get-in config/default-config [:app :utp :cms-api-url]))
 
@@ -28,6 +30,41 @@
         :data
         first
         :id)))
+
+(defn- fold-ascii
+  "Folds diacritics to their ASCII base letters (ä->a, ö->o, å->a, é->e, ...)
+  by NFKD-normalizing and dropping the resulting combining marks."
+  [s]
+  (-> (Normalizer/normalize s Normalizer$Form/NFKD)
+      (str/replace #"\p{M}+" "")))
+
+(defn sanitize-filename
+  "Returns an ASCII-safe version of `filename` suitable for use as a CMS media
+  name. Folds diacritics, replaces any remaining unsafe characters (spaces,
+  path separators, ...) with hyphens and preserves the file extension. Falls
+  back to \"image\" when no usable basename remains.
+
+  The UTP CMS (Drupal) does not reliably accept non-ASCII characters (ä, ö, å)
+  in media names / file paths, so user-provided filenames are normalized here
+  rather than asking users to rename their files."
+  [filename]
+  (let [filename   (or filename "")
+        dot        (str/last-index-of filename ".")
+        [base ext] (if (and dot (pos? dot))
+                     [(subs filename 0 dot) (subs filename dot)]
+                     [filename ""])
+        clean-base (-> base
+                       fold-ascii
+                       (str/replace #"[^A-Za-z0-9._-]+" "-")
+                       (str/replace #"-{2,}" "-")
+                       (str/replace #"^[-.]+" "")
+                       (str/replace #"[-.]+$" ""))
+        clean-ext  (-> ext
+                       fold-ascii
+                       (str/replace #"[^A-Za-z0-9.]+" "")
+                       str/lower-case)]
+    (str (if (str/blank? clean-base) "image" clean-base)
+         clean-ext)))
 
 (defn upload-blob!
   [{:keys [filename data]}]
@@ -61,7 +98,9 @@
   (assert filename "Key :filename must have a value")
   (assert data "Key :data must have a value")
   (assert user "Key :user must have a value")
-  (let [dir-id (resolve-media-directory-id)
+  (let [filename (sanitize-filename filename)
+        params   (assoc params :filename filename)
+        dir-id (resolve-media-directory-id)
         resp1  (upload-blob! params)
         resp2  (create-media-entity! {:filename           filename
                                       :media-directory-id dir-id
