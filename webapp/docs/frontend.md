@@ -10,13 +10,14 @@ LIPAS (lipas.fi) is a comprehensive sports facility management system with a Clo
 
 ### Core Technologies
 - **ClojureScript**: Primary language for frontend development
-- **Re-frame**: State management and event handling framework (v1.4.3)
-- **Reagent**: React wrapper for ClojureScript (v2.0.0-alpha2) - **Preferred approach**
-- **UIx**: Modern React hooks integration (v1.1.1) - Limited use recommended
-- **Shadow-cljs**: Build tool and hot-reload development (v2.28.16)
+- **Re-frame**: State management and event handling framework (v1.4.5)
+- **Reagent**: React wrapper for ClojureScript (v2.0.1)
+- **React**: v19.1
+- **Shadow-cljs**: Build tool and hot-reload development (v3.3.6)
 
 #### React Library Context
-**Important**: UIx was introduced approximately one year ago when Reagent's future React 19+ support was uncertain. Now that Reagent supports modern React versions, the codebase contains a mix of both approaches. While both libraries interoperate well, **new development should prefer Reagent with traditional Re-frame patterns** for consistency and maintainability. UIx usage should be limited to specific cases where React hooks provide clear benefits.
+Use Reagent 2 functional components (`r/defc`) and `reagent.hooks` where React
+hooks are needed. UIx is no longer a project dependency.
 
 ### UI Framework
 - **Material-UI (MUI)**: Component library for consistent UI design
@@ -136,12 +137,12 @@ If there's any possibility that another part of the application might need the s
        [child-component {:data form-data}]])))
 ```
 
-#### UIx Hooks Integration (Use Sparingly)
+#### Hooks Integration
 ```clojure
-;; Only use when hooks provide clear benefits
-(defn hook-based-component []
-  (let [data (use-subscribe [:subscription-query])]
-    [:div data]))
+;; Hooks must be called at component top level and effects list dependencies.
+(r/defc hook-based-component []
+  (let [value (hooks/use-state nil)]
+    [:div (str value)]))
 ```
 
 ### 4. Available Re-frame Effects
@@ -384,7 +385,9 @@ You can return back to the Clojure REPL by evaluating `:cljs/quit` in ClojureScr
 
 You can inspect possible build warnings and errors with: `(user/compile-cljs)`
 
-Currently no automated UI tests exist.
+There is no conventional standalone browser test suite. REPL-driven E2E helpers
+in `dev/lipas/e2e/` provide repeatable setup and cross-layer assertions; use a
+real browser for the user-visible interaction under test.
 
 ## Security Patterns
 
@@ -488,11 +491,9 @@ The `lipas.ui.mui` wrapper is legacy. For new code, import MUI components direct
 
 ;; New (direct import)
 (ns my-ns
-  (:require ["@mui/material/Button$default" :as Button]
-            [reagent.core :as r]))
+  (:require ["@mui/material/Button$default" :as Button]))
 
-(def button (r/adapt-react-class Button))
-[button {:variant "contained"} "Click"]
+[:> Button {:variant "contained"} "Click"]
 ```
 
 Note: The wrapper still works and is used throughout the codebase, but direct imports reduce indirection and make dependencies clearer.
@@ -502,7 +503,7 @@ Note: The wrapper still works and is used throughout the codebase, but direct im
 ### Recommended Enhancements
 
 1. **Complete Malli Migration**: Finish replacing all Spec validations
-2. **Standardize on Reagent**: Gradually refactor UIx components to Reagent
+2. **Keep Reagent 2 patterns consistent**: Use `r/defc` and explicit hook dependencies
 3. **Code Splitting**: Implement lazy loading for large features
 4. **Testing Coverage**: Expand automated testing
 5. **Performance**: Implement virtual scrolling for large lists

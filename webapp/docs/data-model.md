@@ -33,17 +33,18 @@ LIPAS follows a **data-driven** philosophy where:
 3. **Schemas are shared** between frontend (ClojureScript) and backend (Clojure) via `.cljc` files
 4. **Type-specific behavior** is determined by looking up data structures, not hardcoded logic
 
-### Append-Only Event Sourcing
+### Append-Oriented State Revisions
 
-The core entity (sports sites) uses an append-only pattern:
+The normal sports-site write path uses full-state revisions:
 - Every edit creates a new revision with shared `lipas-id`
-- Revisions are never updated or deleted
-- Current state is derived via database views
-- Full audit trail is preserved
+- `sports_site_current` derives the authoritative current non-draft DB state
+- Elasticsearch derives enriched current read/search projections
+- Historical correction and migration paths can deliberately update old rows;
+  this is not strict event sourcing
 
-### Multilingual by Default
+### Multilingual Domain Data
 
-All user-facing text supports three languages:
+Reference data commonly supports Finnish, Swedish, and English:
 ```clojure
 {:fi "Finnish text"
  :se "Swedish text"
@@ -115,23 +116,23 @@ The sports site schema is a **multi-schema** that dispatches on `:type-code`:
 ;; src/cljc/lipas/schema/sports_sites.cljc
 
 (def sports-site
-  (into [:multi {:dispatch (fn [x] (-> x :type :type-code))}]
-        (for [[type-code type-def] types/all]
-          [type-code (make-sports-site-schema
-                      {:type-codes #{type-code}
-                       :location-schema (case (:geometry-type type-def)
-                                          "Point" #'location-schema/point-location
-                                          "LineString" #'location-schema/line-string-location
-                                          "Polygon" #'location-schema/polygon-location)
-                       :extras-schema (-> [:map]
-                                          (add-properties-schema props)
-                                          (add-activities-schema activity))})])))
+  (m/schema (make-sports-site-multi-schema false)))
+
+(def new-sports-site
+  (m/schema (make-sports-site-multi-schema false false)))
 ```
+
+`make-sports-site-multi-schema` iterates `types/all`, dispatches on
+`[:type :type-code]`, chooses a location schema from `:geometry-type`, and adds
+known property, floorball, and activity schema data. The exact implementation
+constructs plain Malli vectors; inspect it rather than copying an abbreviated
+generator into new code.
 
 This approach:
 - Validates each facility against type-appropriate rules
 - Allows different geometry types per facility type
-- Includes only valid properties for each type
+- Selects and validates known properties for each type while keeping maps open
+  enough to preserve compatible historical/unknown fields
 
 ---
 
@@ -229,9 +230,9 @@ Each property includes:
 |-------------|---------------------------------|-----------------------------|
 | `numeric`   | Numeric value (int or double)   | `number?`                   |
 | `boolean`   | True/false                      | `boolean?`                  |
-| `string`    | Free text                       | `[:string {:max N}]`        |
+| `string`    | Free text                       | `[:string]`                 |
 | `enum`      | Single selection from options   | `[:enum "opt1" "opt2" ...]` |
-| `enum-coll` | Multiple selection from options | `[:set [:enum ...]]`        |
+| `enum-coll` | Multiple selection from options | `[:sequential [:enum ...]]` |
 
 ### Property-Type Binding
 
@@ -453,10 +454,11 @@ Route segments can include per-feature properties:
 
 ### Elevation Enrichment
 
-Routes trigger **elevation enrichment** jobs:
-1. After save, a job fetches elevation data from external API
-2. Altitude values are added to coordinates
-3. Route statistics (total ascent/descent) are computed
+Eligible LineString changes trigger **elevation enrichment** jobs. The registry
+checks whether a new/changed two-dimensional geometry needs enrichment. The job
+fetches MML elevation coverage and appends Z coordinates; it does not currently
+compute total ascent/descent. Worker persistence uses stale-write protection so
+it does not overwrite a newer revision silently.
 
 ---
 
@@ -515,7 +517,8 @@ Activities add rich content beyond basic facility data:
 
 Separate from facility status, documents have publication status:
 - `"published"` - Visible to all, included in search
-- `"draft"` - Only visible to author, excluded from current views
+- `"draft"` - Excluded from current/yearly views and fetched through the
+  author/status application query
 
 ---
 
@@ -590,13 +593,11 @@ For API responses, special schemas handle JSON encoding:
 |---------------------------------------------------------|--------------------------------------------|
 | `src/cljc/lipas/schema/sports_sites.cljc`               | Main sports site schema                    |
 | `src/cljc/lipas/schema/sports_sites/location.cljc`      | Location and geometry schemas              |
-| `src/cljc/lipas/schema/sports_sites/types.cljc`         | Type-specific schema helpers               |
 | `src/cljc/lipas/schema/sports_sites/activities.cljc`    | Activity content schemas                   |
 | `src/cljc/lipas/schema/sports_sites/fields.cljc`        | Floorball fields schema                    |
 | `src/cljc/lipas/schema/sports_sites/circumstances.cljc` | Floorball circumstances schema             |
 | `src/cljc/lipas/schema/lois.cljc`                       | LOI schemas                                |
 | `src/cljc/lipas/schema/common.cljc`                     | Shared schemas (coordinates, status, etc.) |
-| `src/cljc/lipas/schema/core.cljc`                       | Low-level schema primitives                |
 
 ### Database Layer
 
