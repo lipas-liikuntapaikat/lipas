@@ -61,22 +61,25 @@ LIPAS is a **distributed GIS application** consisting of:
 - **Single-page application** with ClojureScript frontend
 - **RESTful API** serving JSON data
 - **Background job processing** for async operations
-- **Event-sourced data model** with full audit trail
+- **Append-oriented full-state revisions** for core registry data
 - **GIS-first design** with rich geospatial capabilities
 
 ---
 
 ## Core Design Principles
 
-### 1. Immutability Over Mutability
+### 1. Versioned State Over In-Place Updates
 
-**Opinion:** Data should be append-only. Every change creates a new revision rather than mutating existing records.
+**Opinion:** Normal sports-site edits should preserve prior state by inserting a
+complete new revision rather than overwriting the current document.
 
-**Implementation:** The `sports_site` table stores every revision. A database view (`sports_site_current`) exposes only the latest revision per facility. This provides:
-- Complete audit trail
-- Point-in-time queries
-- Safe concurrent modifications
-- Easy rollback capabilities
+**Implementation:** The `sports_site` table stores full JSONB revisions. A
+database view (`sports_site_current`) exposes the latest non-draft revision per
+facility, ordered by effective `event_date` and then insertion `created_at`.
+Historical correction and data-migration paths can deliberately update existing
+rows, so this is an append-oriented state-revision model rather than strict event
+sourcing. It does not by itself provide optimistic concurrency or automatic
+rollback.
 
 ### 2. Separation of Read and Write Paths
 
@@ -84,9 +87,11 @@ LIPAS is a **distributed GIS application** consisting of:
 
 **Implementation:**
 - **PostgreSQL** is the source of truth for writes
-- **Elasticsearch** serves all read/search operations
-- Write path: API → Validate → DB → Enrich → Index
-- Read path: API → Elasticsearch (bypasses DB entirely)
+- **Elasticsearch** serves search, geospatial queries, reports, and selected API
+  read projections
+- Write path: API → Validate/authorize → DB transaction → post-commit jobs/index
+- Read paths: use Elasticsearch for projections and PostgreSQL for authoritative
+  current/history/internal lookups
 
 ### 3. Data Enrichment at Index Time
 
@@ -140,7 +145,7 @@ Benefits:
 | Routing      | Reitit               | Data-driven routing with OpenAPI |
 | Validation   | Malli                | Schema definition and validation |
 | Database     | PostgreSQL + PostGIS | Relational storage with spatial  |
-| Search       | Elasticsearch 7.x    | Full-text search and analytics   |
+| Search       | Elasticsearch 8      | Full-text search and analytics   |
 | DI/Lifecycle | Integrant            | Component management             |
 | SQL          | HugSQL               | SQL-first database access        |
 | Migrations   | Migratus             | Database schema migrations       |
@@ -388,6 +393,7 @@ The job system handles async operations using PostgreSQL-backed queues:
 - `analysis` - Diversity grid recalculation
 - `elevation` - Route elevation enrichment
 - `webhook` - External system notifications (disabled; no live producers)
+- `help-kb-sync` - Synchronize published help content into the knowledge base
 
 Reminder production and queue cleanup are run directly by the scheduler,
 not through the queue.
@@ -401,7 +407,8 @@ not through the queue.
 5. **Dead Letter Queue:** jobs exceeding max attempts move to `dead_letter_jobs` (and out of `jobs`)
 6. **In-memory Circuit Breaker:** protects the MML elevation API
 
-See `docs/async-jobs.md` (repo root) for the full design.
+See `../../docs/async-jobs.md` for the system-level job design when that sibling
+repository documentation is available.
 
 ---
 
@@ -612,7 +619,10 @@ LIPAS                           PTV API
 - Explicit admin action
 
 **AI-Assisted Descriptions:**
-OpenAI generates Finnish service descriptions from facility data, with human review.
+The PTV AI workflow supports provider-specific generation with human review.
+Current production generation is Gemini-backed, while OpenAI-compatible paths
+remain available for fallback/workbench evaluation; consult
+`lipas.backend.ptv.ai` and `lipas.backend.ptv.workbench` for current selection.
 
 ### OSRM (Open Source Routing Machine)
 
@@ -765,8 +775,8 @@ Avoid:
 
 | Decision                    | Rationale                                          | Trade-offs                                        |
 |-----------------------------|----------------------------------------------------|---------------------------------------------------|
-| **Append-only data**        | Full audit trail, safe concurrent access           | Storage growth, complex queries for current state |
-| **Elasticsearch for reads** | Fast search, geo queries, faceted filtering        | Eventual consistency, index maintenance overhead  |
+| **Versioned state rows**    | Historical state and effective-date queries        | Storage growth, correction exceptions, no built-in optimistic locking |
+| **Elasticsearch projections** | Fast search, geo queries, faceted filtering      | Cross-store coherence and index maintenance       |
 | **Integrant for lifecycle** | Explicit dependencies, testable components         | Learning curve, boilerplate                       |
 | **Re-frame for frontend**   | Predictable state, time-travel debugging           | Verbose for simple cases                          |
 | **PostgreSQL job queue**    | Transactional consistency, no extra infrastructure | Limited throughput vs dedicated queue             |
@@ -779,11 +789,12 @@ Avoid:
 
 LIPAS demonstrates how a mature Clojure/ClojureScript application can handle complex GIS requirements while maintaining developer productivity. The key success factors are:
 
-1. **Immutable data model** - Audit trail and safe operations
+1. **Versioned domain state** - Historical revisions with explicit correction paths
 2. **Clear read/write separation** - Optimized for each path
 3. **Component architecture** - Testable, maintainable
 4. **Schema-first approach** - Validation everywhere
 5. **REPL-driven development** - Fast feedback loops
 6. **Feature-based organization** - Scalable codebase
 
-The system successfully balances pragmatism (SSH deployment, PostgreSQL queues) with sophistication (event sourcing, spatial analysis, AI integration).
+The system balances pragmatic infrastructure with data-driven Clojure,
+full-state revision history, spatial analysis, and AI-assisted integrations.

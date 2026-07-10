@@ -48,8 +48,6 @@ The system is configured using [Integrant](https://github.com/weavejester/integr
                                       │  │ │
 :lipas/mailchimp ──────────────────┐  │  │ │
                                    │  │  │ │
-:lipas/aws ─────────────────────┐  │  │  │ │
-                                │  │  │  │ │
 :lipas/ptv (ref :lipas/db) ──┐  │  │  │  │ │
                              │  │  │  │  │ │
                              ↓  ↓  ↓  ↓  ↓ ↓
@@ -93,7 +91,6 @@ Components are defined in `system.clj` using `ig/init-key`:
 | `:lipas/search` | Elasticsearch client with index configurations |
 | `:lipas/emailer` | SMTP email sender |
 | `:lipas/mailchimp` | Newsletter integration |
-| `:lipas/aws` | AWS credentials for S3 |
 | `:lipas/ptv` | Finnish Public Service Directory integration |
 | `:lipas/app` | Ring application handler |
 | `:lipas/server` | Jetty HTTP server |
@@ -269,8 +266,8 @@ The `lipas.backend.core` namespace contains all business logic:
 ```clojure
 ;; Read operations
 (get-sports-site db lipas-id)           ; From PostgreSQL
-(get-sports-site2 search lipas-id)      ; From Elasticsearch (preferred)
-(get-sports-site-history db lipas-id)   ; All revisions
+(get-sports-site2 search lipas-id)      ; From Elasticsearch projection
+(get-sports-site-history db lipas-id)   ; Yearly revision snapshots
 
 ;; Write operations
 (save-sports-site! db search ptv user sports-site draft?)
@@ -281,24 +278,26 @@ The `lipas.backend.core` namespace contains all business logic:
 ```
 save-sports-site!
      │
-     ├─→ check-permissions! (throws if unauthorized)
-     │
      ├─→ jdbc/with-db-transaction
      │        │
-     │        ├─→ upsert-sports-site! → PostgreSQL
-     │        │
-     │        ├─→ index! → Elasticsearch (main index)
-     │        │
-     │        ├─→ index-legacy-sports-place! → Elasticsearch (legacy index)
-     │        │
-     │        ├─→ jobs/enqueue-job! "elevation" (for routes)
-     │        │
-     │        ├─→ jobs/enqueue-job! "analysis"
-     │        │
-     │        └─→ sync-ptv! (if PTV integration enabled)
+     │        ├─→ read previous current DB revision
+     │        ├─→ permission/existence checks
+     │        ├─→ upsert-sports-site! → append PostgreSQL revision
+     │        └─→ sync-ptv! when enabled/applicable
+     │             └─→ may append and index another revision in the transaction
      │
+     ├─→ COMMIT
+     ├─→ enqueue affected elevation/analysis jobs (published only)
+     ├─→ index! → Elasticsearch main projection (published only)
+     ├─→ index or delete legacy projection according to facility status
      └─→ Return saved sports site
 ```
+
+Jobs and ordinary search indexing deliberately happen after commit. Therefore
+an indexing failure does not roll back PostgreSQL and may require reindexing to
+repair DB/ES drift. PTV synchronization is a known exception because its current
+implementation can index inside the transaction. Draft saves skip PTV, jobs,
+and Elasticsearch.
 
 ### Data Enrichment
 
