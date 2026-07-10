@@ -131,10 +131,12 @@
               [:> Typography {:variant "body2"}
                disclaimer]]]])])
 
-      ;; Help center dialog — global so ?ohje= deep links work on any route
-      [help/dialog]
-
       [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+
+       ;; Help center dialog — global so ?ohje= deep links work on any
+       ;; route. Lives inside the light theme so it matches the rest of
+       ;; the app content.
+       [help/dialog]
 
        ;; Main panel
        (when view

@@ -18,12 +18,12 @@
    ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
    ["@mui/material/Button$default" :as Button]
    ["@mui/material/Card$default" :as Card]
+   ["@mui/material/CardActionArea$default" :as CardActionArea]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/Chip$default" :as Chip]
    ["@mui/material/Collapse$default" :as Collapse]
    ["@mui/material/Dialog$default" :as Dialog]
    ["@mui/material/DialogContent$default" :as DialogContent]
-   ["@mui/material/Divider$default" :as Divider]
    ["@mui/material/Drawer$default" :as Drawer]
    ["@mui/material/GridLegacy$default" :as Grid]
    ["@mui/material/IconButton$default" :as IconButton]
@@ -32,7 +32,6 @@
    ["@mui/material/List$default" :as List]
    ["@mui/material/ListItemButton$default" :as ListItemButton]
    ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/ListSubheader$default" :as ListSubheader]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Stack$default" :as Stack]
    ["@mui/material/Table$default" :as Table]
@@ -443,6 +442,10 @@
 
 ;;; ——— Content area ———————————————————————————————————————————————————
 
+(def ^:private full-width-block-types
+  ;; Interactive/wide blocks that shouldn't be squeezed into a column
+  #{:type-code-explorer :data-model-excel-download})
+
 (r/defc PageView
   [{:keys [page]}]
   [:> Stack {:spacing 3}
@@ -452,36 +455,62 @@
     (when-not (empty? (:summary page))
       [:> Typography {:variant "body1" :color "text.secondary" :sx #js{:mt 1}}
        (:summary page)])]
-   (for [block (:blocks page)]
-     ^{:key (:block-id block)}
-     [BlockView {:block block}])])
+   ;; On large screens the blocks flow into two columns to use the
+   ;; horizontal space; below lg they stack in a single column.
+   [:> Box {:sx #js{:display "grid"
+                    :gap 3
+                    :alignItems "start"
+                    :gridTemplateColumns #js{:xs "1fr"
+                                             :lg "repeat(2, minmax(0, 1fr))"}}}
+    (for [block (:blocks page)]
+      ^{:key (:block-id block)}
+      [:> Box {:sx (when (full-width-block-types (:type block))
+                     #js{:gridColumn "1 / -1"})}
+       [BlockView {:block block}]])]])
+
+(r/defc LandingCardGrid
+  ;; Landing grid: title + summary cards, 1–3 columns depending on
+  ;; screen width. Theme-colored so it works in both light and dark
+  ;; mode; the orange sentence-case titles echo the LIPAS front page
+  ;; cards.
+  [{:keys [items on-select]}]
+  [:> Grid {:container true :spacing 2}
+   (for [{:keys [slug title text]} items]
+     ^{:key slug}
+     [:> Grid {:item true :xs 12 :md 6 :lg 4}
+      [:> Card {:sx #js{:height "100%"}}
+       [:> CardActionArea {:onClick #(on-select slug)
+                           :sx #js{:height "100%"
+                                   :display "flex"
+                                   :flexDirection "column"
+                                   :alignItems "stretch"
+                                   :justifyContent "flex-start"}}
+        [:> CardContent
+         [:> Typography {:variant "h6"
+                         :component "h2"
+                         :color "secondary"
+                         :gutterBottom true
+                         :sx title-sx}
+          title]
+         (when-not (empty? text)
+           [:> Typography {:variant "body1"
+                           :sx #js{:overflow "hidden"
+                                   :textOverflow "ellipsis"
+                                   :display "-webkit-box"
+                                   :WebkitLineClamp 3
+                                   :WebkitBoxOrient "vertical"}}
+            text])]]]])])
 
 (r/defc PageList
-  ;; Landing list: page titles + summaries, theme-colored (the v1 cards
-  ;; hardcoded a light gradient that was unreadable in dark mode).
   [{:keys [section]}]
-  [:> Paper {:variant "outlined"}
-   [:> List {:disablePadding true}
-    (map-indexed
-     (fn [idx {:keys [slug title summary blocks]}]
-       ^{:key slug}
-       [:<>
-        (when (pos? idx) [:> Divider])
-        [:> ListItemButton
-         {:onClick #(==> [::events/select-page (:slug section) slug])
-          :sx #js{:py 1.5}}
-         [:> ListItemText
-          {:primary title
-           :secondary (if (empty? summary)
-                        (some #(when (= :text (:type %)) (:content %)) blocks)
-                        summary)
-           :primaryTypographyProps #js{:sx #js{:fontWeight 700}}
-           :secondaryTypographyProps #js{:sx #js{:overflow "hidden"
-                                                 :textOverflow "ellipsis"
-                                                 :display "-webkit-box"
-                                                 :WebkitLineClamp 2
-                                                 :WebkitBoxOrient "vertical"}}}]]])
-     (:pages section))]])
+  [LandingCardGrid
+   {:items (for [{:keys [slug title summary blocks]} (:pages section)]
+             {:slug slug
+              :title title
+              :text (if (empty? summary)
+                      (some #(when (= :text (:type %)) (:content %)) blocks)
+                      summary)})
+    :on-select #(==> [::events/select-page (:slug section) %])}])
 
 (r/defc SectionLanding
   [{:keys [section]}]
@@ -502,23 +531,14 @@
     [:> Stack {:spacing 2}
      [:> Typography {:variant "h4" :component "h1" :sx title-sx}
       (tr :help/headline)]
-     [:> Paper {:variant "outlined"}
-      [:> List {:disablePadding true}
-       (map-indexed
-        (fn [idx {:keys [slug title summary pages]}]
-          ^{:key slug}
-          [:<>
-           (when (pos? idx) [:> Divider])
-           [:> ListItemButton
-            {:onClick #(==> [::events/select-section slug])
-             :sx #js{:py 1.5}}
-            [:> ListItemText
-             {:primary title
-              :secondary (if (empty? summary)
-                           (str (count pages) " " (if (= 1 (count pages)) "sivu" "sivua"))
-                           summary)
-              :primaryTypographyProps #js{:sx #js{:fontWeight 700}}}]]])
-        tree)]]]))
+     [LandingCardGrid
+      {:items (for [{:keys [slug title summary pages]} tree]
+                {:slug slug
+                 :title title
+                 :text (if (empty? summary)
+                         (str (count pages) " " (if (= 1 (count pages)) "sivu" "sivua"))
+                         summary)})
+       :on-select #(==> [::events/select-section %])}]]))
 
 ;;; ——— Navigation ————————————————————————————————————————————————————
 
@@ -576,17 +596,25 @@
       [:> Typography {:variant "body2" :color "text.secondary" :sx #js{:p 2}}
        (tr :search/results-count 0)]
       [:> List {:disablePadding true :sx #js{:pb 2}}
-       ;; results come in tree order; partition-by keeps it
-       (for [matches (partition-by :section-slug results)]
-         ^{:key (:section-slug (first matches))}
+       (for [{:keys [section-slug section-title pages]} results]
+         ^{:key section-slug}
          [:<>
-          [:> ListSubheader {:disableSticky true} (:section-title (first matches))]
-          (for [{:keys [section-slug page]} matches]
+          ;; Section header navigates to the section landing — a match
+          ;; on the section title itself is a valid result.
+          [:> ListItemButton
+           {:onClick #(do (==> [::events/select-section section-slug])
+                          (when on-navigate (on-navigate)))
+            :sx #js{:py 1}}
+           [:> ListItemText
+            {:primary section-title
+             :primaryTypographyProps
+             #js{:sx #js{:fontWeight 700 :fontSize "0.875rem" :lineHeight 1.35}}}]]
+          (for [page pages]
             ^{:key (:slug page)}
             [:> ListItemButton
              {:onClick #(do (==> [::events/select-page section-slug (:slug page)])
                             (when on-navigate (on-navigate)))
-              :sx #js{:py 0.75}}
+              :sx #js{:pl 4 :py 0.75}}
              [:> ListItemText
               {:primary (:title page)
                :primaryTypographyProps
@@ -654,7 +682,7 @@
 
      ;; Content column
      [:> Box {:sx #js{:flex 1 :overflowY "auto" :minWidth 0}}
-      [:> Box {:sx #js{:maxWidth 900 :px #js{:xs 2 :md 4} :py 3}}
+      [:> Box {:sx #js{:maxWidth 1560 :px #js{:xs 2 :md 4} :py 3}}
 
        ;; Mobile: nav opener + breadcrumb back
        (when mobile?
