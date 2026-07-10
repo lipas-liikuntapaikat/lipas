@@ -82,8 +82,13 @@
                 (str/join " ")))
       (str/lower-case)))
 
+(defn- section-haystack [section]
+  (str/lower-case (str (:title section) " " (:summary section))))
+
 (rf/reg-sub ::search-results
-  ;; [{:section-slug .. :section-title .. :page ..} ...]
+  ;; [{:section-slug .. :section-title .. :pages [..]} ...] in tree
+  ;; order. A hit on the section title/summary surfaces the whole
+  ;; section (all its pages), not just pages whose own content matches.
   :<- [::display-tree]
   :<- [::search-term]
   (fn [[tree term] _]
@@ -91,8 +96,12 @@
       (let [q (str/lower-case (str/trim term))]
         (vec
          (for [section tree
-               page (:pages section)
-               :when (str/includes? (page-haystack page) q)]
+               :let [section-hit? (str/includes? (section-haystack section) q)
+                     pages (if section-hit?
+                             (:pages section)
+                             (filterv #(str/includes? (page-haystack %) q)
+                                      (:pages section)))]
+               :when (seq pages)]
            {:section-slug (:slug section)
             :section-title (:title section)
-            :page page}))))))
+            :pages pages}))))))

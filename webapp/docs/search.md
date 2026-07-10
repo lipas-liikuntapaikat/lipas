@@ -29,7 +29,7 @@ All index names are configured in `src/clj/lipas/backend/config.clj`:
 |-------------------------------|---------------------------------------|-----------------------|
 | `sports_sites_current`        | Main sports site search               | `:sports-site`        |
 | `legacy_sports_sites_current` | V1 API compatibility format           | `:legacy-sports-site` |
-| `analytics`                   | All revisions for analytics           | `:sports-sites`       |
+| `analytics`                   | All revisions for analytics           | `:analytics`          |
 | `lois`                        | Locations of Interest                 | `:lois`               |
 | `schools`                     | School data for reachability analysis | —                     |
 | `vaestoruutu_1km`             | Population grid (1km resolution)      | `:population-grid`    |
@@ -37,6 +37,8 @@ All index names are configured in `src/clj/lipas/backend/config.clj`:
 | `diversity`                   | Pre-calculated diversity indices      | custom                |
 | `subsidies`                   | Subsidy reporting data                | —                     |
 | `city_stats`                  | City-level statistics                 | —                     |
+| `lipas_kb_v1`                 | Help/assistant knowledge base          | `:kb`                 |
+| `assistant_logs`              | Assistant interaction logs             | `:assistant`          |
 
 ### Aliasing Strategy
 
@@ -44,7 +46,8 @@ Indexes use aliases for zero-downtime reindexing:
 1. Create new index with timestamp suffix (e.g., `search-2024-01-15t10-30-00`)
 2. Index all documents to new index
 3. Atomically swap alias to new index
-4. Delete old index
+4. Delete all stale concrete indexes for that alias/mode, including orphaned
+   failed-run indexes
 
 ## Mappings
 
@@ -56,7 +59,7 @@ The sports sites index uses **explicit mapping with strict mode** to prevent ind
 
 **Key characteristics:**
 - `dynamic: "strict"` - rejects queries on unmapped fields
-- `total_fields.limit: 300` - reduced from 2000
+- `total_fields.limit: 450`
 - All ~260 fields explicitly mapped
 
 **Mapping generation** (`search/generate-explicit-mapping`):
@@ -152,14 +155,20 @@ Multimethod dispatches on type-code for custom enrichment:
 ```
 1. Save sports-site!
    ↓
-2. Insert to sports_site table (new revision)
+2. Commit a published sports_site revision
    ↓
-3. core/enrich - Add :search-meta with resolved lookups
+3. Enqueue applicable post-commit jobs
    ↓
-4. search/index! - Send to sports_sites_current (sync or async)
+4. core/enrich - Add :search-meta with resolved lookups
    ↓
-5. If active status: Also index to legacy_sports_sites_current
+5. Synchronously index sports_sites_current
+   ↓
+6. Index legacy_sports_sites_current only for active or temporarily
+   out-of-service sites; delete other statuses from the legacy projection
 ```
+
+Draft saves skip this path. PTV synchronization is an exception that can index
+inside the database transaction before the ordinary post-commit index step.
 
 ## Query Patterns
 
@@ -168,7 +177,7 @@ Multimethod dispatches on type-code for custom enrichment:
 ```clojure
 (search/search client "sports_sites_current"
   {:size 100
-   :query {:bool {:filter [{:term {:status.keyword "active"}}]}}})
+   :query {:bool {:filter [{:term {:status "active"}}]}}})
 ```
 
 ### Full-Text with Field Boosting
@@ -250,7 +259,7 @@ Multimethod dispatches on type-code for custom enrichment:
 1. **Create timestamped index**: `search-2024-01-15t10-30-00`
 2. **Bulk index by type-code**: Iterates all ~250 type codes
 3. **Swap alias**: Atomically point alias to new index
-4. **Delete old indexes**: Clean up previous indexes
+4. **Delete stale indexes**: Clean up previous and orphaned failed-run indexes
 
 ### Bulk Indexing
 
