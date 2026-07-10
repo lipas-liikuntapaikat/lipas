@@ -312,6 +312,18 @@
 (def ugly-keys
   #{:length-km-pc :length-km-avg :sites-count-p1000c :area-m2-pc :area-m2-avg})
 
+(defn- tooltip-flip-props
+  "Recharts pins a tooltip that is taller than the chart to the chart top,
+  letting it spill below the chart and grow the document on every hover.
+  The appearing/disappearing scrollbar re-layouts the page and makes the
+  tooltip flicker on browsers with classic scrollbars. When the chart may
+  be too short to contain the tooltip (~600px for the tallest tooltips),
+  open the tooltip upwards instead."
+  [chart-height]
+  (when (< chart-height 600)
+    {:allowEscapeViewBox {:x false :y true}
+     :reverseDirection   {:x false :y true}}))
+
 (defn sports-stats-tooltip [labels props]
   (let [->formatter (fn [k] (if (ugly-keys k) utils/round-safe identity))
         payload-fn  (fn [payload]
@@ -336,17 +348,20 @@
                      :city-name
                      :type-name)
         precision (if (= metric "length-km-pc") 8 2)
-        formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))]
+        formatter (when (ugly-keys (keyword metric)) #(utils/round-safe % precision))
+        height    (+ 60 (* 30 (count data)))
+        tooltip-props (merge {:content (fn [^js props] (sports-stats-tooltip labels props))}
+                             (tooltip-flip-props height))]
     [:> ResponsiveContainer
      {:width "100%"
-      :height (+ 60 (* 30 (count data)))}
+      :height height}
      [:> BarChart
       {:data     data
        :layout   "vertical"
        :margin   margin
        :on-click on-click}
       [:> Legend {:content (fn [^js props] (legend labels props))}]
-      [:> Tooltip {:content (fn [^js props] (sports-stats-tooltip labels props))}]
+      [:> Tooltip tooltip-props]
       [:> XAxis {:tick font-styles :type "number"}]
       [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> Bar {:dataKey (keyword metric) :fill "orange"}
@@ -381,11 +396,13 @@
 (defn finance-ranking-chart
   [{:keys [data labels metric]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
-        y-axis-key :region]
-    [:> ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+        y-axis-key :region
+        height     (+ 60 (* 48 (count data)))]
+    [:> ResponsiveContainer {:width "100%" :height height}
      [:> BarChart {:data data :layout "vertical" :margin margin}
       [:> Legend {:content (fn [^js props] (legend labels props))}]
-      [:> Tooltip {:content (fn [^js props] (finance-tooltip labels props))}]
+      [:> Tooltip (merge {:content (fn [^js props] (finance-tooltip labels props))}
+                         (tooltip-flip-props height))]
       [:> XAxis {:tick font-styles :type "number"}]
       [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> Bar {:dataKey (keyword metric) :fill (get colors (keyword metric))}
@@ -428,11 +445,13 @@
 (defn subsidies-ranking-chart
   [{:keys [data labels on-click]}]
   (let [margin     {:top 5 :right 100 :bottom 5 :left 100}
-        y-axis-key :group]
-    [:> ResponsiveContainer {:width "100%" :height (+ 60 (* 48 (count data)))}
+        y-axis-key :group
+        height     (+ 60 (* 48 (count data)))]
+    [:> ResponsiveContainer {:width "100%" :height height}
      [:> BarChart {:data data :layout "vertical" :margin margin :on-click on-click}
       [:> Legend {:content (fn [^js props] (legend labels props))}]
-      [:> Tooltip {:content (fn [^js props] (labeled-tooltip labels props))}]
+      [:> Tooltip (merge {:content (fn [^js props] (labeled-tooltip labels props))}
+                         (tooltip-flip-props height))]
       [:> XAxis {:tick font-styles :type "number"}]
       [:> YAxis {:dataKey y-axis-key :type "category" :tick font-styles}]
       [:> Bar {:dataKey :amount :fill "#0a9bff"}
