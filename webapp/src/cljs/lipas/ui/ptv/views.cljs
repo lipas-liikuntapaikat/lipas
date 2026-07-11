@@ -1919,7 +1919,12 @@
          :value v
          :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
          :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-         :error (> (count v) ptv-data/max-user-instruction-length)}])]))
+         :error (> (count v) ptv-data/max-user-instruction-length)}])
+
+     ;; Auditor feedback for user instruction
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :user-instruction}]]))
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]

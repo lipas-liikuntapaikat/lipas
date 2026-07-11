@@ -15,6 +15,10 @@ Kuvaus (Description):
   - Hyväksytty: {{desc-approved}} kpl
   - Muutospyynnöt: {{desc-changes}} kpl
 
+Toimintaohje (UserInstruction):
+  - Hyväksytty: {{ui-approved}} kpl
+  - Muutospyynnöt: {{ui-changes}} kpl
+
 Voit tarkastella auditoituja palveluja ja tehdä tarvittavat muutokset osoitteessa:
 https://lipas.fi
 

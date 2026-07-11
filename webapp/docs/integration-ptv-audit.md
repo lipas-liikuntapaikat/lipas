@@ -704,16 +704,50 @@ first, which assigns the adopted source-id.
    org's PTV managers with service-audit counts (template
    `ptv_service_audit_complete_fi`).
 
+### Whose-move workflow (sites AND services)
+
+Auditors sample: they pick a subset of sites/services into the audit rather
+than auditing everything. The audit view is organized around **whose move it
+is** (GitHub-review style), identically for both sections:
+
+| Bucket | Rule | Whose move |
+|---|---|---|
+| Odottaa auditointia | content-ready but unaudited, partially audited, or content changed since a verdict | auditor |
+| Odottaa korjausta | changes requested, content unchanged | municipality |
+| Valmiit | every required field approved and unchanged | nobody |
+
+Mechanics (all derived, nothing stored beyond the audit map):
+
+- **Scope is implicit**: the first saved verdict pulls an item into the
+  sample. "Odottaa auditointia" shows every content-ready item, with
+  in-flight items (partially audited or changed since a verdict) sorted
+  first so re-audits don't drown among untouched items. (The API also
+  accepts an empty audit — timestamp/auditor-id only — as an explicit
+  scope marker, but the UI doesn't use it.)
+- **Per-revision verdicts**: each field verdict carries an
+  `:audited-content` snapshot of the localized text it was given on
+  (`audit-field` schema). `lipas.data.ptv/audit-field-state` compares the
+  snapshot against current content: any edit makes the verdict `:stale`,
+  which moves the item back to *Odottaa auditointia* with a "Muuttunut
+  auditoinnin jälkeen" chip, and the audit form shows a word diff of what
+  changed since the verdict. Verdicts saved before snapshots existed are
+  grandfathered as unchanged.
+- **Bucket rollup**: `lipas.data.ptv/audit-bucket` over
+  `site-audit-fields`/`service-audit-fields` (Toimintaohje is required only
+  when the service has one).
+- Notification stats tally over the whole sample.
+
 ### UI
 
-- The Audit tab has a **Liikuntapaikat | Palvelut** section selector; the
-  Services section mirrors the site flow (Todo/Completed lists,
-  per-field approve/changes-requested + feedback, single save).
+- The Audit tab has a **Liikuntapaikat | Palvelut** section selector; both
+  sections use the whose-move buckets + picker described above, with
+  per-field approve/changes-requested + feedback and a single save.
 - Stored docs live in app-db at `[:ptv :org <ptv-org-id> :data :service-docs]`
   keyed by `(str service-id)`; `::auditable-services` joins them with the live
   `::services` list.
 - Auditor feedback surfaces to PTV managers in the PALVELUT tab under the
-  Summary and Description fields (`service-audit-feedback-component`).
+  Summary, Description and Toimintaohje fields
+  (`service-audit-feedback-component`).
 
 ### Backfill
 

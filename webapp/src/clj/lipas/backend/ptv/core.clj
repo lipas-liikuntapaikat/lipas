@@ -833,7 +833,9 @@
                :summary-approved (str (get-in stats [:summary :approved]))
                :summary-changes (str (get-in stats [:summary :changes-requested]))
                :desc-approved (str (get-in stats [:description :approved]))
-               :desc-changes (str (get-in stats [:description :changes-requested]))}))
+               :desc-changes (str (get-in stats [:description :changes-requested]))
+               :ui-approved (str (get-in stats [:user-instruction :approved] 0))
+               :ui-changes (str (get-in stats [:user-instruction :changes-requested] 0))}))
           {:sent (count managers)
            :recipients (map :email managers)})
         (do

@@ -702,45 +702,45 @@
 (rf/reg-sub ::selected-audit-tab
   :<- [::ptv]
   (fn [ptv _]
-    (get-in ptv [:audit :selected-tab] "todo")))
+    (get-in ptv [:audit :selected-tab] "waiting-audit")))
+
+;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
+;; an item is in the audit sample when it has an audit record; within the
+;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
+;; :waiting-fixes (municipality's move) or :done (all approved, unchanged).
+
+(defn- site-has-audit-content? [site]
+  (and (some-> site :ptv :summary :fi count (> 5))
+       (some-> site :ptv :description :fi count (> 5))))
 
 (rf/reg-sub ::auditable-sites
-  (fn [[_ org-id status]]
+  (fn [[_ _org-id _bucket]]
     [(rf/subscribe [::ptv])])
-  (fn [[ptv] [_ org-id status]]
-    (let [sites (get-in ptv [:org org-id :data :sports-sites] {})
+  (fn [[ptv] [_ org-id bucket]]
+    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
+         (filter (fn [site]
+                   (let [b (ptv-data/audit-bucket
+                            (get-in site [:ptv :audit])
+                            (ptv-data/site-audit-fields site))]
+                     (if (= :waiting-audit bucket)
+                       ;; The auditor's queue also contains every
+                       ;; content-ready site not audited yet — the first
+                       ;; verdict is what pulls an item into the sample.
+                       (or (= :waiting-audit b)
+                           (and (nil? b) (site-has-audit-content? site)))
+                       (= bucket b)))))
+         ;; in-flight items (partially audited / changed since verdict) first
+         (sort-by (juxt (fn [site]
+                          (if (get-in site [:ptv :audit :timestamp]) 0 1))
+                        :name)))))
 
-          filter-fn (case status
-                      ;; Sites with content but not audited yet
-                      :todo (fn [site]
-                              (let [ptv (:ptv site)]
-                                (and
-                                 ;; Has summary and description content
-                                  (some-> ptv :summary :fi count (> 5))
-                                  (some-> ptv :description :fi count (> 5))
-                                 ;; Not already audited
-                                  (or (nil? (get-in ptv [:audit :summary :status]))
-                                      (nil? (get-in ptv [:audit :description :status]))))))
-
-                      ;; Sites that have been fully audited
-                      :completed (fn [site]
-                                   (let [ptv (:ptv site)]
-                                     (and
-                                      ;; Has audit data for both summary and description
-                                       (some? (get-in ptv [:audit :summary :status]))
-                                       (some? (get-in ptv [:audit :description :status])))))
-
-                      ;; All sites with PTV content
-                      (fn [site]
-                        (let [ptv (:ptv site)]
-                          (and
-                            (some-> ptv :summary :fi count (> 5))
-                            (some-> ptv :description :fi count (> 5))))))]
-
-      ;; Apply filter and sort by name
-      (->> (vals sites)
-           (filter filter-fn)
-           (sort-by :name)))))
+(rf/reg-sub ::audit-sample-sites
+  ;; every site in the audit sample, regardless of bucket
+  (fn [[_ _org-id]]
+    [(rf/subscribe [::ptv])])
+  (fn [[ptv] [_ org-id]]
+    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
+         (filter #(some? (get-in % [:ptv :audit :timestamp]))))))
 
 (rf/reg-sub ::sending-notification?
   :<- [::audit]
@@ -754,7 +754,7 @@
 
 (rf/reg-sub ::audit-stats
   (fn [[_ org-id]]
-    (rf/subscribe [::auditable-sites org-id :completed]))
+    (rf/subscribe [::audit-sample-sites org-id]))
   (fn [sites _]
     (let [tally-fn (fn [field status]
                      (count (filter #(= status (get-in % [:ptv :audit field :status])) sites)))]
@@ -793,7 +793,7 @@
          ;; Backend adds metadata (:timestamp, :auditor-id) — validate only
          ;; the user-editable fields, like ::site-audit-data-valid? does.
          (m/validate ptv-schema/audit-data
-                     (select-keys audit-data [:summary :description])))))
+                     (select-keys audit-data [:summary :description :user-instruction])))))
 
 (rf/reg-sub ::selected-audit-section
   :<- [::ptv]
@@ -805,38 +805,53 @@
   (fn [ptv _]
     (:selected-audit-service ptv)))
 
-(rf/reg-sub ::auditable-services
-  (fn [[_ org-id _status]]
+(rf/reg-sub ::services-with-audit
+  ;; LIPAS-managed/adopted services joined with their stored audit
+  (fn [[_ org-id]]
     [(rf/subscribe [::services org-id])
      (rf/subscribe [::service-docs org-id])])
-  (fn [[services docs] [_ _ status]]
-    (let [with-audit (->> services
-                          ;; Only LIPAS-managed/adopted services form auditable lineages
-                          (filter #(some-> % :source-id (str/starts-with? "lipas-")))
-                          (map (fn [svc]
-                                 (assoc svc :audit
-                                        (get-in docs [(str (:service-id svc)) :document :audit])))))
-          has-content? (fn [svc]
-                         (and (some-> svc :summary :fi count (> 5))
-                              (some-> svc :description :fi count (> 5))))
-          filter-fn (case status
-                      ;; Services with content but not fully audited yet
-                      :todo (fn [svc]
-                              (and (has-content? svc)
-                                   (or (nil? (get-in svc [:audit :summary :status]))
-                                       (nil? (get-in svc [:audit :description :status])))))
-                      ;; Services that have been fully audited
-                      :completed (fn [svc]
-                                   (and (some? (get-in svc [:audit :summary :status]))
-                                        (some? (get-in svc [:audit :description :status]))))
-                      has-content?)]
-      (->> with-audit
-           (filter filter-fn)
-           (sort-by :label)))))
+  (fn [[services docs] _]
+    (->> services
+         (filter #(some-> % :source-id (str/starts-with? "lipas-")))
+         (map (fn [svc]
+                (assoc svc :audit
+                       (get-in docs [(str (:service-id svc)) :document :audit])))))))
+
+(defn- service-has-audit-content? [svc]
+  (and (some-> svc :summary :fi count (> 5))
+       (some-> svc :description :fi count (> 5))))
+
+(rf/reg-sub ::auditable-services
+  (fn [[_ org-id _bucket]]
+    (rf/subscribe [::services-with-audit org-id]))
+  (fn [services [_ _ bucket]]
+    (->> services
+         (filter (fn [svc]
+                   (let [b (ptv-data/audit-bucket
+                            (:audit svc)
+                            (ptv-data/service-audit-fields svc))]
+                     (if (= :waiting-audit bucket)
+                       ;; The auditor's queue also contains every
+                       ;; content-ready service not audited yet — the first
+                       ;; verdict is what pulls an item into the sample.
+                       (or (= :waiting-audit b)
+                           (and (nil? b) (service-has-audit-content? svc)))
+                       (= bucket b)))))
+         ;; in-flight items (partially audited / changed since verdict) first
+         (sort-by (juxt (fn [svc]
+                          (if (get-in svc [:audit :timestamp]) 0 1))
+                        :label)))))
+
+(rf/reg-sub ::audit-sample-services
+  ;; every service in the audit sample, regardless of bucket
+  (fn [[_ org-id]]
+    (rf/subscribe [::services-with-audit org-id]))
+  (fn [services _]
+    (filter #(some? (get-in % [:audit :timestamp])) services)))
 
 (rf/reg-sub ::service-audit-stats
   (fn [[_ org-id]]
-    (rf/subscribe [::auditable-services org-id :completed]))
+    (rf/subscribe [::audit-sample-services org-id]))
   (fn [services _]
     (let [tally-fn (fn [field status]
                      (count (filter #(= status (get-in % [:audit field :status])) services)))]
@@ -844,7 +859,9 @@
        :summary {:approved (tally-fn :summary "approved")
                  :changes-requested (tally-fn :summary "changes-requested")}
        :description {:approved (tally-fn :description "approved")
-                     :changes-requested (tally-fn :description "changes-requested")}})))
+                     :changes-requested (tally-fn :description "changes-requested")}
+       :user-instruction {:approved (tally-fn :user-instruction "approved")
+                          :changes-requested (tally-fn :user-instruction "changes-requested")}})))
 
 (rf/reg-sub ::service-notification-sent?
   :<- [::audit]

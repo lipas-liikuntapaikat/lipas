@@ -743,3 +743,94 @@
       (is (= :ok (status (-> base
                              (assoc-in [:ptv :publishing-status] "Published")
                              (assoc-in [:ptv :sync-enabled] true))))))))
+
+(deftest audit-field-state-test
+  (testing "no verdict -> :pending"
+    (is (= :pending (sut/audit-field-state nil {:fi "x"})))
+    (is (= :pending (sut/audit-field-state {:feedback ""} {:fi "x"}))))
+
+  (testing "verdict without snapshot is grandfathered as unchanged"
+    (is (= :approved (sut/audit-field-state {:status "approved" :feedback ""} {:fi "x"})))
+    (is (= :changes-requested (sut/audit-field-state {:status "changes-requested" :feedback "fix"} {:fi "x"}))))
+
+  (testing "verdict with matching snapshot"
+    (is (= :approved (sut/audit-field-state {:status "approved"
+                                             :feedback ""
+                                             :audited-content {:fi "x"}}
+                                            {:fi "x"}))))
+
+  (testing "content changed since verdict -> :stale"
+    (is (= :stale (sut/audit-field-state {:status "approved"
+                                          :feedback ""
+                                          :audited-content {:fi "x"}}
+                                         {:fi "y"})))
+    (is (= :stale (sut/audit-field-state {:status "changes-requested"
+                                          :feedback "fix"
+                                          :audited-content {:fi "x"}}
+                                         {:fi "x" :se "ny svensk text"}))))
+
+  (testing "blank/nil localized entries do not count as change"
+    (is (= :approved (sut/audit-field-state {:status "approved"
+                                             :feedback ""
+                                             :audited-content {:fi "x" :se ""}}
+                                            {:fi "x" :se nil})))))
+
+(deftest audit-bucket-test
+  (let [fields (fn [svc] (sut/service-audit-fields svc))
+        svc {:summary {:fi "tiivistelmä"}
+             :description {:fi "kuvaus"}
+             :user-instruction {:fi "ohje"}}
+        approved (fn [content] {:status "approved" :feedback "" :audited-content content})
+        changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})]
+
+    (testing "no audit record -> not in sample (nil)"
+      (is (nil? (sut/audit-bucket nil (fields svc)))))
+
+    (testing "scoped via empty audit -> waiting-audit"
+      (is (= :waiting-audit (sut/audit-bucket {:timestamp "2026-07-11T00:00:00.000Z"
+                                               :auditor-id "a"}
+                                              (fields svc)))))
+
+    (testing "partially audited -> waiting-audit"
+      (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                               :summary (approved (:summary svc))}
+                                              (fields svc)))))
+
+    (testing "changes requested, content unchanged -> waiting-fixes"
+      (is (= :waiting-fixes (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                               :summary (changes (:summary svc))
+                                               :description (approved (:description svc))
+                                               :user-instruction (approved (:user-instruction svc))}
+                                              (fields svc)))))
+
+    (testing "all approved and unchanged -> done"
+      (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                      :summary (approved (:summary svc))
+                                      :description (approved (:description svc))
+                                      :user-instruction (approved (:user-instruction svc))}
+                                     (fields svc)))))
+
+    (testing "approved but content edited afterwards -> back to waiting-audit"
+      (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                               :summary (approved {:fi "vanha tiivistelmä"})
+                                               :description (approved (:description svc))
+                                               :user-instruction (approved (:user-instruction svc))}
+                                              (fields svc)))))
+
+    (testing "toimintaohje not required when the service has none"
+      (let [svc' (dissoc svc :user-instruction)]
+        (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                        :summary (approved (:summary svc'))
+                                        :description (approved (:description svc'))}
+                                       (fields svc'))))))
+
+    (testing "site fields spec works the same way"
+      (let [site {:ptv {:summary {:fi "s"} :description {:fi "d"}}}]
+        (is (= :done (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                        :summary (approved {:fi "s"})
+                                        :description (approved {:fi "d"})}
+                                       (sut/site-audit-fields site))))
+        (is (= :waiting-audit (sut/audit-bucket {:timestamp "t" :auditor-id "a"
+                                                 :summary (approved {:fi "muokattu"})
+                                                 :description (approved {:fi "d"})}
+                                                (sut/site-audit-fields site))))))))

@@ -774,7 +774,8 @@
                :service-id service-id
                :name {:fi "Pallokentät"}
                :summary (or summary {:fi "Tiivistelmä"})
-               :description {:fi "Kuvaus"}}}))
+               :description {:fi "Kuvaus"}
+               :user-instruction {:fi "Toimintaohje"}}}))
 
 (defn- post-service-audit
   [token body]
@@ -796,13 +797,16 @@
                                           :service-id svc-id
                                           :source-id source-id
                                           :audit {:summary audit-data
-                                                  :description audit-data}})
+                                                  :description audit-data
+                                                  :user-instruction audit-data}})
           body (tu/safe-parse-json resp)
           current (ptv-service-db/get-current (test-db) (:id org) source-id)]
       (is (= 200 (:status resp)))
       (is (contains? body :timestamp))
       (is (= (str (:id auditor)) (:auditor-id body)))
       (is (= audit-data (:summary body)))
+      (is (= audit-data (:user-instruction body)))
+      (is (= "approved" (get-in current [:document :audit :user-instruction :status])))
       ;; Audit persisted onto a new revision
       (is (= "approved" (get-in current [:document :audit :summary :status])))
       ;; Previous revision's content carried into the audit revision
@@ -839,6 +843,48 @@
       (is (= {:fi "Kuntosalit"} (get-in current [:document :name])))
       (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
       (is (= "changes-requested" (get-in current [:document :audit :summary :status]))))))
+
+(deftest save-ptv-service-audit-scoping-test
+  (testing "An empty audit marks the service as part of the audit sample"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id svc-id
+                                          :audit {}})
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (contains? body :timestamp))
+      (is (= (str (:id auditor)) (:auditor-id body)))
+      ;; No verdicts, just the scope stamp
+      (is (nil? (:summary body)))
+      (is (some? (get-in current [:document :audit :timestamp])))
+      (is (nil? (get-in current [:document :audit :summary]))))))
+
+(deftest save-ptv-service-audit-snapshot-test
+  (testing "Per-field :audited-content snapshots round-trip"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          audit {:summary {:status "approved"
+                           :feedback ""
+                           :audited-content {:fi "Tiivistelmä"}}}
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id svc-id
+                                          :audit audit})
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (= {:fi "Tiivistelmä"} (get-in body [:summary :audited-content])))
+      (is (= {:fi "Tiivistelmä"}
+             (get-in current [:document :audit :summary :audited-content]))))))
 
 (deftest save-ptv-service-audit-not-found-test
   (testing "Returns 404 when the org is unknown"
