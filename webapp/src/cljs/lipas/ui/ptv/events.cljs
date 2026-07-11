@@ -1631,8 +1631,20 @@
                          ;; Initialize feedback to empty string if not present (schema requires it)
           (update-in (conj path :feedback) #(or % ""))))))
 
+(defn- with-audited-content
+  "Stamp the currently-shown content into each field that carries a verdict,
+   so approvals are anchored to a revision: a later content edit makes the
+   verdict stale (see lipas.data.ptv/audit-field-state)."
+  [audit-data contents]
+  (reduce-kv (fn [m field content]
+               (cond-> m
+                 (get-in m [field :status])
+                 (assoc-in [field :audited-content] content)))
+             audit-data
+             contents))
+
 (rf/reg-event-fx ::save-ptv-audit
-  (fn [{:keys [db]} [_ lipas-id audit-data]]
+  (fn [{:keys [db]} [_ lipas-id audit-data contents]]
     ;; Validation strategy (defense in depth):
     ;; 1. UI input constraints (TextField maxLength)
     ;; 2. Save button state (::site-audit-data-valid? subscription using Malli)
@@ -1647,11 +1659,13 @@
                 :headers {:Authorization (str "Token " token)}
                 :uri (str (:backend-url db) "/actions/save-ptv-audit")
                 :params {:lipas-id lipas-id
-                         :audit audit-data}
+                         :audit (-> (select-keys audit-data [:summary :description])
+                                    (with-audited-content contents))}
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success [::save-ptv-audit-success lipas-id]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
+
 
 (rf/reg-event-fx ::save-ptv-audit-success
   (fn [{:keys [db]} [_ lipas-id resp]]
@@ -1776,7 +1790,7 @@
       (assoc-in db (conj path :feedback) value))))
 
 (rf/reg-event-fx ::save-ptv-service-audit
-  (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data]}]]
+  (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data contents]}]]
     (let [token (-> db :user :login :token)
           lipas-org-id (get-in db [:ptv :selected-org :id])]
       (when (seq audit-data)
@@ -1788,11 +1802,13 @@
                 :params {:org-id (if (string? lipas-org-id) (uuid lipas-org-id) lipas-org-id)
                          :service-id (if (string? service-id) (uuid service-id) service-id)
                          :source-id source-id
-                         :audit (select-keys audit-data [:summary :description])}
+                         :audit (-> (select-keys audit-data [:summary :description :user-instruction])
+                                    (with-audited-content contents))}
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success [::save-ptv-service-audit-success (str service-id)]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
+
 
 (rf/reg-event-fx ::save-ptv-service-audit-success
   (fn [{:keys [db]} [_ service-id resp]]

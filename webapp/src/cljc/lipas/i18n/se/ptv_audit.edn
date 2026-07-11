@@ -38,4 +38,8 @@
  :select-service-prompt "Välj en tjänst från listan för att se dess uppgifter",
  :no-services "Inga tjänster",
  :no-services-to-audit "Inga tjänster att granska",
- :no-audited-services "Inga granskade tjänster"}
+ :no-audited-services "Inga granskade tjänster",
+ :waiting-audit-tab "Väntar på granskning",
+ :waiting-fixes-tab "Väntar på korrigering",
+ :done-tab "Färdiga",
+ :changed-since-audit "Ändrad efter granskningen"}
