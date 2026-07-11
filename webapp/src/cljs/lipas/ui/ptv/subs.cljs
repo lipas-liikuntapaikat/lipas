@@ -763,3 +763,90 @@
                  :changes-requested (tally-fn :summary "changes-requested")}
        :description {:approved (tally-fn :description "approved")
                      :changes-requested (tally-fn :description "changes-requested")}})))
+
+;; PTV Service audit subs
+
+(rf/reg-sub ::service-docs
+  (fn [db [_ org-id]]
+    (get-in db [:ptv :org org-id :data :service-docs])))
+
+(rf/reg-sub ::service-audit-data
+  (fn [db [_ service-id]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit]))))
+
+(rf/reg-sub ::service-audit-field-status
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :status]))))
+
+(rf/reg-sub ::service-audit-field-feedback
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :feedback]))))
+
+(rf/reg-sub ::service-audit-data-valid?
+  (fn [[_ service-id]]
+    (rf/subscribe [::service-audit-data service-id]))
+  (fn [audit-data _]
+    (and (seq audit-data)
+         ;; Backend adds metadata (:timestamp, :auditor-id) — validate only
+         ;; the user-editable fields, like ::site-audit-data-valid? does.
+         (m/validate ptv-schema/audit-data
+                     (select-keys audit-data [:summary :description])))))
+
+(rf/reg-sub ::selected-audit-section
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:audit :selected-section] "sites")))
+
+(rf/reg-sub ::selected-audit-service
+  :<- [::ptv]
+  (fn [ptv _]
+    (:selected-audit-service ptv)))
+
+(rf/reg-sub ::auditable-services
+  (fn [[_ org-id _status]]
+    [(rf/subscribe [::services org-id])
+     (rf/subscribe [::service-docs org-id])])
+  (fn [[services docs] [_ _ status]]
+    (let [with-audit (->> services
+                          ;; Only LIPAS-managed/adopted services form auditable lineages
+                          (filter #(some-> % :source-id (str/starts-with? "lipas-")))
+                          (map (fn [svc]
+                                 (assoc svc :audit
+                                        (get-in docs [(str (:service-id svc)) :document :audit])))))
+          has-content? (fn [svc]
+                         (and (some-> svc :summary :fi count (> 5))
+                              (some-> svc :description :fi count (> 5))))
+          filter-fn (case status
+                      ;; Services with content but not fully audited yet
+                      :todo (fn [svc]
+                              (and (has-content? svc)
+                                   (or (nil? (get-in svc [:audit :summary :status]))
+                                       (nil? (get-in svc [:audit :description :status])))))
+                      ;; Services that have been fully audited
+                      :completed (fn [svc]
+                                   (and (some? (get-in svc [:audit :summary :status]))
+                                        (some? (get-in svc [:audit :description :status]))))
+                      has-content?)]
+      (->> with-audit
+           (filter filter-fn)
+           (sort-by :label)))))
+
+(rf/reg-sub ::service-audit-stats
+  (fn [[_ org-id]]
+    (rf/subscribe [::auditable-services org-id :completed]))
+  (fn [services _]
+    (let [tally-fn (fn [field status]
+                     (count (filter #(= status (get-in % [:audit field :status])) services)))]
+      {:total-services (count services)
+       :summary {:approved (tally-fn :summary "approved")
+                 :changes-requested (tally-fn :summary "changes-requested")}
+       :description {:approved (tally-fn :description "approved")
+                     :changes-requested (tally-fn :description "changes-requested")}})))
+
+(rf/reg-sub ::service-notification-sent?
+  :<- [::audit]
+  (fn [audit _]
+    (:service-notification-sent? audit)))

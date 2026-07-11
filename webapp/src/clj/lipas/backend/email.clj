@@ -32,7 +32,11 @@
     :ptv-audit-complete
     {:subject "PTV-auditointi valmistunut"
      :html    (safe-slurp "email_templates/ptv_audit_complete_fi.html")
-     :text    (safe-slurp "email_templates/ptv_audit_complete_fi.txt")}}})
+     :text    (safe-slurp "email_templates/ptv_audit_complete_fi.txt")}
+    :ptv-service-audit-complete
+    {:subject "PTV-palvelujen auditointi valmistunut"
+     :html    (safe-slurp "email_templates/ptv_service_audit_complete_fi.html")
+     :text    (safe-slurp "email_templates/ptv_service_audit_complete_fi.txt")}}})
 
 (defn send*!
   "Thin wrapper for postal."
@@ -216,6 +220,31 @@
                                 :html
                                 (str/replace "{{org-name}}" org-name)
                                 (str/replace "{{site-count}}" site-count)
+                                (str/replace "{{summary-approved}}" summary-approved)
+                                (str/replace "{{summary-changes}}" summary-changes)
+                                (str/replace "{{desc-approved}}" desc-approved)
+                                (str/replace "{{desc-changes}}" desc-changes))}))
+
+(defn send-ptv-service-audit-complete-email!
+  [emailer to {:keys [org-name service-count summary-approved summary-changes desc-approved desc-changes]}]
+  (.send! emailer {:subject (-> templates :fi :ptv-service-audit-complete :subject)
+                   :to      to
+                   :plain   (-> templates
+                                :fi
+                                :ptv-service-audit-complete
+                                :text
+                                (str/replace "{{org-name}}" org-name)
+                                (str/replace "{{service-count}}" service-count)
+                                (str/replace "{{summary-approved}}" summary-approved)
+                                (str/replace "{{summary-changes}}" summary-changes)
+                                (str/replace "{{desc-approved}}" desc-approved)
+                                (str/replace "{{desc-changes}}" desc-changes))
+                   :html    (-> templates
+                                :fi
+                                :ptv-service-audit-complete
+                                :html
+                                (str/replace "{{org-name}}" org-name)
+                                (str/replace "{{service-count}}" service-count)
                                 (str/replace "{{summary-approved}}" summary-approved)
                                 (str/replace "{{summary-changes}}" summary-changes)
                                 (str/replace "{{desc-approved}}" desc-approved)

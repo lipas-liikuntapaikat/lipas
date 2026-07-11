@@ -29,4 +29,13 @@
  :description-needs-changes "Description needs changes. See comments below the field.",
  :auditor-feedback "Auditor feedback",
  :auditor-feedback-changes-requested "Auditor feedback — changes requested",
- :auditor-feedback-approved "Auditor feedback — approved"}
+ :auditor-feedback-approved "Auditor feedback — approved",
+ :sites-section "Sports facilities",
+ :services-section "Services",
+ :services-to-audit "Services to audit",
+ :audited-services "Audited services",
+ :select-service "Select a service to audit",
+ :select-service-prompt "Select a service from the list to see its details",
+ :no-services "No services",
+ :no-services-to-audit "No services to audit",
+ :no-audited-services "No audited services"}
