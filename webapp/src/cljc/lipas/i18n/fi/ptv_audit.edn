@@ -38,4 +38,8 @@
  :select-service-prompt "Valitse palvelu listasta nähdäksesi sen tiedot",
  :no-services "Ei palveluja",
  :no-services-to-audit "Ei auditoitavia palveluja",
- :no-audited-services "Ei auditoituja palveluja"}
+ :no-audited-services "Ei auditoituja palveluja",
+ :waiting-audit-tab "Odottaa auditointia",
+ :waiting-fixes-tab "Odottaa korjausta",
+ :done-tab "Valmiit",
+ :changed-since-audit "Muuttunut auditoinnin jälkeen"}

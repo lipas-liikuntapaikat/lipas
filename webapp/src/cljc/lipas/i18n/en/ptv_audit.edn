@@ -38,4 +38,8 @@
  :select-service-prompt "Select a service from the list to see its details",
  :no-services "No services",
  :no-services-to-audit "No services to audit",
- :no-audited-services "No audited services"}
+ :no-audited-services "No audited services",
+ :waiting-audit-tab "Awaiting audit",
+ :waiting-fixes-tab "Awaiting fixes",
+ :done-tab "Completed",
+ :changed-since-audit "Changed since audit"}

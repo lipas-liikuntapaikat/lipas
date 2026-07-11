@@ -324,7 +324,9 @@
                           [:stats [:map
                                    [:total-services :int]
                                    [:summary [:map [:approved :int] [:changes-requested :int]]]
-                                   [:description [:map [:approved :int] [:changes-requested :int]]]]]]}
+                                   [:description [:map [:approved :int] [:changes-requested :int]]]
+                                   [:user-instruction {:optional true}
+                                    [:map [:approved :int] [:changes-requested :int]]]]]]}
       :handler
       (fn [req]
         (let [params (-> req :parameters :body)
