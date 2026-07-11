@@ -167,24 +167,40 @@ No fetch-merge-write step. The payload is built from LIPAS state alone.
 
 ### Inbound: drift detection only (PTV → cache)
 
-1. Periodically (or on UI load) the backend fetches the org's PTV
-   ServiceChannels and Services via PTV list endpoints.
-2. Responses are cached server-side per organization, keyed by PTV UUID.
-3. The frontend reads from this cache through subscriptions.
-4. `compute-service-channel-drift` (cljc) compares each LIPAS site's
+1. On UI load the backend fetches the org's PTV ServiceChannels and Services
+   via PTV list endpoints and returns them to the frontend.
+2. The frontend caches the responses in re-frame app-db per organization,
+   keyed by PTV UUID. (There is no server-side cache.)
+3. `compute-service-channel-drift` (cljc) compares each LIPAS site's
    *would-be-pushed* values to the cached PTV-side values, returning a
    structured per-field diff.
 
-PTV state is read for visibility only. **It is never written back into the
-LIPAS DB.** This is what differentiates "drift visibility" from "two-way
-sync."
+PTV-side edits are read for visibility only. **They are never written back
+into the LIPAS DB.** This is what differentiates "drift visibility" from
+"two-way sync."
+
+### Shadow store for Services (`ptv_service`)
+
+PTV Services now have a durable LIPAS-side record: the append-only
+`ptv_service` table (revisions keyed by `(org_id, source_id)`, latest exposed
+via the `ptv_service_current` view). Every successful Service write shadows
+the **LIPAS-managed subset** of the PTV response (names, descriptions,
+languages, publishing status — `lipas.data.ptv/->service-document`) into a new
+revision, and Service audits are stored on the same document (`:audit`, same
+schema as site audits). This does not violate the one-way principle: what is
+persisted is LIPAS's own pushed state (plus a one-time lazy snapshot at
+audit time), never kunta-side PTV edits. PTV remains authoritative for all
+non-LIPAS-managed Service fields (ontology terms, service classes, target
+groups, ...). See `integration-ptv-audit.md` → "Service Audits".
 
 ## Module layout
 
 | File | Layer | Responsibility |
 |------|-------|---------------|
-| `src/cljc/lipas/data/ptv.cljc` | Pure data | Payload builders, language mapping, drift detection, organization config. CLJ + CLJS so the same code runs in tests and in the browser preview. |
+| `src/cljc/lipas/data/ptv.cljc` | Pure data | Payload builders, language mapping, drift detection, organization config, `->service-document`. CLJ + CLJS so the same code runs in tests and in the browser preview. |
 | `src/cljc/lipas/schema/sports_sites/ptv.cljc` | Schema | Malli schemas for the `:ptv` metadata block. `{:closed true}` — strict; new fields must be added explicitly. |
+| `src/cljc/lipas/schema/ptv.cljc` | Schema | Malli schemas for Service audits and the `ptv_service` document (reuses the audit schemas above). |
+| `src/clj/lipas/backend/db/ptv_service.clj` | DB accessors | Append-only `ptv_service` table (LIPAS-managed Service content + audits); `ptv_service_current` view queries. |
 | `src/clj/lipas/backend/ptv/integration.clj` | API client | HTTP, OAuth tokens, all PTV endpoint wrappers. Knows nothing about LIPAS data shape. |
 | `src/clj/lipas/backend/ptv/core.clj` | Orchestration | Upsert flows, DB writes via the sports-site event log, service↔channel link diffing. The "what to do when a sync runs" lives here. |
 | `src/clj/lipas/backend/ptv/handler.clj` | HTTP routes | REST endpoints under `/actions/*`. Thin — delegates to core. |
@@ -362,13 +378,16 @@ For ServiceChannels, no adoption flow exists today. If a kunta has a PTV
 ServiceLocation they want LIPAS to take over, the channel is recreated rather
 than adopted.
 
-### PTV as the authoritative store for Service descriptions
+### Service descriptions: PTV authoritative, LIPAS shadow
 
-PTV Services don't have a corresponding LIPAS entity. Descriptions are
-authored in the PALVELUT tab and exist only ephemerally in re-frame app-db
-(`service-candidates`) until synced. A browser refresh before sync loses
-unsaved Service edits. Pragmatic but not great; planned to be addressed
-alongside Service-side strict-1-way alignment.
+PTV Services now have a thin LIPAS entity: the append-only `ptv_service`
+table records the LIPAS-managed subset (names, descriptions, languages,
+publishing status) as a revision on every successful Service write, plus
+Service audits. However, *drafts* are still ephemeral: descriptions authored
+in the PALVELUT tab live only in re-frame app-db (`service-candidates`) until
+synced, and a browser refresh before sync loses unsaved Service edits.
+Durable drafts and adoption-time pull can extend the same `ptv_service`
+document later.
 
 ### No PTV-side validation feedback in LIPAS at edit time
 
@@ -398,6 +417,9 @@ once into LIPAS DB:
 After the pull, the LIPAS event log records this as a regular site revision
 ("imported from PTV at T") and normal 1-way push resumes. This addresses the
 kunta workflow of "we already have PTV content; don't make us re-author it."
+
+For Services, the `ptv_service` table is the natural home for the pulled
+content — the adopt path already writes an initial revision there.
 
 ### Service-side strict-1-way alignment
 

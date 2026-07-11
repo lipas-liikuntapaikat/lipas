@@ -86,8 +86,13 @@
                                        :serviceNames [{:type "Name" :language "fi" :value "Old"}]})
                     ptv/update-service-by-id (fn [_ _ data]
                                                (reset! captured data)
-                                               data)]
-        (ptv-core/upsert-ptv-service! :ptv-stub
+                                               data)
+                    ;; Unit test has no db; the shadow persist is exercised
+                    ;; in lipas.backend.ptv.handler-test.
+                    ptv-core/persist-ptv-service-revision! (fn [& _])]
+        (ptv-core/upsert-ptv-service! :db-stub
+                                      :ptv-stub
+                                      {:id "test-user"}
                                       {:org-id org-id
                                        :service-id service-id
                                        :sub-category-id 4300

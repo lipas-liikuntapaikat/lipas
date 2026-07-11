@@ -801,6 +801,33 @@
           {}
           descriptions))
 
+(defn ->service-document
+  "Extracts the LIPAS-managed subset of a PTV Service entity (camelCase
+   API shape) into the normalized kebab-case document persisted in the
+   ptv_service table. Mirrors lipas.backend.ptv.core/lipas-managed-service-fields —
+   PTV remains authoritative for everything else (ontologyTerms,
+   serviceClasses, targetGroups, ...). Callers add :audit and :last-sync."
+  [ptv-org-id service]
+  (let [source-id (:sourceId service)]
+    (merge
+     {:source-id source-id
+      :service-id (:id service)
+      :ptv-org-id ptv-org-id
+      :name (reduce (fn [acc {:keys [language value type]}]
+                      (if (= "Name" type)
+                        (assoc acc (lang->locale language) value)
+                        acc))
+                    {}
+                    (:serviceNames service))
+      ;; PTV language codes ("sv") -> LIPAS locale codes ("se"), unsupported dropped
+      :languages (into [] (comp (keep lang->locale) (map name)) (:languages service))
+      :publishing-status (:publishingStatus service)
+      ;; Derivable only for sub-category-mapped source-ids; adopted ones
+      ;; (lipas-<org>-ptv-<uuid>) carry no sub-category.
+      :sub-category-id (when-not (adopted-service-source-id? source-id)
+                         (parse-service-source-id source-id))}
+     (ptv-descriptions->texts (:serviceDescriptions service)))))
+
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path
    (upsert-ptv-service-location!*) and the no-sync meta path

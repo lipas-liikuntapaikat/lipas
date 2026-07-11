@@ -29,4 +29,13 @@
  :description-needs-changes "Beskrivningen kräver ändringar. Se kommentaren under fältet.",
  :auditor-feedback "Granskarens respons",
  :auditor-feedback-changes-requested "Granskarens respons – kräver ändringar",
- :auditor-feedback-approved "Granskarens respons – godkänd"}
+ :auditor-feedback-approved "Granskarens respons – godkänd",
+ :sites-section "Idrottsanläggningar",
+ :services-section "Tjänster",
+ :services-to-audit "Tjänster att granska",
+ :audited-services "Granskade tjänster",
+ :select-service "Välj tjänst att granska",
+ :select-service-prompt "Välj en tjänst från listan för att se dess uppgifter",
+ :no-services "Inga tjänster",
+ :no-services-to-audit "Inga tjänster att granska",
+ :no-audited-services "Inga granskade tjänster"}

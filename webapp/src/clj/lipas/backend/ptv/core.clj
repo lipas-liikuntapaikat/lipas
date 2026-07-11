@@ -5,6 +5,7 @@
             [clojure.string :as str]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
+            [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.email :as email]
             [lipas.backend.gis :as gis]
             [lipas.backend.org :as backend-org]
@@ -249,8 +250,41 @@
    existing PTV data when adopting a service."
   #{:sourceId :serviceDescriptions :serviceNames :publishingStatus :languages})
 
+(defn persist-ptv-service-revision!
+  "Appends a ptv_service revision from a PTV Service API response.
+   Carries the previous revision's :audit forward so audits survive
+   content syncs. Never throws — the PTV write has already succeeded and
+   cannot be rolled back; a failed shadow write is only logged and the
+   next upsert self-heals."
+  [db user ptv-org-id ptv-resp]
+  (try
+    (let [source-id (:sourceId ptv-resp)]
+      (if (str/blank? source-id)
+        (log/warnf "PTV service %s has no sourceId; skipping ptv_service revision"
+                   (:id ptv-resp))
+        (if-let [org (backend-org/get-org-by-ptv-org-id db ptv-org-id)]
+          (let [now (utils/timestamp)
+                prev (ptv-service-db/get-current db (:id org) source-id)
+                doc (cond-> (assoc (ptv-data/->service-document ptv-org-id ptv-resp)
+                                   :last-sync now)
+                      (-> prev :document :audit)
+                      (assoc :audit (-> prev :document :audit)))]
+            (ptv-service-db/insert-service-rev!
+             db
+             {:org-id (:id org)
+              :source-id source-id
+              :service-id (:id ptv-resp)
+              :status "active"
+              :author-id (or (:id user) (get-in user [:login :user :id]))
+              :event-date now
+              :document doc}))
+          (log/warnf "No LIPAS org found for PTV org %s; skipping ptv_service revision"
+                     ptv-org-id))))
+    (catch Exception e
+      (log/error e "Failed to persist ptv_service revision (PTV write already succeeded)"))))
+
 (defn upsert-ptv-service!
-  [ptv {:keys [org-id source-id service-id] :as m}]
+  [db ptv user {:keys [org-id source-id service-id] :as m}]
   (let [;; Adoption path: always use the adopted-source-id pattern
         ;; (lipas-{org}-ptv-{service-id}). The standard sub-category
         ;; pattern (lipas-{org}-{sub-cat}) collides with prior LIPAS-managed
@@ -262,8 +296,9 @@
         m (cond-> m
             service-id (assoc :source-id
                               (ptv-data/->adopted-service-source-id org-id service-id)))
-        lipas-data (ptv-data/->ptv-service m)]
-    (if service-id
+        lipas-data (ptv-data/->ptv-service m)
+        resp
+        (if service-id
       ;; Adoption: fetch existing PTV service and overwrite ONLY LIPAS-managed
       ;; fields (names, descriptions, languages, publishingStatus, sourceId).
       ;; Everything else — targetGroups, ontologyTerms, serviceClasses,
@@ -305,7 +340,10 @@
         (catch clojure.lang.ExceptionInfo e
           (if (= 404 (:status (:resp (ex-data e))))
             (ptv/create-service ptv lipas-data)
-            (throw e)))))))
+            (throw e)))))]
+    ;; Shadow every successful Service write into the ptv_service table.
+    (persist-ptv-service-revision! db user org-id resp)
+    resp))
 
 (defn fetch-ptv-org
   [ptv org-id]
@@ -724,6 +762,98 @@
           {:sent 0
            :recipients []
            :warning "No PTV managers found"})))))
+
+(defn save-ptv-service-audit
+  "Saves auditor feedback for a PTV Service. org-id is the LIPAS org uuid.
+   Lazily creates the initial ptv_service revision from a live PTV fetch
+   when the service has never been persisted. Returns the stored audit
+   map, or nil when the org/service can't be resolved (handler -> 404).
+
+   Unlike save-ptv-audit (sports sites preserve the original author for
+   revision semantics), the revision author here is simply whoever caused
+   the revision — the auditor. Append-only inserts make concurrent audits
+   safe: last write wins in ptv_service_current, history keeps both."
+  [db ptv user {:keys [org-id service-id source-id audit]}]
+  (when-let [org (backend-org/get-org db org-id)]
+    (let [ptv-org-id (-> org :ptv-data :org-id)
+          user-id (or (:id user) (get-in user [:login :user :id]))
+          current (or (ptv-service-db/get-current-by-service-id db (:id org) service-id)
+                      (when source-id
+                        (ptv-service-db/get-current db (:id org) source-id)))
+          base-doc (or (:document current)
+                       ;; Lazy initial revision from live PTV. Only
+                       ;; sourceId-bearing (LIPAS-managed or adopted)
+                       ;; services form auditable lineages.
+                       (when ptv-org-id
+                         (let [svc (ptv/get-service ptv ptv-org-id (str service-id))]
+                           (when-not (str/blank? (:sourceId svc))
+                             (ptv-data/->service-document ptv-org-id svc)))))]
+      (when base-doc
+        (let [now (utils/timestamp)
+              audit* (assoc audit
+                            :timestamp now
+                            :auditor-id (str user-id))]
+          (ptv-service-db/insert-service-rev!
+           db
+           {:org-id (:id org)
+            :source-id (or (:source-id current) (:source-id base-doc))
+            :service-id (or (:service-id current) service-id)
+            :status "active"
+            :author-id user-id
+            :event-date now
+            :document (assoc base-doc :audit audit*)})
+          audit*)))))
+
+(defn get-ptv-service-docs
+  "Current ptv_service revisions for a LIPAS org, shaped for the frontend
+   to join with the live PTV service list."
+  [db org-id]
+  (->> (ptv-service-db/get-current-by-org db org-id)
+       (mapv (fn [row]
+               (-> row
+                   (select-keys [:source-id :service-id :event-date :status :document])
+                   (update :service-id str)
+                   (update :event-date str))))))
+
+(defn send-service-audit-notification!
+  "Send email notification about completed Service audits to all PTV
+   managers in the organization. Stats are calculated by frontend and
+   passed here."
+  [db emailer org-id stats]
+  (when-let [org (backend-org/get-org db org-id)]
+    (let [managers (get-ptv-managers db org-id)]
+      (if (seq managers)
+        (do
+          (doseq [manager managers]
+            (email/send-ptv-service-audit-complete-email!
+              emailer
+              (:email manager)
+              {:org-name (:name org)
+               :service-count (str (:total-services stats))
+               :summary-approved (str (get-in stats [:summary :approved]))
+               :summary-changes (str (get-in stats [:summary :changes-requested]))
+               :desc-approved (str (get-in stats [:description :approved]))
+               :desc-changes (str (get-in stats [:description :changes-requested]))}))
+          {:sent (count managers)
+           :recipients (map :email managers)})
+        (do
+          (log/warnf "No PTV managers found for organization %s" org-id)
+          {:sent 0
+           :recipients []
+           :warning "No PTV managers found"})))))
+
+(defn backfill-ptv-service-revisions!
+  "REPL helper: seed ptv_service with current PTV state for every org
+   with PTV config. Skips lineages that already exist only in the sense
+   that a fresh revision is appended (harmless). Not wired to migrations
+   or startup."
+  [db ptv]
+  (doseq [org (backend-org/all-orgs db)
+          :let [ptv-org-id (-> org :ptv-data :org-id)]
+          :when ptv-org-id
+          svc (:itemList (ptv/get-org-services ptv ptv-org-id))
+          :when (some-> (:sourceId svc) (str/starts-with? "lipas-"))]
+    (persist-ptv-service-revision! db nil ptv-org-id svc)))
 
 (comment
   (generate-ptv-service-descriptions
