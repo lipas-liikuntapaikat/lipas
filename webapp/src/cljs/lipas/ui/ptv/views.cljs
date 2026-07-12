@@ -136,6 +136,26 @@
           "Auditoijan palaute")]
        feedback])))
 
+(defn service-audit-feedback-component
+  "Displays auditor feedback for a PTV Service field (summary or description)"
+  [{:keys [service-id field-name]}]
+  (let [feedback (<== [::subs/service-audit-field-feedback service-id field-name])
+        status (<== [::subs/service-audit-field-status service-id field-name])]
+    (when (and feedback (not (str/blank? feedback)))
+      [:> Alert
+       {:severity (case status
+                    "changes-requested" "error"
+                    "approved" "success"
+                    "warning")
+        :variant "outlined"
+        :sx #js {:mt 1 :mb 1}}
+       [:> AlertTitle
+        (case status
+          "changes-requested" "Auditoijan palaute - vaatii muutoksia"
+          "approved" "Auditoijan palaute - hyväksytty"
+          "Auditoijan palaute")]
+       feedback])))
+
 (def ptv-link-field ptv-components/ptv-link-field)
 
 (defn editable-field
@@ -1865,6 +1885,11 @@
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
+     ;; Auditor feedback for summary
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :summary}]
+
      ;; Description
      (let [v (or (get description-data @selected-tab) "")]
        [text-fields/text-field
@@ -1878,6 +1903,11 @@
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
+     ;; Auditor feedback for description
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :description}]
+
      ;; User instruction
      (let [v (or (get user-instruction-data @selected-tab) "")]
        [text-fields/text-field
@@ -1889,7 +1919,12 @@
          :value v
          :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
          :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-         :error (> (count v) ptv-data/max-user-instruction-length)}])]))
+         :error (> (count v) ptv-data/max-user-instruction-length)}])
+
+     ;; Auditor feedback for user instruction
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :user-instruction}]]))
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]

@@ -786,6 +786,87 @@
       ;; No audit data
       :else :none)))
 
+;;; Whose-move audit workflow ;;;
+;;
+;; Auditors sample sites/services: an item is "in the sample" when an audit
+;; record exists (scoping = saving an empty audit, which only stamps
+;; :timestamp/:auditor-id). Verdicts are per field and per revision: each
+;; verdict carries an :audited-content snapshot, and any later content edit
+;; makes the verdict stale, moving the item back to the auditor's queue.
+
+(defn- blank-normalized-localized
+  "Localized map with blank/nil entries removed, for content comparison."
+  [localized]
+  (into {}
+        (remove (fn [[_ v]] (str/blank? v)))
+        localized))
+
+(defn audit-field-state
+  "State of one audited field in the whose-move audit workflow.
+
+   :pending           — no verdict yet
+   :stale             — verdict exists but content changed since (verdicts
+                        without an :audited-content snapshot are
+                        grandfathered as unchanged)
+   :approved          — approved and unchanged
+   :changes-requested — changes requested and unchanged"
+  [{:keys [status audited-content] :as _field-audit} current-content]
+  (cond
+    (nil? status)
+    :pending
+
+    (and audited-content
+         (not= (blank-normalized-localized audited-content)
+               (blank-normalized-localized current-content)))
+    :stale
+
+    (= "approved" status)
+    :approved
+
+    :else
+    :changes-requested))
+
+(defn site-audit-fields
+  "Auditable-fields spec for a sports site (see audit-bucket)."
+  [site]
+  [{:field :summary :content (get-in site [:ptv :summary]) :required? true}
+   {:field :description :content (get-in site [:ptv :description]) :required? true}])
+
+(defn service-audit-fields
+  "Auditable-fields spec for a PTV Service (UI-shaped map with localized
+   :summary/:description/:user-instruction). Toimintaohje is required only
+   when the service has one in some language."
+  [service]
+  [{:field :summary :content (:summary service) :required? true}
+   {:field :description :content (:description service) :required? true}
+   {:field :user-instruction :content (:user-instruction service)
+    :required? (boolean (seq (blank-normalized-localized (:user-instruction service))))}])
+
+(defn audit-field-states
+  "Map of field -> audit-field-state over the required fields."
+  [audit fields]
+  (into {}
+        (comp (filter :required?)
+              (map (fn [{:keys [field content]}]
+                     [field (audit-field-state (get audit field) content)])))
+        fields))
+
+(defn audit-bucket
+  "Whose-move bucket for an item in the audit sample, or nil when the item
+   is not in the sample (no audit record). `fields` as per
+   site-audit-fields / service-audit-fields.
+
+   :waiting-audit — auditor's move: unaudited or changed-since-verdict fields
+   :waiting-fixes — municipality's move: changes requested, content unchanged
+   :done          — every required field approved and unchanged"
+  [audit fields]
+  (when (:timestamp audit)
+    (let [states (vals (audit-field-states audit fields))]
+      (cond
+        (some #{:pending :stale} states) :waiting-audit
+        (some #{:changes-requested} states) :waiting-fixes
+        :else :done))))
+
 (defn ptv-descriptions->texts
   "Extract :summary, :description, :user-instruction maps from PTV descriptions array.
    Works for both serviceDescriptions and serviceChannelDescriptions."
@@ -800,6 +881,33 @@
               acc))
           {}
           descriptions))
+
+(defn ->service-document
+  "Extracts the LIPAS-managed subset of a PTV Service entity (camelCase
+   API shape) into the normalized kebab-case document persisted in the
+   ptv_service table. Mirrors lipas.backend.ptv.core/lipas-managed-service-fields —
+   PTV remains authoritative for everything else (ontologyTerms,
+   serviceClasses, targetGroups, ...). Callers add :audit and :last-sync."
+  [ptv-org-id service]
+  (let [source-id (:sourceId service)]
+    (merge
+     {:source-id source-id
+      :service-id (:id service)
+      :ptv-org-id ptv-org-id
+      :name (reduce (fn [acc {:keys [language value type]}]
+                      (if (= "Name" type)
+                        (assoc acc (lang->locale language) value)
+                        acc))
+                    {}
+                    (:serviceNames service))
+      ;; PTV language codes ("sv") -> LIPAS locale codes ("se"), unsupported dropped
+      :languages (into [] (comp (keep lang->locale) (map name)) (:languages service))
+      :publishing-status (:publishingStatus service)
+      ;; Derivable only for sub-category-mapped source-ids; adopted ones
+      ;; (lipas-<org>-ptv-<uuid>) carry no sub-category.
+      :sub-category-id (when-not (adopted-service-source-id? source-id)
+                         (parse-service-source-id source-id))}
+     (ptv-descriptions->texts (:serviceDescriptions service)))))
 
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path

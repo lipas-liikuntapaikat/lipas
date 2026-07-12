@@ -621,7 +621,8 @@
    "reminder"
    "sports_site"
    "subsidy"
-   "loi"])
+   "loi"
+   "ptv_service"])
 
 ;; For all other tests except the legacy WFS compatibility layer
 ;; Enhanced database utilities that accept db parameter

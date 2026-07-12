@@ -1,0 +1,34 @@
+Hyvä LIPAS-käyttäjä!
+
+PTV-palvelukuvausten auditointi organisaatiollenne {{org-name}} on valmistunut.
+
+Auditoija: DVV (Digi- ja väestötietovirasto)
+Auditoitujen palvelujen määrä: {{service-count}}
+
+Auditoinnin yhteenveto:
+
+Tiivistelmä (Summary):
+  - Hyväksytty: {{summary-approved}} kpl
+  - Muutospyynnöt: {{summary-changes}} kpl
+
+Kuvaus (Description):
+  - Hyväksytty: {{desc-approved}} kpl
+  - Muutospyynnöt: {{desc-changes}} kpl
+
+Toimintaohje (UserInstruction):
+  - Hyväksytty: {{ui-approved}} kpl
+  - Muutospyynnöt: {{ui-changes}} kpl
+
+Voit tarkastella auditoituja palveluja ja tehdä tarvittavat muutokset osoitteessa:
+https://lipas.fi
+
+Navigoi LIPAS-järjestelmässä PTV-näkymän palvelut-välilehdelle tarkastellaksesi auditoinnin tuloksia ja tehdaksesi tarvittavat korjaukset.
+
+Jos sinulla on kysyttävää, ota yhteyttä.
+
+Terveisin,
+Lipas-järjestelmä
+
+Jyväskylän yliopisto:
+Tapani Laakso, LIPAS-projekti, puh. 0400 247 980
+s-posti: lipasinfo@jyu.fi
