@@ -140,6 +140,13 @@
   (fn [user _]
     (:roles (:permissions user))))
 
+(rf/reg-sub ::impersonator
+  :<- [::user]
+  (fn [user _]
+    ;; Present only when the current session was created via the admin
+    ;; impersonation endpoint. {:id ... :email ...} of the admin.
+    (-> user :login :impersonator)))
+
 (rf/reg-sub ::dev-overrides
   (fn [db _]
     ;; This value is only ever set from dev tools

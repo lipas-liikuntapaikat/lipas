@@ -1,4 +1,5 @@
 {:headline "Admin",
+ :impersonate "Log in as user",
  :magic-link "Magic Link",
  :organizations "Organizations",
  :select-magic-link-template "Select letter",

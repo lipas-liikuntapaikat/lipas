@@ -299,6 +299,99 @@
                            (tu/token-header token)))]
     (is (= 403 (:status resp)))))
 
+;;; Impersonation ;;;
+
+(deftest impersonate-test
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        target (tu/gen-regular-user :db-component (test-db))
+        token (jwt/create-token admin)
+        resp (test-app (-> (mock/request :post "/api/actions/impersonate")
+                           (mock/content-type "application/json")
+                           (mock/body (->json {:id (str (:id target))}))
+                           (tu/token-header token)))
+        body (<-json (:body resp))
+        claims (jwt/unsign (:token body))]
+    (is (= 200 (:status resp)))
+    (is (= (:email target) (:email body)))
+
+    (testing "impersonator is exposed in body and baked into the token"
+      (is (= (str (:id admin)) (-> body :impersonator :id)))
+      (is (= (:email admin) (-> body :impersonator :email)))
+      (is (= (:email admin) (-> claims :impersonator :email))))
+
+    (testing "token expiry is capped to the impersonation TTL"
+      (is (<= (:exp claims)
+              (+ (quot (System/currentTimeMillis) 1000)
+                 core/impersonation-token-valid-seconds))))
+
+    (testing "token grants the target user's identity"
+      (let [resp2 (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                                (mock/content-type "application/json")
+                                (tu/token-header (:token body))))
+            body2 (<-json (:body resp2))]
+        (is (= 200 (:status resp2)))
+        (is (= (:email target) (:email body2)))))
+
+    (testing "audit events are recorded on both users"
+      (let [target-events (->> (core/get-user (test-db) (:email target))
+                               :history :events (map :event) set)
+            admin-events (->> (core/get-user (test-db) (:email admin))
+                              :history :events (map :event) set)]
+        (is (contains? target-events "impersonation-started"))
+        (is (contains? admin-events "impersonated-user"))))))
+
+(deftest impersonate-requires-privilege-test
+  (let [user (tu/gen-regular-user :db-component (test-db))
+        target (tu/gen-regular-user :db-component (test-db))
+        token (jwt/create-token user)
+        resp (test-app (-> (mock/request :post "/api/actions/impersonate")
+                           (mock/content-type "application/json")
+                           (mock/body (->json {:id (str (:id target))}))
+                           (tu/token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest impersonate-admin-not-allowed-test
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        other-admin (tu/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        resp (test-app (-> (mock/request :post "/api/actions/impersonate")
+                           (mock/content-type "application/json")
+                           (mock/body (->json {:id (str (:id other-admin))}))
+                           (tu/token-header token)))
+        body (<-json (:body resp))]
+    (is (= 403 (:status resp)))
+    (is (= "impersonation-not-allowed" (:type body)))))
+
+(deftest impersonate-self-not-allowed-test
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        token (jwt/create-token admin)
+        resp (test-app (-> (mock/request :post "/api/actions/impersonate")
+                           (mock/content-type "application/json")
+                           (mock/body (->json {:id (str (:id admin))}))
+                           (tu/token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest refresh-login-preserves-impersonation-test
+  (let [admin (tu/gen-admin-user :db-component (test-db))
+        target (tu/gen-regular-user :db-component (test-db))
+        imp-body (core/impersonate! (test-db) admin (str (:id target)))
+        resp (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                           (mock/content-type "application/json")
+                           (tu/token-header (:token imp-body))))
+        body (<-json (:body resp))
+        claims (jwt/unsign (:token body))]
+    (is (= 200 (:status resp)))
+    (is (= (:email target) (:email body)))
+
+    (testing "refresh keeps the impersonator in body and token claims"
+      (is (= (:email admin) (-> body :impersonator :email)))
+      (is (= (:email admin) (-> claims :impersonator :email))))
+
+    (testing "refresh does not extend expiry beyond the impersonation TTL"
+      (is (<= (:exp claims)
+              (+ (quot (System/currentTimeMillis) 1000)
+                 core/impersonation-token-valid-seconds))))))
+
 (deftest update-user-permissions-test
   ;; Updating permissions has side-effect of publshing drafts the user
   ;; has done earlier to sites where permissions are now being

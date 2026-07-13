@@ -1,4 +1,5 @@
 {:headline "Admin",
+ :impersonate "Logga in som användare",
  :magic-link "Magic link",
  :organizations "Organisationer",
  :select-magic-link-template "Välj brev",

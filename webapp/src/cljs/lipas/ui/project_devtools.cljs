@@ -5,6 +5,7 @@
             [re-frame.core :as rf]
             [re-frame.db]
             [reagent-dev-tools.core :as dev-tools]
+            [reagent.core :as reagent]
             [reagent.dom.client :as rdomc]))
 
 (rf/reg-event-db ::set-privilege-override
@@ -71,6 +72,52 @@
                  "Yes"
                  "No")]]))]]])
 
+(defn- impersonate-selector []
+  (reagent/with-let [_ (rf/dispatch [:lipas.ui.admin.events/get-users])
+                     email* (reagent/atom "")]
+    (let [users (vals @(rf/subscribe [:lipas.ui.admin.subs/users]))
+          by-email (into {} (keep (fn [u] (when (:email u) [(:email u) u])) users))]
+      [:div
+       [:p (count users) " users loaded"]
+       [:input {:type "text"
+                :list "impersonate-users-datalist"
+                :placeholder "user@example.com"
+                :size 40
+                :value @email*
+                :on-change (fn [e] (reset! email* (.. e -target -value)))}]
+       [:datalist {:id "impersonate-users-datalist"}
+        (for [email (sort (keys by-email))]
+          [:option {:key email :value email}])]
+       [:button
+        {:disabled (nil? (get by-email @email*))
+         :on-click (fn [_]
+                     (rf/dispatch [:lipas.ui.login.events/impersonate
+                                   (:id (get by-email @email*))]))}
+        "Impersonate"]])))
+
+(defn impersonation []
+  (let [login @(rf/subscribe [::user-subs/user-data])
+        impersonator @(rf/subscribe [::user-subs/impersonator])
+        ;; Gate on the real privilege (overrides disabled) - the backend
+        ;; enforces it anyway, overrides would only fake the UI.
+        can-impersonate? @(rf/subscribe [::user-subs/check-privilege nil :users/impersonate true])]
+    [:div
+     [:h4 "Current identity"]
+     [:p [:b (or (:email login) "(not logged in)")]]
+     (cond
+       impersonator
+       [:div
+        [:p "Impersonating on behalf of " [:b (:email impersonator)]]
+        [:button
+         {:on-click (fn [_] (rf/dispatch [:lipas.ui.login.events/exit-impersonation]))}
+         "Exit impersonation"]]
+
+       can-impersonate?
+       [impersonate-selector]
+
+       :else
+       [:p "Log in with a user that has the :users/impersonate privilege (admin) to use this."])]))
+
 (def K "lipas.ui.dev-tools")
 
 (defonce react-root (delay
@@ -95,7 +142,10 @@
                            :panels (into (dev-tools/create-default-panels {:state-atom  re-frame.db/app-db})
                                          [{:key :roles
                                            :label "Roles"
-                                           :view [roles]}])}])
+                                           :view [roles]}
+                                          {:key :impersonate
+                                           :label "Impersonate"
+                                           :view [impersonation]}])}])
     :started))
 
 (defn ^:export enable []

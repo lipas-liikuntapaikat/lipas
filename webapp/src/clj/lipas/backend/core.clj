@@ -175,6 +175,38 @@
                                      (hashers/encrypt password)))
   (add-user-event! db user "password-reset"))
 
+(def impersonation-token-valid-seconds 3600)
+
+(defn impersonate!
+  "Mints a login session for the user identified by `target-id` on behalf
+  of `admin` (the request identity). The returned body has the same shape
+  as refresh-login, plus an :impersonator key that is also baked into the
+  token as a claim for audit purposes.
+
+  Refuses self-impersonation and targets that hold user management
+  privileges. Records audit events on both users' histories."
+  [db admin target-id]
+  (let [target (get-user! db target-id)
+        target-conformed (update-in target [:permissions :roles] roles/conform-roles)
+        impersonator (select-keys admin [:id :email])]
+    (when (or (= (str (:id admin)) (str (:id target)))
+              (roles/check-privilege target-conformed nil :users/manage)
+              (roles/check-privilege target-conformed nil :users/impersonate))
+      (throw (ex-info "Impersonation not allowed for this user"
+                      {:type :impersonation-not-allowed})))
+    (log/info "Impersonation started:" (:email admin) "->" (:email target))
+    (add-user-event! db target "impersonation-started"
+                     {:impersonator-id (str (:id admin))
+                      :impersonator-email (:email admin)})
+    (add-user-event! db admin "impersonated-user"
+                     {:target-id (str (:id target))
+                      :target-email (:email target)})
+    (merge (dissoc target :password)
+           {:token (jwt/create-token target
+                                     :valid-seconds impersonation-token-valid-seconds
+                                     :extra-claims {:impersonator impersonator})
+            :impersonator impersonator})))
+
 ;;; Reminders ;;;
 
 (defn get-users-pending-reminders! [db {:keys [id]}]

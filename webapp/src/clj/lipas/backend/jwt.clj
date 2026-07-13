@@ -10,8 +10,9 @@
   "Creates signed jwt-token with user data as payload.
 
   `valid-seconds` sets the expiration span
-  `terse?` include only users :id in payload (fits in URL)"
-  [user & {:keys [terse? valid-seconds]
+  `terse?` include only users :id in payload (fits in URL)
+  `extra-claims` map merged into the payload (e.g. :impersonator)"
+  [user & {:keys [terse? valid-seconds extra-claims]
            :or   {terse?        false
                   valid-seconds (* 6 3600)}}] ;; 6 hours
   (let [fields  (if terse?
@@ -19,6 +20,7 @@
                   [:id :email :username :permissions])
         payload (-> user
                     (select-keys fields)
+                    (merge extra-claims)
                     (assoc :exp (.plusSeconds
                                  (java.time.Instant/now) valid-seconds)))]
     (sign payload)))

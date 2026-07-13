@@ -2,6 +2,7 @@
   (:require [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.notifications :as notifications]
             [lipas.ui.events :as events]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
@@ -10,12 +11,36 @@
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.login.events :as login-events]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
             [lipas.ui.reminders.views :as reminders]
             [lipas.ui.subs :as subs]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
+
+(defn impersonation-banner [{:keys [tr]}]
+  (when-let [impersonator (<== [::user-subs/impersonator])]
+    (let [user-email (<== [::user-subs/user-data])]
+      [:> Grid {:item true :xs 12}
+       [:> Card {:square true
+                 :style {:background-color "#f57c00"
+                         :border-bottom "2px solid white"}}
+        [:> CardContent
+         {:style {:display "flex"
+                  :align-items "center"
+                  :gap "1em"
+                  :flex-wrap "wrap"
+                  :padding "0.5em 1em"}}
+         [:> Icon "supervised_user_circle"]
+         [:> Typography {:variant "body1"}
+          (tr :login/impersonating (:email user-email))]
+         [:> Button
+          {:variant "contained"
+           :size "small"
+           :on-click #(==> [::login-events/exit-impersonation])}
+          (tr :login/exit-impersonation (:email impersonator))]]]])))
 
 (defn main-panel []
   (let [logged-in?   (<== [::subs/logged-in?])
@@ -50,6 +75,10 @@
 
       ;; Account menu
       [nav/account-menu {:tr tr :logged-in? logged-in?}]
+
+      ;; Impersonation banner - always visible while impersonating,
+      ;; also on views that hide the navbar (e.g. map)
+      [impersonation-banner {:tr tr}]
 
       ;; Navbar
       (when show-nav?

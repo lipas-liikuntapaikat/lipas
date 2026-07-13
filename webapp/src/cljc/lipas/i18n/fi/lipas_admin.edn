@@ -1,4 +1,5 @@
 {:headline "Admin",
+ :impersonate "Kirjaudu käyttäjänä",
  :magic-link "Taikalinkki",
  :organizations "Organisaatiot",
  :select-magic-link-template "Valitse saatekirje",

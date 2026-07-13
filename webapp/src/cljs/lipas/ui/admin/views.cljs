@@ -374,6 +374,15 @@
          :disabled (not (m/validate users-schema/new-user-schema user))
          :on-click #(==> [::events/open-magic-link-dialog])}]
 
+       ;; Impersonate button
+       (when (and existing? (= "active" (:status user)))
+         [:> Button
+          {:variant "contained"
+           :color "secondary"
+           :on-click #(==> [:lipas.ui.login.events/impersonate (:id user)])}
+          [:> Icon {:sx #js{:mr 1}} "supervised_user_circle"]
+          (tr :lipas.admin/impersonate)])
+
        ;; Save button
        (when existing?
          [:> Button

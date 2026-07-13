@@ -76,9 +76,14 @@
      :dispatch    [::clear-errors]}))
 
 (rf/reg-event-fx ::login-refresh-failure
-  (fn [_ [_ {:keys [status] :as resp}]]
+  [(rf/inject-cofx ::local-storage/get :admin-login-data)]
+  (fn [{:keys [local-storage]} [_ {:keys [status] :as resp}]]
     (if (#{401 403} status)
-      {:dispatch [::logout]}
+      ;; If an impersonation session expires, fall back to the stashed
+      ;; admin session instead of logging out completely.
+      (if (seq (:admin-login-data local-storage))
+        {:dispatch [::exit-impersonation]}
+        {:dispatch [::logout]})
       {})))
 
 (rf/reg-event-fx ::refresh-login
@@ -115,10 +120,62 @@
   (fn [{:keys [db]}  _]
     {:db (assoc db/default-db :backend-url (:backend-url db))
 
-     ::local-storage/remove! :login-data
+     ::local-storage/remove-many! [:login-data :admin-login-data]
 
      :dispatch               [:lipas.ui.events/navigate "/kirjaudu"]
      :tracker/set-dimension! ["user-type" "guest"]}))
+
+;;; Impersonation ;;;
+
+;; Admins (privilege :users/impersonate) can log in as another user for
+;; testing and support purposes. The admin's own session is stashed in
+;; local storage so it can be restored without re-login. All enforcement
+;; and audit logging happens server-side.
+
+(rf/reg-event-fx ::impersonate
+  (fn [{:keys [db]} [_ user-id]]
+    {:http-xhrio
+     {:method          :post
+      :uri             (str (:backend-url db) "/actions/impersonate")
+      :headers         {:Authorization (str "Token " (get-in db [:user :login :token]))}
+      :params          {:id (str user-id)}
+      :format          (ajax/json-request-format)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success      [::impersonate-success]
+      :on-failure      [::impersonate-failure]}}))
+
+(rf/reg-event-fx ::impersonate-success
+  (fn [{:keys [db]} [_ body]]
+    {;; Reset app state so nothing from the admin session leaks into the
+     ;; impersonated session.
+     :db (assoc db/default-db :backend-url (:backend-url db))
+     ::local-storage/set! [:admin-login-data (get-in db [:user :login])]
+     :dispatch-n [[::login-success :impersonate body]
+                  [:lipas.ui.events/navigate "/profiili"]]}))
+
+(rf/reg-event-fx ::impersonate-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr (:translator db)]
+      {:dispatch [:lipas.ui.events/set-active-notification
+                  {:message (or (-> resp :response :message)
+                                (-> resp :response :error)
+                                (tr :error/unknown))
+                   :success? false}]})))
+
+(rf/reg-event-fx ::exit-impersonation
+  [(rf/inject-cofx ::local-storage/get :admin-login-data)]
+  (fn [{:keys [db local-storage]} _]
+    (let [admin-login (:admin-login-data local-storage)]
+      (if (or (empty? admin-login)
+              (utils/jwt-expired? (:token admin-login)))
+        ;; Stash is gone or the admin token expired while impersonating.
+        {:dispatch [::logout]}
+        {:db (assoc db/default-db :backend-url (:backend-url db))
+         ::local-storage/remove! :admin-login-data
+         :dispatch-n [[::login-success :exit-impersonation admin-login]
+                      ;; Trade the stashed token for a fresh one right away.
+                      [::refresh-login]
+                      [:lipas.ui.events/navigate "/admin"]]}))))
 
 (rf/reg-event-fx ::order-magic-link
   (fn [{db :db} [_ {:keys [email]}]]

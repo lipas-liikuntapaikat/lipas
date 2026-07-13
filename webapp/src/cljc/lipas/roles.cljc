@@ -30,6 +30,7 @@
    :analysis-tool/experimental {:doc "Oikeus käyttää kokeellisia analyysityökaluja"}
 
    :users/manage {:doc "Käyttäjien hallinta (admin)"}
+   :users/impersonate {:doc "Oikeus kirjautua toisena käyttäjänä (admin)"}
 
    :org/member {:doc "Organisaation jäsen"}
    :org/manage {:doc "Organisaation tietojen ja käyttäjien hallinta"}
