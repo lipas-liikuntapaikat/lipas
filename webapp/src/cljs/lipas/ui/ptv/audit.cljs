@@ -1,8 +1,14 @@
 (ns lipas.ui.ptv.audit
   (:require [clojure.string :as str]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
             ["@mui/material/FormLabel$default" :as FormLabel]
@@ -42,9 +48,12 @@
   (let [;; Get existing audit data for this field
         field-audit (get audit-data field)
 
-        ;; Content changed since the verdict? (per-revision approval)
-        stale? (and field-audit
-                    (= :stale (ptv-data/audit-field-state field-audit content-localized)))
+        state (when field-audit
+                (ptv-data/audit-field-state field-audit content-localized))
+        ;; Content changed since the verdict? :stale = approval no longer
+        ;; covers the text (auditor's move), :fixed = the municipality
+        ;; responded to a changes request (reviewable in Valmiit).
+        changed? (contains? #{:stale :fixed} state)
 
         ;; Format last audit information if available
         last-audit-info (when field-audit
@@ -62,16 +71,21 @@
              :summary :ptv/summary
              :description :ptv/description
              :user-instruction :ptv/user-instruction))]
-      (when stale?
-        [:> Chip {:label (tr :ptv.audit/changed-since-audit)
-                  :size "small"
-                  :color "warning"
-                  :variant "outlined"}])]
+      (case state
+        :stale [:> Chip {:label (tr :ptv.audit/changed-since-audit)
+                         :size "small"
+                         :color "warning"
+                         :variant "outlined"}]
+        :fixed [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
+                         :size "small"
+                         :color "info"
+                         :variant "outlined"}]
+        nil)]
 
      ;; Content display; when the text changed after the verdict, show
      ;; what changed as a word diff against the audited snapshot.
      [:> Box {:sx #js {:mb 2 :border "1px solid #eee" :p 2}}
-      (if stale?
+      (if changed?
         [audit-content-diff {:old (get-in field-audit [:audited-content :fi])
                              :new content}]
         [:> Typography {:variant "body1" :whiteSpace "pre-wrap"}
@@ -175,6 +189,7 @@
                           :approved "success.main"
                           :changes-requested "error.main"
                           :stale "warning.main"
+                          :fixed "info.main"
                           "text.disabled")]
           ^{:key (name field)}
           [:> Tab
@@ -204,14 +219,22 @@
        [:> Box {:sx #js {:mt 2}}
         (field-form-fn selected)])]))
 
-;; Complete audit form for a site with single save button
+;; Complete audit form for a site with single save button. Items in the
+;; done bucket open read-only — DVV reviews fixes from Valmiit and only
+;; re-opens the verdict controls via an explicit re-audit action
+;; (tester finding #7).
 (r/defc site-form
   [{:keys [tr lipas-id site]}]
   (let [has-privilege? @(rf/subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
         saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
         site-audit-data @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
         audit-valid? @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data-valid? lipas-id])
-        org-id @(rf/subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])]
+        org-id @(rf/subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
+
+        bucket (ptv-data/audit-bucket site-audit-data (ptv-data/site-audit-fields site))
+        [reauditing? set-reauditing] (hooks/use-state false)
+        _ (hooks/use-effect (fn [] (set-reauditing false)) [lipas-id])
+        editable? (and has-privilege? (or reauditing? (not= :done bucket)))]
 
     [:> Paper {:sx #js{:p 3}}
      [:> Typography {:variant "h6"} (:name site)]
@@ -227,7 +250,7 @@
      [audit-fields-view
       {:tr tr
        :audit-data site-audit-data
-       :has-privilege? has-privilege?
+       :has-privilege? editable?
        :fields [{:field :summary
                  :content-localized (get-in site [:ptv :summary])}
                 {:field :description
@@ -235,31 +258,48 @@
        :field-form-fn (fn [field]
                         [site-field-form {:tr tr :field field :lipas-id lipas-id}])}]
 
-     ;; Single save button for all fields - passing site-audit-data explicitly
      (when has-privilege?
-       [:> Button
-        {:variant "contained"
-         :color "primary"
-         :fullWidth true
-         :sx #js{:mt 3}
-         :disabled (or saving? (not audit-valid?))
-         :onClick (fn []
-                    (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
-                                  lipas-id
-                                  site-audit-data
-                                  ;; snapshots anchoring the verdicts to this revision
-                                  {:summary (get-in site [:ptv :summary])
-                                   :description (get-in site [:ptv :description])}]))}
-        (tr :actions/save)])]))
+       (if editable?
+         ;; Single save button for all fields - passing site-audit-data explicitly
+         [:> Button
+          {:variant "contained"
+           :color "primary"
+           :fullWidth true
+           :sx #js{:mt 3}
+           :disabled (or saving? (not audit-valid?))
+           :onClick (fn []
+                      (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
+                                    lipas-id
+                                    site-audit-data
+                                    ;; snapshots anchoring the verdicts to this revision
+                                    {:summary (get-in site [:ptv :summary])
+                                     :description (get-in site [:ptv :description])}]))}
+          (tr :actions/save)]
 
-;; Complete audit form for a PTV Service with single save button
+         [:> Stack {:spacing 2 :sx #js{:mt 3}}
+          [:> Alert {:severity "success" :variant "outlined"}
+           (tr :ptv.audit/done-item-info)]
+          [:> Button
+           {:variant "outlined"
+            :color "primary"
+            :fullWidth true
+            :onClick #(set-reauditing true)}
+           (tr :ptv.audit/reaudit)]]))]))
+
+;; Complete audit form for a PTV Service with single save button. Done
+;; items open read-only with an explicit re-audit action, like site-form.
 (r/defc service-form
   [{:keys [tr service]}]
   (let [service-id (:service-id service)
         has-privilege? @(rf/subscribe [:lipas.ui.ptv.subs/has-audit-privilege?])
         saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
         audit-data @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-data service-id])
-        audit-valid? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-data-valid? service-id])]
+        audit-valid? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-data-valid? service-id])
+
+        bucket (ptv-data/audit-bucket audit-data (ptv-data/service-audit-fields service))
+        [reauditing? set-reauditing] (hooks/use-state false)
+        _ (hooks/use-effect (fn [] (set-reauditing false)) [service-id])
+        editable? (and has-privilege? (or reauditing? (not= :done bucket)))]
 
     [:> Paper {:sx #js{:p 3}}
      [:> Typography {:variant "h6"} (:label service)]
@@ -269,7 +309,7 @@
      [audit-fields-view
       {:tr tr
        :audit-data audit-data
-       :has-privilege? has-privilege?
+       :has-privilege? editable?
        :fields [{:field :summary
                  :content-localized (:summary service)}
                 {:field :description
@@ -279,24 +319,35 @@
        :field-form-fn (fn [field]
                         [service-field-form {:tr tr :field field :service-id service-id}])}]
 
-     ;; Single save button for all fields
      (when has-privilege?
-       [:> Button
-        {:variant "contained"
-         :color "primary"
-         :fullWidth true
-         :sx #js{:mt 3}
-         :disabled (or saving? (not audit-valid?))
-         :onClick (fn []
-                    (rf/dispatch [:lipas.ui.ptv.events/save-ptv-service-audit
-                                  {:service-id service-id
-                                   :source-id (:source-id service)
-                                   :audit-data audit-data
-                                   ;; snapshots anchoring the verdicts to this revision
-                                   :contents {:summary (:summary service)
-                                              :description (:description service)
-                                              :user-instruction (:user-instruction service)}}]))}
-        (tr :actions/save)])]))
+       (if editable?
+         ;; Single save button for all fields
+         [:> Button
+          {:variant "contained"
+           :color "primary"
+           :fullWidth true
+           :sx #js{:mt 3}
+           :disabled (or saving? (not audit-valid?))
+           :onClick (fn []
+                      (rf/dispatch [:lipas.ui.ptv.events/save-ptv-service-audit
+                                    {:service-id service-id
+                                     :source-id (:source-id service)
+                                     :audit-data audit-data
+                                     ;; snapshots anchoring the verdicts to this revision
+                                     :contents {:summary (:summary service)
+                                                :description (:description service)
+                                                :user-instruction (:user-instruction service)}}]))}
+          (tr :actions/save)]
+
+         [:> Stack {:spacing 2 :sx #js{:mt 3}}
+          [:> Alert {:severity "success" :variant "outlined"}
+           (tr :ptv.audit/done-item-info)]
+          [:> Button
+           {:variant "outlined"
+            :color "primary"
+            :fullWidth true
+            :onClick #(set-reauditing true)}
+           (tr :ptv.audit/reaudit)]]))]))
 
 ;; Site list item component for the list of sites to audit
 (r/defc site-list-item
@@ -308,11 +359,13 @@
                       audit-data (ptv-data/site-audit-fields site))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
+        fixed? (boolean (some #{:fixed} states))
 
-        ;; Calculate completion status (stale verdicts count as incomplete)
+        ;; Calculate completion status (stale verdicts count as incomplete,
+        ;; fixed ones as complete — the municipality has responded)
         status-indicator (cond
                            (and (seq states)
-                                (every? #{:approved :changes-requested} states)) "completed"
+                                (every? #{:approved :changes-requested :fixed} states)) "completed"
                            (or summary-status desc-status) "partial"
                            :else "todo")
 
@@ -359,6 +412,11 @@
           [:> Chip {:label (tr :ptv.audit/changed-since-audit)
                     :size "small"
                     :color "warning"
+                    :variant "outlined"}])
+        (when fixed?
+          [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
+                    :size "small"
+                    :color "info"
                     :variant "outlined"}])]
 
        ;; Show audit status if available
@@ -383,11 +441,13 @@
                       audit-data (ptv-data/service-audit-fields service))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
+        fixed? (boolean (some #{:fixed} states))
 
-        ;; Calculate completion status (stale verdicts count as incomplete)
+        ;; Calculate completion status (stale verdicts count as incomplete,
+        ;; fixed ones as complete — the municipality has responded)
         status-indicator (cond
                            (and (seq states)
-                                (every? #{:approved :changes-requested} states)) "completed"
+                                (every? #{:approved :changes-requested :fixed} states)) "completed"
                            (some some? [summary-status desc-status ui-status]) "partial"
                            :else "todo")
 
@@ -434,6 +494,11 @@
           [:> Chip {:label (tr :ptv.audit/changed-since-audit)
                     :size "small"
                     :color "warning"
+                    :variant "outlined"}])
+        (when fixed?
+          [:> Chip {:label (tr :ptv.audit/fixed-after-audit)
+                    :size "small"
+                    :color "info"
                     :variant "outlined"}])]
 
        ;; Show audit status if available
@@ -448,6 +513,72 @@
             (str ", Description: " desc-status))
           (when ui-status
             (str ", UserInstruction: " ui-status))])]]]))
+
+;; Confirmation dialog for the audit notification: shows who receives the
+;; email (the org's PTV managers, fetched from the backend) and a summary
+;; of its contents before anything is sent (tester finding #2).
+(r/defc notification-dialog
+  [{:keys [tr stats services? lipas-org-id sample-count]}]
+  (let [dialog @(rf/subscribe [:lipas.ui.ptv.subs/notification-dialog])
+        {:keys [open? loading? recipients]} dialog
+        close #(rf/dispatch [:lipas.ui.ptv.events/close-notification-dialog])
+        stat-line (fn [label-kw m]
+                    (str (tr label-kw) " — "
+                         (tr :ptv.audit.status/approved) ": " (or (:approved m) 0) ", "
+                         (tr :ptv.audit.status/changes-requested) ": " (or (:changes-requested m) 0)))]
+    [:> Dialog {:open (boolean open?)
+                :onClose close
+                :maxWidth "sm"
+                :fullWidth true}
+     [:> DialogTitle (tr :ptv.audit/notification-dialog-title)]
+     [:> DialogContent
+      [:> Stack {:spacing 2 :sx #js {:mt 1}}
+       [:> Typography {:variant "body2"}
+        (tr :ptv.audit/notification-dialog-info)]
+
+       [:> Box
+        [:> Typography {:variant "subtitle2"}
+         (tr :ptv.audit/notification-recipients)]
+        (cond
+          loading?
+          [:> CircularProgress {:size 20 :sx #js {:mt 1}}]
+
+          (empty? recipients)
+          [:> Alert {:severity "warning" :variant "outlined" :sx #js {:mt 1}}
+           (tr :ptv.audit/no-recipients-found)]
+
+          :else
+          [:> Stack {:spacing 0.5 :sx #js {:mt 1}}
+           (for [email recipients]
+             ^{:key email}
+             [:> Typography {:variant "body2"} email])])]
+
+       [:> Box
+        [:> Typography {:variant "subtitle2"}
+         (tr :ptv.audit/notification-contents)]
+        [:> Stack {:spacing 0.5 :sx #js {:mt 1}}
+         [:> Typography {:variant "body2"}
+          (str sample-count " " (tr :ptv.audit/audited))]
+         [:> Typography {:variant "body2"}
+          (stat-line :ptv/summary (:summary stats))]
+         [:> Typography {:variant "body2"}
+          (stat-line :ptv/description (:description stats))]
+         (when (and services? (:user-instruction stats))
+           [:> Typography {:variant "body2"}
+            (stat-line :ptv/user-instruction (:user-instruction stats))])]]]]
+     [:> DialogActions
+      [:> Button {:onClick close}
+       (tr :actions/cancel)]
+      [:> Button
+       {:variant "contained"
+        :color "primary"
+        :disabled (boolean (or loading? (empty? recipients)))
+        :onClick (fn []
+                   (close)
+                   (rf/dispatch (if services?
+                                  [:lipas.ui.ptv.events/send-service-audit-notification lipas-org-id stats]
+                                  [:lipas.ui.ptv.events/send-audit-notification lipas-org-id stats])))}
+       (tr :ptv.audit/send-notification)]]]))
 
 ;; Main audit view
 (r/defc main-view
@@ -540,14 +671,21 @@
        {:variant "contained"
         :color "primary"
         :disabled (or sending? (zero? sample-count) notification-sent?)
-        :onClick #(rf/dispatch (if services?
-                                 [:lipas.ui.ptv.events/send-service-audit-notification lipas-org-id stats]
-                                 [:lipas.ui.ptv.events/send-audit-notification lipas-org-id stats]))}
+        ;; Opens a confirmation dialog (recipients + contents) — the
+        ;; actual send is dispatched from the dialog.
+        :onClick #(rf/dispatch [:lipas.ui.ptv.events/open-notification-dialog lipas-org-id])}
        (cond
          sending? (tr :ptv.audit/sending-notification)
          notification-sent? (tr :ptv.audit/notification-sent)
          :else (str (tr :ptv.audit/send-notification)
-                    " (" sample-count " " (tr :ptv.audit/audited) ")"))]]
+                    " (" sample-count " " (tr :ptv.audit/audited) ")"))]
+
+      [notification-dialog
+       {:tr tr
+        :stats stats
+        :services? services?
+        :lipas-org-id lipas-org-id
+        :sample-count sample-count}]]
 
      ;; Split view: item list and audit panel
      [:> Box

@@ -660,11 +660,33 @@
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
 
+(rf/reg-sub ::site-audit-field-display
+  ;; Audit field verdict + its whose-move state against the stored site
+  ;; content, for the municipality-facing feedback alert: once the
+  ;; municipality has fixed a changes-requested text, the alert renders
+  ;; resolved instead of staying red (tester finding #4). Falls back to
+  ;; the sports-site document when the PTV org cache isn't loaded (site
+  ;; page outside the PTV dialog).
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])
+          site-ptv (or (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv])
+                       (let [latest (get-in db [:sports-sites lipas-id :latest])]
+                         (get-in db [:sports-sites lipas-id :history latest :ptv])))
+          field-audit (get-in site-ptv [:audit field])]
+      (when field-audit
+        (assoc field-audit
+               :state (ptv-data/audit-field-state field-audit (get site-ptv field)))))))
+
 (rf/reg-sub ::site-audit-data-valid?
   (fn [[_ lipas-id]]
     (rf/subscribe [::site-audit-data lipas-id]))
   (fn [audit-data _]
     (and (seq audit-data)
+         ;; At least one field must carry a verdict — a bare audit map
+         ;; (only backend metadata like :timestamp/:auditor-id) would
+         ;; otherwise pass the all-optional schema and allow saving an
+         ;; empty audit (tester finding #1).
+         (some #(get-in audit-data [% :status]) [:summary :description])
                    ;; Select only user-editable fields for validation
                    ;; Backend may add metadata (:timestamp, :auditor-id, etc.)
                    ;; but we only validate the fields defined in audit-data schema
@@ -752,13 +774,31 @@
   (fn [audit _]
     (:notification-sent? audit)))
 
+(rf/reg-sub ::notification-dialog
+  ;; {:open? bool :loading? bool :recipients [emails]} — the confirmation
+  ;; dialog shown before sending the audit notification, so the auditor
+  ;; sees who receives it and what it contains.
+  :<- [::audit]
+  (fn [audit _]
+    (:notification-dialog audit)))
+
 (rf/reg-sub ::audit-stats
+  ;; Notification stats tally only items whose verdicts are complete for
+  ;; the current content (bucket :waiting-fixes or :done) — an item back
+  ;; in the auditor's queue (unaudited, partial or stale) doesn't count
+  ;; as audited (tester finding #5).
   (fn [[_ org-id]]
     (rf/subscribe [::audit-sample-sites org-id]))
   (fn [sites _]
-    (let [tally-fn (fn [field status]
-                     (count (filter #(= status (get-in % [:ptv :audit field :status])) sites)))]
-      {:total-sites (count sites)
+    (let [audited (filter (fn [site]
+                            (contains? #{:waiting-fixes :done}
+                                       (ptv-data/audit-bucket
+                                        (get-in site [:ptv :audit])
+                                        (ptv-data/site-audit-fields site))))
+                          sites)
+          tally-fn (fn [field status]
+                     (count (filter #(= status (get-in % [:ptv :audit field :status])) audited)))]
+      {:total-sites (count audited)
        :summary {:approved (tally-fn :summary "approved")
                  :changes-requested (tally-fn :summary "changes-requested")}
        :description {:approved (tally-fn :description "approved")
@@ -785,11 +825,21 @@
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :feedback]))))
 
+(rf/reg-sub ::service-audit-field
+  ;; Full audit field map (incl. :audited-content snapshot) — the caller
+  ;; computes the whose-move state against the live PTV service content
+  ;; it has at hand (see audit-feedback-alert call sites).
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]))))
+
 (rf/reg-sub ::service-audit-data-valid?
   (fn [[_ service-id]]
     (rf/subscribe [::service-audit-data service-id]))
   (fn [audit-data _]
     (and (seq audit-data)
+         ;; At least one verdict required — see ::site-audit-data-valid?
+         (some #(get-in audit-data [% :status]) [:summary :description :user-instruction])
          ;; Backend adds metadata (:timestamp, :auditor-id) — validate only
          ;; the user-editable fields, like ::site-audit-data-valid? does.
          (m/validate ptv-schema/audit-data
@@ -850,12 +900,19 @@
     (filter #(some? (get-in % [:audit :timestamp])) services)))
 
 (rf/reg-sub ::service-audit-stats
+  ;; Same verdict-complete tally semantics as ::audit-stats.
   (fn [[_ org-id]]
     (rf/subscribe [::audit-sample-services org-id]))
   (fn [services _]
-    (let [tally-fn (fn [field status]
-                     (count (filter #(= status (get-in % [:audit field :status])) services)))]
-      {:total-services (count services)
+    (let [audited (filter (fn [svc]
+                            (contains? #{:waiting-fixes :done}
+                                       (ptv-data/audit-bucket
+                                        (:audit svc)
+                                        (ptv-data/service-audit-fields svc))))
+                          services)
+          tally-fn (fn [field status]
+                     (count (filter #(= status (get-in % [:audit field :status])) audited)))]
+      {:total-services (count audited)
        :summary {:approved (tally-fn :summary "approved")
                  :changes-requested (tally-fn :summary "changes-requested")}
        :description {:approved (tally-fn :description "approved")

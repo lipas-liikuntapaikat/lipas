@@ -676,6 +676,11 @@
           source-id (str "lipas-" ptv-org-id "-700001-2026-01-01T00-00-00.000Z")
           texts {:summary {:fi "Kesäkäyttöinen urheilukenttä."}
                  :description {:fi "Limingan keskustan urheilukenttä."}}
+          audit {:timestamp "2026-01-03T00:00:00.000Z"
+                 :auditor-id "auditor-1"
+                 :summary {:status "changes-requested"
+                           :feedback "Tarkenna tekstiä"
+                           :audited-content {:fi "Kesäkäyttöinen urheilukenttä."}}}
           ;; A published, synced site carrying the full lifecycle meta.
           site (core/upsert-sports-site!*
                 (test-db) admin
@@ -697,7 +702,8 @@
                               :publishing-status "Published"
                               :previous-type-code 1210
                               :service-ids []
-                              :service-channel-ids [channel]})})
+                              :service-channel-ids [channel]
+                              :audit audit})})
           lipas-id (:lipas-id site)
           resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                              (mock/content-type "application/json")
@@ -716,7 +722,9 @@
       (is (= "Published" (:publishing-status after)))
       (is (= 1210 (:previous-type-code after)))
       ;; channel link preserved (frozen in PTV, not unlinked)
-      (is (= [channel] (:service-channel-ids after))))))
+      (is (= [channel] (:service-channel-ids after)))
+      ;; auditor's verdicts preserved (server-owned like the lifecycle keys)
+      (is (= audit (:audit after))))))
 
 (deftest save-ptv-service-location-rejects-double-link-test
   (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"

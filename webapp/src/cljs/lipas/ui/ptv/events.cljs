@@ -208,7 +208,8 @@
   (fn [{:keys [db]} [_ lipas-org]]
     {:db (-> db
              (assoc-in [:ptv :selected-org] lipas-org)
-             (assoc-in [:ptv :audit :notification-sent?] false))
+             (assoc-in [:ptv :audit :notification-sent?] false)
+             (assoc-in [:ptv :audit :service-notification-sent?] false))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
@@ -1705,7 +1706,9 @@
           org-id (-get-ptv-org-id db)]
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
+               ;; new audit activity re-arms the notification button
+               (assoc-in [:ptv :audit :notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::save-ptv-audit-failure
@@ -1848,7 +1851,9 @@
                         :success? true}]
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
-               (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp))
+               (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp)
+               ;; new audit activity re-arms the notification button
+               (assoc-in [:ptv :audit :service-notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-db ::select-audit-section
@@ -1889,3 +1894,43 @@
                (assoc-in [:ptv :audit :sending-notification?] false)
                (cond-> (pos? sent-count) (assoc-in [:ptv :audit :service-notification-sent?] true)))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;; Confirmation dialog shown before sending the audit notification: the
+;; auditor sees the recipients (the org's PTV managers, fetched from the
+;; backend) and a summary of what the email contains before committing.
+
+(rf/reg-event-fx ::open-notification-dialog
+  (fn [{:keys [db]} [_ org-id]]
+    (let [token (-> db :user :login :token)
+          org-id (if (string? org-id) (uuid org-id) org-id)]
+      {:db (assoc-in db [:ptv :audit :notification-dialog]
+                     {:open? true :loading? true :recipients nil})
+       :fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/get-ptv-audit-notification-recipients")
+              :params {:org-id org-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::fetch-notification-recipients-success]
+              :on-failure [::fetch-notification-recipients-failure]}]]})))
+
+(rf/reg-event-db ::fetch-notification-recipients-success
+  (fn [db [_ resp]]
+    (update-in db [:ptv :audit :notification-dialog]
+               merge {:loading? false :recipients (vec (:recipients resp))})))
+
+(rf/reg-event-fx ::fetch-notification-recipients-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr (:translator db)
+          notification {:message (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (update-in [:ptv :audit :notification-dialog]
+                          merge {:loading? false :recipients []})
+               (assoc-in [:ptv :errors :notification-recipients] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-db ::close-notification-dialog
+  (fn [db _]
+    (assoc-in db [:ptv :audit :notification-dialog] nil)))

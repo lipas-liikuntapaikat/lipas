@@ -466,7 +466,12 @@
                          ;; duplicate that collides with PTV's unique-name rule.
                          ;; Clear only the one-shot :delete-existing flag.
                          (cond->
-                           archive? (dissoc :delete-existing)))]
+                           archive? (dissoc :delete-existing)
+                           ;; :audit is server-owned, not in persisted-ptv-keys:
+                           ;; carry it over so a sync (e.g. the municipality's
+                           ;; fix) doesn't wipe the auditor's verdicts.
+                           (get-in site [:ptv :audit])
+                           (assoc :audit (get-in site [:ptv :audit]))))]
 
     (log/infof "Upserted service-location %s (status: %s, update: %s, channel: %s)"
                (:lipas-id site) (:status site) (boolean id) (:id ptv-resp))
@@ -700,7 +705,11 @@
               new-ptv (-> (select-keys ptv persisted-ptv-keys)
                           (assoc :source-id          (:source-id old-ptv)
                                  :publishing-status  (:publishing-status old-ptv)
-                                 :previous-type-code (:previous-type-code old-ptv)))
+                                 :previous-type-code (:previous-type-code old-ptv))
+                          ;; :audit is server-owned too — preserve the
+                          ;; auditor's verdicts across meta-saves.
+                          (cond->
+                            (:audit old-ptv) (assoc :audit (:audit old-ptv))))
               site (assoc existing
                           :event-date (utils/timestamp)
                           :ptv new-ptv)]
@@ -758,6 +767,19 @@
                     (concat (-> user :permissions :roles)
                             (backend-org/derive-org-roles (:id user) [org]))))
             org-users)))
+
+(defn get-audit-notification-recipients
+  "Recipient emails for an org's audit-complete notification. Surfaced in
+   the UI so the auditor sees who receives the notification (and what it
+   contains) before sending it. Returns nil for an unknown org."
+  [db org-id]
+  (when (backend-org/get-org db org-id)
+    {:recipients (->> (get-ptv-managers db org-id)
+                      (map :email)
+                      (remove str/blank?)
+                      distinct
+                      sort
+                      vec)}))
 
 (defn send-audit-notification!
   "Send email notification to all PTV managers in the organization.
