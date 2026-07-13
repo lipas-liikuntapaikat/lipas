@@ -296,6 +296,17 @@
               result (ptv-core/send-audit-notification! db emailer org-id stats)]
           {:status 200 :body result}))}}]
 
+   ["/actions/get-ptv-audit-notification-recipients"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map [:org-id :uuid]]}
+      :handler
+      (fn [req]
+        (if-let [result (ptv-core/get-audit-notification-recipients
+                         db (-> req :parameters :body :org-id))]
+          {:status 200 :body result}
+          {:status 404 :body {:error "Organization not found"}}))}}]
+
    ["/actions/fetch-ptv-service-audits"
     {:post
      {:require-privilege ptv-read-access?

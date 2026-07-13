@@ -21,9 +21,11 @@ The PTV Audit feature allows authorized users to review and provide feedback on 
 
 ### Auditing Process
 
-1. **Select Tab**:
-   - **Odottavat (Pending)**: Sites without complete audits
-   - **Valmiit (Completed)**: Sites with at least one field audited
+1. **Select Tab** (see "Whose-move workflow" below for the exact rules):
+   - **Odottavat**: the auditor's queue — content-ready but unaudited,
+     partially audited, or approved content edited afterwards
+   - **Katselmoidut**: waiting for the municipality's fixes
+   - **Valmiit**: approved, or fixed in response to a changes request
 
 2. **Select Site**: Click on a site from the list to view its details
 
@@ -708,34 +710,62 @@ first, which assigns the adopted source-id.
 
 Auditors sample: they pick a subset of sites/services into the audit rather
 than auditing everything. The audit view is organized around **whose move it
-is** (GitHub-review style), identically for both sections:
+is** (GitHub-review style), identically for both sections. The tabs use
+DVV's process vocabulary (Odottavat / Katselmoidut / Valmiit):
 
-| Bucket | Rule | Whose move |
-|---|---|---|
-| Odottaa auditointia | content-ready but unaudited, partially audited, or content changed since a verdict | auditor |
-| Odottaa korjausta | changes requested, content unchanged | municipality |
-| Valmiit | every required field approved and unchanged | nobody |
+| Tab | Bucket | Rule | Whose move |
+|---|---|---|---|
+| Odottavat | `:waiting-audit` | content-ready but unaudited, partially audited, or *approved* content edited afterwards (`:stale`) | auditor |
+| Katselmoidut | `:waiting-fixes` | changes requested, content unchanged | municipality |
+| Valmiit | `:done` | every required field approved, or *fixed* after a changes request | nobody (DVV reviews fixes here) |
+
+The key rule comes from DVV's audit process: a content edit made **in
+response to a changes request** is the municipality completing its move —
+the item goes to *Valmiit*, where DVV sees the original text, the feedback
+and a word diff of the change. An edit to **approved** content instead
+invalidates the approval (`:stale`) and returns the item to the auditor's
+queue.
 
 Mechanics (all derived, nothing stored beyond the audit map):
 
 - **Scope is implicit**: the first saved verdict pulls an item into the
-  sample. "Odottaa auditointia" shows every content-ready item, with
-  in-flight items (partially audited or changed since a verdict) sorted
-  first so re-audits don't drown among untouched items. (The API also
-  accepts an empty audit — timestamp/auditor-id only — as an explicit
-  scope marker, but the UI doesn't use it.)
+  sample. "Odottavat" shows every content-ready item, with in-flight items
+  (partially audited or stale) sorted first so re-audits don't drown among
+  untouched items. (The API also accepts an empty audit —
+  timestamp/auditor-id only — as an explicit scope marker, but the UI
+  doesn't use it; the save button requires at least one field verdict.)
 - **Per-revision verdicts**: each field verdict carries an
   `:audited-content` snapshot of the localized text it was given on
   (`audit-field` schema). `lipas.data.ptv/audit-field-state` compares the
-  snapshot against current content: any edit makes the verdict `:stale`,
-  which moves the item back to *Odottaa auditointia* with a "Muuttunut
-  auditoinnin jälkeen" chip, and the audit form shows a word diff of what
-  changed since the verdict. Verdicts saved before snapshots existed are
-  grandfathered as unchanged.
+  snapshot against current content: an edit after *approved* → `:stale`
+  ("Muuttunut auditoinnin jälkeen" chip, back to Odottavat); an edit after
+  *changes-requested* → `:fixed` ("Korjattu auditoinnin jälkeen" chip, to
+  Valmiit). Both render a word diff of the change in the audit form.
+  Verdicts saved before snapshots existed are grandfathered as unchanged.
 - **Bucket rollup**: `lipas.data.ptv/audit-bucket` over
   `site-audit-fields`/`service-audit-fields` (Toimintaohje is required only
   when the service has one).
-- Notification stats tally over the whole sample.
+- **Done items open read-only**: verdict controls are hidden on Valmiit
+  items behind an explicit "Auditoi uudelleen" action — re-auditing (e.g.
+  rejecting an inadequate fix) pushes the item back into the flow.
+- **Audit survives municipality writes**: `:ptv :audit` on sites is
+  server-owned — both the sync path (`upsert-ptv-service-location!*`) and
+  the meta path (`save-ptv-integration-definitions`) carry it over from
+  the existing record instead of rebuilding `:ptv` without it. (For
+  Services, `persist-ptv-service-revision!` has always carried `:audit`
+  forward.)
+- **Notification stats** tally only verdict-complete items (bucket
+  `:waiting-fixes` or `:done`) — an item back in the auditor's queue does
+  not count as audited. Sending opens a confirmation dialog that shows the
+  recipients (the org's PTV managers, from
+  `/actions/get-ptv-audit-notification-recipients`) and a summary of the
+  email contents before anything is sent. New audit activity re-arms the
+  send button.
+
+The municipality-facing feedback alerts (site PTV tab, wizard texts editor
+and the PALVELUT tab) follow the same field states: a red
+"vaatii muutoksia" alert turns into a resolved info-alert once the fix is
+saved/synced, and approved-but-edited content shows a warning.
 
 ### UI
 
