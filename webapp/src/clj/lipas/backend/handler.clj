@@ -55,6 +55,7 @@
   {:username-conflict (exception-handler 409 :username-conflict)
    :email-conflict (exception-handler 409 :email-conflict)
    :no-permission (exception-handler 403 :no-permission)
+   :impersonation-not-allowed (exception-handler 403 :impersonation-not-allowed)
    :user-not-found (exception-handler 404 :user-not-found)
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
@@ -489,10 +490,30 @@
          :middleware [mw/token-auth mw/auth]
          :handler
          (fn [{:keys [identity]}]
-           (let [user (core/get-user! db (-> identity :id))]
+           (let [user (core/get-user! db (-> identity :id))
+                 ;; Impersonation sessions keep the :impersonator claim and
+                 ;; the short expiry across refreshes so they can't be
+                 ;; laundered into regular sessions.
+                 impersonator (:impersonator identity)]
              {:status 200
               :body (merge (dissoc user :password)
-                           {:token (jwt/create-token user)})}))}}]
+                           {:token (if impersonator
+                                     (jwt/create-token user
+                                                       :valid-seconds core/impersonation-token-valid-seconds
+                                                       :extra-claims {:impersonator impersonator})
+                                     (jwt/create-token user))}
+                           (when impersonator
+                             {:impersonator impersonator}))}))}}]
+
+      ["/actions/impersonate"
+       {:post
+        {:no-doc true
+         :require-privilege :users/impersonate
+         :parameters {:body {:id string?}}
+         :handler
+         (fn [{:keys [identity parameters]}]
+           {:status 200
+            :body (core/impersonate! db identity (-> parameters :body :id))})}}]
 
       ["/actions/request-password-reset"
        {:post

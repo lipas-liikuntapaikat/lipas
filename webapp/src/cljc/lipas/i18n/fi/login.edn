@@ -1,5 +1,7 @@
 {:bad-credentials "Käyttäjätunnus tai salasana ei kelpaa",
+ :exit-impersonation "Palaa omille tunnuksille ({1})",
  :forgot-password? "Unohtuiko salasana?",
+ :impersonating "Olet kirjautunut käyttäjänä {1}",
  :headline "Kirjaudu",
  :login "Kirjaudu",
  :login-help

@@ -1,5 +1,7 @@
 {:bad-credentials "Lösenord eller användarnamn är felaktigt",
+ :exit-impersonation "Återgå till ditt eget konto ({1})",
  :forgot-password? "Glömt ditt lösenord?",
+ :impersonating "Du är inloggad som {1}",
  :headline "Logga in",
  :login "Logga in",
  :login-help

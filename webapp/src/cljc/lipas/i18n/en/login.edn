@@ -1,5 +1,7 @@
 {:bad-credentials "Wrong username or password",
+ :exit-impersonation "Return to your own account ({1})",
  :forgot-password? "Forgot password?",
+ :impersonating "You are logged in as {1}",
  :headline "Login",
  :login "Login",
  :login-help

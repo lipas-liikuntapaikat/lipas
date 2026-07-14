@@ -20,6 +20,10 @@
   (fn  [k]
     (ls-remove! k)))
 
+(rf/reg-fx ::remove-many!
+  (fn [ks]
+    (run! ls-remove! ks)))
+
 (rf/reg-fx ::set!
   (fn  [[k v]]
     (ls-set! k v)))
