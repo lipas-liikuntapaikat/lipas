@@ -229,12 +229,23 @@
         saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
         site-audit-data @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data lipas-id])
         audit-valid? @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-data-valid? lipas-id])
+        dirty? @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-dirty? lipas-id])
         org-id @(rf/subscribe [:lipas.ui.ptv.subs/selected-ptv-org-id])
 
-        bucket (ptv-data/audit-bucket site-audit-data (ptv-data/site-audit-fields site))
+        fields (ptv-data/site-audit-fields site)
+        field-states (vals (ptv-data/audit-field-states site-audit-data fields))
+        bucket (ptv-data/audit-bucket site-audit-data fields)
+        ;; Every save appends a revision and re-anchors verdict snapshots,
+        ;; so it must change something: new input since the last save, or
+        ;; a stale verdict being re-confirmed for the edited content.
+        save-meaningful? (or dirty? (boolean (some #{:stale} field-states)))
         [reauditing? set-reauditing] (hooks/use-state false)
         _ (hooks/use-effect (fn [] (set-reauditing false)) [lipas-id])
-        editable? (and has-privilege? (or reauditing? (not= :done bucket)))]
+        ;; dirty? keeps the form editable while there is unsaved input:
+        ;; the bucket is computed from the live draft, so without it,
+        ;; giving the last pending field a verdict would flip the form
+        ;; read-only and hide the save button BEFORE the audit is saved.
+        editable? (and has-privilege? (or reauditing? dirty? (not= :done bucket)))]
 
     [:> Paper {:sx #js{:p 3}}
      [:> Typography {:variant "h6"} (:name site)]
@@ -266,7 +277,7 @@
            :color "primary"
            :fullWidth true
            :sx #js{:mt 3}
-           :disabled (or saving? (not audit-valid?))
+           :disabled (or saving? (not audit-valid?) (not save-meaningful?))
            :onClick (fn []
                       (rf/dispatch [:lipas.ui.ptv.events/save-ptv-audit
                                     lipas-id
@@ -295,11 +306,20 @@
         saving? @(rf/subscribe [:lipas.ui.ptv.subs/saving-audit?])
         audit-data @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-data service-id])
         audit-valid? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-data-valid? service-id])
+        dirty? @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-dirty? service-id])
 
-        bucket (ptv-data/audit-bucket audit-data (ptv-data/service-audit-fields service))
+        fields (ptv-data/service-audit-fields service)
+        field-states (vals (ptv-data/audit-field-states audit-data fields))
+        bucket (ptv-data/audit-bucket audit-data fields)
+        ;; See site-form: a save must carry new input or re-confirm a
+        ;; stale verdict.
+        save-meaningful? (or dirty? (boolean (some #{:stale} field-states)))
         [reauditing? set-reauditing] (hooks/use-state false)
         _ (hooks/use-effect (fn [] (set-reauditing false)) [service-id])
-        editable? (and has-privilege? (or reauditing? (not= :done bucket)))]
+        ;; dirty? keeps the form editable while there is unsaved input —
+        ;; see site-form for why (draft-derived bucket would otherwise
+        ;; hide the save button on the last verdict click).
+        editable? (and has-privilege? (or reauditing? dirty? (not= :done bucket)))]
 
     [:> Paper {:sx #js{:p 3}}
      [:> Typography {:variant "h6"} (:label service)]
@@ -327,7 +347,7 @@
            :color "primary"
            :fullWidth true
            :sx #js{:mt 3}
-           :disabled (or saving? (not audit-valid?))
+           :disabled (or saving? (not audit-valid?) (not save-meaningful?))
            :onClick (fn []
                       (rf/dispatch [:lipas.ui.ptv.events/save-ptv-service-audit
                                     {:service-id service-id

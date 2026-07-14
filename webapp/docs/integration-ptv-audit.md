@@ -734,6 +734,13 @@ Mechanics (all derived, nothing stored beyond the audit map):
   untouched items. (The API also accepts an empty audit —
   timestamp/auditor-id only — as an explicit scope marker, but the UI
   doesn't use it; the save button requires at least one field verdict.)
+- **Saves are never no-ops**: every save appends a revision (sports_site /
+  ptv_service) and re-anchors the verdict snapshots to the current text,
+  so the save button additionally requires actual input since the last
+  save (dirty tracking in `[:ptv :audit :site-dirty/:service-dirty]`).
+  The one exception: an item with a *stale* verdict can be saved without
+  touching the form — that save is the re-approval that re-anchors the
+  snapshot to the edited content.
 - **Per-revision verdicts**: each field verdict carries an
   `:audited-content` snapshot of the localized text it was given on
   (`audit-field` schema). `lipas.data.ptv/audit-field-state` compares the
@@ -747,7 +754,10 @@ Mechanics (all derived, nothing stored beyond the audit map):
   when the service has one).
 - **Done items open read-only**: verdict controls are hidden on Valmiit
   items behind an explicit "Auditoi uudelleen" action — re-auditing (e.g.
-  rejecting an inadequate fix) pushes the item back into the flow.
+  rejecting an inadequate fix) pushes the item back into the flow. The
+  read-only gate only engages when there is no unsaved input (dirty flag):
+  the bucket is derived from the live draft, so completing the last
+  verdict would otherwise hide the save button before the audit is saved.
 - **Audit survives municipality writes**: `:ptv :audit` on sites is
   server-owned — both the sync path (`upsert-ptv-service-location!*`) and
   the meta path (`save-ptv-integration-definitions`) carry it over from
