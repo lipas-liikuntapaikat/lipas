@@ -179,7 +179,11 @@
     {:db (-> db
              (assoc-in [:ptv :selected-org] lipas-org)
              (assoc-in [:ptv :audit :notification-sent?] false)
-             (assoc-in [:ptv :audit :service-notification-sent?] false))
+             (assoc-in [:ptv :audit :service-notification-sent?] false)
+             ;; org data is refetched, discarding unsaved audit edits
+             ;; and any selection from the previous org
+             (update-in [:ptv :audit] dissoc :site-dirty :service-dirty)
+             (update :ptv dissoc :selected-audit-site :selected-audit-service))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
@@ -1615,13 +1619,24 @@
 
 (rf/reg-event-db ::select-audit-tab
   (fn [db [_ v]]
-    (assoc-in db [:ptv :audit :selected-tab] v)))
+    (-> db
+        (assoc-in [:ptv :audit :selected-tab] v)
+        ;; The previous selection may not exist in the new tab's list —
+        ;; keeping its form visible reads as the wrong tab's content.
+        (update :ptv dissoc :selected-audit-site :selected-audit-service))))
+
+;; Audit edits mark the item dirty ([:ptv :audit :site-dirty/:service-dirty])
+;; — the save button requires actual input (or a stale verdict to
+;; re-confirm), because every save appends a revision and re-anchors the
+;; verdict snapshots to the current content.
 
 (rf/reg-event-db ::update-audit-feedback
   (fn [db [_ lipas-id field value]]
     (let [org-id (-get-ptv-org-id db)
           path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (assoc-in db (conj path :feedback) value))))
+      (-> db
+          (assoc-in (conj path :feedback) value)
+          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
 
 (rf/reg-event-db ::update-audit-status
   (fn [db [_ lipas-id field status]]
@@ -1630,7 +1645,8 @@
       (-> db
           (assoc-in (conj path :status) status)
                          ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))))))
+          (update-in (conj path :feedback) #(or % ""))
+          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
 
 (defn- with-audited-content
   "Stamp the currently-shown content into each field that carries a verdict,
@@ -1677,6 +1693,7 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
+               (update-in [:ptv :audit :site-dirty] dissoc lipas-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
@@ -1694,10 +1711,6 @@
 (rf/reg-event-db ::select-audit-site
   (fn [db [_ site]]
     (assoc-in db [:ptv :selected-audit-site] site)))
-
-(rf/reg-event-db ::select-audit-tab
-  (fn [db [_ tab]]
-    (assoc-in db [:ptv :audit :selected-tab] tab)))
 
 (rf/reg-event-fx ::send-audit-notification
   (fn [{:keys [db]} [_ org-id stats]]
@@ -1784,13 +1797,16 @@
       (-> db
           (assoc-in (conj path :status) status)
           ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))))))
+          (update-in (conj path :feedback) #(or % ""))
+          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
 
 (rf/reg-event-db ::update-service-audit-feedback
   (fn [db [_ service-id field value]]
     (let [org-id (-get-ptv-org-id db)
           path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
-      (assoc-in db (conj path :feedback) value))))
+      (-> db
+          (assoc-in (conj path :feedback) value)
+          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
 
 (rf/reg-event-fx ::save-ptv-service-audit
   (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data contents]}]]
@@ -1822,13 +1838,17 @@
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
                (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp)
+               (update-in [:ptv :audit :service-dirty] dissoc service-id)
                ;; new audit activity re-arms the notification button
                (assoc-in [:ptv :audit :service-notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-db ::select-audit-section
   (fn [db [_ v]]
-    (assoc-in db [:ptv :audit :selected-section] v)))
+    (-> db
+        (assoc-in [:ptv :audit :selected-section] v)
+        ;; see ::select-audit-tab — don't carry a selection across views
+        (update :ptv dissoc :selected-audit-site :selected-audit-service))))
 
 (rf/reg-event-db ::select-audit-service
   (fn [db [_ service]]
