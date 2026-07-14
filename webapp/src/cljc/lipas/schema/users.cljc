@@ -95,6 +95,10 @@
                     [:role [:= :city-manager]]
                     [:city-code [:set (into [:enum] city-codes)]]
                     [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+    [:images-manager [:map
+                      [:role [:= :images-manager]]
+                      [:city-code [:set (into [:enum] city-codes)]]
+                      [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
     [:site-manager [:map
                     [:role [:= :site-manager]]
                     [:lipas-id [:set #'sports-sites-schema/lipas-id]]]]
