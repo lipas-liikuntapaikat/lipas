@@ -34,6 +34,7 @@
                :size 10000
                :_source {:includes ["lipas-id"
                                     "event-date"
+                                    "status"
                                     "location.city.city-code"
                                     "location.city.city-name"
                                     "name"

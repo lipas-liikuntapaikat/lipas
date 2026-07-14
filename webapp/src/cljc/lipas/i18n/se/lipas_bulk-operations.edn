@@ -1,5 +1,7 @@
 {:check-to-update-field "Markera för att uppdatera detta fält"
  :field-will-not-change "Detta fält kommer inte att ändras"
+ :fill-from-org "Fyll i från organisationens kontaktuppgifter"
+ :fill-from-org-help "Kopierar organisationens kontaktuppgifter till formuläret. Tomma fält tömmer motsvarande uppgift på de valda idrottsplatserna."
  :n-sites-selected "{1} idrottsplatser valda"
  :select-fields-to-update "Välj fält att uppdatera:"
  :select-sites-to-update "Välj idrottsplatser för uppdatering"

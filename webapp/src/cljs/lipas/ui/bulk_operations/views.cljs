@@ -186,17 +186,35 @@
       [navigation-buttons tr 0 selected-count 0 on-cancel]]]))
 
 ;; Step 2: Enter contact information
-(defn step-enter-info [tr selected-count on-cancel on-back]
+;; `org-contact` (optional): the calling org's contact info remapped to site
+;; contact keys ({:email :phone-number :www :reservations-link}); when present
+;; (and non-empty) it powers the "fill from organization contact info" button.
+(defn step-enter-info [tr selected-count on-cancel on-back org-contact]
   (let [update-form @(rf/subscribe [::subs/bulk-update-form])
         selected-fields @(rf/subscribe [::subs/selected-fields])
         all-fields #{:email :phone-number :www :reservations-link}
-        all-fields-selected? (= selected-fields all-fields)]
+        all-fields-selected? (= selected-fields all-fields)
+        org-has-contact? (boolean (some some? (vals org-contact)))]
     [:> Box
      [:> Box {:sx {:mb 3}}
       [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel on-back]]
 
      [:> Alert {:severity "info" :sx {:mb 3}}
       (tr :lipas.bulk-operations/selective-update-info)]
+
+     ;; Fill the whole form from the organization's own contact info in one
+     ;; click (blank org fields clear the corresponding site field). Shown only
+     ;; when launched from an org that actually has contact info on file.
+     (when org-has-contact?
+       [:> Box {:sx {:mb 3 :display "flex" :align-items "center" :gap 2 :flex-wrap "wrap"}}
+        [:> Button {:variant "contained"
+                    :color "secondary"
+                    :size "small"
+                    :startIcon (r/as-element [:> Icon "business"])
+                    :on-click #(rf/dispatch [::events/populate-from-org-contact org-contact])}
+         (tr :lipas.bulk-operations/fill-from-org)]
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :lipas.bulk-operations/fill-from-org-help)]])
 
      ;; Header with select all/none buttons
      [:> Box {:sx {:display "flex" :justify-content "space-between" :align-items "center" :mb 2}}
@@ -379,7 +397,7 @@
 ;; "Our sites" tab), so the in-wizard "Select sites" step (0) is omitted — the
 ;; wizard starts at "Enter info" (step 1) and Back from there exits via on-cancel.
 (defn main
-  [{:keys [title description on-cancel external-selection?]}]
+  [{:keys [title description on-cancel external-selection? org-contact]}]
   (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
         current-step @(rf/subscribe [::subs/current-step])
         selected-count @(rf/subscribe [::subs/selected-sites-count])
@@ -429,6 +447,7 @@
                [step-select-sites tr selected-count on-cancel])
            1 [step-enter-info tr selected-count on-cancel
               ;; in external mode Back returns to the caller's list
-              (when external-selection? on-cancel)]
+              (when external-selection? on-cancel)
+              org-contact]
            2 [step-summary tr on-cancel]
            nil))]]]))

@@ -1,5 +1,7 @@
 {:check-to-update-field "Check to update this field"
  :field-will-not-change "This field will not change"
+ :fill-from-org "Fill from organization contact info"
+ :fill-from-org-help "Copies the organization's contact info into the form. Blank fields clear the corresponding field on the selected sites."
  :n-sites-selected "{1} sports sites selected"
  :select-fields-to-update "Select fields to update:"
  :select-sites-to-update "Select sports sites for update"

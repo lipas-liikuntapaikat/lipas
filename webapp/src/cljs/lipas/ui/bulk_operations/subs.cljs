@@ -33,7 +33,13 @@
   :<- [::editable-sites]
   :<- [::sites-filters]
   (fn [[sites filters] _]
-    (let [{:keys [type-code admin owner search-text ownership]} filters]
+    ;; Multi-value filters (type-codes / admins / statuses) mirror the map-view
+    ;; search filters: an empty selection means "no filter", any selection keeps
+    ;; rows whose value is in the chosen set.
+    (let [{:keys [type-codes admins statuses search-text ownership]} filters
+          type-set   (set type-codes)
+          admin-set  (set admins)
+          status-set (set statuses)]
       (cond->> sites
         ;; org-specific: owned vs granted (cross-org edit grant)
         (= ownership "owned")
@@ -42,14 +48,14 @@
         (= ownership "granted")
         (filter (complement :owned?))
 
-        type-code
-        (filter #(= type-code (get-in % [:type :type-code])))
+        (seq type-set)
+        (filter #(contains? type-set (get-in % [:type :type-code])))
 
-        admin
-        (filter #(= admin (:admin %)))
+        (seq admin-set)
+        (filter #(contains? admin-set (:admin %)))
 
-        owner
-        (filter #(= owner (:owner %)))
+        (seq status-set)
+        (filter #(contains? status-set (:status %)))
 
         (not (clojure.string/blank? search-text))
         (filter (fn [site]

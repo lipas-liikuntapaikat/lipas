@@ -48,7 +48,6 @@
             [lipas.ui.bulk-operations.subs :as bulk-ops-subs]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
             [lipas.ui.roles.editor :as role-editor]
-            [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.events :as events]
@@ -960,6 +959,15 @@
             selectable?    (or can-bulk-edit? can-release?)
             types          @(rf/subscribe [:lipas.ui.sports-sites.subs/active-types])
             cities         @(rf/subscribe [:lipas.ui.sports-sites.subs/cities-by-city-code])
+            statuses       @(rf/subscribe [:lipas.ui.sports-sites.subs/statuses])
+            ;; the org's own contact info, remapped to site contact keys, so the
+            ;; bulk-edit wizard can offer "fill from organization contact info"
+            org            @(rf/subscribe [::subs/editing-org])
+            org-contact    (let [pc (get-in org [:data :primary-contact])]
+                             {:email             (not-empty (:email pc))
+                              :phone-number      (not-empty (:phone pc))
+                              :www               (not-empty (:website pc))
+                              :reservations-link (not-empty (:reservations-link pc))})
             locale         (tr)
             bulk-editing?  (pos? current-step)
             ;; counts label the owned/shared/all segments (the "is it working?" cue)
@@ -993,6 +1001,7 @@
            [bulk-ops-views/main
             {:title (tr :lipas.org/bulk-operations)
              :external-selection? true
+             :org-contact org-contact
              :on-cancel #(rf/dispatch [::bulk-ops-events/reset])}]
 
            [:<>
@@ -1012,29 +1021,31 @@
                          :on-click #(rf/dispatch [::bulk-ops-events/set-sites-filter :ownership "granted"])}
               (str (tr :lipas.org/shared-with-us) " (" shared-count ")")]]
 
-            ;; content filters — find sites to view / bulk-edit
-            [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "center" :flex-wrap "wrap"}}
+            ;; content filters — find sites to view / bulk-edit. Multi-select,
+            ;; reusing the same grouped-type / admin / status pickers as the
+            ;; map-view search filters (each: empty = no filter).
+            [:> Box {:sx {:display "flex" :gap 1 :mb 2 :align-items "flex-start" :flex-wrap "wrap"}}
              [:> Box {:sx {:min-width 200}}
               [text-fields/text-field-controlled
                {:label (tr :search/search)
                 :value (:search-text filters)
                 :on-change #(rf/dispatch [::bulk-ops-events/set-sites-filter :search-text %])}]]
-             [:> Box {:sx {:min-width 200}}
-              (r/as-element
-                [ac/type-selector
-                 {:value (:type-code filters)
-                  :label (tr :type/name)
-                  :onChange (fn [_ {:keys [value]}]
-                              (rf/dispatch [::bulk-ops-events/set-sites-filter :type-code value]))}])]
+             [:> Box {:sx {:min-width 220}}
+              [selects/type-category-selector
+               {:value (:type-codes filters)
+                :label (tr :actions/select-types)
+                :on-change #(rf/dispatch [::bulk-ops-events/set-sites-filter :type-codes %])}]]
              ;; no owner filter: take-over locks :owner to the org type's enum, so
              ;; all of an org's sites share one owner value — filtering by it is moot
              [:> Box {:sx {:min-width 200}}
-              (r/as-element
-                [ac/admin-selector
-                 {:value (:admin filters)
-                  :label (tr :lipas.sports-site/admin)
-                  :onChange (fn [_ {:keys [value]}]
-                              (rf/dispatch [::bulk-ops-events/set-sites-filter :admin value]))}])]]
+              [selects/admin-selector
+               {:value (:admins filters)
+                :label (tr :lipas.sports-site/admin)
+                :on-change #(rf/dispatch [::bulk-ops-events/set-sites-filter :admins %])}]]
+             [:> Box {:sx {:min-width 200}}
+              [selects/status-selector
+               {:value (:statuses filters)
+                :on-change #(rf/dispatch [::bulk-ops-events/set-sites-filter :statuses %])}]]]
 
             ;; selection action bar — launches the bulk-edit wizard for the
             ;; checked sites (the headline "edit contact info on many sites"),
@@ -1086,6 +1097,7 @@
                                 :label (tr :lipas.org/type-col)}]
                   [sortable-th {:sort* sort-state :on-sort on-sort :col :city
                                 :label (tr :lipas.org/city)}]
+                  [:> TableCell (tr :lipas.sports-site/status)]
                   [sortable-th {:sort* sort-state :on-sort on-sort :col :last-edited
                                 :label (tr :lipas.org/last-edited)}]
                   [:> TableCell {:align "right"} (tr :lipas.org/who-can-edit)]]]
@@ -1110,6 +1122,7 @@
                                                 :label (tr :lipas.org/shared-with-us)}])]]
                                   [:> TableCell (get-in types [(get-in site [:type :type-code]) :name locale])]
                                   [:> TableCell (get-in cities [(get-in site [:location :city :city-code]) :name locale])]
+                                  [:> TableCell (get-in statuses [(:status site) locale])]
                                   [:> TableCell (some-> (:event-date site) (.substring 0 10))]
                                   [:> TableCell {:align "right"}
                                    [:> IconButton
@@ -1123,7 +1136,7 @@
                                     [:> Icon (if open? "expand_less" "expand_more")]]]]]
                           open?
                           (conj [:> TableRow {:key (str lipas-id "-detail")}
-                                 [:> TableCell {:colSpan (if selectable? 6 5) :sx {:p 0}}
+                                 [:> TableCell {:colSpan (if selectable? 7 6) :sx {:p 0}}
                                   [site-editors-detail tr org-id site]]]))))
                     sorted-sites))]]
 

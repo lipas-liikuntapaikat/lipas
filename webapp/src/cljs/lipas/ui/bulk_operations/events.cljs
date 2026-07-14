@@ -83,6 +83,17 @@
   (fn [db [_ field value]]
     (assoc-in db [:bulk-operations :update-form field] value)))
 
+(rf/reg-event-db ::populate-from-org-contact
+  ;; "Fill from organization contact info": copy the org's contact fields into
+  ;; the bulk-update form and select all four for update. Fields the org leaves
+  ;; blank are populated as nil, which clears that field on the selected sites —
+  ;; the org contact is treated as the source of truth (user-confirmed UX).
+  (fn [db [_ org-contact]]
+    (let [fields #{:email :phone-number :www :reservations-link}]
+      (-> db
+          (assoc-in [:bulk-operations :update-form] (select-keys org-contact fields))
+          (assoc-in [:bulk-operations :selected-fields] fields)))))
+
 (rf/reg-event-fx ::execute-bulk-update
   (fn [{:keys [db]} [_ {:keys [on-success on-failure]}]]
     (let [token (-> db :user :login :token)
@@ -138,7 +149,9 @@
         (assoc-in [:bulk-operations :selected-sites] #{})
         (assoc-in [:bulk-operations :selected-fields] #{})
         (assoc-in [:bulk-operations :update-form] {})
-        (assoc-in [:bulk-operations :filters] {})
+        ;; back to the default status filter (not "show all") so the list
+        ;; returns to its sensible baseline after a bulk edit
+        (assoc-in [:bulk-operations :filters] (:filters db/default-db))
         (assoc-in [:bulk-operations :current-step] 0)
         (assoc-in [:bulk-operations :update-results] nil)
         (assoc-in [:bulk-operations :error] nil))))

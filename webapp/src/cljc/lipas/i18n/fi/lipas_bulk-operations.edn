@@ -1,5 +1,7 @@
 {:check-to-update-field "Valitse päivitettäväksi"
  :field-will-not-change "Tämä kenttä ei muutu"
+ :fill-from-org "Täytä organisaation yhteystiedoista"
+ :fill-from-org-help "Kopioi organisaation yhteystiedot lomakkeelle. Tyhjät kentät tyhjentävät vastaavan tiedon valituista liikuntapaikoista."
  :n-sites-selected "Valittu {1} liikuntapaikkaa"
  :select-fields-to-update "Valitse päivitettävät kentät:"
  :select-sites-to-update "Valitse päivitettävät liikuntapaikat"
