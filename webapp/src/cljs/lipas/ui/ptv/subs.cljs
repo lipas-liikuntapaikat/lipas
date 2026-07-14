@@ -782,6 +782,22 @@
   (fn [audit _]
     (:notification-dialog audit)))
 
+;; Dirty tracking: every save appends a revision and re-anchors verdict
+;; snapshots, so the save button requires actual input since the last
+;; save (set by the ::update-*-audit-* events, cleared on save success
+;; and org switch). Stale verdicts are the exception — re-confirming one
+;; without touching the form is a meaningful save (see site-form).
+
+(rf/reg-sub ::site-audit-dirty?
+  :<- [::audit]
+  (fn [audit [_ lipas-id]]
+    (boolean (get-in audit [:site-dirty lipas-id]))))
+
+(rf/reg-sub ::service-audit-dirty?
+  :<- [::audit]
+  (fn [audit [_ service-id]]
+    (boolean (get-in audit [:service-dirty (str service-id)]))))
+
 (rf/reg-sub ::audit-stats
   ;; Notification stats tally only items whose verdicts are complete for
   ;; the current content (bucket :waiting-fixes or :done) — an item back
