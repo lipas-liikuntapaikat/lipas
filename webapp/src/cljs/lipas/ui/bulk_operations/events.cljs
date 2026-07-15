@@ -1,7 +1,25 @@
 (ns lipas.ui.bulk-operations.events
   (:require [ajax.core :as ajax]
+            [lipas.data.bulk-operations :as bulk-fields]
             [lipas.ui.bulk-operations.db :as db]
             [re-frame.core :as rf]))
+
+(defn- field-id->path
+  "Document path a bulk field writes to: the static registry path, or
+  [:properties k] for a dynamic property field (whose id is the prop key)."
+  [field-id]
+  (or (get bulk-fields/static-field-paths field-id)
+      [:properties field-id]))
+
+(defn- build-updates
+  "Assemble the nested `:updates` patch from the armed fields: for each selected
+  field-id, write its form value at the field's document path. A nil value is
+  kept (the backend treats it as a clear)."
+  [update-form selected-fields]
+  (reduce (fn [patch field-id]
+            (assoc-in patch (field-id->path field-id) (get update-form field-id)))
+          {}
+          selected-fields))
 
 (rf/reg-event-fx ::init
   ;; Bulk update is an org operation — always launched with an org-id.
@@ -100,14 +118,8 @@
           selected-sites (get-in db [:bulk-operations :selected-sites])
           update-form (get-in db [:bulk-operations :update-form])
           selected-fields (get-in db [:bulk-operations :selected-fields])
-                         ;; Remove unselected fields from the update form
-          filtered-updates (reduce-kv
-                             (fn [m k v]
-                               (if (contains? selected-fields k)
-                                 (assoc m k v)
-                                 m))
-                             {}
-                             update-form)]
+          ;; Build the nested patch (only armed fields, at their doc paths)
+          updates (build-updates update-form selected-fields)]
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
        {:method :post
@@ -115,7 +127,7 @@
         :headers {:Authorization (str "Token " token)}
         :params {:org-id (get-in db [:bulk-operations :org-id])
                  :lipas-ids (vec selected-sites)
-                 :updates filtered-updates}
+                 :updates updates}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::execute-bulk-update-success on-success]
@@ -158,8 +170,8 @@
 
 (rf/reg-event-db ::set-current-step
   (fn [db [_ step]]
-    (cond-> db
-      true (assoc-in [:bulk-operations :current-step] step)
-                     ;; When moving to step 2, initialize all fields as selected if none are selected yet
-      (and (= step 1) (empty? (get-in db [:bulk-operations :selected-fields])))
-      (assoc-in [:bulk-operations :selected-fields] #{:email :phone-number :www :reservations-link}))))
+    ;; No field is armed by default: with many fields (core attributes, address,
+    ;; type-specific properties) now on offer, the user explicitly checks the
+    ;; ones to change. "Fill from organization contact info" still arms the four
+    ;; contact fields in one click for that common flow.
+    (assoc-in db [:bulk-operations :current-step] step)))

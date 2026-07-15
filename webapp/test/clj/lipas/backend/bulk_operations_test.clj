@@ -64,6 +64,16 @@
      :granted   (:lipas-id (mk-site! 9995003 837 1130 {:owner-org-id other :edit-grants [(str org-id)]}))
      :unrelated (:lipas-id (mk-site! 9995004 91 1110 {}))}))
 
+(defn- mass-update!
+  "POST /actions/mass-update-org-sites with `updates` as the whole org."
+  [org-id lipas-ids updates token]
+  ((test-app) (-> (mock/request :post "/api/actions/mass-update-org-sites")
+                  (mock/content-type "application/json")
+                  (mock/body (test-utils/->json {:org-id org-id
+                                                 :lipas-ids lipas-ids
+                                                 :updates updates}))
+                  (test-utils/token-header token))))
+
 (defn- persisted-catalog-org!
   "Create a REAL persisted org with an editor role-template catalog (so
   membership projection has a catalog ceiling to draw from). Returns its id."
@@ -297,7 +307,145 @@
       (is (= "Newer DB Name" (:name (core/get-sports-site2 (test-search) owned1 :none)))
           "ES is reindexed from what was actually written to the DB"))))
 
+;;; Generalized field bulk update (status / admin / construction-year /
+;;; address / common properties), beyond the original contact fields. ;;;
+
+(deftest mass-update-core-fields-test
+  (testing "status, admin and construction-year update together across sites"
+    (let [org-id (java.util.UUID/randomUUID)
+          {:keys [owned1 owned2]} (seed-org-sites! org-id)
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [owned1 owned2]
+                              {:status "out-of-service-temporarily"
+                               :admin "state"
+                               :construction-year 1985}
+                              token)
+          s1 (core/get-sports-site (test-db) owned1)
+          s2 (core/get-sports-site (test-db) owned2)]
+      (is (= 200 (:status resp)))
+      (is (= 2 (:total-updated (test-utils/safe-parse-json resp))))
+      (is (= "out-of-service-temporarily" (:status s1)))
+      (is (= "state" (:admin s1)))
+      (is (= 1985 (:construction-year s1)))
+      (is (= "out-of-service-temporarily" (:status s2)))
+      ;; the status column (not just the document) is updated → ES/status search
+      (is (= "out-of-service-temporarily"
+             (:status (core/get-sports-site2 (test-search) owned1 :none)))))))
+
+(deftest mass-update-clear-optional-field-test
+  (testing "sending nil for an optional field clears it (removes the key)"
+    (let [org-id (java.util.UUID/randomUUID)
+          lipas-id (:lipas-id (mk-site! 9995010 91 1110
+                                        {:owner-org-id (str org-id)
+                                         :construction-year 1990}))
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [lipas-id] {:construction-year nil} token)
+          saved (core/get-sports-site (test-db) lipas-id)]
+      (is (= 200 (:status resp)))
+      (is (not (contains? saved :construction-year))
+          "cleared field is removed, not stored as nil"))))
+
+(deftest mass-update-required-field-not-clearable-test
+  (testing "nil for a required field (status) is rejected at the schema (400)"
+    (let [org-id (java.util.UUID/randomUUID)
+          {:keys [owned1]} (seed-org-sites! org-id)
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [owned1] {:status nil} token)]
+      (is (= 400 (:status resp))))))
+
+(deftest mass-update-nested-location-fields-test
+  (testing "postal-office + neighborhood update; sibling location fields preserved"
+    (let [org-id (java.util.UUID/randomUUID)
+          {:keys [owned1]} (seed-org-sites! org-id)
+          before (core/get-sports-site (test-db) owned1)
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [owned1]
+                              {:location {:postal-office "Espoo"
+                                          :city {:neighborhood "Keskusta"}}}
+                              token)
+          saved (core/get-sports-site (test-db) owned1)]
+      (is (= 200 (:status resp)))
+      (is (= "Espoo" (get-in saved [:location :postal-office])))
+      (is (= "Keskusta" (get-in saved [:location :city :neighborhood])))
+      ;; nested siblings survive the assoc-in (not clobbered by a naive merge)
+      (is (= (get-in before [:location :postal-code])
+             (get-in saved [:location :postal-code]))
+          "postal-code untouched")
+      (is (= (get-in before [:location :city :city-code])
+             (get-in saved [:location :city :city-code]))
+          "city-code untouched")
+      (is (= (get-in before [:location :geometries])
+             (get-in saved [:location :geometries]))
+          "geometries untouched"))))
+
+(deftest mass-update-properties-replace-test
+  (testing "an enum-coll property is REPLACED (not appended) and a boolean cleared"
+    (let [org-id (java.util.UUID/randomUUID)
+          ;; two ice-skating fields (type 1520) — both carry :surface-material
+          l1 (:lipas-id (mk-site! 9995020 91 1520
+                                  {:owner-org-id (str org-id)
+                                   :properties {:surface-material ["gravel"] :toilet? true}}))
+          l2 (:lipas-id (mk-site! 9995021 49 1520
+                                  {:owner-org-id (str org-id)
+                                   :properties {:surface-material ["sand"] :toilet? true}}))
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [l1 l2]
+                              {:properties {:surface-material ["concrete"]
+                                            :toilet? nil}}
+                              token)
+          s1 (core/get-sports-site (test-db) l1)
+          s2 (core/get-sports-site (test-db) l2)]
+      (is (= 200 (:status resp)))
+      (is (= ["concrete"] (get-in s1 [:properties :surface-material]))
+          "replaced wholesale, previous [\"gravel\"] gone")
+      (is (= ["concrete"] (get-in s2 [:properties :surface-material])))
+      (is (not (contains? (:properties s1) :toilet?))
+          "nil property value clears the property"))))
+
+(deftest mass-update-property-off-intersection-rejected-test
+  (testing "a property not shared by all selected sites' types is rejected (400)"
+    (let [org-id (java.util.UUID/randomUUID)
+          ;; type 1520 has no :height-m (an indoor property)
+          lipas-id (:lipas-id (mk-site! 9995030 91 1520 {:owner-org-id (str org-id)}))
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [lipas-id] {:properties {:height-m 5}} token)]
+      (is (= 400 (:status resp))))))
+
+(deftest mass-update-invalid-property-value-rejected-test
+  (testing "a property value failing its prop-type schema is rejected (400)"
+    (let [org-id (java.util.UUID/randomUUID)
+          lipas-id (:lipas-id (mk-site! 9995031 91 1520 {:owner-org-id (str org-id)}))
+          token (jwt/create-token (org-editor-user org-id))
+          ;; :surface-material expects a vector of enums, not a bare string
+          resp  (mass-update! org-id [lipas-id]
+                              {:properties {:surface-material "not-a-vector"}}
+                              token)]
+      (is (= 400 (:status resp))))))
+
+(deftest mass-update-empty-payload-rejected-test
+  (testing "a payload with no updatable fields is rejected (400)"
+    (let [org-id (java.util.UUID/randomUUID)
+          {:keys [owned1]} (seed-org-sites! org-id)
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [owned1] {} token)]
+      (is (= 400 (:status resp))))))
+
+(deftest mass-update-mixed-fields-preserves-authz-test
+  (testing "a mixed patch still rejects the whole request if any site is foreign"
+    (let [org-id (java.util.UUID/randomUUID)
+          {:keys [owned1 unrelated]} (seed-org-sites! org-id)
+          before-admin (:admin (core/get-sports-site (test-db) owned1))
+          token (jwt/create-token (org-editor-user org-id))
+          resp  (mass-update! org-id [owned1 unrelated]
+                              {:status "out-of-service-permanently" :admin "state"}
+                              token)]
+      (is (= 500 (:status resp)) "unauthorized lipas-id rejects the batch")
+      (is (= before-admin (:admin (core/get-sports-site (test-db) owned1)))
+          "owned site untouched (all-or-nothing)"))))
+
 (comment
   (clojure.test/run-test-var #'list-org-editable-sites-test)
   (clojure.test/run-test-var #'mass-update-org-editor-success-test)
+  (clojure.test/run-test-var #'mass-update-core-fields-test)
+  (clojure.test/run-test-var #'mass-update-properties-replace-test)
   (clojure.test/run-test-var #'non-editor-denied-test))

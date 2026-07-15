@@ -638,8 +638,9 @@
                         (core/revoke-site-edit! db search (:identity req) lipas-id grantee-org-id org-id)
                         {:status 200 :body {}}))}}]
 
-      ;; --- Bulk contact update (org-only): apply. Gated by :site/create-edit
-      ;; for the org (admits admin + org-editor members). ---
+      ;; --- Bulk field update (org-only): apply a partial patch (contact info,
+      ;; core attributes, address, common properties) to many of the org's sites.
+      ;; Gated by :site/create-edit for the org (admits admin + org-editor). ---
         ["/actions/mass-update-org-sites"
          {:post
           {:no-doc true
@@ -647,15 +648,11 @@
            :parameters {:body [:map
                                [:org-id org-schema/org-id]
                                [:lipas-ids [:vector #'sports-site-schema/lipas-id]]
-                               [:updates [:map
-                                          [:email {:optional true} [:maybe [:string {:min 1 :max 200}]]]
-                                          [:phone-number {:optional true} [:maybe [:string {:min 1 :max 50}]]]
-                                          [:www {:optional true} [:maybe [:string {:min 1 :max 500}]]]
-                                          [:reservations-link {:optional true} [:maybe [:string {:min 1 :max 500}]]]]]]}
+                               [:updates bulk-ops/updates-schema]]}
            :handler (fn [req]
                       (let [{:keys [org-id lipas-ids updates]} (-> req :parameters :body)]
                         {:status 200
-                         :body (bulk-ops/mass-update-org-sites-contacts!
+                         :body (bulk-ops/mass-update-org-sites!
                                  db search ptv (:identity req)
                                  org-id
                                  lipas-ids updates)}))}}]

@@ -1,5 +1,6 @@
 (ns lipas.ui.bulk-operations.subs
-  (:require [re-frame.core :as rf]))
+  (:require [lipas.data.bulk-operations :as bulk-fields]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::editable-sites
   (fn [db _]
@@ -90,3 +91,26 @@
 (rf/reg-sub ::update-results
   (fn [db _]
     (get-in db [:bulk-operations :update-results])))
+
+(rf/reg-sub ::selected-sites-data
+  :<- [::editable-sites]
+  :<- [::selected-sites]
+  (fn [[sites selected] _]
+    (filter #(contains? selected (:lipas-id %)) sites)))
+
+(rf/reg-sub ::selected-sites-type-codes
+  :<- [::selected-sites-data]
+  (fn [sites _]
+    (->> sites
+         (map #(get-in % [:type :type-code]))
+         (remove nil?)
+         distinct)))
+
+;; The type-specific property fields offered for bulk edit: the properties
+;; COMMON to every selected site's type (their intersection). Empty when the
+;; selection is heterogeneous — the view then shows a "no common properties"
+;; note instead of property inputs.
+(rf/reg-sub ::common-property-fields
+  :<- [::selected-sites-type-codes]
+  (fn [type-codes _]
+    (bulk-fields/property-fields type-codes)))

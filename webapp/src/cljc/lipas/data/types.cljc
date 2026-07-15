@@ -1,6 +1,7 @@
 (ns lipas.data.types
   "Categorization of sports sites."
   (:require
+   [clojure.set :as set]
    [lipas.utils :as utils]
    #_[lipas.data.types-old :as old]
    [lipas.data.prop-types :as prop-types]
@@ -159,6 +160,24 @@
 (def used-prop-types
   (let [used (set (mapcat (comp keys :props second) all))]
     (select-keys prop-types/all used)))
+
+(defn type-prop-keys
+  "Set of prop-type keys declared by a single `type-code` (empty for an unknown
+  type-code or a type with no props)."
+  [type-code]
+  (-> all (get type-code) :props keys set))
+
+(defn common-prop-keys
+  "The set of prop-type keys shared by ALL given `type-codes` (the intersection
+  of each type's declared props). Returns #{} for an empty selection or when the
+  types have no property in common — the caller (bulk edit) surfaces that as
+  \"no common properties\". A shared, side-effect-free helper for the FE (which
+  fields to render) and the BE (which property keys a bulk update may touch)."
+  [type-codes]
+  (let [key-sets (map type-prop-keys (distinct type-codes))]
+    (if (seq key-sets)
+      (reduce set/intersection key-sets)
+      #{})))
 
 (comment
   (->type (get all 1180))
