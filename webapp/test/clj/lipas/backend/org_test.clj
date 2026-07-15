@@ -1684,9 +1684,15 @@
                    (let [owner (some-> owner-org-id
                                        (->> (backend-org/get-org (test-db)))
                                        :type core/org-type->owner)]
+                     ;; Strip :images — this test isolates the ownership-claim
+                     ;; boundary, and gen-sports-site randomly emits images. A
+                     ;; site carrying images trips the dedicated :site/edit-images
+                     ;; gate on create, which an org-editor (privilege set
+                     ;; `basic`) doesn't hold, giving a spurious 403 ~half the
+                     ;; runs. Ownership authz is orthogonal to image rights.
                      (cond-> (-> (test-utils/gen-sports-site)
                                  (assoc :status "active")
-                                 (dissoc :lipas-id))
+                                 (dissoc :lipas-id :images))
                        owner-org-id (assoc :owner-org-id (str owner-org-id))
                        owner        (assoc :owner owner))))]
 
