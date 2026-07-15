@@ -1,7 +1,7 @@
 {:add-user "Lisää"
  :add-user-by-email "Lisää sähköpostilla"
  :bulk-operations "Massapäivitys"
- :bulk-operations-description "Päivitä yhteystiedot usealle liikuntapaikalle kerralla"
+ :bulk-operations-description "Päivitä tietoja usealle liikuntapaikalle kerralla"
  :bulk-operations-tab "Massapäivitys"
  :contact-admin
  "Ota yhteyttä järjestelmän ylläpitäjään organisaatiojäsenyyden lisäämiseksi"

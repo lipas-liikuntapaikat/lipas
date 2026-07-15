@@ -1,7 +1,7 @@
 {:add-user "Add"
  :add-user-by-email "Add by email"
  :bulk-operations "Bulk Operations"
- :bulk-operations-description "Update contact information for multiple sports facilities at once"
+ :bulk-operations-description "Update information for multiple sports facilities at once"
  :bulk-operations-tab "Bulk Operations"
  :contact-admin
  "Contact the system administrator to be added to an organization"
