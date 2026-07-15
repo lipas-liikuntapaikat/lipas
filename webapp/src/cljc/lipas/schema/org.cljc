@@ -102,13 +102,33 @@
     [:user-id [:or :uuid :string]]
     [:roles {:optional true} [:vector :string]]]])
 
-(def instructions
-  "Free-text guidance an org-admin writes for their members, localized. Each
-  locale is optional; the whole map is optional (absent for legacy orgs)."
+(def ^:private localized-title
+  [:map
+   [:fi {:optional true} [:maybe [:string {:max 200}]]]
+   [:se {:optional true} [:maybe [:string {:max 200}]]]
+   [:en {:optional true} [:maybe [:string {:max 200}]]]])
+
+(def ^:private localized-body
   [:map
    [:fi {:optional true} [:maybe [:string {:max 10000}]]]
    [:se {:optional true} [:maybe [:string {:max 10000}]]]
    [:en {:optional true} [:maybe [:string {:max 10000}]]]])
+
+(def instruction-page
+  "One page (tab) of org instructions. `:title` labels the tab, `:body` holds the
+  guidance text; both localized (fi/se/en), each locale optional. `:id` is a
+  client-generated stable key used for tab selection and reordering."
+  [:map
+   [:id [:string {:min 1 :max 64}]]
+   [:title {:optional true} [:maybe localized-title]]
+   [:body {:optional true} [:maybe localized-body]]])
+
+(def instructions
+  "Ordered list of instruction pages an org-admin maintains for members — a
+  lightweight per-org mini-CMS. Empty/absent for legacy orgs. Historically this
+  was a single localized `{:fi.. :se.. :en..}` map; `org/unmarshall` upgrades any
+  such legacy row to a one-page vector on read."
+  [:vector {:max 20} instruction-page])
 
 (def org
   (m/schema

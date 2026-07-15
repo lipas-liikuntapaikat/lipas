@@ -30,10 +30,13 @@
  :our-sites-tab "Kohteet"
  :history-tab "Historia"
  :instructions-tab "Ohjeet"
- :instructions-helper "Organisaation ylläpitäjä voi kirjoittaa tähän ohjeet jäsenille. Jäsenet näkevät ohjeet, mutta eivät voi muokata niitä."
- :instructions-fi "Ohjeet (suomeksi)"
- :instructions-se "Ohjeet (ruotsiksi)"
- :instructions-en "Ohjeet (englanniksi)"
+ :instructions-helper "Organisaation ylläpitäjä voi koota jäsenille ohjeita omille sivuilleen (välilehdet). Jäsenet näkevät ohjeet, mutta eivät voi muokata niitä."
+ :add-page "Lisää sivu"
+ :remove-page "Poista sivu"
+ :remove-page-confirm "Poistetaanko tämä ohjesivu? Muutos tallentuu vasta kun painat Tallenna."
+ :page-title-label "Sivun otsikko"
+ :page-body-label "Sisältö"
+ :untitled-page "Nimetön sivu"
  :no-instructions "Ohjeita ei ole vielä lisätty."
 
  ;; role-template catalog editor

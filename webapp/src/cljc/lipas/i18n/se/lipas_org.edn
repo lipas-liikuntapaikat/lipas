@@ -30,10 +30,13 @@
  :our-sites-tab "Anläggningar"
  :history-tab "Historik"
  :instructions-tab "Anvisningar"
- :instructions-helper "Organisationens administratör kan skriva anvisningar för medlemmarna här. Medlemmarna kan läsa anvisningarna men inte redigera dem."
- :instructions-fi "Anvisningar (finska)"
- :instructions-se "Anvisningar (svenska)"
- :instructions-en "Anvisningar (engelska)"
+ :instructions-helper "Organisationens administratör kan samla anvisningar för medlemmarna på egna sidor (flikar). Medlemmarna kan läsa anvisningarna men inte redigera dem."
+ :add-page "Lägg till sida"
+ :remove-page "Ta bort sida"
+ :remove-page-confirm "Ta bort den här anvisningssidan? Ändringen sparas först när du trycker på Spara."
+ :page-title-label "Sidans rubrik"
+ :page-body-label "Innehåll"
+ :untitled-page "Namnlös sida"
  :no-instructions "Inga anvisningar har lagts till ännu."
 
  ;; role-template catalog editor

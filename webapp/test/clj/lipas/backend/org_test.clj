@@ -1274,12 +1274,15 @@
           member (test-utils/gen-regular-user :db-component (test-db))
           _      (backend-org/add-member! (test-db) org-id (:id member)
                                           {:roles ["editor"]} nil)
+          pages  [{:id "p1"
+                   :title {:fi "Yleisohjeet"}
+                   :body {:fi "Ohje" :en "Guide" :se "Anvisning"}}]
           _      (backend-org/update-org! (test-db) org-id
                                           (assoc (backend-org/get-org (test-db) org-id)
-                                                 :instructions {:fi "Ohje" :en "Guide" :se "Anvisning"})
+                                                 :instructions pages)
                                           nil)
           o      (backend-org/get-org (test-db) org-id)]
-      (is (= {:fi "Ohje" :en "Guide" :se "Anvisning"} (:instructions o)))
+      (is (= pages (:instructions o)))
       (is (= 1 (count (:members o))) "Members preserved through a details update"))))
 
 (deftest org-admin-can-set-instructions-test
@@ -1290,10 +1293,10 @@
                                (mock/content-type "application/json")
                                (mock/body (test-utils/->json
                                             (assoc (backend-org/get-org (test-db) org-id)
-                                                   :instructions {:fi "Jäsenohje"})))
+                                                   :instructions [{:id "p1" :title {} :body {:fi "Jäsenohje"}}])))
                                (test-utils/token-header oadmin)))]
       (is (= 200 (:status resp)))
-      (is (= "Jäsenohje" (-> (backend-org/get-org (test-db) org-id) :instructions :fi))))))
+      (is (= "Jäsenohje" (-> (backend-org/get-org (test-db) org-id) :instructions first :body :fi))))))
 
 (deftest org-sites-test
   (testing "org-sites returns owned vs editable sites via ES term filters"
@@ -2031,7 +2034,7 @@
         _      (backend-org/update-org! (test-db) org-id
                                         {:name "Full"
                                          :type "other"
-                                         :instructions {:fi "Ohje"}
+                                         :instructions [{:id "p1" :title {} :body {:fi "Ohje"}}]
                                          :ownership {:city-codes [91] :owners ["city"]}}
                                         nil)
         before (backend-org/get-org (test-db) org-id)
@@ -2040,7 +2043,7 @@
         after  (backend-org/get-org (test-db) org-id)]
     (is (= "Renamed" (:name after)))
     (is (= "other" (:type after)) "absent :type is not re-defaulted to \"city\"")
-    (is (= {:fi "Ohje"} (:instructions after)) "absent :instructions is not nilled")
+    (is (= "Ohje" (-> after :instructions first :body :fi)) "absent :instructions is not nilled")
     (is (= (:ownership before) (:ownership after)) "absent :ownership is not emptied")
     (is (= (:ptv-data before) (:ptv-data after)) "absent :ptv-data is not nilled")
     (is (= (:primary-contact before) (:primary-contact after)))))
@@ -2059,7 +2062,7 @@
         _      (backend-org/update-org-details! (test-db) org-id
                                                 {:name "After"
                                                  :primary-contact {:email "after@example.com"}
-                                                 :instructions {:fi "Uusi ohje"}
+                                                 :instructions [{:id "p1" :title {} :body {:fi "Uusi ohje"}}]
                                                  :type "state"
                                                  :ownership {:city-codes [999] :owners ["state"]}
                                                  :ptv-data {:org-id (str (random-uuid))}}
@@ -2067,7 +2070,7 @@
         after  (backend-org/get-org (test-db) org-id)]
     (is (= "After" (:name after)))
     (is (= "after@example.com" (-> after :primary-contact :email)))
-    (is (= {:fi "Uusi ohje"} (:instructions after)) "instructions ARE org-admin-editable")
+    (is (= "Uusi ohje" (-> after :instructions first :body :fi)) "instructions ARE org-admin-editable")
     (is (= (:type before) (:type after)) "the take-over ceiling :type is ignored")
     (is (= (:ownership before) (:ownership after)) ":ownership is ignored")
     (is (= (:ptv-data before) (:ptv-data after)) ":ptv-data is ignored")

@@ -48,6 +48,7 @@
             [lipas.ui.bulk-operations.subs :as bulk-ops-subs]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
             [lipas.ui.roles.editor :as role-editor]
+            [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.events :as events]
@@ -241,45 +242,124 @@
 
 (def ^:private instruction-langs [[:fi "Suomi"] [:se "Svenska"] [:en "English"]])
 
+(defn- new-instruction-page []
+  {:id (str (random-uuid)) :title {} :body {}})
+
+(defn- page-tab-label
+  "Tab label for a page: its title in `lang`, falling back to fi/en, else a
+  localized placeholder."
+  [tr page lang]
+  (or (not-empty (str/trim (or (get-in page [:title lang]) "")))
+      (not-empty (str/trim (or (get-in page [:title :fi]) "")))
+      (not-empty (str/trim (or (get-in page [:title :en]) "")))
+      (tr :lipas.org/untitled-page)))
+
 (defn instructions-tab
-  "Org admin (and lipas-admin) write localized instructions for members; members
-  see them read-only. Stored in the org payload under :instructions {fi se en}.
-  The language variants are shown as sub-tabs, one editable text area at a time."
-  [tr org-id]
-  (r/with-let [lang (r/atom :fi)]
-    (let [org          @(rf/subscribe [::subs/editing-org])
-          is-new?      (= "new" org-id)
-          can-edit?    (or is-new? @(rf/subscribe [::subs/can? :org/edit-instructions org-id]))
-          instructions (:instructions org)
-          empty?       (every? str/blank? (vals (select-keys instructions [:fi :se :en])))
-          selected     @lang]
-      [:> Box {:sx {:p 2}}
-       [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 2 :max-width 800}}
-        (tr :lipas.org/instructions-helper)]
-       (if (and (not can-edit?) empty?)
-         [:> Typography {:color "text.secondary"} (tr :lipas.org/no-instructions)]
-         [:> Box {:sx {:max-width 800}}
-          (into [:> Tabs {:value     selected
-                          :on-change (fn [_ v] (reset! lang v))
-                          :sx        {:mb 2}}]
-                (for [[loc label] instruction-langs]
-                  [:> Tab {:key loc :label label :value loc}]))
-          ^{:key selected}
-          [text-fields/text-field-controlled
-           {:label     (tr (keyword "lipas.org" (str "instructions-" (name selected))))
-            :value     (get instructions selected)
-            :multiline true
-            :rows      10
-            :disabled  (not can-edit?)
-            :on-change #(rf/dispatch [::events/edit-org [:instructions selected] %])}]
-          (when can-edit?
-            [:> Button
-             {:variant  "contained"
-              :color    "secondary"
-              :on-click #(rf/dispatch [::events/save-org org])
-              :sx       {:mt 2 :display "block"}}
-             [:> Icon {:sx {:mr 1}} "save"]
-             (tr :actions/save)])])])))
+  "Org admin (and lipas-admin) maintain a small set of instruction pages for
+  members — a lightweight per-org mini-CMS. Members see them read-only. Stored
+  under :instructions as an ordered vector of {:id :title :body} pages, each
+  localized (fi/se/en). Outer tabs pick the page, inner tabs the language."
+  [tr _org-id]
+  (let [sel-page (r/atom nil)
+        lang     (r/atom (tr))]
+    (fn [tr org-id]
+      (let [org        @(rf/subscribe [::subs/editing-org])
+            is-new?    (= "new" org-id)
+            can-edit?  (or is-new? @(rf/subscribe [::subs/can? :org/edit-instructions org-id]))
+            pages      (vec (:instructions org))
+            selected   (if (contains? #{:fi :se :en} @lang) @lang :fi)
+          ;; select by stable page id; fall back to the first page
+            cur-id     (or (some #(when (= (:id %) @sel-page) (:id %)) pages)
+                           (:id (first pages)))
+            idx        (some (fn [[i p]] (when (= (:id p) cur-id) i))
+                             (map-indexed vector pages))
+            page       (when idx (nth pages idx))
+            set-pages! (fn [new-pages]
+                         (rf/dispatch [::events/edit-org [:instructions] new-pages]))
+            add-page!  (fn []
+                         (let [p (new-instruction-page)]
+                           (set-pages! (conj pages p))
+                           (reset! sel-page (:id p))))
+            del-page!  (fn [id]
+                         (let [remaining (vec (remove #(= (:id %) id) pages))]
+                           (set-pages! remaining)
+                           (reset! sel-page (:id (first remaining)))))]
+        [:> Box {:sx {:p 2}}
+         [:> Typography {:variant "body2" :color "text.secondary" :sx {:mb 2 :max-width 900}}
+          (tr :lipas.org/instructions-helper)]
+         (cond
+         ;; members with nothing written yet
+           (and (not can-edit?) (empty? pages))
+           [:> Typography {:color "text.secondary"} (tr :lipas.org/no-instructions)]
+
+         ;; admin with no pages yet → just the add button
+           (empty? pages)
+           [:> Button {:variant "outlined" :on-click add-page!}
+            [:> Icon {:sx {:mr 1}} "add"]
+            (tr :lipas.org/add-page)]
+
+           :else
+           [:<>
+          ;; --- page tabs (+ add) ---
+            [:> Stack {:direction "row" :alignItems "center" :sx {:mb 1}}
+             (into [:> Tabs {:value         cur-id
+                             :on-change     (fn [_ v] (reset! sel-page v))
+                             :variant       "scrollable"
+                             :scrollButtons "auto"
+                             :sx            {:flex 1}}]
+                   (for [p pages]
+                     [:> Tab {:key   (:id p)
+                              :value (:id p)
+                              :label (page-tab-label tr p selected)}]))
+             (when can-edit?
+               [:> Tooltip {:title (tr :lipas.org/add-page)}
+                [:> IconButton {:on-click add-page!}
+                 [:> Icon "add"]]])]
+
+          ;; --- language sub-tabs (secondary style: subordinate to the page
+          ;; tabs above, per Material's primary/secondary tabs distinction) ---
+            (into [:> Tabs {:value          (name selected)
+                            :on-change      (fn [_ v] (reset! lang (keyword v)))
+                            :textColor      "secondary"
+                            :indicatorColor "secondary"
+                            :sx             {:mb 2 :minHeight 40}}]
+                  (for [[loc label] instruction-langs]
+                    [:> Tab {:key   loc
+                             :label label
+                             :value (name loc)
+                             :sx    {:minHeight 40 :py 0.5 :textTransform "none"}}]))
+
+          ;; --- title + body for the selected page & language ---
+            (when page
+              [:> Stack {:spacing 2}
+               ^{:key (str cur-id "-title-" (name selected))}
+               [text-fields/text-field-controlled
+                {:label     (tr :lipas.org/page-title-label)
+                 :value     (get-in page [:title selected])
+                 :fullWidth true
+                 :disabled  (not can-edit?)
+                 :on-change #(rf/dispatch [::events/edit-org [:instructions idx :title selected] %])}]
+               ^{:key (str cur-id "-body-" (name selected))}
+               [text-fields/text-field-controlled
+                {:label     (tr :lipas.org/page-body-label)
+                 :value     (get-in page [:body selected])
+                 :multiline true
+                 :rows      18
+                 :fullWidth true
+                 :disabled  (not can-edit?)
+                 :on-change #(rf/dispatch [::events/edit-org [:instructions idx :body selected] %])}]
+               (when can-edit?
+                 [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx {:mt 1}}
+                  [:> Button
+                   {:variant  "contained"
+                    :color    "secondary"
+                    :on-click #(rf/dispatch [::events/save-org org])}
+                   [:> Icon {:sx {:mr 1}} "save"]
+                   (tr :actions/save)]
+                  [buttons/confirming-delete-button
+                   {:tooltip         (tr :lipas.org/remove-page)
+                    :confirm-tooltip (tr :lipas.org/remove-page-confirm)
+                    :on-delete       (fn [_] (del-page! cur-id))}]])])])]))))
 
 (defn overview-tab [tr org-id]
   (let [org @(rf/subscribe [::subs/editing-org])

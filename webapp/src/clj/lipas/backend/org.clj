@@ -40,6 +40,20 @@
    :ownership       (or (:ownership org) {:city-codes [] :owners []})
    :members         (or (:members org) [])})
 
+(defn- normalize-instructions
+  "Back-compat for the pre-pages instructions shape. Instructions were originally
+  a single localized map `{:fi.. :se.. :en..}`; the current shape is an ordered
+  vector of pages `[{:id :title :body}]`. Wrap any legacy map into a one-page
+  vector so the pages-based FE can render old rows."
+  [instructions]
+  (cond
+    (nil? instructions)        instructions
+    (sequential? instructions) (vec instructions)
+    (map? instructions)        [{:id "legacy"
+                                 :title {}
+                                 :body (select-keys instructions [:fi :se :en])}]
+    :else                      instructions))
+
 (defn unmarshall
   "org_current row -> external org map. `:id` is the stable `org_id`. Keeps the
   legacy `:data`/`:ptv-data` keys so existing consumers (PTV, system, FE) work,
@@ -52,7 +66,7 @@
      :ptv-data        (:ptv-data document)
      :type            (:type document)
      :primary-contact (:primary-contact document)
-     :instructions    (:instructions document)
+     :instructions    (normalize-instructions (:instructions document))
      :role-templates  (:role-templates document)
      :ownership       (:ownership document)
      :members         (:members document)}))

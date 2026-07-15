@@ -30,10 +30,13 @@
  :our-sites-tab "Sites"
  :history-tab "History"
  :instructions-tab "Instructions"
- :instructions-helper "The organization admin can write instructions for members here. Members can read the instructions but cannot edit them."
- :instructions-fi "Instructions (Finnish)"
- :instructions-se "Instructions (Swedish)"
- :instructions-en "Instructions (English)"
+ :instructions-helper "The organization admin can gather instructions for members on separate pages (tabs). Members can read the instructions but cannot edit them."
+ :add-page "Add page"
+ :remove-page "Remove page"
+ :remove-page-confirm "Remove this instruction page? The change is saved only when you press Save."
+ :page-title-label "Page title"
+ :page-body-label "Content"
+ :untitled-page "Untitled page"
  :no-instructions "No instructions have been added yet."
 
  ;; role-template catalog editor
