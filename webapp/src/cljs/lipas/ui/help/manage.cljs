@@ -1,12 +1,18 @@
 (ns lipas.ui.help.manage
+  "Help content editor (v2): each locale (fi/se/en) is an independent
+   tree edited, drafted and published separately. The toolbar's locale
+   tabs switch which tree is being edited; Save draft / Publish /
+   History all target the active locale only."
   (:require
    ["@mui/icons-material/Add$default" :as AddIcon]
    ["@mui/icons-material/ArrowDownward$default" :as ArrowDownIcon]
    ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
+   ["@mui/icons-material/AutoFixHigh$default" :as AutoFixIcon]
    ["@mui/icons-material/CategoryOutlined$default" :as CategoryIcon]
    ["@mui/icons-material/Delete$default" :as DeleteIcon]
    ["@mui/icons-material/Download$default" :as DownloadIcon]
    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/History$default" :as HistoryIcon]
    ["@mui/icons-material/Image$default" :as ImageIcon]
    ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
    ["@mui/icons-material/Preview$default" :as PreviewIcon]
@@ -18,6 +24,7 @@
    ["@mui/material/Card$default" :as Card]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/CardHeader$default" :as CardHeader]
+   ["@mui/material/Chip$default" :as Chip]
    ["@mui/material/Collapse$default" :as Collapse]
    ["@mui/material/Dialog$default" :as Dialog]
    ["@mui/material/DialogActions$default" :as DialogActions]
@@ -26,7 +33,11 @@
    ["@mui/material/DialogTitle$default" :as DialogTitle]
    ["@mui/material/FormControl$default" :as FormControl]
    ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/InputAdornment$default" :as InputAdornment]
    ["@mui/material/InputLabel$default" :as InputLabel]
+   ["@mui/material/List$default" :as MuiList]
+   ["@mui/material/ListItem$default" :as ListItem]
+   ["@mui/material/ListItemText$default" :as ListItemText]
    ["@mui/material/MenuItem$default" :as MenuItem]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Select$default" :as Select]
@@ -35,871 +46,630 @@
    ["@mui/material/Tabs$default" :as Tabs]
    ["@mui/material/TextField$default" :as TextField]
    ["@mui/material/Toolbar$default" :as Toolbar]
+   ["@mui/material/Tooltip$default" :as Tooltip]
    ["@mui/material/Typography$default" :as Typography]
    [ajax.core :as ajax]
    [clojure.string :as str]
    [lipas.ui.help.events :as events]
    [lipas.ui.help.subs :as subs]
+   [lipas.utils :as cutils]
    [re-frame.core :as rf]
    [reagent.core :as r]
    [reagent.hooks :as hooks]))
 
-;; Events for managing help content
-(rf/reg-event-db
- ::initialize-editor
- (fn [db _]
-   (update db :help assoc :edited-data (get-in db [:help :data]))))
+;;; ——— Helpers ————————————————————————————————————————————————————————
 
-(rf/reg-event-db
- ::update-section-title
- (fn [db [_ section-idx lang value]]
-   (assoc-in db [:help :edited-data section-idx :title lang] value)))
+(defn- editor-locale [db]
+  (get-in db [:help :editor :locale] :fi))
 
-(rf/reg-event-db
- ::update-page-title
- (fn [db [_ section-idx page-idx lang value]]
-   (assoc-in db [:help :edited-data section-idx :pages page-idx :title lang] value)))
+(defn- epath
+  "Path into the active locale's edited tree."
+  [db & ks]
+  (into [:help :edited-data (editor-locale db)] ks))
 
-(rf/reg-event-db
- ::update-block-content
- (fn [db [_ section-idx page-idx block-idx field lang value]]
-   (assoc-in db [:help :edited-data section-idx :pages page-idx :blocks block-idx field lang] value)))
+(defn- unique-slug
+  "Slug from title, made unique among taken (a set of strings)."
+  [title fallback taken]
+  (let [base (let [s (cutils/->slug title)]
+               (if (str/blank? s) fallback s))]
+    (if-not (contains? taken base)
+      base
+      (loop [n 2]
+        (let [s (str base "-" n)]
+          (if (contains? taken s) (recur (inc n)) s))))))
 
-(rf/reg-event-db
- ::update-block-field
- (fn [db [_ section-idx page-idx block-idx field value]]
-   (assoc-in db [:help :edited-data section-idx :pages page-idx :blocks block-idx field] value)))
+(defn- vec-remove [v idx]
+  (vec (concat (subvec v 0 idx) (subvec v (inc idx)))))
 
-(rf/reg-event-db
- ::add-block
- (fn [db [_ section-idx page-idx block-type]]
-   (let [block-id (str (random-uuid))
-         base-block {:block-id block-id :type block-type}
-         new-block (case block-type
-                     :text (assoc base-block :content {:fi "" :en "" :se ""})
-                     :video (assoc base-block
-                                   :provider :youtube
-                                   :video-id ""
-                                   :title {:fi "" :en "" :se ""})
-                     :image (assoc base-block
-                                   :url ""
-                                   :alt {:fi "" :en "" :se ""}
-                                   :caption {:fi "" :en "" :se ""})
-                     :pdf (assoc base-block
-                                 :url ""
-                                 :caption {:fi "" :en "" :se ""}
-                                 :title {:fi "" :en "" :se ""})
-                     :type-code-explorer base-block ;; No additional props needed for type explorer
-                     :data-model-excel-download base-block)]
-     (update-in db [:help :edited-data section-idx :pages page-idx :blocks] conj new-block))))
+(defn- vec-swap [v i j]
+  (-> v (assoc i (v j)) (assoc j (v i))))
 
-(rf/reg-event-db
- ::delete-block
- (fn [db [_ section-idx page-idx block-idx]]
-   (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
-              (fn [blocks]
-                (vec (concat
-                      (subvec blocks 0 block-idx)
-                      (subvec blocks (inc block-idx))))))))
+;;; ——— Editor state events ————————————————————————————————————————————
 
-(rf/reg-event-db
- ::move-block-up
- (fn [db [_ section-idx page-idx block-idx]]
-   (if (zero? block-idx)
-     db ; Already at the top, no change
-     (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
-                (fn [blocks]
-                  (let [block (get blocks block-idx)
-                        prev-block (get blocks (dec block-idx))]
-                    (-> blocks
-                        (assoc (dec block-idx) block)
-                        (assoc block-idx prev-block))))))))
+(rf/reg-event-db ::initialize-editor
+  (fn [db _]
+    (-> db
+        (assoc-in [:help :edited-data] (get-in db [:help :data]))
+        (assoc-in [:help :editor :section-idx]
+                  (when (seq (get-in db [:help :data (editor-locale db)])) 0))
+        (assoc-in [:help :editor :page-idx] nil))))
 
-(rf/reg-event-db
- ::move-block-down
- (fn [db [_ section-idx page-idx block-idx]]
-   (let [blocks (get-in db [:help :edited-data section-idx :pages page-idx :blocks])
-         last-idx (dec (count blocks))]
-     (if (= block-idx last-idx)
-       db ; Already at the bottom, no change
-       (update-in db [:help :edited-data section-idx :pages page-idx :blocks]
-                  (fn [blocks]
-                    (let [block (get blocks block-idx)
-                          next-block (get blocks (inc block-idx))]
-                      (-> blocks
-                          (assoc block-idx next-block)
-                          (assoc (inc block-idx) block)))))))))
+(rf/reg-event-db ::set-editor-locale
+  (fn [db [_ locale]]
+    (-> db
+        (assoc-in [:help :editor :locale] locale)
+        (assoc-in [:help :editor :section-idx]
+                  (when (seq (get-in db [:help :edited-data locale])) 0))
+        (assoc-in [:help :editor :page-idx] nil))))
 
-;; Section reordering events
-(rf/reg-event-db
- ::move-section-up
- (fn [db [_ section-idx]]
-   (if (zero? section-idx)
-     db ; Already at the top, no change
-     (update-in db [:help :edited-data]
-                (fn [sections]
-                  (let [section (get sections section-idx)
-                        prev-section (get sections (dec section-idx))]
-                    (-> sections
-                        (assoc (dec section-idx) section)
-                        (assoc section-idx prev-section))))))))
+(rf/reg-event-db ::select-section
+  (fn [db [_ idx]]
+    (-> db
+        (assoc-in [:help :editor :section-idx] idx)
+        (assoc-in [:help :editor :page-idx] nil))))
 
-(rf/reg-event-db
- ::move-section-down
- (fn [db [_ section-idx]]
-   (let [sections (get-in db [:help :edited-data])
-         last-idx (dec (count sections))]
-     (if (= section-idx last-idx)
-       db ; Already at the bottom, no change
-       (update-in db [:help :edited-data]
-                  (fn [sections]
-                    (let [section (get sections section-idx)
-                          next-section (get sections (inc section-idx))]
-                      (-> sections
-                          (assoc section-idx next-section)
-                          (assoc (inc section-idx) section)))))))))
+(rf/reg-event-db ::select-page
+  (fn [db [_ idx]]
+    (assoc-in db [:help :editor :page-idx] idx)))
 
-;; Page reordering events
-(rf/reg-event-db
- ::move-page-up
- (fn [db [_ section-idx page-idx]]
-   (if (zero? page-idx)
-     db ; Already at the top, no change
-     (update-in db [:help :edited-data section-idx :pages]
-                (fn [pages]
-                  (let [page (get pages page-idx)
-                        prev-page (get pages (dec page-idx))]
-                    (-> pages
-                        (assoc (dec page-idx) page)
-                        (assoc page-idx prev-page))))))))
+;;; ——— Section/page field edits ———————————————————————————————————————
 
-(rf/reg-event-db
- ::move-page-down
- (fn [db [_ section-idx page-idx]]
-   (let [pages (get-in db [:help :edited-data section-idx :pages])
-         last-idx (dec (count pages))]
-     (if (= page-idx last-idx)
-       db ; Already at the bottom, no change
-       (update-in db [:help :edited-data section-idx :pages]
-                  (fn [pages]
-                    (let [page (get pages page-idx)
-                          next-page (get pages (inc page-idx))]
-                      (-> pages
-                          (assoc page-idx next-page)
-                          (assoc (inc page-idx) page)))))))))
+(rf/reg-event-db ::update-section-field
+  (fn [db [_ section-idx field value]]
+    (assoc-in db (epath db section-idx field) value)))
 
-;; Helper function to create a slug from a string
-(defn- create-slug [s]
-  (-> (or s "")
-      str/lower-case
-      (str/replace #"[^\w\s-]" "") ; Remove special chars except spaces and hyphens
-      (str/replace #"\s+" "-")     ; Replace spaces with hyphens
-      (str/replace #"-+" "-")      ; Replace multiple hyphens with single
-      (str/replace #"^-|-$" "")))  ; Remove leading/trailing hyphens
+(rf/reg-event-db ::update-page-field
+  (fn [db [_ section-idx page-idx field value]]
+    (assoc-in db (epath db section-idx :pages page-idx field) value)))
 
-(rf/reg-event-db
- ::add-page
- (fn [db [_ section-idx]]
-   (let [default-title "New Page"
-         ;; Create a basic slug from the title
-         base-slug (create-slug default-title)
-         ;; Add timestamp to ensure uniqueness
-         timestamp (.now js/Date)
-         ;; Create a basic page structure
-         new-page {:slug (keyword (str base-slug "-" timestamp))
-                   :title {:fi default-title :en default-title :se "Ny sida"}
-                   :blocks []}
-         ;; Get the current pages vector
-         pages (get-in db [:help :edited-data section-idx :pages])
-         new-page-idx (count pages)]
-     ;; Add the new page to the appropriate section
-     (-> db
-         (update-in [:help :edited-data section-idx :pages] conj new-page)
-         ;; Select the new page
-         (assoc-in [:help :dialog :selected-page-idx] new-page-idx)
-         (assoc-in [:help :dialog :selected-page-slug] (:slug new-page))))))
+(rf/reg-event-db ::generate-section-slug
+  ;; Regenerating a published slug is safe-ish: the old slug should be
+  ;; added to :aliases. We do that automatically here.
+  (fn [db [_ section-idx]]
+    (let [sections (get-in db (epath db))
+          {:keys [title slug aliases]} (get sections section-idx)
+          taken (into #{} (map :slug) (vec-remove sections section-idx))
+          new-slug (unique-slug title slug taken)]
+      (if (= new-slug slug)
+        db
+        (-> db
+            (assoc-in (epath db section-idx :slug) new-slug)
+            (assoc-in (epath db section-idx :aliases)
+                      (vec (distinct (concat aliases [slug])))))))))
 
-(rf/reg-event-db
- ::delete-page
- (fn [db [_ section-idx page-idx]]
-   (let [pages (get-in db [:help :edited-data section-idx :pages])
-         selected-page-idx (get-in db [:help :dialog :selected-page-idx])
-         ;; If we're deleting the currently selected page, select the first available page
-         new-selected-idx (if (= selected-page-idx page-idx)
-                            (if (= page-idx 0)
-                              (if (> (count pages) 1) 0 nil) ; Select first page if still pages, else nil
-                              (dec page-idx)) ; Select previous page
-                            (if (and selected-page-idx (> selected-page-idx page-idx))
-                              (dec selected-page-idx) ; Adjust selected index if it's after the deleted one
-                              selected-page-idx))
-         new-selected-slug (when (and (some? new-selected-idx) (< new-selected-idx (count (filterv #(not= % (nth pages page-idx)) pages))))
-                             (:slug (nth (filterv #(not= % (nth pages page-idx)) pages) new-selected-idx)))]
-     (-> db
-         ;; Remove the page from the section
-         (update-in [:help :edited-data section-idx :pages]
-                    (fn [pages] (vec (concat (subvec pages 0 page-idx) (subvec pages (inc page-idx))))))
-         ;; Update the selected page if needed
-         (assoc-in [:help :dialog :selected-page-idx] new-selected-idx)
-         (assoc-in [:help :dialog :selected-page-slug] new-selected-slug)))))
+(rf/reg-event-db ::generate-page-slug
+  (fn [db [_ section-idx page-idx]]
+    (let [pages (get-in db (epath db section-idx :pages))
+          {:keys [title slug aliases]} (get pages page-idx)
+          taken (into #{} (map :slug) (vec-remove pages page-idx))
+          new-slug (unique-slug title slug taken)]
+      (if (= new-slug slug)
+        db
+        (-> db
+            (assoc-in (epath db section-idx :pages page-idx :slug) new-slug)
+            (assoc-in (epath db section-idx :pages page-idx :aliases)
+                      (vec (distinct (concat aliases [slug])))))))))
 
-(rf/reg-event-db
- ::add-section
- (fn [db _]
-   (let [default-title "New Section"
-         ;; Create a basic slug from the title
-         base-slug (create-slug default-title)
-         ;; Add timestamp to ensure uniqueness
-         timestamp (.now js/Date)
-         ;; Create a basic section structure with one default page
-         section-slug (keyword (str base-slug "-" timestamp))
-         welcome-page {:slug (keyword "welcome")
-                       :title {:fi "Welcome" :en "Welcome" :se "Välkommen"}
-                       :blocks []}
-         new-section {:slug section-slug
-                      :title {:fi default-title :en default-title :se "Ny sektion"}
-                      :pages [welcome-page]}
-         ;; Get the current sections
-         sections (or (get-in db [:help :edited-data]) [])
-         new-section-idx (count sections)]
-     ;; Add the new section
-     (-> db
-         (update-in [:help :edited-data] (fn [sections] (conj (or sections []) new-section)))
-         ;; Select the new section and its first page
-         (assoc-in [:help :dialog :selected-section-idx] new-section-idx)
-         (assoc-in [:help :dialog :selected-section-slug] section-slug)
-         (assoc-in [:help :dialog :selected-page-idx] 0)
-         (assoc-in [:help :dialog :selected-page-slug] (:slug welcome-page))))))
+;;; ——— Block events ———————————————————————————————————————————————————
 
-(rf/reg-event-db
- ::delete-section
- (fn [db [_ section-idx]]
-   (let [sections (get-in db [:help :edited-data])
-         selected-section-idx (get-in db [:help :dialog :selected-section-idx])
-         ;; If we're deleting the currently selected section, select the first available section
-         new-selected-idx (if (= selected-section-idx section-idx)
-                            (if (= section-idx 0)
-                              (if (> (count sections) 1) 0 nil) ; Select first section if still sections, else nil
-                              (dec section-idx)) ; Select previous section
-                            (if (and selected-section-idx (> selected-section-idx section-idx))
-                              (dec selected-section-idx) ; Adjust selected index if it's after the deleted one
-                              selected-section-idx))
-         new-selected-slug (when (and (some? new-selected-idx) (< new-selected-idx (count (filterv #(not= % (nth sections section-idx)) sections))))
-                             (:slug (nth (filterv #(not= % (nth sections section-idx)) sections) new-selected-idx)))]
-     (-> db
-         ;; Remove the section
-         (update-in [:help :edited-data]
-                    (fn [sections] (vec (concat (subvec sections 0 section-idx) (subvec sections (inc section-idx))))))
-         ;; Update the selected section if needed
-         (assoc-in [:help :dialog :selected-section-idx] new-selected-idx)
-         (assoc-in [:help :dialog :selected-section-slug] new-selected-slug)
-         ;; Clear page selection if we deleted the selected section
-         ((fn [updated-db]
-            (if (= selected-section-idx section-idx)
-              (-> updated-db
-                  (assoc-in [:help :dialog :selected-page-idx] nil)
-                  (assoc-in [:help :dialog :selected-page-slug] nil))
-              updated-db)))))))
+(rf/reg-event-db ::update-block-field
+  (fn [db [_ section-idx page-idx block-idx field value]]
+    (assoc-in db (epath db section-idx :pages page-idx :blocks block-idx field)
+              value)))
 
-(rf/reg-event-db
- ::apply-changes
- (fn [db _]
-   (-> db
-       (assoc-in [:help :data] (get-in db [:help :edited-data]))
-       (assoc-in [:help :dialog :mode] :read))))
+(rf/reg-event-db ::add-block
+  (fn [db [_ section-idx page-idx block-type]]
+    (let [base-block {:block-id (str (random-uuid)) :type block-type}
+          new-block (case block-type
+                      :text (assoc base-block :content "")
+                      :video (assoc base-block
+                                    :provider :youtube
+                                    :video-id ""
+                                    :title "")
+                      :image (assoc base-block :url "" :alt "" :caption "")
+                      :pdf (assoc base-block :url "" :title "" :caption "")
+                      :type-code-explorer base-block
+                      :data-model-excel-download base-block)]
+      (update-in db (epath db section-idx :pages page-idx :blocks)
+                 (fnil conj []) new-block))))
+
+(rf/reg-event-db ::delete-block
+  (fn [db [_ section-idx page-idx block-idx]]
+    (update-in db (epath db section-idx :pages page-idx :blocks)
+               vec-remove block-idx)))
+
+(rf/reg-event-db ::move-block-up
+  (fn [db [_ section-idx page-idx block-idx]]
+    (if (zero? block-idx)
+      db
+      (update-in db (epath db section-idx :pages page-idx :blocks)
+                 vec-swap block-idx (dec block-idx)))))
+
+(rf/reg-event-db ::move-block-down
+  (fn [db [_ section-idx page-idx block-idx]]
+    (let [blocks (get-in db (epath db section-idx :pages page-idx :blocks))]
+      (if (= block-idx (dec (count blocks)))
+        db
+        (update-in db (epath db section-idx :pages page-idx :blocks)
+                   vec-swap block-idx (inc block-idx))))))
+
+;;; ——— Section/page add/delete/reorder ————————————————————————————————
+
+(rf/reg-event-db ::add-section
+  (fn [db _]
+    (let [sections (or (get-in db (epath db)) [])
+          slug (unique-slug "" "uusi-osio" (into #{} (map :slug) sections))
+          new-section {:id (str (random-uuid))
+                       :slug slug
+                       :title ""
+                       :pages []}]
+      (-> db
+          (assoc-in (epath db) (conj sections new-section))
+          (assoc-in [:help :editor :section-idx] (count sections))
+          (assoc-in [:help :editor :page-idx] nil)))))
+
+(rf/reg-event-db ::delete-section
+  (fn [db [_ section-idx]]
+    (let [sections (vec-remove (get-in db (epath db)) section-idx)]
+      (-> db
+          (assoc-in (epath db) sections)
+          (assoc-in [:help :editor :section-idx] (when (seq sections) 0))
+          (assoc-in [:help :editor :page-idx] nil)))))
+
+(rf/reg-event-db ::move-section-up
+  (fn [db [_ section-idx]]
+    (if (zero? section-idx)
+      db
+      (-> db
+          (update-in (epath db) vec-swap section-idx (dec section-idx))
+          (assoc-in [:help :editor :section-idx] (dec section-idx))))))
+
+(rf/reg-event-db ::move-section-down
+  (fn [db [_ section-idx]]
+    (let [sections (get-in db (epath db))]
+      (if (= section-idx (dec (count sections)))
+        db
+        (-> db
+            (update-in (epath db) vec-swap section-idx (inc section-idx))
+            (assoc-in [:help :editor :section-idx] (inc section-idx)))))))
+
+(rf/reg-event-db ::add-page
+  (fn [db [_ section-idx]]
+    (let [pages (or (get-in db (epath db section-idx :pages)) [])
+          slug (unique-slug "" "uusi-sivu" (into #{} (map :slug) pages))
+          new-page {:id (str (random-uuid))
+                    :slug slug
+                    :title ""
+                    :blocks []}]
+      (-> db
+          (assoc-in (epath db section-idx :pages) (conj pages new-page))
+          (assoc-in [:help :editor :page-idx] (count pages))))))
+
+(rf/reg-event-db ::delete-page
+  (fn [db [_ section-idx page-idx]]
+    (-> db
+        (update-in (epath db section-idx :pages) vec-remove page-idx)
+        (assoc-in [:help :editor :page-idx] nil))))
+
+(rf/reg-event-db ::move-page-up
+  (fn [db [_ section-idx page-idx]]
+    (if (zero? page-idx)
+      db
+      (-> db
+          (update-in (epath db section-idx :pages) vec-swap page-idx (dec page-idx))
+          (assoc-in [:help :editor :page-idx] (dec page-idx))))))
+
+(rf/reg-event-db ::move-page-down
+  (fn [db [_ section-idx page-idx]]
+    (let [pages (get-in db (epath db section-idx :pages))]
+      (if (= page-idx (dec (count pages)))
+        db
+        (-> db
+            (update-in (epath db section-idx :pages) vec-swap page-idx (inc page-idx))
+            (assoc-in [:help :editor :page-idx] (inc page-idx)))))))
+
+;;; ——— Preview / save / publish (per locale) ——————————————————————————
+
+(rf/reg-event-db ::apply-changes
+  ;; Preview: copy the active locale's edited tree into the read-mode
+  ;; data without saving.
+  (fn [db _]
+    (let [locale (editor-locale db)]
+      (-> db
+          (assoc-in [:help :data locale] (get-in db [:help :edited-data locale]))
+          (assoc-in [:help :dialog :mode] :read)))))
 
 (rf/reg-event-fx ::save-changes
-                 (fn [{:keys [db]} _]
-                   (let [token  (-> db :user :login :token)]
-                     {:db (assoc-in db [:help :save-in-progress] true)
-                      :fx [[:http-xhrio
-                            {:method          :post
-                             :headers         {:Authorization (str "Token " token)}
-                             :uri             (str (:backend-url db) "/actions/save-help-data")
-                             :params          (get-in db [:help :edited-data])
-                             :format          (ajax/transit-request-format)
-                             :response-format (ajax/transit-response-format)
-                             :on-success      [::save-success]
-                             :on-failure      [::save-failure]}]]})))
+  (fn [{:keys [db]} _]
+    (let [token (-> db :user :login :token)
+          locale (editor-locale db)]
+      {:db (assoc-in db [:help :save-in-progress] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/save-help-data")
+              :params          {:locale locale
+                                :data (get-in db [:help :edited-data locale])}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::save-success]
+              :on-failure      [::save-failure]}]]})))
 
 (rf/reg-event-fx ::save-success
-                 (fn [{:keys [db]} _]
-                   (let [tr           (:translator db)
-                         notification {:message  (tr :notifications/save-success)
-                                       :success? true}]
-                     {:db (-> db (assoc-in [:ptv :save-in-progress] false))
-                      :fx [[:dispatch [::apply-changes]]
-                           [:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+  (fn [{:keys [db]} _]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-success)
+                        :success? true}]
+      {:db (assoc-in db [:help :save-in-progress] false)
+       :fx [[:dispatch [::apply-changes]]
+            [:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::save-failure
-                 (fn [{:keys [db]} [_ resp]]
-                   (let [tr           (:translator db)
-                         notification {:message  (tr :notifications/save-failed)
-                                       :success? false}]
-                     {:db (-> db
-                              (assoc-in [:help :save-in-progress] false)
-                              (assoc-in [:help :errors :save] resp))
-                      :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-failed)
+                        :success? false}]
+      {:db (-> db
+               (assoc-in [:help :save-in-progress] false)
+               (assoc-in [:help :errors :save] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(rf/reg-sub
- ::edited-help-data
- :<- [::subs/help]
- (fn [help _]
-   (:edited-data help)))
+(rf/reg-event-fx ::save-draft
+  (fn [{:keys [db]} _]
+    (let [token (-> db :user :login :token)
+          locale (editor-locale db)]
+      {:db (assoc-in db [:help :save-in-progress] true)
+       :fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/save-help-draft")
+              :params          {:locale locale
+                                :data (get-in db [:help :edited-data locale])}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::save-draft-success]
+              :on-failure      [::save-failure]}]]})))
 
-;; Confirmation dialog related events and subscriptions
-(rf/reg-event-db
- ::show-confirm-dialog
- (fn [db [_ dialog-type params]]
-   (assoc-in db [:help :confirm-dialog] {:open? true
-                                         :type dialog-type
-                                         :params params})))
+(rf/reg-event-fx ::save-draft-success
+  (fn [{:keys [db]} _]
+    (let [tr           (:translator db)
+          notification {:message  (tr :notifications/save-success)
+                        :success? true}]
+      {:db (assoc-in db [:help :save-in-progress] false)
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
-(rf/reg-event-db
- ::hide-confirm-dialog
- (fn [db _]
-   (assoc-in db [:help :confirm-dialog :open?] false)))
+;;; ——— Version history (per locale) ———————————————————————————————————
 
-(rf/reg-event-fx
- ::confirm-action
- (fn [{:keys [db]} _]
-   (let [{:keys [type params]} (get-in db [:help :confirm-dialog])]
-     {:db (assoc-in db [:help :confirm-dialog :open?] false)
-      :fx [[:dispatch (case type
-                        :delete-section [::delete-section (:section-idx params)]
-                        :delete-page [::delete-page (:section-idx params) (:page-idx params)]
-                        :delete-block [::delete-block (:section-idx params) (:page-idx params) (:block-idx params)])]]})))
+(rf/reg-event-fx ::open-version-history
+  (fn [{:keys [db]} _]
+    {:db (assoc-in db [:help :versions :dialog-open?] true)
+     :fx [[:dispatch [::get-versions]]]}))
 
-(rf/reg-sub
- ::confirm-dialog
- :<- [::subs/help]
- (fn [help _]
-   (get help :confirm-dialog {:open? false})))
+(rf/reg-event-db ::close-version-history
+  (fn [db _]
+    (assoc-in db [:help :versions :dialog-open?] false)))
 
-;; Helper UI Components
-(r/defc language-tabs [{:keys [current-lang on-change]}]
-  [:> Tabs
-   {:value current-lang
-    :onChange #(on-change %2)
-    :centered true}
-   [:> Tab {:value :fi :label "Suomi"}]
-   [:> Tab {:value :en :label "English"}]
-   [:> Tab {:value :se :label "Svenska"}]])
+(rf/reg-event-fx ::get-versions
+  (fn [{:keys [db]} _]
+    (let [token (-> db :user :login :token)]
+      {:fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/get-help-versions")
+              :params          {:locale (editor-locale db)}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::get-versions-success]
+              :on-failure      [::save-failure]}]]})))
 
-(r/defc localized-text-field
-  [{:keys [value label on-change multiline rows lang]}]
-  [:> TextField
-   {:fullWidth true
-    :label label
-    :value (get value lang "")
-    :onChange #(on-change lang (.. % -target -value))
-    :variant "outlined"
-    :margin "normal"
-    :multiline (boolean multiline)
-    :rows (or rows 4)}])
+(rf/reg-event-db ::get-versions-success
+  (fn [db [_ versions]]
+    (assoc-in db [:help :versions :items] versions)))
 
-(r/defc section-editor [{:keys [section-idx section]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)]
-    [:> Box {:sx #js{:mt 2}}
-     [:> Paper {:sx #js{:p 2 :mb 2
-                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                        :transition "box-shadow 0.3s ease"}}
-      [:> Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
-       [:> Typography {:variant "body2" :gutterBottom false}
-        "SECTION SETTINGS"]
-       [:> IconButton {:onClick #(set-expanded! (not expanded))
-                       :size "small"
-                       :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                               :transition "transform 0.3s"}}
-        [:> ExpandMoreIcon {:fontSize "small"}]]]
+(rf/reg-event-fx ::load-version
+  (fn [{:keys [db]} [_ id]]
+    (let [token (-> db :user :login :token)]
+      {:fx [[:http-xhrio
+             {:method          :post
+              :headers         {:Authorization (str "Token " token)}
+              :uri             (str (:backend-url db) "/actions/get-help-version")
+              :params          {:id (str id)}
+              :format          (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success      [::load-version-success]
+              :on-failure      [::save-failure]}]]})))
 
-      [:> Collapse {:in expanded :timeout "auto"}
-       [:> Box {:sx #js{:mt 2}}
-        [language-tabs {:current-lang lang :on-change set-lang!}]
+(rf/reg-event-fx ::load-version-success
+  ;; Loads the version into the editor only — publishing it
+  ;; (= rollback) is an explicit separate step.
+  (fn [{:keys [db]} [_ version]]
+    {:db (-> db
+             (assoc-in [:help :edited-data (editor-locale db)] (:body version))
+             (assoc-in [:help :versions :dialog-open?] false))
+     :fx [[:dispatch [:lipas.ui.events/set-active-notification
+                      {:message  "Version loaded into editor. Publish to make it live."
+                       :success? true}]]]}))
 
-        [localized-text-field
-         {:label "Section Title"
-          :value (:title section)
-          :lang lang
-          :on-change #(rf/dispatch [::update-section-title section-idx %1 %2])}]]]]]))
+;;; ——— Subs ———————————————————————————————————————————————————————————
 
-(r/defc page-editor [{:keys [section-idx page-idx page]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)]
-    [:> Box {:sx #js{:mt 2}}
-     [:> Paper {:sx #js{:p 2 :mb 2
-                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                        :transition "box-shadow 0.3s ease"}}
-      [:> Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
-       [:> Typography {:variant "body2" :gutterBottom false}
-        "PAGE SETTINGS"]
-       [:> IconButton {:onClick #(set-expanded! (not expanded))
-                       :size "small"
-                       :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                               :transition "transform 0.3s"}}
-        [:> ExpandMoreIcon {:fontSize "small"}]]]
+(rf/reg-sub ::versions
+  (fn [db _]
+    (get-in db [:help :versions])))
 
-      [:> Collapse {:in expanded :timeout "auto"}
-       [:> Box {:sx #js{:mt 2}}
-        [language-tabs {:current-lang lang :on-change set-lang!}]
+(rf/reg-sub ::editor-locale*
+  (fn [db _]
+    (editor-locale db)))
 
-        [localized-text-field
-         {:label "Page Title"
-          :value (:title page)
-          :lang lang
-          :on-change #(rf/dispatch [::update-page-title section-idx page-idx %1 %2])}]]]]]))
+(rf/reg-sub ::edited-tree
+  ;; The active locale's edited tree
+  (fn [db _]
+    (get-in db [:help :edited-data (editor-locale db)])))
+
+(rf/reg-sub ::editor-section-idx
+  (fn [db _]
+    (get-in db [:help :editor :section-idx])))
+
+(rf/reg-sub ::editor-page-idx
+  (fn [db _]
+    (get-in db [:help :editor :page-idx])))
+
+;;; ——— Confirmation dialog ————————————————————————————————————————————
+
+(rf/reg-event-db ::show-confirm-dialog
+  (fn [db [_ dialog-type params]]
+    (assoc-in db [:help :confirm-dialog] {:open? true
+                                          :type dialog-type
+                                          :params params})))
+
+(rf/reg-event-db ::hide-confirm-dialog
+  (fn [db _]
+    (assoc-in db [:help :confirm-dialog :open?] false)))
+
+(rf/reg-event-fx ::confirm-action
+  (fn [{:keys [db]} _]
+    (let [{:keys [type params]} (get-in db [:help :confirm-dialog])]
+      {:db (assoc-in db [:help :confirm-dialog :open?] false)
+       :fx [[:dispatch (case type
+                         :delete-section [::delete-section (:section-idx params)]
+                         :delete-page [::delete-page (:section-idx params) (:page-idx params)]
+                         :delete-block [::delete-block (:section-idx params) (:page-idx params) (:block-idx params)])]]})))
+
+(rf/reg-sub ::confirm-dialog
+  :<- [::subs/help]
+  (fn [help _]
+    (get help :confirm-dialog {:open? false})))
+
+;;; ——— UI: shared block chrome ————————————————————————————————————————
+
+(r/defc block-card
+  "Common card chrome for block editors: icon + label + preview text in
+   the header, expand/reorder/delete actions, editable fields inside."
+  [{:keys [icon label preview section-idx page-idx block-idx blocks-count children]}]
+  (let [[expanded set-expanded!] (hooks/use-state false)]
+    [:> Card {:variant "elevation"
+              :elevation 3
+              :sx #js{:mb 2
+                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                      :transition "box-shadow 0.3s ease"}}
+     [:> CardHeader
+      {:title (r/as-element
+               [:> Typography {:variant "subtitle1" :component "div"}
+                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
+                 icon
+                 label
+                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
+                  preview]]])
+       :action (r/as-element
+                [:> Box {:sx #js{:display "flex" :gap 0.5}}
+                 [:> IconButton {:onClick #(set-expanded! (not expanded))
+                                 :size "small"
+                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                         :transition "transform 0.3s"}}
+                  [:> ExpandMoreIcon {:fontSize "small"}]]
+
+                 [:> IconButton {:color "primary"
+                                 :size "small"
+                                 :disabled (zero? block-idx)
+                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
+                  [:> ArrowUpIcon {:fontSize "small"}]]
+
+                 [:> IconButton {:color "primary"
+                                 :size "small"
+                                 :disabled (= block-idx (dec blocks-count))
+                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
+                  [:> ArrowDownIcon {:fontSize "small"}]]
+
+                 [:> IconButton {:color "error"
+                                 :size "small"
+                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block
+                                                         {:section-idx section-idx
+                                                          :page-idx page-idx
+                                                          :block-idx block-idx}])}
+                  [:> DeleteIcon {:fontSize "small"}]]])}]
+
+     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
+      [:> CardContent {}
+       children]]]))
+
+(defn- truncate [s n]
+  (when-not (str/blank? s)
+    (if (> (count s) n) (str (subs s 0 n) "...") s)))
+
+;;; ——— UI: block editors ——————————————————————————————————————————————
 
 (r/defc text-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)
-        content-preview (or
-                         (when-let [content (get-in block [:content :fi])]
-                           (when (not (str/blank? content))
-                             (if (> (count content) 50)
-                               (str (subs content 0 50) "...")
-                               content)))
-                         "Empty text block")]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> TextIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}]
-                 "Text Block"
-                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
-                  content-preview]]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
-
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
-
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
-
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
-
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       [language-tabs {:current-lang lang :on-change set-lang!}]
-
-       [localized-text-field
-        {:label "Content"
-         :value (:content block)
-         :multiline true
-         :rows 6
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :content %1 %2])}]]]]))
+  [block-card
+   {:icon (r/as-element [:> TextIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+    :label "Text"
+    :preview (or (truncate (:content block) 50) "Empty text block")
+    :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+    :children
+    (r/as-element
+     [:> TextField
+      {:fullWidth true
+       :label "Content (markdown)"
+       :value (or (:content block) "")
+       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                :content (.. % -target -value)])
+       :variant "outlined"
+       :margin "normal"
+       :multiline true
+       :rows 8}])}])
 
 (r/defc video-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)
-        video-id (or (:video-id block) "")
-        provider (name (or (:provider block) :youtube))
-        title (get-in block [:title :fi] "")]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> VideoIcon {:fontSize "small" :color "action" :sx #js {:mr 1}}]
-                 "Video Block"
-                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
-                  (if (str/blank? video-id)
-                    "No video set"
-                    (str provider ": " video-id (when-not (str/blank? title) (str " - " title))))]]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
+  [block-card
+   {:icon (r/as-element [:> VideoIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+    :label "Video"
+    :preview (if (str/blank? (:video-id block))
+               "No video set"
+               (str (name (or (:provider block) :youtube)) ": " (:video-id block)
+                    (when-not (str/blank? (:title block)) (str " - " (:title block)))))
+    :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+    :children
+    (r/as-element
+     [:<>
+      [:> FormControl {:fullWidth true :margin "normal"}
+       [:> InputLabel {:id "video-provider-label"} "Provider"]
+       [:> Select {:labelId "video-provider-label"
+                   :value (name (or (:provider block) :youtube))
+                   :label "Provider"
+                   :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                            :provider (keyword (.. % -target -value))])}
+        [:> MenuItem {:value "youtube"} "YouTube"]
+        [:> MenuItem {:value "vimeo"} "Vimeo"]]]
 
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
+      [:> TextField {:fullWidth true
+                     :label "Video ID"
+                     :value (or (:video-id block) "")
+                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                              :video-id (.. % -target -value)])
+                     :variant "outlined"
+                     :margin "normal"
+                     :helperText "For YouTube: the part after v= in URL"}]
 
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
-
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
-
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       [:> FormControl {:fullWidth true :margin "normal"}
-        [:> InputLabel {:id "video-provider-label"} "Provider"]
-        [:> Select {:labelId "video-provider-label"
-                    :value (or (:provider block) :youtube)
-                    :onChange #(rf/dispatch [::update-block-field
-                                             section-idx page-idx block-idx
-                                             :provider
-                                             (keyword (.. % -target -value))])}
-         [:> MenuItem {:value "youtube"} "YouTube"]
-         [:> MenuItem {:value "vimeo"} "Vimeo"]]]
-
-       [:> TextField {:fullWidth true
-                      :label "Video ID"
-                      :value (or (:video-id block) "")
-                      :onChange #(rf/dispatch [::update-block-field
-                                               section-idx page-idx block-idx
-                                               :video-id
-                                               (.. % -target -value)])
-                      :variant "outlined"
-                      :margin "normal"
-                      :helperText "For YouTube: the part after v= in URL"}]
-
-       [language-tabs {:current-lang lang :on-change set-lang!}]
-
-       [localized-text-field
-        {:label "Title"
-         :value (:title block)
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :title %1 %2])}]]]]))
+      [:> TextField {:fullWidth true
+                     :label "Title"
+                     :value (or (:title block) "")
+                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                              :title (.. % -target -value)])
+                     :variant "outlined"
+                     :margin "normal"}]])}])
 
 (r/defc image-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)
-        url (or (:url block) "")
-        alt-text (get-in block [:alt :fi] "")
-        image-name (when-not (str/blank? url)
-                     (let [parts (str/split url #"/")]
-                       (if (seq parts)
-                         (last parts)
-                         url)))]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> ImageIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}]
-                 "Image Block"
-                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
-                  (if (str/blank? url)
-                    "No image set"
-                    (if (str/blank? alt-text)
-                      image-name
-                      alt-text))]]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
+  [block-card
+   {:icon (r/as-element [:> ImageIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+    :label "Image"
+    :preview (cond
+               (str/blank? (:url block)) "No image set"
+               (not (str/blank? (:alt block))) (:alt block)
+               :else (last (str/split (:url block) #"/")))
+    :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+    :children
+    (r/as-element
+     [:<>
+      [:> TextField {:fullWidth true
+                     :label "Image URL"
+                     :value (or (:url block) "")
+                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                              :url (.. % -target -value)])
+                     :variant "outlined"
+                     :margin "normal"}]
 
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
+      [:> TextField {:fullWidth true
+                     :label "Alt text"
+                     :value (or (:alt block) "")
+                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                              :alt (.. % -target -value)])
+                     :variant "outlined"
+                     :margin "normal"
+                     :helperText "Mandatory for accessibility"}]
 
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
-
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
-
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       [:> TextField {:fullWidth true
-                      :label "Image URL"
-                      :value (or (:url block) "")
-                      :onChange #(rf/dispatch [::update-block-field
-                                               section-idx page-idx block-idx
-                                               :url
-                                               (.. % -target -value)])
-                      :variant "outlined"
-                      :margin "normal"}]
-
-       [language-tabs {:current-lang lang :on-change set-lang!}]
-
-       [localized-text-field
-        {:label "Alt Text"
-         :value (:alt block)
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :alt %1 %2])}]
-
-       [localized-text-field
-        {:label "Caption"
-         :value (:caption block)
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :caption %1 %2])}]]]]))
+      [:> TextField {:fullWidth true
+                     :label "Caption"
+                     :value (or (:caption block) "")
+                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                              :caption (.. % -target -value)])
+                     :variant "outlined"
+                     :margin "normal"}]])}])
 
 (r/defc pdf-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[lang set-lang!] (hooks/use-state :fi)
-        [expanded set-expanded!] (hooks/use-state false)
-        url (or (:url block) "")
-        title (get-in block [:title :fi] "")
-        pdf-name (when-not (str/blank? url)
-                   (let [parts (str/split url #"/")]
-                     (if (seq parts)
-                       (last parts)
-                       url)))]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> PdfIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}]
-                 "PDF Block"
-                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
-                  (if (str/blank? url)
-                    "No PDF set"
-                    (if (str/blank? title)
-                      pdf-name
-                      title))]]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
+  (let [url (or (:url block) "")]
+    [block-card
+     {:icon (r/as-element [:> PdfIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+      :label "PDF"
+      :preview (cond
+                 (str/blank? url) "No PDF set"
+                 (not (str/blank? (:title block))) (:title block)
+                 :else (last (str/split url #"/")))
+      :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+      :children
+      (r/as-element
+       [:<>
+        [:> TextField {:fullWidth true
+                       :label "PDF URL"
+                       :value url
+                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                :url (.. % -target -value)])
+                       :variant "outlined"
+                       :margin "normal"
+                       :helperText "URL path to the PDF file"}]
 
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
+        (when (and (str/starts-with? url "https://drive.google.com/file")
+                   (str/ends-with? url "/view?usp=sharing"))
+          (let [gid (second (re-find #"/file/d/([^/]+)" url))
+                gurl (str "https://docs.google.com/viewer?srcid="
+                          gid
+                          "&pid=explorer&efh=false&a=v&chrome=false&embedded=true")]
+            [:> Button {:onClick #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                :url gurl])}
+             "Fix Google Drive Link"]))
 
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
+        [:> TextField {:fullWidth true
+                       :label "Title"
+                       :value (or (:title block) "")
+                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                :title (.. % -target -value)])
+                       :variant "outlined"
+                       :margin "normal"}]
 
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
+        [:> TextField {:fullWidth true
+                       :label "Caption"
+                       :value (or (:caption block) "")
+                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                :caption (.. % -target -value)])
+                       :variant "outlined"
+                       :margin "normal"}]])}]))
 
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       [:> TextField {:fullWidth true
-                      :label "PDF URL"
-                      :value (or (:url block) "")
-                      :onChange #(rf/dispatch [::update-block-field
-                                               section-idx page-idx block-idx
-                                               :url
-                                               (.. % -target -value)])
-                      :variant "outlined"
-                      :margin "normal"
-                      :helperText "URL path to the PDF file"}]
+(r/defc type-code-explorer-block-editor [{:keys [section-idx page-idx block-idx blocks-count]}]
+  [block-card
+   {:icon (r/as-element [:> CategoryIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+    :label "Type Code Explorer"
+    :preview nil
+    :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+    :children
+    (r/as-element
+     [:> Typography {:variant "body2" :color "text.secondary"}
+      "This block displays a hierarchical browser for sports facility types."])}])
 
-       (when (and (str/starts-with? url "https://drive.google.com/file")
-                  (str/ends-with? url "/view?usp=sharing"))
-         (let [gid (second (re-find #"/file/d/([^/]+)" url))
-               gurl (str "https://docs.google.com/viewer?srcid="
-                         gid
-                         "&pid=explorer&efh=false&a=v&chrome=false&embedded=true")]
-           [:> Button {:onClick #(rf/dispatch [::update-block-field
-                                               section-idx page-idx block-idx
-                                               :url gurl])}
+(r/defc data-model-excel-download-block-editor [{:keys [section-idx page-idx block-idx blocks-count]}]
+  [block-card
+   {:icon (r/as-element [:> DownloadIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}])
+    :label "Data Model Excel Download"
+    :preview nil
+    :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
+    :children
+    (r/as-element
+     [:> Typography {:variant "body2" :color "text.secondary"}
+      "This block displays a button that downloads a data model Excel file."])}])
 
-            "Fix Google Drive Link"]))
-
-       [language-tabs {:current-lang lang :on-change set-lang!}]
-
-       [localized-text-field
-        {:label "Title"
-         :value (:title block)
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :title %1 %2])}]
-
-       [localized-text-field
-        {:label "Caption"
-         :value (:caption block)
-         :lang lang
-         :on-change #(rf/dispatch [::update-block-content section-idx page-idx block-idx :caption %1 %2])}]]]]))
-
-(r/defc type-code-explorer-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[expanded set-expanded!] (hooks/use-state false)]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> CategoryIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}]
-                 "Type Code Explorer"]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
-
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
-
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
-
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
-
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       ;; Type explorer has no editable properties - it just displays the sports facility types.
-       [:> Typography {:variant "body2" :color "text.secondary"}
-        "This block will display a hierarchical browser for sports facility types. Users can explore main categories, subcategories, and individual facility types."]]]]))
-
-(r/defc data-model-excel-download-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
-  (let [[expanded set-expanded!] (hooks/use-state false)]
-    [:> Card {:variant "elevation"
-              :elevation 3
-              :sx #js{:mb 2
-                      :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
-                      :transition "box-shadow 0.3s ease"}}
-     [:> CardHeader
-      {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 [:> DownloadIcon {:fontSize "small" :color "action" :sx #js{:mr 1}}]
-                 "Data Model Excel Download"]])
-       :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 ;; Expand/collapse button
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
-
-                 ;; Move up button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
-
-                 ;; Move down button
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
-
-                 ;; Delete button
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block {:section-idx section-idx :page-idx page-idx :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
-
-     [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
-      [:> CardContent {}
-       ;; Type explorer has no editable properties - it just displays the sports facility types.
-       [:> Typography {:variant "body2" :color "text.secondary"}
-        "This block will display a button that downloads a data model Excel file."]]]]))
-
-(r/defc block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
+(r/defc block-editor [{:keys [block] :as props}]
   (case (:type block)
-    :text [text-block-editor {:section-idx section-idx
-                              :page-idx page-idx
-                              :block-idx block-idx
-                              :blocks-count blocks-count
-                              :block block}]
-    :video [video-block-editor {:section-idx section-idx
-                                :page-idx page-idx
-                                :block-idx block-idx
-                                :blocks-count blocks-count
-                                :block block}]
-    :image [image-block-editor {:section-idx section-idx
-                                :page-idx page-idx
-                                :block-idx block-idx
-                                :blocks-count blocks-count
-                                :block block}]
-    :pdf [pdf-block-editor {:section-idx section-idx
-                            :page-idx page-idx
-                            :block-idx block-idx
-                            :blocks-count blocks-count
-                            :block block}]
-    :type-code-explorer [type-code-explorer-block-editor {:section-idx section-idx
-                                                          :page-idx page-idx
-                                                          :block-idx block-idx
-                                                          :blocks-count blocks-count
-                                                          :block block}]
-    :data-model-excel-download [data-model-excel-download-block-editor {:section-idx section-idx
-                                                                        :page-idx page-idx
-                                                                        :block-idx block-idx
-                                                                        :blocks-count blocks-count
-                                                                        :block block}]
+    :text [text-block-editor props]
+    :video [video-block-editor props]
+    :image [image-block-editor props]
+    :pdf [pdf-block-editor props]
+    :type-code-explorer [type-code-explorer-block-editor props]
+    :data-model-excel-download [data-model-excel-download-block-editor props]
     [:> Typography {:color "error"} (str "Unknown block type: " (:type block))]))
 
 (r/defc add-block-controls [{:keys [section-idx page-idx]}]
@@ -961,25 +731,132 @@
 
    [add-block-controls {:section-idx section-idx :page-idx page-idx}]])
 
-(r/defc section-selector [{:keys [sections selected-section-idx on-select]}]
+;;; ——— UI: section/page settings ——————————————————————————————————————
+
+(r/defc slug-field
+  [{:keys [value label on-change on-generate helper]}]
+  [:> TextField
+   {:fullWidth true
+    :label (or label "Slug")
+    :value (or value "")
+    :onChange #(on-change (.. % -target -value))
+    :variant "outlined"
+    :margin "normal"
+    :helperText (or helper "Used in ?ohje= links. Renames keep the old slug working (alias).")
+    :InputProps
+    #js{:endAdornment
+        (r/as-element
+         [:> InputAdornment {:position "end"}
+          [:> Tooltip {:title "Generate from title"}
+           [:> IconButton {:size "small" :onClick on-generate}
+            [:> AutoFixIcon {:fontSize "small"}]]]])}}])
+
+(r/defc section-editor [{:keys [section-idx section]}]
+  (let [[expanded set-expanded!] (hooks/use-state false)]
+    [:> Box {:sx #js{:mt 2}}
+     [:> Paper {:sx #js{:p 2 :mb 2
+                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                        :transition "box-shadow 0.3s ease"}}
+      [:> Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
+       [:> Typography {:variant "body2" :gutterBottom false}
+        "SECTION SETTINGS"]
+       [:> IconButton {:onClick #(set-expanded! (not expanded))
+                       :size "small"
+                       :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                               :transition "transform 0.3s"}}
+        [:> ExpandMoreIcon {:fontSize "small"}]]]
+
+      [:> Collapse {:in expanded :timeout "auto"}
+       [:> Box {:sx #js{:mt 2}}
+        [:> TextField
+         {:fullWidth true
+          :label "Section Title"
+          :value (or (:title section) "")
+          :onChange #(rf/dispatch [::update-section-field section-idx :title (.. % -target -value)])
+          :variant "outlined"
+          :margin "normal"}]
+
+        [slug-field
+         {:value (:slug section)
+          :on-change #(rf/dispatch [::update-section-field section-idx :slug %])
+          :on-generate #(rf/dispatch [::generate-section-slug section-idx])}]
+
+        [:> TextField
+         {:fullWidth true
+          :label "Summary"
+          :value (or (:summary section) "")
+          :onChange #(rf/dispatch [::update-section-field section-idx :summary (.. % -target -value)])
+          :variant "outlined"
+          :margin "normal"
+          :multiline true
+          :rows 2
+          :helperText "1-2 sentences shown in listings"}]]]]]))
+
+(r/defc page-editor [{:keys [section-idx page-idx page]}]
+  (let [[expanded set-expanded!] (hooks/use-state false)]
+    [:> Box {:sx #js{:mt 2}}
+     [:> Paper {:sx #js{:p 2 :mb 2
+                        :boxShadow (if expanded "0px 6px 10px rgba(0, 0, 0, 0.15)" "")
+                        :transition "box-shadow 0.3s ease"}}
+      [:> Box {:sx #js{:display "flex" :justifyContent "space-between" :alignItems "center"}}
+       [:> Typography {:variant "body2" :gutterBottom false}
+        "PAGE SETTINGS"]
+       [:> IconButton {:onClick #(set-expanded! (not expanded))
+                       :size "small"
+                       :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                               :transition "transform 0.3s"}}
+        [:> ExpandMoreIcon {:fontSize "small"}]]]
+
+      [:> Collapse {:in expanded :timeout "auto"}
+       [:> Box {:sx #js{:mt 2}}
+        [:> TextField
+         {:fullWidth true
+          :label "Page Title"
+          :value (or (:title page) "")
+          :onChange #(rf/dispatch [::update-page-field section-idx page-idx :title (.. % -target -value)])
+          :variant "outlined"
+          :margin "normal"}]
+
+        [slug-field
+         {:value (:slug page)
+          :on-change #(rf/dispatch [::update-page-field section-idx page-idx :slug %])
+          :on-generate #(rf/dispatch [::generate-page-slug section-idx page-idx])}]
+
+        [:> TextField
+         {:fullWidth true
+          :label "Summary"
+          :value (or (:summary page) "")
+          :onChange #(rf/dispatch [::update-page-field section-idx page-idx :summary (.. % -target -value)])
+          :variant "outlined"
+          :margin "normal"
+          :multiline true
+          :rows 2
+          :helperText "1-2 sentences shown in listings and used by the AI assistant"}]]]]]))
+
+;;; ——— UI: selectors ——————————————————————————————————————————————————
+
+(defn- node-label [node idx kind]
+  (let [title (:title node)]
+    (if (str/blank? title)
+      (str kind " " (inc idx) " (" (:slug node) ")")
+      title)))
+
+(r/defc section-selector [{:keys [sections selected-section-idx]}]
   [:> Stack {:spacing 1}
 
    [:> Typography {:variant "h6"} "Select Section"]
 
    [:> FormControl {:fullWidth true}
-    #_[:> InputLabel {:id "section-select-label"} "Select Section"]
-    [:> Select {:labelId "section-select-label"
-                :value (or selected-section-idx "")
-                :onChange #(on-select (js/parseInt (.. % -target -value)))
+    [:> Select {:value (if (some? selected-section-idx) selected-section-idx "")
+                :onChange #(rf/dispatch [::select-section (js/parseInt (.. % -target -value))])
                 :displayEmpty true}
      (map-indexed
       (fn [idx section]
         [:> MenuItem {:key idx :value idx}
-         (get-in section [:title :fi] (str "Section " idx))])
+         (node-label section idx "Section")])
       sections)]]
 
    [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
-    ;; Add Section button
     [:> Button
      {:variant "contained"
       :color "primary"
@@ -989,7 +866,6 @@
       :sx #js{:mt 0}}
      "Add Section"]
 
-    ;; Delete Section button (disabled if no section is selected)
     [:> Button
      {:variant "outlined"
       :color "error"
@@ -1000,7 +876,6 @@
       :sx #js{:mt 0}}
      "Delete Section"]
 
-    ;; Move Section Up button
     [:> Button
      {:variant "outlined"
       :color "primary"
@@ -1011,7 +886,6 @@
       :sx #js{:mt 0}}
      "Move Up"]
 
-    ;; Move Section Down button
     [:> Button
      {:variant "outlined"
       :color "primary"
@@ -1023,26 +897,23 @@
       :sx #js{:mt 0}}
      "Move Down"]]])
 
-(r/defc page-selector [{:keys [section-idx pages selected-page-idx on-select]}]
+(r/defc page-selector [{:keys [section-idx pages selected-page-idx]}]
   [:> Stack {:spacing 2}
 
    [:> Typography {:variant "h6"} "Select Page"]
 
    [:> FormControl {:fullWidth true}
-    #_[:> InputLabel {:id "page-select-label"} "Select Page"]
-    [:> Select {:labelId "page-select-label"
-                :value (or selected-page-idx "")
-                :onChange #(on-select (js/parseInt (.. % -target -value)))
+    [:> Select {:value (if (some? selected-page-idx) selected-page-idx "")
+                :onChange #(rf/dispatch [::select-page (js/parseInt (.. % -target -value))])
                 :displayEmpty true}
      (map-indexed
       (fn [idx page]
         [:> MenuItem {:key idx :value idx}
-         (get-in page [:title :fi] (str "Page " idx))])
+         (node-label page idx "Page")])
       pages)]]
 
    [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
 
-    ;; Add Page button
     [:> Button
      {:variant "contained"
       :color "primary"
@@ -1052,7 +923,6 @@
       :sx #js{:mt 0}}
      "Add Page"]
 
-    ;; Delete Page button (disabled if no page is selected)
     [:> Button
      {:variant "outlined"
       :color "error"
@@ -1064,7 +934,6 @@
       :sx #js{:mt 0}}
      "Delete Page"]
 
-    ;; Move Page Up button
     [:> Button
      {:variant "outlined"
       :color "primary"
@@ -1075,7 +944,6 @@
       :sx #js{:mt 0}}
      "Move Up"]
 
-    ;; Move Page Down button
     [:> Button
      {:variant "outlined"
       :color "primary"
@@ -1087,38 +955,97 @@
       :sx #js{:mt 0}}
      "Move Down"]]])
 
-(r/defc editor-toolbar []
-  [:> Toolbar {:disableGutters true :sx #js{:mb 2}}
-   [:> Typography {:variant "h5" :component "div" :sx #js{:flexGrow 1}}
-    "Help Content Editor"]
+;;; ——— UI: toolbar + dialogs ——————————————————————————————————————————
 
-   [:> Stack {:direction "row" :spacing 1}
-    [:> Button
-     {:variant "contained"
-      :color "primary"
-      :startIcon (r/as-element [:> PreviewIcon {}])
-      :onClick #(rf/dispatch [::apply-changes])}
-     "Preview"]
-    [:> Button
-     {:variant "contained"
-      :color "secondary"
-      :startIcon (r/as-element [:> SaveIcon {}])
-      :onClick #(rf/dispatch [::save-changes])}
-     "Save"]
-    [:> Button
-     {:variant "outlined"
-      :color "secondary"
-      :sx #js{:ml 1}
-      :onClick #(rf/dispatch [::events/close-edit-mode])}
-     "Cancel"]]])
+(r/defc editor-toolbar []
+  (let [locale @(rf/subscribe [::editor-locale*])]
+    [:> Toolbar {:disableGutters true :sx #js{:mb 2 :gap 2 :flexWrap "wrap"}}
+     [:> Typography {:variant "h5" :component "div"}
+      "Help Content Editor"]
+
+     ;; Which language's tree is being edited. Each language is
+     ;; drafted/published independently.
+     [:> Tabs {:value (name locale)
+               :onChange #(rf/dispatch [::set-editor-locale (keyword %2)])
+               :sx #js{:flexGrow 1 :minHeight 40}}
+      [:> Tab {:value "fi" :label "Suomi"}]
+      [:> Tab {:value "se" :label "Svenska"}]
+      [:> Tab {:value "en" :label "English"}]]
+
+     [:> Stack {:direction "row" :spacing 1}
+      [:> Button
+       {:variant "outlined"
+        :color "primary"
+        :startIcon (r/as-element [:> HistoryIcon {}])
+        :onClick #(rf/dispatch [::open-version-history])}
+       "History"]
+      [:> Button
+       {:variant "contained"
+        :color "primary"
+        :startIcon (r/as-element [:> PreviewIcon {}])
+        :onClick #(rf/dispatch [::apply-changes])}
+       "Preview"]
+      [:> Button
+       {:variant "outlined"
+        :color "secondary"
+        :startIcon (r/as-element [:> SaveIcon {}])
+        :onClick #(rf/dispatch [::save-draft])}
+       (str "Save draft (" (name locale) ")")]
+      [:> Button
+       {:variant "contained"
+        :color "secondary"
+        :startIcon (r/as-element [:> SaveIcon {}])
+        :onClick #(rf/dispatch [::save-changes])}
+       (str "Publish (" (name locale) ")")]
+      [:> Button
+       {:variant "outlined"
+        :color "secondary"
+        :sx #js{:ml 1}
+        :onClick #(rf/dispatch [::events/close-edit-mode])}
+       "Cancel"]]]))
+
+(r/defc version-history-dialog []
+  (let [{:keys [dialog-open? items]} @(rf/subscribe [::versions])
+        locale @(rf/subscribe [::editor-locale*])]
+    [:> Dialog
+     {:open (boolean dialog-open?)
+      :onClose #(rf/dispatch [::close-version-history])
+      :maxWidth "sm"
+      :fullWidth true}
+
+     [:> DialogTitle {} (str "Version history (" (name locale) ")")]
+
+     [:> DialogContent {}
+      (if (empty? items)
+        [:> DialogContentText {} "No saved versions."]
+        [:> MuiList {}
+         (for [{:keys [id event-date status]} items]
+           ^{:key id}
+           [:> ListItem
+            {:secondaryAction
+             (r/as-element
+              [:> Button
+               {:size "small"
+                :variant "outlined"
+                :onClick #(rf/dispatch [::load-version id])}
+               "Load into editor"])}
+            [:> Chip {:size "small"
+                      :label status
+                      :color (if (= "active" status) "secondary" "default")
+                      :sx #js{:mr 2}}]
+            [:> ListItemText
+             ;; "2026-07-08 14:03:22.123456" → "2026-07-08 14:03"
+             {:primary (subs (str event-date) 0 16)}]])])]
+
+     [:> DialogActions {}
+      [:> Button
+       {:onClick #(rf/dispatch [::close-version-history])
+        :color "primary"}
+       "Close"]]]))
 
 (r/defc confirmation-dialog []
   (let [dialog @(rf/subscribe [::confirm-dialog])
         dialog-type (:type dialog)
-        params (:params dialog)
-        section-idx (:section-idx params)
-        page-idx (:page-idx params)
-        block-idx (:block-idx params)
 
         get-title (fn []
                     (case dialog-type
@@ -1135,7 +1062,7 @@
                         "Are you sure you want to proceed with this action?"))]
 
     [:> Dialog
-     {:open (:open? dialog)
+     {:open (boolean (:open? dialog))
       :onClose #(rf/dispatch [::hide-confirm-dialog])
       :aria-labelledby "confirm-dialog-title"}
 
@@ -1161,13 +1088,13 @@
 
 (r/defc view
   []
-  (let [edit-data @(rf/subscribe [::edited-help-data])
-        selected-section-idx @(rf/subscribe [::subs/selected-section-idx])
-        selected-page-idx @(rf/subscribe [::subs/selected-page-idx])
+  (let [tree @(rf/subscribe [::edited-tree])
+        selected-section-idx @(rf/subscribe [::editor-section-idx])
+        selected-page-idx @(rf/subscribe [::editor-page-idx])
 
-        selected-section (when (and edit-data (number? selected-section-idx)
-                                    (< selected-section-idx (count edit-data)))
-                           (nth edit-data selected-section-idx))
+        selected-section (when (and tree (number? selected-section-idx)
+                                    (< selected-section-idx (count tree)))
+                           (nth tree selected-section-idx))
         selected-pages (when selected-section
                          (:pages selected-section))
         selected-page (when (and selected-pages (number? selected-page-idx)
@@ -1177,12 +1104,12 @@
     [:> Box {:sx #js{:p 2}}
      ;; Confirmation dialog always rendered but only shown when needed
      [confirmation-dialog {}]
+     [version-history-dialog {}]
      [editor-toolbar {}]
 
      [section-selector
-      {:sections edit-data
-       :selected-section-idx selected-section-idx
-       :on-select #(rf/dispatch [::events/select-section % (get-in (nth edit-data %) [:slug])])}]
+      {:sections tree
+       :selected-section-idx selected-section-idx}]
 
      (when selected-section
        [section-editor {:section-idx selected-section-idx :section selected-section}])
@@ -1191,8 +1118,7 @@
        [page-selector
         {:section-idx selected-section-idx
          :pages selected-pages
-         :selected-page-idx selected-page-idx
-         :on-select #(rf/dispatch [::events/select-page % (get-in (nth selected-pages %) [:slug])])}])
+         :selected-page-idx selected-page-idx}])
 
      (when (and selected-section selected-page)
        [page-editor

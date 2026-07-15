@@ -15,7 +15,6 @@
      :controllers
      [{:start
        (fn [_]
-         (==> [:lipas.ui.help.events/get-help-data])
          (==> [:lipas.ui.map.events/show-sports-site* nil]))}]}]
 
    ["/loi/:loi-id"

@@ -36,6 +36,12 @@
    {:interval-seconds 300
     :task-fn produce-reminder-emails!}
 
+   :nightly-help-kb-sync
+   ;; Code-derived KB docs (types, props) can change with any deploy, so
+   ;; resync daily; content-hash diffing makes a no-change run cheap.
+   {:interval-seconds 86400
+    :task-fn (fn [db] (jobs/enqueue-job! db "help-kb-sync" {}))}
+
    :recover-stuck-jobs
    {:interval-seconds 600
     :task-fn (fn [db] (jobs/recover-stuck-jobs! db jobs/stuck-job-timeout-minutes))}

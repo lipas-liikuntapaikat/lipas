@@ -1,4 +1,6 @@
-{:headline "Help",
+{:only-in-finnish "This content is currently available only in Finnish.",
+ :available-pages "Pages in this section",
+ :headline "Help",
  :manage-content "Manage help content",
  :privacy-policy "Privacy policy"
  :data-model "Data model"

@@ -2171,7 +2171,10 @@
     [:> Dialog
      {:open open?
       :fullScreen true
-      :max-width "xl"}
+      :max-width "xl"
+      ;; The assistant panel lives outside this dialog's portal — without
+      ;; this the modal focus trap steals every keystroke from it.
+      :disableEnforceFocus true}
 
      [:> AppBar
       {:sx #js {:position "relative"}}

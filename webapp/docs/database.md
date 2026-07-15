@@ -1,6 +1,9 @@
 # Database Schema
 
-LIPAS uses PostgreSQL with extensive JSONB document storage. The schema follows an append-only event sourcing pattern for core entities.
+LIPAS uses PostgreSQL with extensive JSONB document storage. Core entities use
+append-oriented full-state revisions. This is not strict event sourcing: normal
+writes append, while explicit historical-correction and migration paths may
+update existing rows.
 
 ## Architecture Overview
 
@@ -8,7 +11,7 @@ LIPAS uses PostgreSQL with extensive JSONB document storage. The schema follows 
 ┌─────────────────────────────────────────────────────────────┐
 │                      PostgreSQL                             │
 ├─────────────────────────────────────────────────────────────┤
-│  Event Log Tables          │  Current State Views          │
+│  Versioned State Tables    │  Current State Views          │
 │  ─────────────────         │  ────────────────────         │
 │  sports_site (append-only) │  sports_site_current          │
 │  loi (append-only)         │  loi_current                  │
@@ -27,21 +30,22 @@ LIPAS uses PostgreSQL with extensive JSONB document storage. The schema follows 
 
 ## Core Tables
 
-### `sports_site` - Facility Event Log
+### `sports_site` - Facility Revision Log
 
-The central table implementing **append-only event sourcing**. Every edit creates a new revision sharing the same `lipas_id`.
+The central table stores complete facility revisions. Normal edits create a new
+row sharing the same `lipas_id`.
 
 ```sql
 CREATE TABLE sports_site (
   id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  created_at timestamptz DEFAULT CURRENT_TIMESTAMP,
-  event_date timestamptz NOT NULL,  -- When this revision became valid
+  created_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  event_date timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
   lipas_id   integer NOT NULL,      -- Permanent facility identifier
   status     text NOT NULL,         -- 'published', 'draft'
   document   jsonb NOT NULL,        -- Full facility data
-  author_id  uuid REFERENCES account(id),
-  type_code  integer NOT NULL,      -- Facility type (indexed)
-  city_code  text NOT NULL          -- City code (indexed)
+  author_id  uuid NOT NULL REFERENCES account(id),
+  type_code  integer NOT NULL,      -- Relational projection from document
+  city_code  text NOT NULL          -- Relational projection from document
 );
 ```
 
@@ -49,7 +53,8 @@ CREATE TABLE sports_site (
 - `lipas_id` is the permanent identifier for a facility
 - `id` (UUID) uniquely identifies each revision
 - `document` contains the complete facility data as JSONB
-- Revisions are never updated or deleted (append-only)
+- Normal application saves append revisions. Backdated permanent-closure repair
+  and data migrations are deliberate exceptions that can update existing rows.
 
 ### `account` - User Accounts
 
@@ -150,7 +155,7 @@ CREATE INDEX idx_versioned_data_type_event_date
 
 ### `sports_site_current`
 
-Shows only the latest **published** revision for each facility.
+Shows the latest **non-draft** revision for each facility.
 
 ```sql
 CREATE VIEW sports_site_current AS
@@ -166,7 +171,9 @@ JOIN (
 ) b ON a.id = b.id AND b.row_number = 1;
 ```
 
-**Usage:** Most read operations use this view via `get-sports-site`.
+**Usage:** Internal authoritative current reads use this view via
+`get-sports-site`. Major public/search/report paths use the derived Elasticsearch
+projection instead.
 
 ### `sports_site_by_year`
 
@@ -179,7 +186,7 @@ FROM sports_site a
 JOIN (
   SELECT id, row_number() OVER (
     PARTITION BY lipas_id, date_trunc('year', event_date)
-    ORDER BY event_date DESC
+    ORDER BY event_date DESC, created_at DESC
   ) AS row_number
   FROM sports_site
   WHERE status != 'draft'
@@ -205,7 +212,8 @@ JOIN (
 
 A unified job queue. State model: `pending -> processing -> completed`.
 Retries are pending jobs with a future `run_at`; permanently failed jobs
-live only in `dead_letter_jobs`. See `docs/async-jobs.md` (repo root).
+live only in `dead_letter_jobs`. See `../../docs/async-jobs.md` when the sibling
+system-level documentation is available.
 
 ### `jobs` - Main Job Queue
 
@@ -230,8 +238,8 @@ CREATE TABLE jobs (
   updated_at     timestamptz DEFAULT now()
 );
 
--- Fetch performance index
-CREATE INDEX idx_jobs_pending ON jobs (status, run_at, priority)
+-- Fetch performance index (pending rows only)
+CREATE INDEX idx_jobs_pending ON jobs (priority DESC, run_at ASC)
   WHERE status = 'pending';
 
 -- Deduplication applies to pending jobs only
@@ -347,8 +355,7 @@ For complex data transformations:
 | Table            | Index                                | Purpose          |
 |------------------|--------------------------------------|------------------|
 | `sports_site`    | Primary on `id`                      | Row lookup       |
-| `sports_site`    | Implied on `lipas_id`, `event_date`  | View performance |
-| `jobs`           | `(status, run_at, priority)` partial | Job fetching     |
+| `jobs`           | `(priority DESC, run_at ASC)` partial for pending rows | Job fetching |
 | `jobs`           | `(type, dedup_key)` unique partial   | Deduplication    |
 | `versioned_data` | `(type, event_date DESC)`            | Latest by type   |
 
@@ -384,7 +391,7 @@ CREATE INDEX idx_document_status ON sports_site
 ### Creating New Revision
 
 ```clojure
-;; Appends new row, doesn't update existing
+;; Normal path appends a new row; see correction exception above
 (db/upsert-sports-site! db-spec user sports-site)
 ```
 
@@ -413,7 +420,7 @@ RETURNING id;
 User Edit
     │
     ▼
-sports_site table (new revision appended)
+sports_site table (normally a new full-state revision)
     │
     ▼
 sports_site_current view (reflects latest)
@@ -425,4 +432,6 @@ Elasticsearch index (enriched, denormalized)
 API responses / Search queries
 ```
 
-The database is the **source of truth** with full history. Elasticsearch serves as a read-optimized cache of current revisions.
+The database is the **source of truth**. Elasticsearch serves derived enriched
+projections for search and major read paths. The existing history query is a
+yearly snapshot view, not an exact row-by-row revision log.

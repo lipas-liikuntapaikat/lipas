@@ -1,5 +1,6 @@
 (ns lipas.backend.ptv.workbench
-  (:require [lipas.backend.ptv.ai :as ai]
+  (:require [lipas.backend.llm :as llm]
+            [lipas.backend.ptv.ai :as ai]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
@@ -33,7 +34,7 @@
     {:prompt-doc    prompt-doc
      :system-prompt (-> templates :v5 :system-prompt)
      :user-prompt   (-> templates :v5 :user-prompt)
-     :defaults      ai/default-params
+     :defaults      llm/default-params
      :templates     templates}))
 
 (defn preview-service
@@ -53,7 +54,7 @@
     {:prompt-doc    prompt-doc
      :system-prompt (-> templates :v5 :system-prompt)
      :user-prompt   (-> templates :v5 :user-prompt)
-     :defaults      ai/default-params
+     :defaults      llm/default-params
      :templates     templates}))
 
 (defn preview-data
@@ -64,25 +65,23 @@
 
 (defn run-experiment
   [{:keys [system-prompt user-prompt params]}]
-  (let [provider (ai/model->provider (:model params))
+  (let [provider (llm/model->provider (:model params))
         base-cfg (case provider
-                   :gemini ai/gemini-config
-                   ai/openai-config)
+                   :gemini llm/gemini-config
+                   llm/openai-config)
         config   (case provider
                    :gemini (merge base-cfg
+                                  {:response-schema ai/GeminiResponse}
                                   (select-keys params [:model :top-p :max-tokens
                                                        :temperature :thinking-level]))
                    (merge base-cfg
                           (select-keys params [:model :top-p :presence-penalty
                                                :max-tokens :temperature])
-                          {:message-format {:type "json_schema"
-                                            :json_schema {:name   "Response"
-                                                          :strict true
-                                                          :schema ai/Response}}}))
+                          {:message-format ai/openai-response-format}))
         start    (System/currentTimeMillis)
         result   (case provider
-                   :gemini (ai/gemini-complete-raw config system-prompt user-prompt)
-                   (ai/complete-raw config system-prompt user-prompt))
+                   :gemini (llm/gemini-complete-raw config system-prompt user-prompt)
+                   (llm/complete-raw config system-prompt user-prompt))
         elapsed  (- (System/currentTimeMillis) start)]
     (assoc result :elapsed-ms elapsed)))
 

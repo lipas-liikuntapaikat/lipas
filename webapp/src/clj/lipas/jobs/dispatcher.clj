@@ -12,6 +12,7 @@
    [lipas.backend.elevation :as elevation]
    [lipas.backend.email :as email]
    [lipas.backend.gis :as gis]
+   [lipas.backend.kb :as kb]
    [lipas.integration.utp.webhook :as utp-webhook]
    [lipas.jobs.core :as jobs]
    [lipas.jobs.patterns :as patterns]
@@ -88,6 +89,10 @@
 
     ;; Default email handling
     (email/send! emailer payload)))
+
+(defmethod handle-job "help-kb-sync"
+  [{:keys [db search]} _job]
+  (kb/sync! db search))
 
 (defmethod handle-job "webhook"
   [{:keys [db]} {:keys [id payload]}]
