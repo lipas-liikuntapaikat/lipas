@@ -2,6 +2,7 @@
   (:require [lipas.backend.middleware :as mw]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
+            [lipas.schema.ptv :as lipas-ptv-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [taoensso.timbre :as log]))
@@ -157,7 +158,7 @@
       (fn [req]
         (try
           {:status 200
-           :body (ptv-core/upsert-ptv-service! ptv (-> req :parameters :body))}
+           :body (ptv-core/upsert-ptv-service! db ptv (:identity req) (-> req :parameters :body))}
           (catch clojure.lang.ExceptionInfo e
             (if-let [ptv-err (ptv-core/parse-ptv-error e)]
               (do
@@ -293,5 +294,55 @@
               org-id (:org-id params)
               stats (:stats params)
               result (ptv-core/send-audit-notification! db emailer org-id stats)]
+          {:status 200 :body result}))}}]
+
+   ["/actions/get-ptv-audit-notification-recipients"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map [:org-id :uuid]]}
+      :handler
+      (fn [req]
+        (if-let [result (ptv-core/get-audit-notification-recipients
+                         db (-> req :parameters :body :org-id))]
+          {:status 200 :body result}
+          {:status 404 :body {:error "Organization not found"}}))}}]
+
+   ["/actions/fetch-ptv-service-audits"
+    {:post
+     {:require-privilege ptv-read-access?
+      :parameters {:body #'lipas-ptv-schema/fetch-service-audits-body}
+      :handler
+      (fn [req]
+        {:status 200
+         :body (ptv-core/get-ptv-service-docs db (-> req :parameters :body :org-id))})}}]
+
+   ["/actions/save-ptv-service-audit"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body #'lipas-ptv-schema/save-service-audit-body}
+      :handler
+      (fn [req]
+        (let [body (-> req :parameters :body)]
+          (if-let [result (ptv-core/save-ptv-service-audit db ptv (:identity req) body)]
+            {:status 200 :body result}
+            {:status 404 :body {:error "Service not found"}})))}}]
+
+   ["/actions/send-service-audit-notification"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map
+                          [:org-id :uuid]
+                          [:stats [:map
+                                   [:total-services :int]
+                                   [:summary [:map [:approved :int] [:changes-requested :int]]]
+                                   [:description [:map [:approved :int] [:changes-requested :int]]]
+                                   [:user-instruction {:optional true}
+                                    [:map [:approved :int] [:changes-requested :int]]]]]]}
+      :handler
+      (fn [req]
+        (let [params (-> req :parameters :body)
+              org-id (:org-id params)
+              stats (:stats params)
+              result (ptv-core/send-service-audit-notification! db emailer org-id stats)]
           {:status 200 :body result}))}}]])
 

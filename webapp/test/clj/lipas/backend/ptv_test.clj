@@ -84,6 +84,43 @@
                                  (tu/token-header token)))]
         (is (= 403 (:status resp)))))))
 
+(deftest get-audit-notification-recipients-test
+  (t/testing "Returns the org's PTV manager emails for the confirmation dialog"
+    (let [org (create-org! {:name "Recipients Org"
+                            :ptv-data {:org-id "test-ptv-org-3"
+                                       :city-codes [91]}})
+          org-id (:id org)
+          ptv-manager (tu/gen-user {:db? true
+                                    :db-component (test-db)
+                                    :permissions {:roles [{:role :ptv-manager
+                                                           :city-code [91]
+                                                           :org-id [(str org-id)]}]}})
+          _ (backend-org/add-member! (test-db) org-id (:id ptv-manager) {:roles []} nil)
+          auditor (tu/gen-user {:db? true :admin? true
+                                :db-component (test-db)
+                                :permissions {:roles [{:role :ptv-auditor}]}})
+          token (jwt/create-token auditor)
+          resp ((test-app) (-> (mock/request :post "/api/actions/get-ptv-audit-notification-recipients")
+                               (mock/json-body {:org-id org-id})
+                               (tu/token-header token)))
+          body (<-json (:body resp))]
+      (is (= 200 (:status resp)))
+      (is (= [(:email ptv-manager)] (:recipients body)))
+
+      (t/testing "Unknown org gives 404"
+        (let [resp ((test-app) (-> (mock/request :post "/api/actions/get-ptv-audit-notification-recipients")
+                                   (mock/json-body {:org-id (java.util.UUID/randomUUID)})
+                                   (tu/token-header token)))]
+          (is (= 404 (:status resp)))))))
+
+  (t/testing "Requires :ptv/audit privilege"
+    (let [regular-user (tu/gen-user {:db? true :db-component (test-db)})
+          token (jwt/create-token regular-user)
+          resp ((test-app) (-> (mock/request :post "/api/actions/get-ptv-audit-notification-recipients")
+                               (mock/json-body {:org-id (java.util.UUID/randomUUID)})
+                               (tu/token-header token)))]
+      (is (= 403 (:status resp))))))
+
 (deftest get-ptv-managers-catalog-grant-test
   (t/testing "Catalog-granted ptv-manager is included alongside direct-role managers (F10)"
     ;; Catalog grants are projection-only (JWT, never persisted to
@@ -371,6 +408,42 @@
           :publishing-status "Published" :service-ids [] :sync-enabled true
           :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
          extra))
+
+(deftest upsert-ptv-service-location-preserves-audit-test
+  ;; :audit is server-owned and deliberately not in persisted-ptv-keys — a
+  ;; sync (e.g. the municipality fixing a changes-requested text) must not
+  ;; wipe the auditor's verdicts. Regression: tester observed an audited
+  ;; site returning to "unaudited" after a fix + sync, because the rebuilt
+  ;; :ptv meta dropped :audit.
+  (let [audit {:timestamp "2026-07-01T00:00:00.000Z"
+               :auditor-id "auditor-1"
+               :summary {:status "changes-requested"
+                         :feedback "Tarkenna tekstiä"
+                         :audited-content {:fi "vanha tiivistelmä"}}}
+        site {:lipas-id 12345 :name "Auditoitu halli" :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425} :address "Katu 1" :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              ;; The DB copy of the site carries the audit...
+              :ptv (sent-ptv {:audit audit})}
+        published-resp {:id "chan-1" :sourceId "src-1" :publishingStatus "Published"
+                        :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
+                  ptv-integ/get-org-service-channel (fn [_ _ _] published-resp)
+                  ptv-integ/update-service-location (fn [_ _ _] published-resp)
+                  ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
+      (let [[_ new-ptv-data]
+            (ptv-core/upsert-ptv-service-location!*
+              {} {:org-id "org-x"
+                  :site site
+                  ;; ...while the client's sync payload does not.
+                  :ptv (dissoc (:ptv site) :audit)})]
+        (is (= audit (:audit new-ptv-data))
+            "Auditor's verdicts survive the sync")))))
 
 (deftest to-archive?-decision-test
   (let [sent (fn [status & [ptv-extra]]

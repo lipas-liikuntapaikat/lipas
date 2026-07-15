@@ -178,7 +178,12 @@
   (fn [{:keys [db]} [_ lipas-org]]
     {:db (-> db
              (assoc-in [:ptv :selected-org] lipas-org)
-             (assoc-in [:ptv :audit :notification-sent?] false))
+             (assoc-in [:ptv :audit :notification-sent?] false)
+             (assoc-in [:ptv :audit :service-notification-sent?] false)
+             ;; org data is refetched, discarding unsaved audit edits
+             ;; and any selection from the previous org
+             (update-in [:ptv :audit] dissoc :site-dirty :service-dirty)
+             (update :ptv dissoc :selected-audit-site :selected-audit-service))
      :fx [[:dispatch [::fetch-ptv-org-data lipas-org]]]}))
 
 (rf/reg-event-fx ::set-candidates-search
@@ -268,7 +273,8 @@
             [:dispatch [::fetch-ptv-org lipas-org]]
             [:dispatch [::fetch-ptv-services lipas-org]]
             [:dispatch [::fetch-ptv-service-channels lipas-org]]
-            [:dispatch [::fetch-ptv-service-collections lipas-org]]]})))
+            [:dispatch [::fetch-ptv-service-collections lipas-org]]
+            [:dispatch [::fetch-ptv-service-audits lipas-org]]]})))
 
 (rf/reg-event-fx ::fetch-ptv-org
   (fn [{:keys [db]} [_ lipas-org]]
@@ -1613,13 +1619,24 @@
 
 (rf/reg-event-db ::select-audit-tab
   (fn [db [_ v]]
-    (assoc-in db [:ptv :audit :selected-tab] v)))
+    (-> db
+        (assoc-in [:ptv :audit :selected-tab] v)
+        ;; The previous selection may not exist in the new tab's list —
+        ;; keeping its form visible reads as the wrong tab's content.
+        (update :ptv dissoc :selected-audit-site :selected-audit-service))))
+
+;; Audit edits mark the item dirty ([:ptv :audit :site-dirty/:service-dirty])
+;; — the save button requires actual input (or a stale verdict to
+;; re-confirm), because every save appends a revision and re-anchors the
+;; verdict snapshots to the current content.
 
 (rf/reg-event-db ::update-audit-feedback
   (fn [db [_ lipas-id field value]]
     (let [org-id (-get-ptv-org-id db)
           path [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field]]
-      (assoc-in db (conj path :feedback) value))))
+      (-> db
+          (assoc-in (conj path :feedback) value)
+          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
 
 (rf/reg-event-db ::update-audit-status
   (fn [db [_ lipas-id field status]]
@@ -1628,10 +1645,23 @@
       (-> db
           (assoc-in (conj path :status) status)
                          ;; Initialize feedback to empty string if not present (schema requires it)
-          (update-in (conj path :feedback) #(or % ""))))))
+          (update-in (conj path :feedback) #(or % ""))
+          (assoc-in [:ptv :audit :site-dirty lipas-id] true)))))
+
+(defn- with-audited-content
+  "Stamp the currently-shown content into each field that carries a verdict,
+   so approvals are anchored to a revision: a later content edit makes the
+   verdict stale (see lipas.data.ptv/audit-field-state)."
+  [audit-data contents]
+  (reduce-kv (fn [m field content]
+               (cond-> m
+                 (get-in m [field :status])
+                 (assoc-in [field :audited-content] content)))
+             audit-data
+             contents))
 
 (rf/reg-event-fx ::save-ptv-audit
-  (fn [{:keys [db]} [_ lipas-id audit-data]]
+  (fn [{:keys [db]} [_ lipas-id audit-data contents]]
     ;; Validation strategy (defense in depth):
     ;; 1. UI input constraints (TextField maxLength)
     ;; 2. Save button state (::site-audit-data-valid? subscription using Malli)
@@ -1646,11 +1676,13 @@
                 :headers {:Authorization (str "Token " token)}
                 :uri (str (:backend-url db) "/actions/save-ptv-audit")
                 :params {:lipas-id lipas-id
-                         :audit audit-data}
+                         :audit (-> (select-keys audit-data [:summary :description])
+                                    (with-audited-content contents))}
                 :format (ajax/transit-request-format)
                 :response-format (ajax/transit-response-format)
                 :on-success [::save-ptv-audit-success lipas-id]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
+
 
 (rf/reg-event-fx ::save-ptv-audit-success
   (fn [{:keys [db]} [_ lipas-id resp]]
@@ -1660,7 +1692,10 @@
           org-id (-get-ptv-org-id db)]
       {:db (-> db
                (assoc-in [:ptv :audit :saving?] false)
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit] resp)
+               (update-in [:ptv :audit :site-dirty] dissoc lipas-id)
+               ;; new audit activity re-arms the notification button
+               (assoc-in [:ptv :audit :notification-sent?] false))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
 
 (rf/reg-event-fx ::save-ptv-audit-failure
@@ -1676,10 +1711,6 @@
 (rf/reg-event-db ::select-audit-site
   (fn [db [_ site]]
     (assoc-in db [:ptv :selected-audit-site] site)))
-
-(rf/reg-event-db ::select-audit-tab
-  (fn [db [_ tab]]
-    (assoc-in db [:ptv :audit :selected-tab] tab)))
 
 (rf/reg-event-fx ::send-audit-notification
   (fn [{:keys [db]} [_ org-id stats]]
@@ -1721,3 +1752,175 @@
                (assoc-in [:ptv :audit :sending-notification?] false)
                (assoc-in [:ptv :errors :send-notification] error))
        :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;; PTV Service audit events
+;;
+;; Stored ptv_service documents live at [:ptv :org <ptv-org-id> :data
+;; :service-docs] keyed by (str service-id), mirroring the :services
+;; cache keyed by PTV uuid. Audit drafts are edited in place under
+;; [... :service-docs <id> :document :audit], like site audit drafts
+;; under the site's [:ptv :audit].
+
+(rf/reg-event-fx ::fetch-ptv-service-audits
+  (fn [{:keys [db]} [_ lipas-org]]
+    (let [token (-> db :user :login :token)
+          ptv-org-id (get-in lipas-org [:ptv-data :org-id])
+          lipas-org-id (:id lipas-org)]
+      (when (and ptv-org-id lipas-org-id)
+        {:fx [[:http-xhrio
+               {:method :post
+                :headers {:Authorization (str "Token " token)}
+                :uri (str (:backend-url db) "/actions/fetch-ptv-service-audits")
+                :params {:org-id (if (string? lipas-org-id) (uuid lipas-org-id) lipas-org-id)}
+                :format (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success [::fetch-ptv-service-audits-success ptv-org-id]
+                :on-failure [::fetch-ptv-service-audits-failure]}]]}))))
+
+(rf/reg-event-db ::fetch-ptv-service-audits-success
+  (fn [db [_ ptv-org-id resp]]
+    (assoc-in db [:ptv :org ptv-org-id :data :service-docs]
+              (utils/index-by (comp str :service-id) resp))))
+
+(rf/reg-event-fx ::fetch-ptv-service-audits-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr (:translator db)
+          notification {:message (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (assoc-in db [:ptv :errors :service-audits] resp)
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-db ::update-service-audit-status
+  (fn [db [_ service-id field status]]
+    (let [org-id (-get-ptv-org-id db)
+          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
+      (-> db
+          (assoc-in (conj path :status) status)
+          ;; Initialize feedback to empty string if not present (schema requires it)
+          (update-in (conj path :feedback) #(or % ""))
+          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+
+(rf/reg-event-db ::update-service-audit-feedback
+  (fn [db [_ service-id field value]]
+    (let [org-id (-get-ptv-org-id db)
+          path [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]]
+      (-> db
+          (assoc-in (conj path :feedback) value)
+          (assoc-in [:ptv :audit :service-dirty (str service-id)] true)))))
+
+(rf/reg-event-fx ::save-ptv-service-audit
+  (fn [{:keys [db]} [_ {:keys [service-id source-id audit-data contents]}]]
+    (let [token (-> db :user :login :token)
+          lipas-org-id (get-in db [:ptv :selected-org :id])]
+      (when (seq audit-data)
+        {:db (assoc-in db [:ptv :audit :saving?] true)
+         :fx [[:http-xhrio
+               {:method :post
+                :headers {:Authorization (str "Token " token)}
+                :uri (str (:backend-url db) "/actions/save-ptv-service-audit")
+                :params {:org-id (if (string? lipas-org-id) (uuid lipas-org-id) lipas-org-id)
+                         :service-id (if (string? service-id) (uuid service-id) service-id)
+                         :source-id source-id
+                         :audit (-> (select-keys audit-data [:summary :description :user-instruction])
+                                    (with-audited-content contents))}
+                :format (ajax/transit-request-format)
+                :response-format (ajax/transit-response-format)
+                :on-success [::save-ptv-service-audit-success (str service-id)]
+                :on-failure [::save-ptv-audit-failure]}]]}))))
+
+
+(rf/reg-event-fx ::save-ptv-service-audit-success
+  (fn [{:keys [db]} [_ service-id resp]]
+    (let [tr (:translator db)
+          org-id (-get-ptv-org-id db)
+          notification {:message (tr :notifications/save-success)
+                        :success? true}]
+      {:db (-> db
+               (assoc-in [:ptv :audit :saving?] false)
+               (assoc-in [:ptv :org org-id :data :service-docs service-id :document :audit] resp)
+               (update-in [:ptv :audit :service-dirty] dissoc service-id)
+               ;; new audit activity re-arms the notification button
+               (assoc-in [:ptv :audit :service-notification-sent?] false))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-db ::select-audit-section
+  (fn [db [_ v]]
+    (-> db
+        (assoc-in [:ptv :audit :selected-section] v)
+        ;; see ::select-audit-tab — don't carry a selection across views
+        (update :ptv dissoc :selected-audit-site :selected-audit-service))))
+
+(rf/reg-event-db ::select-audit-service
+  (fn [db [_ service]]
+    (assoc-in db [:ptv :selected-audit-service] service)))
+
+(rf/reg-event-fx ::send-service-audit-notification
+  (fn [{:keys [db]} [_ org-id stats]]
+    (let [token (-> db :user :login :token)
+          ;; Ensure org-id is a UUID
+          org-id (if (string? org-id) (uuid org-id) org-id)]
+      {:db (assoc-in db [:ptv :audit :sending-notification?] true)
+       :fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/send-service-audit-notification")
+              :params {:org-id org-id
+                       :stats stats}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::send-service-notification-success]
+              :on-failure [::send-notification-failure]}]]})))
+
+(rf/reg-event-fx ::send-service-notification-success
+  (fn [{:keys [db]} [_ result]]
+    (let [sent-count (:sent result)
+          tr (:translator db)
+          message (if (pos? sent-count)
+                    (str/replace (tr :ptv.audit/notification-sent-success) "%1$s" (str sent-count))
+                    (tr :ptv.audit/no-recipients-found))
+          notification {:message message
+                        :success? (pos? sent-count)}]
+      {:db (-> db
+               (assoc-in [:ptv :audit :sending-notification?] false)
+               (cond-> (pos? sent-count) (assoc-in [:ptv :audit :service-notification-sent?] true)))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+;; Confirmation dialog shown before sending the audit notification: the
+;; auditor sees the recipients (the org's PTV managers, fetched from the
+;; backend) and a summary of what the email contains before committing.
+
+(rf/reg-event-fx ::open-notification-dialog
+  (fn [{:keys [db]} [_ org-id]]
+    (let [token (-> db :user :login :token)
+          org-id (if (string? org-id) (uuid org-id) org-id)]
+      {:db (assoc-in db [:ptv :audit :notification-dialog]
+                     {:open? true :loading? true :recipients nil})
+       :fx [[:http-xhrio
+             {:method :post
+              :headers {:Authorization (str "Token " token)}
+              :uri (str (:backend-url db) "/actions/get-ptv-audit-notification-recipients")
+              :params {:org-id org-id}
+              :format (ajax/transit-request-format)
+              :response-format (ajax/transit-response-format)
+              :on-success [::fetch-notification-recipients-success]
+              :on-failure [::fetch-notification-recipients-failure]}]]})))
+
+(rf/reg-event-db ::fetch-notification-recipients-success
+  (fn [db [_ resp]]
+    (update-in db [:ptv :audit :notification-dialog]
+               merge {:loading? false :recipients (vec (:recipients resp))})))
+
+(rf/reg-event-fx ::fetch-notification-recipients-failure
+  (fn [{:keys [db]} [_ resp]]
+    (let [tr (:translator db)
+          notification {:message (tr :notifications/get-failed)
+                        :success? false}]
+      {:db (-> db
+               (update-in [:ptv :audit :notification-dialog]
+                          merge {:loading? false :recipients []})
+               (assoc-in [:ptv :errors :notification-recipients] resp))
+       :fx [[:dispatch [:lipas.ui.events/set-active-notification notification]]]})))
+
+(rf/reg-event-db ::close-notification-dialog
+  (fn [db _]
+    (assoc-in db [:ptv :audit :notification-dialog] nil)))

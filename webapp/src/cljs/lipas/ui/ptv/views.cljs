@@ -117,24 +117,26 @@
                   (on-change [(:value v)]))}]))
 
 (defn audit-feedback-component
-  "Displays audit feedback for a specific field (summary or description)"
+  "Displays audit feedback for a specific field (summary or description).
+   Renders resolved (info) once the municipality has fixed the text."
   [{:keys [lipas-id field-name]}]
-  (let [feedback (<== [::subs/site-audit-field-feedback lipas-id field-name])
-        status (<== [::subs/site-audit-field-status lipas-id field-name])]
-    (when (and feedback (not (str/blank? feedback)))
-      [:> Alert
-       {:severity (case status
-                    "changes-requested" "error"
-                    "approved" "success"
-                    "warning")
-        :variant "outlined"
-        :sx #js {:mt 1 :mb 1}}
-       [:> AlertTitle
-        (case status
-          "changes-requested" "Auditoijan palaute - vaatii muutoksia"
-          "approved" "Auditoijan palaute - hyväksytty"
-          "Auditoijan palaute")]
-       feedback])))
+  (let [tr (<== [:lipas.ui.subs/translator])
+        field-audit (<== [::subs/site-audit-field-display lipas-id field-name])]
+    [ptv-components/audit-feedback-alert
+     {:tr tr
+      :field-audit field-audit}]))
+
+(defn service-audit-feedback-component
+  "Displays auditor feedback for a PTV Service field. `current-content`
+   is the live PTV content of the field — the verdict snapshot is compared
+   against it so a fix synced to PTV resolves the alert."
+  [{:keys [service-id field-name current-content]}]
+  (let [tr (<== [:lipas.ui.subs/translator])
+        field-audit (<== [::subs/service-audit-field service-id field-name])]
+    [ptv-components/audit-feedback-alert
+     {:tr tr
+      :field-audit field-audit
+      :current-content current-content}]))
 
 (def ptv-link-field ptv-components/ptv-link-field)
 
@@ -1865,6 +1867,12 @@
          :helperText (str (count v) "/" ptv-data/max-summary-length)
          :error (> (count v) ptv-data/max-summary-length)}])
 
+     ;; Auditor feedback for summary
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :summary
+       :current-content (:summary service)}]
+
      ;; Description
      (let [v (or (get description-data @selected-tab) "")]
        [text-fields/text-field
@@ -1878,6 +1886,12 @@
          :helperText (str (count v) "/" ptv-data/max-description-length)
          :error (> (count v) ptv-data/max-description-length)}])
 
+     ;; Auditor feedback for description
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :description
+       :current-content (:description service)}]
+
      ;; User instruction
      (let [v (or (get user-instruction-data @selected-tab) "")]
        [text-fields/text-field
@@ -1889,7 +1903,13 @@
          :value v
          :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
          :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
-         :error (> (count v) ptv-data/max-user-instruction-length)}])]))
+         :error (> (count v) ptv-data/max-user-instruction-length)}])
+
+     ;; Auditor feedback for user instruction
+     [service-audit-feedback-component
+      {:service-id (:service-id service)
+       :field-name :user-instruction
+       :current-content (:user-instruction service)}]]))
 
 (defn service-panel
   [{:keys [org-id service descriptions]}]
@@ -1918,10 +1938,29 @@
                               current-texts)
                  edited-name (assoc :service-name edited-name))
           lipas-managed? (some-> source-id (str/starts-with? "lipas-"))
-          modified? (= "Modified" (:publishing-status service))]
-      [layouts/expansion-panel
-       {:label (:label service)
-        :label-icon (when lipas-managed?
+          modified? (= "Modified" (:publishing-status service))
+
+          ;; Audit state indicator so a pending change request is visible
+          ;; in the listing without opening the service (tester finding #3)
+          service-audit (<== [::subs/service-audit-data (:service-id service)])
+          audit-bucket (ptv-data/audit-bucket
+                        service-audit
+                        (ptv-data/service-audit-fields ptv-texts))
+          audit-icon (case audit-bucket
+                       :waiting-fixes
+                       [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}
+                        [:> WarningIcon {:sx #js {:color "warning.main"}}]]
+
+                       :done
+                       [:> Tooltip {:title (tr :ptv.audit.status/approved)}
+                        [:> CheckCircleIcon {:sx #js {:color "success.main"}}]]
+
+                       :waiting-audit
+                       [:> Tooltip {:title (tr :ptv.audit/audit-in-progress)}
+                        [:> PartialIcon {:sx #js {:color "info.main"}}]]
+
+                       nil)
+          sync-chip (when lipas-managed?
                       (cond
                         modified?
                         [:> Tooltip {:title (tr :ptv/modified-in-ptv)}
@@ -1945,7 +1984,13 @@
                                    :size "small"
                                    :color "success"
                                    :variant "outlined"
-                                   :icon (r/as-element [:> Sync {:fontSize "small"}])}]]))}
+                                   :icon (r/as-element [:> Sync {:fontSize "small"}])}]]))]
+      [layouts/expansion-panel
+       {:label (:label service)
+        :label-icon (when (or sync-chip audit-icon)
+                      [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+                       sync-chip
+                       audit-icon])}
        [:> Grid {:container true :spacing 3}
         [:> Grid {:item true :xs 12 :md 5}
          [service-panel-left {:tr tr :org-id org-id :service service
