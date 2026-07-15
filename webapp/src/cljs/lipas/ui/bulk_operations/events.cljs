@@ -103,14 +103,16 @@
 
 (rf/reg-event-db ::populate-from-org-contact
   ;; "Fill from organization contact info": copy the org's contact fields into
-  ;; the bulk-update form and select all four for update. Fields the org leaves
+  ;; the bulk-update form and arm all four for update. Fields the org leaves
   ;; blank are populated as nil, which clears that field on the selected sites —
   ;; the org contact is treated as the source of truth (user-confirmed UX).
+  ;; Merge, don't replace: other armed fields (status, address, properties, ...)
+  ;; and their values must survive the one-click fill.
   (fn [db [_ org-contact]]
     (let [fields #{:email :phone-number :www :reservations-link}]
       (-> db
-          (assoc-in [:bulk-operations :update-form] (select-keys org-contact fields))
-          (assoc-in [:bulk-operations :selected-fields] fields)))))
+          (update-in [:bulk-operations :update-form] merge (select-keys org-contact fields))
+          (update-in [:bulk-operations :selected-fields] (fnil into #{}) fields)))))
 
 (rf/reg-event-fx ::execute-bulk-update
   (fn [{:keys [db]} [_ {:keys [on-success on-failure]}]]

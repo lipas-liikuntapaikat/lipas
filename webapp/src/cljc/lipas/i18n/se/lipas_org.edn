@@ -1,7 +1,7 @@
 {:add-user "Lägg till"
  :add-user-by-email "Lägg till via e-post"
  :bulk-operations "Massuppdatering"
- :bulk-operations-description "Uppdatera kontaktinformation för flera idrottsanläggningar samtidigt"
+ :bulk-operations-description "Uppdatera uppgifter för flera idrottsanläggningar samtidigt"
  :bulk-operations-tab "Massuppdatering"
  :contact-admin
  "Kontakta systemadministratören för att läggas till i en organisation"

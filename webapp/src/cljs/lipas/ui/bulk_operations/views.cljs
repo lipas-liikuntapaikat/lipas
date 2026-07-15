@@ -21,10 +21,6 @@
             [lipas.ui.components.autocompletes :as ac]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Dialog$default" :as Dialog]
-            ["@mui/material/DialogActions$default" :as DialogActions]
-            ["@mui/material/DialogContent$default" :as DialogContent]
-            ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/List$default" :as List]
@@ -198,52 +194,24 @@
                :on-toggle #(rf/dispatch [::events/toggle-field-selection fid])
                :on-change #(rf/dispatch [::events/set-bulk-update-field fid %])}]))]))
 
-;; Execute button, gated by a confirmation dialog when a high-impact field
-;; (currently: status) is among the armed fields. Status is recoverable (the
-;; site log is append-only) but changing it en masse warrants a deliberate OK.
-(defn submit-button [tr]
-  (r/with-let [confirm? (r/atom false)]
-    (let [selected-fields @(rf/subscribe [::subs/selected-fields])
-          selected-count  @(rf/subscribe [::subs/selected-sites-count])
-          update-form     @(rf/subscribe [::subs/bulk-update-form])
-          locale          (tr)
-          high-impact     (filter #(and (:high-impact? %)
-                                        (contains? selected-fields (:field-id %)))
-                                  bulk-fields/static-fields)
-          ;; block submit while any armed field holds a schema-invalid value —
-          ;; matches the backend and spares the user a 400 round-trip
-          has-invalid?    (some #(field-value-invalid? % (get update-form %)) selected-fields)
-          execute!        #(rf/dispatch [::events/execute-bulk-update
-                                         {:on-success (fn [_] (rf/dispatch [::events/get-editable-sites]))
-                                          :on-failure nil}])]
-      [:<>
-       [:> Button {:variant "contained"
-                   :color "primary"
-                   :disabled (or (zero? (count selected-fields)) (boolean has-invalid?))
-                   :on-click (if (seq high-impact) #(reset! confirm? true) execute!)}
-        (tr :lipas.bulk-operations/update-n-sites selected-count)]
-       (when has-invalid?
-         [:> Typography {:variant "caption" :color "error" :sx {:ml 2}}
-          (tr :lipas.bulk-operations/fix-invalid-values)])
-
-       [:> Dialog {:open @confirm? :on-close #(reset! confirm? false)}
-        [:> DialogTitle (tr :lipas.bulk-operations/confirm-high-impact-title)]
-        [:> DialogContent
-         [:> Typography {:sx {:mb 1}}
-          (tr :lipas.bulk-operations/confirm-high-impact selected-count)]
-         (into [:> List {:dense true}]
-               (for [f high-impact
-                     :let [fid (:field-id f)
-                           v (get update-form fid)]]
-                 [:> ListItem {:key (str fid)}
-                  [:> ListItemText
-                   {:primary (get-in f [:label locale])
-                    :secondary (get-in f [:opts v locale] (str v))}]]))]
-        [:> DialogActions
-         [:> Button {:on-click #(reset! confirm? false)} (tr :confirm/no)]
-         [:> Button {:variant "contained" :color "primary"
-                     :on-click #(do (reset! confirm? false) (execute!))}
-          (tr :confirm/yes)]]]])))
+;; Advance from Enter-info to the Yhteenveto step. The update is NOT executed
+;; here — the summary previews the exact changes and holds the execute button.
+;; Gated like the old direct submit: at least one armed field, no invalid values.
+(defn next-to-summary-button [tr]
+  (let [selected-fields @(rf/subscribe [::subs/selected-fields])
+        update-form     @(rf/subscribe [::subs/bulk-update-form])
+        ;; block advancing while any armed field holds a schema-invalid value —
+        ;; matches the backend and spares the user a 400 round-trip
+        has-invalid?    (some #(field-value-invalid? % (get update-form %)) selected-fields)]
+    [:<>
+     [:> Button {:variant "contained"
+                 :color "primary"
+                 :disabled (or (empty? selected-fields) (boolean has-invalid?))
+                 :on-click #(rf/dispatch [::events/set-current-step 2])}
+      (tr :actions/next)]
+     (when has-invalid?
+       [:> Typography {:variant "caption" :color "error" :sx {:ml 2}}
+        (tr :lipas.bulk-operations/fix-invalid-values)])]))
 
 ;; Navigation buttons component
 ;; `on-back` (optional): when supplied, overrides the step-1 Back action — used
@@ -274,7 +242,7 @@
                      :on-click #(rf/dispatch [::events/set-current-step 1])}
           (tr :actions/next)]
 
-       1 [submit-button tr]
+       1 [next-to-summary-button tr]
 
        nil)]]))
 
@@ -456,52 +424,99 @@
      [:> Box {:sx {:mt 3}}
       [navigation-buttons tr 1 selected-count (count selected-fields) on-cancel on-back]]]))
 
-;; Step 3: Summary
+;; Step 3: Yhteenveto — a two-mode step. Before execution it PREVIEWS the exact
+;; changes (armed fields with target values + the sites they'll be applied to)
+;; and holds the execute button; after execution it shows the results. The
+;; preview is the deliberate confirmation for the whole update — including
+;; high-impact fields, which upgrade the alert to a warning.
+
+(defn- summary-fields-list
+  "The armed fields with their human-readable target values."
+  [update-form selected-fields property-fields locale]
+  (into [:> List]
+        (for [fid selected-fields
+              :let [field (resolve-field fid property-fields)]
+              :when field]
+          [:> ListItem {:key (str fid)}
+           [:> ListItemText
+            {:primary (get-in field [:label locale])
+             :secondary (display-value field (get update-form fid) locale)}]])))
+
+(defn- summary-sites-list
+  [sites]
+  [:> Box {:sx {:max-height 300 :overflow-y "auto" :border 1 :border-color "divider" :border-radius 1 :p 2}}
+   [:> List {:dense true}
+    (for [site sites]
+      [:> ListItem {:key (:lipas-id site)}
+       [:> ListItemText
+        {:primary (:name site)
+         :secondary (str "ID: " (:lipas-id site))}]])]])
+
 (defn step-summary [tr on-cancel]
-  (let [update-results   @(rf/subscribe [::subs/update-results])
-        update-form      @(rf/subscribe [::subs/bulk-update-form])
-        selected-fields  @(rf/subscribe [::subs/selected-fields])
-        property-fields  @(rf/subscribe [::subs/common-property-fields])
-        editable-sites   @(rf/subscribe [::subs/editable-sites])
-        locale           (tr)
-        updated-site-ids (set (:updated-sites update-results))
-        updated-sites    (filter #(contains? updated-site-ids (:lipas-id %)) editable-sites)]
-    [:> Box
-     [:> Alert {:severity "success" :sx {:mb 3}}
-      (tr :lipas.bulk-operations/update-completed)]
+  (let [update-results  @(rf/subscribe [::subs/update-results])
+        update-form     @(rf/subscribe [::subs/bulk-update-form])
+        selected-fields @(rf/subscribe [::subs/selected-fields])
+        property-fields @(rf/subscribe [::subs/common-property-fields])
+        editable-sites  @(rf/subscribe [::subs/editable-sites])
+        locale          (tr)]
+    (if update-results
+      ;; --- Results: the update has run ---
+      (let [updated-site-ids (set (:updated-sites update-results))
+            updated-sites    (filter #(contains? updated-site-ids (:lipas-id %)) editable-sites)]
+        [:> Box
+         [:> Alert {:severity "success" :sx {:mb 3}}
+          (tr :lipas.bulk-operations/update-completed)]
 
-     [:> Typography {:variant "h6" :sx {:mb 2}}
-      (tr :lipas.bulk-operations/updated-fields)]
+         [:> Typography {:variant "h6" :sx {:mb 2}}
+          (tr :lipas.bulk-operations/updated-fields)]
+         [summary-fields-list update-form selected-fields property-fields locale]
 
-     (into [:> List]
-           (for [fid selected-fields
-                 :let [field (resolve-field fid property-fields)]
-                 :when field]
-             [:> ListItem {:key (str fid)}
-              [:> ListItemText
-               {:primary (get-in field [:label locale])
-                :secondary (display-value field (get update-form fid) locale)}]]))
+         [:> Typography {:variant "h6" :sx {:mt 3 :mb 2}}
+          (str (tr :lipas.bulk-operations/updated-sites-list) " (" (:total-updated update-results) ")")]
+         [summary-sites-list updated-sites]
 
-     ;; Updated sites list
-     [:> Typography {:variant "h6" :sx {:mt 3 :mb 2}}
-      (str (tr :lipas.bulk-operations/updated-sites-list) " (" (:total-updated update-results) ")")]
+         [:> Box {:sx {:mt 3 :display "flex" :gap 2}}
+          [:> Button {:variant "contained"
+                      :color "primary"
+                      :on-click on-cancel}
+           (tr :actions/done)]
+          [:> Button {:variant "outlined"
+                      :on-click #(rf/dispatch [::events/reset])}
+           (tr :lipas.bulk-operations/update-more-sites)]]])
 
-     [:> Box {:sx {:max-height 300 :overflow-y "auto" :border 1 :border-color "divider" :border-radius 1 :p 2}}
-      [:> List {:dense true}
-       (for [site updated-sites]
-         [:> ListItem {:key (:lipas-id site)}
-          [:> ListItemText
-           {:primary (:name site)
-            :secondary (str "ID: " (:lipas-id site))}]])]]
+      ;; --- Preview: confirm before executing ---
+      (let [selected-sites @(rf/subscribe [::subs/selected-sites])
+            selected-count @(rf/subscribe [::subs/selected-sites-count])
+            sites          (filter #(contains? selected-sites (:lipas-id %)) editable-sites)
+            high-impact?   (some #(and (:high-impact? %)
+                                       (contains? selected-fields (:field-id %)))
+                                 bulk-fields/static-fields)
+            execute!       #(rf/dispatch [::events/execute-bulk-update
+                                          {:on-success (fn [_] (rf/dispatch [::events/get-editable-sites]))
+                                           :on-failure nil}])]
+        [:> Box
+         [:> Alert {:severity (if high-impact? "warning" "info") :sx {:mb 3}}
+          (tr :lipas.bulk-operations/review-before-update selected-count)]
 
-     [:> Box {:sx {:mt 3 :display "flex" :gap 2}}
-      [:> Button {:variant "contained"
-                  :color "primary"
-                  :on-click on-cancel}
-       (tr :actions/done)]
-      [:> Button {:variant "outlined"
-                  :on-click #(rf/dispatch [::events/reset])}
-       (tr :lipas.bulk-operations/update-more-sites)]]]))
+         [:> Typography {:variant "h6" :sx {:mb 2}}
+          (tr :lipas.bulk-operations/fields-to-update)]
+         [summary-fields-list update-form selected-fields property-fields locale]
+
+         [:> Typography {:variant "h6" :sx {:mt 3 :mb 2}}
+          (str (tr :lipas.bulk-operations/sites-to-update-list) " (" selected-count ")")]
+         [summary-sites-list sites]
+
+         [:> Box {:sx {:mt 3 :display "flex" :gap 2}}
+          [:> Button {:variant "outlined"
+                      :on-click #(rf/dispatch [::events/set-current-step 1])}
+           (tr :actions/back)]
+          [:> Button {:variant "outlined"
+                      :on-click on-cancel}
+           (tr :actions/cancel)]
+          [:> Button {:variant "contained"
+                      :color "primary"
+                      :on-click execute!}
+           (tr :lipas.bulk-operations/update-n-sites selected-count)]]]))))
 
 ;; Main component with stepper
 ;; `external-selection?`: site selection happens in the caller's list (the org
@@ -513,7 +528,8 @@
         current-step @(rf/subscribe [::subs/current-step])
         selected-count @(rf/subscribe [::subs/selected-sites-count])
         loading? @(rf/subscribe [::subs/loading?])
-        error @(rf/subscribe [::subs/error])]
+        error @(rf/subscribe [::subs/error])
+        update-results @(rf/subscribe [::subs/update-results])]
 
     [:> Grid {:container true :spacing 2 :sx {:p 1}}
      ;; Header
@@ -533,20 +549,16 @@
      ;; Stepper
      [:> Grid {:item true :xs 12}
       [:> Paper {:sx {:p 3}}
-       (if external-selection?
-         ;; selection is external → 2-step flow (enter info → summary)
-         [:> Stepper {:active-step (dec current-step) :sx {:mb 3}}
-          [:> Step
-           [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
-          [:> Step
-           [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]]
-         [:> Stepper {:active-step current-step :sx {:mb 3}}
-          [:> Step
-           [:> StepLabel (tr :lipas.bulk-operations/step-select-sites)]]
-          [:> Step
-           [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
-          [:> Step
-           [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]])
+       ;; Always the same 3 steps. In external mode selection happened in the
+       ;; caller's list and current-step starts at 1, so "Valitse liikuntapaikat"
+       ;; renders as already completed. After execution every step is done.
+       [:> Stepper {:active-step (if update-results 3 current-step) :sx {:mb 3}}
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-select-sites)]]
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-enter-info)]]
+        [:> Step
+         [:> StepLabel (tr :lipas.bulk-operations/step-summary)]]]
 
        ;; Step content
        (if loading?
