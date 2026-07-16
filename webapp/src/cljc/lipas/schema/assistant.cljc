@@ -58,6 +58,17 @@
       [:label label]
       [:location [:string {:min 2 :max 100}]]]]
 
+    ;; Exact-coordinate variant for tool-derived points (e.g. geometry
+    ;; problem locations). Bounds ~cover Finland so the model can't pan
+    ;; the user into the void; safe to run during editing.
+    ["pan-to-coordinates"
+     [:map {:closed true}
+      [:type [:= "pan-to-coordinates"]]
+      [:label label]
+      [:lon [:double {:min 19.0 :max 32.0}]]
+      [:lat [:double {:min 59.0 :max 70.5}]]
+      [:zoom {:optional true} [:int {:min 5 :max 18}]]]]
+
     ["navigate-to-view"
      [:map {:closed true}
       [:type [:= "navigate-to-view"]]

@@ -18,6 +18,7 @@
             [clj-http.client :as http]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [lipas.backend.gis :as gis]
             [lipas.backend.kb :as kb]
             [lipas.backend.search :as search]
             [lipas.backend.llm :as llm]
@@ -48,6 +49,22 @@
      [:status {:optional true} [:string {:max 50}]]]]
    [:edit-mode? {:optional true} :boolean]
    [:active-tool {:optional true} [:string {:max 100}]]
+   [:edit {:optional true} ; live map-editor state (drawing/editing geometry)
+    [:map {:closed true}
+     [:new-site? {:optional true} :boolean]
+     [:sub-mode {:optional true} [:string {:max 30}]]
+     [:geometry-type {:optional true} [:string {:max 20}]]
+     [:segments {:optional true} :int]
+     [:vertices {:optional true} :int]
+     [:length-km {:optional true} number?]
+     [:self-intersections {:optional true} :int]
+     [:problem-locations {:optional true}
+      [:vector {:max 5}
+       [:map {:closed true}
+        [:lon number?]
+        [:lat number?]]]]
+     [:invalid-fields {:optional true}
+      [:vector {:max 10} [:string {:max 60}]]]]]
    [:search-filters {:optional true} [:string {:max 500}]]
    [:help {:optional true} ; open help-center page ("about this topic" questions)
     [:map {:closed true}
@@ -61,7 +78,12 @@
      [:tab {:optional true} [:string {:max 100}]]
      [:wizard-step {:optional true} [:string {:max 100}]]]]])
 
-(def max-tool-iterations 6)
+;; Cap on tool-calling ROUNDS (one round can carry several parallel
+;; calls). A complex route-editing answer legitimately uses 5-6 rounds
+;; (search → geometry check → doc fetches → work-saving search →
+;; buttons); 8 leaves slack without inviting rephrasing loops. Tune from
+;; assistant_logs :tool-rounds / :budget-exhausted?.
+(def max-tool-iterations 8)
 (def max-history-messages 12)
 (def chat-rate-limit {:window-ms (* 60 60 1000) :max 30})
 (def escalation-rate-limit {:window-ms (* 24 60 60 1000) :max 5})
@@ -232,6 +254,23 @@
                               :view {:type "string"
                                      :enum (vec (sort (keys assistant-schema/views)))}}
                  :required ["label" "view"]}}
+
+   {:name "check_route_geometry"
+    :description "Analyze the geometry quality of a SAVED route-type sports site (latu, kuntorata, ulkoilureitti, pyöräilyreitti…): self-intersections, duplicate vertices, gaps between route segments, vertex density and total length, with problem locations as lon/lat. Use when the user reports red warning markers, asks why a route looks wrong or whether it is OK, or asks about simplification. Offer zoom_map_to_coordinates buttons for the returned problem locations. Only works on saved sites — an UNSAVED draft is summarized in USER CONTEXT under :edit instead."
+    :parameters {:type "object"
+                 :properties {:lipas-id {:type "integer"}}
+                 :required ["lipas-id"]}}
+
+   {:name "zoom_map_to_coordinates"
+    :description "Propose a UI action: zoom the map to exact WGS84 coordinates (button; the user clicks to run it). Use ONLY with coordinates from tool results or USER CONTEXT — e.g. geometry problem locations — never coordinates you inferred yourself. Unlike other action buttons this one stays usable while the user is editing."
+    :parameters {:type "object"
+                 :properties {:label {:type "string"
+                                      :description "Button text in the user's language, e.g. 'Näytä ongelmakohta 1'"}
+                              :lon {:type "number"}
+                              :lat {:type "number"}
+                              :zoom {:type "integer"
+                                     :description "Map zoom level 12–18, default 16"}}
+                 :required ["label" "lon" "lat"]}}
 
    {:name "escalate_to_support"
     :description "When you cannot answer from the knowledge base, or the user asks for something requiring human support (account issues, data corrections you cannot guide, bugs, wanting to talk to a human): draft a support request. The user confirms before anything is sent. ALWAYS write answer text alongside this call: tell the user an editable draft appears below your message and that pressing 'Lähetä tukipyyntö' sends it. If the user asked for a human without describing their issue, ask them to add what it concerns into the draft before sending."
@@ -440,6 +479,36 @@
                       :label (str (:label args))
                       :view (str (:view args))})
 
+    "check_route_geometry"
+    (let [idx (get-in search [:indices :sports-site :search])
+          src (try (-> (search/fetch-document (:client search) idx (:lipas-id args))
+                       :body :_source)
+                   (catch Exception _ nil))
+          fcoll (-> src :location :geometries)
+          geom-type (-> fcoll :features first :geometry :type)]
+      (cond
+        (nil? src)
+        {:error "Site not found"}
+
+        (not= "LineString" geom-type)
+        {:error (str "Site " (:lipas-id args) " is not a route (geometry: "
+                     (or geom-type "missing")
+                     ") — this tool only analyzes route geometries.")}
+
+        :else
+        (assoc (gis/route-geometry-report fcoll)
+               :lipas-id (:lipas-id args)
+               :name (:name src)
+               :note "Explain problems in plain language, fetch fix instructions from the knowledge base, and offer zoom_map_to_coordinates buttons for problem locations.")))
+
+    "zoom_map_to_coordinates"
+    (->client-action
+     (cond-> {:type "pan-to-coordinates"
+              :label (str (:label args))
+              :lon (double (:lon args))
+              :lat (double (:lat args))}
+       (:zoom args) (assoc :zoom (int (:zoom args)))))
+
     "escalate_to_support"
     ;; Marker result only: answer! short-circuits on this tool and the
     ;; widget renders a confirmation card. Nothing is sent here.
@@ -473,6 +542,7 @@ RULES:
 - ADAPT guides to the user's situation. The user is always logged in (this assistant requires it) — never include registration or login steps. USER CONTEXT below tells you where they are right now: omit steps they have already completed (e.g. skip \"avaa karttanäkymä\" when the route shows they are on the map; skip \"valitse kohde\" when a site is already selected) and start from the first step that is actually left to do. Adapting means OMITTING or briefly acknowledging completed steps — never adding steps or details that are not in the sources.
 - For data-maintenance questions (\"mitkä kohteet kaipaavat päivitystä?\") use the listing tools; present results as a compact markdown list with links.
 - PERMISSIONS: the user's roles (official names + scopes) are in USER CONTEXT. For any question about editing rights on a specific site (\"miksi en voi muokata\", \"saanko muokata\") call check_site_permission — its verdict comes from the real permission engine and overrides your own reasoning. Never guess what a role allows: if the KB has no entry about it, say so.
+- ROUTE EDITING: while the user is drawing or editing geometry, USER CONTEXT :app-context :edit carries live editor state — segment/vertex counts, length-km, self-intersection count with up to 5 problem locations (lon/lat), and invalid-fields blocking save. Ground answers to 'miksi tallennus ei onnistu' or 'mitä punaiset merkit ovat' in this state: name the concrete problems, fetch the fix steps from the knowledge base, and offer zoom_map_to_coordinates buttons to the problem locations (label like 'Näytä ongelmakohta 1'). For a SAVED route, check_route_geometry gives the full report. zoom_map_to_coordinates buttons work during editing; other action buttons are disabled until the user closes edit mode.
 - NAMES FROM DATA ONLY: municipality, facility-type and role names must come from context or tool results — NEVER infer a name from a bare code using world knowledge.
 - Never write a support email address into an answer — escalation via the confirmation card handles delivery.
 - Help deep-links (?ohje=...) must be copied verbatim from tool results; never construct one yourself.
@@ -535,7 +605,8 @@ USER CONTEXT:
 (def ^:private action-tool-names
   "Propose-only tools: calling one produces a button, not information.
    A turn that pairs answer text with only these calls is a final answer."
-  #{"apply_search" "show_site_on_map" "pan_map_to_location" "navigate_to_view"})
+  #{"apply_search" "show_site_on_map" "pan_map_to_location" "navigate_to_view"
+    "zoom_map_to_coordinates"})
 
 (defn- collect-actions
   "Validated UI actions proposed via the action tools this turn."
@@ -597,7 +668,9 @@ USER CONTEXT:
              :actions (->> actions distinct (take max-actions-per-answer) vec)
              ;; A blank draft renders a confusing empty card — fall back to
              ;; the user's own words.
-             :escalation {:summary (if (str/blank? summary) message summary)}})
+             :escalation {:summary (if (str/blank? summary) message summary)}
+             :tool-rounds iter
+             :budget-exhausted? false})
 
           (and (seq fcalls) (< iter max-tool-iterations))
           (let [results (mapv (fn [fc] (run-tool ctx (:name fc) (:args fc))) fcalls)
@@ -614,7 +687,9 @@ USER CONTEXT:
               {:answer-md (sanitize-answer-links text sources')
                :sources (vec (distinct sources'))
                :actions (->> actions' distinct (take max-actions-per-answer) vec)
-               :escalation nil}
+               :escalation nil
+               :tool-rounds (inc iter)
+               :budget-exhausted? false}
               (recur (into contents
                            [{:role "model" :parts (vec parts)}
                             {:role "user"
@@ -630,7 +705,14 @@ USER CONTEXT:
                      best-text)))
 
           :else
-          (let [actions' (->> actions distinct (take max-actions-per-answer) vec)]
+          (let [;; Tool budget exhausted mid-turn: action-tool calls are
+                ;; local and cheap — salvage them so a button the answer
+                ;; text already promises never goes missing.
+                salvaged (->> fcalls
+                              (filter (comp action-tool-names :name))
+                              (mapv (fn [fc] (run-tool ctx (:name fc) (:args fc)))))
+                actions (collect-actions actions salvaged)
+                actions' (->> actions distinct (take max-actions-per-answer) vec)]
             {:answer-md (cond
                           (not (str/blank? best-text)) (sanitize-answer-links best-text sources)
                           ;; The model sometimes treats a proposed button as
@@ -646,7 +728,11 @@ USER CONTEXT:
                           "Pahoittelut — en osannut muodostaa vastausta. Yritä muotoilla kysymys uudelleen.")
              :sources (vec (distinct sources))
              :actions actions'
-             :escalation nil}))))))
+             :escalation nil
+             :tool-rounds iter
+             ;; True when tool calls were still pending at the cap — the
+             ;; answer is less grounded than the model intended.
+             :budget-exhausted? (boolean (seq fcalls))}))))))
 
 ;;; ——— Rate limiting ————————————————————————————————————————————————
 
@@ -700,8 +786,11 @@ USER CONTEXT:
                       :actions (mapv :type (:actions result))
                       :escalated? (some? (:escalation result))
                       :context (json/encode (:context req))
-                      :took-ms (- (System/currentTimeMillis) start)})
-      {:status 200 :body result})))
+                      :took-ms (- (System/currentTimeMillis) start)
+                      :tool-rounds (:tool-rounds result)
+                      :budget-exhausted? (:budget-exhausted? result)})
+      ;; Telemetry stays in the log; the widget doesn't need it.
+      {:status 200 :body (dissoc result :tool-rounds :budget-exhausted?)})))
 
 (defn escalate!
   "Send a user-confirmed support request to lipasinfo via the email job

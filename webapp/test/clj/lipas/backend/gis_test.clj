@@ -787,3 +787,67 @@
                                                  (* (- max-x min-x) (- max-y min-y)))
                                                chunks))
                                 1e-6)))))
+
+;;; Route geometry quality analysis ;;;
+
+(defn- route-fc [& lines]
+  {:type "FeatureCollection"
+   :features (mapv (fn [coords]
+                     {:type "Feature"
+                      :geometry {:type "LineString" :coordinates coords}})
+                   lines)})
+
+(deftest route-geometry-report-test
+  (testing "a clean route reports ok with sane totals"
+    (let [r (gis/route-geometry-report
+             (route-fc [[25.70 62.24] [25.701 62.241] [25.702 62.241] [25.703 62.242]]))]
+      (is (true? (:ok? r)))
+      (is (= 1 (:feature-count r)))
+      (is (= 4 (:vertex-count r)))
+      (is (< 0.2 (:length-km r) 0.5))
+      (is (false? (:needs-simplification? r)))))
+
+  (testing "a figure-eight crossing is found at the crossing point"
+    (let [r (gis/route-geometry-report
+             (route-fc [[25.70 62.24] [25.702 62.242] [25.702 62.24] [25.70 62.242]]))
+          locs (-> r :self-intersections :locations)]
+      (is (false? (:ok? r)))
+      (is (= 1 (count locs)))
+      (is (< 25.700 (:lon (first locs)) 25.702))
+      (is (< 62.240 (:lat (first locs)) 62.242))))
+
+  (testing "a closed loop (start = end) is legitimate, not a kink"
+    (is (true? (:ok? (gis/route-geometry-report
+                      (route-fc [[25.70 62.24] [25.701 62.241]
+                                 [25.702 62.24] [25.70 62.24]]))))))
+
+  (testing "consecutive vertices under a meter apart are duplicates"
+    (let [r (gis/route-geometry-report
+             (route-fc [[25.70 62.24] [25.70 62.24]
+                        [25.701 62.241] [25.7010000001 62.2410000001]
+                        [25.702 62.242]]))]
+      (is (= 2 (-> r :duplicate-vertices :count)))))
+
+  (testing "endpoints of different features that almost touch are gaps"
+    (let [r (gis/route-geometry-report
+             (route-fc [[25.70 62.24] [25.701 62.241]]
+                       [[25.70105 62.24105] [25.702 62.242]]))
+          gap (-> r :endpoint-gaps :locations first)]
+      (is (= 1 (-> r :endpoint-gaps :count)))
+      (is (= [0 1] (:features gap)))
+      (is (<= 1 (:distance-m gap) 25))))
+
+  (testing "GPS-density tracks are flagged for simplification"
+    (let [step 0.00005 ; ~2.7m between vertices ≈ 370/km
+          coords (mapv (fn [i] [(+ 25.70 (* i step)) 62.24]) (range 400))
+          r (gis/route-geometry-report (route-fc coords))]
+      (is (true? (:needs-simplification? r)))
+      (is (true? (:ok? r)))))
+
+  (testing "point geometries yield an empty but well-formed report"
+    (let [r (gis/route-geometry-report
+             {:type "FeatureCollection"
+              :features [{:type "Feature"
+                          :geometry {:type "Point" :coordinates [25.70 62.24]}}]})]
+      (is (zero? (:feature-count r)))
+      (is (true? (:ok? r))))))
