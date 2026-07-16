@@ -279,33 +279,34 @@
             {:status 200 :body result}
             {:status 404 :body {:error "Sports site not found"}})))}}]
 
+   ;; Notification contents (which items await municipality fixes) are
+   ;; derived server-side both here and at send time — the client only
+   ;; says which org and section, and the preview shows exactly what the
+   ;; send will email.
    ["/actions/send-audit-notification"
-    {:post
-     {:require-privilege :ptv/audit
-      :parameters {:body [:map
-                          [:org-id :uuid]
-                          [:stats [:map
-                                   [:total-sites :int]
-                                   [:summary [:map [:approved :int] [:changes-requested :int]]]
-                                   [:description [:map [:approved :int] [:changes-requested :int]]]]]]}
-      :handler
-      (fn [req]
-        (let [params (-> req :parameters :body)
-              org-id (:org-id params)
-              stats (:stats params)
-              result (ptv-core/send-audit-notification! db emailer org-id stats)]
-          {:status 200 :body result}))}}]
-
-   ["/actions/get-ptv-audit-notification-recipients"
     {:post
      {:require-privilege :ptv/audit
       :parameters {:body [:map [:org-id :uuid]]}
       :handler
       (fn [req]
-        (if-let [result (ptv-core/get-audit-notification-recipients
-                         db (-> req :parameters :body :org-id))]
+        (if-let [result (ptv-core/send-audit-notification!
+                         db search emailer (-> req :parameters :body :org-id))]
           {:status 200 :body result}
           {:status 404 :body {:error "Organization not found"}}))}}]
+
+   ["/actions/get-ptv-audit-notification-preview"
+    {:post
+     {:require-privilege :ptv/audit
+      :parameters {:body [:map
+                          [:org-id :uuid]
+                          [:section [:enum "sites" "services"]]]}
+      :handler
+      (fn [req]
+        (let [{:keys [org-id section]} (-> req :parameters :body)]
+          (if-let [result (ptv-core/get-audit-notification-preview
+                           db search ptv org-id section)]
+            {:status 200 :body result}
+            {:status 404 :body {:error "Organization not found"}})))}}]
 
    ["/actions/fetch-ptv-service-audits"
     {:post
@@ -330,19 +331,11 @@
    ["/actions/send-service-audit-notification"
     {:post
      {:require-privilege :ptv/audit
-      :parameters {:body [:map
-                          [:org-id :uuid]
-                          [:stats [:map
-                                   [:total-services :int]
-                                   [:summary [:map [:approved :int] [:changes-requested :int]]]
-                                   [:description [:map [:approved :int] [:changes-requested :int]]]
-                                   [:user-instruction {:optional true}
-                                    [:map [:approved :int] [:changes-requested :int]]]]]]}
+      :parameters {:body [:map [:org-id :uuid]]}
       :handler
       (fn [req]
-        (let [params (-> req :parameters :body)
-              org-id (:org-id params)
-              stats (:stats params)
-              result (ptv-core/send-service-audit-notification! db emailer org-id stats)]
-          {:status 200 :body result}))}}]])
+        (if-let [result (ptv-core/send-service-audit-notification!
+                         db ptv emailer (-> req :parameters :body :org-id))]
+          {:status 200 :body result}
+          {:status 404 :body {:error "Organization not found"}}))}}]])
 

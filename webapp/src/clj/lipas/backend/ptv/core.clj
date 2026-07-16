@@ -781,33 +781,87 @@
                       sort
                       vec)}))
 
-(defn send-audit-notification!
-  "Send email notification to all PTV managers in the organization.
-   Stats are calculated by frontend and passed here."
-  [db emailer org-id stats]
+;; The katselmointi notification tells the org's PTV managers which items
+;; currently await their fixes. Contents are derived here at send/preview
+;; time from the same cljc whose-move fns the audit view uses — never
+;; trusted from the client — so an already-fixed item can't be reported as
+;; an open change request, and repeat notifications only ever name what's
+;; still (or newly) actionable.
+
+(defn site-audit-notification-data
+  "Current-state contents ({:action-items [..] :approved-count n}) for the
+   org's sites-section katselmointi notification. Sites come from the same
+   ES query the audit view lists. Returns nil for an unknown org."
+  [db search org-id]
+  (when-let [org (backend-org/get-org db org-id)]
+    (->> (get-ptv-integration-candidates
+          search (select-keys (:ptv-data org) [:city-codes :owners]))
+         (map (fn [site]
+                {:ref {:lipas-id (:lipas-id site) :name (:name site)}
+                 :audit (get-in site [:ptv :audit])
+                 :fields (ptv-data/site-audit-fields site)}))
+         (ptv-data/audit-notification-summary))))
+
+(defn service-audit-notification-data
+  "Services-section counterpart of site-audit-notification-data: live PTV
+   services joined with their stored ptv_service audits, the same join the
+   audit view does. Returns nil for an unknown org."
+  [db ptv org-id]
+  (when-let [org (backend-org/get-org db org-id)]
+    (let [ptv-org-id (-> org :ptv-data :org-id)
+          services (when ptv-org-id
+                     (:itemList (fetch-ptv-services ptv ptv-org-id)))
+          audits (->> (ptv-service-db/get-current-by-org db (:id org))
+                      (utils/index-by (comp str :service-id)))]
+      (->> services
+           (filter #(some-> % :sourceId (str/starts-with? "lipas-")))
+           (map (fn [svc]
+                  (let [texts (ptv-data/ptv-descriptions->texts
+                               (:serviceDescriptions svc))]
+                    {:ref {:service-id (str (:id svc))
+                           :name (ptv-data/select-service-name (:serviceNames svc))}
+                     :audit (get-in audits [(str (:id svc)) :document :audit])
+                     :fields (ptv-data/service-audit-fields texts)})))
+           (ptv-data/audit-notification-summary)))))
+
+(defn get-audit-notification-preview
+  "Recipients + derived contents for the notification confirmation dialog,
+   so the auditor sees exactly what the send endpoint will email (the send
+   re-derives the same data). Returns nil for an unknown org."
+  [db search ptv org-id section]
+  (when-let [recipients (get-audit-notification-recipients db org-id)]
+    (merge recipients
+           (case section
+             "services" (service-audit-notification-data db ptv org-id)
+             (site-audit-notification-data db search org-id)))))
+
+(defn- send-audit-notification!*
+  [db emailer org-id section data]
   (when-let [org (backend-org/get-org db org-id)]
     (let [managers (get-ptv-managers db org-id)]
       (if (seq managers)
         (do
           (doseq [manager managers]
-            (email/send-ptv-audit-complete-email!
-              emailer
-              (:email manager)
-              {:org-name (:name org)
-               :site-count (str (:total-sites stats))
-               :summary-approved (str (get-in stats [:summary :approved]))
-               :summary-changes (str (get-in stats [:summary :changes-requested]))
-               :desc-approved (str (get-in stats [:description :approved]))
-               :desc-changes (str (get-in stats [:description :changes-requested]))}))
-
+            (email/send-ptv-audit-notification-email!
+             emailer
+             (:email manager)
+             (assoc data
+                    :org-name (:name org)
+                    :section section)))
           {:sent (count managers)
-           :recipients (map :email managers)})
-
+           :recipients (mapv :email managers)})
         (do
           (log/warnf "No PTV managers found for organization %s" org-id)
           {:sent 0
            :recipients []
            :warning "No PTV managers found"})))))
+
+(defn send-audit-notification!
+  "Send the sites-section katselmointi notification to the org's PTV
+   managers. Contents are derived at send time — see the section comment."
+  [db search emailer org-id]
+  (send-audit-notification!* db emailer org-id :sites
+                             (site-audit-notification-data db search org-id)))
 
 (defn save-ptv-service-audit
   "Saves auditor feedback for a PTV Service. org-id is the LIPAS org uuid.
@@ -862,33 +916,10 @@
                    (update :event-date str))))))
 
 (defn send-service-audit-notification!
-  "Send email notification about completed Service audits to all PTV
-   managers in the organization. Stats are calculated by frontend and
-   passed here."
-  [db emailer org-id stats]
-  (when-let [org (backend-org/get-org db org-id)]
-    (let [managers (get-ptv-managers db org-id)]
-      (if (seq managers)
-        (do
-          (doseq [manager managers]
-            (email/send-ptv-service-audit-complete-email!
-              emailer
-              (:email manager)
-              {:org-name (:name org)
-               :service-count (str (:total-services stats))
-               :summary-approved (str (get-in stats [:summary :approved]))
-               :summary-changes (str (get-in stats [:summary :changes-requested]))
-               :desc-approved (str (get-in stats [:description :approved]))
-               :desc-changes (str (get-in stats [:description :changes-requested]))
-               :ui-approved (str (get-in stats [:user-instruction :approved] 0))
-               :ui-changes (str (get-in stats [:user-instruction :changes-requested] 0))}))
-          {:sent (count managers)
-           :recipients (map :email managers)})
-        (do
-          (log/warnf "No PTV managers found for organization %s" org-id)
-          {:sent 0
-           :recipients []
-           :warning "No PTV managers found"})))))
+  "Services-section counterpart of send-audit-notification!."
+  [db ptv emailer org-id]
+  (send-audit-notification!* db emailer org-id :services
+                             (service-audit-notification-data db ptv org-id)))
 
 (defn backfill-ptv-service-revisions!
   "REPL helper: seed ptv_service with current PTV state for every org
