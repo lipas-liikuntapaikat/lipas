@@ -535,17 +535,18 @@
             (str ", UserInstruction: " ui-status))])]]]))
 
 ;; Confirmation dialog for the audit notification: shows who receives the
-;; email (the org's PTV managers, fetched from the backend) and a summary
-;; of its contents before anything is sent (tester finding #2).
+;; email (the org's PTV managers) and the derived contents — which items
+;; await municipality fixes — before anything is sent (tester finding #2).
+;; Everything comes from the backend preview endpoint, which runs the same
+;; derivation as the send endpoint.
 (r/defc notification-dialog
-  [{:keys [tr stats services? lipas-org-id sample-count]}]
+  [{:keys [tr services? lipas-org-id]}]
   (let [dialog @(rf/subscribe [:lipas.ui.ptv.subs/notification-dialog])
-        {:keys [open? loading? recipients]} dialog
+        {:keys [open? loading? recipients action-items approved-count]} dialog
         close #(rf/dispatch [:lipas.ui.ptv.events/close-notification-dialog])
-        stat-line (fn [label-kw m]
-                    (str (tr label-kw) " — "
-                         (tr :ptv.audit.status/approved) ": " (or (:approved m) 0) ", "
-                         (tr :ptv.audit.status/changes-requested) ": " (or (:changes-requested m) 0)))]
+        field-label {:summary (tr :ptv/summary)
+                     :description (tr :ptv/description)
+                     :user-instruction (tr :ptv/user-instruction)}]
     [:> Dialog {:open (boolean open?)
                 :onClose close
                 :maxWidth "sm"
@@ -576,16 +577,24 @@
        [:> Box
         [:> Typography {:variant "subtitle2"}
          (tr :ptv.audit/notification-contents)]
-        [:> Stack {:spacing 0.5 :sx #js {:mt 1}}
-         [:> Typography {:variant "body2"}
-          (str sample-count " " (tr :ptv.audit/audited))]
-         [:> Typography {:variant "body2"}
-          (stat-line :ptv/summary (:summary stats))]
-         [:> Typography {:variant "body2"}
-          (stat-line :ptv/description (:description stats))]
-         (when (and services? (:user-instruction stats))
-           [:> Typography {:variant "body2"}
-            (stat-line :ptv/user-instruction (:user-instruction stats))])]]]]
+        (when-not loading?
+          (if (seq action-items)
+            [:> Stack {:spacing 0.5 :sx #js {:mt 1}}
+             [:> Typography {:variant "body2" :sx #js {:fontWeight 500}}
+              (str (tr :ptv.audit/notification-action-items)
+                   " (" (count action-items) "):")]
+             (for [{:keys [name fields] :as item} action-items]
+               ^{:key (str (or (:lipas-id item) (:service-id item)))}
+               [:> Typography {:variant "body2"}
+                (str "• " name " — "
+                     (str/join ", " (keep field-label fields)))])
+             (when (pos? approved-count)
+               [:> Typography {:variant "body2" :sx #js {:mt 1}}
+                (str/replace (tr :ptv.audit/notification-approved-line)
+                             "%1$s" (str approved-count))])]
+            [:> Typography {:variant "body2" :sx #js {:mt 1}}
+             (str/replace (tr :ptv.audit/notification-no-fixes)
+                          "%1$s" (str approved-count))]))]]]
      [:> DialogActions
       [:> Button {:onClick close}
        (tr :actions/cancel)]
@@ -596,8 +605,8 @@
         :onClick (fn []
                    (close)
                    (rf/dispatch (if services?
-                                  [:lipas.ui.ptv.events/send-service-audit-notification lipas-org-id stats]
-                                  [:lipas.ui.ptv.events/send-audit-notification lipas-org-id stats])))}
+                                  [:lipas.ui.ptv.events/send-service-audit-notification lipas-org-id]
+                                  [:lipas.ui.ptv.events/send-audit-notification lipas-org-id])))}
        (tr :ptv.audit/send-notification)]]]))
 
 ;; Main audit view
@@ -614,14 +623,14 @@
         sites-waiting-audit @(rf/subscribe [:lipas.ui.ptv.subs/auditable-sites org-id :waiting-audit])
         sites-waiting-fixes @(rf/subscribe [:lipas.ui.ptv.subs/auditable-sites org-id :waiting-fixes])
         sites-done @(rf/subscribe [:lipas.ui.ptv.subs/auditable-sites org-id :done])
-        site-stats @(rf/subscribe [:lipas.ui.ptv.subs/audit-stats org-id])
+        site-notify-counts @(rf/subscribe [:lipas.ui.ptv.subs/site-audit-notification-counts org-id])
         site-notification-sent? @(rf/subscribe [:lipas.ui.ptv.subs/notification-sent?])
 
         ;; Services
         services-waiting-audit @(rf/subscribe [:lipas.ui.ptv.subs/auditable-services org-id :waiting-audit])
         services-waiting-fixes @(rf/subscribe [:lipas.ui.ptv.subs/auditable-services org-id :waiting-fixes])
         services-done @(rf/subscribe [:lipas.ui.ptv.subs/auditable-services org-id :done])
-        service-stats @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-stats org-id])
+        service-notify-counts @(rf/subscribe [:lipas.ui.ptv.subs/service-audit-notification-counts org-id])
         service-notification-sent? @(rf/subscribe [:lipas.ui.ptv.subs/service-notification-sent?])
 
         sending? @(rf/subscribe [:lipas.ui.ptv.subs/sending-notification?])
@@ -630,8 +639,7 @@
         waiting-audit-items (if services? services-waiting-audit sites-waiting-audit)
         waiting-fixes-items (if services? services-waiting-fixes sites-waiting-fixes)
         done-items (if services? services-done sites-done)
-        stats (if services? service-stats site-stats)
-        sample-count (or (if services? (:total-services stats) (:total-sites stats)) 0)
+        {:keys [action-count approved-count]} (if services? service-notify-counts site-notify-counts)
         notification-sent? (if services? service-notification-sent? site-notification-sent?)
 
         display-items (case selected-tab
@@ -690,22 +698,29 @@
       [:> Button
        {:variant "contained"
         :color "primary"
-        :disabled (or sending? (zero? sample-count) notification-sent?)
+        ;; Enabled when something needs the municipality's attention
+        ;; (action-count) or a "nothing to fix" note can be sent
+        ;; (approved-count) — items mid-audit or fixed-awaiting-re-review
+        ;; alone don't justify a notification.
+        :disabled (or sending?
+                      notification-sent?
+                      (and (zero? action-count) (zero? approved-count)))
         ;; Opens a confirmation dialog (recipients + contents) — the
         ;; actual send is dispatched from the dialog.
-        :onClick #(rf/dispatch [:lipas.ui.ptv.events/open-notification-dialog lipas-org-id])}
+        :onClick #(rf/dispatch [:lipas.ui.ptv.events/open-notification-dialog
+                                lipas-org-id
+                                (if services? "services" "sites")])}
        (cond
          sending? (tr :ptv.audit/sending-notification)
          notification-sent? (tr :ptv.audit/notification-sent)
-         :else (str (tr :ptv.audit/send-notification)
-                    " (" sample-count " " (tr :ptv.audit/audited) ")"))]
+         (pos? action-count) (str (tr :ptv.audit/send-notification)
+                                  " (" action-count " " (tr :ptv.audit/needing-fixes) ")")
+         :else (tr :ptv.audit/send-notification))]
 
       [notification-dialog
        {:tr tr
-        :stats stats
         :services? services?
-        :lipas-org-id lipas-org-id
-        :sample-count sample-count}]]
+        :lipas-org-id lipas-org-id}]]
 
      ;; Split view: item list and audit panel
      [:> Box

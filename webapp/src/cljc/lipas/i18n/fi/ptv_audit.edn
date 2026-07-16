@@ -52,4 +52,8 @@
  :notification-dialog-title "Lähetä ilmoitus auditoinnista",
  :notification-dialog-info "Ilmoitus lähetetään sähköpostitse organisaation PTV-vastuukäyttäjille.",
  :notification-recipients "Vastaanottajat",
- :notification-contents "Sähköposti sisältää yhteenvedon auditoinnista:"}
+ :notification-contents "Sähköposti sisältää yhteenvedon auditoinnista:",
+ :needing-fixes "korjattavaa",
+ :notification-action-items "Korjauksia vaativat kohteet",
+ :notification-approved-line "Lisäksi %1$s kohdetta on katselmoitu ilman muutospyyntöjä.",
+ :notification-no-fixes "Ei avoimia korjauspyyntöjä. %1$s kohdetta on katselmoitu ja hyväksytty."}
