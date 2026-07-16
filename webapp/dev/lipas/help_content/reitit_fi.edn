@@ -1,0 +1,58 @@
+;; Route-editing help pages (fi), consolidated 2026-07-16 from Lipasinfo
+;; videos XcZrIepjYe0 / DUa_aMbg9k0 / M3tmvCVyoD4 (Gemini 3.1 Pro native
+;; video analysis) + the 23.11.2023 jyu.fi route guide PDF, grounded
+;; against current UI code. See docs/wip/reitti-ohjeet-konsolidointi.md.
+;; Publish with lipas.help-authoring/upsert-pages!.
+{:section-slug "liikunta-ja-ulkoilupaikan-tietojen-lisaaminen-ja-muokkaaminen"
+ :after-slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"
+ :pages
+ [{:slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"
+   :title "Reittimäisen liikuntapaikan lisääminen"
+   :summary "Miten uusi reittimäinen liikuntapaikka (esim. kuntorata, latu, ulkoilureitti) lisätään LIPAS-järjestelmään piirtämällä reitti kartalle, ja mitä tietoja reitistä tallennetaan."
+   :blocks
+   [{:type :text
+     :content "### Yleistä reittien tallentamisesta\n\nLIPAS-tietokantaan kerätään tiedot Suomen liikuntaan ja ulkoiluun varustetuista reiteistä. Tallennettavien reittien tulee olla hoidettuja, niiden käyttöön tulee olla mahdolliset maanomistajien luvat tai sopimukset, ja reitillä on oltava omistaja sekä ylläpitäjä. Lisäksi reitin tulee olla opastettu maastomerkeillä tai sen käyttö on muilla tavoin ohjeistettua. Pelkästään jokaisenoikeuksin käytettäviä polkuja ei tallenneta LIPAS-tietokantaan.\n\nErityinen painopiste on kuntien ja virkistysalueyhdistysten ylläpitämissä liikunta- ja ulkoilureiteissä. Metsähallituksen ylläpitämiä reittejä ei erityisesti kerätä, sillä Metsähallitus huolehtii oman reittiverkostonsa tiedoista omissa järjestelmissään.\n\nReitit on luokiteltu useisiin liikuntapaikkatyyppeihin (esim. 4401 Kuntorata, 4402 Latu, 4403 Kävelyreitti/ulkoilureitti, 4405 Retkeilyreitti, 4411 Maastopyöräilyreitti). Yksi fyysinen reitti voidaan kuvata useamman tyypin avulla: tyypillisesti sama ura on talvella latu ja kesällä kuntorata. Tyyppiluokittelun kuvaukset löydät Ohjeet-osion Tyyppiluokkaselaimesta."}
+    {:type :text
+     :content "### Reitin piirtäminen kartalle\n\n**Esitiedot:** Kirjautuminen (lipas.fi/kirjaudu) ja muokkausoikeudet kyseisen kunnan liikuntapaikkoihin. Jos sinulla ei ole tunnusta, rekisteröidy ja määritä mihin tietoihin haluat muokkausoikeudet — ylläpitäjät vahvistavat tunnuksesi.\n\n1. Napsauta karttanäkymän vasemman alakulman **+**-painiketta (Uusi liikuntapaikka).\n2. Valitse **Liikuntapaikkatyyppi** — voit hakea tyyppiä kirjoittamalla tai valita listasta. Tyypin lyhyt kuvaus näytetään valinnan yhteydessä. Napsauta **OK**.\n3. Kohdista kartta reitin alueelle siirtämällä, zoomaamalla tai osoitehaulla. Jos näet tekstin *\"Kartta täytyy zoomata lähemmäs\"*, lähennä karttaa kunnes **Lisää kartalle** -painike aktivoituu.\n4. Napsauta **Lisää kartalle** ja piirrä reitti: jokainen hiiren napsautus lisää yhden reittipisteen, ja pisteiden välille piirtyy viiva. Päätä reittiosa **kaksoisnapsauttamalla**.\n5. Jos reitti koostuu useista erillisistä osista, valitse **Lisää reittiosa** ja piirrä seuraava osa samalla tavalla.\n6. Napsauta **Valmis**.\n7. Täytä reitin tiedot ja napsauta **Tallenna**. Onnistuneesta tallennuksesta näytetään ilmoitus *\"Tallennus onnistui\"*.\n\n**Vinkki:** Piirrä reitti myötäilemään maastossa olevaa uraa mahdollisimman tarkasti. Voit hyödyntää taustakartan lisäksi muita karttatasoja (esim. ilmakuvaa).\n\n**Huom:** Reittiviiva ei saisi leikata itseään. Jos reitti risteää itsensä kanssa, ongelmakohta osoitetaan punaisella merkillä. Katso ohje reittigeometrian korjaamisesta."}
+    {:type :video
+     :provider :youtube
+     :video-id "XcZrIepjYe0"
+     :title "Video: Reittimäisen liikuntapaikan lisääminen"}
+    {:type :text
+     :content "### Reitin tiedot\n\n**Perustiedot:** Liikuntapaikan tilan oletusvalinta on *Toiminnassa*; muut vaihtoehdot ovat *Suunniteltu* ja *Poistettu käytöstä väliaikaisesti*. Pakolliset kentät on merkitty tähdellä, ja ne on täytettävä ennen tallennusta. Katuosoite on pakollinen — jos reitillä ei ole selkeää osoitetta, käytä lähintä mahdollista osoitetta, esimerkiksi lähtöpisteen tai parkkipaikan osoitetta. Reitin nimen lisäksi voit antaa erillisen markkinointinimen; jos erityistä markkinointinimeä ei ole, täytä vain tavallinen nimikenttä. Yhteystiedot-kenttään voit määrittää, kuka vastaa liikuntapaikan asiakaspalvelusta tai palautteista.\n\n**Lisätiedot:** Lisätiedot-välilehden kentät vaihtuvat liikuntapaikkatyypin mukaan. Pintamateriaali ja reitin leveys koskevat oletuksena koko reittiä — jos reittiosilla on eri ominaisuudet, määritä tiedot kullekin reittiosalle erikseen. Reitin pituuden voit syöttää käsin tai antaa järjestelmän laskea sen automaattisesti (laskin-kuvake, *\"Laske reitin pituus automaattisesti\"*)."}
+    {:type :pdf
+     :url "https://drive.google.com/file/d/19wXBU-wyjSMJ-5Uv1P7VOxy6JBZY8sIh/preview"
+     :title "Reittiohje (PDF, 11/2023)"}]}
+
+  {:slug "reittigeometrian-tuonti-tiedostosta"
+   :title "Reittigeometrian tuonti tiedostosta"
+   :summary "Reitin geometrian voi piirtämisen sijaan tuoda valmiista tiedostosta (GPX, GeoJSON, KML, Shapefile), esimerkiksi GPS-laitteen tai urheilusovelluksen tallentamasta jäljestä."
+   :blocks
+   [{:type :text
+     :content "**Esitiedot:** Kirjautuminen ja muokkausoikeudet sekä reittitiedosto tuetussa muodossa: **GPX**, **GeoJSON** (.json/.geojson), **KML** tai **Shapefile** (zip-pakattuna). GPX-tiedoston koordinaatiston on oltava WGS84 (GPS-laitteiden ja sovellusten vakiomuoto).\n\n1. Kohdista kartta reitin alueelle esimerkiksi **Hae kartan alueelta** -haulla.\n2. Napsauta vasemman alakulman **+**-painiketta, valitse liikuntapaikkatyyppi ja napsauta **OK**.\n3. Valitse **Tuo tiedostosta** -välilehti (Piirrä-välilehden vieressä). Jos näet varoituksen *\"Kartta täytyy zoomata lähemmäs\"*, lähennä karttaa kunnes se poistuu.\n4. Napsauta **Tuo geometriat tiedostosta** -painiketta. *\"Tuo geometriat\"* -ikkuna aukeaa.\n5. Valitse tiedosto koneeltasi (Valitse tiedosto / Choose File).\n6. Ikkunaan listautuvat tiedostosta tunnistetut reittiosat. Valitse tuotavat osat valintaruuduista ja napsauta **Tuo valitut**. Reitti piirtyy kartalle.\n7. Tarkista, että geometria näyttää oikealta, ja napsauta **Valmis**. Täytä sitten reitin tiedot ja tallenna."}
+    {:type :video
+     :provider :youtube
+     :video-id "DUa_aMbg9k0"
+     :title "Video: Reittigeometrian tuonti tiedostosta"}
+    {:type :text
+     :content "### Vinkit\n\n- Jos tiedostossa on useita erillisiä reittiosia, ne kaikki listautuvat tuonti-ikkunaan ja voit valita niistä haluamasi.\n- Tuonti-ikkunassa voi näkyä ylimääräisiä tai oudosti nimettyjä rivejä tiedoston merkistökoodauksen takia — valitse vain selkeästi nimetyt reittiosat.\n- Järjestelmä yksinkertaistaa tuotua reittijälkeä automaattisesti kevyesti, sillä esimerkiksi GPS-jäljet sisältävät usein tarpeettoman tiheästi pisteitä. Jos jälki on silti liian tiheä, käytä Yksinkertaista-työkalua (katso ohje reittigeometrian korjaamisesta).\n- Voit tuoda geometrian myös olemassa olevaan reittiin: avaa reitti muokkaustilaan ja valitse työkaluvalikosta *\"Tuo geometriat tiedostosta\"*."}]}
+
+  {:slug "reittigeometrian-korjaaminen-ja-yksinkertaistaminen"
+   :title "Reittigeometrian korjaaminen ja yksinkertaistaminen"
+   :summary "Miten reittiviivan virheet (itsensä kanssa risteävä reitti, päällekkäiset pisteet) korjataan ja miten liian tiheä reittijälki yksinkertaistetaan."
+   :blocks
+   [{:type :text
+     :content "**Esitiedot:** Reitti on valittuna ja muokkaustila on päällä (kynäkuvake **Muokkaa**). Muokkaustilassa reittiviivan pisteet tulevat näkyviin.\n\n### Reittipisteiden siirtäminen, lisääminen ja poistaminen\n\n- **Siirrä** reittipistettä tarttumalla siihen hiirellä ja raahaamalla se uuteen kohtaan.\n- **Lisää** uusi piste napsauttamalla reittiviivaa kohdasta, johon haluat pisteen.\n- **Poista** piste pitämällä **Alt-näppäin** pohjassa ja napsauttamalla pistettä.\n\n### Itsensä kanssa risteävän reitin korjaaminen\n\nJos reittiviiva leikkaa itsensä, ongelmakohdassa näytetään punainen huomiomerkki: *\"Muuta reitin kulkua niin, että reittiosa ei risteä itsensä kanssa. Voit tarvittaessa katkaista reitin useampaan osaan.\"* LIPAS sallii tallentamisen, mutta risteävä reitti voi estää tietojen hyödyntämisen muissa palveluissa.\n\n1. Valitse työkaluvalikosta **Katkaise reittiosa** (saksikuvake).\n2. Napsauta reittiviivaa risteyskohdassa. Katkaisu jakaa reitin kahdeksi reittiosaksi, jolloin virhemerkki poistuu.\n3. Varmista katkaisu viemällä hiiri viivan päälle: erillinen reittiosa korostuu omana viivanaan.\n\nJos ongelmakohdassa on tiheä sumppu päällekkäisiä pisteitä (esim. GPS-jäljen \"sykerö\"), älä katkaise sokkona: poista ensin turhat päällekkäiset pisteet **Alt + napsautus** -toiminnolla yksi kerrallaan, kunnes reitin kulku selkeytyy, ja katkaise vasta sitten tarvittaessa."}
+    {:type :video
+     :provider :youtube
+     :video-id "M3tmvCVyoD4"
+     :title "Video: Reitin katkaisu ja reittijäljen yksinkertaistaminen"}
+    {:type :text
+     :content "### Reittijäljen yksinkertaistaminen\n\nTuodussa GPS-jäljessä on usein pisteitä tarpeettoman tiheästi, mikä tekee reitistä raskaan käsitellä.\n\n1. Valitse työkaluvalikosta **Yksinkertaista**. Kartan alareunaan avautuu *\"Yksinkertaista geometrioita\"* -säädin.\n2. Vedä liukusäädintä (asteikko 0–10) oikealle: järjestelmä vähentää reittipisteitä ja näyttää tuloksen kartalla reaaliajassa.\n3. Zoomaa lähemmäs ja tarkista, että yksinkertaistettu viiva seuraa yhä maastossa kulkevaa uraa. Jos viiva oikoo liikaa, pienennä säätöä tai korjaa yksittäisiä pisteitä raahaamalla.\n4. Hyväksy napsauttamalla **OK**, tai hylkää napsauttamalla **Peruuta**.\n5. Voit perua yksinkertaistamisen **Kumoa**-painikkeella (nuolikuvake työkaluvalikossa).\n\n**Varoitus:** Yksinkertaistaminen on kompromissi tarkkuuden ja käsiteltävyyden välillä — tarkista tulos aina kartalta. Jos hyväksyt maksimiyksinkertaistuksen, työkalu ei enää vähennä pisteitä samasta osasta uudelleen; loput pisteet on poistettava käsin (Alt + napsautus).\n\n### Reittiosan poistaminen\n\nKokonaisen reittiosan voit poistaa valitsemalla työkaluvalikosta **Poista reittiosa** (roskakorikuvake) ja napsauttamalla poistettavaa osaa.\n\nMuista lopuksi tallentaa muutokset (**Tallenna**)."}]}
+
+  {:slug "reittimaisen-liikuntapaikan-poistaminen"
+   :title "Reittimäisen liikuntapaikan poistaminen"
+   :summary "Miten reitti poistetaan LIPAS-järjestelmästä ja mitä eri poistosyyt tarkoittavat."
+   :blocks
+   [{:type :text
+     :content "**Esitiedot:** Poistettava reitti on valittuna kartalta ja sinulla on muokkausoikeudet siihen.\n\n1. Napsauta työkalurivin **roskakorikuvaketta** (Poista liikuntapaikka).\n2. Valitse aukeavassa ikkunassa **Poiston syy**:\n   - *Poistettu käytöstä pysyvästi* — reitti ei ole enää käytössä. Kohde arkistoituu, mutta se löytyy edelleen liikuntapaikkahaulla.\n   - *Poistettu käytöstä väliaikaisesti* — reitti on tilapäisesti pois käytöstä. Kohde arkistoituu vastaavasti.\n   - *Väärä tieto* — kohde on virheellinen (esim. kahteen kertaan tallennettu). Reitti poistetaan lopullisesti, eikä se näy enää hauissa eikä kartalla.\n3. Valitse tarvittaessa **Vuosi**, jolloin poisto tapahtui.\n4. Vahvista napsauttamalla **Poista**. Onnistumisesta näytetään ilmoitus.\n\n**Vinkki:** Jos reitti on pois käytöstä vain määräajan (esim. reittimuutos tai kunnostus), käytä tilaa *Poistettu käytöstä väliaikaisesti* — näin reitin historia ja tiedot säilyvät."}]}]}
