@@ -1,11 +1,81 @@
 (ns lipas.ui.assistant.events
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
+            [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.ui.help.events :as help-events]
             [lipas.ui.map.events :as map-events]
+            [lipas.ui.map.utils :as map-utils]
             [lipas.ui.ptv.events :as ptv-events]
             [lipas.ui.utils :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]))
+
+(defn- round6 [x]
+  (/ (js/Math.round (* x 1e6)) 1e6))
+
+(defn- fcoll-vertex-count [fcoll]
+  (transduce (map (fn [f]
+                    (let [g (:geometry f)
+                          c (:coordinates g)]
+                      (case (:type g)
+                        "Point" 1
+                        "LineString" (count c)
+                        "Polygon" (reduce + 0 (map count c))
+                        0))))
+             + 0 (:features fcoll)))
+
+(defn- invalid-fields
+  "Top-level field paths failing schema validation for the current
+   edits — the concrete reason the save button is disabled."
+  [schema data]
+  (when data
+    (when-let [errors (:errors (m/explain schema (utils/make-saveable data)))]
+      (->> errors
+           (map (fn [{:keys [in]}]
+                  (->> (take 2 in)
+                       (map #(if (keyword? %) (name %) (str %)))
+                       (str/join "."))))
+           distinct
+           (take 10)
+           vec))))
+
+(defn- edit-context
+  "Live map-editor state: what is being drawn/edited right now, its
+   geometry stats and problems, and what blocks saving. Mirrors the
+   backend's context-schema :edit block. Must never throw — a broken
+   snapshot must not block sending a message."
+  [db]
+  (try
+    (let [mode (-> db :map :mode)
+          new? (= :adding (:name mode))
+          geoms (:geoms mode)
+          problem-fs (-> mode :problems :data :features)
+          geom-type (or (-> geoms :features first :geometry :type)
+                        (some-> (:geom-type mode) str))
+          data (if new?
+                 (-> db :new-sports-site :data)
+                 (get-in db [:sports-sites (:lipas-id mode) :editing]))
+          schema (if new?
+                   sports-site-schema/new-sports-site
+                   sports-site-schema/sports-site)
+          length-km (when (and geoms (= "LineString" geom-type))
+                      (map-utils/calculate-length-km geoms))]
+      (cond-> {}
+        new? (assoc :new-site? true)
+        (:sub-mode mode) (assoc :sub-mode (name (:sub-mode mode)))
+        geom-type (assoc :geometry-type geom-type)
+        geoms (assoc :segments (count (:features geoms))
+                     :vertices (fcoll-vertex-count geoms))
+        length-km (assoc :length-km length-km)
+        problem-fs (assoc :self-intersections (count problem-fs)
+                          :problem-locations
+                          (mapv (fn [f]
+                                  (let [[lon lat] (-> f :geometry :coordinates)]
+                                    {:lon (round6 lon) :lat (round6 lat)}))
+                                (take 5 problem-fs)))
+        data (merge (when-let [inv (invalid-fields schema data)]
+                      {:invalid-fields inv}))))
+    (catch :default _ nil)))
 
 (defn db->context
   "Snapshot of where the user is, sent with every message so the
@@ -26,7 +96,8 @@
                (str/includes? route "stats") "statistics view"
                :else nil)
         lipas-id (-> db :map :mode :lipas-id)
-        edit-mode? (contains? #{:editing :drawing} (-> db :map :mode :name))
+        edit-mode? (contains? #{:editing :drawing :adding} (-> db :map :mode :name))
+        edit-ctx (when edit-mode? (edit-context db))
         help-ctx (help-events/dialog-context db)]
     (cond-> {}
       locale (assoc :locale locale)
@@ -34,6 +105,7 @@
       view (assoc :view view)
       lipas-id (assoc :site {:lipas-id lipas-id})
       edit-mode? (assoc :edit-mode? true)
+      (seq edit-ctx) (assoc :edit edit-ctx)
       (seq help-ctx) (assoc :help help-ctx)
       (seq ptv-ctx) (assoc :ptv ptv-ctx))))
 
@@ -126,6 +198,14 @@
     [[:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]
      [:dispatch [::pan-to-location (:location action)]]]
 
+    ;; Deliberately no navigation: this action is offered during
+    ;; geometry editing (zoom to a problem spot) and navigating would
+    ;; disturb the edit session.
+    "pan-to-coordinates"
+    (let [{:keys [lat lon]} (map-events/wgs84->epsg3067 [(:lon action) (:lat action)])]
+      [[:dispatch [:lipas.ui.map.events/set-center lat lon]]
+       [:dispatch [:lipas.ui.map.events/set-zoom (or (:zoom action) 16)]]])
+
     "navigate-to-view"
     (when-let [route (view->route (:view action))]
       [[:dispatch [:lipas.ui.events/navigate route]]])
@@ -134,14 +214,16 @@
 
 (rf/reg-event-fx ::run-action
   (fn [{:keys [db]} [_ msg-idx action-idx action]]
-    (if (contains? #{:editing :drawing} (-> db :map :mode :name))
-      ;; Never navigate away from unsaved edits.
-      {:dispatch [:lipas.ui.events/set-active-notification
-                  {:message "Sulje ensin muokkaustila, niin avustaja voi ohjata näkymää."
-                   :success? false}]}
-      (when-let [fx (action->fx action)]
-        {:db (assoc-in db [:assistant :messages msg-idx :actions action-idx :executed?] true)
-         :fx (vec fx)}))))
+    (let [editing? (contains? #{:editing :drawing :adding} (-> db :map :mode :name))]
+      ;; Never navigate away from unsaved edits — but pure map pan/zoom
+      ;; (inspecting a geometry problem) is safe during editing.
+      (if (and editing? (not= "pan-to-coordinates" (:type action)))
+        {:dispatch [:lipas.ui.events/set-active-notification
+                    {:message "Sulje ensin muokkaustila, niin avustaja voi ohjata näkymää."
+                     :success? false}]}
+        (when-let [fx (action->fx action)]
+          {:db (assoc-in db [:assistant :messages msg-idx :actions action-idx :executed?] true)
+           :fx (vec fx)})))))
 
 (rf/reg-event-fx ::pan-to-location
   (fn [_ [_ location]]

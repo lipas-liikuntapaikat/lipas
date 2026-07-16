@@ -4,8 +4,10 @@
     [clojure.string :as str]
     [taoensso.timbre :as log])
   (:import
+    [org.locationtech.jts.algorithm RobustLineIntersector]
     [org.locationtech.jts.algorithm.hull ConcaveHull]
-    [org.locationtech.jts.geom Coordinate CoordinateFilter Geometry GeometryFactory PrecisionModel]
+    [org.locationtech.jts.geom Coordinate CoordinateFilter Envelope Geometry GeometryFactory PrecisionModel]
+    [org.locationtech.jts.index.strtree STRtree]
     [org.locationtech.jts.geom.util GeometryCombiner]
     [org.locationtech.jts.io WKTReader]
     [org.locationtech.jts.operation.buffer BufferOp]
@@ -253,6 +255,148 @@
      (catch Exception ex
        (log/warn ex "Failed to simplify fcoll" fcoll)
        fcoll))))
+
+;;; Route geometry quality analysis ;;;
+;;
+;; Diagnosis for the AI assistant's check_route_geometry tool — a
+;; human-explainable report, not a validator. All input is WGS84
+;; GeoJSON; distances via haversine so no projection round-trips.
+
+(defn- round-6 ^double [x] (/ (Math/round (* (double x) 1e6)) 1e6))
+(defn- round-2 ^double [x] (/ (Math/round (* (double x) 100.0)) 100.0))
+
+(defn- dist-m
+  "Haversine distance in meters between [lon lat] pairs."
+  [[lon1 lat1] [lon2 lat2]]
+  (let [la1 (Math/toRadians lat1)
+        la2 (Math/toRadians lat2)
+        sin-dlat (Math/sin (/ (- la2 la1) 2))
+        sin-dlon (Math/sin (/ (- (Math/toRadians lon2) (Math/toRadians lon1)) 2))
+        a (+ (* sin-dlat sin-dlat)
+             (* (Math/cos la1) (Math/cos la2) sin-dlon sin-dlon))]
+    (* 2 earth-mean-radius-m (Math/asin (Math/sqrt (min 1.0 a))))))
+
+(defn- line-length-m [coords]
+  (reduce + 0.0 (map dist-m coords (rest coords))))
+
+(defn- self-intersection-points
+  "Points where a linestring crosses itself. Pairwise robust check of
+   non-adjacent segments over an STRtree, so GPS tracks with thousands
+   of points stay fast. A shared endpoint between the first and last
+   segment (a closed loop) is legitimate and not reported. Returns at
+   most `cap` [lon lat] points."
+  [coords cap]
+  (let [segs (mapv (fn [i c1 c2] [i (Coordinate. (first c1) (second c1))
+                                  (Coordinate. (first c2) (second c2))])
+                   (range) coords (rest coords))
+        tree (STRtree.)
+        _ (doseq [[i ^Coordinate c1 ^Coordinate c2] segs]
+            (.insert tree (doto (Envelope. c1) (.expandToInclude c2)) i))
+        _ (.build tree)
+        li (RobustLineIntersector.)
+        seg (fn [i] (nth segs i))
+        hit (fn [i j]
+              (let [[_ ^Coordinate a1 ^Coordinate a2] (seg i)
+                    [_ ^Coordinate b1 ^Coordinate b2] (seg j)]
+                (.computeIntersection li a1 a2 b1 b2)
+                (when (.hasIntersection li)
+                  (let [^Coordinate p (.getIntersection li 0)]
+                    ;; Adjacent segments always meet at their shared
+                    ;; vertex; only a crossing elsewhere is a problem.
+                    (when-not (and (= 1 (.getIntersectionNum li))
+                                   (or (.equals2D p a1) (.equals2D p a2))
+                                   (or (.equals2D p b1) (.equals2D p b2)))
+                      [(.-x p) (.-y p)])))))]
+    (->> (for [[i ^Coordinate c1 ^Coordinate c2] segs
+               j (.query tree (doto (Envelope. c1) (.expandToInclude c2)))
+               :let [j (int j)]
+               :when (> j (inc i))]
+           (hit i j))
+         (keep identity)
+         (map (fn [[lon lat]] [(round-6 lon) (round-6 lat)]))
+         distinct
+         (take cap)
+         vec)))
+
+(defn- duplicate-vertex-points
+  "Consecutive vertices closer than 1 m — leftovers of GPS noise or
+   double clicks that make editing tools misbehave."
+  [coords cap]
+  (->> (map (fn [c1 c2] (when (< (dist-m c1 c2) 1.0) c1)) coords (rest coords))
+       (keep identity)
+       (map (fn [[lon lat]] [(round-6 lon) (round-6 lat)]))
+       distinct
+       (take cap)
+       vec))
+
+(defn- endpoint-gaps
+  "Pairs of segment (feature) endpoints from different linestrings that
+   almost touch (0.5–25 m apart) — routes that probably should connect
+   but don't quite."
+  [lines cap]
+  (let [ends (for [[i coords] (map-indexed vector lines)
+                   c [(first coords) (last coords)]]
+               [i c])]
+    (->> (for [[[i c1] & more] (iterate rest ends)
+               :while more
+               [j c2] more
+               :when (not= i j)
+               :let [d (dist-m c1 c2)]
+               :when (< 0.5 d 25.0)]
+           {:features [i j]
+            :distance-m (Math/round ^double d)
+            :location {:lon (round-6 (first c1)) :lat (round-6 (second c1))}})
+         (take cap)
+         vec)))
+
+(def ^:private dense-vertices-per-km
+  "Above this the track is raw GPS output that begs simplification;
+   hand-drawn routes run 10–50 vertices/km."
+  120)
+
+(defn route-geometry-report
+  "Quality report of a route FeatureCollection (WGS84 GeoJSON with
+   LineString features): totals, self-intersections, duplicate
+   consecutive vertices, near-miss gaps between features, vertex
+   density. Locations are bounded (max ~8 per problem type) and rounded
+   so the report stays prompt-sized."
+  [fcoll]
+  (let [lines (->> (:features fcoll)
+                   (filter #(= "LineString" (get-in % [:geometry :type])))
+                   (mapv #(mapv strip-z (get-in % [:geometry :coordinates]))))
+        cap 8
+        per-line (mapv (fn [i coords]
+                         {:feature i
+                          :vertices (count coords)
+                          :length-m (Math/round ^double (line-length-m coords))
+                          :self-intersections (self-intersection-points coords cap)
+                          :duplicate-vertices (duplicate-vertex-points coords cap)})
+                       (range) lines)
+        length-km (/ (reduce + 0 (map :length-m per-line)) 1000.0)
+        vertices (reduce + 0 (map :vertices per-line))
+        kinks (vec (mapcat (fn [{:keys [feature self-intersections]}]
+                             (map (fn [[lon lat]]
+                                    {:feature feature :lon lon :lat lat})
+                                  self-intersections))
+                           per-line))
+        dupes (vec (mapcat (fn [{:keys [feature duplicate-vertices]}]
+                             (map (fn [[lon lat]]
+                                    {:feature feature :lon lon :lat lat})
+                                  duplicate-vertices))
+                           per-line))
+        gaps (endpoint-gaps lines cap)
+        vpk (when (pos? length-km) (Math/round ^double (/ vertices length-km)))]
+    {:feature-count (count lines)
+     :vertex-count vertices
+     :length-km (round-2 length-km)
+     :vertices-per-km vpk
+     :needs-simplification? (boolean (and vpk (> vpk dense-vertices-per-km)))
+     :self-intersections {:count (count kinks) :locations (vec (take cap kinks))}
+     :duplicate-vertices {:count (count dupes) :locations (vec (take cap dupes))}
+     :endpoint-gaps {:count (count gaps) :locations gaps}
+     :ok? (and (zero? (count kinks))
+               (zero? (count dupes))
+               (zero? (count gaps)))}))
 
 (defn ->jts-multi-point [coords]
   (.createMultiPointFromCoords
