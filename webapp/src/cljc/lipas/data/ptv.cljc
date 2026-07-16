@@ -845,6 +845,40 @@
         (some #{:changes-requested} states) :waiting-fixes
         :else :done))))
 
+(defn audit-notification-summary
+  "Contents of the katselmointi notification sent to the municipality's
+   PTV managers, derived from the current audit sample (so already-fixed
+   items drop out by themselves): :action-items — items in the
+   :waiting-fixes bucket (municipality's move), each entry's :ref merged
+   with :fields naming the fields with open change requests — and
+   :approved-count, the number of fully-approved items. Items mid-audit
+   (:waiting-audit) and fixes awaiting re-review (:fixed) count in
+   neither: they need no municipality action and aren't approved yet.
+   Entries: {:ref map, :audit map, :fields as per site-audit-fields /
+   service-audit-fields}. Used by both the backend email builder and the
+   audit view's send-notification button, so the numbers always agree."
+  [entries]
+  (reduce
+   (fn [acc {:keys [ref audit fields]}]
+     (let [states (audit-field-states audit fields)
+           bucket (audit-bucket audit fields)]
+       (cond
+         (= :waiting-fixes bucket)
+         (update acc :action-items conj
+                 (assoc ref :fields (->> states
+                                         (keep (fn [[field state]]
+                                                 (when (= :changes-requested state)
+                                                   field)))
+                                         vec)))
+
+         (and (= :done bucket)
+              (every? #(= :approved %) (vals states)))
+         (update acc :approved-count inc)
+
+         :else acc)))
+   {:action-items [] :approved-count 0}
+   entries))
+
 (defn determine-audit-status
   "Audit indicator for a sports site row in the manager-facing listing.
    Derived from the whose-move field states so a municipality's fix clears

@@ -52,4 +52,8 @@
  :notification-dialog-title "Skicka meddelande om granskningen",
  :notification-dialog-info "Meddelandet skickas per e-post till organisationens PTV-ansvariga användare.",
  :notification-recipients "Mottagare",
- :notification-contents "E-postmeddelandet innehåller en sammanfattning av granskningen:"}
+ :notification-contents "E-postmeddelandet innehåller en sammanfattning av granskningen:",
+ :needing-fixes "att korrigera",
+ :notification-action-items "Objekt som kräver korrigeringar",
+ :notification-approved-line "Dessutom har %1$s objekt granskats utan ändringsbegäranden.",
+ :notification-no-fixes "Inga öppna ändringsbegäranden. %1$s objekt har granskats och godkänts."}

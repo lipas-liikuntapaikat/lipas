@@ -798,27 +798,22 @@
   (fn [audit [_ service-id]]
     (boolean (get-in audit [:service-dirty (str service-id)]))))
 
-(rf/reg-sub ::audit-stats
-  ;; Notification stats tally only items whose verdicts are complete for
-  ;; the current content (bucket :waiting-fixes or :done) — an item back
-  ;; in the auditor's queue (unaudited, partial or stale) doesn't count
-  ;; as audited (tester finding #5).
+(rf/reg-sub ::site-audit-notification-counts
+  ;; {:action-count n :approved-count n} for the send-notification button:
+  ;; items awaiting municipality fixes / fully approved. Derived with the
+  ;; same cljc fn the backend email builder uses, so the button count
+  ;; always matches what the notification would say.
   (fn [[_ org-id]]
     (rf/subscribe [::audit-sample-sites org-id]))
   (fn [sites _]
-    (let [audited (filter (fn [site]
-                            (contains? #{:waiting-fixes :done}
-                                       (ptv-data/audit-bucket
-                                        (get-in site [:ptv :audit])
-                                        (ptv-data/site-audit-fields site))))
-                          sites)
-          tally-fn (fn [field status]
-                     (count (filter #(= status (get-in % [:ptv :audit field :status])) audited)))]
-      {:total-sites (count audited)
-       :summary {:approved (tally-fn :summary "approved")
-                 :changes-requested (tally-fn :summary "changes-requested")}
-       :description {:approved (tally-fn :description "approved")
-                     :changes-requested (tally-fn :description "changes-requested")}})))
+    (let [{:keys [action-items approved-count]}
+          (ptv-data/audit-notification-summary
+           (map (fn [site]
+                  {:audit (get-in site [:ptv :audit])
+                   :fields (ptv-data/site-audit-fields site)})
+                sites))]
+      {:action-count (count action-items)
+       :approved-count approved-count})))
 
 ;; PTV Service audit subs
 
@@ -915,26 +910,19 @@
   (fn [services _]
     (filter #(some? (get-in % [:audit :timestamp])) services)))
 
-(rf/reg-sub ::service-audit-stats
-  ;; Same verdict-complete tally semantics as ::audit-stats.
+(rf/reg-sub ::service-audit-notification-counts
+  ;; Same semantics as ::site-audit-notification-counts.
   (fn [[_ org-id]]
     (rf/subscribe [::audit-sample-services org-id]))
   (fn [services _]
-    (let [audited (filter (fn [svc]
-                            (contains? #{:waiting-fixes :done}
-                                       (ptv-data/audit-bucket
-                                        (:audit svc)
-                                        (ptv-data/service-audit-fields svc))))
-                          services)
-          tally-fn (fn [field status]
-                     (count (filter #(= status (get-in % [:audit field :status])) audited)))]
-      {:total-services (count audited)
-       :summary {:approved (tally-fn :summary "approved")
-                 :changes-requested (tally-fn :summary "changes-requested")}
-       :description {:approved (tally-fn :description "approved")
-                     :changes-requested (tally-fn :description "changes-requested")}
-       :user-instruction {:approved (tally-fn :user-instruction "approved")
-                          :changes-requested (tally-fn :user-instruction "changes-requested")}})))
+    (let [{:keys [action-items approved-count]}
+          (ptv-data/audit-notification-summary
+           (map (fn [svc]
+                  {:audit (:audit svc)
+                   :fields (ptv-data/service-audit-fields svc)})
+                services))]
+      {:action-count (count action-items)
+       :approved-count approved-count})))
 
 (rf/reg-sub ::service-notification-sent?
   :<- [::audit]

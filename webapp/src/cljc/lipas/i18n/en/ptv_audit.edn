@@ -52,4 +52,8 @@
  :notification-dialog-title "Send audit notification",
  :notification-dialog-info "The notification is sent by email to the organization's PTV managers.",
  :notification-recipients "Recipients",
- :notification-contents "The email contains a summary of the audit:"}
+ :notification-contents "The email contains a summary of the audit:",
+ :needing-fixes "needing fixes",
+ :notification-action-items "Items requiring corrections",
+ :notification-approved-line "In addition, %1$s items have been reviewed with no change requests.",
+ :notification-no-fixes "No open change requests. %1$s items have been reviewed and approved."}
