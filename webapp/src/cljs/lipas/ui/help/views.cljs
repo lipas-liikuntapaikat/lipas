@@ -448,25 +448,50 @@
 
 (r/defc PageView
   [{:keys [page]}]
-  [:> Stack {:spacing 3}
-   [:> Box
-    [:> Typography {:variant "h4" :component "h1" :sx title-sx}
-     (:title page)]
-    (when-not (empty? (:summary page))
-      [:> Typography {:variant "body1" :color "text.secondary" :sx #js{:mt 1}}
-       (:summary page)])]
-   ;; On large screens the blocks flow into two columns to use the
-   ;; horizontal space; below lg they stack in a single column.
-   [:> Box {:sx #js{:display "grid"
-                    :gap 3
-                    :alignItems "start"
-                    :gridTemplateColumns #js{:xs "1fr"
-                                             :lg "repeat(2, minmax(0, 1fr))"}}}
-    (for [block (:blocks page)]
-      ^{:key (:block-id block)}
-      [:> Box {:sx (when (full-width-block-types (:type block))
-                     #js{:gridColumn "1 / -1"})}
-       [BlockView {:block block}]])]])
+  (let [xl? (useMediaQuery (fn [theme] (.up (.-breakpoints theme) "xl")))
+        blocks   (:blocks page)
+        video?   (fn [b] (= :video (:type b)))
+        wide?    (fn [b] (full-width-block-types (:type b)))
+        videos   (filter video? blocks)
+        others   (remove #(or (video? %) (wide? %)) blocks)
+        ;; Two columns only on xl screens, and only when both columns
+        ;; would have content: other content stacks left, videos stack
+        ;; right. The structures differ, so this is a media-query branch
+        ;; rather than responsive sx.
+        grouped? (and xl? (seq videos) (seq others))]
+    [:> Stack {:spacing 3}
+     [:> Box
+      [:> Typography {:variant "h4" :component "h1" :sx title-sx}
+       (:title page)]
+      (when-not (empty? (:summary page))
+        [:> Typography {:variant "body1" :color "text.secondary" :sx #js{:mt 1}}
+         (:summary page)])]
+     (if grouped?
+       [:> Box {:sx #js{:display "grid"
+                        :gap 3
+                        :alignItems "start"
+                        :gridTemplateColumns "repeat(2, minmax(0, 1fr))"}}
+        [:> Stack {:spacing 3}
+         (for [block others]
+           ^{:key (:block-id block)}
+           [BlockView {:block block}])]
+        [:> Stack {:spacing 3}
+         (for [block videos]
+           ^{:key (:block-id block)}
+           [BlockView {:block block}])]
+        ;; Interactive/wide blocks span both columns below the grouped
+        ;; content.
+        (for [block blocks
+              :when (wide? block)]
+          ^{:key (:block-id block)}
+          [:> Box {:sx #js{:gridColumn "1 / -1"}}
+           [BlockView {:block block}]])]
+       ;; Below xl (or when a page has only one kind of content) the
+       ;; blocks stack in a single column in authored order.
+       [:> Stack {:spacing 3}
+        (for [block blocks]
+          ^{:key (:block-id block)}
+          [BlockView {:block block}])])]))
 
 (r/defc LandingCardGrid
   ;; Landing grid: title + summary cards, 1–3 columns depending on
