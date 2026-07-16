@@ -26,7 +26,23 @@
     (is (not (m/validate assistant/context-schema
                          {:ptv {:open? true :password "hunter2"}})))
     (is (not (m/validate assistant/context-schema
-                         {:evil "payload"})))))
+                         {:evil "payload"}))))
+  (testing "live map-editor state validates"
+    (is (m/validate assistant/context-schema
+                    {:locale "fi"
+                     :edit-mode? true
+                     :edit {:new-site? true
+                            :sub-mode "editing"
+                            :geometry-type "LineString"
+                            :segments 2
+                            :vertices 340
+                            :length-km 5.4
+                            :self-intersections 2
+                            :problem-locations [{:lon 25.701 :lat 62.241}]
+                            :invalid-fields ["location.address" "name"]}}))
+    (is (not (m/validate assistant/context-schema
+                         {:edit {:geoms {:type "FeatureCollection"}}}))
+        "raw geometries don't belong in the snapshot")))
 
 (deftest describe-roles-test
   (testing "roles get official names and code→name resolved scopes"
@@ -72,7 +88,18 @@
                                   :location "Nallikari, Oulu"}))
     (is (assistant-schema/valid? {:type "navigate-to-view"
                                   :label "Avaa tilastot"
-                                  :view "stats-finance"})))
+                                  :view "stats-finance"}))
+    (is (assistant-schema/valid? {:type "pan-to-coordinates"
+                                  :label "Näytä ongelmakohta 1"
+                                  :lon 25.701
+                                  :lat 62.241
+                                  :zoom 16})))
+
+  (testing "pan-to-coordinates is bounded to ~Finland"
+    (is (not (assistant-schema/valid? {:type "pan-to-coordinates" :label "x"
+                                       :lon 5.0 :lat 40.0})))
+    (is (not (assistant-schema/valid? {:type "pan-to-coordinates" :label "x"
+                                       :lon 25.0 :lat 62.0 :zoom 99}))))
 
   (testing "apply-search requires at least one filter"
     (is (not (assistant-schema/valid? {:type "apply-search" :label "Hae"}))))
@@ -163,3 +190,16 @@
   (testing "too-short location is refused"
     (is (some? (:error (run-tool* {} "pan_map_to_location" {:label "Siirry"
                                                             :location "x"}))))))
+
+(deftest zoom-to-coordinates-tool-test
+  (is (= {:type "pan-to-coordinates" :label "Näytä ongelmakohta 1"
+          :lon 25.701 :lat 62.241 :zoom 16}
+         (:client-action (run-tool* {} "zoom_map_to_coordinates"
+                                    {:label "Näytä ongelmakohta 1"
+                                     :lon 25.701 :lat 62.241 :zoom 16}))))
+  (testing "zoom is optional"
+    (is (some? (:client-action (run-tool* {} "zoom_map_to_coordinates"
+                                          {:label "Näytä" :lon 25.0 :lat 62.0})))))
+  (testing "coordinates outside Finland are refused — the model cannot pan the user into the void"
+    (is (some? (:error (run-tool* {} "zoom_map_to_coordinates"
+                                  {:label "x" :lon 5.0 :lat 40.0}))))))

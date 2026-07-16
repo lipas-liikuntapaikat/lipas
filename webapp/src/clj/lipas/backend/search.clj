@@ -320,7 +320,12 @@
      :actions    {:type "keyword"}
      :escalated? {:type "boolean"}
      :context    {:type "keyword" :index false}
-     :took-ms    {:type "integer"}}}})
+     :took-ms    {:type "integer"}
+     ;; Tool-loop telemetry: how many tool rounds an answer took and
+     ;; whether it ran into max-tool-iterations — the data for tuning
+     ;; the budget instead of guessing.
+     :tool-rounds        {:type "integer"}
+     :budget-exhausted?  {:type "boolean"}}}})
 
 (def mappings
   "All Elasticsearch index mappings. Used by system initialization and tests."

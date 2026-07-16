@@ -250,10 +250,12 @@ help-cms->docs skip rules).
    (summaries + hand-tuned
    slugs where wanted, se/en translations when they exist); then flip GA
    (`:ai-assistant/use` → `roles/basic`). If `assistant_logs` already exists
-   in an env, PUT `_mapping` with `actions {:type "keyword"}` (strict mapping;
-   fresh indices get it automatically).
+   in an env, PUT `_mapping` with `actions {:type "keyword"}`,
+   `tool-rounds {:type "integer"}` and `budget-exhausted? {:type "boolean"}`
+   (strict mapping; fresh indices get all of them automatically).
 3. Kibana views over `assistant_logs` (escalation rate = failure metric,
-   top questions = content backlog).
+   top questions = content backlog, tool-rounds distribution +
+   budget-exhausted? rate = max-tool-iterations tuning — currently 8).
 4. Prompt iteration from `assistant_logs` (watch for hedged invention, e.g.
    icon locations not in sources).
 5. Parked: lipasinfo email-history harvesting (PM/DPO); Drive-hosted melonta
