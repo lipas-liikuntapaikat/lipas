@@ -171,7 +171,7 @@
   (fn [db [_ _]]
     (-> db
         (assoc-in [:ptv :dialog :open?] false)
-        (assoc-in [:ptv :selected-tag] "wizard")
+        (assoc-in [:ptv :selected-tab] "wizard")
         (update :ptv dissoc :candidates-search :selected-step))))
 
 (rf/reg-event-fx ::select-org
