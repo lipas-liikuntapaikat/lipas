@@ -28,6 +28,8 @@
  :not-yet-synced "Valittu vietäväksi, ei vielä viety PTV:hen",
  :summary "Tiivistelmä",
  :user-instruction "Toimintaohje",
+ :writing-guidance-description "Mitä kuvaukseen kannattaa kirjoittaa?",
+ :writing-guidance-user-instruction "Mitä toimintaohjeeseen kannattaa kirjoittaa?",
  :tooltip "Vie Palvelutietovarantoon",
  :wizard "Käyttöönotto"
  :filter-all "Kaikki"
