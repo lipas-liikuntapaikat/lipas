@@ -121,8 +121,13 @@
                       sites (ptv/get-eligible-sites search {:type-codes type-codes
                                                             :city-codes city-codes
                                                             :owners ["city" "city-main-owner"]})]
-                  (make-overview sites)))]
-    (-> (ai/generate-ptv-service-descriptions doc)
+                  ;; Aggregate stats (counts, free-use, surfaces, lighting)
+                  ;; give the model grounding data for access/fee claims —
+                  ;; the same doc shape the prompt was benched with.
+                  (make-aggregate-overview sites {:free-use? true
+                                                  :surface-materials? true
+                                                  :lighting? true})))]
+    (-> (ai/generate-ptv-service-descriptions doc {:sub-category-id sub-category-id})
         :message
         :content)))
 

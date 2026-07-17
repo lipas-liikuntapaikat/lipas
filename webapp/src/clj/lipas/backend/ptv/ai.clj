@@ -3,6 +3,7 @@
             [clj-http.client :as client]
             [clojure.string :as str]
             [lipas.backend.config :as config]
+            [lipas.data.ptv-service-guidance :as service-guidance]
             [malli.json-schema :as json-schema]
             [malli.util :as mu]
             [taoensso.timbre :as log]))
@@ -777,12 +778,108 @@ Max 5000 chars/language.
 Source data:
 %s")
 
+(def generate-utp-service-descriptions-prompt-v6
+  "v5 + per-sub-category content guidance from DVV/PTV experts
+   (lipas.data.ptv-service-guidance). Three format slots: description
+   guidance, user-instruction guidance, source data JSON.
+
+   Grounding is two-tier: every claim must be either (a) supported by the
+   source data or (b) a generic type-level statement authorized by the
+   guidance. Municipality-specific claims without data support are banned;
+   conditional guidance items (\"Kerro, jos...\") become redirect phrasing
+   when the data is silent.
+
+   Benched 2026-07-17 against v5 with the v3 grader (12 cases):
+   guidance-coverage 2.9→5.0, grounding 3.8→4.5, content-accuracy 4.8→5.0."
+  "You are writing a PTV SERVICE (Palvelu) description — this describes a municipal
+sports service from the CITIZEN'S perspective. Individual facilities (ServiceLocations)
+have their own separate descriptions; this text describes the service as a whole.
+
+The source data contains aggregate statistics. Use this as BACKGROUND CONTEXT to
+inform your writing. Do NOT transcribe it as an inventory or enumerate counts per type.
+
+BEFORE WRITING, verify:
+1. GROUNDING — every sentence must be either
+   (a) supported by the source data below, or
+   (b) a generic statement about this facility type that holds anywhere,
+       as authorized by the guidance below.
+   This (b) is an explicit exception to the facts-only rule. NEVER write a
+   municipality-specific claim the source data does not support — no claims
+   about fees, booking systems, opening hours, supervision, equipment, or
+   maintenance unless the data confirms them.
+2. NO CONTACT INFO — no addresses, phone numbers, or URLs.
+3. NO EVALUATIVE ADJECTIVES — do not use monipuolinen, kattava, mångsidig, versatile,
+   lukuisia, numerous, or similar words that emphasize abundance.
+4. NO META-COMMENTARY — if data is missing, omit it silently.
+5. FREE-USE DATA — the \"free-use\" field uses a checkbox model:
+   - \"true\" count = confirmed free to use without reservation or fee
+   - \"unknown\" count = not confirmed (the checkbox was not checked, NOT necessarily paid)
+   Only state \"maksuton\" / \"free\" if a significant share is confirmed true.
+   If mostly unknown, do not make claims about cost — simply omit.
+
+TYPE-SPECIFIC CONTENT GUIDANCE
+The guidance below comes from PTV content experts. It defines what TOPICS the
+description and the user instruction should cover for this facility type, and
+in what order. Treat it as a topical outline, NOT as facts:
+- Facility types, equipment, and services mentioned in the guidance are
+  EXAMPLES that may not exist in this municipality. Mention them as concrete
+  facts only if the source data supports them.
+- Generic statements the guidance authorizes (e.g. who the service is for,
+  what activities the type enables) are allowed even though they are not in
+  the source data — phrase them so they describe the facility type in
+  general, not this municipality specifically.
+- Guidance items phrased conditionally (\"Kerro, jos...\") apply only when
+  the source data confirms the condition. When the data is silent about
+  reservations or fees, do not assert anything — instead direct the reader:
+  \"Tarkista varaustilanne ja mahdolliset maksut palvelupaikan tiedoista tai
+  kunnan asiointikanavista.\"
+
+--- GUIDANCE for the description (kuvaus) ---
+%s
+
+--- GUIDANCE for the user instruction (toimintaohje) ---
+%s
+
+OUTPUT:
+
+Summary: A complete sentence describing the service. Max 150 chars/language.
+- GOOD: \"Vantaalla voi uida kymmenellä yleisellä uimarannalla ja uimapaikalla.\"
+- GOOD: \"Tampereella on talvikaudella käytössä luistelukenttiä ja jääkiekkokaukaloita.\"
+- BAD:  \"Tampereella on 144 luistelukenttää, 10 kaukaloa, 7 tekojääkenttää...\" (inventory)
+- BAD:  \"Tampere tarjoaa jääurheilualueita.\" (municipality as subject)
+
+Description: 2–4 paragraphs, max 2000 chars/language, following the topics and
+order of the description guidance above. Use inessive case for the municipality
+(\"Oulussa\", \"Espoossa\"). You may mention approximate scale (\"useita\",
+\"kymmeniä\", \"yli sata\") but do NOT list exact counts per facility type.
+
+User instruction (Toimintaohje): 1–3 short paragraphs, max 5000 chars/language,
+following the topics of the user-instruction guidance above. Actionable and
+written for the citizen: how to access or start using the service. Do not
+include addresses or phone numbers. When reservations or fees are not
+confirmed by the data, use the redirect pattern instead of asserting.
+- GOOD: \"Liikuntapaikat ovat vapaasti käytettävissä. Tarkista aukioloajat ja yhteystiedot palvelupaikkojen kuvauksista.\"
+- GOOD: \"Uimahallin käyttö edellyttää pääsylipun ostamista. Tarkista aukioloajat ja hinnat palvelupaikan kuvauksesta.\"
+
+Source data:
+%s")
+
 (defn generate-ptv-service-descriptions
-  [doc]
-  (let [prompt-doc doc]
+  "Generate Service summary/description/user-instruction. When
+   `sub-category-id` has DVV content guidance, uses the v6 prompt with the
+   guidance injected; otherwise falls back to the v5 prompt (e.g. adopted
+   services without a sub-category mapping)."
+  [doc & [{:keys [sub-category-id]}]]
+  (let [guidance (get service-guidance/guidance sub-category-id)
+        prompt (if guidance
+                 (format generate-utp-service-descriptions-prompt-v6
+                         (:description guidance)
+                         (:user-instruction guidance)
+                         (json/encode doc))
+                 (format generate-utp-service-descriptions-prompt-v5 (json/encode doc)))]
     (gemini-complete gemini-config
                      ptv-system-instruction-v5
-                     (format generate-utp-service-descriptions-prompt-v5 (json/encode prompt-doc)))))
+                     prompt)))
 
 (defn get-models
   [{:keys [_api-key models-url]}]

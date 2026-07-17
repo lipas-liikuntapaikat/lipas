@@ -40,6 +40,7 @@
             [clojure.string :as str]
             [goog.string.format]
             [lipas.data.ptv :as ptv-data]
+            [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.types :as types]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.layouts :as layouts]
@@ -137,6 +138,26 @@
      {:tr tr
       :field-audit field-audit
       :current-content current-content}]))
+
+(defn service-writing-guidance
+  "Collapsed accordion showing the DVV per-sub-category content guidance
+   for a Service field. `field` is :description or :user-instruction.
+   Renders nothing when no guidance exists for the sub-category (e.g.
+   adopted services without a sub-category mapping). Guidance body is
+   Finnish-only by source."
+  [{:keys [tr sub-category-id field]}]
+  (when-let [text (get-in service-guidance/guidance [sub-category-id field])]
+    [:> Accordion {:disableGutters true :elevation 0 :variant "outlined"}
+     [:> AccordionSummary {:expandIcon (r/as-element [:> Icon "expand_more"])}
+      [:> Stack {:direction "row" :spacing 1 :align-items "center"}
+       [:> Icon {:fontSize "small" :color "action"} "help_outline"]
+       [:> Typography {:variant "body2"}
+        (case field
+          :description      (tr :ptv/writing-guidance-description)
+          :user-instruction (tr :ptv/writing-guidance-user-instruction))]]]
+     [:> AccordionDetails
+      [:> Typography {:variant "body2" :sx #js {:whiteSpace "pre-line"}}
+       text]]]))
 
 (def ptv-link-field ptv-components/ptv-link-field)
 
@@ -1249,6 +1270,8 @@
                         :error (> summary-len ptv-data/max-summary-length)}])
 
                     ;; Description
+                    [service-writing-guidance
+                     {:tr tr :sub-category-id sub-category-id :field :description}]
                     (let [desc-val (or (get-in m [:description @selected-tab]) "")
                           desc-len (count desc-val)]
                       [text-fields/text-field
@@ -1263,6 +1286,8 @@
                         :error (> desc-len ptv-data/max-description-length)}])
 
                     ;; User instruction / Toimintaohje
+                    [service-writing-guidance
+                     {:tr tr :sub-category-id sub-category-id :field :user-instruction}]
                     (let [ui-val (or (get-in m [:user-instruction @selected-tab]) "")
                           ui-len (count ui-val)]
                       [text-fields/text-field
@@ -1847,7 +1872,8 @@
   [{:keys [tr source-id service descriptions org-languages selected-tab]}]
   (let [summary-data (merge (:summary service) (:summary descriptions))
         description-data (merge (:description service) (:description descriptions))
-        user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))]
+        user-instruction-data (merge (:user-instruction service) (:user-instruction descriptions))
+        sub-category-id (ptv-data/parse-service-source-id source-id)]
     [:> Stack {:spacing 2}
 
      [controls/lang-selector
@@ -1874,6 +1900,8 @@
        :current-content (:summary service)}]
 
      ;; Description
+     [service-writing-guidance
+      {:tr tr :sub-category-id sub-category-id :field :description}]
      (let [v (or (get description-data @selected-tab) "")]
        [text-fields/text-field
         {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
@@ -1893,6 +1921,8 @@
        :current-content (:description service)}]
 
      ;; User instruction
+     [service-writing-guidance
+      {:tr tr :sub-category-id sub-category-id :field :user-instruction}]
      (let [v (or (get user-instruction-data @selected-tab) "")]
        [text-fields/text-field
         {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
