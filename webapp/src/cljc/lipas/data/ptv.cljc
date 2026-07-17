@@ -801,11 +801,29 @@
       (= "approved" status) :approved
       :else :changes-requested)))
 
+(def site-audited-field-keys
+  "The :ptv keys the site audit covers (see site-audit-fields). Also the
+   keys the UI snapshots as :ptv-persisted so whose-move states can be
+   derived from saved content instead of the live edit draft."
+  [:summary :description])
+
 (defn site-audit-fields
   "Auditable-fields spec for a sports site (see audit-bucket)."
   [site]
   [{:field :summary :content (get-in site [:ptv :summary]) :required? true}
    {:field :description :content (get-in site [:ptv :description]) :required? true}])
+
+(defn with-persisted-audit-content
+  "Site with its audited :ptv fields replaced by the :ptv-persisted
+   snapshot (last content loaded from / saved to the backend), when one
+   exists. Audit whose-move states must follow persisted content — the
+   PTV views mutate the cached :ptv on every keystroke, and deriving the
+   state from that draft would mark a field :fixed (or :stale) before
+   anything is saved."
+  [site]
+  (if-let [persisted (:ptv-persisted site)]
+    (update site :ptv #(merge (apply dissoc % site-audited-field-keys) persisted))
+    site))
 
 (defn service-audit-fields
   "Auditable-fields spec for a PTV Service (UI-shaped map with localized
@@ -1197,7 +1215,7 @@
      ;; UUID it can no longer resolve to a name.
      :publishing-status (-> site :ptv :publishing-status)
 
-     :audit-status (determine-audit-status site)}))
+     :audit-status (determine-audit-status (with-persisted-audit-content site))}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
   (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)

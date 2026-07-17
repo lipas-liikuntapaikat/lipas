@@ -246,9 +246,15 @@
                          ;; Preserve locally-modified :ptv data (e.g. AI-generated descriptions)
           merged-sites (reduce-kv
                          (fn [m lipas-id new-site]
-                           (let [existing (get existing-sites lipas-id)]
+                           (let [existing (get existing-sites lipas-id)
+                                 ;; Snapshot the audited fields as they are in the
+                                 ;; saved document (pre-merge), so audit whose-move
+                                 ;; states can be derived from persisted content
+                                 ;; instead of the live edit draft.
+                                 persisted (select-keys (:ptv new-site)
+                                                        ptv-data/site-audited-field-keys)]
                              (assoc m lipas-id
-                                    (cond-> new-site
+                                    (cond-> (assoc new-site :ptv-persisted persisted)
                                       (:ptv existing) (update :ptv #(merge (:ptv existing) %))))))
                          {}
                          new-sites)]
@@ -1324,7 +1330,12 @@
                  (update-in [:ptv :org org-id :data :service-channels] dissoc old-channel-id))
                               ;; Update the lipas TS also, it will be the same TS as PTV last-sync now
                (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :event-date] (:last-sync ptv))
-               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv))
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] ptv)
+                              ;; The sync persisted the draft — refresh the snapshot audit
+                              ;; whose-move states are derived from, so the audit status
+                              ;; (row bucket, feedback alert) moves only now, not on keystrokes.
+               (assoc-in [:ptv :org org-id :data :sports-sites lipas-id :ptv-persisted]
+                         (select-keys ptv ptv-data/site-audited-field-keys)))
        :fx (into (or (seq extra-fx) [])
                  [[:dispatch [:lipas.ui.events/set-active-notification
                               {:message (tr :notifications/save-success) :success? true}]]])})))

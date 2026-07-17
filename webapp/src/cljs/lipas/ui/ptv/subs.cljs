@@ -661,21 +661,28 @@
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
 
 (rf/reg-sub ::site-audit-field-display
-  ;; Audit field verdict + its whose-move state against the stored site
+  ;; Audit field verdict + its whose-move state against the persisted site
   ;; content, for the municipality-facing feedback alert: once the
-  ;; municipality has fixed a changes-requested text, the alert renders
-  ;; resolved instead of staying red (tester finding #4). Falls back to
-  ;; the sports-site document when the PTV org cache isn't loaded (site
-  ;; page outside the PTV dialog).
+  ;; municipality has fixed a changes-requested text and saved it via sync,
+  ;; the alert renders resolved instead of staying red (tester finding #4).
+  ;; The comparison must use the :ptv-persisted snapshot, not the cached
+  ;; :ptv the text fields mutate on every keystroke — otherwise a single
+  ;; keypress flips the alert to "fixed" before anything is saved. Falls
+  ;; back to the sports-site document when the PTV org cache isn't loaded
+  ;; (site page outside the PTV dialog).
   (fn [db [_ lipas-id field]]
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])
-          site-ptv (or (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv])
+          cached-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+          site-ptv (or (:ptv cached-site)
                        (let [latest (get-in db [:sports-sites lipas-id :latest])]
                          (get-in db [:sports-sites lipas-id :history latest :ptv])))
-          field-audit (get-in site-ptv [:audit field])]
+          field-audit (get-in site-ptv [:audit field])
+          content (if-let [persisted (:ptv-persisted cached-site)]
+                    (get persisted field)
+                    (get site-ptv field))]
       (when field-audit
         (assoc field-audit
-               :state (ptv-data/audit-field-state field-audit (get site-ptv field)))))))
+               :state (ptv-data/audit-field-state field-audit content))))))
 
 (rf/reg-sub ::site-audit-data-valid?
   (fn [[_ lipas-id]]
