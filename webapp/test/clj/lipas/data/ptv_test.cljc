@@ -923,3 +923,46 @@
                         (site {:timestamp "t" :auditor-id "a"
                                :summary (approved {:fi "s"})
                                :description (approved {:fi "d"})})))))))
+
+(deftest with-persisted-audit-content-test
+  (let [changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})
+        approved (fn [content] {:status "approved" :feedback "" :audited-content content})
+        audit {:timestamp "t" :auditor-id "a"
+               :summary (changes {:fi "s"})
+               :description (approved {:fi "d"})}
+        ;; The user has typed into the summary draft but nothing is saved yet.
+        site {:ptv {:summary {:fi "s (muokattu)"}
+                    :description {:fi "d"}
+                    :audit audit}
+              :ptv-persisted {:summary {:fi "s"}
+                              :description {:fi "d"}}}]
+
+    (testing "no snapshot -> site unchanged (falls back to live content)"
+      (let [site' (dissoc site :ptv-persisted)]
+        (is (= site' (sut/with-persisted-audit-content site')))))
+
+    (testing "audited fields come from the snapshot, other :ptv keys survive"
+      (is (= {:summary {:fi "s"}
+              :description {:fi "d"}
+              :audit audit}
+             (:ptv (sut/with-persisted-audit-content site)))))
+
+    (testing "unsaved keystrokes don't complete the municipality's move"
+      (is (= :changes-requested
+             (sut/determine-audit-status (sut/with-persisted-audit-content site))))
+      ;; ...but a persisted fix (snapshot refreshed on sync success) does.
+      (is (= :approved
+             (sut/determine-audit-status
+              (sut/with-persisted-audit-content
+                (assoc site :ptv-persisted {:summary {:fi "s (muokattu)"}
+                                            :description {:fi "d"}}))))))
+
+    (testing "unsaved keystrokes don't invalidate an approval either"
+      (let [site' (assoc-in site [:ptv :audit :summary] (approved {:fi "s"}))]
+        (is (= :approved
+               (sut/determine-audit-status (sut/with-persisted-audit-content site'))))))
+
+    (testing "a field absent from the snapshot is absent, not the draft value"
+      (let [site' (assoc site :ptv-persisted {:description {:fi "d"}})]
+        (is (nil? (get-in (sut/with-persisted-audit-content site')
+                          [:ptv :summary])))))))
