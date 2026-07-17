@@ -25,6 +25,7 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-int]
             [lipas.backend.search :as search]
+            [lipas.data.ptv-service-guidance :as guidance]
             [lipas.data.types :as types]
             [malli.json-schema :as json-schema]
             [malli.util :as mu]
@@ -637,7 +638,10 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
 ;;; ——— Service description eval ———————————————————————————————————
 
 (def service-test-cases
-  "Fixed set of {city-code, sub-category-id} pairs for reproducible service evals."
+  "Fixed set of {city-code, sub-category-id} pairs for reproducible service evals.
+   Includes large municipalities, guidance-rich sub-categories (1, 2), and
+   thin-data small municipalities (Utajärvi, Raahe, Liminka) to probe the
+   hallucination risk when source data is sparse."
   [{:city-code 91   :sub-category-id 1100 :label "Lähiliikuntapaikat / Helsinki"}
    {:city-code 564  :sub-category-id 4400 :label "Ladut / Oulu"}
    {:city-code 92   :sub-category-id 3200 :label "Uimapaikat / Vantaa"}
@@ -645,7 +649,11 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
    {:city-code 179  :sub-category-id 2100 :label "Sisäliikuntasalit / Jyväskylä"}
    {:city-code 49   :sub-category-id 1300 :label "Pallokentät / Espoo"}
    {:city-code 698  :sub-category-id 4400 :label "Ladut / Rovaniemi"}
-   {:city-code 405  :sub-category-id 3200 :label "Uimapaikat / Lappeenranta"}])
+   {:city-code 405  :sub-category-id 3200 :label "Uimapaikat / Lappeenranta"}
+   {:city-code 91   :sub-category-id 1    :label "Virkistysalueet / Helsinki"}
+   {:city-code 564  :sub-category-id 2    :label "Retkeilyn palvelut / Oulu"}
+   {:city-code 889  :sub-category-id 1300 :label "Pallokentät / Utajärvi"}
+   {:city-code 678  :sub-category-id 3100 :label "Uimahallit / Raahe"}])
 
 (defn- build-service-prompt-doc
   "Build a service aggregate overview doc for a test case."
@@ -661,6 +669,183 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
                                          :surface-materials? true
                                          :lighting?          true}))))
 
+;;; ——— Service prompt v6: type-specific guidance ———————————————————
+;;
+;; v6 = v5 + per-sub-category content guidance from lipas.data.ptv-service-guidance
+;; (DVV/PTV expert guidance on what topics a Service kuvaus/toimintaohje
+;; should cover). The grounding rule is two-tier: every claim must be either
+;; (a) supported by source data or (b) generic type-level as authorized by
+;; the guidance. Municipality-specific claims without data support are banned.
+
+;; The v6 template itself lives in production code:
+;; ai/generate-utp-service-descriptions-prompt-v6 (promoted after the
+;; 2026-07-17 bench: guidance-coverage 2.9->5.0, grounding 3.8->4.5).
+
+(defn v6-user-prompt
+  "Build the v6 user prompt for a service test case: injects the
+   sub-category's content guidance. Falls back to the v5 template when no
+   guidance exists for the sub-category."
+  [{:keys [sub-category-id]} prompt-doc]
+  (if-let [g (get guidance/guidance sub-category-id)]
+    (format ai/generate-utp-service-descriptions-prompt-v6
+            (:description g)
+            (:user-instruction g)
+            (json/encode prompt-doc))
+    (format ai/generate-utp-service-descriptions-prompt-v5
+            (json/encode prompt-doc))))
+
+;;; ——— Service grading v3: guidance coverage + grounding ———————————
+
+(def grounding-criterion-schema
+  [:map
+   [:grade :int]
+   [:feedback :string]
+   [:ungrounded-claims [:vector :string]]])
+
+(def criteria-keys-v3
+  [:tone :prohibited-elements :structure :language-quality
+   :character-limits :content-accuracy :summary-format
+   :guidance-coverage :grounding])
+
+(def service-grading-response-schema-v3
+  [:map
+   [:overall-grade :int]
+   [:overall-reasoning :string]
+   [:tone criterion-schema]
+   [:prohibited-elements criterion-schema]
+   [:structure criterion-schema]
+   [:language-quality criterion-schema]
+   [:character-limits criterion-schema]
+   [:content-accuracy criterion-schema]
+   [:summary-format criterion-schema]
+   [:guidance-coverage criterion-schema]
+   [:grounding grounding-criterion-schema]])
+
+(def ServiceGradingResponseV3
+  (json-schema/transform (mu/open-schema service-grading-response-schema-v3)))
+
+(def service-grader-config-v3
+  {:model          (:model llm/gemini-default-params)
+   :thinking-level "high"
+   :temperature    0.5
+   :top-p          0.90
+   :response-schema ServiceGradingResponseV3})
+
+(def service-grading-system-prompt-v3
+  "You are a strict quality evaluator for the Finnish Service Information Repository (Palvelutietovaranto / PTV). Grade AI-generated PTV SERVICE (Palvelu) descriptions against the official DVV content guidelines.
+
+A Service description describes a municipal sports service as a whole from the
+citizen's perspective. It has three parts: summary (max 150 chars), description
+(max 2000 chars), and user instruction / toimintaohje (max 5000 chars), each in
+Finnish, Swedish, and English.
+
+You are given: (1) the source data the texts were generated from, (2) official
+type-specific content guidance describing what topics the description and user
+instruction SHOULD cover for this facility type, and (3) the generated output.
+
+Grade each criterion on a 1-5 scale:
+  1 = Completely fails
+  2 = Major issues
+  3 = Acceptable with notable issues
+  4 = Good with minor issues
+  5 = Excellent
+
+CRITERIA:
+
+1. TONE
+   Neutral, administrative, unemotional, service-focused. No marketing language,
+   promotional expressions, or evaluative adjectives (\"monipuolinen\",
+   \"kattava\", \"versatile\", \"mångsidig\" count as evaluative).
+
+2. PROHIBITED ELEMENTS
+   Must NOT contain: tervetuloa/välkommen/welcome, nauttia/njuta/enjoy,
+   exclamation marks, marketing adjectives, emotional appeals.
+   Must NOT contain street addresses, phone numbers, or URLs.
+   Must NOT repeat the organization/municipality name as subject.
+   Must NOT enumerate exact facility counts per type (inventory style).
+
+3. STRUCTURE
+   Description: 2–4 paragraphs, one topic per paragraph, most important first.
+   User instruction: actionable, tells the citizen how to access the service.
+
+4. LANGUAGE QUALITY
+   Grammatically correct, readable, clear in ALL three languages (fi, se, en).
+   Finnish: correct place name inflection (Raahessa not Raaheessa), varied
+   vocabulary, formal terms, reader-friendly units. Swedish: correct gender
+   agreement (ett-ord vs en-ord).
+
+5. CHARACTER LIMITS
+   Summary ≤ 150 chars, description ≤ 2000 chars, user instruction ≤ 5000 chars
+   per language.
+
+6. CONTENT ACCURACY
+   Factual based on source data. No meta-commentary about missing data.
+   No unintentionally comical phrasing.
+
+7. SUMMARY FORMAT
+   A complete sentence (virke), NOT a comma-separated list. Not a copy of the
+   service name. No information absent from the description.
+
+8. GUIDANCE COVERAGE
+   Compare the description against the description guidance topics, and the
+   user instruction against the user-instruction guidance topics. Full marks
+   require every APPLICABLE topic to be covered in the right text. A topic
+   that cannot be covered without inventing facts counts as covered when the
+   text handles it with a redirect (\"tarkista ... palvelupaikan tiedoista\")
+   or omits it. Penalize topics that are missing entirely, covered in the
+   wrong text, or in a clearly different order than the guidance suggests.
+
+9. GROUNDING
+   Classify EVERY claim in the generated texts into exactly one of:
+   (a) data-grounded — directly supported by the source data
+   (b) generic-type-level — a statement about this facility type in general
+       that holds anywhere and asserts nothing specific about this
+       municipality (these are ALLOWED, the guidance authorizes them)
+   (c) ungrounded-specific — a municipality-specific claim the source data
+       does not support. Typical offenders: claims about fees, booking
+       systems or channels, opening hours, supervision, maintenance,
+       equipment, or specific facility features not present in the data.
+   Redirect phrasings (\"tarkista varaustilanne asiointikanavasta\") are NOT
+   ungrounded — they assert nothing.
+   Grade: 5 = zero ungrounded-specific claims; 4 = one borderline case;
+   3 = one clear violation; 2 = two; 1 = three or more.
+   List every ungrounded-specific claim VERBATIM in :ungrounded-claims
+   (empty array if none).
+
+Be strict. Cite exact problematic phrases. The goal is to compare prompt
+variants, so consistent grading matters more than generosity.")
+
+(def service-grading-user-prompt-v3
+  "Source data (aggregate facility information used to generate the texts):
+%s
+
+Type-specific content guidance (what topics SHOULD be covered for this facility type):
+%s
+
+Generated output to evaluate:
+%s
+
+Grade this output against all 9 criteria. Check especially:
+- GROUNDING: hunt for municipality-specific claims not supported by the source
+  data (fees, reservations, opening hours, equipment). List them verbatim.
+- GUIDANCE COVERAGE: which guidance topics are missing or misplaced?
+- Is the summary a complete sentence?
+- Does any text exceed its character limit?
+Be specific — cite exact phrases.")
+
+(defn v3-grader-prompt
+  "Build the v3 grader prompt: source data + sub-category guidance rubric +
+   generated output."
+  [{:keys [sub-category-id]} prompt-doc gen-content]
+  (let [g (get guidance/guidance sub-category-id)]
+    (format service-grading-user-prompt-v3
+            (json/encode prompt-doc)
+            (if g
+              (str "KUVAUS (description) should cover:\n" (:description g)
+                   "\n\nTOIMINTAOHJE (user instruction) should cover:\n" (:user-instruction g))
+              "No type-specific guidance available for this sub-category.")
+            (json/encode gen-content))))
+
 (defn run-service-eval
   "Run evaluation on service descriptions.
 
@@ -669,13 +854,18 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
      :batch-size              - how many to evaluate
      :system-prompt           - override generation system prompt
      :user-prompt-template    - override generation user prompt template
+     :build-user-prompt       - (fn [test-case prompt-doc] -> string); overrides
+                                :user-prompt-template when given
      :generator-config        - override generator model config
      :grader-config           - override grader model config
      :grader-system-prompt    - override grading system prompt
      :grader-user-prompt-template - override grading user prompt template
+     :build-grader-prompt     - (fn [test-case prompt-doc gen-content] -> string);
+                                overrides :grader-user-prompt-template when given
 
    Returns a vector of result maps."
   [search-component & {:keys [test-cases batch-size system-prompt user-prompt-template
+                              build-user-prompt build-grader-prompt
                               generator-config grader-config
                               grader-system-prompt grader-user-prompt-template]
                        :or   {test-cases              service-test-cases
@@ -703,16 +893,20 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
                       gen-result (gemini-call
                                    generator-config
                                    system-prompt
-                                   (format user-prompt-template (json/encode prompt-doc)))
+                                   (if build-user-prompt
+                                     (build-user-prompt tc prompt-doc)
+                                     (format user-prompt-template (json/encode prompt-doc))))
                       _ (printf "%.1fs, " (/ (:elapsed-ms gen-result) 1000.0))
                       _ (print "grading... ")
                       _ (flush)
                       grade-result (gemini-call
                                      grader-config
                                      grader-system-prompt
-                                     (format grader-user-prompt-template
-                                             (json/encode prompt-doc)
-                                             (json/encode (:content gen-result))))
+                                     (if build-grader-prompt
+                                       (build-grader-prompt tc prompt-doc (:content gen-result))
+                                       (format grader-user-prompt-template
+                                               (json/encode prompt-doc)
+                                               (json/encode (:content gen-result)))))
                       overall (-> grade-result :content :overall-grade)]
                   (printf "%.1fs — grade: %d/5\n" (/ (:elapsed-ms grade-result) 1000.0) (or overall 0))
                   (flush)
@@ -725,8 +919,9 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
               {:test-case tc :error (.getMessage e)})))))))
 
 (defn pp-service-result
-  "Pretty-print a single service eval result."
-  [result]
+  "Pretty-print a single service eval result. Pass :criteria to use a
+   different criteria set (default v3)."
+  [result & {:keys [criteria] :or {criteria criteria-keys-v3}}]
   (if (:error result)
     (printf "%s — ERROR: %s\n" (or (-> result :test-case :label) "?") (:error result))
     (let [gen   (:content (:generation result))
@@ -738,13 +933,46 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
       (println "Summary (SE):" (get-in gen [:summary :se]))
       (println "Summary (EN):" (get-in gen [:summary :en]))
       (println "\nDescription (FI):" (get-in gen [:description :fi]))
+      (println "\nUser instruction (FI):" (get-in gen [:user-instruction :fi]))
       (println "\n--- Grading ---")
       (printf "Overall: %d/5\n" (or (:overall-grade grade) 0))
       (println "Reasoning:" (:overall-reasoning grade))
-      (doseq [k criteria-keys-v2]
+      (doseq [k criteria]
         (when-let [c (get grade k)]
           (when (< (:grade c) 5)
-            (printf "  %s: %d/5 — %s\n" (name k) (:grade c) (:feedback c))))))))
+            (printf "  %s: %d/5 — %s\n" (name k) (:grade c) (:feedback c)))))
+      (when-let [claims (seq (get-in grade [:grounding :ungrounded-claims]))]
+        (println "  Ungrounded claims:")
+        (doseq [c claims]
+          (println "   ×" c))))))
+
+(defn compare-service-evals
+  "Print a per-criterion and per-case comparison of two service eval runs
+   (e.g. baseline v5 vs guidance-injected v6). Assumes both runs used the
+   same test cases in the same order."
+  [label-a results-a label-b results-b & {:keys [criteria] :or {criteria criteria-keys-v3}}]
+  (let [grade-of  (fn [r] (-> r :grading :content))
+        avg       (fn [xs] (when (seq xs) (/ (reduce + xs) (double (count xs)))))
+        crit-avg  (fn [results k]
+                    (avg (keep #(get-in (grade-of %) [k :grade]) (remove :error results))))]
+    (println "\n=== Service eval comparison ===")
+    (printf "%-24s %8s %8s\n" "criterion" label-a label-b)
+    (let [oa (avg (keep #(-> % grade-of :overall-grade) (remove :error results-a)))
+          ob (avg (keep #(-> % grade-of :overall-grade) (remove :error results-b)))]
+      (printf "%-24s %8.2f %8.2f\n" "overall" (or oa 0.0) (or ob 0.0)))
+    (doseq [k criteria]
+      (printf "%-24s %8.2f %8.2f\n" (name k)
+              (or (crit-avg results-a k) 0.0)
+              (or (crit-avg results-b k) 0.0)))
+    (println "\nPer case (overall):")
+    (doseq [[a b] (map vector results-a results-b)]
+      (printf "  %-32s %4s %4s%s\n"
+              (or (-> a :test-case :label) "?")
+              (str (or (-> a grade-of :overall-grade) "-"))
+              (str (or (-> b grade-of :overall-grade) "-"))
+              (let [claims (get-in (grade-of b) [:grounding :ungrounded-claims])]
+                (if (seq claims) (str "  ⚠ " (count claims) " ungrounded") ""))))
+    (println)))
 
 (comment
   ;; Quick start
@@ -759,4 +987,23 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
     (eval/run-eval (user/search)
                    {:lipas-ids      (take 3 ids)
                     :system-prompt  "Your improved prompt here..."}))
-  (eval/summary results2))
+  (eval/summary results2)
+
+  ;; Service description A/B: v5 baseline vs v6 (type-specific guidance).
+  ;; Both arms graded with the same v3 grader (guidance rubric + grounding).
+  (def v5-results
+    (eval/run-service-eval (user/search)
+      {:system-prompt        ai/ptv-system-instruction-v5
+       :user-prompt-template ai/generate-utp-service-descriptions-prompt-v5
+       :grader-config        eval/service-grader-config-v3
+       :grader-system-prompt eval/service-grading-system-prompt-v3
+       :build-grader-prompt  eval/v3-grader-prompt}))
+  (def v6-results
+    (eval/run-service-eval (user/search)
+      {:system-prompt        ai/ptv-system-instruction-v5
+       :build-user-prompt    eval/v6-user-prompt
+       :grader-config        eval/service-grader-config-v3
+       :grader-system-prompt eval/service-grading-system-prompt-v3
+       :build-grader-prompt  eval/v3-grader-prompt}))
+  (eval/compare-service-evals "v5" v5-results "v6" v6-results)
+  (eval/pp-service-result (first v6-results)))
