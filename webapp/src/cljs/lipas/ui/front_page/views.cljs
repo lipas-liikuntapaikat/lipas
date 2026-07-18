@@ -92,7 +92,9 @@
    {:label "Kuutoskaupunkivertailu" :href "https://kuutoskaupunkivertailu.fi/"}
    {:label "Toimio" :href "https://toimio.com/"}
    {:label "Olympiakomitea" :href "https://www.olympiakomitea.fi/"}
-   {:label "Sitowise" :href "https://www.sitowise.com/fi/teknologia-ja-design/tuoteratkaisut/routa-infran-kunnossapitojarjestelma"}])
+   {:label "Sitowise" :href "https://www.sitowise.com/fi/teknologia-ja-design/tuoteratkaisut/routa-infran-kunnossapitojarjestelma"}
+   {:label "Luontotori.fi" :href "https://luontotori.fi/"}
+   {:label "Trimble" :href "https://upa.trimble.com/fi-fi/tuotteet/julkishallinto"}])
 
 (defn ->logo [{:keys [img full-height?]}]
   [:> Grid {:item true :xs 12 :sm "auto" :md "auto" :lg "auto" :xl "auto"}
