@@ -54,8 +54,11 @@
   "devDependencies": {
     "buffer": "^6.0.3",
     "events": "^3.3.0",
-    "shadow-cljs": "^3.3.6",
+    "shadow-cljs": "^3.4.11",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5"
+  },
+  "overrides": {
+    "xmldom": "npm:@xmldom/xmldom@^0.9.10"
   }
 }
