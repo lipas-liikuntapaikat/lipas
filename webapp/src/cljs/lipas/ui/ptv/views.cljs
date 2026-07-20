@@ -512,7 +512,7 @@
        [text-fields/text-field
         {:disabled loading?
          :variant "outlined"
-         :rows 5
+         :rows 7
          :multiline true
          :on-change #(==> [::events/set-description site @selected-tab %])
          :label (tr :ptv/description)
@@ -1276,7 +1276,7 @@
                           desc-len (count desc-val)]
                       [text-fields/text-field
                        {:variant "outlined"
-                        :rows 5
+                        :rows 7
                         :multiline true
                         :on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
                         :label (tr :ptv/description)
@@ -1292,7 +1292,7 @@
                           ui-len (count ui-val)]
                       [text-fields/text-field
                        {:variant "outlined"
-                        :rows 3
+                        :rows 5
                         :multiline true
                         :on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
                         :label (tr :ptv/user-instruction)
@@ -1473,7 +1473,7 @@
           ;; Description
            [text-fields/text-field
             {:variant "outlined"
-             :rows 5
+             :rows 7
              :multiline true
              :on-change #(==> [::events/set-description site selected-tab %])
              :label (tr :ptv/description)
@@ -1906,7 +1906,7 @@
        [text-fields/text-field
         {:on-change #(==> [::events/set-service-candidate-description source-id @selected-tab %])
          :variant "outlined"
-         :rows 5
+         :rows 7
          :multiline true
          :label (tr :ptv/description)
          :value v
@@ -1927,7 +1927,7 @@
        [text-fields/text-field
         {:on-change #(==> [::events/set-service-candidate-user-instruction source-id @selected-tab %])
          :variant "outlined"
-         :rows 3
+         :rows 5
          :multiline true
          :label (tr :ptv/user-instruction)
          :value v
