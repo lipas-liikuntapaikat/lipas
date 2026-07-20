@@ -554,7 +554,7 @@
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
                 :fullWidth true
-                :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
+                :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
@@ -563,7 +563,7 @@
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                 :fullWidth true
-                :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
+                :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                 :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
                 :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))
