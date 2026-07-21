@@ -1,6 +1,8 @@
 # Agent Tooling
 
-How we work with AI coding agents (Claude Code et al.) on LIPAS — what we're building, why, and how to extend it.
+How we work with AI coding agents on LIPAS—what we're building, why, and how to
+extend it. `AGENTS.md` is the Codex entry point and `CLAUDE.md` is the Claude
+Code entry point; both should route to the same project-owned domain knowledge.
 
 This is meta-documentation: it explains the *approach*, not the codebase. For agent-shaped reference docs about LIPAS itself, see the rest of `webapp/docs/`.
 
@@ -65,8 +67,8 @@ Three loading tiers, ordered by cost:
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│  CLAUDE.md                                                         │
-│  Always loaded every session. Must stay tiny.                      │
+│  AGENTS.md / CLAUDE.md                                             │
+│  Native agent entry point. Must stay compact.                      │
 │  Vocabulary, invariants, REPL access, must-knows.                  │
 └────────────────────────────────────────────────────────────────────┘
                               │
@@ -147,9 +149,11 @@ When you reach for something that should already exist:
 
 A new skill (vs. a new scenario in lipas-e2e) when the task domain is genuinely separate. E.g. `lipas-ptv` if PTV scenarios grow enough to deserve their own SKILL.md and trip-wires. Don't fragment prematurely — a skill earns its split by having ≥3 scenarios and distinct trip-wires.
 
-### Updating CLAUDE.md
+### Updating an agent entry point
 
-CLAUDE.md is **always loaded**, so every line costs every conversation. Add to it only when:
+`AGENTS.md` and `CLAUDE.md` are loaded by their respective agents, so every line
+has a recurring context cost. Keep shared invariants aligned while adapting
+tool-specific instructions. Add to an entry point only when:
 
 - The fact is touched by ≥3 different task types (otherwise it goes in a skill).
 - It's a vocabulary item or invariant agents need to even *parse* the codebase.
@@ -194,7 +198,9 @@ The skill earns its place by repeatedly saving rediscovery cost. Entries that ne
 
 Honest open questions:
 
-- **Should we cull `webapp/docs/`?** Several files are LLM-generated marketing prose, generic LLM coaching, or leaked system prompts. They actively cost context. We've deferred the rewrite until the skill has carried real weight, so the cull is evidence-driven.
+- **Should we cull `webapp/docs/`?** Several files are long-form or generic and
+  may contain stale generated claims. Keep culling evidence-driven: repair
+  misleading facts first, then remove documents that have no demonstrated use.
 - **Should `.claude/skills/clj-surgeon/` and `.claude/skills/playwright-cli/` be checked in?** They're currently per-developer installs. Same answer applies: prove the value via use, then standardize.
 - **When does a tap>-based event bus pay off?** Probably only when we hit a class of bugs whose root cause is invisible to snapshots (e.g. event-ordering bugs). Until then, defer.
 - **How does this scale to non-LIPAS projects?** The architecture is generic; the skill content isn't. The interesting question is whether the *patterns* (skill router, catalog, scenarios, runtime tools ns) become a template.
@@ -205,4 +211,6 @@ The space is moving fast. What works in 2026 may not be what works in 2027. We'r
 
 - `webapp/.claude/skills/lipas-e2e/SKILL.md` — the first skill instance
 - `webapp/dev/lipas/e2e/tools.clj` — the runtime tooling layer
-- `webapp/CLAUDE.md` — the always-on tier
+- `webapp/docs/domain-map.md` — cross-agent source-of-truth router
+- `webapp/AGENTS.md` — Codex entry point
+- `webapp/CLAUDE.md` — Claude Code entry point

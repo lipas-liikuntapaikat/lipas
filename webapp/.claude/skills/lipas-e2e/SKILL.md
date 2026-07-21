@@ -116,6 +116,7 @@ Things that bite if forgotten:
 - **Permissions checked in core, not middleware.** The handler trusts `core/upsert-sports-site!` to throw `:no-permission`. Privilege key for sites: `:site/create-edit`.
 - **Auto-permission grant on create.** A user creating a new site with no city/type role automatically gets `:site-manager` for that lipas-id (`core/ensure-permission!`). So "permission denied" only fires on edits, not creates.
 - **Append-only ⇒ no real delete.** Soft delete = flip status to `out-of-service-permanently`. For a clean slate, `lipas.test-utils/prune-db!` (test DB only).
+- **Backgrounded Chrome tabs do not render.** Chrome suspends requestAnimationFrame in hidden tabs and Reagent schedules renders on rAF — so via `cljs-eval`, app-db advances but the DOM stays frozen at whatever was last painted (looks exactly like a crashed React tree; even snackbars won't appear). State-level assertions still work; for DOM/visual assertions use a fresh Playwright session (`playwright-cli open --config=.playwright/cli.config.json https://localhost`), never the user's tab.
 
 ## Don't load (low signal for e2e)
 

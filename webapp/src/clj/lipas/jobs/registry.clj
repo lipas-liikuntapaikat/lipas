@@ -127,6 +127,17 @@
     :priority 95
     :max-attempts 3}
 
+   "help-kb-sync"
+   {:doc "Sync help CMS + code-derived docs into the lipas_kb search index."
+    :payload-schema [:map]
+    :lane :slow
+    :timeout-min 15
+    :priority 60
+    :max-attempts 3
+    ;; Publishing several times in a row coalesces into one sync.
+    :dedup-key-fn (fn [_] "help-kb-sync")
+    :debounce-sec 10}
+
    ;; NOTE: webhook has no live producers. The enqueue sites are kept
    ;; commented out in lipas.backend.core until UTP (or someone else)
    ;; starts consuming webhooks again. The type stays registered so the

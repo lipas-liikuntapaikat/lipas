@@ -40,6 +40,10 @@
 
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
+   ;; Rollout: admin-only for dogfooding (admin holds every privilege
+   ;; automatically). GA for all registered users = add to `basic`.
+   :ai-assistant/use {:doc "Oikeus käyttää AI-avustajaa"}
+
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
 
    :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}

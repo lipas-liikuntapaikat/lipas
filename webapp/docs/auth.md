@@ -1,6 +1,7 @@
 # Authentication & Authorization
 
-> **Status**: Complete
+> **Status**: Source-audited; see the runtime-scope and token-revocation caveats
+> below.
 
 This document describes LIPAS authentication (verifying user identity) and authorization (determining what actions users can perform).
 
@@ -55,6 +56,12 @@ Frontend automatically refreshes tokens every 15 minutes via `/actions/refresh-l
 3. Issues a new token with updated permissions
 
 If refresh fails with 401/403, user is logged out.
+
+Ordinary authenticated requests authorize from the permissions embedded in the
+JWT; they do not reload the user from PostgreSQL. The 15-minute refresh updates
+permissions for a normal active browser session, but a copied/stale token can
+remain usable until its six-hour expiry because there is no server-side token
+revocation check.
 
 ## Login Methods
 
@@ -111,16 +118,22 @@ Privileges are namespaced keywords representing specific actions:
    :activity/view      {:doc "View activity data"}
    :activity/edit      {:doc "Edit activity data"}
    :loi/create-edit    {:doc "Create and edit other locations"}
+   :loi/view           {:doc "View other locations"}
    :floorball/view     {:doc "View floorball data"}
+   :floorball/view-extended {:doc "View extended floorball data"}
    :floorball/edit     {:doc "Edit floorball data"}
    :analysis-tool/use  {:doc "Use analysis tools"}
+   :analysis-tool/experimental {:doc "Use experimental analysis tools"}
    :users/manage       {:doc "Manage users (admin)"}
    :org/member         {:doc "Organization member"}
    :org/manage         {:doc "Manage organization"}
+   :org/admin          {:doc "Create organizations"}
+   :ai-assistant/use   {:doc "Use the AI assistant"}
    :ptv/manage         {:doc "Manage PTV integration"}
    :ptv/audit          {:doc "Audit PTV descriptions"}
    :help/manage        {:doc "Edit help content"}
    :jobs/manage        {:doc "Manage background jobs"}
+   :itrs/edit          {:doc "Edit ITRS classification data"}
    ...})
 ```
 
@@ -136,10 +149,14 @@ Roles are bundles of privileges with optional context constraints:
 | `:type-manager` | Basic editing | `:type-code` (required) |
 | `:site-manager` | Basic editing | `:lipas-id` (required) |
 | `:activities-manager` | Activity editing | `:activity` (required) |
+| `:itrs-assessor` | ITRS editing | Optional city/type scopes |
 | `:floorball-manager` | Floorball editing | `:type-code` (optional) |
 | `:analysis-user` | Analysis tools | None |
+| `:analysis-experimental-user` | Standard + experimental analysis | None |
 | `:ptv-manager` | PTV management | `:city-code` (required) |
+| `:ptv-auditor` | PTV audit | None |
 | `:org-admin` | Organization management | `:org-id` (required) |
+| `:org-user` | Organization membership | `:org-id` (required) |
 
 **Basic privileges** (shared by manager roles):
 ```clojure
@@ -190,6 +207,14 @@ A role matches a context when **all** its context constraints match:
 - Missing constraint in role = always matches
 - `::roles/any` in context = matches any value (for "can user do this anywhere?" checks)
 - Set intersection for multi-value contexts (e.g., activities)
+
+Important: `check-privilege` interprets only the scope keys physically present
+on the stored role assignment. It does not consult the role definition's
+`:required-context-keys` at runtime. A missing scope therefore becomes global
+for that dimension. Permission schemas are expected to prevent malformed
+assignments, but current PTV/organization schema optionality does not fully match
+the role table. Treat permission-map validation as a security boundary and add
+focused tests when changing it.
 
 ```clojure
 ;; Check if user can edit a specific site
@@ -277,7 +302,11 @@ The `check-privilege` function checks for overrides first:
 
 ## Auto-Permission Assignment
 
-When a user creates a new sports site without existing permission to it, they automatically receive `:site-manager` role for that site:
+When a user creates a new sports site without existing edit permission, they
+normally receive a `:site-manager` role for that site. Planning sites created via
+the analysis-tool permission path intentionally skip this assignment. Draft and
+new-site permission gates also differ from existing published-site edits; verify
+all three cases when changing creation authorization.
 
 ```clojure
 ;; src/clj/lipas/backend/core.clj
@@ -297,16 +326,19 @@ For search queries, permissions can be applied as ES filters:
 ;; src/cljc/lipas/roles.cljc
 (defn wrap-es-query-site-has-privilege
   [query user required-privilege]
-  ;; Wraps query to only return sites user can edit
-  ;; Admin gets no filter; others get city/type/lipas-id filters
+  ;; UI search helper using city/type/lipas-id filters
   ...)
 ```
 
-This is used for "show only sites I can edit" search functionality.
+This is used for "show only sites I can edit" search functionality. It is not an
+authorization boundary: when the user has no affecting roles, the helper returns
+the original query unchanged, relying on the UI not to expose the filter. It also
+does not model activity or organization scopes. Enforce authority separately.
 
 ## API Authentication
 
-All authenticated API endpoints use JWT token authentication:
+After HTTP Basic login, ordinary authenticated API requests use JWT token
+authentication:
 
 ```
 GET /api/endpoint
@@ -317,9 +349,10 @@ The `token-auth` middleware extracts and validates the token, populating `:ident
 
 ## Security Considerations
 
-1. **Password hashing**: Uses buddy-hashers (bcrypt by default)
+1. **Password hashing**: Uses the configured/default buddy-hashers algorithm
 2. **Token signing**: HS512 with environment-configured secret
 3. **Token expiration**: 6 hours default, checked on every request
-4. **Refresh mechanism**: Prevents session hijacking with regular re-validation
+4. **Refresh mechanism**: Refreshes DB-backed permissions for the active UI;
+   it is not token revocation
 5. **Permission checks**: Applied at both route and business logic levels
 6. **No token storage on backend**: Stateless authentication
