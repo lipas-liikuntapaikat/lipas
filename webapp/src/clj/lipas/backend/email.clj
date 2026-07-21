@@ -28,11 +28,7 @@
     :reminder
     {:subject "LIPAS-muistutus"
      :html    (safe-slurp "email_templates/reminder_fi.html")
-     :text    (safe-slurp "email_templates/reminder_fi.txt")}
-    :ptv-audit-complete
-    {:subject "PTV-auditointi valmistunut"
-     :html    (safe-slurp "email_templates/ptv_audit_complete_fi.html")
-     :text    (safe-slurp "email_templates/ptv_audit_complete_fi.txt")}}})
+     :text    (safe-slurp "email_templates/reminder_fi.txt")}}})
 
 (defn send*!
   "Thin wrapper for postal."
@@ -196,30 +192,107 @@
                                 (str/replace "{{link}}" link)
                                 (str/replace "{{valid-days}}" (str valid-days)))}))
 
-(defn send-ptv-audit-complete-email!
-  [emailer to {:keys [org-name site-count summary-approved summary-changes desc-approved desc-changes]}]
-  (.send! emailer {:subject (-> templates :fi :ptv-audit-complete :subject)
-                   :to      to
-                   :plain   (-> templates
-                                :fi
-                                :ptv-audit-complete
-                                :text
-                                (str/replace "{{org-name}}" org-name)
-                                (str/replace "{{site-count}}" site-count)
-                                (str/replace "{{summary-approved}}" summary-approved)
-                                (str/replace "{{summary-changes}}" summary-changes)
-                                (str/replace "{{desc-approved}}" desc-approved)
-                                (str/replace "{{desc-changes}}" desc-changes))
-                   :html    (-> templates
-                                :fi
-                                :ptv-audit-complete
-                                :html
-                                (str/replace "{{org-name}}" org-name)
-                                (str/replace "{{site-count}}" site-count)
-                                (str/replace "{{summary-approved}}" summary-approved)
-                                (str/replace "{{summary-changes}}" summary-changes)
-                                (str/replace "{{desc-approved}}" desc-approved)
-                                (str/replace "{{desc-changes}}" desc-changes))}))
+;; --- PTV katselmointi notification -------------------------------------------
+;; Sent to a municipality's PTV managers after DVV has reviewed
+;; ("katselmoinut") their PTV texts. Contents are derived server-side from
+;; the current audit sample (lipas.backend.ptv.core) — the email leads with
+;; the items that await the municipality's fixes; when there are none, a
+;; short all-approved note goes out instead. Finnish only, like the DVV
+;; process itself. Copy lives here in code (org-membership emails set the
+;; precedent) because the two variants share no useful template skeleton.
+
+(def ^:private ptv-audit-field-names-fi
+  {:summary "Tiivistelmä"
+   :description "Kuvaus"
+   :user-instruction "Toimintaohje"})
+
+(def ^:private ptv-audit-section-copy
+  {:sites {:subject-suffix "(liikuntapaikat)"
+           :items-nom "kohteet"
+           :items-part "kohdetta"
+           :tab "liikuntapaikat"}
+   :services {:subject-suffix "(palvelut)"
+              :items-nom "palvelut"
+              :items-part "palvelua"
+              :tab "palvelut"}})
+
+(defn- escape-html [s]
+  (-> (str s)
+      (str/replace "&" "&amp;")
+      (str/replace "<" "&lt;")
+      (str/replace ">" "&gt;")))
+
+(defn ptv-audit-notification-message
+  "Builds the katselmointi notification email as {:subject :plain :html}.
+   `section` is :sites or :services; `action-items` ({:name .. :fields [..]})
+   and `approved-count` come from lipas.data.ptv/audit-notification-summary."
+  [{:keys [org-name section action-items approved-count]}]
+  (let [{:keys [subject-suffix items-nom items-part tab]}
+        (get ptv-audit-section-copy section)
+
+        fixes? (boolean (seq action-items))
+        item-line (fn [{:keys [name fields]}]
+                    (str name " — "
+                         (str/join ", " (keep ptv-audit-field-names-fi fields))))
+        intro (str "DVV (Digi- ja väestötietovirasto) on katselmoinut organisaationne "
+                   org-name " PTV-tekstejä " subject-suffix ".")
+        fixes-heading (str "Seuraavat " items-nom " vaativat korjauksia ("
+                           (count action-items) " kpl):")
+        approved-line (when (pos? approved-count)
+                        (str "Lisäksi " approved-count " " items-part
+                             " on katselmoitu ilman muutospyyntöjä."))
+        all-approved (str "Katselmoinnissa ei havaittu korjattavaa: "
+                          approved-count " " items-part
+                          " on katselmoitu ja hyväksytty.")
+        navigate (if fixes?
+                   (str "Kirjaudu LIPAS-järjestelmään ja avaa PTV-näkymän " tab
+                        "-välilehti nähdäksesi katselmoijan palautteen ja"
+                        " tehdäksesi tarvittavat korjaukset:")
+                   (str "Voit tarkastella katselmoituja tekstejä LIPAS-järjestelmän"
+                        " PTV-näkymän " tab "-välilehdellä:"))]
+    {:subject (str (if fixes?
+                     "PTV-katselmointi: korjauspyyntöjä "
+                     "PTV-katselmointi valmis ")
+                   subject-suffix)
+     :plain (str/join "\n\n"
+                      (remove nil?
+                              ["Hyvä LIPAS-käyttäjä!"
+                               intro
+                               (when fixes?
+                                 (str fixes-heading "\n\n"
+                                      (str/join "\n" (map #(str "  - " (item-line %))
+                                                          action-items))))
+                               (if fixes? approved-line all-approved)
+                               (str navigate "\nhttps://lipas.fi")
+                               "Jos sinulla on kysyttävää, ota yhteyttä."
+                               "Terveisin,\nLipas-järjestelmä"
+                               (str "Jyväskylän yliopisto:\n"
+                                    "Tapani Laakso, LIPAS-projekti, puh. 0400 247 980\n"
+                                    "s-posti: lipasinfo@jyu.fi")]))
+     :html (str "<html><body>"
+                "<p>Hyvä LIPAS-käyttäjä!</p>"
+                "<p>" (escape-html intro) "</p>"
+                (when fixes?
+                  (str "<p><b>" (escape-html fixes-heading) "</b></p>"
+                       "<ul>"
+                       (apply str (map #(str "<li>" (escape-html (item-line %)) "</li>")
+                                       action-items))
+                       "</ul>"))
+                (if fixes?
+                  (some->> approved-line escape-html (format "<p>%s</p>"))
+                  (str "<p>" (escape-html all-approved) "</p>"))
+                "<p>" (escape-html navigate) "<br>"
+                "<a href=\"https://lipas.fi\">https://lipas.fi</a></p>"
+                "<p>Jos sinulla on kysyttävää, ota yhteyttä.</p>"
+                "<p>Terveisin,<br>Lipas-järjestelmä</p>"
+                "<p>Jyväskylän yliopisto:<br>"
+                "Tapani Laakso, LIPAS-projekti, puh. 0400 247 980<br>"
+                "s-posti: lipasinfo@jyu.fi</p>"
+                "</body></html>")}))
+
+(defn send-ptv-audit-notification-email!
+  [emailer to params]
+  (.send! emailer (assoc (ptv-audit-notification-message params) :to to)))
 
 (defn send-feedback-email!
   [emailer to feedback]

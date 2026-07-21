@@ -1,7 +1,10 @@
 (ns lipas.backend.ptv-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures] :as t]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures] :as t]
             [clojure.pprint :refer [pprint]]
             [lipas.backend.core :as core]
+            [lipas.backend.db.ptv-service :as ptv-service-db]
+            [lipas.backend.email :as email]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
             [lipas.backend.ptv.core :as ptv-core]
@@ -31,58 +34,216 @@
     (backend-org/create-org (test-db) org)
     org))
 
-(deftest send-audit-notification-test
-  (t/testing "Sends notification to PTV managers using provided stats"
-    (let [;; Setup: org, users
-          org (create-org! {:name "Test Org"
-                            :ptv-data {:org-id "test-ptv-org"
-                                       :city-codes [91]}})
-          org-id (:id org)
-          ptv-manager (tu/gen-user {:db? true
-                                    :db-component (test-db)
-                                    :permissions {:roles [{:role :ptv-manager
-                                                           :city-code [91]
-                                                           :org-id [(str org-id)]}]}})
-          ;; PTV managers of an org are its members who hold :ptv/manage;
-          ;; membership now lives in the org document.
-          _ (backend-org/add-member! (test-db) org-id (:id ptv-manager) {:roles []} nil)
-          auditor (tu/gen-user {:db? true :admin? true
-                                :db-component (test-db)
-                                :permissions {:roles [{:role :ptv-auditor}]}})
-          token (jwt/create-token auditor)
+;;; Audit notification ;;;
+;;
+;; The katselmointi notification's contents are derived server-side from
+;; the current audit sample: items in the :waiting-fixes bucket become the
+;; email's action list, fully-approved items only a count. Items mid-audit
+;; or already fixed (awaiting DVV re-review) appear in neither.
 
-          stats {:total-sites 5
-                 :summary {:approved 3
-                           :changes-requested 2}
-                 :description {:approved 4
-                               :changes-requested 1}}]
+(defn- seed-ptv-site!
+  "Seeds + indexes an active city-91 site with PTV texts (:fi \"Tiivistelmä\"
+   / \"Kuvaus\") and the given audit map."
+  [user lipas-id site-name audit]
+  (let [site {:lipas-id lipas-id
+              :status "active"
+              :event-date "2026-01-01T00:00:00.000Z"
+              :name site-name
+              :owner "city"
+              :admin "city-sports"
+              :type {:type-code 1210}
+              :location {:city {:city-code 91}
+                         :address "Test Street 1"
+                         :postal-code "00100"
+                         :postal-office "Helsinki"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point"
+                                                             :coordinates [24.9384 60.1695]}}]}}
+              :ptv (cond-> {:org-id "test-ptv-org"
+                            :summary {:fi "Tiivistelmä"}
+                            :description {:fi "Kuvaus"}}
+                     audit (assoc :audit audit))}]
+    (core/upsert-sports-site!* (test-db) user site)
+    (core/index! (test-search) site true)
+    site))
 
-      ;; Test
+(defn- site-audit
+  "Audit map whose :description is approved-and-unchanged; :summary verdict
+   and its audited snapshot come from the args, so the caller picks the
+   bucket: audited-summary \"Tiivistelmä\" = unchanged content."
+  [summary-status audited-summary]
+  {:timestamp "2026-07-01T00:00:00.000Z"
+   :auditor-id "auditor-1"
+   :summary {:status summary-status
+             :feedback "Palaute"
+             :audited-content {:fi audited-summary}}
+   :description {:status "approved"
+                 :feedback ""
+                 :audited-content {:fi "Kuvaus"}}})
+
+(deftest audit-notification-flow-test
+  (let [org (create-org! {:name "Test Org"
+                          :ptv-data {:org-id "test-ptv-org"
+                                     :city-codes [91]}})
+        org-id (:id org)
+        ptv-manager (tu/gen-user {:db? true
+                                  :db-component (test-db)
+                                  :permissions {:roles [{:role :ptv-manager
+                                                         :city-code [91]
+                                                         :org-id [(str org-id)]}]}})
+        ;; PTV managers of an org are its members who hold :ptv/manage;
+        ;; membership now lives in the org document.
+        _ (backend-org/add-member! (test-db) org-id (:id ptv-manager) {:roles []} nil)
+        auditor (tu/gen-user {:db? true :admin? true
+                              :db-component (test-db)
+                              :permissions {:roles [{:role :ptv-auditor}]}})
+        token (jwt/create-token auditor)]
+
+    ;; One site per whose-move state:
+    (seed-ptv-site! auditor 9990001 "Korjattava halli"
+                    (site-audit "changes-requested" "Tiivistelmä"))
+    (seed-ptv-site! auditor 9990002 "Hyväksytty halli"
+                    (site-audit "approved" "Tiivistelmä"))
+    ;; changes requested, but content edited since = municipality already
+    ;; fixed it — must appear in neither number
+    (seed-ptv-site! auditor 9990003 "Korjattu halli"
+                    (site-audit "changes-requested" "Vanha tiivistelmä"))
+    ;; verdict missing on :description = audit still in progress
+    (seed-ptv-site! auditor 9990004 "Kesken halli"
+                    (dissoc (site-audit "changes-requested" "Tiivistelmä")
+                            :description))
+    (seed-ptv-site! auditor 9990005 "Auditoimaton halli" nil)
+
+    (t/testing "Payload: only the waiting-fixes site is actionable, only the approved one counts as passed"
+      (is (= {:action-items [{:lipas-id 9990001
+                              :name "Korjattava halli"
+                              :fields [:summary]}]
+              :approved-count 1}
+             (ptv-core/site-audit-notification-data (test-db) (test-search) org-id))))
+
+    (t/testing "Email leads with the action list and names no already-fixed items"
+      (let [emailer (tu/create-test-emailer)
+            result (ptv-core/send-audit-notification! (test-db) (test-search) emailer org-id)
+            [msg :as sent] @(:sent-emails emailer)]
+        (is (= 1 (:sent result)))
+        (is (= [(:email ptv-manager)] (:recipients result)))
+        (is (= 1 (count sent)))
+        (is (= (:email ptv-manager) (:to msg)))
+        (is (str/includes? (:subject msg) "korjauspyyntöjä"))
+        (is (str/includes? (:plain msg) "Korjattava halli — Tiivistelmä"))
+        (is (str/includes? (:plain msg) "Lisäksi 1 kohdetta on katselmoitu ilman muutospyyntöjä."))
+        (is (not (str/includes? (:plain msg) "Korjattu halli")))
+        (is (not (str/includes? (:plain msg) "Kesken halli")))))
+
+    (t/testing "Preview endpoint returns recipients + the derived contents"
+      (let [resp ((test-app) (-> (mock/request :post "/api/actions/get-ptv-audit-notification-preview")
+                                 (mock/json-body {:org-id org-id :section "sites"})
+                                 (tu/token-header token)))
+            body (<-json (:body resp))]
+        (is (= 200 (:status resp)))
+        (is (= [(:email ptv-manager)] (:recipients body)))
+        (is (= [{:lipas-id 9990001 :name "Korjattava halli" :fields ["summary"]}]
+               (:action-items body)))
+        (is (= 1 (:approved-count body)))))
+
+    (t/testing "Send endpoint takes only the org — contents are derived server-side"
       (let [resp ((test-app) (-> (mock/request :post "/api/actions/send-audit-notification")
-                                 (mock/json-body {:org-id org-id :stats stats})
+                                 (mock/json-body {:org-id org-id})
                                  (tu/token-header token)))
             body (<-json (:body resp))]
         (is (= 200 (:status resp)))
         (is (= 1 (:sent body)))
-        (is (= (:email ptv-manager) (first (:recipients body)))))))
+        (is (= (:email ptv-manager) (first (:recipients body))))))
 
-  (t/testing "Requires :ptv/audit privilege"
-    (let [org (create-org! {:name "Test Org 2"
-                            :ptv-data {:org-id "test-ptv-org-2"
-                                       :city-codes [91]}})
-          org-id (:id org)
-          regular-user (tu/gen-user {:db? true :db-component (test-db)})
-          token (jwt/create-token regular-user)
-          stats {:total-sites 0
-                 :summary {:approved 0
-                           :changes-requested 0}
-                 :description {:approved 0
-                               :changes-requested 0}}]
+    (t/testing "Unknown org gives 404"
+      (doseq [[uri body] {"/api/actions/get-ptv-audit-notification-preview"
+                          {:org-id (java.util.UUID/randomUUID) :section "sites"}
+                          "/api/actions/send-audit-notification"
+                          {:org-id (java.util.UUID/randomUUID)}}]
+        (let [resp ((test-app) (-> (mock/request :post uri)
+                                   (mock/json-body body)
+                                   (tu/token-header token)))]
+          (is (= 404 (:status resp)) uri))))
 
-      (let [resp ((test-app) (-> (mock/request :post "/api/actions/send-audit-notification")
-                                 (mock/json-body {:org-id org-id :stats stats})
-                                 (tu/token-header token)))]
-        (is (= 403 (:status resp)))))))
+    (t/testing "Requires :ptv/audit privilege"
+      (let [regular-token (jwt/create-token (tu/gen-user {:db? true :db-component (test-db)}))]
+        (doseq [[uri body] {"/api/actions/get-ptv-audit-notification-preview"
+                            {:org-id org-id :section "sites"}
+                            "/api/actions/send-audit-notification"
+                            {:org-id org-id}
+                            "/api/actions/send-service-audit-notification"
+                            {:org-id org-id}}]
+          (let [resp ((test-app) (-> (mock/request :post uri)
+                                     (mock/json-body body)
+                                     (tu/token-header regular-token)))]
+            (is (= 403 (:status resp)) uri)))))))
+
+(deftest service-audit-notification-data-test
+  (let [org (create-org! {:name "Palvelu Org"
+                          :ptv-data {:org-id "test-ptv-org"
+                                     :city-codes [91]}})
+        author (tu/gen-user {:db? true :db-component (test-db)})
+        fixes-id (java.util.UUID/randomUUID)
+        ok-id (java.util.UUID/randomUUID)
+        fixed-id (java.util.UUID/randomUUID)
+        foreign-id (java.util.UUID/randomUUID)
+        mk-svc (fn [id svc-name]
+                 {:id (str id)
+                  :sourceId (str "lipas-" id)
+                  :serviceNames [{:type "Name" :language "fi" :value svc-name}]
+                  :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                        {:type "Description" :language "fi" :value "Kuvaus"}]})
+        seed-audit! (fn [svc-id audit]
+                      (ptv-service-db/insert-service-rev!
+                       (test-db)
+                       {:org-id (:id org)
+                        :source-id (str "lipas-" svc-id)
+                        :service-id svc-id
+                        :status "active"
+                        :author-id (:id author)
+                        :event-date (utils/timestamp)
+                        :document {:source-id (str "lipas-" svc-id)
+                                   :service-id (str svc-id)
+                                   :audit audit}}))]
+    (seed-audit! fixes-id (site-audit "changes-requested" "Tiivistelmä"))
+    (seed-audit! ok-id (site-audit "approved" "Tiivistelmä"))
+    (seed-audit! fixed-id (site-audit "changes-requested" "Vanha tiivistelmä"))
+
+    (with-redefs [ptv-core/fetch-ptv-services
+                  (fn [_ _] {:itemList [(mk-svc fixes-id "Korjattava palvelu")
+                                        (mk-svc ok-id "Hyväksytty palvelu")
+                                        (mk-svc fixed-id "Korjattu palvelu")
+                                        ;; not LIPAS-managed -> not in the sample
+                                        (assoc (mk-svc foreign-id "Vieras palvelu")
+                                               :sourceId "muu-lahde")]})]
+      (is (= {:action-items [{:service-id (str fixes-id)
+                              :name "Korjattava palvelu"
+                              :fields [:summary]}]
+              :approved-count 1}
+             (ptv-core/service-audit-notification-data (test-db) nil (:id org)))))))
+
+(deftest ptv-audit-notification-message-test
+  (let [fixes (email/ptv-audit-notification-message
+               {:org-name "Testilä"
+                :section :sites
+                :action-items [{:name "Halli" :fields [:summary :description]}]
+                :approved-count 2})
+        all-ok (email/ptv-audit-notification-message
+                {:org-name "Testilä"
+                 :section :services
+                 :action-items []
+                 :approved-count 3})]
+    (t/testing "Change-request variant"
+      (is (str/includes? (:subject fixes) "korjauspyyntöjä"))
+      (is (str/includes? (:plain fixes) "Seuraavat kohteet vaativat korjauksia (1 kpl):"))
+      (is (str/includes? (:plain fixes) "Halli — Tiivistelmä, Kuvaus"))
+      (is (str/includes? (:plain fixes) "Lisäksi 2 kohdetta on katselmoitu ilman muutospyyntöjä."))
+      (is (str/includes? (:html fixes) "<li>Halli — Tiivistelmä, Kuvaus</li>")))
+    (t/testing "All-approved variant"
+      (is (str/includes? (:subject all-ok) "valmis"))
+      (is (str/includes? (:plain all-ok) "3 palvelua on katselmoitu ja hyväksytty"))
+      (is (not (str/includes? (:plain all-ok) "vaativat korjauksia"))))))
 
 (deftest get-ptv-managers-catalog-grant-test
   (t/testing "Catalog-granted ptv-manager is included alongside direct-role managers (F10)"
@@ -371,6 +532,42 @@
           :publishing-status "Published" :service-ids [] :sync-enabled true
           :languages ["fi"] :summary {:fi "summary"} :description {:fi "description"}}
          extra))
+
+(deftest upsert-ptv-service-location-preserves-audit-test
+  ;; :audit is server-owned and deliberately not in persisted-ptv-keys — a
+  ;; sync (e.g. the municipality fixing a changes-requested text) must not
+  ;; wipe the auditor's verdicts. Regression: tester observed an audited
+  ;; site returning to "unaudited" after a fix + sync, because the rebuilt
+  ;; :ptv meta dropped :audit.
+  (let [audit {:timestamp "2026-07-01T00:00:00.000Z"
+               :auditor-id "auditor-1"
+               :summary {:status "changes-requested"
+                         :feedback "Tarkenna tekstiä"
+                         :audited-content {:fi "vanha tiivistelmä"}}}
+        site {:lipas-id 12345 :name "Auditoitu halli" :status "active"
+              :type {:type-code 1210}
+              :location {:city {:city-code 425} :address "Katu 1" :postal-code "91900"
+                         :geometries {:type "FeatureCollection"
+                                      :features [{:type "Feature"
+                                                  :geometry {:type "Point" :coordinates [25.0 65.0]}}]}}
+              :search-meta {:location {:wgs84-point [25.0 65.0]}}
+              ;; The DB copy of the site carries the audit...
+              :ptv (sent-ptv {:audit audit})}
+        published-resp {:id "chan-1" :sourceId "src-1" :publishingStatus "Published"
+                        :services [] :serviceChannelNames [] :serviceChannelDescriptions []}]
+    (with-redefs [core/enrich identity
+                  ptv-integ/get-org-ptv-config-with-fallback (fn [_ _] {:supported-languages ["fi"]})
+                  ptv-integ/get-org-service-channel (fn [_ _ _] published-resp)
+                  ptv-integ/update-service-location (fn [_ _ _] published-resp)
+                  ptv-integ/update-service-connections (fn [_ _ _ _] nil)]
+      (let [[_ new-ptv-data]
+            (ptv-core/upsert-ptv-service-location!*
+              {} {:org-id "org-x"
+                  :site site
+                  ;; ...while the client's sync payload does not.
+                  :ptv (dissoc (:ptv site) :audit)})]
+        (is (= audit (:audit new-ptv-data))
+            "Auditor's verdicts survive the sync")))))
 
 (deftest to-archive?-decision-test
   (let [sent (fn [status & [ptv-extra]]
