@@ -54,7 +54,7 @@
   (let [anchor (<== [::subs/account-menu-anchor])
         close #(==> [:lipas.ui.events/show-account-menu nil])
         admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
-        org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
+        org-mgmt-visible? @(rf/subscribe [:lipas.ui.org.subs/can-access-org-management?])]
 
     [:> Menu {:anchor-el anchor
               :open (some? anchor)
@@ -87,8 +87,7 @@
 
      ;; Organizations
      (when (and logged-in?
-                (or admin?
-                    org?))
+                org-mgmt-visible?)
        [:> MenuItem {:id "account-menu-item-organizations"
                      :on-click (comp close #(navigate! "/organisaatiot"))}
         [:> ListItemIcon

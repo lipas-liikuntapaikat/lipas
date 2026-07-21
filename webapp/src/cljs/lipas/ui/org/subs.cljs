@@ -79,6 +79,15 @@
   (fn [user _]
     (roles/check-privilege user {} :users/manage)))
 
+;; Rollout gate for the org-management UI as a whole (nav links, profile
+;; page, routes) — distinct from the in-app capability gating in ::can?
+;; below. Rollout sequence: 1) admin-only silent release (current), 2) opened
+;; to a pilot set of orgs, 3) GA to all org members.
+(rf/reg-sub ::can-access-org-management?
+  :<- [::is-lipas-admin]
+  (fn [admin? _]
+    admin?))
+
 (rf/reg-sub ::is-org-admin?
   (fn [[_ org-id] _]
     ;; :org-id role-context must be a set (set-intersection matcher, like :activity)

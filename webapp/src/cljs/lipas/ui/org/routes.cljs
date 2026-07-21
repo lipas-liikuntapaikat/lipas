@@ -8,7 +8,7 @@
    {:name :lipas.ui.routes/org
     :tr-key :lipas.org/headline
     :navbar-link :lipas.ui.routes/orgs
-    :view #'views/org-view
+    :view #'views/org-detail-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers
@@ -22,7 +22,7 @@
   ["organisaatiot"
    {:name :lipas.ui.routes/orgs
     :tr-key :lipas.admin/organizations
-    :view #'views/orgs-list-view
+    :view #'views/orgs-list-page
     :controllers
     [{:start
       (fn [_]
@@ -33,7 +33,7 @@
    {:name :lipas.ui.routes/org-bulk-operations
     :tr-key :lipas.org/bulk-operations
     :navbar-link :lipas.ui.routes/orgs
-    :view #'views/bulk-operations-view
+    :view #'views/org-bulk-operations-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers

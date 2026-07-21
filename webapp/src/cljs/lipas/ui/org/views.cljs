@@ -1610,3 +1610,24 @@
   (let [{:keys [org-id]} (:path @(rf/subscribe [::ui-subs/parameters]))]
     (rf/dispatch [::events/set-current-tab "our-sites"])
     (rfe/replace-state :lipas.ui.routes/org {:path-params {:org-id org-id}})))
+
+;; ---------------------------------------------------------------------------
+;; Rollout gate — guards direct URL access the same way the nav links are
+;; gated (see lipas.ui.org.subs/can-access-org-management?), mirroring the
+;; admin-panel's own route self-guard (lipas.ui.admin.views/main).
+;; ---------------------------------------------------------------------------
+
+(defn- require-org-management-access [component]
+  (if @(rf/subscribe [::subs/can-access-org-management?])
+    component
+    (do (rf/dispatch [:lipas.ui.events/navigate "/"])
+        nil)))
+
+(defn orgs-list-page []
+  [require-org-management-access [orgs-list-view]])
+
+(defn org-detail-page []
+  [require-org-management-access [org-view]])
+
+(defn org-bulk-operations-page []
+  [require-org-management-access [bulk-operations-view]])
