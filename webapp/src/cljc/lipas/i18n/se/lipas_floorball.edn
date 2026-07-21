@@ -1,3 +1,7 @@
 {:headline "Förhållanden"
- :disclaimer
- "Uppgifterna på fliken Förhållanden gäller anläggningens grenspecifika förhållanden, t.ex. under match- eller tävlingsevenemang. Uppgifterna kompletterar anläggningens övriga datainnehåll, t.ex. uppgifter som upprätthålls av grenens förbund. Uppgifterna på fliken Förhållanden förväntas inte upprätthållas av anläggningens ägare (t.ex. kommunen), utan underhållet avtalas separat med den part som producerar uppgifterna. Uppgifterna berikar anläggningens övriga datainnehåll och betjänar dataproducentens egen verksamhet. Tillgängliga uppgifter är öppna data och kan fritt användas av andra användare."}
+ :disclaimer-1
+ "Fliken Förhållanden innehåller idrottsspecifik information om anläggningen, till exempel förhållanden och krav som gäller vid matcher och andra idrottsevenemang. Uppgifterna kompletterar anläggningens grundläggande information och kan omfatta innehåll som underhålls av specialidrottsförbund eller andra organisationer."
+ :disclaimer-2
+ "Informationen är inte avsedd att underhållas av anläggningens ägare (t.ex. en kommun). I stället avtalas ansvaret för underhållet separat med den organisation som tillhandahåller uppgifterna."
+ :disclaimer-3
+ "Uppgifterna berikar den samlade informationen om anläggningen och stöder samtidigt informationsleverantörens egen verksamhet. All publicerad information är öppen data och fritt tillgänglig för återanvändning av andra användare."}

@@ -1215,7 +1215,9 @@
      [:> Alert
       {:severity "info"
        :sx #js {:mt 1}}
-      (tr :lipas.floorball/disclaimer)]
+      [:> Typography {:paragraph true} (tr :lipas.floorball/disclaimer-1)]
+      [:> Typography {:paragraph true} (tr :lipas.floorball/disclaimer-2)]
+      [:> Typography {:sx #js {:mb 0}} (tr :lipas.floorball/disclaimer-3)]]
 
      (when (and (<== [:lipas.ui.sports-sites.subs/editing? lipas-id])
                 (not can-edit?))

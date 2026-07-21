@@ -1,3 +1,7 @@
 {:headline "Conditions"
- :disclaimer
- "The information on the Conditions tab relates to the sport-specific conditions of the sports facility, e.g. during match or game events. The information supplements the facility's other data content, e.g. data maintained by the sport federation. The information on the Conditions tab is not expected to be maintained by the facility's owner (e.g. a municipality); its maintenance is instead agreed separately with the party producing the data. The information enriches the facility's other data content and serves the data producer's own activities. The available information is open data and freely usable by other users."}
+ :disclaimer-1
+ "The Conditions tab contains sport-specific venue information, such as conditions and requirements related to matches and other sporting events. This data complements the venue's core information and may include content maintained by sports federations or other organizations."
+ :disclaimer-2
+ "The information is not intended to be maintained by the venue owner (e.g., a municipality). Instead, responsibility for maintaining the data is agreed separately with the relevant data provider."
+ :disclaimer-3
+ "The data enriches the overall information available about the venue while also supporting the provider's own operations. All published data is open and freely available for reuse by other users."}
