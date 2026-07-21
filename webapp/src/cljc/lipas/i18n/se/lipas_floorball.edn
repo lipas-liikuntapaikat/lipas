@@ -1,1 +1,3 @@
-{:headline "Förhållanden"}
+{:headline "Förhållanden"
+ :disclaimer
+ "Uppgifterna på fliken Förhållanden gäller anläggningens grenspecifika förhållanden, t.ex. under match- eller tävlingsevenemang. Uppgifterna kompletterar anläggningens övriga datainnehåll, t.ex. uppgifter som upprätthålls av grenens förbund. Uppgifterna på fliken Förhållanden förväntas inte upprätthållas av anläggningens ägare (t.ex. kommunen), utan underhållet avtalas separat med den part som producerar uppgifterna. Uppgifterna berikar anläggningens övriga datainnehåll och betjänar dataproducentens egen verksamhet. Tillgängliga uppgifter är öppna data och kan fritt användas av andra användare."}

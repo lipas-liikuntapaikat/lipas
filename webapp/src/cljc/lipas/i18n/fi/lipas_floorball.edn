@@ -1,1 +1,3 @@
-{:headline "Olosuhteet"}
+{:headline "Olosuhteet"
+ :disclaimer
+ "Olosuhteet-välilehdellä olevat tiedot liittyvät liikuntapaikan lajiolosuhteisiin esim. ottelu- tai pelitapahtumien aikana. Tiedot täydentävät liikuntapaikan muuta tietosisältöä esim. lajiliiton ylläpitämällä tiedolla. Olosuhteet-välilehden tietoja ei odoteta liikuntapaikan omistajan (esim. kunta) ylläpitävän vaan sen ylläpidosta sovitaan erikseen tietoa tuottavan tahon kanssa. Tieto rikastaa liikuntapaikan muuta tietosisältöä ja palvelee tiedon tuottajan omaa toimintaa. Saatavilla oleva tieto on avointa dataa ja vapaasti muiden käyttäjien hyödynnettävissä."}
