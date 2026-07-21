@@ -1,8 +1,9 @@
 (ns lipas.migrations.ptv-organizations
   (:require [environ.core :as env]
-            [lipas.backend.org :as org]
+            [lipas.backend.db.utils] ; jsonb map->PGobject protocol extensions
             [lipas.data.ptv :as ptv]
             [next.jdbc :as jdbc]
+            [next.jdbc.sql :as sql]
             [taoensso.timbre :as log]))
 
 (defn migrate-up
@@ -25,11 +26,19 @@
         (try
           (log/info "Creating organization:" org-name)
 
-          ;; Create the organization with PTV config
+          ;; Insert directly into the single-row `org` schema that existed when
+          ;; this migration was written. It predates the org event-log
+          ;; conversion (20260604120000); calling the evolving `org/create-org`
+          ;; (which now targets the revision schema with org_id/document) breaks
+          ;; a from-scratch migration run, because that schema does not exist
+          ;; yet at this point. These seeded rows are folded into the new schema
+          ;; by the event-log migration's migrate-up.
           (let [org-data {:name org-name
                           :data {} ; Empty data for now - contact info can be added later
                           :ptv-data ptv-config}
-                created-org (org/create-org db org-data)]
+                created-org (sql/insert! db :org org-data
+                                         (assoc jdbc/unqualified-snake-kebab-opts
+                                                :return-keys true))]
 
             (log/info "Successfully created organization:" org-name
                       "with ID:" (:id created-org)))

@@ -1,5 +1,6 @@
 (ns lipas.ui.bulk-operations.subs
-  (:require [re-frame.core :as rf]))
+  (:require [lipas.data.bulk-operations :as bulk-fields]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::editable-sites
   (fn [db _]
@@ -33,16 +34,29 @@
   :<- [::editable-sites]
   :<- [::sites-filters]
   (fn [[sites filters] _]
-    (let [{:keys [type-code admin owner search-text]} filters]
+    ;; Multi-value filters (type-codes / admins / statuses) mirror the map-view
+    ;; search filters: an empty selection means "no filter", any selection keeps
+    ;; rows whose value is in the chosen set.
+    (let [{:keys [type-codes admins statuses search-text ownership]} filters
+          type-set   (set type-codes)
+          admin-set  (set admins)
+          status-set (set statuses)]
       (cond->> sites
-        type-code
-        (filter #(= type-code (get-in % [:type :type-code])))
+        ;; org-specific: owned vs granted (cross-org edit grant)
+        (= ownership "owned")
+        (filter :owned?)
 
-        admin
-        (filter #(= admin (:admin %)))
+        (= ownership "granted")
+        (filter (complement :owned?))
 
-        owner
-        (filter #(= owner (:owner %)))
+        (seq type-set)
+        (filter #(contains? type-set (get-in % [:type :type-code])))
+
+        (seq admin-set)
+        (filter #(contains? admin-set (:admin %)))
+
+        (seq status-set)
+        (filter #(contains? status-set (:status %)))
 
         (not (clojure.string/blank? search-text))
         (filter (fn [site]
@@ -77,3 +91,26 @@
 (rf/reg-sub ::update-results
   (fn [db _]
     (get-in db [:bulk-operations :update-results])))
+
+(rf/reg-sub ::selected-sites-data
+  :<- [::editable-sites]
+  :<- [::selected-sites]
+  (fn [[sites selected] _]
+    (filter #(contains? selected (:lipas-id %)) sites)))
+
+(rf/reg-sub ::selected-sites-type-codes
+  :<- [::selected-sites-data]
+  (fn [sites _]
+    (->> sites
+         (map #(get-in % [:type :type-code]))
+         (remove nil?)
+         distinct)))
+
+;; The type-specific property fields offered for bulk edit: the properties
+;; COMMON to every selected site's type (their intersection). Empty when the
+;; selection is heterogeneous — the view then shows a "no common properties"
+;; note instead of property inputs.
+(rf/reg-sub ::common-property-fields
+  :<- [::selected-sites-type-codes]
+  (fn [type-codes _]
+    (bulk-fields/property-fields type-codes)))

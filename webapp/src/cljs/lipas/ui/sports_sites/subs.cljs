@@ -395,7 +395,15 @@
 
            ;; Site-level image links: shown as-is in the Kuvat tab (and gates
            ;; the tab's visibility for users without :site/edit-images).
-           :images (:images latest)}
+           :images (:images latest)
+
+           ;; org-management: surface ownership so the site-page editing-rights
+           ;; tab (map/views) can gate on it
+           :owner-org-id (-> latest :owner-org-id)
+           ;; denormalized owner org name from the ES doc (search-meta) so
+           ;; non-members/anonymous viewers see a name, not a UUID (F15)
+           :owner-org-name (-> latest :search-meta :owner-org-name)
+           :edit-grants  (-> latest :edit-grants)}
 
         ;; TODO put type-specific stuff behind a multi-method
 

@@ -15,7 +15,8 @@ INSERT INTO public.sports_site (
   document,
   author_id,
   type_code,
-  city_code
+  city_code,
+  acting_org_id
 )
 VALUES (
   :event_date ::timestamptz,
@@ -24,7 +25,8 @@ VALUES (
   :document,
   :author_id ::uuid,
   :type_code,
-  :city_code
+  :city_code,
+  :acting_org_id ::uuid
 );
 
 -- :name get
@@ -58,6 +60,15 @@ WHERE type_code = :type_code
 SELECT *
 FROM sports_site_by_year
 WHERE lipas_id = :lipas_id
+
+-- :name get-edit-history
+-- :command :query
+-- :result :many
+-- :doc Lightweight per-revision edit history (timestamp + author, no document) for a single sports-site
+SELECT event_date, author_id, status
+FROM sports_site
+WHERE lipas_id = :lipas_id
+ORDER BY event_date DESC
 
 -- :name get-yearly-by-type-code
 -- :command :query

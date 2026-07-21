@@ -54,7 +54,7 @@
   (let [anchor (<== [::subs/account-menu-anchor])
         close #(==> [:lipas.ui.events/show-account-menu nil])
         admin? @(rf/subscribe [:lipas.ui.user.subs/check-privilege nil :users/manage])
-        org? @(rf/subscribe [:lipas.ui.user.subs/can-access-some-org?])]
+        org-mgmt-visible? @(rf/subscribe [:lipas.ui.org.subs/can-access-org-management?])]
 
     [:> Menu {:anchor-el anchor
               :open (some? anchor)
@@ -87,8 +87,7 @@
 
      ;; Organizations
      (when (and logged-in?
-                (or admin?
-                    org?))
+                org-mgmt-visible?)
        [:> MenuItem {:id "account-menu-item-organizations"
                      :on-click (comp close #(navigate! "/organisaatiot"))}
         [:> ListItemIcon
@@ -248,11 +247,14 @@
 
 (defn get-sub-page [route tr]
   (let [name (-> route :data :name)
-        tr-key (-> route :data :tr-key)]
+        tr-key (-> route :data :tr-key)
+        ;; Parameterized routes can't build an href from their bare name; they
+        ;; declare `:navbar-link` to point the crumb at a parent route instead
+        ;; (e.g. org detail -> orgs list), so the crumb is always clickable.
+        link-name (or (-> route :data :navbar-link) name)]
     (when name
       {:text (tr tr-key)
-       :href (when (not (-> route :data :no-navbar-link?))
-               (rfe/href name))})))
+       :href (rfe/href link-name)})))
 
 (defn menu-button [{:keys [tr]}]
   [:> IconButton

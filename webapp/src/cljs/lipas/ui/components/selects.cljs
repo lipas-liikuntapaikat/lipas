@@ -54,7 +54,10 @@
                              {:PaperProps
                               {:style
                                {:transform "translate2(0)"}}})
-                      (assoc :value (if value (pr-str value) ""))
+                      ;; `some?` not truthiness: a selected boolean `false` is a
+                      ;; real value and must round-trip to its MenuItem (else it
+                      ;; renders blank). nil still means "nothing selected".
+                      (assoc :value (if (some? value) (pr-str value) ""))
                       (assoc :on-change on-change))
         sort-fn   (or sort-fn label-fn)]
     [:> Tooltip {:title tooltip}

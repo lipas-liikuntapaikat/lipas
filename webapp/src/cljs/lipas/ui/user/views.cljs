@@ -245,12 +245,13 @@
           ;;    (str "> " (tr :user/swimming-pools-link))])
           ]]]
 
-       [:> Grid {:item true :xs 12}
-        [:> Card (merge card-props)
-         [:> CardHeader {:title (tr :lipas.user/organizations)}]
-         [:> CardContent
+       (when @(rf/subscribe [::org-subs/can-access-org-management?])
+         [:> Grid {:item true :xs 12}
+          [:> Card (merge card-props)
+           [:> CardHeader {:title (tr :lipas.user/organizations)}]
+           [:> CardContent
 
-          [explain-orgs]]]]
+            [explain-orgs]]]])
 
        [:> Grid {:item true :xs 12}
         [:> Card card-props

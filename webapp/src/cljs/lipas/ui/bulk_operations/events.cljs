@@ -1,27 +1,56 @@
 (ns lipas.ui.bulk-operations.events
   (:require [ajax.core :as ajax]
+            [lipas.data.bulk-operations :as bulk-fields]
             [lipas.ui.bulk-operations.db :as db]
             [re-frame.core :as rf]))
 
+(defn- field-id->path
+  "Document path a bulk field writes to: the static registry path, or
+  [:properties k] for a dynamic property field (whose id is the prop key)."
+  [field-id]
+  (or (get bulk-fields/static-field-paths field-id)
+      [:properties field-id]))
+
+(defn- build-updates
+  "Assemble the nested `:updates` patch from the armed fields: for each selected
+  field-id, write its form value at the field's document path. A nil value is
+  kept (the backend treats it as a clear)."
+  [update-form selected-fields]
+  (reduce (fn [patch field-id]
+            (assoc-in patch (field-id->path field-id) (get update-form field-id)))
+          {}
+          selected-fields))
+
 (rf/reg-event-fx ::init
-  (fn [{:keys [db]} [_ {:keys [on-success]}]]
-    (let [already-initialized? (seq (get-in db [:bulk-operations :editable-sites]))]
-      (if already-initialized?
-                       ;; If already initialized, don't reset the state
-        {:dispatch (when on-success [on-success])}
-                       ;; Otherwise, initialize fresh
-        {:db (assoc-in db [:bulk-operations] db/default-db)
-         :dispatch-n [[::get-editable-sites]
-                      (when on-success [on-success])]}))))
+  ;; Bulk update is an org operation — always launched with an org-id.
+  (fn [{:keys [db]} [_ {:keys [org-id on-success]}]]
+    (let [same-org? (and (= org-id (get-in db [:bulk-operations :org-id]))
+                         (seq (get-in db [:bulk-operations :editable-sites])))]
+      ;; Always refetch the list — it goes stale in app-db when org sites are
+      ;; created/edited elsewhere in the app (F36). For the same org we keep
+      ;; selections/filters and let the view show the old list (+ loading flag)
+      ;; while the refetch is in flight; an org switch resets the state fresh.
+      {:db (if same-org?
+             db
+             (-> db
+                 (assoc-in [:bulk-operations] db/default-db)
+                 (assoc-in [:bulk-operations :org-id] org-id)))
+       :dispatch-n [[::get-editable-sites]
+                    (when on-success [on-success])]})))
 
 (rf/reg-event-fx ::get-editable-sites
   (fn [{:keys [db]} _]
-    (let [token (-> db :user :login :token)]
-      {:db (assoc-in db [:bulk-operations :loading?] true)
+    (let [token (-> db :user :login :token)
+          org-id (get-in db [:bulk-operations :org-id])]
+      ;; clear any stale fetch error — the view renders [:bulk-operations :error]
+      {:db (-> db
+               (update :bulk-operations dissoc :error)
+               (assoc-in [:bulk-operations :loading?] true))
        :http-xhrio
-       {:method :get
-        :uri (str (:backend-url db) "/actions/get-editable-sports-sites")
+       {:method :post
+        :uri (str (:backend-url db) "/actions/get-org-sites-for-bulk")
         :headers {:Authorization (str "Token " token)}
+        :params {:org-id org-id}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::get-editable-sites-success]
@@ -72,27 +101,35 @@
   (fn [db [_ field value]]
     (assoc-in db [:bulk-operations :update-form field] value)))
 
+(rf/reg-event-db ::populate-from-org-contact
+  ;; "Fill from organization contact info": copy the org's contact fields into
+  ;; the bulk-update form and arm all four for update. Fields the org leaves
+  ;; blank are populated as nil, which clears that field on the selected sites —
+  ;; the org contact is treated as the source of truth (user-confirmed UX).
+  ;; Merge, don't replace: other armed fields (status, address, properties, ...)
+  ;; and their values must survive the one-click fill.
+  (fn [db [_ org-contact]]
+    (let [fields #{:email :phone-number :www :reservations-link}]
+      (-> db
+          (update-in [:bulk-operations :update-form] merge (select-keys org-contact fields))
+          (update-in [:bulk-operations :selected-fields] (fnil into #{}) fields)))))
+
 (rf/reg-event-fx ::execute-bulk-update
   (fn [{:keys [db]} [_ {:keys [on-success on-failure]}]]
     (let [token (-> db :user :login :token)
           selected-sites (get-in db [:bulk-operations :selected-sites])
           update-form (get-in db [:bulk-operations :update-form])
           selected-fields (get-in db [:bulk-operations :selected-fields])
-                         ;; Remove unselected fields from the update form
-          filtered-updates (reduce-kv
-                             (fn [m k v]
-                               (if (contains? selected-fields k)
-                                 (assoc m k v)
-                                 m))
-                             {}
-                             update-form)]
+          ;; Build the nested patch (only armed fields, at their doc paths)
+          updates (build-updates update-form selected-fields)]
       {:db (assoc-in db [:bulk-operations :loading?] true)
        :http-xhrio
        {:method :post
-        :uri (str (:backend-url db) "/actions/mass-update-sports-sites")
+        :uri (str (:backend-url db) "/actions/mass-update-org-sites")
         :headers {:Authorization (str "Token " token)}
-        :params {:lipas-ids (vec selected-sites)
-                 :updates filtered-updates}
+        :params {:org-id (get-in db [:bulk-operations :org-id])
+                 :lipas-ids (vec selected-sites)
+                 :updates updates}
         :format (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::execute-bulk-update-success on-success]
@@ -126,15 +163,17 @@
         (assoc-in [:bulk-operations :selected-sites] #{})
         (assoc-in [:bulk-operations :selected-fields] #{})
         (assoc-in [:bulk-operations :update-form] {})
-        (assoc-in [:bulk-operations :filters] {})
+        ;; back to the default status filter (not "show all") so the list
+        ;; returns to its sensible baseline after a bulk edit
+        (assoc-in [:bulk-operations :filters] (:filters db/default-db))
         (assoc-in [:bulk-operations :current-step] 0)
         (assoc-in [:bulk-operations :update-results] nil)
         (assoc-in [:bulk-operations :error] nil))))
 
 (rf/reg-event-db ::set-current-step
   (fn [db [_ step]]
-    (cond-> db
-      true (assoc-in [:bulk-operations :current-step] step)
-                     ;; When moving to step 2, initialize all fields as selected if none are selected yet
-      (and (= step 1) (empty? (get-in db [:bulk-operations :selected-fields])))
-      (assoc-in [:bulk-operations :selected-fields] #{:email :phone-number :www :reservations-link}))))
+    ;; No field is armed by default: with many fields (core attributes, address,
+    ;; type-specific properties) now on offer, the user explicitly checks the
+    ;; ones to change. "Fill from organization contact info" still arms the four
+    ;; contact fields in one click for that common flow.
+    (assoc-in db [:bulk-operations :current-step] step)))

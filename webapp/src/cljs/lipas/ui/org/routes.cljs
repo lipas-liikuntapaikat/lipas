@@ -7,8 +7,8 @@
   ["organisaatio/:org-id"
    {:name :lipas.ui.routes/org
     :tr-key :lipas.org/headline
-    :no-navbar-link? true
-    :view #'views/org-view
+    :navbar-link :lipas.ui.routes/orgs
+    :view #'views/org-detail-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers
@@ -22,7 +22,7 @@
   ["organisaatiot"
    {:name :lipas.ui.routes/orgs
     :tr-key :lipas.admin/organizations
-    :view #'views/orgs-list-view
+    :view #'views/orgs-list-page
     :controllers
     [{:start
       (fn [_]
@@ -32,8 +32,8 @@
   ["organisaatiot/:org-id/massa-paivitys"
    {:name :lipas.ui.routes/org-bulk-operations
     :tr-key :lipas.org/bulk-operations
-    :no-navbar-link? true
-    :view #'views/bulk-operations-view
+    :navbar-link :lipas.ui.routes/orgs
+    :view #'views/org-bulk-operations-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers
