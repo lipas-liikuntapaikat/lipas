@@ -28,6 +28,8 @@
  :not-yet-synced "Vald för export, ännu inte synkroniserad till PTV",
  :summary "Sammanfattning",
  :user-instruction "Handlingsanvisning",
+ :writing-guidance-description "Vad bör beskrivningen innehålla?",
+ :writing-guidance-user-instruction "Vad bör handlingsanvisningen innehålla?",
  :tooltip "Skicka till PTV",
  :wizard "Idrifttagning"
  :filter-all "Alla"

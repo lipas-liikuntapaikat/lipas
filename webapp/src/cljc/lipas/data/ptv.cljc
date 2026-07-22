@@ -757,34 +757,158 @@
             (:value service-name)))
         service-names))
 
-(defn determine-audit-status
-  "Determines the audit status for a site based on its audit data.
-   Returns one of: :approved, :changes-requested, :partial, :none"
-  [site]
-  (let [audit-data (get-in site [:ptv :audit])
-        summary-status (get-in audit-data [:summary :status])
-        desc-status (get-in audit-data [:description :status])]
+;;; Whose-move audit workflow ;;;
+;;
+;; Auditors sample sites/services: an item is "in the sample" when an audit
+;; record exists (scoping = saving an empty audit, which only stamps
+;; :timestamp/:auditor-id). Verdicts are per field and per revision: each
+;; verdict carries an :audited-content snapshot. What a later content edit
+;; means depends on the verdict (DVV's process): a fix in response to a
+;; changes request completes the municipality's move (:fixed -> Valmiit,
+;; where DVV reviews the change), while editing approved content invalidates
+;; the approval (:stale -> back to the auditor's queue).
+
+(defn- blank-normalized-localized
+  "Localized map with blank/nil entries removed, for content comparison."
+  [localized]
+  (into {}
+        (remove (fn [[_ v]] (str/blank? v)))
+        localized))
+
+(defn audit-field-state
+  "State of one audited field in the whose-move audit workflow.
+
+   :pending           — no verdict yet
+   :fixed             — changes were requested and the content has been
+                        edited since: the municipality has responded, so
+                        the field counts as done (DVV reviews the change
+                        on the Valmiit tab)
+   :stale             — approved but content changed since: the approval
+                        no longer covers the current text, back to the
+                        auditor's queue (verdicts without an
+                        :audited-content snapshot are grandfathered as
+                        unchanged)
+   :approved          — approved and unchanged
+   :changes-requested — changes requested and unchanged"
+  [{:keys [status audited-content] :as _field-audit} current-content]
+  (let [changed? (and audited-content
+                      (not= (blank-normalized-localized audited-content)
+                            (blank-normalized-localized current-content)))]
     (cond
-      ;; Both fields audited
-      (and summary-status desc-status)
+      (nil? status) :pending
+      (and changed? (= "approved" status)) :stale
+      changed? :fixed
+      (= "approved" status) :approved
+      :else :changes-requested)))
+
+(def site-audited-field-keys
+  "The :ptv keys the site audit covers (see site-audit-fields). Also the
+   keys the UI snapshots as :ptv-persisted so whose-move states can be
+   derived from saved content instead of the live edit draft."
+  [:summary :description])
+
+(defn site-audit-fields
+  "Auditable-fields spec for a sports site (see audit-bucket)."
+  [site]
+  [{:field :summary :content (get-in site [:ptv :summary]) :required? true}
+   {:field :description :content (get-in site [:ptv :description]) :required? true}])
+
+(defn with-persisted-audit-content
+  "Site with its audited :ptv fields replaced by the :ptv-persisted
+   snapshot (last content loaded from / saved to the backend), when one
+   exists. Audit whose-move states must follow persisted content — the
+   PTV views mutate the cached :ptv on every keystroke, and deriving the
+   state from that draft would mark a field :fixed (or :stale) before
+   anything is saved."
+  [site]
+  (if-let [persisted (:ptv-persisted site)]
+    (update site :ptv #(merge (apply dissoc % site-audited-field-keys) persisted))
+    site))
+
+(defn service-audit-fields
+  "Auditable-fields spec for a PTV Service (UI-shaped map with localized
+   :summary/:description/:user-instruction). Toimintaohje is required only
+   when the service has one in some language."
+  [service]
+  [{:field :summary :content (:summary service) :required? true}
+   {:field :description :content (:description service) :required? true}
+   {:field :user-instruction :content (:user-instruction service)
+    :required? (boolean (seq (blank-normalized-localized (:user-instruction service))))}])
+
+(defn audit-field-states
+  "Map of field -> audit-field-state over the required fields."
+  [audit fields]
+  (into {}
+        (comp (filter :required?)
+              (map (fn [{:keys [field content]}]
+                     [field (audit-field-state (get audit field) content)])))
+        fields))
+
+(defn audit-bucket
+  "Whose-move bucket for an item in the audit sample, or nil when the item
+   is not in the sample (no audit record). `fields` as per
+   site-audit-fields / service-audit-fields. The buckets map to the DVV
+   process tabs: Odottavat / Katselmoidut / Valmiit.
+
+   :waiting-audit — auditor's move: unaudited fields, or approved content
+                    edited afterwards (:stale)
+   :waiting-fixes — municipality's move: changes requested, content unchanged
+   :done          — every required field approved, or fixed in response to
+                    a changes request (DVV reviews fixes from this bucket)"
+  [audit fields]
+  (when (:timestamp audit)
+    (let [states (vals (audit-field-states audit fields))]
       (cond
-        ;; Both approved
-        (and (= "approved" summary-status) (= "approved" desc-status))
-        :approved
+        (some #{:pending :stale} states) :waiting-audit
+        (some #{:changes-requested} states) :waiting-fixes
+        :else :done))))
 
-        ;; Any changes requested
-        (or (= "changes-requested" summary-status) (= "changes-requested" desc-status))
-        :changes-requested
+(defn audit-notification-summary
+  "Contents of the katselmointi notification sent to the municipality's
+   PTV managers, derived from the current audit sample (so already-fixed
+   items drop out by themselves): :action-items — items in the
+   :waiting-fixes bucket (municipality's move), each entry's :ref merged
+   with :fields naming the fields with open change requests — and
+   :approved-count, the number of fully-approved items. Items mid-audit
+   (:waiting-audit) and fixes awaiting re-review (:fixed) count in
+   neither: they need no municipality action and aren't approved yet.
+   Entries: {:ref map, :audit map, :fields as per site-audit-fields /
+   service-audit-fields}. Used by both the backend email builder and the
+   audit view's send-notification button, so the numbers always agree."
+  [entries]
+  (reduce
+   (fn [acc {:keys [ref audit fields]}]
+     (let [states (audit-field-states audit fields)
+           bucket (audit-bucket audit fields)]
+       (cond
+         (= :waiting-fixes bucket)
+         (update acc :action-items conj
+                 (assoc ref :fields (->> states
+                                         (keep (fn [[field state]]
+                                                 (when (= :changes-requested state)
+                                                   field)))
+                                         vec)))
 
-        ;; Mixed or other statuses
-        :else :partial)
+         (and (= :done bucket)
+              (every? #(= :approved %) (vals states)))
+         (update acc :approved-count inc)
 
-      ;; Only one field audited
-      (or summary-status desc-status)
-      :partial
+         :else acc)))
+   {:action-items [] :approved-count 0}
+   entries))
 
-      ;; No audit data
-      :else :none)))
+(defn determine-audit-status
+  "Audit indicator for a sports site row in the manager-facing listing.
+   Derived from the whose-move field states so a municipality's fix clears
+   the changes-requested flag. Returns :approved (done), :changes-requested
+   (waiting for fixes), :partial (audit in progress) or :none."
+  [site]
+  (let [audit (get-in site [:ptv :audit])]
+    (case (audit-bucket audit (site-audit-fields site))
+      :done :approved
+      :waiting-fixes :changes-requested
+      :waiting-audit :partial
+      :none)))
 
 (defn ptv-descriptions->texts
   "Extract :summary, :description, :user-instruction maps from PTV descriptions array.
@@ -800,6 +924,33 @@
               acc))
           {}
           descriptions))
+
+(defn ->service-document
+  "Extracts the LIPAS-managed subset of a PTV Service entity (camelCase
+   API shape) into the normalized kebab-case document persisted in the
+   ptv_service table. Mirrors lipas.backend.ptv.core/lipas-managed-service-fields —
+   PTV remains authoritative for everything else (ontologyTerms,
+   serviceClasses, targetGroups, ...). Callers add :audit and :last-sync."
+  [ptv-org-id service]
+  (let [source-id (:sourceId service)]
+    (merge
+     {:source-id source-id
+      :service-id (:id service)
+      :ptv-org-id ptv-org-id
+      :name (reduce (fn [acc {:keys [language value type]}]
+                      (if (= "Name" type)
+                        (assoc acc (lang->locale language) value)
+                        acc))
+                    {}
+                    (:serviceNames service))
+      ;; PTV language codes ("sv") -> LIPAS locale codes ("se"), unsupported dropped
+      :languages (into [] (comp (keep lang->locale) (map name)) (:languages service))
+      :publishing-status (:publishingStatus service)
+      ;; Derivable only for sub-category-mapped source-ids; adopted ones
+      ;; (lipas-<org>-ptv-<uuid>) carry no sub-category.
+      :sub-category-id (when-not (adopted-service-source-id? source-id)
+                         (parse-service-source-id source-id))}
+     (ptv-descriptions->texts (:serviceDescriptions service)))))
 
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path
@@ -1064,7 +1215,7 @@
      ;; UUID it can no longer resolve to a name.
      :publishing-status (-> site :ptv :publishing-status)
 
-     :audit-status (determine-audit-status site)}))
+     :audit-status (determine-audit-status (with-persisted-audit-content site))}))
 
 (defn sports-site->service-ids [types source-id->service sports-site]
   (let [sub-cat-id (-> sports-site :type :type-code types :sub-category)

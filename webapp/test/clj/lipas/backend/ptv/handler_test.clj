@@ -2,7 +2,10 @@
   (:require [cheshire.core]
             [clojure.test :refer [deftest is use-fixtures testing]]
             [lipas.backend.core :as core]
+            [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.jwt :as jwt]
+            [lipas.backend.org :as backend-org]
+            [lipas.backend.ptv.integration :as ptv-integration]
             [lipas.test-utils :as tu]
             [ring.mock.request :as mock]))
 
@@ -673,6 +676,11 @@
           source-id (str "lipas-" ptv-org-id "-700001-2026-01-01T00-00-00.000Z")
           texts {:summary {:fi "Kesäkäyttöinen urheilukenttä."}
                  :description {:fi "Limingan keskustan urheilukenttä."}}
+          audit {:timestamp "2026-01-03T00:00:00.000Z"
+                 :auditor-id "auditor-1"
+                 :summary {:status "changes-requested"
+                           :feedback "Tarkenna tekstiä"
+                           :audited-content {:fi "Kesäkäyttöinen urheilukenttä."}}}
           ;; A published, synced site carrying the full lifecycle meta.
           site (core/upsert-sports-site!*
                 (test-db) admin
@@ -694,7 +702,8 @@
                               :publishing-status "Published"
                               :previous-type-code 1210
                               :service-ids []
-                              :service-channel-ids [channel]})})
+                              :service-channel-ids [channel]
+                              :audit audit})})
           lipas-id (:lipas-id site)
           resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                              (mock/content-type "application/json")
@@ -713,7 +722,9 @@
       (is (= "Published" (:publishing-status after)))
       (is (= 1210 (:previous-type-code after)))
       ;; channel link preserved (frozen in PTV, not unlinked)
-      (is (= [channel] (:service-channel-ids after))))))
+      (is (= [channel] (:service-channel-ids after)))
+      ;; auditor's verdicts preserved (server-owned like the lifecycle keys)
+      (is (= audit (:audit after))))))
 
 (deftest save-ptv-service-location-rejects-double-link-test
   (testing "Syncing a service-location to a channel another site owns is rejected with 409 (before any PTV call)"
@@ -740,6 +751,307 @@
       (is (= 409 (:status resp)))
       (is (= "double-link" (:type body)))
       (is (contains? (set (map :lipas-id (:other-sites body))) rink-b)))))
+
+;;; PTV Service audits (ptv_service table) ;;;
+
+(def ^:private svc-ptv-org-id "8f1c2a3b-1111-4abc-9def-000000000010")
+
+(defn- seed-service-org!
+  "Seeds a LIPAS org with PTV config; returns the org map (with :id)."
+  []
+  (let [org {:id (java.util.UUID/randomUUID)
+             :name (str "PTV Service Audit Org " (System/currentTimeMillis) "-" (rand-int 100000))
+             :data {}
+             :ptv-data {:org-id svc-ptv-org-id
+                        :city-codes [91]
+                        :owners ["city"]
+                        :supported-languages ["fi"]}}]
+    (backend-org/create-org (test-db) org)
+    org))
+
+(defn- seed-service-rev!
+  [org {:keys [source-id service-id summary]}]
+  (ptv-service-db/insert-service-rev!
+   (test-db)
+   {:org-id (:id org)
+    :source-id source-id
+    :service-id service-id
+    :author-id nil
+    :event-date "2026-01-01T00:00:00.000Z"
+    :document {:source-id source-id
+               :service-id service-id
+               :name {:fi "Pallokentät"}
+               :summary (or summary {:fi "Tiivistelmä"})
+               :description {:fi "Kuvaus"}
+               :user-instruction {:fi "Toimintaohje"}}}))
+
+(defn- post-service-audit
+  [token body]
+  (test-app (-> (mock/request :post "/api/actions/save-ptv-service-audit")
+                (mock/content-type "application/json")
+                (mock/body (tu/->json body))
+                (tu/token-header token))))
+
+(deftest save-ptv-service-audit-existing-revision-test
+  (testing "Saves audit onto the latest existing ptv_service revision"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          audit-data {:status "approved" :feedback "Hyvä kuvaus"}
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id svc-id
+                                          :source-id source-id
+                                          :audit {:summary audit-data
+                                                  :description audit-data
+                                                  :user-instruction audit-data}})
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (contains? body :timestamp))
+      (is (= (str (:id auditor)) (:auditor-id body)))
+      (is (= audit-data (:summary body)))
+      (is (= audit-data (:user-instruction body)))
+      (is (= "approved" (get-in current [:document :audit :user-instruction :status])))
+      ;; Audit persisted onto a new revision
+      (is (= "approved" (get-in current [:document :audit :summary :status])))
+      ;; Previous revision's content carried into the audit revision
+      (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
+      ;; History keeps both revisions (seed + audit)
+      (is (= 2 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
+
+(deftest save-ptv-service-audit-lazy-initial-revision-test
+  (testing "Creates the initial revision from a live PTV fetch when none exists"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-2100")
+          audit-data {:status "changes-requested" :feedback "Tarkenna kuvausta"}
+          resp (with-redefs [ptv-integration/get-service
+                             (fn [_ _ _]
+                               {:id svc-id
+                                :sourceId source-id
+                                :serviceNames [{:type "Name" :language "fi" :value "Kuntosalit"}]
+                                :serviceDescriptions [{:type "Summary" :language "fi" :value "Tiivistelmä"}
+                                                      {:type "Description" :language "fi" :value "Kuvaus"}]
+                                :languages ["fi"]
+                                :publishingStatus "Published"})]
+                 (post-service-audit token {:org-id (str (:id org))
+                                            :service-id svc-id
+                                            :audit {:summary audit-data}}))
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (= audit-data (:summary body)))
+      (is (some? current))
+      ;; Document extracted from the live PTV entity
+      (is (= {:fi "Kuntosalit"} (get-in current [:document :name])))
+      (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
+      (is (= "changes-requested" (get-in current [:document :audit :summary :status]))))))
+
+(deftest save-ptv-service-audit-scoping-test
+  (testing "An empty audit marks the service as part of the audit sample"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id svc-id
+                                          :audit {}})
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (contains? body :timestamp))
+      (is (= (str (:id auditor)) (:auditor-id body)))
+      ;; No verdicts, just the scope stamp
+      (is (nil? (:summary body)))
+      (is (some? (get-in current [:document :audit :timestamp])))
+      (is (nil? (get-in current [:document :audit :summary]))))))
+
+(deftest save-ptv-service-audit-snapshot-test
+  (testing "Per-field :audited-content snapshots round-trip"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          audit {:summary {:status "approved"
+                           :feedback ""
+                           :audited-content {:fi "Tiivistelmä"}}}
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id svc-id
+                                          :audit audit})
+          body (tu/safe-parse-json resp)
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (= {:fi "Tiivistelmä"} (get-in body [:summary :audited-content])))
+      (is (= {:fi "Tiivistelmä"}
+             (get-in current [:document :audit :summary :audited-content]))))))
+
+(deftest save-ptv-service-audit-not-found-test
+  (testing "Returns 404 when the org is unknown"
+    (let [auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          resp (post-service-audit token {:org-id (str (java.util.UUID/randomUUID))
+                                          :service-id (str (java.util.UUID/randomUUID))
+                                          :audit {:summary {:status "approved" :feedback ""}}})]
+      (is (= 404 (:status resp)))))
+
+  (testing "Returns 404 when the service has no sourceId (native, never adopted)"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          resp (with-redefs [ptv-integration/get-service (fn [_ _ _] {})]
+                 (post-service-audit token {:org-id (str (:id org))
+                                            :service-id (str (java.util.UUID/randomUUID))
+                                            :audit {:summary {:status "approved" :feedback ""}}}))]
+      (is (= 404 (:status resp))))))
+
+(deftest save-ptv-service-audit-privilege-test
+  (testing "Requires :ptv/audit privilege"
+    (let [org (seed-service-org!)
+          regular-user (tu/gen-user {:db? true :db-component (test-db) :admin? false})
+          token (jwt/create-token regular-user)
+          resp (post-service-audit token {:org-id (str (:id org))
+                                          :service-id (str (java.util.UUID/randomUUID))
+                                          :audit {:summary {:status "approved" :feedback ""}}})]
+      (is (= 403 (:status resp)))))
+
+  (testing "Requires authentication"
+    (let [resp (test-app (-> (mock/request :post "/api/actions/save-ptv-service-audit")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:org-id (str (java.util.UUID/randomUUID))
+                                                    :service-id (str (java.util.UUID/randomUUID))
+                                                    :audit {}}))))]
+      (is (= 401 (:status resp))))))
+
+(deftest save-ptv-service-audit-validation-test
+  (testing "Rejects invalid status and overlong feedback"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          bad-status (post-service-audit token {:org-id (str (:id org))
+                                                :service-id (str (java.util.UUID/randomUUID))
+                                                :audit {:summary {:status "lgtm" :feedback ""}}})
+          too-long (post-service-audit token {:org-id (str (:id org))
+                                              :service-id (str (java.util.UUID/randomUUID))
+                                              :audit {:summary {:status "approved"
+                                                                :feedback (apply str (repeat 1001 "x"))}}})]
+      (is (= 400 (:status bad-status)))
+      (is (= 400 (:status too-long))))))
+
+(deftest save-ptv-service-audit-last-write-wins-test
+  (testing "Concurrent/subsequent audits: latest wins in current view, history keeps all"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          _ (post-service-audit token {:org-id (str (:id org))
+                                       :service-id svc-id
+                                       :audit {:summary {:status "approved" :feedback "Eka"}}})
+          _ (Thread/sleep 1100) ;; utils/timestamp has second granularity in event ordering
+          _ (post-service-audit token {:org-id (str (:id org))
+                                       :service-id svc-id
+                                       :audit {:summary {:status "changes-requested" :feedback "Toka"}}})
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= "changes-requested" (get-in current [:document :audit :summary :status])))
+      (is (= "Toka" (get-in current [:document :audit :summary :feedback])))
+      (is (= 3 (count (ptv-service-db/get-history (test-db) (:id org) source-id)))))))
+
+(deftest fetch-ptv-service-audits-test
+  (testing "Returns stored service docs for the org to auditors"
+    (let [org (seed-service-org!)
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          token (jwt/create-token auditor)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-audits")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:org-id (str (:id org))}))
+                             (tu/token-header token)))
+          body (tu/safe-parse-json resp)]
+      (is (= 200 (:status resp)))
+      (is (= 1 (count body)))
+      (is (= source-id (-> body first :source-id)))
+      (is (= svc-id (-> body first :service-id)))
+      (is (= "Kuvaus" (-> body first :document :description :fi)))))
+
+  (testing "Regular users get 403"
+    (let [org (seed-service-org!)
+          regular-user (tu/gen-user {:db? true :db-component (test-db) :admin? false})
+          token (jwt/create-token regular-user)
+          resp (test-app (-> (mock/request :post "/api/actions/fetch-ptv-service-audits")
+                             (mock/content-type "application/json")
+                             (mock/body (tu/->json {:org-id (str (:id org))}))
+                             (tu/token-header token)))]
+      (is (= 403 (:status resp))))))
+
+(deftest save-ptv-service-persists-revision-test
+  (testing "Successful save-ptv-service shadows a revision into ptv_service"
+    (let [org (seed-service-org!)
+          admin (tu/gen-admin-user :db-component (test-db))
+          token (jwt/create-token admin)
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          resp (with-redefs [ptv-integration/update-service
+                             (fn [_ _ data] (assoc data :id svc-id))]
+                 (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
+                               (mock/content-type "application/json")
+                               (mock/body (tu/->json {:org-id svc-ptv-org-id
+                                                      :city-codes [91]
+                                                      :source-id source-id
+                                                      :sub-category-id 1300
+                                                      :languages ["fi"]
+                                                      :summary {:fi "Tiivistelmä"}
+                                                      :description {:fi "Kuvaus"}}))
+                               (tu/token-header token))))
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      (is (= 200 (:status resp)))
+      (is (some? current))
+      (is (= svc-id (str (:service-id current))))
+      (is (= {:fi "Tiivistelmä"} (get-in current [:document :summary])))
+      (is (some? (get-in current [:document :last-sync]))))))
+
+(deftest save-ptv-service-carries-audit-forward-test
+  (testing "A content sync via save-ptv-service preserves the latest audit"
+    (let [org (seed-service-org!)
+          admin (tu/gen-admin-user :db-component (test-db))
+          auditor (tu/gen-ptv-auditor :db-component (test-db))
+          svc-id (str (java.util.UUID/randomUUID))
+          source-id (str "lipas-" svc-ptv-org-id "-1300")
+          _ (seed-service-rev! org {:source-id source-id :service-id svc-id})
+          _ (post-service-audit (jwt/create-token auditor)
+                                {:org-id (str (:id org))
+                                 :service-id svc-id
+                                 :audit {:summary {:status "changes-requested" :feedback "Korjaa"}}})
+          _ (Thread/sleep 1100)
+          _ (with-redefs [ptv-integration/update-service
+                          (fn [_ _ data] (assoc data :id svc-id))]
+              (test-app (-> (mock/request :post "/api/actions/save-ptv-service")
+                            (mock/content-type "application/json")
+                            (mock/body (tu/->json {:org-id svc-ptv-org-id
+                                                   :city-codes [91]
+                                                   :source-id source-id
+                                                   :sub-category-id 1300
+                                                   :languages ["fi"]
+                                                   :summary {:fi "Uusi tiivistelmä"}
+                                                   :description {:fi "Uusi kuvaus"}}))
+                            (tu/token-header (jwt/create-token admin)))))
+          current (ptv-service-db/get-current (test-db) (:id org) source-id)]
+      ;; Content updated by the sync...
+      (is (= {:fi "Uusi tiivistelmä"} (get-in current [:document :summary])))
+      ;; ...but the audit survives
+      (is (= "changes-requested" (get-in current [:document :audit :summary :status])))
+      (is (= "Korjaa" (get-in current [:document :audit :summary :feedback]))))))
 
 (comment
   (clojure.test/run-tests *ns*)

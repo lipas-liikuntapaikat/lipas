@@ -660,11 +660,40 @@
     (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
       (get-in db [:ptv :org org-id :data :sports-sites lipas-id :ptv :audit field :status]))))
 
+(rf/reg-sub ::site-audit-field-display
+  ;; Audit field verdict + its whose-move state against the persisted site
+  ;; content, for the municipality-facing feedback alert: once the
+  ;; municipality has fixed a changes-requested text and saved it via sync,
+  ;; the alert renders resolved instead of staying red (tester finding #4).
+  ;; The comparison must use the :ptv-persisted snapshot, not the cached
+  ;; :ptv the text fields mutate on every keystroke — otherwise a single
+  ;; keypress flips the alert to "fixed" before anything is saved. Falls
+  ;; back to the sports-site document when the PTV org cache isn't loaded
+  ;; (site page outside the PTV dialog).
+  (fn [db [_ lipas-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])
+          cached-site (get-in db [:ptv :org org-id :data :sports-sites lipas-id])
+          site-ptv (or (:ptv cached-site)
+                       (let [latest (get-in db [:sports-sites lipas-id :latest])]
+                         (get-in db [:sports-sites lipas-id :history latest :ptv])))
+          field-audit (get-in site-ptv [:audit field])
+          content (if-let [persisted (:ptv-persisted cached-site)]
+                    (get persisted field)
+                    (get site-ptv field))]
+      (when field-audit
+        (assoc field-audit
+               :state (ptv-data/audit-field-state field-audit content))))))
+
 (rf/reg-sub ::site-audit-data-valid?
   (fn [[_ lipas-id]]
     (rf/subscribe [::site-audit-data lipas-id]))
   (fn [audit-data _]
     (and (seq audit-data)
+         ;; At least one field must carry a verdict — a bare audit map
+         ;; (only backend metadata like :timestamp/:auditor-id) would
+         ;; otherwise pass the all-optional schema and allow saving an
+         ;; empty audit (tester finding #1).
+         (some #(get-in audit-data [% :status]) [:summary :description])
                    ;; Select only user-editable fields for validation
                    ;; Backend may add metadata (:timestamp, :auditor-id, etc.)
                    ;; but we only validate the fields defined in audit-data schema
@@ -702,45 +731,45 @@
 (rf/reg-sub ::selected-audit-tab
   :<- [::ptv]
   (fn [ptv _]
-    (get-in ptv [:audit :selected-tab] "todo")))
+    (get-in ptv [:audit :selected-tab] "waiting-audit")))
+
+;; Whose-move audit workflow (see lipas.data.ptv/audit-bucket):
+;; an item is in the audit sample when it has an audit record; within the
+;; sample it sits in exactly one bucket: :waiting-audit (auditor's move),
+;; :waiting-fixes (municipality's move) or :done (all approved, unchanged).
+
+(defn- site-has-audit-content? [site]
+  (and (some-> site :ptv :summary :fi count (> 5))
+       (some-> site :ptv :description :fi count (> 5))))
 
 (rf/reg-sub ::auditable-sites
-  (fn [[_ org-id status]]
+  (fn [[_ _org-id _bucket]]
     [(rf/subscribe [::ptv])])
-  (fn [[ptv] [_ org-id status]]
-    (let [sites (get-in ptv [:org org-id :data :sports-sites] {})
+  (fn [[ptv] [_ org-id bucket]]
+    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
+         (filter (fn [site]
+                   (let [b (ptv-data/audit-bucket
+                            (get-in site [:ptv :audit])
+                            (ptv-data/site-audit-fields site))]
+                     (if (= :waiting-audit bucket)
+                       ;; The auditor's queue also contains every
+                       ;; content-ready site not audited yet — the first
+                       ;; verdict is what pulls an item into the sample.
+                       (or (= :waiting-audit b)
+                           (and (nil? b) (site-has-audit-content? site)))
+                       (= bucket b)))))
+         ;; in-flight items (partially audited / changed since verdict) first
+         (sort-by (juxt (fn [site]
+                          (if (get-in site [:ptv :audit :timestamp]) 0 1))
+                        :name)))))
 
-          filter-fn (case status
-                      ;; Sites with content but not audited yet
-                      :todo (fn [site]
-                              (let [ptv (:ptv site)]
-                                (and
-                                 ;; Has summary and description content
-                                  (some-> ptv :summary :fi count (> 5))
-                                  (some-> ptv :description :fi count (> 5))
-                                 ;; Not already audited
-                                  (or (nil? (get-in ptv [:audit :summary :status]))
-                                      (nil? (get-in ptv [:audit :description :status]))))))
-
-                      ;; Sites that have been fully audited
-                      :completed (fn [site]
-                                   (let [ptv (:ptv site)]
-                                     (and
-                                      ;; Has audit data for both summary and description
-                                       (some? (get-in ptv [:audit :summary :status]))
-                                       (some? (get-in ptv [:audit :description :status])))))
-
-                      ;; All sites with PTV content
-                      (fn [site]
-                        (let [ptv (:ptv site)]
-                          (and
-                            (some-> ptv :summary :fi count (> 5))
-                            (some-> ptv :description :fi count (> 5))))))]
-
-      ;; Apply filter and sort by name
-      (->> (vals sites)
-           (filter filter-fn)
-           (sort-by :name)))))
+(rf/reg-sub ::audit-sample-sites
+  ;; every site in the audit sample, regardless of bucket
+  (fn [[_ _org-id]]
+    [(rf/subscribe [::ptv])])
+  (fn [[ptv] [_ org-id]]
+    (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
+         (filter #(some? (get-in % [:ptv :audit :timestamp]))))))
 
 (rf/reg-sub ::sending-notification?
   :<- [::audit]
@@ -752,14 +781,157 @@
   (fn [audit _]
     (:notification-sent? audit)))
 
-(rf/reg-sub ::audit-stats
+(rf/reg-sub ::notification-dialog
+  ;; {:open? bool :loading? bool :recipients [emails]} — the confirmation
+  ;; dialog shown before sending the audit notification, so the auditor
+  ;; sees who receives it and what it contains.
+  :<- [::audit]
+  (fn [audit _]
+    (:notification-dialog audit)))
+
+;; Dirty tracking: every save appends a revision and re-anchors verdict
+;; snapshots, so the save button requires actual input since the last
+;; save (set by the ::update-*-audit-* events, cleared on save success
+;; and org switch). Stale verdicts are the exception — re-confirming one
+;; without touching the form is a meaningful save (see site-form).
+
+(rf/reg-sub ::site-audit-dirty?
+  :<- [::audit]
+  (fn [audit [_ lipas-id]]
+    (boolean (get-in audit [:site-dirty lipas-id]))))
+
+(rf/reg-sub ::service-audit-dirty?
+  :<- [::audit]
+  (fn [audit [_ service-id]]
+    (boolean (get-in audit [:service-dirty (str service-id)]))))
+
+(rf/reg-sub ::site-audit-notification-counts
+  ;; {:action-count n :approved-count n} for the send-notification button:
+  ;; items awaiting municipality fixes / fully approved. Derived with the
+  ;; same cljc fn the backend email builder uses, so the button count
+  ;; always matches what the notification would say.
   (fn [[_ org-id]]
-    (rf/subscribe [::auditable-sites org-id :completed]))
+    (rf/subscribe [::audit-sample-sites org-id]))
   (fn [sites _]
-    (let [tally-fn (fn [field status]
-                     (count (filter #(= status (get-in % [:ptv :audit field :status])) sites)))]
-      {:total-sites (count sites)
-       :summary {:approved (tally-fn :summary "approved")
-                 :changes-requested (tally-fn :summary "changes-requested")}
-       :description {:approved (tally-fn :description "approved")
-                     :changes-requested (tally-fn :description "changes-requested")}})))
+    (let [{:keys [action-items approved-count]}
+          (ptv-data/audit-notification-summary
+           (map (fn [site]
+                  {:audit (get-in site [:ptv :audit])
+                   :fields (ptv-data/site-audit-fields site)})
+                sites))]
+      {:action-count (count action-items)
+       :approved-count approved-count})))
+
+;; PTV Service audit subs
+
+(rf/reg-sub ::service-docs
+  (fn [db [_ org-id]]
+    (get-in db [:ptv :org org-id :data :service-docs])))
+
+(rf/reg-sub ::service-audit-data
+  (fn [db [_ service-id]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit]))))
+
+(rf/reg-sub ::service-audit-field-status
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :status]))))
+
+(rf/reg-sub ::service-audit-field-feedback
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field :feedback]))))
+
+(rf/reg-sub ::service-audit-field
+  ;; Full audit field map (incl. :audited-content snapshot) — the caller
+  ;; computes the whose-move state against the live PTV service content
+  ;; it has at hand (see audit-feedback-alert call sites).
+  (fn [db [_ service-id field]]
+    (let [org-id (get-in db [:ptv :selected-org :ptv-data :org-id])]
+      (get-in db [:ptv :org org-id :data :service-docs (str service-id) :document :audit field]))))
+
+(rf/reg-sub ::service-audit-data-valid?
+  (fn [[_ service-id]]
+    (rf/subscribe [::service-audit-data service-id]))
+  (fn [audit-data _]
+    (and (seq audit-data)
+         ;; At least one verdict required — see ::site-audit-data-valid?
+         (some #(get-in audit-data [% :status]) [:summary :description :user-instruction])
+         ;; Backend adds metadata (:timestamp, :auditor-id) — validate only
+         ;; the user-editable fields, like ::site-audit-data-valid? does.
+         (m/validate ptv-schema/audit-data
+                     (select-keys audit-data [:summary :description :user-instruction])))))
+
+(rf/reg-sub ::selected-audit-section
+  :<- [::ptv]
+  (fn [ptv _]
+    (get-in ptv [:audit :selected-section] "sites")))
+
+(rf/reg-sub ::selected-audit-service
+  :<- [::ptv]
+  (fn [ptv _]
+    (:selected-audit-service ptv)))
+
+(rf/reg-sub ::services-with-audit
+  ;; LIPAS-managed/adopted services joined with their stored audit
+  (fn [[_ org-id]]
+    [(rf/subscribe [::services org-id])
+     (rf/subscribe [::service-docs org-id])])
+  (fn [[services docs] _]
+    (->> services
+         (filter #(some-> % :source-id (str/starts-with? "lipas-")))
+         (map (fn [svc]
+                (assoc svc :audit
+                       (get-in docs [(str (:service-id svc)) :document :audit])))))))
+
+(defn- service-has-audit-content? [svc]
+  (and (some-> svc :summary :fi count (> 5))
+       (some-> svc :description :fi count (> 5))))
+
+(rf/reg-sub ::auditable-services
+  (fn [[_ org-id _bucket]]
+    (rf/subscribe [::services-with-audit org-id]))
+  (fn [services [_ _ bucket]]
+    (->> services
+         (filter (fn [svc]
+                   (let [b (ptv-data/audit-bucket
+                            (:audit svc)
+                            (ptv-data/service-audit-fields svc))]
+                     (if (= :waiting-audit bucket)
+                       ;; The auditor's queue also contains every
+                       ;; content-ready service not audited yet — the first
+                       ;; verdict is what pulls an item into the sample.
+                       (or (= :waiting-audit b)
+                           (and (nil? b) (service-has-audit-content? svc)))
+                       (= bucket b)))))
+         ;; in-flight items (partially audited / changed since verdict) first
+         (sort-by (juxt (fn [svc]
+                          (if (get-in svc [:audit :timestamp]) 0 1))
+                        :label)))))
+
+(rf/reg-sub ::audit-sample-services
+  ;; every service in the audit sample, regardless of bucket
+  (fn [[_ org-id]]
+    (rf/subscribe [::services-with-audit org-id]))
+  (fn [services _]
+    (filter #(some? (get-in % [:audit :timestamp])) services)))
+
+(rf/reg-sub ::service-audit-notification-counts
+  ;; Same semantics as ::site-audit-notification-counts.
+  (fn [[_ org-id]]
+    (rf/subscribe [::audit-sample-services org-id]))
+  (fn [services _]
+    (let [{:keys [action-items approved-count]}
+          (ptv-data/audit-notification-summary
+           (map (fn [svc]
+                  {:audit (:audit svc)
+                   :fields (ptv-data/service-audit-fields svc)})
+                services))]
+      {:action-count (count action-items)
+       :approved-count approved-count})))
+
+(rf/reg-sub ::service-notification-sent?
+  :<- [::audit]
+  (fn [audit _]
+    (:service-notification-sent? audit)))

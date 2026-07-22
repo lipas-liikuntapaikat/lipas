@@ -22,22 +22,29 @@
   (m/schema [:enum "approved" "changes-requested"]))
 
 (def audit-field
-  "Schema for individual audit field feedback."
+  "Schema for individual audit field feedback. :audited-content snapshots
+   the localized text the verdict was given on — verdicts are per revision,
+   and comparing the snapshot against current content detects edits made
+   after the audit (see lipas.data.ptv/audit-field-state)."
   (m/schema
    [:map
     {:closed true}
     [:status audit-status-enum]
-    [:feedback [:string {:min 0 :max 1000}]]]))
+    [:feedback [:string {:min 0 :max 1000}]]
+    [:audited-content {:optional true} (localized-string-schema nil)]]))
 
 (def ptv-audit
-  "Schema for PTV audit information including timestamp, auditor, and field-specific feedback."
+  "Schema for PTV audit information including timestamp, auditor, and field-specific feedback.
+   :user-instruction (Toimintaohje) is audited for PTV Services only —
+   ServiceLocations don't carry a user instruction."
   (m/schema
    [:map
     {:closed true}
     [:timestamp [:string {:min 24 :max 30}]] ;; ISO-8601 format timestamps
     [:auditor-id :string]
     [:summary {:optional true} audit-field]
-    [:description {:optional true} audit-field]]))
+    [:description {:optional true} audit-field]
+    [:user-instruction {:optional true} audit-field]]))
 
 (def audit-data
   "Schema for audit data sent from frontend (before backend adds timestamp/auditor-id)."
@@ -45,7 +52,8 @@
    [:map
     {:closed true}
     [:summary {:optional true} audit-field]
-    [:description {:optional true} audit-field]]))
+    [:description {:optional true} audit-field]
+    [:user-instruction {:optional true} audit-field]]))
 
 (def ptv-meta
   "Schema for PTV metadata associated with sports sites."

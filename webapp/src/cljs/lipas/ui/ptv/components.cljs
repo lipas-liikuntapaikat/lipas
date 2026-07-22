@@ -32,6 +32,45 @@
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
 
+(defn audit-feedback-alert
+  "Auditor feedback for one field in the municipality-facing views.
+   Severity follows the whose-move state so a red changes-requested alert
+   resolves once the municipality has edited the text (:fixed), and an
+   approval whose content changed afterwards shows as a warning (:stale).
+   Props: :tr, :field-audit (full audit field map incl. :audited-content
+   and optionally a precomputed :state), :current-content (localized map
+   to compare the verdict snapshot against; omit when :state is given)."
+  [{:keys [tr field-audit current-content]}]
+  (let [{:keys [status feedback]} field-audit
+        state (or (:state field-audit)
+                  (when field-audit
+                    (ptv-data/audit-field-state field-audit current-content)))
+        [severity title] (case state
+                           :changes-requested
+                           ["error" (tr :ptv.audit/auditor-feedback-changes-requested)]
+
+                           :approved
+                           ["success" (tr :ptv.audit/auditor-feedback-approved)]
+
+                           :fixed
+                           ["info" (tr :ptv.audit/auditor-feedback-fixed)]
+
+                           :stale
+                           ["warning" (tr :ptv.audit/auditor-feedback-stale)]
+
+                           ;; no state (no verdict/content info): raw status
+                           (case status
+                             "changes-requested" ["error" (tr :ptv.audit/auditor-feedback-changes-requested)]
+                             "approved" ["success" (tr :ptv.audit/auditor-feedback-approved)]
+                             ["warning" (tr :ptv.audit/auditor-feedback)]))]
+    (when (and feedback (not (str/blank? feedback)))
+      [:> Alert
+       {:severity severity
+        :variant "outlined"
+        :sx #js {:mt 1 :mb 1}}
+       [:> AlertTitle title]
+       feedback])))
+
 (defn ptv-link-field
   "Shows PTV items as links with an edit button to switch to selector mode.
    When an item has no :url, renders as plain text instead of a link.
@@ -515,7 +554,7 @@
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-description @source-id @selected-tab %])
                 :fullWidth true
-                :variant "outlined" :rows 5 :multiline true :label (tr :ptv/description) :value v
+                :variant "outlined" :rows 7 :multiline true :label (tr :ptv/description) :value v
                 :inputProps #js {:maxLength ptv-data/max-description-length}
                 :helperText (str (count v) "/" ptv-data/max-description-length)
                 :error (> (count v) ptv-data/max-description-length)}])
@@ -524,7 +563,7 @@
               [text-fields/text-field
                {:on-change #(rf/dispatch [::events/set-service-candidate-user-instruction @source-id @selected-tab %])
                 :fullWidth true
-                :variant "outlined" :rows 3 :multiline true :label (tr :ptv/user-instruction) :value v
+                :variant "outlined" :rows 5 :multiline true :label (tr :ptv/user-instruction) :value v
                 :inputProps #js {:maxLength ptv-data/max-user-instruction-length}
                 :helperText (str (count v) "/" ptv-data/max-user-instruction-length)
                 :error (> (count v) ptv-data/max-user-instruction-length)}])]])]])))

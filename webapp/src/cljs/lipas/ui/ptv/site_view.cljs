@@ -24,24 +24,21 @@
             [reagent.hooks :as hooks]))
 
 (r/defc audit-summary-notification
-  "Displays a summary notification if there are audit issues"
+  "Displays a summary notification if there are unresolved audit issues.
+   A field the municipality has already fixed (whose-move state :fixed)
+   no longer counts as an issue."
   [{:keys [tr lipas-id]}]
-  (let [summary-feedback @(rf/subscribe [::subs/site-audit-field-feedback lipas-id :summary])
-        summary-status @(rf/subscribe [::subs/site-audit-field-status lipas-id :summary])
-        desc-feedback @(rf/subscribe [::subs/site-audit-field-feedback lipas-id :description])
-        desc-status @(rf/subscribe [::subs/site-audit-field-status lipas-id :description])
+  (let [summary-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id :summary])
+        desc-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id :description])
 
-        has-summary-issues? (and summary-feedback
-                                 (not (str/blank? summary-feedback))
-                                 (= summary-status "changes-requested"))
-        has-desc-issues? (and desc-feedback
-                              (not (str/blank? desc-feedback))
-                              (= desc-status "changes-requested"))
+        has-issues? (fn [{:keys [feedback state]}]
+                      (and feedback
+                           (not (str/blank? feedback))
+                           (= :changes-requested state)))
+        has-summary-issues? (has-issues? summary-audit)
+        has-desc-issues? (has-issues? desc-audit)]
 
-        issues-count (+ (if has-summary-issues? 1 0)
-                        (if has-desc-issues? 1 0))]
-
-    (when (> issues-count 0)
+    (when (or has-summary-issues? has-desc-issues?)
       [:> Alert
        {:severity "warning"
         :variant "outlined"
@@ -58,24 +55,13 @@
          (tr :ptv.audit/description-needs-changes))])))
 
 (r/defc audit-feedback-component
-  "Displays audit feedback for a specific field (summary or description)"
+  "Displays audit feedback for a specific field (summary or description).
+   Renders resolved (info) once the municipality has fixed the text."
   [{:keys [tr lipas-id field-name]}]
-  (let [feedback @(rf/subscribe [::subs/site-audit-field-feedback lipas-id field-name])
-        status @(rf/subscribe [::subs/site-audit-field-status lipas-id field-name])]
-    (when (and feedback (not (str/blank? feedback)))
-      [:> Alert
-       {:severity (case status
-                    "changes-requested" "error"
-                    "approved" "success"
-                    "warning")
-        :variant "outlined"
-        :sx #js {:mt 1 :mb 1}}
-       [:> AlertTitle
-        (case status
-          "changes-requested" (tr :ptv.audit/auditor-feedback-changes-requested)
-          "approved" (tr :ptv.audit/auditor-feedback-approved)
-          (tr :ptv.audit/auditor-feedback))]
-       feedback])))
+  (let [field-audit @(rf/subscribe [::subs/site-audit-field-display lipas-id field-name])]
+    [ptv-components/audit-feedback-alert
+     {:tr tr
+      :field-audit field-audit}]))
 
 (r/defc site-view [{:keys [tr lipas-id can-edit? edit-data]}]
   (let [[selected-tab set-selected-tab] (hooks/use-state :fi)
