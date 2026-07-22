@@ -881,6 +881,61 @@
     (is (sequential? body))
     (is (every? #(m/validate sports-site-schema/sports-site %) body))))
 
+(deftest get-full-sports-site-history-unauthenticated-test
+  (let [resp (test-app (-> (mock/request :get "/api/sports-sites/history/1/full")
+                           (mock/content-type "application/json")))]
+    (is (= 401 (:status resp)))))
+
+(deftest get-full-sports-site-history-requires-privilege-test
+  (let [regular-user (tu/gen-regular-user :db-component (test-db))
+        token (jwt/create-token regular-user)
+        resp (test-app (-> (mock/request :get "/api/sports-sites/history/1/full")
+                           (mock/content-type "application/json")
+                           (tu/token-header token)))]
+    (is (= 403 (:status resp)))))
+
+(deftest get-full-sports-site-history-test
+  (let [user (tu/gen-admin-user :db-component (test-db))
+        rev1 (-> (tu/gen-sports-site-with-type 3110)
+                 (assoc :status "active")
+                 (assoc :event-date "2024-01-01T00:00:00.000Z"))
+        rev2 (-> rev1
+                 (assoc :event-date "2024-06-01T00:00:00.000Z")
+                 (assoc :name "Kissalan kuulahalli"))
+        draft (-> rev1
+                  (assoc :event-date "2024-09-01T00:00:00.000Z"))
+        _ (core/upsert-sports-site!* (test-db) user rev1)
+        _ (core/upsert-sports-site!* (test-db) user rev2)
+        _ (core/upsert-sports-site!* (test-db) user draft true)
+        lipas-id (:lipas-id rev1)
+        token (jwt/create-token user)
+
+        full-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
+                                                         lipas-id "/full"))
+                                (mock/content-type "application/json")
+                                (tu/token-header token)))
+        full-body (<-json (:body full-resp))
+
+        ;; The existing per-year endpoint stays untouched: same calendar
+        ;; year, drafts excluded -> only the latest (rev2) shows.
+        yearly-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
+                                                           lipas-id))
+                                  (mock/content-type "application/json")))
+        yearly-body (<-json (:body yearly-resp))]
+
+    (testing "full history includes every revision, including drafts"
+      (is (= 200 (:status full-resp)))
+      (is (sequential? full-body))
+      (is (= 3 (count full-body)))
+      (is (every? #(m/validate sports-site-schema/sports-site %) full-body))
+      (is (= 1 (count (filter #(= "draft" (:doc-status %)) full-body))))
+      (is (= 2 (count (filter #(= "published" (:doc-status %)) full-body)))))
+
+    (testing "existing per-year endpoint is unaffected"
+      (is (= 200 (:status yearly-resp)))
+      (is (= 1 (count yearly-body)))
+      (is (= "Kissalan kuulahalli" (:name (first yearly-body)))))))
+
 (deftest search-test
   (let [site (tu/gen-sports-site)
         lipas-id (:lipas-id site)
