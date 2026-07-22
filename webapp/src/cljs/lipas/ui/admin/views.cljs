@@ -1,8 +1,12 @@
 (ns lipas.ui.admin.views
-  (:require ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
+            ["@turf/area$default" :as turf-area]
+            ["@turf/length$default" :as turf-length]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -13,6 +17,8 @@
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Typography$default" :as Typography]
+            ["react" :as react]
+            [clojure.reader :refer [read-string]]
             [clojure.string :as str]
             [lipas.data.styles :as styles]
             [lipas.roles :as roles]
@@ -586,6 +592,246 @@
         (:username user)
         (str "User ID: " author-id))))
 
+;; Calls turf directly instead of lipas.ui.map.utils, to avoid pulling the
+;; OpenLayers-heavy map bundle into the admin module for two small calcs.
+(defn- geom-length-km [fcoll]
+  (when (seq (:features fcoll))
+    (-> fcoll clj->js turf-length (utils/round-safe 2) read-string)))
+
+(defn- geom-area-m2 [fcoll]
+  (when (seq (:features fcoll))
+    (-> fcoll clj->js turf-area (utils/round-safe 2) read-string)))
+
+(defn- format-area [area-m2]
+  (if (>= area-m2 10000)
+    (str (utils/round-safe (/ area-m2 10000) 2) " ha")
+    (str area-m2 " m²")))
+
+(defn- count-vertices [coords]
+  (if (number? (first coords))
+    1
+    (reduce + 0 (map count-vertices coords))))
+
+(defn- line-segment-count [feature]
+  (case (get-in feature [:geometry :type])
+    "LineString"      (max 0 (dec (count (get-in feature [:geometry :coordinates]))))
+    "MultiLineString" (reduce + 0 (map #(max 0 (dec (count %)))
+                                       (get-in feature [:geometry :coordinates])))
+    0))
+
+(defn- geom-summary-for-features
+  "Lightweight, human-comparable summary of a GeoJSON feature seq: vertex
+   count plus route length or polygon area, so revisions can be eyeballed
+   for meaningful geometry changes without diffing raw coordinates."
+  [features]
+  (let [by-type       (group-by #(get-in % [:geometry :type]) features)
+        line-features (concat (get by-type "LineString") (get by-type "MultiLineString"))
+        poly-features (concat (get by-type "Polygon") (get by-type "MultiPolygon"))
+        point-features (concat (get by-type "Point") (get by-type "MultiPoint"))
+        vertex-count  (reduce + 0 (map #(count-vertices (get-in % [:geometry :coordinates])) features))]
+    (cond
+      (seq line-features)
+      (let [segments  (reduce + 0 (map line-segment-count line-features))
+            length-km (geom-length-km {:type "FeatureCollection" :features line-features})]
+        {:vertex-count vertex-count
+         :geom-summary (str segments " segmenttiä, " vertex-count " solmua, " length-km " km")})
+
+      (seq poly-features)
+      (let [area-m2 (geom-area-m2 {:type "FeatureCollection" :features poly-features})]
+        {:vertex-count vertex-count
+         :geom-summary (str vertex-count " solmua, " (format-area area-m2))})
+
+      (seq point-features)
+      {:vertex-count vertex-count
+       :geom-summary (str (count point-features) " piste" (when (> (count point-features) 1) "ttä"))}
+
+      :else
+      {:vertex-count 0 :geom-summary "-"})))
+
+;; Shape-based, not path-based: a document can carry more than one
+;; FeatureCollection (the site's own :location/:geometries, but also e.g.
+;; each entry under :activities/:outdoor-recreation-routes/:routes has its
+;; own :geometries) -- anything shaped like one gets the compact summary
+;; treatment, wherever it occurs.
+(defn- geo-feature-collection? [v]
+  (and (map? v) (= "FeatureCollection" (:type v)) (sequential? (:features v))))
+
+;; Fields we add onto each revision map for table display, plus admin
+;; metadata pulled from the DB row (not part of the document itself) --
+;; stripped before diffing/tree-rendering so only real document content
+;; is compared.
+(def ^:private synthetic-revision-keys
+  #{:index :formatted-date :user-display
+    :revision-id :revision-created-at :author :doc-status})
+
+(defn- leaf-str [v]
+  (cond
+    (nil? v) "-"
+    (boolean? v) (str v)
+    (keyword? v) (name v)
+    ;; Falls through here when only one side of a diff is a FeatureCollection
+    ;; (e.g. a route gained/lost its :geometries entirely) -- render it the
+    ;; same way the paired-comparison case in diff-paths does, for consistency.
+    (geo-feature-collection? v) (:geom-summary (geom-summary-for-features (:features v)))
+    (map? v) (str (count v) " kenttää")
+    (sequential? v) (let [s (str v)]
+                      (if (> (count s) 80) (str (count v) " kpl") s))
+    :else (str v)))
+
+(defn- diff-paths
+  "Flat list of {:path [...] :old :new} for every leaf that differs between
+   two documents. Recurses into maps and vectors alike (vectors index-wise)
+   so nested rich structures -- e.g. a route entry under
+   :activities/:outdoor-recreation-routes/:routes -- are diffed field by
+   field. The one exception is GeoJSON geometry: when BOTH sides of a path
+   are FeatureCollections (wherever they appear), they're compared via their
+   geom-summary instead of diffing raw coordinates. If only one side is one
+   -- the geometry was added or removed entirely -- that's a real structural
+   change and falls through to the normal leaf comparison below, so it isn't
+   silently swallowed just because e.g. an empty FeatureCollection's summary
+   happens to look the same as 'no geometry'."
+  [old new]
+  (letfn [(walk [path old-v new-v acc]
+            (cond
+              (and (geo-feature-collection? old-v) (geo-feature-collection? new-v))
+              (let [old-s (:geom-summary (geom-summary-for-features (:features old-v)))
+                    new-s (:geom-summary (geom-summary-for-features (:features new-v)))]
+                (if (= old-s new-s) acc (conj acc {:path path :old old-s :new new-s})))
+
+              (and (map? old-v) (map? new-v))
+              (reduce (fn [acc k] (walk (conj path k) (get old-v k) (get new-v k) acc))
+                      acc
+                      (distinct (concat (keys old-v) (keys new-v))))
+
+              (and (vector? old-v) (vector? new-v))
+              (reduce (fn [acc i] (walk (conj path i) (get old-v i) (get new-v i) acc))
+                      acc
+                      (range (max (count old-v) (count new-v))))
+
+              (= old-v new-v) acc
+
+              :else (conj acc {:path path :old old-v :new new-v})))]
+    (walk [] old new [])))
+
+(defn- toggle-path [s path]
+  (if (contains? s path) (disj s path) (conj s path)))
+
+(defn- tree-value-node [{:keys [expanded* path label value] :as props}]
+  (let [indent (* (count path) 16)]
+    (cond
+      (geo-feature-collection? value)
+      [:div {:style {:padding-left indent :font-family "monospace"}}
+       [:> Typography {:variant "body2"}
+        (str label ": " (:geom-summary (geom-summary-for-features (:features value))))]]
+
+      (map? value)
+      (let [expanded? (contains? @expanded* path)]
+        [:div {:style {:padding-left indent}}
+         [:div {:style {:cursor "pointer"} :on-click #(swap! expanded* toggle-path path)}
+          [:> Typography {:variant "body2" :style {:font-family "monospace"}}
+           (str (if expanded? "▼ " "▶ ") label " {" (count value) "}")]]
+         (when expanded?
+           (doall
+            (for [[k v] (sort-by (comp str key) value)]
+              ^{:key (str path k)}
+              [tree-value-node (assoc props :path (conj path k) :label (name k) :value v)])))])
+
+      (and (sequential? value) (seq value))
+      (let [expanded? (contains? @expanded* path)
+            show-all? (contains? @expanded* (conj path ::all))
+            shown (if (or show-all? (<= (count value) 20)) value (take 20 value))]
+        [:div {:style {:padding-left indent}}
+         [:div {:style {:cursor "pointer"} :on-click #(swap! expanded* toggle-path path)}
+          [:> Typography {:variant "body2" :style {:font-family "monospace"}}
+           (str (if expanded? "▼ " "▶ ") label " [" (count value) "]")]]
+         (when expanded?
+           [:<>
+            (doall
+             (map-indexed
+              (fn [i v]
+                ^{:key (str path i)}
+                [tree-value-node (assoc props :path (conj path i) :label (str "#" i) :value v)])
+              shown))
+            (when (and (not show-all?) (> (count value) 20))
+              [:div {:style {:padding-left (+ indent 16) :cursor "pointer" :color "#757575"}
+                     :on-click #(swap! expanded* conj (conj path ::all))}
+               (str "… ja " (- (count value) 20) " lisää — näytä kaikki")])])])
+
+      :else
+      [:div {:style {:padding-left indent :font-family "monospace"}}
+       [:> Typography {:variant "body2"} (str label ": " (leaf-str value))]])))
+
+(defn doc-tree
+  "Collapsible read-only view of a full document. Top-level keys start
+   expanded/visible; nested branches start collapsed. Any GeoJSON
+   FeatureCollection (the site's own geometry, or e.g. a route's nested
+   geometry under :activities) is never walked -- shown as a compact
+   summary instead -- and any other long array is capped at 20 items with
+   a 'show all' toggle, so large routes/polygons stay readable."
+  [document]
+  (r/with-let [expanded* (r/atom #{})]
+    [:div
+     (doall
+      (for [[k v] (sort-by (comp str key) document)]
+        ^{:key (str k)}
+        [tree-value-node {:expanded* expanded* :path [k] :label (name k) :value v}]))]))
+
+;; Marker key distinguishing a diff leaf ({::old ::new}) from a branch
+;; (a plain nested map) once diff-paths' flat list is renested into a tree.
+(def ^:private diff-leaf-marker ::diff-leaf)
+
+(defn- path-key-label
+  "diff-paths keys can be keywords (map traversal) or ints (vector index)."
+  [k]
+  (if (keyword? k) (name k) (str "#" k)))
+
+(defn- build-diff-tree [diffs]
+  (reduce (fn [acc {:keys [path old new]}]
+            (assoc-in acc path {diff-leaf-marker true :old old :new new}))
+          {}
+          diffs))
+
+(defn- diff-tree-node [depth label node]
+  (let [indent (* depth 16)]
+    (if (get node diff-leaf-marker)
+      [:div {:style {:padding-left indent :font-family "monospace"}}
+       [:> Typography {:variant "body2"}
+        (str label ": " (leaf-str (:old node)) "  →  " (leaf-str (:new node)))]]
+      [:div {:style {:padding-left indent}}
+       [:> Typography {:variant "body2" :style {:font-family "monospace" :font-weight 600}}
+        label]
+       (doall
+        (for [[k v] (sort-by (comp str key) node)]
+          ^{:key (str label k)}
+          [diff-tree-node (inc depth) (path-key-label k) v]))])))
+
+(defn changes-view
+  "Same tree shape as doc-tree, but pruned to only the paths that changed
+   since the previous revision -- recursing into nested maps/vectors alike
+   (so e.g. a change to just one route's :fi/:se/:en description stays
+   visible, instead of collapsing into an opaque 'N kpl -> N kpl'), with
+   any nested GeoJSON geometry still summarized as one line."
+  [prev-revision revision]
+  (let [strip #(apply dissoc % synthetic-revision-keys)
+        diffs (when prev-revision
+                (diff-paths (strip prev-revision) (strip revision)))]
+    (cond
+      (nil? prev-revision)
+      [:> Typography {:variant "body2" :style {:color "#757575"}}
+       "Ensimmäinen tallennettu versio -- ei aiempaa tallennusta vertailtavaksi."]
+
+      (empty? diffs)
+      [:> Typography {:variant "body2" :style {:color "#757575"}}
+       "Ei muutoksia edelliseen tallennukseen."]
+
+      :else
+      (let [tree (build-diff-tree diffs)]
+        [:div
+         (doall
+          (for [[k v] (sort-by (comp str key) tree)]
+            ^{:key (str k)}
+            [diff-tree-node 0 (path-key-label k) v]))]))))
+
 (defn site-history-search []
   (let [search-id (<== [::subs/site-history-search-id])
         loading? (<== [::subs/site-history-loading?])
@@ -616,47 +862,113 @@
                        (==> [::events/search-site-history (js/parseInt search-id-str)]))}
          (if loading? "Haetaan..." "Hae")]]]]]))
 
+(def ^:private detail-columns 6)
+
+(defn- revision-detail
+  "Content shown inside a row's Collapse: a Muutokset/Koko dokumentti
+   toggle plus the corresponding view, for one revision."
+  [{:keys [revision prev mode on-mode-change]}]
+  [:div {:style {:padding "8px 16px 16px"}}
+   [:> Grid2 {:container true :spacing 1 :sx #js{:mb 1}}
+    [:> Grid2
+     [:> Button
+      {:size "small"
+       :variant (if (= :changes mode) "contained" "outlined")
+       :on-click #(on-mode-change :changes)}
+      "Muutokset"]]
+    [:> Grid2
+     [:> Button
+      {:size "small"
+       :variant (if (= :full mode) "contained" "outlined")
+       :on-click #(on-mode-change :full)}
+      "Koko dokumentti"]]]
+   (if (= :changes mode)
+     [changes-view prev revision]
+     ^{:key (str "tree-" (:revision-id revision))}
+     [doc-tree (apply dissoc revision synthetic-revision-keys)])])
+
 (defn site-history-results []
-  (let [results (<== [::subs/site-history-results])
-        error (<== [::subs/site-history-error])
-        loading? (<== [::subs/site-history-loading?])
-        users (<== [::subs/users])
-        tr (<== [:lipas.ui.subs/translator])]
-    [:<>
-     ;; Error display
-     (when error
-       [:> Alert {:severity "error" :sx #js{:mb 2}}
-        error])
+  (r/with-let [expanded* (r/atom {})
+               detail-mode* (r/atom {})]
+    (let [results (<== [::subs/site-history-results])
+          error (<== [::subs/site-history-error])
+          loading? (<== [::subs/site-history-loading?])
+          users (<== [::subs/users])
+          tr (<== [:lipas.ui.subs/translator])
+          ;; Newest first for iteration/diffing (each row's "previous" is
+          ;; the next one down), but :index counts from the oldest revision
+          ;; (#1) forward, matching how admins expect version numbers to read.
+          sorted-raw (->> (or results [])
+                          (sort-by :event-date #(compare %2 %1))
+                          vec)
+          total (count sorted-raw)
+          sorted (->> sorted-raw
+                      (map-indexed
+                       (fn [idx revision]
+                         (-> revision
+                             (assoc :index (- total idx))
+                             (assoc :formatted-date (format-timestamp (:event-date revision)))
+                             (assoc :user-display (get-user-display-name users (:author revision))))))
+                      vec)]
+      [:<>
+       ;; Error display
+       (when error
+         [:> Alert {:severity "error" :sx #js{:mb 2}}
+          error])
 
-     ;; Loading indicator
-     (when loading?
-       [:> LinearProgress {:sx #js{:mb 2}}])
+       ;; Loading indicator
+       (when loading?
+         [:> LinearProgress {:sx #js{:mb 2}}])
 
-     ;; Results
-     (when (and results (seq results))
-       [:> Card
-        [:> CardHeader {:title (str "Hukutulokset (" (count results) " versiota)")}]
-        [:> CardContent
-         [tables/table-v2
-          {:items (map-indexed (fn [idx revision]
-                                 (-> revision
-                                     (assoc :index (+ idx 1))
-                                     (assoc :formatted-date (format-timestamp (:event-date revision)))
-                                     (assoc :user-display (get-user-display-name users (:author revision)))
-                                     (assoc :type-code (get-in revision [:type :type-code]))))
-                               (sort-by :event-date #(compare %2 %1) results))
-           :headers
-           {:index {:label "#"}
-            :formatted-date {:label (tr :time/time)}
-            :user-display {:label (tr :lipas.user/user)}
-            :status {:label (tr :lipas.sports-site/status)}
-            :name {:label (tr :lipas.sports-site/name)}
-            :type-code {:label (tr :type/type-code)}}}]]])
+       ;; Results: each row expands in place (accordion-style, like the PTV
+       ;; site table) so the diff/full-doc view sits right next to the row
+       ;; that was clicked, instead of scrolling to the bottom of a long list.
+       (when (and results (seq results))
+         [:> Card
+          [:> CardHeader {:title (str "Hakutulokset (" (count results) " versiota)")}]
+          [:> CardContent
+           [:> Table
+            [:> TableHead
+             [:> TableRow
+              [:> TableCell {:padding "checkbox"}]
+              [:> TableCell "#"]
+              [:> TableCell (tr :time/time)]
+              [:> TableCell (tr :lipas.sports-site/status)]
+              [:> TableCell (tr :lipas.sports-site/name)]
+              [:> TableCell (tr :lipas.user/user)]]]
+            [:> TableBody
+             (doall
+              (for [[idx revision] (map-indexed vector sorted)
+                    :let [id (:revision-id revision)
+                          expanded? (get @expanded* id false)
+                          prev (get sorted (inc idx))
+                          mode (get @detail-mode* id :changes)]]
+                ^{:key (str id)}
+                [:<>
+                 [:> TableRow
+                  {:hover true
+                   :style {:cursor "pointer"}
+                   :on-click #(swap! expanded* update id not)}
+                  [:> TableCell {:padding "checkbox"}
+                   [:> IconButton {:size "small"}
+                    [:> Icon (if expanded? "keyboard_arrow_up" "keyboard_arrow_down")]]]
+                  [:> TableCell (:index revision)]
+                  [:> TableCell (:formatted-date revision)]
+                  [:> TableCell (:status revision)]
+                  [:> TableCell (:name revision)]
+                  [:> TableCell (:user-display revision)]]
+                 [:> TableRow
+                  [:> TableCell {:style {:paddingTop 0 :paddingBottom 0} :colSpan detail-columns}
+                   [:> Collapse {:in expanded? :timeout "auto" :unmountOnExit true}
+                    [revision-detail {:revision revision
+                                      :prev prev
+                                      :mode mode
+                                      :on-mode-change #(swap! detail-mode* assoc id %)}]]]]]))]]]])
 
-     ;; No results message
-     (when (and results (empty? results))
-       [:> Alert {:severity "info"}
-        "No history found for this LIPAS ID"])]))
+       ;; No results message
+       (when (and results (empty? results))
+         [:> Alert {:severity "info"}
+          "No history found for this LIPAS ID"])])))
 
 (defn site-history-tab []
   [:> Card {:square true}

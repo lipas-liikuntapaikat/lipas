@@ -679,6 +679,16 @@
                     (assoc :author (:author-id metadata))
                     (assoc :doc-status (:doc-status metadata))))))))
 
+(defn get-full-sports-site-history [db lipas-id]
+  (->> (db/get-full-sports-site-history db lipas-id)
+       (map (fn [sports-site]
+              (let [metadata (meta sports-site)]
+                (-> sports-site
+                    (assoc :revision-id (:id metadata))
+                    (assoc :revision-created-at (:created-at metadata))
+                    (assoc :author (:author-id metadata))
+                    (assoc :doc-status (:doc-status metadata))))))))
+
 ;; ES doesn't support indexing FeatureCollections
 ;; NOTE: feature-coll->geom-coll moved to lipas.backend.geom-utils to avoid circular dependency
 

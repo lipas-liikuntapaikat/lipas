@@ -240,6 +240,21 @@
              {:status 200
               :body (core/get-sports-site-history db lipas-id)})}}]
 
+        ;; Full, raw revision log (every row, including drafts) for a single
+        ;; lipas-id. Unlike the endpoint above, this is admin-only: it exposes
+        ;; author ids and draft/incorrect-data revisions across the site's
+        ;; entire history, not just one deduped row per year.
+        ["/sports-sites/history/:lipas-id/full"
+         {:get
+          {:no-doc false
+           :require-privilege :users/manage
+           :parameters {:path {:lipas-id int?}}
+           :responses {200 {:body [:sequential sports-site-schema/sports-site-compat]}}
+           :handler
+           (fn [{{{:keys [lipas-id]} :path} :parameters}]
+             {:status 200
+              :body (core/get-full-sports-site-history db lipas-id)})}}]
+
         ["/sports-sites/type/:type-code"
          {:get
           {:no-doc false

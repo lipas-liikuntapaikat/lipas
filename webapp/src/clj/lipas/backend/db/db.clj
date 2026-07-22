@@ -159,6 +159,12 @@
   [db-spec lipas-id]
   (sports-site/get-edit-history db-spec {:lipas_id lipas-id}))
 
+(defn get-full-sports-site-history [db-spec lipas-id]
+  (let [params (-> {:lipas-id lipas-id}
+                   db-utils/->snake-case-keywords)]
+    (->> (sports-site/get-full-history db-spec params)
+         (map sports-site/unmarshall-history-row))))
+
 (defn get-sports-sites-by-type-code
   [db-spec type-code {:keys [revs raw?] :or {revs "latest" raw? false}}]
   (let [db-fn (cond

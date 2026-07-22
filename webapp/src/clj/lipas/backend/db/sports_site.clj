@@ -27,4 +27,15 @@
                          :doc-status    status
                          :acting-org-id acting_org_id})))
 
+(defn unmarshall-history-row
+  "Like `unmarshall`, but also keeps the revision's own row id and
+   created-at, needed to identify individual rows in the full
+   (non-deduplicated) event log."
+  [{:keys [id created_at document author_id status] :as doc}]
+  (when doc
+    (with-meta document {:id id
+                          :created-at created_at
+                          :author-id author_id
+                          :doc-status status})))
+
 (hugsql/def-db-fns "sql/sports_site.sql")

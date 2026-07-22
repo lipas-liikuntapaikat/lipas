@@ -70,6 +70,15 @@ FROM sports_site
 WHERE lipas_id = :lipas_id
 ORDER BY event_date DESC
 
+-- :name get-full-history
+-- :command :query
+-- :result :many
+-- :doc Returns the full, raw revision history (every row, including drafts) for a single sports-site (lipas_id)
+SELECT *
+FROM sports_site
+WHERE lipas_id = :lipas_id
+ORDER BY event_date DESC, created_at DESC
+
 -- :name get-yearly-by-type-code
 -- :command :query
 -- :result :many

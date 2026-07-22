@@ -253,7 +253,7 @@
                (assoc-in [:admin :site-history :error] nil))
        :http-xhrio
        {:method :get
-        :uri (str (:backend-url db) "/sports-sites/history/" lipas-id)
+        :uri (str (:backend-url db) "/sports-sites/history/" lipas-id "/full")
         :headers {:Authorization (str "Token " token)}
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success [::site-history-success]
