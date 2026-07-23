@@ -1,11 +1,14 @@
 (ns lipas.ui.assistant.events
+  ;; Lives in the base module: must not require the lazy :map or :ptv
+  ;; modules. Map/PTV interactions go through literal event keywords
+  ;; dispatched with :lipas.ui.lazy/load-then, light helpers extracted to
+  ;; lipas.ui.geom and lipas.ui.ptv.context.
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
             [lipas.schema.sports-sites :as sports-site-schema]
+            [lipas.ui.geom :as geom]
             [lipas.ui.help.events :as help-events]
-            [lipas.ui.map.events :as map-events]
-            [lipas.ui.map.utils :as map-utils]
-            [lipas.ui.ptv.events :as ptv-events]
+            [lipas.ui.ptv.context :as ptv-context]
             [lipas.ui.utils :as utils]
             [malli.core :as m]
             [re-frame.core :as rf]))
@@ -59,7 +62,7 @@
                    sports-site-schema/new-sports-site
                    sports-site-schema/sports-site)
           length-km (when (and geoms (= "LineString" geom-type))
-                      (map-utils/calculate-length-km geoms))]
+                      (geom/calculate-length-km geoms))]
       (cond-> {}
         new? (assoc :new-site? true)
         (:sub-mode mode) (assoc :sub-mode (name (:sub-mode mode)))
@@ -85,7 +88,7 @@
   (let [tr (:translator db)
         locale (when tr (name (tr)))
         route (some-> db :current-route :data :name str)
-        ptv-ctx (ptv-events/dialog-context db)
+        ptv-ctx (ptv-context/dialog-context db)
         view (cond
                ;; A fullscreen dialog covers whatever the route renders —
                ;; it is where the user actually is.
@@ -182,17 +185,22 @@
   "Whitelist translator: action map → dispatch vectors. Unknown action
    types translate to nothing."
   [{:keys [type] :as action}]
+  ;; Map-touching actions dispatch through :lipas.ui.lazy/load-then :map —
+  ;; their handlers live in the lazy :map module (no-op when already in,
+  ;; e.g. every mid-edit action).
   (case type
     "apply-search"
     [[:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]
-     [:dispatch [:lipas.ui.search.events/replace-filters
-                 {:search-text (:search-text action)
-                  :city-codes (:city-codes action)
-                  :type-codes (:type-codes action)
-                  :edit-permission? (:only-editable action)}]]]
+     [:dispatch [:lipas.ui.lazy/load-then :map
+                 [:lipas.ui.search.events/replace-filters
+                  {:search-text (:search-text action)
+                   :city-codes (:city-codes action)
+                   :type-codes (:type-codes action)
+                   :edit-permission? (:only-editable action)}]]]]
 
     "show-site"
-    [[:dispatch [:lipas.ui.map.events/show-sports-site (:lipas-id action)]]]
+    [[:dispatch [:lipas.ui.lazy/load-then :map
+                 [:lipas.ui.map.events/show-sports-site (:lipas-id action)]]]]
 
     "pan-to-location"
     [[:dispatch [:lipas.ui.events/navigate :lipas.ui.routes.map/map]]
@@ -202,9 +210,10 @@
     ;; geometry editing (zoom to a problem spot) and navigating would
     ;; disturb the edit session.
     "pan-to-coordinates"
-    (let [{:keys [lat lon]} (map-events/wgs84->epsg3067 [(:lon action) (:lat action)])]
-      [[:dispatch [:lipas.ui.map.events/set-center lat lon]]
-       [:dispatch [:lipas.ui.map.events/set-zoom (or (:zoom action) 16)]]])
+    [[:dispatch [:lipas.ui.lazy/load-then :map
+                 [:lipas.ui.map.events/set-view-wgs84
+                  [(:lon action) (:lat action)]
+                  (or (:zoom action) 16)]]]]
 
     "navigate-to-view"
     (when-let [route (view->route (:view action))]
@@ -240,11 +249,12 @@
   (fn [_ [_ resp]]
     (let [f (-> resp :features first)]
       (if-let [coords (-> f :geometry :coordinates)]
-        (let [{:keys [lat lon]} (map-events/wgs84->epsg3067 coords)
-              address? (contains? #{"address" "venue" "street"}
+        (let [address? (contains? #{"address" "venue" "street"}
                                   (-> f :properties :layer))]
-          {:fx [[:dispatch [:lipas.ui.map.events/set-center lat lon]]
-                [:dispatch [:lipas.ui.map.events/set-zoom (if address? 14 12)]]]})
+          {:fx [[:dispatch [:lipas.ui.lazy/load-then :map
+                            [:lipas.ui.map.events/set-view-wgs84
+                             coords
+                             (if address? 14 12)]]]]})
         {:dispatch [::pan-to-location-failure nil]}))))
 
 (rf/reg-event-fx ::pan-to-location-failure

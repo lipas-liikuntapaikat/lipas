@@ -164,6 +164,10 @@
                  user)]
       (roles/check-privilege user role-context k))))
 
+(rf/reg-sub ::admin-org
+  (fn [db [_ id]]
+    (get-in db [:admin :orgs id])))
+
 (rf/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]
     (case context-key
@@ -173,8 +177,9 @@
       :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])
       :org-id [;; Session user or org admin, managing their own orgs
                (rf/subscribe [:lipas.ui.org.subs/user-org-by-id v])
-               ;; Admin view
-               (rf/subscribe [:lipas.ui.admin.subs/org v])]))
+               ;; Admin view (base twin of :lipas.ui.admin.subs/org — the
+               ;; admin subs live in the lazy :admin module)
+               (rf/subscribe [::admin-org v])]))
   (fn [x [_ context-key _v locale]]
     (case context-key
       :lipas-id (:name x)

@@ -566,3 +566,51 @@
      (for [k [:vaka :lukiot :perus+lukio :peruskoulut :erityis]]
        [:> Area
         {:dataKey k :stackId "a" :fill (school-types k) :stroke (school-types k)}]))])
+
+(defn elevation-area-chart
+  "Presentational route elevation profile. The data plumbing (subs,
+   segment selection) lives in lipas.ui.sports-sites.views/elevation-profile
+   in the :map module; this component sits in the lazy :charts module and
+   is rendered through lipas.ui.lazy so the map bundle doesn't carry
+   recharts."
+  [{:keys [data labels on-hover on-leave]}]
+  [:> ResponsiveContainer {:width "100%" :height 300}
+   [:> AreaChart
+    {:data data
+     :layout "horizontal"
+     :baseValue "dataMin"
+     :onMouseMove (fn [^js state]
+                    (when (and state (.-isTooltipActive state))
+                      (let [active-index (parse-long (.-activeIndex state))
+                            segment-data (nth data active-index)]
+                        (when segment-data
+                          (on-hover segment-data)))))
+     :onMouseLeave (fn [_] (on-leave))}
+    [:defs
+     [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
+      [:stop {:stopColor (:elevation-m colors) :offset "5%" :stopOpacity "0.8"}]
+      [:stop {:stopColor (:elevation-m colors) :offset "95%" :stopOpacity "0"}]]]
+    [:> Legend {:content (fn [^js props] (legend labels props))}]
+    [:> Tooltip
+     {:content (fn [^js props]
+                 (labeled-tooltip
+                   labels
+                   :label
+                   :hide-header
+                   #(utils/round-safe % 2)
+                   props))}]
+    [:> XAxis
+     {:dataKey "distance-km" :tick true :unit "km"
+      :domain #js ["dataMin" "dataMax"]
+      :type "number"
+      :tickFormatter (fn [x] (utils/round-safe x 1))}]
+    [:> YAxis
+     {:tick font-styles
+      :dataKey :elevation-m
+      :unit "m"
+      :domain #js ["dataMin" "dataMax"]
+      :tickFormatter (fn [x] (utils/round-safe x 0))}]
+    [:> Area
+     {:dataKey :elevation-m
+      :fill "url(#color-elevation)"
+      :stroke (:elevation-m colors)}]]])

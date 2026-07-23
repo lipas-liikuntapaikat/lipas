@@ -3,6 +3,16 @@
             [lipas.roles :as roles]
             [lipas.ui.db :as db]
             [lipas.ui.search.db :as search-db]
+            ;; Shared app-db "model layer": subs/events referenced across
+            ;; feature modules (stats, admin, org, user profile, help,
+            ;; assistant). Required here so they stay in the base module —
+            ;; only the views/OpenLayers side of these features is lazy.
+            [lipas.ui.reports.events]
+            [lipas.ui.search.events]
+            [lipas.ui.search.subs]
+            [lipas.ui.sports-sites.activities.subs]
+            [lipas.ui.sports-sites.events]
+            [lipas.ui.sports-sites.subs]
             [lipas.data.types :as types-data]
             [lipas.ui.utils :as utils :refer [==>]]
             [re-frame.core :as rf]
@@ -41,9 +51,17 @@
   (fn [db [_ _]]
     (assoc db :drawer-open? false)))
 
-(rf/reg-event-db ::set-translator
-  (fn [db [_ locale]]
-    (assoc db :translator (i18n/->tr-fn locale))))
+(rf/reg-event-fx ::set-translator
+  ;; :en and :se dictionaries live in lazy modules. Switch the locale
+  ;; immediately (missing translations fall back to :fi via tongue), load
+  ;; the dictionary module and re-set the translator so the UI re-renders
+  ;; with the real texts once they're in.
+  (fn [{:keys [db]} [_ locale]]
+    (cond-> {:db (assoc db :translator (i18n/->tr-fn locale))}
+      (not (i18n/dict-loaded? locale))
+      (assoc :fx [[:lipas.ui.lazy/load-fx
+                   {:module (case locale :en :i18n-en :se :i18n-se)
+                    :events [[::set-translator locale]]}]]))))
 
 (rf/reg-event-db ::set-active-notification
   (fn [db [_ notification]]

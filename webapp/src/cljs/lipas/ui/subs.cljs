@@ -1,6 +1,7 @@
 (ns lipas.ui.subs
   (:require [clojure.string :refer [upper-case]]
             [lipas.data.types :as types]
+            [lipas.ui.lazy :as lazy]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::current-route
@@ -10,7 +11,12 @@
 (rf/reg-sub ::current-view
   :<- [::current-route]
   (fn [route _]
-    (-> route :data :view)))
+    (let [view (-> route :data :view)]
+      ;; Lazy routes carry a shadow.lazy loadable; routes/on-navigate
+      ;; guarantees its module is loaded before the match reaches app-db.
+      (if (lazy/loadable? view)
+        @view
+        view))))
 
 (rf/reg-sub ::parameters
   :<- [::current-route]
@@ -44,6 +50,13 @@
   :<- [::translator]
   (fn [tr _]
     (tr)))
+
+(rf/reg-sub ::ptv-dialog-open?
+  ;; Base-module twin of :lipas.ui.ptv.subs/dialog-open? — reads the db
+  ;; path directly so always-mounted UI (assistant, map controls) can
+  ;; check it without the lazy :ptv module being loaded.
+  (fn [db _]
+    (get-in db [:ptv :dialog :open?])))
 
 (rf/reg-sub ::active-notification
   (fn [db _]

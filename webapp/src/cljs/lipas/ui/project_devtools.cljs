@@ -72,10 +72,17 @@
                  "Yes"
                  "No")]]))]]])
 
+(rf/reg-sub ::admin-users
+  ;; Base twin of :lipas.ui.admin.subs/users — the admin subs live in the
+  ;; lazy :admin module, which this dev-tool loads on demand below.
+  (fn [db _]
+    (-> db :admin :users)))
+
 (defn- impersonate-selector []
-  (reagent/with-let [_ (rf/dispatch [:lipas.ui.admin.events/get-users])
+  (reagent/with-let [_ (rf/dispatch [:lipas.ui.lazy/load-then :admin
+                                     [:lipas.ui.admin.events/get-users]])
                      email* (reagent/atom "")]
-    (let [users (vals @(rf/subscribe [:lipas.ui.admin.subs/users]))
+    (let [users (vals @(rf/subscribe [::admin-users]))
           by-email (into {} (keep (fn [u] (when (:email u) [(:email u) u])) users))]
       [:div
        [:p (count users) " users loaded"]

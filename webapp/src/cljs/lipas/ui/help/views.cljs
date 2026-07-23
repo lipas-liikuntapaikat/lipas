@@ -47,7 +47,7 @@
    ["@mui/material/useMediaQuery$default" :as useMediaQuery]
    ["react-markdown$default" :as ReactMarkdown]
    [lipas.ui.help.events :as events]
-   [lipas.ui.help.manage :as manage]
+   [lipas.ui.lazy :as lazy]
    [lipas.ui.help.subs :as subs]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :as utils :refer [==>]]
@@ -770,7 +770,7 @@
 
      (if (= :edit mode)
        [:> DialogContent {:sx #js{:display "flex" :flexDirection "column"}}
-        [manage/view]]
+        [lazy/lazy-view {:loadable lazy/help-manage-view}]]
        [:> DialogContent {:sx #js{:p 0 :display "flex" :overflow "hidden"}}
         [ReadView {:mobile? mobile?}]])]))
 

@@ -3,6 +3,7 @@
             [lipas.ui.admin.routes :as admin]
             [lipas.ui.forgot-password.routes :as forgot-password]
             [lipas.ui.front-page.routes :as front-page]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.login.routes :as login]
             [lipas.ui.map.routes :as lmap]
             [lipas.ui.register.routes :as register]
@@ -73,7 +74,15 @@
       (string/starts-with? current-path "/#")
       (set! js/window.location.href (-> (utils/current-path) (subs 2)))
 
-      :else (==> [:lipas.ui.events/navigated new-match]))))
+      :else
+      ;; Lazy routes carry a shadow.lazy loadable in :view. Load its
+      ;; module before ::navigated so the route's controllers dispatch
+      ;; into registered event handlers. While loading, the previous
+      ;; view stays rendered.
+      (let [view (-> new-match :data :view)]
+        (if (and (lazy/loadable? view) (not (lazy/ready? view)))
+          (lazy/load! view #(==> [:lipas.ui.events/navigated new-match]))
+          (==> [:lipas.ui.events/navigated new-match]))))))
 
 (defn init! []
   (rfe/start!

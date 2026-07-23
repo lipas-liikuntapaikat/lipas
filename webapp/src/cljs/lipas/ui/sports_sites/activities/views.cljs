@@ -1,6 +1,5 @@
 (ns lipas.ui.sports-sites.activities.views
   (:require ["@mui/material/Alert$default" :as Alert]
-            [clojure.pprint :as pprint]
             [clojure.string :as str]
             [lipas.schema.common :as common-schema]
             [lipas.ui.components.autocompletes :as autocompletes]
@@ -8,6 +7,7 @@
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.buttons :as lui-btn]
             [lipas.ui.components.forms :refer [->display-tf]]
@@ -40,6 +40,12 @@
             [reagent.core :as r]))
 
 (declare make-field)
+
+(defn- debug-str
+  "Debug-panel pretty print. cljs.pprint costs ~90KB in the bundle, so
+   the dev-only dumps use JSON formatting instead."
+  [x]
+  (js/JSON.stringify (clj->js x) nil 2))
 
 (defn set-field*
   [lipas-id & args]
@@ -199,7 +205,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [tables/form-table
+        [form-table/form-table
          {:key              (str (count (vals @state)))
           :headers          [[:_organization (get-in contact-props [:organization :field :label locale])]
                              [:_role (get-in contact-props [:role :field :label locale])]]
@@ -237,7 +243,7 @@
        (when config/debug?
          [:> Grid {:item true :xs 12}
           [layouts/expansion-panel {:label "debug"}
-           [:pre (with-out-str (pprint/pprint contact-props))]]])])))
+           [:pre (debug-str contact-props)]]])])))
 
 (defn accessibility
   [{:keys [read-only? lipas-id locale label description set-field
@@ -391,7 +397,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [tables/form-table
+        [form-table/form-table
          {:key              @state
           :headers          [[locale label]]
           :hide-header-row? true
@@ -738,7 +744,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [tables/form-table
+        [form-table/form-table
          {:key (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]
@@ -856,7 +862,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [tables/form-table
+        [form-table/form-table
          {:key             (str (count (vals @state)))
           :headers         [[:url (tr :utp/link)]
                             [:_description (tr :general/description)] []]
@@ -1109,7 +1115,7 @@
          [:> Grid {:item true :xs 12}
           [layouts/expansion-panel {:label "debug route props"}
            [:> Grid {:item true :xs 12}
-            [:pre (with-out-str (pprint/pprint props))]]]])])))
+            [:pre (debug-str props)]]]])])))
 
 (defn routes
   [{:keys [read-only? _route-props lipas-id activity-k value
@@ -1415,7 +1421,7 @@
      (when config/debug?
        [:> Grid {:item true :xs 12}
         [layouts/expansion-panel {:label "debug"}
-         [:pre (with-out-str (pprint/pprint activity))]]])]))
+         [:pre (debug-str activity)]]])]))
 
 (comment
 

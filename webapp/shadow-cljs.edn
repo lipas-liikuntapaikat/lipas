@@ -6,7 +6,9 @@
  :builds
  {:app
   {:target     :browser
-   :asset-path "js/compiled"
+   ;; Absolute: the module loader resolves lazy-module URIs against this,
+   ;; and relative paths break on nested routes (/liikuntapaikat/123).
+   :asset-path "/js/compiled"
    :output-dir "resources/public/js/compiled"
    ;; Renders resources/public/index.html from index.html.tmpl on every build,
    ;; substituting the resolved (hashed) bundle filename.
@@ -15,11 +17,55 @@
    {:closure-defines
     {re-frame.trace.trace-enabled? true}}
    :release
-   ;; 8-char MD5 prefix is plenty for collision-resistance on a single bundle
+   ;; 8-char MD5 prefix is plenty for collision-resistance
    {:module-hash-names 8}
+   ;; Code splitting: :app is the always-loaded base; the rest load on
+   ;; demand through shadow.lazy loadables registered in lipas.ui.lazy.
+   ;; Shadow assigns each namespace to the deepest module that dominates
+   ;; all its users, so code shared between e.g. :map and :ptv lands in
+   ;; :geo (proj4 + EPSG:3067 setup) instead of the base bundle.
+   :module-loader true
    :modules
    {:app
-    {:init-fn lipas.ui.core/init}}
+    {:init-fn lipas.ui.core/init}
+    :geo
+    {:entries [lipas.ui.map.projection]
+     :depends-on #{:app}}
+    :map
+    {:entries [lipas.ui.map.views]
+     :depends-on #{:app :geo}}
+    :charts
+    {:entries [lipas.ui.charts]
+     :depends-on #{:app}}
+    :analysis
+    {:entries [lipas.ui.analysis.views
+               lipas.ui.analysis.map-integration]
+     :depends-on #{:app :geo :map :charts}}
+    :ptv
+    {:entries [lipas.ui.ptv.views
+               lipas.ui.ptv.site-view]
+     :depends-on #{:app :geo}}
+    :stats
+    {:entries [lipas.ui.stats.views]
+     :depends-on #{:app :charts}}
+    :admin
+    {:entries [lipas.ui.admin.views]
+     :depends-on #{:app :charts :geo :ptv}}
+    :org
+    {:entries [lipas.ui.org.views]
+     :depends-on #{:app}}
+    :help-manage
+    {:entries [lipas.ui.help.manage]
+     :depends-on #{:app}}
+    :xlsx
+    {:entries [lipas.ui.excel]
+     :depends-on #{:app}}
+    :i18n-en
+    {:entries [lipas.i18n.register-en]
+     :depends-on #{:app}}
+    :i18n-se
+    {:entries [lipas.i18n.register-se]
+     :depends-on #{:app}}}
    ;; TODO: Consider moving e.g. recharts to its own module,
    ;; load when navigation to tilastot.
    :devtools

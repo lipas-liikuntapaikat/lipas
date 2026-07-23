@@ -191,14 +191,22 @@
   (fn [mode _]
     (:sub-mode mode)))
 
+(rf/reg-sub ::analysis-mode-inputs
+  ;; Same data as the reachability/diversity/heatmap root subs, but read
+  ;; straight from app-db: those subs live in the lazy :analysis module
+  ;; and aren't registered before it loads, while ::mode must work from
+  ;; map startup.
+  (fn [db _]
+    {:reachability (-> db :analysis :reachability)
+     :diversity (-> db :analysis :diversity)
+     :heatmap (:heatmap db)}))
+
 (rf/reg-sub ::mode
   :<- [::content-padding]
   :<- [::mode*]
-  :<- [:lipas.ui.analysis.reachability.subs/reachability]
-  :<- [:lipas.ui.analysis.diversity.subs/diversity]
-  :<- [:lipas.ui.analysis.heatmap.subs/heatmap]
+  :<- [::analysis-mode-inputs]
   :<- [::simplify]
-  (fn [[content-padding mode reachability diversity heatmap simplify] _]
+  (fn [[content-padding mode {:keys [reachability diversity heatmap]} simplify] _]
     (let [analysis?  (= (:name mode) :analysis)
           simplify? (and (#{:adding :editing} (:name mode))
                          (= (:sub-mode mode) :simplifying))]

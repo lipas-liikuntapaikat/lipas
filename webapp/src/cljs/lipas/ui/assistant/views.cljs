@@ -28,7 +28,7 @@
    [lipas.ui.assistant.subs :as subs]
    [lipas.ui.components.text-fields :as text-fields]
    [lipas.ui.help.subs :as help-subs]
-   [lipas.ui.ptv.subs :as ptv-subs]
+   [lipas.ui.subs :as root-subs]
    [lipas.ui.user.subs :as user-subs]
    [lipas.ui.utils :refer [==>]]
    [re-frame.core :as rf]
@@ -276,7 +276,8 @@
         open? @(rf/subscribe [::subs/open?])
         map-route? @(rf/subscribe [::subs/map-route?])
         help-open? @(rf/subscribe [::help-subs/dialog-open?])
-        ptv-open? @(rf/subscribe [::ptv-subs/dialog-open?])]
+        ;; Base-module sub — the real PTV subs live in the lazy :ptv module.
+        ptv-open? @(rf/subscribe [::root-subs/ptv-dialog-open?])]
     (when can-use?
       [:<>
        (when open? [Panel])

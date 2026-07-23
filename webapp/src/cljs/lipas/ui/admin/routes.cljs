@@ -1,12 +1,14 @@
 (ns lipas.ui.admin.routes
-  (:require [lipas.ui.admin.views :as views]
-            [lipas.ui.utils :as utils :refer [==>]]))
+  "Route definitions only — admin views/events live in the lazy :admin
+   module, loaded by lipas.ui.routes/on-navigate before controllers run."
+  (:require [lipas.ui.lazy :as lazy]
+            [lipas.ui.utils :refer [==>]]))
 
 (def routes
   ["admin"
    {:name   :lipas.ui.routes/admin
     :tr-key :lipas.admin/headline
-    :view   views/main
+    :view   lazy/admin-view
     :parameters {:query [:map
                          [:tab {:optional true} :keyword]
                          [:edit-id {:optional true} :string]]}

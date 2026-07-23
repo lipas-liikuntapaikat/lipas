@@ -18,8 +18,8 @@
             ["ol/source/Vector$default" :as VectorSource]
             ["ol/source/WMTS$default" :as WMTSSource]
             ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
-            [lipas.ui.analysis.reachability.events]
             [lipas.ui.map.editing :as editing]
+            [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.events :as events]
             [lipas.ui.map.projection :as proj]
             [lipas.ui.map.styles :as styles]
@@ -598,7 +598,7 @@
         (show-population! reachability)
         (show-schools! reachability)
         (map-utils/enable-schools-hover!)
-        (map-utils/draw-analytics-buffer! reachability))))
+        (hooks/draw-analytics-buffer! reachability))))
 
 (defn set-diversity-mode!
   [{:keys [layers] :as map-ctx}
@@ -656,7 +656,7 @@
         (show-population! reachability)
         (show-schools! reachability)
         (map-utils/enable-schools-hover!)
-        (map-utils/draw-analytics-buffer! reachability))))
+        (hooks/draw-analytics-buffer! reachability))))
 
 (defn update-diversity-mode!
   [{:keys [layers] :as map-ctx}
