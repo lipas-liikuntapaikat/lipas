@@ -2,7 +2,6 @@
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
     [clojure.core.async :as async]
-    [clojure.tools.namespace.repl]
     [integrant.repl :refer [reset-all halt go]]
     [integrant.repl.state]
     [lipas.wfs.core :as wfs]
@@ -15,11 +14,6 @@
 
 (integrant.repl/set-prep! (fn []
                             (dissoc @(requiring-resolve 'lipas.backend.config/system-config) :lipas/nrepl)))
-
-#_(clojure.tools.namespace.repl/set-refresh-dirs "/src" "/test")
-
-(defn current-config []
-  integrant.repl.state/config)
 
 (def ^:private valid-log-levels
   #{:trace :debug :info :warn :error :fatal})
@@ -180,11 +174,14 @@
   (integrant.repl/reset))
 
 (defn refresh-all
-  "Performs a full refresh of all namespaces using tools.namespace.
-   Unlike the incremental refresh, this reloads everything from scratch.
-   Useful when incremental refresh gets into a bad state."
+  "Reloads ALL loaded namespaces (not just changed ones) and restarts the
+   system. Useful when the incremental (user/reset) is in a bad state.
+
+   Uses the same clj-reload machinery as (user/reset) — do NOT reach for
+   clojure.tools.namespace here; mixing the two reload mechanisms corrupts
+   namespace state and has killed the nREPL server before."
   []
-  (clojure.tools.namespace.repl/refresh-all))
+  (reset-all))
 
 ;; shadow-cljs lives in the :frontend alias (kept off the backend test/uberjar
 ;; classpath), so resolve it lazily — these fns only work in the shadow-launched
