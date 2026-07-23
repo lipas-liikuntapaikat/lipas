@@ -26,7 +26,8 @@ Key options: `-t 300000` (custom timeout), `--reset-session` (clear corrupted st
 ## Common Commands
 
 ```clojure
-(user/reset)                    ; Reload code and restart system
+(user/reset)                    ; Reload changed namespaces and restart system
+(user/refresh-all)              ; Reload ALL loaded namespaces (only when reset is stuck)
 (user/db)                       ; Get database connection
 (user/search)                   ; Get Elasticsearch client
 (user/reindex-search!)          ; Reindex after mapping changes
@@ -36,6 +37,11 @@ Key options: `-t 300000` (custom timeout), `--reset-session` (clear corrupted st
 ```
 
 System components available via `integrant.repl.state/system` after reset.
+
+`(user/reset)` is the only step needed after backend changes. If it throws
+`Failed to load namespace: X`, that's a real compile error in X — fix it and
+rerun reset. Never use `clojure.tools.namespace` (`tn/refresh`); mixing reload
+mechanisms with the clj-reload-based workflow corrupts namespace state.
 
 ## Testing
 
