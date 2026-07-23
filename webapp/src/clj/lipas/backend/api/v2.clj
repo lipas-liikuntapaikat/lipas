@@ -25,6 +25,7 @@
    "renovation-years"
    "renovations"
    "owner"
+   "owner-org-id"
    "location"
    "properties"
    "www"
