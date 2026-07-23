@@ -1,46 +1,51 @@
 (ns lipas.ui.help.views
   (:require
-   ["@mui/icons-material/Close$default" :as CloseIcon]
-   ["@mui/icons-material/ArrowForwardIos$default" :as ArrowForwadIosIcon]
    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
-   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-   ["@mui/icons-material/Help$default" :as Help]
-   ["@mui/icons-material/Edit$default" :as EditIcon]
    ["@mui/material/Accordion$default" :as Accordion]
    ["@mui/material/AccordionSummary$default" :as AccordionSummary]
    ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+   ["@mui/icons-material/Close$default" :as CloseIcon]
+   ["@mui/icons-material/Edit$default" :as EditIcon]
+   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+   ["@mui/icons-material/Help$default" :as Help]
+   ["@mui/icons-material/Menu$default" :as MenuIcon]
+   ["@mui/icons-material/OpenInNew$default" :as OpenInNewIcon]
+   ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
+   ["@mui/icons-material/Search$default" :as SearchIcon]
+   ["@mui/material/Alert$default" :as Alert]
    ["@mui/material/AppBar$default" :as AppBar]
    ["@mui/material/Box$default" :as Box]
    ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
    ["@mui/material/Button$default" :as Button]
    ["@mui/material/Card$default" :as Card]
+   ["@mui/material/CardActionArea$default" :as CardActionArea]
    ["@mui/material/CardContent$default" :as CardContent]
    ["@mui/material/Chip$default" :as Chip]
+   ["@mui/material/Collapse$default" :as Collapse]
    ["@mui/material/Dialog$default" :as Dialog]
    ["@mui/material/DialogContent$default" :as DialogContent]
-   ["@mui/material/Divider$default" :as Divider]
+   ["@mui/material/Drawer$default" :as Drawer]
    ["@mui/material/GridLegacy$default" :as Grid]
    ["@mui/material/IconButton$default" :as IconButton]
+   ["@mui/material/InputAdornment$default" :as InputAdornment]
    ["@mui/material/Link$default" :as Link]
    ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItem$default" :as ListItem]
    ["@mui/material/ListItemButton$default" :as ListItemButton]
    ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/ListItemIcon$default" :as ListItemIcon]
    ["@mui/material/Paper$default" :as Paper]
    ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Tab$default" :as Tab]
    ["@mui/material/Table$default" :as Table]
    ["@mui/material/TableBody$default" :as TableBody]
    ["@mui/material/TableCell$default" :as TableCell]
    ["@mui/material/TableContainer$default" :as TableContainer]
    ["@mui/material/TableHead$default" :as TableHead]
    ["@mui/material/TableRow$default" :as TableRow]
-   ["@mui/material/Tabs$default" :as Tabs]
    ["@mui/material/TextField$default" :as TextField]
    ["@mui/material/Toolbar$default" :as Toolbar]
    ["@mui/material/Tooltip$default" :as Tooltip]
    ["@mui/material/Typography$default" :as Typography]
+   ["@mui/material/useMediaQuery$default" :as useMediaQuery]
+   ["react-markdown$default" :as ReactMarkdown]
    [lipas.ui.help.events :as events]
    [lipas.ui.help.manage :as manage]
    [lipas.ui.help.subs :as subs]
@@ -50,29 +55,14 @@
    [reagent.hooks :as hooks]
    [re-frame.core :as rf]))
 
-(r/defc YoutubeIframe
-  [{:keys [video-id title]}]
-  [:iframe
-   {:width "560"
-    :height "315"
-    :src (str "https://www.youtube.com/embed/" video-id)
-    :title (or title "YouTube video player")
-    :frame-border "0"
-    :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    :referrer-policy "strict-origin-when-cross-origin"
-    :allow-full-screen true}])
+;; The app theme uppercases every heading variant — help content titles
+;; are sentence-length, so they opt out explicitly.
+(def title-sx
+  #js{:textTransform "none"
+      :fontWeight 700
+      :lineHeight 1.25})
 
-(r/defc PdfIframe
-  [{:keys [url title]}]
-  [:> Box {:width "100%" :height "100%"}
-   [:> Paper {:elevation 2 :sx #js {:p 2}}
-    [:iframe
-     {:width "100%"
-      :height "600px"
-      :src url
-      :title (or title "PDF")
-      :frame-border "0"
-      :allow-full-screen true}]]])
+;;; ——— Type code explorer (unchanged from v1) ————————————————————————
 
 ;; Helper component to display a list of types
 (r/defc TypesList
@@ -366,145 +356,316 @@
     [:> Stack {:spacing 1}
      [:> Typography {:variant "h6"} (tr :help/data-model)]
      [:> Typography (tr :help/data-model-excel)]
-     [:> Button {:variant "contained"
-                 :on-click #(rf/dispatch [:lipas.ui.reports.events/create-data-model-report])}
-      (tr :actions/download-excel)]]))
+     [:> Box
+      [:> Button {:variant "contained"
+                  :on-click #(rf/dispatch [:lipas.ui.reports.events/create-data-model-report])}
+       (tr :actions/download-excel)]]]))
 
-(r/defc ContentBlock
+;;; ——— Content blocks —————————————————————————————————————————————————
+
+(r/defc ResponsiveVideo
+  [{:keys [video-id title]}]
+  [:> Box {:sx #js{:maxWidth 760}}
+   (when-not (empty? title)
+     [:> Typography {:variant "subtitle1" :sx #js{:fontWeight 700 :mb 1}}
+      title])
+   [:> Box {:sx #js{:position "relative"
+                    :pt "56.25%" ; 16:9
+                    :borderRadius 1
+                    :overflow "hidden"
+                    :bgcolor "common.black"}}
+    [:iframe
+     {:style {:position "absolute" :top 0 :left 0
+              :width "100%" :height "100%" :border 0}
+      :src (str "https://www.youtube.com/embed/" video-id)
+      :title (or title "YouTube video player")
+      :allow "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      :referrer-policy "strict-origin-when-cross-origin"
+      :allow-full-screen true}]]])
+
+(r/defc PdfCard
+  [{:keys [url title caption]}]
+  [:> Paper {:variant "outlined" :sx #js{:overflow "hidden"}}
+   [:> Stack {:direction "row" :spacing 1 :alignItems "center"
+              :sx #js{:px 2 :py 1 :bgcolor "action.hover"}}
+    [:> PdfIcon {:color "action"}]
+    [:> Typography {:variant "subtitle1" :sx #js{:fontWeight 700 :flexGrow 1}}
+     (if (empty? title) "PDF" title)]
+    [:> Tooltip {:title "Avaa uuteen välilehteen"}
+     [:> IconButton {:component "a" :href url :target "_blank" :rel "noopener"
+                     :size "small"}
+      [:> OpenInNewIcon {:fontSize "small"}]]]]
+   [:iframe
+    {:style {:width "100%" :height "70vh" :border 0 :display "block"}
+     :src url
+     :title (or title "PDF")
+     :allow-full-screen true}]
+   (when-not (empty? caption)
+     [:> Typography {:variant "body2" :color "text.secondary" :sx #js{:p 1.5}}
+      caption])])
+
+(r/defc BlockView
   [{:keys [block]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
-    (case (:type block)
-      :text
-      [:> Typography (locale (:content block))]
+  (case (:type block)
+    :text
+    [:> Box {:sx #js{:typography "body1"
+                     :maxWidth 760
+                     "& p" #js{:mt 0 :mb 1.5}
+                     "& p:last-child" #js{:mb 0}
+                     "& a" #js{:color "secondary.main"}
+                     "& img" #js{:maxWidth "100%"}}}
+     [:> ReactMarkdown (:content block)]]
 
-      :video
-      [YoutubeIframe {:video-id (:video-id block)
-                      :title (when (:title block) (locale (:title block)))}]
+    :video
+    [ResponsiveVideo {:video-id (:video-id block) :title (:title block)}]
 
-      :image
-      [:img {:src (:url block)
-             :alt (locale (:alt block))
-             :style #js{:maxWidth "100%"}}]
+    :image
+    [:> Box {:sx #js{:maxWidth 760}}
+     [:img {:src (:url block)
+            :alt (:alt block)
+            :style {:maxWidth "100%" :borderRadius "4px"}}]
+     (when-not (empty? (:caption block))
+       [:> Typography {:variant "body2" :color "text.secondary"}
+        (:caption block)])]
 
-      :pdf
-      [PdfIframe {:url (:url block)
-                  :title (when (:title block) (locale (:title block)))}]
+    :pdf
+    [PdfCard {:url (:url block) :title (:title block) :caption (:caption block)}]
 
-      :type-code-explorer
-      [TypeCodeExplorer]
+    :type-code-explorer
+    [TypeCodeExplorer]
 
-      :data-model-excel-download
-      [DataModelExcelDownload]
+    :data-model-excel-download
+    [DataModelExcelDownload]
 
-      ;; Default case - unknown block type
-      [:> Typography {:color "error"} (str "Unknown block type: " (:type block))])))
+    ;; Default case - unknown block type
+    [:> Typography {:color "error"} (str "Unknown block type: " (:type block))]))
 
-(r/defc HelpContent
-  [{:keys [title blocks]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
-    [:> Stack {:direction "column" :spacing 2 :sx #js{:pl 4 :flex 1}}
-     [:> Typography {:variant :h6} (locale title)]
+;;; ——— Content area ———————————————————————————————————————————————————
 
-     ;; Content blocks container
-     [:> Stack {:direction "column" :spacing 2}
-      (for [block blocks]
-        ^{:key (:block-id block)}
-        [ContentBlock {:block block}])]]))
+(def ^:private full-width-block-types
+  ;; Interactive/wide blocks that shouldn't be squeezed into a column
+  #{:type-code-explorer :data-model-excel-download})
 
-(r/defc SummaryGrid
-  [{:keys [pages on-page-select]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
-    [:> Grid {:container true :spacing 2 :sx #js{:pl 4 :flex 1}}
-     [:> Grid {:item true :xs 12}
-      [:> Typography
-       {:variant "subtitle1"
-        :gutterBottom true}
-       (tr :help/available-pages)]]
+(r/defc PageView
+  [{:keys [page]}]
+  (let [xl? (useMediaQuery (fn [theme] (.up (.-breakpoints theme) "xl")))
+        blocks   (:blocks page)
+        video?   (fn [b] (= :video (:type b)))
+        wide?    (fn [b] (full-width-block-types (:type b)))
+        videos   (filter video? blocks)
+        others   (remove #(or (video? %) (wide? %)) blocks)
+        ;; Two columns only on xl screens, and only when both columns
+        ;; would have content: other content stacks left, videos stack
+        ;; right. The structures differ, so this is a media-query branch
+        ;; rather than responsive sx.
+        grouped? (and xl? (seq videos) (seq others))]
+    [:> Stack {:spacing 3}
+     [:> Box
+      [:> Typography {:variant "h4" :component "h1" :sx title-sx}
+       (:title page)]
+      (when-not (empty? (:summary page))
+        [:> Typography {:variant "body1" :color "text.secondary" :sx #js{:mt 1}}
+         (:summary page)])]
+     (if grouped?
+       [:> Box {:sx #js{:display "grid"
+                        :gap 3
+                        :alignItems "start"
+                        :gridTemplateColumns "repeat(2, minmax(0, 1fr))"}}
+        [:> Stack {:spacing 3}
+         (for [block others]
+           ^{:key (:block-id block)}
+           [BlockView {:block block}])]
+        [:> Stack {:spacing 3}
+         (for [block videos]
+           ^{:key (:block-id block)}
+           [BlockView {:block block}])]
+        ;; Interactive/wide blocks span both columns below the grouped
+        ;; content.
+        (for [block blocks
+              :when (wide? block)]
+          ^{:key (:block-id block)}
+          [:> Box {:sx #js{:gridColumn "1 / -1"}}
+           [BlockView {:block block}]])]
+       ;; Below xl (or when a page has only one kind of content) the
+       ;; blocks stack in a single column in authored order.
+       [:> Stack {:spacing 3}
+        (for [block blocks]
+          ^{:key (:block-id block)}
+          [BlockView {:block block}])])]))
 
-     (map-indexed
-      (fn [idx {:keys [slug title blocks]}]
-         ;; Find the first text block to display as summary
-        (let [summary-block (first (filter #(= :text (:type %)) blocks))
-              summary-text (when summary-block (:content summary-block))]
-          [:> Grid {:item true :xs 12 :sm 6 :md 4 :key (name slug)}
-           [:> Card {:sx #js{:height "100%"
-                             :cursor "pointer"
-                             :transition "transform 0.2s, box-shadow 0.2s, border-color 0.2s"
-                             :boxShadow 3
-                             :border "1px solid"
-                             :borderColor "divider"
-                             :background "linear-gradient(145deg, #ffffff, #f5f5f5)"
-                             ":hover" #js{:transform "scale(1.03)"
-                                          :boxShadow 6
-                                          :borderColor "secondary.main"}} ;; Use secondary color for border on hover
-                     :onClick #(on-page-select idx slug)}
-            [:> CardContent
-             [:> Typography
-              {:variant "subtitle2"
-               :gutterBottom true
-               :fontWeight "bold"}
-              (locale title)]
-             [:> Typography
-              {:variant "body2"
-               :color "text.secondary"
-               :sx #js{:overflow "hidden"
-                       :textOverflow "ellipsis"
-                       :display "-webkit-box"
-                       :-webkit-line-clamp 3
-                       :-webkit-box-orient "vertical"}}
-              (locale summary-text)]]]]))
-      pages)]))
+(r/defc LandingCardGrid
+  ;; Landing grid: title + summary cards, 1–3 columns depending on
+  ;; screen width. Theme-colored so it works in both light and dark
+  ;; mode; the orange sentence-case titles echo the LIPAS front page
+  ;; cards.
+  [{:keys [items on-select]}]
+  [:> Grid {:container true :spacing 2}
+   (for [{:keys [slug title text]} items]
+     ^{:key slug}
+     [:> Grid {:item true :xs 12 :md 6 :lg 4}
+      [:> Card {:sx #js{:height "100%"}}
+       [:> CardActionArea {:onClick #(on-select slug)
+                           :sx #js{:height "100%"
+                                   :display "flex"
+                                   :flexDirection "column"
+                                   :alignItems "stretch"
+                                   :justifyContent "flex-start"}}
+        [:> CardContent
+         [:> Typography {:variant "h6"
+                         :component "h2"
+                         :color "secondary"
+                         :gutterBottom true
+                         :sx title-sx}
+          title]
+         (when-not (empty? text)
+           [:> Typography {:variant "body1"
+                           :sx #js{:overflow "hidden"
+                                   :textOverflow "ellipsis"
+                                   :display "-webkit-box"
+                                   :WebkitLineClamp 3
+                                   :WebkitBoxOrient "vertical"}}
+            text])]]]])])
 
-(r/defc HelpMenu
-  [{:keys [pages selected-page on-page-select]}]
-  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale (tr)]
-    [:> Stack {:direction "column"}
-     [:> List {:sx #js{:minWidth "200px"
-                       :maxWidth "350px"
-                       :width "100%"
-                       :overflow "auto"}}
-      (map-indexed
-       (fn [idx {:keys [slug title]}]
-         ^{:key (name slug)}
+(r/defc PageList
+  [{:keys [section]}]
+  [LandingCardGrid
+   {:items (for [{:keys [slug title summary blocks]} (:pages section)]
+             {:slug slug
+              :title title
+              :text (if (empty? summary)
+                      (some #(when (= :text (:type %)) (:content %)) blocks)
+                      summary)})
+    :on-select #(==> [::events/select-page (:slug section) %])}])
+
+(r/defc SectionLanding
+  [{:keys [section]}]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Stack {:spacing 2}
+     [:> Typography {:variant "h4" :component "h1" :sx title-sx}
+      (:title section)]
+     (when-not (empty? (:summary section))
+       [:> Typography {:variant "body1" :color "text.secondary"}
+        (:summary section)])
+     [:> Typography {:variant "subtitle2" :color "text.secondary" :sx #js{:pt 1}}
+      (tr :help/available-pages)]
+     [PageList {:section section}]]))
+
+(r/defc FrontPage
+  [{:keys [tree]}]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Stack {:spacing 2}
+     [:> Typography {:variant "h4" :component "h1" :sx title-sx}
+      (tr :help/headline)]
+     [LandingCardGrid
+      {:items (for [{:keys [slug title summary pages]} tree]
+                {:slug slug
+                 :title title
+                 :text (if (empty? summary)
+                         (str (count pages) " " (if (= 1 (count pages)) "sivu" "sivua"))
+                         summary)})
+       :on-select #(==> [::events/select-section %])}]]))
+
+;;; ——— Navigation ————————————————————————————————————————————————————
+
+(r/defc NavTree
+  [{:keys [tree on-navigate]}]
+  (let [selected-section-slug @(rf/subscribe [::subs/selected-section-slug])
+        selected-page-slug @(rf/subscribe [::subs/selected-page-slug])
+        expanded @(rf/subscribe [::subs/expanded-sections])]
+    [:> List {:disablePadding true :sx #js{:pb 2}}
+     (for [{:keys [slug title pages]} tree]
+       (let [expanded? (contains? expanded slug)]
+         ^{:key slug}
          [:<>
-          [:> Divider]
-          [:> ListItem
-           {:key (name slug)
-            :disablePadding true
-            :component "a"
-            :sx #js{:transition "border-color 0.2s"
-                    :border "2px solid"
-                    :borderColor (if (= selected-page idx) "secondary.main" "transparent")
-                    ":hover" #js{:borderColor "secondary.main"}}}
-           [:> ListItemButton {:on-click #(on-page-select idx slug)
-                               :sx #js{:padding "8px 16px"}}
-            (when (= selected-page idx)
-              [:> ListItemIcon
-               [:> ArrowForwadIosIcon {:color "secondary"}]])
-            [:> ListItemText {:primary (locale title)
-                              :primaryTypographyProps #js{:noWrap false}}]]]])
-       pages)]]))
+          [:> ListItemButton
+           {:onClick #(do (==> [::events/select-section slug])
+                          (when on-navigate (on-navigate)))
+            :selected (and (= slug selected-section-slug)
+                           (nil? selected-page-slug))
+            :sx #js{:alignItems "flex-start" :py 1}}
+           [:> ListItemText
+            {:primary title
+             :primaryTypographyProps
+             #js{:sx #js{:fontWeight 700 :fontSize "0.875rem" :lineHeight 1.35}}}]
+           [:> IconButton
+            {:size "small"
+             :edge "end"
+             :aria-label (if expanded? "collapse" "expand")
+             :onClick (fn [e]
+                        (.stopPropagation e)
+                        (==> [::events/toggle-section slug]))
+             :sx #js{:mt 0.25
+                     :transform (if expanded? "rotate(180deg)" "rotate(0deg)")
+                     :transition "transform 0.2s"}}
+            [:> ExpandMoreIcon {:fontSize "small"}]]]
+          [:> Collapse {:in expanded? :timeout "auto"}
+           [:> List {:disablePadding true}
+            (for [page pages]
+              ^{:key (:slug page)}
+              [:> ListItemButton
+               {:onClick #(do (==> [::events/select-page slug (:slug page)])
+                              (when on-navigate (on-navigate)))
+                :selected (and (= slug selected-section-slug)
+                               (= (:slug page) selected-page-slug))
+                :sx #js{:pl 4 :py 0.75}}
+               [:> ListItemText
+                {:primary (:title page)
+                 :primaryTypographyProps
+                 #js{:sx #js{:fontSize "0.85rem" :lineHeight 1.35}}}]])]]]))]))
 
-(r/defc HelpSection
-  [{:keys [pages] :as _section}]
-  (let [selected-page-idx @(rf/subscribe [::subs/selected-page-idx])
-        selected-page (when (and (number? selected-page-idx)
-                                 (< selected-page-idx (count pages)))
-                        (nth pages selected-page-idx))]
-    [:> Stack {:direction "row" :spacing 2}
+(r/defc SearchResults
+  [{:keys [on-navigate]}]
+  (let [results @(rf/subscribe [::subs/search-results])
+        tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    (if (empty? results)
+      [:> Typography {:variant "body2" :color "text.secondary" :sx #js{:p 2}}
+       (tr :search/results-count 0)]
+      [:> List {:disablePadding true :sx #js{:pb 2}}
+       (for [{:keys [section-slug section-title pages]} results]
+         ^{:key section-slug}
+         [:<>
+          ;; Section header navigates to the section landing — a match
+          ;; on the section title itself is a valid result.
+          [:> ListItemButton
+           {:onClick #(do (==> [::events/select-section section-slug])
+                          (when on-navigate (on-navigate)))
+            :sx #js{:py 1}}
+           [:> ListItemText
+            {:primary section-title
+             :primaryTypographyProps
+             #js{:sx #js{:fontWeight 700 :fontSize "0.875rem" :lineHeight 1.35}}}]]
+          (for [page pages]
+            ^{:key (:slug page)}
+            [:> ListItemButton
+             {:onClick #(do (==> [::events/select-page section-slug (:slug page)])
+                            (when on-navigate (on-navigate)))
+              :sx #js{:pl 4 :py 0.75}}
+             [:> ListItemText
+              {:primary (:title page)
+               :primaryTypographyProps
+               #js{:sx #js{:fontSize "0.85rem" :lineHeight 1.35}}}]])])])))
 
-     [HelpMenu {:pages pages
-                :selected-page selected-page-idx
-                :on-page-select #(==> [::events/select-page %1 %2])}]
+(r/defc NavPanel
+  [{:keys [tree on-navigate]}]
+  (let [search-term @(rf/subscribe [::subs/search-term])
+        tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Box
+     [:> Box {:sx #js{:p 2 :pb 1}}
+      [:> TextField
+       {:fullWidth true
+        :size "small"
+        :placeholder (tr :search/search)
+        :value search-term
+        :onChange #(==> [::events/set-search-term (.. % -target -value)])
+        :InputProps #js{:startAdornment
+                        (r/as-element
+                         [:> InputAdornment {:position "start"}
+                          [:> SearchIcon {:fontSize "small"}]])}}]]
+     (if (empty? search-term)
+       [NavTree {:tree tree :on-navigate on-navigate}]
+       [SearchResults {:on-navigate on-navigate}])]))
 
-     (if selected-page
-       [HelpContent selected-page]
-       [SummaryGrid {:pages pages
-                     :on-page-select #(==> [::events/select-page %1 %2])}])]))
+;;; ——— Dialog ————————————————————————————————————————————————————————
 
 (r/defc HelpManageButton []
   (let [has-permission? @(rf/subscribe [::user-subs/check-privilege nil :help/manage])
@@ -519,85 +680,106 @@
         :on-click #(==> [::events/open-edit-mode])}
        (tr :help/manage-content)])))
 
-(r/defc view
-  [{:keys []}]
-  (let [sections @(rf/subscribe [::subs/help-data])
-        mode @(rf/subscribe [::subs/mode])
-        dialog-open? @(rf/subscribe [::subs/dialog-open?])
-        selected-section-idx @(rf/subscribe [::subs/selected-section-idx])
-        selected-page-idx @(rf/subscribe [::subs/selected-page-idx])
-        selected-section (when (and sections (number? selected-section-idx)
-                                    (< selected-section-idx (count sections)))
-                           (nth sections selected-section-idx))
-        selected-pages (when selected-section
-                         (:pages selected-section))
-        selected-page (when (and selected-pages (number? selected-page-idx)
-                                 (< selected-page-idx (count selected-pages)))
-                        (nth selected-pages selected-page-idx))
+(r/defc ReadView
+  [{:keys [mobile?]}]
+  (let [tree @(rf/subscribe [::subs/display-tree])
+        fallback? @(rf/subscribe [::subs/fallback?])
+        selected-section @(rf/subscribe [::subs/selected-section])
+        selected-page @(rf/subscribe [::subs/selected-page])
         tr @(rf/subscribe [:lipas.ui.subs/translator])
-        locale-kw (tr)]
+        [drawer-open? set-drawer-open!] (hooks/use-state false)
+        close-drawer! #(set-drawer-open! false)]
+    [:> Box {:sx #js{:display "flex" :flex 1 :minHeight 0}}
 
-    [:<>
-     ;; Help button in main UI
-     [:> Tooltip {:title (tr :help/headline)}
-      [:> IconButton {:size "large"
-                      :on-click #(==> [::events/open-dialog])}
-       [:> Help]]]
+     ;; Navigation: permanent panel on desktop, drawer on mobile
+     (if mobile?
+       [:> Drawer {:open drawer-open?
+                   :onClose close-drawer!
+                   :ModalProps #js{:keepMounted true}
+                   :PaperProps #js{:sx #js{:width 300}}}
+        [NavPanel {:tree tree :on-navigate close-drawer!}]]
+       [:> Box {:sx #js{:width 320
+                        :minWidth 280
+                        :borderRight 1
+                        :borderColor "divider"
+                        :overflowY "auto"}}
+        [NavPanel {:tree tree}]])
 
-     ;; Help dialog
-     [:> Dialog
-      {:fullScreen true
-       :keepMounted true
-       :open dialog-open?
-       :onClose #(==> [::events/close-dialog])}
+     ;; Content column
+     [:> Box {:sx #js{:flex 1 :overflowY "auto" :minWidth 0}}
+      [:> Box {:sx #js{:maxWidth 1560 :px #js{:xs 2 :md 4} :py 3}}
 
-      [:> AppBar {:sx #js {:position "relative"}}
-       [:> Toolbar {}
-        [:> Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}}
-         (tr :help/headline)]
+       ;; Mobile: nav opener + breadcrumb back
+       (when mobile?
+         [:> Stack {:direction "row" :spacing 1 :alignItems "center" :sx #js{:mb 2}}
+          [:> Button {:variant "outlined"
+                      :size "small"
+                      :startIcon (r/as-element [:> MenuIcon])
+                      :onClick #(set-drawer-open! true)}
+           (tr :help/headline)]
+          (when selected-page
+            [:> Button {:size "small"
+                        :startIcon (r/as-element [:> ArrowBackIcon])
+                        :onClick #(==> [::events/select-section (:slug selected-section)])}
+             (tr :actions/back)])])
 
-        ;; Manage content button (only visible with permission)
-        [HelpManageButton]
+       (when fallback?
+         [:> Alert {:severity "info" :sx #js{:mb 2}}
+          (tr :help/only-in-finnish)])
 
-        [:> IconButton
-         {:edge "start"
-          :color "inherit"
-          :onClick #(==> [::events/close-dialog])}
-         [:> CloseIcon]]]]
+       (cond
+         selected-page [PageView {:page selected-page}]
+         selected-section [SectionLanding {:section selected-section}]
+         :else [FrontPage {:tree tree}])]]]))
 
-      [:> DialogContent {:sx #js {:display "flex" :flexDirection "column" :gap 2}}
+(r/defc dialog
+  ;; Mounted once at app root (lipas.ui.views/main-panel) so ?ohje= deep
+  ;; links open the help center on any route.
+  []
+  (let [mode @(rf/subscribe [::subs/mode])
+        dialog-open? @(rf/subscribe [::subs/dialog-open?])
+        tr @(rf/subscribe [:lipas.ui.subs/translator])
+        mobile? (useMediaQuery "(max-width:899.95px)")]
 
-       (when (= :edit mode)
-         [manage/view])
+    [:> Dialog
+     {:fullScreen true
+      :keepMounted true
+      :open dialog-open?
+      :onClose #(==> [::events/close-dialog])
+      ;; The assistant panel lives outside this dialog's portal — without
+      ;; this the modal focus trap steals every keystroke from it.
+      :disableEnforceFocus true}
 
-       (when (= :read mode)
-         [:<>
-          [:> Tabs {:value selected-section-idx
-                    :onChange #(==> [::events/select-section %2 (get-in (nth sections %2) [:slug])])
-                    :variant "scrollable"
-                    :scrollButtons true}
-           (map-indexed
-            (fn [idx section]
-              [:> Tab {:key idx
-                       :value idx
-                       :label (locale-kw (:title section))
-                       :wrapped true}])
-            sections)]
+     [:> AppBar {:sx #js{:position "relative"}}
+      [:> Toolbar {}
+       [:> Typography {:variant "h6" :color "inherit" :sx #js{:flexGrow 1}
+                       :component "button"
+                       :onClick #(==> [::events/go-home])
+                       :style {:background "none" :border 0 :cursor "pointer"
+                               :textAlign "left" :color "inherit"}}
+        (tr :help/headline)]
 
-          [:> Breadcrumbs {:sx #js{:mt 1}}
-           [:> Typography (tr :help/headline)]
+       ;; Manage content button (only visible with permission)
+       [HelpManageButton]
 
-           (when selected-section
-             [:> Link {:underline "hover"
-                       :color "inherit"
-                       :on-click #(==> [::events/select-page nil nil])}
-              (locale-kw (:title selected-section))])
+       [:> IconButton
+        {:edge "start"
+         :color "inherit"
+         :onClick #(==> [::events/close-dialog])}
+        [:> CloseIcon]]]]
 
-           (when selected-page
-             [:> Link {:underline "hover"
-                       :color "inherit"
-                       :href "/"}
-              (locale-kw (:title selected-page))])]
+     (if (= :edit mode)
+       [:> DialogContent {:sx #js{:display "flex" :flexDirection "column"}}
+        [manage/view]]
+       [:> DialogContent {:sx #js{:p 0 :display "flex" :overflow "hidden"}}
+        [ReadView {:mobile? mobile?}]])]))
 
-          (when selected-section
-            [HelpSection selected-section])])]]]))
+(r/defc view
+  ;; Help icon button for the (mini-)navbar; the dialog itself is mounted
+  ;; at app root.
+  [{:keys []}]
+  (let [tr @(rf/subscribe [:lipas.ui.subs/translator])]
+    [:> Tooltip {:title (tr :help/headline)}
+     [:> IconButton {:size "large"
+                     :on-click #(==> [::events/open-dialog])}
+      [:> Help]]]))

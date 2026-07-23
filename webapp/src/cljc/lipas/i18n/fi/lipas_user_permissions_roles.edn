@@ -29,6 +29,7 @@
   :city-manager "Kuntakäyttäjä",
   :analysis-experimental-user "Analyysityökalukehittäjä",
   :org-user "Organisaatiokäyttäjä",
+  :assistant-tester "AI-avustajan testaaja",
   :org-editor "Organisaation muokkaaja"},
  :role-descriptions
  {:type-manager "Valitun tyypin liikuntapaikkojen muokkaus",

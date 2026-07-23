@@ -26,6 +26,7 @@
   :site-manager "Site Manager",
   :city-manager "City Manager",
   :org-user "Organization user",
+  :assistant-tester "AI Assistant Tester",
   :org-editor "Organization editor"},
  :role-descriptions
  {:type-manager "Editing of sites of the selected type",

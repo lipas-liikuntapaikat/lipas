@@ -1,0 +1,72 @@
+{:section-slug
+ "liikunta-ja-ulkoilupaikan-tietojen-lisaaminen-ja-muokkaaminen",
+ :section-title
+ "Adding and editing sports and outdoor facility information",
+ :after-slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen",
+ :pages
+ [{:slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen",
+   :title "Adding a route-based sports facility",
+   :summary
+   "How to add a new route-based sports facility (e.g., fitness trail, ski track, outdoor route) to the LIPAS system by drawing the route on the map, and what information about the route is saved.",
+   :blocks
+   [{:type :text,
+     :content
+     "### General information on saving routes\n\nThe LIPAS database collects information on routes equipped for sports and outdoor recreation in Finland. The routes to be saved must be maintained, there must be potential landowner permissions or agreements for their use, and the route must have an owner and an administrator. In addition, the route must be guided with terrain markers or its use must be otherwise instructed. Trails used solely under everyman's rights (jokaisenoikeus) are not saved in the LIPAS database.\n\nA special focus is on sports and outdoor routes maintained by municipalities and recreation area associations. Routes maintained by Metsähallitus (the Finnish Forest and Park Service) are not specifically collected, as Metsähallitus takes care of the data for its own route network in its own systems.\n\nRoutes are classified into several sports facility types (e.g., 4401 Fitness trail, 4402 Ski track, 4403 Walking route/outdoor route, 4405 Hiking route, 4411 Mountain biking route). One physical route can be described using multiple types: typically, the same track is a ski track in winter and a fitness trail in summer. You can find descriptions of the type classifications in the Type classification browser in the Instructions section."}
+    {:type :text,
+     :content
+     "### Drawing a route on the map\n\n**Prerequisites:** Logging in (lipas.fi/kirjaudu) and editing rights to the sports facilities of the municipality in question. If you do not have an account, register and specify which data you want editing rights for — the administrators will confirm your account.\n\n1. Click the **+** button in the bottom left corner of the map view (New sports facility).\n2. Select **Sports facility type** — you can search for a type by typing or select from the list. A short description of the type is shown when selecting. Click **OK**.\n3. Center the map on the route area by panning, zooming, or using address search. If you see the text *\"Map needs to be zoomed in closer\"*, zoom in on the map until the **Add to map** button is activated.\n4. Click **Add to map** and draw the route: each mouse click adds one route point, and a line is drawn between the points. Finish the route section by **double-clicking**.\n5. If the route consists of several separate sections, select **Add route section** and draw the next section in the same way.\n6. Click **Done**.\n7. Fill in the route details and click **Save**. A notification *\"Saved successfully\"* is shown upon successful saving.\n\n**Tip:** Draw the route to follow the track in the terrain as accurately as possible. In addition to the background map, you can utilize other map layers (e.g., aerial image).\n\n**Note:** The route line should not intersect itself. If the route crosses itself, the problem area is indicated with a red mark. See the instructions on fixing route geometry."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "XcZrIepjYe0",
+     :title "Video: Adding a route-based sports facility"}
+    {:type :text,
+     :content
+     "### Route details\n\n**Basic information:** The default selection for the sports facility status is *Active*; other options are *Planned* and *Temporarily out of use*. Mandatory fields are marked with an asterisk, and they must be filled in before saving. The street address is mandatory — if the route does not have a clear address, use the closest possible address, for example, the address of the starting point or parking lot. In addition to the route name, you can provide a separate marketing name; if there is no specific marketing name, just fill in the standard name field. In the Contact information field, you can specify who is responsible for the sports facility's customer service or feedback.\n\n**Additional information:** The fields on the Additional information tab change according to the sports facility type. Surface material and route width apply to the entire route by default — if the route sections have different properties, specify the details for each route section separately. You can enter the route length manually or let the system calculate it automatically (calculator icon, *\"Calculate route length automatically\"*)."}
+    {:type :pdf,
+     :url
+     "https://drive.google.com/file/d/19wXBU-wyjSMJ-5Uv1P7VOxy6JBZY8sIh/preview",
+     :title "Route instructions (PDF, 11/2023)"}],
+   :translation-of-slug
+   "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"}
+  {:slug "reittigeometrian-tuonti-tiedostosta",
+   :title "Importing route geometry from a file",
+   :summary
+   "Instead of drawing, the route geometry can be imported from a ready-made file (GPX, GeoJSON, KML, Shapefile), for example from a track saved by a GPS device or a sports application.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Prerequisites:** Login and editing rights, as well as a route file in a supported format: **GPX**, **GeoJSON** (.json/.geojson), **KML** or **Shapefile** (zipped). The coordinate system of the GPX file must be WGS84 (the standard format for GPS devices and applications).\n\n1. Center the map on the route area, for example using the **Search from map area** search.\n2. Click the **+** button in the bottom left corner, select the sports facility type and click **OK**.\n3. Select the **Import from file** tab (next to the Draw tab). If you see the warning *\"The map must be zoomed in closer\"*, zoom in on the map until it disappears.\n4. Click the **Import geometries from file** button. The *\"Import geometries\"* window opens.\n5. Select a file from your computer (Choose File).\n6. The route sections identified from the file are listed in the window. Select the sections to import from the checkboxes and click **Import selected**. The route is drawn on the map.\n7. Check that the geometry looks correct, and click **Done**. Then fill in the route details and save."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "DUa_aMbg9k0",
+     :title "Video: Importing route geometry from a file"}
+    {:type :text,
+     :content
+     "### Tips\n\n- If the file contains several separate route sections, they will all be listed in the import window and you can select the ones you want.\n- The import window may show extra or oddly named rows due to the file's character encoding — just select the clearly named route sections.\n- The system automatically simplifies the imported route track slightly, as GPS tracks, for example, often contain unnecessarily dense points. If the track is still too dense, use the Simplify tool (see the instructions on fixing route geometry).\n- You can also import geometry into an existing route: open the route in edit mode and select *\"Import geometries from file\"* from the tool menu."}],
+   :translation-of-slug "reittigeometrian-tuonti-tiedostosta"}
+  {:slug "reittigeometrian-korjaaminen-ja-yksinkertaistaminen",
+   :title "Correcting and simplifying route geometry",
+   :summary
+   "How to correct route line errors (self-intersecting route, overlapping points) and how to simplify an overly dense route track.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Prerequisites:** The route is selected and edit mode is on (pencil icon **Edit**). In edit mode, the points of the route line become visible.\n\n### Moving, adding, and removing route points\n\n- **Move** a route point by grabbing it with the mouse and dragging it to a new location.\n- **Add** a new point by clicking the route line where you want the point.\n- **Remove** a point by holding down the **Alt key** and clicking the point.\n\n### Correcting a self-intersecting route\n\nIf the route line intersects itself, a red warning sign is displayed at the problem area: *\"Change the course of the route so that the route section does not intersect itself. You can split the route into multiple sections if necessary.\"* LIPAS allows saving, but an intersecting route can prevent the data from being utilized in other services.\n\n1. Select **Split route section** (scissors icon) from the tool menu.\n2. Click the route line at the intersection. The split divides the route into two route sections, which removes the error mark.\n3. Verify the split by hovering the mouse over the line: the separate route section is highlighted as its own line.\n\nIf the problem area has a dense cluster of overlapping points (e.g., a GPS track \"tangle\"), do not split blindly: first remove unnecessary overlapping points one by one using the **Alt + click** function until the course of the route becomes clear, and only then split if necessary."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "M3tmvCVyoD4",
+     :title "Video: Splitting a route and simplifying a route track"}
+    {:type :text,
+     :content
+     "### Simplifying a route track\n\nAn imported GPS track often has points unnecessarily densely, which makes the route heavy to process.\n\n1. Select **Simplify** from the tool menu. A *\"Simplify geometries\"* slider opens at the bottom of the map.\n2. Drag the slider (scale 0–10) to the right: the system reduces the route points and shows the result on the map in real time.\n3. Zoom in closer and check that the simplified line still follows the track running in the terrain. If the line cuts corners too much, decrease the adjustment or correct individual points by dragging.\n4. Accept by clicking **OK**, or reject by clicking **Cancel**.\n5. You can undo the simplification with the **Undo** button (arrow icon in the tool menu).\n\n**Warning:** Simplification is a compromise between accuracy and manageability — always check the result on the map. If you accept the maximum simplification, the tool will no longer reduce points from the same section again; the remaining points must be removed manually (Alt + click).\n\n### Removing a route section\n\nYou can remove an entire route section by selecting **Remove route section** (trash can icon) from the tool menu and clicking the section to be removed.\n\nFinally, remember to save the changes (**Save**)."}],
+   :translation-of-slug
+   "reittigeometrian-korjaaminen-ja-yksinkertaistaminen"}
+  {:slug "reittimaisen-liikuntapaikan-poistaminen",
+   :title "Deleting a route-type sports facility",
+   :summary
+   "How to delete a route from the LIPAS system and what the different deletion reasons mean.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Prerequisites:** The route to be deleted is selected on the map and you have edit rights to it.\n\n1. Click the **trash can icon** (Delete sports facility) on the toolbar.\n2. In the window that opens, select the **Reason for deletion**:\n   - *Permanently out of use* — the route is no longer in use. The facility is archived, but it can still be found using the sports facility search.\n   - *Temporarily out of use* — the route is temporarily out of use. The facility is archived accordingly.\n   - *Incorrect information* — the facility is incorrect (e.g., saved twice). The route is permanently deleted and will no longer appear in searches or on the map.\n3. If necessary, select the **Year** when the deletion occurred.\n4. Confirm by clicking **Delete**. A success notification will be displayed.\n\n**Tip:** If the route is out of use only for a certain period (e.g., route change or renovation), use the status *Temporarily out of use* — this way the route's history and data are preserved."}],
+   :translation-of-slug "reittimaisen-liikuntapaikan-poistaminen"}]}

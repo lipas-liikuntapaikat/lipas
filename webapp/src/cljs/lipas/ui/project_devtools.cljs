@@ -135,8 +135,14 @@
       [dev-tools/dev-tool {:toggle-btn (fn [open-fn]
                                          [:button.reagent-dev-tools__nav-li-a.reagent-dev-tools__toggle-btn
                                           {:on-click open-fn
-                                           :style {:margin-bottom "75px"
-                                                   :margin-right "5px"
+                                           ;; right edge, vertically centered: both bottom
+                                           ;; corners are taken (assistant Fab, map controls)
+                                           :style {:position "fixed"
+                                                   :top "50%"
+                                                   :right "0px"
+                                                   :bottom "auto"
+                                                   :left "auto"
+                                                   :transform "translateY(-50%)"
                                                    :box-shadow "1px 1px 5px rgba(0, 0, 0, 0.5)"}}
                                           "dev"])
                            :panels (into (dev-tools/create-default-panels {:state-atom  re-frame.db/app-db})

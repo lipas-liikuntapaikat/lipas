@@ -3,10 +3,14 @@
 (def default-db
   {:dialog
    {:open? false
-    :selected-section-idx 0 ; Index of selected section in vector
+    ;; Selection is by canonical slug (strings). ?ohje= aliases resolve
+    ;; to these on navigation.
     :selected-section-slug nil
-    :selected-page-idx nil ; Index of selected page in section's pages vector
     :selected-page-slug nil
+    :expanded-sections #{}
+    :search-term ""
     :mode :read}
-   ;; Help data is loaded from the server
+   :editor
+   {:locale :fi}
+   ;; {:fi [sections] :se [...] :en [...]} loaded from the server
    :data nil})

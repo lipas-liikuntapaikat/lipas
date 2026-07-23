@@ -40,6 +40,14 @@
 
    :help/manage {:doc "Oikeus muokata ohjeiden sisältöä"}
 
+   ;; Rollout: OFF for everyone incl. admin (not ready for prod use, help
+   ;; center v2 is shipping without it) - excluded from `:admin`'s blanket
+   ;; grant below. Assign the standalone `:assistant-tester` role to keep
+   ;; developing/dogfooding against a real backend. Next stage: admin-only
+   ;; (re-add to `:admin`'s privileges). GA for all registered users = add
+   ;; to `basic`.
+   :ai-assistant/use {:doc "Oikeus käyttää AI-avustajaa"}
+
    :ptv/manage {:doc "Oikeus nähdä PTV dialogi ja PTV välilehti paikoilla"}
 
    :ptv/audit {:doc "Oikeus auditoida PTV integraatiossa olevien liikuntapaikkojen kuvauksia"}
@@ -62,9 +70,11 @@
    ;; all privileges
    ;; Except: org/member, because this is used to list users on
    ;; org pages which belong to the organization.
+   ;; Except: ai-assistant/use, not ready for prod use yet (see comment on
+   ;; the privilege above); use the `:assistant-tester` role instead.
    {:sort 0
     :assignable true
-    :privileges (disj (set (keys privileges)) :org/member)
+    :privileges (disj (set (keys privileges)) :org/member :ai-assistant/use)
     ;; This is kind of duplicated from specs, not sure if needed or
     ;; if the UI can introspect the spec.
     ;; These are also used to get the ORDER of UI fields for edit.
@@ -208,6 +218,16 @@
     :catalog-assignable true
     :privileges basic
     :required-context-keys [:org-id]
+    :optional-context-keys []}
+
+   ;; Assign to specific devs/testers to keep developing the AI assistant
+   ;; against a real backend while it's excluded from :admin (see comment
+   ;; on :ai-assistant/use above).
+   :assistant-tester
+   {:sort 70
+    :assignable true
+    :privileges #{:ai-assistant/use}
+    :required-context-keys []
     :optional-context-keys []}})
 
 (defn role-sort-fn

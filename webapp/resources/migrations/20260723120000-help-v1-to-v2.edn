@@ -1,0 +1,4 @@
+{:ns lipas.migrations.help-v1-to-v2
+ :up-fn migrate-up
+ :down-fn migrate-down
+ :transaction? true}

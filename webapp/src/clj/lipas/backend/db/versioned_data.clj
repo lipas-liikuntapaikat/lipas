@@ -32,6 +32,33 @@
                          pages)))))
         body))
 
+(defn- unmarshall-help-v2-tree
+  ;; JSONB roundtrip stringifies keywords; only block :type/:provider
+  ;; need re-keywordizing (v2 slugs are plain strings by design).
+  [tree]
+  (mapv
+   (fn [section]
+     (update section :pages
+             (fn [pages]
+               (mapv (fn [page]
+                       (update page :blocks
+                               (fn [blocks]
+                                 (mapv (fn [{:keys [type] :as block}]
+                                         (cond-> (update block :type keyword)
+                                           (= "video" type) (update :provider keyword)))
+                                       blocks))))
+                     pages))))
+   tree))
+
+(defmethod unmarshall "help-v2-fi" [{:keys [body]}]
+  (unmarshall-help-v2-tree body))
+
+(defmethod unmarshall "help-v2-se" [{:keys [body]}]
+  (unmarshall-help-v2-tree body))
+
+(defmethod unmarshall "help-v2-en" [{:keys [body]}]
+  (unmarshall-help-v2-tree body))
+
 (defmethod unmarshall :default [{:keys [body]}]
   body)
 

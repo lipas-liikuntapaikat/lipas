@@ -126,6 +126,7 @@
     [:org-user [:map
                 [:role [:= :org-user]]
                 [:org-id {:optional true} [:set :string]]]]
+    [:assistant-tester [:map [:role [:= :assistant-tester]]]]
     ;; Catch-all for unknown roles - just requires :role keyword
     [::default [:map [:role role-keyword]]]]))
 

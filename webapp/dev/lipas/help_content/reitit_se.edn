@@ -1,0 +1,72 @@
+{:section-slug
+ "liikunta-ja-ulkoilupaikan-tietojen-lisaaminen-ja-muokkaaminen",
+ :section-title
+ "Lägga till och redigera uppgifter om idrotts- och friluftsplatser",
+ :after-slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen",
+ :pages
+ [{:slug "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen",
+   :title "Lägga till en ruttformad idrottsplats",
+   :summary
+   "Hur en ny ruttformad idrottsplats (t.ex. motionsspår, skidspår, friluftsled) läggs till i LIPAS-systemet genom att rita rutten på kartan, och vilka uppgifter som sparas om rutten.",
+   :blocks
+   [{:type :text,
+     :content
+     "### Allmänt om att spara rutter\n\nI LIPAS-databasen samlas information om Finlands utrustade rutter för motion och friluftsliv. Rutterna som sparas ska vara underhållna, det ska finnas eventuella tillstånd eller avtal med markägare för användningen av dem, och rutten måste ha en ägare samt en upprätthållare. Dessutom ska rutten vara skyltad med terrängmärken eller dess användning på annat sätt anvisad. Stigar som enbart används med allemansrätten sparas inte i LIPAS-databasen.\n\nEtt särskilt fokus ligger på motions- och friluftsleder som upprätthålls av kommuner och friluftsområdesföreningar. Rutter som upprätthålls av Forststyrelsen (Metsähallitus) samlas inte in specifikt, eftersom Forststyrelsen sköter informationen om sitt eget ruttnätverk i sina egna system.\n\nRutter är indelade i flera idrottsplatstyper (t.ex. 4401 Motionsspår, 4402 Skidspår, 4403 Promenadrutt/friluftsled, 4405 Vandringsled, 4411 Terrängcyklingsrutt). En fysisk rutt kan beskrivas med hjälp av flera typer: typiskt sett är samma spår ett skidspår på vintern och ett motionsspår på sommaren. Beskrivningar av typklassificeringen hittar du i Typklassbläddraren (Tyyppiluokkaselain) i avsnittet Anvisningar."}
+    {:type :text,
+     :content
+     "### Rita rutten på kartan\n\n**Förkunskaper:** Inloggning (lipas.fi/kirjaudu) och redigeringsrättigheter till idrottsplatserna i den aktuella kommunen. Om du inte har ett konto, registrera dig och ange vilka uppgifter du vill ha redigeringsrättigheter till — administratörerna bekräftar ditt konto.\n\n1. Klicka på **+**-knappen i kartvyns nedre vänstra hörn (Ny idrottsplats).\n2. Välj **Idrottsplatstyp** — du kan söka efter typen genom att skriva eller välja från listan. En kort beskrivning av typen visas i samband med valet. Klicka på **OK**.\n3. Centrera kartan över ruttens område genom att flytta, zooma eller använda adressökningen. Om du ser texten *\"Kartan måste zoomas in närmare\"*, zooma in kartan tills knappen **Lägg till på kartan** aktiveras.\n4. Klicka på **Lägg till på kartan** och rita rutten: varje musklick lägger till en ruttpunkt, och en linje ritas mellan punkterna. Avsluta ruttdelen genom att **dubbelklicka**.\n5. Om rutten består av flera separata delar, välj **Lägg till ruttdel** och rita nästa del på samma sätt.\n6. Klicka på **Färdig**.\n7. Fyll i ruttens uppgifter och klicka på **Spara**. Vid en lyckad sparning visas meddelandet *\"Sparandet lyckades\"*.\n\n**Tips:** Rita rutten så att den följer spåret i terrängen så noggrant som möjligt. Du kan utnyttja andra kartlager (t.ex. flygbild) utöver bakgrundskartan.\n\n**Obs:** Ruttlinjen bör inte korsa sig själv. Om rutten korsar sig själv markeras problemområdet med ett rött märke. Se anvisningen om att korrigera ruttgeometrin."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "XcZrIepjYe0",
+     :title "Video: Lägga till en ruttformad idrottsplats"}
+    {:type :text,
+     :content
+     "### Ruttens uppgifter\n\n**Grunduppgifter:** Standardvalet för idrottsplatsens status är *I bruk*; andra alternativ är *Planerad* och *Tillfälligt ur bruk*. Obligatoriska fält är markerade med en stjärna, och de måste fyllas i innan du sparar. Gatuadress är obligatorisk — om rutten inte har en tydlig adress, använd närmaste möjliga adress, till exempel adressen till startpunkten eller parkeringsplatsen. Utöver ruttens namn kan du ange ett separat marknadsföringsnamn; om det inte finns något särskilt marknadsföringsnamn, fyll bara i det vanliga namnfältet. I fältet Kontaktuppgifter kan du ange vem som ansvarar för idrottsplatsens kundtjänst eller respons.\n\n**Tilläggsuppgifter:** Fälten på fliken Tilläggsuppgifter ändras beroende på idrottsplatstyp. Ytmaterial och ruttens bredd gäller som standard hela rutten — om ruttdelarna har olika egenskaper, ange uppgifterna för varje ruttdel separat. Ruttens längd kan du mata in manuellt eller låta systemet beräkna den automatiskt (kalkylatorikonen, *\"Beräkna ruttens längd automatiskt\"*)."}
+    {:type :pdf,
+     :url
+     "https://drive.google.com/file/d/19wXBU-wyjSMJ-5Uv1P7VOxy6JBZY8sIh/preview",
+     :title "Ruttanvisning (PDF, 11/2023)"}],
+   :translation-of-slug
+   "reittimaisen-liikuntapaikan-lisaaminen-ja-muokkaaminen"}
+  {:slug "reittigeometrian-tuonti-tiedostosta",
+   :title "Import av ruttgeometri från fil",
+   :summary
+   "I stället för att rita kan ruttens geometri importeras från en färdig fil (GPX, GeoJSON, KML, Shapefile), till exempel från ett spår som sparats av en GPS-enhet eller sportapp.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Förkunskaper:** Inloggning och redigeringsrättigheter samt en ruttfil i ett format som stöds: **GPX**, **GeoJSON** (.json/.geojson), **KML** eller **Shapefile** (zip-komprimerad). GPX-filens koordinatsystem måste vara WGS84 (standardformat för GPS-enheter och appar).\n\n1. Centrera kartan över ruttens område, till exempel med sökningen **Sök i kartområdet**.\n2. Klicka på **+**-knappen i det nedre vänstra hörnet, välj typ av idrottsplats och klicka på **OK**.\n3. Välj fliken **Importera från fil** (bredvid fliken Rita). Om du ser varningen *\"Kartan måste zoomas in närmare\"*, zooma in kartan tills den försvinner.\n4. Klicka på knappen **Importera geometrier från fil**. Fönstret *\"Importera geometrier\"* öppnas.\n5. Välj en fil från din dator (Välj fil / Choose File).\n6. I fönstret listas de ruttdelar som identifierats i filen. Välj de delar som ska importeras i kryssrutorna och klicka på **Importera valda**. Rutten ritas på kartan.\n7. Kontrollera att geometrin ser rätt ut och klicka på **Klar**. Fyll sedan i ruttens uppgifter och spara."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "DUa_aMbg9k0",
+     :title "Video: Import av ruttgeometri från fil"}
+    {:type :text,
+     :content
+     "### Tips\n\n- Om filen innehåller flera separata ruttdelar listas alla i importfönstret och du kan välja de du vill ha.\n- I importfönstret kan det visas extra eller konstigt namngivna rader på grund av filens teckenkodning — välj bara de tydligt namngivna ruttdelarna.\n- Systemet förenklar automatiskt det importerade ruttspåret något, eftersom till exempel GPS-spår ofta innehåller onödigt tätt med punkter. Om spåret ändå är för tätt, använd verktyget Förenkla (se anvisningen om att korrigera ruttgeometri).\n- Du kan också importera geometrin till en befintlig rutt: öppna rutten i redigeringsläge och välj *\"Importera geometrier från fil\"* i verktygsmenyn."}],
+   :translation-of-slug "reittigeometrian-tuonti-tiedostosta"}
+  {:slug "reittigeometrian-korjaaminen-ja-yksinkertaistaminen",
+   :title "Korrigering och förenkling av ruttgeometri",
+   :summary
+   "Hur man korrigerar fel i ruttlinjen (rutt som korsar sig själv, överlappande punkter) och hur man förenklar ett för tätt ruttspår.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Förutsättningar:** Rutten är vald och redigeringsläget är aktiverat (pennikonen **Redigera**). I redigeringsläget blir ruttlinjens punkter synliga.\n\n### Flytta, lägga till och ta bort ruttpunkter\n\n- **Flytta** en ruttpunkt genom att ta tag i den med musen och dra den till en ny plats.\n- **Lägg till** en ny punkt genom att klicka på ruttlinjen där du vill ha punkten.\n- **Ta bort** en punkt genom att hålla ner **Alt-tangenten** och klicka på punkten.\n\n### Korrigering av en rutt som korsar sig själv\n\nOm ruttlinjen skär sig själv visas en röd varningssymbol vid problemområdet: *\"Ändra ruttens sträckning så att ruttdelen inte korsar sig själv. Du kan vid behov dela upp rutten i flera delar.\"* LIPAS tillåter sparande, men en korsande rutt kan hindra att informationen utnyttjas i andra tjänster.\n\n1. Välj **Dela ruttdel** (saxikonen) i verktygsmenyn.\n2. Klicka på ruttlinjen i korsningen. Delningen delar upp rutten i två ruttdelar, varvid felmarkeringen försvinner.\n3. Säkerställ delningen genom att föra muspekaren över linjen: den separata ruttdelen markeras som en egen linje.\n\nOm det finns ett tätt kluster av överlappande punkter vid problemområdet (t.ex. ett \"trassel\" i GPS-spåret), dela inte i blindo: ta först bort onödiga överlappande punkter med **Alt + klick**-funktionen en i taget tills ruttens sträckning blir tydlig, och dela först därefter vid behov."}
+    {:type :video,
+     :provider :youtube,
+     :video-id "M3tmvCVyoD4",
+     :title "Video: Delning av rutt och förenkling av ruttspår"}
+    {:type :text,
+     :content
+     "### Förenkling av ruttspår\n\nI ett importerat GPS-spår finns det ofta punkter onödigt tätt, vilket gör rutten tung att hantera.\n\n1. Välj **Förenkla** i verktygsmenyn. I kartans nederkant öppnas reglaget *\"Förenkla geometrier\"*.\n2. Dra skjutreglaget (skala 0–10) åt höger: systemet minskar antalet ruttpunkter och visar resultatet på kartan i realtid.\n3. Zooma in och kontrollera att den förenklade linjen fortfarande följer spåret i terrängen. Om linjen genar för mycket, minska inställningen eller korrigera enskilda punkter genom att dra i dem.\n4. Godkänn genom att klicka på **OK**, eller avbryt genom att klicka på **Avbryt**.\n5. Du kan ångra förenklingen med knappen **Ångra** (pilikonen i verktygsmenyn).\n\n**Varning:** Förenkling är en kompromiss mellan noggrannhet och hanterbarhet — kontrollera alltid resultatet på kartan. Om du godkänner maximal förenkling kommer verktyget inte längre att minska punkterna från samma del igen; de återstående punkterna måste tas bort manuellt (Alt + klick).\n\n### Ta bort en ruttdel\n\nDu kan ta bort en hel ruttdel genom att välja **Ta bort ruttdel** (papperskorgsikonen) i verktygsmenyn och klicka på den del som ska tas bort.\n\nKom slutligen ihåg att spara ändringarna (**Spara**)."}],
+   :translation-of-slug
+   "reittigeometrian-korjaaminen-ja-yksinkertaistaminen"}
+  {:slug "reittimaisen-liikuntapaikan-poistaminen",
+   :title "Borttagning av ruttliknande idrottsplats",
+   :summary
+   "Hur en rutt tas bort från LIPAS-systemet och vad de olika borttagningsorsakerna innebär.",
+   :blocks
+   [{:type :text,
+     :content
+     "**Förutsättningar:** Rutten som ska tas bort är vald på kartan och du har redigeringsrättigheter till den.\n\n1. Klicka på **papperskorgsikonen** i verktygsfältet (Ta bort idrottsplats).\n2. Välj **Orsak till borttagning** i fönstret som öppnas:\n   - *Permanent tagen ur bruk* — rutten är inte längre i bruk. Objektet arkiveras, men det kan fortfarande hittas via idrottsplatssökningen.\n   - *Tillfälligt tagen ur bruk* — rutten är tillfälligt ur bruk. Objektet arkiveras på motsvarande sätt.\n   - *Felaktig information* — objektet är felaktigt (t.ex. sparat två gånger). Rutten tas bort permanent och visas inte längre i sökningar eller på kartan.\n3. Välj vid behov **År** då borttagningen skedde.\n4. Bekräfta genom att klicka på **Ta bort**. Ett meddelande visas när åtgärden har lyckats.\n\n**Tips:** Om rutten endast är ur bruk under en viss tid (t.ex. ruttändring eller renovering), använd statusen *Tillfälligt tagen ur bruk* — på så sätt bevaras ruttens historik och uppgifter."}],
+   :translation-of-slug "reittimaisen-liikuntapaikan-poistaminen"}]}

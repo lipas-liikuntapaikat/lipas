@@ -16,6 +16,19 @@
         (str/lower-case)
         (str/replace #"(\"|\(|\))" ""))))
 
+(defn ->slug
+  "URL-friendly slug from a title: lowercase, ä/å→a ö→o, whitespace→-,
+   other non-alphanumerics dropped. Returns \"\" for blank input."
+  [s]
+  (-> (or s "")
+      (str/lower-case)
+      (str/replace #"[äå]" "a")
+      (str/replace #"ö" "o")
+      (str/replace #"[^a-z0-9\s-]" "")
+      (str/trim)
+      (str/replace #"\s+" "-")
+      (str/replace #"-+" "-")))
+
 (defn index-by
   ([idx-fn coll]
    (index-by idx-fn identity coll))
@@ -234,3 +247,13 @@
          (assoc acc activity-k activity-v)))
      {}
      activities)))
+
+(defn localized
+  "Pick `locale` from a localized {:fi ... :se ... :en ...} map, falling
+   back fi → en → se when the requested language is missing or blank."
+  [locale m]
+  (when m
+    (or (not-empty (get m locale))
+        (not-empty (:fi m))
+        (not-empty (:en m))
+        (not-empty (:se m)))))

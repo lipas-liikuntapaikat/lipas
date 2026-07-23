@@ -26,6 +26,7 @@
   :site-manager "Platsadministratör",
   :city-manager "Stadsadministratör",
   :org-user "Organisationsanvändare",
+  :assistant-tester "AI-assistenttestare",
   :org-editor "Organisationsredigerare"},
  :role-descriptions
  {:type-manager "Redigering av anläggningar av vald typ",
