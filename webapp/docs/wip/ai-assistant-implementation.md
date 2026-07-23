@@ -202,11 +202,16 @@ languages draft/publish/roll back independently. Nodes carry stable
 optional `:summary` (landing lists + KB body) and `:translation-of`
 (reserved for future per-page fallback).
 
-**Migration**: `(lipas.backend.help/migrate-v1->v2! db)` — one-shot; fi
+**Migration**: `lipas.backend.help/migrate-v1->v2!` — one-shot; fi
 gets everything with regenerated readable slugs (old timestamp slugs →
 aliases), se/en start empty (prod se/en content was placeholder junk or
 stale-seed lies like "Excel reports" over accessibility-tool content).
-v1 `"help"` rows stay untouched as history. Run once per environment.
+v1 `"help"` rows stay untouched as history. Wired in as a migratus
+Clojure migration (`lipas.migrations.help-v1-to-v2`,
+`resources/migrations/20260723120000-help-v1-to-v2.edn`) so it runs
+automatically with the rest of the deploy migrations instead of a manual
+REPL step; no-ops (logged, not thrown) when there's no v1 data or v2
+content already exists.
 
 **Read view** (`lipas.ui.help.views` rewrite, docs-site pattern): tree
 sidebar (collapsible sections, sentence-case wrapping labels; the theme
@@ -239,10 +244,10 @@ help-cms->docs skip rules).
 ## Remaining / next
 
 1. **PR + code review** (branch has ~2.5k added lines; `/code-review` worth it).
-2. Deploy: `GEMINI_API_KEY` in prod env; **run help-v2 migration against
-   prod DB** (`(lipas.backend.help/migrate-v1->v2! db)`, once, before the
-   first v2 publish); first `help-kb-sync` runs via scheduler/publish;
-   **run ingestion against prod DB** (87 entries live only in local
+2. Deploy: `GEMINI_API_KEY` in prod env (help-v2 migration runs
+   automatically via migratus, no manual step); first `help-kb-sync` runs
+   via scheduler/publish; **run ingestion against prod DB** (87 entries
+   live only in local
    versioned_data) and **carry the fi `ptv-integraatio` help section
    (15 pages) to prod** after Lipasinfo review — take the section from
    lipas-dev's `help-v2-fi` tree (so review edits ride along), conj onto

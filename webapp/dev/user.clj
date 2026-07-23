@@ -532,7 +532,9 @@
   ;; Help content v2: one versioned_data doc per locale
   (require '[lipas.backend.help :as help*])
   (help*/get-help-data (db))                ; {:fi [...] :se [...] :en [...]}
-  (help*/migrate-v1->v2! (db))              ; one-shot v1 → v2 (fi gets all)
+  ;; v1 → v2 (fi gets all) now runs automatically as a migratus migration
+  ;; (lipas.migrations.help-v1-to-v2); call directly only for manual poking.
+  (help*/migrate-v1->v2! (db))
   (help*/save-help-data (db) :fi [])        ; publish one locale
 
   (require '[malli.core :as m])
