@@ -175,6 +175,7 @@ jobs:
           docker compose run --rm backend-build
           docker compose run --rm frontend-npm-deps
           docker compose run --rm frontend-build
+          docker compose run --rm frontend-precompress
 
       - name: Run database migrations
         working-directory: /var/lipas
@@ -192,7 +193,17 @@ jobs:
           source /var/lipas/.env.sh
           docker compose rm -sf backend worker
           docker compose up -d backend worker
-          docker compose restart proxy
+          # The proxy must be recreated after the backend so nginx re-resolves
+          # the new backend container IP. --build picks up nginx/Dockerfile
+          # changes (brotli modules ship in the image) and is a cached no-op
+          # otherwise. Hosts run different proxy variants, so detect the
+          # running one instead of hardcoding a service name.
+          PROXY_SVC=$(docker compose ps --services | grep -E '^proxy(-dev|-local)?$' || true)
+          if [ -n "$PROXY_SVC" ]; then
+            docker compose up -d --no-deps --build --force-recreate "$PROXY_SVC"
+          else
+            echo "No running proxy service found; skipping proxy restart"
+          fi
           echo "Deployed $(git -C /var/lipas rev-parse --short HEAD)"
 
       - name: Re-index Elasticsearch

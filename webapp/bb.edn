@@ -16,11 +16,11 @@
                     :urls {:dev "https://lipas-dev.cc.jyu.fi"
                            :prod "https://lipas.fi"}})
 
-                 (defn frontend-bundle-name
+                 (defn frontend-module-files
                    "Reads manifest.edn (written by shadow-cljs on every build) and
-                    returns the resolved :app bundle filename — e.g. \"app.0EA395B3.js\"
-                    in release mode, \"app.js\" in dev. Exits with an error message if
-                    the manifest is missing or malformed."
+                    returns all module bundle filenames — with code splitting the
+                    lazy modules must reach the server too, not just :app. Exits
+                    with an error message if the manifest is missing or empty."
                    []
                    (let [path (get-in deploy-config [:paths :frontend-manifest])
                          f    (java.io.File. path)]
@@ -28,11 +28,11 @@
                        (println (str "❌ Frontend manifest not found at " path
                                      " — did the build run?"))
                        (System/exit 1))
-                     (let [manifest (edn/read-string (slurp f))
-                           app-mod  (first (filter (fn [m] (= :app (:module-id m))) manifest))]
-                       (or (:output-name app-mod)
-                           (do (println "❌ No :app module found in manifest.edn")
-                               (System/exit 1)))))))
+                     (let [names (mapv :output-name (edn/read-string (slurp f)))]
+                       (when (empty? names)
+                         (println "❌ No modules found in manifest.edn")
+                         (System/exit 1))
+                       names))))
 
          cljs-watch {:task (shell "npm run watch")}
          bundle-size-check
@@ -140,17 +140,34 @@
                                (println "🏗️  Building frontend release bundle...")
                                (shell "npm run build"))
 
-                             ;; Resolve hashed bundle name from manifest.edn (post-build)
-                             (let [bundle        (when deploy-frontend? (frontend-bundle-name))
+                             ;; Resolve module bundles from manifest.edn (post-build)
+                             (let [modules       (when deploy-frontend? (frontend-module-files))
                                    compiled-dir  (get-in deploy-config [:paths :frontend-compiled-dir])
-                                   bundle-local  (when bundle (str compiled-dir "/" bundle))
                                    index-local   (get-in deploy-config [:paths :frontend-index])
-                                   remote-public (get-in deploy-config [:paths :remote-public])]
+                                   remote-public (get-in deploy-config [:paths :remote-public])
+                                   ;; Each bundle plus its precompressed .br/.gz siblings
+                                   ;; (written by scripts/precompress.mjs during npm run build).
+                                   ;; nginx falls back to on-the-fly compression when a sibling
+                                   ;; is missing, so warn but proceed.
+                                   frontend-files
+                                   (when deploy-frontend?
+                                     (vec (mapcat
+                                            (fn [m]
+                                              (let [f (str compiled-dir "/" m)]
+                                                (when-not (.exists (java.io.File. f))
+                                                  (println (str "❌ Frontend bundle not found at " f))
+                                                  (System/exit 1))
+                                                (into [f]
+                                                      (for [ext [".br" ".gz"]
+                                                            :let [c (str f ext)]
+                                                            :when (if (.exists (java.io.File. c))
+                                                                    true
+                                                                    (do (println (str "⚠️  " c " missing — nginx will compress on the fly"))
+                                                                        false))]
+                                                        c))))
+                                            modules)))]
 
                                (when deploy-frontend?
-                                 (when-not (.exists (java.io.File. bundle-local))
-                                   (println (str "❌ Frontend bundle not found at " bundle-local))
-                                   (System/exit 1))
                                  (when-not (.exists (java.io.File. index-local))
                                    (println (str "❌ Frontend index.html not found at " index-local
                                                  " — build hook should have rendered it"))
@@ -161,25 +178,44 @@
                                (when deploy-backend?
                                  (shell (str "scp " (get-in deploy-config [:paths :backend-jar]) " " host ":/tmp/")))
                                (when deploy-frontend?
-                                 ;; Upload both the hashed JS bundle and the rendered index.html.
-                                 ;; Bundle filename is content-addressed so it never collides with
-                                 ;; previous deploys; index.html is rewritten in place.
-                                 (shell (str "scp " bundle-local " " index-local " " host ":/tmp/")))
+                                 ;; Upload every module bundle (+ compressed siblings) and the
+                                 ;; rendered index.html. Bundle filenames are content-addressed
+                                 ;; so they never collide with previous deploys; index.html is
+                                 ;; rewritten in place.
+                                 (shell (str "scp " (str/join " " frontend-files) " " index-local " " host ":/tmp/")))
 
-                               ;; Deploy files and restart if needed
+                               ;; Deploy files and restart if needed. The script runs remotely
+                               ;; as root via stdin, which avoids nested ssh/sudo quoting.
                                (println (str "🔄 Deploying " type-str " on " host "..."))
-                               (let [backend-commands (when deploy-backend?
-                                                        (str "sudo cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend])))
-                                     ;; Order matters: install the new bundle BEFORE rewriting index.html
-                                     ;; so users never see an index.html that points to a missing bundle.
-                                     frontend-commands (when deploy-frontend?
-                                                         (str "sudo cp /tmp/" bundle " " remote-public "/js/compiled/" bundle
-                                                              " && sudo cp /tmp/index.html " remote-public "/index.html"))
-                                     restart-commands (when deploy-backend?
-                                                        "sudo bash -c \"source /var/lipas/.env.sh && docker compose -f /var/lipas/docker-compose.yml rm -sf backend worker && docker compose -f /var/lipas/docker-compose.yml up -d backend worker && docker compose -f /var/lipas/docker-compose.yml restart proxy\"")
-                                     all-commands (str/join " && " (filter some? [backend-commands frontend-commands restart-commands]))]
+                               (let [basename (fn [p] (.getName (java.io.File. p)))
+                                     script
+                                     (str "set -eo pipefail\n"
+                                          (when deploy-backend?
+                                            (str "cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend]) "\n"))
+                                          ;; Order matters: install the new bundles BEFORE rewriting
+                                          ;; index.html so users never see an index.html that points
+                                          ;; to a missing bundle.
+                                          (when deploy-frontend?
+                                            (str (str/join (map (fn [f] (str "cp /tmp/" (basename f) " " remote-public "/js/compiled/\n"))
+                                                                frontend-files))
+                                                 "cp /tmp/index.html " remote-public "/index.html\n"))
+                                          (when deploy-backend?
+                                            (str "source /var/lipas/.env.sh\n"
+                                                 "docker compose -f /var/lipas/docker-compose.yml rm -sf backend worker\n"
+                                                 "docker compose -f /var/lipas/docker-compose.yml up -d backend worker\n"
+                                                 ;; The proxy must be recreated after the backend so nginx
+                                                 ;; re-resolves the new backend container IP. --build picks
+                                                 ;; up nginx/Dockerfile changes (brotli modules ship in the
+                                                 ;; image) and is a cached no-op otherwise. Hosts run
+                                                 ;; different proxy variants, so detect the running one.
+                                                 "PROXY_SVC=$(docker compose -f /var/lipas/docker-compose.yml ps --services | grep -E '^proxy(-dev|-local)?$' || true)\n"
+                                                 "if [ -n \"$PROXY_SVC\" ]; then\n"
+                                                 "  docker compose -f /var/lipas/docker-compose.yml up -d --no-deps --build --force-recreate \"$PROXY_SVC\"\n"
+                                                 "else\n"
+                                                 "  echo 'no running proxy service found; skipping proxy restart'\n"
+                                                 "fi\n")))]
 
-                                 (shell (str "ssh " host " 'set -e && " all-commands "'"))))
+                                 (shell {:in script} "ssh" host "sudo bash -s")))
 
                              (println (str "✅ " (str/capitalize type-str) " deployment to " env " completed successfully!"))
                              (println (str "🌐 " (get-in deploy-config [:urls env-key]))))}
