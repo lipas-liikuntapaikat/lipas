@@ -571,7 +571,9 @@
   ol-features)
 
 ;; Extracted to lipas.ui.geom (base module) so the assistant and site
-;; forms can use them without pulling in the map closure.
+;; forms can use them without pulling in the map closure. These aliases
+;; exist for this namespace's internal callers — deprecated for new
+;; code: require lipas.ui.geom directly.
 (def calculate-length-km geom/calculate-length-km)
 (def calculate-area-km2 geom/calculate-area-km2)
 (def calculate-area-m2 geom/calculate-area-m2)

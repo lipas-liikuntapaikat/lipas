@@ -2,7 +2,7 @@
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
             [lipas.roles :as roles]
-                        [lipas.ui.utils :as ui-utils]
+            [lipas.ui.utils :as ui-utils]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 

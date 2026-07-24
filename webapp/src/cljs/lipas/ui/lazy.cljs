@@ -62,7 +62,10 @@
 (defn load!
   "Loads the module of `x` (a loadable or a key of `modules`), then calls
    on-ready (no args). No-op callback-wise if already loaded. Failures
-   (network) surface as a notification so a dead click isn't silent."
+   (network) surface as a sticky notification so a dead click isn't
+   silent — note goog's module manager gives up on a module after its
+   internal retries, so a later load! of the same module won't refetch;
+   recovery is a page reload (which the notification text says)."
   ([x] (load! x nil))
   ([x on-ready]
    (let [ll (if (keyword? x) (get modules x) x)]
@@ -71,9 +74,7 @@
                 (fn [err]
                   (js/console.error "Failed to load app module"
                                     (pr-str (.-modules ^js ll)) err)
-                  (rf/dispatch [:lipas.ui.events/set-active-notification
-                                {:message "Sovelluksen osan lataaminen epäonnistui. Tarkista verkkoyhteys ja yritä uudelleen."
-                                 :success? false}]))))))
+                  (rf/dispatch [:lipas.ui.events/module-load-failed]))))))
 
 (rf/reg-fx ::load-fx
   (fn [{:keys [module events]}]
@@ -91,7 +92,12 @@
 (defn lazy-view
   "Renders the component behind `loadable` with `args` once its module is
    loaded; a small spinner (or :fallback) until then. In dev all modules
-   are loaded eagerly, so this renders directly."
+   are loaded eagerly, so this renders directly.
+
+   The loadable is captured on mount — re-rendering the same instance
+   with a *different* loadable would deref the new one against the old
+   ready-state (and throw if its module isn't in). Use a React :key or a
+   separate call site per loadable instead."
   [{:keys [loadable]} & _args]
   (let [ready?* (r/atom (lazy/ready? loadable))]
     (when-not @ready?*

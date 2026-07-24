@@ -27,12 +27,19 @@
     (when (.exists manifest-file)
       (edn/read-string (slurp manifest-file)))))
 
+(defn- asset-path
+  "Public URL prefix the module loader fetches from — same :asset-path the
+   build config gives shadow, so prefetch links can't drift from it."
+  [state]
+  (or (get-in state [:shadow.build/config :asset-path])
+      "/js/compiled"))
+
 (defn- prefetch-links
-  [manifest]
+  [manifest path]
   (->> manifest
        (filter #(prefetch-modules (:module-id %)))
-       (map #(str "<link rel=\"prefetch\" as=\"script\" href=\"/js/compiled/"
-                  (:output-name %) "\">"))
+       (map #(str "<link rel=\"prefetch\" as=\"script\" href=\""
+                  path "/" (:output-name %) "\">"))
        (str/join "\n    ")))
 
 (defn render-index
@@ -51,7 +58,8 @@
       :else
       (let [rendered (-> (slurp tmpl-file)
                          (str/replace "{{APP_JS}}" output-name)
-                         (str/replace "{{PREFETCH_LINKS}}" (prefetch-links manifest)))]
+                         (str/replace "{{PREFETCH_LINKS}}"
+                                      (prefetch-links manifest (asset-path state))))]
         (spit output-path rendered)
         (println (str "[cache-bust] Wrote " output-path " referencing " output-name)))))
   state)

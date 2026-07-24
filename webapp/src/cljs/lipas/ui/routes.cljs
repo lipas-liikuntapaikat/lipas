@@ -67,8 +67,16 @@
                args  (conj args (-> match :parameters :path))]
            (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
+;; Monotonic navigation token. A lazy-module load completing after the
+;; user has already navigated elsewhere must not dispatch its (now stale)
+;; ::navigated — that would overwrite current-route with an older match
+;; and desync the rendered view from the URL. Every navigation bumps the
+;; token; a load callback only fires if its token is still the latest.
+(defonce nav-token* (atom 0))
+
 (defn on-navigate [new-match]
-  (let [current-path (utils/current-path)]
+  (let [current-path (utils/current-path)
+        token (swap! nav-token* inc)]
     (cond
       ;; Fix deprecated url with hash
       (string/starts-with? current-path "/#")
@@ -81,7 +89,8 @@
       ;; view stays rendered.
       (let [view (-> new-match :data :view)]
         (if (and (lazy/loadable? view) (not (lazy/ready? view)))
-          (lazy/load! view #(==> [:lipas.ui.events/navigated new-match]))
+          (lazy/load! view #(when (= token @nav-token*)
+                              (==> [:lipas.ui.events/navigated new-match])))
           (==> [:lipas.ui.events/navigated new-match]))))))
 
 (defn init! []

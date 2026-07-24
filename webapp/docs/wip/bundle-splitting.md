@@ -73,5 +73,11 @@ release bundle into shadow-cljs `:modules` loaded on demand.
   always-mounted UI, add a base-module twin sub that reads the db path.
 - In dev all modules load eagerly at page load; real lazy loading only
   happens in release builds. Verify with a release build served locally.
+- If a module fetch fails (network drop), goog's module manager retries
+  a few times and then gives up on that module *permanently* — a later
+  `load!` won't refetch. The sticky failure notification therefore
+  advises reloading the page. Navigations whose module never loaded also
+  never dispatch `::navigated`, so the previous view stays rendered
+  (guarded by a nav token against stale loads completing late).
 - `lipas.data.*` (~550 KB raw) is still baked into `:app` —
   data-from-server was deliberately left out of scope.

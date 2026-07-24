@@ -67,6 +67,19 @@
   (fn [db [_ notification]]
     (assoc db :active-notification notification)))
 
+(rf/reg-event-fx ::module-load-failed
+  ;; Lazy-module fetch failed (lipas.ui.lazy) — usually a network drop.
+  ;; Routed through the translator here; :fi is always bundled, so the
+  ;; key resolves even when the active locale's dictionary isn't in.
+  ;; Sticky, and the text advises reloading the page: goog's module
+  ;; manager gives up on a module after its retries, so re-clicking the
+  ;; same navigation won't refetch — only a reload recovers.
+  (fn [{:keys [db]} _]
+    {:dispatch [::set-active-notification
+                {:message ((:translator db) :notifications/module-load-failed)
+                 :success? false
+                 :sticky? true}]}))
+
 (rf/reg-event-db ::show-test-version-disclaimer
   (fn [db _]
     (let [tr (:translator db)]

@@ -581,9 +581,8 @@
      :baseValue "dataMin"
      :onMouseMove (fn [^js state]
                     (when (and state (.-isTooltipActive state))
-                      (let [active-index (parse-long (.-activeIndex state))
-                            segment-data (nth data active-index)]
-                        (when segment-data
+                      (when-let [active-index (parse-long (.-activeIndex state))]
+                        (when-let [segment-data (nth data active-index nil)]
                           (on-hover segment-data)))))
      :onMouseLeave (fn [_] (on-leave))}
     [:defs

@@ -1,4 +1,5 @@
 {:get-failed "Couldn't get data.",
+ :module-load-failed "Failed to load part of the application. Check your network connection and reload the page.",
  :ie
  "Internet Explorer is not a supported browser. Please use another web browser, e.g. Chrome, Firefox or Edge.",
  :save-failed "Saving failed",
