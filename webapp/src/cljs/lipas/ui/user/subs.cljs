@@ -1,5 +1,6 @@
 (ns lipas.ui.user.subs
   (:require [lipas.roles :as roles]
+            [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]))
 
 ;; TODO: Likely not very useful now. Checks should mainly be done using
@@ -165,8 +166,9 @@
       (roles/check-privilege user role-context k))))
 
 (rf/reg-sub ::admin-org
-  (fn [db [_ id]]
-    (get-in db [:admin :orgs id])))
+  :<- [::ui-subs/admin-orgs]
+  (fn [orgs [_ id]]
+    (get orgs id)))
 
 (rf/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]

@@ -6,8 +6,11 @@
     (-> db :stats :selected-tab)))
 
 (rf/reg-sub ::abolished-cities
-  (fn [db _]
-    (-> db :abolished-cities)))
+  ;; The root lives in base (shared model layer) — layered here only to
+  ;; keep the stats-local keyword stable.
+  :<- [:lipas.ui.sports-sites.subs/abolished-cities]
+  (fn [cities _]
+    cities))
 
 ;; Includes also historical cities that no-more exist
 (rf/reg-sub ::cities

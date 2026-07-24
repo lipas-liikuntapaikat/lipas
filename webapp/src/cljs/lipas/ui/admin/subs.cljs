@@ -1,12 +1,16 @@
 (ns lipas.ui.admin.subs
   (:require [clojure.string :as str]
             [lipas.roles :as roles]
+            [lipas.ui.subs :as ui-subs]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::users
-  (fn [db _]
-    (-> db :admin :users)))
+  ;; The root lives in base (dev-tools impersonation reads it too) — see
+  ;; "Cross-module root subs" in lipas.ui.subs.
+  :<- [::ui-subs/admin-users]
+  (fn [users _]
+    users))
 
 (rf/reg-sub ::users-status
   (fn [db _]
@@ -114,8 +118,11 @@
 ;;; Orgs ;;;
 
 (rf/reg-sub ::orgs
-  (fn [db _]
-    (-> db :admin :orgs)))
+  ;; The root lives in base (profile role-context display reads it too)
+  ;; — see "Cross-module root subs" in lipas.ui.subs.
+  :<- [::ui-subs/admin-orgs]
+  (fn [orgs _]
+    orgs))
 
 ;; Resolves an org-id (role context value) to its org for name display in the
 ;; user roles list — see lipas.ui.user.subs/context-value-name. Org roles are no

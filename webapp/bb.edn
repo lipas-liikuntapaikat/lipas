@@ -1,5 +1,6 @@
 {:tasks {:requires ([clojure.string :as str]
-                    [clojure.edn :as edn])
+                    [clojure.edn :as edn]
+                    [clojure.java.io :as io])
 
          ;; === DEPLOYMENT CONFIGURATION ===
          :init (do
@@ -34,6 +35,62 @@
                                (System/exit 1)))))))
 
          cljs-watch {:task (shell "npm run watch")}
+         bundle-size-check
+         {:doc "Check release module sizes against the :app gzip budget (CI guard, see docs/wip/bundle-splitting.md)"
+          :task
+          (let [;; Gzip budget (KB) for the always-loaded :app module. Code
+                ;; splitting's failure mode is silent: one wrong static require
+                ;; hoists a lazy namespace into :app with no compile error and
+                ;; no dev-time symptom. If this check fails, run
+                ;; `npm run build-report` and see what moved into :app; bump
+                ;; the budget only for intentional base-module growth.
+                ;; Headroom over the current size is deliberately ~20 KB:
+                ;; accidental hoists are whole-module-sized (the smallest
+                ;; module is ~11 KB gzip, most 30+), so they still trip this.
+                app-budget-kb 815
+                manifest-path (get-in deploy-config [:paths :frontend-manifest])
+                dir (get-in deploy-config [:paths :frontend-compiled-dir])
+                _ (when-not (.exists (java.io.File. manifest-path))
+                    (println (str "❌ " manifest-path " not found — run `npm run build` first"))
+                    (System/exit 1))
+                manifest (edn/read-string (slurp manifest-path))
+                _ (when (some (fn [m]
+                                (some (fn [entry]
+                                        (str/starts-with? (str entry) "shadow.cljs.devtools"))
+                                      (:entries m)))
+                              manifest)
+                    (println "❌ manifest.edn is from a dev/watch build — run `npm run build` first")
+                    (System/exit 1))
+                gzip-size (fn [f]
+                            (let [out (java.io.ByteArrayOutputStream.)]
+                              (with-open [in (io/input-stream f)
+                                          gz (java.util.zip.GZIPOutputStream. out)]
+                                (io/copy in gz))
+                              (.size out)))
+                rows (doall
+                       (for [{:keys [module-id output-name]} manifest
+                             :let [f (java.io.File. (str dir "/" output-name))]]
+                         (do (when-not (.exists f)
+                               (println (str "❌ " output-name " referenced by manifest.edn but missing"))
+                               (System/exit 1))
+                             {:module module-id
+                              :raw (.length f)
+                              :gzip (gzip-size f)})))
+                kb (fn [n] (format "%6.0f" (/ n 1000.0)))]
+            (println "Module sizes:")
+            (doseq [{:keys [module raw gzip]} (sort-by :gzip > rows)]
+              (println (format "  %-12s %s KB raw %s KB gzip" (name module) (kb raw) (kb gzip))))
+            (let [app-gzip (or (:gzip (first (filter (fn [row] (= :app (:module row))) rows)))
+                               (do (println "❌ no :app module in manifest.edn")
+                                   (System/exit 1)))]
+              (if (> app-gzip (* app-budget-kb 1000))
+                (do (println (format "\n❌ :app is %.0f KB gzip, over the %d KB budget."
+                                     (/ app-gzip 1000.0) app-budget-kb))
+                    (println "   Likely silent hoisting — run `npm run build-report` and check what moved into :app.")
+                    (println "   If the base-module growth is intentional, bump app-budget-kb in bb.edn.")
+                    (System/exit 1))
+                (println (format "\n✅ :app %.0f KB gzip is within the %d KB budget"
+                                 (/ app-gzip 1000.0) app-budget-kb)))))}
          lint {:doc "Run clj-kondo"
                :task (shell "clj-kondo --lint src")}
          init-lint {:doc "Initialize Clj-kondo cache with library code"

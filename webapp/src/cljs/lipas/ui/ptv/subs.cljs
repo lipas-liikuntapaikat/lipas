@@ -6,6 +6,7 @@
             [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.map.projection :as projection]
             [lipas.ui.ptv.events :as events]
+            [lipas.ui.subs :as ui-subs]
             [lipas.ui.utils :as utils :refer [prod?]]
             [malli.core :as m]
             [malli.error :as me]
@@ -16,9 +17,11 @@
     (:ptv db)))
 
 (rf/reg-sub ::dialog-open?
-  :<- [::ptv]
-  (fn [ptv _]
-    (get-in ptv [:dialog :open?])))
+  ;; The root lives in base (always-mounted UI reads it too) — see
+  ;; "Cross-module root subs" in lipas.ui.subs.
+  :<- [::ui-subs/ptv-dialog-open?]
+  (fn [open? _]
+    open?))
 
 (rf/reg-sub ::selected-tab
   :<- [::ptv]

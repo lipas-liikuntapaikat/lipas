@@ -17,7 +17,11 @@
    - Components: [lazy-view {:loadable x} & args] renders a spinner until the
      module is in, then renders [@x & args].
    - Events: {:fx [[::load-fx {:module :map :events [[…]]}]]} (or dispatch
-     [::load-then :map […]]) for event chains that cross into a lazy module."
+     [::load-then :map […]]) for event chains that cross into a lazy module.
+   - Subs: when an always-loaded view needs data from a lazy feature's db
+     region, the root sub lives in the shallower module and the feature's
+     subs layer on it with :<- — see \"Cross-module root subs\" in
+     lipas.ui.subs."
   (:require ["@mui/material/CircularProgress$default" :as CircularProgress]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -94,15 +98,19 @@
    loaded; a small spinner (or :fallback) until then. In dev all modules
    are loaded eagerly, so this renders directly.
 
-   The loadable is captured on mount — re-rendering the same instance
-   with a *different* loadable would deref the new one against the old
-   ready-state (and throw if its module isn't in). Use a React :key or a
-   separate call site per loadable instead."
+   Safe under React instance reuse: readiness is checked against the
+   *current* loadable on every render, so two lazy-views alternating at
+   the same tree position (e.g. site-details tabs) each load and render
+   their own module."
   [{:keys [loadable]} & _args]
-  (let [ready?* (r/atom (lazy/ready? loadable))]
-    (when-not @ready?*
-      (load! loadable #(reset! ready?* true)))
+  (let [tick* (r/atom 0)
+        ensure-loaded! (fn [ll]
+                         (when-not (lazy/ready? ll)
+                           (load! ll #(swap! tick* inc))))]
+    (ensure-loaded! loadable)
     (fn [{:keys [loadable fallback]} & args]
-      (if @ready?*
+      @tick* ;; re-render when a pending load completes
+      (if (lazy/ready? loadable)
         (into [@loadable] args)
-        (or fallback [spinner])))))
+        (do (ensure-loaded! loadable)
+            (or fallback [spinner]))))))

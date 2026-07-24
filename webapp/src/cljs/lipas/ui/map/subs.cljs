@@ -192,10 +192,11 @@
     (:sub-mode mode)))
 
 (rf/reg-sub ::analysis-mode-inputs
-  ;; Same data as the reachability/diversity/heatmap root subs, but read
-  ;; straight from app-db: those subs live in the lazy :analysis module
-  ;; and aren't registered before it loads, while ::mode must work from
-  ;; map startup.
+  ;; Cross-module root for the analysis db regions: ::mode needs them
+  ;; from map startup, before the lazy :analysis module loads. The
+  ;; reachability/diversity/heatmap region subs in :analysis layer on
+  ;; this — see "Cross-module root subs" in lipas.ui.subs for the
+  ;; placement rule.
   (fn [db _]
     {:reachability (-> db :analysis :reachability)
      :diversity (-> db :analysis :diversity)

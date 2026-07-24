@@ -45,7 +45,19 @@ release bundle into shadow-cljs `:modules` loaded on demand.
   keywords wrapped in `[:lipas.ui.lazy/load-then :map …]`, plus light
   extractions: `lipas.ui.geom` (length/area/elevation, small turf pkgs),
   `lipas.ui.ptv.context` (pure db-reader for dialog context),
-  `:lipas.ui.subs/ptv-dialog-open?` (base twin of the ptv sub).
+  `:lipas.ui.subs/ptv-dialog-open?` (cross-module root sub, see below).
+- **Cross-module root subs** — when always-loaded UI needs data from a
+  lazy feature's db region, the root (extractor) sub is registered in
+  the *shallowest module that needs it* and the feature's own subs layer
+  on it with `:<-`; the db path is written exactly once. Base-resident
+  roots live in the "Cross-module root subs" section of `lipas.ui.subs`
+  (ptv dialog, admin users/orgs); `::analysis-mode-inputs` in
+  `lipas.ui.map.subs` is the same pattern one level down (`:map` ←
+  `:analysis`). Signal chains may only point toward `:app` along module
+  `:depends-on` edges — that direction is registration-race-free because
+  the module loader loads dependencies before dependents. The reverse
+  direction (base subscribing to a lazy module's sub) is exactly the
+  unregistered-sub error below.
 - **i18n**: cljs bundles only `:fi`; `lipas.i18n.register-en/-se`
   (module entries) call `i18n/register-dict!` on load.
   `::set-translator` switches immediately (tongue falls back to fi) and
@@ -65,12 +77,20 @@ release bundle into shadow-cljs `:modules` loaded on demand.
   module that doesn't depend on it) — shadow silently *hoists* the
   shared code up to the common dominator module (usually `:app`) instead
   of erroring. Check `npm run build-report` per-module sizes after
-  adding cross-feature requires.
+  adding cross-feature requires. CI guards the headline win:
+  `bb bundle-size-check` (run after the release build) fails if `:app`
+  exceeds its gzip budget (`app-budget-kb` in `bb.edn`) and prints all
+  module sizes. If it trips, find what hoisted via the build report;
+  bump the budget only for intentional base growth. The reverse
+  direction is always safe: lazy modules may require base namespaces
+  with normal aliases.
 - Dispatching an event whose handler lives in an unloaded module drops
   the event with a console error — wrap with
   `[:lipas.ui.lazy/load-then <module> <event>…]`.
 - Subscribing to an unregistered sub returns nil + console error — for
-  always-mounted UI, add a base-module twin sub that reads the db path.
+  always-mounted UI, register a cross-module root sub in the shallower
+  module and layer the feature's subs on it (see Architecture above).
+  Don't duplicate the db path in two independent root subs.
 - In dev all modules load eagerly at page load; real lazy loading only
   happens in release builds. Verify with a release build served locally.
 - If a module fetch fails (network drop), goog's module manager retries
@@ -81,3 +101,14 @@ release bundle into shadow-cljs `:modules` loaded on demand.
   (guarded by a nav token against stale loads completing late).
 - `lipas.data.*` (~550 KB raw) is still baked into `:app` —
   data-from-server was deliberately left out of scope.
+
+## Simplification candidates
+
+- **i18n split** (~34 KB gzip for en+se) is the weakest trade here: a
+  reader-conditional `i18n/core`, dictionary-atom rebuild machinery and
+  two race guards (`::set-translator`/`::dict-loaded`), plus a Finnish
+  flash for en/se users on first visit. If the translator machinery
+  misbehaves, fold the dictionaries back into `:app` first — it is
+  self-contained: delete the `:i18n-en`/`:i18n-se` modules and
+  `lipas.i18n.register-*`, restore static dicts in `lipas.i18n.core`,
+  drop the `::dict-loaded` chain.
