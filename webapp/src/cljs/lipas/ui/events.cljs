@@ -61,7 +61,19 @@
       (not (i18n/dict-loaded? locale))
       (assoc :fx [[:lipas.ui.lazy/load-fx
                    {:module (case locale :en :i18n-en :se :i18n-se)
-                    :events [[::set-translator locale]]}]]))))
+                    :events [[::dict-loaded locale]]}]]))))
+
+(rf/reg-event-db ::dict-loaded
+  ;; Dictionary-module load completed. Re-set the translator (new fn
+  ;; instance → subs invalidate → UI re-renders with the real texts) only
+  ;; if `locale` is still the active one — rapid switching can finish
+  ;; module loads out of order, and a stale completion must not drag the
+  ;; UI back to an earlier locale (same shape as the navigation race
+  ;; guarded in lipas.ui.routes/on-navigate).
+  (fn [db [_ locale]]
+    (cond-> db
+      (= locale ((:translator db)))
+      (assoc :translator (i18n/->tr-fn locale)))))
 
 (rf/reg-event-db ::set-active-notification
   (fn [db [_ notification]]
