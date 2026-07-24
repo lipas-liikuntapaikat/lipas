@@ -1,7 +1,10 @@
 services:
 
   proxy-base:
-    image: nginx:stable
+    # Stock nginx + ngx_brotli dynamic modules (see nginx/Dockerfile).
+    # Built on each host, not pulled: docker compose build proxy|proxy-dev|proxy-local
+    build: ./nginx
+    image: lipas/proxy
     environment:
       DIGITRANSIT_SUBSCRIPTION_KEY:
     ports:
@@ -314,6 +317,13 @@ services:
     extends:
       service: node-base
     command: npm install --quiet
+
+  # Writes .br/.gz siblings next to the release bundles for nginx
+  # brotli_static/gzip_static. Run after frontend-build.
+  frontend-precompress:
+    extends:
+      service: node-base
+    command: node scripts/precompress.mjs
 
   frontend-build:
     extends:
