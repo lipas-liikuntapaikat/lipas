@@ -725,7 +725,7 @@ Grade this output against all DVV criteria. Be specific — cite exact problemat
   (json-schema/transform (mu/open-schema service-grading-response-schema-v3)))
 
 (def service-grader-config-v3
-  {:model          (:model ai/gemini-default-params)
+  {:model          (:model llm/gemini-default-params)
    :thinking-level "high"
    :temperature    0.5
    :top-p          0.90
