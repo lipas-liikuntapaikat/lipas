@@ -3,6 +3,7 @@
             [lipas.ui.admin.routes :as admin]
             [lipas.ui.forgot-password.routes :as forgot-password]
             [lipas.ui.front-page.routes :as front-page]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.login.routes :as login]
             [lipas.ui.map.routes :as lmap]
             [lipas.ui.register.routes :as register]
@@ -66,14 +67,31 @@
                args  (conj args (-> match :parameters :path))]
            (apply rfe/push-state (into [kw] (remove nil?) args))))))
 
+;; Monotonic navigation token. A lazy-module load completing after the
+;; user has already navigated elsewhere must not dispatch its (now stale)
+;; ::navigated — that would overwrite current-route with an older match
+;; and desync the rendered view from the URL. Every navigation bumps the
+;; token; a load callback only fires if its token is still the latest.
+(defonce nav-token* (atom 0))
+
 (defn on-navigate [new-match]
-  (let [current-path (utils/current-path)]
+  (let [current-path (utils/current-path)
+        token (swap! nav-token* inc)]
     (cond
       ;; Fix deprecated url with hash
       (string/starts-with? current-path "/#")
       (set! js/window.location.href (-> (utils/current-path) (subs 2)))
 
-      :else (==> [:lipas.ui.events/navigated new-match]))))
+      :else
+      ;; Lazy routes carry a shadow.lazy loadable in :view. Load its
+      ;; module before ::navigated so the route's controllers dispatch
+      ;; into registered event handlers. While loading, the previous
+      ;; view stays rendered.
+      (let [view (-> new-match :data :view)]
+        (if (and (lazy/loadable? view) (not (lazy/ready? view)))
+          (lazy/load! view #(when (= token @nav-token*)
+                              (==> [:lipas.ui.events/navigated new-match])))
+          (==> [:lipas.ui.events/navigated new-match]))))))
 
 (defn init! []
   (rfe/start!

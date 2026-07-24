@@ -1,7 +1,7 @@
 (ns lipas.ui.effects
   (:require ["file-saver" :as filesaver]
-            ["zipcelx$default" :as zipcelx]
             [lipas.ui.config :as config]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.routes :as routes]
             [re-frame.core :as rf]))
 
@@ -38,8 +38,10 @@
         (.catch #(js/console.error "Copy to clipboard failed:" %)))))
 
 (rf/reg-fx ::download-excel!
-  (fn  [config]
-    (zipcelx (clj->js config))))
+  ;; zipcelx (+ jszip) lives in the lazy :xlsx module; first export pays
+  ;; a short module fetch, later ones call straight through.
+  (fn [config]
+    (lazy/load! :xlsx #((deref (:xlsx lazy/modules)) config))))
 
 (rf/reg-fx ::save-as!
   (fn [{:keys [blob filename]}]

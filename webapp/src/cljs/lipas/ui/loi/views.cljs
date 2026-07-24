@@ -5,6 +5,7 @@
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.buttons :as buttons]
@@ -176,7 +177,7 @@
 
        ;; Table
        [:> Grid {:item true :xs 12}
-        [tables/form-table
+        [form-table/form-table
          {:key        (str (count (vals @state)))
           :headers    [[:_filename (tr :general/name)]
                        [:_description (tr :general/description)]]

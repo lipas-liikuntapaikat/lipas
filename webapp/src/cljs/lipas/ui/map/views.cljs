@@ -18,8 +18,6 @@
             [lipas.data.sports-sites :as ss]
             [lipas.roles :as roles]
             [lipas.ui.accessibility.views :as accessibility]
-            [lipas.ui.analysis.views :as analysis]
-            [lipas.ui.analysis.heatmap.subs :as heatmap-subs]
             [lipas.ui.components.autocompletes :as autocompletes]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.dialogs :as dialogs]
@@ -66,9 +64,7 @@
             [lipas.ui.assistant.views :as assistant-views]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
-            [lipas.ui.org.views :as org-views]
-            [lipas.ui.ptv.site-view :as ptv-site]
-            [lipas.ui.ptv.views :as ptv]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.reminders.views :as reminders]
             [lipas.ui.reports.views :as reports]
             [lipas.ui.search.views :as search]
@@ -682,53 +678,8 @@
 (defmethod popup-body :itrs-segment [popup]
   [itrs-segment {:data (:data popup)}])
 
-(defmethod popup-body :heatmap [popup]
-  (let [tr (<== [:lipas.ui.subs/translator])
-        locale (tr)
-        data (-> popup :data :features first :properties)
-        dimension (<== [::heatmap-subs/dimension])
-        weight-by (<== [::heatmap-subs/weight-by])
-        ;; Get type labels for type-distribution dimension
-        types-db (<== [:lipas.ui.sports-sites.subs/all-types])]
-
-    [:> Paper
-     {:style
-      {:padding "0.5em"
-       :min-width "200px"}}
-
-     [:> Stack {:direction "column"}
-      ;; Facility count
-      [:> Typography {:variant "body2" :style {:font-weight "bold"}}
-       (str (:doc_count data) " " (if (= 1 (:doc_count data))
-                                    (tr :analysis/heatmap-popup-facility-singular)
-                                    (tr :analysis/heatmap-popup-facility-plural)))]
-
-      ;; Type distribution for type-distribution dimension
-      (when (and (= :type-distribution dimension) (:types data))
-        [:<>
-         [:> Typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
-          (str (tr :analysis/heatmap-popup-top-types) (count (:types data)) ")")]
-         (into [:> List {:dense true :style {:padding 0}}]
-               (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:types data)))
-                     :let [type-label (get-in types-db [key :name locale] (str (tr :analysis/heatmap-popup-type-fallback) key))]]
-                 [:> ListItem {:style {:padding "2px 0"}}
-                  [:> Typography {:variant "caption"}
-                   (str type-label ": " doc_count)]]))])
-
-      ;; Activities for activities dimension
-      (when (and (= :activities dimension) (:activities data))
-        [:<>
-         [:> Typography {:variant "caption" :style {:margin-top "0.5em" :font-weight "bold"}}
-          (tr :analysis/heatmap-popup-activities)]
-         (into [:> List {:dense true :style {:padding 0}}]
-               (for [{:keys [key doc_count]} (take 5 (sort-by :doc_count > (:activities data)))]
-                 [:> ListItem {:style {:padding "2px 0"}}
-                  [:> Typography {:variant "caption"}
-                   (str key ": " doc_count)]]))])]
-
-     ;; Grid reference (optional, for debugging)
-     #_[:> Typography {:variant "caption" :color "textSecondary" :style {:margin-top "0.5em"}}
-        (str "Grid: " (:grid_key data))]]))
+;; The :heatmap popup-body method is registered by the lazy :analysis
+;; module (lipas.ui.analysis.map-integration) when it loads.
 
 (r/defc popup [{:keys [popup-ref]}]
   (let [{:keys [data placement]
@@ -1259,7 +1210,7 @@
               :edit-itrs? edit-itrs?}]]
 
          6 [:> Grid {:item true :xs 12}
-            [ptv-site/site-view
+            [lazy/lazy-view {:loadable lazy/ptv-site-view}
              {:tr tr
               :lipas-id lipas-id
               :type-code type-code
@@ -1276,7 +1227,7 @@
 
          ;; Editing rights (org-management)
          8 [:> Grid {:item true :xs 12}
-            [org-views/editing-rights-panel
+            [lazy/lazy-view {:loadable lazy/org-editing-rights-panel}
              {:tr tr
               :lipas-id lipas-id
               :owner-org-id (:owner-org-id display-data)}]])]
@@ -2016,15 +1967,15 @@
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
         mode-name (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])
-        ptv-dialog-open? (<== [:lipas.ui.ptv.subs/dialog-open?])
+        ptv-dialog-open? (<== [:lipas.ui.subs/ptv-dialog-open?])
         ptv-manage-privilege (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage])
         ptv-audit-privilege (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/audit])
         ptv-privilege (or ptv-manage-privilege ptv-audit-privilege)]
     [:<>
-     ;; PTV dialog
-     ;; TODO Disabled until ready for release
-     (when ptv-privilege
-       [ptv/dialog {:tr tr}])
+     ;; PTV dialog — lives in the lazy :ptv module; mounted only while
+     ;; open (the open button loads the module first)
+     (when (and ptv-privilege ptv-dialog-open?)
+       [lazy/lazy-view {:loadable lazy/ptv-dialog} {:tr tr}])
 
      ;; Address search dialog
      [address-search-dialog]
@@ -2093,7 +2044,8 @@
              :color (if ptv-dialog-open? "secondary" "default")
              :on-click #(==> (if ptv-dialog-open?
                                [:lipas.ui.ptv.events/close-dialog]
-                               [:lipas.ui.ptv.events/open-dialog]))}
+                               [:lipas.ui.lazy/load-then :ptv
+                                [:lipas.ui.ptv.events/open-dialog]]))}
             "PTV"]]])]]]))
 
 (defn add-view
@@ -2126,7 +2078,7 @@
      ;; Search, filters etc.
      (case view
        :adding [add-view {:tr tr :width width}]
-       :analysis [analysis/view
+       :analysis [lazy/lazy-view {:loadable lazy/analysis-view}
                   {:tr tr}]
        :site [sports-site-view {:tr tr :site-data selected-site :width width}]
        :loi [loi/view {:display-data loi}]

@@ -5,6 +5,7 @@
             [ajax.core :as ajax]
             [goog.string :as gstring]
             [goog.string.format]
+            [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]))
@@ -23,6 +24,15 @@
 
 (defn bottom-right [extent]
   (epsg3067->wgs84-fast #js [(aget extent 2) (aget extent 1)]))
+
+(rf/reg-event-fx ::set-view-wgs84
+  ;; [lon lat] in WGS84 → map center + zoom. Registered in the lazy :map
+  ;; module; base-module callers (the AI assistant) dispatch this via
+  ;; [:lipas.ui.lazy/load-then :map …] so the projection setup is loaded.
+  (fn [_ [_ wgs84-coords zoom]]
+    (let [{:keys [lat lon]} (wgs84->epsg3067 wgs84-coords)]
+      {:fx [[:dispatch [::set-center lat lon]]
+            [:dispatch [::set-zoom zoom]]]})))
 
 (rf/reg-event-db ::toggle-drawer
                  (fn [db _]
@@ -48,7 +58,9 @@
                       :dispatch-n
                       [(when (and extent width) [:lipas.ui.search.events/submit-search])
                        (when (and extent width) [:lipas.ui.loi.events/search])
-                       (when (and extent width) [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
+                       (when (and extent width (hooks/installed?))
+                        ;; handler lives in the lazy :analysis module
+                        [:lipas.ui.analysis.heatmap.events/map-view-changed])]})))
 
 ;; Map displaying events ;;
 
@@ -428,7 +440,10 @@
            [:lipas.ui.search.events/submit-search]
            [:lipas.ui.map.events/show-sports-site lipas-id]]
     (some-> result :ptv :error)
-    (conj [:lipas.ui.ptv.events/notify-if-sync-failed result])))
+    ;; The handler lives in the lazy :ptv module; load it on this (rare)
+    ;; error path so the warning toast is never silently dropped.
+    (conj [:lipas.ui.lazy/load-then :ptv
+           [:lipas.ui.ptv.events/notify-if-sync-failed result]])))
 
 (defn- on-failure-default [{:keys [lipas-id]}]
   [[:lipas.ui.map.events/show-sports-site lipas-id]])
@@ -801,11 +816,13 @@
                      [:lipas.ui.search.events/set-status-filter ["planning"] :append]]}))
 
 (rf/reg-event-fx ::show-analysis
-                 (fn [{:keys [db]} [_ lipas-id]]
+                 (fn [_ [_ lipas-id]]
                    {:dispatch-n
                     [(when-not lipas-id
                        [::show-analysis*])
-                     [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]]}))
+                     ;; reachability events live in the lazy :analysis module
+                     [:lipas.ui.lazy/load-then :analysis
+                      [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]]]}))
 
 (rf/reg-event-fx ::hide-analysis
                  (fn [{:keys [db]} _]

@@ -2,7 +2,7 @@
   (:require [ajax.core :as ajax]
             [ajax.protocols :as ajaxp]
             [lipas.ui.analysis.reachability.db :as db]
-            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.analysis.buffer :as buffer]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
@@ -86,7 +86,7 @@
 (defn calc-buffer-geom [db lipas-id]
   (let [fcoll       (get-in db [:analysis :reachability :runs lipas-id :geoms])
         distance-km (-> db :analysis :reachability :distance-km)]
-    (map-utils/calc-buffer-geom fcoll distance-km)))
+    (buffer/calc-buffer-geom fcoll distance-km)))
 
 (rf/reg-event-fx ::set-analysis-distance-km
   (fn [{:keys [db]} [_ v]]

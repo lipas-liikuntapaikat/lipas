@@ -3,6 +3,7 @@
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.forms :as forms]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/FormGroup$default" :as FormGroup]
@@ -189,7 +190,7 @@
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
   (let [localize (partial utils/localize-field tr)]
-    [tables/form-table
+    [form-table/form-table
      {:headers         (make-headers tr)
       :items
       (->> (vals items)

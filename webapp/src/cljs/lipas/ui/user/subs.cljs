@@ -1,5 +1,6 @@
 (ns lipas.ui.user.subs
   (:require [lipas.roles :as roles]
+            [lipas.ui.subs :as ui-subs]
             [re-frame.core :as rf]))
 
 ;; TODO: Likely not very useful now. Checks should mainly be done using
@@ -164,6 +165,11 @@
                  user)]
       (roles/check-privilege user role-context k))))
 
+(rf/reg-sub ::admin-org
+  :<- [::ui-subs/admin-orgs]
+  (fn [orgs [_ id]]
+    (get orgs id)))
+
 (rf/reg-sub ::context-value-name
   (fn [[_ context-key v _locale]]
     (case context-key
@@ -173,8 +179,9 @@
       :lipas-id (rf/subscribe [:lipas.ui.sports-sites.subs/latest-rev v])
       :org-id [;; Session user or org admin, managing their own orgs
                (rf/subscribe [:lipas.ui.org.subs/user-org-by-id v])
-               ;; Admin view
-               (rf/subscribe [:lipas.ui.admin.subs/org v])]))
+               ;; Admin view (base twin of :lipas.ui.admin.subs/org — the
+               ;; admin subs live in the lazy :admin module)
+               (rf/subscribe [::admin-org v])]))
   (fn [x [_ context-key _v locale]]
     (case context-key
       :lipas-id (:name x)

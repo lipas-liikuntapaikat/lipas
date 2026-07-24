@@ -1,6 +1,9 @@
 (ns lipas.ui.org.routes
-  (:require [lipas.ui.org.events :as events]
-            [lipas.ui.org.views :as views]
+  "Route definitions — org views live in the lazy :org module, loaded by
+   lipas.ui.routes/on-navigate before controllers run. lipas.ui.org.events
+   stays in the base module (login and the user profile need it)."
+  (:require [lipas.ui.lazy :as lazy]
+            [lipas.ui.org.events :as events]
             [re-frame.core :as rf]))
 
 (def org-detail-routes
@@ -8,7 +11,7 @@
    {:name :lipas.ui.routes/org
     :tr-key :lipas.org/headline
     :navbar-link :lipas.ui.routes/orgs
-    :view #'views/org-detail-page
+    :view lazy/org-detail-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers
@@ -22,7 +25,7 @@
   ["organisaatiot"
    {:name :lipas.ui.routes/orgs
     :tr-key :lipas.admin/organizations
-    :view #'views/orgs-list-page
+    :view lazy/orgs-list-page
     :controllers
     [{:start
       (fn [_]
@@ -33,7 +36,7 @@
    {:name :lipas.ui.routes/org-bulk-operations
     :tr-key :lipas.org/bulk-operations
     :navbar-link :lipas.ui.routes/orgs
-    :view #'views/org-bulk-operations-page
+    :view lazy/org-bulk-operations-page
     :parameters {:path [:map
                         [:org-id :string]]}
     :controllers

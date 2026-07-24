@@ -1,10 +1,15 @@
 (ns lipas.ui.analysis.heatmap.subs
-  (:require [re-frame.core :as rf]))
+  (:require [lipas.ui.map.subs :as map-subs]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub
   ::heatmap
-  (fn [db _]
-    (:heatmap db)))
+  ;; The root lives in the :map module (map ::mode needs this region
+  ;; before :analysis loads) — see "Cross-module root subs" in
+  ;; lipas.ui.subs for the placement rule.
+  :<- [::map-subs/analysis-mode-inputs]
+  (fn [{:keys [heatmap]} _]
+    heatmap))
 
 (rf/reg-sub
   ::dimension

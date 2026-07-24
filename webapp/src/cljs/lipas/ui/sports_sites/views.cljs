@@ -2,15 +2,8 @@
   (:require [clojure.string :as str]
             ["@mui/material/Alert$default" :as Alert]
             ["mdi-material-ui/Calculator$default" :as Calculator]
-            ["recharts/es6/cartesian/Area" :refer [Area]]
-            ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
-            ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
-            ["recharts/es6/chart/AreaChart" :refer [AreaChart]]
-            ["recharts/es6/component/Legend" :refer [Legend]]
-            ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
-            ["recharts/es6/component/Tooltip" :refer [Tooltip]]
             [lipas.data.ptv :as ptv-data]
-            [lipas.ui.charts :as charts]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.dialogs :as dialogs]
@@ -21,7 +14,7 @@
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.geom :as geom]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -495,7 +488,7 @@
    [:> Grid {:item true}
     [:> IconButton
      {:title (tr :map/calculate-route-length)
-      :on-click #(-> geoms map-utils/calculate-length-km on-change)}
+      :on-click #(-> geoms geom/calculate-length-km on-change)}
      [:> Calculator]]]])
 
 (defn area-km2-field
@@ -507,7 +500,7 @@
    [:> Grid {:item true}
     [:> IconButton
      {:title (tr :map/calculate-area)
-      :on-click #(-> geoms map-utils/calculate-area-km2 on-change)}
+      :on-click #(-> geoms geom/calculate-area-km2 on-change)}
      [:> Calculator]]]])
 
 ;; TODO: This can replace the previous two cases also
@@ -546,7 +539,7 @@
    [:> Grid {:item true}
     [:> IconButton
      {:title (tr :map/calculate-area)
-      :on-click #(-> geoms map-utils/calculate-area-m2 on-change)}
+      :on-click #(-> geoms geom/calculate-area-m2 on-change)}
      [:> Calculator]]]])
 
 (defn pools-field
@@ -1271,47 +1264,15 @@
            [:> Icon "navigate_next"]]]]]
 
        [:> Grid {:item true :xs 12}
-        [:> ResponsiveContainer {:width "100%" :height 300}
-         [:> AreaChart
-          {:data data
-           :layout "horizontal"
-           :baseValue "dataMin"
-           :onMouseMove (fn [^js state]
-                          (when (and state (.-isTooltipActive state))
-                            (let [active-index (parse-long (.-activeIndex state))
-                                  segment-data (nth data active-index)]
-                              (when segment-data
-                                (==> [:lipas.ui.map.events/show-elevation-marker (clj->js segment-data)])))))
-           :onMouseLeave (fn [_]
-                           (==> [:lipas.ui.map.events/hide-elevation-marker]))}
-          [:defs
-           [:linearGradient {:id "color-elevation" :x1 "0" :y1 "0" :x2 "0" :y2 "1"}
-            [:stop {:stopColor (:elevation-m charts/colors) :offset "5%" :stopOpacity "0.8"}]
-            [:stop {:stopColor (:elevation-m charts/colors) :offset "95%" :stopOpacity "0"}]]]
-          [:> Legend {:content (fn [^js props] (charts/legend labels props))}]
-          [:> Tooltip
-           {:content (fn [^js props]
-                       (charts/labeled-tooltip
-                         labels
-                         :label
-                         :hide-header
-                         #(utils/round-safe % 2)
-                         props))}]
-          [:> XAxis
-           {:dataKey "distance-km" :tick true :unit "km"
-            :domain #js ["dataMin" "dataMax"]
-            :type "number"
-            :tickFormatter (fn [x] (utils/round-safe x 1))}]
-          [:> YAxis
-           {:tick charts/font-styles
-            :dataKey :elevation-m
-            :unit "m"
-            :domain #js ["dataMin" "dataMax"]
-            :tickFormatter (fn [x] (utils/round-safe x 0))}]
-          [:> Area
-           {:dataKey :elevation-m
-            :fill "url(#color-elevation)"
-            :stroke (:elevation-m charts/colors)}]]]]
+        ;; recharts lives in the lazy :charts module
+        [lazy/lazy-view {:loadable lazy/elevation-area-chart}
+         {:data data
+          :labels labels
+          :on-hover (fn [segment-data]
+                      (==> [:lipas.ui.map.events/show-elevation-marker
+                            (clj->js segment-data)]))
+          :on-leave (fn []
+                      (==> [:lipas.ui.map.events/hide-elevation-marker]))}]]
 
        ;; Total ascend / descend
        [:> Grid {:item true :xs 12}

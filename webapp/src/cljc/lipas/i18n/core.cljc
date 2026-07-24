@@ -13,11 +13,13 @@
    [lipas.data.sports-sites :as sports-sites]
    [lipas.data.swimming-pools :as pools]
    [lipas.data.types :as types]
-   ;; Require these directly in this ns to ensure shadow-cljs reloads
-   ;; this ns when translations change -> hot reload changes work.
-   [lipas.i18n.en :as en]
+   ;; On the JVM all dictionaries load statically. In the browser only
+   ;; :fi is bundled with the base module; :en and :se live in the lazy
+   ;; :i18n-en / :i18n-se modules (see lipas.i18n.register-en/-se) and
+   ;; register themselves via `register-dict!` when loaded.
+   #?@(:clj [[lipas.i18n.en :as en]
+             [lipas.i18n.se :as se]])
    [lipas.i18n.fi :as fi]
-   [lipas.i18n.se :as se]
    [lipas.i18n.utils :as i18n-utils]
    [lipas.utils :as utils]
    [tongue.core :as tongue]))
@@ -56,19 +58,45 @@
     }
    (merge m)))
 
-(def dicts
-  {:fi fi/translations
-   :se se/translations
-   :en en/translations
-   :tongue/fallback :fi})
+#?(:clj
+   (do
+     (def dicts
+       {:fi fi/translations
+        :se se/translations
+        :en en/translations
+        :tongue/fallback :fi})
 
-(def translate (tongue/build-translate dicts))
+     (def translate (tongue/build-translate dicts)))
+
+   :cljs
+   (do
+     (defonce dicts*
+       (atom {:fi fi/translations
+              :tongue/fallback :fi}))
+
+     (defonce translate*
+       (atom (tongue/build-translate @dicts*)))
+
+     (defn register-dict!
+       "Called by the lazy locale modules (lipas.i18n.register-en/-se) when
+        they load. Rebuilds the tongue translate fn to include the new
+        dictionary; existing translator fns pick it up on next call."
+       [locale dict]
+       (swap! dicts* assoc locale dict)
+       (reset! translate* (tongue/build-translate @dicts*)))
+
+     (defn dict-loaded? [locale]
+       (contains? @dicts* locale))
+
+     (defn translate [& args]
+       (apply @translate* args))))
 
 (defn ->tr-fn
   "Returns a translator fn for given locale.
 
   Translator fn Returns current locale (:fi :se :en) when called with
-  no args. "
+  no args. Missing translations fall back to :fi — in the browser a
+  whole dictionary may be missing until its lazy module registers it."
   [locale]
   (fn
     ([]

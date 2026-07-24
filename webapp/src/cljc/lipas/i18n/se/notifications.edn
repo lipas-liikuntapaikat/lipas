@@ -1,4 +1,5 @@
 {:get-failed "Datasökning misslyckades.",
+ :module-load-failed "Det gick inte att ladda en del av applikationen. Kontrollera nätverksanslutningen och ladda om sidan.",
  :ie
  "Internet Explorer stöds inte. Vi rekommenderar du använder t.ex. Chrome, Firefox eller Edge.",
  :save-failed "Sparningen misslyckades",

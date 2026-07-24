@@ -7,6 +7,7 @@
             [lipas.ui.components.forms :as forms]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/FormGroup$default" :as FormGroup]
@@ -454,7 +455,7 @@
           :on-select        #(==> [::events/toggle-dialog :field %])
           :hide-action-btn? true
           :items            display-data}])
-      [tables/form-table
+      [form-table/form-table
        {;; FIXME: Doesn't update if values are UPDATED, but
         ;; at least updated the table if new items are added.
         :key             (str (count (vals edit-data)))
@@ -586,7 +587,7 @@
          {:headers headers
           :items   display-data}]
         [:> Typography {:style {:margin-bottom "1em"}} "Ei tietoa pukuhuoneista"])
-      [tables/form-table
+      [form-table/form-table
        {:key             (str (count (vals edit-data)))
         :read-only?      read-only?
         :headers         headers
@@ -615,7 +616,7 @@
          {:headers headers
           :items   display-data}]
         [:> Typography {:style {:margin-bottom "1em"}} "Ei katselmointeja"])
-      [tables/form-table
+      [form-table/form-table
        {:key             (str (count (vals edit-data)))
         :read-only?      read-only?
         :headers         headers

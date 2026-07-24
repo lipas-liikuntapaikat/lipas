@@ -28,3 +28,10 @@
 
 (def ^js epsg3067 (:epsg3067 proj))
 (def epsg3067-top-left (extent/getTopLeft (.getExtent epsg3067)))
+
+(defn wgs84->epsg3067
+  "WGS84 [lon lat] (js array) → EPSG:3067 coords. Defined here (the :geo
+   module) so the lazy :ptv module can transform coordinates without
+   depending on the full :map module."
+  [wgs84-coords]
+  (proj/fromLonLat wgs84-coords epsg3067))

@@ -3,6 +3,16 @@
             [lipas.roles :as roles]
             [lipas.ui.db :as db]
             [lipas.ui.search.db :as search-db]
+            ;; Shared app-db "model layer": subs/events referenced across
+            ;; feature modules (stats, admin, org, user profile, help,
+            ;; assistant). Required here so they stay in the base module —
+            ;; only the views/OpenLayers side of these features is lazy.
+            [lipas.ui.reports.events]
+            [lipas.ui.search.events]
+            [lipas.ui.search.subs]
+            [lipas.ui.sports-sites.activities.subs]
+            [lipas.ui.sports-sites.events]
+            [lipas.ui.sports-sites.subs]
             [lipas.data.types :as types-data]
             [lipas.ui.utils :as utils :refer [==>]]
             [re-frame.core :as rf]
@@ -41,13 +51,46 @@
   (fn [db [_ _]]
     (assoc db :drawer-open? false)))
 
-(rf/reg-event-db ::set-translator
+(rf/reg-event-fx ::set-translator
+  ;; :en and :se dictionaries live in lazy modules. Switch the locale
+  ;; immediately (missing translations fall back to :fi via tongue), load
+  ;; the dictionary module and re-set the translator so the UI re-renders
+  ;; with the real texts once they're in.
+  (fn [{:keys [db]} [_ locale]]
+    (cond-> {:db (assoc db :translator (i18n/->tr-fn locale))}
+      (not (i18n/dict-loaded? locale))
+      (assoc :fx [[:lipas.ui.lazy/load-fx
+                   {:module (case locale :en :i18n-en :se :i18n-se)
+                    :events [[::dict-loaded locale]]}]]))))
+
+(rf/reg-event-db ::dict-loaded
+  ;; Dictionary-module load completed. Re-set the translator (new fn
+  ;; instance → subs invalidate → UI re-renders with the real texts) only
+  ;; if `locale` is still the active one — rapid switching can finish
+  ;; module loads out of order, and a stale completion must not drag the
+  ;; UI back to an earlier locale (same shape as the navigation race
+  ;; guarded in lipas.ui.routes/on-navigate).
   (fn [db [_ locale]]
-    (assoc db :translator (i18n/->tr-fn locale))))
+    (cond-> db
+      (= locale ((:translator db)))
+      (assoc :translator (i18n/->tr-fn locale)))))
 
 (rf/reg-event-db ::set-active-notification
   (fn [db [_ notification]]
     (assoc db :active-notification notification)))
+
+(rf/reg-event-fx ::module-load-failed
+  ;; Lazy-module fetch failed (lipas.ui.lazy) — usually a network drop.
+  ;; Routed through the translator here; :fi is always bundled, so the
+  ;; key resolves even when the active locale's dictionary isn't in.
+  ;; Sticky, and the text advises reloading the page: goog's module
+  ;; manager gives up on a module after its retries, so re-clicking the
+  ;; same navigation won't refetch — only a reload recovers.
+  (fn [{:keys [db]} _]
+    {:dispatch [::set-active-notification
+                {:message ((:translator db) :notifications/module-load-failed)
+                 :success? false
+                 :sticky? true}]}))
 
 (rf/reg-event-db ::show-test-version-disclaimer
   (fn [db _]

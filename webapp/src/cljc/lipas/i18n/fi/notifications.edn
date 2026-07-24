@@ -1,4 +1,5 @@
 {:get-failed "Tietojen hakeminen epäonnistui.",
+ :module-load-failed "Sovelluksen osan lataaminen epäonnistui. Tarkista verkkoyhteys ja lataa sivu uudelleen.",
  :ie
  (str
   "Internet Explorer ei ole tuettu selain. "

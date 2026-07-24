@@ -1,12 +1,17 @@
 (ns lipas.ui.analysis.reachability.subs
   (:require [goog.color :as gcolor]
             [goog.date.duration :as gduration]
+            [lipas.ui.map.subs :as map-subs]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::reachability
-  (fn [db _]
-    (-> db :analysis :reachability)))
+  ;; The root lives in the :map module (map ::mode needs this region
+  ;; before :analysis loads) — see "Cross-module root subs" in
+  ;; lipas.ui.subs for the placement rule.
+  :<- [::map-subs/analysis-mode-inputs]
+  (fn [{:keys [reachability]} _]
+    reachability))
 
 (rf/reg-sub ::loading?
   :<- [::reachability]

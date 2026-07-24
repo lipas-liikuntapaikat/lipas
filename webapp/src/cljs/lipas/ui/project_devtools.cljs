@@ -1,5 +1,6 @@
 (ns lipas.ui.project-devtools
   (:require [lipas.roles :as roles]
+            [lipas.ui.subs :as ui-subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
@@ -73,9 +74,10 @@
                  "No")]]))]]])
 
 (defn- impersonate-selector []
-  (reagent/with-let [_ (rf/dispatch [:lipas.ui.admin.events/get-users])
+  (reagent/with-let [_ (rf/dispatch [:lipas.ui.lazy/load-then :admin
+                                     [:lipas.ui.admin.events/get-users]])
                      email* (reagent/atom "")]
-    (let [users (vals @(rf/subscribe [:lipas.ui.admin.subs/users]))
+    (let [users (vals @(rf/subscribe [::ui-subs/admin-users]))
           by-email (into {} (keep (fn [u] (when (:email u) [(:email u) u])) users))]
       [:div
        [:p (count users) " users loaded"]

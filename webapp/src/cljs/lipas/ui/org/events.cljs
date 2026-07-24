@@ -2,7 +2,6 @@
   (:require [ajax.core :as ajax]
             [clojure.string :as str]
             [lipas.roles :as roles]
-            [lipas.ui.bulk-operations.events :as bulk-ops-events]
             [lipas.ui.utils :as ui-utils]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
@@ -105,14 +104,14 @@
                      (cond-> {:db (assoc-in db [:org :current-tab] tab)}
                        ;; Initialize bulk operations when switching to that tab
                        (= tab "bulk-operations")
-                       (assoc :dispatch [::bulk-ops-events/init {:org-id org-id}])
+                       (assoc :dispatch [:lipas.ui.bulk-operations.events/init {:org-id org-id}])
 
                        ;; Lazily load data for the new org-management tabs
                        ;; The Our-sites list is driven by bulk-ops' editable-sites
                        ;; (owned ∪ granted, with :owned?); the "owned" fetch stays
                        ;; only for the card / setup-checklist counts.
                        (= tab "our-sites")
-                       (assoc :fx [[:dispatch [::bulk-ops-events/init {:org-id org-id}]]
+                       (assoc :fx [[:dispatch [:lipas.ui.bulk-operations.events/init {:org-id org-id}]]
                                    [:dispatch [::get-org-sites org-id "owned"]]])
 
                        (= tab "history")
@@ -165,7 +164,7 @@
 ;; Bulk operations integration
 (rf/reg-event-fx ::init-bulk-operations
                  (fn [_ [_ org-id]]
-                   {:dispatch [::bulk-ops-events/init {:org-id org-id}]}))
+                   {:dispatch [:lipas.ui.bulk-operations.events/init {:org-id org-id}]}))
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success

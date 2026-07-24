@@ -1,6 +1,6 @@
 (ns lipas.ui.sports-sites.activities.subs
   (:require [lipas.roles :as roles]
-            [lipas.ui.map.utils :as map-utils]
+            [lipas.ui.geom :as geom]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::activities
@@ -109,8 +109,8 @@
                         (update :features (fn [fs]
                                             (filterv #(contains? fids (:id %)) fs))))]
           (-> route
-              (assoc :route-length (map-utils/calculate-length-km fcoll))
-              (assoc :elevation-stats (map-utils/calculate-elevation-stats fcoll))))))))
+              (assoc :route-length (geom/calculate-length-km fcoll))
+              (assoc :elevation-stats (geom/calculate-elevation-stats fcoll))))))))
 
 (rf/reg-sub ::selected-route-id
   :<- [::activities]

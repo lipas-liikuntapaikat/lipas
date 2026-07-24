@@ -3,7 +3,6 @@
   necessary side-effects to take effect.`"
   (:require ["@mapbox/togeojson" :as toGeoJSON]
             ["@turf/area$default" :as turf-area]
-            ["@turf/buffer$default" :as turf-buffer]
             ["@turf/clean-coords$default" :as turf-clean-coords]
             ["@turf/combine$default" :as turf-combine]
             ["@turf/helpers" :refer [convertArea point]]
@@ -31,6 +30,7 @@
             [goog.array :as garray]
             [goog.object :as gobj]
             [goog.string.path :as gpath]
+            [lipas.ui.geom :as geom]
             [lipas.ui.map.styles :as styles]
             [lipas.ui.utils :refer [==>] :as utils]))
 
@@ -570,47 +570,14 @@
 (defn fix-features [ol-features]
   ol-features)
 
-(defn calculate-length-km
-  [fcoll]
-  (when (seq (:features fcoll))
-    (-> fcoll
-        clj->js
-        turf-length ;; returns kilometers
-        (utils/round-safe 2)
-        read-string)))
-
-(defn calculate-area-km2
-  [fcoll]
-  (-> fcoll
-      clj->js
-      turf-area ;; returns square meters
-      (convertArea "meters" "kilometers")
-      (utils/round-safe 2)
-      read-string))
-
-(defn calculate-area-m2
-  [fcoll]
-  (when (seq (:features fcoll))
-    (-> fcoll
-        clj->js
-        turf-area ;; returns square meters
-        (utils/round-safe 2)
-        read-string)))
-
-(defn calculate-elevation-stats
-  [fcoll]
-  (->> fcoll
-       :features
-       (map (comp :coordinates :geometry))
-       (mapcat (fn [coll] (map (fn [coords] (get coords 2)) coll)))
-       (partition 2 1)
-       (reduce (fn [res [prev curr]]
-                 (let [d (- curr prev)]
-                   (cond
-                     (zero? d) res
-                     (pos? d) (update res :ascend-m + d)
-                     (neg? d) (update res :descend-m + (Math/abs d)))))
-               {:ascend-m 0 :descend-m 0})))
+;; Extracted to lipas.ui.geom (base module) so the assistant and site
+;; forms can use them without pulling in the map closure. These aliases
+;; exist for this namespace's internal callers — deprecated for new
+;; code: require lipas.ui.geom directly.
+(def calculate-length-km geom/calculate-length-km)
+(def calculate-area-km2 geom/calculate-area-km2)
+(def calculate-area-m2 geom/calculate-area-m2)
+(def calculate-elevation-stats geom/calculate-elevation-stats)
 
 (defn wgs84->epsg3067 [wgs84-coords]
   (let [proj (proj/get "EPSG:3067")]
@@ -620,47 +587,9 @@
   (let [proj (proj/get "EPSG:3067")]
     (proj/toLonLat epsg3067-coords proj)))
 
-(defn calc-buffer-geom [geoms distance-km]
-  (case (-> geoms :features first :geometry :type)
-
-    "Point"
-    geoms
-
-    ("LineString" "Polygon")
-    (-> geoms
-        clj->js
-        (turf-combine)
-        (turf-buffer distance-km #js {:units "kilometers"})
-        (js->clj :keywordize-keys true))
-
-    nil))
-
-(defn draw-analytics-buffer!
-  [{:keys [layers] :as map-ctx}
-   {:keys [distance-km selected-sports-site] :as analysis}]
-
-  (let [{:keys [buffer-geom center]} (get-in analysis [:runs selected-sports-site])
-        ^js analysis-layer (-> layers :overlays :analysis)]
-
-    ;; Clear existing buffer
-    (-> analysis-layer .getSource .clear)
-
-    (when-let [buff-feature
-               (case (-> buffer-geom :features first :geometry :type)
-
-                 "Point"
-                 (when (and (:lon center) (:lat center))
-                   (let [center (wgs84->epsg3067 #js [(:lon center) (:lat center)])]
-                     (Feature. #js {:geometry (Circle. center (* distance-km 1000))})))
-
-                 ("LineString" "Polygon")
-                 (-> buffer-geom :features first clj->js ->ol-feature)
-
-                 nil)]
-
-      (-> analysis-layer .getSource (.addFeature buff-feature))))
-
-  map-ctx)
+;; calc-buffer-geom and draw-analytics-buffer! moved to
+;; lipas.ui.analysis.buffer (lazy :analysis module) — @turf/buffer drags
+;; the 260KB jsts geometry engine along, and only reachability needs it.
 
 (defn draw-diversity-areas!
   [{:keys [layers] :as map-ctx}

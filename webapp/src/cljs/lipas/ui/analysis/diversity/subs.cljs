@@ -1,12 +1,17 @@
 (ns lipas.ui.analysis.diversity.subs
   (:require [lipas.schema.diversity :as diversity-schema]
+            [lipas.ui.map.subs :as map-subs]
             [lipas.ui.utils :as utils]
             [malli.core :as m]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::diversity
-  (fn [db _]
-    (-> db :analysis :diversity)))
+  ;; The root lives in the :map module (map ::mode needs this region
+  ;; before :analysis loads) — see "Cross-module root subs" in
+  ;; lipas.ui.subs for the placement rule.
+  :<- [::map-subs/analysis-mode-inputs]
+  (fn [{:keys [diversity]} _]
+    diversity))
 
 (rf/reg-sub ::selected-analysis-tab
   :<- [::diversity]

@@ -1,6 +1,7 @@
 (ns lipas.ui.subs
   (:require [clojure.string :refer [upper-case]]
             [lipas.data.types :as types]
+            [lipas.ui.lazy :as lazy]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::current-route
@@ -10,7 +11,12 @@
 (rf/reg-sub ::current-view
   :<- [::current-route]
   (fn [route _]
-    (-> route :data :view)))
+    (let [view (-> route :data :view)]
+      ;; Lazy routes carry a shadow.lazy loadable; routes/on-navigate
+      ;; guarantees its module is loaded before the match reaches app-db.
+      (if (lazy/loadable? view)
+        @view
+        view))))
 
 (rf/reg-sub ::parameters
   :<- [::current-route]
@@ -44,6 +50,35 @@
   :<- [::translator]
   (fn [tr _]
     (tr)))
+
+;;; Cross-module root subs ;;;
+;;
+;; Root (extractor) subs for db regions owned by lazy-module features
+;; but read by always-loaded UI. Placement rule: a root sub lives in the
+;; shallowest module that needs its data; subs in deeper modules layer
+;; on it with :<-. That direction is registration-race-free — the module
+;; loader loads a module's dependencies (ultimately :app) before the
+;; module itself — whereas base code must never subscribe to subs
+;; registered in lazy modules.
+
+(rf/reg-sub ::ptv-dialog-open?
+  ;; Read by always-mounted UI (assistant, map controls);
+  ;; lipas.ui.ptv.subs/dialog-open? layers on this.
+  (fn [db _]
+    (get-in db [:ptv :dialog :open?])))
+
+(rf/reg-sub ::admin-users
+  ;; Read by the dev-tools impersonation selector (project-devtools);
+  ;; lipas.ui.admin.subs/users layers on this.
+  (fn [db _]
+    (-> db :admin :users)))
+
+(rf/reg-sub ::admin-orgs
+  ;; Read by the profile view's role-context name display
+  ;; (lipas.ui.user.subs/admin-org); lipas.ui.admin.subs/orgs layers on
+  ;; this.
+  (fn [db _]
+    (-> db :admin :orgs)))
 
 (rf/reg-sub ::active-notification
   (fn [db _]

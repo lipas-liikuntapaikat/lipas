@@ -1,6 +1,7 @@
 (ns lipas.ui.sports-sites.slides
   (:require [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
             [malli.core :as m]
@@ -43,7 +44,7 @@
   [[:length-m (tr :dimensions/length-m)]])
 
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
-  [tables/form-table
+  [form-table/form-table
    {:headers         (make-headers tr)
     :add-btn-size    add-btn-size
     :max-width       max-width

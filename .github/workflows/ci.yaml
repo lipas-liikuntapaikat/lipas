@@ -139,3 +139,9 @@ jobs:
       # aliases don't apply here
       - name: Build frontend
         run: clojure -M:frontend:dev -m shadow.cljs.devtools.cli release app
+
+      # Code splitting's failure mode is silent: a wrong static require
+      # hoists a lazy module into :app with no compile error. Guard the
+      # base-module size budget (see webapp/docs/wip/bundle-splitting.md).
+      - name: Check bundle size budget
+        run: bb bundle-size-check

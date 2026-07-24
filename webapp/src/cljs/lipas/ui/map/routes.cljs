@@ -1,13 +1,15 @@
 (ns lipas.ui.map.routes
+  "Route definitions only — the map views/events live in the lazy :map
+   module, loaded by lipas.ui.routes/on-navigate before controllers run."
   (:require [lipas.schema.sports-sites :as sports-sites-schema]
-            [lipas.ui.map.views :as views]
-            [lipas.ui.utils :as utils :refer [==>]]))
+            [lipas.ui.lazy :as lazy]
+            [lipas.ui.utils :refer [==>]]))
 
 (def routes
   ["liikuntapaikat"
    {:name      :lipas.ui.routes/map
     :tr-key    :sport/headline
-    :view      views/main
+    :view      lazy/map-view
     :hide-nav? true}
 
    [""
