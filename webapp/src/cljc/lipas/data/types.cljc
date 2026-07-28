@@ -2,10 +2,10 @@
   "Categorization of sports sites."
   (:require
     [clojure.set :as set]
-    [lipas.utils :as utils]
     #_[lipas.data.types-old :as old]
     [lipas.data.prop-types :as prop-types]
-    [lipas.data.types-new :as new]))
+    [lipas.data.types-new :as new]
+    [lipas.utils :as utils]))
 
 (def main-categories
   new/main-categories)

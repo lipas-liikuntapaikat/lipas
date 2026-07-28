@@ -22,7 +22,7 @@
       (update-in db (into [] base-path) dissoc (last path))
       (dissoc db path))))
 
-(defn next-id [db path]
+(defn next-id [_db _path]
   (gensym))
 
 (defn save-entity [db path entity]
@@ -414,7 +414,7 @@
         :location
         :geometries
         (update-in [:features]
-                   #(map-indexed (fn [idx f]
+                   #(map-indexed (fn [_idx f]
                                    (-> f
                                        (assoc-in [:id] (or (:id f) (str (random-uuid))))
                                        (assoc-in [:properties :name] name)
@@ -489,7 +489,7 @@
   ([x]
    (round-safe x 2))
   ([x precision]
-   (if (number? x)
+   (when (number? x)
      (.toFixed x precision))))
 
 (defn vec-remove

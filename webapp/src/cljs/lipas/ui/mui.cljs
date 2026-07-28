@@ -3,7 +3,7 @@
             ["@mui/material/useMediaQuery$default" :as useMediaQuery]
             [camel-snake-kebab.core :refer [convert-case]]
             [camel-snake-kebab.extras :refer [transform-keys]]
-            [clojure.string :as s]
+            [clojure.string :as str]
             [lipas.utils :as utils]
             [reagent.core :as r]))
 
@@ -11,7 +11,7 @@
   "Converts keywords to PascalCase or camelCase
   respecting case of the first character."
   [kw & rest]
-  (keyword (convert-case identity s/capitalize "" (name kw) rest)))
+  (keyword (convert-case identity str/capitalize "" (name kw) rest)))
 
 (comment
   (= (keyword->PasCamelCase :kissa-metso) :kissaMetso)

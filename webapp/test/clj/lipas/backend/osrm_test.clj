@@ -37,7 +37,7 @@
 
 (deftest get-distances-and-travel-times-success-test
   (testing "returns all results when profiles complete within timeout"
-    (let [mock-get-data (fn [{:keys [profile]}]
+    (let [mock-get-data (fn [_]
                           {:code "Ok"
                            :distances [[100]]
                            :durations [[10]]})]

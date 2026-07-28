@@ -1,24 +1,27 @@
 (ns lipas.ui.sports-sites.renovations
-  (:require ["@mui/material/Box$default" :as Box]
-            ["@mui/material/Button$default" :as Button]
-            ["@mui/material/Card$default" :as Card]
-            ["@mui/material/CardContent$default" :as CardContent]
-            ["@mui/material/Divider$default" :as Divider]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/InputLabel$default" :as InputLabel]
-            ["@mui/material/Popover$default" :as Popover]
-            ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/TextField$default" :as TextField]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.data.sports-sites.renovations :as renovations-data]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            [clojure.string :as str]
-            [reagent.core :as r]))
+  (:require ;; clj-kondo false-positive: it resolves the bare symbol `Box`
+            ;; to cljs.core/Box (a real internal deftype) instead of this
+            ;; import, so it doesn't see `[:> Box ...]` usages below as
+            ;; usage of this require.
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    ["@mui/material/Box$default" :as Box]
+    ["@mui/material/Button$default" :as Button]
+    ["@mui/material/Card$default" :as Card]
+    ["@mui/material/CardContent$default" :as CardContent]
+    ["@mui/material/Divider$default" :as Divider]
+    ["@mui/material/Icon$default" :as Icon]
+    ["@mui/material/IconButton$default" :as IconButton]
+    ["@mui/material/InputLabel$default" :as InputLabel]
+    ["@mui/material/Popover$default" :as Popover]
+    ["@mui/material/Stack$default" :as Stack]
+    ["@mui/material/Typography$default" :as Typography]
+    [clojure.string :as str]
+    [lipas.data.sports-sites.renovations :as renovations-data]
+    [lipas.ui.components.autocompletes :as autocompletes]
+    [lipas.ui.components.dialogs :as dialogs]
+    [lipas.ui.components.selects :as selects]
+    [lipas.ui.components.text-fields :as text-fields]
+    [reagent.core :as r]))
 
 ;; ---------------------------------------------------------------------------
 ;; Single-entry dialog (Add / Edit)

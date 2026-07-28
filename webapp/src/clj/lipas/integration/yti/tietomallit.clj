@@ -171,6 +171,7 @@
             (let [elapsed (- (System/currentTimeMillis) start-time)]
               (report-progress! {:phase phase
                                  :status :error
+                                 :elapsed-ms elapsed
                                  :message (format "Stopped after error at item %d/%d" (inc idx) total)})
               {:results (conj results result)
                :ok-count (- (inc idx) new-error-count)
@@ -365,7 +366,7 @@
 
 (defn ->type-dto
   "Generate ClassDTO for a specific type (e.g., 3110 Uimahalli)."
-  [type-code type-data & {:keys [prefix] :or {prefix "lipas"}}]
+  [_type-code type-data & {:keys [prefix] :or {prefix "lipas"}}]
   (let [sub-code (:sub-category type-data)
         sub-name (get-in types/sub-categories [sub-code :name :fi])]
     (->class-dto (:name type-data)
@@ -870,11 +871,6 @@
   [spec]
   (some :generate-from-types (:classes spec)))
 
-(defn- get-type-hierarchy-config
-  "Get the type hierarchy configuration from the spec."
-  [spec]
-  (first (filter :generate-from-types (:classes spec))))
-
 (defn- should-generate-type-specific-attrs?
   "Check if the spec indicates type-specific attributes should be generated."
   [spec]
@@ -893,11 +889,10 @@
 
    Parameters:
      prop-key - Property key (e.g., :height-m)
-     prefix - Model prefix
 
    Note: These attributes are created without a domain - they will be
    added to specific type classes via property references."
-  [prop-key prefix]
+  [prop-key]
   (let [prop-def (prop-types/all prop-key)
         identifier (->attribute-identifier prop-key)
         xsd-type (get lipas->xsd-type (:data-type prop-def) (str xsd-ns "string"))]
@@ -913,9 +908,9 @@
 
    Returns a vector of attribute DTOs (without domain - will be added
    to types via property references)."
-  [prefix]
+  [_prefix]
   (let [used-props (get-all-used-props)]
-    (mapv #(prop-def->attribute-dto % prefix) used-props)))
+    (mapv prop-def->attribute-dto used-props)))
 
 (defn type-code->class-identifier
   "Get the class identifier for a type code."
@@ -1052,12 +1047,11 @@
 
      :use-dev-prefix - Use dev-prefix instead of production prefix (default true)
      :dry-run - Return DTOs without making API calls (default false)
-     :skip-existing - Skip resources that already exist (default true)
      :include-types - Include all 149 type classes in hierarchy (default true)
 
    Returns a summary of created resources and any errors."
-  [& {:keys [use-dev-prefix dry-run skip-existing include-types]
-      :or {use-dev-prefix true dry-run false skip-existing true include-types true}}]
+  [& {:keys [use-dev-prefix dry-run include-types]
+      :or {use-dev-prefix true dry-run false include-types true}}]
   (let [spec (load-model-spec)
         model-dto (spec->model-dto spec :use-dev-prefix use-dev-prefix)
         prefix (:prefix model-dto)

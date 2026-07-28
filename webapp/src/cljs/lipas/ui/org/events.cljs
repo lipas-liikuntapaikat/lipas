@@ -123,7 +123,7 @@
                   (get-in db [:org :editing-org :role-templates] {}))))))
 
 (rf/reg-event-fx ::save-org-success
-  (fn [{:keys [db]} [_ _org new? resp]]
+  (fn [{:keys [db]} [_ _org new? _resp]]
     (let [tr (:translator db)
           base-fx [[:dispatch [::get-user-orgs]]
                    [:dispatch [:lipas.ui.events/set-active-notification
@@ -168,7 +168,7 @@
 
  ;; PTV configuration events
 (rf/reg-event-fx ::save-ptv-config-success
-  (fn [{:keys [db]} [_ org-id ptv-config resp]]
+  (fn [{:keys [db]} [_ org-id ptv-config _resp]]
     {:db (update-in db [:user :orgs]
                     (fn [orgs]
                       (mapv (fn [org]
@@ -293,7 +293,7 @@
 (rf/reg-event-fx ::invite-member-success
                  ;; The response's :new-account? tells us what actually happened,
                  ;; so the toast is accurate whether we invited or added.
-  (fn [{:keys [db]} [_ org-id email resp]]
+  (fn [_ [_ org-id email resp]]
     {:fx [[:dispatch [::get-org-users org-id]]
           [:dispatch [::clear-invite-member-form]]
           [:dispatch [:lipas.ui.events/set-active-notification
@@ -401,7 +401,7 @@
         :on-failure [::failure]}})))
 
 (rf/reg-event-fx ::edit-template-catalog-success
-  (fn [{:keys [db]} [_ org-id role-templates _resp]]
+  (fn [{:keys [db]} [_ _org-id role-templates _resp]]
     {:db (assoc-in db [:org :editing-org :role-templates] role-templates)
      :fx [[:dispatch [::get-user-orgs]]
           [:dispatch [:lipas.ui.events/set-active-notification
@@ -486,7 +486,7 @@
       :on-failure [::failure]}}))
 
 (rf/reg-event-fx ::site-edit-grant-success
-  (fn [{:keys [db]} [_ _org-id lipas-id _resp]]
+  (fn [_ [_ _org-id lipas-id _resp]]
     {:fx [[:dispatch [::get-site-editors lipas-id]]
           [:dispatch [:lipas.ui.events/set-active-notification
                       {:message "Muokkausoikeus päivitetty" :success? true}]]]}))

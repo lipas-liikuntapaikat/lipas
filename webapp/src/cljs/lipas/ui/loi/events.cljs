@@ -47,7 +47,7 @@
           (==> [:lipas.ui.loi.events/stop-editing]))]})))
 
 (rf/reg-event-fx ::delete
-  (fn [{:keys [db]} [_ loi status year]]
+  (fn [_ [_ loi status year]]
     (let [event-date (when (= status "out-of-service-permanently")
                        (if (utils/this-year? year)
                          (utils/timestamp)

@@ -1,8 +1,6 @@
 (ns lipas.schema.search
   "Schemas for search results table field validation."
-  (:require [lipas.schema.sports-sites :as sports-sites]
-            [lipas.schema.users :as users]
-            [lipas.utils :as utils]))
+  (:require [lipas.schema.sports-sites :as sports-sites]))
 
 ;; Individual field schemas matching the spec definitions from schema/core.cljc
 

@@ -9,5 +9,5 @@
     :view   views/main
     :controllers
     [{:start
-      (fn [& params]
+      (fn [& _params]
         (==> [:lipas.ui.user.events/get-users-sports-sites]))}]}])

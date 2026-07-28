@@ -1,5 +1,6 @@
 (ns lipas.ui.bulk-operations.subs
-  (:require [lipas.data.bulk-operations :as bulk-fields]
+  (:require [clojure.string :as str]
+            [lipas.data.bulk-operations :as bulk-fields]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::editable-sites
@@ -58,19 +59,19 @@
         (seq status-set)
         (filter #(contains? status-set (:status %)))
 
-        (not (clojure.string/blank? search-text))
+        (not (str/blank? search-text))
         (filter (fn [site]
-                  (let [search-lower (clojure.string/lower-case search-text)]
+                  (let [search-lower (str/lower-case search-text)]
                     (or (and (:name site)
-                             (clojure.string/includes? (clojure.string/lower-case (:name site)) search-lower))
+                             (str/includes? (str/lower-case (:name site)) search-lower))
                         (and (:email site)
-                             (clojure.string/includes? (clojure.string/lower-case (:email site)) search-lower))
+                             (str/includes? (str/lower-case (:email site)) search-lower))
                         (and (:phone-number site)
-                             (clojure.string/includes? (:phone-number site) search-lower))
+                             (str/includes? (:phone-number site) search-lower))
                         (and (:www site)
-                             (clojure.string/includes? (clojure.string/lower-case (:www site)) search-lower))
+                             (str/includes? (str/lower-case (:www site)) search-lower))
                         (and (:reservations-link site)
-                             (clojure.string/includes? (clojure.string/lower-case (:reservations-link site)) search-lower))))))))))
+                             (str/includes? (str/lower-case (:reservations-link site)) search-lower))))))))))
 
 (rf/reg-sub ::selected-sites-count
   :<- [::selected-sites]

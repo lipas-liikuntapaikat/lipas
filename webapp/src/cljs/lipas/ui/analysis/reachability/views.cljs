@@ -1,5 +1,23 @@
 (ns lipas.ui.analysis.reachability.views
-  (:require ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
+  (:require ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Divider$default" :as Divider]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Link$default" :as Link]
+            ;; clj-kondo false positive: `List` collides with the cljs.core/List
+            ;; deftype, so the [:> List ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
             ["rc-slider$default" :as Slider]
             [lipas.ui.analysis.reachability.events :as events]
             [lipas.ui.analysis.reachability.subs :as subs]
@@ -9,20 +27,6 @@
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.map.events :as map-events]
-            ["@mui/material/CircularProgress$default" :as CircularProgress]
-            ["@mui/material/Divider$default" :as Divider]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/Link$default" :as Link]
-            ["@mui/material/List$default" :as List]
-            ["@mui/material/ListItem$default" :as ListItem]
-            ["@mui/material/ListItemText$default" :as ListItemText]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Tab$default" :as Tab]
-            ["@mui/material/Tabs$default" :as Tabs]
-            ["@mui/material/Tooltip$default" :as Tooltip]
-            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 

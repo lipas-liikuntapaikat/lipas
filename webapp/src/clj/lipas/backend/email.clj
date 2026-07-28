@@ -309,7 +309,7 @@
 
 (defrecord TestEmailer []
   Emailer
-  (send! [_ message] {:status "OK"}))
+  (send! [_ _message] {:status "OK"}))
 
 (comment
   (require '[lipas.backend.config :as config])

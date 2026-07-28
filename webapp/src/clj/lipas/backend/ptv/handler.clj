@@ -1,6 +1,5 @@
 (ns lipas.backend.ptv.handler
-  (:require [lipas.backend.middleware :as mw]
-            [lipas.backend.ptv.core :as ptv-core]
+  (:require [lipas.backend.ptv.core :as ptv-core]
             [lipas.roles :as roles]
             [lipas.schema.ptv :as lipas-ptv-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]

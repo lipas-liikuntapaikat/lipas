@@ -1,7 +1,8 @@
 (ns lipas.backend.api.v1.routes
-  (:require [lipas.backend.api.v1.core :as v1-core]
-            [lipas.backend.api.v1.http :as v1-http]
+  (:require [clojure.string :as str]
+            [lipas.backend.api.v1.core :as v1-core]
             [lipas.backend.api.v1.handlers :as v1-handlers]
+            [lipas.backend.api.v1.http :as v1-http]
             [lipas.schema.api.v1 :as v1-schema]
             [lipas.schema.sports-sites.types :as types-schema]
             [reitit.coercion.malli :as malli]
@@ -67,7 +68,7 @@
          :body {:error "Internal server error"
                 :message "An unexpected error occurred"}}))))
 
-(defn routes [{:keys [search db]}]
+(defn routes [{:keys [search]}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
                      {:url "/v1/openapi.json"})
 
@@ -170,7 +171,7 @@ Access to the hierarchical type classification system used for categorizing spor
                                  (string? fields-value)
                                 ;; Handle comma-separated string by splitting
                                  (if (re-find #"," fields-value)
-                                   (mapv clojure.string/trim (clojure.string/split fields-value #","))
+                                   (mapv str/trim (str/split fields-value #","))
                                    [fields-value])
                                  :else fields-value))
                       locale (or (keyword lang) :fi)

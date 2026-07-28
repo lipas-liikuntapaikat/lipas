@@ -168,4 +168,4 @@
 (rf/reg-sub ::new-preset-name-valid?
   :<- [::new-preset-name]
   (fn [s _]
-    (and (m/validate diversity-schema/category-name s))))
+    (m/validate diversity-schema/category-name s)))

@@ -1,7 +1,6 @@
 (ns lipas.backend.ptv-test
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures] :as t]
-            [clojure.pprint :refer [pprint]]
             [lipas.backend.core :as core]
             [lipas.backend.db.ptv-service :as ptv-service-db]
             [lipas.backend.email :as email]
@@ -10,7 +9,6 @@
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integ]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.types :as types]
             [lipas.test-utils :refer [<-json] :as tu]
             [lipas.utils :as utils]
             [ring.mock.request :as mock]))

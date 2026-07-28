@@ -1,12 +1,9 @@
 (ns lipas.data.activities
-  (:require
-    [clojure.string :as str]
-    [lipas.data.materials :as materials]
-    [lipas.data.types :as types]
-    [lipas.schema.common :as common-schema]
-    [lipas.utils :as utils]
-    [malli.core :as m]
-    [malli.util :as mu]))
+  (:require [clojure.string :as str]
+            [lipas.data.materials :as materials]
+            [lipas.schema.common :as common-schema]
+            [lipas.utils :as utils]
+            [malli.util :as mu]))
 
 (defn collect-schema
   [m]

@@ -3,12 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.types :as types]
-            [lipas.roles :as roles]
-            [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.utils :as utils]
-            [malli.core :as m]
-            [malli.error :as me]
             [re-frame.core :as rf]))
 
 (defn ptv-error-payload
@@ -1505,7 +1500,7 @@
              (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge (ptv-data/ptv-service-channel->texts resp)))}))
 
 (rf/reg-event-fx ::load-ptv-texts-failure
-  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+  (fn [{:keys [db]} _]
     {:db (-> db)}))
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
 

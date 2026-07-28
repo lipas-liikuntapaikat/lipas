@@ -1,8 +1,5 @@
 (ns lipas.ui.components.text-fields
-  (:require ["react" :as react]
-            [clojure.reader :refer [read-string]]
-            [clojure.string :as string]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
@@ -12,6 +9,9 @@
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Tooltip$default" :as Tooltip]
+            ["react" :as react]
+            [clojure.reader :refer [read-string]]
+            [clojure.string :as str]
             [malli.core :as m]
             [reagent.core :as r]))
 
@@ -37,11 +37,11 @@
 (defn coerce [type s]
   (if (= type "number")
     (-> s
-        (string/replace "," ".")
-        (string/replace #"[^\d.]" "")
-        (as-> $ (if (or (string/ends-with? $ ".")
-                        (and (string/includes? $ ".")
-                             (string/ends-with? $ "0")))
+        (str/replace "," ".")
+        (str/replace #"[^\d.]" "")
+        (as-> $ (if (or (str/ends-with? $ ".")
+                        (and (str/includes? $ ".")
+                             (str/ends-with? $ "0")))
                   $
                   (read-string $))))
     (not-empty s)))
@@ -58,7 +58,7 @@
 (defn text-field-controlled
   [{:keys [value type on-change spec required
            InputProps InputLabelProps
-           adornment multiline read-only? tooltip on-blur
+           adornment multiline tooltip on-blur
            error]
     :or   {tooltip ""}
     :as   props} & children]
@@ -82,7 +82,7 @@
                                      ;; FIXME: Juho later, better to read with parseInt or such
                                      (on-change (read-string (str value)))
                                      (when (string? value)
-                                       (let [value (-> value string/trim not-empty)]
+                                       (let [value (-> value str/trim not-empty)]
                                          (on-change value)
                                          (when on-blur
                                            (on-blur value)))))

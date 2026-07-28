@@ -12,8 +12,8 @@
             ["@mui/material/Typography$default" :as Typography]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
-            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.autocompletes :refer [autocomplete2]]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.ptv.components :as ptv-components]
             [lipas.ui.ptv.controls :as controls]
             [lipas.ui.ptv.events :as events]
@@ -68,7 +68,6 @@
         [editing-org? set-editing-org?] (hooks/use-state false)
         [editing-services? set-editing-services?] (hooks/use-state false)
         [creating-service? set-creating-service?] (hooks/use-state false)
-        locale (tr)
         ptv-base (if (prod?)
                    "https://palvelutietovaranto.suomi.fi"
                    "https://palvelutietovaranto.trn.suomi.fi")
@@ -83,7 +82,7 @@
                edit-data
                sports-site)
 
-        {:keys [sync-enabled delete-existing last-sync publishing-status]} (:ptv site)
+        {:keys [sync-enabled delete-existing]} (:ptv site)
 
         orgs @(rf/subscribe [::subs/all-orgs])
         ;; Single source of truth for "which org is this site's PTV integration

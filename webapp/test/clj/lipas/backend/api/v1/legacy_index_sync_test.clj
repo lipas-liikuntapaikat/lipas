@@ -125,21 +125,21 @@
     (let [site (test-utils/make-point-site 2000001
                                            :name "Original Name"
                                            :type-code 1120)
-          _ (create-site-in-db! site)]
+          _ (create-site-in-db! site)
 
-      ;; Now use save-sports-site! to update - this should sync to legacy index
-      (let [updated-site (assoc site :name "Updated Name")
-            _ (save-site! updated-site)]
-        (Thread/sleep 200)
+          ;; Now use save-sports-site! to update - this should sync to legacy index
+          updated-site (assoc site :name "Updated Name")
+          _ (save-site! updated-site)]
+      (Thread/sleep 200)
 
-        ;; Verify the update went to legacy index
-        (let [legacy-doc (get-legacy-doc 2000001)]
-          (is (some? legacy-doc)
-              "Site should exist in legacy index after update")
-          ;; Legacy format stores name as locale map when fetched directly from ES
-          ;; (API endpoint formats it to string based on lang param)
-          (is (= "Updated Name" (or (:fi (:name legacy-doc)) (:name legacy-doc)))
-              "Legacy doc should reflect the updated name"))))))
+      ;; Verify the update went to legacy index
+      (let [legacy-doc (get-legacy-doc 2000001)]
+        (is (some? legacy-doc)
+            "Site should exist in legacy index after update")
+        ;; Legacy format stores name as locale map when fetched directly from ES
+        ;; (API endpoint formats it to string based on lang param)
+        (is (= "Updated Name" (or (:fi (:name legacy-doc)) (:name legacy-doc)))
+            "Legacy doc should reflect the updated name")))))
 
 ;;; Tests for legacy index deletion on status change ;;;
 

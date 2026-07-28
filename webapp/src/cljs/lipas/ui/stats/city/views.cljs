@@ -1,9 +1,9 @@
 (ns lipas.ui.stats.city.views
-  (:require [lipas.ui.charts :as charts]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.charts :as charts]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.tables :as tables]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.stats.city.events :as events]
             [lipas.ui.stats.city.subs :as subs]
             [lipas.ui.stats.common :as common]

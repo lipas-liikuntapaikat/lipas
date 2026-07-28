@@ -699,7 +699,7 @@
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
 
-(defn index-services [services])
+(defn index-services [_services])
 
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
@@ -1122,7 +1122,7 @@
                          :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
       (vec (concat drifted link-drift)))))
 
-(defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
+(defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
 

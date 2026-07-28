@@ -22,6 +22,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.string :as str]
+            [integrant.repl.state]
             [lipas.backend.ptv.ai :as ai]
             [lipas.backend.search :as search]
             [taoensso.timbre :as log]))

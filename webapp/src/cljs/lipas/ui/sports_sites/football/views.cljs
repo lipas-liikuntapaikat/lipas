@@ -1,19 +1,19 @@
 (ns lipas.ui.sports-sites.football.views
-  (:require [lipas.ui.components.checkboxes :as checkboxes]
+  (:require ["@mui/material/FormGroup$default" :as FormGroup]
+            [lipas.schema.common :as common-schema]
+            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
+            [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.schema.swimming-pools :as pools-schema]
+            [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.forms :as forms]
             [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.football.events]
             [lipas.ui.sports-sites.football.subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [lipas.schema.common :as common-schema]
-            [lipas.schema.sports-sites.fields :as fields-schema]
-            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
-            [lipas.schema.swimming-pools :as pools-schema]
             [re-frame.core :as rf]))
 
 (rf/reg-event-db ::save-pool
@@ -51,8 +51,7 @@
           (assoc-in [:sports-sites :football :data] data)))))
 
 (defn form [{:keys [tr data]}]
-  (let [set-field (partial set-field :pool)
-        locale    (tr)]
+  (let [set-field (partial set-field :pool)]
     [:> FormGroup
      ;; Pool type
      [selects/select
@@ -184,29 +183,24 @@
    #_[:accessibility (tr :lipas.swimming-pool.pool/accessibility)]
    #_[:outdoor-pool? (tr :lipas.swimming-pool.pool/outdoor-pool?)]])
 
-(defn- localize-accessibility [tr pool]
-  (update pool :accessibility
-          #(map (fn [f] (tr (keyword :accessibility f))) %)))
-
 (defn table [{:keys [tr items lipas-id add-btn-size max-width]}]
-  (let [localize (partial utils/localize-field tr)]
-    [form-table/form-table
-     {:headers         (make-headers tr)
-      :items
-      (->> (vals items)
-           #_(map (partial localize :type :pool-types))
-           #_(map (partial localize :structure :pool-structures))
-           #_(map (partial localize-accessibility tr))
-           (sort-by :length-m utils/reverse-cmp))
-      :max-width       max-width
-      :add-tooltip     "Lisää"
-      :add-btn-size    add-btn-size
-      :edit-tooltip    (tr :actions/edit)
-      :delete-tooltip  (tr :actions/delete)
-      :confirm-tooltip (tr :confirm/delete-confirm)
-      :on-add          #(==> [::toggle-dialog :pool {}])
-      :on-edit         #(==> [::toggle-dialog :pool (get items (:id %))])
-      :on-delete       #(==> [::remove-pool lipas-id %])}]))
+  [form-table/form-table
+   {:headers         (make-headers tr)
+    :items
+    (->> (vals items)
+         #_(map (partial localize :type :pool-types))
+         #_(map (partial localize :structure :pool-structures))
+         #_(map (partial localize-accessibility tr))
+         (sort-by :length-m utils/reverse-cmp))
+    :max-width       max-width
+    :add-tooltip     "Lisää"
+    :add-btn-size    add-btn-size
+    :edit-tooltip    (tr :actions/edit)
+    :delete-tooltip  (tr :actions/delete)
+    :confirm-tooltip (tr :confirm/delete-confirm)
+    :on-add          #(==> [::toggle-dialog :pool {}])
+    :on-edit         #(==> [::toggle-dialog :pool (get items (:id %))])
+    :on-delete       #(==> [::remove-pool lipas-id %])}])
 
 (defn read-only-table [{:keys [tr items]}]
   [tables/table {:headers (make-headers tr)
@@ -214,7 +208,7 @@
                  :key-fn  #(gensym)}])
 
 (defn fields-field
-  [{:keys [tr read-only? width] :as props}]
+  [{:keys [tr read-only? width]}]
   (let [dialog-open? (<== [::dialog-open?])
         add-data     (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data         (if add-data

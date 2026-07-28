@@ -1,12 +1,17 @@
 (ns prod
-  (:require [clojure.data.csv :as csv]
-            [integrant.core :as ig]
-            [lipas.backend.config :as config]
-            [lipas.utils :as utils]
-            [malli.core :as m]
-            [lipas.wfs.mappings :as wfs-mappings]
-            [lipas.wfs.core :as wfs]
-            [lipas.maintenance :as maintenance]))
+  (:require
+    ;; Each of these backs a (comment ...) snippet below that uses it
+    ;; unqualified without its own local re-require (unlike the other
+    ;; blocks in this file, which re-require what they need inline).
+    ;; clj-kondo's :skip-comments hides that usage, but removing these
+    ;; breaks copy-pasting those snippets into the REPL right after
+    ;; (require 'prod).
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [integrant.core :as ig]
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [lipas.backend.config :as config]
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [malli.core :as m]))
 
 ;; exploring
 (comment

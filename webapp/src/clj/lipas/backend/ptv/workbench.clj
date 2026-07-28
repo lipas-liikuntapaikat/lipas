@@ -1,12 +1,12 @@
 (ns lipas.backend.ptv.workbench
-  (:require [lipas.backend.llm :as llm]
+  (:require [cheshire.core :as json]
+            [lipas.backend.llm :as llm]
             [lipas.backend.ptv.ai :as ai]
-            [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.backend.ptv.core :as ptv-core]
             [lipas.backend.ptv.integration :as ptv-integration]
             [lipas.backend.search :as search]
             [lipas.data.types :as types]
-            [cheshire.core :as json]))
+            [lipas.schema.sports-sites :as sports-sites-schema]))
 
 (defn- make-templates [flow prompt-doc]
   (let [json-doc (json/encode prompt-doc)

@@ -8,7 +8,7 @@
 
 (defn migrate-up
   "Migrate hardcoded PTV organizations from lipas.data.ptv to the database"
-  [{:keys [db] :as config}]
+  [{:keys [db]}]
   (let [environment (env/env :environment)
         ;; Select test orgs for dev/test, prod orgs for prod environment
         organizations (case environment
@@ -50,7 +50,7 @@
 
 (defn migrate-down
   "Remove migrated PTV organizations from the database"
-  [{:keys [db] :as config}]
+  [{:keys [db]}]
   (let [environment (env/env :environment)
         organizations (case environment
                         ("dev" "test") ptv/test-organizations

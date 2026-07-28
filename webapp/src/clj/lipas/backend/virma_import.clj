@@ -7,18 +7,17 @@
 
    The coordinates in the CSV are in ETRS-TM35FIN (EPSG:3067) projection
    and need to be converted to WGS84 (EPSG:4326) for LIPAS."
-  (:require
-    [clojure.data.csv :as csv]
-    [clojure.java.io :as io]
-    [clojure.string :as str]
-    [cheshire.core :as json]
-    [lipas.backend.gis :as gis]
-    [lipas.data.types :as types]
-    [lipas.data.loi :as loi]
-    [malli.core :as m]
-    [malli.error :as me]
-    [lipas.schema.sports-sites :as sports-site-schema]
-    [lipas.schema.lois :as loi-schema]))
+  (:require [cheshire.core :as json]
+            [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [lipas.backend.gis :as gis]
+            [lipas.data.loi :as loi]
+            [lipas.data.types :as types]
+            [lipas.schema.lois :as loi-schema]
+            [lipas.schema.sports-sites :as sports-site-schema]
+            [malli.core :as m]
+            [malli.error :as me]))
 
 ;; Coordinate transformation constants
 (def tm35fin-srid 3067)
@@ -181,13 +180,12 @@
    Note: The :status field here refers to the sports site's operational status
    (active, planning, etc.), not the document status (draft/published).
    Document status is set separately when saving to the database."
-  [{:keys [geom id name_fi name_en name_se address zip municipali
-           info_fi info_se info_en
-           www_fi www_se www_en telephone email
+  [{:keys [geom name_fi name_en name_se address zip
+           info_fi
+           www_fi telephone email
            ownerclass x_eureffin y_eureffin
            munici_nro lipas_type_name lipas_type_code
-           lipas_loi_type properties]
-    :as row}]
+           properties]}]
   (let [;; Parse coordinates
         coords-from-wkt (parse-geom-wkt geom)
         coords-from-xy (when (and x_eureffin y_eureffin)
@@ -272,12 +270,10 @@
    - loi-category (category key)
    - loi-type (type value)
    - Plus optional props (name, description, etc.)"
-  [{:keys [geom id name_fi name_en name_se address zip municipali
+  [{:keys [geom name_fi name_en name_se
            info_fi info_se info_en
-           www_fi telephone email
-           ownerclass x_eureffin y_eureffin
-           munici_nro lipas_loi_type]
-    :as row}]
+           x_eureffin y_eureffin
+           lipas_loi_type]}]
   (let [;; Parse coordinates
         coords-from-wkt (parse-geom-wkt geom)
         coords-from-xy (when (and x_eureffin y_eureffin)

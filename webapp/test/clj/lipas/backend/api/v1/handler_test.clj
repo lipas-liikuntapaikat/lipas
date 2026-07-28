@@ -7,6 +7,7 @@
    3. Response structure matches the legacy API contract
    4. Query parameters work as expected (filtering, pagination, etc.)"
   (:require
+    [clojure.set :as set]
     [clojure.string :as str]
     [clojure.test :refer [deftest is testing use-fixtures]]
     [lipas.backend.core :as core]
@@ -205,7 +206,7 @@
         (is (#{200 206} (:status resp2)))
         (let [ids1 (set (map :sportsPlaceId body1))
               ids2 (set (map :sportsPlaceId body2))]
-          (is (empty? (clojure.set/intersection ids1 ids2))
+          (is (empty? (set/intersection ids1 ids2))
               "Page 1 and 2 should have different items"))))
 
     (testing "206 Partial Content when more results available"

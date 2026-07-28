@@ -4,16 +4,14 @@
             [clojure.core.async :as async]
             [clojure.data.csv :as csv]
             [clojure.java.jdbc :as jdbc]
-            [next.jdbc :as next-jdbc]
-            [next.jdbc.result-set :as rs]
             [clojure.string :as str]
             [dk.ative.docjure.spreadsheet :as excel]
-            [lipas.backend.api.v1.locations :as legacy-locations]
-            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
-            [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.accessibility :as accessibility]
             [lipas.backend.analysis.diversity :as diversity]
             [lipas.backend.analysis.reachability :as reachability]
+            [lipas.backend.api.v1.locations :as legacy-locations]
+            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+            [lipas.backend.api.v1.transform :as legacy-transform]
             [lipas.backend.db.db :as db]
             [lipas.backend.email :as email]
             [lipas.backend.geom-utils :refer [feature-coll->geom-coll]]
@@ -35,9 +33,10 @@
             [lipas.reports :as reports]
             [lipas.roles :as roles]
             [lipas.utils :as utils]
+            [next.jdbc :as next-jdbc]
+            [next.jdbc.result-set :as rs]
             [taoensso.timbre :as log])
-  (:import
-    [java.io OutputStreamWriter]))
+  (:import [java.io OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -151,7 +150,7 @@
                      {:from old-perms :to permissions})))
 
 (defn update-user-status!
-  [db {:keys [id status] :as user}]
+  [db {:keys [status] :as user}]
   (let [user (db/get-user-by-id db user)
         old-status (-> user :status)
         new-user (assoc user :status status)]
@@ -299,7 +298,7 @@
   (if (:activities sports-site)
     (update sports-site :activities
             (fn [activities]
-              (reduce-kv (fn [m k v]
+              (reduce-kv (fn [m k _v]
                            (if (and (get-in m [k :routes])
                                     (get-in sports-site [:activities k :routes]))
                              (update-in m [k :routes] (fn [routes]
@@ -1370,8 +1369,8 @@
     (:body (search/search client idx-name params))))
 
 (defn calculate-stats
-  [db search* {:keys [city-codes type-codes grouping year]
-               :or {grouping "location.city.city-code"}}]
+  [_db search* {:keys [city-codes type-codes grouping year]
+                :or {grouping "location.city.city-code"}}]
   (let [pop-data (get-populations search* year)
         statuses ["active" "out-of-service-temporarily"]
         query {:size 0,
@@ -1501,7 +1500,7 @@
         distance (:distance location)
         origin (str lat "," lon)
         decay-factor 2
-        offset (str (* distance (* decay-factor 0.5)) "m")
+        offset (str (* distance decay-factor 0.5) "m")
         scale (str (* distance decay-factor) "m")
         size 100
         from 0

@@ -1,13 +1,13 @@
 (ns lipas.ui.sports-sites.slides
-  (:require [lipas.schema.swimming-pools :as pool-schema]
+  (:require ["@mui/material/FormGroup$default" :as FormGroup]
+            [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.form-table :as form-table]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
-            [malli.core :as m]
-            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
-            [lipas.ui.utils :refer [<== ==>]]))
+            [lipas.ui.utils :refer [<== ==>]]
+            [malli.core :as m]))
 
 (defn set-field [dialog field value]
   (#(==> [::hall/set-dialog-field dialog field value])))

@@ -322,7 +322,7 @@
         statuses translator pool-types pool-accessibility
         floorball-types floor-elasticity player-entrance
         audience-stand-access car-parking-economics-model
-        roof-trussess-operation-model field-types map-mode] _]
+        roof-trussess-operation-model field-types _map-mode] _]
     (when site
       (let [locale        (translator)
             latest        (or (utils/latest-edit (:edits site))
@@ -421,8 +421,8 @@
           (when (#{2510 2520} (:type-code type)) ; ice stadiums
             {:rinks (:rinks latest)})
 
-          (when (or (contains? floorball-types (:type-code type)) ; floorball
-                    #_(#{2230 1350 1340} (:type-code type))) ; football
+          ;; TODO: also gate on football type-codes? #{2230 1350 1340}
+          (when (contains? floorball-types (:type-code type)) ; floorball
             {:circumstances (-> latest
                                 :circumstances
                                 (update :player-entrance

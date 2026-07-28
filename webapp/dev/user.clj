@@ -2,9 +2,14 @@
   "Utilities for reloaded workflow using `integrant.repl`."
   (:require
     [clojure.core.async :as async]
-    [integrant.repl :refer [reset-all halt go]]
+    ;; `go` is meant to be typed directly at the REPL (`(go)`), mirroring
+    ;; reset-all/reset below — see the (comment (go) (reset) ...) block
+    ;; near the end of this file. clj-kondo's :skip-comments hides that
+    ;; usage. (`halt` was referred here too but had no evidence of use
+    ;; anywhere, including in comments, so it was dropped instead.)
+    #_{:clj-kondo/ignore [:unused-referred-var]}
+    [integrant.repl :refer [reset-all go]]
     [integrant.repl.state]
-    [lipas.wfs.core :as wfs]
     [migratus.core :as migratus]
     [taoensso.timbre :as log]))
 
@@ -307,7 +312,7 @@
 
          ;; Validate with progress reporting
          results (reduce
-                   (fn [{:keys [total valid errors] :as acc} doc]
+                   (fn [{:keys [total] :as acc} doc]
                      (when (and verbose? (pos? total) (zero? (mod total 1000)))
                        (println (format "Processed %d documents..." total)))
                      (if (m-validate schema doc)

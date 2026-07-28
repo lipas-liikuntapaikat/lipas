@@ -1,12 +1,5 @@
 (ns lipas.ui.front-page.views
-  (:require [clojure.string :as str]
-            [lipas.schema.users :as users-schema]
-            [lipas.ui.components.misc :as misc]
-            [lipas.ui.components.text-fields :as text-fields]
-            [malli.core :as m]
-            [lipas.ui.front-page.events :as events]
-            [lipas.ui.front-page.subs :as subs]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardActions$default" :as CardActions]
             ["@mui/material/CardContent$default" :as CardContent]
@@ -20,6 +13,11 @@
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Link$default" :as Link]
+            ;; clj-kondo false positive: the bare symbol `List` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> List ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
             ["@mui/material/ListItemButton$default" :as ListItemButton]
             ["@mui/material/ListItemIcon$default" :as ListItemIcon]
@@ -28,9 +26,16 @@
             ["@mui/material/Snackbar$default" :as Snackbar]
             ["@mui/material/SvgIcon$default" :as SvgIcon]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
+            [lipas.schema.users :as users-schema]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.front-page.events :as events]
+            [lipas.ui.front-page.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.svg :as svg]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]
             [reagent.core :as r]))
 
 (def links

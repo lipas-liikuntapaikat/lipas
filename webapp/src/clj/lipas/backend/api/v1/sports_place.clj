@@ -395,29 +395,6 @@
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 
-(def surface-materials
-  {"gravel" "Sora",
-   "fiberglass" "Lasikuitu",
-   "brick-crush" "Tiilimurska",
-   "water" "Vesi",
-   "concrete" "Betoni",
-   "textile" "Tekstiili",
-   "asphalt" "Asfaltti",
-   "ceramic" "Keraaminen",
-   "rock-dust" "Kivituhka",
-   "deinked-pulp" "Siistausmassa",
-   "stone" "Kivi",
-   "metal" "Metalli",
-   "soil" "Maa",
-   "woodchips" "Hake",
-   "grass" "Nurmi",
-   "synthetic" "Muovi / synteettinen",
-   "sand" "Hiekka",
-   "artificial-turf" "Tekonurmi",
-   "wood" "Puu",
-   "sawdust" "Sahanpuru",
-   "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
-
 (defn- strip-z-coordinate
   "Strips Z-coordinate from coordinates, keeping only [lon lat].
   Works recursively for nested coordinate arrays (LineString, Polygon)."
@@ -440,7 +417,7 @@
 
 (defn- add-point-props [fs]
   (utils/mapv-indexed
-    (fn [idx f]
+    (fn [_idx f]
       (-> f
           (update :geometry strip-z-from-geometry)
           (assoc :properties {:pointId 0}))) fs))

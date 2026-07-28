@@ -24,9 +24,9 @@
             [lipas.backend.core :as core]
             [lipas.backend.system :as system]
             [lipas.data.types :as types]
+            [lipas.utils :as utils]
             [lipas.wfs.mappings :as mappings]
             [lipas.wfs.sld :as sld]
-            [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))
 

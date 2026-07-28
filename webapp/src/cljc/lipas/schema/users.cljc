@@ -1,12 +1,12 @@
 (ns lipas.schema.users
-  (:require [lipas.data.activities :as activities]
+  (:require #?(:clj [clojure.test.check.generators :as gen])
+            [lipas.data.activities :as activities]
             [lipas.data.cities :as cities]
-            [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.data.types :as types]
             [lipas.roles :as roles]
             [lipas.schema.common :as common]
-            [malli.core :as m]
-            #?(:clj [clojure.test.check.generators :as gen])))
+            [lipas.schema.sports-sites :as sports-sites-schema]
+            [malli.core :as m]))
 
 ;; Email validation
 (def email-regex #"^[a-zA-Z0-9åÅäÄöÖ._%+-]+@[a-zA-Z0-9åÅäÄöÖ.-]+\.[a-zA-Z]{2,63}$")

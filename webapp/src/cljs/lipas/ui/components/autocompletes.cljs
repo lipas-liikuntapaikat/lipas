@@ -1,7 +1,7 @@
 (ns lipas.ui.components.autocompletes
   (:require ["@mui/material/Autocomplete$default" :as Autocomplete]
-            ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/FormHelperText$default" :as FormHelperText]
+            ["@mui/material/TextField$default" :as TextField]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]
@@ -20,15 +20,17 @@
 ;;    which magically effect multiple things
 ;; 4. items-by-vals ???
 (defn autocomplete
-  [{:keys [label items value value-fn label-fn key-fn on-change sort-fn spec multi?
+  [{:keys [label items value value-fn label-fn key-fn on-change sort-fn multi?
            required helper-text deselect? sort-cmp render-option-fn disabled variant]
     :or {label-fn :label
          disabled false
-         sort-fn label-fn
          sort-cmp compare
          value-fn :value
          variant "standard"}}]
-  (let [items-by-vals (utils/index-by (comp pr-str value-fn) items)]
+  ;; sort-fn defaults to label-fn; computed here (not in :or) since :or
+  ;; can't reliably reference another destructured key from the same map.
+  (let [sort-fn (or sort-fn label-fn)
+        items-by-vals (utils/index-by (comp pr-str value-fn) items)]
     (r/with-let [state (r/atom "")]
       [:<>
        [:> Autocomplete

@@ -2,6 +2,10 @@
   "Jobs admin UI: Overview (are jobs flowing?) and Dead letters
   (what broke, and one-click triage). English-only admin tool."
   (:require ["@mui/material/Alert$default" :as Alert]
+            ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
+            ;; deftype, so the [:> Box ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]

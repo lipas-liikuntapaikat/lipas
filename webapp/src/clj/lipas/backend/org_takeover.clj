@@ -226,63 +226,64 @@
         ;; the request-time snapshot — :lipas-ids has been populated since the
         ;; table was born, so the rule fallback only guards hand-made rows
         lipas-ids  (or (:lipas-ids req)
-                       (matching-lipas-ids db (:ownership-rule req) org-id))]
-    ;; DB revisions + ES bulk index + request status in one transaction (mirrors
-    ;; bulk-ops mass-update): either every selected site is claimed and the
-    ;; request marked approved, or the whole thing rolls back.
-    ;; clojure.java.jdbc tx (re-entrant: the nested with-db-transaction inside
-    ;; db/upsert-sports-site! reuses it) — same mechanism as bulk-ops mass-update.
-    (let [claimed-count
-          (jdbc-old/with-db-transaction [tx db]
+                       (matching-lipas-ids db (:ownership-rule req) org-id))
+
+        ;; DB revisions + ES bulk index + request status in one transaction (mirrors
+        ;; bulk-ops mass-update): either every selected site is claimed and the
+        ;; request marked approved, or the whole thing rolls back.
+        ;; clojure.java.jdbc tx (re-entrant: the nested with-db-transaction inside
+        ;; db/upsert-sports-site! reuses it) — same mechanism as bulk-ops mass-update.
+        claimed-count
+        (jdbc-old/with-db-transaction [tx db]
             ;; Flip the status FIRST, guarded on the current state. 0 rows ⇒ a
             ;; concurrent approval already won the row — throw to roll back so the
             ;; claim runs exactly once.
-            (when (zero? (first (jdbc-old/execute! tx
-                                                   ["UPDATE org_takeover_request
+          (when (zero? (first (jdbc-old/execute! tx
+                                                 ["UPDATE org_takeover_request
                                                      SET status='approved', decided_by=?, decided_at=now()
                                                      WHERE id=? AND status='requested'"
-                                                    (utils/->uuid-safe (:id actor)) (utils/->uuid-safe request-id)])))
-              (throw (ex-info "Takeover request already decided"
-                              {:type :invalid-takeover-state})))
-            (let [;; one IN-query for all current revisions instead of a SELECT per
+                                                  (utils/->uuid-safe (:id actor)) (utils/->uuid-safe request-id)])))
+            (throw (ex-info "Takeover request already decided"
+                            {:type :invalid-takeover-state})))
+          (let [;; one IN-query for all current revisions instead of a SELECT per
                   ;; lipas-id (F17 — Helsinki scale ≈ 3700 sites ⇒ ~3700 round trips
                   ;; saved). Ids deleted since the request just don't come back —
                   ;; skipped. The rows come back unmarshalled; enrich-activities is
                   ;; reapplied per doc so each one is exactly what
                   ;; core/get-sports-site used to return here.
-                  claimable (->> (db/get-sports-sites-by-lipas-ids tx lipas-ids)
-                                 (map core/enrich-activities)
+                claimable (->> (db/get-sports-sites-by-lipas-ids tx lipas-ids)
+                               (map core/enrich-activities)
                                  ;; already owned by this org (claimed between
                                  ;; request and approval) → idempotent skip
-                                 (remove #(= (str org-id) (some-> (:owner-org-id %) str))))
-                  updated (doall
-                            (for [site claimable]
+                               (remove #(= (str org-id) (some-> (:owner-org-id %) str))))
+                updated (doall
+                          (for [site claimable]
                              ;; fresh :event-date — reusing the stored one would create
                              ;; a duplicate (lipas-id, event-date) revision pair (FE
                              ;; history keys by event-date) and misdate the claim
-                              (->> (cond-> (assoc site
-                                                  :event-date    (utils/timestamp)
-                                                  :owner-org-id  (str org-id)
-                                                  :acting-org-id (str org-id))
-                                     owner-enum (assoc :owner owner-enum))
-                                   (core/upsert-sports-site!* tx actor))))]
+                            (->> (cond-> (assoc site
+                                                :event-date    (utils/timestamp)
+                                                :owner-org-id  (str org-id)
+                                                :acting-org-id (str org-id))
+                                   owner-enum (assoc :owner owner-enum))
+                                 (core/upsert-sports-site!* tx actor))))]
               ;; one bulk index for all of them (refresh=wait_for, so the immediate
               ;; "our sites" refresh after a reclaim sees the freshly-claimed sites)
-              (when (seq updated)
-                (let [idx (get-in search [:indices :sports-site :search])
+            (when (seq updated)
+              (let [idx (get-in search [:indices :sports-site :search])
                       ;; resolved once per batch — owner just changed, so the docs
                       ;; must carry the new owner org's name (F15)
-                      org-names (core/org-names db)]
-                  (search/bulk-index-sync! (:client search)
-                                           (search/->bulk idx :lipas-id
-                                                          (map #(core/enrich % org-names) updated)))))
-              (count updated)))]
-      {:status        "approved"
-       :org-id        (str org-id)
-       :sites-claimed claimed-count
+                    org-names (core/org-names db)]
+                (search/bulk-index-sync! (:client search)
+                                         (search/->bulk idx :lipas-id
+                                                        (map #(core/enrich % org-names) updated)))))
+            (count updated)))]
+    {:status        "approved"
+     :org-id        (str org-id)
+     :sites-claimed claimed-count
        ;; already-owned + no-longer-existing — surfaced so the approver can see
        ;; when the applied set ended up smaller than the requested one
-       :sites-skipped (- (count lipas-ids) claimed-count)})))
+     :sites-skipped (- (count lipas-ids) claimed-count)}))
 
 (defn reclaim-now!
   "LIPAS-admin direct reclaim: create a request and immediately approve it, so a

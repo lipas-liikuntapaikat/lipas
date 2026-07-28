@@ -17,6 +17,7 @@
    - Multi-segment geometries (routes with multiple trail sections)
    - Type-specific properties (pools, rinks, route lengths, etc.)"
   (:require
+    [clojure.set :as set]
     [clojure.test :refer [deftest is testing use-fixtures]]
     [lipas.backend.api.v1.transform :as legacy-transform]
     [lipas.backend.core :as core]
@@ -441,7 +442,7 @@
             page2 (query-legacy-api "/v1/sports-places?pageSize=5&page=2")
             ids1 (set (map :sportsPlaceId (:body page1)))
             ids2 (set (map :sportsPlaceId (:body page2)))]
-        (is (empty? (clojure.set/intersection ids1 ids2))
+        (is (empty? (set/intersection ids1 ids2))
             "Pages should have different items")))))
 
 (defn query-legacy-api-with-headers
@@ -605,23 +606,23 @@
         (save-and-index! site)))
 
     (testing "Link header uses camelCase param names and omits empty values"
-      (let [{:keys [headers]} (query-legacy-api "/v1/sports-places?pageSize=3&typeCodes=1120")]
-        (let [link-header (get headers "Link")]
-          (is (some? link-header) "Should have Link header")
+      (let [{:keys [headers]} (query-legacy-api "/v1/sports-places?pageSize=3&typeCodes=1120")
+            link-header (get headers "Link")]
+        (is (some? link-header) "Should have Link header")
 
-          ;; Should use camelCase param names
-          (is (re-find #"pageSize=" link-header)
-              "Should use 'pageSize' (camelCase)")
-          (is (not (re-find #"page-size=" link-header))
-              "Should NOT use 'page-size' (kebab-case)")
+        ;; Should use camelCase param names
+        (is (re-find #"pageSize=" link-header)
+            "Should use 'pageSize' (camelCase)")
+        (is (not (re-find #"page-size=" link-header))
+            "Should NOT use 'page-size' (kebab-case)")
 
-          ;; Should NOT include empty params
-          (is (not (re-find #"city-codes=" link-header))
-              "Should NOT include empty city-codes param")
-          (is (not (re-find #"modified-after=" link-header))
-              "Should NOT include empty modified-after param")
-          (is (not (re-find #"search-string=" link-header))
-              "Should NOT include empty search-string param"))))))
+        ;; Should NOT include empty params
+        (is (not (re-find #"city-codes=" link-header))
+            "Should NOT include empty city-codes param")
+        (is (not (re-find #"modified-after=" link-header))
+            "Should NOT include empty modified-after param")
+        (is (not (re-find #"search-string=" link-header))
+            "Should NOT include empty search-string param")))))
 
 (comment
   ;; Run all tests in this namespace

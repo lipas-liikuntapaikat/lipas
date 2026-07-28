@@ -3,8 +3,7 @@
   (:require [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.schema.common :as common]
-            [malli.core :as m]
-            [malli.util :as mu]))
+            [malli.core :as m]))
 
 (def tags (m/schema [:sequential [:string {:min 2 :max 100}]]))
 

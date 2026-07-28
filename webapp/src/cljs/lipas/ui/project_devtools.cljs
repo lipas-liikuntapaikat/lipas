@@ -6,7 +6,7 @@
             [re-frame.core :as rf]
             [re-frame.db]
             [reagent-dev-tools.core :as dev-tools]
-            [reagent.core :as reagent]
+            [reagent.core :as r]
             [reagent.dom.client :as rdomc]))
 
 (rf/reg-event-db ::set-privilege-override
@@ -74,9 +74,9 @@
                  "No")]]))]]])
 
 (defn- impersonate-selector []
-  (reagent/with-let [_ (rf/dispatch [:lipas.ui.lazy/load-then :admin
-                                     [:lipas.ui.admin.events/get-users]])
-                     email* (reagent/atom "")]
+  (r/with-let [_ (rf/dispatch [:lipas.ui.lazy/load-then :admin
+                               [:lipas.ui.admin.events/get-users]])
+               email* (r/atom "")]
     (let [users (vals @(rf/subscribe [::ui-subs/admin-users]))
           by-email (into {} (keep (fn [u] (when (:email u) [(:email u) u])) users))]
       [:div

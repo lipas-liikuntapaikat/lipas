@@ -2,6 +2,6 @@
   (:require
     [lipas.i18n.utils :as utils])
   #?(:cljs
-     (:require-macros [lipas.i18n.utils :refer [deftranslations]])))
+     (:require-macros [lipas.i18n.utils])))
 
 (utils/deftranslations "fi")

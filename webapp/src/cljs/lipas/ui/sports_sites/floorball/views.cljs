@@ -1,27 +1,27 @@
 (ns lipas.ui.sports-sites.floorball.views
   (:require ["@mui/material/Alert$default" :as Alert]
-            ["mdi-material-ui/Calculator$default" :as Calculator]
-            [lipas.roles :as roles]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.forms :as forms]
-            [lipas.ui.components.misc :as misc]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.form-table :as form-table]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/InputAdornment$default" :as InputAdornment]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            ["mdi-material-ui/Calculator$default" :as Calculator]
+            [lipas.roles :as roles]
+            [lipas.schema.common :as common-schema]
+            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
+            [lipas.schema.sports-sites.fields :as fields-schema]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.form-table :as form-table]
+            [lipas.ui.components.forms :as forms]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.sports-sites.floorball.events :as events]
             [lipas.ui.sports-sites.floorball.subs :as subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils :refer [<== ==>]]
-            [lipas.schema.common :as common-schema]
-            [lipas.schema.sports-sites.fields :as fields-schema]
-            [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 
@@ -474,7 +474,7 @@
         :on-delete       #(==> [::events/remove-field lipas-id %])}])))
 
 (defn locker-rooms-form
-  [{:keys [tr read-only? on-change display-data edit-data]}]
+  [{:keys [read-only? on-change display-data edit-data]}]
   [forms/form {:read-only? read-only?}
    ;; Erotuomareille oma lukittava suihkullinen pukuhuone
    {:label "Erotuomareille oma lukittava suihkullinen pukuhuone"
@@ -512,7 +512,7 @@
       :on-change #(on-change :locker-rooms-count %)}]}])
 
 (defn locker-room-form
-  [{:keys [tr read-only? on-change display-data edit-data]}]
+  [{:keys [read-only? on-change display-data edit-data]}]
   [forms/form {:read-only? read-only?}
 
    ;; Pukuhuoneiden pinta-ala m2

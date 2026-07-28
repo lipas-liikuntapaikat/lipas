@@ -1,28 +1,26 @@
 (ns lipas.i18n.core
   (:refer-clojure :exclude [read-string])
-  (:require
-    #?(:cljs [clojure.reader :refer [read-string]]
-       :clj [clojure.edn :refer [read-string]])
-    [clojure.string :as str]
-    [lipas.data.admins :as admins]
-    [lipas.data.cities :as cities]
-    [lipas.data.ice-stadiums :as ice]
-    [lipas.data.materials :as materials]
-    [lipas.data.owners :as owners]
-    [lipas.data.prop-types :as prop-types]
-    [lipas.data.sports-sites :as sports-sites]
-    [lipas.data.swimming-pools :as pools]
-    [lipas.data.types :as types]
-   ;; On the JVM all dictionaries load statically. In the browser only
-   ;; :fi is bundled with the base module; :en and :se live in the lazy
-   ;; :i18n-en / :i18n-se modules (see lipas.i18n.register-en/-se) and
-   ;; register themselves via `register-dict!` when loaded.
-    #?@(:clj [[lipas.i18n.en :as en]
-              [lipas.i18n.se :as se]])
-    [lipas.i18n.fi :as fi]
-    [lipas.i18n.utils :as i18n-utils]
-    [lipas.utils :as utils]
-    [tongue.core :as tongue]))
+  (:require #?(:cljs [clojure.reader :refer [read-string]]
+               :clj [clojure.edn :refer [read-string]])
+            ;; On the JVM all dictionaries load statically. In the browser only
+            ;; :fi is bundled with the base module; :en and :se live in the lazy
+            ;; :i18n-en / :i18n-se modules (see lipas.i18n.register-en/-se) and
+            ;; register themselves via `register-dict!` when loaded.
+            #?@(:clj [[lipas.i18n.en :as en]
+                      [lipas.i18n.se :as se]])
+            [clojure.string :as str]
+            [lipas.data.admins :as admins]
+            [lipas.data.cities :as cities]
+            [lipas.data.ice-stadiums :as ice]
+            [lipas.data.materials :as materials]
+            [lipas.data.owners :as owners]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.sports-sites :as sports-sites]
+            [lipas.data.swimming-pools :as pools]
+            [lipas.data.types :as types]
+            [lipas.i18n.fi :as fi]
+            [lipas.utils :as utils]
+            [tongue.core :as tongue]))
 
 (defn- ->translations [locale m]
   (reduce-kv (fn [res k v]

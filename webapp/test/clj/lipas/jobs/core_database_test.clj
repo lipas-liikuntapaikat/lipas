@@ -1,6 +1,7 @@
 (ns lipas.jobs.core-database-test
   "Integration tests for core queue operations against a real database."
   (:require
+    [clojure.set :as set]
     [clojure.test :refer [deftest testing is use-fixtures]]
     [lipas.jobs.core :as jobs]
     [lipas.test-utils :as test-utils]
@@ -119,8 +120,8 @@
             batch2 (jobs/fetch-next-jobs db {:limit 2})]
         (is (= 2 (count batch1)))
         (is (= 2 (count batch2)))
-        (is (empty? (clojure.set/intersection (set (map :id batch1))
-                                              (set (map :id batch2)))))))))
+        (is (empty? (set/intersection (set (map :id batch1))
+                                      (set (map :id batch2)))))))))
 
 ;; =============================================================================
 ;; Status transitions

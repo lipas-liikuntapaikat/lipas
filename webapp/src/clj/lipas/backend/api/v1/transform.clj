@@ -1,11 +1,10 @@
 (ns lipas.backend.api.v1.transform
-  (:require
-    [clojure.set :as set]
-    [lipas.data.types :as types]
-    [lipas.backend.api.v1.sports-place :as old]
-    [lipas.utils :as utils]
-    [clojure.string :as str]
-    [lipas.backend.gis :as gis]))
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
+            [lipas.backend.api.v1.sports-place :as old]
+            [lipas.backend.gis :as gis]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
@@ -62,44 +61,43 @@
   ([m]
    (->old-lipas-sports-site* m (-> m :type :type-code types/all :props keys)))
   ([m prop-keys]
-   (let [type-code (-> m :type :type-code)]
-     (-> m
+   (-> m
 
-         (select-keys [:name :marketing-name :email :www :phone-number :renovation-years
-                       :construction-year :location :properties :reservations-link])
+       (select-keys [:name :marketing-name :email :www :phone-number :renovation-years
+                     :construction-year :location :properties :reservations-link])
 
-         (assoc :last-modified (-> m :event-date UTC->last-modified)
-                :name {:fi (:name m)
-                       :se (-> m :name-localized :se)
-                       :en (-> m :name-localized :en)}
-                :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
-                :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
-                :school-use (-> m :properties :school-use?)
-                :free-use (-> m :properties :free-use?)
-                :type (select-keys (:type m) [:type-code]))
+       (assoc :last-modified (-> m :event-date UTC->last-modified)
+              :name {:fi (:name m)
+                     :se (-> m :name-localized :se)
+                     :en (-> m :name-localized :en)}
+              :admin (if (= "unknown" (:admin m)) "no-information" (:admin m))
+              :owner (if (= "unknown" (:owner m)) "no-information" (:owner m))
+              :school-use (-> m :properties :school-use?)
+              :free-use (-> m :properties :free-use?)
+              :type (select-keys (:type m) [:type-code]))
 
-         (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
+       (assoc-in [:location :neighborhood] (-> m :location :city :neighborhood))
 
-         (update-in [:location :city] dissoc :neighborhood)
+       (update-in [:location :city] dissoc :neighborhood)
 
-         (update-in [:location :address] #(if (< 100 (count %)) (subs % 0 100) %))
+       (update-in [:location :address] #(if (< 100 (count %)) (subs % 0 100) %))
 
-         (update :properties #(-> %
-                                  (dissoc :school-use? :free-use?)
-                                  (update :surface-material
-                                          (comp old/surface-materials first))
-                                  (select-keys prop-keys)
-                                  (assoc :info-fi (-> m :comment))
-                                  (update :parkour-hall-equipment-and-structures
-                                          (fn [coll] (not-empty (str/join "," coll))))
-                                  (update :travel-modes
-                                          (fn [coll] (not-empty (str/join "," coll))))
-                                  (set/rename-keys old/prop-mappings-reverse)))
-         old/adapt-geoms
-         utils/clean
-         utils/->camel-case-keywords
-         fix-special-case
-         normalize-properties))))
+       (update :properties #(-> %
+                                (dissoc :school-use? :free-use?)
+                                (update :surface-material
+                                        (comp old/surface-materials first))
+                                (select-keys prop-keys)
+                                (assoc :info-fi (-> m :comment))
+                                (update :parkour-hall-equipment-and-structures
+                                        (fn [coll] (not-empty (str/join "," coll))))
+                                (update :travel-modes
+                                        (fn [coll] (not-empty (str/join "," coll))))
+                                (set/rename-keys old/prop-mappings-reverse)))
+       old/adapt-geoms
+       utils/clean
+       utils/->camel-case-keywords
+       fix-special-case
+       normalize-properties)))
 
 (defmulti ->old-lipas-sports-site
   "Transforms New LIPAS sports-site to old Lipas sports-site. Details

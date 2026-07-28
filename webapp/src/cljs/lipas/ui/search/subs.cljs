@@ -303,7 +303,7 @@
 
 (rf/reg-sub ::allow-changing-bounding-box-filter?
   :<- [::pagination]
-  (fn [{:keys [page-size]}]
+  (fn [_]
    ;;(>= 500 page-size)
     true))
 

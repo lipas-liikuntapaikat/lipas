@@ -1,10 +1,10 @@
 (ns lipas.ui.components.dialogs
-  (:require ["@mui/material/Slide$default" :as Slide]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/Slide$default" :as Slide]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [reagent-dev-tools.state :as dev-state]))

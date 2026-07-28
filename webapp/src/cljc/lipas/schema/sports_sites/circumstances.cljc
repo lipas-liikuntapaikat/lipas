@@ -1,9 +1,9 @@
 (ns lipas.schema.sports-sites.circumstances
-  (:require [lipas.data.floorball :as floorball]
+  (:require #?(:clj [clojure.test.check.generators])
+            [lipas.data.floorball :as floorball]
             [lipas.schema.common :as common]
-            [malli.util :as mu]
             [malli.core :as m]
-            #?(:clj [clojure.test.check.generators])))
+            [malli.util :as mu]))
 
 ;; Standalone schemas for frontend form validation
 ;; Constraints match original clojure.spec definitions from schema/core.cljc

@@ -1,9 +1,9 @@
 (ns lipas.schema.sports-sites-test
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.set :as set]
+            [clojure.test :refer [deftest testing is]]
             [lipas.schema.sports-sites :as sports-sites]
             [lipas.utils :as utils]
-            [malli.core :as m]
-            [malli.generator :as mg]))
+            [malli.core :as m]))
 
 ;; Basic field schemas
 
@@ -315,8 +315,8 @@
     (let [valid-years [1950 1975 2000 2015 2024]
           invalid-years [1799 (+ utils/this-year 11)]]
       (is (m/validate sports-sites/renovation-years valid-years))
-      (is (not (m/validate sports-sites/renovation-years (conj valid-years 1799))))
-      (is (not (m/validate sports-sites/renovation-years (conj valid-years (+ utils/this-year 11))))))))
+      (doseq [invalid-year invalid-years]
+        (is (not (m/validate sports-sites/renovation-years (conj valid-years invalid-year))))))))
 
 ;; Schema building function tests
 
@@ -819,9 +819,9 @@
                           (.indexOf (map first (drop 2 multi-form)) type-code))
               schema-map (second schema)
               fields (set (map first (drop 2 schema-map)))]
-          (is (clojure.set/subset? required-fields fields)
+          (is (set/subset? required-fields fields)
               (str "Type code " type-code " missing required fields: "
-                   (clojure.set/difference required-fields fields)))))))
+                   (set/difference required-fields fields)))))))
 
   (testing "Property: Optional fields are consistently marked across type codes"
     (let [optional-fields #{:marketing-name :name-localized :email :www

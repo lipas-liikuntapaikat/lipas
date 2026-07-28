@@ -29,7 +29,7 @@
         (is (= 182 (count prop-type-keys))))
 
       (testing "Each prop-type field has a mapping"
-        (doseq [[prop-key prop-def] prop-types/all]
+        (doseq [prop-key (keys prop-types/all)]
           (is (contains? properties (keyword (str "properties." (name prop-key))))
               (str "Missing mapping for property: " prop-key))))))
 

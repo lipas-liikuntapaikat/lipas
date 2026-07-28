@@ -1,12 +1,12 @@
 (ns lipas.backend.bulk-operations.core
   "CQRS-style actions for backend operations"
   (:require [clojure.java.jdbc :as jdbc]
-            [lipas.data.bulk-operations :as bulk-fields]
-            [lipas.data.prop-types :as prop-types]
-            [lipas.data.types :as types]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.search :as search]
+            [lipas.data.bulk-operations :as bulk-fields]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.types :as types]
             [lipas.schema.common :as common-schema]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.schema.sports-sites.location :as location-schema]

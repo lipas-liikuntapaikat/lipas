@@ -1,5 +1,6 @@
 (ns lipas.ui.map.map
-  (:require ["ol" :as ol]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["ol" :as ol]
             ["ol/events/condition" :as events-condition]
             ["ol/extent" :as extent]
             ["ol/interaction/DoubleClickZoom$default" :as DoubleClickZoom]
@@ -18,15 +19,14 @@
             ["ol/source/Vector$default" :as VectorSource]
             ["ol/source/WMTS$default" :as WMTSSource]
             ["ol/tilegrid/WMTS$default" :as WMTSTileGrid]
+            [lipas.ui.analysis.heatmap.map :as heatmap]
             [lipas.ui.map.editing :as editing]
-            [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.events :as events]
+            [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.projection :as proj]
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.subs :as subs]
             [lipas.ui.map.utils :as map-utils]
-            [lipas.ui.analysis.heatmap.map :as heatmap]
-            ["@mui/material/GridLegacy$default" :as Grid]
             [lipas.ui.utils :refer [==>] :as utils]
             [re-frame.core :as rf]
             [reagent.core :as r]))
@@ -533,7 +533,7 @@
 
 (defn show-diversity-grid!
   [{:keys [layers] :as map-ctx}
-   {:keys [data results]}]
+   {:keys [results]}]
   (let [^js layer (-> layers :overlays :diversity-grid)]
     (-> layer .getSource .clear)
 
@@ -602,7 +602,7 @@
 
 (defn set-diversity-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [analysis] :as mode}]
+   {:keys [analysis]}]
   (let [diversity (:diversity analysis)
         ^js layer (-> layers :overlays :diversity-area)]
     (-> map-ctx
@@ -619,8 +619,8 @@
         (map-utils/fit-to-extent! (-> layer .getSource .getExtent)))))
 
 (defn set-heatmap-mode!
-  [{:keys [layers] :as map-ctx}
-   {:keys [analysis] :as mode}]
+  [{:as map-ctx}
+   {:keys [analysis]}]
   (let [heatmap (:heatmap analysis)]
     (-> map-ctx
         editing/clear-edits!
@@ -660,7 +660,7 @@
 
 (defn update-diversity-mode!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id fit-nonce sub-mode analysis]}]
+   {:keys [analysis]}]
   (let [diversity (:diversity analysis)
         ^js layer (-> layers :overlays :diversity-area)]
     (-> map-ctx
@@ -713,7 +713,7 @@
                               (set-analysis-mode! map-ctx mode)))]
     (assoc map-ctx :mode mode)))
 
-(defn map-inner [opts]
+(defn map-inner [_opts]
 
   ;; Internal state
   (let [map-ctx* (atom nil)]
@@ -733,7 +733,6 @@
        (fn [comp]
          (let [opts (r/props comp)
                basemap (:basemap opts)
-               overlays (:overlays opts)
                geoms (:geoms opts)
                lois (:lois opts)
                mode (-> opts :mode)

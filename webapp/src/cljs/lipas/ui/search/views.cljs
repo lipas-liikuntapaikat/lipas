@@ -1,14 +1,5 @@
 (ns lipas.ui.search.views
-  (:require [lipas.data.prop-types :as prop-types]
-            [lipas.roles :as roles]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.autocompletes :as autocompletes :refer [autocomplete2]]
-            [lipas.ui.components.lists :as lists]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
@@ -22,6 +13,15 @@
             ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.roles :as roles]
+            [lipas.ui.components.autocompletes :as autocompletes :refer [autocomplete2]]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.lists :as lists]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.reports.views :as reports]
             [lipas.ui.search.events :as events]
             [lipas.ui.search.subs :as subs]
@@ -44,7 +44,7 @@
 
 (defn property-filter-input
   "Renders an input component for a single property filter based on its data type"
-  [{:keys [tr prop-key prop-def filter-value on-change]}]
+  [{:keys [tr prop-def filter-value on-change]}]
   (let [data-type (:data-type prop-def)
         prop-name (get-in prop-def [:name :fi])]
 
@@ -233,8 +233,7 @@
 
 (defn filters
   [{:keys [tr size]}]
-  (let [logged-in? (<== [:lipas.ui.user.subs/logged-in?])
-        statuses (<== [::subs/statuses-filter])
+  (let [statuses (<== [::subs/statuses-filter])
         type-codes (<== [::subs/types-filter])
         city-codes (<== [::subs/cities-filter])
         admins (<== [::subs/admins-filter])

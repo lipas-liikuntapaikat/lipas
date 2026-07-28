@@ -1,7 +1,7 @@
 (ns lipas.i18n.utils
   (:require
+    #?(:clj [clojure.edn :as edn])
     #?(:clj [clojure.java.io :as io])
-    [clojure.edn :as edn]
     [clojure.string :as str]))
 
 (def top-level-keys

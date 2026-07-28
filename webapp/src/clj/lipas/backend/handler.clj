@@ -1,21 +1,21 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [lipas.backend.analysis.heatmap :as heatmap]
-            [lipas.backend.auth :as auth]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
-            [lipas.backend.bulk-operations.core :as bulk-ops]
-            [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.assistant :as assistant]
+            [lipas.backend.auth :as auth]
+            [lipas.backend.bulk-operations.core :as bulk-ops]
             [lipas.backend.core :as core]
             [lipas.backend.help :as help]
-            [lipas.backend.search :as search*]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
             [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
+            [lipas.backend.search :as search*]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -95,7 +95,7 @@
    (let [default-handler (:reitit.coercion/request-coercion exception/default-handlers)]
      (fn [e request]
        (log/errorf e "Request coercion error")
-       (if (clojure.string/starts-with? (:uri request) "/v1")
+       (if (str/starts-with? (:uri request) "/v1")
          ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
          ;; Use malli.error/humanize to get human-readable messages
          (let [{:keys [schema value errors]} (ex-data e)
@@ -800,7 +800,7 @@
           {:no-doc false
            :handler
            (fn [{:keys [body-params]}]
-             (let [s (some-> (:search-string body-params) str clojure.string/trim)
+             (let [s (some-> (:search-string body-params) str str/trim)
                    idx (get-in search [:indices :sports-site :search])
                    client (:client search)]
                (if (or (empty? s) (< (count s) 2))

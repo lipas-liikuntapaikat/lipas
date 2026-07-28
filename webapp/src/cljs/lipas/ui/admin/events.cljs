@@ -2,10 +2,9 @@
   (:require [ajax.core :as ajax]
             [lipas.roles :as roles]
             [lipas.schema.users :as users-schema]
-            [malli.core :as m]
             [lipas.ui.utils :as utils]
-            [re-frame.core :as rf]
-            [reitit.frontend.easy :as rfe]))
+            [malli.core :as m]
+            [re-frame.core :as rf]))
 
 (rf/reg-event-db ::filter-users
   (fn [db [_ s]]

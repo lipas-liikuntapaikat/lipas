@@ -236,7 +236,7 @@
         (update :hits #(remove nil? %)))))
 
 (defn calc-distances-and-travel-times
-  [search {:keys [search-fcoll buffer-fcoll distance-km profiles type-codes zones]}]
+  [search {:keys [search-fcoll buffer-fcoll distance-km type-codes zones]}]
   (let [pop-data (future (common/get-population-data search buffer-fcoll distance-km))
 
         school-data (future (common/get-school-data search buffer-fcoll distance-km))

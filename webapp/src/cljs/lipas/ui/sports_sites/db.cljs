@@ -2,7 +2,6 @@
   (:require [lipas.data.admins :as admins]
             [lipas.data.materials :as materials]
             [lipas.data.owners :as owners]
-            [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites :as sports-sites]
             [lipas.data.types :as types]
             [lipas.ui.sports-sites.activities.db :as activities]

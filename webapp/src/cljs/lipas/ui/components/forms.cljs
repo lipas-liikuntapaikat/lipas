@@ -1,10 +1,10 @@
 (ns lipas.ui.components.forms
-  (:require [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Divider$default" :as Divider]
+  (:require ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/Link$default" :as Link]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.utils :as utils]))
 
 (defn ->display-tf [{:keys [label value mui-props]} multiline? rows]

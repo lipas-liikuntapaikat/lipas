@@ -16,7 +16,6 @@
             [lipas.schema.sports-sites.images :as images-schema]
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.form-table :as form-table]
-            [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as lui-tf]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [malli.core :as m]

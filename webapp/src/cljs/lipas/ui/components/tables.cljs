@@ -1,13 +1,9 @@
 (ns lipas.ui.components.tables
-  (:require [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            ["@mui/material/CircularProgress$default" :as CircularProgress]
-            ["@mui/material/Fab$default" :as Fab]
+  (:require ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Table$default" :as Table]
             ["@mui/material/TableBody$default" :as TableBody]
             ["@mui/material/TableCell$default" :as TableCell]
@@ -16,6 +12,7 @@
             ["@mui/material/TableSortLabel$default" :as TableSortLabel]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
 

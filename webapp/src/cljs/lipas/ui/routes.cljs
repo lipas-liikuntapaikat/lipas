@@ -1,15 +1,15 @@
 (ns lipas.ui.routes
-  (:require [clojure.string :as string]
+  (:require [clojure.string :as str]
             [lipas.ui.admin.routes :as admin]
             [lipas.ui.forgot-password.routes :as forgot-password]
             [lipas.ui.front-page.routes :as front-page]
             [lipas.ui.lazy :as lazy]
             [lipas.ui.login.routes :as login]
             [lipas.ui.map.routes :as lmap]
+            [lipas.ui.org.routes :as org]
             [lipas.ui.register.routes :as register]
             [lipas.ui.stats.routes :as stats]
             [lipas.ui.user.routes :as user]
-            [lipas.ui.org.routes :as org]
             [lipas.ui.utils :refer [==>] :as utils]
             [reitit.coercion.malli :as rcm]
             [reitit.frontend :as rf]
@@ -23,7 +23,7 @@
    {:name ::root
     :controllers
     [{:start
-      (fn [& params]
+      (fn [& _params]
         (navigate-async!
           (if (= "liikuntapaikat.lipas.fi" (utils/domain))
             :lipas.ui.routes.map/map
@@ -45,16 +45,16 @@
     {:data {:coercion rcm/coercion}}))
 
 (defn match-by-path [path]
-  (let [path (string/replace path #"/#" "")]
+  (let [path (str/replace path #"/#" "")]
     (rf/match-by-path routes path)))
 
 (defn navigate!
   ([path]
    (navigate! path nil))
   ([path & args]
-   (cond (and (string? path) (or (string/starts-with? path "http")
-                                 (string/starts-with? path "tel:")
-                                 (string/starts-with? path "mailto:")))
+   (cond (and (string? path) (or (str/starts-with? path "http")
+                                 (str/starts-with? path "tel:")
+                                 (str/starts-with? path "mailto:")))
          ;; External link
          (set! (.-location js/window) path)
 
@@ -79,7 +79,7 @@
         token (swap! nav-token* inc)]
     (cond
       ;; Fix deprecated url with hash
-      (string/starts-with? current-path "/#")
+      (str/starts-with? current-path "/#")
       (set! js/window.location.href (-> (utils/current-path) (subs 2)))
 
       :else

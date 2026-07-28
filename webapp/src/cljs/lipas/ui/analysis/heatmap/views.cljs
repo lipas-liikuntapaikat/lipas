@@ -1,13 +1,8 @@
 (ns lipas.ui.analysis.heatmap.views
-  (:require [lipas.ui.analysis.heatmap.events :as events]
-            [lipas.ui.analysis.heatmap.subs :as subs]
-            [lipas.ui.components.selects :as selects]
-            ["@mui/material/Accordion$default" :as Accordion]
+  (:require ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/FormControl$default" :as FormControl]
-            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-            ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/InputLabel$default" :as InputLabel]
@@ -17,8 +12,10 @@
             ["@mui/material/Select$default" :as Select]
             ["@mui/material/Slider$default" :as Slider]
             ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Switch$default" :as Switch]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.analysis.heatmap.events :as events]
+            [lipas.ui.analysis.heatmap.subs :as subs]
+            [lipas.ui.components.selects :as selects]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 

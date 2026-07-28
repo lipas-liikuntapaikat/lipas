@@ -114,8 +114,7 @@
 
 (rf/reg-event-fx ::create-data-model-report
   (fn [{:keys [db]} [_ _]]
-    (let [content-type (:xlsx cutils/content-type)
-          fmt "xlsx"]
+    (let [content-type (:xlsx cutils/content-type)]
       {:http-xhrio
        {:method          :post
         :uri             (str (:backend-url db) "/actions/create-data-model-report")

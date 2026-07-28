@@ -2,12 +2,10 @@
   "NOTE: make sure `lipas.ui.map.projection` is loaded first for the
   necessary side-effects to take effect.`"
   (:require ["@mapbox/togeojson" :as toGeoJSON]
-            ["@turf/area$default" :as turf-area]
             ["@turf/clean-coords$default" :as turf-clean-coords]
             ["@turf/combine$default" :as turf-combine]
-            ["@turf/helpers" :refer [convertArea point]]
+            ["@turf/helpers" :refer [point]]
             ["@turf/kinks$default" :as turf-kinks]
-            ["@turf/length$default" :as turf-length]
             ["@turf/line-split$default" :as turf-line-split]
             ["@turf/meta" :as turf-meta]
             ["@turf/nearest-point-on-line$default" :as turf-nearest-point-on-line]
@@ -22,17 +20,15 @@
             ["ol/interaction" :as interaction]
             ["ol/proj" :as proj]
             ["shpjs" :as shp]
-            [lipas.ui.map.projection] ;; Loaded for side-effects
-            [clojure.reader :refer [read-string]]
-            [lipas.schema.common :as common-schema]
             [clojure.string :as str]
-            [malli.core :as m]
             [goog.array :as garray]
-            [goog.object :as gobj]
             [goog.string.path :as gpath]
+            [lipas.schema.common :as common-schema]
             [lipas.ui.geom :as geom]
+            [lipas.ui.map.projection] ;; Loaded for side-effects
             [lipas.ui.map.styles :as styles]
-            [lipas.ui.utils :refer [==>] :as utils]))
+            [lipas.ui.utils :refer [==>] :as utils]
+            [malli.core :as m]))
 
 (def geoJSON (GeoJSON. #js {:dataProjection "EPSG:4326"
                             :featureProjection "EPSG:3067"}))
@@ -98,7 +94,7 @@
 
 (defmulti file->geoJSON :ext)
 
-(defmethod file->geoJSON "zip" [{:keys [file enc cb]}]
+(defmethod file->geoJSON "zip" [{:keys [file cb]}]
   (-> file .arrayBuffer (.then shp) (.then cb)))
 
 (defmethod file->geoJSON "gpx" [params] (text->geoJSON params))
@@ -108,8 +104,7 @@
 (defmethod file->geoJSON :default [params] {:unknown (:ext params)})
 
 (defn parse-ext [file]
-  (-> file
-      (gobj/get "name" "")
+  (-> (or (aget file "name") "")
       gpath/extension
       str/lower-case))
 
@@ -497,18 +492,18 @@
     map-ctx))
 
 (defn- ->splitter [fcoll]
-  (let [fs (gobj/get fcoll "features")]
+  (let [fs (aget fcoll "features")]
     (case (count fs)
       1 (first fs)
       (-> fcoll
           turf-combine
-          (gobj/getValueByKeys "features" 0)))))
+          (aget "features" 0)))))
 
 (defn- split-by-features [f kinks]
   (let [splitter (->splitter kinks)
         splitted (turf-line-split f splitter)]
-    (garray/forEach (gobj/get splitted "features")
-                    (fn [f] (gobj/set f "id" (str (random-uuid)))))
+    (garray/forEach (aget splitted "features")
+                    (fn [f] (aset f "id" (str (random-uuid)))))
     splitted))
 
 (defn split-at-coords [ol-feature coords]
@@ -521,9 +516,9 @@
 
 (defn fix-kinks* [f]
   (let [kinks (turf-kinks f)]
-    (if (-> kinks (gobj/get "features") not-empty)
+    (if (-> kinks (aget "features") not-empty)
       (-> (split-by-features f kinks)
-          (gobj/get "features"))
+          (aget "features"))
       #js [f])))
 
 (defn ->fcoll [fs]
@@ -542,7 +537,7 @@
   (-> fcoll
       :features
       clj->js
-      (garray/concatMap #(-> % turf-kinks (gobj/get "features")))
+      (garray/concatMap #(-> % turf-kinks (aget "features")))
       ->fcoll
       ->clj))
 
@@ -555,7 +550,7 @@
   (-> fcoll
       clj->js
       (turf-truncate #js {:coordinates 2 :mutate true})
-      (gobj/get "features")
+      (aget "features")
       (garray/map clean-coords-safe)
       (garray/filter some?)
       ->fcoll

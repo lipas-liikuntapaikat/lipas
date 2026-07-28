@@ -45,16 +45,16 @@
       (is (thrown-with-msg? Exception #"service down" (failing!))))
 
     ;; Now the breaker is open: calls fail fast without invoking the body
-    (let [called? (atom false)]
-      (let [ex (try
-                 (patterns/with-circuit-breaker "test-service" {:failure-threshold 3
-                                                                :open-duration-ms 60000}
-                   (reset! called? true))
-                 nil
-                 (catch Exception e e))]
-        (is (some? ex))
-        (is (patterns/circuit-breaker-open? ex))
-        (is (false? @called?) "Body must not run while the breaker is open")))))
+    (let [called? (atom false)
+          ex (try
+               (patterns/with-circuit-breaker "test-service" {:failure-threshold 3
+                                                              :open-duration-ms 60000}
+                 (reset! called? true))
+               nil
+               (catch Exception e e))]
+      (is (some? ex))
+      (is (patterns/circuit-breaker-open? ex))
+      (is (false? @called?) "Body must not run while the breaker is open"))))
 
 (deftest circuit-breaker-independent-services-test
   (testing "Breakers are tracked per service"

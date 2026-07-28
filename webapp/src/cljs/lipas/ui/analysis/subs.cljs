@@ -1,6 +1,6 @@
 (ns lipas.ui.analysis.subs
-  (:require [re-frame.core :as rf]
-            [lipas.roles :as roles]))
+  (:require [lipas.roles :as roles]
+            [re-frame.core :as rf]))
 
 (rf/reg-sub ::analysis
   (fn [db _]

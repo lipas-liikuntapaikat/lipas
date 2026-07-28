@@ -9,6 +9,6 @@
     :tr-key :home-page/headline
     :view   views/main
     :controllers
-    [{:start (fn [& params]
+    [{:start (fn [& _params]
                (==> [::events/get-newsletter])
                (==> [::events/get-front-page-stats]))}]}])

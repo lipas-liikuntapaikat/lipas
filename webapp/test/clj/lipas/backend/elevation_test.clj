@@ -7,7 +7,8 @@
   access. The old (pre vertex-driven optimization) implementation is
   copied at the bottom of this namespace and used to assert exact
   old-vs-new equivalence of the produced values."
-  (:require [clojure.string :as str]
+  (:require [clj-http.client :as client]
+            [clojure.string :as str]
             [clojure.test :refer [deftest testing is]]
             [lipas.backend.elevation :as elevation]
             [lipas.backend.gis :as gis]
@@ -459,13 +460,13 @@
 
 (deftest get-elevation-coverage-error-handling-test
   (testing "HTTP 4xx/5xx throws with response context"
-    (with-redefs [clj-http.client/get (fn [_url _opts] {:status 503 :body "unavailable"})]
+    (with-redefs [client/get (fn [_url _opts] {:status 503 :body "unavailable"})]
       (is (thrown-with-msg? ExceptionInfo #"MML API error"
                             (elevation/get-elevation-coverage
                               {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
 
   (testing "Unexpected status throws"
-    (with-redefs [clj-http.client/get (fn [_url _opts] {:status 302})]
+    (with-redefs [client/get (fn [_url _opts] {:status 302})]
       (is (thrown-with-msg? ExceptionInfo #"Unexpected MML API response"
                             (elevation/get-elevation-coverage
                               {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
@@ -474,7 +475,7 @@
     ;; SocketTimeoutException extends InterruptedIOException, which the
     ;; circuit breaker's interrupt classifier rethrows WITHOUT counting;
     ;; MML slowness must count as a service failure
-    (with-redefs [clj-http.client/get
+    (with-redefs [client/get
                   (fn [_url _opts] (throw (java.net.SocketTimeoutException. "Read timed out")))]
       (let [ex (try
                  (elevation/get-elevation-coverage
@@ -489,7 +490,7 @@
                       :else (recur (ex-cause e)))))))))
 
   (testing "HTTP 200 parses the grid"
-    (with-redefs [clj-http.client/get
+    (with-redefs [client/get
                   (fn [_url _opts]
                     {:status 200
                      :body   (synthetic-grid-body {:min-x 400000 :max-x 400004

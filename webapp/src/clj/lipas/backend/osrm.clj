@@ -7,9 +7,7 @@
     [clojure.string :as str]
     [environ.core :refer [env]]
     [lipas.backend.gis :as gis]
-    [taoensso.timbre :as log])
-  (:import
-    [java.util.concurrent TimeoutException]))
+    [taoensso.timbre :as log]))
 
 (def profiles
   {:car {:url (:osrm-car-url env)}

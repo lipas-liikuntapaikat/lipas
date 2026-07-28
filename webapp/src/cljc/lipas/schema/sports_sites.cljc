@@ -1,17 +1,17 @@
 (ns lipas.schema.sports-sites
   (:refer-clojure :exclude [name comment])
-  (:require [lipas.data.admins :as admins]
+  (:require [lipas.data.activities :as activities]
+            [lipas.data.admins :as admins]
             [lipas.data.owners :as owners]
-            [lipas.data.activities :as activities]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.sports-sites.renovations :as renovations]
+            [lipas.data.types :as types]
+            [lipas.schema.common :as common]
             [lipas.schema.sports-sites.activities :as activities-schema]
             [lipas.schema.sports-sites.circumstances :as circumstances-schema]
             [lipas.schema.sports-sites.fields :as fields-schema]
             [lipas.schema.sports-sites.images :as images-schema]
             [lipas.schema.sports-sites.location :as location-schema]
-            [lipas.schema.common :as common]
-            [lipas.data.types :as types]
             [lipas.utils :as utils]
             [malli.core :as m]))
 

@@ -131,18 +131,6 @@
         :message
         :content)))
 
-(defn- ptv-list-has-content?
-  "Check if a PTV-style list of {:type :language :value} maps has any
-   non-placeholder content. Returns false for lists where all values
-   are empty/placeholder."
-  [items]
-  (boolean (some (fn [item]
-                   (let [v (:value item)]
-                     (and (string? v)
-                          (not (str/blank? v))
-                          (not= v "-"))))
-                 items)))
-
 (defn- localized-list?
   "Localized lists are `[{:value <str> :language <str> ...} ...]`. Used by
    PTV for descriptions, names, requirements, etc."
@@ -658,18 +646,19 @@
                                                                       {:org-id org-id
                                                                        :ptv ptv
                                                                        :site sports-site
-                                                                       :archive? archive?})]
+                                                                       :archive? archive?})
 
-          (let [resp (core/upsert-sports-site! tx
-                                               user
-                                               (assoc sports-site
-                                                      :event-date (:last-sync new-ptv-data)
-                                                      :ptv new-ptv-data)
-                                               false)]
-            (core/index! search resp :sync (core/org-names tx))
-            ;; Return both :ptv and :event-date so the caller's outer index!
-            ;; reindexes the same revision we just wrote.
-            {:ptv new-ptv-data :event-date (:event-date resp)}))))
+              resp (core/upsert-sports-site! tx
+                                             user
+                                             (assoc sports-site
+                                                    :event-date (:last-sync new-ptv-data)
+                                                    :ptv new-ptv-data)
+                                             false)]
+
+          (core/index! search resp :sync (core/org-names tx))
+          ;; Return both :ptv and :event-date so the caller's outer index!
+          ;; reindexes the same revision we just wrote.
+          {:ptv new-ptv-data :event-date (:event-date resp)})))
     (catch Exception e
       ;; Don't store (ex-data e) directly — clj-http's response includes a
       ;; live `HttpClient` Java object that Cheshire can't serialize to the

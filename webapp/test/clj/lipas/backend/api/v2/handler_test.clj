@@ -6,6 +6,7 @@
    2. Response structure matches the V2 API contract
    3. Query parameters work as expected (filtering, pagination, etc.)"
   (:require
+    [clojure.set :as set]
     [clojure.test :refer [deftest is testing use-fixtures]]
     [lipas.backend.core :as core]
     [lipas.test-utils :as test-utils]
@@ -192,7 +193,7 @@
         (is (= 200 (:status resp2)))
         (let [ids1 (set (map :lipas-id (:items body1)))
               ids2 (set (map :lipas-id (:items body2)))]
-          (is (empty? (clojure.set/intersection ids1 ids2))
+          (is (empty? (set/intersection ids1 ids2))
               "Page 1 and 2 should have different items"))))))
 
 (deftest list-sports-sites-filter-by-type-codes-test

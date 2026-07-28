@@ -1,28 +1,22 @@
 (ns lipas.search-indexer
-  (:require
-    [clojure.string :as str]
-    [lipas.backend.api.v1.locations :as legacy-locations]
-    [lipas.backend.api.v1.sports-place :as legacy-sports-place]
-    [lipas.backend.analysis.diversity :as diversity]
-    [lipas.backend.config :as config]
-    [lipas.backend.core :as core]
-    [lipas.backend.db.db :as db]
-    [lipas.backend.search :as search]
-    [lipas.backend.system :as backend]
-    [lipas.data.cities :as cities]
-    [lipas.data.types :as types]
-    [lipas.backend.api.v1.transform :as legacy-transform]
-    [lipas.utils :as utils]
-    [next.jdbc :as jdbc]
-    [taoensso.timbre :as log]))
+  (:require [clojure.string :as str]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.api.v1.locations :as legacy-locations]
+            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+            [lipas.backend.api.v1.transform :as legacy-transform]
+            [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.search :as search]
+            [lipas.backend.system :as backend]
+            [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]
+            [next.jdbc :as jdbc]
+            [taoensso.timbre :as log]))
 
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
-
-(defn- wait-all [futures]
-  (log/info "Waiting for indexing requests to get processed...")
-  (doseq [f futures]
-    (log/info (deref f))))
 
 (defn- wait-one
   [future]
@@ -91,7 +85,7 @@
        (print-results results)))))
 
 (defn enrich-for-analytics
-  [users {:keys [id document author_id status created_at] :as revision}]
+  [users {:keys [id document author_id status created_at]}]
   (try
     (-> document
         core/enrich

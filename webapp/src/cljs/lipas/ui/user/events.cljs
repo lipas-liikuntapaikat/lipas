@@ -32,7 +32,7 @@
           :success? true}]]})))
 
 (rf/reg-event-fx ::update-user-data-failure
-  (fn [{:keys [db]} [_ resp]]
+  (fn [{:keys [db]} [_ _resp]]
     (let [tr (-> db :translator)]
       {:dispatch [:lipas.ui.events/set-active-notification
                   {:message  (tr :notifications/save-failed)

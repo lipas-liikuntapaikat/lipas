@@ -1,17 +1,17 @@
 (ns lipas.ui.components.selects
-  (:require ["@mui/material/Typography$default" :as Typography]
-            [clojure.reader :refer [read-string]]
-            [clojure.string :as string]
-            [lipas.data.cities :as cities]
-            [lipas.data.types :as types]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            ["@mui/material/FormControl$default" :as FormControl]
+  (:require ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Select$default" :as Select]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            [clojure.reader :refer [read-string]]
+            [clojure.string :as str]
+            [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
+            [lipas.ui.components.autocompletes :as autocompletes]
             [lipas.ui.utils :refer [<==] :as utils]
             [lipas.utils :as cutils]
             [malli.core :as m]
@@ -171,8 +171,8 @@
 
 (defn- id-parser [prefix]
   (comp
-    (filter #(string/starts-with? % prefix))
-    (map #(string/replace % prefix ""))
+    (filter #(str/starts-with? % prefix))
+    (map #(str/replace % prefix ""))
     (map cutils/->int)))
 
 (def parse-avis (id-parser "avi-"))
@@ -219,8 +219,8 @@
                               [:r> Typography
                                props
                                (cond
-                                 (string/includes? option "province-") (strong1 v)
-                                 (string/includes? option "avi-")      (strong2 v)
+                                 (str/includes? option "province-") (strong1 v)
+                                 (str/includes? option "avi-")      (strong2 v)
                                  :else                                 v)])))
       :on-change        (comp on-change (partial ->city-codes avis provinces))}]))
 
@@ -271,8 +271,8 @@
                               [:r> Typography
                                props
                                (cond
-                                 (string/includes? option "sub-cat")  (strong1 v)
-                                 (string/includes? option "main-cat") (strong2 v)
+                                 (str/includes? option "sub-cat")  (strong1 v)
+                                 (str/includes? option "main-cat") (strong2 v)
                                  :else                                v)])))
       :sort-fn          (fn [{:keys [type-code cat-id]}]
                           (case type-code
@@ -430,7 +430,7 @@
       :label-fn     (comp :label second)
       :value-fn     first
       :label        (tr :actions/select-columns)
-      :render-value (fn [v] (tr :actions/select-hint))
+      :render-value (fn [_v] (tr :actions/select-hint))
       :on-change    on-change}]))
 
 (defn status-selector [{:keys [value on-change]}]
@@ -446,7 +446,7 @@
       :label-fn     (comp locale second)
       :value-fn     first
       :label        (tr :actions/select-statuses)
-      :render-value (fn [v] (tr :actions/select-hint))
+      :render-value (fn [_v] (tr :actions/select-hint))
       :on-change    on-change}]))
 
 (defn status-selector-single [{:keys [value on-change read-only?]}]

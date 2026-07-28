@@ -82,7 +82,7 @@
 
 (defn migrate-down
   "No-op - cannot safely remove generated IDs without knowing original state"
-  [{:keys [db] :as _config}]
+  [_config]
   (log/warn "Rollback not supported for add-route-ids migration - IDs cannot be removed"))
 
 (comment

@@ -1,5 +1,6 @@
 (ns lipas.backend.api.v1.handlers
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
             [lipas.utils :as utils]))
@@ -66,7 +67,7 @@
       (localize lang)
       utils/->camel-case-keywords
       ;; Legacy API uses 'properties' key (not 'props') with keys without '?' suffix
-      (clojure.set/rename-keys {:props :properties})
+      (set/rename-keys {:props :properties})
       (update :properties transform-property-keys)
       ;; Add infoFi property (maps from 'comment' field in new data model)
       (assoc-in [:properties :infoFi] info-fi-property)))

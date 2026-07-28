@@ -1,11 +1,11 @@
 (ns lipas.ui.accessibility.views
-  (:require [lipas.ui.accessibility.events :as events]
-            [lipas.ui.accessibility.subs :as subs]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.accessibility.events :as events]
+            [lipas.ui.accessibility.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (defn view

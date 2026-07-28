@@ -1,15 +1,15 @@
 (ns lipas.ui.feedback.views
-  (:require [lipas.ui.components.autocompletes :as autocompletes]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            [lipas.schema.users :as users-schema]
+            [lipas.ui.components.autocompletes :as autocompletes]
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.feedback.events :as events]
             [lipas.ui.feedback.subs :as subs]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/Tooltip$default" :as Tooltip]
-            [lipas.ui.utils :refer [<== ==>]]
-            [lipas.schema.users :as users-schema]))
+            [lipas.ui.utils :refer [<== ==>]]))
 
 (defn feedback-btn []
   (let [tr          (<== [:lipas.ui.subs/translator])

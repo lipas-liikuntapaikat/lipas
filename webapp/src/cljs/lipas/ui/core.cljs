@@ -11,7 +11,6 @@
             [lipas.ui.utils :refer [==>] :as utils]
             [lipas.ui.views :as views]
             [re-frame.core :as rf]
-            [reagent.core :as r]
             [reagent.dom.client :as rdomc]))
 
 (def dev-backend-url "http://localhost:8091/api")

@@ -210,7 +210,7 @@
   (testing "an org-editor of a DIFFERENT org cannot bulk-edit this org's sites"
     (let [org-id   (java.util.UUID/randomUUID)
           other-id (java.util.UUID/randomUUID)
-          {:keys [owned1]} (seed-org-sites! org-id)
+          _ (seed-org-sites! org-id)
           token (jwt/create-token (org-editor-user other-id))
           resp ((test-app) (-> (mock/request :post "/api/actions/get-org-sites-for-bulk")
                                (mock/content-type "application/json")

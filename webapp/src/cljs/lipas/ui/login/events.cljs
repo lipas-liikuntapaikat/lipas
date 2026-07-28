@@ -77,7 +77,7 @@
 
 (rf/reg-event-fx ::login-refresh-failure
   [(rf/inject-cofx ::local-storage/get :admin-login-data)]
-  (fn [{:keys [local-storage]} [_ {:keys [status] :as resp}]]
+  (fn [{:keys [local-storage]} [_ {:keys [status]}]]
     (if (#{401 403} status)
       ;; If an impersonation session expires, fall back to the stashed
       ;; admin session instead of logging out completely.

@@ -3,7 +3,11 @@
   (:require
     [clojure.set :as set]
     [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.analysis.diversity :as diversity]
+    [lipas.backend.core :as core]
     [lipas.backend.email :as email]
+    [lipas.backend.gis :as gis]
+    [lipas.integration.utp.webhook :as utp-webhook]
     [lipas.jobs.dispatcher :as dispatcher]
     [lipas.jobs.registry :as registry]
     [lipas.test-utils :as test-utils]
@@ -66,14 +70,14 @@
 (deftest analysis-job-handler-test
   (testing "Analysis handler recalculates the diversity grid for active sites"
     (let [recalc-called (atom nil)]
-      (with-redefs [lipas.backend.core/get-sports-site
+      (with-redefs [core/get-sports-site
                     (fn [_db lipas-id]
                       {:lipas-id lipas-id
                        :status "active"
                        :location {:geometries {:type "FeatureCollection"
                                                :features []}}})
-                    lipas.backend.gis/simplify-safe (fn [geom] geom)
-                    lipas.backend.analysis.diversity/recalc-grid!
+                    gis/simplify-safe (fn [geom] geom)
+                    diversity/recalc-grid!
                     (fn [_search geom] (reset! recalc-called geom))]
         (dispatcher/handle-job {:db (test-db) :search (create-mock-search)}
                                {:id 1 :type "analysis" :payload {:lipas-id 12345}})
@@ -81,19 +85,19 @@
 
   (testing "Analysis is skipped for sites in non-analyzable status"
     (let [recalc-called (atom nil)]
-      (with-redefs [lipas.backend.core/get-sports-site
+      (with-redefs [core/get-sports-site
                     (fn [_db lipas-id]
                       {:lipas-id lipas-id
                        :status "out-of-service-permanently"
                        :location {:geometries {:type "FeatureCollection" :features []}}})
-                    lipas.backend.analysis.diversity/recalc-grid!
+                    diversity/recalc-grid!
                     (fn [_search geom] (reset! recalc-called geom))]
         (dispatcher/handle-job {:db (test-db) :search (create-mock-search)}
                                {:id 1 :type "analysis" :payload {:lipas-id 12345}})
         (is (nil? @recalc-called) "recalc-grid! must not run for retired sites"))))
 
   (testing "Analysis throws for a missing sports site"
-    (with-redefs [lipas.backend.core/get-sports-site (fn [_ _] nil)]
+    (with-redefs [core/get-sports-site (fn [_ _] nil)]
       (is (thrown-with-msg? Exception #"not found"
                             (dispatcher/handle-job {:db (test-db) :search nil}
                                                    {:id 2 :type "analysis"
@@ -102,7 +106,7 @@
 (deftest webhook-job-handler-test
   (testing "Webhook handler forwards payload to UTP integration"
     (let [received (atom nil)]
-      (with-redefs [lipas.integration.utp.webhook/process-v2!
+      (with-redefs [utp-webhook/process-v2!
                     (fn [_db _config payload]
                       (log/info "Mock webhook process called" payload)
                       (reset! received payload))]

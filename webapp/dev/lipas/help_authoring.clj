@@ -15,7 +15,6 @@
    .claude/skills/help-video-ingest/SKILL.md for the workflow."
   (:require [cheshire.core :as json]
             [clj-http.client :as http]
-            [clojure.string :as str]
             [lipas.backend.db.db :as db]))
 
 ;;; ——— Gemini REST ———————————————————————————————————————————————————

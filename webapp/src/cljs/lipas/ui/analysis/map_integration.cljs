@@ -8,20 +8,25 @@
    - registers the :heatmap method of the map popup multimethod
    - requiring the analysis event namespaces registers their re-frame
      handlers before any dispatch can reach them."
-  (:require ["@mui/material/List$default" :as List]
-            ["@mui/material/ListItem$default" :as ListItem]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.ui.analysis.buffer :as buffer]
-            [lipas.ui.analysis.diversity.events]
-            [lipas.ui.analysis.events]
-            [lipas.ui.analysis.heatmap.events]
-            [lipas.ui.analysis.heatmap.subs :as heatmap-subs]
-            [lipas.ui.analysis.reachability.events]
-            [lipas.ui.map.hooks :as hooks]
-            [lipas.ui.map.views :as map-views]
-            [lipas.ui.utils :refer [<==]]))
+  (:require
+   ;; clj-kondo false positive: `List` collides with the cljs.core/List
+   ;; deftype, so the [:> List ...] hiccup uses below aren't recognized as
+   ;; uses of this alias.
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    ["@mui/material/List$default" :as List]
+    ["@mui/material/ListItem$default" :as ListItem]
+    ["@mui/material/Paper$default" :as Paper]
+    ["@mui/material/Stack$default" :as Stack]
+    ["@mui/material/Typography$default" :as Typography]
+    [lipas.ui.analysis.buffer :as buffer]
+    [lipas.ui.analysis.diversity.events]
+    [lipas.ui.analysis.events]
+    [lipas.ui.analysis.heatmap.events]
+    [lipas.ui.analysis.heatmap.subs :as heatmap-subs]
+    [lipas.ui.analysis.reachability.events]
+    [lipas.ui.map.hooks :as hooks]
+    [lipas.ui.map.views :as map-views]
+    [lipas.ui.utils :refer [<==]]))
 
 (defmethod map-views/popup-body :heatmap [popup]
   (let [tr (<== [:lipas.ui.subs/translator])

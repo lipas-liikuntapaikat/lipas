@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -8,13 +9,12 @@
             ["@mui/material/Grid$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
             ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Table$default" :as Table]
-            ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tooltip$default" :as Tooltip]

@@ -1,12 +1,11 @@
 (ns lipas.schema.handler
   "Route-specific schemas that don't fit elsewhere."
-  (:require [lipas.data.cities :as cities]
+  (:require [clojure.string :as str]
             [lipas.data.status :as status]
             [lipas.reports :as reports]
             [lipas.schema.common :as common]
             [lipas.schema.sports-sites :as sports-sites-schema]
             [lipas.schema.sports-sites.types :as types-schema]
-            [lipas.schema.sports-sites.location :as location-schema]
             [lipas.utils :as utils]
             [malli.core :as m]))
 
@@ -106,7 +105,7 @@
     [:and :string
      [:fn {:error/message "Login URL must start with a known LIPAS domain"}
       (fn [s]
-        (some #(clojure.string/starts-with? s %)
+        (some #(str/starts-with? s %)
               ["https://localhost"
                "https://lipas-dev.cc.jyu.fi"
                "https://uimahallit.lipas.fi"

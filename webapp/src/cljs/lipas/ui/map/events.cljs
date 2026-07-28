@@ -370,7 +370,7 @@
           [:dispatch [::show-sports-site lipas-id]])]})))
 
 (rf/reg-event-fx ::loi-selected
-  (fn [{:keys [db]} [_ event loi-id]]
+  (fn [_ [_ _event loi-id]]
     {:fx
      [[:dispatch [::show-loi loi-id]]]}))
 
@@ -386,7 +386,7 @@
 ;;; Higher order events ;;;
 
 (rf/reg-event-fx ::show-loi
-  (fn [{:keys [db]} [_ loi-id]]
+  (fn [_ [_ loi-id]]
     {:fx
      [[:dispatch [:lipas.ui.loi.events/select-loi loi-id]]
       (if loi-id
@@ -652,7 +652,7 @@
           [:dispatch [::toggle-simplify-dialog]]]}))
 
 (rf/reg-event-fx ::close-simplify-tool
-  (fn [{:keys [db]} _]
+  (fn [_ _]
     {:fx [[:dispatch [::toggle-simplify-dialog]]
           [:dispatch [::continue-editing]]]}))
 
@@ -1035,7 +1035,7 @@
        :fx [[:dispatch [::update-geometries lipas-id geoms]]]})))
 
 (rf/reg-event-fx ::restore-site-backup
-  (fn [{:keys [db]} [_ files lipas-id]]
+  (fn [_ [_ files lipas-id]]
     (let [file (aget files 0)
           cb (fn [json]
                (rf/dispatch [::restore-site-backup* json lipas-id]))

@@ -1,6 +1,9 @@
 (ns lipas.ui.ptv.audit
-  (:require [clojure.string :as str]
-            ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
+            ;; deftype, so the [:> Box ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
@@ -16,10 +19,11 @@
             ["@mui/material/Radio$default" :as Radio]
             ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]

@@ -1,11 +1,11 @@
 (ns lipas.ui.stats.common
-  (:require [lipas.ui.components.layouts :as layouts]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.components.layouts :as layouts]
             [lipas.ui.mui :as mui]
             [reagent.core :as r]))
 

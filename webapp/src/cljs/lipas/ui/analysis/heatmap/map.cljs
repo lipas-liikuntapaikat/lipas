@@ -1,6 +1,5 @@
 (ns lipas.ui.analysis.heatmap.map
-  (:require ["ol/Feature$default" :as Feature]
-            ["ol/format/GeoJSON$default" :as GeoJSON]
+  (:require ["ol/format/GeoJSON$default" :as GeoJSON]
             ["ol/layer/Heatmap$default" :as HeatmapLayer]
             ["ol/source/Vector$default" :as VectorSource]
             [lipas.ui.analysis.heatmap.db :as db]))
@@ -86,7 +85,7 @@
 
 (defn update-heatmap-visuals!
   [{:keys [layers] :as map-ctx}
-   {:keys [visual] :as heatmap}]
+   {:keys [visual]}]
   (when-let [layer (-> layers :overlays :heatmap)]
     (update-heatmap-layer! layer visual))
   map-ctx)

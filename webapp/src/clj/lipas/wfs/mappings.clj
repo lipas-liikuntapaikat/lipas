@@ -1,12 +1,12 @@
 (ns lipas.wfs.mappings
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [lipas.backend.api.v1.sports-place :as legacy-utils]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
             [lipas.data.owners :as owners]
             [lipas.data.prop-types :as prop-types]
-            [lipas.data.types :as types]
-            [lipas.backend.api.v1.sports-place :as legacy-utils]))
+            [lipas.data.types :as types]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 

@@ -1,14 +1,14 @@
 (ns lipas.ui.reminders.views
-  (:require [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/Tooltip$default" :as Tooltip]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.reminders.events :as events]
             [lipas.ui.reminders.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]))

@@ -2,7 +2,6 @@
   (:require [lipas.backend.search :as search]
             [lipas.schema.common :as common]
             [lipas.schema.sports-sites :as sports-site-schema]
-            [lipas.schema.sports-sites :as sports-sites]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.sports-sites.types :as types]
             [taoensso.timbre :as log]))
@@ -91,12 +90,12 @@
 
 (def OwnerFacetValue
   [:map
-   [:value #'sports-sites/owner]
+   [:value #'sports-site-schema/owner]
    [:count :int]])
 
 (def AdminFacetValue
   [:map
-   [:value #'sports-sites/admin]
+   [:value #'sports-site-schema/admin]
    [:count :int]])
 
 (def StatusFacetValue

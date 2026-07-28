@@ -1,29 +1,5 @@
 (ns lipas.ui.analysis.diversity.view
-  (:require ["rc-slider$default" :as Slider]
-            ["recharts/es6/cartesian/Bar" :refer [Bar]]
-            ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
-            ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
-            ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
-            ["recharts/es6/chart/BarChart" :refer [BarChart]]
-            ["recharts/es6/component/Cell" :refer [Cell]]
-            ["recharts/es6/component/Legend" :refer [Legend]]
-            ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
-            ["recharts/es6/component/Tooltip" :refer [Tooltip]]
-            [clojure.string :as str]
-            [goog.color :as gcolor]
-            [goog.object :as gobj]
-            [lipas.ui.analysis.diversity.events :as events]
-            [lipas.ui.analysis.diversity.subs :as subs]
-            [lipas.ui.charts :as charts]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.misc :as misc]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -37,8 +13,34 @@
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tabs$default" :as Tabs]
-            ["@mui/material/Tooltip$default" :as Tooltip]
+            ;; Aliased (not `Tooltip`) because "recharts/es6/component/Tooltip"
+            ;; below is also bound to `Tooltip` for the chart's hover content;
+            ;; this one is MUI's Tooltip, used for plain hover-text wrappers.
+            ["@mui/material/Tooltip$default" :as MuiTooltip]
             ["@mui/material/Typography$default" :as Typography]
+            ["rc-slider$default" :as Slider]
+            ["recharts/es6/cartesian/Bar" :refer [Bar]]
+            ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
+            ["recharts/es6/cartesian/XAxis" :refer [XAxis]]
+            ["recharts/es6/cartesian/YAxis" :refer [YAxis]]
+            ["recharts/es6/chart/BarChart" :refer [BarChart]]
+            ["recharts/es6/component/Cell" :refer [Cell]]
+            ["recharts/es6/component/Legend" :refer [Legend]]
+            ["recharts/es6/component/ResponsiveContainer" :refer [ResponsiveContainer]]
+            ["recharts/es6/component/Tooltip" :refer [Tooltip]]
+            [clojure.string :as str]
+            [goog.color :as gcolor]
+            [lipas.ui.analysis.diversity.events :as events]
+            [lipas.ui.analysis.diversity.subs :as subs]
+            [lipas.ui.charts :as charts]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
@@ -47,7 +49,7 @@
 (def geom-type "Polygon")
 
 (defn helper [{:keys [label tooltip]}]
-  [:> Tooltip {:title tooltip}
+  [:> MuiTooltip {:title tooltip}
    [:> Link
     {:style {:font-family "Lato" :font-size "0.9em" :margin "0.5em"}
      :underline "always"}
@@ -172,7 +174,7 @@
 
                 ;; Delete category button
                 [:> Grid {:item true :xs 2}
-                 [:> Tooltip {:title (tr :analysis/delete-category)}
+                 [:> MuiTooltip {:title (tr :analysis/delete-category)}
                   [:> IconButton
                    {:on-click #(==> [::events/delete-category idx])}
                    [:> Icon "delete"]]]]]]]))]))
@@ -487,15 +489,15 @@
        {:verticalAlign "top"
         :content (fn [^js props]
                    #_(charts/legend labels props)
-                   (let [payload (gobj/get props "payload")]
+                   (let [payload (.-payload props)]
                      (r/as-element
                        (->> payload
                             (map
-                              (fn [obj]
-                                {:label (or (labels (gobj/get obj "value"))
-                                            (labels (keyword (gobj/get obj "value"))))
-                                 :color (gobj/get obj "color")
-                                 :type (gobj/get obj "type")}))
+                              (fn [^js obj]
+                                {:label (or (labels (.-value obj))
+                                            (labels (keyword (.-value obj))))
+                                 :color (.-color obj)
+                                 :type (.-type obj)}))
                             (sort-by :label)
                             (map
                               (fn [{:keys [label color type]}]

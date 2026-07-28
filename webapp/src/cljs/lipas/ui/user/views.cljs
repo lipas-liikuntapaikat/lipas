@@ -1,13 +1,5 @@
 (ns lipas.ui.user.views
-  (:require ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/Link$default" :as Link]
-            ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.roles :as roles]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardActions$default" :as CardActions]
             ["@mui/material/CardContent$default" :as CardContent]
@@ -18,9 +10,21 @@
             ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Link$default" :as Link]
+            ;; clj-kondo false positive: the bare symbol `List` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> List ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
             ["@mui/material/ListItemButton$default" :as ListItemButton]
             ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.roles :as roles]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.subs :as org-subs]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]

@@ -41,8 +41,8 @@
          "/></svg>")))
 
 (defn ->arrow-str
-  [{:keys [color width height hover?]
-    :or   {color "black" width 24 height 24 hover? false}}]
+  [{:keys [color]
+    :or   {color "black"}}]
   (gstring/format
     "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>
 <svg fill=\"%s\" height=\"30px\" width=\"30px\" version=\"1.1\" id=\"Layer_1\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"

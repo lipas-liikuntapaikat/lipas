@@ -20,8 +20,8 @@
             [clojure.string :as str]
             [lipas.backend.gis :as gis]
             [lipas.backend.kb :as kb]
-            [lipas.backend.search :as search]
             [lipas.backend.llm :as llm]
+            [lipas.backend.search :as search]
             [lipas.data.cities :as cities]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.types :as types]
@@ -340,7 +340,7 @@
                  (pr-str (me/humanize (assistant-schema/explain action))))}))
 
 (defn- run-tool*
-  [{:keys [db search user scope]} tool-name args]
+  [{:keys [search user scope]} tool-name args]
   (case tool-name
     "search_kb"
     (kb/search-kb search {:query (:query args)
@@ -771,7 +771,7 @@ USER CONTEXT:
 ;;; ——— Public entrypoints (called from handler) —————————————————————
 
 (defn chat!
-  [{:keys [db search user] :as req}]
+  [{:keys [search user] :as req}]
   (if (rate-limited? :chat (:id user) chat-rate-limit)
     {:status 429
      :body {:error "Viestiraja täynnä. Yritä myöhemmin uudelleen."}}

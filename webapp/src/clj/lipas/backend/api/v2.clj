@@ -106,7 +106,7 @@
                     types (conj {:terms {:loi-type.keyword types}})
                     categories (conj {:terms {:loi-category.keyword categories}}))}}})
 
-(defn routes [{:keys [db search] :as _ctx}]
+(defn routes [{:keys [search] :as _ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
                      {:url "/v2/openapi.json"})]
     ["/v2"
