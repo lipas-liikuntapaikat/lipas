@@ -11,13 +11,15 @@
 # Runs in ~90 ms (both tools are GraalVM binaries; a single file is 16-56 ms for
 # clj-kondo and ~31 ms for cljfmt), so it is cheap enough to run on every edit.
 #
-# Formatting is applied silently. clj-kondo ERRORS exit 2, which is how a
+# Formatting is applied silently. clj-kondo findings exit 2, which is how a
 # PostToolUse hook feeds text back to the model — so unresolved symbols, arity
-# mistakes and unbalanced delimiters surface immediately instead of at CI.
-# Warnings are deliberately NOT raised here: 177 of 409 files carry pre-existing
-# ones, and re-reporting them on every edit to a legacy file would be pure noise.
-# Warnings are handled by `bb lint-ratchet` in CI, which only fails on files that
-# got worse.
+# mistakes, unused bindings and unbalanced delimiters surface immediately
+# instead of at CI.
+#
+# This reports warnings as well as errors. That was not always safe: while the
+# repository still carried ~480 legacy warnings, re-reporting them on every edit
+# to an old file would have been pure noise. The tree is now at zero warnings
+# and CI gates on that, so anything reported here is genuinely new.
 
 set -uo pipefail
 
@@ -53,16 +55,18 @@ cd "$WEBAPP" || exit 0
 cljfmt fix "$rel" >/dev/null 2>&1
 
 kondo_out="$(clj-kondo --lint "$rel" 2>&1)"
-errors="$(printf '%s' "$kondo_out" | grep ': error: ' || true)"
+findings="$(printf '%s' "$kondo_out" | grep -E ': (error|warning): ' || true)"
 
-if [ -n "$errors" ]; then
+if [ -n "$findings" ]; then
     {
-        echo "clj-kondo found errors in $rel:"
+        echo "clj-kondo findings in $rel:"
         echo
-        printf '%s\n' "$errors"
+        printf '%s\n' "$findings"
         echo
-        echo "Fix these before moving on. (Warnings are not reported here; run"
-        echo "\`cd webapp && bb lint $rel\` to see them.)"
+        echo "The tree is at zero warnings and CI gates on that, so these are new."
+        echo "Fix them before moving on. If one is genuinely a false positive,"
+        echo "silence it narrowly with #_{:clj-kondo/ignore [:linter-name]} and a"
+        echo "comment saying why the code is correct — not as a shortcut."
     } >&2
     exit 2
 fi

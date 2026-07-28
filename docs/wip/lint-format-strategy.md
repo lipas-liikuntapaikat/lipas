@@ -169,55 +169,120 @@ so a partially staged file is checked as it sits on disk.
 
 ### Layer 3 — CI (`.github/workflows/ci.yaml`)
 
-New `lint` job: `bb fmt-check`, `bb lint`, and on PRs `bb lint-ratchet`. No
-services, no JVM, no dependency resolution — verified that a cold checkout with
-no `.clj-kondo/.cache` gives the same `errors: 0, warnings: 484` as a warm local
-one. Versions pinned to match the local toolchain. Needs `fetch-depth: 0` for
-the merge base.
+New `lint` job: `bb fmt-check` and `bb lint-strict`. No services, no JVM, no
+dependency resolution — verified that a cold checkout with no
+`.clj-kondo/.cache` gives the same result as a warm local one, so `bb init-lint`
+is not needed. Tool versions are pinned to match the local toolchain.
 
-### The ratchet, and why not `--fail-level warning`
+## The warning cleanup
 
-484 warnings live across 177 of 409 files. Gating changed files at
-`--fail-level warning` would fail roughly two PRs in five over warnings nobody
-in that PR wrote, and the gate would be switched off within a week.
+The repository went from **484 clj-kondo warnings to 0**, which is why the gates
+above fail on warnings rather than only errors, and why the merge-base warning
+ratchet that existed briefly has been deleted — `--fail-level warning` applied
+to the whole tree is strictly stronger and much less machinery.
 
-`bb lint-ratchet` (`webapp/scripts/lint_ratchet.bb`) instead materialises the
-merge base in a throwaway git worktree, counts clj-kondo warnings per file on
-both sides, and fails only where a file got worse:
+38 of the 484 needed no code change at all, only `.clj-kondo/config.edn`:
+`:unresolved-var` exclusions for the eight `hugsql/def-db-fns` namespaces and
+the three `deftranslations` i18n namespaces, and `:config-in-ns` turning off
+`:unresolved-namespace` for `lipas.ui.lazy`, whose entire job is naming
+namespaces it must not require.
 
-```
-❌ New clj-kondo warnings introduced:
+The rest was split across six parallel agents by directory. What it surfaced:
 
-  src/cljs/lipas/ui/stats/common.cljs  (1 → 2)
-      …:3:14: warning: Unsorted namespace: @mui/material/Button$default
-      …:43:9: warning: unused binding unused-here
-```
+- **Namespaces used fully qualified but never required** — the dominant real
+  bug, 25 instances. `clojure.set` in six test namespaces, `clojure.string` in
+  eight files across clj/cljc/cljs, plus `clj-http.client`, `next.jdbc`,
+  `honey.sql`, `integrant.repl.state` and four `with-redefs` targets in
+  `dispatcher_test.clj`. Each worked only because some other namespace happened
+  to load the dependency first.
+- **A duplicate `def`** in `api/v1/sports_place.clj`, the second silently
+  shadowing the first.
+- **A namespace required twice under two aliases** in `analysis/heatmap.clj`,
+  both in use.
+- **An eager static require defeating intentional lazy loading** —
+  `lipas.backend.system` statically required `lipas.jobs.system` while `-main`
+  separately does `(require 'lipas.jobs.system)` + `resolve` in worker mode
+  specifically to keep worker-only deps out of server boot.
+- **Four `deftest` forms with a string in docstring position.** `deftest` takes
+  no docstring, so each was evaluated and discarded.
+- **A MUI/recharts `Tooltip` name collision** where two modules bound the same
+  bare name and require order decided which won.
+- **Two tests asserting less than their siblings** — LineString and Polygon
+  sub-tests in `wfs/core_test.clj` destructured `status` and never checked it,
+  while the Point sub-test did.
 
-New files have a base count of zero, so they must be warning-clean. Legacy
-warnings are tolerated but can only go down.
+## The trap that makes `clean-ns` unsafe here
 
-## Current warning inventory (484)
+clojure-lsp's `clean-ns` removes any require clj-kondo calls unused, and
+clj-kondo is wrong in two ways that both fail silently.
 
-```
-190  unused binding / unused default
-176  unused require + Unsorted namespace   <- largely `bb clean-ns`-able
-118  everything else (unresolved, redundant let, inconsistent alias, …)
-```
+**Aliases colliding with `cljs.core`.** With
+`["@mui/material/Box$default" :as Box]` and bare `[:> Box ...]`, clj-kondo
+resolves the bare symbol to the real `cljs.core/Box` deftype and never records a
+use. Delete the require and clj-kondo *still* reports zero warnings, and the
+ClojureScript release build *still* succeeds — `cljs.core/Box` genuinely exists.
+The component is simply wrong in the browser. Colliding names, determined
+empirically: `Box`, `List`, `Symbol`, `Keyword`, `Delay`, `Atom`, `Var`,
+`Range`, `Cons`, `Empty`, `Reduced`, `Volatile`, `MultiFn`, `Namespace`,
+`Repeat`, `Iterate`, `Cycle`. `Set` and `Map` do not collide. 18 requires were
+restored across the frontend for this reason.
 
-The 85 `@mui/material/*` "Unsorted namespace" warnings come from the project's
-own `:unsorted-required-namespaces {:sort :case-sensitive}` interacting with JS
-module strings. Worth deciding whether to normalise the order or exempt JS
-modules — currently pure noise.
+**Requires kept for load-time side effects.** re-frame `reg-event-*`/`reg-sub`,
+`defmethod` implementations, integrant `init-key` methods, proj4 projection
+registration. `test_utils.clj` requiring `lipas.backend.system` is the clearest
+case: nothing references it, but deleting it would have broken `ig/init` for the
+entire test suite.
+
+Both are restored with `#_{:clj-kondo/ignore [:unused-namespace]}` and a comment.
+
+**How to tell a false positive from genuinely dead code:** check whether the
+only usage sits inside a `#_` discard or `(comment ...)` block. clj-kondo skips
+those (`:skip-comments true`), so such a require really is unused. This matters
+— a first attempt at an automated checker did not model discards and reported
+three files as broken whose usages were all inside `#_(defn ...)`. Restoring
+those requires would have been wrong.
+
+## Verification performed
+
+Neither the test suite nor a release build can catch a wrongly removed
+side-effecting require, so the cleanup was checked by:
+
+- **Require-graph diff** against the pre-cleanup commit, inspecting every
+  removed edge for top-level side effects in the target namespace. 69 removed,
+  68 with no side effects, 1 flagged and confirmed correct by hand. The detector
+  was itself validated by confirming it fires on known re-frame namespaces and
+  stays quiet on pure ones.
+- **Component-binding check** over all 194 `src/cljs` files: every symbol used
+  in live `[:> ...]` position is bound by its ns form. Verified clean on the
+  pre-cleanup tree first, so any hit would have been newly introduced.
+- **ClojureScript release build**: 810 files compiled, 0 shadow-cljs warnings
+  (an unresolved symbol would appear here as "Use of undeclared Var").
+- **`bb bundle-size-check`**: `:app` 795 KB gzip against the 815 KB budget,
+  confirming none of the 25 added requires hoisted a lazy module into the base
+  bundle.
+- **Backend test suite** compared against a baseline captured at the
+  pre-cleanup commit in a separate worktree, because the local test database
+  carries schema drift that fails a couple of search tests regardless.
 
 ## Left undone
 
-- **Warning burn-down.** The ratchet stops growth; it does not reduce the 484.
-  `bb clean-ns` over the affected files would clear ~176 mechanically.
-- **The `@mui/material/*` sort question** above.
-- **`/usr/local/bin/cljfmt` 0.13.1** is shadowed but still installed; removing it
-  needs sudo.
+- **`utils_test.cljc`** binds `invalid-data {:name "John" :age -5}` and never
+  asserts on it. The intended check could not be inferred, so it is marked
+  `_invalid-data` with a TODO rather than given an invented assertion.
+- **`backend/ptv_test.clj`** lost its `lipas.data.types` require, whose only use
+  is inside a fully `#_`-discarded integration test. Correct today; that test
+  would need the require back if reinstated.
+- **`sync-model!`** in `integration/yti/tietomallit.clj` documented a
+  `:skip-existing` option that was destructured but never used — the behaviour
+  it promised does not exist. The dead option was removed rather than left
+  misleading. If it was meant to work, that is a separate change.
+- **Two possible gaps in `map/map.cljs`**, surfaced while removing dead
+  bindings and deliberately not "fixed", since either fix would invent
+  behaviour: `map-inner`'s `component-did-mount` never calls `set-overlays!`
+  (only `component-did-update` does), and `update-diversity-mode!` ignores
+  `lipas-id`/`fit-nonce`/`sub-mode` that its sibling `update-reachability-mode!`
+  uses.
 - **babashka is one minor behind** (1.12.217 local and pinned in CI, 1.13.219
-  available). Deliberately not bumped — bb runs the deploy tasks too, so that is
-  a separate change.
-- **`bb lint-strict` is unused.** It exists for the day the warning count
-  reaches zero and the repo-wide gate can replace the ratchet.
+  available). Not bumped here — bb also runs the deploy tasks.
+- **`/usr/local/bin/cljfmt` 0.13.1** is shadowed by the 0.16.5 install but still
+  present; removing it needs sudo.

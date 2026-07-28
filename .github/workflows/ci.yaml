@@ -77,8 +77,7 @@ jobs:
   # clj-kondo, cljfmt and bb are all GraalVM binaries, and the per-library
   # clj-kondo configs under webapp/.clj-kondo/<lib>/ are committed. Verified
   # that a cold clone with no .clj-kondo/.cache reports exactly the same
-  # errors: 0, warnings: 484 as a warm local checkout, so `bb init-lint` is
-  # not needed here.
+  # result as a warm local checkout, so `bb init-lint` is not needed here.
   #
   # Versions are pinned so CI and developer machines cannot disagree about
   # what "formatted" means. Bump them together with the local toolchain.
@@ -90,10 +89,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          # The warning ratchet diffs against the merge base, which a shallow
-          # clone cannot resolve.
-          fetch-depth: 0
 
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@12.5
@@ -106,19 +101,11 @@ jobs:
       - name: Check formatting
         run: bb fmt-check
 
-      # Errors only. The repository carries ~480 pre-existing warnings across
-      # 177 of 409 files; failing on those here would block every PR.
+      # Warnings fail too. The repository is at zero clj-kondo warnings and the
+      # point of this gate is to keep it there — a warning ratchet against the
+      # merge base was needed only while ~480 legacy warnings still existed.
       - name: Lint
-        run: bb lint
-
-      # The ratchet: legacy warnings are tolerated, but a file you touched may
-      # not come back with more of them than it had at the merge base. New
-      # files start from zero, so they must be warning-clean.
-      - name: No new warnings in changed files
-        if: github.event_name == 'pull_request'
-        env:
-          LINT_BASE: origin/${{ github.base_ref }}
-        run: bb lint-ratchet
+        run: bb lint-strict
 
   # Backend tests need postgres + elasticsearch, so they run via
   # docker compose like before.

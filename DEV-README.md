@@ -282,9 +282,9 @@ cd webapp
 bb fmt            # format everything (or pass specific files)
 bb fmt-check      # check without writing
 bb lint           # clj-kondo; errors fail
-bb check          # fmt-check + lint, what CI runs
-bb clean-ns <f>   # remove unused requires (clojure-lsp)
-bb lint-ratchet   # fail if changed files gained warnings
+bb lint-strict    # clj-kondo; warnings fail too — what CI gates on
+bb check          # fmt-check + lint-strict, what CI runs
+bb clean-ns <f>   # remove unused requires (clojure-lsp) — see the warning below
 ```
 
 Both tools resolve their config by walking **up** from the working directory,
@@ -300,12 +300,40 @@ Enforcement runs at three points:
 - **`.githooks/pre-commit`** checks staged Clojure files. Enabled by
   `setup-dev.sh`, or manually with `git config core.hooksPath .githooks`.
   Bypass with `git commit --no-verify`.
-- **CI** runs `bb fmt-check`, `bb lint`, and on pull requests `bb lint-ratchet`.
+- **CI** runs `bb fmt-check` and `bb lint-strict`.
 
-The repository carries ~480 pre-existing clj-kondo warnings, so warnings do not
-fail the build outright. The ratchet enforces them differentially: a file you
-touched may not come back with more warnings than it had at the merge base, and
-new files must be warning-clean.
+The repository is at **zero clj-kondo warnings**, and all three gates fail on
+warnings as well as errors. Keeping it there is cheaper than getting there was.
+
+If a finding is genuinely a false positive, silence it narrowly at the call site
+with `#_{:clj-kondo/ignore [:linter-name]}` and a comment saying why the code is
+correct. It is not a shortcut for a warning that is merely tedious to fix.
+
+### `bb clean-ns` will delete requires you need
+
+clojure-lsp's clean-ns removes any require clj-kondo considers unused, and
+clj-kondo is wrong in two ways that matter here. Always review its diff.
+
+1. **Aliases that collide with `cljs.core`.** Requiring
+   `["@mui/material/Box$default" :as Box]` and using bare `[:> Box ...]` looks
+   unused to clj-kondo, because it resolves the bare symbol to the real
+   `cljs.core/Box` deftype. Remove the require and clj-kondo *still* reports
+   zero warnings and the ClojureScript build *still* succeeds — the component
+   is simply wrong in the browser. Confirmed colliding names: `Box`, `List`,
+   `Symbol`, `Keyword`, `Delay`, `Atom`, `Var`, `Range`, `Cons`, `Empty`,
+   `Reduced`, `Volatile`, `MultiFn`, `Namespace`, `Repeat`, `Iterate`, `Cycle`.
+   `Set` and `Map` do not collide.
+
+2. **Requires that exist only for load-time side effects** — re-frame handler
+   registration, `defmethod` implementations, integrant `init-key` methods,
+   proj4 projection registration. Nothing references them, so they read as
+   unused; deleting one breaks the program at runtime with no compile error and
+   no failing test.
+
+In both cases restore the require with `#_{:clj-kondo/ignore [:unused-namespace]}`
+and a comment. To tell a genuine false positive from genuinely dead code, check
+whether the usage sits inside a `#_` discard or `(comment ...)` block — clj-kondo
+skips those, so a require used only from dead code really is unused.
 
 `git blame` skips the bulk cljfmt reformat via `.git-blame-ignore-revs`
 (configured by `setup-dev.sh`).

@@ -39,16 +39,18 @@ changed="$(git status --porcelain -- 'webapp/src' 'webapp/test' 'webapp/dev' 2>/
 cd "$WEBAPP" || exit 0
 
 kondo_out="$(clj-kondo --lint src test dev 2>&1)"
-errors="$(printf '%s' "$kondo_out" | grep ': error: ' || true)"
+findings="$(printf '%s' "$kondo_out" | grep -E ': (error|warning): ' || true)"
 
-if [ -n "$errors" ]; then
+if [ -n "$findings" ]; then
     {
-        echo "clj-kondo reports errors across the project:"
+        echo "clj-kondo findings across the project:"
         echo
-        printf '%s\n' "$errors"
+        printf '%s\n' "$findings"
         echo
-        echo "These may be in files you did not edit directly — a rename or a"
-        echo "removed var can break a reference elsewhere. Fix them before finishing."
+        echo "Some may be in files you did not edit directly — a rename or a"
+        echo "removed var can break a reference elsewhere, and removing a require"
+        echo "can leave another namespace short. The tree is kept at zero"
+        echo "warnings, so fix these before finishing."
     } >&2
     exit 2
 fi

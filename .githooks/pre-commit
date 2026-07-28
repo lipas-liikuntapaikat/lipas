@@ -58,10 +58,15 @@ else
 fi
 
 if command -v clj-kondo >/dev/null 2>&1; then
-    if ! kondo_out="$(clj-kondo --fail-level error --lint "${rel[@]}" 2>&1)"; then
-        echo "✗ clj-kondo found errors in staged files:"
+    # Warnings fail as well as errors: the repository is at zero clj-kondo
+    # warnings and CI gates on that, so catching them here is the fast path.
+    if ! kondo_out="$(clj-kondo --fail-level warning --lint "${rel[@]}" 2>&1)"; then
+        echo "✗ clj-kondo findings in staged files:"
         echo
-        printf '%s\n' "$kondo_out" | grep ': error: ' || printf '%s\n' "$kondo_out"
+        printf '%s\n' "$kondo_out" | grep -E ': (error|warning): ' || printf '%s\n' "$kondo_out"
+        echo
+        echo "  If a finding is a false positive, silence it narrowly with"
+        echo "  #_{:clj-kondo/ignore [:linter-name]} plus a comment saying why."
         status=1
     fi
 else

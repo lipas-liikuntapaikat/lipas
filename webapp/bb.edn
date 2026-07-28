@@ -65,28 +65,48 @@
                  (defn clj-source? [p]
                    (boolean (re-find clj-source-re (str p))))
 
+                 (defn keepable?
+                   "A path is worth passing to the tools if it exists and is
+                    either a directory (both tools recurse into one) or a
+                    Clojure source file."
+                   [p]
+                   (let [f (io/file project-dir p)]
+                     (and (.exists f)
+                          (or (.isDirectory f) (clj-source? p)))))
+
                  (defn resolve-paths
-                   "Turn task arguments into webapp-relative paths that exist.
-                    With no arguments, falls back to lint-paths. Accepts both
-                    `src/…` and repo-root-relative `webapp/src/…`, so piping
-                    `git diff --name-only` straight in works. Non-Clojure and
-                    deleted paths are dropped."
+                   "Turn task arguments into webapp-relative paths. With no
+                    arguments, falls back to lint-paths. Accepts both `src/…`
+                    and repo-root-relative `webapp/src/…`, so piping
+                    `git diff --name-only` straight in works.
+
+                    Returns {:paths [...] :dropped [...]}. Callers must treat
+                    'arguments given but nothing resolved' as a failure, never
+                    as success: silently reporting \"nothing to do\" and exiting
+                    0 turns a typo'd path — or a directory, which an earlier
+                    version rejected outright — into a green gate that checked
+                    nothing at all."
                    [args]
                    (if (empty? args)
-                     lint-paths
-                     (->> args
-                          (map (fn [p] (str/replace (str p) webapp-prefix-re "")))
-                          (filter clj-source?)
-                          (filter (fn [p] (.exists (io/file project-dir p))))
-                          distinct
-                          vec)))
+                     {:paths lint-paths :dropped []}
+                     (let [norm    (map (fn [p] (str/replace (str p) webapp-prefix-re "")) args)
+                           grouped (group-by keepable? norm)]
+                       {:paths   (vec (distinct (get grouped true)))
+                        :dropped (vec (distinct (get grouped false)))})))
+
+                 (defn report-dropped [dropped]
+                   (when (seq dropped)
+                     (println "⚠️  Ignored (not an existing Clojure file or directory):")
+                     (doseq [p dropped] (println "    " p))))
 
                  (defn run-lint
                    "Returns the clj-kondo exit code (0 clean, 2 warnings, 3 errors)."
                    [args fail-level]
-                   (let [paths (resolve-paths args)]
+                   (let [{:keys [paths dropped]} (resolve-paths args)]
+                     (report-dropped dropped)
                      (if (empty? paths)
-                       (do (println "Nothing to lint.") 0)
+                       (do (println "❌ Nothing to lint — no argument resolved to a lintable path.")
+                           1)
                        (:exit (apply process/shell
                                      {:dir project-dir :continue true}
                                      "clj-kondo" "--fail-level" fail-level "--lint"
@@ -95,9 +115,11 @@
                  (defn run-cljfmt
                    "cmd is \"check\" or \"fix\". Returns the cljfmt exit code."
                    [cmd args]
-                   (let [paths (resolve-paths args)]
+                   (let [{:keys [paths dropped]} (resolve-paths args)]
+                     (report-dropped dropped)
                      (if (empty? paths)
-                       (do (println "Nothing to format.") 0)
+                       (do (println "❌ Nothing to format — no argument resolved to a formattable path.")
+                           1)
                        (let [exit (:exit (apply process/shell
                                                 {:dir project-dir :continue true}
                                                 "cljfmt" cmd paths))]
@@ -196,16 +218,16 @@
                       :task (System/exit (run-lint *command-line-args* "warning"))}
 
          lint-changed {:doc "clj-kondo (errors fail) on files changed vs LINT_BASE, default origin/master"
-                       :task (let [paths (resolve-paths (changed-files))]
+                       ;; An empty changed-file set is a legitimate no-op here,
+                       ;; unlike explicitly passed arguments that resolve to
+                       ;; nothing — so this exits 0 rather than going through
+                       ;; run-lint's "nothing resolved" failure path.
+                       :task (let [{:keys [paths]} (resolve-paths (changed-files))]
                                (if (empty? paths)
                                  (println "No changed Clojure files — nothing to lint.")
                                  (do (println (str "Linting " (count paths) " changed file(s):"))
                                      (doseq [p paths] (println "  " p))
                                      (System/exit (run-lint paths "error")))))}
-
-         lint-ratchet {:doc "Fail if any file changed vs LINT_BASE gained clj-kondo warnings. Legacy warnings are tolerated but can only go down."
-                       :task (apply shell {:dir project-dir}
-                                    "bb" "scripts/lint_ratchet.bb" *command-line-args*)}
 
          fmt {:doc "Format with cljfmt (all sources, or the files given as arguments)"
               :task (System/exit (run-cljfmt "fix" *command-line-args*))}
@@ -213,9 +235,9 @@
          fmt-check {:doc "Check formatting without writing (all sources, or given files)"
                     :task (System/exit (run-cljfmt "check" *command-line-args*))}
 
-         check {:doc "What CI and the pre-commit hook run: fmt-check + lint"
-                :task (let [fmt  (run-cljfmt "check" nil)
-                            kondo (run-lint nil "error")]
+         check {:doc "What CI runs: fmt-check + lint-strict (warnings fail)"
+                :task (let [fmt   (run-cljfmt "check" nil)
+                            kondo (run-lint nil "warning")]
                         (System/exit (max fmt kondo)))}
 
          cljfmt {:doc "Deprecated alias for `fmt` (kept for muscle memory)"
