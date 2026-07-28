@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# Reject commits containing badly formatted or broken Clojure.
+#
+# Enable once per clone (setup-dev.sh does it for you):
+#
+#     git config core.hooksPath .githooks
+#
+# This is the backstop for edits that do not go through Claude Code — another
+# editor, a manual fix, a session with hooks disabled. Only staged Clojure files
+# are checked, so it costs a few hundred milliseconds.
+#
+# Bypass with `git commit --no-verify` when you genuinely need to (committing a
+# work-in-progress conflict resolution, for instance).
+#
+# Caveat: the checks read the working tree, not the staged blobs. If a file is
+# only partially staged, what is verified is the file on disk rather than the
+# exact content being committed.
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+WEBAPP="$REPO_ROOT/webapp"
+
+[ -d "$WEBAPP" ] || exit 0
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR \
+    | grep -E '^webapp/.*\.(clj|cljs|cljc|cljd|cljx|bb|edn)$' || true)"
+[ -n "$staged" ] || exit 0
+
+# Paths relative to webapp/, where .cljfmt.edn and .clj-kondo/ resolve. Files
+# staged as deleted are already excluded by --diff-filter.
+rel=()
+while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    p="${f#webapp/}"
+    [ -f "$WEBAPP/$p" ] && rel+=("$p")
+done <<< "$staged"
+
+[ "${#rel[@]}" -gt 0 ] || exit 0
+
+cd "$WEBAPP" || exit 0
+
+status=0
+
+if command -v cljfmt >/dev/null 2>&1; then
+    if ! fmt_out="$(cljfmt check "${rel[@]}" 2>&1)"; then
+        echo "✗ Some staged files are not formatted:"
+        echo
+        printf '%s\n' "$fmt_out" | grep -E 'formatted incorrectly|^--- ' || printf '%s\n' "$fmt_out"
+        echo
+        echo "  Fix:  cd webapp && bb fmt ${rel[*]}"
+        echo "  Then: git add -u"
+        status=1
+    fi
+else
+    echo "⚠ cljfmt not found — skipping the format check. brew install cljfmt"
+fi
+
+if command -v clj-kondo >/dev/null 2>&1; then
+    if ! kondo_out="$(clj-kondo --fail-level error --lint "${rel[@]}" 2>&1)"; then
+        echo "✗ clj-kondo found errors in staged files:"
+        echo
+        printf '%s\n' "$kondo_out" | grep ': error: ' || printf '%s\n' "$kondo_out"
+        status=1
+    fi
+else
+    echo "⚠ clj-kondo not found — skipping the lint check. brew install borkdude/brew/clj-kondo"
+fi
+
+if [ "$status" -ne 0 ]; then
+    echo
+    echo "Commit rejected. Use 'git commit --no-verify' to override."
+fi
+
+exit "$status"
