@@ -82,7 +82,7 @@ Delegate browser testing to `browser-tester` sub-agent to preserve context.
 ### Formatting and linting
 
 Enforced by hooks and CI, so you rarely need to run these by hand — the
-PostToolUse hook formats each file you edit and reports clj-kondo errors
+PostToolUse hook formats each file you edit and reports clj-kondo findings
 immediately.
 
 ```bash

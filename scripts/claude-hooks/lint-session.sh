@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #
-# Claude Code Stop hook: whole-project clj-kondo error check at end of turn.
+# Claude Code Stop hook: whole-project clj-kondo check at end of turn.
 #
 # The PostToolUse hook only ever sees the one file that was just edited, so it
 # cannot notice cross-file breakage — rename a var and the dangling reference
 # lives in some *other* namespace, which nothing re-lints. This catches that
 # once the edits have settled.
 #
-# Errors exit 2, which makes Claude Code keep working instead of ending the turn
-# on broken code. Warnings are left to `bb lint-ratchet` in CI.
+# Findings exit 2, which makes Claude Code keep working instead of ending the
+# turn on broken code. Warnings block as well as errors: the tree is at zero
+# clj-kondo warnings and CI gates on that, so anything reported here is new.
 #
 # Costs ~3 s over the whole project, but only when Clojure files actually
 # changed in the working tree; otherwise it exits in a few milliseconds.

@@ -296,7 +296,7 @@ answer.
 Enforcement runs at three points:
 
 - **Claude Code hooks** (`.claude/settings.json`) format each edited file and
-  report clj-kondo errors immediately. ~90 ms.
+  report clj-kondo findings immediately. ~90 ms.
 - **`.githooks/pre-commit`** checks staged Clojure files. Enabled by
   `setup-dev.sh`, or manually with `git config core.hooksPath .githooks`.
   Bypass with `git commit --no-verify`.

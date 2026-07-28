@@ -119,10 +119,9 @@ works.
 bb lint          clj-kondo, errors fail        (all sources or given files)
 bb lint-strict   as above, warnings fail too
 bb lint-changed  clj-kondo on files changed vs LINT_BASE
-bb lint-ratchet  fail only where a changed file GAINED warnings
 bb fmt           cljfmt fix
 bb fmt-check     cljfmt check
-bb check         fmt-check + lint — what CI and pre-commit run
+bb check         fmt-check + lint-strict — what CI runs
 ```
 
 Scope went from `src` only to `src test dev build.clj scripts`. `bb lint`
@@ -141,12 +140,14 @@ so the session root no longer decides whether formatting happens. Both point at
 | Event | Script | Does |
 |---|---|---|
 | PreToolUse `Write\|Edit` | `paren-repair.sh` | delimiter repair, no-op if not installed |
-| PostToolUse `Write\|Edit` | `format-and-lint.sh` | `cljfmt fix` + `clj-kondo`; errors exit 2 |
-| Stop | `lint-session.sh` | whole-project error check |
+| PostToolUse `Write\|Edit` | `format-and-lint.sh` | `cljfmt fix` + `clj-kondo`; findings exit 2 |
+| Stop | `lint-session.sh` | whole-project check, warnings included |
 
-`format-and-lint.sh` raises **errors only**. 177 of 409 files carry pre-existing
-warnings; repeating them on every edit to a legacy file would be noise. Exit 2 is
-how a PostToolUse hook feeds text back to the model.
+`format-and-lint.sh` reports **warnings as well as errors**. That only became
+safe once the tree reached zero warnings — while 177 of 409 files still carried
+pre-existing ones, repeating them on every edit to a legacy file would have been
+noise, so the hook was errors-only until the cleanup landed. Exit 2 is how a
+PostToolUse hook feeds text back to the model.
 
 `lint-session.sh` exists because the per-file hook cannot see cross-file
 breakage — rename a var and the dangling reference is in a namespace nothing
@@ -160,7 +161,7 @@ rebalance parens, so it cannot corrupt a conflicted file.
 
 ### Layer 2 — pre-commit (`.githooks/pre-commit`)
 
-`cljfmt check` + `clj-kondo --fail-level error` on staged Clojure files only.
+`cljfmt check` + `clj-kondo --fail-level warning` on staged Clojure files only.
 Opt-in per clone via `git config core.hooksPath .githooks`, which `setup-dev.sh`
 now does. Missing tools degrade to a warning. Bypass with `--no-verify`.
 
