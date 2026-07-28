@@ -1,0 +1,13 @@
+# Revisions to skip when running `git blame`.
+#
+# Only bulk, whitespace-only reformats belong here — commits that touch a large
+# number of files without changing program semantics. Adding anything else hides
+# real authorship.
+#
+# GitHub honours this file automatically. Locally, enable it once with:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style(webapp): apply cljfmt to src, test and dev
+# 183 files reformatted to webapp/.cljfmt.edn; verified token-identical.
+0b564e8bb5a692bf7e2e6511148e7686e4f792c4
