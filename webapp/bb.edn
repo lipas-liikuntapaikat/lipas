@@ -221,8 +221,13 @@
                        ;; An empty changed-file set is a legitimate no-op here,
                        ;; unlike explicitly passed arguments that resolve to
                        ;; nothing — so this exits 0 rather than going through
-                       ;; run-lint's "nothing resolved" failure path.
-                       :task (let [{:keys [paths]} (resolve-paths (changed-files))]
+                       ;; run-lint's "nothing resolved" failure path. It must be
+                       ;; caught BEFORE resolve-paths, whose empty-args case
+                       ;; means "no arguments given" and falls back to linting
+                       ;; everything.
+                       :task (let [changed (changed-files)
+                                   {:keys [paths]} (when (seq changed)
+                                                     (resolve-paths changed))]
                                (if (empty? paths)
                                  (println "No changed Clojure files — nothing to lint.")
                                  (do (println (str "Linting " (count paths) " changed file(s):"))
