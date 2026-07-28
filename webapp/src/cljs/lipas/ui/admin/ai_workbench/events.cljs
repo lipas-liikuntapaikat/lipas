@@ -1,5 +1,6 @@
 (ns lipas.ui.admin.ai-workbench.events
   (:require [ajax.core :as ajax]
+            [clojure.string :as str]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -77,7 +78,7 @@
 ;; Sports site autocomplete search
 (rf/reg-event-fx ::search-sites
   (fn [{:keys [db]} [_ search-string]]
-    (let [s (some-> search-string str clojure.string/trim)]
+    (let [s (some-> search-string str str/trim)]
       (if (or (empty? s) (< (count s) 2))
         {:db (assoc-in db (conj state-path :site-search-results) [])}
         {:http-xhrio

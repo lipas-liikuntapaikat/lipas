@@ -1,34 +1,37 @@
 (ns lipas.ui.admin.ai-workbench.views
   (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Autocomplete$default" :as Autocomplete]
+            ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
+            ;; deftype, so the [:> Box ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
-            ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/Chip$default" :as Chip]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/MenuItem$default" :as MenuItem]
             ["@mui/material/Slider$default" :as Slider]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Switch$default" :as Switch]
             ["@mui/material/TextField$default" :as TextField]
-            ["@mui/material/Autocomplete$default" :as Autocomplete]
             ["@mui/material/ToggleButton$default" :as ToggleButton]
             ["@mui/material/ToggleButtonGroup$default" :as ToggleButtonGroup]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
-            ["react" :as react]
             [lipas.data.types :as types]
             [lipas.ui.admin.ai-workbench.events :as events]
             [lipas.ui.admin.ai-workbench.subs :as subs]
             [lipas.ui.components.autocompletes :as ac]
-            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.events :as ui-events]
             [lipas.ui.ptv.controls :as ptv-controls]
             [re-frame.core :as rf]
@@ -119,8 +122,7 @@
        (when-let [c (:city-name site)] (str ", " c))))
 
 (r/defc service-location-input []
-  (let [lipas-id       @(rf/subscribe [::subs/lipas-id])
-        loading?       @(rf/subscribe [::subs/preview-loading?])
+  (let [loading?       @(rf/subscribe [::subs/preview-loading?])
         error          @(rf/subscribe [::subs/preview-error])
         search-results @(rf/subscribe [::subs/site-search-results])
         options        (hooks/use-memo

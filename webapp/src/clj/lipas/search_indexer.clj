@@ -1,28 +1,22 @@
 (ns lipas.search-indexer
-  (:require
-   [clojure.string :as str]
-   [lipas.backend.api.v1.locations :as legacy-locations]
-   [lipas.backend.api.v1.sports-place :as legacy-sports-place]
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.search :as search]
-   [lipas.backend.system :as backend]
-   [lipas.data.cities :as cities]
-   [lipas.data.types :as types]
-   [lipas.backend.api.v1.transform :as legacy-transform]
-   [lipas.utils :as utils]
-   [next.jdbc :as jdbc]
-   [taoensso.timbre :as log]))
+  (:require [clojure.string :as str]
+            [lipas.backend.analysis.diversity :as diversity]
+            [lipas.backend.api.v1.locations :as legacy-locations]
+            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+            [lipas.backend.api.v1.transform :as legacy-transform]
+            [lipas.backend.config :as config]
+            [lipas.backend.core :as core]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.search :as search]
+            [lipas.backend.system :as backend]
+            [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
+            [lipas.utils :as utils]
+            [next.jdbc :as jdbc]
+            [taoensso.timbre :as log]))
 
 (def cities (utils/index-by :city-code cities/all))
 (def types types/all)
-
-(defn- wait-all [futures]
-  (log/info "Waiting for indexing requests to get processed...")
-  (doseq [f futures]
-    (log/info (deref f))))
 
 (defn- wait-one
   [future]
@@ -61,8 +55,8 @@
                       (legacy-transform/->old-lipas-sports-site)
                       (assoc :id (:lipas-id %))
                       (legacy-sports-place/format-sports-place
-                       :all
-                       legacy-locations/format-location)))
+                        :all
+                        legacy-locations/format-location)))
             (search/->bulk idx-name :sportsPlaceId)
             (search/bulk-index! client)
             (wait-one)
@@ -91,7 +85,7 @@
        (print-results results)))))
 
 (defn enrich-for-analytics
-  [users {:keys [id document author_id status created_at] :as revision}]
+  [users {:keys [id document author_id status created_at]}]
   (try
     (-> document
         core/enrich
@@ -162,20 +156,20 @@
     ;; vector load.
     (jdbc/with-transaction [tx db]
       (let [tail (reduce
-                  (fn [batch row]
-                    (let [m (select-keys row [:id :document :author_id :status :created_at])]
-                      (if-let [enriched (enrich-for-analytics users m)]
-                        (let [batch+ (conj batch enriched)]
-                          (if (>= (count batch+) analytics-batch-size)
-                            (do (flush-analytics-batch! client idx-name type-code batch+)
-                                [])
-                            batch+))
-                        batch)))
-                  []
-                  (jdbc/plan tx
-                             ["SELECT id, document, author_id, status, created_at, type_code
+                   (fn [batch row]
+                     (let [m (select-keys row [:id :document :author_id :status :created_at])]
+                       (if-let [enriched (enrich-for-analytics users m)]
+                         (let [batch+ (conj batch enriched)]
+                           (if (>= (count batch+) analytics-batch-size)
+                             (do (flush-analytics-batch! client idx-name type-code batch+)
+                                 [])
+                             batch+))
+                         batch)))
+                   []
+                   (jdbc/plan tx
+                              ["SELECT id, document, author_id, status, created_at, type_code
                                FROM sports_site WHERE type_code = ?" type-code]
-                             {:fetch-size 500}))]
+                              {:fetch-size 500}))]
         (flush-analytics-batch! client idx-name type-code tail)))))
 
 (defn main

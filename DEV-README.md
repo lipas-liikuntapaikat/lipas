@@ -261,6 +261,84 @@ bb test-var lipas.backend.core-test/some-test
 ```
 
 
+## Linting and Formatting
+
+Formatting is defined by `webapp/.cljfmt.edn`, linting by
+`webapp/.clj-kondo/config.edn`. Both are enforced in CI, so the local tools must
+match the pinned versions:
+
+```bash
+brew trust borkdude/brew          # the tap clj-kondo ships from
+brew install borkdude/brew/clj-kondo   # 2026.07.24
+brew install cljfmt                    # 0.16.5
+```
+
+Versions are pinned in the `lint` job of `.github/workflows/ci.yaml`; bump them
+there and locally together.
+
+```bash
+cd webapp
+
+bb fmt            # format everything (or pass specific files)
+bb fmt-check      # check without writing
+bb lint           # clj-kondo; errors fail
+bb lint-strict    # clj-kondo; warnings fail too — what CI gates on
+bb check          # fmt-check + lint-strict, what CI runs
+bb clean-ns <f>   # remove unused requires (clojure-lsp) — see the warning below
+```
+
+Both tools resolve their config by walking **up** from the working directory,
+and that config lives in `webapp/`. Run them from `webapp/`, or via these `bb`
+tasks, which pin the directory themselves — invoked from the repository root the
+raw binaries silently fall back to their own defaults and give a different
+answer.
+
+Enforcement runs at three points:
+
+- **Claude Code hooks** (`.claude/settings.json`) format each edited file and
+  report clj-kondo findings immediately. ~90 ms.
+- **`.githooks/pre-commit`** checks staged Clojure files. Enabled by
+  `setup-dev.sh`, or manually with `git config core.hooksPath .githooks`.
+  Bypass with `git commit --no-verify`.
+- **CI** runs `bb fmt-check` and `bb lint-strict`.
+
+The repository is at **zero clj-kondo warnings**, and all three gates fail on
+warnings as well as errors. Keeping it there is cheaper than getting there was.
+
+If a finding is genuinely a false positive, silence it narrowly at the call site
+with `#_{:clj-kondo/ignore [:linter-name]}` and a comment saying why the code is
+correct. It is not a shortcut for a warning that is merely tedious to fix.
+
+### `bb clean-ns` will delete requires you need
+
+clojure-lsp's clean-ns removes any require clj-kondo considers unused, and
+clj-kondo is wrong in two ways that matter here. Always review its diff.
+
+1. **Aliases that collide with `cljs.core`.** Requiring
+   `["@mui/material/Box$default" :as Box]` and using bare `[:> Box ...]` looks
+   unused to clj-kondo, because it resolves the bare symbol to the real
+   `cljs.core/Box` deftype. Remove the require and clj-kondo *still* reports
+   zero warnings and the ClojureScript build *still* succeeds — the component
+   is simply wrong in the browser. Confirmed colliding names: `Box`, `List`,
+   `Symbol`, `Keyword`, `Delay`, `Atom`, `Var`, `Range`, `Cons`, `Empty`,
+   `Reduced`, `Volatile`, `MultiFn`, `Namespace`, `Repeat`, `Iterate`, `Cycle`.
+   `Set` and `Map` do not collide.
+
+2. **Requires that exist only for load-time side effects** — re-frame handler
+   registration, `defmethod` implementations, integrant `init-key` methods,
+   proj4 projection registration. Nothing references them, so they read as
+   unused; deleting one breaks the program at runtime with no compile error and
+   no failing test.
+
+In both cases restore the require with `#_{:clj-kondo/ignore [:unused-namespace]}`
+and a comment. To tell a genuine false positive from genuinely dead code, check
+whether the usage sits inside a `#_` discard or `(comment ...)` block — clj-kondo
+skips those, so a require used only from dead code really is unused.
+
+`git blame` skips the bulk cljfmt reformat via `.git-blame-ignore-revs`
+(configured by `setup-dev.sh`).
+
+
 ## Container Reference
 
 | Service       | Purpose              | Local Port          |

@@ -1,7 +1,7 @@
 (ns lipas.backend.api.v1.search
-  (:require [qbits.spandex :as es]
+  (:require [clojure.string :as str]
+            [qbits.spandex :as es]
             [qbits.spandex.utils :as es-utils]
-            [clojure.string :as str]
             [taoensso.timbre :as log]))
 
 (defn sanitize-search-string

@@ -105,9 +105,9 @@
   connection-manager
   (delay
     (doto (conn-mgr/make-reusable-conn-manager
-           {:timeout 30 ; Idle connection TTL (seconds)
-            :threads 32
-            :default-per-route 32})
+            {:timeout 30 ; Idle connection TTL (seconds)
+             :threads 32
+             :default-per-route 32})
       ;; Health-check connections that sat idle >1s before reuse, so a
       ;; keep-alive connection the server closed doesn't surface as an
       ;; IOException mid-request
@@ -256,30 +256,30 @@
   (update fcoll :features
           (fn [fs]
             (mapv
-             (fn [feat]
-               (update-in feat [:geometry :coordinates]
-                          (fn [coords]
-                            (condp = (-> feat :geometry :type)
-                              "Point"      (f coords)
-                              "LineString" (mapv f coords)
-                              "Polygon"    (mapv #(mapv f %) coords)
-                              (throw (ex-info "Encountered unexpected geometry type" feat))))))
-             fs))))
+              (fn [feat]
+                (update-in feat [:geometry :coordinates]
+                           (fn [coords]
+                             (condp = (-> feat :geometry :type)
+                               "Point"      (f coords)
+                               "LineString" (mapv f coords)
+                               "Polygon"    (mapv #(mapv f %) coords)
+                               (throw (ex-info "Encountered unexpected geometry type" feat))))))
+              fs))))
 
 (defn reduce-vertices
   "Reduce rf over every vertex coordinate of fcoll without rebuilding
   the collection, in the same order `map-vertices` visits them."
   [rf init fcoll]
   (reduce
-   (fn [acc feat]
-     (let [coords (-> feat :geometry :coordinates)]
-       (condp = (-> feat :geometry :type)
-         "Point"      (rf acc coords)
-         "LineString" (reduce rf acc coords)
-         "Polygon"    (reduce #(reduce rf %1 %2) acc coords)
-         (throw (ex-info "Encountered unexpected geometry type" feat)))))
-   init
-   (:features fcoll)))
+    (fn [acc feat]
+      (let [coords (-> feat :geometry :coordinates)]
+        (condp = (-> feat :geometry :type)
+          "Point"      (rf acc coords)
+          "LineString" (reduce rf acc coords)
+          "Polygon"    (reduce #(reduce rf %1 %2) acc coords)
+          (throw (ex-info "Encountered unexpected geometry type" feat)))))
+    init
+    (:features fcoll)))
 
 (defn geometry-vertices
   "All vertex coordinates of fcoll that `append-elevations` will
@@ -325,10 +325,10 @@
   [fcoll grid-index tm35-vertices]
   (let [i (volatile! -1)]
     (map-vertices
-     (fn [coords]
-       (let [[x y] coords]
-         [x y (resolve-elevation grid-index (nth tm35-vertices (vswap! i inc)))]))
-     fcoll)))
+      (fn [coords]
+        (let [[x y] coords]
+          [x y (resolve-elevation grid-index (nth tm35-vertices (vswap! i inc)))]))
+      fcoll)))
 
 (defn parse-ascii-grid-headers
   [lines]
@@ -438,15 +438,15 @@
   [fetch-plan]
   (into {}
         (mapcat
-         (fn [wave]
-           (mapcat (fn [{:keys [chunk-keys]} grid]
-                     (let [indexed (index-grid grid)]
-                       (map (fn [k] [k indexed]) chunk-keys)))
-                   wave
-                   (patterns/pmap-with-timeout
-                    elevation-chunk-timeout-ms
-                    (comp get-elevation-coverage :envelope)
-                    wave))))
+          (fn [wave]
+            (mapcat (fn [{:keys [chunk-keys]} grid]
+                      (let [indexed (index-grid grid)]
+                        (map (fn [k] [k indexed]) chunk-keys)))
+                    wave
+                    (patterns/pmap-with-timeout
+                      elevation-chunk-timeout-ms
+                      (comp get-elevation-coverage :envelope)
+                      wave))))
         (partition-all max-concurrent-fetches fetch-plan)))
 
 (defn enrich-elevation

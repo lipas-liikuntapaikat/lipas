@@ -6,14 +6,14 @@
   database; only the job handler itself is redefined (there is no external
   service to call in tests)."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.dispatcher :as dispatcher]
-   [lipas.jobs.registry :as registry]
-   [lipas.jobs.worker :as worker]
-   [lipas.test-utils :as test-utils])
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.dispatcher :as dispatcher]
+    [lipas.jobs.registry :as registry]
+    [lipas.jobs.worker :as worker]
+    [lipas.test-utils :as test-utils])
   (:import
-   [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor]))
+    [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor]))
 
 (defonce test-system (atom nil))
 
@@ -238,12 +238,12 @@
                                                       :body "Hello"})]
       (try
         (worker/start-mixed-duration-worker!
-         {:db db :emailer test-emailer :search nil}
-         {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 200})
+          {:db db :emailer test-emailer :search nil}
+          {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 200})
 
         (is (test-utils/wait-for-condition
-             (fn [] (= "completed" (:jobs/status (test-utils/get-job-by-id db id))))
-             10000)
+              (fn [] (= "completed" (:jobs/status (test-utils/get-job-by-id db id))))
+              10000)
             "Email job should complete")
 
         (is (= 1 (count @(:sent-emails test-emailer))))

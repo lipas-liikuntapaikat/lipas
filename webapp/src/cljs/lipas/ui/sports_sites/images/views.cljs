@@ -16,7 +16,6 @@
             [lipas.schema.sports-sites.images :as images-schema]
             [lipas.ui.components.dialogs :as dialogs]
             [lipas.ui.components.form-table :as form-table]
-            [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as lui-tf]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [malli.core :as m]
@@ -40,7 +39,7 @@
   "Drops blank entries from a localized-string map; nil when nothing remains."
   [m]
   (not-empty
-   (into {} (filter (fn [[_ v]] (and (string? v) (not (str/blank? v))))) m)))
+    (into {} (filter (fn [[_ v]] (and (string? v) (not (str/blank? v))))) m)))
 
 (defn- ->image
   "Normalizes dialog form data into an image map: trims the URL and drops

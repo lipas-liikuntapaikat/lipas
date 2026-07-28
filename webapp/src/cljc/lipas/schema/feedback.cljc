@@ -12,7 +12,7 @@
 (def feedback-payload
   "Feedback payload schema. Uses qualified keys to match the existing API contract."
   (m/schema
-   [:map
-    [:lipas.feedback/type feedback-type]
-    [:lipas.feedback/text feedback-text]
-    [:lipas.feedback/sender {:optional true} users/email-schema]]))
+    [:map
+     [:lipas.feedback/type feedback-type]
+     [:lipas.feedback/text feedback-text]
+     [:lipas.feedback/sender {:optional true} users/email-schema]]))

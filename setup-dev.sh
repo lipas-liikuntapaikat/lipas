@@ -4,6 +4,16 @@ set -e
 
 source .env.sh
 
+### Git hooks ###
+
+printf "\n *** Enabling repository git hooks *** \n\n"
+# .githooks/pre-commit rejects unformatted or broken Clojure. Hooks are not
+# shared by git itself, so every clone has to opt in via core.hooksPath.
+git config core.hooksPath .githooks
+# Keeps the bulk cljfmt reformat out of `git blame`.
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+echo "core.hooksPath -> .githooks (bypass a single commit with --no-verify)"
+
 ### Cert ###
 
 printf "\n *** Generating self-signed SSL certificate *** \n\n"

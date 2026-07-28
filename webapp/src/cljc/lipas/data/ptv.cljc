@@ -699,7 +699,7 @@
 (comment
   (parse-service-source-id "lipas-7fdd7f84-e52a-4c17-a59a-d7c2a3095ed5-6100"))
 
-(defn index-services [services])
+(defn index-services [_services])
 
 (defn resolve-missing-services
   "Infer services (sub-categories) that need to be created in PTV and
@@ -877,25 +877,25 @@
    audit view's send-notification button, so the numbers always agree."
   [entries]
   (reduce
-   (fn [acc {:keys [ref audit fields]}]
-     (let [states (audit-field-states audit fields)
-           bucket (audit-bucket audit fields)]
-       (cond
-         (= :waiting-fixes bucket)
-         (update acc :action-items conj
-                 (assoc ref :fields (->> states
-                                         (keep (fn [[field state]]
-                                                 (when (= :changes-requested state)
-                                                   field)))
-                                         vec)))
+    (fn [acc {:keys [ref audit fields]}]
+      (let [states (audit-field-states audit fields)
+            bucket (audit-bucket audit fields)]
+        (cond
+          (= :waiting-fixes bucket)
+          (update acc :action-items conj
+                  (assoc ref :fields (->> states
+                                          (keep (fn [[field state]]
+                                                  (when (= :changes-requested state)
+                                                    field)))
+                                          vec)))
 
-         (and (= :done bucket)
-              (every? #(= :approved %) (vals states)))
-         (update acc :approved-count inc)
+          (and (= :done bucket)
+               (every? #(= :approved %) (vals states)))
+          (update acc :approved-count inc)
 
-         :else acc)))
-   {:action-items [] :approved-count 0}
-   entries))
+          :else acc)))
+    {:action-items [] :approved-count 0}
+    entries))
 
 (defn determine-audit-status
   "Audit indicator for a sports site row in the manager-facing listing.
@@ -934,23 +934,23 @@
   [ptv-org-id service]
   (let [source-id (:sourceId service)]
     (merge
-     {:source-id source-id
-      :service-id (:id service)
-      :ptv-org-id ptv-org-id
-      :name (reduce (fn [acc {:keys [language value type]}]
-                      (if (= "Name" type)
-                        (assoc acc (lang->locale language) value)
-                        acc))
-                    {}
-                    (:serviceNames service))
+      {:source-id source-id
+       :service-id (:id service)
+       :ptv-org-id ptv-org-id
+       :name (reduce (fn [acc {:keys [language value type]}]
+                       (if (= "Name" type)
+                         (assoc acc (lang->locale language) value)
+                         acc))
+                     {}
+                     (:serviceNames service))
       ;; PTV language codes ("sv") -> LIPAS locale codes ("se"), unsupported dropped
-      :languages (into [] (comp (keep lang->locale) (map name)) (:languages service))
-      :publishing-status (:publishingStatus service)
+       :languages (into [] (comp (keep lang->locale) (map name)) (:languages service))
+       :publishing-status (:publishingStatus service)
       ;; Derivable only for sub-category-mapped source-ids; adopted ones
       ;; (lipas-<org>-ptv-<uuid>) carry no sub-category.
-      :sub-category-id (when-not (adopted-service-source-id? source-id)
-                         (parse-service-source-id source-id))}
-     (ptv-descriptions->texts (:serviceDescriptions service)))))
+       :sub-category-id (when-not (adopted-service-source-id? source-id)
+                          (parse-service-source-id source-id))}
+      (ptv-descriptions->texts (:serviceDescriptions service)))))
 
 (def persisted-ptv-keys
   "The editable :ptv meta keys persisted on a sync. Both the sync path
@@ -1122,7 +1122,7 @@
                          :removed (mk-entries (set/difference lipas-service-ids ptv-service-ids))}])]
       (vec (concat drifted link-drift)))))
 
-(defn sports-site->ptv-input [{:keys [types org-id org-defaults org-langs]} service-channels services site]
+(defn sports-site->ptv-input [{:keys [types org-id org-langs]} service-channels services site]
   (let [service-id (-> site :ptv :service-ids first)
         service-channel-id (-> site :ptv :service-channel-ids first)
 

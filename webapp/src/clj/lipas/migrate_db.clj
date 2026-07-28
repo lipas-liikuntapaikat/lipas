@@ -1,7 +1,8 @@
 (ns lipas.migrate-db
-  (:require [migratus.core :as migratus]
+  (:refer-clojure :exclude [reset!])
+  (:require [clojure.string :as str]
             [lipas.backend.config :as config]
-            [clojure.string :as str])
+            [migratus.core :as migratus])
   (:gen-class))
 
 (def migration-config

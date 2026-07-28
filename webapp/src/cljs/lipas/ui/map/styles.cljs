@@ -196,30 +196,24 @@
         planned? #js [style planned-stroke]
         :else #js [style]))))
 
-(defn loi-style [f resolution]
-  (let [loi-type (.get f "loi-type")
-        status (.get f "status")]
-    #js [(Style. #js {:image (Circle. #js {:radius 8
-                                           :stroke (Stroke. #js {:color mui/primary})
-                                           :fill (Fill. #js {:color mui/secondary2})})})
-         (Style. #js {:stroke (Stroke. #js {:color mui/primary})
-                      :fill (Fill. #js {:color (->rgba mui/secondary 0.5)})})]))
+(defn loi-style [_f _resolution]
+  #js [(Style. #js {:image (Circle. #js {:radius 8
+                                         :stroke (Stroke. #js {:color mui/primary})
+                                         :fill (Fill. #js {:color mui/secondary2})})})
+       (Style. #js {:stroke (Stroke. #js {:color mui/primary})
+                    :fill (Fill. #js {:color (->rgba mui/secondary 0.5)})})])
 
-(defn loi-style-hover [f resolution]
-  (let [loi-type (.get f "loi-type")
-        status (.get f "status")]
-    #js [(Style. #js {:image (Circle. #js {:radius 10
-                                           :stroke (Stroke. #js {:color mui/primary})
-                                           :fill (Fill. #js {:color mui/secondary2})})})
-         (Style. #js {:stroke (Stroke. #js {:color mui/primary})
-                      :fill (Fill. #js {:color (->rgba mui/secondary 0.7)})})]))
+(defn loi-style-hover [_f _resolution]
+  #js [(Style. #js {:image (Circle. #js {:radius 10
+                                         :stroke (Stroke. #js {:color mui/primary})
+                                         :fill (Fill. #js {:color mui/secondary2})})})
+       (Style. #js {:stroke (Stroke. #js {:color mui/primary})
+                    :fill (Fill. #js {:color (->rgba mui/secondary 0.7)})})])
 
-(defn loi-style-selected [f resolution]
-  (let [loi-type (.get f "loi-type")
-        status (.get f "status")]
-    (Style. #js {:image (Circle. #js {:radius 10
-                                      :stroke (Stroke. #js {:color mui/gold})
-                                      :fill (Fill. #js {:color mui/secondary2})})})))
+(defn loi-style-selected [_f _resolution]
+  (Style. #js {:image (Circle. #js {:radius 10
+                                    :stroke (Stroke. #js {:color mui/gold})
+                                    :fill (Fill. #js {:color mui/secondary2})})}))
 
 (def styleset styles/symbols)
 
@@ -446,11 +440,11 @@
    "Varhaiskasvatusyksikkö"
    {:name "Varhaiskasvatusyksikkö" :color "#ff40ff"}})
 
-(defn school-style [f resolution]
+(defn school-style [f _resolution]
   (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24})))
 
-(defn school-hover-style [f resolution]
+(defn school-hover-style [f _resolution]
   (let [color (:color (get school-colors (.get f "type")))]
     (->school-style {:color color :width 24 :height 24 :hover? true})))
 

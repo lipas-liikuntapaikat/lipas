@@ -1,7 +1,6 @@
 (ns lipas.ui.map.subs
   (:require [clojure.string :as str]
             [goog.array :as garray]
-            [goog.object :as gobj]
             [re-frame.core :as rf]
             [reagent.ratom :as ratom]))
 
@@ -118,21 +117,21 @@
                        ;; Hmm, consider cljs-bean here? Should be nearly as fast
                        geoms            (or
                                           ;; Full geoms
-                                          (gobj/getValueByKeys obj
-                                                               "location"
-                                                               "geometries"
-                                                               "features")
+                                          (some-> obj
+                                                  (aget "location")
+                                                  (aget "geometries")
+                                                  (aget "features"))
                                           ;; Simplified geoms
-                                          (gobj/getValueByKeys obj
-                                                               "search-meta"
-                                                               "location"
-                                                               "simple-geoms"
-                                                               "features"))
-                       type-code        (gobj/getValueByKeys obj "type" "type-code")
-                       lipas-id         (gobj/get obj "lipas-id")
-                       name             (gobj/get obj "name")
-                       status           (gobj/get obj "status")
-                       travel-direction (gobj/get obj "travel-direction")]
+                                          (some-> obj
+                                                  (aget "search-meta")
+                                                  (aget "location")
+                                                  (aget "simple-geoms")
+                                                  (aget "features")))
+                       type-code        (some-> obj (aget "type") (aget "type-code"))
+                       lipas-id         (aget obj "lipas-id")
+                       name             (aget obj "name")
+                       status           (aget obj "status")
+                       travel-direction (aget obj "travel-direction")]
 
                  ;; To avoid displaying duplicates when editing
                    (when-not (= lipas-id' lipas-id)

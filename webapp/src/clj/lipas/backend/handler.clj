@@ -1,21 +1,21 @@
 (ns lipas.backend.handler
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [lipas.backend.analysis.heatmap :as heatmap]
-            [lipas.backend.auth :as auth]
             [lipas.backend.api.v1.routes :as v1]
             [lipas.backend.api.v2 :as v2]
-            [lipas.backend.bulk-operations.core :as bulk-ops]
-            [lipas.backend.bulk-operations.handler :as bulk-ops-handler]
             [lipas.backend.assistant :as assistant]
+            [lipas.backend.auth :as auth]
+            [lipas.backend.bulk-operations.core :as bulk-ops]
             [lipas.backend.core :as core]
             [lipas.backend.help :as help]
-            [lipas.backend.search :as search*]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.middleware :as mw]
             [lipas.backend.org :as org]
             [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
+            [lipas.backend.search :as search*]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -95,7 +95,7 @@
    (let [default-handler (:reitit.coercion/request-coercion exception/default-handlers)]
      (fn [e request]
        (log/errorf e "Request coercion error")
-       (if (clojure.string/starts-with? (:uri request) "/v1")
+       (if (str/starts-with? (:uri request) "/v1")
          ;; Legacy API format: {"errors":{"fieldName":["error message"]}}
          ;; Use malli.error/humanize to get human-readable messages
          (let [{:keys [schema value errors]} (ex-data e)
@@ -800,7 +800,7 @@
           {:no-doc false
            :handler
            (fn [{:keys [body-params]}]
-             (let [s (some-> (:search-string body-params) str clojure.string/trim)
+             (let [s (some-> (:search-string body-params) str str/trim)
                    idx (get-in search [:indices :sports-site :search])
                    client (:client search)]
                (if (or (empty? s) (< (count s) 2))
@@ -1320,99 +1320,99 @@
              {:status 200
               :body (core/search-lois-with-params search body-params)})}}]
 
-      ["/actions/save-help-data"
-       {:post
-        {:no-doc true
-         :require-privilege :help/manage
-         :parameters {:body help-schema/SaveHelpDataBody}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (help/save-help-data db (:locale body-params) (:data body-params))})}}]
+        ["/actions/save-help-data"
+         {:post
+          {:no-doc true
+           :require-privilege :help/manage
+           :parameters {:body help-schema/SaveHelpDataBody}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (help/save-help-data db (:locale body-params) (:data body-params))})}}]
 
-      ["/actions/get-help-data"
-       {:post
-        {:no-doc true
-         :responses {200 {:body help-schema/HelpData}}
-         :handler
-         (fn [_]
-           {:status 200
-            :body (help/get-help-data db)})}}]
+        ["/actions/get-help-data"
+         {:post
+          {:no-doc true
+           :responses {200 {:body help-schema/HelpData}}
+           :handler
+           (fn [_]
+             {:status 200
+              :body (help/get-help-data db)})}}]
 
-      ["/actions/save-help-draft"
-       {:post
-        {:no-doc true
-         :require-privilege :help/manage
-         :parameters {:body help-schema/SaveHelpDataBody}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (help/save-help-draft db (:locale body-params) (:data body-params))})}}]
+        ["/actions/save-help-draft"
+         {:post
+          {:no-doc true
+           :require-privilege :help/manage
+           :parameters {:body help-schema/SaveHelpDataBody}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (help/save-help-draft db (:locale body-params) (:data body-params))})}}]
 
-      ["/actions/get-help-versions"
-       {:post
-        {:no-doc true
-         :require-privilege :help/manage
-         :parameters {:body help-schema/HelpVersionsBody}
-         :handler
-         (fn [{:keys [body-params]}]
-           {:status 200
-            :body (help/get-help-versions db (:locale body-params))})}}]
+        ["/actions/get-help-versions"
+         {:post
+          {:no-doc true
+           :require-privilege :help/manage
+           :parameters {:body help-schema/HelpVersionsBody}
+           :handler
+           (fn [{:keys [body-params]}]
+             {:status 200
+              :body (help/get-help-versions db (:locale body-params))})}}]
 
-      ["/actions/get-help-version"
-       {:post
-        {:no-doc true
-         :require-privilege :help/manage
-         :parameters {:body [:map [:id :string]]}
-         :handler
-         (fn [{:keys [body-params]}]
-           (if-let [version (help/get-help-version
-                              db (java.util.UUID/fromString (:id body-params)))]
-             {:status 200 :body version}
-             {:status 404 :body {:error "Version not found"}}))}}]
+        ["/actions/get-help-version"
+         {:post
+          {:no-doc true
+           :require-privilege :help/manage
+           :parameters {:body [:map [:id :string]]}
+           :handler
+           (fn [{:keys [body-params]}]
+             (if-let [version (help/get-help-version
+                                db (java.util.UUID/fromString (:id body-params)))]
+               {:status 200 :body version}
+               {:status 404 :body {:error "Version not found"}}))}}]
 
-      ["/actions/assistant-chat"
-       {:post
-        {:no-doc true
-         :require-privilege :ai-assistant/use
-         :parameters {:body [:map
-                             [:message [:string {:min 1 :max 2000}]]
-                             [:history {:optional true}
-                              [:vector
-                               [:map
-                                [:role [:enum "user" "assistant"]]
-                                [:text :string]]]]
-                             [:context {:optional true} assistant/context-schema]]}
-         :handler
-         (fn [req]
-           (let [{:keys [message history context]} (:body-params req)]
-             (assistant/chat! {:db db
-                               :search search
-                               :user (:identity req)
-                               :message message
-                               :history (or history [])
-                               :context context})))}}]
+        ["/actions/assistant-chat"
+         {:post
+          {:no-doc true
+           :require-privilege :ai-assistant/use
+           :parameters {:body [:map
+                               [:message [:string {:min 1 :max 2000}]]
+                               [:history {:optional true}
+                                [:vector
+                                 [:map
+                                  [:role [:enum "user" "assistant"]]
+                                  [:text :string]]]]
+                               [:context {:optional true} assistant/context-schema]]}
+           :handler
+           (fn [req]
+             (let [{:keys [message history context]} (:body-params req)]
+               (assistant/chat! {:db db
+                                 :search search
+                                 :user (:identity req)
+                                 :message message
+                                 :history (or history [])
+                                 :context context})))}}]
 
-      ["/actions/assistant-escalate"
-       {:post
-        {:no-doc true
-         :require-privilege :ai-assistant/use
-         :parameters {:body [:map
-                             [:summary [:string {:min 1 :max 2000}]]
-                             [:transcript {:optional true}
-                              [:vector
-                               [:map
-                                [:role [:enum "user" "assistant"]]
-                                [:text :string]]]]
-                             [:context {:optional true} assistant/context-schema]]}
-         :handler
-         (fn [req]
-           (let [{:keys [summary transcript context]} (:body-params req)]
-             (assistant/escalate! {:db db
-                                   :user (:identity req)
-                                   :summary summary
-                                   :transcript (or transcript [])
-                                   :context context})))}}]
+        ["/actions/assistant-escalate"
+         {:post
+          {:no-doc true
+           :require-privilege :ai-assistant/use
+           :parameters {:body [:map
+                               [:summary [:string {:min 1 :max 2000}]]
+                               [:transcript {:optional true}
+                                [:vector
+                                 [:map
+                                  [:role [:enum "user" "assistant"]]
+                                  [:text :string]]]]
+                               [:context {:optional true} assistant/context-schema]]}
+           :handler
+           (fn [req]
+             (let [{:keys [summary transcript context]} (:body-params req)]
+               (assistant/escalate! {:db db
+                                     :user (:identity req)
+                                     :summary summary
+                                     :transcript (or transcript [])
+                                     :context context})))}}]
 
       ;; Heatmap analysis
         ["/actions/create-heatmap"

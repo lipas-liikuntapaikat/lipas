@@ -17,20 +17,18 @@
    - upkeepclas (maintenance class, no LIPAS equivalent)
    - upkeepinfo (maintenance info, no LIPAS equivalent)
    - pyhiinvaellus? property (pilgrimage flag, no LIPAS equivalent)"
-  (:require
-    [clojure.data.csv :as csv]
-    [clojure.java.io :as io]
-    [clojure.string :as str]
-    [cheshire.core :as json]
-    [lipas.backend.gis :as gis]
-    [lipas.backend.db.db :as db]
-    [lipas.data.cities :as cities]
-    [lipas.data.types :as types]
-    [malli.core :as m]
-    [malli.error :as me]
-    [lipas.schema.sports-sites :as sports-site-schema])
-  (:import
-    [org.locationtech.jts.io WKTReader]))
+  (:require [cheshire.core :as json]
+            [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
+            [clojure.string :as str]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.gis :as gis]
+            [lipas.data.cities :as cities]
+            [lipas.data.types :as types]
+            [lipas.schema.sports-sites :as sports-site-schema]
+            [malli.core :as m]
+            [malli.error :as me])
+  (:import [org.locationtech.jts.io WKTReader]))
 
 ;; --- Coordinate transformation ---
 
@@ -204,15 +202,13 @@
    Returns {:site <doc> :dropped <map>} or nil if row can't be converted.
    The :dropped map records what information was not carried over."
   [{:keys [geom gid name_fi name_en name_se
-           info_fi info_se info_en
+           info_fi
            www_fi telephone email
            upkeeper munici_nro municipali
-           lipas_type_code lipas_type_name
+           lipas_type_code
            length_m properties
            chall_clas accessibil upkeepclas upkeepinfo
-           shapeestim timestamp ski_route
-           subregion region subreg_nro region_nro]
-    :as row}]
+           shapeestim timestamp]}]
   (let [linestrings (parse-multilinestring-wkt geom)
         type-code   (when (and lipas_type_code (re-matches #"\d+" lipas_type_code))
                       (let [code (Integer/parseInt lipas_type_code)]

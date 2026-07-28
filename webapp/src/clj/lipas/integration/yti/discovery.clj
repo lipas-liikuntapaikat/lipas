@@ -46,9 +46,9 @@
   (discovery/export-model \"japy\" :json-ld)
   ```"
   (:require
-   [clj-http.client :as http]
-   [clojure.data.json :as json]
-   [clojure.string :as str]))
+    [clj-http.client :as http]
+    [clojure.data.json :as json]
+    [clojure.string :as str]))
 
 ;;; Configuration
 

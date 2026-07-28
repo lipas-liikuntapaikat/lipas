@@ -7,7 +7,7 @@
             [lipas.ui.map.projection :as projection]
             [lipas.ui.ptv.events :as events]
             [lipas.ui.subs :as ui-subs]
-            [lipas.ui.utils :as utils :refer [prod?]]
+            [lipas.ui.utils :as utils]
             [malli.core :as m]
             [malli.error :as me]
             [re-frame.core :as rf]))
@@ -351,7 +351,7 @@
      (rf/subscribe [::service-candidate-descriptions org-id])
      (rf/subscribe [::selected-org])
      (rf/subscribe [::service-mappings org-id])])
-  (fn [[missing-services manual-services descriptions selected-org service-mappings] [_ org-id]]
+  (fn [[missing-services manual-services descriptions selected-org service-mappings] [_ _org-id]]
     (->> (concat missing-services
                  manual-services)
          (map (fn [{:keys [source-id] :as m}]
@@ -453,9 +453,8 @@
   ;; Sports sites filtered by the wizard step 1 sub-category selection.
   (fn [[_ org-id]]
     [(rf/subscribe [::sports-sites org-id])
-     (rf/subscribe [::candidates-search])
-     (rf/subscribe [:lipas.ui.sports-sites.subs/all-types])])
-  (fn [[sites candidates-search types] _]
+     (rf/subscribe [::candidates-search])])
+  (fn [[sites candidates-search] _]
     (let [sub-cats (:sub-cats candidates-search)]
       (if (seq sub-cats)
         (let [sub-cats-set (set sub-cats)]
@@ -752,8 +751,8 @@
     (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
          (filter (fn [site]
                    (let [b (ptv-data/audit-bucket
-                            (get-in site [:ptv :audit])
-                            (ptv-data/site-audit-fields site))]
+                             (get-in site [:ptv :audit])
+                             (ptv-data/site-audit-fields site))]
                      (if (= :waiting-audit bucket)
                        ;; The auditor's queue also contains every
                        ;; content-ready site not audited yet — the first
@@ -818,10 +817,10 @@
   (fn [sites _]
     (let [{:keys [action-items approved-count]}
           (ptv-data/audit-notification-summary
-           (map (fn [site]
-                  {:audit (get-in site [:ptv :audit])
-                   :fields (ptv-data/site-audit-fields site)})
-                sites))]
+            (map (fn [site]
+                   {:audit (get-in site [:ptv :audit])
+                    :fields (ptv-data/site-audit-fields site)})
+                 sites))]
       {:action-count (count action-items)
        :approved-count approved-count})))
 
@@ -899,8 +898,8 @@
     (->> services
          (filter (fn [svc]
                    (let [b (ptv-data/audit-bucket
-                            (:audit svc)
-                            (ptv-data/service-audit-fields svc))]
+                             (:audit svc)
+                             (ptv-data/service-audit-fields svc))]
                      (if (= :waiting-audit bucket)
                        ;; The auditor's queue also contains every
                        ;; content-ready service not audited yet — the first
@@ -927,10 +926,10 @@
   (fn [services _]
     (let [{:keys [action-items approved-count]}
           (ptv-data/audit-notification-summary
-           (map (fn [svc]
-                  {:audit (:audit svc)
-                   :fields (ptv-data/service-audit-fields svc)})
-                services))]
+            (map (fn [svc]
+                   {:audit (:audit svc)
+                    :fields (ptv-data/service-audit-fields svc)})
+                 services))]
       {:action-count (count action-items)
        :approved-count approved-count})))
 

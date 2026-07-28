@@ -6,17 +6,17 @@
   return normally (job completed) or throw (job retried / dead-lettered
   by the worker)."
   (:require
-   [lipas.backend.analysis.diversity :as diversity]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.elevation :as elevation]
-   [lipas.backend.email :as email]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.kb :as kb]
-   [lipas.integration.utp.webhook :as utp-webhook]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.patterns :as patterns]
-   [taoensso.timbre :as log]))
+    [lipas.backend.analysis.diversity :as diversity]
+    [lipas.backend.config :as config]
+    [lipas.backend.core :as core]
+    [lipas.backend.elevation :as elevation]
+    [lipas.backend.email :as email]
+    [lipas.backend.gis :as gis]
+    [lipas.backend.kb :as kb]
+    [lipas.integration.utp.webhook :as utp-webhook]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.patterns :as patterns]
+    [taoensso.timbre :as log]))
 
 (defmulti handle-job
   "Handle a job based on its type."

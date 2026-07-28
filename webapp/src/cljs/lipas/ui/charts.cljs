@@ -1,5 +1,13 @@
 (ns lipas.ui.charts
-  (:require ["recharts/es6/cartesian/Area" :refer [Area]]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableRow$default" :as TableRow]
+            ["@mui/material/Typography$default" :as Typography]
+            ["recharts/es6/cartesian/Area" :refer [Area]]
             ["recharts/es6/cartesian/Bar" :refer [Bar]]
             ["recharts/es6/cartesian/CartesianGrid" :refer [CartesianGrid]]
             ["recharts/es6/cartesian/Line" :refer [Line]]
@@ -16,18 +24,9 @@
             ["recharts/es6/component/Tooltip" :refer [Tooltip]]
             ["recharts/es6/polar/Pie" :refer [Pie]]
             [clojure.set :refer [map-invert rename-keys]]
-            [clojure.string :as string]
-            [goog.object :as gobj]
+            [clojure.string :as str]
             [goog.string :as gstring]
             [lipas.ui.components.misc :as misc]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Table$default" :as Table]
-            ["@mui/material/TableBody$default" :as TableBody]
-            ["@mui/material/TableCell$default" :as TableCell]
-            ["@mui/material/TableRow$default" :as TableRow]
-            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.mui :as mui]
             [lipas.ui.utils :as utils]
             [reagent.core :as r]))
@@ -93,7 +92,7 @@
 
 (defn parse-number [s]
   (when (string? s)
-    (js/Number.parseFloat (string/replace s #"[^\d\.]" ""))))
+    (js/Number.parseFloat (str/replace s #"[^\d\.]" ""))))
 
 (defn energy-chart
   [{:keys [data energy energy-label]}]
@@ -175,15 +174,15 @@
   ([labels props]
    (legend labels :label props))
   ([labels sort-fn props]
-   (let [payload (gobj/get props "payload")]
+   (let [payload (aget props "payload")]
      (r/as-element
        (->> payload
             (map
               (fn [obj]
-                {:label (or (labels (gobj/get obj "value"))
-                            (labels (keyword (gobj/get obj "value"))))
-                 :color (gobj/get obj "color")
-                 :type  (gobj/get obj "type")}))
+                {:label (or (labels (aget obj "value"))
+                            (labels (keyword (aget obj "value"))))
+                 :color (aget obj "color")
+                 :type  (aget obj "type")}))
             (sort-by sort-fn)
             (map
               (fn [{:keys [label color type]}]
@@ -200,41 +199,46 @@
    (tooltip payload-fn labels :label false props))
   ([payload-fn labels sort-fn ^js props]
    (tooltip payload-fn labels sort-fn false props))
-  ([payload-fn labels sort-fn hide-header? ^js props]
-   (let [label   (gobj/get props "label")
-         payload (gobj/get props "payload")]
-     (r/as-element
-       [:> Paper {:style {:padding "1em"}}
+  ([payload-fn _labels sort-fn hide-header? ^js props]
+   (let [label   (aget props "label")
+         payload (aget props "payload")]
+     ;; recharts 3.x renders custom Tooltip content with an empty payload
+     ;; while the tooltip is inactive (initial mount included). Render
+     ;; nothing then, or every payload-fn doing (-> payload first (aget ...))
+     ;; crashes the whole view.
+     (when (seq payload)
+       (r/as-element
+         [:> Paper {:style {:padding "1em"}}
 
-       ;; Tooltip header
-        (when-not hide-header?
-          [:> Typography
-           {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
-           label])
+        ;; Tooltip header
+          (when-not hide-header?
+            [:> Typography
+             {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
+             label])
 
-       ;; Content table
-        [:> Table {:style {:width "350"} :padding "normal" :size "small"}
-         (->> payload
-              payload-fn
-              (sort-by sort-fn)
-              (map
-                (fn [{:keys [label value icon color]}]
-                  [:> TableRow #_{:style {:height "24px"}}
-                   (when icon
-                     [:> TableCell {:padding "none"}
-                      [:> Icon {:style {:color color}}
-                       icon]])
-                   [:> TableCell
-                    [:> Typography {:variant "caption"}
-                     label]]
-                   [:> TableCell
-                    [:> Typography {:variant "caption"}
-                     value]]]))
-              (into [:> TableBody]))]]))))
+        ;; Content table
+          [:> Table {:style {:width "350"} :padding "normal" :size "small"}
+           (->> payload
+                payload-fn
+                (sort-by sort-fn)
+                (map
+                  (fn [{:keys [label value icon color]}]
+                    [:> TableRow #_{:style {:height "24px"}}
+                     (when icon
+                       [:> TableCell {:padding "none"}
+                        [:> Icon {:style {:color color}}
+                         icon]])
+                     [:> TableCell
+                      [:> Typography {:variant "caption"}
+                       label]]
+                     [:> TableCell
+                      [:> Typography {:variant "caption"}
+                       value]]]))
+                (into [:> TableBody]))]])))))
 
 (defn- get-population [payload]
   (when (> (count payload) 0)
-    (gobj/getValueByKeys payload 0 "payload" "population")))
+    (aget payload 0 "payload" "population")))
 
 (defn finance-tooltip [labels props]
   (let [payload-fn (fn [payload]
@@ -243,12 +247,12 @@
                          (->> payload
                               (map
                                 (fn [^js obj]
-                                  {:color (gobj/get obj "color")
-                                   :value (utils/round-safe (gobj/get obj "value"))
-                                   :icon  (if (gobj/get obj "stroke")
+                                  {:color (aget obj "color")
+                                   :value (utils/round-safe (aget obj "value"))
+                                   :icon  (if (aget obj "stroke")
                                             (legend-icons "line")
                                             (legend-icons "rect"))
-                                   :label (labels (keyword (gobj/get obj "name")))})))
+                                   :label (labels (keyword (aget obj "name")))})))
                          {:color "white"
                           :icon  "__dummy__"
                           :value population
@@ -281,10 +285,10 @@
                      (->> payload
                           (map
                             (fn [obj]
-                              {:label (labels (gobj/get obj "name"))
-                               :color (gobj/get obj "fill")
+                              {:label (labels (aget obj "name"))
+                               :color (aget obj "fill")
                                :icon  "label"
-                               :value (gobj/get obj "value")}))))]
+                               :value (aget obj "value")}))))]
     (tooltip payload-fn labels props)))
 
 (defn age-structure-chart
@@ -329,7 +333,7 @@
         payload-fn  (fn [payload]
                       (let [entry (-> payload
                                       first
-                                      (gobj/get "payload")
+                                      (aget "payload")
                                       (js->clj :keywordize-keys true))]
                         (->> entry
                              (reduce
@@ -368,15 +372,15 @@
        [:> LabelList {:position "right" :formatter formatter}]]]]))
 
 (defn angled-tick [props]
-  (let [x       (gobj/get props "x")
-        y       (gobj/get props "y")
-        payload (gobj/get props "payload")]
+  (let [x       (aget props "x")
+        y       (aget props "y")
+        payload (aget props "payload")]
     (r/as-element
       [:g {:transform (gstring/format "translate(%d,%d)" x y)}
        [:text
         {:x 0 :y 0 :dy 16 :textAnchor "end" :transform "rotate(-45)"
          :font-family "Lato"}
-        (gobj/get payload "value")]])))
+        (aget payload "value")]])))
 
 (defn finance-chart
   [{:keys [data metrics labels on-click]}]
@@ -417,7 +421,7 @@
    (let [payload-fn (fn [^js payload]
                       (let [entry (-> payload
                                       first
-                                      (gobj/get "payload")
+                                      (aget "payload")
                                       (js->clj :keywordize-keys true))]
                         (->> entry
                              (reduce
@@ -458,8 +462,8 @@
        [:> LabelList {:position "right"}]]]]))
 
 (defn ->payload [evt]
-  (when-let [arr (gobj/get evt "activePayload")]
-    (let [obj (gobj/getValueByKeys arr 0 "payload")]
+  (when-let [arr (aget evt "activePayload")]
+    (let [obj (aget arr 0 "payload")]
       (js->clj obj :keywordize-keys true))))
 
 (def zone-colors
@@ -494,10 +498,10 @@
          [:> Bar {:dataKey zone :stackId "a" :fill (zone-colors zone)}]))])
 
 #_(defn fixed-tick [props]
-    (let [x       (gobj/get props "x")
-          y       (gobj/get props "y")
-          payload (gobj/get props "payload")
-          v       (gobj/get payload "value")]
+    (let [x       (aget props "x")
+          y       (aget props "y")
+          payload (aget props "payload")
+          v       (aget payload "value")]
       (r/as-element
         [:g {:transform (gstring/format "translate(%d,%d)" x y)}
          [:text

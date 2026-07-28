@@ -1,20 +1,5 @@
 (ns lipas.ui.sports-sites.views
-  (:require [clojure.string :as str]
-            ["@mui/material/Alert$default" :as Alert]
-            ["mdi-material-ui/Calculator$default" :as Calculator]
-            [lipas.data.ptv :as ptv-data]
-            [lipas.ui.lazy :as lazy]
-            [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.forms :as forms]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.misc :as misc]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.geom :as geom]
+  (:require ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -27,20 +12,35 @@
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            ["mdi-material-ui/Calculator$default" :as Calculator]
+            [clojure.string :as str]
+            [lipas.data.owners :as owners-data]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.ptv :as ptv-data]
+            [lipas.schema.ice-stadiums :as ice-schema]
+            [lipas.schema.sports-sites :as sites-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
+            [lipas.schema.swimming-pools :as pools-schema]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.forms :as forms]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.geom :as geom]
+            [lipas.ui.lazy :as lazy]
             [lipas.ui.mui :as mui]
             [lipas.ui.sports-sites.events :as events]
-            [lipas.ui.sports-sites.subs :as subs]
             [lipas.ui.sports-sites.hall-equipment :as hall]
             [lipas.ui.sports-sites.pools :as pools]
             [lipas.ui.sports-sites.renovations :as renovations]
             [lipas.ui.sports-sites.slides :as slides]
+            [lipas.ui.sports-sites.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
-            [lipas.schema.sports-sites :as sites-schema]
-            [lipas.schema.sports-sites.location :as location-schema]
-            [lipas.schema.ice-stadiums :as ice-schema]
-            [lipas.schema.swimming-pools :as pools-schema]
-            [lipas.data.prop-types :as prop-types]
-            [lipas.data.owners :as owners-data]
             [reagent.core :as r]))
 
 ;; TODO maybe put this into config / app-db instead?
@@ -151,7 +151,7 @@
       legacy-owner-field)))
 
 (defn form
-  [{:keys [tr display-data edit-data types size-categories admins
+  [{:keys [tr display-data edit-data types admins
            owners on-change read-only? sub-headings? lipas-id status-read-only? new?]}]
 
   (let [locale (tr)
@@ -351,9 +351,7 @@
   (r/with-let [no-address? (r/atom (and (not address-required?)
                                         (= "-" (:address display-data))))]
     (let [locale (tr)
-          editing? (not read-only?)
-          lipas-id (when editing? (<== [:lipas.ui.map.subs/editing-lipas-id]))
-          first-point (when editing? (<== [::subs/editing-first-point lipas-id]))]
+          editing? (not read-only?)]
 
       [forms/form
        {:read-only? read-only?}
@@ -543,7 +541,7 @@
      [:> Calculator]]]])
 
 (defn pools-field
-  [{:keys [tr read-only? width] :as props}]
+  [{:keys [tr read-only? width]}]
   (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
@@ -569,7 +567,7 @@
          :lipas-id (-> data :edit-data :lipas-id)}])]))
 
 (defn slides-field
-  [{:keys [tr read-only? width] :as props}]
+  [{:keys [tr read-only? width]}]
   (let [dialogs (<== [::hall/dialogs])
         add-data (<== [:lipas.ui.sports-sites.subs/new-site-data])
         data (if add-data
@@ -595,7 +593,7 @@
          :lipas-id (-> data :edit-data :lipas-id)}])]))
 
 (defn space-divisible-field
-  [{:keys [tr value label helper-text tooltip on-change spec disabled?] :as props}]
+  [{:keys [value label helper-text tooltip on-change spec disabled?]}]
   (r/with-let [checkbox-state (r/atom (some? value))]
     [:<>
      [checkboxes/checkbox

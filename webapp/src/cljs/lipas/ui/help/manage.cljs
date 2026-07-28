@@ -3,59 +3,63 @@
    tree edited, drafted and published separately. The toolbar's locale
    tabs switch which tree is being edited; Save draft / Publish /
    History all target the active locale only."
-  (:require
-   ["@mui/icons-material/Add$default" :as AddIcon]
-   ["@mui/icons-material/ArrowDownward$default" :as ArrowDownIcon]
-   ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
-   ["@mui/icons-material/AutoFixHigh$default" :as AutoFixIcon]
-   ["@mui/icons-material/CategoryOutlined$default" :as CategoryIcon]
-   ["@mui/icons-material/Delete$default" :as DeleteIcon]
-   ["@mui/icons-material/Download$default" :as DownloadIcon]
-   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-   ["@mui/icons-material/History$default" :as HistoryIcon]
-   ["@mui/icons-material/Image$default" :as ImageIcon]
-   ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
-   ["@mui/icons-material/Preview$default" :as PreviewIcon]
-   ["@mui/icons-material/Save$default" :as SaveIcon]
-   ["@mui/icons-material/TextFields$default" :as TextIcon]
-   ["@mui/icons-material/VideoLibrary$default" :as VideoIcon]
-   ["@mui/material/Box$default" :as Box]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardContent$default" :as CardContent]
-   ["@mui/material/CardHeader$default" :as CardHeader]
-   ["@mui/material/Chip$default" :as Chip]
-   ["@mui/material/Collapse$default" :as Collapse]
-   ["@mui/material/Dialog$default" :as Dialog]
-   ["@mui/material/DialogActions$default" :as DialogActions]
-   ["@mui/material/DialogContent$default" :as DialogContent]
-   ["@mui/material/DialogContentText$default" :as DialogContentText]
-   ["@mui/material/DialogTitle$default" :as DialogTitle]
-   ["@mui/material/FormControl$default" :as FormControl]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/InputAdornment$default" :as InputAdornment]
-   ["@mui/material/InputLabel$default" :as InputLabel]
-   ["@mui/material/List$default" :as MuiList]
-   ["@mui/material/ListItem$default" :as ListItem]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/MenuItem$default" :as MenuItem]
-   ["@mui/material/Paper$default" :as Paper]
-   ["@mui/material/Select$default" :as Select]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Tab$default" :as Tab]
-   ["@mui/material/Tabs$default" :as Tabs]
-   ["@mui/material/TextField$default" :as TextField]
-   ["@mui/material/Toolbar$default" :as Toolbar]
-   ["@mui/material/Tooltip$default" :as Tooltip]
-   ["@mui/material/Typography$default" :as Typography]
-   [ajax.core :as ajax]
-   [clojure.string :as str]
-   [lipas.ui.help.events :as events]
-   [lipas.ui.help.subs :as subs]
-   [lipas.utils :as cutils]
-   [re-frame.core :as rf]
-   [reagent.core :as r]
-   [reagent.hooks :as hooks]))
+  (:require ["@mui/icons-material/Add$default" :as AddIcon]
+            ["@mui/icons-material/ArrowDownward$default" :as ArrowDownIcon]
+            ["@mui/icons-material/ArrowUpward$default" :as ArrowUpIcon]
+            ["@mui/icons-material/AutoFixHigh$default" :as AutoFixIcon]
+            ["@mui/icons-material/CategoryOutlined$default" :as CategoryIcon]
+            ["@mui/icons-material/Delete$default" :as DeleteIcon]
+            ["@mui/icons-material/Download$default" :as DownloadIcon]
+            ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/icons-material/History$default" :as HistoryIcon]
+            ["@mui/icons-material/Image$default" :as ImageIcon]
+            ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
+            ["@mui/icons-material/Preview$default" :as PreviewIcon]
+            ["@mui/icons-material/Save$default" :as SaveIcon]
+            ["@mui/icons-material/TextFields$default" :as TextIcon]
+            ["@mui/icons-material/VideoLibrary$default" :as VideoIcon]
+            ;; clj-kondo false positive: the bare symbol `Box` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> Box ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
+            ["@mui/material/Box$default" :as Box]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/CardHeader$default" :as CardHeader]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/Collapse$default" :as Collapse]
+            ["@mui/material/Dialog$default" :as Dialog]
+            ["@mui/material/DialogActions$default" :as DialogActions]
+            ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/DialogContentText$default" :as DialogContentText]
+            ["@mui/material/DialogTitle$default" :as DialogTitle]
+            ["@mui/material/FormControl$default" :as FormControl]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/InputAdornment$default" :as InputAdornment]
+            ["@mui/material/InputLabel$default" :as InputLabel]
+            ["@mui/material/List$default" :as MuiList]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/MenuItem$default" :as MenuItem]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Select$default" :as Select]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/TextField$default" :as TextField]
+            ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            [ajax.core :as ajax]
+            [clojure.string :as str]
+            [lipas.ui.help.events :as events]
+            [lipas.ui.help.subs :as subs]
+            [lipas.utils :as cutils]
+            [re-frame.core :as rf]
+            [reagent.core :as r]
+            [reagent.hooks :as hooks]))
 
 ;;; ——— Helpers ————————————————————————————————————————————————————————
 
@@ -453,39 +457,39 @@
                       :transition "box-shadow 0.3s ease"}}
      [:> CardHeader
       {:title (r/as-element
-               [:> Typography {:variant "subtitle1" :component "div"}
-                [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
-                 icon
-                 label
-                 [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
-                  preview]]])
+                [:> Typography {:variant "subtitle1" :component "div"}
+                 [:> Box {:sx #js{:display "flex" :alignItems "center" :gap 1}}
+                  icon
+                  label
+                  [:> Typography {:variant "body2" :color "text.secondary" :component "span" :sx #js{:ml 2}}
+                   preview]]])
        :action (r/as-element
-                [:> Box {:sx #js{:display "flex" :gap 0.5}}
-                 [:> IconButton {:onClick #(set-expanded! (not expanded))
-                                 :size "small"
-                                 :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
-                                         :transition "transform 0.3s"}}
-                  [:> ExpandMoreIcon {:fontSize "small"}]]
+                 [:> Box {:sx #js{:display "flex" :gap 0.5}}
+                  [:> IconButton {:onClick #(set-expanded! (not expanded))
+                                  :size "small"
+                                  :sx #js{:transform (if expanded "rotate(180deg)" "rotate(0deg)")
+                                          :transition "transform 0.3s"}}
+                   [:> ExpandMoreIcon {:fontSize "small"}]]
 
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (zero? block-idx)
-                                 :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
-                  [:> ArrowUpIcon {:fontSize "small"}]]
+                  [:> IconButton {:color "primary"
+                                  :size "small"
+                                  :disabled (zero? block-idx)
+                                  :onClick #(rf/dispatch [::move-block-up section-idx page-idx block-idx])}
+                   [:> ArrowUpIcon {:fontSize "small"}]]
 
-                 [:> IconButton {:color "primary"
-                                 :size "small"
-                                 :disabled (= block-idx (dec blocks-count))
-                                 :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
-                  [:> ArrowDownIcon {:fontSize "small"}]]
+                  [:> IconButton {:color "primary"
+                                  :size "small"
+                                  :disabled (= block-idx (dec blocks-count))
+                                  :onClick #(rf/dispatch [::move-block-down section-idx page-idx block-idx])}
+                   [:> ArrowDownIcon {:fontSize "small"}]]
 
-                 [:> IconButton {:color "error"
-                                 :size "small"
-                                 :onClick #(rf/dispatch [::show-confirm-dialog :delete-block
-                                                         {:section-idx section-idx
-                                                          :page-idx page-idx
-                                                          :block-idx block-idx}])}
-                  [:> DeleteIcon {:fontSize "small"}]]])}]
+                  [:> IconButton {:color "error"
+                                  :size "small"
+                                  :onClick #(rf/dispatch [::show-confirm-dialog :delete-block
+                                                          {:section-idx section-idx
+                                                           :page-idx page-idx
+                                                           :block-idx block-idx}])}
+                   [:> DeleteIcon {:fontSize "small"}]]])}]
 
      [:> Collapse {:in expanded :timeout "auto" :unmountOnExit true}
       [:> CardContent {}
@@ -505,16 +509,16 @@
     :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
     :children
     (r/as-element
-     [:> TextField
-      {:fullWidth true
-       :label "Content (markdown)"
-       :value (or (:content block) "")
-       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                :content (.. % -target -value)])
-       :variant "outlined"
-       :margin "normal"
-       :multiline true
-       :rows 8}])}])
+      [:> TextField
+       {:fullWidth true
+        :label "Content (markdown)"
+        :value (or (:content block) "")
+        :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                 :content (.. % -target -value)])
+        :variant "outlined"
+        :margin "normal"
+        :multiline true
+        :rows 8}])}])
 
 (r/defc video-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   [block-card
@@ -527,33 +531,33 @@
     :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
     :children
     (r/as-element
-     [:<>
-      [:> FormControl {:fullWidth true :margin "normal"}
-       [:> InputLabel {:id "video-provider-label"} "Provider"]
-       [:> Select {:labelId "video-provider-label"
-                   :value (name (or (:provider block) :youtube))
-                   :label "Provider"
-                   :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                            :provider (keyword (.. % -target -value))])}
-        [:> MenuItem {:value "youtube"} "YouTube"]
-        [:> MenuItem {:value "vimeo"} "Vimeo"]]]
+      [:<>
+       [:> FormControl {:fullWidth true :margin "normal"}
+        [:> InputLabel {:id "video-provider-label"} "Provider"]
+        [:> Select {:labelId "video-provider-label"
+                    :value (name (or (:provider block) :youtube))
+                    :label "Provider"
+                    :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                             :provider (keyword (.. % -target -value))])}
+         [:> MenuItem {:value "youtube"} "YouTube"]
+         [:> MenuItem {:value "vimeo"} "Vimeo"]]]
 
-      [:> TextField {:fullWidth true
-                     :label "Video ID"
-                     :value (or (:video-id block) "")
-                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                              :video-id (.. % -target -value)])
-                     :variant "outlined"
-                     :margin "normal"
-                     :helperText "For YouTube: the part after v= in URL"}]
+       [:> TextField {:fullWidth true
+                      :label "Video ID"
+                      :value (or (:video-id block) "")
+                      :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                               :video-id (.. % -target -value)])
+                      :variant "outlined"
+                      :margin "normal"
+                      :helperText "For YouTube: the part after v= in URL"}]
 
-      [:> TextField {:fullWidth true
-                     :label "Title"
-                     :value (or (:title block) "")
-                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                              :title (.. % -target -value)])
-                     :variant "outlined"
-                     :margin "normal"}]])}])
+       [:> TextField {:fullWidth true
+                      :label "Title"
+                      :value (or (:title block) "")
+                      :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                               :title (.. % -target -value)])
+                      :variant "outlined"
+                      :margin "normal"}]])}])
 
 (r/defc image-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   [block-card
@@ -566,31 +570,31 @@
     :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
     :children
     (r/as-element
-     [:<>
-      [:> TextField {:fullWidth true
-                     :label "Image URL"
-                     :value (or (:url block) "")
-                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                              :url (.. % -target -value)])
-                     :variant "outlined"
-                     :margin "normal"}]
+      [:<>
+       [:> TextField {:fullWidth true
+                      :label "Image URL"
+                      :value (or (:url block) "")
+                      :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                               :url (.. % -target -value)])
+                      :variant "outlined"
+                      :margin "normal"}]
 
-      [:> TextField {:fullWidth true
-                     :label "Alt text"
-                     :value (or (:alt block) "")
-                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                              :alt (.. % -target -value)])
-                     :variant "outlined"
-                     :margin "normal"
-                     :helperText "Mandatory for accessibility"}]
+       [:> TextField {:fullWidth true
+                      :label "Alt text"
+                      :value (or (:alt block) "")
+                      :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                               :alt (.. % -target -value)])
+                      :variant "outlined"
+                      :margin "normal"
+                      :helperText "Mandatory for accessibility"}]
 
-      [:> TextField {:fullWidth true
-                     :label "Caption"
-                     :value (or (:caption block) "")
-                     :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                              :caption (.. % -target -value)])
-                     :variant "outlined"
-                     :margin "normal"}]])}])
+       [:> TextField {:fullWidth true
+                      :label "Caption"
+                      :value (or (:caption block) "")
+                      :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                               :caption (.. % -target -value)])
+                      :variant "outlined"
+                      :margin "normal"}]])}])
 
 (r/defc pdf-block-editor [{:keys [section-idx page-idx block-idx blocks-count block]}]
   (let [url (or (:url block) "")]
@@ -604,41 +608,41 @@
       :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
       :children
       (r/as-element
-       [:<>
-        [:> TextField {:fullWidth true
-                       :label "PDF URL"
-                       :value url
-                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                                :url (.. % -target -value)])
-                       :variant "outlined"
-                       :margin "normal"
-                       :helperText "URL path to the PDF file"}]
+        [:<>
+         [:> TextField {:fullWidth true
+                        :label "PDF URL"
+                        :value url
+                        :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                 :url (.. % -target -value)])
+                        :variant "outlined"
+                        :margin "normal"
+                        :helperText "URL path to the PDF file"}]
 
-        (when (and (str/starts-with? url "https://drive.google.com/file")
-                   (str/ends-with? url "/view?usp=sharing"))
-          (let [gid (second (re-find #"/file/d/([^/]+)" url))
-                gurl (str "https://docs.google.com/viewer?srcid="
-                          gid
-                          "&pid=explorer&efh=false&a=v&chrome=false&embedded=true")]
-            [:> Button {:onClick #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                                :url gurl])}
-             "Fix Google Drive Link"]))
+         (when (and (str/starts-with? url "https://drive.google.com/file")
+                    (str/ends-with? url "/view?usp=sharing"))
+           (let [gid (second (re-find #"/file/d/([^/]+)" url))
+                 gurl (str "https://docs.google.com/viewer?srcid="
+                           gid
+                           "&pid=explorer&efh=false&a=v&chrome=false&embedded=true")]
+             [:> Button {:onClick #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                 :url gurl])}
+              "Fix Google Drive Link"]))
 
-        [:> TextField {:fullWidth true
-                       :label "Title"
-                       :value (or (:title block) "")
-                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                                :title (.. % -target -value)])
-                       :variant "outlined"
-                       :margin "normal"}]
+         [:> TextField {:fullWidth true
+                        :label "Title"
+                        :value (or (:title block) "")
+                        :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                 :title (.. % -target -value)])
+                        :variant "outlined"
+                        :margin "normal"}]
 
-        [:> TextField {:fullWidth true
-                       :label "Caption"
-                       :value (or (:caption block) "")
-                       :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
-                                                :caption (.. % -target -value)])
-                       :variant "outlined"
-                       :margin "normal"}]])}]))
+         [:> TextField {:fullWidth true
+                        :label "Caption"
+                        :value (or (:caption block) "")
+                        :onChange #(rf/dispatch [::update-block-field section-idx page-idx block-idx
+                                                 :caption (.. % -target -value)])
+                        :variant "outlined"
+                        :margin "normal"}]])}]))
 
 (r/defc type-code-explorer-block-editor [{:keys [section-idx page-idx block-idx blocks-count]}]
   [block-card
@@ -648,8 +652,8 @@
     :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
     :children
     (r/as-element
-     [:> Typography {:variant "body2" :color "text.secondary"}
-      "This block displays a hierarchical browser for sports facility types."])}])
+      [:> Typography {:variant "body2" :color "text.secondary"}
+       "This block displays a hierarchical browser for sports facility types."])}])
 
 (r/defc data-model-excel-download-block-editor [{:keys [section-idx page-idx block-idx blocks-count]}]
   [block-card
@@ -659,8 +663,8 @@
     :section-idx section-idx :page-idx page-idx :block-idx block-idx :blocks-count blocks-count
     :children
     (r/as-element
-     [:> Typography {:variant "body2" :color "text.secondary"}
-      "This block displays a button that downloads a data model Excel file."])}])
+      [:> Typography {:variant "body2" :color "text.secondary"}
+       "This block displays a button that downloads a data model Excel file."])}])
 
 (r/defc block-editor [{:keys [block] :as props}]
   (case (:type block)
@@ -719,15 +723,15 @@
     "Page Content Blocks"]
 
    (map-indexed
-    (fn [idx block]
-      ^{:key (str (:block-id block))}
-      [block-editor
-       {:section-idx section-idx
-        :page-idx page-idx
-        :block-idx idx
-        :blocks-count (count blocks)
-        :block block}])
-    blocks)
+     (fn [idx block]
+       ^{:key (str (:block-id block))}
+       [block-editor
+        {:section-idx section-idx
+         :page-idx page-idx
+         :block-idx idx
+         :blocks-count (count blocks)
+         :block block}])
+     blocks)
 
    [add-block-controls {:section-idx section-idx :page-idx page-idx}]])
 
@@ -746,10 +750,10 @@
     :InputProps
     #js{:endAdornment
         (r/as-element
-         [:> InputAdornment {:position "end"}
-          [:> Tooltip {:title "Generate from title"}
-           [:> IconButton {:size "small" :onClick on-generate}
-            [:> AutoFixIcon {:fontSize "small"}]]]])}}])
+          [:> InputAdornment {:position "end"}
+           [:> Tooltip {:title "Generate from title"}
+            [:> IconButton {:size "small" :onClick on-generate}
+             [:> AutoFixIcon {:fontSize "small"}]]]])}}])
 
 (r/defc section-editor [{:keys [section-idx section]}]
   (let [[expanded set-expanded!] (hooks/use-state false)]
@@ -851,10 +855,10 @@
                 :onChange #(rf/dispatch [::select-section (js/parseInt (.. % -target -value))])
                 :displayEmpty true}
      (map-indexed
-      (fn [idx section]
-        [:> MenuItem {:key idx :value idx}
-         (node-label section idx "Section")])
-      sections)]]
+       (fn [idx section]
+         [:> MenuItem {:key idx :value idx}
+          (node-label section idx "Section")])
+       sections)]]
 
    [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
     [:> Button
@@ -907,10 +911,10 @@
                 :onChange #(rf/dispatch [::select-page (js/parseInt (.. % -target -value))])
                 :displayEmpty true}
      (map-indexed
-      (fn [idx page]
-        [:> MenuItem {:key idx :value idx}
-         (node-label page idx "Page")])
-      pages)]]
+       (fn [idx page]
+         [:> MenuItem {:key idx :value idx}
+          (node-label page idx "Page")])
+       pages)]]
 
    [:> Stack {:direction "row" :spacing 1 :flexWrap "wrap"}
 
@@ -1024,11 +1028,11 @@
            [:> ListItem
             {:secondaryAction
              (r/as-element
-              [:> Button
-               {:size "small"
-                :variant "outlined"
-                :onClick #(rf/dispatch [::load-version id])}
-               "Load into editor"])}
+               [:> Button
+                {:size "small"
+                 :variant "outlined"
+                 :onClick #(rf/dispatch [::load-version id])}
+                "Load into editor"])}
             [:> Chip {:size "small"
                       :label status
                       :color (if (= "active" status) "secondary" "default")

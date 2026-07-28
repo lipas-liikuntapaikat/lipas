@@ -993,17 +993,17 @@ Be specific — cite exact phrases.")
   ;; Both arms graded with the same v3 grader (guidance rubric + grounding).
   (def v5-results
     (eval/run-service-eval (user/search)
-      {:system-prompt        ai/ptv-system-instruction-v5
-       :user-prompt-template ai/generate-utp-service-descriptions-prompt-v5
-       :grader-config        eval/service-grader-config-v3
-       :grader-system-prompt eval/service-grading-system-prompt-v3
-       :build-grader-prompt  eval/v3-grader-prompt}))
+                           {:system-prompt        ai/ptv-system-instruction-v5
+                            :user-prompt-template ai/generate-utp-service-descriptions-prompt-v5
+                            :grader-config        eval/service-grader-config-v3
+                            :grader-system-prompt eval/service-grading-system-prompt-v3
+                            :build-grader-prompt  eval/v3-grader-prompt}))
   (def v6-results
     (eval/run-service-eval (user/search)
-      {:system-prompt        ai/ptv-system-instruction-v5
-       :build-user-prompt    eval/v6-user-prompt
-       :grader-config        eval/service-grader-config-v3
-       :grader-system-prompt eval/service-grading-system-prompt-v3
-       :build-grader-prompt  eval/v3-grader-prompt}))
+                           {:system-prompt        ai/ptv-system-instruction-v5
+                            :build-user-prompt    eval/v6-user-prompt
+                            :grader-config        eval/service-grader-config-v3
+                            :grader-system-prompt eval/service-grading-system-prompt-v3
+                            :build-grader-prompt  eval/v3-grader-prompt}))
   (eval/compare-service-evals "v5" v5-results "v6" v6-results)
   (eval/pp-service-result (first v6-results)))

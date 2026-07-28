@@ -5,7 +5,7 @@
   UI can group failures by problem type. Kept server-side so future
   alerting can reuse the same classification."
   (:require
-   [clojure.string :as str]))
+    [clojure.string :as str]))
 
 (def error-classes
   "Ordered [class pattern] pairs; the first matching pattern wins.

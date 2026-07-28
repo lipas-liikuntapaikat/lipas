@@ -2,7 +2,6 @@
   (:require [lipas.backend.search :as search]
             [lipas.schema.common :as common]
             [lipas.schema.sports-sites :as sports-site-schema]
-            [lipas.schema.sports-sites :as sports-sites]
             [lipas.schema.sports-sites.location :as location-schema]
             [lipas.schema.sports-sites.types :as types]
             [taoensso.timbre :as log]))
@@ -91,12 +90,12 @@
 
 (def OwnerFacetValue
   [:map
-   [:value #'sports-sites/owner]
+   [:value #'sports-site-schema/owner]
    [:count :int]])
 
 (def AdminFacetValue
   [:map
-   [:value #'sports-sites/admin]
+   [:value #'sports-site-schema/admin]
    [:count :int]])
 
 (def StatusFacetValue
@@ -216,8 +215,8 @@
                                     (8 9 10) 100000
                                     10000)}
              :aggs (merge
-                    {:centroid {:geo_centroid {:field "search-meta.location.wgs84-point"}}}
-                    (build-dimension-aggs dimension weight-by))}}}))
+                     {:centroid {:geo_centroid {:field "search-meta.location.wgs84-point"}}}
+                     (build-dimension-aggs dimension weight-by))}}}))
 
 (defn normalize-weights
   "Scale weights to 0-1 range using min-max normalization.
@@ -269,14 +268,14 @@
      :geometry {:type "Point"
                 :coordinates [lon lat]}
      :properties (merge
-                  {:weight weight
-                   :grid_key (:key bucket)
-                   :doc_count (:doc_count bucket)}
+                   {:weight weight
+                    :grid_key (:key bucket)
+                    :doc_count (:doc_count bucket)}
                   ;; Add dimension-specific properties
-                  (case dimension
-                    :type-distribution {:types (get-in bucket [:types :buckets] [])}
-                    :activities {:activities (get-in bucket [:activities :buckets] [])}
-                    {}))}))
+                   (case dimension
+                     :type-distribution {:types (get-in bucket [:types :buckets] [])}
+                     :activities {:activities (get-in bucket [:activities :buckets] [])}
+                     {}))}))
 
 (defn transform-to-features
   "Transform ES aggregation results to GeoJSON features with normalized weights"

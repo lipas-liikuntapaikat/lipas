@@ -1,13 +1,15 @@
 (ns lipas.ui.navbar
-  (:require [clojure.string :as string]
-            [lipas.ui.feedback.views :as feedback]
-            [lipas.ui.help.views :as help]
-            ["@mui/material/AppBar$default" :as AppBar]
+  (:require ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
+            ;; clj-kondo false positive: the bare symbol `List` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> List ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
             ["@mui/material/ListItem$default" :as ListItem]
             ["@mui/material/ListItemButton$default" :as ListItemButton]
@@ -20,6 +22,9 @@
             ["@mui/material/SwipeableDrawer$default" :as SwipeableDrawer]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
+            [lipas.ui.feedback.views :as feedback]
+            [lipas.ui.help.views :as help]
             [lipas.ui.mui :as mui]
             [lipas.ui.subs :as subs]
             [lipas.ui.svg :as svg]
@@ -145,7 +150,7 @@
    {:style {:font-size "1em"}
     :on-click #(==> [:lipas.ui.events/set-translator locale])}
    [:> Typography {:variant "body2"}
-    (-> locale name string/upper-case)]])
+    (-> locale name str/upper-case)]])
 
 (defn lang-selector [props]
   [:> Grid

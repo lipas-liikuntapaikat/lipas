@@ -509,28 +509,28 @@
   "Seeds a realistic, PTV-synced sports-site bound to `channel-ids`."
   [user {:keys [name type-code city-code address postal-code postal-office coords channel-ids]}]
   (core/upsert-sports-site!*
-   (test-db) user
-   {:status "active"
-    :event-date "2025-01-01T00:00:00.000Z"
-    :name name
-    :owner "city"
-    :admin "city-sports"
-    :type {:type-code type-code}
-    :location {:city {:city-code city-code}
-               :address address
-               :postal-code postal-code
-               :postal-office postal-office
-               :geometries {:type "FeatureCollection"
-                            :features [{:type "Feature"
-                                        :geometry {:type "Point"
-                                                   :coordinates coords}}]}}
-    :ptv {:org-id ptv-org-id
-          :sync-enabled true
-          :last-sync "2025-01-02T00:00:00.000Z"
-          :summary {:fi "Kuvaus" :se "Beskrivning" :en "Summary"}
-          :description {:fi "Pidempi kuvaus" :se "Beskrivning" :en "Description"}
-          :service-ids []
-          :service-channel-ids channel-ids}}))
+    (test-db) user
+    {:status "active"
+     :event-date "2025-01-01T00:00:00.000Z"
+     :name name
+     :owner "city"
+     :admin "city-sports"
+     :type {:type-code type-code}
+     :location {:city {:city-code city-code}
+                :address address
+                :postal-code postal-code
+                :postal-office postal-office
+                :geometries {:type "FeatureCollection"
+                             :features [{:type "Feature"
+                                         :geometry {:type "Point"
+                                                    :coordinates coords}}]}}
+     :ptv {:org-id ptv-org-id
+           :sync-enabled true
+           :last-sync "2025-01-02T00:00:00.000Z"
+           :summary {:fi "Kuvaus" :se "Beskrivning" :en "Summary"}
+           :description {:fi "Pidempi kuvaus" :se "Beskrivning" :en "Description"}
+           :service-ids []
+           :service-channel-ids channel-ids}}))
 
 (defn- check-link
   "Calls the check endpoint as `token` and returns parsed body."
@@ -683,27 +683,27 @@
                            :audited-content {:fi "Kesäkäyttöinen urheilukenttä."}}}
           ;; A published, synced site carrying the full lifecycle meta.
           site (core/upsert-sports-site!*
-                (test-db) admin
-                {:status "active"
-                 :event-date "2026-01-02T00:00:00.000Z"
-                 :name "Limingan urheilukenttä"
-                 :owner "city" :admin "city-sports"
-                 :type {:type-code 1210}
-                 :location {:city {:city-code 425}
-                            :address "Kentäntie 1" :postal-code "91900" :postal-office "Liminka"
-                            :geometries {:type "FeatureCollection"
-                                         :features [{:type "Feature"
-                                                     :geometry {:type "Point" :coordinates [25.41 64.81]}}]}}
-                 :ptv (merge texts
-                             {:org-id ptv-org-id
-                              :sync-enabled true
-                              :last-sync "2026-01-02T00:00:00.000Z"
-                              :source-id source-id
-                              :publishing-status "Published"
-                              :previous-type-code 1210
-                              :service-ids []
-                              :service-channel-ids [channel]
-                              :audit audit})})
+                 (test-db) admin
+                 {:status "active"
+                  :event-date "2026-01-02T00:00:00.000Z"
+                  :name "Limingan urheilukenttä"
+                  :owner "city" :admin "city-sports"
+                  :type {:type-code 1210}
+                  :location {:city {:city-code 425}
+                             :address "Kentäntie 1" :postal-code "91900" :postal-office "Liminka"
+                             :geometries {:type "FeatureCollection"
+                                          :features [{:type "Feature"
+                                                      :geometry {:type "Point" :coordinates [25.41 64.81]}}]}}
+                  :ptv (merge texts
+                              {:org-id ptv-org-id
+                               :sync-enabled true
+                               :last-sync "2026-01-02T00:00:00.000Z"
+                               :source-id source-id
+                               :publishing-status "Published"
+                               :previous-type-code 1210
+                               :service-ids []
+                               :service-channel-ids [channel]
+                               :audit audit})})
           lipas-id (:lipas-id site)
           resp (test-app (-> (mock/request :post "/api/actions/save-ptv-meta")
                              (mock/content-type "application/json")
@@ -772,18 +772,18 @@
 (defn- seed-service-rev!
   [org {:keys [source-id service-id summary]}]
   (ptv-service-db/insert-service-rev!
-   (test-db)
-   {:org-id (:id org)
-    :source-id source-id
-    :service-id service-id
-    :author-id nil
-    :event-date "2026-01-01T00:00:00.000Z"
-    :document {:source-id source-id
-               :service-id service-id
-               :name {:fi "Pallokentät"}
-               :summary (or summary {:fi "Tiivistelmä"})
-               :description {:fi "Kuvaus"}
-               :user-instruction {:fi "Toimintaohje"}}}))
+    (test-db)
+    {:org-id (:id org)
+     :source-id source-id
+     :service-id service-id
+     :author-id nil
+     :event-date "2026-01-01T00:00:00.000Z"
+     :document {:source-id source-id
+                :service-id service-id
+                :name {:fi "Pallokentät"}
+                :summary (or summary {:fi "Tiivistelmä"})
+                :description {:fi "Kuvaus"}
+                :user-instruction {:fi "Toimintaohje"}}}))
 
 (defn- post-service-audit
   [token body]

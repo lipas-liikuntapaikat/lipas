@@ -5,8 +5,8 @@
    1. Pagination link generation
    2. Dynamic base path support for different entry points"
   (:require
-   [clojure.test :refer [deftest is testing]]
-   [lipas.backend.api.v1.http :as http]))
+    [clojure.test :refer [deftest is testing]]
+    [lipas.backend.api.v1.http :as http]))
 
 ;;; Tests for create-page-links ;;;
 

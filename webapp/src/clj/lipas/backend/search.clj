@@ -1,10 +1,10 @@
 (ns lipas.backend.search
   (:require
-   [clojure.core.async :as async]
-   [clojure.string :as str]
-   [lipas.data.prop-types :as prop-types]
-   [qbits.spandex :as es]
-   [qbits.spandex.utils :as es-utils]))
+    [clojure.core.async :as async]
+    [clojure.string :as str]
+    [lipas.data.prop-types :as prop-types]
+    [qbits.spandex :as es]
+    [qbits.spandex.utils :as es-utils]))
 
 (def es-type "_doc") ; See https://bit.ly/2wslBqY
 
@@ -78,13 +78,13 @@
   "Generates ES mappings for all property fields from prop-types/all."
   []
   (reduce-kv
-   (fn [acc prop-key prop-def]
-     (let [field-name (keyword (str "properties." (name prop-key)))
-           data-type (:data-type prop-def)
-           mapping (prop-type->es-mapping data-type)]
-       (assoc acc field-name mapping)))
-   {}
-   prop-types/all))
+    (fn [acc prop-key prop-def]
+      (let [field-name (keyword (str "properties." (name prop-key)))
+            data-type (:data-type prop-def)
+            mapping (prop-type->es-mapping data-type)]
+        (assoc acc field-name mapping)))
+    {}
+    prop-types/all))
 
 (def total-fields-limit 450)
 

@@ -1,6 +1,7 @@
 (ns lipas.ui.ptv.components
   "Shared PTV UI components to avoid circular dependencies"
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
@@ -8,13 +9,12 @@
             ["@mui/material/Grid$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
             ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Table$default" :as Table]
-            ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tooltip$default" :as Tooltip]
@@ -253,8 +253,8 @@
                                      "-"))
         get-name (fn [type lang] (or (->> preview :serviceChannelNames
                                           (filter (fn [m] (and
-                                                           (= (:language m) lang)
-                                                           (= (:type m) type))))
+                                                            (= (:language m) lang)
+                                                            (= (:type m) type))))
                                           (map :value)
                                           join)
                                      "-"))
@@ -483,9 +483,9 @@
                  {:variant "outlined" :size "small" :disabled generating?
                   :sx #js {:textTransform "none"}
                   :startIcon (r/as-element
-                              (if generating?
-                                [:> CircularProgress {:size 16 :color "inherit"}]
-                                [:> Icon "auto_fix_high"]))
+                               (if generating?
+                                 [:> CircularProgress {:size 16 :color "inherit"}]
+                                 [:> Icon "auto_fix_high"]))
                   :on-click #(rf/dispatch [::events/generate-service-descriptions
                                            org-id @source-id nil [] []])}
                  (tr :ptv.actions/generate-with-ai)]
@@ -496,9 +496,9 @@
                      {:size "small" :variant "outlined"
                       :disabled (or generating? (not has-text?))
                       :startIcon (r/as-element
-                                  (if generating?
-                                    [:> CircularProgress {:size 16 :color "inherit"}]
-                                    [:> Icon "translate"]))
+                                   (if generating?
+                                     [:> CircularProgress {:size 16 :color "inherit"}]
+                                     [:> Icon "translate"]))
                       :sx #js {:textTransform "none"}
                       :on-click #(rf/dispatch [::events/translate-service-candidate-with-texts
                                                @source-id from-lang other-langs
@@ -513,9 +513,9 @@
                :disabled (or syncing? (not valid?))
                :sx #js {:textTransform "none"}
                :startIcon (r/as-element
-                           (if syncing?
-                             [:> CircularProgress {:size 16 :color "inherit"}]
-                             [:> Icon "ios_share"]))
+                            (if syncing?
+                              [:> CircularProgress {:size 16 :color "inherit"}]
+                              [:> Icon "ios_share"]))
                :on-click #(let [data (merge {:org-id org-id
                                              :source-id @source-id
                                              :sub-category-id (ptv-data/parse-service-source-id @source-id)

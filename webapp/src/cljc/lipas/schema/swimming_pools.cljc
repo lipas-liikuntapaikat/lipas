@@ -24,22 +24,22 @@
 
 (def pool-schema
   (m/schema
-   [:map
-    [:type {:optional true} pool-type]
-    [:outdoor-pool? {:optional true} :boolean]
-    [:temperature-c {:optional true} pool-temperature-c]
-    [:volume-m3 {:optional true} [:and common/number [:fn #(<= 0 % 5000)]]]
-    [:area-m2 {:optional true} pool-area-m2]
-    [:length-m {:optional true} pool-length-m]
-    [:width-m {:optional true} pool-width-m]
-    [:depth-min-m {:optional true} pool-depth-m]
-    [:depth-max-m {:optional true} pool-depth-m]
-    [:accessibility {:optional true} [:vector {:distinct true} accessibility-feature]]]))
+    [:map
+     [:type {:optional true} pool-type]
+     [:outdoor-pool? {:optional true} :boolean]
+     [:temperature-c {:optional true} pool-temperature-c]
+     [:volume-m3 {:optional true} [:and common/number [:fn #(<= 0 % 5000)]]]
+     [:area-m2 {:optional true} pool-area-m2]
+     [:length-m {:optional true} pool-length-m]
+     [:width-m {:optional true} pool-width-m]
+     [:depth-min-m {:optional true} pool-depth-m]
+     [:depth-max-m {:optional true} pool-depth-m]
+     [:accessibility {:optional true} [:vector {:distinct true} accessibility-feature]]]))
 
 (def slide-structure (m/schema (into [:enum] (keys materials/slide-structures))))
 
 (def slide-schema
   (m/schema
-   [:map
-    [:length-m pool-length-m]
-    [:structure {:optional true} slide-structure]]))
+    [:map
+     [:length-m pool-length-m]
+     [:structure {:optional true} slide-structure]]))

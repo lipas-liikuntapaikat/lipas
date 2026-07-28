@@ -57,7 +57,7 @@
       [::create-report]]}))
 
 (rf/reg-event-fx ::select-filters
-  (fn [{:keys [db]} [_ {:keys [city-code avi-id province-id]} grouping]]
+  (fn [{:keys [db]} [_ {:keys [avi-id province-id]} grouping]]
     (let [types-path    [:stats :finance :selected-types]
           cities-path   [:stats :finance :selected-cities]
           grouping-path [:stats :finance :selected-grouping]]

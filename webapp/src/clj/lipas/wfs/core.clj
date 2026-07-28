@@ -24,9 +24,9 @@
             [lipas.backend.core :as core]
             [lipas.backend.system :as system]
             [lipas.data.types :as types]
+            [lipas.utils :as utils]
             [lipas.wfs.mappings :as mappings]
             [lipas.wfs.sld :as sld]
-            [lipas.utils :as utils]
             [next.jdbc :as jdbc]
             [taoensso.timbre :as log]))
 
@@ -38,10 +38,10 @@
                              (get mappings/type-code->legacy-fields type-code))]
     [(:status sports-site)
      (->>
-      (for [field fields]
-        (let [resolver-fn (mappings/legacy-field->resolve-fn field)]
-          [field (resolver-fn {:site sports-site :feature feature :idx idx})]))
-      (into {}))]))
+       (for [field fields]
+         (let [resolver-fn (mappings/legacy-field->resolve-fn field)]
+           [field (resolver-fn {:site sports-site :feature feature :idx idx})]))
+       (into {}))]))
 
 (defn ->wfs-rows [sports-site]
   ;; WFS reads the document straight from the DB without going through
@@ -60,28 +60,28 @@
 
 (def type-layer-mat-views
   (->>
-   (for [[type-code view-names] mappings/type-code->view-names
-         view-name view-names]
-     [view-name
-      {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
-       :select (into
+    (for [[type-code view-names] mappings/type-code->view-names
+          view-name view-names]
+      [view-name
+       {:create-materialized-view [(keyword (str "wfs." view-name)) :if-not-exists]
+        :select (into
                 ;; Include fid (feature ID) for unique index (enables stable paging in GeoServer)
-                [[:id :fid]
-                 [(if (str/ends-with? view-name "_3d")
-                    [:cast [:st_force_3d :the_geom] (mappings/resolve-geom-field-type type-code :z)]
-                    [:cast [:st_force_2d :the_geom] (mappings/resolve-geom-field-type type-code nil)]) :the_geom]]
-                (for [field (sort-by mappings/field-sorter utils/reverse-cmp
-                                     (set/union
-                                      mappings/common-fields
-                                      (mappings/type-code->legacy-fields type-code)))
-                      :when (not= :the_geom field)]
-                  (let [field-type (mappings/resolve-field-type field)]
-                    [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
-       :from [:wfs.master]
-       :where [:and
-               [:= :type_code [:inline type-code]]
-               [:= :status [:inline "active"]]]}])
-   (into {})))
+                  [[:id :fid]
+                   [(if (str/ends-with? view-name "_3d")
+                      [:cast [:st_force_3d :the_geom] (mappings/resolve-geom-field-type type-code :z)]
+                      [:cast [:st_force_2d :the_geom] (mappings/resolve-geom-field-type type-code nil)]) :the_geom]]
+                  (for [field (sort-by mappings/field-sorter utils/reverse-cmp
+                                       (set/union
+                                         mappings/common-fields
+                                         (mappings/type-code->legacy-fields type-code)))
+                        :when (not= :the_geom field)]
+                    (let [field-type (mappings/resolve-field-type field)]
+                      [[:cast [:->> :doc [:inline (name field)]] field-type] field])))
+        :from [:wfs.master]
+        :where [:and
+                [:= :type_code [:inline type-code]]
+                [:= :status [:inline "active"]]]}])
+    (into {})))
 
 (defn ->coll-layer
   [view-name fields]
@@ -194,13 +194,13 @@
 
   (let [all-view-names (concat
                         ;; Type layer views
-                        (->> mappings/type-code->view-names
-                             vals
-                             (mapcat identity))
+                         (->> mappings/type-code->view-names
+                              vals
+                              (mapcat identity))
                         ;; Collection layer views
-                        (->> mappings/coll-layer-mat-view-specs
-                             keys
-                             (map name)))
+                         (->> mappings/coll-layer-mat-view-specs
+                              keys
+                              (map name)))
         rows (for [view-name all-view-names]
                {:table_schema "wfs"
                 :table_name view-name
@@ -245,21 +245,21 @@
                         (mapcat ->wfs-rows)
                         (partition-all 100))]
         (jdbc/execute!
-         db
-         (sql/format
-          {:insert-into [:wfs.master]
-           :values (for [[status row] part]
-                     {:lipas-id (:id row)
-                      :type_code (:tyyppikoodi row)
-                      :geom_type (:type (:the_geom row))
-                      :doc [:lift row]
+          db
+          (sql/format
+            {:insert-into [:wfs.master]
+             :values (for [[status row] part]
+                       {:lipas-id (:id row)
+                        :type_code (:tyyppikoodi row)
+                        :geom_type (:type (:the_geom row))
+                        :doc [:lift row]
                       ;; Geometries are in 3067 coordinate system in Legacy WFS
-                      :the_geom [:st_transform
-                                 [:st_setsrid
-                                  [:st_geomfromgeojson [:lift (:the_geom row)]]
-                                  [:cast 4326 :int]]
-                                 [:cast 3067 :int]]
-                      :status status})}))))))
+                        :the_geom [:st_transform
+                                   [:st_setsrid
+                                    [:st_geomfromgeojson [:lift (:the_geom row)]]
+                                    [:cast 4326 :int]]
+                                   [:cast 3067 :int]]
+                        :status status})}))))))
 
 (defn refresh-all!
   [db]
@@ -321,16 +321,16 @@
 (defn get-all-layers
   []
   (->
-   (http/get (str (get geoserver-config :root-url) "/layers")
-             (get geoserver-config :default-http-opts))
-   (get-in [:body :layers :layer])))
+    (http/get (str (get geoserver-config :root-url) "/layers")
+              (get geoserver-config :default-http-opts))
+    (get-in [:body :layers :layer])))
 
 (defn get-layer
   [layer-name]
   (->
-   (http/get (str (get geoserver-config :root-url) "/layers/" layer-name)
-             (get geoserver-config :default-http-opts))
-   (get-in [:body])))
+    (http/get (str (get geoserver-config :root-url) "/layers/" layer-name)
+              (get geoserver-config :default-http-opts))
+    (get-in [:body])))
 
 (defn list-featuretypes
   "Lists all available featuretypes in lipas-wfs-v2 datastore. "
@@ -420,11 +420,11 @@
      (.mkdirs target)
      (log/info "Backing up GeoServer styles to" (.getPath target))
      (doall
-      (for [{:keys [style-name]} sld/style-defs]
-        (let [f (io/file target (str style-name ".sld"))]
-          (spit f (get-style-sld style-name))
-          (log/info "Wrote" (.getPath f))
-          (.getPath f)))))))
+       (for [{:keys [style-name]} sld/style-defs]
+         (let [f (io/file target (str style-name ".sld"))]
+           (spit f (get-style-sld style-name))
+           (log/info "Wrote" (.getPath f))
+           (.getPath f)))))))
 
 (comment
   ;;; Style workflow ;;;
@@ -497,7 +497,7 @@
       (http/put layer-url
                 (merge (:default-http-opts geoserver-config)
                        {:body (json/generate-string
-                               {:layer {:defaultStyle style}})
+                                {:layer {:defaultStyle style}})
                         :content-type "application/json"})))))
 
 (defn delete-layer
@@ -621,19 +621,19 @@
                       {:content-type "application/json"
                        :as :raw
                        :body (json/generate-string
-                              {:layerGroup
-                               {:name group-name
-                                :mode "SINGLE"
-                                :workspace {:name (:workspace-name geoserver-config)}
-                                :bounds {:minx 50000.0
-                                         :maxx 760000.0
-                                         :miny 6600000.0
-                                         :maxy 7800000.0
-                                         :crs "EPSG:3067"}
-                                :publishables
-                                {:published (for [layer layers]
-                                              {"@type" "layer"
-                                               :name (str "lipas:" layer)})}}})})))
+                               {:layerGroup
+                                {:name group-name
+                                 :mode "SINGLE"
+                                 :workspace {:name (:workspace-name geoserver-config)}
+                                 :bounds {:minx 50000.0
+                                          :maxx 760000.0
+                                          :miny 6600000.0
+                                          :maxy 7800000.0
+                                          :crs "EPSG:3067"}
+                                 :publishables
+                                 {:published (for [layer layers]
+                                               {"@type" "layer"
+                                                :name (str "lipas:" layer)})}}})})))
 
   (log/info "All layergroups rebuilt!"))
 
@@ -678,7 +678,7 @@
   (rebuild-all-legacy-layer-groups)
 
   (println (json/generate-string
-            {:layerGroup {:name "lipas_4800_ampumaurheilupaikat", :mode "SINGLE", :workspace "lipas", :bounds {:minx 50000.0, :maxx 760000.0, :miny 6600000.0, :maxy 7800000.0, :crs "EPSG:3067"}, :publishables {:published '({:type "layer", :name "lipas:lipas_4830_jousiammuntarata"} {:type "layer", :name "lipas:lipas_4840_jousiammuntamaastorata"} {:type "layer", :name "lipas:lipas_4820_ampumaurheilukeskus"} {:type "layer", :name "lipas:lipas_4810_ampumarata"})}}}))
+             {:layerGroup {:name "lipas_4800_ampumaurheilupaikat", :mode "SINGLE", :workspace "lipas", :bounds {:minx 50000.0, :maxx 760000.0, :miny 6600000.0, :maxy 7800000.0, :crs "EPSG:3067"}, :publishables {:published '({:type "layer", :name "lipas:lipas_4830_jousiammuntarata"} {:type "layer", :name "lipas:lipas_4840_jousiammuntamaastorata"} {:type "layer", :name "lipas:lipas_4820_ampumaurheilukeskus"} {:type "layer", :name "lipas:lipas_4810_ampumarata"})}}}))
 
   (list-featuretypes)
 
@@ -740,8 +740,8 @@
 
   (update-vals (group-by :type-code legacy-fields)
                (fn [coll] (set/difference
-                           (->> coll (map :legacy-field) set)
-                           common-fields)))
+                            (->> coll (map :legacy-field) set)
+                            common-fields)))
 
   (require '[clojure.set :as set])
 
@@ -772,12 +772,12 @@
                           :dbtype "postgis"}
           params (merge default-params connection-params)
           json-body (json/generate-string
-                     {:dataStore
-                      {:name datastore-name
-                       :type "PostGIS"
-                       :enabled true
-                       :connectionParameters
-                       {:entry (map (fn [[k v]] {"@key" (name k) "$" (str v)}) params)}}})]
+                      {:dataStore
+                       {:name datastore-name
+                        :type "PostGIS"
+                        :enabled true
+                        :connectionParameters
+                        {:entry (map (fn [[k v]] {"@key" (name k) "$" (str v)}) params)}}})]
       (http/put url (merge auth
                            {:body json-body
                             :content-type "application/json"

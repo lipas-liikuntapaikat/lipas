@@ -1,22 +1,23 @@
 (ns lipas.ui.events
-  (:require [lipas.i18n.core :as i18n]
-            [lipas.roles :as roles]
-            [lipas.ui.db :as db]
-            [lipas.ui.search.db :as search-db]
-            ;; Shared app-db "model layer": subs/events referenced across
-            ;; feature modules (stats, admin, org, user profile, help,
-            ;; assistant). Required here so they stay in the base module —
-            ;; only the views/OpenLayers side of these features is lazy.
-            [lipas.ui.reports.events]
-            [lipas.ui.search.events]
-            [lipas.ui.search.subs]
-            [lipas.ui.sports-sites.activities.subs]
-            [lipas.ui.sports-sites.events]
-            [lipas.ui.sports-sites.subs]
-            [lipas.data.types :as types-data]
-            [lipas.ui.utils :as utils :refer [==>]]
-            [re-frame.core :as rf]
-            [reitit.frontend.controllers :as rfc]))
+  (:require
+    [lipas.data.types :as types-data]
+    [lipas.i18n.core :as i18n]
+    [lipas.roles :as roles]
+    [lipas.ui.db :as db]
+    ;; Shared app-db "model layer": subs/events referenced across
+    ;; feature modules (stats, admin, org, user profile, help,
+    ;; assistant). Required here so they stay in the base module —
+    ;; only the views/OpenLayers side of these features is lazy.
+    [lipas.ui.reports.events]
+    [lipas.ui.search.db :as search-db]
+    [lipas.ui.search.events]
+    [lipas.ui.search.subs]
+    [lipas.ui.sports-sites.activities.subs]
+    [lipas.ui.sports-sites.events]
+    [lipas.ui.sports-sites.subs]
+    [lipas.ui.utils :as utils :refer [==>]]
+    [re-frame.core :as rf]
+    [reitit.frontend.controllers :as rfc]))
 
 (rf/reg-event-fx ::initialize-db
   [(rf/inject-cofx :lipas.ui.local-storage/get :login-data)]
@@ -139,7 +140,7 @@
       {})))
 
 (rf/reg-event-fx ::display
-  (fn [{:keys [db]} [_ lipas-id]]
+  (fn [_ [_ lipas-id]]
     {:dispatch [::navigate (str "/#/liikuntapaikat/" lipas-id)]}))
 
 (rf/reg-event-db ::set-screen-size

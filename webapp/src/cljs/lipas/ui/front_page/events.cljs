@@ -60,7 +60,7 @@
       :on-failure      [::subscribe-newsletter-failure]}}))
 
 (rf/reg-event-fx ::subscribe-newsletter-success
-  (fn [{:keys [db]} [_ resp]]
+  (fn [{:keys [db]} [_ _resp]]
     (let [tr (-> db :translator)]
       {:dispatch-n
        [[:lipas.ui.events/set-active-notification
@@ -68,7 +68,7 @@
           :success? true}]]})))
 
 (rf/reg-event-fx ::subscribe-newsletter-failure
-  (fn [{:keys [db]} [_ resp]]
+  (fn [{:keys [db]} [_ _resp]]
     (let [tr (-> db :translator)]
       {:dispatch-n
        [[:lipas.ui.events/set-active-notification

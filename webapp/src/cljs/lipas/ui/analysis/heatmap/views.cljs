@@ -1,13 +1,8 @@
 (ns lipas.ui.analysis.heatmap.views
-  (:require [lipas.ui.analysis.heatmap.events :as events]
-            [lipas.ui.analysis.heatmap.subs :as subs]
-            [lipas.ui.components.selects :as selects]
-            ["@mui/material/Accordion$default" :as Accordion]
+  (:require ["@mui/material/Accordion$default" :as Accordion]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/FormControl$default" :as FormControl]
-            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-            ["@mui/material/FormHelperText$default" :as FormHelperText]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/InputLabel$default" :as InputLabel]
@@ -17,53 +12,55 @@
             ["@mui/material/Select$default" :as Select]
             ["@mui/material/Slider$default" :as Slider]
             ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Switch$default" :as Switch]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.analysis.heatmap.events :as events]
+            [lipas.ui.analysis.heatmap.subs :as subs]
+            [lipas.ui.components.selects :as selects]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 
 #_(defn dimension-selector []
-  (let [dimension @(rf/subscribe [::subs/dimension])
-        tr @(rf/subscribe [:lipas.ui.subs/translator])]
-    [:> FormControl {:full-width true :margin "normal"}
-     [:> InputLabel (tr :analysis/heatmap-dimension)]
-     [:> Select
-      {:value dimension
-       :on-change #(rf/dispatch [::events/update-dimension-and-refresh (keyword (.. % -target -value))])}
-      [:> MenuItem {:value :density} (tr :analysis/heatmap-facility-density)]
-      [:> MenuItem {:value :area} (tr :analysis/heatmap-total-area-coverage)]
-      [:> MenuItem {:value :capacity} (tr :analysis/heatmap-capacity-distribution)]
-      [:> MenuItem {:value :type-distribution} (tr :analysis/heatmap-facility-types)]
-      [:> MenuItem {:value :year-round} (tr :analysis/heatmap-year-round-availability)]
-      [:> MenuItem {:value :lighting} (tr :analysis/heatmap-facilities-with-lighting)]
-      [:> MenuItem {:value :activities} (tr :analysis/heatmap-activity-distribution)]]]))
+    (let [dimension @(rf/subscribe [::subs/dimension])
+          tr @(rf/subscribe [:lipas.ui.subs/translator])]
+      [:> FormControl {:full-width true :margin "normal"}
+       [:> InputLabel (tr :analysis/heatmap-dimension)]
+       [:> Select
+        {:value dimension
+         :on-change #(rf/dispatch [::events/update-dimension-and-refresh (keyword (.. % -target -value))])}
+        [:> MenuItem {:value :density} (tr :analysis/heatmap-facility-density)]
+        [:> MenuItem {:value :area} (tr :analysis/heatmap-total-area-coverage)]
+        [:> MenuItem {:value :capacity} (tr :analysis/heatmap-capacity-distribution)]
+        [:> MenuItem {:value :type-distribution} (tr :analysis/heatmap-facility-types)]
+        [:> MenuItem {:value :year-round} (tr :analysis/heatmap-year-round-availability)]
+        [:> MenuItem {:value :lighting} (tr :analysis/heatmap-facilities-with-lighting)]
+        [:> MenuItem {:value :activities} (tr :analysis/heatmap-activity-distribution)]]]))
 
 #_(defn weight-selector []
-  (let [weight-by @(rf/subscribe [::subs/weight-by])
-        dimension @(rf/subscribe [::subs/dimension])
-        tr @(rf/subscribe [:lipas.ui.subs/translator])]
-    (when (= dimension :density)
-      [:> FormControl {:full-width true :margin "normal"}
-       [:> InputLabel (tr :analysis/heatmap-weight-by)]
-       [:> Select
-        {:value weight-by
-         :on-change #(rf/dispatch [::events/update-weight-by-and-refresh (keyword (.. % -target -value))])}
-        [:> MenuItem {:value :count} (tr :analysis/heatmap-count)]
-        [:> MenuItem {:value :area-m2} (tr :analysis/heatmap-area-m2)]
-        [:> MenuItem {:value :route-length-km} (tr :analysis/heatmap-route-length-km)]]])))
+    (let [weight-by @(rf/subscribe [::subs/weight-by])
+          dimension @(rf/subscribe [::subs/dimension])
+          tr @(rf/subscribe [:lipas.ui.subs/translator])]
+      (when (= dimension :density)
+        [:> FormControl {:full-width true :margin "normal"}
+         [:> InputLabel (tr :analysis/heatmap-weight-by)]
+         [:> Select
+          {:value weight-by
+           :on-change #(rf/dispatch [::events/update-weight-by-and-refresh (keyword (.. % -target -value))])}
+          [:> MenuItem {:value :count} (tr :analysis/heatmap-count)]
+          [:> MenuItem {:value :area-m2} (tr :analysis/heatmap-area-m2)]
+          [:> MenuItem {:value :route-length-km} (tr :analysis/heatmap-route-length-km)]]])))
 
 #_(defn precision-selector []
-  (let [precision @(rf/subscribe [::subs/precision])
-        zoom @(rf/subscribe [:lipas.ui.map.subs/zoom])
-        tr @(rf/subscribe [:lipas.ui.subs/translator])]
-    [:> FormControl {:full-width true :margin "normal"}
-     [:> InputLabel (tr :analysis/heatmap-geohash-precision)]
-     [:> Select
-      {:value (or precision "auto")
-       :on-change #(let [val (.. % -target -value)]
-                     (rf/dispatch [::events/update-precision-and-refresh
-                                   (if (= val "auto") nil (js/parseInt val))]))}
-      [:> MenuItem {:value "auto"} (str (tr :analysis/heatmap-auto-current) (cond
+    (let [precision @(rf/subscribe [::subs/precision])
+          zoom @(rf/subscribe [:lipas.ui.map.subs/zoom])
+          tr @(rf/subscribe [:lipas.ui.subs/translator])]
+      [:> FormControl {:full-width true :margin "normal"}
+       [:> InputLabel (tr :analysis/heatmap-geohash-precision)]
+       [:> Select
+        {:value (or precision "auto")
+         :on-change #(let [val (.. % -target -value)]
+                       (rf/dispatch [::events/update-precision-and-refresh
+                                     (if (= val "auto") nil (js/parseInt val))]))}
+        [:> MenuItem {:value "auto"} (str (tr :analysis/heatmap-auto-current) (cond
                                                                                 (<= zoom 5) 4
                                                                                 (<= zoom 7) 5
                                                                                 (<= zoom 9) 6
@@ -71,33 +68,33 @@
                                                                                 (<= zoom 13) 8
                                                                                 (<= zoom 15) 8
                                                                                 :else 8) ")")]
-      [:> MenuItem {:value 1} (tr :analysis/heatmap-precision-1)]
-      [:> MenuItem {:value 2} (tr :analysis/heatmap-precision-2)]
-      [:> MenuItem {:value 3} (tr :analysis/heatmap-precision-3)]
-      [:> MenuItem {:value 4} (tr :analysis/heatmap-precision-4)]
-      [:> MenuItem {:value 5} (tr :analysis/heatmap-precision-5)]
-      [:> MenuItem {:value 6} (tr :analysis/heatmap-precision-6)]
-      [:> MenuItem {:value 7} (tr :analysis/heatmap-precision-7)]
-      [:> MenuItem {:value 8} (tr :analysis/heatmap-precision-8)]
-      [:> MenuItem {:value 9} (tr :analysis/heatmap-precision-9)]
-      [:> MenuItem {:value 10} (tr :analysis/heatmap-precision-10)]]
-     [:> FormHelperText (tr :analysis/heatmap-precision-help)]]))
+        [:> MenuItem {:value 1} (tr :analysis/heatmap-precision-1)]
+        [:> MenuItem {:value 2} (tr :analysis/heatmap-precision-2)]
+        [:> MenuItem {:value 3} (tr :analysis/heatmap-precision-3)]
+        [:> MenuItem {:value 4} (tr :analysis/heatmap-precision-4)]
+        [:> MenuItem {:value 5} (tr :analysis/heatmap-precision-5)]
+        [:> MenuItem {:value 6} (tr :analysis/heatmap-precision-6)]
+        [:> MenuItem {:value 7} (tr :analysis/heatmap-precision-7)]
+        [:> MenuItem {:value 8} (tr :analysis/heatmap-precision-8)]
+        [:> MenuItem {:value 9} (tr :analysis/heatmap-precision-9)]
+        [:> MenuItem {:value 10} (tr :analysis/heatmap-precision-10)]]
+       [:> FormHelperText (tr :analysis/heatmap-precision-help)]]))
 
 #_(defn bbox-filter-selector []
-  (let [use-bbox-filter? @(rf/subscribe [::subs/use-bbox-filter?])
-        tr @(rf/subscribe [:lipas.ui.subs/translator])]
-    [:> FormControl {:full-width true :margin "normal"}
-     [:> FormControlLabel
-      {:control (r/as-element
-                 [:> Switch
-                  {:checked use-bbox-filter?
-                   :on-change #(rf/dispatch [::events/update-bbox-filter-and-refresh
-                                             (.. % -target -checked)])}])
-       :label (tr :analysis/heatmap-filter-by-map-view)}]
-     [:> FormHelperText
-      (if use-bbox-filter?
-        (tr :analysis/heatmap-analyzing-current-bounds)
-        (tr :analysis/heatmap-analyzing-whole-finland))]]))
+    (let [use-bbox-filter? @(rf/subscribe [::subs/use-bbox-filter?])
+          tr @(rf/subscribe [:lipas.ui.subs/translator])]
+      [:> FormControl {:full-width true :margin "normal"}
+       [:> FormControlLabel
+        {:control (r/as-element
+                    [:> Switch
+                     {:checked use-bbox-filter?
+                      :on-change #(rf/dispatch [::events/update-bbox-filter-and-refresh
+                                                (.. % -target -checked)])}])
+         :label (tr :analysis/heatmap-filter-by-map-view)}]
+       [:> FormHelperText
+        (if use-bbox-filter?
+          (tr :analysis/heatmap-analyzing-current-bounds)
+          (tr :analysis/heatmap-analyzing-whole-finland))]]))
 
 ;; Updated selectors using existing components
 (defn type-filter []
@@ -222,14 +219,14 @@
         tr @(rf/subscribe [:lipas.ui.subs/translator])]
     [:> Stack {:direction "column" :spacing 2}
      [:> Paper {:style {:padding "0.5em"
-                         :overflow-y "auto"}}
+                        :overflow-y "auto"}}
       [:> Typography {:variant "h5" :gutterBottom true}
        (tr :analysis/heatmap)]
 
       ;; Info text
       [:> Paper {:style {:margin-bottom "16px"
-                          :padding "1em"
-                          :background-color "#f5e642"}}
+                         :padding "1em"
+                         :background-color "#f5e642"}}
        [:> Typography {:variant "body2"}
         (tr :analysis/heatmap-info-text)]]
 

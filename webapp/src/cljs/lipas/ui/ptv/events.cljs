@@ -3,12 +3,7 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
-            [lipas.data.types :as types]
-            [lipas.roles :as roles]
-            [lipas.schema.sports-sites.ptv :as ptv-schema]
             [lipas.ui.utils :as utils]
-            [malli.core :as m]
-            [malli.error :as me]
             [re-frame.core :as rf]))
 
 (defn ptv-error-payload
@@ -1505,7 +1500,7 @@
              (update-in [:ptv :org org-id :data :sports-sites lipas-id :ptv] merge (ptv-data/ptv-service-channel->texts resp)))}))
 
 (rf/reg-event-fx ::load-ptv-texts-failure
-  (fn [{:keys [db]} [_ lipas-id org-id resp]]
+  (fn [{:keys [db]} _]
     {:db (-> db)}))
              ;; (assoc-in [:ptv :loading-from-ptv :ptv-text] false)
 
@@ -1696,7 +1691,6 @@
                 :on-success [::save-ptv-audit-success lipas-id]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
 
-
 (rf/reg-event-fx ::save-ptv-audit-success
   (fn [{:keys [db]} [_ lipas-id resp]]
     (let [tr (:translator db)
@@ -1841,7 +1835,6 @@
                 :response-format (ajax/transit-response-format)
                 :on-success [::save-ptv-service-audit-success (str service-id)]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
-
 
 (rf/reg-event-fx ::save-ptv-service-audit-success
   (fn [{:keys [db]} [_ service-id resp]]

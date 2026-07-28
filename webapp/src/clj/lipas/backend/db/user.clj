@@ -1,8 +1,8 @@
 (ns lipas.backend.db.user
   (:require
-   [hugsql.core :as hugsql]
-   [lipas.backend.db.utils :as utils]
-   [lipas.roles :as roles]))
+    [hugsql.core :as hugsql]
+    [lipas.backend.db.utils :as utils]
+    [lipas.roles :as roles]))
 
 (defn marshall [{:keys [history] :as user}]
   (-> user

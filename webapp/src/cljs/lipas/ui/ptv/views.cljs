@@ -7,30 +7,40 @@
             ["@mui/icons-material/SyncProblem$default" :as SyncProblem]
             ["@mui/icons-material/Warning$default" :as WarningIcon]
             ["@mui/material/Accordion$default" :as Accordion]
-            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-            ["@mui/material/Link$default" :as Link]
-            ["@mui/material/Radio$default" :as Radio]
-            ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/AccordionDetails$default" :as AccordionDetails]
             ["@mui/material/AccordionSummary$default" :as AccordionSummary]
             ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/AlertTitle$default" :as AlertTitle]
             ["@mui/material/AppBar$default" :as AppBar]
             ["@mui/material/Avatar$default" :as Avatar]
+            ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
+            ;; deftype, so the [:> Box ...] hiccup use below isn't recognized
+            ;; as a use of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Collapse$default" :as Collapse]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogContent$default" :as DialogContent]
+            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+            ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Link$default" :as Link]
             ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Radio$default" :as Radio]
+            ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Step$default" :as Step]
             ["@mui/material/StepButton$default" :as StepButton]
             ["@mui/material/Stepper$default" :as Stepper]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
             ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableContainer$default" :as TableContainer]
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tabs$default" :as Tabs]
@@ -42,19 +52,12 @@
             [lipas.data.ptv :as ptv-data]
             [lipas.data.ptv-service-guidance :as service-guidance]
             [lipas.data.types :as types]
+            [lipas.ui.components.autocompletes :refer [autocomplete2]]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.misc :as misc]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.autocompletes :refer [autocomplete2]]
-            ["@mui/material/Chip$default" :as Chip]
-            ["@mui/material/CircularProgress$default" :as CircularProgress]
-            ["@mui/material/Collapse$default" :as Collapse]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Switch$default" :as Switch]
-            ["@mui/material/TableBody$default" :as TableBody]
-            ["@mui/material/TableContainer$default" :as TableContainer]
             [lipas.ui.mui :as mui]
             [lipas.ui.ptv.audit :as audit]
             [lipas.ui.ptv.components :as ptv-components]
@@ -635,7 +638,6 @@
           org-id (<== [::subs/selected-ptv-org-id])
           sites (<== [::subs/sports-sites org-id])
           filtered-sites (filter-sites sites @search-text @status-filter)
-          sync-all-enabled? (<== [::subs/sync-all-enabled? org-id])
           double-linked-ids (<== [::subs/double-linked-lipas-ids org-id])
 
           ;; Audit status component
@@ -926,7 +928,7 @@
       [:> Icon "arrow_forward"]]]))
 
 (r/defc service-preview
-  [{:keys [source-id sub-category-id valid]}]
+  [{:keys [source-id sub-category-id]}]
   (let [preview @(rf/subscribe [::subs/service-preview source-id sub-category-id])
         row (fn [{:keys [label value tooltip]}]
               [:> Tooltip {:title tooltip}
@@ -1042,8 +1044,7 @@
 
 (defn create-services
   []
-  (r/with-let [selected-tab (r/atom :fi)
-               link-expanded (r/atom #{})]
+  (r/with-let [selected-tab (r/atom :fi)]
     (let [tr (<== [:lipas.ui.subs/translator])
           org-id (<== [::subs/selected-ptv-org-id])
           service-candidates (<== [::subs/service-candidates org-id])
@@ -1565,21 +1566,18 @@
   (let [tr (<== [:lipas.ui.subs/translator])
         org-id (<== [::subs/selected-ptv-org-id])
         sports-sites (<== [::subs/sports-sites-wizard org-id])
-        setup-done? (<== [::subs/sports-site-setup-done org-id])
         sports-sites-count (count sports-sites)
         sports-sites-count-sync (count (filter :sync-enabled sports-sites))
-        sports-sites-filter (<== [::subs/sports-sites-filter])
 
         [selected-tab set-selected-tab] (hooks/use-state :fi)
 
         ;; TODO: Rename this so service-location-generation progress can also be
         ;; added to this level
         {:keys [in-progress?
-                processed-lipas-ids
                 processed-count
                 total-count
                 processed-percent
-                halt?] :as m}
+                halt?]}
         (<== [::subs/batch-descriptions-generation-progress])]
 
     [:> Stack
@@ -1974,8 +1972,8 @@
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
           audit-bucket (ptv-data/audit-bucket
-                        service-audit
-                        (ptv-data/service-audit-fields ptv-texts))
+                         service-audit
+                         (ptv-data/service-audit-fields ptv-texts))
           audit-icon (case audit-bucket
                        :waiting-fixes
                        [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}
@@ -2102,7 +2100,7 @@
        [:> StepButton
         {:color "inherit"
          :onClick (partial set-step 0)}
-        (str "1. Valitse liikuntapaikat")]]
+        "1. Valitse liikuntapaikat"]]
       [:> Step
        {:key "2"
         :completed services-done?}
@@ -2190,7 +2188,6 @@
         selected-org (<== [::subs/selected-org])
         ptv-org-id (<== [::subs/selected-ptv-org-id])
         org-data (<== [::subs/selected-org-data ptv-org-id])
-        sites (<== [::subs/sports-sites ptv-org-id])
 
         has-manage-privilege? (<== [::subs/has-manage-privilege?])
         has-audit-privilege? (<== [::subs/has-audit-privilege?])

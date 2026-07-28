@@ -1,8 +1,7 @@
 (ns lipas.backend.org-test
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [integrant.core :as ig]
-            [lipas.backend.config :as config]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
@@ -10,9 +9,9 @@
             [lipas.migrations.org-type-association :as org-type-association]
             [lipas.roles :as roles]
             [lipas.schema.org :as org-schema]
-            [malli.core :as m]
             [lipas.test-utils :as test-utils]
             [lipas.utils :as utils]
+            [malli.core :as m]
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as rs]
             [ring.mock.request :as mock]))
@@ -1206,9 +1205,9 @@
                         (filter #(re-find #"Jäsen lisätty" %))
                         first)]
       (is (some? add-line) "An 'added member' line exists")
-      (is (clojure.string/includes? add-line (:email member))
+      (is (str/includes? add-line (:email member))
           "The added-member line shows the email")
-      (is (not (clojure.string/includes? add-line (str (:id member))))
+      (is (not (str/includes? add-line (str (:id member))))
           "The raw user-id UUID must not appear"))))
 
 (deftest org-history-authz-test
@@ -1253,11 +1252,11 @@
           "Org admin sees the author's coarse role label")
       (is (empty? (authored oadmin-hist :author-name))
           "Org admin response carries no :author-name")
-      (is (not-any? #(clojure.string/includes? (str %) (:email lipas-admin))
+      (is (not-any? #(str/includes? (str %) (:email lipas-admin))
                     (map :author-name oadmin-hist))
           "The lipas-admin author's email never appears for org admins")
       ;; member references in change summaries stay readable (own-org members)
-      (is (some (fn [rev] (some #(clojure.string/includes? % (:email member)) (:changes rev)))
+      (is (some (fn [rev] (some #(str/includes? % (:email member)) (:changes rev)))
                 oadmin-hist)
           "Member references in change lines keep emails (visible in Jäsenet anyway)")
       ;; lipas-admin mode: unchanged person view

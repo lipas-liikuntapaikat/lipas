@@ -79,6 +79,45 @@ Delegate browser testing to `browser-tester` sub-agent to preserve context.
 
 ## Code Style
 
+### Formatting and linting
+
+Enforced by hooks and CI, so you rarely need to run these by hand — the
+PostToolUse hook formats each file you edit and reports clj-kondo findings
+immediately.
+
+```bash
+cd webapp          # required: both tools resolve config by walking UP from cwd
+bb fmt <files>     # cljfmt fix
+bb lint <files>    # clj-kondo, errors fail
+bb lint-strict     # clj-kondo, warnings fail too — what CI gates on
+bb check           # fmt-check + lint-strict, what CI runs
+bb clean-ns <f>    # drop unused requires (clojure-lsp) — review its diff, see below
+```
+
+Run these from `webapp/` or via `bb`. From the repository root the raw
+`cljfmt`/`clj-kondo` binaries find no config and silently apply their own
+defaults — `:community` indentation instead of this project's `:cursive`.
+
+The tree is at **zero clj-kondo warnings** and every gate fails on warnings.
+For a genuine false positive use `#_{:clj-kondo/ignore [:linter-name]}` at the
+call site with a comment saying why the code is correct — never as a shortcut.
+
+**`bb clean-ns` deletes requires that are actually needed.** Two cases, both of
+which leave clj-kondo reporting zero warnings and the build succeeding while the
+app breaks at runtime:
+
+- An alias colliding with `cljs.core` — `[:> Box ...]` resolves to
+  `cljs.core/Box`, so the require reads as unused. Colliding names: `Box`,
+  `List`, `Symbol`, `Keyword`, `Delay`, `Atom`, `Var`, `Range`, `Cons`, `Empty`,
+  `Reduced`, `Volatile`, `MultiFn`, `Namespace`, `Repeat`, `Iterate`, `Cycle`
+  (`Set` and `Map` are fine).
+- A require kept only for load-time side effects — re-frame `reg-event-*`/
+  `reg-sub`, `defmethod`, integrant `init-key`, proj4 registration.
+
+Before believing "unused", check whether the only usage sits inside a `#_`
+discard or `(comment ...)` block; clj-kondo skips those, so such a require
+genuinely is dead.
+
 ### Backend (Clojure)
 
 - Use `str` alias for `clojure.string`

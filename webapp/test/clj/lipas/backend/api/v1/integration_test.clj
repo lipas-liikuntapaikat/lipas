@@ -17,11 +17,12 @@
    - Multi-segment geometries (routes with multiple trail sections)
    - Type-specific properties (pools, rinks, route lengths, etc.)"
   (:require
-   [clojure.test :refer [deftest is testing use-fixtures]]
-   [lipas.backend.api.v1.transform :as legacy-transform]
-   [lipas.backend.core :as core]
-   [lipas.test-utils :as test-utils]
-   [ring.mock.request :as mock]))
+    [clojure.set :as set]
+    [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.api.v1.transform :as legacy-transform]
+    [lipas.backend.core :as core]
+    [lipas.test-utils :as test-utils]
+    [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
 
@@ -441,7 +442,7 @@
             page2 (query-legacy-api "/v1/sports-places?pageSize=5&page=2")
             ids1 (set (map :sportsPlaceId (:body page1)))
             ids2 (set (map :sportsPlaceId (:body page2)))]
-        (is (empty? (clojure.set/intersection ids1 ids2))
+        (is (empty? (set/intersection ids1 ids2))
             "Pages should have different items")))))
 
 (defn query-legacy-api-with-headers
@@ -472,8 +473,8 @@
 
     (testing "Uses /v1 prefix when X-Forwarded-Prefix is /v1 (api.lipas.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/v1/sports-places?pageSize=5"
-                                      {"x-forwarded-prefix" "/v1"})]
+                                       "/v1/sports-places?pageSize=5"
+                                       {"x-forwarded-prefix" "/v1"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
@@ -482,8 +483,8 @@
 
     (testing "Uses /api prefix when X-Forwarded-Prefix is /api (lipas.cc.jyu.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/v1/sports-places?pageSize=5"
-                                      {"x-forwarded-prefix" "/api"})]
+                                       "/v1/sports-places?pageSize=5"
+                                       {"x-forwarded-prefix" "/api"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
@@ -494,8 +495,8 @@
 
     (testing "Uses /v1 prefix when X-Forwarded-Prefix is /v1 (lipas.fi)"
       (let [{:keys [status headers]} (query-legacy-api-with-headers
-                                      "/v1/sports-places?pageSize=5"
-                                      {"x-forwarded-prefix" "/v1"})]
+                                       "/v1/sports-places?pageSize=5"
+                                       {"x-forwarded-prefix" "/v1"})]
         (is (= 206 status))
         (let [link-header (get headers "Link")]
           (is (some? link-header))
@@ -566,7 +567,7 @@
 
       (testing "filters by closeToLon, closeToLat, closeToDistanceKm"
         (let [{:keys [status body]} (query-legacy-api
-                                     "/v1/sports-places?closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1")]
+                                      "/v1/sports-places?closeToLon=24.9384&closeToLat=60.1699&closeToDistanceKm=1")]
           (is (#{200 206} status) "Should return 200 or 206, not an error")
           (is (vector? body) "Response should be a vector")
           ;; The Helsinki center site should be found (within 1km)
@@ -605,23 +606,23 @@
         (save-and-index! site)))
 
     (testing "Link header uses camelCase param names and omits empty values"
-      (let [{:keys [headers]} (query-legacy-api "/v1/sports-places?pageSize=3&typeCodes=1120")]
-        (let [link-header (get headers "Link")]
-          (is (some? link-header) "Should have Link header")
+      (let [{:keys [headers]} (query-legacy-api "/v1/sports-places?pageSize=3&typeCodes=1120")
+            link-header (get headers "Link")]
+        (is (some? link-header) "Should have Link header")
 
-          ;; Should use camelCase param names
-          (is (re-find #"pageSize=" link-header)
-              "Should use 'pageSize' (camelCase)")
-          (is (not (re-find #"page-size=" link-header))
-              "Should NOT use 'page-size' (kebab-case)")
+        ;; Should use camelCase param names
+        (is (re-find #"pageSize=" link-header)
+            "Should use 'pageSize' (camelCase)")
+        (is (not (re-find #"page-size=" link-header))
+            "Should NOT use 'page-size' (kebab-case)")
 
-          ;; Should NOT include empty params
-          (is (not (re-find #"city-codes=" link-header))
-              "Should NOT include empty city-codes param")
-          (is (not (re-find #"modified-after=" link-header))
-              "Should NOT include empty modified-after param")
-          (is (not (re-find #"search-string=" link-header))
-              "Should NOT include empty search-string param"))))))
+        ;; Should NOT include empty params
+        (is (not (re-find #"city-codes=" link-header))
+            "Should NOT include empty city-codes param")
+        (is (not (re-find #"modified-after=" link-header))
+            "Should NOT include empty modified-after param")
+        (is (not (re-find #"search-string=" link-header))
+            "Should NOT include empty search-string param")))))
 
 (comment
   ;; Run all tests in this namespace

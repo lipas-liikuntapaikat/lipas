@@ -8,12 +8,12 @@
   job with a future run_at. Permanently failed jobs are moved to the
   dead_letter_jobs table and removed from jobs."
   (:require
-   [lipas.backend.db.utils :refer [->kebab-case-keywords]]
-   [lipas.jobs.db :as jobs-db]
-   [lipas.jobs.patterns :as patterns]
-   [lipas.jobs.registry :as registry]
-   [lipas.jobs.triage :as triage]
-   [taoensso.timbre :as log]))
+    [lipas.backend.db.utils :refer [->kebab-case-keywords]]
+    [lipas.jobs.db :as jobs-db]
+    [lipas.jobs.patterns :as patterns]
+    [lipas.jobs.registry :as registry]
+    [lipas.jobs.triage :as triage]
+    [taoensso.timbre :as log]))
 
 (def job-type-schema registry/job-type-schema)
 (def job-status-schema registry/job-status-schema)
@@ -54,17 +54,17 @@
                           (f payload)))
           run-at (or run-at
                      (java.sql.Timestamp/from
-                      (.plusSeconds (java.time.Instant/now)
-                                    (long (:debounce-sec job-def 0)))))
+                       (.plusSeconds (java.time.Instant/now)
+                                     (long (:debounce-sec job-def 0)))))
           row (jobs-db/enqueue-job!
-               db
-               {:type job-type
-                :payload payload
-                :priority (or priority (:priority job-def))
-                :max_attempts (or max-attempts (:max-attempts job-def))
-                :run_at run-at
-                :created_by created-by
-                :dedup_key dedup-key})]
+                db
+                {:type job-type
+                 :payload payload
+                 :priority (or priority (:priority job-def))
+                 :max_attempts (or max-attempts (:max-attempts job-def))
+                 :run_at run-at
+                 :created_by created-by
+                 :dedup_key dedup-key})]
       (if row
         (do (log/debug "Enqueued job" {:id (:id row) :type job-type})
             {:id (:id row)})
@@ -305,7 +305,7 @@
   [db dead-letter-ids user-email]
   {:acknowledged (if (seq dead-letter-ids)
                    (jobs-db/acknowledge-dead-letter-jobs!
-                    db
-                    {:ids (long-array dead-letter-ids)
-                     :acknowledged_by user-email})
+                     db
+                     {:ids (long-array dead-letter-ids)
+                      :acknowledged_by user-email})
                    0)})

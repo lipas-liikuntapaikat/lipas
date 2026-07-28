@@ -32,49 +32,49 @@
     (let [[lon lat] (-> pop-entry :_source :coords gis/wkt-point->coords)
           g1 (gis/->point lat lon)]
       (assoc pop-entry :sports-sites (map
-                                      (fn [site]
-                                        (let [g2 (-> site
-                                                     :_source
-                                                     :search-meta
-                                                     :location
-                                                     :simple-geoms
-                                                     gis/->flat-coords
-                                                     not-empty
-                                                     (some->
-                                                      gis/->jts-multi-point
-                                                      (gis/nearest-points g1)
-                                                      first))
+                                       (fn [site]
+                                         (let [g2 (-> site
+                                                      :_source
+                                                      :search-meta
+                                                      :location
+                                                      :simple-geoms
+                                                      gis/->flat-coords
+                                                      not-empty
+                                                      (some->
+                                                        gis/->jts-multi-point
+                                                        (gis/nearest-points g1)
+                                                        first))
 
-                                              distance (gis/distance-point g1 g2)]
-                                          {:id (:_id site)
-                                           :type-code (-> site
-                                                          :_source
-                                                          :type
-                                                          :type-code)
-                                           :distance-m distance}))
-                                      site-data)))))
+                                               distance (gis/distance-point g1 g2)]
+                                           {:id (:_id site)
+                                            :type-code (-> site
+                                                           :_source
+                                                           :type
+                                                           :type-code)
+                                            :distance-m distance}))
+                                       site-data)))))
 
 (defn- append-route-distances [pop-data site-data]
   (let [res (osrm/get-distances-and-travel-times
-             {:profiles #{:foot}
-              :sources (->> pop-data
-                            (map (comp gis/wkt-point->coords :coords :_source))
-                            (map #(str/join "," %)))
-              :destinations (->> site-data
-                                 (map (comp :simple-geoms :location :search-meta :_source))
-                                 (mapcat gis/->coord-pair-strs))})]
+              {:profiles #{:foot}
+               :sources (->> pop-data
+                             (map (comp gis/wkt-point->coords :coords :_source))
+                             (map #(str/join "," %)))
+               :destinations (->> site-data
+                                  (map (comp :simple-geoms :location :search-meta :_source))
+                                  (mapcat gis/->coord-pair-strs))})]
     (map-indexed
-     (fn [pop-idx pop-entry]
-       (assoc pop-entry :sports-sites
-              (map-indexed
-               (fn [site-idx site]
-                 {:id (:_id site)
-                  :status (-> site :_source :status)
-                  :type-code (-> site :_source :type :type-code)
-                  :distance-m (get-in res [:foot :distances pop-idx site-idx])
-                  :duration-s (get-in res [:foot :durations pop-idx site-idx])})
-               site-data)))
-     pop-data)))
+      (fn [pop-idx pop-entry]
+        (assoc pop-entry :sports-sites
+               (map-indexed
+                 (fn [site-idx site]
+                   {:id (:_id site)
+                    :status (-> site :_source :status)
+                    :type-code (-> site :_source :type :type-code)
+                    :distance-m (get-in res [:foot :distances pop-idx site-idx])
+                    :duration-s (get-in res [:foot :durations pop-idx site-idx])})
+                 site-data)))
+      pop-data)))
 
 (def bool->num {true 1 false 0})
 
@@ -89,33 +89,33 @@
          site->status-fn (constantly true)}
     :as _opts}]
   (map
-   (fn [pop-entry]
-     (let [cats (reduce
-                 (fn [m {:keys [type-codes name factor]
-                         :or {factor 1}}]
-                   (assoc m name
-                          (->> pop-entry
-                               sports-sites-fn
-                               (filter
-                                (fn [site]
-                                  (and
-                                   (statuses (site->status-fn site))
-                                   (type-codes (site->type-code-fn site))
-                                   (> max-distance-m (or (site->distance-fn site)
-                                                         max-distance-m)))))
-                               first
-                               some?
-                               bool->num
+    (fn [pop-entry]
+      (let [cats (reduce
+                   (fn [m {:keys [type-codes name factor]
+                           :or {factor 1}}]
+                     (assoc m name
+                            (->> pop-entry
+                                 sports-sites-fn
+                                 (filter
+                                   (fn [site]
+                                     (and
+                                       (statuses (site->status-fn site))
+                                       (type-codes (site->type-code-fn site))
+                                       (> max-distance-m (or (site->distance-fn site)
+                                                             max-distance-m)))))
+                                 first
+                                 some?
+                                 bool->num
                                ;; Occurrence in category contributes
                                ;; to diversity index with 0 or 1 *
                                ;; factor
-                               (* factor))))
-                 {}
-                 categories)]
-       (-> pop-entry
-           (assoc :categories cats)
-           (assoc :diversity-index (->> cats vals (apply +))))))
-   pop-data))
+                                 (* factor))))
+                   {}
+                   categories)]
+        (-> pop-entry
+            (assoc :categories cats)
+            (assoc :diversity-index (->> cats vals (apply +))))))
+    pop-data))
 
 (defn- ->grid-geojson
   ([pop-data] (->grid-geojson pop-data {}))
@@ -124,22 +124,22 @@
    {:type "FeatureCollection"
     :features
     (map
-     (fn [pop-entry]
-       (let [coords (-> pop-entry :_source coords-fn)
-             coords-3067 (gis/wgs84->tm35fin-no-wrap coords)]
-         {:type "Feature"
-          :geometry
-          {:type "Point"
-           :coordinates coords}
-          :properties
-          (merge
-           {:id (-> pop-entry :_source :id_nro)
-            :grid_id (-> pop-entry :_source :grd_id)
-            :epsg3067 coords-3067
-            :diversity_idx (:diversity-index pop-entry)
-            :population (-> pop-entry :_source :vaesto utils/->int common/anonymize)}
-           (:categories pop-entry))}))
-     pop-data)}))
+      (fn [pop-entry]
+        (let [coords (-> pop-entry :_source coords-fn)
+              coords-3067 (gis/wgs84->tm35fin-no-wrap coords)]
+          {:type "Feature"
+           :geometry
+           {:type "Point"
+            :coordinates coords}
+           :properties
+           (merge
+             {:id (-> pop-entry :_source :id_nro)
+              :grid_id (-> pop-entry :_source :grd_id)
+              :epsg3067 coords-3067
+              :diversity_idx (:diversity-index pop-entry)
+              :population (-> pop-entry :_source :vaesto utils/->int common/anonymize)}
+             (:categories pop-entry))}))
+      pop-data)}))
 
 (defn prepare-categories [categories]
   (map #(update % :type-codes set) categories))
@@ -168,12 +168,12 @@
      :population-age-65- age-65-
      :population-weighted-mean (when (pos? total-pop)
                                  (double
-                                  (/ (->> pop-entries
-                                          (map (fn [m]
-                                                 (* (-> m :_source :vaesto utils/->int)
-                                                    (:diversity-index m))))
-                                          (apply +))
-                                     total-pop)))}))
+                                   (/ (->> pop-entries
+                                           (map (fn [m]
+                                                  (* (-> m :_source :vaesto utils/->int)
+                                                     (:diversity-index m))))
+                                           (apply +))
+                                      total-pop)))}))
 
 (defn calc-diversity-indices
   [search
@@ -343,15 +343,15 @@
   [cell-points site-entries radius-m]
   (mapv (fn [point]
           (persistent!
-           (reduce
-            (fn [acc i]
-              (if (gis/within-distance? (:geom-3067 (nth site-entries i))
-                                        radius-m
-                                        point)
-                (conj! acc i)
-                acc))
-            (transient [])
-            (range (count site-entries)))))
+            (reduce
+              (fn [acc i]
+                (if (gis/within-distance? (:geom-3067 (nth site-entries i))
+                                          radius-m
+                                          point)
+                  (conj! acc i)
+                  acc))
+              (transient [])
+              (range (count site-entries)))))
         cell-points))
 
 (defn index-dests
@@ -410,30 +410,30 @@
         nil-rows (fn [n-cols]
                    (vec (repeat n-sources (vec (repeat n-cols nil)))))]
     (reduce
-     (fn [acc p]
-       (let [per-chunk (mapv #(get % p) chunk-results)]
-         (if (every? nil? per-chunk)
-           acc
-           (let [failed-cols (into (sorted-set)
-                                   (mapcat (fn [i]
-                                             (when (nil? (nth per-chunk i))
-                                               (range (nth offsets i)
-                                                      (+ (nth offsets i)
-                                                         (nth chunk-sizes i))))))
-                                   (range (count per-chunk)))
-                 concat-rows (fn [k]
-                               (apply mapv (fn [& rows] (into [] cat rows))
-                                      (map-indexed
-                                       (fn [i r]
-                                         (if r (k r) (nil-rows (nth chunk-sizes i))))
-                                       per-chunk)))]
-             (-> acc
-                 (assoc-in [:tables p] {:distances (concat-rows :distances)
-                                        :durations (concat-rows :durations)})
-                 (cond-> (seq failed-cols)
-                   (assoc-in [:failed-cols p] failed-cols)))))))
-     {:tables {} :failed-cols {}}
-     osrm-profiles)))
+      (fn [acc p]
+        (let [per-chunk (mapv #(get % p) chunk-results)]
+          (if (every? nil? per-chunk)
+            acc
+            (let [failed-cols (into (sorted-set)
+                                    (mapcat (fn [i]
+                                              (when (nil? (nth per-chunk i))
+                                                (range (nth offsets i)
+                                                       (+ (nth offsets i)
+                                                          (nth chunk-sizes i))))))
+                                    (range (count per-chunk)))
+                  concat-rows (fn [k]
+                                (apply mapv (fn [& rows] (into [] cat rows))
+                                       (map-indexed
+                                         (fn [i r]
+                                           (if r (k r) (nil-rows (nth chunk-sizes i))))
+                                         per-chunk)))]
+              (-> acc
+                  (assoc-in [:tables p] {:distances (concat-rows :distances)
+                                         :durations (concat-rows :durations)})
+                  (cond-> (seq failed-cols)
+                    (assoc-in [:failed-cols p] failed-cols)))))))
+      {:tables {} :failed-cols {}}
+      osrm-profiles)))
 
 (defn- fetch-tables!
   "Table matrices for sources x dests, chunking destinations so each
@@ -458,16 +458,16 @@
   for this site (same footprint as the old per-site request failure)."
   [tables failed-cols row-idx cols]
   (not-empty
-   (reduce-kv
-    (fn [res p {:keys [distances durations]}]
-      (if (some (or (get failed-cols p) #{}) cols)
-        res
-        (let [drow (nth distances row-idx)
-              trow (nth durations row-idx)]
-          (assoc res p {:distance-m (min-finite (map #(nth drow %) cols))
-                        :duration-s (min-finite (map #(nth trow %) cols))}))))
-    {}
-    tables)))
+    (reduce-kv
+      (fn [res p {:keys [distances durations]}]
+        (if (some (or (get failed-cols p) #{}) cols)
+          res
+          (let [drow (nth distances row-idx)
+                trow (nth durations row-idx)]
+            (assoc res p {:distance-m (min-finite (map #(nth drow %) cols))
+                          :duration-s (min-finite (map #(nth trow %) cols))}))))
+      {}
+      tables)))
 
 (defn- tile-key [[e n]]
   [(quot (long e) tile-size-m) (quot (long n) tile-size-m)])
@@ -497,12 +497,12 @@
                                    (site-osrm-mins tables failed-cols row-idx
                                                    (site->cols site-idx)))}))
         docs (concat
-              (map-indexed
-               (fn [row-idx {:keys [cell site-idxs]}]
-                 (assoc cell :sports-sites (mapv #(->site-result row-idx %) site-idxs)))
-               routed)
-              (map (fn [{:keys [cell]}] (assoc cell :sports-sites []))
-                   unrouted))]
+               (map-indexed
+                 (fn [row-idx {:keys [cell site-idxs]}]
+                   (assoc cell :sports-sites (mapv #(->site-result row-idx %) site-idxs)))
+                 routed)
+               (map (fn [{:keys [cell]}] (assoc cell :sports-sites []))
+                    unrouted))]
     (->> docs
          (search/->bulk idx-name :grd_id)
          (search/bulk-index-sync! client))
@@ -524,8 +524,8 @@
         cells-3067 (mapv gis/wgs84->tm35fin-no-wrap cell-coords)
         cell-points (mapv gis/tm35fin-point cells-3067)
         site-hits (:hits (common/get-sports-site-data-scrolled
-                          search site-area-fcoll (/ cell-radius-m 1000)
-                          all-type-codes statuses))
+                           search site-area-fcoll (/ cell-radius-m 1000)
+                           all-type-codes statuses))
         site-entries (into [] (keep #(prepare-site-entry % on-error)) site-hits)
         assignments (assign-sites cell-points site-entries
                                   (+ cell-radius-m assignment-margin-m))

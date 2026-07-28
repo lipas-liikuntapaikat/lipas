@@ -18,9 +18,9 @@
 
 (defn download-button [{:keys [on-click label] :as props}]
   [:> Button (merge {:color    "secondary"
-                      :variant  "outlined"
-                      :on-click on-click}
-                     props)
+                     :variant  "outlined"
+                     :on-click on-click}
+                    props)
    label])
 
 (defn login-button [{:keys [on-click label]}]

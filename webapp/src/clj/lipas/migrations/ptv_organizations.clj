@@ -8,7 +8,7 @@
 
 (defn migrate-up
   "Migrate hardcoded PTV organizations from lipas.data.ptv to the database"
-  [{:keys [db] :as config}]
+  [{:keys [db]}]
   (let [environment (env/env :environment)
         ;; Select test orgs for dev/test, prod orgs for prod environment
         organizations (case environment
@@ -50,7 +50,7 @@
 
 (defn migrate-down
   "Remove migrated PTV organizations from the database"
-  [{:keys [db] :as config}]
+  [{:keys [db]}]
   (let [environment (env/env :environment)
         organizations (case environment
                         ("dev" "test") ptv/test-organizations
@@ -68,8 +68,8 @@
 
           ;; Use raw SQL since we need to delete by name
           (let [result (jdbc/execute-one!
-                        db
-                        ["DELETE FROM org WHERE name = ?" org-name])]
+                         db
+                         ["DELETE FROM org WHERE name = ?" org-name])]
             (if (pos? (:next.jdbc/update-count result))
               (log/info "Successfully removed organization:" org-name)
               (log/warn "Organization not found:" org-name)))

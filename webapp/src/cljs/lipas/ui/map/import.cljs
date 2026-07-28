@@ -1,11 +1,5 @@
 (ns lipas.ui.map.import
-  (:require [clojure.string :as string]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.map.events :as events]
-            [lipas.ui.map.subs :as subs]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
             ["@mui/material/DialogContent$default" :as DialogContent]
@@ -15,10 +9,16 @@
             ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.subs :as subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]))
 
 (def import-formats [".zip" ".kml" ".gpx" ".json" ".geojson"])
-(def import-formats-str (string/join " " import-formats))
+(def import-formats-str (str/join " " import-formats))
 
 (defn helper [{:keys [label tooltip]}]
   [:> Tooltip {:title tooltip}
@@ -66,7 +66,7 @@
          [:> Grid {:item true}
           [:input
            {:type      "file"
-            :accept    (string/join "," import-formats)
+            :accept    (str/join "," import-formats)
             :on-change #(==> [::events/load-geoms-from-file
                               (-> % .-target .-files)
                               geom-type])}]]

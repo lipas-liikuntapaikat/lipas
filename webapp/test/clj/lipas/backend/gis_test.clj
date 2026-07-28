@@ -800,7 +800,7 @@
 (deftest route-geometry-report-test
   (testing "a clean route reports ok with sane totals"
     (let [r (gis/route-geometry-report
-             (route-fc [[25.70 62.24] [25.701 62.241] [25.702 62.241] [25.703 62.242]]))]
+              (route-fc [[25.70 62.24] [25.701 62.241] [25.702 62.241] [25.703 62.242]]))]
       (is (true? (:ok? r)))
       (is (= 1 (:feature-count r)))
       (is (= 4 (:vertex-count r)))
@@ -809,7 +809,7 @@
 
   (testing "a figure-eight crossing is found at the crossing point"
     (let [r (gis/route-geometry-report
-             (route-fc [[25.70 62.24] [25.702 62.242] [25.702 62.24] [25.70 62.242]]))
+              (route-fc [[25.70 62.24] [25.702 62.242] [25.702 62.24] [25.70 62.242]]))
           locs (-> r :self-intersections :locations)]
       (is (false? (:ok? r)))
       (is (= 1 (count locs)))
@@ -818,21 +818,26 @@
 
   (testing "a closed loop (start = end) is legitimate, not a kink"
     (is (true? (:ok? (gis/route-geometry-report
-                      (route-fc [[25.70 62.24] [25.701 62.241]
-                                 [25.702 62.24] [25.70 62.24]]))))))
+                       (route-fc [[25.70 62.24] [25.701 62.241]
+                                  [25.702 62.24] [25.70 62.24]]))))))
 
   (testing "consecutive vertices under a meter apart are duplicates"
     (let [r (gis/route-geometry-report
-             (route-fc [[25.70 62.24] [25.70 62.24]
-                        [25.701 62.241] [25.7010000001 62.2410000001]
-                        [25.702 62.242]]))]
+              (route-fc [[25.70 62.24] [25.70 62.24]
+                         [25.701 62.241] [25.7010000001 62.2410000001]
+                         [25.702 62.242]]))]
       (is (= 2 (-> r :duplicate-vertices :count)))))
 
   (testing "endpoints of different features that almost touch are gaps"
     (let [r (gis/route-geometry-report
-             (route-fc [[25.70 62.24] [25.701 62.241]]
-                       [[25.70105 62.24105] [25.702 62.242]]))
-          gap (-> r :endpoint-gaps :locations first)]
+              (route-fc [[25.70 62.24] [25.701 62.241]]
+                        [[25.70105 62.24105] [25.702 62.242]]))
+          ;; clj-kondo mis-infers the return of `route-geometry-report`'s
+          ;; :endpoint-gaps :locations as a map instead of a vector of maps
+          ;; (the private `endpoint-gaps` helper genuinely returns
+          ;; (vec (take cap (map (fn [_] {...}) ...))) — a vector); `first`
+          ;; here is correct.
+          gap #_{:clj-kondo/ignore [:type-mismatch]} (-> r :endpoint-gaps :locations first)]
       (is (= 1 (-> r :endpoint-gaps :count)))
       (is (= [0 1] (:features gap)))
       (is (<= 1 (:distance-m gap) 25))))
@@ -846,8 +851,8 @@
 
   (testing "point geometries yield an empty but well-formed report"
     (let [r (gis/route-geometry-report
-             {:type "FeatureCollection"
-              :features [{:type "Feature"
-                          :geometry {:type "Point" :coordinates [25.70 62.24]}}]})]
+              {:type "FeatureCollection"
+               :features [{:type "Feature"
+                           :geometry {:type "Point" :coordinates [25.70 62.24]}}]})]
       (is (zero? (:feature-count r)))
       (is (true? (:ok? r))))))

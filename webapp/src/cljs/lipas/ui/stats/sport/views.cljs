@@ -1,10 +1,10 @@
 (ns lipas.ui.stats.sport.views
-  (:require [lipas.ui.charts :as charts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.tables :as tables]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.charts :as charts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
             [lipas.ui.stats.common :as common]
             [lipas.ui.stats.sport.events :as events]
             [lipas.ui.stats.sport.subs :as subs]
@@ -128,9 +128,9 @@
                         (when-let [m (charts/->payload evt)]
                           (==> [::events/select-filters m grouping])))]
          [:> Grid {:item true
-                    :xs 12
+                   :xs 12
                     ;; Needed to make the flex item shrink when the content (chart) was larger
-                    :sx {:width 0}}
+                   :sx {:width 0}}
           [charts/sports-stats-chart
            {:data     data
             :labels   labels

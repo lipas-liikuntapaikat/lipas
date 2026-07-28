@@ -1,6 +1,6 @@
 (ns lipas.backend.api.v1.util
   (:require
-   [clojure.string :refer [blank?]]))
+    [clojure.string :refer [blank?]]))
 
 (defn parse-year
   [y]
@@ -30,10 +30,10 @@
   "Similar to select-keys, just the 'key' here is a path in the nested map"
   [m & paths]
   (reduce
-   (fn [result path]
-     (assoc-in result path (get-in m path)))
-   {}
-   paths))
+    (fn [result path]
+      (assoc-in result path (get-in m path)))
+    {}
+    paths))
 
 (defn parse-path
   "Parses keyword path from dot (.) delimited input and returns a vector

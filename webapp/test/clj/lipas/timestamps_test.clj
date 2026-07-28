@@ -51,7 +51,5 @@
     (is (re-matches iso8601-pattern "2024-12-27T13:25:00.123Z"))
     (is (re-matches iso8601-pattern "2024-12-27T13:25:00.1234567890Z"))))
 
-
 (comment
-  (clojure.test/run-tests *ns*)
-  )
+  (clojure.test/run-tests *ns*))

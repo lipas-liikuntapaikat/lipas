@@ -212,7 +212,7 @@
 ;; This is what gets debounced
 (rf/reg-event-fx
   ::refresh-heatmap
-  (fn [{:keys [db]} _]
+  (fn [_ _]
     {:dispatch-n [[::get-facets]
                   [::create-heatmap]]}))
 

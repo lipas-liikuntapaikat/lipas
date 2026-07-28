@@ -45,7 +45,7 @@
         [:lipas.ui.map.events/set-overlay false :diversity-grid]]})))
 
 (rf/reg-event-fx ::calc-diversity-indices
-  (fn [{:keys [db]} [_ {:keys [id] :as candidate} cb skip-search]]
+  (fn [{:keys [db]} [_ {:keys [id]} cb skip-search]]
     (let [url   (str (:backend-url db) "/actions/calc-diversity-indices")
           feat  (get-in db [:analysis :diversity :areas id])
           fcoll {:type     "FeatureCollection"
@@ -346,7 +346,7 @@
       (dissoc aggs :diversity-idx-median :diversity-idx-mode))))
 
 (defn- export-aggs-excel
-  [db fmt]
+  [db _fmt]
   (let [data    (->areas-excel-data (get-in db [:analysis :diversity]))
         headers (-> data first keys (->> (map (juxt identity name)) (sort-by second)))
         config  {:filename "diversity_report_areas"

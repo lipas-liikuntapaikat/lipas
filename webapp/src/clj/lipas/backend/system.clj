@@ -1,17 +1,15 @@
 (ns lipas.backend.system
-  (:require
-   [clojure.pprint :refer [pprint]]
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.email :as email]
-   [lipas.backend.handler :as handler]
-   [lipas.backend.search :as search]
-   [lipas.jobs.system :as jobs-system]
-   [lipas.backend.org :as org]
-   [nrepl.server :as nrepl]
-   [ring.adapter.jetty :as jetty]
-   [taoensso.timbre :as log]))
+  (:require [clojure.pprint :refer [pprint]]
+            [integrant.core :as ig]
+            [lipas.backend.config :as config]
+            [lipas.backend.db.db :as db]
+            [lipas.backend.email :as email]
+            [lipas.backend.handler :as handler]
+            [lipas.backend.org :as org]
+            [lipas.backend.search :as search]
+            [nrepl.server :as nrepl]
+            [ring.adapter.jetty :as jetty]
+            [taoensso.timbre :as log]))
 
 (defmethod ig/init-key :lipas/db [_ db-spec]
   (if (:dev db-spec)

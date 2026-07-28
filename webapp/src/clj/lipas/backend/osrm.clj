@@ -1,15 +1,13 @@
 (ns lipas.backend.osrm
   (:require
-   [cemerick.url :as url]
-   [clj-http.client :as client]
-   [clj-http.conn-mgr :as conn-mgr]
-   [clojure.core.cache :as cache]
-   [clojure.string :as str]
-   [environ.core :refer [env]]
-   [lipas.backend.gis :as gis]
-   [taoensso.timbre :as log])
-  (:import
-   [java.util.concurrent TimeoutException]))
+    [cemerick.url :as url]
+    [clj-http.client :as client]
+    [clj-http.conn-mgr :as conn-mgr]
+    [clojure.core.cache :as cache]
+    [clojure.string :as str]
+    [environ.core :refer [env]]
+    [lipas.backend.gis :as gis]
+    [taoensso.timbre :as log]))
 
 (def profiles
   {:car {:url (:osrm-car-url env)}
@@ -41,9 +39,9 @@
   jobs (which hold at most one connection per profile host at a time)."}
   connection-manager
   (doto (conn-mgr/make-reusable-conn-manager
-         {:timeout 30 ; Idle connection TTL (seconds)
-          :threads 30 ; Max connections total
-          :default-per-route 10}) ; Per profile server (car/bicycle/foot)
+          {:timeout 30 ; Idle connection TTL (seconds)
+           :threads 30 ; Max connections total
+           :default-per-route 10}) ; Per profile server (car/bicycle/foot)
     ;; Health-check connections that sat idle >1s before reuse, so a
     ;; keep-alive connection the server closed doesn't surface as an
     ;; IOException mid-request
@@ -86,13 +84,13 @@
               (str/join ";"))
          "?"
          (url/map->query
-          {:annotations annotations
-           :skip_waypoints true
-           :generate_hints false
-           :sources (str/join ";" (range 0 (count sources)))
-           :destinations (str/join ";" (range (count sources)
-                                              (+ (count sources)
-                                                 (count destinations))))}))))
+           {:annotations annotations
+            :skip_waypoints true
+            :generate_hints false
+            :sources (str/join ";" (range 0 (count sources)))
+            :destinations (str/join ";" (range (count sources)
+                                               (+ (count sources)
+                                                  (count destinations))))}))))
 
 (defn get-data
   "Fetch a distance/duration table from OSRM. Returns nil on any
@@ -224,5 +222,5 @@
    (:durations car)]
 
   (time
-   (get-distances-and-travel-times
-    (assoc params :profiles [:car :bicycle :foot]))))
+    (get-distances-and-travel-times
+      (assoc params :profiles [:car :bicycle :foot]))))

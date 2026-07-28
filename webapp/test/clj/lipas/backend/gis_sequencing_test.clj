@@ -8,7 +8,8 @@
   - Validates preservation of features and properties
 
   The rest of lipas.backend.gis is covered by lipas.backend.gis-test."
-  (:require [clojure.test :as t :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :as t :refer [deftest is testing]]
             [lipas.backend.gis :as gis]))
 
 ;; ============================================================================
@@ -426,7 +427,7 @@
           (str "Should have 2 connections (only from Trail 1). Got: " quality))
 
       ;; Trail 1 segments should be together
-      (let [t1-indices (keep-indexed #(when (clojure.string/starts-with? (:id %2) "t1") %1) features)]
+      (let [t1-indices (keep-indexed #(when (str/starts-with? (:id %2) "t1") %1) features)]
         (is (= 3 (count t1-indices)))
         (is (= (range (first t1-indices) (+ (first t1-indices) 3))
                t1-indices)

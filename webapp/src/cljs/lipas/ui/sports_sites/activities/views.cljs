@@ -1,21 +1,6 @@
 (ns lipas.ui.sports-sites.activities.views
   (:require ["@mui/material/Alert$default" :as Alert]
-            [clojure.string :as str]
-            [lipas.schema.common :as common-schema]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.form-table :as form-table]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.buttons :as lui-btn]
-            [lipas.ui.components.forms :refer [->display-tf]]
-            [lipas.ui.components.text-fields :as lui-tf]
-            [lipas.data.activities :as activities-data]
-            [lipas.ui.config :as config]
             ["@mui/material/Button$default" :as Button]
-            ["@mui/material/Chip$default" :as Chip]
             ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/FormControl$default" :as FormControl]
@@ -24,13 +9,25 @@
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Popper$default" :as Popper]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
-            [lipas.ui.mui :as mui]
+            [clojure.string :as str]
+            [lipas.data.activities :as activities-data]
+            [lipas.schema.common :as common-schema]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as lui-btn]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.form-table :as form-table]
+            [lipas.ui.components.forms :refer [->display-tf]]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as lui-tf]
+            [lipas.ui.config :as config]
             [lipas.ui.sports-sites.activities.events :as events]
             [lipas.ui.sports-sites.activities.subs :as subs]
             [lipas.ui.sports-sites.subs :as sports-sites-subs]
@@ -52,7 +49,7 @@
   (==> [:lipas.ui.sports-sites.events/edit-field lipas-id (butlast args) (last args)]))
 
 (defn nice-form
-  [props children]
+  [_props children]
   [:> Grid {:container true :spacing 4}
    (doall
      (for [[idx child] (map vector (range) children)]
@@ -97,10 +94,9 @@
       :on-change on-change}]]])
 
 (defn checkboxes
-  [{:keys [read-only? items label helper-text label-fn value-fn
+  [{:keys [read-only? items label helper-text label-fn
            on-change value sort-fn caption-fn component]
-    :or   {value-fn  identity
-           component checkboxes/switch}}]
+    :or   {component checkboxes/switch}}]
   (let [vs (set value)]
     [:> Grid {:container true :spacing 2}
 
@@ -135,7 +131,7 @@
               [:> Typography {:variant "caption"} caption]])]))]]))
 
 (defn contact-dialog
-  [{:keys [tr locale description dialog-state on-save on-close contact-props]}]
+  [{:keys [tr locale dialog-state on-save contact-props]}]
   (let [field-sorter (<== [::subs/field-sorter :default])]
     [dialogs/dialog
      {:title         (tr :utp/add-contact)
@@ -167,7 +163,7 @@
                                (swap! dialog-state assoc-in path v)))}]]))]]))
 
 (defn contacts
-  [{:keys [read-only? lipas-id locale label description set-field
+  [{:keys [read-only? locale label description set-field
            value contact-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
@@ -246,7 +242,7 @@
            [:pre (debug-str contact-props)]]])])))
 
 (defn accessibility
-  [{:keys [read-only? lipas-id locale label description set-field
+  [{:keys [read-only? locale label description set-field
            value accessibility-props]}]
 
   [:> Grid {:container true}
@@ -330,7 +326,7 @@
          :on-change #(set-field :unit %)}]]]]))
 
 (defn textlist-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id label description]}]
+  [{:keys [tr locale dialog-state on-save description]}]
   [dialogs/dialog
    {:title         (tr :utp/add-highlight)
     :open?         (:open? @dialog-state)
@@ -601,7 +597,7 @@
                        "add")]]]])])))
 
 (defn image-dialog
-  [{:keys [tr locale helper-text dialog-state on-save on-close lipas-id image-props]}]
+  [{:keys [tr locale helper-text dialog-state on-save lipas-id image-props]}]
   (let [description-length-error (> (-> @dialog-state :data :description (get locale) count) 255)]
     [dialogs/dialog
      {:title         (if (-> @dialog-state :data :url)
@@ -664,7 +660,7 @@
          :multiline   true
          :rows        5
          :variant     "outlined"
-         :error       (boolean description-length-error)}]]
+         :error       description-length-error}]]
 
       ;; Alt-text
       [:> Grid {:item true :xs 12}
@@ -693,7 +689,7 @@
          :variant     "outlined"}]]]]))
 
 (defn images
-  [{:keys [value on-change locale label helper-text tr read-only? lipas-id image-props]}]
+  [{:keys [value on-change locale label helper-text read-only? lipas-id image-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -787,7 +783,7 @@
           #_#_:key-fn              :url}]]])))
 
 (defn video-dialog
-  [{:keys [tr label helper-text locale dialog-state on-save on-close]}]
+  [{:keys [tr helper-text locale dialog-state on-save]}]
   [dialogs/dialog
    {:title         (if (-> @dialog-state :data :url)
                      (tr :utp/video)
@@ -825,7 +821,7 @@
        :variant   "outlined"}]]]])
 
 (defn videos
-  [{:keys [value on-change locale label helper-text tr read-only?]}]
+  [{:keys [value on-change locale label helper-text read-only?]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))
@@ -955,8 +951,7 @@
 
 (defn single-route
   [{:keys [read-only? route-props lipas-id type-code route activity-k
-           locale _label _description _set-field set-field edit-itrs?]
-    :as   props}]
+           locale _label _description _set-field set-field edit-itrs?]}]
   ;; Ensure route has an :id - required by schema since commit 63af05df
   (r/with-let [route-form-state (r/atom (if (:id route)
                                           route

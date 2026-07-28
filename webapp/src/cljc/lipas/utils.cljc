@@ -1,13 +1,13 @@
 (ns lipas.utils
   (:require
-   [camel-snake-kebab.core :as csk]
-   [camel-snake-kebab.extras :as csk-extras]
-   [clojure.string :as str]
-   [clojure.walk :as walk]
-   [malli.core :as m]
-   #?(:cljs [cljs.reader :refer [read-string]])
-   #?(:cljs [goog.string :as gstring])
-   #?(:cljs [goog.string.format])))
+    [camel-snake-kebab.core :as csk]
+    [camel-snake-kebab.extras :as csk-extras]
+    [clojure.string :as str]
+    [clojure.walk :as walk]
+    [malli.core :as m]
+    #?(:cljs [cljs.reader :refer [read-string]])
+    #?(:cljs [goog.string :as gstring])
+    #?(:cljs [goog.string.format])))
 
 (defn ->sortable-name [s]
   (if (nil? s)
@@ -76,11 +76,11 @@
   "Removes nil values and empty {} entries recursively from maps."
   [m]
   (walk/postwalk
-   (fn [x]
-     (cond
-       (map? x) (not-empty (into {} (filter (comp some? val)) x))
-       :else x))
-   m))
+    (fn [x]
+      (cond
+        (map? x) (not-empty (into {} (filter (comp some? val)) x))
+        :else x))
+    m))
 
 (defn ->number [s]
   (try
@@ -169,11 +169,11 @@
 ;; From Stackoverflow https://bit.ly/2wslBqY
 (defn deep-merge [a b]
   (merge-with
-   (fn [x y]
-     (cond (map? y)    (deep-merge x y)
-           (vector? y) (concat x y)
-           :else       y))
-   a b))
+    (fn [x y]
+      (cond (map? y)    (deep-merge x y)
+            (vector? y) (concat x y)
+            :else       y))
+    a b))
 
 (defn csv-data->maps [csv-data]
   (map zipmap
@@ -229,10 +229,10 @@
 
 (defn ->prefix-map [m prefix]
   (reduce
-   (fn [res [k v]]
-     (assoc res (keyword (str prefix (name k))) v))
-   {}
-   m))
+    (fn [res [k v]]
+      (assoc res (keyword (str prefix (name k))) v))
+    {}
+    m))
 
 (defn regenerate-route-ids
   "Regenerates :id for all routes in activities map.
@@ -240,13 +240,13 @@
   [activities]
   (when activities
     (reduce-kv
-     (fn [acc activity-k activity-v]
-       (if-let [routes (:routes activity-v)]
-         (assoc-in acc [activity-k :routes]
-                   (mapv #(assoc % :id (str (gen-uuid))) routes))
-         (assoc acc activity-k activity-v)))
-     {}
-     activities)))
+      (fn [acc activity-k activity-v]
+        (if-let [routes (:routes activity-v)]
+          (assoc-in acc [activity-k :routes]
+                    (mapv #(assoc % :id (str (gen-uuid))) routes))
+          (assoc acc activity-k activity-v)))
+      {}
+      activities)))
 
 (defn localized
   "Pick `locale` from a localized {:fi ... :se ... :en ...} map, falling

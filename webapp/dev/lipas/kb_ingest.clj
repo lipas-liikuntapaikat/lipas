@@ -168,14 +168,14 @@
 
 (def ^:private extract-schema
   (json-schema/transform
-   (mu/open-schema
-    [:map {:closed true}
-     [:entries
-      [:vector
-       [:map {:closed true}
-        [:title :string]
-        [:body :string]
-        [:start-seconds :int]]]]])))
+    (mu/open-schema
+      [:map {:closed true}
+       [:entries
+        [:vector
+         [:map {:closed true}
+          [:title :string]
+          [:body :string]
+          [:start-seconds :int]]]]])))
 
 (def ^:private extract-system-prompt
   "You convert LIPAS user-guide source material (PDF text or video transcript) into knowledge-base entries for an AI help assistant.
@@ -194,14 +194,14 @@ Produce one entry per distinct user task or question the source answers. Rules:
 
 (def ^:private ground-schema
   (json-schema/transform
-   (mu/open-schema
-    [:map {:closed true}
-     [:verdicts
-      [:vector
-       [:map {:closed true}
-        [:title :string]
-        [:grounded :boolean]
-        [:issues :string]]]]])))
+    (mu/open-schema
+      [:map {:closed true}
+       [:verdicts
+        [:vector
+         [:map {:closed true}
+          [:title :string]
+          [:grounded :boolean]
+          [:issues :string]]]]])))
 
 (def ^:private ground-system-prompt
   "You are a strict fact-checker. You get SOURCE MATERIAL and ENTRIES derived from it. For each entry decide whether every substantive claim (steps, UI elements, names, codes, constraints) is supported by the source. Wording may be paraphrased, cleaned up or translated into another language — that is fine. Adding facts that are not in the source is not. Report grounded=false with the offending claims in issues when the entry invents anything.")
@@ -228,11 +228,11 @@ Produce one entry per distinct user task or question the source answers. Rules:
   "Returns entries with :grounded / :issues merged in from the verifier."
   [source-text entries]
   (let [verdicts (:verdicts
-                  (gemini-json ground-system-prompt
-                               (str "SOURCE MATERIAL:\n\n" source-text
-                                    "\n\nENTRIES:\n\n"
-                                    (json/encode (map #(select-keys % [:title :body]) entries)))
-                               ground-schema))
+                   (gemini-json ground-system-prompt
+                                (str "SOURCE MATERIAL:\n\n" source-text
+                                     "\n\nENTRIES:\n\n"
+                                     (json/encode (map #(select-keys % [:title :body]) entries)))
+                                ground-schema))
         by-title (into {} (map (juxt :title identity)) verdicts)]
     (mapv (fn [e]
             (let [v (get by-title (:title e))]

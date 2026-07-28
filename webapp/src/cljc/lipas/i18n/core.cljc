@@ -1,28 +1,26 @@
 (ns lipas.i18n.core
   (:refer-clojure :exclude [read-string])
-  (:require
-   #?(:cljs [clojure.reader :refer [read-string]]
-      :clj [clojure.edn :refer [read-string]])
-   [clojure.string :as str]
-   [lipas.data.admins :as admins]
-   [lipas.data.cities :as cities]
-   [lipas.data.ice-stadiums :as ice]
-   [lipas.data.materials :as materials]
-   [lipas.data.owners :as owners]
-   [lipas.data.prop-types :as prop-types]
-   [lipas.data.sports-sites :as sports-sites]
-   [lipas.data.swimming-pools :as pools]
-   [lipas.data.types :as types]
-   ;; On the JVM all dictionaries load statically. In the browser only
-   ;; :fi is bundled with the base module; :en and :se live in the lazy
-   ;; :i18n-en / :i18n-se modules (see lipas.i18n.register-en/-se) and
-   ;; register themselves via `register-dict!` when loaded.
-   #?@(:clj [[lipas.i18n.en :as en]
-             [lipas.i18n.se :as se]])
-   [lipas.i18n.fi :as fi]
-   [lipas.i18n.utils :as i18n-utils]
-   [lipas.utils :as utils]
-   [tongue.core :as tongue]))
+  (:require #?(:cljs [clojure.reader :refer [read-string]]
+               :clj [clojure.edn :refer [read-string]])
+            ;; On the JVM all dictionaries load statically. In the browser only
+            ;; :fi is bundled with the base module; :en and :se live in the lazy
+            ;; :i18n-en / :i18n-se modules (see lipas.i18n.register-en/-se) and
+            ;; register themselves via `register-dict!` when loaded.
+            #?@(:clj [[lipas.i18n.en :as en]
+                      [lipas.i18n.se :as se]])
+            [clojure.string :as str]
+            [lipas.data.admins :as admins]
+            [lipas.data.cities :as cities]
+            [lipas.data.ice-stadiums :as ice]
+            [lipas.data.materials :as materials]
+            [lipas.data.owners :as owners]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.sports-sites :as sports-sites]
+            [lipas.data.swimming-pools :as pools]
+            [lipas.data.types :as types]
+            [lipas.i18n.fi :as fi]
+            [lipas.utils :as utils]
+            [tongue.core :as tongue]))
 
 (defn- ->translations [locale m]
   (reduce-kv (fn [res k v]
@@ -32,31 +30,31 @@
 
 (defn append-data! [locale m]
   (->>
-   {:status                    (->translations locale sports-sites/statuses)
-    :admin                     (->translations locale admins/all)
-    :owner                     (->translations locale owners/all)
-    :pool-types                (->translations locale pools/pool-types)
-    :sauna-types               (->translations locale pools/sauna-types)
-    :accessibility             (->translations locale pools/accessibility)
-    :heat-sources              (->translations locale pools/heat-sources)
-    :filtering-methods         (->translations locale pools/filtering-methods)
-    :pool-structures           (->translations locale materials/pool-structures)
-    :slide-structures          (->translations locale materials/slide-structures)
-    :building-materials        (->translations locale materials/building-materials)
-    :supporting-structures     (->translations locale materials/supporting-structures)
-    :ceiling-structures        (->translations locale materials/ceiling-structures)
-    :heat-recovery-types       (->translations locale ice/heat-recovery-types)
-    :dryer-duty-types          (->translations locale ice/dryer-duty-types)
-    :dryer-types               (->translations locale ice/dryer-types)
-    :heat-pump-types           (->translations locale ice/heat-pump-types)
-    :condensate-energy-targets (->translations locale ice/condensate-energy-targets)
-    :ice-resurfacer-fuels      (->translations locale ice/ice-resurfacer-fuels)
-    :refrigerant-solutions     (->translations locale ice/refrigerant-solutions)
-    :refrigerants              (->translations locale ice/refrigerants)
-    :size-categories           (->translations locale ice/size-categories)
+    {:status                    (->translations locale sports-sites/statuses)
+     :admin                     (->translations locale admins/all)
+     :owner                     (->translations locale owners/all)
+     :pool-types                (->translations locale pools/pool-types)
+     :sauna-types               (->translations locale pools/sauna-types)
+     :accessibility             (->translations locale pools/accessibility)
+     :heat-sources              (->translations locale pools/heat-sources)
+     :filtering-methods         (->translations locale pools/filtering-methods)
+     :pool-structures           (->translations locale materials/pool-structures)
+     :slide-structures          (->translations locale materials/slide-structures)
+     :building-materials        (->translations locale materials/building-materials)
+     :supporting-structures     (->translations locale materials/supporting-structures)
+     :ceiling-structures        (->translations locale materials/ceiling-structures)
+     :heat-recovery-types       (->translations locale ice/heat-recovery-types)
+     :dryer-duty-types          (->translations locale ice/dryer-duty-types)
+     :dryer-types               (->translations locale ice/dryer-types)
+     :heat-pump-types           (->translations locale ice/heat-pump-types)
+     :condensate-energy-targets (->translations locale ice/condensate-energy-targets)
+     :ice-resurfacer-fuels      (->translations locale ice/ice-resurfacer-fuels)
+     :refrigerant-solutions     (->translations locale ice/refrigerant-solutions)
+     :refrigerants              (->translations locale ice/refrigerants)
+     :size-categories           (->translations locale ice/size-categories)
     ;;:stats-metrics             (->translations locale reports/stats-metrics)
-    }
-   (merge m)))
+     }
+    (merge m)))
 
 #?(:clj
    (do
@@ -249,130 +247,130 @@
 
 (defn localize [locale sports-site]
   (reduce
-   (fn [sports-site {:keys [path translations many? translate-fn]}]
-     (if-let [value (get-in sports-site path)]
-       (assoc-in sports-site path
-                 (cond
-                   translations (if many?
-                                  (map #(get-in translations [% locale]) value)
-                                  (get-in translations [value locale]))
-                   translate-fn (apply translate-fn [locale value])
-                   :else        (throw
-                                 (ex-info "Invalid localization definition."
-                                          {:missing-either
-                                           [:translations :translate-fn]}))))
-       sports-site))
-   sports-site
-   localizations))
+    (fn [sports-site {:keys [path translations many? translate-fn]}]
+      (if-let [value (get-in sports-site path)]
+        (assoc-in sports-site path
+                  (cond
+                    translations (if many?
+                                   (map #(get-in translations [% locale]) value)
+                                   (get-in translations [value locale]))
+                    translate-fn (apply translate-fn [locale value])
+                    :else        (throw
+                                   (ex-info "Invalid localization definition."
+                                            {:missing-either
+                                             [:translations :translate-fn]}))))
+        sports-site))
+    sports-site
+    localizations))
 
 (def localizations2
   (->>
-   [    ;; Admin
-    {:path         [:admin]
-     :target-path  [:admin-localized]
-     :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
+    [    ;; Admin
+     {:path         [:admin]
+      :target-path  [:admin-localized]
+      :translate-fn (fn [locales v] (-> v admins/all (select-keys locales)))}
 
     ;; Owner
-    {:path         [:owner]
-     :target-path  [:owner-localized]
-     :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
+     {:path         [:owner]
+      :target-path  [:owner-localized]
+      :translate-fn (fn [locales v] (-> v owners/all (select-keys locales)))}
 
     ;; Type
-    {:path         [:type :type-code]
-     :target-path  [:type :name-localized]
-     :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
+     {:path         [:type :type-code]
+      :target-path  [:type :name-localized]
+      :translate-fn (fn [locales v] (-> v types/all :name (select-keys locales)))}
 
 ;; Location
-    {:path         [:location :city :city-code]
-     :target-path  [:location :city :name-localized]
-     :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
+     {:path         [:location :city :city-code]
+      :target-path  [:location :city :name-localized]
+      :translate-fn (fn [locales v] (-> v cities/by-city-code :name (select-keys locales)))}
 
     ;; Properties (prop type names)
-    {:path        [:properties]
-     :target-path [:properties-localized]
-     :translate-fn (fn [locales m]
-                     (into {}
-                           (for [k (keys m)]
-                             [k (-> k prop-types/all :name (select-keys locales))])))}
+     {:path        [:properties]
+      :target-path [:properties-localized]
+      :translate-fn (fn [locales m]
+                      (into {}
+                            (for [k (keys m)]
+                              [k (-> k prop-types/all :name (select-keys locales))])))}
 
     ;; Proerties->surface-material
-    {:path         [:properties :surface-material]
-     :target-path  [:properties :surface-material-localized]
-     :translate-fn (fn [locales vs]
-                     (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}
+     {:path         [:properties :surface-material]
+      :target-path  [:properties :surface-material-localized]
+      :translate-fn (fn [locales vs]
+                      (map (fn [v] (-> v materials/surface-materials (select-keys locales))) vs))}
 
     ;; Proerties->travel-modes
-    {:path         [:properties :travel-modes]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:travel-modes :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}
+     {:path         [:properties :travel-modes]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:travel-modes :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}
 
     ;; Proerties->parkour-hall-equipment-and-structures
-    {:path         [:properties :parkour-hall-equipment-and-structures]
-     :target-path  [:properties :parkour-hall-equipment-and-structures-localized]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:parkour-hall-equipment-and-structures :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}
+     {:path         [:properties :parkour-hall-equipment-and-structures]
+      :target-path  [:properties :parkour-hall-equipment-and-structures-localized]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:parkour-hall-equipment-and-structures :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}
 
     ;; Properties->outdoor-exercise-structures
-    {:path         [:properties :outdoor-exercise-structures]
-     :target-path  [:properties :outdoor-exercise-structures-localized]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:outdoor-exercise-structures :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}
+     {:path         [:properties :outdoor-exercise-structures]
+      :target-path  [:properties :outdoor-exercise-structures-localized]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:outdoor-exercise-structures :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}
 
     ;; Proerties->boating-service-class
-    {:path         [:properties :boating-service-class]
-     :target-path  [:properties :boating-service-class-localized]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:boating-service-class :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}
+     {:path         [:properties :boating-service-class]
+      :target-path  [:properties :boating-service-class-localized]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:boating-service-class :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}
 
     ;; Properties->water-point
-    {:path         [:properties :water-point]
-     :target-path  [:properties :water-point-localized]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:water-point :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}
+     {:path         [:properties :water-point]
+      :target-path  [:properties :water-point-localized]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:water-point :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}
 
     ;; Properties->sport-specification
-    {:path         [:properties :sport-specification]
-     :target-path  [:properties :sport-specification-localized]
-     :translate-fn (fn [locales vs]
-                     (-> prop-types/all
-                         (get-in [:sport-specification :opts])
-                         (select-keys vs)
-                         (->> (map :label)
-                              (map #(select-keys % locales)))))}]
+     {:path         [:properties :sport-specification]
+      :target-path  [:properties :sport-specification-localized]
+      :translate-fn (fn [locales vs]
+                      (-> prop-types/all
+                          (get-in [:sport-specification :opts])
+                          (select-keys vs)
+                          (->> (map :label)
+                               (map #(select-keys % locales)))))}]
 
-   (map #(update % :translate-fn memoize))))
+    (map #(update % :translate-fn memoize))))
 
 (defn localize2
   "Doesn't mutilate original values like `localizations`. Instead assocs
   localizations under `target-path`."
   [locales sports-site]
   (reduce
-   (fn [sports-site {:keys [path target-path translate-fn]}]
-     (if-let [value (get-in sports-site path)]
-       (assoc-in sports-site target-path (apply translate-fn [locales value]))
-       sports-site))
-   (assoc-in sports-site [:name-localized :fi] (:name sports-site))
-   localizations2))
+    (fn [sports-site {:keys [path target-path translate-fn]}]
+      (if-let [value (get-in sports-site path)]
+        (assoc-in sports-site target-path (apply translate-fn [locales value]))
+        sports-site))
+    (assoc-in sports-site [:name-localized :fi] (:name sports-site))
+    localizations2))
 
 (defn handle->path [s locale]
   (let [[k1 k2] (str/split s #"/")]
@@ -381,25 +379,25 @@
 (defn csv-data->dicts
   [csv-data]
   (reduce
-   (fn [m {:keys [handle fi se en]}]
-     (cond-> m
-       (not-empty fi) (assoc-in (handle->path handle :fi) fi)
-       (not-empty se) (assoc-in (handle->path handle :se) se)
-       (not-empty en) (assoc-in (handle->path handle :en) en)))
-   {}
-   csv-data))
+    (fn [m {:keys [handle fi se en]}]
+      (cond-> m
+        (not-empty fi) (assoc-in (handle->path handle :fi) fi)
+        (not-empty se) (assoc-in (handle->path handle :se) se)
+        (not-empty en) (assoc-in (handle->path handle :en) en)))
+    {}
+    csv-data))
 
 (defn ->flat [locale m]
   (reduce-kv
-   (fn [res k v]
-     (reduce-kv
-      (fn [res2 k2 v]
-        (let [kw (keyword (name k) (name k2))]
-          (assoc-in res2 [kw locale] v)))
-      res
-      v))
-   {}
-   m))
+    (fn [res k v]
+      (reduce-kv
+        (fn [res2 k2 v]
+          (let [kw (keyword (name k) (name k2))]
+            (assoc-in res2 [kw locale] v)))
+        res
+        v))
+    {}
+    m))
 
 (defn remove-extra-spaces [s]
   (if (string? s)

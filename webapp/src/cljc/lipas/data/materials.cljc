@@ -131,7 +131,7 @@
                                     :en "Natural surface"}})
 
 (def building-materials
-  (select-keys all ["concrete" "brick""steel" "wood" "solid-rock"]))
+  (select-keys all ["concrete" "brick" "steel" "wood" "solid-rock"]))
 
 (def slide-structures
   (select-keys all ["concrete" "steel" "hardened-plastic"]))

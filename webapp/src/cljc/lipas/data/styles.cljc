@@ -814,5 +814,4 @@
    106
    {:shape "polygon",
     :fill {:color "#99d18f"},
-    :stroke {:color "#000000" :width 1.5}}
-   })
+    :stroke {:color "#000000" :width 1.5}}})

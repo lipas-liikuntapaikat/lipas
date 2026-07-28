@@ -1,10 +1,11 @@
 (ns lipas.jobs.core-test
   "Pure (non-database) tests for the job registry and core helpers."
   (:require
-   [clojure.test :refer [deftest testing is]]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.registry :as registry]
-   [malli.core :as m]))
+    [clojure.set :as set]
+    [clojure.test :refer [deftest testing is]]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.registry :as registry]
+    [malli.core :as m]))
 
 (deftest lane-classification-test
   (testing "Job duration classification comes from the registry"
@@ -16,8 +17,8 @@
   (testing "Every job type is in exactly one lane"
     (is (= (set (keys registry/job-types))
            (into registry/fast-job-types registry/slow-job-types)))
-    (is (empty? (clojure.set/intersection registry/fast-job-types
-                                          registry/slow-job-types)))))
+    (is (empty? (set/intersection registry/fast-job-types
+                                  registry/slow-job-types)))))
 
 (deftest job-type-schema-test
   (testing "Malli schema validation"

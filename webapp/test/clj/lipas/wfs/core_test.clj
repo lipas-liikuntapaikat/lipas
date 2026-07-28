@@ -1,10 +1,14 @@
 (ns lipas.wfs.core-test
   "This namespace provides tests for lipas.wfs.core namespace"
-  (:require [clojure.test :refer :all]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [honey.sql :as sql]
+            [lipas.backend.db.db :as db]
             [lipas.test-utils :as test-utils]
+            [lipas.utils :as utils]
             [lipas.wfs.core :as wfs]
             [lipas.wfs.mappings :as wfs-mappings]
-            [lipas.utils :as utils]))
+            [next.jdbc :as jdbc]))
 
 ;;; Test system setup ;;;
 (defonce test-system (atom nil))
@@ -165,9 +169,8 @@
 
 ;; WFS Row Conversion Tests
 
+;; Test WFS row conversion with different geometry types and proper test data
 (deftest test-wfs-row-conversion
-  "Test WFS row conversion with different geometry types and proper test data"
-
   (testing "Point geometry WFS row conversion (Tennis Court)"
     (let [[status row-data] (wfs/->wfs-row sample-point-sports-site 0
                                            (first (get-in sample-point-sports-site [:location :geometries :features])))]
@@ -193,6 +196,9 @@
     (let [[status row-data] (wfs/->wfs-row sample-linestring-sports-site 0
                                            (first (get-in sample-linestring-sports-site [:location :geometries :features])))]
 
+      (testing "Returns correct status"
+        (is (= "active" status)))
+
       (testing "LineString-specific field mappings"
         (is (= 23456 (:id row-data)))
         (is (= "Test Horse Trail" (:nimi_fi row-data)))
@@ -212,6 +218,9 @@
     (let [[status row-data] (wfs/->wfs-row sample-polygon-sports-site 0
                                            (first (get-in sample-polygon-sports-site [:location :geometries :features])))]
 
+      (testing "Returns correct status"
+        (is (= "active" status)))
+
       (testing "Polygon-specific field mappings"
         (is (= 34567 (:id row-data)))
         (is (= "Test Sports Park" (:nimi_fi row-data)))
@@ -225,9 +234,8 @@
         (is (vector? (-> row-data :the_geom :coordinates)))
         (is (= 1 (:alue_id row-data))))))) ; Area ID based on index
 
+;; Test WFS rows conversion with multiple features for different geometry types
 (deftest test-wfs-rows-conversion
-  "Test WFS rows conversion with multiple features for different geometry types"
-
   (testing "Multiple Point features"
     (let [multi-point-site (assoc-in sample-point-sports-site
                                      [:location :geometries :features]
@@ -270,9 +278,8 @@
       (is (= 1 (-> rows first second :alue_id)))
       (is (= 2 (-> rows second second :alue_id))))))
 
+;; Test that different geometry types include appropriate type-specific fields
 (deftest test-geometry-type-specific-fields
-  "Test that different geometry types include appropriate type-specific fields"
-
   (testing "Point geometry includes point-specific fields"
     (let [[_ row-data] (wfs/->wfs-row sample-point-sports-site 0
                                       (first (get-in sample-point-sports-site [:location :geometries :features])))
@@ -416,8 +423,8 @@
       (is (thrown? IllegalArgumentException
                    (wfs-mappings/resolve-geom-field-type 99999 false))))))
 
+;; Complete end-to-end test of WFS lifecycle with multiple geometry types
 (deftest ^:integration test-wfs-e2e-lifecycle
-  "Complete end-to-end test of WFS lifecycle with multiple geometry types"
   (testing "Full lifecycle of materialized view operations"
 
     ;; Step 1: Generate and insert sports sites with different geometry types
@@ -442,13 +449,13 @@
       (testing "Step 1: Insert sports sites to the main database"
         ;; Insert the test sites
         (doseq [site test-sites]
-          (let [result (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site)]
+          (let [result (db/upsert-sports-site! (test-db) test-user site)]
             (is (some? result)
                 (str "Should successfully insert site " (:lipas-id site)))))
 
         ;; Verify sites were inserted
         (doseq [site test-sites]
-          (let [retrieved-site (lipas.backend.db.db/get-sports-site (test-db) (:lipas-id site))]
+          (let [retrieved-site (db/get-sports-site (test-db) (:lipas-id site))]
             (is (some? retrieved-site)
                 (str "Site " (:lipas-id site) " should exist in database"))
             (is (= (:lipas-id site) (:lipas-id retrieved-site))
@@ -461,11 +468,11 @@
 
         ;; Verify all inserted sites exist in wfs.master table
         (doseq [site test-sites]
-          (let [wfs-rows (next.jdbc/execute!
-                          (test-db)
-                          (honey.sql/format {:select [:lipas_id :type_code :geom_type :status]
-                                             :from [:wfs.master]
-                                             :where [:= :lipas_id (:lipas-id site)]}))]
+          (let [wfs-rows (jdbc/execute!
+                           (test-db)
+                           (sql/format {:select [:lipas_id :type_code :geom_type :status]
+                                        :from [:wfs.master]
+                                        :where [:= :lipas_id (:lipas-id site)]}))]
             (is (seq wfs-rows)
                 (str "Site " (:lipas-id site) " should exist in wfs.master"))
 
@@ -489,10 +496,10 @@
             (when (seq view-names)
               (doseq [view-name view-names]
                 (let [view-data (try
-                                  (next.jdbc/execute!
-                                   (test-db)
-                                   [(str "SELECT id, tyyppikoodi FROM wfs." view-name
-                                         " WHERE id = ?") (:lipas-id site)])
+                                  (jdbc/execute!
+                                    (test-db)
+                                    [(str "SELECT id, tyyppikoodi FROM wfs." view-name
+                                          " WHERE id = ?") (:lipas-id site)])
                                   (catch Exception e
                                     (println "Error querying view" view-name ":" (.getMessage e))
                                     []))]
@@ -512,7 +519,7 @@
         (let [site-to-remove (assoc point-site
                                     :status "out-of-service-permanently"
                                     :event-date (utils/timestamp))]
-          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site-to-remove))
+          (db/upsert-sports-site! (test-db) test-user site-to-remove))
 
         ;; Modify one site (change name and properties)
         (let [site-to-modify (assoc linestring-site
@@ -521,7 +528,7 @@
                                     :event-date (utils/timestamp)
                                     :properties (assoc (:properties linestring-site)
                                                        :route-length-km 7.5))]
-          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user site-to-modify))
+          (db/upsert-sports-site! (test-db) test-user site-to-modify))
 
         ;; Add a new site
         (let [new-site (assoc sample-point-sports-site
@@ -529,10 +536,10 @@
                               :name "New Tennis Court"
                               :event-date (utils/timestamp)
                               :type {:type-code 1370})] ; Tennis court
-          (lipas.backend.db.db/upsert-sports-site! (test-db) test-user new-site)
+          (db/upsert-sports-site! (test-db) test-user new-site)
 
           ;; Verify new site was added
-          (let [retrieved-site (lipas.backend.db.db/get-sports-site (test-db) 90004)]
+          (let [retrieved-site (db/get-sports-site (test-db) 90004)]
             (is (some? retrieved-site) "New site should exist in database")
             (is (= "New Tennis Court" (:name retrieved-site)) "New site name should match"))))
 
@@ -540,34 +547,34 @@
         (is (nil? (wfs/refresh-all! (test-db))))
 
         ;; Check that removed site is no longer active in views
-        (let [removed-site-data (next.jdbc/execute!
-                                 (test-db)
-                                 (honey.sql/format {:select [:lipas_id :status]
-                                                    :from [:wfs.master]
-                                                    :where [:= :lipas_id 90001]}))]
+        (let [removed-site-data (jdbc/execute!
+                                  (test-db)
+                                  (sql/format {:select [:lipas_id :status]
+                                               :from [:wfs.master]
+                                               :where [:= :lipas_id 90001]}))]
           (if (seq removed-site-data)
             (is (not= "active" (:master/status (first removed-site-data)))
                 "Removed site should not have active status")
             (is true "Removed site may be excluded from wfs.master entirely")))
 
         ;; Check that modified site has updated data
-        (let [modified-site-rows (next.jdbc/execute!
-                                  (test-db)
-                                  (honey.sql/format {:select [:lipas_id :doc]
-                                                     :from [:wfs.master]
-                                                     :where [:= :lipas_id 90002]}))]
+        (let [modified-site-rows (jdbc/execute!
+                                   (test-db)
+                                   (sql/format {:select [:lipas_id :doc]
+                                                :from [:wfs.master]
+                                                :where [:= :lipas_id 90002]}))]
           (when (seq modified-site-rows)
             (let [doc-data (-> modified-site-rows first :master/doc)]
-              (is (or (clojure.string/includes? (str doc-data) "Modified Horse Trail")
-                      (clojure.string/includes? (str doc-data) "Modified test comment"))
+              (is (or (str/includes? (str doc-data) "Modified Horse Trail")
+                      (str/includes? (str doc-data) "Modified test comment"))
                   "Modified site should have updated data in wfs.master"))))
 
         ;; Check that new site exists in appropriate views
-        (let [new-site-data (next.jdbc/execute!
-                             (test-db)
-                             (honey.sql/format {:select [:lipas_id :type_code]
-                                                :from [:wfs.master]
-                                                :where [:= :lipas_id 90004]}))]
+        (let [new-site-data (jdbc/execute!
+                              (test-db)
+                              (sql/format {:select [:lipas_id :type_code]
+                                           :from [:wfs.master]
+                                           :where [:= :lipas_id 90004]}))]
           (is (seq new-site-data) "New site should exist in wfs.master")
           (when (seq new-site-data)
             (is (= 1370 (:master/type_code (first new-site-data)))
@@ -578,10 +585,10 @@
           (when (seq tennis-view-names)
             (doseq [view-name tennis-view-names]
               (let [view-count (try
-                                 (next.jdbc/execute-one!
-                                  (test-db)
-                                  [(str "SELECT COUNT(*) as count FROM wfs." view-name
-                                        " WHERE id IN (90001, 90004)")])
+                                 (jdbc/execute-one!
+                                   (test-db)
+                                   [(str "SELECT COUNT(*) as count FROM wfs." view-name
+                                         " WHERE id IN (90001, 90004)")])
                                  (catch Exception e
                                    (println "Error counting in view" view-name ":" (.getMessage e))
                                    {:count 0}))]
@@ -598,8 +605,8 @@
           (when (seq tennis-view-names)
             (doseq [view-name tennis-view-names]
               (is (thrown? Exception
-                           (next.jdbc/execute! (test-db)
-                                               [(str "SELECT 1 FROM wfs." view-name " LIMIT 1")]))
+                           (jdbc/execute! (test-db)
+                                          [(str "SELECT 1 FROM wfs." view-name " LIMIT 1")]))
                   (str "View " view-name " should no longer exist after drop")))))))))
 
 ;; Test running in REPL first

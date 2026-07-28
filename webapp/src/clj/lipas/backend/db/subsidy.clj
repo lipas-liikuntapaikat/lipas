@@ -1,6 +1,6 @@
 (ns lipas.backend.db.subsidy
   (:require
-   [hugsql.core :as hugsql]))
+    [hugsql.core :as hugsql]))
 
 (defn marshall [subsidy]
   {:year (:year subsidy)

@@ -1,6 +1,7 @@
 {:tasks {:requires ([clojure.string :as str]
                     [clojure.edn :as edn]
-                    [clojure.java.io :as io])
+                    [clojure.java.io :as io]
+                    [babashka.process :as process])
 
          ;; === DEPLOYMENT CONFIGURATION ===
          :init (do
@@ -32,7 +33,121 @@
                        (when (empty? names)
                          (println "❌ No modules found in manifest.edn")
                          (System/exit 1))
-                       names))))
+                       names)))
+
+                 ;; === LINT & FORMAT ===
+                 ;;
+                 ;; clj-kondo and cljfmt both discover their config by walking
+                 ;; UP from the process working directory, and this project's
+                 ;; config lives here in webapp/ (.clj-kondo/, .cljfmt.edn)
+                 ;; rather than at the repository root. Invoked from the root
+                 ;; they silently fall back to tool defaults — for cljfmt that
+                 ;; is :community indentation instead of this project's
+                 ;; :cursive, which is how 183 files drifted out of format
+                 ;; before this was gated. Every task below pins the working
+                 ;; directory to this bb.edn's directory, so the verdict never
+                 ;; depends on where the task was invoked from.
+
+                 (def project-dir
+                   (str (.getParent (io/file (System/getProperty "babashka.config")))))
+
+                 (def lint-paths
+                   "Everything that must stay lint- and format-clean."
+                   ["src" "test" "dev" "build.clj" "scripts"])
+
+                 ;; bb.edn is EDN, so regex literals are not allowed here.
+                 ;; Extensions match what cljfmt already picks up when it is
+                 ;; handed a directory — .edn included, since src/ holds 239 of
+                 ;; them (i18n, data mappings) and they are part of the format.
+                 (def clj-source-re (re-pattern "\\.(clj[scdx]?|bb|edn)$"))
+                 (def webapp-prefix-re (re-pattern "^webapp/"))
+
+                 (defn clj-source? [p]
+                   (boolean (re-find clj-source-re (str p))))
+
+                 (defn keepable?
+                   "A path is worth passing to the tools if it exists and is
+                    either a directory (both tools recurse into one) or a
+                    Clojure source file."
+                   [p]
+                   (let [f (io/file project-dir p)]
+                     (and (.exists f)
+                          (or (.isDirectory f) (clj-source? p)))))
+
+                 (defn resolve-paths
+                   "Turn task arguments into webapp-relative paths. With no
+                    arguments, falls back to lint-paths. Accepts both `src/…`
+                    and repo-root-relative `webapp/src/…`, so piping
+                    `git diff --name-only` straight in works.
+
+                    Returns {:paths [...] :dropped [...]}. Callers must treat
+                    'arguments given but nothing resolved' as a failure, never
+                    as success: silently reporting \"nothing to do\" and exiting
+                    0 turns a typo'd path — or a directory, which an earlier
+                    version rejected outright — into a green gate that checked
+                    nothing at all."
+                   [args]
+                   (if (empty? args)
+                     {:paths lint-paths :dropped []}
+                     (let [norm    (map (fn [p] (str/replace (str p) webapp-prefix-re "")) args)
+                           grouped (group-by keepable? norm)]
+                       {:paths   (vec (distinct (get grouped true)))
+                        :dropped (vec (distinct (get grouped false)))})))
+
+                 (defn report-dropped [dropped]
+                   (when (seq dropped)
+                     (println "⚠️  Ignored (not an existing Clojure file or directory):")
+                     (doseq [p dropped] (println "    " p))))
+
+                 (defn run-lint
+                   "Returns the clj-kondo exit code (0 clean, 2 warnings, 3 errors)."
+                   [args fail-level]
+                   (let [{:keys [paths dropped]} (resolve-paths args)]
+                     (report-dropped dropped)
+                     (if (empty? paths)
+                       (do (println "❌ Nothing to lint — no argument resolved to a lintable path.")
+                           1)
+                       (:exit (apply process/shell
+                                     {:dir project-dir :continue true}
+                                     "clj-kondo" "--fail-level" fail-level "--lint"
+                                     paths)))))
+
+                 (defn run-cljfmt
+                   "cmd is \"check\" or \"fix\". Returns the cljfmt exit code."
+                   [cmd args]
+                   (let [{:keys [paths dropped]} (resolve-paths args)]
+                     (report-dropped dropped)
+                     (if (empty? paths)
+                       (do (println "❌ Nothing to format — no argument resolved to a formattable path.")
+                           1)
+                       (let [exit (:exit (apply process/shell
+                                                {:dir project-dir :continue true}
+                                                "cljfmt" cmd paths))]
+                         (when (and (= "check" cmd) (not (zero? exit)))
+                           (println)
+                           (println "Fix with:  cd webapp && bb fmt"))
+                         exit))))
+
+                 (defn changed-files
+                   "Clojure files under webapp/ changed against the merge-base
+                    with LINT_BASE (default origin/master). Deleted files are
+                    excluded. Falls back to comparing against HEAD when the
+                    base ref cannot be resolved (shallow clone, no remote)."
+                   []
+                   (let [base    (or (System/getenv "LINT_BASE") "origin/master")
+                         base-mb (-> (process/shell {:dir project-dir :out :string
+                                                     :err :string :continue true}
+                                                    "git" "merge-base" "HEAD" base)
+                                     :out str/trim)
+                         ref     (if (str/blank? base-mb) "HEAD" base-mb)]
+                     (when (str/blank? base-mb)
+                       (println (str "⚠️  Could not resolve " base
+                                     " — comparing against the working tree only.")))
+                     (->> (process/shell {:dir project-dir :out :string :continue true}
+                                         "git" "diff" "--name-only" "--diff-filter=d" ref)
+                          :out
+                          str/split-lines
+                          (remove str/blank?)))))
 
          cljs-watch {:task (shell "npm run watch")}
          bundle-size-check
@@ -91,18 +206,65 @@
                     (System/exit 1))
                 (println (format "\n✅ :app %.0f KB gzip is within the %d KB budget"
                                  (/ app-gzip 1000.0) app-budget-kb)))))}
-         lint {:doc "Run clj-kondo"
-               :task (shell "clj-kondo --lint src")}
-         init-lint {:doc "Initialize Clj-kondo cache with library code"
-                    :task (shell "sh -c" "clj-kondo --copy-configs --lint $(clojure -A:dev -Spath)")}
-         clean-ns {:doc ""
-                   :task (do
-                           (let [files *command-line-args*]
-                             (shell (str "clojure-lsp clean-ns --filenames=" (str/join ":" files)))))}
-         cljfmt {:doc "Run cljfmt through Clojure-LSP, taking each file to format as argument (so works with shell globs)"
-                 :task (do
-                         (let [files *command-line-args*]
-                           (shell (str "clojure-lsp format --filenames=" (str/join ":" files)))))}
+         ;; === LINT & FORMAT TASKS ===
+         ;; All of these accept optional file arguments and otherwise cover
+         ;; src, test, dev, build.clj and scripts. See the :init block above
+         ;; for why the working directory is pinned.
+
+         lint {:doc "clj-kondo over all sources, or the files given as arguments. Fails on errors."
+               :task (System/exit (run-lint *command-line-args* "error"))}
+
+         lint-strict {:doc "As `lint`, but warnings fail too."
+                      :task (System/exit (run-lint *command-line-args* "warning"))}
+
+         lint-changed {:doc "clj-kondo (errors fail) on files changed vs LINT_BASE, default origin/master"
+                       ;; An empty changed-file set is a legitimate no-op here,
+                       ;; unlike explicitly passed arguments that resolve to
+                       ;; nothing — so this exits 0 rather than going through
+                       ;; run-lint's "nothing resolved" failure path. It must be
+                       ;; caught BEFORE resolve-paths, whose empty-args case
+                       ;; means "no arguments given" and falls back to linting
+                       ;; everything.
+                       :task (let [changed (changed-files)
+                                   {:keys [paths]} (when (seq changed)
+                                                     (resolve-paths changed))]
+                               (if (empty? paths)
+                                 (println "No changed Clojure files — nothing to lint.")
+                                 (do (println (str "Linting " (count paths) " changed file(s):"))
+                                     (doseq [p paths] (println "  " p))
+                                     (System/exit (run-lint paths "error")))))}
+
+         fmt {:doc "Format with cljfmt (all sources, or the files given as arguments)"
+              :task (System/exit (run-cljfmt "fix" *command-line-args*))}
+
+         fmt-check {:doc "Check formatting without writing (all sources, or given files)"
+                    :task (System/exit (run-cljfmt "check" *command-line-args*))}
+
+         check {:doc "What CI runs: fmt-check + lint-strict (warnings fail)"
+                :task (let [fmt   (run-cljfmt "check" nil)
+                            kondo (run-lint nil "warning")]
+                        (System/exit (max fmt kondo)))}
+
+         cljfmt {:doc "Deprecated alias for `fmt` (kept for muscle memory)"
+                 :task (System/exit (run-cljfmt "fix" *command-line-args*))}
+
+         ;; Linting the whole dependency classpath always reports findings in
+         ;; library sources, so clj-kondo exits non-zero here. That is expected —
+         ;; we only want the --copy-configs side effect, so the exit code is
+         ;; deliberately ignored.
+         init-lint {:doc "Refresh the vendored clj-kondo configs from the dependency classpath (they are committed; rerun after changing deps)"
+                    :task (do (process/shell {:dir project-dir :out :string
+                                              :err :string :continue true}
+                                             "sh" "-c"
+                                             "clj-kondo --copy-configs --lint \"$(clojure -A:dev -Spath)\"")
+                              (println "clj-kondo configs refreshed under .clj-kondo/"))}
+
+         clean-ns {:doc "Remove unused requires via clojure-lsp, taking files as arguments (needs whole-project analysis, so this one stays on clojure-lsp)"
+                   :task (let [files *command-line-args*]
+                           (if (seq files)
+                             (shell (str "clojure-lsp clean-ns --filenames=" (str/join ":" files)))
+                             (do (println "Usage: bb clean-ns <file> [<file> ...]")
+                                 (System/exit 1))))}
 
          ;; === NEW DEPLOYMENT TASKS ===
 

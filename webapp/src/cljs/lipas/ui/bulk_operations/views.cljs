@@ -1,28 +1,20 @@
 (ns lipas.ui.bulk-operations.views
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/material/Accordion$default" :as Accordion]
+            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            ["@mui/material/Alert$default" :as Alert]
+            ;; clj-kondo false positive: `Box`/`List` bare symbols resolve
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> Box ...]`/`[:> List ...]` are used
+            ;; below. See lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
-            ["@mui/material/Table$default" :as Table]
-            ["@mui/material/TableBody$default" :as TableBody]
-            ["@mui/material/TableCell$default" :as TableCell]
-            ["@mui/material/TableContainer$default" :as TableContainer]
-            ["@mui/material/TableHead$default" :as TableHead]
-            ["@mui/material/TableRow$default" :as TableRow]
-            [clojure.string :as str]
-            [lipas.data.bulk-operations :as bulk-fields]
-            [lipas.data.prop-types :as prop-types]
-            [lipas.schema.sports-sites :as sites-schema]
-            [lipas.schema.sports-sites.location :as location-schema]
-            [malli.core :as m]
-            [lipas.ui.bulk-operations.events :as events]
-            [lipas.ui.bulk-operations.subs :as subs]
-            [lipas.ui.components.autocompletes :as ac]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
             ["@mui/material/ListItem$default" :as ListItem]
             ["@mui/material/ListItemText$default" :as ListItemText]
@@ -30,11 +22,25 @@
             ["@mui/material/Step$default" :as Step]
             ["@mui/material/StepLabel$default" :as StepLabel]
             ["@mui/material/Stepper$default" :as Stepper]
+            ["@mui/material/Table$default" :as Table]
+            ["@mui/material/TableBody$default" :as TableBody]
+            ["@mui/material/TableCell$default" :as TableCell]
+            ["@mui/material/TableContainer$default" :as TableContainer]
+            ["@mui/material/TableHead$default" :as TableHead]
+            ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
-            ["@mui/material/Accordion$default" :as Accordion]
-            ["@mui/material/AccordionDetails$default" :as AccordionDetails]
-            ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+            [clojure.string :as str]
+            [lipas.data.bulk-operations :as bulk-fields]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.schema.sports-sites :as sites-schema]
+            [lipas.schema.sports-sites.location :as location-schema]
+            [lipas.ui.bulk-operations.events :as events]
+            [lipas.ui.bulk-operations.subs :as subs]
+            [lipas.ui.components.autocompletes :as ac]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
+            [malli.core :as m]
             [re-frame.core :as rf]
             [reagent.core :as r]))
 
@@ -220,7 +226,7 @@
 (defn navigation-buttons
   ([tr current-step selected-count selected-fields-count on-cancel]
    (navigation-buttons tr current-step selected-count selected-fields-count on-cancel nil))
-  ([tr current-step selected-count selected-fields-count on-cancel on-back]
+  ([tr current-step selected-count _selected-fields-count on-cancel on-back]
    [:> Box {:sx {:display "flex" :justify-content "space-between"}}
     [:> Box
      (when (pos? current-step)

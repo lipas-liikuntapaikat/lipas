@@ -3,14 +3,13 @@
             [dk.ative.docjure.spreadsheet :as excel]
             [lipas.backend.core :as core]
             [lipas.backend.jwt :as jwt]
-            [lipas.data.loi :as loi]
             [lipas.data.status :as status]
             [lipas.schema.common :as common-schema]
             [lipas.schema.reminders :as reminders-schema]
             [lipas.schema.sports-sites :as sports-site-schema]
             [lipas.schema.users :as users-schema]
             [lipas.seed :as seed]
-            [lipas.test-utils :refer [->transit <-transit <-json ->json] :as tu]
+            [lipas.test-utils :refer [->json ->transit <-json <-transit] :as tu]
             [lipas.utils :as utils]
             [malli.core :as m]
             [malli.generator :as mg]
@@ -911,7 +910,7 @@
         token (jwt/create-token user)
 
         full-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
-                                                         lipas-id "/full"))
+                                                        lipas-id "/full"))
                                 (mock/content-type "application/json")
                                 (tu/token-header token)))
         full-body (<-json (:body full-resp))
@@ -919,7 +918,7 @@
         ;; The existing per-year endpoint stays untouched: same calendar
         ;; year, drafts excluded -> only the latest (rev2) shows.
         yearly-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
-                                                           lipas-id))
+                                                          lipas-id))
                                   (mock/content-type "application/json")))
         yearly-body (<-json (:body yearly-resp))]
 

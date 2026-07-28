@@ -1,19 +1,24 @@
 (ns lipas.ui.ptv.controls
-  (:require ["@mui/material/Box$default" :as Box]
-            ["@mui/material/Button$default" :as Button]
-            ["@mui/material/FormControl$default" :as FormControl]
-            ["@mui/material/FormControlLabel$default" :as FormControlLabel]
-            ["@mui/material/FormLabel$default" :as FormLabel]
-            ["@mui/material/Radio$default" :as Radio]
-            ["@mui/material/RadioGroup$default" :as RadioGroup]
-            ["@mui/material/Tab$default" :as Tab]
-            ["@mui/material/Tabs$default" :as Tabs]
-            ["@mui/material/TextField$default" :as TextField]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.ui.components.autocompletes :refer [autocomplete2]]
-            [re-frame.core :as rf]
-            [reagent.core :as r]
-            [reagent.hooks :as hooks]))
+  (:require
+   ;; clj-kondo false positive: `Box` collides with the cljs.core/Box deftype,
+   ;; so the [:> Box ...] hiccup uses below aren't recognized as uses of this
+   ;; alias.
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    ["@mui/material/Box$default" :as Box]
+    ["@mui/material/Button$default" :as Button]
+    ["@mui/material/FormControl$default" :as FormControl]
+    ["@mui/material/FormControlLabel$default" :as FormControlLabel]
+    ["@mui/material/FormLabel$default" :as FormLabel]
+    ["@mui/material/Radio$default" :as Radio]
+    ["@mui/material/RadioGroup$default" :as RadioGroup]
+    ["@mui/material/Tab$default" :as Tab]
+    ["@mui/material/Tabs$default" :as Tabs]
+    ["@mui/material/TextField$default" :as TextField]
+    ["@mui/material/Typography$default" :as Typography]
+    [lipas.ui.components.autocompletes :refer [autocomplete2]]
+    [re-frame.core :as rf]
+    [reagent.core :as r]
+    [reagent.hooks :as hooks]))
 
 (r/defc info-text [{:keys [children]}]
   [:> Typography

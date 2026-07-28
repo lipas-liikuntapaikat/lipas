@@ -1,6 +1,9 @@
 (ns lipas.ui.ptv.audit
-  (:require [clojure.string :as str]
-            ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/material/Alert$default" :as Alert]
+            ;; clj-kondo false positive: `Box` collides with the cljs.core/Box
+            ;; deftype, so the [:> Box ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Chip$default" :as Chip]
@@ -16,10 +19,11 @@
             ["@mui/material/Radio$default" :as Radio]
             ["@mui/material/RadioGroup$default" :as RadioGroup]
             ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
             [lipas.ui.components.text-fields :as tf]
             [lipas.ui.ptv.components :as ptv-components]
@@ -196,15 +200,15 @@
            {:value (name field)
             :sx #js {:minHeight 40}
             :label (r/as-element
-                    [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
-                     [:> Box {:sx #js {:width 8
-                                       :height 8
-                                       :borderRadius "50%"
-                                       :bgcolor dot-color}}]
-                     [:span (tr (case field
-                                  :summary :ptv/summary
-                                  :description :ptv/description
-                                  :user-instruction :ptv/user-instruction))]])}]))]
+                     [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+                      [:> Box {:sx #js {:width 8
+                                        :height 8
+                                        :borderRadius "50%"
+                                        :bgcolor dot-color}}]
+                      [:span (tr (case field
+                                   :summary :ptv/summary
+                                   :description :ptv/description
+                                   :user-instruction :ptv/user-instruction))]])}]))]
 
      ;; Selected field's content...
      [content-panel
@@ -376,7 +380,7 @@
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         field-states (ptv-data/audit-field-states
-                      audit-data (ptv-data/site-audit-fields site))
+                       audit-data (ptv-data/site-audit-fields site))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))
@@ -458,7 +462,7 @@
         desc-status (get-in audit-data [:description :status])
         ui-status (get-in audit-data [:user-instruction :status])
         field-states (ptv-data/audit-field-states
-                      audit-data (ptv-data/service-audit-fields service))
+                       audit-data (ptv-data/service-audit-fields service))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))

@@ -96,28 +96,28 @@
   [v1-data locale]
   (let [section-slugs (atom #{})]
     (vec
-     (for [section v1-data
-           :let [old-slug (name (:slug section))
-                 title (get-in section [:title locale])
-                 slug (unique-slug title old-slug @section-slugs)
-                 _ (swap! section-slugs conj slug)
-                 page-slugs (atom #{})]]
-       {:id (str (random-uuid))
-        :slug slug
-        :title (or title "")
-        :aliases (vec (distinct (remove #{slug} [old-slug])))
-        :pages (vec
-                (for [page (:pages section)
-                      :let [old-page-slug (name (:slug page))
-                            page-title (get-in page [:title locale])
-                            page-slug (unique-slug page-title old-page-slug @page-slugs)
-                            _ (swap! page-slugs conj page-slug)]]
-                  {:id (str (random-uuid))
-                   :slug page-slug
-                   :title (or page-title "")
-                   :aliases (vec (distinct (remove #{page-slug} [old-page-slug])))
-                   :blocks (vec (keep (partial v1-block->v2 locale)
-                                      (:blocks page)))}))}))))
+      (for [section v1-data
+            :let [old-slug (name (:slug section))
+                  title (get-in section [:title locale])
+                  slug (unique-slug title old-slug @section-slugs)
+                  _ (swap! section-slugs conj slug)
+                  page-slugs (atom #{})]]
+        {:id (str (random-uuid))
+         :slug slug
+         :title (or title "")
+         :aliases (vec (distinct (remove #{slug} [old-slug])))
+         :pages (vec
+                  (for [page (:pages section)
+                        :let [old-page-slug (name (:slug page))
+                              page-title (get-in page [:title locale])
+                              page-slug (unique-slug page-title old-page-slug @page-slugs)
+                              _ (swap! page-slugs conj page-slug)]]
+                    {:id (str (random-uuid))
+                     :slug page-slug
+                     :title (or page-title "")
+                     :aliases (vec (distinct (remove #{page-slug} [old-page-slug])))
+                     :blocks (vec (keep (partial v1-block->v2 locale)
+                                        (:blocks page)))}))}))))
 
 (defn migrate-v1->v2!
   "One-shot migration: publishes the v1 active document as the fi v2

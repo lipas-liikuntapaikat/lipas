@@ -1,8 +1,5 @@
 (ns lipas.ui.reports.views
-  (:require [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogActions$default" :as DialogActions]
@@ -14,6 +11,9 @@
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Tooltip$default" :as Tooltip]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.reports.events :as events]
             [lipas.ui.reports.subs :as subs]
             [lipas.ui.search.events :as search-events]
@@ -37,7 +37,7 @@
       :on-change   on-change}]))
 
 (defn format-selector
-  [{:keys [tr value on-change]}]
+  [{:keys [value on-change]}]
   (let [items [{:label "Excel" :value "xlsx"}
                {:label "CSV" :value "csv"}
                {:label "GeoJSON" :value "geojson"}]]

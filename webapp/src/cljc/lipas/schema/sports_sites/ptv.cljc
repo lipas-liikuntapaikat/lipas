@@ -27,67 +27,67 @@
    and comparing the snapshot against current content detects edits made
    after the audit (see lipas.data.ptv/audit-field-state)."
   (m/schema
-   [:map
-    {:closed true}
-    [:status audit-status-enum]
-    [:feedback [:string {:min 0 :max 1000}]]
-    [:audited-content {:optional true} (localized-string-schema nil)]]))
+    [:map
+     {:closed true}
+     [:status audit-status-enum]
+     [:feedback [:string {:min 0 :max 1000}]]
+     [:audited-content {:optional true} (localized-string-schema nil)]]))
 
 (def ptv-audit
   "Schema for PTV audit information including timestamp, auditor, and field-specific feedback.
    :user-instruction (Toimintaohje) is audited for PTV Services only —
    ServiceLocations don't carry a user instruction."
   (m/schema
-   [:map
-    {:closed true}
-    [:timestamp [:string {:min 24 :max 30}]] ;; ISO-8601 format timestamps
-    [:auditor-id :string]
-    [:summary {:optional true} audit-field]
-    [:description {:optional true} audit-field]
-    [:user-instruction {:optional true} audit-field]]))
+    [:map
+     {:closed true}
+     [:timestamp [:string {:min 24 :max 30}]] ;; ISO-8601 format timestamps
+     [:auditor-id :string]
+     [:summary {:optional true} audit-field]
+     [:description {:optional true} audit-field]
+     [:user-instruction {:optional true} audit-field]]))
 
 (def audit-data
   "Schema for audit data sent from frontend (before backend adds timestamp/auditor-id)."
   (m/schema
-   [:map
-    {:closed true}
-    [:summary {:optional true} audit-field]
-    [:description {:optional true} audit-field]
-    [:user-instruction {:optional true} audit-field]]))
+    [:map
+     {:closed true}
+     [:summary {:optional true} audit-field]
+     [:description {:optional true} audit-field]
+     [:user-instruction {:optional true} audit-field]]))
 
 (def ptv-meta
   "Schema for PTV metadata associated with sports sites."
   (m/schema
-   [:map
-    {:closed true}
-    [:org-id :string]
-    [:sync-enabled :boolean]
-    [:delete-existing {:optional true} :boolean]
+    [:map
+     {:closed true}
+     [:org-id :string]
+     [:sync-enabled :boolean]
+     [:delete-existing {:optional true} :boolean]
 
     ;; These options aren't used now:
     ;; TODO: Remove
-    [:service-channel-integration
-     {:optional true}
-     integration-enum]
-    [:service-integration
-     {:optional true}
-     integration-enum]
+     [:service-channel-integration
+      {:optional true}
+      integration-enum]
+     [:service-integration
+      {:optional true}
+      integration-enum]
 
-    [:service-channel-ids [:vector :string]]
-    [:service-ids [:vector :string]]
-    [:languages {:optional true} [:vector :string]]
+     [:service-channel-ids [:vector :string]]
+     [:service-ids [:vector :string]]
+     [:languages {:optional true} [:vector :string]]
 
     ;; Per-language character limits enforced by PTV (see lipas.data.ptv).
     ;; The :error/message values are localization keys resolved via `tr`
     ;; in the UI (e.g. the sync-button why-disabled tooltip).
-    [:summary (localized-string-schema {:max ptv-data/max-summary-length
-                                        :error/message :ptv/error-summary-too-long})]
-    [:description (localized-string-schema {:max ptv-data/max-description-length
-                                            :error/message :ptv/error-description-too-long})]
-    [:user-instruction {:optional true} (localized-string-schema {:max ptv-data/max-user-instruction-length
-                                                                  :error/message :ptv/error-user-instruction-too-long})]
+     [:summary (localized-string-schema {:max ptv-data/max-summary-length
+                                         :error/message :ptv/error-summary-too-long})]
+     [:description (localized-string-schema {:max ptv-data/max-description-length
+                                             :error/message :ptv/error-description-too-long})]
+     [:user-instruction {:optional true} (localized-string-schema {:max ptv-data/max-user-instruction-length
+                                                                   :error/message :ptv/error-user-instruction-too-long})]
 
-    [:audit {:optional true} ptv-audit]]))
+     [:audit {:optional true} ptv-audit]]))
 
 (def create-ptv-service-location
   "Schema for creating PTV service locations.
@@ -95,9 +95,9 @@
    instead of a publish/update — used by the explicit \"Archive in PTV\"
    actions in both the wizard and the sports-site PTV tab."
   (m/schema
-   [:map
-    {:closed true}
-    [:org-id :string]
-    [:lipas-id #'sports-sites-schema/lipas-id]
-    [:archive? {:optional true} :boolean]
-    [:ptv ptv-meta]]))
+    [:map
+     {:closed true}
+     [:org-id :string]
+     [:lipas-id #'sports-sites-schema/lipas-id]
+     [:archive? {:optional true} :boolean]
+     [:ptv ptv-meta]]))

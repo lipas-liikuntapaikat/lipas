@@ -1,8 +1,8 @@
 (ns lipas.ui.analysis.reachability.events
   (:require [ajax.core :as ajax]
             [ajax.protocols :as ajaxp]
-            [lipas.ui.analysis.reachability.db :as db]
             [lipas.ui.analysis.buffer :as buffer]
+            [lipas.ui.analysis.reachability.db :as db]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
@@ -187,8 +187,7 @@
 
 (rf/reg-event-fx ::create-report
   (fn [{:keys [db]} _]
-    (let [params    (-> db :analysis :reachability)
-          lipas-ids (-> db :analysis :reachability :runs keys)]
+    (let [params (-> db :analysis :reachability)]
       {:http-xhrio
        {:method          :post
         :uri             (str (:backend-url db) "/actions/create-analysis-report")

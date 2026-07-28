@@ -1,5 +1,5 @@
 (ns lipas.utils-test
-  (:require [clojure.test :refer [deftest is testing run-tests]]
+  (:require [clojure.test :refer [deftest is testing]]
             [lipas.utils :as utils]))
 
 (deftest sortable-name-test
@@ -264,7 +264,11 @@
 (deftest spec-validation-test
   (testing "validate-noisy returns validation result with output"
     (let [valid-data {:name "John" :age 30}
-          invalid-data {:name "John" :age -5}]
+          ;; TODO: this looks like it was meant to be asserted against too
+          ;; (e.g. (is (false? (utils/validate-noisy ... invalid-data)))
+          ;; with a schema that actually rejects a negative :age), but no
+          ;; such assertion exists — left unused rather than guessing intent.
+          _invalid-data {:name "John" :age -5}]
       ;; Note: validate-noisy prints to stdout, we just test the return value
       (is (true? (utils/validate-noisy map? valid-data)))
       (is (false? (utils/validate-noisy empty? valid-data)))))
@@ -319,4 +323,4 @@
       (is (= 3 (count (set ids)))))))
 
 (comment
-  (run-tests *ns*))
+  (clojure.test/run-tests *ns*))

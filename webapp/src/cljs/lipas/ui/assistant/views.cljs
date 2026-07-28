@@ -1,39 +1,43 @@
 (ns lipas.ui.assistant.views
-  (:require
-   ["@mui/icons-material/AddComment$default" :as AddCommentIcon]
-   ["@mui/icons-material/Close$default" :as CloseIcon]
-   ["@mui/icons-material/Done$default" :as DoneIcon]
-   ["@mui/icons-material/ExpandLess$default" :as ExpandLessIcon]
-   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-   ["@mui/icons-material/PlayArrow$default" :as PlayArrowIcon]
-   ["@mui/icons-material/Send$default" :as SendIcon]
-   ["@mui/icons-material/SmartToy$default" :as SmartToyIcon]
-   ["@mui/material/Box$default" :as Box]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardActions$default" :as CardActions]
-   ["@mui/material/CardContent$default" :as CardContent]
-   ["@mui/material/Chip$default" :as Chip]
-   ["@mui/material/Collapse$default" :as Collapse]
-   ["@mui/material/CircularProgress$default" :as CircularProgress]
-   ["@mui/material/Fab$default" :as Fab]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/Paper$default" :as Paper]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Tooltip$default" :as Tooltip]
-   ["@mui/material/Typography$default" :as Typography]
-   ["react-markdown$default" :as ReactMarkdown]
-   [clojure.string :as str]
-   [lipas.ui.assistant.events :as events]
-   [lipas.ui.assistant.subs :as subs]
-   [lipas.ui.components.text-fields :as text-fields]
-   [lipas.ui.help.subs :as help-subs]
-   [lipas.ui.subs :as root-subs]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :refer [==>]]
-   [re-frame.core :as rf]
-   [reagent.core :as r]
-   [reagent.hooks :as hooks]))
+  (:require ["@mui/icons-material/AddComment$default" :as AddCommentIcon]
+            ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/Done$default" :as DoneIcon]
+            ["@mui/icons-material/ExpandLess$default" :as ExpandLessIcon]
+            ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+            ["@mui/icons-material/PlayArrow$default" :as PlayArrowIcon]
+            ["@mui/icons-material/Send$default" :as SendIcon]
+            ["@mui/icons-material/SmartToy$default" :as SmartToyIcon]
+            ;; clj-kondo false positive: it resolves the bare symbol `Box`
+            ;; against a builtin and never sees the `[:> Box ...]` usages
+            ;; below as referencing this alias, so it always reports the
+            ;; require as unused even though Box is used extensively.
+            #_{:clj-kondo/ignore [:unused-namespace]}
+            ["@mui/material/Box$default" :as Box]
+            ["@mui/material/Button$default" :as Button]
+            ["@mui/material/Card$default" :as Card]
+            ["@mui/material/CardActions$default" :as CardActions]
+            ["@mui/material/CardContent$default" :as CardContent]
+            ["@mui/material/Chip$default" :as Chip]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Collapse$default" :as Collapse]
+            ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            ["react-markdown$default" :as ReactMarkdown]
+            [clojure.string :as str]
+            [lipas.ui.assistant.events :as events]
+            [lipas.ui.assistant.subs :as subs]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.help.subs :as help-subs]
+            [lipas.ui.subs :as root-subs]
+            [lipas.ui.user.subs :as user-subs]
+            [lipas.ui.utils :refer [==>]]
+            [re-frame.core :as rf]
+            [reagent.core :as r]
+            [reagent.hooks :as hooks]))
 
 (defn- md-link
   "Markdown link renderer: ?ohje= links open the in-app help center,
@@ -41,14 +45,14 @@
   [^js props]
   (let [href (.-href props)]
     (r/as-element
-     [:a {:href href
-          :on-click (fn [e]
-                      (when (str/starts-with? (str href) "?ohje=")
-                        (.preventDefault e)
-                        (==> [::events/open-source href])))
-          :target (when-not (str/starts-with? (str href) "?ohje=") "_blank")
-          :rel "noopener"}
-      (.-children props)])))
+      [:a {:href href
+           :on-click (fn [e]
+                       (when (str/starts-with? (str href) "?ohje=")
+                         (.preventDefault e)
+                         (==> [::events/open-source href])))
+           :target (when-not (str/starts-with? (str href) "?ohje=") "_blank")
+           :rel "noopener"}
+       (.-children props)])))
 
 (r/defc Message
   [{:keys [message idx]}]
@@ -84,9 +88,9 @@
                                :p 0
                                :minWidth 0}
                        :endIcon (r/as-element
-                                 (if sources-open?
-                                   [:> ExpandLessIcon {:fontSize "small"}]
-                                   [:> ExpandMoreIcon {:fontSize "small"}]))
+                                  (if sources-open?
+                                    [:> ExpandLessIcon {:fontSize "small"}]
+                                    [:> ExpandMoreIcon {:fontSize "small"}]))
                        :onClick #(set-sources-open! (not sources-open?))}
             (str "Lähteet (" (count shown) ")")]
            [:> Collapse {:in sources-open? :timeout 150}
@@ -111,9 +115,9 @@
                        :color "secondary"
                        :disabled executed?
                        :startIcon (r/as-element
-                                   (if executed?
-                                     [:> DoneIcon {:fontSize "small"}]
-                                     [:> PlayArrowIcon {:fontSize "small"}]))
+                                    (if executed?
+                                      [:> DoneIcon {:fontSize "small"}]
+                                      [:> PlayArrowIcon {:fontSize "small"}]))
                        :sx #js{:textTransform "none"}
                        :onClick #(==> [::events/run-action idx action-idx action])}
             label])])]]))
@@ -160,10 +164,10 @@
     ;; Keep the newest message — and especially the escalation card, which
     ;; appears below the answer — in view.
     (hooks/use-effect
-     (fn []
-       (when-let [el (.-current scroll-ref)]
-         (set! (.-scrollTop el) (.-scrollHeight el))))
-     [(count messages) thinking? pending-escalation])
+      (fn []
+        (when-let [el (.-current scroll-ref)]
+          (set! (.-scrollTop el) (.-scrollHeight el))))
+      [(count messages) thinking? pending-escalation])
     [:> Paper
      {:elevation 8
       ;; bottom clears the map's bottom-right control cluster; zIndex

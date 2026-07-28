@@ -34,13 +34,13 @@
    (tietomallit/create-lipas-model!)
    ```"
   (:require
-   [clj-http.client :as http]
-   [clojure.data.json :as json]
-   [clojure.edn :as edn]
-   [clojure.java.io :as io]
-   [clojure.string :as str]
-   [lipas.data.prop-types :as prop-types]
-   [lipas.data.types :as types]))
+    [clj-http.client :as http]
+    [clojure.data.json :as json]
+    [clojure.edn :as edn]
+    [clojure.java.io :as io]
+    [clojure.string :as str]
+    [lipas.data.prop-types :as prop-types]
+    [lipas.data.types :as types]))
 
 ;;; Forward declarations
 
@@ -171,6 +171,7 @@
             (let [elapsed (- (System/currentTimeMillis) start-time)]
               (report-progress! {:phase phase
                                  :status :error
+                                 :elapsed-ms elapsed
                                  :message (format "Stopped after error at item %d/%d" (inc idx) total)})
               {:results (conj results result)
                :ok-count (- (inc idx) new-error-count)
@@ -365,7 +366,7 @@
 
 (defn ->type-dto
   "Generate ClassDTO for a specific type (e.g., 3110 Uimahalli)."
-  [type-code type-data & {:keys [prefix] :or {prefix "lipas"}}]
+  [_type-code type-data & {:keys [prefix] :or {prefix "lipas"}}]
   (let [sub-code (:sub-category type-data)
         sub-name (get-in types/sub-categories [sub-code :name :fi])]
     (->class-dto (:name type-data)
@@ -870,11 +871,6 @@
   [spec]
   (some :generate-from-types (:classes spec)))
 
-(defn- get-type-hierarchy-config
-  "Get the type hierarchy configuration from the spec."
-  [spec]
-  (first (filter :generate-from-types (:classes spec))))
-
 (defn- should-generate-type-specific-attrs?
   "Check if the spec indicates type-specific attributes should be generated."
   [spec]
@@ -893,11 +889,10 @@
 
    Parameters:
      prop-key - Property key (e.g., :height-m)
-     prefix - Model prefix
 
    Note: These attributes are created without a domain - they will be
    added to specific type classes via property references."
-  [prop-key prefix]
+  [prop-key]
   (let [prop-def (prop-types/all prop-key)
         identifier (->attribute-identifier prop-key)
         xsd-type (get lipas->xsd-type (:data-type prop-def) (str xsd-ns "string"))]
@@ -913,9 +908,9 @@
 
    Returns a vector of attribute DTOs (without domain - will be added
    to types via property references)."
-  [prefix]
+  [_prefix]
   (let [used-props (get-all-used-props)]
-    (mapv #(prop-def->attribute-dto % prefix) used-props)))
+    (mapv prop-def->attribute-dto used-props)))
 
 (defn type-code->class-identifier
   "Get the class identifier for a type code."
@@ -945,13 +940,13 @@
   []
   (let [prop-to-types (get-prop-to-types-mapping)]
     (vec
-     (for [[prop-key type-codes] prop-to-types
-           type-code type-codes
-           :let [class-id (type-code->class-identifier type-code)]
-           :when class-id]
-       {:attribute (->attribute-identifier prop-key)
-        :class class-id
-        :type-code type-code}))))
+      (for [[prop-key type-codes] prop-to-types
+            type-code type-codes
+            :let [class-id (type-code->class-identifier type-code)]
+            :when class-id]
+        {:attribute (->attribute-identifier prop-key)
+         :class class-id
+         :type-code type-code}))))
 
 (defn add-type-specific-attributes!
   "Create type-specific attributes and assign them to their type classes.
@@ -979,12 +974,12 @@
       ;; Execute with progress: first create attributes, then add to classes
       (let [;; Step 1: Create all attributes with progress
             attr-progress (process-items-with-progress
-                           :creating-type-specific-attributes
-                           (vec attr-dtos)
-                           (fn [attr-dto]
-                             (let [result (add-attribute! prefix attr-dto)]
-                               (assoc result :identifier (:identifier attr-dto))))
-                           #(:identifier %))
+                            :creating-type-specific-attributes
+                            (vec attr-dtos)
+                            (fn [attr-dto]
+                              (let [result (add-attribute! prefix attr-dto)]
+                                (assoc result :identifier (:identifier attr-dto))))
+                            #(:identifier %))
             attr-results (:results attr-progress)
 
             created-attrs (set (map :identifier (filter #(= :created (:status %)) attr-results)))
@@ -992,17 +987,17 @@
             ;; Step 2: Add property references with progress (only for created attrs)
             property-progress (when-not (:stopped? attr-progress)
                                 (process-items-with-progress
-                                 :assigning-type-attributes
-                                 (vec assignments)
-                                 (fn [{:keys [attribute class]}]
-                                   (if (contains? created-attrs attribute)
-                                     (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" attribute)]
-                                       (add-property-to-class! prefix class attr-uri))
-                                     {:status :skipped
-                                      :attribute attribute
-                                      :class class
-                                      :reason "Attribute not created"}))
-                                 #(str (:class %) "." (:attribute %))))
+                                  :assigning-type-attributes
+                                  (vec assignments)
+                                  (fn [{:keys [attribute class]}]
+                                    (if (contains? created-attrs attribute)
+                                      (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" attribute)]
+                                        (add-property-to-class! prefix class attr-uri))
+                                      {:status :skipped
+                                       :attribute attribute
+                                       :class class
+                                       :reason "Attribute not created"}))
+                                  #(str (:class %) "." (:attribute %))))
             property-results (or (:results property-progress) [])]
         {:prefix prefix
          :attribute-results attr-results
@@ -1052,12 +1047,11 @@
 
      :use-dev-prefix - Use dev-prefix instead of production prefix (default true)
      :dry-run - Return DTOs without making API calls (default false)
-     :skip-existing - Skip resources that already exist (default true)
      :include-types - Include all 149 type classes in hierarchy (default true)
 
    Returns a summary of created resources and any errors."
-  [& {:keys [use-dev-prefix dry-run skip-existing include-types]
-      :or {use-dev-prefix true dry-run false skip-existing true include-types true}}]
+  [& {:keys [use-dev-prefix dry-run include-types]
+      :or {use-dev-prefix true dry-run false include-types true}}]
   (let [spec (load-model-spec)
         model-dto (spec->model-dto spec :use-dev-prefix use-dev-prefix)
         prefix (:prefix model-dto)
@@ -1156,10 +1150,10 @@
           ;; Order matters: classes -> core attributes -> associations -> properties -> code lists -> type attrs
           (let [;; 1. Create classes with progress
                 class-progress (process-items-with-progress
-                                :creating-classes
-                                (vec all-class-dtos)
-                                #(add-class! prefix %)
-                                #(:identifier %))
+                                 :creating-classes
+                                 (vec all-class-dtos)
+                                 #(add-class! prefix %)
+                                 #(:identifier %))
                 class-results (:results class-progress)
 
                 ;; Check for stop-on-error
@@ -1170,20 +1164,20 @@
                 ;; 2. Create core attributes with progress
                 attr-progress (when-not (:stopped? class-progress)
                                 (process-items-with-progress
-                                 :creating-core-attributes
-                                 (vec core-attr-dtos)
-                                 #(add-attribute! prefix %)
-                                 #(:identifier %)))
+                                  :creating-core-attributes
+                                  (vec core-attr-dtos)
+                                  #(add-attribute! prefix %)
+                                  #(:identifier %)))
                 attr-results (or (:results attr-progress) [])
 
                 ;; 3. Create associations with progress
                 assoc-progress (when-not (or (:stopped? class-progress)
                                              (:stopped? attr-progress))
                                  (process-items-with-progress
-                                  :creating-associations
-                                  (vec assoc-dtos)
-                                  #(add-association! prefix %)
-                                  #(:identifier %)))
+                                   :creating-associations
+                                   (vec assoc-dtos)
+                                   #(add-association! prefix %)
+                                   #(:identifier %)))
                 assoc-results (or (:results assoc-progress) [])
 
                 ;; 4. Add properties to classes with progress
@@ -1191,13 +1185,13 @@
                                                 (:stopped? attr-progress)
                                                 (:stopped? assoc-progress))
                                     (process-items-with-progress
-                                     :adding-properties-to-classes
-                                     (vec (:attributes spec))
-                                     (fn [attr]
-                                       (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" (:identifier attr))
-                                             domain (:domain attr)]
-                                         (add-property-to-class! prefix domain attr-uri)))
-                                     #(:identifier %)))
+                                      :adding-properties-to-classes
+                                      (vec (:attributes spec))
+                                      (fn [attr]
+                                        (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" (:identifier attr))
+                                              domain (:domain attr)]
+                                          (add-property-to-class! prefix domain attr-uri)))
+                                      #(:identifier %)))
                 property-results (or (:results property-progress) [])
 
                 ;; 5. Link code lists with progress
@@ -1207,19 +1201,19 @@
                                                  (:stopped? assoc-progress)
                                                  (:stopped? property-progress))
                                      (process-items-with-progress
-                                      :linking-code-lists
-                                      (vec attrs-with-code-lists)
-                                      (fn [attr]
-                                        (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" (:identifier attr))
-                                              code-list-key (:code-list-key attr)
-                                              code-list-uri (get code-lists code-list-key)
-                                              domain (:domain attr)]
-                                          (if code-list-uri
-                                            (add-code-list! prefix domain attr-uri [code-list-uri])
-                                            {:status :skipped
-                                             :identifier (:identifier attr)
-                                             :reason (str "No URI for " code-list-key)})))
-                                      #(:identifier %)))
+                                       :linking-code-lists
+                                       (vec attrs-with-code-lists)
+                                       (fn [attr]
+                                         (let [attr-uri (str "https://iri.suomi.fi/model/" prefix "/" (:identifier attr))
+                                               code-list-key (:code-list-key attr)
+                                               code-list-uri (get code-lists code-list-key)
+                                               domain (:domain attr)]
+                                           (if code-list-uri
+                                             (add-code-list! prefix domain attr-uri [code-list-uri])
+                                             {:status :skipped
+                                              :identifier (:identifier attr)
+                                              :reason (str "No URI for " code-list-key)})))
+                                       #(:identifier %)))
                 code-list-results (or (:results code-list-progress) [])
 
                 ;; 6. Type-specific attributes (if enabled)
@@ -1471,14 +1465,14 @@
 
       ;; Execute API calls sequentially (order matters for hierarchy)
       (let [results (reduce
-                     (fn [acc class-dto]
-                       (let [result (add-class! prefix class-dto)]
-                         (if (= :created (:status result))
-                           (update acc :created conj (:identifier class-dto))
-                           (update acc :failed conj {:identifier (:identifier class-dto)
-                                                     :error (:response result)}))))
-                     {:created [] :failed []}
-                     classes-to-create)]
+                      (fn [acc class-dto]
+                        (let [result (add-class! prefix class-dto)]
+                          (if (= :created (:status result))
+                            (update acc :created conj (:identifier class-dto))
+                            (update acc :failed conj {:identifier (:identifier class-dto)
+                                                      :error (:response result)}))))
+                      {:created [] :failed []}
+                      classes-to-create)]
         (assoc results
                :prefix prefix
                :success (empty? (:failed results))

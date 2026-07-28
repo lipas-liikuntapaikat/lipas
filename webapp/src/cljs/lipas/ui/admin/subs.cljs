@@ -1,6 +1,5 @@
 (ns lipas.ui.admin.subs
   (:require [clojure.string :as str]
-            [lipas.roles :as roles]
             [lipas.ui.subs :as ui-subs]
             [lipas.utils :as cutils]
             [re-frame.core :as rf]))

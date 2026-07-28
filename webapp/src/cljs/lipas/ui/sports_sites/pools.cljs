@@ -1,15 +1,15 @@
 (ns lipas.ui.sports-sites.pools
-  (:require [lipas.schema.swimming-pools :as pool-schema]
+  (:require ["@mui/material/FormGroup$default" :as FormGroup]
+            [lipas.schema.swimming-pools :as pool-schema]
             [lipas.ui.components.checkboxes :as checkboxes]
             [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.selects :as selects]
             [lipas.ui.components.form-table :as form-table]
+            [lipas.ui.components.selects :as selects]
             [lipas.ui.components.tables :as tables]
             [lipas.ui.components.text-fields :as text-fields]
-            [malli.core :as m]
-            ["@mui/material/FormGroup$default" :as FormGroup]
             [lipas.ui.sports-sites.hall-equipment :as hall]
-            [lipas.ui.utils :refer [<== ==>] :as utils]))
+            [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]))
 
 (defn set-field [dialog field value]
   (#(==> [::hall/set-dialog-field dialog field value])))
@@ -124,15 +124,15 @@
         close  #(==> [::hall/toggle-dialog :pool])
         valid? (m/validate pool-schema/pool-schema data)]
     [dialogs/dialog {:title         (if (:id data)
-                                  (tr :lipas.swimming-pool.pools/edit-pool)
-                                  (tr :lipas.swimming-pool.pools/add-pool))
-                 :save-label    (tr :actions/save)
-                 :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::hall/toggle-dialog :pool])
-                 :save-enabled? valid?
-                 :on-save       (comp reset
-                                      close
-                                      #(==> [::hall/save-pool lipas-id data]))}
+                                      (tr :lipas.swimming-pool.pools/edit-pool)
+                                      (tr :lipas.swimming-pool.pools/add-pool))
+                     :save-label    (tr :actions/save)
+                     :cancel-label  (tr :actions/cancel)
+                     :on-close      #(==> [::hall/toggle-dialog :pool])
+                     :save-enabled? valid?
+                     :on-save       (comp reset
+                                          close
+                                          #(==> [::hall/save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -174,5 +174,5 @@
 
 (defn read-only-table [{:keys [tr items]}]
   [tables/table {:headers (make-headers tr)
-              :items   (sort-by :length-m utils/reverse-cmp items)
-              :key-fn  #(gensym)}])
+                 :items   (sort-by :length-m utils/reverse-cmp items)
+                 :key-fn  #(gensym)}])

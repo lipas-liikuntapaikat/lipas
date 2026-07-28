@@ -1,11 +1,10 @@
 (ns lipas.ui.sports-sites.activities.events
   (:require [ajax.core :as ajax]
-            [goog.object :as gobj]
             [lipas.utils :as utils]
             [re-frame.core :as rf]))
 
 (rf/reg-event-fx ::init-edit-view
-  (fn [{:keys [db]} [_ lipas-id edit-data]]
+  (fn [_ _]
     {}))
 
 (rf/reg-event-fx ::add-route
@@ -55,7 +54,7 @@
      :fx [[:dispatch [:lipas.ui.map.events/continue-editing]]]}))
 
 (rf/reg-event-fx ::select-route
-  (fn [{:keys [db]} [_ lipas-id {:keys [fids id] :as route}]]
+  (fn [{:keys [db]} [_ lipas-id {:keys [fids id]}]]
     {:db (-> db
              (assoc-in [:sports-sites :activities :mode] :route-details)
              (assoc-in [:sports-sites :activities :selected-route-id] id))
@@ -78,7 +77,7 @@
   (fn [{:keys [db]} [_ files lipas-id cb]]
     (let [file      (aget files 0)
           form-data (doto (js/FormData.)
-                      (.append "filename" (gobj/get file "name" ""))
+                      (.append "filename" (or (aget file "name") ""))
                       (.append "lipas-id" lipas-id)
                       (.append "file" file))
           token     (-> db :user :login :token)]
@@ -97,7 +96,7 @@
     {}))
 
 (rf/reg-event-fx ::upload-utp-image-failure
-  (fn [{:keys [db]} [event-k resp]]
+  (fn [{:keys [db]} _]
     (let [tr           (:translator db)
           notification {:message  (tr :notifications/save-failed)
                         :success? false}]

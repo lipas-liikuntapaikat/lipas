@@ -1,5 +1,23 @@
 (ns lipas.ui.analysis.reachability.views
-  (:require ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
+  (:require ["@mui/material/CircularProgress$default" :as CircularProgress]
+            ["@mui/material/Divider$default" :as Divider]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
+            ["@mui/material/Link$default" :as Link]
+            ;; clj-kondo false positive: `List` collides with the cljs.core/List
+            ;; deftype, so the [:> List ...] hiccup uses below aren't recognized
+            ;; as uses of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemText$default" :as ListItemText]
+            ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Tab$default" :as Tab]
+            ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            ["mdi-material-ui/MapMarkerDistance$default" :as MapMarkerDistance]
             ["rc-slider$default" :as Slider]
             [lipas.ui.analysis.reachability.events :as events]
             [lipas.ui.analysis.reachability.subs :as subs]
@@ -9,20 +27,6 @@
             [lipas.ui.components.layouts :as layouts]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.map.events :as map-events]
-            ["@mui/material/CircularProgress$default" :as CircularProgress]
-            ["@mui/material/Divider$default" :as Divider]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/Link$default" :as Link]
-            ["@mui/material/List$default" :as List]
-            ["@mui/material/ListItem$default" :as ListItem]
-            ["@mui/material/ListItemText$default" :as ListItemText]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/Tab$default" :as Tab]
-            ["@mui/material/Tabs$default" :as Tabs]
-            ["@mui/material/Tooltip$default" :as Tooltip]
-            ["@mui/material/Typography$default" :as Typography]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -62,11 +66,11 @@
      ;; Tabs
      [:> Grid {:item true :xs 12}
       [:> Tabs {:value sports-sites-view
-                 :indicator-color "primary"
-                 :text-color "inherit"
-                 :variant "fullWidth"
+                :indicator-color "primary"
+                :text-color "inherit"
+                :variant "fullWidth"
 
-                 :on-change #(==> [::events/select-sports-sites-view %2])}
+                :on-change #(==> [::events/select-sports-sites-view %2])}
        [:> Tab {:icon (r/as-element [:> Icon "list"]) :value "list"}]
        [:> Tab {:icon (r/as-element [:> Icon "analytics"]) :value "chart"}]]]
 
@@ -208,11 +212,11 @@
 
      [:> Grid {:item true :xs 12}
       [:> Tabs {:value schools-view
-                 :indicator-color "primary"
-                 :text-color "inherit"
-                 :variant "fullWidth"
+                :indicator-color "primary"
+                :text-color "inherit"
+                :variant "fullWidth"
 
-                 :on-change #(==> [::events/select-schools-view %2])}
+                :on-change #(==> [::events/select-schools-view %2])}
        [:> Tab {:icon (r/as-element [:> Icon "list"]) :value "list"}]
        [:> Tab {:icon (r/as-element [:> Icon "analytics"]) :value "chart"}]]]
 
@@ -410,9 +414,9 @@
          :justify-content "space-between"
          :align-items "center"}
         [:> Grid {:item true
-                   :container true
-                   :align-items "center"
-                   :spacing 1}
+                  :container true
+                  :align-items "center"
+                  :spacing 1}
          [:> Grid {:item true}
           [selects/select
            {:items sites
@@ -452,10 +456,10 @@
      (when selected-site
        [:> Grid {:item true :xs 12}
         [:> Tabs {:value selected-tab
-                   :on-change #(==> [::events/select-analysis-tab %2])
-                   :style {:margin-bottom "1em"}
-                   :indicator-color "secondary"
-                   :text-color "secondary"}
+                  :on-change #(==> [::events/select-analysis-tab %2])
+                  :style {:margin-bottom "1em"}
+                  :indicator-color "secondary"
+                  :text-color "secondary"}
          [:> Tab {:label (tr :sport/headline) :value :sports-sites}]
          [:> Tab {:label (tr :analysis/population) :value :population}]
          [:> Tab {:label (tr :analysis/schools) :value :schools}]

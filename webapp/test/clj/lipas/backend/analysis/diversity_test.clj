@@ -128,11 +128,11 @@
   (let [site-idx (get-in search [:indices :sports-site :search])]
     (doseq [site test-sports-sites]
       (search/index!
-       (:client search)
-       site-idx
-       (constantly (:_id site))
-       (:_source site)
-       :sync))))
+        (:client search)
+        site-idx
+        (constantly (:_id site))
+        (:_source site)
+        :sync))))
 
 ;;; Mock OSRM for deterministic tests ;;;
 
@@ -170,8 +170,8 @@
 
 (def test-point-fcoll
   (gis/->fcoll
-   [(gis/->feature {:type "Point"
-                    :coordinates [24.9477 60.1678]})]))
+    [(gis/->feature {:type "Point"
+                     :coordinates [24.9477 60.1678]})]))
 
 (defn- run-recalc-capturing-bulk!
   "Run recalc-grid! with bulk indexing captured instead of written.
@@ -359,8 +359,8 @@
         (let [futures (map (fn [coords]
                              (future
                                (let [fcoll (gis/->fcoll
-                                            [(gis/->feature {:type "Point"
-                                                             :coordinates coords})])]
+                                             [(gis/->feature {:type "Point"
+                                                              :coordinates coords})])]
                                  (diversity/recalc-grid! (test-search) fcoll))))
                            test-points)]
 

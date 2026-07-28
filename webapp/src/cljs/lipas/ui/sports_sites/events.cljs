@@ -72,7 +72,7 @@
        :http-xhrio
        {:method          :post
         :headers         {:Authorization (str "Token " token)}
-        :uri             (str (:backend-url db) (str "/sports-sites" params))
+        :uri             (str (:backend-url db) "/sports-sites" params)
         :params          rev
         :format          (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
@@ -276,7 +276,7 @@
     (assoc-in db [:sports-sites :delete-dialog :selected-year] year)))
 
 (rf/reg-event-fx ::delete
-  (fn [db [_ data status year draft?]]
+  (fn [_db [_ data status year draft?]]
     (let [event-date (if (utils/this-year? year)
                        (utils/timestamp)
                        (utils/->end-of-year year))
@@ -314,7 +314,7 @@
     (let [params {:lipas-id lipas-id :name name}]
       {:http-xhrio
        {:method          :post
-        :uri             (str (:backend-url db) (str "/actions/check-sports-site-name"))
+        :uri             (str (:backend-url db) "/actions/check-sports-site-name")
         :params          params
         :format          (ajax/transit-request-format)
         :response-format (ajax/transit-response-format)
@@ -330,5 +330,5 @@
     (assoc-in db [:sports-sites :name-check :error] resp)))
 
 (rf/reg-event-db ::clear-name-check
-  (fn [db [_ resp]]
+  (fn [db _]
     (assoc-in db [:sports-sites :name-check] {})))

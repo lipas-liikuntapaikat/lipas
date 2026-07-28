@@ -3,10 +3,8 @@
 
   These schemas ensure the concept-mappings.edn file remains valid and
   consistent as we discover and document mappings to external models."
-  (:require
-   [malli.core :as m]
-   [malli.transform]
-   [malli.util :as mu]))
+  (:require [malli.core :as m]
+            [malli.transform]))
 
 ;;; Enums
 

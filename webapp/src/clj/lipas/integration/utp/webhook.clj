@@ -68,7 +68,6 @@
                                     :objects payload})}]
     (client/post (:webhook-url config) params)))
 
-
 (defn process-v2!
   "Process webhook payload in the new jobs system format.
    Payload should contain :lipas-ids and/or :loi-ids vectors.

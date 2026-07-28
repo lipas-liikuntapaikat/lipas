@@ -15,40 +15,40 @@
   ;; TODO figure out why this doesn't work for kw values
   #_(m/decode help-schema/HelpData body mt/json-transformer)
   (mapv
-   (fn [section]
-     (-> section
-         (update :slug keyword)
-         (update :pages
-                 (fn [pages]
-                   (mapv (fn [page]
-                           (-> page
-                               (update :slug keyword)
-                               (update :blocks
-                                       (fn [blocks]
-                                         (mapv (fn [{:keys [type] :as block}]
-                                                 (cond-> (update block :type keyword)
-                                                   (= "video" type) (update :provider keyword)))
-                                               blocks)))))
-                         pages)))))
-        body))
+    (fn [section]
+      (-> section
+          (update :slug keyword)
+          (update :pages
+                  (fn [pages]
+                    (mapv (fn [page]
+                            (-> page
+                                (update :slug keyword)
+                                (update :blocks
+                                        (fn [blocks]
+                                          (mapv (fn [{:keys [type] :as block}]
+                                                  (cond-> (update block :type keyword)
+                                                    (= "video" type) (update :provider keyword)))
+                                                blocks)))))
+                          pages)))))
+    body))
 
 (defn- unmarshall-help-v2-tree
   ;; JSONB roundtrip stringifies keywords; only block :type/:provider
   ;; need re-keywordizing (v2 slugs are plain strings by design).
   [tree]
   (mapv
-   (fn [section]
-     (update section :pages
-             (fn [pages]
-               (mapv (fn [page]
-                       (update page :blocks
-                               (fn [blocks]
-                                 (mapv (fn [{:keys [type] :as block}]
-                                         (cond-> (update block :type keyword)
-                                           (= "video" type) (update :provider keyword)))
-                                       blocks))))
-                     pages))))
-   tree))
+    (fn [section]
+      (update section :pages
+              (fn [pages]
+                (mapv (fn [page]
+                        (update page :blocks
+                                (fn [blocks]
+                                  (mapv (fn [{:keys [type] :as block}]
+                                          (cond-> (update block :type keyword)
+                                            (= "video" type) (update :provider keyword)))
+                                        blocks))))
+                      pages))))
+    tree))
 
 (defmethod unmarshall "help-v2-fi" [{:keys [body]}]
   (unmarshall-help-v2-tree body))

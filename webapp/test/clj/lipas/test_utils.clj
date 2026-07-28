@@ -1,29 +1,34 @@
 (ns lipas.test-utils
-  (:require [buddy.hashers :as hashers]
-            [cheshire.core :as j]
-            [clojure.java.jdbc :as jdbc]
-            [clojure.java.io :as io]
-            [clojure.string :as str]
-            [cognitect.transit :as transit]
-            [lipas.backend.analysis.diversity :as diversity]
-            [lipas.backend.config :as config]
-            [lipas.backend.core :as core]
-            [lipas.backend.org :as backend-org]
-            [lipas.backend.email :as email]
-            [lipas.backend.search :as search]
-            [lipas.backend.system :as sy]
-            [lipas.schema.lois :as loi-schema]
-            [lipas.schema.sports-sites :as sports-site-schema]
-            [lipas.schema.users :as users-schema]
-            [malli.core :as m]
-            [malli.generator :as mg]
-            [lipas.utils :as utils]
-            [migratus.core :as migratus]
-            [qbits.spandex :as es]
-            [ring.mock.request :as mock]
-            [integrant.core :as ig]
-            [clojure.test :as t]
-            [next.jdbc :as next-jdbc])
+  (:require
+    [buddy.hashers :as hashers]
+    [cheshire.core :as j]
+    [clojure.java.io :as io]
+    [clojure.java.jdbc :as jdbc]
+    [clojure.string :as str]
+    [clojure.test :as t]
+    [cognitect.transit :as transit]
+    [integrant.core :as ig]
+    [lipas.backend.analysis.diversity :as diversity]
+    [lipas.backend.config :as config]
+    [lipas.backend.core :as core]
+    [lipas.backend.email :as email]
+    [lipas.backend.org :as backend-org]
+    [lipas.backend.search :as search]
+            ;; Required for side effects: registers the ig/init-key and
+            ;; ig/halt-key! defmethods (:lipas/db, :lipas/search, :lipas/app,
+            ;; :lipas/server, etc.) that ig/init needs when tests build the
+            ;; system. No other required namespace in this file loads it.
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [lipas.backend.system :as sy]
+    [lipas.schema.lois :as loi-schema]
+    [lipas.schema.sports-sites :as sports-site-schema]
+    [lipas.schema.users :as users-schema]
+    [malli.core :as m]
+    [malli.generator :as mg]
+    [migratus.core :as migratus]
+    [next.jdbc :as next-jdbc]
+    [qbits.spandex :as es]
+    [ring.mock.request :as mock])
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
@@ -84,7 +89,7 @@
                       site (-> base-site
                                (assoc :lipas-id (inc i))
                                (cond->
-                                city-codes
+                                 city-codes
                                  (assoc-in [:location :city :city-code]
                                            (nth city-codes (mod i (clojure.core/count city-codes))))
 
@@ -662,8 +667,8 @@
      ;; Verify that required tables actually exist
      (try
        ;; First check if we can connect to the database
-       (let [connection-test (jdbc/query db-config ["SELECT 1"])]
-         (println "✓ Database connection successful"))
+       (jdbc/query db-config ["SELECT 1"])
+       (println "✓ Database connection successful")
 
        ;; Then check for the account table specifically
        (let [table-check (jdbc/query db-config
@@ -1206,12 +1211,12 @@
                       :created_at (str (java.time.Instant/now))
                       :updated_at (str (java.time.Instant/now))}
         dlj (first
-             (next-jdbc/execute!
-              db
-              ["INSERT INTO dead_letter_jobs (original_job, error_message)
+              (next-jdbc/execute!
+                db
+                ["INSERT INTO dead_letter_jobs (original_job, error_message)
                 VALUES (?::jsonb, ?) RETURNING id"
-               (j/generate-string original-job)
-               error-message]))
+                 (j/generate-string original-job)
+                 error-message]))
         dlj-id (:dead_letter_jobs/id dlj)
         ;; Support both :acknowledged (boolean) and :acknowledged-by (string)
         ack-user (or acknowledged-by (when acknowledged "system"))]

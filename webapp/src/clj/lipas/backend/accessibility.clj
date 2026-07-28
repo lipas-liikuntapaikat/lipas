@@ -16,22 +16,22 @@
      (. hash update (.getBytes input "UTF-8"))
      (let [digest (.digest hash)]
        (str/upper-case
-        (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))))))
+         (apply str (map #(format "%02x" (bit-and % 0xff)) digest)))))))
 
 (defn calc-checksum
   [{:keys [secret-key system-id]} params]
   (hexdigest
-   (str
-    secret-key
-    system-id
-    (get params "servicePointId")
-    (get params "user")
-    (get params "validUntil")
-    (get params "streetAddress")
-    (get params "postOffice")
-    (get params "name")
-    (get params "northing")
-    (get params "easting"))))
+    (str
+      secret-key
+      system-id
+      (get params "servicePointId")
+      (get params "user")
+      (get params "validUntil")
+      (get params "streetAddress")
+      (get params "postOffice")
+      (get params "name")
+      (get params "northing")
+      (get params "easting"))))
 
 (def timezone (java.time.ZoneId/of "UTC"))
 
@@ -39,7 +39,7 @@
   "Strict ISO date format with fixed precision of one second and no
   timezone. Used by Accessibility register."
   (java.time.format.DateTimeFormatter/ofPattern
-   "yyyy-MM-dd'T'HH:mm:ss"))
+    "yyyy-MM-dd'T'HH:mm:ss"))
 
 (defn now+hours [hours]
   (-> (java.time.Instant/now)
@@ -77,36 +77,36 @@
 (defn make-app-url [user sports-site]
   (let [params (make-params user sports-site)]
     (str
-     (:base-url config)
-     "/app/ServicePoint/"
-     "?"
-     (client/generate-query-string
-      (assoc params "checksum" (calc-checksum config params))))))
+      (:base-url config)
+      "/app/ServicePoint/"
+      "?"
+      (client/generate-query-string
+        (assoc params "checksum" (calc-checksum config params))))))
 
 (defn get-statements [_lipas-id]
   ;; TODO: Re-enable when accessibility register integration is revived
   #_(let [url (str
-               (:base-url config)
-               "/api/v1/accessibility/servicepoints/"
-               (:system-id config)
-               "/"
-               _lipas-id
-               "/sentences")]
+                (:base-url config)
+                "/api/v1/accessibility/servicepoints/"
+                (:system-id config)
+                "/"
+                _lipas-id
+                "/sentences")]
       (:body (client/get url {:as :json})))
   [])
 
 (comment
   (make-app-url
-   {:email "kissa@koira.fi"}
-   {:name     "testi"
-    :lipas-id 12345
-    :location
-    {:address "testikatu 13"
-     :city    {:city-code 992}
-     :geometries
-     {:features
-      [{:geometry
-        {:type        "Point"
-         :coordinates [23.8259457479965 61.4952794263427]}}]}}})
+    {:email "kissa@koira.fi"}
+    {:name     "testi"
+     :lipas-id 12345
+     :location
+     {:address "testikatu 13"
+      :city    {:city-code 992}
+      :geometries
+      {:features
+       [{:geometry
+         {:type        "Point"
+          :coordinates [23.8259457479965 61.4952794263427]}}]}}})
 
   (get-statements 12345))

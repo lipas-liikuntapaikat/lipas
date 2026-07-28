@@ -1,12 +1,17 @@
 (ns prod
-  (:require [clojure.data.csv :as csv]
-            [integrant.core :as ig]
-            [lipas.backend.config :as config]
-            [lipas.utils :as utils]
-            [malli.core :as m]
-            [lipas.wfs.mappings :as wfs-mappings]
-            [lipas.wfs.core :as wfs]
-            [lipas.maintenance :as maintenance]))
+  (:require
+    ;; Each of these backs a (comment ...) snippet below that uses it
+    ;; unqualified without its own local re-require (unlike the other
+    ;; blocks in this file, which re-require what they need inline).
+    ;; clj-kondo's :skip-comments hides that usage, but removing these
+    ;; breaks copy-pasting those snippets into the REPL right after
+    ;; (require 'prod).
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [integrant.core :as ig]
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [lipas.backend.config :as config]
+    #_{:clj-kondo/ignore [:unused-namespace]}
+    [malli.core :as m]))
 
 ;; exploring
 (comment
@@ -34,11 +39,11 @@
 
   ;; ALL the invalid ones
   (def invalid2 (reduce (fn [coll k]
-                      (let [sites (be/get-sports-sites-by-type-code (:lipas/db system) k)]
-                        (into coll (filter (complement (fn [x] (m/validate ss-schema/sports-site x))))
-                              sites)))
-                    []
-                    type-codes))
+                          (let [sites (be/get-sports-sites-by-type-code (:lipas/db system) k)]
+                            (into coll (filter (complement (fn [x] (m/validate ss-schema/sports-site x))))
+                                  sites)))
+                        []
+                        type-codes))
 
   (count invalid2)
   (map #(me/humanize (m/explain ss-schema/sports-site %)) invalid2)
@@ -53,7 +58,6 @@
     (println "saving" (:lipas-id m))
     (be/save-sports-site! (:lipas/db system) (:lipas/search system) nil robot
                           (assoc m :status "incorrect-data")))
-
 
   (def invalid
     (->> data vals (mapcat identity)
@@ -74,9 +78,7 @@
   (def site (be/get-sports-site (:lipas/db system) 617582))
   (me/humanize (m/explain ss-schema/sports-site site))
 
-  (be/index! (:lipas/search system) site)
-
-  )
+  (be/index! (:lipas/search system) site))
 
 ;; Iisalmi manual updates
 (comment
@@ -118,8 +120,6 @@
               (println "Saving updates: " lipas-id)
               (bcore/upsert-sports-site!* (:lipas/db system) robot upd)
               (bcore/index! (:lipas/search system) upd))))))))
-
-
 
 ;; WFS Legacy Layer Management - New Type Codes Deployment
 ;; Support for type codes: 1190, 1650, 2225, 2620, 3250, 4406, 4407, 4441, 6150
@@ -191,8 +191,7 @@
   ;; (wfs/drop-legacy-mat-view! db "lipas_1190_pulkkamaki")
   ;; (wfs/unpublish-layer "lipas_1190_pulkkamaki")
 
-
-  ;; Taloustiedot ingest
+;; Taloustiedot ingest
   (require '[lipas.maintenance :as maintenance])
 
   (def system (ig/init (select-keys config/system-config [:lipas/search :lipas/db])))
@@ -201,7 +200,4 @@
            :search (:lipas/search system)})
   (def csv-path "/tmp/taloustiedot_2024.csv")
 
-  (maintenance/add-city-stats-from-csv! s1 csv-path 2024)
-
-
-  )
+  (maintenance/add-city-stats-from-csv! s1 csv-path 2024))

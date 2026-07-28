@@ -1,13 +1,5 @@
 (ns lipas.ui.user.views
-  (:require ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/Link$default" :as Link]
-            ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Typography$default" :as Typography]
-            [lipas.roles :as roles]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardActions$default" :as CardActions]
             ["@mui/material/CardContent$default" :as CardContent]
@@ -18,9 +10,21 @@
             ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/Link$default" :as Link]
+            ;; clj-kondo false positive: the bare symbol `List` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> List ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
             ["@mui/material/ListItemButton$default" :as ListItemButton]
             ["@mui/material/ListItemIcon$default" :as ListItemIcon]
+            ["@mui/material/Stack$default" :as Stack]
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.roles :as roles]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.subs :as org-subs]
             [lipas.ui.user.events :as events]
             [lipas.ui.user.subs :as subs]
@@ -67,7 +71,7 @@
         close    #(==> [::events/select-sports-site nil])
         lipas-id (:lipas-id site)]
     [:> Dialog {:open     (some? (seq site))
-                 :on-close close}
+                :on-close close}
 
      [:> DialogTitle
       (or (:name site) "")]
@@ -191,14 +195,14 @@
           [user-form tr user]]
          [:> CardActions
           [:> Button {:href  "/etusivu"
-                       :color :secondary}
+                      :color :secondary}
            (str "> " (tr :user/front-page-link))]
           [:> Button {:href  "/passu-hukassa"
-                       :color :primary}
+                      :color :primary}
            (str "> " (tr :reset-password/change-password))]
           (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
             [:> Button {:href  "/admin"
-                         :color :primary}
+                        :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
 ;; Saved searches
@@ -232,7 +236,7 @@
 
          [:> CardActions
           [:> Button {:href  "/liikuntapaikat"
-                       :color :secondary}
+                      :color :secondary}
            (str "> " (tr :sport/headline))]
 
           ;; (when (some #{2510 2520} (map :type-code sites))

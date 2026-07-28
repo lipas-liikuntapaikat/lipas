@@ -83,14 +83,14 @@
 ;; LTO_tyyppi
 (def heat-recovery-types
   {"thermal-wheel"        {:fi "Pyörivä"
-                          :en "Thermal wheel"
-                          :se nil}
+                           :en "Thermal wheel"
+                           :se nil}
    "liquid-circulation"   {:fi "Nestekierto"
-                          :en "Liquid circulation"
-                          :se nil}
+                           :en "Liquid circulation"
+                           :se nil}
    "plate-heat-exchanger" {:fi "Levysiirrin"
-                          :en "Plate heat exchanger"
-                          :se nil}})
+                           :en "Plate heat exchanger"
+                           :se nil}})
 
 ;; Ilmankuivaustapa
 (def dryer-types

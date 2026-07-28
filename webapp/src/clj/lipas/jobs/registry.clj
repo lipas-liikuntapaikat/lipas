@@ -20,10 +20,10 @@
   Job handlers are defmethods on lipas.jobs.dispatcher/handle-job. The worker
   asserts at startup that every type registered here has a handler."
   (:require
-   [lipas.data.types :as types]
-   [lipas.schema.sports-sites :as sports-sites-schema]
-   [malli.core :as m]
-   [malli.error :as me]))
+    [lipas.data.types :as types]
+    [lipas.schema.sports-sites :as sports-sites-schema]
+    [malli.core :as m]
+    [malli.error :as me]))
 
 ;; Save triggers
 ;;
@@ -59,8 +59,8 @@
 
 (defn- site-has-z? [site]
   (boolean
-   (some #(some-> % :geometry :coordinates any-leaf-3d?)
-         (-> site :location :geometries :features))))
+    (some #(some-> % :geometry :coordinates any-leaf-3d?)
+          (-> site :location :geometries :features))))
 
 (defn- route?
   "Sites whose geometry type is LineString get elevation enrichment."

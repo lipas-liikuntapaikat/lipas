@@ -5,9 +5,9 @@
 (defn- all-energy-data-exists? [{:keys [energy-consumption]}]
   (let [{:keys [electricity-mwh heat-mwh water-m3]} energy-consumption]
     (and
-     (some? electricity-mwh)
-     (some? heat-mwh)
-     (some? water-m3))))
+      (some? electricity-mwh)
+      (some? heat-mwh)
+      (some? water-m3))))
 
 (defn- get-values [sites field-kw]
   (->> sites
@@ -35,11 +35,11 @@
 
 (defn ->row [fields m]
   (reduce
-   (fn [res f]
-     (let [v (utils/get-in-path m f)]
-       (conj res (if (coll? v) (utils/join v) v))))
-   []
-   fields))
+    (fn [res f]
+      (let [v (utils/get-in-path m f)]
+        (conj res (if (coll? v) (utils/join v) v))))
+    []
+    fields))
 
 (def basic-fields
   {"lipas-id"
@@ -159,11 +159,11 @@
 
 (def measure-fields
   (merge
-   area-fields
-   length-fields
-   width-fields
-   height-fields
-   other-measures))
+    area-fields
+    length-fields
+    width-fields
+    height-fields
+    other-measures))
 
 (def service-fields
   (select-keys prop-fields ["properties.equipment-rental?"
@@ -274,9 +274,9 @@
 
 (def fields
   (merge
-   basic-fields
-   meta-fields
-   prop-fields))
+    basic-fields
+    meta-fields
+    prop-fields))
 
 (def default-fields
   (select-keys fields ["lipas-id"
@@ -381,10 +381,10 @@
 
 (def subsidies-groupings
   (merge
-   finance-stats-groupings
-   {"type" {:fi "Tyyppi"
-            :se "Typ"
-            :en "Type"}}))
+    finance-stats-groupings
+    {"type" {:fi "Tyyppi"
+             :se "Typ"
+             :en "Type"}}))
 
 (def subsidies-issuers
   {"AVI" {:fi "AVI"
@@ -398,13 +398,13 @@
   (let [ms (map (comp #(get % service) :services #(get % year) :stats) cities)
         ks (-> stats-metrics keys (->> (map keyword)))]
     (reduce
-     (fn [res k]
-       (assoc res k (->> ms
-                         (map k)
-                         (remove nil?)
-                         utils/simple-stats)))
-     {}
-     ks)))
+      (fn [res k]
+        (assoc res k (->> ms
+                          (map k)
+                          (remove nil?)
+                          utils/simple-stats)))
+      {}
+      ks)))
 
 (defn calc-avgs [year cities]
   {:population (->> cities
@@ -421,17 +421,17 @@
 
 (defn calc-stats [years cities]
   (reduce
-   (fn [res year]
-     (assoc res year (calc-avgs-memo year cities)))
-   {}
-   years))
+    (fn [res year]
+      (assoc res year (calc-avgs-memo year cities)))
+    {}
+    years))
 
 (defn calc-per-capita [population m]
   (reduce
-   (fn [m [k v]]
-     (assoc m k (/ (* 1000 v) population)))
-   {}
-   m))
+    (fn [m [k v]]
+      (assoc m k (/ (* 1000 v) population)))
+    {}
+    m))
 
 (defn finance-report [city-codes all-cities]
   (let [cities (utils/index-by :city-code all-cities)
@@ -441,69 +441,69 @@
 
 (defn calculate-stats-by-city [aggs-data pop-data]
   (reduce
-   (fn [res m]
+    (fn [res m]
      ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
-     (let [city-code  (int (:key m))
-           population (pop-data city-code)
+      (let [city-code  (int (:key m))
+            population (pop-data city-code)
 
-           m2-sum          (-> m :area_m2_stats :sum)
-           km-sum          (-> m :length_km_stats :sum)
-           area-m2-stats   (-> m
-                               :area_m2_stats
-                               (assoc :pc (when (and population m2-sum)
-                                            (double (/ m2-sum population))))
-                               (utils/->prefix-map "area-m2-"))
-           length-km-stats (-> m
-                               :length_km_stats
-                               (assoc :pc (when (and population km-sum)
-                                            (double (/ km-sum population))))
-                               (utils/->prefix-map "length-km-"))
-           sites-count     (:doc_count m)
-           entry           (merge
-                            area-m2-stats
-                            length-km-stats
-                            {:population         population
-                             :sites-count        sites-count
-                             :sites-count-p1000c (when (and population sites-count)
-                                                   (double
-                                                    (/ sites-count
-                                                       (/ population 1000))))})]
-       (assoc res city-code entry)))
-   {}
-   aggs-data))
+            m2-sum          (-> m :area_m2_stats :sum)
+            km-sum          (-> m :length_km_stats :sum)
+            area-m2-stats   (-> m
+                                :area_m2_stats
+                                (assoc :pc (when (and population m2-sum)
+                                             (double (/ m2-sum population))))
+                                (utils/->prefix-map "area-m2-"))
+            length-km-stats (-> m
+                                :length_km_stats
+                                (assoc :pc (when (and population km-sum)
+                                             (double (/ km-sum population))))
+                                (utils/->prefix-map "length-km-"))
+            sites-count     (:doc_count m)
+            entry           (merge
+                              area-m2-stats
+                              length-km-stats
+                              {:population         population
+                               :sites-count        sites-count
+                               :sites-count-p1000c (when (and population sites-count)
+                                                     (double
+                                                       (/ sites-count
+                                                          (/ population 1000))))})]
+        (assoc res city-code entry)))
+    {}
+    aggs-data))
 
 (defn calculate-stats-by-type [aggs-data pop-data city-codes]
   (reduce
-   (fn [res m]
+    (fn [res m]
      ;; ES 8.x returns numeric aggregation keys as floats, so convert to int
-     (let [type-code       (int (:key m))
-           populations     (if (empty? city-codes)
-                             pop-data ;; all
-                             (select-keys pop-data city-codes))
-           population      (->> populations vals (reduce +))
-           m2-sum          (-> m :area_m2_stats :sum)
-           km-sum          (-> m :length_km_stats :sum)
-           area-m2-stats   (-> m
-                               :area_m2_stats
-                               (assoc :pc (when (and population m2-sum)
-                                            (double (/ m2-sum population))))
-                               (utils/->prefix-map "area-m2-"))
-           length-km-stats (-> m
-                               :length_km_stats
-                               (assoc :pc (when (and population km-sum)
-                                            (double (/ km-sum population))))
-                               (utils/->prefix-map "length-km-"))
+      (let [type-code       (int (:key m))
+            populations     (if (empty? city-codes)
+                              pop-data ;; all
+                              (select-keys pop-data city-codes))
+            population      (->> populations vals (reduce +))
+            m2-sum          (-> m :area_m2_stats :sum)
+            km-sum          (-> m :length_km_stats :sum)
+            area-m2-stats   (-> m
+                                :area_m2_stats
+                                (assoc :pc (when (and population m2-sum)
+                                             (double (/ m2-sum population))))
+                                (utils/->prefix-map "area-m2-"))
+            length-km-stats (-> m
+                                :length_km_stats
+                                (assoc :pc (when (and population km-sum)
+                                             (double (/ km-sum population))))
+                                (utils/->prefix-map "length-km-"))
 
-           sites-count (:doc_count m)
-           entry       (merge
-                        area-m2-stats
-                        length-km-stats
-                        {:population         population
-                         :sites-count        sites-count
-                         :sites-count-p1000c (when (and population sites-count)
-                                               (double
-                                                (/ sites-count
-                                                   (/ population 1000))))})]
-       (assoc res type-code entry)))
-   {}
-   aggs-data))
+            sites-count (:doc_count m)
+            entry       (merge
+                          area-m2-stats
+                          length-km-stats
+                          {:population         population
+                           :sites-count        sites-count
+                           :sites-count-p1000c (when (and population sites-count)
+                                                 (double
+                                                   (/ sites-count
+                                                      (/ population 1000))))})]
+        (assoc res type-code entry)))
+    {}
+    aggs-data))

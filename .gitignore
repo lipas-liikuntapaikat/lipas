@@ -27,7 +27,10 @@ webapp/resources/public/index.html
 webapp/resources/public/google*.html
 webapp/.cljs_rhino_repl
 webapp/.clj-kondo/.cache
-webapp/.clj-kondo/*/
+# The vendored per-library configs under webapp/.clj-kondo/<lib>/ ARE tracked.
+# They decide how macros are linted, so leaving them out made CI lint against a
+# different config set than any developer machine. Refresh with `bb init-lint`
+# after changing deps.
 webapp/node_modules
 webapp/dist
 webapp/.lsp/.cache
@@ -43,7 +46,17 @@ webapp/local-scrap
 webapp/.eca/
 
 # IDE and development files
+# NOTE: patterns containing a slash are anchored to this file's directory, so
+# `.claude/*` covers only the repository-root .claude/ — NOT webapp/.claude/.
+# The rules that must apply at every depth use a leading **/ .
 .claude/*
 !.claude/skills/
+# settings.json is the shared, committed Claude Code config — hooks live there.
+!.claude/settings.json
+# settings.local.json is the per-developer override and must never be committed.
+# Spelled out at repo level on purpose: it was previously only ignored via an
+# individual's ~/.config/git/ignore, so on a fresh clone it was committable.
+**/.claude/settings.local.json
+**/.claude/*.bak
 .git-rewrite/
 data/

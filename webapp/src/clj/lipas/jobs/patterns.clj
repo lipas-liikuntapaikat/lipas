@@ -2,10 +2,10 @@
   "Reliability patterns for the job queue: exponential backoff, per-item
   timeouts and a simple in-memory circuit breaker."
   (:require
-   [taoensso.timbre :as log])
+    [taoensso.timbre :as log])
   (:import
-   [java.util Random]
-   [java.util.concurrent TimeoutException]))
+    [java.util Random]
+    [java.util.concurrent TimeoutException]))
 
 (def ^:private random (Random.))
 
@@ -40,7 +40,7 @@
       (do
         (future-cancel f)
         (throw (TimeoutException.
-                (str "Operation timed out after " timeout-ms "ms: " error-context))))
+                 (str "Operation timed out after " timeout-ms "ms: " error-context))))
       result)))
 
 (defn pmap-with-timeout

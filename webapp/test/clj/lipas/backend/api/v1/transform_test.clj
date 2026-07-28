@@ -9,11 +9,9 @@
    - Field names: kebab-case -> camelCase
    - Property mappings: new keys -> legacy keys
    - Type-specific transformations (ice stadiums, swimming pools, golf)"
-  (:require
-   [clojure.test :refer [deftest testing is]]
-   [lipas.backend.api.v1.transform :as transform]
-   [lipas.backend.api.v1.sports-place :as legacy-sports-place]
-   [clojure.set :as set]))
+  (:require [clojure.test :refer [deftest is testing]]
+            [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+            [lipas.backend.api.v1.transform :as transform]))
 
 ;;; Test data - representative examples of new LIPAS format
 
@@ -189,7 +187,7 @@
                       ["state" "state"]]]
       (doseq [[input expected] test-cases]
         (let [result (transform/->old-lipas-sports-site
-                      (assoc minimal-sports-site :admin input))]
+                       (assoc minimal-sports-site :admin input))]
           (is (= expected (:admin result))
               (str "Admin transformation failed for: " input))))))
 
@@ -200,7 +198,7 @@
                       ["company" "company"]]]
       (doseq [[input expected] test-cases]
         (let [result (transform/->old-lipas-sports-site
-                      (assoc minimal-sports-site :owner input))]
+                       (assoc minimal-sports-site :owner input))]
           (is (= expected (:owner result))
               (str "Owner transformation failed for: " input)))))))
 

@@ -1,8 +1,8 @@
 (ns lipas.ui.components.misc
-  (:require [lipas.ui.components.buttons :as buttons]
-            ["@mui/material/GridLegacy$default" :as Grid]
+  (:require ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/Typography$default" :as Typography]))
+            ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.components.buttons :as buttons]))
 
 ;; Returns actually a list of components.
 ;; TODO think something more intuitive here.
@@ -67,7 +67,7 @@
 
 (defn icon-text3 [{:keys [icon text icon-color]}]
   [:> Grid {:container true :align-items "center"
-             :style {:padding-right "0.5em" :padding-left "0.5em"}}
+            :style {:padding-right "0.5em" :padding-left "0.5em"}}
    [:> Grid {:item true}
     [:> Icon {:style {:color icon-color :display "inline"}}
      icon]]

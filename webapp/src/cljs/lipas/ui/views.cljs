@@ -1,10 +1,5 @@
 (ns lipas.ui.views
-  (:require [lipas.ui.assistant.views :as assistant]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.notifications :as notifications]
-            [lipas.ui.events :as events]
-            [lipas.ui.help.views :as help]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
@@ -13,6 +8,11 @@
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/Typography$default" :as Typography]
+            [lipas.ui.assistant.views :as assistant]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.notifications :as notifications]
+            [lipas.ui.events :as events]
+            [lipas.ui.help.views :as help]
             [lipas.ui.login.events :as login-events]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
@@ -110,50 +110,50 @@
 
         ;; Navbar
         (when show-nav?
-        [:> Grid {:item true :xs 12 :style {:flex "0 1 auto"}}
+          [:> Grid {:item true :xs 12 :style {:flex "0 1 auto"}}
 
-         [nav/nav {:tr tr :logged-in? logged-in?}]
+           [nav/nav {:tr tr :logged-in? logged-in?}]
 
          ;; Dev-env disclaimer
-         (when disclaimer
-           [:> Grid {:item true :xs 12 :md 12 :lg 12}
-            [:> Card {:square true
-                       :style  {:background-color mui/secondary
-                                :border-bottom    "2px solid white"}}
-             [:> CardHeader
-              {:style  {:padding-bottom 0}
-               :title  (tr :disclaimer/headline)
-               :action (r/as-element
-                         [:> IconButton
-                          {:on-click #(==> [::events/set-active-disclaimer nil])}
-                          [:> Icon "close"]])}]
-             [:> CardContent
-              [:> Typography {:variant "body2"}
-               disclaimer]]]])])
+           (when disclaimer
+             [:> Grid {:item true :xs 12 :md 12 :lg 12}
+              [:> Card {:square true
+                        :style  {:background-color mui/secondary
+                                 :border-bottom    "2px solid white"}}
+               [:> CardHeader
+                {:style  {:padding-bottom 0}
+                 :title  (tr :disclaimer/headline)
+                 :action (r/as-element
+                           [:> IconButton
+                            {:on-click #(==> [::events/set-active-disclaimer nil])}
+                            [:> Icon "close"]])}]
+               [:> CardContent
+                [:> Typography {:variant "body2"}
+                 disclaimer]]]])])
 
-      [mui/mui-theme-provider {:theme mui/jyu-theme-light}
+        [mui/mui-theme-provider {:theme mui/jyu-theme-light}
 
        ;; Help center dialog — global so ?ohje= deep links work on any
        ;; route. Lives inside the light theme so it matches the rest of
        ;; the app content.
-       [help/dialog]
+         [help/dialog]
 
        ;; Main panel
-       (when view
-         [view])
+         (when view
+           [view])
 
        ;; Reminders dialog
-       [reminders/dialog]
+         [reminders/dialog]
 
        ;; AI assistant launcher + panel (privilege-gated inside)
-       [assistant/view]
+         [assistant/view]
 
        ;; Global UI-blocking confirmation dialog
-       (when confirmation
-         [dialogs/confirmation-dialog confirmation])
+         (when confirmation
+           [dialogs/confirmation-dialog confirmation])
 
        ;; Global ephmeral notifications
-       (when notification
-         [notifications/notification
-          {:notification notification
-           :on-close     #(==> [::events/set-active-notification nil])}])]]]]]))
+         (when notification
+           [notifications/notification
+            {:notification notification
+             :on-close     #(==> [::events/set-active-notification nil])}])]]]]]))

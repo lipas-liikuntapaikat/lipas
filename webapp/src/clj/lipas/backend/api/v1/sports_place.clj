@@ -1,12 +1,12 @@
 (ns lipas.backend.api.v1.sports-place
   (:require
-   [clojure.set :as set]
-   [clojure.string :as str]
-   [lipas.backend.api.v1.util :refer [parse-path parse-year select-paths]]
-   [lipas.data.admins :as admins]
-   [lipas.data.owners :as owners]
-   [lipas.data.types :as types]
-   [lipas.utils :as utils]))
+    [clojure.set :as set]
+    [clojure.string :as str]
+    [lipas.backend.api.v1.util :refer [parse-path parse-year select-paths]]
+    [lipas.data.admins :as admins]
+    [lipas.data.owners :as owners]
+    [lipas.data.types :as types]
+    [lipas.utils :as utils]))
 
 ;; Surface materials mapping (moved from sports-place.clj)
 (def surface-materials
@@ -33,10 +33,10 @@
    "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
 
 (def df-in (java.time.format.DateTimeFormatter/ofPattern
-            "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
+             "yyyy-MM-dd HH:mm:ss[.SSS][.SS][.S]"))
 
 (def df-out (java.time.format.DateTimeFormatter/ofPattern
-             "yyyy-MM-dd HH:mm:ss.SSS"))
+              "yyyy-MM-dd HH:mm:ss.SSS"))
 
 (defn parse-date
   "Parses a date string using the defined input formatter."
@@ -111,7 +111,7 @@
    :marketingName (:marketingName sports-place)
    :type {:typeCode (-> sports-place :type :typeCode)
           :name (-> (types/all
-                     (-> sports-place :type :typeCode))
+                      (-> sports-place :type :typeCode))
                     :name)}
    :schoolUse (:schoolUse sports-place)
    :freeUse (:freeUse sports-place)
@@ -395,29 +395,6 @@
 
 (def prop-mappings-reverse (set/map-invert prop-mappings))
 
-(def surface-materials
-  {"gravel" "Sora",
-   "fiberglass" "Lasikuitu",
-   "brick-crush" "Tiilimurska",
-   "water" "Vesi",
-   "concrete" "Betoni",
-   "textile" "Tekstiili",
-   "asphalt" "Asfaltti",
-   "ceramic" "Keraaminen",
-   "rock-dust" "Kivituhka",
-   "deinked-pulp" "Siistausmassa",
-   "stone" "Kivi",
-   "metal" "Metalli",
-   "soil" "Maa",
-   "woodchips" "Hake",
-   "grass" "Nurmi",
-   "synthetic" "Muovi / synteettinen",
-   "sand" "Hiekka",
-   "artificial-turf" "Tekonurmi",
-   "wood" "Puu",
-   "sawdust" "Sahanpuru",
-   "sand-infilled-artificial-turf" "Hiekkatekonurmi"})
-
 (defn- strip-z-coordinate
   "Strips Z-coordinate from coordinates, keeping only [lon lat].
   Works recursively for nested coordinate arrays (LineString, Polygon)."
@@ -440,32 +417,32 @@
 
 (defn- add-point-props [fs]
   (utils/mapv-indexed
-   (fn [idx f]
-     (-> f
-         (update :geometry strip-z-from-geometry)
-         (assoc :properties {:pointId 0}))) fs))
+    (fn [_idx f]
+      (-> f
+          (update :geometry strip-z-from-geometry)
+          (assoc :properties {:pointId 0}))) fs))
 
 (defn- add-route-props [fs]
   (utils/mapv-indexed
-   (fn [idx f]
-     (-> f
-         (update :geometry strip-z-from-geometry)
-         (assoc :properties {:routeCollectionId 0
-                             :routeCollectionName "routeColl_1"
-                             :routeId 0
-                             :routeName "route_1"
-                             :routeSegmentId 0
-                             :routeSegmentName (str "segment_" idx)}))) fs))
+    (fn [idx f]
+      (-> f
+          (update :geometry strip-z-from-geometry)
+          (assoc :properties {:routeCollectionId 0
+                              :routeCollectionName "routeColl_1"
+                              :routeId 0
+                              :routeName "route_1"
+                              :routeSegmentId 0
+                              :routeSegmentName (str "segment_" idx)}))) fs))
 
 (defn- add-area-props [fs]
   (utils/mapv-indexed
-   (fn [idx f]
-     (-> f
-         (update :geometry strip-z-from-geometry)
-         (assoc :properties {:areaId 0
-                             :areaName "area_1"
-                             :areaSegmentId 0
-                             :areaSegmentName (str "segment_" idx)}))) fs))
+    (fn [idx f]
+      (-> f
+          (update :geometry strip-z-from-geometry)
+          (assoc :properties {:areaId 0
+                              :areaName "area_1"
+                              :areaSegmentId 0
+                              :areaSegmentName (str "segment_" idx)}))) fs))
 
 (defn adapt-geoms [s]
   (let [geom-type (-> s :type :type-code types/all :geometry-type)
@@ -484,17 +461,17 @@
   (let [ice-props (->> (:rinks m)
                        (take 3)
                        (map-indexed
-                        (fn [idx rink]
-                          (let [n (inc idx)
-                                length (:length-m rink)
-                                width (:width-m rink)]
-                            {(keyword (str "field-" n "-length-m")) length
-                             (keyword (str "field-" n "-width-m")) width
-                             (keyword (str "field-" n "-area-m2")) (when (and length width)
-                                                                     (* length width))})))
+                         (fn [idx rink]
+                           (let [n (inc idx)
+                                 length (:length-m rink)
+                                 width (:width-m rink)]
+                             {(keyword (str "field-" n "-length-m")) length
+                              (keyword (str "field-" n "-width-m")) width
+                              (keyword (str "field-" n "-area-m2")) (when (and length width)
+                                                                      (* length width))})))
                        (apply merge)
                        (merge
-                        {:ice-rinks-count (-> m :rinks count)}))]
+                         {:ice-rinks-count (-> m :rinks count)}))]
     (update m :properties merge ice-props)))
 
 (defn add-swimming-pool-props
@@ -505,20 +482,20 @@
                         (sort-by :length-m utils/reverse-cmp)
                         (take 5)
                         (map-indexed
-                         (fn [idx pool]
-                           (let [n (inc idx)
+                          (fn [idx pool]
+                            (let [n (inc idx)
                                  ;; There's a typo in old-lipas pool 1 length prop and
                                  ;; we 'fix' it here. Seriously.
-                                 length-key (str "-length-m" (when (= 1 n) "-m"))]
-                             {(keyword (str "pool-" n length-key)) (:length-m pool)
-                              (keyword (str "pool-" n "-width-m")) (:width-m pool)
-                              (keyword (str "pool-" n "-temperature-c")) (:temperature-c pool)
-                              (keyword (str "pool-" n "-max-depth-m")) (:max-depth-m pool)
-                              (keyword (str "pool-" n "-min-depth-m")) (:min-depth-m pool)})))
+                                  length-key (str "-length-m" (when (= 1 n) "-m"))]
+                              {(keyword (str "pool-" n length-key)) (:length-m pool)
+                               (keyword (str "pool-" n "-width-m")) (:width-m pool)
+                               (keyword (str "pool-" n "-temperature-c")) (:temperature-c pool)
+                               (keyword (str "pool-" n "-max-depth-m")) (:max-depth-m pool)
+                               (keyword (str "pool-" n "-min-depth-m")) (:min-depth-m pool)})))
                         (apply merge)
                         (merge
-                         {:water-slides-count (-> m :slides count)
-                          :waterslides-total-length-m (->> (:slides m)
-                                                           (map :length-m)
-                                                           (reduce utils/+safe))}))]
+                          {:water-slides-count (-> m :slides count)
+                           :waterslides-total-length-m (->> (:slides m)
+                                                            (map :length-m)
+                                                            (reduce utils/+safe))}))]
     (update m :properties merge pool-props)))

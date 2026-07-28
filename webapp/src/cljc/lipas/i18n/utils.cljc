@@ -1,8 +1,8 @@
 (ns lipas.i18n.utils
   (:require
-   #?(:clj [clojure.java.io :as io])
-   [clojure.edn :as edn]
-   [clojure.string :as str]))
+    #?(:clj [clojure.edn :as edn])
+    #?(:clj [clojure.java.io :as io])
+    [clojure.string :as str]))
 
 (def top-level-keys
   [:accessibility
@@ -113,19 +113,19 @@
      (let [cljs? (some? (:ns &env))
            translations-map
            (reduce
-            (fn [m kw]
-              (let [safe-name (safe-filename (name kw))
-                    path (str "lipas/i18n/" lang "/" safe-name ".edn")
-                    resource (io/resource path)]
-                (if resource
-                  (let [content (edn/read-string
-                                 (if cljs?
-                                   (@slurp-resource! &env path)
-                                   (slurp resource)))]
-                    (assoc m kw content))
-                  (do
-                    (println "WARNING: Missing translation file:" path)
-                    m))))
-            {}
-            top-level-keys)]
+             (fn [m kw]
+               (let [safe-name (safe-filename (name kw))
+                     path (str "lipas/i18n/" lang "/" safe-name ".edn")
+                     resource (io/resource path)]
+                 (if resource
+                   (let [content (edn/read-string
+                                   (if cljs?
+                                     (@slurp-resource! &env path)
+                                     (slurp resource)))]
+                     (assoc m kw content))
+                   (do
+                     (println "WARNING: Missing translation file:" path)
+                     m))))
+             {}
+             top-level-keys)]
        `(def ~'translations '~translations-map))))

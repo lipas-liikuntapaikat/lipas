@@ -1,50 +1,30 @@
 (ns lipas.ui.admin.views
-  (:require ["@mui/material/Autocomplete" :refer [createFilterOptions]]
-            ["@turf/area$default" :as turf-area]
-            ["@turf/length$default" :as turf-length]
+  (:require ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Card$default" :as Card]
             ["@mui/material/CardContent$default" :as CardContent]
             ["@mui/material/CardHeader$default" :as CardHeader]
             ["@mui/material/Collapse$default" :as Collapse]
-            ["@mui/material/FormGroup$default" :as FormGroup]
-            ["@mui/material/GridLegacy$default" :as Grid]
-            ["@mui/material/Icon$default" :as Icon]
-            ["@mui/material/IconButton$default" :as IconButton]
-            ["@mui/material/List$default" :as List]
-            ["@mui/material/ListItem$default" :as ListItem]
-            ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
-            ["@mui/material/ListItemText$default" :as ListItemText]
-            ["@mui/material/Stack$default" :as Stack]
-            ["@mui/material/Typography$default" :as Typography]
-            ["react" :as react]
-            [clojure.reader :refer [read-string]]
-            [clojure.string :as str]
-            [lipas.data.styles :as styles]
-            [lipas.roles :as roles]
-            [lipas.schema.users :as users-schema]
-            [malli.core :as m]
-            [lipas.ui.admin.events :as events]
-            [lipas.ui.admin.jobs.views :as jobs-views]
-            [lipas.ui.admin.subs :as subs]
-            [lipas.ui.roles.editor :as role-editor]
-            [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.admin.ai-workbench.views :as ai-workbench-views]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.autocompletes :as ac]
-            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Dialog$default" :as Dialog]
             ["@mui/material/DialogContent$default" :as DialogContent]
             ["@mui/material/DialogTitle$default" :as DialogTitle]
             ["@mui/material/Fab$default" :as Fab]
+            ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/Grid$default" :as Grid2]
+            ["@mui/material/GridLegacy$default" :as Grid]
+            ["@mui/material/Icon$default" :as Icon]
+            ["@mui/material/IconButton$default" :as IconButton]
             ["@mui/material/LinearProgress$default" :as LinearProgress]
+            ;; clj-kondo false positive: `List` collides with the cljs.core/List
+            ;; deftype, so the [:> List ...] hiccup use below isn't recognized
+            ;; as a use of this alias.
+            #_{:clj-kondo/ignore [:unused-namespace]}
+            ["@mui/material/List$default" :as List]
+            ["@mui/material/ListItem$default" :as ListItem]
+            ["@mui/material/ListItemSecondaryAction$default" :as ListItemSecondaryAction]
+            ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Paper$default" :as Paper]
+            ["@mui/material/Stack$default" :as Stack]
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Table$default" :as Table]
             ["@mui/material/TableBody$default" :as TableBody]
@@ -53,13 +33,33 @@
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Toolbar$default" :as Toolbar]
+            ["@mui/material/Typography$default" :as Typography]
+            ["@turf/area$default" :as turf-area]
+            ["@turf/length$default" :as turf-length]
+            [clojure.reader :refer [read-string]]
+            [lipas.data.styles :as styles]
+            [lipas.roles :as roles]
+            [lipas.schema.users :as users-schema]
+            [lipas.ui.admin.ai-workbench.views :as ai-workbench-views]
+            [lipas.ui.admin.events :as events]
+            [lipas.ui.admin.jobs.views :as jobs-views]
+            [lipas.ui.admin.subs :as subs]
+            [lipas.ui.components.autocompletes :as ac]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.tables :as tables]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.mui :as mui]
+            [lipas.ui.roles.editor :as role-editor]
             [lipas.ui.subs :as ui-subs]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]
             [reagent.core :as r]
-            [reagent.hooks :as hooks]
             [reitit.frontend.easy :as rfe]))
 
 (defn magic-link-dialog [{:keys [tr]}]
@@ -570,7 +570,6 @@
         :items users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))
 
-
 (defn format-timestamp [timestamp]
   (when timestamp
     (try
@@ -732,9 +731,9 @@
            (str (if expanded? "▼ " "▶ ") label " {" (count value) "}")]]
          (when expanded?
            (doall
-            (for [[k v] (sort-by (comp str key) value)]
-              ^{:key (str path k)}
-              [tree-value-node (assoc props :path (conj path k) :label (name k) :value v)])))])
+             (for [[k v] (sort-by (comp str key) value)]
+               ^{:key (str path k)}
+               [tree-value-node (assoc props :path (conj path k) :label (name k) :value v)])))])
 
       (and (sequential? value) (seq value))
       (let [expanded? (contains? @expanded* path)
@@ -747,11 +746,11 @@
          (when expanded?
            [:<>
             (doall
-             (map-indexed
-              (fn [i v]
-                ^{:key (str path i)}
-                [tree-value-node (assoc props :path (conj path i) :label (str "#" i) :value v)])
-              shown))
+              (map-indexed
+                (fn [i v]
+                  ^{:key (str path i)}
+                  [tree-value-node (assoc props :path (conj path i) :label (str "#" i) :value v)])
+                shown))
             (when (and (not show-all?) (> (count value) 20))
               [:div {:style {:padding-left (+ indent 16) :cursor "pointer" :color "#757575"}
                      :on-click #(swap! expanded* conj (conj path ::all))}
@@ -772,9 +771,9 @@
   (r/with-let [expanded* (r/atom #{})]
     [:div
      (doall
-      (for [[k v] (sort-by (comp str key) document)]
-        ^{:key (str k)}
-        [tree-value-node {:expanded* expanded* :path [k] :label (name k) :value v}]))]))
+       (for [[k v] (sort-by (comp str key) document)]
+         ^{:key (str k)}
+         [tree-value-node {:expanded* expanded* :path [k] :label (name k) :value v}]))]))
 
 ;; Marker key distinguishing a diff leaf ({::old ::new}) from a branch
 ;; (a plain nested map) once diff-paths' flat list is renested into a tree.
@@ -801,9 +800,9 @@
        [:> Typography {:variant "body2" :style {:font-family "monospace" :font-weight 600}}
         label]
        (doall
-        (for [[k v] (sort-by (comp str key) node)]
-          ^{:key (str label k)}
-          [diff-tree-node (inc depth) (path-key-label k) v]))])))
+         (for [[k v] (sort-by (comp str key) node)]
+           ^{:key (str label k)}
+           [diff-tree-node (inc depth) (path-key-label k) v]))])))
 
 (defn changes-view
   "Same tree shape as doc-tree, but pruned to only the paths that changed
@@ -828,9 +827,9 @@
       (let [tree (build-diff-tree diffs)]
         [:div
          (doall
-          (for [[k v] (sort-by (comp str key) tree)]
-            ^{:key (str k)}
-            [diff-tree-node 0 (path-key-label k) v]))]))))
+           (for [[k v] (sort-by (comp str key) tree)]
+             ^{:key (str k)}
+             [diff-tree-node 0 (path-key-label k) v]))]))))
 
 (defn site-history-search []
   (let [search-id (<== [::subs/site-history-search-id])
@@ -904,11 +903,11 @@
           total (count sorted-raw)
           sorted (->> sorted-raw
                       (map-indexed
-                       (fn [idx revision]
-                         (-> revision
-                             (assoc :index (- total idx))
-                             (assoc :formatted-date (format-timestamp (:event-date revision)))
-                             (assoc :user-display (get-user-display-name users (:author revision))))))
+                        (fn [idx revision]
+                          (-> revision
+                              (assoc :index (- total idx))
+                              (assoc :formatted-date (format-timestamp (:event-date revision)))
+                              (assoc :user-display (get-user-display-name users (:author revision))))))
                       vec)]
       [:<>
        ;; Error display
@@ -938,32 +937,32 @@
               [:> TableCell (tr :lipas.user/user)]]]
             [:> TableBody
              (doall
-              (for [[idx revision] (map-indexed vector sorted)
-                    :let [id (:revision-id revision)
-                          expanded? (get @expanded* id false)
-                          prev (get sorted (inc idx))
-                          mode (get @detail-mode* id :changes)]]
-                ^{:key (str id)}
-                [:<>
-                 [:> TableRow
-                  {:hover true
-                   :style {:cursor "pointer"}
-                   :on-click #(swap! expanded* update id not)}
-                  [:> TableCell {:padding "checkbox"}
-                   [:> IconButton {:size "small"}
-                    [:> Icon (if expanded? "keyboard_arrow_up" "keyboard_arrow_down")]]]
-                  [:> TableCell (:index revision)]
-                  [:> TableCell (:formatted-date revision)]
-                  [:> TableCell (:status revision)]
-                  [:> TableCell (:name revision)]
-                  [:> TableCell (:user-display revision)]]
-                 [:> TableRow
-                  [:> TableCell {:style {:paddingTop 0 :paddingBottom 0} :colSpan detail-columns}
-                   [:> Collapse {:in expanded? :timeout "auto" :unmountOnExit true}
-                    [revision-detail {:revision revision
-                                      :prev prev
-                                      :mode mode
-                                      :on-mode-change #(swap! detail-mode* assoc id %)}]]]]]))]]]])
+               (for [[idx revision] (map-indexed vector sorted)
+                     :let [id (:revision-id revision)
+                           expanded? (get @expanded* id false)
+                           prev (get sorted (inc idx))
+                           mode (get @detail-mode* id :changes)]]
+                 ^{:key (str id)}
+                 [:<>
+                  [:> TableRow
+                   {:hover true
+                    :style {:cursor "pointer"}
+                    :on-click #(swap! expanded* update id not)}
+                   [:> TableCell {:padding "checkbox"}
+                    [:> IconButton {:size "small"}
+                     [:> Icon (if expanded? "keyboard_arrow_up" "keyboard_arrow_down")]]]
+                   [:> TableCell (:index revision)]
+                   [:> TableCell (:formatted-date revision)]
+                   [:> TableCell (:status revision)]
+                   [:> TableCell (:name revision)]
+                   [:> TableCell (:user-display revision)]]
+                  [:> TableRow
+                   [:> TableCell {:style {:paddingTop 0 :paddingBottom 0} :colSpan detail-columns}
+                    [:> Collapse {:in expanded? :timeout "auto" :unmountOnExit true}
+                     [revision-detail {:revision revision
+                                       :prev prev
+                                       :mode mode
+                                       :on-mode-change #(swap! detail-mode* assoc id %)}]]]]]))]]]])
 
        ;; No results message
        (when (and results (empty? results))

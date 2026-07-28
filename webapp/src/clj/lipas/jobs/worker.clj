@@ -15,13 +15,13 @@
   affect zero rows. Zombies are counted in worker-stats and logged loudly;
   handlers must set socket timeouts so they cannot hang forever."
   (:require
-   [clojure.set :as set]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.dispatcher :as dispatcher]
-   [lipas.jobs.registry :as registry]
-   [taoensso.timbre :as log])
+    [clojure.set :as set]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.dispatcher :as dispatcher]
+    [lipas.jobs.registry :as registry]
+    [taoensso.timbre :as log])
   (:import
-   [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor TimeUnit]))
+    [java.util.concurrent Executors ScheduledExecutorService ThreadPoolExecutor TimeUnit]))
 
 (defonce worker-state (atom {:running? false
                              :pools nil
@@ -292,11 +292,11 @@
   (let [state @worker-state
         pools (:pools state)]
     (merge
-     {:running? (:running? state)
-      :active-futures (count (:futures state))
-      :zombie-count (:zombie-count state 0)}
-     (when pools
-       {:fast-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:fast-pool pools))
-        :fast-active (.getActiveCount ^ThreadPoolExecutor (:fast-pool pools))
-        :general-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:general-pool pools))
-        :general-active (.getActiveCount ^ThreadPoolExecutor (:general-pool pools))}))))
+      {:running? (:running? state)
+       :active-futures (count (:futures state))
+       :zombie-count (:zombie-count state 0)}
+      (when pools
+        {:fast-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:fast-pool pools))
+         :fast-active (.getActiveCount ^ThreadPoolExecutor (:fast-pool pools))
+         :general-pool-size (.getCorePoolSize ^ThreadPoolExecutor (:general-pool pools))
+         :general-active (.getActiveCount ^ThreadPoolExecutor (:general-pool pools))}))))

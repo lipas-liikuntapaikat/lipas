@@ -73,6 +73,40 @@ env:
   ENVIRONMENT: ${{ vars.ENVIRONMENT }}
 
 jobs:
+  # Format and lint. Needs no services, no JVM and no dependency download:
+  # clj-kondo, cljfmt and bb are all GraalVM binaries, and the per-library
+  # clj-kondo configs under webapp/.clj-kondo/<lib>/ are committed. Verified
+  # that a cold clone with no .clj-kondo/.cache reports exactly the same
+  # result as a warm local checkout, so `bb init-lint` is not needed here.
+  #
+  # Versions are pinned so CI and developer machines cannot disagree about
+  # what "formatted" means. Bump them together with the local toolchain.
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: webapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@12.5
+        with:
+          bb: 1.12.217
+          clj-kondo: 2026.07.24
+          cljfmt: 0.16.5
+
+      # Formatting must match webapp/.cljfmt.edn exactly.
+      - name: Check formatting
+        run: bb fmt-check
+
+      # Warnings fail too. The repository is at zero clj-kondo warnings and the
+      # point of this gate is to keep it there — a warning ratchet against the
+      # merge base was needed only while ~480 legacy warnings still existed.
+      - name: Lint
+        run: bb lint-strict
+
   # Backend tests need postgres + elasticsearch, so they run via
   # docker compose like before.
   backend-tests:

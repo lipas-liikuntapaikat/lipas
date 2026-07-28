@@ -9,5 +9,5 @@
     :view   views/main
     :controllers
     [{:stop
-      (fn [& params]
+      (fn [& _params]
         (==> [:lipas.ui.register.events/reset-form]))}]}])

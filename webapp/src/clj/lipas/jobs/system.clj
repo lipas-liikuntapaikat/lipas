@@ -4,11 +4,11 @@
   Reuses existing system components (db, search, emailer) from the main
   webapp system and adds the worker and scheduler."
   (:require
-   [integrant.core :as ig]
-   [lipas.backend.config :as config]
-   [lipas.jobs.scheduler :as scheduler]
-   [lipas.jobs.worker :as worker]
-   [taoensso.timbre :as log]))
+    [integrant.core :as ig]
+    [lipas.backend.config :as config]
+    [lipas.jobs.scheduler :as scheduler]
+    [lipas.jobs.worker :as worker]
+    [taoensso.timbre :as log]))
 
 (defmethod ig/init-key :lipas.jobs/scheduler
   [_ {:keys [db]}]
@@ -24,8 +24,8 @@
   [_ {:keys [db search emailer config]}]
   (log/info "Starting unified job worker")
   (worker/start-mixed-duration-worker!
-   {:db db :search search :emailer emailer}
-   config))
+    {:db db :search search :emailer emailer}
+    config))
 
 (defmethod ig/halt-key! :lipas.jobs/worker
   [_ _]
@@ -56,17 +56,17 @@
 (def worker-system-config
   (merge
    ;; Reuse existing system components
-   (select-keys config/system-config
-                [:lipas/db :lipas/search :lipas/emailer])
+    (select-keys config/system-config
+                 [:lipas/db :lipas/search :lipas/emailer])
 
-   {:lipas.jobs/scheduler
-    {:db (ig/ref :lipas/db)}
+    {:lipas.jobs/scheduler
+     {:db (ig/ref :lipas/db)}
 
-    :lipas.jobs/worker
-    {:db (ig/ref :lipas/db)
-     :search (ig/ref :lipas/search)
-     :emailer (ig/ref :lipas/emailer)
-     :config (get-worker-config)}}))
+     :lipas.jobs/worker
+     {:db (ig/ref :lipas/db)
+      :search (ig/ref :lipas/search)
+      :emailer (ig/ref :lipas/emailer)
+      :config (get-worker-config)}}))
 
 (defn start-worker-system!
   "Start the worker system using the main system configuration."

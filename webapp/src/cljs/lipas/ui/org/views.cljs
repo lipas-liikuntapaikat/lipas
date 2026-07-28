@@ -1,6 +1,11 @@
 (ns lipas.ui.org.views
   (:require ["@mui/icons-material/Delete$default" :as DeleteIcon]
             ["@mui/material/Alert$default" :as Alert]
+            ;; clj-kondo false positive: the bare symbol `Box` resolves
+            ;; against a builtin during analysis, so the alias is reported
+            ;; unused even though `[:> Box ...]` is used below. See
+            ;; lipas.ui.assistant.views for the same pattern.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/Box$default" :as Box]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
@@ -47,12 +52,12 @@
             [lipas.ui.bulk-operations.events :as bulk-ops-events]
             [lipas.ui.bulk-operations.subs :as bulk-ops-subs]
             [lipas.ui.bulk-operations.views :as bulk-ops-views]
-            [lipas.ui.roles.editor :as role-editor]
             [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.selects :as selects]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.org.events :as events]
             [lipas.ui.org.subs :as subs]
+            [lipas.ui.roles.editor :as role-editor]
             [lipas.ui.subs :as ui-subs]
             [lipas.utils :as utils]
             [malli.core :as m]

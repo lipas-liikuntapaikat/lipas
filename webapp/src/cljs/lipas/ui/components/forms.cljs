@@ -1,10 +1,10 @@
 (ns lipas.ui.components.forms
-  (:require [lipas.ui.components.text-fields :as text-fields]
-            ["@mui/material/Divider$default" :as Divider]
+  (:require ["@mui/material/Divider$default" :as Divider]
             ["@mui/material/FormControl$default" :as FormControl]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/InputLabel$default" :as InputLabel]
             ["@mui/material/Link$default" :as Link]
+            [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.utils :as utils]))
 
 (defn ->display-tf [{:keys [label value mui-props]} multiline? rows]
@@ -53,8 +53,8 @@
     (cond
       (nil? (first d))  nil
       (= (first d) :<>) (into
-                         [:<>]
-                         (map (partial ->field read-only?) (rest d)))
+                          [:<>]
+                          (map (partial ->field read-only?) (rest d)))
       (vector? d)       d
 
       read-only? (if link?
@@ -64,11 +64,11 @@
 
 (defn form [{:keys [read-only?]} & data]
   (into
-   [:> Grid {:container true :spacing 2}]
-   (for [elem  data
-         :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
-         m     ms
-         :when (some? m)]
-     [:> Grid {:item true :xs 12}
-      [:> FormControl {:full-width true}
-       (->field read-only? m)]])))
+    [:> Grid {:container true :spacing 2}]
+    (for [elem  data
+          :let  [ms (if (= (first elem) :<>) (rest elem) [elem])]
+          m     ms
+          :when (some? m)]
+      [:> Grid {:item true :xs 12}
+       [:> FormControl {:full-width true}
+        (->field read-only? m)]])))

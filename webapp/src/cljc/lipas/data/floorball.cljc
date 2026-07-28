@@ -1,6 +1,6 @@
 (ns lipas.data.floorball
   (:require
-   [lipas.data.materials :as materials]))
+    [lipas.data.materials :as materials]))
 
 (def audit-type "floorball-circumstances-audit")
 

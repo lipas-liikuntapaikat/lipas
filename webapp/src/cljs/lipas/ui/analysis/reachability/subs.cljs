@@ -278,7 +278,7 @@
   :<- [:lipas.ui.sports-sites.subs/active-types]
   :<- [:lipas.ui.subs/locale]
   :<- [::zones]
-  (fn [[data profile metric labels types locale zones] _]
+  (fn [[data profile metric _labels types locale zones] _]
     (->> data
          (map
            (fn [m]
@@ -350,7 +350,7 @@
 
 (rf/reg-sub ::zones-count-max
   :<- [::zones]
-  (fn [zones [_ metric]]
+  (fn [_zones [_ metric]]
     #_(let [range (get-in zones [:ranges metric])]
         (count range))
     (condp = metric

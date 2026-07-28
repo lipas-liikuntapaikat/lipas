@@ -1,19 +1,5 @@
 (ns lipas.ui.loi.views
-  (:require [clojure.string :as str]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.checkboxes :as checkboxes]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.form-table :as form-table]
-            [lipas.ui.components.tables :as tables]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.loi.events :as events]
-            [lipas.ui.loi.subs :as subs]
-            [lipas.ui.map.events :as map-events]
-            [lipas.ui.map.import :as import]
-            ["@mui/material/Button$default" :as Button]
+  (:require ["@mui/material/Button$default" :as Button]
             ["@mui/material/FormLabel$default" :as FormLabel]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -22,6 +8,19 @@
             ["@mui/material/Tab$default" :as Tab]
             ["@mui/material/Tabs$default" :as Tabs]
             ["@mui/material/Typography$default" :as Typography]
+            [clojure.string :as str]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.checkboxes :as checkboxes]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.form-table :as form-table]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.loi.events :as events]
+            [lipas.ui.loi.subs :as subs]
+            [lipas.ui.map.events :as map-events]
+            [lipas.ui.map.import :as import]
             [lipas.ui.utils :refer [<== ==>] :as utils]
             [reagent.core :as r]))
 
@@ -42,7 +41,7 @@
    label])
 
 (defn image-dialog
-  [{:keys [tr locale dialog-state on-save on-close lipas-id helper-text image-props]}]
+  [{:keys [tr locale dialog-state on-save lipas-id helper-text image-props]}]
   [dialogs/dialog
    {:title         (if (-> @dialog-state :data :url)
                      (tr :utp/photo)
@@ -130,7 +129,7 @@
        :variant     "outlined"}]]]])
 
 (defn images
-  [{:keys [value on-change locale label tr read-only? lipas-id helper-text image-props]}]
+  [{:keys [value on-change locale label read-only? lipas-id helper-text image-props]}]
   (r/with-let [state (r/atom (->> value
                                   (map #(assoc % :id (gensym)))
                                   (utils/index-by :id)))

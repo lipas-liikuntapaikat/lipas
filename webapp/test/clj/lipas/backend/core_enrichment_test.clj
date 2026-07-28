@@ -1,7 +1,7 @@
 (ns lipas.backend.core-enrichment-test
   (:require
-   [clojure.test :refer [deftest is testing]]
-   [lipas.backend.core :as core]))
+    [clojure.test :refer [deftest is testing]]
+    [lipas.backend.core :as core]))
 
 (def sample-sports-site-with-activities
   {:lipas-id 123456

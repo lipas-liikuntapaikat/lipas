@@ -1,12 +1,12 @@
 (ns lipas.backend.bulk-operations.core
   "CQRS-style actions for backend operations"
   (:require [clojure.java.jdbc :as jdbc]
-            [lipas.data.bulk-operations :as bulk-fields]
-            [lipas.data.prop-types :as prop-types]
-            [lipas.data.types :as types]
             [lipas.backend.core :as core]
             [lipas.backend.db.db :as db]
             [lipas.backend.search :as search]
+            [lipas.data.bulk-operations :as bulk-fields]
+            [lipas.data.prop-types :as prop-types]
+            [lipas.data.types :as types]
             [lipas.schema.common :as common-schema]
             [lipas.schema.sports-sites :as sites-schema]
             [lipas.schema.sports-sites.location :as location-schema]
@@ -238,11 +238,11 @@
                                  ;; fresh per-revision timestamp — reusing the
                                  ;; stored :event-date would collide with the
                                  ;; previous revision (FE keys history by it)
-                                 :event-date (utils/timestamp)
+                                  :event-date (utils/timestamp)
                                  ;; audit: on whose behalf the bulk op runs.
                                  ;; Stamped by this trusted path AFTER the
                                  ;; whitelist above.
-                                 :acting-org-id org-id)
+                                  :acting-org-id org-id)
                                 ;; let core's carry-forward keep the stored
                                 ;; (freshest) ownership fields authoritative
                                 (dissoc :owner-org-id :edit-grants))]
@@ -254,23 +254,23 @@
       ;; Bulk index to ES outside the transaction (an ES failure must not roll
       ;; back committed DB data; worst case ES lags and is fixed by reindexing)
       ;; using the documents as they were written to the DB.
-      (let [search-index (get-in search [:indices :sports-site :search])
+        (let [search-index (get-in search [:indices :sports-site :search])
             ;; resolved once per batch; keeps :search-meta :owner-org-name
             ;; (F15) present on re-indexed org-owned docs
-            org-names (core/org-names db)
-            enriched-sites (map #(core/enrich % org-names) saved-sites)
-            bulk-data (search/->bulk search-index :lipas-id enriched-sites)]
-        (log/debug "Bulk indexing" (count enriched-sites) "sports sites")
-        (search/bulk-index-sync! (:client search) bulk-data))
+              org-names (core/org-names db)
+              enriched-sites (map #(core/enrich % org-names) saved-sites)
+              bulk-data (search/->bulk search-index :lipas-id enriched-sites)]
+          (log/debug "Bulk indexing" (count enriched-sites) "sports sites")
+          (search/bulk-index-sync! (:client search) bulk-data))
 
       ;; NOTE: Background jobs deliberately not enqueued: current background
       ;; processes are relevant only if geoms change and bulk-ops don't touch
       ;; geoms. TODO: If/when webhooks are enabled again, they need to be
       ;; added here!
 
-      (log/info "Mass update completed"
-                {:updated-count (count saved-sites)
-                 :total-requested (count lipas-ids)})
+        (log/info "Mass update completed"
+                  {:updated-count (count saved-sites)
+                   :total-requested (count lipas-ids)})
 
-      {:updated-sites (mapv :lipas-id saved-sites)
-       :total-updated (count saved-sites)}))))
+        {:updated-sites (mapv :lipas-id saved-sites)
+         :total-updated (count saved-sites)}))))

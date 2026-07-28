@@ -6,12 +6,12 @@
   queue machinery provided no value. Only real work (sending an email)
   becomes a job."
   (:require
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.monitoring :as monitoring]
-   [lipas.reminders :as reminders]
-   [taoensso.timbre :as log])
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.monitoring :as monitoring]
+    [lipas.reminders :as reminders]
+    [taoensso.timbre :as log])
   (:import
-   [java.util.concurrent Executors ScheduledExecutorService TimeUnit]))
+    [java.util.concurrent Executors ScheduledExecutorService TimeUnit]))
 
 (defonce scheduler-state (atom {:running? false
                                 :executor nil

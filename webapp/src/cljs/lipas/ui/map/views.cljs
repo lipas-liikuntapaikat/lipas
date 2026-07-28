@@ -1,35 +1,5 @@
 (ns lipas.ui.map.views
   (:require ["@mui/material/Alert$default" :as Alert]
-            ["@mui/material/MenuItem$default" :as MenuItem]
-            ["@mui/material/Paper$default" :as Paper]
-            ["@mui/material/TextField$default" :as TextField]
-            ["@mui/material/Typography$default" :as Typography]
-            ["mdi-material-ui/ContentCut$default" :as ContentCut]
-            ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
-            ["mdi-material-ui/Eraser$default" :as Eraser]
-            ["mdi-material-ui/FileUpload$default" :as FileUpload]
-            ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
-            ["react" :as react]
-            [clojure.string :as str]
-            [lipas.data.activities :as activities-data]
-            [lipas.schema.common :as common-schema]
-            [malli.core :as m]
-            [lipas.data.ptv :as ptv-data]
-            [lipas.data.sports-sites :as ss]
-            [lipas.roles :as roles]
-            [lipas.ui.accessibility.views :as accessibility]
-            [lipas.ui.components.autocompletes :as autocompletes]
-            [lipas.ui.components.buttons :as buttons]
-            [lipas.ui.components.dialogs :as dialogs]
-            [lipas.ui.components.layouts :as layouts]
-            [lipas.ui.components.selects :as selects]
-            [lipas.ui.components.text-fields :as text-fields]
-            [lipas.ui.components.misc :as misc]
-            [lipas.ui.loi.views :as loi]
-            [lipas.ui.map.events :as events]
-            [lipas.ui.map.import :as import]
-            [lipas.ui.map.map :as ol-map]
-            [lipas.ui.map.subs :as subs]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
             ["@mui/material/Drawer$default" :as Drawer]
@@ -38,12 +8,17 @@
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
             ["@mui/material/IconButton$default" :as IconButton]
+            ;; clj-kondo false-positive: it resolves the bare symbol `List`
+            ;; to cljs.core/List (a real internal deftype) instead of this
+            ;; import, so it doesn't see `[:> List]` below (line ~117) as usage.
+            #_{:clj-kondo/ignore [:unused-namespace]}
             ["@mui/material/List$default" :as List]
-            ["@mui/material/ListItem$default" :as ListItem]
             ["@mui/material/ListItemButton$default" :as ListItemButton]
             ["@mui/material/ListItemIcon$default" :as ListItemIcon]
             ["@mui/material/ListItemText$default" :as ListItemText]
             ["@mui/material/Menu$default" :as Menu]
+            ["@mui/material/MenuItem$default" :as MenuItem]
+            ["@mui/material/Paper$default" :as Paper]
             ["@mui/material/Popper$default" :as Popper]
             ["@mui/material/Slide$default" :as Slide]
             ["@mui/material/Slider$default" :as Slider]
@@ -59,12 +34,39 @@
             ["@mui/material/TableHead$default" :as TableHead]
             ["@mui/material/TableRow$default" :as TableRow]
             ["@mui/material/Tabs$default" :as Tabs]
+            ["@mui/material/TextField$default" :as TextField]
             ["@mui/material/Toolbar$default" :as Toolbar]
             ["@mui/material/Tooltip$default" :as Tooltip]
+            ["@mui/material/Typography$default" :as Typography]
+            ["mdi-material-ui/ContentCut$default" :as ContentCut]
+            ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
+            ["mdi-material-ui/Eraser$default" :as Eraser]
+            ["mdi-material-ui/FileUpload$default" :as FileUpload]
+            ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
+            ["react" :as react]
+            [clojure.string :as str]
+            [lipas.data.activities :as activities-data]
+            [lipas.data.ptv :as ptv-data]
+            [lipas.data.sports-sites :as ss]
+            [lipas.roles :as roles]
+            [lipas.schema.common :as common-schema]
+            [lipas.ui.accessibility.views :as accessibility]
             [lipas.ui.assistant.views :as assistant-views]
+            [lipas.ui.components.autocompletes :as autocompletes]
+            [lipas.ui.components.buttons :as buttons]
+            [lipas.ui.components.dialogs :as dialogs]
+            [lipas.ui.components.layouts :as layouts]
+            [lipas.ui.components.misc :as misc]
+            [lipas.ui.components.selects :as selects]
+            [lipas.ui.components.text-fields :as text-fields]
+            [lipas.ui.lazy :as lazy]
+            [lipas.ui.loi.views :as loi]
+            [lipas.ui.map.events :as events]
+            [lipas.ui.map.import :as import]
+            [lipas.ui.map.map :as ol-map]
+            [lipas.ui.map.subs :as subs]
             [lipas.ui.mui :as mui]
             [lipas.ui.navbar :as nav]
-            [lipas.ui.lazy :as lazy]
             [lipas.ui.reminders.views :as reminders]
             [lipas.ui.reports.views :as reports]
             [lipas.ui.search.views :as search]
@@ -75,6 +77,7 @@
             [lipas.ui.sports-sites.views :as sports-sites]
             [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :refer [<== ==>] :as utils]
+            [malli.core :as m]
             [re-frame.core :as rf]
             [reagent.core :as r]
             [reagent.hooks :as hooks]))
@@ -958,7 +961,7 @@
         {:keys [types admins owners editing? edits-valid?
                 problems? editing-allowed? delete-dialog-open?
                 can-publish? logged-in? size-categories sub-mode
-                geom-type portal save-in-progress? undo redo
+                geom-type save-in-progress? undo redo
                 more-tools-menu-anchor dead? selected-tab]}
         (<== [::subs/sports-site-view lipas-id type-code])
 
@@ -969,9 +972,6 @@
                          (:sync-enabled (:ptv display-data)))
                        (<== [:lipas.ui.user.subs/check-privilege {:city-code ::roles/any} :ptv/manage]))
 
-        ;; Allow map tools to be used with either regular or activity privileges
-        can-use-map-tools? (or can-publish?
-                               edit-activities?)
         can-edit-map? can-publish?
 
         map-tool-items (when (and editing? (#{"LineString" "Polygon"} geom-type))
@@ -1963,7 +1963,7 @@
               [:> MapSearchOutline]]]]]]]]])))
 
 (defn default-tools
-  [{:keys [tr logged-in?]}]
+  [{:keys [tr]}]
   (let [result-view (<== [:lipas.ui.search.subs/search-results-view])
         mode-name (<== [::subs/mode-name])
         show-create-button? (<== [::subs/show-create-button?])

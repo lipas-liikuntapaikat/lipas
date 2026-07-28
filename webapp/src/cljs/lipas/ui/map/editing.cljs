@@ -10,8 +10,7 @@
             [lipas.ui.map.styles :as styles]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.utils :refer [==>] :as utils]
-            [re-frame.core :as rf]
-            [re-frame.db :as db]))
+            [re-frame.core :as rf]))
 
 (defn clear-edits!
   [{:keys [layers] :as map-ctx}]
@@ -93,8 +92,8 @@
         (assoc-in [:interactions :split] split))))
 
 (defn enable-highlighting!
-  [{:keys [lmap layers] :as map-ctx}
-   {:keys [selected-features] :as mode}]
+  [{:keys [layers] :as map-ctx}
+   {:keys [selected-features]}]
   (let [^js edits-layer (-> layers :overlays :edits)
         edits-source (.getSource edits-layer)
         ^js highlights-layer (-> layers :overlays :highlights)
@@ -226,7 +225,7 @@
 
 (defn simplify-edits!
   [{:keys [layers] :as map-ctx}
-   {:keys [lipas-id geoms simplify]}]
+   {:keys [geoms simplify]}]
   (let [^js layer (-> layers :overlays :edits)
         source (.getSource layer)
         tolerance (map-utils/simplify-scale (:tolerance simplify))
@@ -455,10 +454,11 @@
                      map-utils/enable-marker-hover!)
          on-modifyend (fn [f]
                         (==> [::events/update-geometries lipas-id f])
-                        (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
-                          ;; Switch back to editing normal :editing mode
-                          ;;(==> [::events/continue-editing lipas-id :editing geom-type])
-                          ))]
+                        ;; Switching back to normal :editing mode here was
+                        ;; disabled; kept as a note in case it's revisited:
+                        ;; (when (#{:drawing :drawing-hole :deleting :splitting} sub-mode)
+                        ;;   (==> [::events/continue-editing lipas-id :editing geom-type]))
+                        )]
      (case sub-mode
        :view-only (set-view-only-edit-mode! map-ctx mode)
        :drawing (start-drawing! map-ctx geom-type on-modifyend)

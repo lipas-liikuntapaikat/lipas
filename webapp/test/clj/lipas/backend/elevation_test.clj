@@ -7,7 +7,8 @@
   access. The old (pre vertex-driven optimization) implementation is
   copied at the bottom of this namespace and used to assert exact
   old-vs-new equivalence of the produced values."
-  (:require [clojure.string :as str]
+  (:require [clj-http.client :as client]
+            [clojure.string :as str]
             [clojure.test :refer [deftest testing is]]
             [lipas.backend.elevation :as elevation]
             [lipas.backend.gis :as gis]
@@ -74,17 +75,17 @@
   (testing "Rounds to even coordinates (2m cell alignment)"
     (is (= {:min-x 400000 :min-y 6900000 :max-x 400010 :max-y 6900012}
            (elevation/fit-to-coverage
-            {:min-x 400001.4 :min-y 6900000.6 :max-x 400010.5 :max-y 6900011.9}))))
+             {:min-x 400001.4 :min-y 6900000.6 :max-x 400010.5 :max-y 6900011.9}))))
 
   (testing "Even values pass through"
     (is (= {:min-x 400002 :min-y 6900004 :max-x 400006 :max-y 6900008}
            (elevation/fit-to-coverage
-            {:min-x 400002.0 :min-y 6900004.0 :max-x 400006.0 :max-y 6900008.0}))))
+             {:min-x 400002.0 :min-y 6900004.0 :max-x 400006.0 :max-y 6900008.0}))))
 
   (testing "Clamps to the coverage envelope"
     (let [{:keys [envelope]} elevation/coverage-info
           fitted (elevation/fit-to-coverage
-                  {:min-x 0.0 :min-y 0.0 :max-x 99999999.0 :max-y 99999999.0})]
+                   {:min-x 0.0 :min-y 0.0 :max-x 99999999.0 :max-y 99999999.0})]
       (is (= {:min-x (:min-x envelope) :min-y (:min-y envelope)
               :max-x (:max-x envelope) :max-y (:max-y envelope)}
              fitted)))))
@@ -114,13 +115,13 @@
 
   (testing "Data is fully realized vectors for O(1) lookups"
     (let [parsed (elevation/parse-ascii-grid
-                  "NCOLS 2\r\nNROWS 1\r\nXLLCORNER 0\r\nYLLCORNER 0\r\nCELLSIZE 2.0\r\n1.0 2.0\n")]
+                   "NCOLS 2\r\nNROWS 1\r\nXLLCORNER 0\r\nYLLCORNER 0\r\nCELLSIZE 2.0\r\n1.0 2.0\n")]
       (is (vector? (:data parsed)))
       (is (every? vector? (:data parsed)))))
 
   (testing "Trailing empty lines are skipped"
     (let [parsed (elevation/parse-ascii-grid
-                  "NCOLS 1\r\nNROWS 1\r\nXLLCORNER 0\r\nYLLCORNER 0\r\nCELLSIZE 2.0\r\n1.0\n\n")]
+                   "NCOLS 1\r\nNROWS 1\r\nXLLCORNER 0\r\nYLLCORNER 0\r\nCELLSIZE 2.0\r\n1.0\n\n")]
       (is (= [[1.0]] (:data parsed))))))
 
 (deftest validate-grid-test
@@ -132,12 +133,12 @@
     (testing "Missing rows (truncated response) throw"
       (is (thrown-with-msg? ExceptionInfo #"MML grid dimensions"
                             (elevation/validate-grid
-                             (update grid :data pop) env))))
+                              (update grid :data pop) env))))
 
     (testing "A short row (truncated mid-row) throws"
       (is (thrown-with-msg? ExceptionInfo #"MML grid dimensions"
                             (elevation/validate-grid
-                             (update-in grid [:data 1] pop) env))))))
+                              (update-in grid [:data 1] pop) env))))))
 
 (deftest chunk-key-test
   (testing "Chunk keys are quotients of the fixed 250m grid"
@@ -156,7 +157,7 @@
                [434355.5312 6943966.5048] [44000.01 6594000.01]]]
       (let [[x y] p
             {:keys [min-x max-x min-y max-y]} (elevation/chunk-key->envelope
-                                               (elevation/chunk-key p))]
+                                                (elevation/chunk-key p))]
         (is (and (>= x min-x) (< x max-x) (>= y min-y) (< y max-y))))))
 
   (testing "A point exactly on the coverage max edge maps to the last chunk inside"
@@ -234,46 +235,46 @@
   (testing "Point"
     (is (= [[25.7 62.6]]
            (elevation/geometry-vertices
-            {:type "FeatureCollection"
-             :features [{:type "Feature"
-                         :geometry {:type "Point" :coordinates [25.7 62.6]}}]}))))
+             {:type "FeatureCollection"
+              :features [{:type "Feature"
+                          :geometry {:type "Point" :coordinates [25.7 62.6]}}]}))))
 
   (testing "LineString"
     (is (= [[25.7 62.6] [25.8 62.7]]
            (elevation/geometry-vertices
-            {:type "FeatureCollection"
-             :features [{:type "Feature"
-                         :geometry {:type "LineString"
-                                    :coordinates [[25.7 62.6] [25.8 62.7]]}}]}))))
+             {:type "FeatureCollection"
+              :features [{:type "Feature"
+                          :geometry {:type "LineString"
+                                     :coordinates [[25.7 62.6] [25.8 62.7]]}}]}))))
 
   (testing "Polygon with a hole includes every ring's vertices"
     (is (= [[25.0 62.0] [25.1 62.0] [25.1 62.1] [25.0 62.0]
             [25.04 62.04] [25.06 62.04] [25.06 62.06] [25.04 62.04]]
            (elevation/geometry-vertices
-            {:type "FeatureCollection"
-             :features [{:type "Feature"
-                         :geometry {:type "Polygon"
-                                    :coordinates
-                                    [[[25.0 62.0] [25.1 62.0] [25.1 62.1] [25.0 62.0]]
-                                     [[25.04 62.04] [25.06 62.04] [25.06 62.06] [25.04 62.04]]]}}]}))))
+             {:type "FeatureCollection"
+              :features [{:type "Feature"
+                          :geometry {:type "Polygon"
+                                     :coordinates
+                                     [[[25.0 62.0] [25.1 62.0] [25.1 62.1] [25.0 62.0]]
+                                      [[25.04 62.04] [25.06 62.04] [25.06 62.06] [25.04 62.04]]]}}]}))))
 
   (testing "Multiple features concatenate in order"
     (is (= [[25.7 62.6] [25.8 62.7] [25.9 62.8]]
            (elevation/geometry-vertices
-            {:type "FeatureCollection"
-             :features [{:type "Feature"
-                         :geometry {:type "LineString"
-                                    :coordinates [[25.7 62.6] [25.8 62.7]]}}
-                        {:type "Feature"
-                         :geometry {:type "Point" :coordinates [25.9 62.8]}}]}))))
+             {:type "FeatureCollection"
+              :features [{:type "Feature"
+                          :geometry {:type "LineString"
+                                     :coordinates [[25.7 62.6] [25.8 62.7]]}}
+                         {:type "Feature"
+                          :geometry {:type "Point" :coordinates [25.9 62.8]}}]}))))
 
   (testing "Unexpected geometry type throws"
     (is (thrown? ExceptionInfo
                  (elevation/geometry-vertices
-                  {:type "FeatureCollection"
-                   :features [{:type "Feature"
-                               :geometry {:type "MultiPoint"
-                                          :coordinates [[25.7 62.6]]}}]}))))
+                   {:type "FeatureCollection"
+                    :features [{:type "Feature"
+                                :geometry {:type "MultiPoint"
+                                           :coordinates [[25.7 62.6]]}}]}))))
 
   (testing "reduce-vertices and map-vertices visit vertices in the same order"
     ;; append-elevations consumes the CRS-transformed vertex list by
@@ -299,7 +300,7 @@
   ;; Reference case from the original implementation's comment block:
   ;; test-point resolves to 152.34 from this 2x2 grid.
   (let [test-point (gis/wgs84->tm35fin-no-wrap
-                    [25.720539797408946 62.62057217751676]) ;; ~[434355.53 6943966.50]
+                     [25.720539797408946 62.62057217751676]) ;; ~[434355.53 6943966.50]
         k          (elevation/chunk-key test-point)
         grid       {:headers {:ncols 2 :nrows 2 :xllcorner 434352.0
                               :yllcorner 6943964.0 :cellsize 2.0}
@@ -338,9 +339,9 @@
 
     (testing "NODATA value passes through unchanged"
       (let [nodata {k (elevation/index-grid
-                       {:headers {:ncols 2 :nrows 2 :xllcorner 434352.0
-                                  :yllcorner 6943964.0 :cellsize 2.0}
-                        :data [[-9999.0 -9999.0] [-9999.0 -9999.0]]})}]
+                        {:headers {:ncols 2 :nrows 2 :xllcorner 434352.0
+                                   :yllcorner 6943964.0 :cellsize 2.0}
+                         :data [[-9999.0 -9999.0] [-9999.0 -9999.0]]})}]
         (is (= -9999.0 (elevation/resolve-elevation nodata test-point)))))
 
     (testing "Vertex without a covering grid throws a descriptive error"
@@ -459,26 +460,26 @@
 
 (deftest get-elevation-coverage-error-handling-test
   (testing "HTTP 4xx/5xx throws with response context"
-    (with-redefs [clj-http.client/get (fn [_url _opts] {:status 503 :body "unavailable"})]
+    (with-redefs [client/get (fn [_url _opts] {:status 503 :body "unavailable"})]
       (is (thrown-with-msg? ExceptionInfo #"MML API error"
                             (elevation/get-elevation-coverage
-                             {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
+                              {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
 
   (testing "Unexpected status throws"
-    (with-redefs [clj-http.client/get (fn [_url _opts] {:status 302})]
+    (with-redefs [client/get (fn [_url _opts] {:status 302})]
       (is (thrown-with-msg? ExceptionInfo #"Unexpected MML API response"
                             (elevation/get-elevation-coverage
-                             {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
+                              {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})))))
 
   (testing "Socket timeouts are rethrown without an InterruptedIOException in the cause chain"
     ;; SocketTimeoutException extends InterruptedIOException, which the
     ;; circuit breaker's interrupt classifier rethrows WITHOUT counting;
     ;; MML slowness must count as a service failure
-    (with-redefs [clj-http.client/get
+    (with-redefs [client/get
                   (fn [_url _opts] (throw (java.net.SocketTimeoutException. "Read timed out")))]
       (let [ex (try
                  (elevation/get-elevation-coverage
-                  {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})
+                   {:min-x 400000 :max-x 400250 :min-y 6900000 :max-y 6900250})
                  (catch Exception e e))]
         (is (instance? ExceptionInfo ex))
         (is (re-find #"MML request timed out" (ex-message ex)))
@@ -489,13 +490,13 @@
                       :else (recur (ex-cause e)))))))))
 
   (testing "HTTP 200 parses the grid"
-    (with-redefs [clj-http.client/get
+    (with-redefs [client/get
                   (fn [_url _opts]
                     {:status 200
                      :body   (synthetic-grid-body {:min-x 400000 :max-x 400004
                                                    :min-y 6900000 :max-y 6900004})})]
       (let [grid (elevation/get-elevation-coverage
-                  {:min-x 400000 :max-x 400004 :min-y 6900000 :max-y 6900004})]
+                   {:min-x 400000 :max-x 400004 :min-y 6900000 :max-y 6900004})]
         (is (= 2 (-> grid :headers :ncols)))
         (is (= 2 (count (:data grid))))))))
 
@@ -555,23 +556,23 @@
   (let [[lon lat]              (gis/wgs84->tm35fin-no-wrap coords)
         {:keys [headers data]} (->> elevations
                                     (some
-                                     (fn [{:keys [headers] :as elevation}]
-                                       (let [min-x (:xllcorner headers)
-                                             min-y (:yllcorner headers)
-                                             max-x (+ min-x (* (:ncols headers)
-                                                               (:cellsize headers)))
-                                             max-y (+ min-y (* (:nrows headers)
-                                                               (:cellsize headers)))]
-                                         (and (>= max-x lon min-x)
-                                              (>= max-y lat min-y)
-                                              elevation)))))
+                                      (fn [{:keys [headers] :as elevation}]
+                                        (let [min-x (:xllcorner headers)
+                                              min-y (:yllcorner headers)
+                                              max-x (+ min-x (* (:ncols headers)
+                                                                (:cellsize headers)))
+                                              max-y (+ min-y (* (:nrows headers)
+                                                                (:cellsize headers)))]
+                                          (and (>= max-x lon min-x)
+                                               (>= max-y lat min-y)
+                                               elevation)))))
         col (min (long (Math/floor
-                        (/ (- lon (:xllcorner headers))
-                           (:cellsize headers))))
+                         (/ (- lon (:xllcorner headers))
+                            (:cellsize headers))))
                  (dec (:ncols headers)))
         row (min (long (Math/floor
-                        (/ (- lat (:yllcorner headers))
-                           (:cellsize headers))))
+                         (/ (- lat (:yllcorner headers))
+                            (:cellsize headers))))
                  (dec (:nrows headers)))]
     (-> data rseq (nth row) (nth col))))
 
@@ -580,27 +581,27 @@
   (update fcoll :features
           (fn [fs]
             (map
-             (fn [f]
-               (update-in f [:geometry :coordinates]
-                          (fn [coords]
-                            (condp = (-> f :geometry :type)
-                              "Point"      (let [[x y] coords]
-                                             [x y (old-resolve-elevation coords elevations)])
-                              "LineString" (mapv
-                                            (fn [coords]
-                                              (let [[x y] coords]
-                                                [x y (old-resolve-elevation coords elevations)]))
-                                            coords)
-                              "Polygon"    (mapv
-                                            (fn [coords]
-                                              (mapv
-                                               (fn [coords]
-                                                 (let [[x y] coords]
-                                                   [x y (old-resolve-elevation coords elevations)]))
-                                               coords))
-                                            coords)
-                              (throw (ex-info "Encountered unexpected geometry type" f))))))
-             fs))))
+              (fn [f]
+                (update-in f [:geometry :coordinates]
+                           (fn [coords]
+                             (condp = (-> f :geometry :type)
+                               "Point"      (let [[x y] coords]
+                                              [x y (old-resolve-elevation coords elevations)])
+                               "LineString" (mapv
+                                              (fn [coords]
+                                                (let [[x y] coords]
+                                                  [x y (old-resolve-elevation coords elevations)]))
+                                              coords)
+                               "Polygon"    (mapv
+                                              (fn [coords]
+                                                (mapv
+                                                  (fn [coords]
+                                                    (let [[x y] coords]
+                                                      [x y (old-resolve-elevation coords elevations)]))
+                                                  coords))
+                                              coords)
+                               (throw (ex-info "Encountered unexpected geometry type" f))))))
+              fs))))
 
 (defn old-enrich-elevation
   "The implementation before the vertex-driven optimization: corridor
