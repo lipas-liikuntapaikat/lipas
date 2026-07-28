@@ -52,17 +52,33 @@
        distinct
        sort))
 
+(def lint-paths ["src" "test" "dev" "build.clj" "scripts"])
+
 (defn warning-counts
-  "Map of webapp-relative path -> warning count, by linting `files` inside
-   `dir`. Files absent from dir are skipped by clj-kondo, and so are simply
-   missing from the result (treated as count 0 by callers)."
-  [dir files]
-  (let [present (filter (fn [f] (fs/exists? (fs/file dir f))) files)]
+  "Map of webapp-relative path -> clj-kondo warning count for a whole tree.
+   Files with no warnings are simply absent, and callers treat that as 0.
+
+   Two details here are load-bearing, and getting either wrong makes the
+   ratchet report regressions that do not exist:
+
+   - The WHOLE tree is linted, not just the changed files. Several of
+     clj-kondo's checks are cross-namespace (it infers the return type of a
+     function defined elsewhere), and those findings only appear when the
+     defining namespace is analysed in the same run.
+
+   - --cache false. Otherwise a warm .clj-kondo/.cache supplies cross-namespace
+     information on one side while the freshly created base worktree, which has
+     no cache, goes without — so the same code scores differently on each side.
+     That asymmetry produced a phantom `gis_test.clj (0 -> 1)` regression on a
+     whitespace-only commit. Disabling the cache on both sides costs nothing
+     here, because a whole-tree run derives the same information anyway."
+  [dir]
+  (let [present (filter (fn [p] (fs/exists? (fs/file dir p))) lint-paths)]
     (if (empty? present)
       {}
       (let [{:keys [out]} (apply process/shell
                                  {:dir dir :out :string :err :string :continue true}
-                                 "clj-kondo" "--lint" present)]
+                                 "clj-kondo" "--cache" "false" "--lint" present)]
         (->> (str/split-lines out)
              (keep (fn [line]
                      (when-let [[_ path] (re-find (re-pattern "^(.+?):\\d+:\\d+: warning: ") line)]
@@ -95,7 +111,7 @@
       (println (str "Comparing " (count changed) " changed file(s) against "
                     (subs base 0 (min 8 (count base))) " (" base-ref ")"))
 
-      (let [head-counts (warning-counts project-dir changed)
+      (let [head-counts (warning-counts project-dir)
             worktree    (str (fs/create-temp-dir {:prefix "lint-ratchet-"}))
             wt-path     (str worktree "/tree")
             ;; Compute the exit code inside try/finally and exit only after
@@ -112,7 +128,7 @@
                   (do (println "❌ Could not create a worktree for the base revision:")
                       (println err)
                       1)
-                  (let [base-counts (warning-counts (str wt-path "/webapp") changed)
+                  (let [base-counts (warning-counts (str wt-path "/webapp"))
                         regressions (for [f changed
                                           :let [before (get base-counts f 0)
                                                 after  (get head-counts f 0)]
