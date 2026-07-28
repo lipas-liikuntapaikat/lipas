@@ -1,14 +1,14 @@
 (ns lipas.backend.db.utils
   (:require
-   [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
-   [camel-snake-kebab.extras :refer [transform-keys]]
-   [cheshire.core :as j]
-   [clojure.java.jdbc :as jdbc]
-   [next.jdbc.prepare :as prepare]
-   [next.jdbc.result-set :as rs])
+    [camel-snake-kebab.core :refer [->kebab-case ->snake_case]]
+    [camel-snake-kebab.extras :refer [transform-keys]]
+    [cheshire.core :as j]
+    [clojure.java.jdbc :as jdbc]
+    [next.jdbc.prepare :as prepare]
+    [next.jdbc.result-set :as rs])
   (:import
-   (org.postgresql.util PGobject)
-   (java.sql PreparedStatement)))
+    (org.postgresql.util PGobject)
+    (java.sql PreparedStatement)))
 
 (comment (<-json (->json {:kissa "koira"})))
 (def <-json #(j/decode % true))
@@ -59,17 +59,17 @@
 ;; next.jdbc
 
 (extend-protocol prepare/SettableParameter
-    clojure.lang.IPersistentMap
-    (set-parameter [m ^PreparedStatement s i]
-      (.setObject s i (->pgobject m)))
+  clojure.lang.IPersistentMap
+  (set-parameter [m ^PreparedStatement s i]
+    (.setObject s i (->pgobject m)))
 
   clojure.lang.IPersistentVector
   (set-parameter [v ^PreparedStatement s i]
     (.setObject s i (->pgobject v))))
 
 (extend-protocol rs/ReadableColumn
-    org.postgresql.util.PGobject
-    (read-column-by-label [^PGobject v _]
-      (<-pgobject v))
-    (read-column-by-index [^PGobject v _2 _3]
-      (<-pgobject v)))
+  org.postgresql.util.PGobject
+  (read-column-by-label [^PGobject v _]
+    (<-pgobject v))
+  (read-column-by-index [^PGobject v _2 _3]
+    (<-pgobject v)))

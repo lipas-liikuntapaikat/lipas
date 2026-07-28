@@ -29,9 +29,9 @@
         ;; When some profiles time out, others should still return data
         ;; The exact behavior depends on implementation
         (let [result (osrm/get-distances-and-travel-times
-                      {:profiles [:car :bicycle :foot]
-                       :sources ["24.9,60.1"]
-                       :destinations ["24.95,60.15"]})]
+                       {:profiles [:car :bicycle :foot]
+                        :sources ["24.9,60.1"]
+                        :destinations ["24.95,60.15"]})]
           ;; At minimum, the fast profile should succeed
           (is (map? result)))))))
 
@@ -44,9 +44,9 @@
 
       (with-redefs [osrm/get-data mock-get-data]
         (let [result (osrm/get-distances-and-travel-times
-                      {:profiles [:car :bicycle :foot]
-                       :sources ["24.9,60.1"]
-                       :destinations ["24.95,60.15"]})]
+                       {:profiles [:car :bicycle :foot]
+                        :sources ["24.9,60.1"]
+                        :destinations ["24.95,60.15"]})]
           ;; All three profiles should return results
           (is (= #{:car :bicycle :foot} (set (keys result))))
           (is (every? some? (vals result))))))))

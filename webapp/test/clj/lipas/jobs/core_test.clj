@@ -1,10 +1,10 @@
 (ns lipas.jobs.core-test
   "Pure (non-database) tests for the job registry and core helpers."
   (:require
-   [clojure.test :refer [deftest testing is]]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.registry :as registry]
-   [malli.core :as m]))
+    [clojure.test :refer [deftest testing is]]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.registry :as registry]
+    [malli.core :as m]))
 
 (deftest lane-classification-test
   (testing "Job duration classification comes from the registry"

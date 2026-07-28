@@ -44,8 +44,8 @@
                             {:headers            {"x-goog-api-key" api-key
                                                   "Content-Type"   "application/json"}
                              :body               (json/encode
-                                                  {:contents [{:role "user" :parts parts}]
-                                                   :generationConfig gen-config})
+                                                   {:contents [{:role "user" :parts parts}]
+                                                    :generationConfig gen-config})
                              :socket-timeout     600000
                              :connection-timeout 10000})
                  :body
@@ -131,26 +131,26 @@ Fidelity rules — these override everything else:
   (let [paths (translatable-paths page)
         texts (mapv #(get-in page %) paths)
         out   (gemini-generate
-               config
-               [{:text (str "Translate the following LIPAS help-center strings from Finnish to "
-                            (locale->language target-locale)
-                            ". They belong to one help article about maintaining sports-facility "
-                            "data on a map. Rules:\n"
-                            "- Preserve markdown structure exactly (headers, lists, bold, quotes).\n"
-                            "- LIPAS's user interface is fully localized, so translate quoted UI "
-                            "labels naturally into the target language (e.g. \"Lisää kartalle\" → "
-                            (case target-locale :se "\"Lägg till på kartan\"" "\"Add to map\"")
-                            " style), keeping them **bold**/quoted as in the source.\n"
-                            "- Keep LIPAS type codes (e.g. 4402), URLs and file-format names unchanged.\n"
-                            "- Finnish domain terms may be glossed once in parentheses when helpful.\n"
-                            "- Return JSON: {\"translations\": [...]} with exactly "
-                            (count texts) " strings, same order as the input.\n\n"
-                            "Input strings as JSON:\n" (json/encode texts))}]
-               :response-schema {:type "object"
-                                 :properties {:translations {:type "array"
-                                                             :items {:type "string"}}}
-                                 :required ["translations"]}
-               :max-tokens 32768)
+                config
+                [{:text (str "Translate the following LIPAS help-center strings from Finnish to "
+                             (locale->language target-locale)
+                             ". They belong to one help article about maintaining sports-facility "
+                             "data on a map. Rules:\n"
+                             "- Preserve markdown structure exactly (headers, lists, bold, quotes).\n"
+                             "- LIPAS's user interface is fully localized, so translate quoted UI "
+                             "labels naturally into the target language (e.g. \"Lisää kartalle\" → "
+                             (case target-locale :se "\"Lägg till på kartan\"" "\"Add to map\"")
+                             " style), keeping them **bold**/quoted as in the source.\n"
+                             "- Keep LIPAS type codes (e.g. 4402), URLs and file-format names unchanged.\n"
+                             "- Finnish domain terms may be glossed once in parentheses when helpful.\n"
+                             "- Return JSON: {\"translations\": [...]} with exactly "
+                             (count texts) " strings, same order as the input.\n\n"
+                             "Input strings as JSON:\n" (json/encode texts))}]
+                :response-schema {:type "object"
+                                  :properties {:translations {:type "array"
+                                                              :items {:type "string"}}}
+                                  :required ["translations"]}
+                :max-tokens 32768)
         translations (:translations out)]
     (when (not= (count texts) (count translations))
       (throw (ex-info "Translation count mismatch"
@@ -239,7 +239,7 @@ Fidelity rules — these override everything else:
                         (dissoc p :translation-of-slug)))
         pages       (mapv (comp ensure-ids resolve-tr) pages)
         sec-idx     (or (first (keep-indexed
-                                (fn [i s] (when (= (:slug s) section-slug) i)) tree))
+                                 (fn [i s] (when (= (:slug s) section-slug) i)) tree))
                         (count tree))
         section     (or (get tree sec-idx)
                         {:id      (str (random-uuid))
@@ -256,10 +256,10 @@ Fidelity rules — these override everything else:
                                    inc)
                           (count ps)))
         new-pages   (first
-                     (reduce (fn [[ps idx] page]
-                               (upsert-page ps page idx))
-                             [(vec (:pages section)) insert-idx]
-                             pages))
+                      (reduce (fn [[ps idx] page]
+                                (upsert-page ps page idx))
+                              [(vec (:pages section)) insert-idx]
+                              pages))
         tree        (assoc tree sec-idx (assoc section :pages new-pages))
         _           (validate-tree! tree)
         ;; v1 branches also have a save-help-data (different type/arity) —

@@ -160,15 +160,15 @@
         close  #(==> [::toggle-dialog :pool])
         valid? (constantly true)]
     [dialogs/dialog {:title         (if (:id data)
-                                  "Muokkaa"
-                                  "Lisää")
-                 :save-label    (tr :actions/save)
-                 :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::toggle-dialog :pool])
-                 :save-enabled? valid?
-                 :on-save       (comp reset
-                                      close
-                                      #(==> [::save-pool lipas-id data]))}
+                                      "Muokkaa"
+                                      "Lisää")
+                     :save-label    (tr :actions/save)
+                     :cancel-label  (tr :actions/cancel)
+                     :on-close      #(==> [::toggle-dialog :pool])
+                     :save-enabled? valid?
+                     :on-save       (comp reset
+                                          close
+                                          #(==> [::save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -210,8 +210,8 @@
 
 (defn read-only-table [{:keys [tr items]}]
   [tables/table {:headers (make-headers tr)
-              :items   (sort-by :length-m utils/reverse-cmp items)
-              :key-fn  #(gensym)}])
+                 :items   (sort-by :length-m utils/reverse-cmp items)
+                 :key-fn  #(gensym)}])
 
 (defn fields-field
   [{:keys [tr read-only? width] :as props}]

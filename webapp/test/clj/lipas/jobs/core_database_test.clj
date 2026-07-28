@@ -1,10 +1,10 @@
 (ns lipas.jobs.core-database-test
   "Integration tests for core queue operations against a real database."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.jobs.core :as jobs]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.jobs.core :as jobs]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]))
 
 ;; Test system setup using shared fixture
 (defonce test-system (atom nil))

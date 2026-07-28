@@ -81,14 +81,14 @@
   [{:keys [filename media-directory-id media-id]}]
   (let [url  (str api-url "/media/image")
         body (json/encode
-              {:data
-               {:type       "media--image",
-                :attributes {:name filename},
-                :relationships
-                {:field_media_image
-                 {:data {:type "file--file", :id media-id}},
-                 :directory
-                 {:data {:type "taxonomy_term--media_directories", :id media-directory-id}}}}})]
+               {:data
+                {:type       "media--image",
+                 :attributes {:name filename},
+                 :relationships
+                 {:field_media_image
+                  {:data {:type "file--file", :id media-id}},
+                  :directory
+                  {:data {:type "taxonomy_term--media_directories", :id media-directory-id}}}}})]
     (-> (client/post url {:basic-auth basic-auth-creds :headers default-headers :body body})
         :body
         (json/decode keyword))))
@@ -107,8 +107,8 @@
                                       :media-id           (-> resp1 :data :id)})
         url    (str host (-> resp1 :data :attributes :uri :url))]
     {:public-urls        (merge
-                          {:original url}
-                          (-> resp1 :data :attributes :image_style_uri))
+                           {:original url}
+                           (-> resp1 :data :attributes :image_style_uri))
      :media-directory-id dir-id
      :filename           filename
      :file-id            (-> resp1 :data :id)
@@ -126,5 +126,4 @@
 
   (def resp2 (create-media-entity! {:filename           "panda.jpeg"
                                     :media-directory-id dir-id
-                                    :media-id           (-> resp1 :data :id)}))
-  )
+                                    :media-id           (-> resp1 :data :id)})))

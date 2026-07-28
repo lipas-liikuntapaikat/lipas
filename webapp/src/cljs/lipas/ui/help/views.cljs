@@ -1,59 +1,59 @@
 (ns lipas.ui.help.views
   (:require
-   ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
-   ["@mui/material/Accordion$default" :as Accordion]
-   ["@mui/material/AccordionSummary$default" :as AccordionSummary]
-   ["@mui/material/AccordionDetails$default" :as AccordionDetails]
-   ["@mui/icons-material/Close$default" :as CloseIcon]
-   ["@mui/icons-material/Edit$default" :as EditIcon]
-   ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
-   ["@mui/icons-material/Help$default" :as Help]
-   ["@mui/icons-material/Menu$default" :as MenuIcon]
-   ["@mui/icons-material/OpenInNew$default" :as OpenInNewIcon]
-   ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
-   ["@mui/icons-material/Search$default" :as SearchIcon]
-   ["@mui/material/Alert$default" :as Alert]
-   ["@mui/material/AppBar$default" :as AppBar]
-   ["@mui/material/Box$default" :as Box]
-   ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
-   ["@mui/material/Button$default" :as Button]
-   ["@mui/material/Card$default" :as Card]
-   ["@mui/material/CardActionArea$default" :as CardActionArea]
-   ["@mui/material/CardContent$default" :as CardContent]
-   ["@mui/material/Chip$default" :as Chip]
-   ["@mui/material/Collapse$default" :as Collapse]
-   ["@mui/material/Dialog$default" :as Dialog]
-   ["@mui/material/DialogContent$default" :as DialogContent]
-   ["@mui/material/Drawer$default" :as Drawer]
-   ["@mui/material/GridLegacy$default" :as Grid]
-   ["@mui/material/IconButton$default" :as IconButton]
-   ["@mui/material/InputAdornment$default" :as InputAdornment]
-   ["@mui/material/Link$default" :as Link]
-   ["@mui/material/List$default" :as List]
-   ["@mui/material/ListItemButton$default" :as ListItemButton]
-   ["@mui/material/ListItemText$default" :as ListItemText]
-   ["@mui/material/Paper$default" :as Paper]
-   ["@mui/material/Stack$default" :as Stack]
-   ["@mui/material/Table$default" :as Table]
-   ["@mui/material/TableBody$default" :as TableBody]
-   ["@mui/material/TableCell$default" :as TableCell]
-   ["@mui/material/TableContainer$default" :as TableContainer]
-   ["@mui/material/TableHead$default" :as TableHead]
-   ["@mui/material/TableRow$default" :as TableRow]
-   ["@mui/material/TextField$default" :as TextField]
-   ["@mui/material/Toolbar$default" :as Toolbar]
-   ["@mui/material/Tooltip$default" :as Tooltip]
-   ["@mui/material/Typography$default" :as Typography]
-   ["@mui/material/useMediaQuery$default" :as useMediaQuery]
-   ["react-markdown$default" :as ReactMarkdown]
-   [lipas.ui.help.events :as events]
-   [lipas.ui.lazy :as lazy]
-   [lipas.ui.help.subs :as subs]
-   [lipas.ui.user.subs :as user-subs]
-   [lipas.ui.utils :as utils :refer [==>]]
-   [reagent.core :as r]
-   [reagent.hooks :as hooks]
-   [re-frame.core :as rf]))
+    ["@mui/icons-material/ArrowBack$default" :as ArrowBackIcon]
+    ["@mui/material/Accordion$default" :as Accordion]
+    ["@mui/material/AccordionSummary$default" :as AccordionSummary]
+    ["@mui/material/AccordionDetails$default" :as AccordionDetails]
+    ["@mui/icons-material/Close$default" :as CloseIcon]
+    ["@mui/icons-material/Edit$default" :as EditIcon]
+    ["@mui/icons-material/ExpandMore$default" :as ExpandMoreIcon]
+    ["@mui/icons-material/Help$default" :as Help]
+    ["@mui/icons-material/Menu$default" :as MenuIcon]
+    ["@mui/icons-material/OpenInNew$default" :as OpenInNewIcon]
+    ["@mui/icons-material/PictureAsPdf$default" :as PdfIcon]
+    ["@mui/icons-material/Search$default" :as SearchIcon]
+    ["@mui/material/Alert$default" :as Alert]
+    ["@mui/material/AppBar$default" :as AppBar]
+    ["@mui/material/Box$default" :as Box]
+    ["@mui/material/Breadcrumbs$default" :as Breadcrumbs]
+    ["@mui/material/Button$default" :as Button]
+    ["@mui/material/Card$default" :as Card]
+    ["@mui/material/CardActionArea$default" :as CardActionArea]
+    ["@mui/material/CardContent$default" :as CardContent]
+    ["@mui/material/Chip$default" :as Chip]
+    ["@mui/material/Collapse$default" :as Collapse]
+    ["@mui/material/Dialog$default" :as Dialog]
+    ["@mui/material/DialogContent$default" :as DialogContent]
+    ["@mui/material/Drawer$default" :as Drawer]
+    ["@mui/material/GridLegacy$default" :as Grid]
+    ["@mui/material/IconButton$default" :as IconButton]
+    ["@mui/material/InputAdornment$default" :as InputAdornment]
+    ["@mui/material/Link$default" :as Link]
+    ["@mui/material/List$default" :as List]
+    ["@mui/material/ListItemButton$default" :as ListItemButton]
+    ["@mui/material/ListItemText$default" :as ListItemText]
+    ["@mui/material/Paper$default" :as Paper]
+    ["@mui/material/Stack$default" :as Stack]
+    ["@mui/material/Table$default" :as Table]
+    ["@mui/material/TableBody$default" :as TableBody]
+    ["@mui/material/TableCell$default" :as TableCell]
+    ["@mui/material/TableContainer$default" :as TableContainer]
+    ["@mui/material/TableHead$default" :as TableHead]
+    ["@mui/material/TableRow$default" :as TableRow]
+    ["@mui/material/TextField$default" :as TextField]
+    ["@mui/material/Toolbar$default" :as Toolbar]
+    ["@mui/material/Tooltip$default" :as Tooltip]
+    ["@mui/material/Typography$default" :as Typography]
+    ["@mui/material/useMediaQuery$default" :as useMediaQuery]
+    ["react-markdown$default" :as ReactMarkdown]
+    [lipas.ui.help.events :as events]
+    [lipas.ui.lazy :as lazy]
+    [lipas.ui.help.subs :as subs]
+    [lipas.ui.user.subs :as user-subs]
+    [lipas.ui.utils :as utils :refer [==>]]
+    [reagent.core :as r]
+    [reagent.hooks :as hooks]
+    [re-frame.core :as rf]))
 
 ;; The app theme uppercases every heading variant — help content titles
 ;; are sentence-length, so they opt out explicitly.
@@ -202,16 +202,16 @@
                          (let [term (clojure.string/lower-case search-term)]
                            (->> types-data
                                 (filter #(or
-                                          (clojure.string/includes?
-                                           (clojure.string/lower-case (get-in % [:name locale] ""))
-                                           term)
-                                          (clojure.string/includes?
-                                           (clojure.string/lower-case (str (:type-code %)))
-                                           term)
-                                          (when-let [desc (get-in % [:description locale])]
-                                            (clojure.string/includes?
-                                             (clojure.string/lower-case desc)
-                                             term))))
+                                           (clojure.string/includes?
+                                             (clojure.string/lower-case (get-in % [:name locale] ""))
+                                             term)
+                                           (clojure.string/includes?
+                                             (clojure.string/lower-case (str (:type-code %)))
+                                             term)
+                                           (when-let [desc (get-in % [:description locale])]
+                                             (clojure.string/includes?
+                                               (clojure.string/lower-case desc)
+                                               term))))
                                 (sort-by :type-code))))]
 
     ;; Main component view
@@ -659,8 +659,8 @@
         :onChange #(==> [::events/set-search-term (.. % -target -value)])
         :InputProps #js{:startAdornment
                         (r/as-element
-                         [:> InputAdornment {:position "start"}
-                          [:> SearchIcon {:fontSize "small"}]])}}]]
+                          [:> InputAdornment {:position "start"}
+                           [:> SearchIcon {:fontSize "small"}]])}}]]
      (if (empty? search-term)
        [NavTree {:tree tree :on-navigate on-navigate}]
        [SearchResults {:on-navigate on-navigate}])]))

@@ -67,7 +67,7 @@
         close    #(==> [::events/select-sports-site nil])
         lipas-id (:lipas-id site)]
     [:> Dialog {:open     (some? (seq site))
-                 :on-close close}
+                :on-close close}
 
      [:> DialogTitle
       (or (:name site) "")]
@@ -191,14 +191,14 @@
           [user-form tr user]]
          [:> CardActions
           [:> Button {:href  "/etusivu"
-                       :color :secondary}
+                      :color :secondary}
            (str "> " (tr :user/front-page-link))]
           [:> Button {:href  "/passu-hukassa"
-                       :color :primary}
+                      :color :primary}
            (str "> " (tr :reset-password/change-password))]
           (when @(rf/subscribe [::subs/check-privilege nil :users/manage])
             [:> Button {:href  "/admin"
-                         :color :primary}
+                        :color :primary}
              (str "> " (tr :user/admin-page-link))])]]]
 
 ;; Saved searches
@@ -232,7 +232,7 @@
 
          [:> CardActions
           [:> Button {:href  "/liikuntapaikat"
-                       :color :secondary}
+                      :color :secondary}
            (str "> " (tr :sport/headline))]
 
           ;; (when (some #{2510 2520} (map :type-code sites))

@@ -752,8 +752,8 @@
     (->> (vals (get-in ptv [:org org-id :data :sports-sites] {}))
          (filter (fn [site]
                    (let [b (ptv-data/audit-bucket
-                            (get-in site [:ptv :audit])
-                            (ptv-data/site-audit-fields site))]
+                             (get-in site [:ptv :audit])
+                             (ptv-data/site-audit-fields site))]
                      (if (= :waiting-audit bucket)
                        ;; The auditor's queue also contains every
                        ;; content-ready site not audited yet — the first
@@ -818,10 +818,10 @@
   (fn [sites _]
     (let [{:keys [action-items approved-count]}
           (ptv-data/audit-notification-summary
-           (map (fn [site]
-                  {:audit (get-in site [:ptv :audit])
-                   :fields (ptv-data/site-audit-fields site)})
-                sites))]
+            (map (fn [site]
+                   {:audit (get-in site [:ptv :audit])
+                    :fields (ptv-data/site-audit-fields site)})
+                 sites))]
       {:action-count (count action-items)
        :approved-count approved-count})))
 
@@ -899,8 +899,8 @@
     (->> services
          (filter (fn [svc]
                    (let [b (ptv-data/audit-bucket
-                            (:audit svc)
-                            (ptv-data/service-audit-fields svc))]
+                             (:audit svc)
+                             (ptv-data/service-audit-fields svc))]
                      (if (= :waiting-audit bucket)
                        ;; The auditor's queue also contains every
                        ;; content-ready service not audited yet — the first
@@ -927,10 +927,10 @@
   (fn [services _]
     (let [{:keys [action-items approved-count]}
           (ptv-data/audit-notification-summary
-           (map (fn [svc]
-                  {:audit (:audit svc)
-                   :fields (ptv-data/service-audit-fields svc)})
-                services))]
+            (map (fn [svc]
+                   {:audit (:audit svc)
+                    :fields (ptv-data/service-audit-fields svc)})
+                 services))]
       {:action-count (count action-items)
        :approved-count approved-count})))
 

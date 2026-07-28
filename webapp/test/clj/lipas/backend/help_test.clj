@@ -97,5 +97,4 @@
 
     (testing "bare media URLs never leak into languages without titles"
       (is (empty? (kb/help-cms->docs
-                   {:fi [] :se (help/v1->v2-tree v1-fixture :se) :en []}
-                   ))))))
+                    {:fi [] :se (help/v1->v2-tree v1-fixture :se) :en []}))))))

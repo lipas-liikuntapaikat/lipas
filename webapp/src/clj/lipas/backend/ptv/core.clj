@@ -275,14 +275,14 @@
                       (-> prev :document :audit)
                       (assoc :audit (-> prev :document :audit)))]
             (ptv-service-db/insert-service-rev!
-             db
-             {:org-id (:id org)
-              :source-id source-id
-              :service-id (:id ptv-resp)
-              :status "active"
-              :author-id (or (:id user) (get-in user [:login :user :id]))
-              :event-date now
-              :document doc}))
+              db
+              {:org-id (:id org)
+               :source-id source-id
+               :service-id (:id ptv-resp)
+               :status "active"
+               :author-id (or (:id user) (get-in user [:login :user :id]))
+               :event-date now
+               :document doc}))
           (log/warnf "No LIPAS org found for PTV org %s; skipping ptv_service revision"
                      ptv-org-id))))
     (catch Exception e
@@ -315,37 +315,37 @@
       ;; trips the SubTargetGroupRequired check (ServiceValidator.cs:225).
       ;; sub-category-id is still useful upstream (source-id, app-db
       ;; mapping), but it must not drive payload overrides on adoption.
-      (let [existing (-> (ptv/get-service ptv org-id service-id)
-                         (normalize-ptv-service-for-update))
-            lipas-data (select-keys lipas-data lipas-managed-service-fields)
-            merged (merge-service-data existing lipas-data)
+          (let [existing (-> (ptv/get-service ptv org-id service-id)
+                             (normalize-ptv-service-for-update))
+                lipas-data (select-keys lipas-data lipas-managed-service-fields)
+                merged (merge-service-data existing lipas-data)
             ;; PTV requires names for all supported languages — use Finnish as fallback
-            fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
-                                 (:value %))
-                              (:serviceNames merged))
-                        "")
-            required-langs (set (map name (:languages merged)))
-            existing-name-langs (set (map :language (:serviceNames merged)))
-            missing-name-langs (clojure.set/difference required-langs existing-name-langs)
-            data (-> merged
-                     (update :serviceDescriptions (fn [items] (filterv #(not (str/blank? (:value %))) items)))
+                fi-name (or (some #(when (and (= "fi" (:language %)) (not (str/blank? (:value %))))
+                                     (:value %))
+                                  (:serviceNames merged))
+                            "")
+                required-langs (set (map name (:languages merged)))
+                existing-name-langs (set (map :language (:serviceNames merged)))
+                missing-name-langs (clojure.set/difference required-langs existing-name-langs)
+                data (-> merged
+                         (update :serviceDescriptions (fn [items] (filterv #(not (str/blank? (:value %))) items)))
                      ;; Fill empty name values with Finnish fallback
-                     (update :serviceNames (fn [items]
-                                             (let [filled (mapv #(if (str/blank? (:value %))
-                                                                   (assoc % :value fi-name)
-                                                                   %)
-                                                                items)]
+                         (update :serviceNames (fn [items]
+                                                 (let [filled (mapv #(if (str/blank? (:value %))
+                                                                       (assoc % :value fi-name)
+                                                                       %)
+                                                                    items)]
                                                ;; Add entries for completely missing languages
-                                               (into filled (for [lang missing-name-langs]
-                                                              {:type "Name" :language lang :value fi-name}))))))]
-        (ptv/update-service-by-id ptv service-id data))
+                                                   (into filled (for [lang missing-name-langs]
+                                                                  {:type "Name" :language lang :value fi-name}))))))]
+            (ptv/update-service-by-id ptv service-id data))
       ;; New service: try update by source-id, create if not found
-      (try
-        (ptv/update-service ptv source-id lipas-data)
-        (catch clojure.lang.ExceptionInfo e
-          (if (= 404 (:status (:resp (ex-data e))))
-            (ptv/create-service ptv lipas-data)
-            (throw e)))))]
+          (try
+            (ptv/update-service ptv source-id lipas-data)
+            (catch clojure.lang.ExceptionInfo e
+              (if (= 404 (:status (:resp (ex-data e))))
+                (ptv/create-service ptv lipas-data)
+                (throw e)))))]
     ;; Shadow every successful Service write into the ptv_service table.
     (persist-ptv-service-revision! db user org-id resp)
     resp))
@@ -800,7 +800,7 @@
   [db search org-id]
   (when-let [org (backend-org/get-org db org-id)]
     (->> (get-ptv-integration-candidates
-          search (select-keys (:ptv-data org) [:city-codes :owners]))
+           search (select-keys (:ptv-data org) [:city-codes :owners]))
          (map (fn [site]
                 {:ref {:lipas-id (:lipas-id site) :name (:name site)}
                  :audit (get-in site [:ptv :audit])
@@ -822,7 +822,7 @@
            (filter #(some-> % :sourceId (str/starts-with? "lipas-")))
            (map (fn [svc]
                   (let [texts (ptv-data/ptv-descriptions->texts
-                               (:serviceDescriptions svc))]
+                                (:serviceDescriptions svc))]
                     {:ref {:service-id (str (:id svc))
                            :name (ptv-data/select-service-name (:serviceNames svc))}
                      :audit (get-in audits [(str (:id svc)) :document :audit])
@@ -848,11 +848,11 @@
         (do
           (doseq [manager managers]
             (email/send-ptv-audit-notification-email!
-             emailer
-             (:email manager)
-             (assoc data
-                    :org-name (:name org)
-                    :section section)))
+              emailer
+              (:email manager)
+              (assoc data
+                     :org-name (:name org)
+                     :section section)))
           {:sent (count managers)
            :recipients (mapv :email managers)})
         (do
@@ -899,14 +899,14 @@
                             :timestamp now
                             :auditor-id (str user-id))]
           (ptv-service-db/insert-service-rev!
-           db
-           {:org-id (:id org)
-            :source-id (or (:source-id current) (:source-id base-doc))
-            :service-id (or (:service-id current) service-id)
-            :status "active"
-            :author-id user-id
-            :event-date now
-            :document (assoc base-doc :audit audit*)})
+            db
+            {:org-id (:id org)
+             :source-id (or (:source-id current) (:source-id base-doc))
+             :service-id (or (:service-id current) service-id)
+             :status "active"
+             :author-id user-id
+             :event-date now
+             :document (assoc base-doc :audit audit*)})
           audit*)))))
 
 (defn get-ptv-service-docs

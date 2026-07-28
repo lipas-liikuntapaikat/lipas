@@ -1,7 +1,7 @@
 (ns lipas.data.types-old
   "Type codes went through a major overhaul in the summer of 2024. This namespace represents the situation before the changes were made."
   (:require
-   [lipas.utils :as utils]))
+    [lipas.utils :as utils]))
 
 (def main-categories
   {0
@@ -2635,7 +2635,7 @@
    201
    {:description
     {:fi
-     #_ "Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde."
+     #_"Luonnonvesistössä sijaitseva virkistyskalastusta varten varustettu ja hoidettu kohde."
      "Vapaa-ajankalastukseen sopiva kohde. Kohteessa voi olla palvelurakenteita.",
      :se
      "Område eller en plats i ett naturligt vattendrag som ställts i ordning för fritidsfiske.",
@@ -2643,7 +2643,7 @@
      "Natural aquatic destination equipped and maintained for recreational fishing."},
     :tags          {:fi ["kalastusalue" "kalastuspaikka"]},
     :name
-    {:fi #_ "Kalastusalue/-paikka" "Kalastuskohde (piste)",
+    {:fi #_"Kalastusalue/-paikka" "Kalastuskohde (piste)",
      :se "Område eller plats för fiske",
      :en "Fishing area/spot "},
     :type-code     201,

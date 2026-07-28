@@ -1,13 +1,13 @@
 (ns lipas.backend.analysis.common
   (:require
-   [clojure.core.async :as async]
-   [clojure.data.csv :as csv]
-   [clojure.java.io :as io]
-   [clojure.set :as set]
-   [clojure.walk :as walk]
-   [lipas.backend.search :as search]
-   [lipas.utils :as utils]
-   [taoensso.timbre :as log]))
+    [clojure.core.async :as async]
+    [clojure.data.csv :as csv]
+    [clojure.java.io :as io]
+    [clojure.set :as set]
+    [clojure.walk :as walk]
+    [lipas.backend.search :as search]
+    [lipas.utils :as utils]
+    [taoensso.timbre :as log]))
 
 (def population-high-def-threshold-km 10)
 (def default-statuses #{"planning" "planned" "active" "out-of-service-temporarily"})
@@ -45,11 +45,11 @@
         (update-in [:query :bool :filter :geo_shape] set/rename-keys
                    {:coords :search-meta.location.geometries})
         (cond->
-            (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
-            (seq type-codes) (update-in [:query :bool :must] conj
-                                        {:terms {:type.type-code type-codes}})
-            (seq statuses)   (update-in [:query :bool :must] conj
-                                        {:terms {:status statuses}})))))
+          (or (seq type-codes) (seq statuses)) (assoc-in [:query :bool :must] [])
+          (seq type-codes) (update-in [:query :bool :must] conj
+                                      {:terms {:type.type-code type-codes}})
+          (seq statuses)   (update-in [:query :bool :must] conj
+                                      {:terms {:status statuses}})))))
 
 (defn get-sports-site-data
   ([search fcoll distance-km type-codes]
@@ -98,8 +98,8 @@
   (when (and (some? n) (>= n anonymity-threshold)) n))
 
 #_(defn coerce-population-grid-int
-  [s]
-  (if (#{"-1"} s) nil (utils/->int s)))
+    [s]
+    (if (#{"-1"} s) nil (utils/->int s)))
 
 (defn coerce-population-grid-item
   [m]

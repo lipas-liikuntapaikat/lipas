@@ -1,11 +1,11 @@
 (ns lipas.data.types
   "Categorization of sports sites."
   (:require
-   [clojure.set :as set]
-   [lipas.utils :as utils]
-   #_[lipas.data.types-old :as old]
-   [lipas.data.prop-types :as prop-types]
-   [lipas.data.types-new :as new]))
+    [clojure.set :as set]
+    [lipas.utils :as utils]
+    #_[lipas.data.types-old :as old]
+    [lipas.data.prop-types :as prop-types]
+    [lipas.data.types-new :as new]))
 
 (def main-categories
   new/main-categories)
@@ -130,32 +130,32 @@
                        #(nth % 2) ; type-code
                        #(nth % 16) ; prop-name
                        )
-         (for [[type-code {:keys [main-category sub-category] :as type}] active
-               [prop-k _] (:props type)]
-           [main-category
-            sub-category
-            type-code
-            (:geometry-type type)
-            (get-in main-categories [main-category :name :fi])
-            (get-in main-categories [main-category :name :se])
-            (get-in main-categories [main-category :name :en])
-            (get-in sub-categories [sub-category :name :fi])
-            (get-in sub-categories [sub-category :name :se])
-            (get-in sub-categories [sub-category :name :en])
-            (get-in type [:name :fi])
-            (get-in type [:name :se])
-            (get-in type [:name :en])
-            (get-in type [:description :fi])
-            (get-in type [:description :se])
-            (get-in type [:description :en])
-            (name prop-k)
-            (get-in prop-types/all [prop-k :data-type])
-            (get-in prop-types/all [prop-k :name :fi])
-            (get-in prop-types/all [prop-k :name :se])
-            (get-in prop-types/all [prop-k :name :en])
-            (get-in prop-types/all [prop-k :description :fi])
-            (get-in prop-types/all [prop-k :description :se])
-            (get-in prop-types/all [prop-k :description :en])]))))
+                 (for [[type-code {:keys [main-category sub-category] :as type}] active
+                       [prop-k _] (:props type)]
+                   [main-category
+                    sub-category
+                    type-code
+                    (:geometry-type type)
+                    (get-in main-categories [main-category :name :fi])
+                    (get-in main-categories [main-category :name :se])
+                    (get-in main-categories [main-category :name :en])
+                    (get-in sub-categories [sub-category :name :fi])
+                    (get-in sub-categories [sub-category :name :se])
+                    (get-in sub-categories [sub-category :name :en])
+                    (get-in type [:name :fi])
+                    (get-in type [:name :se])
+                    (get-in type [:name :en])
+                    (get-in type [:description :fi])
+                    (get-in type [:description :se])
+                    (get-in type [:description :en])
+                    (name prop-k)
+                    (get-in prop-types/all [prop-k :data-type])
+                    (get-in prop-types/all [prop-k :name :fi])
+                    (get-in prop-types/all [prop-k :name :se])
+                    (get-in prop-types/all [prop-k :name :en])
+                    (get-in prop-types/all [prop-k :description :fi])
+                    (get-in prop-types/all [prop-k :description :se])
+                    (get-in prop-types/all [prop-k :description :en])]))))
 
 (def used-prop-types
   (let [used (set (mapcat (comp keys :props second) all))]
@@ -180,6 +180,4 @@
       #{})))
 
 (comment
-  (->type (get all 1180))
-
-  )
+  (->type (get all 1180)))

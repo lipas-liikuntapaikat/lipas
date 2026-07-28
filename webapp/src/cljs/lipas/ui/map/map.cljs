@@ -724,10 +724,10 @@
        (fn [] [:> Grid {:id "map"
                         ;; Keyboard navigation requires that this element has a tabIndex
                         ;; see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
-                         :tabIndex -1
-                         :item true
-                         :style {:height "100%" :width "100%"}
-                         :xs 12}])
+                        :tabIndex -1
+                        :item true
+                        :style {:height "100%" :width "100%"}
+                        :xs 12}])
 
        :component-did-mount
        (fn [comp]

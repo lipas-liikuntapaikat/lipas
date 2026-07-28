@@ -570,7 +570,6 @@
         :items users
         :on-select #(==> [::events/set-user-to-edit %])}]]]))
 
-
 (defn format-timestamp [timestamp]
   (when timestamp
     (try
@@ -732,9 +731,9 @@
            (str (if expanded? "▼ " "▶ ") label " {" (count value) "}")]]
          (when expanded?
            (doall
-            (for [[k v] (sort-by (comp str key) value)]
-              ^{:key (str path k)}
-              [tree-value-node (assoc props :path (conj path k) :label (name k) :value v)])))])
+             (for [[k v] (sort-by (comp str key) value)]
+               ^{:key (str path k)}
+               [tree-value-node (assoc props :path (conj path k) :label (name k) :value v)])))])
 
       (and (sequential? value) (seq value))
       (let [expanded? (contains? @expanded* path)
@@ -747,11 +746,11 @@
          (when expanded?
            [:<>
             (doall
-             (map-indexed
-              (fn [i v]
-                ^{:key (str path i)}
-                [tree-value-node (assoc props :path (conj path i) :label (str "#" i) :value v)])
-              shown))
+              (map-indexed
+                (fn [i v]
+                  ^{:key (str path i)}
+                  [tree-value-node (assoc props :path (conj path i) :label (str "#" i) :value v)])
+                shown))
             (when (and (not show-all?) (> (count value) 20))
               [:div {:style {:padding-left (+ indent 16) :cursor "pointer" :color "#757575"}
                      :on-click #(swap! expanded* conj (conj path ::all))}
@@ -772,9 +771,9 @@
   (r/with-let [expanded* (r/atom #{})]
     [:div
      (doall
-      (for [[k v] (sort-by (comp str key) document)]
-        ^{:key (str k)}
-        [tree-value-node {:expanded* expanded* :path [k] :label (name k) :value v}]))]))
+       (for [[k v] (sort-by (comp str key) document)]
+         ^{:key (str k)}
+         [tree-value-node {:expanded* expanded* :path [k] :label (name k) :value v}]))]))
 
 ;; Marker key distinguishing a diff leaf ({::old ::new}) from a branch
 ;; (a plain nested map) once diff-paths' flat list is renested into a tree.
@@ -801,9 +800,9 @@
        [:> Typography {:variant "body2" :style {:font-family "monospace" :font-weight 600}}
         label]
        (doall
-        (for [[k v] (sort-by (comp str key) node)]
-          ^{:key (str label k)}
-          [diff-tree-node (inc depth) (path-key-label k) v]))])))
+         (for [[k v] (sort-by (comp str key) node)]
+           ^{:key (str label k)}
+           [diff-tree-node (inc depth) (path-key-label k) v]))])))
 
 (defn changes-view
   "Same tree shape as doc-tree, but pruned to only the paths that changed
@@ -828,9 +827,9 @@
       (let [tree (build-diff-tree diffs)]
         [:div
          (doall
-          (for [[k v] (sort-by (comp str key) tree)]
-            ^{:key (str k)}
-            [diff-tree-node 0 (path-key-label k) v]))]))))
+           (for [[k v] (sort-by (comp str key) tree)]
+             ^{:key (str k)}
+             [diff-tree-node 0 (path-key-label k) v]))]))))
 
 (defn site-history-search []
   (let [search-id (<== [::subs/site-history-search-id])
@@ -904,11 +903,11 @@
           total (count sorted-raw)
           sorted (->> sorted-raw
                       (map-indexed
-                       (fn [idx revision]
-                         (-> revision
-                             (assoc :index (- total idx))
-                             (assoc :formatted-date (format-timestamp (:event-date revision)))
-                             (assoc :user-display (get-user-display-name users (:author revision))))))
+                        (fn [idx revision]
+                          (-> revision
+                              (assoc :index (- total idx))
+                              (assoc :formatted-date (format-timestamp (:event-date revision)))
+                              (assoc :user-display (get-user-display-name users (:author revision))))))
                       vec)]
       [:<>
        ;; Error display
@@ -938,32 +937,32 @@
               [:> TableCell (tr :lipas.user/user)]]]
             [:> TableBody
              (doall
-              (for [[idx revision] (map-indexed vector sorted)
-                    :let [id (:revision-id revision)
-                          expanded? (get @expanded* id false)
-                          prev (get sorted (inc idx))
-                          mode (get @detail-mode* id :changes)]]
-                ^{:key (str id)}
-                [:<>
-                 [:> TableRow
-                  {:hover true
-                   :style {:cursor "pointer"}
-                   :on-click #(swap! expanded* update id not)}
-                  [:> TableCell {:padding "checkbox"}
-                   [:> IconButton {:size "small"}
-                    [:> Icon (if expanded? "keyboard_arrow_up" "keyboard_arrow_down")]]]
-                  [:> TableCell (:index revision)]
-                  [:> TableCell (:formatted-date revision)]
-                  [:> TableCell (:status revision)]
-                  [:> TableCell (:name revision)]
-                  [:> TableCell (:user-display revision)]]
-                 [:> TableRow
-                  [:> TableCell {:style {:paddingTop 0 :paddingBottom 0} :colSpan detail-columns}
-                   [:> Collapse {:in expanded? :timeout "auto" :unmountOnExit true}
-                    [revision-detail {:revision revision
-                                      :prev prev
-                                      :mode mode
-                                      :on-mode-change #(swap! detail-mode* assoc id %)}]]]]]))]]]])
+               (for [[idx revision] (map-indexed vector sorted)
+                     :let [id (:revision-id revision)
+                           expanded? (get @expanded* id false)
+                           prev (get sorted (inc idx))
+                           mode (get @detail-mode* id :changes)]]
+                 ^{:key (str id)}
+                 [:<>
+                  [:> TableRow
+                   {:hover true
+                    :style {:cursor "pointer"}
+                    :on-click #(swap! expanded* update id not)}
+                   [:> TableCell {:padding "checkbox"}
+                    [:> IconButton {:size "small"}
+                     [:> Icon (if expanded? "keyboard_arrow_up" "keyboard_arrow_down")]]]
+                   [:> TableCell (:index revision)]
+                   [:> TableCell (:formatted-date revision)]
+                   [:> TableCell (:status revision)]
+                   [:> TableCell (:name revision)]
+                   [:> TableCell (:user-display revision)]]
+                  [:> TableRow
+                   [:> TableCell {:style {:paddingTop 0 :paddingBottom 0} :colSpan detail-columns}
+                    [:> Collapse {:in expanded? :timeout "auto" :unmountOnExit true}
+                     [revision-detail {:revision revision
+                                       :prev prev
+                                       :mode mode
+                                       :on-mode-change #(swap! detail-mode* assoc id %)}]]]]]))]]]])
 
        ;; No results message
        (when (and results (empty? results))

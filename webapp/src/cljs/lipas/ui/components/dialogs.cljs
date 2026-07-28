@@ -33,23 +33,23 @@
            bottom-actions]} & contents]
   (let [{dev-open? :open? :keys [place width height]} @dev-state/dev-state]
     [:> Dialog {:open                 open?
-                 :full-screen          true
-                 :Transition-component Slide
-                 :Transition-props     {:direction "up"}
-                 :on-close             on-close
-                 :Paper-Props          {:style {:background-color mui/gray1}}
-                 :style {:margin-right (when (and dev-open? (= :right place)) (str width "px"))
-                         :margin-bottom (when (and dev-open? (= :bottom place)) (str height "px"))}}
+                :full-screen          true
+                :Transition-component Slide
+                :Transition-props     {:direction "up"}
+                :on-close             on-close
+                :Paper-Props          {:style {:background-color mui/gray1}}
+                :style {:margin-right (when (and dev-open? (= :right place)) (str width "px"))
+                        :margin-bottom (when (and dev-open? (= :bottom place)) (str height "px"))}}
 
      ;; Top bar
      [mui/mui-theme-provider {:theme mui/jyu-theme-dark}
       (into
         [:> DialogActions {:style
-                             {:margin           0
-                              :padding-right    "0.5em"
-                              :background-color mui/primary}}
+                           {:margin           0
+                            :padding-right    "0.5em"
+                            :background-color mui/primary}}
          [:> DialogTitle {:sx {:flex-grow 1
-                                 :color "white"}}
+                               :color "white"}}
           (or title "")]]
         top-actions)]
 

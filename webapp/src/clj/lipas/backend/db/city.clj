@@ -13,9 +13,9 @@
   `read-string`. Otherwise keyword `name` is returned."
   [k]
   (if (and (keyword? k) (-> k name (.charAt 0) Character/isDigit))
-      (or (utils/->number (name k))
-          (name k))
-      k))
+    (or (utils/->number (name k))
+        (name k))
+    k))
 
 (defn- fix-keys [m]
   (let [ks    (keys m)

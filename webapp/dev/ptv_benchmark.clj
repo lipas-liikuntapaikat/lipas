@@ -91,13 +91,13 @@
   [n]
   (let [{:keys [client idx-name]} (get-search-client)
         results (search/search
-                 client
-                 idx-name
-                 {:size (* n 3)
-                  :query {:bool {:must [{:term {:status.keyword "active"}}
-                                        {:exists {:field "properties"}}]}}
-                  :sort [{:_score :desc}
-                         {:lipas-id :asc}]})
+                  client
+                  idx-name
+                  {:size (* n 3)
+                   :query {:bool {:must [{:term {:status.keyword "active"}}
+                                         {:exists {:field "properties"}}]}}
+                   :sort [{:_score :desc}
+                          {:lipas-id :asc}]})
         hits (get-in results [:body :hits :hits])]
     (->> hits
          (map :_source)
@@ -108,10 +108,10 @@
   [lipas-id]
   (let [{:keys [client idx-name]} (get-search-client)
         results (search/search
-                 client
-                 idx-name
-                 {:size 1
-                  :query {:term {:lipas-id lipas-id}}})]
+                  client
+                  idx-name
+                  {:size 1
+                   :query {:term {:lipas-id lipas-id}}})]
     (-> results :body :hits :hits first :_source)))
 
 (defn categorize-data-richness

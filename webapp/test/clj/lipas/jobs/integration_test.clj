@@ -2,14 +2,14 @@
   "End-to-end integration tests: scheduler + worker processing real jobs
   against a real database."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.scheduler :as scheduler]
-   [lipas.jobs.worker :as worker]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.scheduler :as scheduler]
+    [lipas.jobs.worker :as worker]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]))
 
 (defonce test-system (atom nil))
 
@@ -28,13 +28,13 @@
                                                :body "Test message"})]
         (try
           (worker/start-mixed-duration-worker!
-           {:db db :emailer test-emailer :search nil}
-           {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
+            {:db db :emailer test-emailer :search nil}
+            {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
 
           (is (test-utils/wait-for-condition
-               (fn []
-                 (= "completed" (:jobs/status (test-utils/get-job-by-id db email-id))))
-               10000)
+                (fn []
+                  (= "completed" (:jobs/status (test-utils/get-job-by-id db email-id))))
+                10000)
               "Email job should complete within timeout")
 
           (is (= 1 (count @(:sent-emails test-emailer))))
@@ -115,15 +115,15 @@
 
       (try
         (worker/start-mixed-duration-worker!
-         {:db db :emailer test-emailer :search nil}
-         {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
+          {:db db :emailer test-emailer :search nil}
+          {:fast-threads 1 :general-threads 1 :batch-size 5 :poll-interval-ms 300})
 
         ;; Scheduler tick (called directly for determinism)
         (is (= 1 (scheduler/produce-reminder-emails! db)))
 
         (is (test-utils/wait-for-condition
-             (fn [] (= 1 (count @(:sent-emails test-emailer))))
-             10000)
+              (fn [] (= 1 (count @(:sent-emails test-emailer))))
+              10000)
             "Reminder email should be sent")
 
         (is (= "e2e-reminder@example.com"

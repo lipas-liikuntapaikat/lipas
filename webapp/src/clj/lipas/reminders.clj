@@ -1,7 +1,7 @@
 (ns lipas.reminders
   (:require
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]))
+    [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]))
 
 (defn ->email
   [db {:keys [id body account-id]}]

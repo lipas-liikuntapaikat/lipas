@@ -6,10 +6,10 @@
    2. Response structure matches the V2 API contract
    3. Query parameters work as expected (filtering, pagination, etc.)"
   (:require
-   [clojure.test :refer [deftest is testing use-fixtures]]
-   [lipas.backend.core :as core]
-   [lipas.test-utils :as test-utils]
-   [ring.mock.request :as mock]))
+    [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.core :as core]
+    [lipas.test-utils :as test-utils]
+    [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
 

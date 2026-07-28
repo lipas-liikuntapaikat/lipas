@@ -67,7 +67,7 @@
 
 (defn icon-text3 [{:keys [icon text icon-color]}]
   [:> Grid {:container true :align-items "center"
-             :style {:padding-right "0.5em" :padding-left "0.5em"}}
+            :style {:padding-right "0.5em" :padding-left "0.5em"}}
    [:> Grid {:item true}
     [:> Icon {:style {:color icon-color :display "inline"}}
      icon]]

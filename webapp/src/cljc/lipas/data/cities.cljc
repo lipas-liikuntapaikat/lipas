@@ -1,6 +1,6 @@
 (ns lipas.data.cities
   (:require
-   [lipas.utils :as utils]))
+    [lipas.utils :as utils]))
 
 ;; 7 Regional State Administrative Agencies (AVI)
 ;; https://www.tilastokeskus.fi/meta/luokitukset/avi/001-2019/index.html

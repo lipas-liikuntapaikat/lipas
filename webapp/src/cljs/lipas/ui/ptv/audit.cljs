@@ -196,15 +196,15 @@
            {:value (name field)
             :sx #js {:minHeight 40}
             :label (r/as-element
-                    [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
-                     [:> Box {:sx #js {:width 8
-                                       :height 8
-                                       :borderRadius "50%"
-                                       :bgcolor dot-color}}]
-                     [:span (tr (case field
-                                  :summary :ptv/summary
-                                  :description :ptv/description
-                                  :user-instruction :ptv/user-instruction))]])}]))]
+                     [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+                      [:> Box {:sx #js {:width 8
+                                        :height 8
+                                        :borderRadius "50%"
+                                        :bgcolor dot-color}}]
+                      [:span (tr (case field
+                                   :summary :ptv/summary
+                                   :description :ptv/description
+                                   :user-instruction :ptv/user-instruction))]])}]))]
 
      ;; Selected field's content...
      [content-panel
@@ -376,7 +376,7 @@
         summary-status (get-in audit-data [:summary :status])
         desc-status (get-in audit-data [:description :status])
         field-states (ptv-data/audit-field-states
-                      audit-data (ptv-data/site-audit-fields site))
+                       audit-data (ptv-data/site-audit-fields site))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))
@@ -458,7 +458,7 @@
         desc-status (get-in audit-data [:description :status])
         ui-status (get-in audit-data [:user-instruction :status])
         field-states (ptv-data/audit-field-states
-                      audit-data (ptv-data/service-audit-fields service))
+                       audit-data (ptv-data/service-audit-fields service))
         states (vals field-states)
         changed? (boolean (some #{:stale} states))
         fixed? (boolean (some #{:fixed} states))

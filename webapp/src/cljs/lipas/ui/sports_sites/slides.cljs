@@ -33,11 +33,11 @@
                   (tr :lipas.swimming-pool.slides/add-slide))
         on-save (comp reset close #(==> [::hall/save-slide lipas-id data]))]
     [dialogs/dialog {:title         title
-                 :save-label    (tr :actions/save)
-                 :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::hall/toggle-dialog :slide])
-                 :save-enabled? valid?
-                 :on-save       on-save}
+                     :save-label    (tr :actions/save)
+                     :cancel-label  (tr :actions/cancel)
+                     :on-close      #(==> [::hall/toggle-dialog :slide])
+                     :save-enabled? valid?
+                     :on-save       on-save}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -59,5 +59,5 @@
 
 (defn read-only-table [{:keys [tr items]}]
   [tables/table {:headers (make-headers tr)
-              :items   items
-              :key-fn  #(gensym)}])
+                 :items   items
+                 :key-fn  #(gensym)}])

@@ -121,6 +121,6 @@
      ;; Chart
      (when (= view "chart")
        [:> Grid {:item true
-                  :xs 12
-                  :sx {:width 0}}
+                 :xs 12
+                 :sx {:width 0}}
         [charts/age-structure-chart {:data data :labels labels}]])]))

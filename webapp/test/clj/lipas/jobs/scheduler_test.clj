@@ -2,12 +2,12 @@
   "Tests for the scheduler's direct maintenance tasks: reminder email
   production, retention cleanup and scheduler lifecycle."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]
-   [lipas.jobs.scheduler :as scheduler]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]
+    [lipas.jobs.scheduler :as scheduler]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]))
 
 (defonce test-system (atom nil))
 

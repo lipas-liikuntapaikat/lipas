@@ -911,7 +911,7 @@
         token (jwt/create-token user)
 
         full-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
-                                                         lipas-id "/full"))
+                                                        lipas-id "/full"))
                                 (mock/content-type "application/json")
                                 (tu/token-header token)))
         full-body (<-json (:body full-resp))
@@ -919,7 +919,7 @@
         ;; The existing per-year endpoint stays untouched: same calendar
         ;; year, drafts excluded -> only the latest (rev2) shows.
         yearly-resp (test-app (-> (mock/request :get (str "/api/sports-sites/history/"
-                                                           lipas-id))
+                                                          lipas-id))
                                   (mock/content-type "application/json")))
         yearly-body (<-json (:body yearly-resp))]
 

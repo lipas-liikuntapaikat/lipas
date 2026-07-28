@@ -1,7 +1,7 @@
 (ns lipas.backend.jwt
   (:require
-   [buddy.sign.jwt :as jwt]
-   [environ.core :refer [env]]))
+    [buddy.sign.jwt :as jwt]
+    [environ.core :refer [env]]))
 
 (def sign #(jwt/sign % (env :auth-key) {:alg :hs512}))
 (def unsign #(jwt/unsign % (env :auth-key) {:alg :hs512}))
@@ -22,5 +22,5 @@
                     (select-keys fields)
                     (merge extra-claims)
                     (assoc :exp (.plusSeconds
-                                 (java.time.Instant/now) valid-seconds)))]
+                                  (java.time.Instant/now) valid-seconds)))]
     (sign payload)))

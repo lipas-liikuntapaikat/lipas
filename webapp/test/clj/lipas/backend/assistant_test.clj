@@ -58,18 +58,18 @@
     (testing "retrieved ?ohje= links survive"
       (is (= "Katso [ohje](?ohje=tallentajille/kohteen-kopiointi)."
              (sanitize-answer-links
-              "Katso [ohje](?ohje=tallentajille/kohteen-kopiointi)." sources))))
+               "Katso [ohje](?ohje=tallentajille/kohteen-kopiointi)." sources))))
     (testing "invented ?ohje= links degrade to plain text"
       (is (= "Katso Käyttöoikeudet."
              (sanitize-answer-links
-              "Katso [Käyttöoikeudet](?ohje=peruskasitteet/kayttooikeudet)." sources))))
+               "Katso [Käyttöoikeudet](?ohje=peruskasitteet/kayttooikeudet)." sources))))
     (testing "fabricated tool-call schemes degrade to plain text"
       (is (= "Avaa profiili"
              (sanitize-answer-links "[Avaa profiili](navigate_to_view:profile)" sources))))
     (testing "normal web and mail links survive"
       (is (= "[video](https://youtu.be/x?t=10) ja [posti](mailto:a@b.fi)"
              (sanitize-answer-links
-              "[video](https://youtu.be/x?t=10) ja [posti](mailto:a@b.fi)" sources))))))
+               "[video](https://youtu.be/x?t=10) ja [posti](mailto:a@b.fi)" sources))))))
 
 (deftest action-schema-test
   (testing "valid actions"

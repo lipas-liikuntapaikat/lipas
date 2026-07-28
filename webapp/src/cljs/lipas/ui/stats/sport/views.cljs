@@ -128,9 +128,9 @@
                         (when-let [m (charts/->payload evt)]
                           (==> [::events/select-filters m grouping])))]
          [:> Grid {:item true
-                    :xs 12
+                   :xs 12
                     ;; Needed to make the flex item shrink when the content (chart) was larger
-                    :sx {:width 0}}
+                   :sx {:width 0}}
           [charts/sports-stats-chart
            {:data     data
             :labels   labels

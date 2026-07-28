@@ -191,13 +191,13 @@
      [:> CardHeader
       {:title "Activity"
        :action (r/as-element
-                [:> ToggleButtonGroup
-                 {:value window
-                  :exclusive true
-                  :size "small"
-                  :onChange (fn [_ v] (when v (rf/dispatch [::events/set-throughput-window v])))}
-                 [:> ToggleButton {:value 24} "24 h"]
-                 [:> ToggleButton {:value 168} "7 d"]])}]
+                 [:> ToggleButtonGroup
+                  {:value window
+                   :exclusive true
+                   :size "small"
+                   :onChange (fn [_ v] (when v (rf/dispatch [::events/set-throughput-window v])))}
+                  [:> ToggleButton {:value 24} "24 h"]
+                  [:> ToggleButton {:value 168} "7 d"]])}]
      [:> CardContent
       (when data
         [throughput-chart {:data data}])
@@ -472,8 +472,8 @@
         [max-attempts set-max-attempts] (hooks/use-state "")]
     ;; Clear the max-attempts override when another entry is opened
     (hooks/use-effect
-     (fn [] (set-max-attempts ""))
-     [(:id job)])
+      (fn [] (set-max-attempts ""))
+      [(:id job)])
     [:> Dialog {:open (some? job)
                 :onClose #(rf/dispatch [::events/close-job-details-dialog])
                 :maxWidth "md"
@@ -491,10 +491,10 @@
                      :sx #js{:mb 2}
                      :action (when-not (:acknowledged job)
                                (r/as-element
-                                [:> Button {:size "small"
-                                            :color "inherit"
-                                            :on-click #(rf/dispatch [::events/acknowledge-jobs [(:id job)]])}
-                                 "Acknowledge"]))}
+                                 [:> Button {:size "small"
+                                             :color "inherit"
+                                             :on-click #(rf/dispatch [::events/acknowledge-jobs [(:id job)]])}
+                                  "Acknowledge"]))}
            (str "A newer " (get-in job [:original-job :type]) " job (#" job-id ")"
                 (when lipas-id (str " for site " lipas-id))
                 " completed at " (fmt-ts completed-at)
@@ -610,9 +610,9 @@
                     :start-icon (when acknowledging?
                                   (r/as-element [:> CircularProgress {:size 16}]))
                     :on-click #(when (js/confirm
-                                      (str "Acknowledge " (count superseded-ids)
-                                           " superseded job(s)? A newer job has already "
-                                           "completed for each of these sites."))
+                                       (str "Acknowledge " (count superseded-ids)
+                                            " superseded job(s)? A newer job has already "
+                                            "completed for each of these sites."))
                                  (rf/dispatch [::events/acknowledge-jobs superseded-ids]))}
          (str "Acknowledge all superseded (" (count superseded-ids) ")")])
       (when site-filter
@@ -637,20 +637,20 @@
         stats @(rf/subscribe [::subs/dead-letter-stats])]
     ;; Poll while mounted; ::poll ticks re-check the :polling? flag.
     (hooks/use-effect
-     (fn []
-       (rf/dispatch [::events/start-polling])
-       (fn []
-         (rf/dispatch [::events/stop-polling])))
-     [])
+      (fn []
+        (rf/dispatch [::events/start-polling])
+        (fn []
+          (rf/dispatch [::events/stop-polling])))
+      [])
     [:> Card {:square true}
      [:> CardContent
       [:> Stack {:direction "row" :spacing 2 :alignItems "center" :sx #js{:mb 1}}
        [:> Typography {:variant "h5" :sx #js{:flexGrow 1}} "Jobs"]
        [:> FormControlLabel
         {:control (r/as-element
-                   [:> Switch {:checked (boolean auto-refresh?)
-                               :size "small"
-                               :onChange #(rf/dispatch [::events/toggle-auto-refresh])}])
+                    [:> Switch {:checked (boolean auto-refresh?)
+                                :size "small"
+                                :onChange #(rf/dispatch [::events/toggle-auto-refresh])}])
          :label "Auto-refresh (30 s)"}]
        [:> Button {:variant "contained"
                    :color "primary"

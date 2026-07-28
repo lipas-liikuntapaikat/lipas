@@ -14,13 +14,13 @@
   (let [user (:identity req)]
     (or
       ;; Global audit privilege
-     (roles/check-privilege user {} :ptv/audit)
+      (roles/check-privilege user {} :ptv/audit)
       ;; Context-specific manage privilege (check with any city-code the user has)
-     (some (fn [permission]
-             (when-let [city-code (:city-code permission)]
-               (some #(roles/check-privilege user {:city-code %} :ptv/manage)
-                     city-code)))
-           (get-in user [:permissions :roles])))))
+      (some (fn [permission]
+              (when-let [city-code (:city-code permission)]
+                (some #(roles/check-privilege user {:city-code %} :ptv/manage)
+                      city-code)))
+            (get-in user [:permissions :roles])))))
 
 (defn routes [{:keys [db search ptv emailer] :as _ctx}]
   [""
@@ -54,7 +54,7 @@
         (let [{:keys [lipas-id reference]} (-> req :parameters :body)]
           {:status 200
            :body (ptv-core/generate-ptv-descriptions
-                  search lipas-id {:reference reference})}))}}]
+                   search lipas-id {:reference reference})}))}}]
 
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
@@ -67,7 +67,7 @@
               doc (dissoc body :reference)]
           {:status 200
            :body (ptv-core/generate-ptv-descriptions-from-data
-                  doc {:reference reference})}))}}]
+                   doc {:reference reference})}))}}]
 
    ["/actions/generate-ptv-descriptions-batch"
     {:post
@@ -82,8 +82,8 @@
       (fn [req]
         {:status 200
          :body (ptv-core/generate-ptv-descriptions-batch
-                search
-                (-> req :parameters :body))})}}]
+                 search
+                 (-> req :parameters :body))})}}]
 
    ["/actions/translate-to-other-langs"
     {:post
@@ -98,7 +98,7 @@
       (fn [req]
         {:status 200
          :body (ptv-core/translate-to-other-langs
-                (-> req :parameters :body))})}}]
+                 (-> req :parameters :body))})}}]
 
    ["/actions/generate-ptv-service-descriptions"
     {:post
@@ -214,8 +214,8 @@
       (fn [req]
         {:status 200
          :body (ptv-core/check-service-channel-link
-                db
-                (select-keys (-> req :parameters :body) [:lipas-id :service-channel-id]))})}}]
+                 db
+                 (select-keys (-> req :parameters :body) [:lipas-id :service-channel-id]))})}}]
 
    ["/actions/save-ptv-service-location"
     {:post
@@ -290,7 +290,7 @@
       :handler
       (fn [req]
         (if-let [result (ptv-core/send-audit-notification!
-                         db search emailer (-> req :parameters :body :org-id))]
+                          db search emailer (-> req :parameters :body :org-id))]
           {:status 200 :body result}
           {:status 404 :body {:error "Organization not found"}}))}}]
 
@@ -304,7 +304,7 @@
       (fn [req]
         (let [{:keys [org-id section]} (-> req :parameters :body)]
           (if-let [result (ptv-core/get-audit-notification-preview
-                           db search ptv org-id section)]
+                            db search ptv org-id section)]
             {:status 200 :body result}
             {:status 404 :body {:error "Organization not found"}})))}}]
 
@@ -335,7 +335,7 @@
       :handler
       (fn [req]
         (if-let [result (ptv-core/send-service-audit-notification!
-                         db ptv emailer (-> req :parameters :body :org-id))]
+                          db ptv emailer (-> req :parameters :body :org-id))]
           {:status 200 :body result}
           {:status 404 :body {:error "Organization not found"}}))}}]])
 

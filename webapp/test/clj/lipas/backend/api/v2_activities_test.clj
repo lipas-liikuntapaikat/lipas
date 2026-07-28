@@ -1,7 +1,7 @@
 (ns lipas.backend.api.v2-activities-test
   (:require
-   [clojure.test :refer [deftest is testing]]
-   [lipas.backend.api.v2 :as v2]))
+    [clojure.test :refer [deftest is testing]]
+    [lipas.backend.api.v2 :as v2]))
 
 (deftest sports-sites-query-activities-filtering-test
   (testing "Activity filtering uses search-meta.activities field"
@@ -41,10 +41,10 @@
 
   (testing "Activities filter works with other filters"
     (let [query (v2/->sports-sites-query
-                 {:activities ["cycling"]
-                  :statuses ["active"]
-                  :type-codes [101 102]
-                  :city-codes [91]})]
+                  {:activities ["cycling"]
+                   :statuses ["active"]
+                   :type-codes [101 102]
+                   :city-codes [91]})]
       (let [filters (get-in query [:query :bool :filter])]
         (is (= 4 (count filters))
             "Should have 4 filters: status, type, city, and activities")

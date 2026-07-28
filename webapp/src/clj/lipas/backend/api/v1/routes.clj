@@ -69,18 +69,18 @@
 
 (defn routes [{:keys [search db]}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                    {:url "/v1/openapi.json"})
+                     {:url "/v1/openapi.json"})
 
         ;; Named handlers for reuse with HEAD method
         get-sports-place-by-id
         (safe-handler
-         (fn [req]
-           (let [locale (or (-> req :parameters :query :lang keyword) :fi)
-                 sports-place-id (-> req :parameters :path :sports-place-id)
-                 resp (v1-core/fetch-sports-place-es search locale sports-place-id)]
-             (if resp
-               {:status 200 :body resp}
-               {:status 404 :body {:errors {:sportsPlaceId "Didn't find such sports place. :("}}}))))]
+          (fn [req]
+            (let [locale (or (-> req :parameters :query :lang keyword) :fi)
+                  sports-place-id (-> req :parameters :path :sports-place-id)
+                  resp (v1-core/fetch-sports-place-es search locale sports-place-id)]
+              (if resp
+                {:status 200 :body resp}
+                {:status 404 :body {:errors {:sportsPlaceId "Didn't find such sports place. :("}}}))))]
 
     ["/v1"
      {:openapi
@@ -128,77 +128,77 @@ Access to the hierarchical type classification system used for categorizing spor
      ["/sports-places"
       (let [list-sports-places
             (safe-handler
-             (fn [{:keys [parameters] :as req}]
-               (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
-                             closeToMatch closeToLon closeToLat modifiedAfter
-                             searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
+              (fn [{:keys [parameters] :as req}]
+                (let [{:keys [pageSize page typeCodes cityCodes closeToDistanceKm
+                              closeToMatch closeToLon closeToLat modifiedAfter
+                              searchString retkikartta harrastuspassi lang] :as qp} (-> parameters :query)
 
-                     pageSize (or pageSize 10)
+                      pageSize (or pageSize 10)
                      ;; Validate page size
-                     _ (when (or (< pageSize 1) (> pageSize 100))
-                         (throw (ex-info "Invalid page size: must be between 1 and 100"
-                                         {:type :invalid-input
-                                          :parameter :pageSize
-                                          :value pageSize})))
+                      _ (when (or (< pageSize 1) (> pageSize 100))
+                          (throw (ex-info "Invalid page size: must be between 1 and 100"
+                                          {:type :invalid-input
+                                           :parameter :pageSize
+                                           :value pageSize})))
 
                      ;; Ensure typeCodes and cityCodes are always collections
-                     type-codes (cond (nil? typeCodes) nil
-                                      (coll? typeCodes) typeCodes
-                                      :else [typeCodes])
-                     city-codes (cond (nil? cityCodes) nil
-                                      (coll? cityCodes) cityCodes
-                                      :else [cityCodes])
+                      type-codes (cond (nil? typeCodes) nil
+                                       (coll? typeCodes) typeCodes
+                                       :else [typeCodes])
+                      city-codes (cond (nil? cityCodes) nil
+                                       (coll? cityCodes) cityCodes
+                                       :else [cityCodes])
 
-                     params {:limit pageSize
-                             :offset (dec (or page 1))
-                             :type-codes type-codes
-                             :city-codes city-codes
-                             :close-to (when closeToDistanceKm
-                                         {:distance (str (* closeToDistanceKm 1000) "m")
-                                          :field (if (= closeToMatch :start-point)
-                                                   :location.coordinates.wgs84
-                                                   :location.geom-coll)
-                                          :point {:lon closeToLon
-                                                  :lat closeToLat}})
-                             :modified-after modifiedAfter
-                             :search-string searchString
-                             :excursion-map? retkikartta
-                             :harrastuspassi? harrastuspassi}
-                     fields (let [fields-value (:fields qp)]
-                              (cond
-                                (nil? fields-value) []
-                                (string? fields-value)
+                      params {:limit pageSize
+                              :offset (dec (or page 1))
+                              :type-codes type-codes
+                              :city-codes city-codes
+                              :close-to (when closeToDistanceKm
+                                          {:distance (str (* closeToDistanceKm 1000) "m")
+                                           :field (if (= closeToMatch :start-point)
+                                                    :location.coordinates.wgs84
+                                                    :location.geom-coll)
+                                           :point {:lon closeToLon
+                                                   :lat closeToLat}})
+                              :modified-after modifiedAfter
+                              :search-string searchString
+                              :excursion-map? retkikartta
+                              :harrastuspassi? harrastuspassi}
+                      fields (let [fields-value (:fields qp)]
+                               (cond
+                                 (nil? fields-value) []
+                                 (string? fields-value)
                                 ;; Handle comma-separated string by splitting
-                                (if (re-find #"," fields-value)
-                                  (mapv clojure.string/trim (clojure.string/split fields-value #","))
-                                  [fields-value])
-                                :else fields-value))
-                     locale (or (keyword lang) :fi)
-                     resp (v1-core/fetch-sports-places-es search locale params fields)
-                     {:keys [partial? total results]} resp]
-                 (if partial?
-                   (let [base-path (or (v1-http/extract-base-path req) "/v1")
-                         path (v1-http/build-sports-places-path base-path)
+                                 (if (re-find #"," fields-value)
+                                   (mapv clojure.string/trim (clojure.string/split fields-value #","))
+                                   [fields-value])
+                                 :else fields-value))
+                      locale (or (keyword lang) :fi)
+                      resp (v1-core/fetch-sports-places-es search locale params fields)
+                      {:keys [partial? total results]} resp]
+                  (if partial?
+                    (let [base-path (or (v1-http/extract-base-path req) "/v1")
+                          path (v1-http/build-sports-places-path base-path)
                          ;; Build link params from original query params (camelCase), filtered of nil/empty values
-                         link-params (->> {:pageSize pageSize
-                                           :typeCodes typeCodes
-                                           :cityCodes cityCodes
-                                           :closeToLon closeToLon
-                                           :closeToLat closeToLat
-                                           :closeToDistanceKm closeToDistanceKm
-                                           :modifiedAfter modifiedAfter
-                                           :searchString searchString
-                                           :retkikartta retkikartta
-                                           :harrastuspassi harrastuspassi
-                                           :lang lang
-                                           :fields (:fields qp)}
-                                          (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
-                                          (into {}))
+                          link-params (->> {:pageSize pageSize
+                                            :typeCodes typeCodes
+                                            :cityCodes cityCodes
+                                            :closeToLon closeToLon
+                                            :closeToLat closeToLat
+                                            :closeToDistanceKm closeToDistanceKm
+                                            :modifiedAfter modifiedAfter
+                                            :searchString searchString
+                                            :retkikartta retkikartta
+                                            :harrastuspassi harrastuspassi
+                                            :lang lang
+                                            :fields (:fields qp)}
+                                           (remove (fn [[_ v]] (or (nil? v) (and (coll? v) (empty? v)))))
+                                           (into {}))
                          ;; Pass page number (1-indexed), not offset (0-indexed)
-                         links (v1-http/create-page-links path link-params (or page 1) (:limit params) total)]
-                     (v1-http/linked-partial-content results links))
-                   {:status 200
-                    :body results}))))]
+                          links (v1-http/create-page-links path link-params (or page 1) (:limit params) total)]
+                      (v1-http/linked-partial-content results links))
+                    {:status 200
+                     :body results}))))]
         {:parameters {:query v1-schema/search-params}
          :get
          {:tags ["sport-places"]
@@ -216,12 +216,12 @@ Access to the hierarchical type classification system used for categorizing spor
        {:tags ["sport-places"]
         :handler
         (safe-handler
-         (fn [req]
-           (let [since-str (or (-> req :parameters :query :since) "1984-01-01 00:00:00.000")
+          (fn [req]
+            (let [since-str (or (-> req :parameters :query :since) "1984-01-01 00:00:00.000")
                  ;; Use the since string directly for ES query (ES accepts ISO format)
-                 api-results (v1-core/fetch-deleted-sports-places-es search since-str)]
-             {:status 200
-              :body api-results})))
+                  api-results (v1-core/fetch-deleted-sports-places-es search since-str)]
+              {:status 200
+               :body api-results})))
         :responses {200 {:body v1-schema/deleted-sports-places-response}}}}]
      ["/categories"
       {:tags ["sport-place-types"]
@@ -229,10 +229,10 @@ Access to the hierarchical type classification system used for categorizing spor
        :get
        {:handler
         (safe-handler
-         (fn [req]
-           (let [locale (or (-> req :parameters :query :lang keyword) :fi)]
-             {:status 200
-              :body (v1-handlers/categories locale)})))
+          (fn [req]
+            (let [locale (or (-> req :parameters :query :lang keyword) :fi)]
+              {:status 200
+               :body (v1-handlers/categories locale)})))
         :responses {200 {:body #'v1-schema/category-response}}}}]
      ["/sports-place-types"
       {:parameters {:query [:map [:lang {:optional true} #'v1-schema/lang]]}
@@ -240,10 +240,10 @@ Access to the hierarchical type classification system used for categorizing spor
        {:tags ["sport-place-types"]
         :handler
         (safe-handler
-         (fn [req]
-           (let [locale (or (-> req :parameters :query :lang keyword) :fi)]
-             {:status 200
-              :body (v1-handlers/sports-place-types locale)})))
+          (fn [req]
+            (let [locale (or (-> req :parameters :query :lang keyword) :fi)]
+              {:status 200
+               :body (v1-handlers/sports-place-types locale)})))
         :responses {200 {:body #'v1-schema/sports-place-types-response}}}}]
      ["/sports-place-types/:type-code"
       {:swagger {:id ::legacy}
@@ -253,11 +253,11 @@ Access to the hierarchical type classification system used for categorizing spor
        {:tags ["sport-place-types"]
         :handler
         (safe-handler
-         (fn [req]
-           (let [locale (or (-> req :parameters :query :lang keyword) :fi)
-                 type-code (-> req :parameters :path :type-code)]
-             {:status 200
-              :body (v1-handlers/sports-place-by-type-code locale type-code)})))
+          (fn [req]
+            (let [locale (or (-> req :parameters :query :lang keyword) :fi)
+                  type-code (-> req :parameters :path :type-code)]
+              {:status 200
+               :body (v1-handlers/sports-place-by-type-code locale type-code)})))
         :responses {200 {:body #'v1-schema/sports-places-by-type-response}}}}]
      ["/swagger.json"
       {:get

@@ -2,8 +2,8 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.materials :as materials]
-   [lipas.schema.common]))
+    [lipas.data.materials :as materials]
+    [lipas.schema.common]))
 
 (def all
   {:height-m

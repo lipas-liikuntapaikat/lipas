@@ -5,10 +5,10 @@
   already processing does not suppress a new enqueue - the running execution
   may be working on stale data, so a successor must be allowed."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.jobs.core :as jobs]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.jobs.core :as jobs]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]))
 
 (defonce test-system (atom nil))
 
@@ -115,14 +115,14 @@
           start-latch (java.util.concurrent.CountDownLatch. 1)
           results (atom [])
           threads (doall
-                   (for [_ (range n)]
-                     (Thread.
-                      (fn []
-                        (.await start-latch)
-                        (let [result (try
-                                       (jobs/enqueue-job! db "analysis" {:lipas-id 555})
-                                       (catch Exception e e))]
-                          (swap! results conj result))))))]
+                    (for [_ (range n)]
+                      (Thread.
+                        (fn []
+                          (.await start-latch)
+                          (let [result (try
+                                         (jobs/enqueue-job! db "analysis" {:lipas-id 555})
+                                         (catch Exception e e))]
+                            (swap! results conj result))))))]
       (doseq [t threads] (.start t))
       (.countDown start-latch)
       (doseq [t threads] (.join t 10000))

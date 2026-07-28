@@ -1696,7 +1696,6 @@
                 :on-success [::save-ptv-audit-success lipas-id]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
 
-
 (rf/reg-event-fx ::save-ptv-audit-success
   (fn [{:keys [db]} [_ lipas-id resp]]
     (let [tr (:translator db)
@@ -1841,7 +1840,6 @@
                 :response-format (ajax/transit-response-format)
                 :on-success [::save-ptv-service-audit-success (str service-id)]
                 :on-failure [::save-ptv-audit-failure]}]]}))))
-
 
 (rf/reg-event-fx ::save-ptv-service-audit-success
   (fn [{:keys [db]} [_ service-id resp]]

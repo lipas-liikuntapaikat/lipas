@@ -2,8 +2,8 @@
   "Tests for reliability patterns: exponential backoff and the in-memory
   circuit breaker."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.jobs.patterns :as patterns]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.jobs.patterns :as patterns]))
 
 (use-fixtures :each (fn [f] (patterns/reset-breakers!) (f)))
 

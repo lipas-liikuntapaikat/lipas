@@ -84,7 +84,7 @@
                       site (-> base-site
                                (assoc :lipas-id (inc i))
                                (cond->
-                                city-codes
+                                 city-codes
                                  (assoc-in [:location :city :city-code]
                                            (nth city-codes (mod i (clojure.core/count city-codes))))
 
@@ -1206,12 +1206,12 @@
                       :created_at (str (java.time.Instant/now))
                       :updated_at (str (java.time.Instant/now))}
         dlj (first
-             (next-jdbc/execute!
-              db
-              ["INSERT INTO dead_letter_jobs (original_job, error_message)
+              (next-jdbc/execute!
+                db
+                ["INSERT INTO dead_letter_jobs (original_job, error_message)
                 VALUES (?::jsonb, ?) RETURNING id"
-               (j/generate-string original-job)
-               error-message]))
+                 (j/generate-string original-job)
+                 error-message]))
         dlj-id (:dead_letter_jobs/id dlj)
         ;; Support both :acknowledged (boolean) and :acknowledged-by (string)
         ack-user (or acknowledged-by (when acknowledged "system"))]

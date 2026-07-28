@@ -63,10 +63,10 @@
      (when (seq clauses)
        (->> (jdbc/execute! db
                            (hsql/format
-                            {:select [:lipas_id]
-                             :from   [:sports_site_current]
-                             :where  (into [:and] (cond-> clauses
-                                                    exclude-org-id (conj (not-owned-by-clause exclude-org-id))))})
+                             {:select [:lipas_id]
+                              :from   [:sports_site_current]
+                              :where  (into [:and] (cond-> clauses
+                                                     exclude-org-id (conj (not-owned-by-clause exclude-org-id))))})
                            {:builder-fn rs/as-unqualified-kebab-maps})
             (mapv :lipas-id))))))
 
@@ -82,14 +82,14 @@
      (when (seq clauses)
        (jdbc/execute! db
                       (hsql/format
-                       {:select   [:lipas_id
-                                   [[:->> :document [:inline "name"]] :name]
-                                   [[:->> :document [:inline "owner"]] :current-owner]
-                                   [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
-                        :from     [:sports_site_current]
-                        :where    (into [:and] (cond-> clauses
-                                                 exclude-org-id (conj (not-owned-by-clause exclude-org-id))))
-                        :order-by [[[:->> :document [:inline "name"]] :asc]]})
+                        {:select   [:lipas_id
+                                    [[:->> :document [:inline "name"]] :name]
+                                    [[:->> :document [:inline "owner"]] :current-owner]
+                                    [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
+                         :from     [:sports_site_current]
+                         :where    (into [:and] (cond-> clauses
+                                                  exclude-org-id (conj (not-owned-by-clause exclude-org-id))))
+                         :order-by [[[:->> :document [:inline "name"]] :asc]]})
                       {:builder-fn rs/as-unqualified-kebab-maps})))))
 
 (defn- with-owner-org-names
@@ -173,14 +173,14 @@
   (when (seq lipas-ids)
     (jdbc/execute! db
                    (hsql/format
-                    {:select   [:lipas_id
-                                [[:->> :document [:inline "name"]] :name]
-                                [[:->> :document [:inline "owner"]] :current-owner]
-                                [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
-                     :from     [:sports_site_current]
-                     :where    (cond-> [:and [:in :lipas_id (vec lipas-ids)]]
-                                 exclude-org-id (conj (not-owned-by-clause exclude-org-id)))
-                     :order-by [[[:->> :document [:inline "name"]] :asc]]})
+                     {:select   [:lipas_id
+                                 [[:->> :document [:inline "name"]] :name]
+                                 [[:->> :document [:inline "owner"]] :current-owner]
+                                 [[:->> :document [:inline "owner-org-id"]] :current-owner-org-id]]
+                      :from     [:sports_site_current]
+                      :where    (cond-> [:and [:in :lipas_id (vec lipas-ids)]]
+                                  exclude-org-id (conj (not-owned-by-clause exclude-org-id)))
+                      :order-by [[[:->> :document [:inline "name"]] :asc]]})
                    {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (defn request-preview
@@ -256,16 +256,16 @@
                                  ;; request and approval) → idempotent skip
                                  (remove #(= (str org-id) (some-> (:owner-org-id %) str))))
                   updated (doall
-                           (for [site claimable]
+                            (for [site claimable]
                              ;; fresh :event-date — reusing the stored one would create
                              ;; a duplicate (lipas-id, event-date) revision pair (FE
                              ;; history keys by event-date) and misdate the claim
-                             (->> (cond-> (assoc site
-                                                 :event-date    (utils/timestamp)
-                                                 :owner-org-id  (str org-id)
-                                                 :acting-org-id (str org-id))
-                                    owner-enum (assoc :owner owner-enum))
-                                  (core/upsert-sports-site!* tx actor))))]
+                              (->> (cond-> (assoc site
+                                                  :event-date    (utils/timestamp)
+                                                  :owner-org-id  (str org-id)
+                                                  :acting-org-id (str org-id))
+                                     owner-enum (assoc :owner owner-enum))
+                                   (core/upsert-sports-site!* tx actor))))]
               ;; one bulk index for all of them (refresh=wait_for, so the immediate
               ;; "our sites" refresh after a reclaim sees the freshly-claimed sites)
               (when (seq updated)
@@ -323,20 +323,20 @@
   (when (seq lipas-ids)
     (jdbc/execute! db
                    (hsql/format
-                    {:select   [:lipas_id
-                                [[:->> :document [:inline "name"]] :name]
-                                [[:->> :document [:inline "owner"]] :current-owner]
-                                [[:case
-                                  [:= [:jsonb_typeof [:-> :document [:inline "edit-grants"]]]
-                                   [:inline "array"]]
-                                  [:jsonb_array_length [:-> :document [:inline "edit-grants"]]]
-                                  :else [:inline 0]]
-                                 :edit-grant-count]]
-                     :from     [:sports_site_current]
-                     :where    [:and
-                                [:in :lipas_id (vec lipas-ids)]
-                                [:= [:->> :document [:inline "owner-org-id"]] (str org-id)]]
-                     :order-by [[[:->> :document [:inline "name"]] :asc]]})
+                     {:select   [:lipas_id
+                                 [[:->> :document [:inline "name"]] :name]
+                                 [[:->> :document [:inline "owner"]] :current-owner]
+                                 [[:case
+                                   [:= [:jsonb_typeof [:-> :document [:inline "edit-grants"]]]
+                                    [:inline "array"]]
+                                   [:jsonb_array_length [:-> :document [:inline "edit-grants"]]]
+                                   :else [:inline 0]]
+                                  :edit-grant-count]]
+                      :from     [:sports_site_current]
+                      :where    [:and
+                                 [:in :lipas_id (vec lipas-ids)]
+                                 [:= [:->> :document [:inline "owner-org-id"]] (str org-id)]]
+                      :order-by [[[:->> :document [:inline "name"]] :asc]]})
                    {:builder-fn rs/as-unqualified-kebab-maps})))
 
 (defn preview-release
@@ -372,16 +372,16 @@
                              (map core/enrich-activities)
                              (filter #(= (str org-id) (some-> (:owner-org-id %) str))))
                 updated (doall
-                         (for [site owned]
+                          (for [site owned]
                            ;; fresh :event-date — reusing the stored one would
                            ;; collide with the previous revision (FE history keys
                            ;; by event-date) and misdate the release
-                           (->> (cond-> (-> site
-                                            (dissoc :owner-org-id :edit-grants)
-                                            (assoc :event-date    (utils/timestamp)
-                                                   :acting-org-id (str org-id)))
-                                  owner (assoc :owner owner))
-                                (core/upsert-sports-site!* tx actor))))]
+                            (->> (cond-> (-> site
+                                             (dissoc :owner-org-id :edit-grants)
+                                             (assoc :event-date    (utils/timestamp)
+                                                    :acting-org-id (str org-id)))
+                                   owner (assoc :owner owner))
+                                 (core/upsert-sports-site!* tx actor))))]
             (when (seq updated)
               (let [idx       (get-in search [:indices :sports-site :search])
                     org-names (core/org-names db)]

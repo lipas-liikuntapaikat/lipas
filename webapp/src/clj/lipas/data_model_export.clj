@@ -59,15 +59,15 @@
   [os]
   (excel/save-workbook-into-stream! os
                                     (excel/create-workbook
-                                     "Liikuntapaikka" sports-sites/csv-data
-                                     "Liikuntapaikkatyypit" types/csv-data
-                                     "Ominaisuudet" prop-types/csv-data
-                                     "Luokitellut ominaisuudet" prop-types/enum-csv-data
-                                     "Tyypit+Ominaisuudet" types/csv-data-with-props
-                                     "Omistajaluokat" owners/csv-data
-                                     "Ylläpitäjäluokat" admins/csv-data
-                                     "Aktiviteetit (UTP)" activities/csv-data
-                                     "Muut kohteet" loi/csv-data
-                                     "Salibandyn olosuhdetiedot" (circumastances/schema->csv-data)
-                                     "WFS-tasot" wfs/csv-data
-                                     "Tekniset mäppäykset" legacy-mappings-csv)))
+                                      "Liikuntapaikka" sports-sites/csv-data
+                                      "Liikuntapaikkatyypit" types/csv-data
+                                      "Ominaisuudet" prop-types/csv-data
+                                      "Luokitellut ominaisuudet" prop-types/enum-csv-data
+                                      "Tyypit+Ominaisuudet" types/csv-data-with-props
+                                      "Omistajaluokat" owners/csv-data
+                                      "Ylläpitäjäluokat" admins/csv-data
+                                      "Aktiviteetit (UTP)" activities/csv-data
+                                      "Muut kohteet" loi/csv-data
+                                      "Salibandyn olosuhdetiedot" (circumastances/schema->csv-data)
+                                      "WFS-tasot" wfs/csv-data
+                                      "Tekniset mäppäykset" legacy-mappings-csv)))

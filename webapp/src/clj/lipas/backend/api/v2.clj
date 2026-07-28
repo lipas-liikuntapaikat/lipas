@@ -108,7 +108,7 @@
 
 (defn routes [{:keys [db search] :as _ctx}]
   (let [ui-handler (swagger-ui/create-swagger-ui-handler
-                    {:url "/v2/openapi.json"})]
+                     {:url "/v2/openapi.json"})]
     ["/v2"
      {:openapi
       {:id :api-v2

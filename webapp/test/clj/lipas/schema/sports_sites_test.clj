@@ -323,11 +323,11 @@
 (deftest make-sports-site-schema-basic-structure-test
   (testing "Basic schema structure for Point geometry"
     (let [schema (sports-sites/make-sports-site-schema
-                  {:title "Test Sports Site"
-                   :description "Test description"
-                   :type-codes #{1234}
-                   :location-schema [:map [:test :string]]
-                   :extras-schema [:map]})
+                   {:title "Test Sports Site"
+                    :description "Test description"
+                    :type-codes #{1234}
+                    :location-schema [:map [:test :string]]
+                    :extras-schema [:map]})
           form (m/form schema)]
 
       (is (= :map (first form)))
@@ -351,10 +351,10 @@
 
   (testing "Optional fields are marked as optional"
     (let [schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1234}
-                   :location-schema [:map]
-                   :extras-schema [:map]})
+                   {:title "Test"
+                    :type-codes #{1234}
+                    :location-schema [:map]
+                    :extras-schema [:map]})
           form (m/form schema)
           optional-fields #{:marketing-name :name-localized :email :www
                             :reservations-link :phone-number :comment
@@ -367,10 +367,10 @@
 (deftest make-sports-site-schema-type-code-structure-test
   (testing "Type code is nested in type map"
     (let [schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1530 2000}
-                   :location-schema [:map]
-                   :extras-schema [:map]})
+                   {:title "Test"
+                    :type-codes #{1530 2000}
+                    :location-schema [:map]
+                    :extras-schema [:map]})
           form (m/form schema)
           type-field (first (filter #(= :type (first %)) (drop 2 form)))
           type-map (second type-field)
@@ -384,11 +384,11 @@
 (deftest make-sports-site-schema-compat-type-code-structure-test
   (testing "Compat version has :encode/json identity in type-code enum"
     (let [schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1530 2000}
-                   :location-schema [:map]
-                   :extras-schema [:map]}
-                  true) ; compat? = true
+                   {:title "Test"
+                    :type-codes #{1530 2000}
+                    :location-schema [:map]
+                    :extras-schema [:map]}
+                   true) ; compat? = true
           form (m/form schema)
           type-field (first (filter #(= :type (first %)) (drop 2 form)))
           type-map (second type-field)
@@ -403,22 +403,22 @@
 (deftest location-schema-city-code-difference-test
   (testing "Compat version uses location schemas with :encode/json identity in city-code"
     (let [normal-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map
-                                                    [:city-code [:enum 91 92]]]]
-                                            [:address :string]]
-                          :extras-schema [:map]})
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map
+                                                     [:city-code [:enum 91 92]]]]
+                                             [:address :string]]
+                           :extras-schema [:map]})
           compat-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map
-                                                    [:city-code [:enum {:encode/json identity} 91 92]]]]
-                                            [:address :string]]
-                          :extras-schema [:map]}
-                         true)
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map
+                                                     [:city-code [:enum {:encode/json identity} 91 92]]]]
+                                             [:address :string]]
+                           :extras-schema [:map]}
+                          true)
           normal-form (m/form normal-schema)
           compat-form (m/form compat-schema)
 
@@ -490,24 +490,24 @@
                                                           :geometry {:type "Point"
                                                                      :coordinates [25.0 60.0]}}]}}}
           normal-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map [:city-code :int]]]
-                                            [:address :string]
-                                            [:postal-code :string]
-                                            [:geometries :any]]
-                          :extras-schema [:map]})
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map [:city-code :int]]]
+                                             [:address :string]
+                                             [:postal-code :string]
+                                             [:geometries :any]]
+                           :extras-schema [:map]})
           compat-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map [:city-code :int]]]
-                                            [:address :string]
-                                            [:postal-code :string]
-                                            [:geometries :any]]
-                          :extras-schema [:map]}
-                         true)]
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map [:city-code :int]]]
+                                             [:address :string]
+                                             [:postal-code :string]
+                                             [:geometries :any]]
+                           :extras-schema [:map]}
+                          true)]
 
       (is (m/validate normal-schema valid-site))
       (is (m/validate compat-schema valid-site))))
@@ -547,24 +547,24 @@
                                      :postal-code "00100"
                                      :geometries {}}}]
           normal-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map [:city-code :int]]]
-                                            [:address :string]
-                                            [:postal-code :string]
-                                            [:geometries :any]]
-                          :extras-schema [:map]})
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map [:city-code :int]]]
+                                             [:address :string]
+                                             [:postal-code :string]
+                                             [:geometries :any]]
+                           :extras-schema [:map]})
           compat-schema (sports-sites/make-sports-site-schema
-                         {:title "Test"
-                          :type-codes #{1530}
-                          :location-schema [:map
-                                            [:city [:map [:city-code :int]]]
-                                            [:address :string]
-                                            [:postal-code :string]
-                                            [:geometries :any]]
-                          :extras-schema [:map]}
-                         true)]
+                          {:title "Test"
+                           :type-codes #{1530}
+                           :location-schema [:map
+                                             [:city [:map [:city-code :int]]]
+                                             [:address :string]
+                                             [:postal-code :string]
+                                             [:geometries :any]]
+                           :extras-schema [:map]}
+                          true)]
 
       (doseq [invalid-site invalid-sites]
         (is (not (m/validate normal-schema invalid-site)))
@@ -576,10 +576,10 @@
                   [:custom-field {:optional true} :string]
                   [:another-field {:optional true} :int]]
           schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1234}
-                   :location-schema [:map]
-                   :extras-schema extras})
+                   {:title "Test"
+                    :type-codes #{1234}
+                    :location-schema [:map]
+                    :extras-schema extras})
           form (m/form schema)
           fields (into #{} (map first (drop 2 form)))]
 
@@ -588,10 +588,10 @@
 
   (testing "Empty extras schema works"
     (let [schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1234}
-                   :location-schema [:map]
-                   :extras-schema [:map]})]
+                   {:title "Test"
+                    :type-codes #{1234}
+                    :location-schema [:map]
+                    :extras-schema [:map]})]
       (is (m/validate schema {:lipas-id 1
                               :event-date "2025-01-01T00:00:00.000Z"
                               :status "active"
@@ -608,10 +608,10 @@
                     [:field-length-m {:optional true} :int]
                     [:surface-material {:optional true} :string]]]]
           schema (sports-sites/make-sports-site-schema
-                  {:title "Test"
-                   :type-codes #{1234}
-                   :location-schema [:map]
-                   :extras-schema extras})]
+                   {:title "Test"
+                    :type-codes #{1234}
+                    :location-schema [:map]
+                    :extras-schema extras})]
 
       (is (m/validate schema {:lipas-id 1
                               :event-date "2025-01-01T00:00:00.000Z"

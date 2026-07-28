@@ -120,42 +120,42 @@
              :description description
              :closed false}]
            (concat
-            (when include-lipas-id?
-              [[:lipas-id #'lipas-id]])
-            [[:event-date {:description "Timestamp when this information became valid (ISO 8601, UTC time zone)"}
-              #'common/iso8601-timestamp]
-             [:status #'common/status]
-             [:name #'name]
-             [:marketing-name {:optional true} #'marketing-name]
-             [:name-localized {:optional true} #'name-localized]
-             [:owner #'owner]
-             [:admin #'admin]
-             [:email {:optional true} #'email]
-             [:www {:optional true} #'www]
-             [:reservations-link {:optional true} #'reservations-link]
-             [:phone-number {:optional true} #'phone-number]
-             [:comment {:optional true} #'comment]
-             [:construction-year {:optional true} #'construction-year]
-             [:renovation-years {:optional true} #'renovation-years]
-             [:renovations {:optional true} #'renovations]
-             [:images {:optional true} #'images-schema/images]
-             [:type
-              [:map
+             (when include-lipas-id?
+               [[:lipas-id #'lipas-id]])
+             [[:event-date {:description "Timestamp when this information became valid (ISO 8601, UTC time zone)"}
+               #'common/iso8601-timestamp]
+              [:status #'common/status]
+              [:name #'name]
+              [:marketing-name {:optional true} #'marketing-name]
+              [:name-localized {:optional true} #'name-localized]
+              [:owner #'owner]
+              [:admin #'admin]
+              [:email {:optional true} #'email]
+              [:www {:optional true} #'www]
+              [:reservations-link {:optional true} #'reservations-link]
+              [:phone-number {:optional true} #'phone-number]
+              [:comment {:optional true} #'comment]
+              [:construction-year {:optional true} #'construction-year]
+              [:renovation-years {:optional true} #'renovation-years]
+              [:renovations {:optional true} #'renovations]
+              [:images {:optional true} #'images-schema/images]
+              [:type
+               [:map
                ;; Add :encode/json identity in compat mode to prevent conversion to string
-               [:type-code (if compat?
-                             (into [:enum {:encode/json identity}] type-codes)
-                             (into [:enum] type-codes))]]]
-             [:location location-schema]
+                [:type-code (if compat?
+                              (into [:enum {:encode/json identity}] type-codes)
+                              (into [:enum] type-codes))]]]
+              [:location location-schema]
              ;; --- org-management ownership fields (opt-in; nil/absent for
              ;; legacy sites). owner = the org that owns the site; edit-grants =
              ;; other orgs granted edit by the owner (cross-org collaboration). ---
-             [:owner-org-id {:optional true
-                             :description "Id of the organization that owns this site"}
-              [:maybe #'common/uuid]]
-             [:edit-grants {:optional true
-                            :description "Org ids granted edit access by the owner"}
-              [:vector #'common/uuid]]]
-            extras-entries)))))
+              [:owner-org-id {:optional true
+                              :description "Id of the organization that owns this site"}
+               [:maybe #'common/uuid]]
+              [:edit-grants {:optional true
+                             :description "Org ids granted edit access by the owner"}
+               [:vector #'common/uuid]]]
+             extras-entries)))))
 
 (defn- make-sports-site-multi-schema
   "Helper function to generate sports-site multi schema.
@@ -187,55 +187,55 @@
            ;; make-sports-site-schema now returns pure data (no mu/merge),
            ;; so no m/form conversion needed.
            [type-code (make-sports-site-schema
-                       {:title (str type-code " - " (:en (:name x)))
-                        :description (get-in x [:description :en])
-                        :type-codes #{type-code}
-                        :location-schema location-schema
-                        :extras-schema (cond-> [:map]
-                                         (seq props)
-                                         (conj [:properties
-                                                {:optional true}
-                                                (into [:map]
-                                                      (for [[k schema] (select-keys prop-types/schemas (keys props))]
-                                                        [k {:optional true
-                                                            :description (get-in prop-types/all [k :description :en])}
-                                                         schema]))])
+                        {:title (str type-code " - " (:en (:name x)))
+                         :description (get-in x [:description :en])
+                         :type-codes #{type-code}
+                         :location-schema location-schema
+                         :extras-schema (cond-> [:map]
+                                          (seq props)
+                                          (conj [:properties
+                                                 {:optional true}
+                                                 (into [:map]
+                                                       (for [[k schema] (select-keys prop-types/schemas (keys props))]
+                                                         [k {:optional true
+                                                             :description (get-in prop-types/all [k :description :en])}
+                                                          schema]))])
 
-                                         floorball?
-                                         (conj [:fields
-                                                {:optional true
-                                                 :description "Collection of playing fields in the facility"}
-                                                #'fields-schema/fields]
-                                               [:locker-rooms
-                                                {:optional true
-                                                 :description "Collection of locker rooms in the facility"}
-                                                #'circumstances-schema/locker-rooms]
-                                               [:audits
-                                                {:optional true
-                                                 :description "Collection of facility audits"}
-                                                #'circumstances-schema/audits]
-                                               [:circumstances
-                                                {:optional true
-                                                 :description "Floorball facility information"}
-                                                #'circumstances-schema/floorball])
+                                          floorball?
+                                          (conj [:fields
+                                                 {:optional true
+                                                  :description "Collection of playing fields in the facility"}
+                                                 #'fields-schema/fields]
+                                                [:locker-rooms
+                                                 {:optional true
+                                                  :description "Collection of locker rooms in the facility"}
+                                                 #'circumstances-schema/locker-rooms]
+                                                [:audits
+                                                 {:optional true
+                                                  :description "Collection of facility audits"}
+                                                 #'circumstances-schema/audits]
+                                                [:circumstances
+                                                 {:optional true
+                                                  :description "Floorball facility information"}
+                                                 #'circumstances-schema/floorball])
 
-                                         activity
-                                         (conj [:activities
-                                                {:optional true
-                                                 :description "Enriched content for Luontoon.fi service."}
-                                                [:map
-                                                 [activity-key
-                                                  {:optional true}
-                                                  (case activity-key
-                                                    :outdoor-recreation-areas #'activities-schema/outdoor-recreation-areas
-                                                    :outdoor-recreation-facilities #'activities-schema/outdoor-recreation-facilities
-                                                    :outdoor-recreation-routes #'activities-schema/outdoor-recreation-routes
-                                                    :cycling #'activities-schema/cycling
-                                                    :paddling #'activities-schema/paddling
-                                                    :birdwatching #'activities-schema/birdwatching
-                                                    :fishing #'activities-schema/fishing)]]]))}
-                       compat?
-                       include-lipas-id?)]))))
+                                          activity
+                                          (conj [:activities
+                                                 {:optional true
+                                                  :description "Enriched content for Luontoon.fi service."}
+                                                 [:map
+                                                  [activity-key
+                                                   {:optional true}
+                                                   (case activity-key
+                                                     :outdoor-recreation-areas #'activities-schema/outdoor-recreation-areas
+                                                     :outdoor-recreation-facilities #'activities-schema/outdoor-recreation-facilities
+                                                     :outdoor-recreation-routes #'activities-schema/outdoor-recreation-routes
+                                                     :cycling #'activities-schema/cycling
+                                                     :paddling #'activities-schema/paddling
+                                                     :birdwatching #'activities-schema/birdwatching
+                                                     :fishing #'activities-schema/fishing)]]]))}
+                        compat?
+                        include-lipas-id?)]))))
 
 (def sports-site
   (m/schema (make-sports-site-multi-schema false)))
@@ -257,22 +257,22 @@
 
     (require '[malli.error :as me])
     (me/humanize
-     (m/explain new-or-existing-sports-site
-                {:status "active"
+      (m/explain new-or-existing-sports-site
+                 {:status "active"
                ;;:lipas-id 1
-                 :event-date "2025-01-01T00:00:00.000Z"
-                 :name "foo"
-                 :owner "city"
-                 :ptv {:kissa "koira"}
-                 :admin "city-sports"
-                 :location {:city {:city-code 5}
-                            :address "foo"
-                            :postal-code "00100"
-                            :postal-office "foo"
-                            :geometries {:type "FeatureCollection"
-                                         :features [{:type "Feature"
-                                                     :geometry {:type "Point"
-                                                                :coordinates [0.0 0.0]}}]}}
-                 :type {:type-code 1530}})))
+                  :event-date "2025-01-01T00:00:00.000Z"
+                  :name "foo"
+                  :owner "city"
+                  :ptv {:kissa "koira"}
+                  :admin "city-sports"
+                  :location {:city {:city-code 5}
+                             :address "foo"
+                             :postal-code "00100"
+                             :postal-office "foo"
+                             :geometries {:type "FeatureCollection"
+                                          :features [{:type "Feature"
+                                                      :geometry {:type "Point"
+                                                                 :coordinates [0.0 0.0]}}]}}
+                  :type {:type-code 1530}})))
 
 (def prop-types prop-types/schemas)

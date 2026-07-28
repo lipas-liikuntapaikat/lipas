@@ -68,8 +68,8 @@
 
           ;; Use raw SQL since we need to delete by name
           (let [result (jdbc/execute-one!
-                        db
-                        ["DELETE FROM org WHERE name = ?" org-name])]
+                         db
+                         ["DELETE FROM org WHERE name = ?" org-name])]
             (if (pos? (:next.jdbc/update-count result))
               (log/info "Successfully removed organization:" org-name)
               (log/warn "Organization not found:" org-name)))

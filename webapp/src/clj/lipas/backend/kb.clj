@@ -249,14 +249,14 @@
 (defn code-data->docs
   []
   (concat
-   nav-docs
-   (keep role->doc roles/roles)
-   (for [lang langs, entry types/active
-         :let [doc (type->doc lang entry)] :when doc]
-     doc)
-   (for [lang langs, entry prop-types/all
-         :let [doc (prop->doc lang entry)] :when doc]
-     doc)))
+    nav-docs
+    (keep role->doc roles/roles)
+    (for [lang langs, entry types/active
+          :let [doc (type->doc lang entry)] :when doc]
+      doc)
+    (for [lang langs, entry prop-types/all
+          :let [doc (prop->doc lang entry)] :when doc]
+      doc)))
 
 ;;; ——— Ingested docs (jyu.fi PDFs, YouTube transcripts) ————————————
 ;;
@@ -320,7 +320,7 @@
             with-embeddings (mapv (fn [doc v] (assoc doc :embedding v))
                                   changed vectors)]
         (search/bulk-index-sync!
-         client (search/->bulk idx :id with-embeddings))))
+          client (search/->bulk idx :id with-embeddings))))
     (doseq [id orphans]
       (search/delete! client idx id))
     (let [result {:total    (count docs)

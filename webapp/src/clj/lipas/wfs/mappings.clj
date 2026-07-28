@@ -247,40 +247,40 @@
 (def legacy-field->resolve-fn
   "Resolve function receives a map with keys :site :feature :idx"
   (merge
-   {:id (comp :lipas-id :site)
-    :nimi_fi (comp :name :site)
-    :nimi_se (comp :se :name-localized :site)
-    :nimi_en (comp :en :name-localized :site)
-    :sahkoposti (comp :email :site)
-    :www (comp :www :site)
-    :puhelinnumero (comp :phone-number :site)
-    :koulun_liikuntapaikka (comp :school-use? :properties :site)
-    :vapaa_kaytto (comp :free-use? :properties :site)
-    :rakennusvuosi (comp :construction-year :site)
-    :peruskorjausvuodet (fn [m] (some->> m :site :renovation-years (str/join ",")))
-    :omistaja (comp :fi owners/all :owner :site)
-    :yllapitaja (comp :fi admins/all :admin :site)
-    :katuosoite (comp :address :location :site)
-    :postinumero (comp :postal-code :location :site)
-    :postitoimipaikka (comp :postal-office :location :site)
-    :kunta_nimi_fi (comp :fi :name cities/by-city-code :city-code :city :location :site)
-    :kuntanumero (comp :city-code :city :location :site)
-    :kuntaosa (comp :neighborhood :city :location :site)
-    :tyyppikoodi (comp :type-code :type :site)
-    :tyyppi_nimi_fi (comp :fi :name types/all :type-code :type :site)
-    :tyyppi_nimi_se (comp :se :name types/all :type-code :type :site)
-    :tyyppi_nimi_en (comp :en :name types/all :type-code :type :site)
-    :tyyppikoodi_paaryhma (fn [{:keys [site]}]
-                            (let [type-code (-> site :type :type-code)
-                                  main-cat (get-in types/all [type-code :main-category])]
-                              (get-in types/main-categories [main-cat :name :fi])))
-    :tyyppikoodi_alaryhma (fn [{:keys [site]}]
-                            (let [type-code (-> site :type :type-code)
-                                  sub-cat (get-in types/all [type-code :sub-category])]
-                              (get-in types/sub-categories [sub-cat :name :fi])))
-    :muokattu_viimeksi (comp ->helsinki-time :event-date :site)
-    :lisatieto_fi (comp :comment :site)
-    :sijainti_id (comp :lipas-id :site)
+    {:id (comp :lipas-id :site)
+     :nimi_fi (comp :name :site)
+     :nimi_se (comp :se :name-localized :site)
+     :nimi_en (comp :en :name-localized :site)
+     :sahkoposti (comp :email :site)
+     :www (comp :www :site)
+     :puhelinnumero (comp :phone-number :site)
+     :koulun_liikuntapaikka (comp :school-use? :properties :site)
+     :vapaa_kaytto (comp :free-use? :properties :site)
+     :rakennusvuosi (comp :construction-year :site)
+     :peruskorjausvuodet (fn [m] (some->> m :site :renovation-years (str/join ",")))
+     :omistaja (comp :fi owners/all :owner :site)
+     :yllapitaja (comp :fi admins/all :admin :site)
+     :katuosoite (comp :address :location :site)
+     :postinumero (comp :postal-code :location :site)
+     :postitoimipaikka (comp :postal-office :location :site)
+     :kunta_nimi_fi (comp :fi :name cities/by-city-code :city-code :city :location :site)
+     :kuntanumero (comp :city-code :city :location :site)
+     :kuntaosa (comp :neighborhood :city :location :site)
+     :tyyppikoodi (comp :type-code :type :site)
+     :tyyppi_nimi_fi (comp :fi :name types/all :type-code :type :site)
+     :tyyppi_nimi_se (comp :se :name types/all :type-code :type :site)
+     :tyyppi_nimi_en (comp :en :name types/all :type-code :type :site)
+     :tyyppikoodi_paaryhma (fn [{:keys [site]}]
+                             (let [type-code (-> site :type :type-code)
+                                   main-cat (get-in types/all [type-code :main-category])]
+                               (get-in types/main-categories [main-cat :name :fi])))
+     :tyyppikoodi_alaryhma (fn [{:keys [site]}]
+                             (let [type-code (-> site :type :type-code)
+                                   sub-cat (get-in types/all [type-code :sub-category])]
+                               (get-in types/sub-categories [sub-cat :name :fi])))
+     :muokattu_viimeksi (comp ->helsinki-time :event-date :site)
+     :lisatieto_fi (comp :comment :site)
+     :sijainti_id (comp :lipas-id :site)
 
     ;; Following keys are "special ones" that don't take sports-site as
     ;; argument, but either a feature or idx. This is because for WFS
@@ -288,25 +288,25 @@
     ;; collection to as many rows as there are features. LIPAS WFS
     ;; does not use MultiLineString or MultiPolygon for backwards
     ;; compatibility reasons.
-    :the_geom (fn [{:keys [feature]}] (:geometry feature))
-    :reitti_id (fn [{:keys [idx]}] (inc idx))
-    :alue_id (fn [{:keys [idx]}] (inc idx))
-    :kulkusuunta (fn [{:keys [feature]}] (-> feature :properties :travel-direction))}
+     :the_geom (fn [{:keys [feature]}] (:geometry feature))
+     :reitti_id (fn [{:keys [idx]}] (inc idx))
+     :alue_id (fn [{:keys [idx]}] (inc idx))
+     :kulkusuunta (fn [{:keys [feature]}] (-> feature :properties :travel-direction))}
 
    ;; Create lookup functions for all possible type-specific props.
-   (update-vals legacy-prop->legacy-handle
-                (fn [legacy-handle]
-                  (fn [m]
-                    (let [prop-k (legacy-handle->prop legacy-handle)
-                          prop (get prop-types/all prop-k)
-                          v (get-in m [:site :properties prop-k])]
-                      (case (:data-type prop)
-                        "enum" (get-in prop [:opts v :label :fi])
-                        "enum-coll" (-> (select-keys (:opts prop) v)
-                                        vals
-                                        (->> (map (comp :fi :label))
-                                             (str/join ",")))
-                        v)))))))
+    (update-vals legacy-prop->legacy-handle
+                 (fn [legacy-handle]
+                   (fn [m]
+                     (let [prop-k (legacy-handle->prop legacy-handle)
+                           prop (get prop-types/all prop-k)
+                           v (get-in m [:site :properties prop-k])]
+                       (case (:data-type prop)
+                         "enum" (get-in prop [:opts v :label :fi])
+                         "enum-coll" (-> (select-keys (:opts prop) v)
+                                         vals
+                                         (->> (map (comp :fi :label))
+                                              (str/join ",")))
+                         v)))))))
 
 (def common-fields
   "Fields present in all WFS views"

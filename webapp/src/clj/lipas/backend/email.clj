@@ -35,23 +35,23 @@
   [{:keys [host port user pass from]}
    {:keys [to subject plain html]}]
   (postal/send-message
-   (merge
-    {:host host
+    (merge
+      {:host host
      ;; Socket timeouts (ms, javax.mail wants strings). Blocking socket IO
      ;; ignores thread interrupts, so without these a stuck SMTP server
      ;; would leak a job-worker thread past the watchdog timeout.
-     :connectiontimeout "30000"
-     :timeout "60000"
-     :writetimeout "60000"}
-    (when port {:port port})
-    (when (and (not-empty user) (not-empty pass))
-      {:user user :pass pass :ssl true}))
-   {:from    from
-    :to      to
-    :subject subject
-    :body    (cond-> [:alternative]
-               (not-empty plain) (conj {:type "text/plain" :content plain})
-               (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
+       :connectiontimeout "30000"
+       :timeout "60000"
+       :writetimeout "60000"}
+      (when port {:port port})
+      (when (and (not-empty user) (not-empty pass))
+        {:user user :pass pass :ssl true}))
+    {:from    from
+     :to      to
+     :subject subject
+     :body    (cond-> [:alternative]
+                (not-empty plain) (conj {:type "text/plain" :content plain})
+                (not-empty html)  (conj {:type "text/html;charset=utf-8" :content html})
                ;; Fallback if both are empty to avoid NPE
                 (and (empty? plain) (empty? html)) (conj {:type "text/plain" :content ""}))}))
 

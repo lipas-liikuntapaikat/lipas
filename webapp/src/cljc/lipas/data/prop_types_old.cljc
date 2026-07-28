@@ -1370,5 +1370,4 @@
     :description
     {:fi "Toimiiko kohteessa ohjelmapalveluyritys.",
      :se "",
-     :en ""}}
-   })
+     :en ""}}})

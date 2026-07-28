@@ -462,10 +462,10 @@
         ;; Verify all inserted sites exist in wfs.master table
         (doseq [site test-sites]
           (let [wfs-rows (next.jdbc/execute!
-                          (test-db)
-                          (honey.sql/format {:select [:lipas_id :type_code :geom_type :status]
-                                             :from [:wfs.master]
-                                             :where [:= :lipas_id (:lipas-id site)]}))]
+                           (test-db)
+                           (honey.sql/format {:select [:lipas_id :type_code :geom_type :status]
+                                              :from [:wfs.master]
+                                              :where [:= :lipas_id (:lipas-id site)]}))]
             (is (seq wfs-rows)
                 (str "Site " (:lipas-id site) " should exist in wfs.master"))
 
@@ -490,9 +490,9 @@
               (doseq [view-name view-names]
                 (let [view-data (try
                                   (next.jdbc/execute!
-                                   (test-db)
-                                   [(str "SELECT id, tyyppikoodi FROM wfs." view-name
-                                         " WHERE id = ?") (:lipas-id site)])
+                                    (test-db)
+                                    [(str "SELECT id, tyyppikoodi FROM wfs." view-name
+                                          " WHERE id = ?") (:lipas-id site)])
                                   (catch Exception e
                                     (println "Error querying view" view-name ":" (.getMessage e))
                                     []))]
@@ -541,10 +541,10 @@
 
         ;; Check that removed site is no longer active in views
         (let [removed-site-data (next.jdbc/execute!
-                                 (test-db)
-                                 (honey.sql/format {:select [:lipas_id :status]
-                                                    :from [:wfs.master]
-                                                    :where [:= :lipas_id 90001]}))]
+                                  (test-db)
+                                  (honey.sql/format {:select [:lipas_id :status]
+                                                     :from [:wfs.master]
+                                                     :where [:= :lipas_id 90001]}))]
           (if (seq removed-site-data)
             (is (not= "active" (:master/status (first removed-site-data)))
                 "Removed site should not have active status")
@@ -552,10 +552,10 @@
 
         ;; Check that modified site has updated data
         (let [modified-site-rows (next.jdbc/execute!
-                                  (test-db)
-                                  (honey.sql/format {:select [:lipas_id :doc]
-                                                     :from [:wfs.master]
-                                                     :where [:= :lipas_id 90002]}))]
+                                   (test-db)
+                                   (honey.sql/format {:select [:lipas_id :doc]
+                                                      :from [:wfs.master]
+                                                      :where [:= :lipas_id 90002]}))]
           (when (seq modified-site-rows)
             (let [doc-data (-> modified-site-rows first :master/doc)]
               (is (or (clojure.string/includes? (str doc-data) "Modified Horse Trail")
@@ -564,10 +564,10 @@
 
         ;; Check that new site exists in appropriate views
         (let [new-site-data (next.jdbc/execute!
-                             (test-db)
-                             (honey.sql/format {:select [:lipas_id :type_code]
-                                                :from [:wfs.master]
-                                                :where [:= :lipas_id 90004]}))]
+                              (test-db)
+                              (honey.sql/format {:select [:lipas_id :type_code]
+                                                 :from [:wfs.master]
+                                                 :where [:= :lipas_id 90004]}))]
           (is (seq new-site-data) "New site should exist in wfs.master")
           (when (seq new-site-data)
             (is (= 1370 (:master/type_code (first new-site-data)))
@@ -579,9 +579,9 @@
             (doseq [view-name tennis-view-names]
               (let [view-count (try
                                  (next.jdbc/execute-one!
-                                  (test-db)
-                                  [(str "SELECT COUNT(*) as count FROM wfs." view-name
-                                        " WHERE id IN (90001, 90004)")])
+                                   (test-db)
+                                   [(str "SELECT COUNT(*) as count FROM wfs." view-name
+                                         " WHERE id IN (90001, 90004)")])
                                  (catch Exception e
                                    (println "Error counting in view" view-name ":" (.getMessage e))
                                    {:count 0}))]

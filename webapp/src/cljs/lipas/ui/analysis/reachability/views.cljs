@@ -62,11 +62,11 @@
      ;; Tabs
      [:> Grid {:item true :xs 12}
       [:> Tabs {:value sports-sites-view
-                 :indicator-color "primary"
-                 :text-color "inherit"
-                 :variant "fullWidth"
+                :indicator-color "primary"
+                :text-color "inherit"
+                :variant "fullWidth"
 
-                 :on-change #(==> [::events/select-sports-sites-view %2])}
+                :on-change #(==> [::events/select-sports-sites-view %2])}
        [:> Tab {:icon (r/as-element [:> Icon "list"]) :value "list"}]
        [:> Tab {:icon (r/as-element [:> Icon "analytics"]) :value "chart"}]]]
 
@@ -208,11 +208,11 @@
 
      [:> Grid {:item true :xs 12}
       [:> Tabs {:value schools-view
-                 :indicator-color "primary"
-                 :text-color "inherit"
-                 :variant "fullWidth"
+                :indicator-color "primary"
+                :text-color "inherit"
+                :variant "fullWidth"
 
-                 :on-change #(==> [::events/select-schools-view %2])}
+                :on-change #(==> [::events/select-schools-view %2])}
        [:> Tab {:icon (r/as-element [:> Icon "list"]) :value "list"}]
        [:> Tab {:icon (r/as-element [:> Icon "analytics"]) :value "chart"}]]]
 
@@ -410,9 +410,9 @@
          :justify-content "space-between"
          :align-items "center"}
         [:> Grid {:item true
-                   :container true
-                   :align-items "center"
-                   :spacing 1}
+                  :container true
+                  :align-items "center"
+                  :spacing 1}
          [:> Grid {:item true}
           [selects/select
            {:items sites
@@ -452,10 +452,10 @@
      (when selected-site
        [:> Grid {:item true :xs 12}
         [:> Tabs {:value selected-tab
-                   :on-change #(==> [::events/select-analysis-tab %2])
-                   :style {:margin-bottom "1em"}
-                   :indicator-color "secondary"
-                   :text-color "secondary"}
+                  :on-change #(==> [::events/select-analysis-tab %2])
+                  :style {:margin-bottom "1em"}
+                  :indicator-color "secondary"
+                  :text-color "secondary"}
          [:> Tab {:label (tr :sport/headline) :value :sports-sites}]
          [:> Tab {:label (tr :analysis/population) :value :population}]
          [:> Tab {:label (tr :analysis/schools) :value :schools}]

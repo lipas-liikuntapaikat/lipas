@@ -3,9 +3,9 @@
   Elasticsearch. These run against the real (local/CI) ES cluster but need no
   database, so they build a bare client from the test config."
   (:require
-   [clojure.test :refer [deftest is testing use-fixtures]]
-   [lipas.backend.search :as search]
-   [lipas.test-utils :as tu]))
+    [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.search :as search]
+    [lipas.test-utils :as tu]))
 
 ;; Prefix used for the throwaway indices this ns creates. Deliberately unique so
 ;; the pattern-based sweep can never touch real indices.
@@ -27,8 +27,8 @@
 
 (defn- with-fresh-es [f]
   (binding [*client* (search/create-cli
-                      (let [{:keys [hosts user pass]} (:search tu/config)]
-                        {:hosts hosts :user user :password pass}))]
+                       (let [{:keys [hosts user pass]} (:search tu/config)]
+                         {:hosts hosts :user user :password pass}))]
     (cleanup! *client*)          ; guard against leftovers from a crashed run
     (try (f)
          (finally (cleanup! *client*)))))

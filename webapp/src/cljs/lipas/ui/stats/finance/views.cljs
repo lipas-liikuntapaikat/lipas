@@ -17,9 +17,9 @@
   [{:keys [tr] :as props}]
   [selects/year-selector
    (merge
-    props
-    {:label (tr :actions/select-year)
-     :style common/select-style})])
+     props
+     {:label (tr :actions/select-year)
+      :style common/select-style})])
 
 (defn unit-selector [{:keys [tr value on-change]}]
   (let [locale (tr)
@@ -177,8 +177,8 @@
             (tr :stats/show-ranking))}
          [:> IconButton {:on-click #(==> [::events/toggle-chart-type])}
           [:> Icon {:font-size "large" :color (if (= "ranking" chart-type)
-                                                 "secondary"
-                                                 "inherit")}
+                                                "secondary"
+                                                "inherit")}
            "sort"]]]]
 
        ;; Clear filters button
@@ -211,8 +211,8 @@
          ;; Comparison chart
          (if (= "comparison" chart-type)
            [:> Grid {:item true
-                      :xs 12
-                      :sx {:width 0}}
+                     :xs 12
+                     :sx {:width 0}}
             [charts/finance-chart
              {:data     data
               :metrics  metrics
@@ -222,9 +222,9 @@
            ;; Ranking chart
            [:> Grid {:container true :item true :direction "column" :spacing 4}
             [:> Grid {:item true
-                       :xs 12
-                       :md 6
-                       :sx {:width 0}}
+                      :xs 12
+                      :md 6
+                      :sx {:width 0}}
              [charts/finance-ranking-chart
               {:data     ranking-data
                :metric   ranking-metric

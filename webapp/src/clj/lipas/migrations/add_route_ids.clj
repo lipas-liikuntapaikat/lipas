@@ -24,13 +24,13 @@
   [activities]
   (when activities
     (reduce-kv
-     (fn [acc activity-k activity-v]
-       (if-let [routes (:routes activity-v)]
-         (let [fixed-routes (add-ids-to-routes routes)]
-           (assoc-in acc [activity-k :routes] fixed-routes))
-         (assoc acc activity-k activity-v)))
-     {}
-     activities)))
+      (fn [acc activity-k activity-v]
+        (if-let [routes (:routes activity-v)]
+          (let [fixed-routes (add-ids-to-routes routes)]
+            (assoc-in acc [activity-k :routes] fixed-routes))
+          (assoc acc activity-k activity-v)))
+      {}
+      activities)))
 
 (defn- has-routes-without-ids?
   "Check if any route in activities is missing an :id"
@@ -65,8 +65,8 @@
         ;; Update the document in place for the current revision
         ;; This is a data fix, not a normal edit, so we update directly
         (jdbc/execute-one!
-         db
-         ["UPDATE sports_site
+          db
+          ["UPDATE sports_site
            SET document = ?::jsonb
            WHERE lipas_id = ?
              AND (lipas_id, event_date) IN (
@@ -75,8 +75,8 @@
                WHERE status = 'published'
                GROUP BY lipas_id
              )"
-          (json/generate-string fixed-document)
-          lipas_id])))
+           (json/generate-string fixed-document)
+           lipas_id])))
 
     (log/info "Migration complete: add-route-ids. Fixed" (count sites-to-fix) "sites")))
 

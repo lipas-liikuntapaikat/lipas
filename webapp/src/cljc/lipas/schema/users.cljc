@@ -14,20 +14,20 @@
 
 (def email-schema
   (m/schema
-   [:and
-    {:gen/gen #?(:clj (gen/fmap
-                       (fn [[user domain tld]]
-                         (str user "@" domain "." tld))
-                       (gen/tuple
-                        (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 3 12))
-                        (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 3 10))
-                        (gen/elements ["fi" "com" "org" "net"])))
-                 :cljs nil)}
-    [:string]
-    [:fn {:error/message "Not a valid email address"}
-     #(re-matches email-regex %)]
-    [:fn {:error/message "Email contains consecutive dots"}
-     #(not (re-find two-consecutive-dots-regex %))]]))
+    [:and
+     {:gen/gen #?(:clj (gen/fmap
+                         (fn [[user domain tld]]
+                           (str user "@" domain "." tld))
+                         (gen/tuple
+                           (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 3 12))
+                           (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 3 10))
+                           (gen/elements ["fi" "com" "org" "net"])))
+                  :cljs nil)}
+     [:string]
+     [:fn {:error/message "Not a valid email address"}
+      #(re-matches email-regex %)]
+     [:fn {:error/message "Email contains consecutive dots"}
+      #(not (re-find two-consecutive-dots-regex %))]]))
 
 ;; Common string validations
 (defn string-length
@@ -47,31 +47,31 @@
 ;; User data schemas
 (def user-data-schema
   (m/schema
-   [:map
-    [:firstname firstname-schema]
-    [:lastname lastname-schema]
-    [:permissions-request {:optional true} permissions-request-schema]]))
+    [:map
+     [:firstname firstname-schema]
+     [:lastname lastname-schema]
+     [:permissions-request {:optional true} permissions-request-schema]]))
 
 ;; Main user schema for registration/validation
 (def new-user-schema
   (m/schema
-   [:map
-    [:email email-schema]
-    [:username username-schema]
-    [:password {:optional true} password-schema]
-    [:user-data user-data-schema]
-    [:permissions {:optional true} [:map]]]))
+    [:map
+     [:email email-schema]
+     [:username username-schema]
+     [:password {:optional true} password-schema]
+     [:user-data user-data-schema]
+     [:permissions {:optional true} [:map]]]))
 
 ;; Complete user schema with system fields
 (def user-schema
   (m/schema
-   [:map
-    [:id common/uuid]
-    [:status [:enum "active" "archived"]]
-    [:email email-schema]
-    [:username username-schema]
-    [:user-data user-data-schema]
-    [:password {:optional true} password-schema]]))
+    [:map
+     [:id common/uuid]
+     [:status [:enum "active" "archived"]]
+     [:email email-schema]
+     [:username username-schema]
+     [:user-data user-data-schema]
+     [:password {:optional true} password-schema]]))
 
 ;;; Role-based permissions ;;;
 
@@ -85,50 +85,50 @@
 (def role-schema
   "Multi-dispatch role schema, replaces s/multi-spec role-type."
   (m/schema
-   [:multi {:dispatch (fn [x] (some-> x :role keyword))}
-    [:admin [:map [:role [:= :admin]]]]
-    [:type-manager [:map
-                    [:role [:= :type-manager]]
-                    [:type-code [:set (into [:enum] type-codes)]]
-                    [:city-code {:optional true} [:set (into [:enum] city-codes)]]]]
-    [:city-manager [:map
-                    [:role [:= :city-manager]]
-                    [:city-code [:set (into [:enum] city-codes)]]
-                    [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
-    [:images-manager [:map
-                      [:role [:= :images-manager]]
-                      [:city-code [:set (into [:enum] city-codes)]]
-                      [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
-    [:site-manager [:map
-                    [:role [:= :site-manager]]
-                    [:lipas-id [:set #'sports-sites-schema/lipas-id]]]]
-    [:activities-manager [:map
-                          [:role [:= :activities-manager]]
-                          [:activity [:set (into [:enum] activity-values)]]
-                          [:city-code {:optional true} [:set (into [:enum] city-codes)]]
-                          [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
-    [:itrs-assessor [:map
-                     [:role [:= :itrs-assessor]]
-                     [:city-code {:optional true} [:set (into [:enum] city-codes)]]
+    [:multi {:dispatch (fn [x] (some-> x :role keyword))}
+     [:admin [:map [:role [:= :admin]]]]
+     [:type-manager [:map
+                     [:role [:= :type-manager]]
+                     [:type-code [:set (into [:enum] type-codes)]]
+                     [:city-code {:optional true} [:set (into [:enum] city-codes)]]]]
+     [:city-manager [:map
+                     [:role [:= :city-manager]]
+                     [:city-code [:set (into [:enum] city-codes)]]
                      [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
-    [:floorball-manager [:map
-                         [:role [:= :floorball-manager]]
-                         [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
-    [:analysis-user [:map [:role [:= :analysis-user]]]]
-    [:analysis-experimental-user [:map [:role [:= :analysis-experimental-user]]]]
-    [:ptv-manager [:map
-                   [:role [:= :ptv-manager]]
-                   [:city-code {:optional true} [:set (into [:enum] city-codes)]]]]
-    [:ptv-auditor [:map [:role [:= :ptv-auditor]]]]
-    [:org-admin [:map
-                 [:role [:= :org-admin]]
+     [:images-manager [:map
+                       [:role [:= :images-manager]]
+                       [:city-code [:set (into [:enum] city-codes)]]
+                       [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+     [:site-manager [:map
+                     [:role [:= :site-manager]]
+                     [:lipas-id [:set #'sports-sites-schema/lipas-id]]]]
+     [:activities-manager [:map
+                           [:role [:= :activities-manager]]
+                           [:activity [:set (into [:enum] activity-values)]]
+                           [:city-code {:optional true} [:set (into [:enum] city-codes)]]
+                           [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+     [:itrs-assessor [:map
+                      [:role [:= :itrs-assessor]]
+                      [:city-code {:optional true} [:set (into [:enum] city-codes)]]
+                      [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+     [:floorball-manager [:map
+                          [:role [:= :floorball-manager]]
+                          [:type-code {:optional true} [:set (into [:enum] type-codes)]]]]
+     [:analysis-user [:map [:role [:= :analysis-user]]]]
+     [:analysis-experimental-user [:map [:role [:= :analysis-experimental-user]]]]
+     [:ptv-manager [:map
+                    [:role [:= :ptv-manager]]
+                    [:city-code {:optional true} [:set (into [:enum] city-codes)]]]]
+     [:ptv-auditor [:map [:role [:= :ptv-auditor]]]]
+     [:org-admin [:map
+                  [:role [:= :org-admin]]
+                  [:org-id {:optional true} [:set :string]]]]
+     [:org-user [:map
+                 [:role [:= :org-user]]
                  [:org-id {:optional true} [:set :string]]]]
-    [:org-user [:map
-                [:role [:= :org-user]]
-                [:org-id {:optional true} [:set :string]]]]
-    [:assistant-tester [:map [:role [:= :assistant-tester]]]]
+     [:assistant-tester [:map [:role [:= :assistant-tester]]]]
     ;; Catch-all for unknown roles - just requires :role keyword
-    [::default [:map [:role role-keyword]]]]))
+     [::default [:map [:role role-keyword]]]]))
 
 (def roles-schema
   (m/schema [:vector role-schema]))
@@ -136,15 +136,15 @@
 (def permissions-schema
   "User permissions map, covering both old flat permissions and new role-based."
   (m/schema
-   [:map
+    [:map
     ;; Old permissions
-    [:admin? {:optional true} :boolean]
-    [:draft? {:optional true} :boolean]
-    [:sports-sites {:optional true} [:vector [:int {:min 0}]]]
-    [:all-cities? {:optional true} :boolean]
-    [:all-types? {:optional true} :boolean]
-    [:cities {:optional true} [:vector (into [:enum] city-codes)]]
-    [:types {:optional true} [:vector (into [:enum] type-codes)]]
-    [:activities {:optional true} [:vector (into [:enum] activity-values)]]
+     [:admin? {:optional true} :boolean]
+     [:draft? {:optional true} :boolean]
+     [:sports-sites {:optional true} [:vector [:int {:min 0}]]]
+     [:all-cities? {:optional true} :boolean]
+     [:all-types? {:optional true} :boolean]
+     [:cities {:optional true} [:vector (into [:enum] city-codes)]]
+     [:types {:optional true} [:vector (into [:enum] type-codes)]]
+     [:activities {:optional true} [:vector (into [:enum] activity-values)]]
     ;; New roles
-    [:roles {:optional true} roles-schema]]))
+     [:roles {:optional true} roles-schema]]))

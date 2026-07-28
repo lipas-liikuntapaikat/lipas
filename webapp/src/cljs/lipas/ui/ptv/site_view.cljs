@@ -255,21 +255,21 @@
       [:> FormControlLabel
        {:label (tr :ptv.actions/integration-enabled)
         :control (r/as-element
-                  [:> Switch
-                   {:disabled read-only?
-                    :checked sync-enabled
-                    :on-change (fn [_e v]
-                                 (rf/dispatch [::events/toggle-site-sync-enabled lipas-id v]))}])}]
+                   [:> Switch
+                    {:disabled read-only?
+                     :checked sync-enabled
+                     :on-change (fn [_e v]
+                                  (rf/dispatch [::events/toggle-site-sync-enabled lipas-id v]))}])}]
       (when (and (not sync-enabled)
                  previous-sent?)
         [:> FormControlLabel
          {:label (tr :ptv.actions/archive-in-ptv)
           :control (r/as-element
-                    [:> Switch
-                     {:disabled read-only?
-                      :checked (or delete-existing false)
-                      :on-change (fn [_e v]
-                                   (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))}])}])]
+                     [:> Switch
+                      {:disabled read-only?
+                       :checked (or delete-existing false)
+                       :on-change (fn [_e v]
+                                    (rf/dispatch [:lipas.ui.sports-sites.events/edit-field lipas-id [:ptv :delete-existing] v]))}])}])]
 
      ;; 3. Organization selector — only relevant once the user opts in to sync.
      ;; Pre-filled from ::resolved-org-id. Shown as a caption + edit affordance

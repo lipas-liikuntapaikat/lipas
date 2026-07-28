@@ -1,13 +1,13 @@
 (ns lipas.jobs.dispatcher-test
   "Tests for job type handlers."
   (:require
-   [clojure.set :as set]
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.backend.email :as email]
-   [lipas.jobs.dispatcher :as dispatcher]
-   [lipas.jobs.registry :as registry]
-   [lipas.test-utils :as test-utils]
-   [taoensso.timbre :as log]))
+    [clojure.set :as set]
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.email :as email]
+    [lipas.jobs.dispatcher :as dispatcher]
+    [lipas.jobs.registry :as registry]
+    [lipas.test-utils :as test-utils]
+    [taoensso.timbre :as log]))
 
 ;; Test system setup using shared fixture
 (defonce test-system (atom nil))

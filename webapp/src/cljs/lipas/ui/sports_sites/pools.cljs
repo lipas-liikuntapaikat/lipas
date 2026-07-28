@@ -124,15 +124,15 @@
         close  #(==> [::hall/toggle-dialog :pool])
         valid? (m/validate pool-schema/pool-schema data)]
     [dialogs/dialog {:title         (if (:id data)
-                                  (tr :lipas.swimming-pool.pools/edit-pool)
-                                  (tr :lipas.swimming-pool.pools/add-pool))
-                 :save-label    (tr :actions/save)
-                 :cancel-label  (tr :actions/cancel)
-                 :on-close      #(==> [::hall/toggle-dialog :pool])
-                 :save-enabled? valid?
-                 :on-save       (comp reset
-                                      close
-                                      #(==> [::hall/save-pool lipas-id data]))}
+                                      (tr :lipas.swimming-pool.pools/edit-pool)
+                                      (tr :lipas.swimming-pool.pools/add-pool))
+                     :save-label    (tr :actions/save)
+                     :cancel-label  (tr :actions/cancel)
+                     :on-close      #(==> [::hall/toggle-dialog :pool])
+                     :save-enabled? valid?
+                     :on-save       (comp reset
+                                          close
+                                          #(==> [::hall/save-pool lipas-id data]))}
      [form {:tr tr :data data}]]))
 
 (defn- make-headers [tr]
@@ -174,5 +174,5 @@
 
 (defn read-only-table [{:keys [tr items]}]
   [tables/table {:headers (make-headers tr)
-              :items   (sort-by :length-m utils/reverse-cmp items)
-              :key-fn  #(gensym)}])
+                 :items   (sort-by :length-m utils/reverse-cmp items)
+                 :key-fn  #(gensym)}])

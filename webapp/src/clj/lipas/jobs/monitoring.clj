@@ -5,9 +5,9 @@
   log pipeline. The same health data is exposed to admins via the
   get-jobs-health-status endpoint."
   (:require
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.patterns :as patterns]
-   [taoensso.timbre :as log]))
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.patterns :as patterns]
+    [taoensso.timbre :as log]))
 
 (defn health-check
   "Perform a health check of the job queue.

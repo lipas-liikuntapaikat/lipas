@@ -4,13 +4,13 @@
   Focuses on metrics correctness using Malli schema validation
   rather than manual assertions on response structure."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.backend.jwt :as jwt]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.schema :as schema]
-   [lipas.test-utils :refer [->json <-json] :as tu]
-   [next.jdbc :as jdbc]
-   [ring.mock.request :as mock]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.jwt :as jwt]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.schema :as schema]
+    [lipas.test-utils :refer [->json <-json] :as tu]
+    [next.jdbc :as jdbc]
+    [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
 (defonce test-system (atom nil))
@@ -383,7 +383,7 @@
 
     (testing "requires jobs/manage privilege"
       (let [user-token (jwt/create-token
-                        (tu/gen-user {:db? true :admin? false :db-component db}))
+                         (tu/gen-user {:db? true :admin? false :db-component db}))
             resp (post! user-token {:statuses ["pending"]})]
         (is (= 403 (:status resp)))))
 

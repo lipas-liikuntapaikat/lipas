@@ -1,8 +1,8 @@
 (ns lipas.backend.search-mapping-test
   (:require
-   [clojure.test :refer [deftest is testing]]
-   [lipas.backend.search :as search]
-   [lipas.data.prop-types :as prop-types]))
+    [clojure.test :refer [deftest is testing]]
+    [lipas.backend.search :as search]
+    [lipas.data.prop-types :as prop-types]))
 
 (deftest generate-explicit-mapping-test
   (testing "Mapping generation produces correct structure"

@@ -1974,8 +1974,8 @@
           ;; in the listing without opening the service (tester finding #3)
           service-audit (<== [::subs/service-audit-data (:service-id service)])
           audit-bucket (ptv-data/audit-bucket
-                        service-audit
-                        (ptv-data/service-audit-fields ptv-texts))
+                         service-audit
+                         (ptv-data/service-audit-fields ptv-texts))
           audit-icon (case audit-bucket
                        :waiting-fixes
                        [:> Tooltip {:title (tr :ptv.audit.status/changes-requested)}

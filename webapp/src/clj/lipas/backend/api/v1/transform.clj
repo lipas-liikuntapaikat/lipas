@@ -1,17 +1,17 @@
 (ns lipas.backend.api.v1.transform
   (:require
-   [clojure.set :as set]
-   [lipas.data.types :as types]
-   [lipas.backend.api.v1.sports-place :as old]
-   [lipas.utils :as utils]
-   [clojure.string :as str]
-   [lipas.backend.gis :as gis]))
+    [clojure.set :as set]
+    [lipas.data.types :as types]
+    [lipas.backend.api.v1.sports-place :as old]
+    [lipas.utils :as utils]
+    [clojure.string :as str]
+    [lipas.backend.gis :as gis]))
 
 (def helsinki-tz (java.time.ZoneId/of "Europe/Helsinki"))
 
 (def df-out "Strict date format for outputs to old Lipas."
   (java.time.format.DateTimeFormatter/ofPattern
-   "yyyy-MM-dd HH:mm:ss.SSS"))
+    "yyyy-MM-dd HH:mm:ss.SSS"))
 
 (defn UTC->last-modified
   "Converts UTC ISO 8601 string to old Lipas last modified timestamp string.
@@ -51,10 +51,10 @@
   (if-let [props (:properties m)]
     (assoc m :properties
            (reduce-kv
-            (fn [acc k v]
-              (assoc acc k (normalize-number v)))
-            {}
-            props))
+             (fn [acc k v]
+               (assoc acc k (normalize-number v)))
+             {}
+             props))
     m))
 
 (defn ->old-lipas-sports-site*

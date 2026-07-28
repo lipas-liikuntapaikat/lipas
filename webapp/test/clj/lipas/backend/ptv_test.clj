@@ -196,16 +196,16 @@
                                         {:type "Description" :language "fi" :value "Kuvaus"}]})
         seed-audit! (fn [svc-id audit]
                       (ptv-service-db/insert-service-rev!
-                       (test-db)
-                       {:org-id (:id org)
-                        :source-id (str "lipas-" svc-id)
-                        :service-id svc-id
-                        :status "active"
-                        :author-id (:id author)
-                        :event-date (utils/timestamp)
-                        :document {:source-id (str "lipas-" svc-id)
-                                   :service-id (str svc-id)
-                                   :audit audit}}))]
+                        (test-db)
+                        {:org-id (:id org)
+                         :source-id (str "lipas-" svc-id)
+                         :service-id svc-id
+                         :status "active"
+                         :author-id (:id author)
+                         :event-date (utils/timestamp)
+                         :document {:source-id (str "lipas-" svc-id)
+                                    :service-id (str svc-id)
+                                    :audit audit}}))]
     (seed-audit! fixes-id (site-audit "changes-requested" "Tiivistelmä"))
     (seed-audit! ok-id (site-audit "approved" "Tiivistelmä"))
     (seed-audit! fixed-id (site-audit "changes-requested" "Vanha tiivistelmä"))
@@ -225,15 +225,15 @@
 
 (deftest ptv-audit-notification-message-test
   (let [fixes (email/ptv-audit-notification-message
-               {:org-name "Testilä"
-                :section :sites
-                :action-items [{:name "Halli" :fields [:summary :description]}]
-                :approved-count 2})
-        all-ok (email/ptv-audit-notification-message
                 {:org-name "Testilä"
-                 :section :services
-                 :action-items []
-                 :approved-count 3})]
+                 :section :sites
+                 :action-items [{:name "Halli" :fields [:summary :description]}]
+                 :approved-count 2})
+        all-ok (email/ptv-audit-notification-message
+                 {:org-name "Testilä"
+                  :section :services
+                  :action-items []
+                  :approved-count 3})]
     (t/testing "Change-request variant"
       (is (str/includes? (:subject fixes) "korjauspyyntöjä"))
       (is (str/includes? (:plain fixes) "Seuraavat kohteet vaativat korjauksia (1 kpl):"))

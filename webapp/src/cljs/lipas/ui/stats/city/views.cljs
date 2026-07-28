@@ -138,8 +138,8 @@
      ;; Chart
      (when (= view "chart")
        [:> Grid {:item true
-                  :xs 12
-                  :sx {:width 0}}
+                 :xs 12
+                 :sx {:width 0}}
         [charts/city-finance-chart
          {:metrics metrics :data finance-data :labels labels}]])
 

@@ -92,7 +92,7 @@
 
     [:> Tooltip {:title tooltip}
      (into [:> TextField (merge {:variant "standard"}
-                                  props)]
+                                props)]
            children)]))
 
 (def text-field text-field-controlled)

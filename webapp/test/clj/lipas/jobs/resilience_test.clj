@@ -2,11 +2,11 @@
   "Resilience tests: full retry ladders, queue consistency after partial
   failures and dead letter queue management."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.db :as jobs-db]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.db :as jobs-db]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]))
 
 (defonce test-system (atom nil))
 
@@ -151,9 +151,9 @@
           dlj1 (test-utils/create-test-dead-letter-job! db)
           dlj2 (test-utils/create-test-dead-letter-job! db)
           result (jobs/reprocess-dead-letter-jobs!
-                  db
-                  [(:id dlj1) (:id dlj2) 999999] ; 999999 doesn't exist
-                  "admin@test.com")]
+                   db
+                   [(:id dlj1) (:id dlj2) 999999] ; 999999 doesn't exist
+                   "admin@test.com")]
 
       (is (= 2 (count (:succeeded result))))
       (is (= 1 (count (:failed result))))

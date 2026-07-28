@@ -1,10 +1,10 @@
 (ns lipas.jobs.handler
   "Admin endpoints for job queue monitoring and management."
   (:require
-   [lipas.backend.core :as backend-core]
-   [lipas.jobs.core :as core]
-   [lipas.jobs.schema :as schema]
-   [reitit.coercion.malli]))
+    [lipas.backend.core :as backend-core]
+    [lipas.jobs.core :as core]
+    [lipas.jobs.schema :as schema]
+    [reitit.coercion.malli]))
 
 (defn routes
   "Admin job queue monitoring routes."
@@ -68,10 +68,10 @@
               user-email (-> req :identity :email)]
           {:status 200
            :body (core/reprocess-dead-letter-jobs!
-                  db
-                  dead-letter-ids
-                  user-email
-                  (when max-attempts {:max-attempts max-attempts}))}))}}]
+                   db
+                   dead-letter-ids
+                   user-email
+                   (when max-attempts {:max-attempts max-attempts}))}))}}]
 
    ["/actions/acknowledge-dead-letter-jobs"
     {:post
@@ -84,18 +84,18 @@
               user-email (-> req :identity :email)]
           {:status 200
            :body (core/acknowledge-dead-letter-jobs!
-                  db
-                  dead-letter-ids
-                  user-email)}))}}]])
+                   db
+                   dead-letter-ids
+                   user-email)}))}}]])
 
 (comment
   (require '[lipas.backend.jwt :as jwt])
   (def admin (repl/get-robot-user))
   (def token (jwt/create-token admin {:terse? true :valid-seconds (* 15 60)}))
   (println
-   (str (format
-         "curl -X POST -H \"Authorization: Token %s\" http://localhost:8091/api/actions/create-jobs-metrics-report"
-         token)))
+    (str (format
+           "curl -X POST -H \"Authorization: Token %s\" http://localhost:8091/api/actions/create-jobs-metrics-report"
+           token)))
 
   ;; Seed the dev DB with jobs activity and dead letters so the admin UI
   ;; has something to show (throughput chart, queue, DLQ groups incl. a

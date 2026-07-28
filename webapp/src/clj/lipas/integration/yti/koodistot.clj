@@ -104,12 +104,12 @@
   - Import template: /yhteentoimivuus/import-template.xlsx
   - Import example: /yhteentoimivuus/import-example.xlsx"
   (:require
-   [dk.ative.docjure.spreadsheet :as excel]
-   [lipas.data.admins :as lipas-admins]
-   [lipas.data.materials :as lipas-materials]
-   [lipas.data.owners :as lipas-owners]
-   [lipas.data.status :as lipas-status]
-   [lipas.data.types :as lipas-types]))
+    [dk.ative.docjure.spreadsheet :as excel]
+    [lipas.data.admins :as lipas-admins]
+    [lipas.data.materials :as lipas-materials]
+    [lipas.data.owners :as lipas-owners]
+    [lipas.data.status :as lipas-status]
+    [lipas.data.types :as lipas-types]))
 
 (defn create-registry-workbook
   "Create an Excel workbook compatible with Yhteentoimivuusalusta codes registry import.
@@ -215,50 +215,50 @@
         ;; Main categories - top level of hierarchy (BROADER is empty)
         main-category-rows
         (map-indexed
-         (fn [idx [type-code {:keys [name]}]]
-           [(main-code type-code) ; CODEVALUE with -M suffix
-            "" ; BROADER - empty for top-level codes
-            "DRAFT" ; STATUS - match the code scheme status
-            (:fi name) ; PREFLABEL_FI
-            (:se name) ; PREFLABEL_SV
-            (:en name) ; PREFLABEL_EN
-            "" "" "" ; DESCRIPTION fields - not needed for categories
-            (str (inc idx)) ; ORDER - 1 to main-count
-            nil nil ""]) ; STARTDATE, ENDDATE, HREF
-         (sort-by first lipas-types/main-categories))
+          (fn [idx [type-code {:keys [name]}]]
+            [(main-code type-code) ; CODEVALUE with -M suffix
+             "" ; BROADER - empty for top-level codes
+             "DRAFT" ; STATUS - match the code scheme status
+             (:fi name) ; PREFLABEL_FI
+             (:se name) ; PREFLABEL_SV
+             (:en name) ; PREFLABEL_EN
+             "" "" "" ; DESCRIPTION fields - not needed for categories
+             (str (inc idx)) ; ORDER - 1 to main-count
+             nil nil ""]) ; STARTDATE, ENDDATE, HREF
+          (sort-by first lipas-types/main-categories))
 
         ;; Sub-categories - second level (BROADER points to main category)
         sub-category-rows
         (map-indexed
-         (fn [idx [type-code {:keys [name main-category]}]]
-           [(sub-code type-code) ; CODEVALUE with -S suffix
-            (main-code main-category) ; BROADER - points to parent main category (with -M suffix)
-            "DRAFT" ; STATUS
-            (:fi name) ; PREFLABEL_FI
-            (:se name) ; PREFLABEL_SV
-            (:en name) ; PREFLABEL_EN
-            "" "" "" ; DESCRIPTION fields
-            (str (+ main-count (inc idx))) ; ORDER - main-count+1 onwards
-            nil nil ""])
-         (sort-by first lipas-types/sub-categories))
+          (fn [idx [type-code {:keys [name main-category]}]]
+            [(sub-code type-code) ; CODEVALUE with -S suffix
+             (main-code main-category) ; BROADER - points to parent main category (with -M suffix)
+             "DRAFT" ; STATUS
+             (:fi name) ; PREFLABEL_FI
+             (:se name) ; PREFLABEL_SV
+             (:en name) ; PREFLABEL_EN
+             "" "" "" ; DESCRIPTION fields
+             (str (+ main-count (inc idx))) ; ORDER - main-count+1 onwards
+             nil nil ""])
+          (sort-by first lipas-types/sub-categories))
 
         ;; Type codes - leaf level (BROADER points to sub-category)
         type-rows
         (map-indexed
-         (fn [idx [type-code {:keys [name description sub-category]}]]
-           [(str type-code) ; CODEVALUE - no suffix, these are the actual LIPAS codes
-            (sub-code sub-category) ; BROADER - points to parent sub-category (with -S suffix)
-            "DRAFT" ; STATUS
-            (:fi name) ; PREFLABEL_FI
-            (:se name) ; PREFLABEL_SV
-            (:en name) ; PREFLABEL_EN
+          (fn [idx [type-code {:keys [name description sub-category]}]]
+            [(str type-code) ; CODEVALUE - no suffix, these are the actual LIPAS codes
+             (sub-code sub-category) ; BROADER - points to parent sub-category (with -S suffix)
+             "DRAFT" ; STATUS
+             (:fi name) ; PREFLABEL_FI
+             (:se name) ; PREFLABEL_SV
+             (:en name) ; PREFLABEL_EN
             ;; Include descriptions for leaf nodes (actual facility types)
-            (or (:fi description) "")
-            (or (:se description) "")
-            (or (:en description) "")
-            (str (+ main-count sub-count (inc idx))) ; ORDER - main-count+sub-count+1 onwards
-            nil nil ""])
-         (sort-by first lipas-types/active))
+             (or (:fi description) "")
+             (or (:se description) "")
+             (or (:en description) "")
+             (str (+ main-count sub-count (inc idx))) ; ORDER - main-count+sub-count+1 onwards
+             nil nil ""])
+          (sort-by first lipas-types/active))
 
         ;; Combine all codes: header + main categories + sub categories + type codes
         ;; Order matters for clarity but the hierarchy is determined by BROADER field
@@ -362,17 +362,17 @@
 
         code-rows
         (map-indexed
-         (fn [idx [code-key labels]]
-           [(name code-key) ; CODEVALUE - use the string key
-            "" ; BROADER - empty for flat list
-            "DRAFT"
-            (:fi labels)
-            (:se labels)
-            (:en labels)
-            "" "" "" ; No descriptions for simple codes
-            (str (inc idx))
-            nil nil ""])
-         (sort-by (comp :fi val) codes))
+          (fn [idx [code-key labels]]
+            [(name code-key) ; CODEVALUE - use the string key
+             "" ; BROADER - empty for flat list
+             "DRAFT"
+             (:fi labels)
+             (:se labels)
+             (:en labels)
+             "" "" "" ; No descriptions for simple codes
+             (str (inc idx))
+             nil nil ""])
+          (sort-by (comp :fi val) codes))
 
         all-codes (concat [codes-headers] code-rows)]
 
@@ -383,27 +383,27 @@
   "Create Excel workbook for LIPAS admin types (ylläpitäjätyypit)."
   []
   (create-simple-codelist-workbook
-   "lipas-admin-types"
-   {:fi "LIPAS Ylläpitäjätyypit"
-    :se "LIPAS Förvaltartyper"
-    :en "LIPAS Administrator Types"}
-   {:fi "Liikuntapaikkojen ylläpitäjien luokitus LIPAS-järjestelmässä. Sisältää kunnan eri toimialat sekä yksityiset toimijat."
-    :se "Klassificering av förvaltare av idrottsanläggningar i LIPAS-systemet."
-    :en "Classification of sports facility administrators in the LIPAS system. Includes municipal departments and private operators."}
-   lipas-admins/all))
+    "lipas-admin-types"
+    {:fi "LIPAS Ylläpitäjätyypit"
+     :se "LIPAS Förvaltartyper"
+     :en "LIPAS Administrator Types"}
+    {:fi "Liikuntapaikkojen ylläpitäjien luokitus LIPAS-järjestelmässä. Sisältää kunnan eri toimialat sekä yksityiset toimijat."
+     :se "Klassificering av förvaltare av idrottsanläggningar i LIPAS-systemet."
+     :en "Classification of sports facility administrators in the LIPAS system. Includes municipal departments and private operators."}
+    lipas-admins/all))
 
 (defn create-owner-types-workbook
   "Create Excel workbook for LIPAS owner types (omistajatyypit)."
   []
   (create-simple-codelist-workbook
-   "lipas-owner-types"
-   {:fi "LIPAS Omistajatyypit"
-    :se "LIPAS Ägartyper"
-    :en "LIPAS Owner Types"}
-   {:fi "Liikuntapaikkojen omistajien luokitus LIPAS-järjestelmässä."
-    :se "Klassificering av ägare av idrottsanläggningar i LIPAS-systemet."
-    :en "Classification of sports facility owners in the LIPAS system."}
-   lipas-owners/all))
+    "lipas-owner-types"
+    {:fi "LIPAS Omistajatyypit"
+     :se "LIPAS Ägartyper"
+     :en "LIPAS Owner Types"}
+    {:fi "Liikuntapaikkojen omistajien luokitus LIPAS-järjestelmässä."
+     :se "Klassificering av ägare av idrottsanläggningar i LIPAS-systemet."
+     :en "Classification of sports facility owners in the LIPAS system."}
+    lipas-owners/all))
 
 (defn export-admin-types-excel
   "Export LIPAS admin types to Excel file for Koodistot import."
@@ -427,14 +427,14 @@
   "Create Excel workbook for LIPAS sports site statuses."
   []
   (create-simple-codelist-workbook
-   "lipas-statuses"
-   {:fi "LIPAS Liikuntapaikan tilat"
-    :se "LIPAS Idrottsplatsens status"
-    :en "LIPAS Sports Site Statuses"}
-   {:fi "Liikuntapaikan tila LIPAS-järjestelmässä. Kuvaa onko paikka toiminnassa, suunnitteilla vai poistettu käytöstä."
-    :se "Status för idrottsanläggning i LIPAS-systemet."
-    :en "Sports facility status in the LIPAS system. Indicates whether the site is active, planned, or out of service."}
-   lipas-status/statuses))
+    "lipas-statuses"
+    {:fi "LIPAS Liikuntapaikan tilat"
+     :se "LIPAS Idrottsplatsens status"
+     :en "LIPAS Sports Site Statuses"}
+    {:fi "Liikuntapaikan tila LIPAS-järjestelmässä. Kuvaa onko paikka toiminnassa, suunnitteilla vai poistettu käytöstä."
+     :se "Status för idrottsanläggning i LIPAS-systemet."
+     :en "Sports facility status in the LIPAS system. Indicates whether the site is active, planned, or out of service."}
+    lipas-status/statuses))
 
 (defn export-status-types-excel
   "Export LIPAS status types to Excel file for Koodistot import."
@@ -449,14 +449,14 @@
   "Create Excel workbook for LIPAS surface materials."
   []
   (create-simple-codelist-workbook
-   "lipas-surface-materials"
-   {:fi "LIPAS Pintamateriaalit"
-    :se "LIPAS Ytmaterial"
-    :en "LIPAS Surface Materials"}
-   {:fi "Liikuntapaikkojen pintamateriaalien luokitus LIPAS-järjestelmässä."
-    :se "Klassificering av ytmaterial för idrottsanläggningar i LIPAS-systemet."
-    :en "Classification of surface materials for sports facilities in the LIPAS system."}
-   lipas-materials/surface-materials))
+    "lipas-surface-materials"
+    {:fi "LIPAS Pintamateriaalit"
+     :se "LIPAS Ytmaterial"
+     :en "LIPAS Surface Materials"}
+    {:fi "Liikuntapaikkojen pintamateriaalien luokitus LIPAS-järjestelmässä."
+     :se "Klassificering av ytmaterial för idrottsanläggningar i LIPAS-systemet."
+     :en "Classification of surface materials for sports facilities in the LIPAS system."}
+    lipas-materials/surface-materials))
 
 (defn export-surface-materials-excel
   "Export LIPAS surface materials to Excel file for Koodistot import."

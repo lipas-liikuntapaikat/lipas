@@ -22,8 +22,7 @@
   "Map of sub-category code -> {:description ... :user-instruction ...}.
   :description      = what the Service kuvaus should contain
   :user-instruction = what the Service toimintaohje should contain"
-  {
-   ;; Virkistys- ja retkeilyalueet
+  {   ;; Virkistys- ja retkeilyalueet
    1
    {:description
     "1. Mikä palvelu on?
@@ -788,5 +787,4 @@ Ohjeista noudattamaan alueella olevia opastetauluja ja järjestyssääntöjä. M
 Kerro, että koiraharrastusalueet ovat yleensä omatoimisessa käytössä ja että käyttäjän tulee tuoda omat välineet ja varusteet, jos niitä tarvitaan.
 
 5. Siisteys ja turvallisuus
-Ohjeista asiakkaita huolehtimaan siisteydestä ja käyttämään alueen jäteastioita. Mainitse, että koiran tulee olla hallinnassa ja että käyttäjä huomioi muut koirat ja ihmiset."}
-   })
+Ohjeista asiakkaita huolehtimaan siisteydestä ja käyttämään alueen jäteastioita. Mainitse, että koiran tulee olla hallinnassa ja että käyttäjä huomioi muut koirat ja ihmiset."}})

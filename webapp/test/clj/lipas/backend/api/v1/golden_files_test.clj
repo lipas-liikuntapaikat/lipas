@@ -13,12 +13,12 @@
    These tests verify the TRANSFORMATION LOGIC is correct by comparing
    our transform output against known-good production responses."
   (:require
-   [clojure.data.json :as json]
-   [clojure.java.io :as io]
-   [clojure.set :as set]
-   [clojure.test :refer [deftest is testing]]
-   [lipas.backend.api.v1.sports-place :as legacy-sports-place]
-   [lipas.backend.api.v1.transform :as transform]))
+    [clojure.data.json :as json]
+    [clojure.java.io :as io]
+    [clojure.set :as set]
+    [clojure.test :refer [deftest is testing]]
+    [lipas.backend.api.v1.sports-place :as legacy-sports-place]
+    [lipas.backend.api.v1.transform :as transform]))
 
 ;;; Fixture loading helpers
 

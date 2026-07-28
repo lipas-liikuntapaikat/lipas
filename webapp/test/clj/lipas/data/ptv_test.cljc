@@ -906,23 +906,23 @@
       (is (= :none (sut/determine-audit-status (site nil)))))
     (testing "partially audited -> :partial"
       (is (= :partial (sut/determine-audit-status
-                       (site {:timestamp "t" :auditor-id "a"
-                              :summary (approved {:fi "s"})})))))
+                        (site {:timestamp "t" :auditor-id "a"
+                               :summary (approved {:fi "s"})})))))
     (testing "changes requested and unchanged -> :changes-requested"
       (is (= :changes-requested (sut/determine-audit-status
-                                 (site {:timestamp "t" :auditor-id "a"
-                                        :summary (changes {:fi "s"})
-                                        :description (approved {:fi "d"})})))))
+                                  (site {:timestamp "t" :auditor-id "a"
+                                         :summary (changes {:fi "s"})
+                                         :description (approved {:fi "d"})})))))
     (testing "requested changes fixed -> :approved (municipality's move done)"
       (is (= :approved (sut/determine-audit-status
-                        (site {:timestamp "t" :auditor-id "a"
-                               :summary (changes {:fi "vanha"})
-                               :description (approved {:fi "d"})})))))
+                         (site {:timestamp "t" :auditor-id "a"
+                                :summary (changes {:fi "vanha"})
+                                :description (approved {:fi "d"})})))))
     (testing "all approved -> :approved"
       (is (= :approved (sut/determine-audit-status
-                        (site {:timestamp "t" :auditor-id "a"
-                               :summary (approved {:fi "s"})
-                               :description (approved {:fi "d"})})))))))
+                         (site {:timestamp "t" :auditor-id "a"
+                                :summary (approved {:fi "s"})
+                                :description (approved {:fi "d"})})))))))
 
 (deftest with-persisted-audit-content-test
   (let [changes (fn [content] {:status "changes-requested" :feedback "fix" :audited-content content})
@@ -953,9 +953,9 @@
       ;; ...but a persisted fix (snapshot refreshed on sync success) does.
       (is (= :approved
              (sut/determine-audit-status
-              (sut/with-persisted-audit-content
-                (assoc site :ptv-persisted {:summary {:fi "s (muokattu)"}
-                                            :description {:fi "d"}}))))))
+               (sut/with-persisted-audit-content
+                 (assoc site :ptv-persisted {:summary {:fi "s (muokattu)"}
+                                             :description {:fi "d"}}))))))
 
     (testing "unsaved keystrokes don't invalidate an approval either"
       (let [site' (assoc-in site [:ptv :audit :summary] (approved {:fi "s"}))]

@@ -1,27 +1,27 @@
 (ns lipas.maintenance
   (:require
-   [cheshire.core :as json]
-   [clojure.data.csv :as csv]
-   [clojure.edn :as edn]
-   [clojure.java.jdbc :as jdbc]
-   [clojure.set :as set]
-   [clojure.string :as str]
-   [clojure.walk :as walk]
-   [lipas.backend.config :as config]
-   [lipas.backend.core :as core]
-   [lipas.backend.db.db :as db]
-   [lipas.backend.gis :as gis]
-   [lipas.backend.search :as search]
-   [lipas.backend.system :as backend]
-   [lipas.data.cities :as cities]
-   [lipas.data.owners :as owners]
-   [lipas.data.types :as types]
-   [lipas.data.types-old :as old-types]
-   [lipas.schema.sports-sites :as sports-site-schema]
-   [lipas.schema.sports-sites.types :as types-schema]
-   [lipas.utils :as utils]
-   [malli.core :as m]
-   [taoensso.timbre :as log]))
+    [cheshire.core :as json]
+    [clojure.data.csv :as csv]
+    [clojure.edn :as edn]
+    [clojure.java.jdbc :as jdbc]
+    [clojure.set :as set]
+    [clojure.string :as str]
+    [clojure.walk :as walk]
+    [lipas.backend.config :as config]
+    [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]
+    [lipas.backend.gis :as gis]
+    [lipas.backend.search :as search]
+    [lipas.backend.system :as backend]
+    [lipas.data.cities :as cities]
+    [lipas.data.owners :as owners]
+    [lipas.data.types :as types]
+    [lipas.data.types-old :as old-types]
+    [lipas.schema.sports-sites :as sports-site-schema]
+    [lipas.schema.sports-sites.types :as types-schema]
+    [lipas.utils :as utils]
+    [malli.core :as m]
+    [taoensso.timbre :as log]))
 
 (defn merge-types
   [db search ptv user type-code-from type-code-to]
@@ -59,8 +59,8 @@
 
 (def all-cities
   (merge
-   cities/by-city-code
-   cities/abolished-by-city-code))
+    cities/by-city-code
+    cities/abolished-by-city-code))
 
 (defn upsert-all!
   ([db user sports-sites]
@@ -82,53 +82,53 @@
 
 (defn- calc-per-capita [m population]
   (reduce-kv
-   (fn [m k v]
-     (let [v (when (and v population) (/ (* 1000 v) population))]
-       (assoc m k v)))
-   {}
-   m))
+    (fn [m k v]
+      (let [v (when (and v population) (/ (* 1000 v) population))]
+        (assoc m k v)))
+    {}
+    m))
 
 (defn- ->city-finance-entries [data]
   (reduce
-   (fn [res {:keys [city-code stats]}]
-     (into res
-           (for [[year data] stats
-                 :let [youth (-> data :services :youth-services)
-                       sports (-> data :services :sports-services)
-                       city (all-cities city-code)
-                       province (cities/provinces (:province-id city))
-                       avi (cities/avi-areas (:avi-id city))
-                       popl (:population data)]]
-             (merge
-              (select-keys city [:province-id :avi-id])
-              {:id (str city-code "-" year)
-               :date (str year "-01-01")
-               :city-code city-code
-               :year year
-               :population popl
-               :search_meta
-               {:city-name (:name city)
-                :province-name (:name province)
-                :avi-name (:name avi)}}
-              (utils/->prefix-map youth "youth-services-")
-              (utils/->prefix-map sports "sports-services-")
-              (-> youth
-                  (calc-per-capita popl)
-                  (utils/->prefix-map "youth-services-pc-"))
-              (-> sports
-                  (calc-per-capita popl)
-                  (utils/->prefix-map "sports-services-pc-"))))))
-   []
-   data))
+    (fn [res {:keys [city-code stats]}]
+      (into res
+            (for [[year data] stats
+                  :let [youth (-> data :services :youth-services)
+                        sports (-> data :services :sports-services)
+                        city (all-cities city-code)
+                        province (cities/provinces (:province-id city))
+                        avi (cities/avi-areas (:avi-id city))
+                        popl (:population data)]]
+              (merge
+                (select-keys city [:province-id :avi-id])
+                {:id (str city-code "-" year)
+                 :date (str year "-01-01")
+                 :city-code city-code
+                 :year year
+                 :population popl
+                 :search_meta
+                 {:city-name (:name city)
+                  :province-name (:name province)
+                  :avi-name (:name avi)}}
+                (utils/->prefix-map youth "youth-services-")
+                (utils/->prefix-map sports "sports-services-")
+                (-> youth
+                    (calc-per-capita popl)
+                    (utils/->prefix-map "youth-services-pc-"))
+                (-> sports
+                    (calc-per-capita popl)
+                    (utils/->prefix-map "sports-services-pc-"))))))
+    []
+    data))
 
 (defn- ->subsidy-es-entry [m]
   (-> m
       (assoc
-       :timestamp (str (:year m) "-01-01")
-       :province-id (-> m :city-code all-cities :province-id)
-       :avi-id (-> m :city-code all-cities :avi-id))
+        :timestamp (str (:year m) "-01-01")
+        :province-id (-> m :city-code all-cities :province-id)
+        :avi-id (-> m :city-code all-cities :avi-id))
       (cond->
-       (->> m :type-codes (remove nil?) empty?) (assoc :type-codes [-1]))
+        (->> m :type-codes (remove nil?) empty?) (assoc :type-codes [-1]))
       (dissoc :city-name)))
 
 ;; There are no sensible primary keys in the data so we purge and
@@ -247,44 +247,44 @@
 (defn ->city-stats-map
   [csv-data year]
   (reduce
-   (fn [res m]
-     (let [city-code (-> m :kunta_nimi city-lookup)
-           population (or (-> m :asukasluku utils/->number) 0)
-           youth {:investments (-> m :nuor_investoinnit ->number-div-by-1000)
-                  :net-costs (-> m :nuor_nettokustannukset ->number-div-by-1000)
-                  :subsidies (-> m :nuor_avustukset ->number-div-by-1000)
-                  :operating-expenses (-> m :nuor_kayttokustannukset ->number-div-by-1000)
-                  :operating-incomes (-> m :nuor_kayttotuotot ->number-div-by-1000)
+    (fn [res m]
+      (let [city-code (-> m :kunta_nimi city-lookup)
+            population (or (-> m :asukasluku utils/->number) 0)
+            youth {:investments (-> m :nuor_investoinnit ->number-div-by-1000)
+                   :net-costs (-> m :nuor_nettokustannukset ->number-div-by-1000)
+                   :subsidies (-> m :nuor_avustukset ->number-div-by-1000)
+                   :operating-expenses (-> m :nuor_kayttokustannukset ->number-div-by-1000)
+                   :operating-incomes (-> m :nuor_kayttotuotot ->number-div-by-1000)
                          ;; New names since 2021 Numbers are not
                          ;; probably comparatible with earlier ones and
                          ;; thus new keys
-                  :operational-expenses (-> m :nuor_toimintakulut ->number-div-by-1000)
-                  :operational-income (-> m :nuor_toimintatuotot ->number-div-by-1000)
-                  :surplus (-> m :nuor_tilikauden_ylijaama ->number-div-by-1000)
-                  :deficit (-> m :nuor_tilikauden_alijaama ->number-div-by-1000)}
-           sport {:investments (-> m :liik_investoinnit ->number-div-by-1000)
-                  :net-costs (-> m :liik_nettokustannukset ->number-div-by-1000)
-                  :subsidies (-> m :liik_avustukset ->number-div-by-1000)
-                  :operating-expenses (-> m :liik_kayttokustannukset ->number-div-by-1000)
-                  :operating-incomes (-> m :liik_kayttotuotot ->number-div-by-1000)
+                   :operational-expenses (-> m :nuor_toimintakulut ->number-div-by-1000)
+                   :operational-income (-> m :nuor_toimintatuotot ->number-div-by-1000)
+                   :surplus (-> m :nuor_tilikauden_ylijaama ->number-div-by-1000)
+                   :deficit (-> m :nuor_tilikauden_alijaama ->number-div-by-1000)}
+            sport {:investments (-> m :liik_investoinnit ->number-div-by-1000)
+                   :net-costs (-> m :liik_nettokustannukset ->number-div-by-1000)
+                   :subsidies (-> m :liik_avustukset ->number-div-by-1000)
+                   :operating-expenses (-> m :liik_kayttokustannukset ->number-div-by-1000)
+                   :operating-incomes (-> m :liik_kayttotuotot ->number-div-by-1000)
                          ;; New names since 2021 Numbers are not
                          ;; probably comparatible with earlier ones and
                          ;; thus new keys
-                  :operational-expenses (-> m :liik_toimintakulut ->number-div-by-1000)
-                  :operational-income (-> m :liik_toimintatuotot ->number-div-by-1000)
-                  :surplus (-> m :liik_tilikauden_ylijaama ->number-div-by-1000)
-                  :deficit (-> m :liik_tilikauden_alijaama ->number-div-by-1000)}]
+                   :operational-expenses (-> m :liik_toimintakulut ->number-div-by-1000)
+                   :operational-income (-> m :liik_toimintatuotot ->number-div-by-1000)
+                   :surplus (-> m :liik_tilikauden_ylijaama ->number-div-by-1000)
+                   :deficit (-> m :liik_tilikauden_alijaama ->number-div-by-1000)}]
 
-       (-> res
-           (assoc-in [city-code year :population] population)
-           (assoc-in [city-code year :services "youth-services"] youth)
-           (assoc-in [city-code year :services "youth-services-pc"]
-                     (calc-per-capita youth population))
-           (assoc-in [city-code year :services "sports-services"] sport)
-           (assoc-in [city-code year :services "sports-services-pc"]
-                     (calc-per-capita sport population)))))
-   {}
-   csv-data))
+        (-> res
+            (assoc-in [city-code year :population] population)
+            (assoc-in [city-code year :services "youth-services"] youth)
+            (assoc-in [city-code year :services "youth-services-pc"]
+                      (calc-per-capita youth population))
+            (assoc-in [city-code year :services "sports-services"] sport)
+            (assoc-in [city-code year :services "sports-services-pc"]
+                      (calc-per-capita sport population)))))
+    {}
+    csv-data))
 
 (def city-finance-csv-headers
   ["kunta_nimi"
@@ -313,11 +313,11 @@
   [city-code year m]
   (let [entry (json/encode m)]
     (format
-     (str
-      "UPDATE city "
-      "SET stats = jsonb_set(stats, '{%s}', '%s') "
-      "WHERE city_code = %s;")
-     year entry city-code)))
+      (str
+        "UPDATE city "
+        "SET stats = jsonb_set(stats, '{%s}', '%s') "
+        "WHERE city_code = %s;")
+      year entry city-code)))
 
 (defn add-city-stats-from-csv!
   [{:keys [db _search] :as system} csv-path year]
@@ -416,14 +416,14 @@
   (def city-data (core/get-cities (:db system) :no-cache))
 
   (utils/->prefix-map
-   (calc-per-capita
-    {:net-costs 17.0,
-     :subsidies 4.0,
-     :investments 0.0,
-     :operating-incomes 0.0,
-     :operating-expenses 17.0}
-    2500)
-   "kissa-komodo-")
+    (calc-per-capita
+      {:net-costs 17.0,
+       :subsidies 4.0,
+       :investments 0.0,
+       :operating-incomes 0.0,
+       :operating-expenses 17.0}
+      2500)
+    "kissa-komodo-")
 
   (-> city-data
       ->city-finance-entries

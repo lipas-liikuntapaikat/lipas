@@ -112,10 +112,10 @@
 
   (testing "Duplicate vertices are deduped"
     (let [entry (diversity/prepare-site-entry
-                 (linestring-site "site-2" 4401 [[24.9 60.17]
-                                                 [24.91 60.18]
-                                                 [24.9 60.17]])
-                 prn)]
+                  (linestring-site "site-2" 4401 [[24.9 60.17]
+                                                  [24.91 60.18]
+                                                  [24.9 60.17]])
+                  prn)]
       (is (= ["24.9,60.17" "24.91,60.18"] (:dests entry)))))
 
   (testing "Site without usable geometry yields nil"
@@ -175,9 +175,9 @@
   (testing "Columns of consecutive chunks are concatenated per row"
     (let [{:keys [tables failed-cols]}
           (diversity/merge-table-chunks
-           [{:car {:distances [[1 2] [3 4]] :durations [[10 20] [30 40]]}}
-            {:car {:distances [[5] [6]] :durations [[50] [60]]}}]
-           [2 1] 2)]
+            [{:car {:distances [[1 2] [3 4]] :durations [[10 20] [30 40]]}}
+             {:car {:distances [[5] [6]] :durations [[50] [60]]}}]
+            [2 1] 2)]
       (is (= [[1 2 5] [3 4 6]] (-> tables :car :distances)))
       (is (= [[10 20 50] [30 40 60]] (-> tables :car :durations)))
       (is (= {} failed-cols))))
@@ -185,8 +185,8 @@
   (testing "Single chunk passes through"
     (let [{:keys [tables failed-cols]}
           (diversity/merge-table-chunks
-           [{:foot {:distances [[1.0]] :durations [[2.0]]}}]
-           [1] 1)]
+            [{:foot {:distances [[1.0]] :durations [[2.0]]}}]
+            [1] 1)]
       (is (= [[1.0]] (-> tables :foot :distances)))
       (is (= [[2.0]] (-> tables :foot :durations)))
       (is (= {} failed-cols))))
@@ -194,10 +194,10 @@
   (testing "A chunk missing a profile is nil-filled and its columns reported"
     (let [{:keys [tables failed-cols]}
           (diversity/merge-table-chunks
-           [{:car {:distances [[1 2]] :durations [[10 20]]}
-             :foot {:distances [[1 2]] :durations [[10 20]]}}
-            {:car {:distances [[3]] :durations [[30]]}}]
-           [2 1] 1)]
+            [{:car {:distances [[1 2]] :durations [[10 20]]}
+              :foot {:distances [[1 2]] :durations [[10 20]]}}
+             {:car {:distances [[3]] :durations [[30]]}}]
+            [2 1] 1)]
       (is (= [[1 2 3]] (-> tables :car :distances)))
       ;; foot kept with nil-filled columns for the failed chunk
       (is (= [[1 2 nil]] (-> tables :foot :distances)))
@@ -207,8 +207,8 @@
   (testing "Profile missing from every chunk is omitted entirely"
     (let [{:keys [tables failed-cols]}
           (diversity/merge-table-chunks
-           [{:car {:distances [[1]] :durations [[10]]}} {}]
-           [1 1] 1)]
+            [{:car {:distances [[1]] :durations [[10]]}} {}]
+            [1 1] 1)]
       (is (= #{:car} (set (keys tables))))
       (is (= {:car #{1}} (update-vals failed-cols set)))))
 

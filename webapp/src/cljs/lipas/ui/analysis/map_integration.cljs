@@ -67,4 +67,4 @@
                    (str key ": " doc_count)]]))])]]))
 
 (hooks/install!
- {:draw-analytics-buffer! buffer/draw-analytics-buffer!})
+  {:draw-analytics-buffer! buffer/draw-analytics-buffer!})

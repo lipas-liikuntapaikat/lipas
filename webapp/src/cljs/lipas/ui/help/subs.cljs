@@ -95,13 +95,13 @@
     (when-not (str/blank? term)
       (let [q (str/lower-case (str/trim term))]
         (vec
-         (for [section tree
-               :let [section-hit? (str/includes? (section-haystack section) q)
-                     pages (if section-hit?
-                             (:pages section)
-                             (filterv #(str/includes? (page-haystack %) q)
-                                      (:pages section)))]
-               :when (seq pages)]
-           {:section-slug (:slug section)
-            :section-title (:title section)
-            :pages pages}))))))
+          (for [section tree
+                :let [section-hit? (str/includes? (section-haystack section) q)
+                      pages (if section-hit?
+                              (:pages section)
+                              (filterv #(str/includes? (page-haystack %) q)
+                                       (:pages section)))]
+                :when (seq pages)]
+            {:section-slug (:slug section)
+             :section-title (:title section)
+             :pages pages}))))))

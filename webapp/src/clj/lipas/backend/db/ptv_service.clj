@@ -42,25 +42,25 @@
   "Latest revision of the (org-id, source-id) lineage, or nil."
   [db org-id source-id]
   (first
-   (sql/query db
-              (hsql/format {:select [:*]
-                            :from [:ptv_service_current]
-                            :where [:and
-                                    [:= :org_id (->uuid org-id)]
-                                    [:= :source_id source-id]]})
-              query-opts)))
+    (sql/query db
+               (hsql/format {:select [:*]
+                             :from [:ptv_service_current]
+                             :where [:and
+                                     [:= :org_id (->uuid org-id)]
+                                     [:= :source_id source-id]]})
+               query-opts)))
 
 (defn get-current-by-service-id
   "Latest revision of the org's lineage carrying the given PTV Service UUID, or nil."
   [db org-id service-id]
   (first
-   (sql/query db
-              (hsql/format {:select [:*]
-                            :from [:ptv_service_current]
-                            :where [:and
-                                    [:= :org_id (->uuid org-id)]
-                                    [:= :service_id (->uuid service-id)]]})
-              query-opts)))
+    (sql/query db
+               (hsql/format {:select [:*]
+                             :from [:ptv_service_current]
+                             :where [:and
+                                     [:= :org_id (->uuid org-id)]
+                                     [:= :service_id (->uuid service-id)]]})
+               query-opts)))
 
 (defn get-history
   "All revisions of the (org-id, source-id) lineage, newest first."

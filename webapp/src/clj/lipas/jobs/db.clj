@@ -1,8 +1,8 @@
 (ns lipas.jobs.db
   "Database access layer for the unified job queue system."
   (:require
-   [hugsql.core :as hugsql]
-   [lipas.backend.db.utils :as utils]))
+    [hugsql.core :as hugsql]
+    [lipas.backend.db.utils :as utils]))
 
 (defn marshall [entry]
   (utils/->snake-case-keywords entry))

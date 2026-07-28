@@ -7,11 +7,11 @@
    3. Response structure matches the legacy API contract
    4. Query parameters work as expected (filtering, pagination, etc.)"
   (:require
-   [clojure.string :as str]
-   [clojure.test :refer [deftest is testing use-fixtures]]
-   [lipas.backend.core :as core]
-   [lipas.test-utils :as test-utils]
-   [ring.mock.request :as mock]))
+    [clojure.string :as str]
+    [clojure.test :refer [deftest is testing use-fixtures]]
+    [lipas.backend.core :as core]
+    [lipas.test-utils :as test-utils]
+    [ring.mock.request :as mock]))
 
 ;;; Test system setup ;;;
 

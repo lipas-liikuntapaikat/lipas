@@ -3,8 +3,8 @@
 
   Job type and payload schemas live in lipas.jobs.registry."
   (:require
-   [lipas.jobs.registry :as registry]
-   [malli.core :as m]))
+    [lipas.jobs.registry :as registry]
+    [malli.core :as m]))
 
 (def job-type-schema registry/job-type-schema)
 (def job-status-schema registry/job-status-schema)

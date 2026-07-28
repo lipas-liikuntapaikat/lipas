@@ -317,14 +317,14 @@
 (defn- list-sites [search query-filters extra-clauses limit]
   (let [idx (get-in search [:indices :sports-site :search])
         resp (search/search
-              (:client search) idx
-              {:size (min (or limit 20) 50)
-               :sort [{:event-date {:order "asc"}}]
-               :query {:bool (merge {:filter (into [{:terms {:status ["active" "out-of-service-temporarily"]}}]
-                                                   query-filters)}
-                                    extra-clauses)}
-               :_source [:lipas-id :name :type.type-code :location.city.city-code
-                         :status :event-date]})]
+               (:client search) idx
+               {:size (min (or limit 20) 50)
+                :sort [{:event-date {:order "asc"}}]
+                :query {:bool (merge {:filter (into [{:terms {:status ["active" "out-of-service-temporarily"]}}]
+                                                    query-filters)}
+                                     extra-clauses)}
+                :_source [:lipas-id :name :type.type-code :location.city.city-code
+                          :status :event-date]})]
     {:total (-> resp :body :hits :total :value)
      :sites (mapv site-hit->summary (-> resp :body :hits :hits))}))
 
@@ -419,7 +419,7 @@
               user* (update-in user [:permissions :roles]
                                (fn [rs] (mapv #(update % :role keyword) rs)))
               can-edit? (boolean (roles/check-privilege
-                                  user* (roles/site-roles-context src) :site/create-edit))]
+                                   user* (roles/site-roles-context src) :site/create-edit))]
           {:can-edit? can-edit?
            :site {:lipas-id (:lipas-id src)
                   :name (:name src)
@@ -449,11 +449,11 @@
 
         :else
         (->client-action
-         (cond-> {:type "apply-search" :label (str label)}
-           search-text (assoc :search-text search-text)
-           (seq city-codes) (assoc :city-codes (vec city-codes))
-           (seq type-codes) (assoc :type-codes (vec type-codes))
-           only-editable (assoc :only-editable true)))))
+          (cond-> {:type "apply-search" :label (str label)}
+            search-text (assoc :search-text search-text)
+            (seq city-codes) (assoc :city-codes (vec city-codes))
+            (seq type-codes) (assoc :type-codes (vec type-codes))
+            only-editable (assoc :only-editable true)))))
 
     "show_site_on_map"
     (let [idx (get-in search [:indices :sports-site :search])
@@ -503,11 +503,11 @@
 
     "zoom_map_to_coordinates"
     (->client-action
-     (cond-> {:type "pan-to-coordinates"
-              :label (str (:label args))
-              :lon (double (:lon args))
-              :lat (double (:lat args))}
-       (:zoom args) (assoc :zoom (int (:zoom args)))))
+      (cond-> {:type "pan-to-coordinates"
+               :label (str (:label args))
+               :lon (double (:lon args))
+               :lat (double (:lat args))}
+        (:zoom args) (assoc :zoom (int (:zoom args)))))
 
     "escalate_to_support"
     ;; Marker result only: answer! short-circuits on this tool and the
@@ -528,7 +528,7 @@
 (defn- system-prompt
   [{:keys [user scope context]}]
   (str
-   "You are Lipastaja, the LIPAS assistant embedded in lipas.fi — Finland's national sports facility database. Users are registered maintainers (municipality employees and other data producers).
+    "You are Lipastaja, the LIPAS assistant embedded in lipas.fi — Finland's national sports facility database. Users are registered maintainers (municipality employees and other data producers).
 
 RULES:
 - Answer ONLY from tool results. If the knowledge base has nothing relevant, say so honestly and offer to contact support with escalate_to_support. Never invent UI elements, menu names or type codes.
@@ -551,18 +551,18 @@ RULES:
 
 USER CONTEXT:
 "
-   (json/encode
-    {:name (-> user :user-data :firstname)
-     :editing-scope (cond
-                      (:all? scope) "all municipalities and types (admin)"
-                      (:none? scope) "no editing rights"
-                      :else (cond-> {}
-                              (seq (:city-codes scope))
-                              (assoc :cities (mapv city-label (sort (:city-codes scope))))
-                              (seq (:type-codes scope))
-                              (assoc :types (mapv type-label (sort (:type-codes scope))))))
-     :roles (describe-roles user)
-     :app-context context})))
+    (json/encode
+      {:name (-> user :user-data :firstname)
+       :editing-scope (cond
+                        (:all? scope) "all municipalities and types (admin)"
+                        (:none? scope) "no editing rights"
+                        :else (cond-> {}
+                                (seq (:city-codes scope))
+                                (assoc :cities (mapv city-label (sort (:city-codes scope))))
+                                (seq (:type-codes scope))
+                                (assoc :types (mapv type-label (sort (:type-codes scope))))))
+       :roles (describe-roles user)
+       :app-context context})))
 
 ;;; ——— Gemini chat with tools ———————————————————————————————————————
 

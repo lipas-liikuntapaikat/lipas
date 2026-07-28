@@ -196,8 +196,8 @@
        [:> CardHeader
         {:title (tr :login/headline)
          :action (r/as-element
-                  [register-btn
-                   {:tooltip (tr :register/headline)}])}]
+                   [register-btn
+                    {:tooltip (tr :register/headline)}])}]
        [:> CardContent
         {}
         [:> Tabs {:value login-mode

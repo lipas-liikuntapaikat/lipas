@@ -2,8 +2,8 @@
   "Type codes went through a major overhaul in the summer of 2024. This
   namespace represents the changes made."
   (:require
-   [lipas.data.prop-types-old :as old]
-   [lipas.data.types :as types]))
+    [lipas.data.prop-types-old :as old]
+    [lipas.data.types :as types]))
 
 (def all
   (-> old/all
@@ -504,8 +504,7 @@
       (assoc-in [:swimming-pool-count :description :fi] "Altaiden lukumäärä yhteensä. Syötä tieto tai laske automaattisesti.")
       (assoc-in [:pool-water-area-m2 :description :fi] "Asiakaskäytössä oleva vesipinta-ala yhteensä.")
 
-
-      ;;; Maasto ja loput ;;;
+;;; Maasto ja loput ;;;
 
       ;; Add new pulkkamäki prop-type
       (assoc :sledding-hill?
@@ -519,8 +518,7 @@
                :se "Det finns en pulkabacke på platsen."
                :en "There is a sledding hill at the location."}})
 
-
-      ;; Add new kulkutavat prop-type
+;; Add new kulkutavat prop-type
       (assoc :travel-modes
              {:name      {:fi "Kulkutavat"
                           :se "Resesätt"
@@ -613,10 +611,7 @@
               :description
               {:fi "Kohde on ympärivuotisessa käytössä"
                :se "Platsen är i användning året runt"
-               :en "The location is in use year-round"}})
-
-
-      ))
+               :en "The location is in use year-round"}})))
 
 (def used
   (let [used (set (mapcat (comp keys :props second) types/all))]
@@ -624,6 +619,4 @@
 
 (comment
   (require '[clojure.pprint :as pprint])
-  #?(:clj (spit "/tmp/prop-types.edn" (with-out-str (pprint/pprint all))))
-
-  )
+  #?(:clj (spit "/tmp/prop-types.edn" (with-out-str (pprint/pprint all)))))

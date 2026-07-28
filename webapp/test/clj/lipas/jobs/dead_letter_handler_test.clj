@@ -1,13 +1,13 @@
 (ns lipas.jobs.dead-letter-handler-test
   "Handler tests for dead letter queue endpoints."
   (:require
-   [clojure.test :refer [deftest testing is use-fixtures]]
-   [lipas.backend.jwt :as jwt]
-   [lipas.jobs.core :as jobs]
-   [lipas.jobs.db :as jobs-db]
-   [lipas.test-utils :as test-utils]
-   [next.jdbc :as jdbc]
-   [ring.mock.request :as mock]))
+    [clojure.test :refer [deftest testing is use-fixtures]]
+    [lipas.backend.jwt :as jwt]
+    [lipas.jobs.core :as jobs]
+    [lipas.jobs.db :as jobs-db]
+    [lipas.test-utils :as test-utils]
+    [next.jdbc :as jdbc]
+    [ring.mock.request :as mock]))
 
 ;; Test system setup using shared fixture
 (defonce test-system (atom nil))
@@ -273,8 +273,8 @@
 
         (testing "requires authorization"
           (let [no-auth-token (jwt/create-token
-                               {:id 1 :email "user@test.com" :permissions {:roles []}}
-                               {:valid-seconds 300})
+                                {:id 1 :email "user@test.com" :permissions {:roles []}}
+                                {:valid-seconds 300})
                 params {:dead-letter-ids [(:id dlj2)]}
                 resp (app (-> (mock/request :post "/api/actions/acknowledge-dead-letter-jobs")
                               (mock/content-type "application/transit+json")
@@ -286,8 +286,8 @@
   (testing "Dead letter endpoints require jobs/manage permission"
     (let [app (:lipas/app @test-system)
           no-auth-token (jwt/create-token
-                         {:id 1 :email "user@test.com" :permissions {:roles []}}
-                         {:valid-seconds 300})]
+                          {:id 1 :email "user@test.com" :permissions {:roles []}}
+                          {:valid-seconds 300})]
 
       (testing "GET endpoint returns 403 without permission"
         (let [resp (app (-> (mock/request :get "/api/actions/get-dead-letter-jobs")

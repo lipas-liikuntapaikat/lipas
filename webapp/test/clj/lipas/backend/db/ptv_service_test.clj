@@ -49,17 +49,17 @@
           source-id (str "lipas-" ptv-org-id "-1300")
           svc-id (java.util.UUID/randomUUID)
           _ (ptv-service-db/insert-service-rev!
-             (test-db)
-             {:org-id (:id org)
-              :source-id source-id
-              :service-id svc-id
-              :author-id nil
-              :event-date "2026-01-01T00:00:00.000Z"
-              :document {:source-id source-id
-                         :name {:fi "Pallokentät"}
-                         :summary {:fi "Tiivistelmä"}
-                         :description {:fi "Kuvaus"}
-                         :audit {:summary {:status "approved" :feedback "ok"}}}})
+              (test-db)
+              {:org-id (:id org)
+               :source-id source-id
+               :service-id svc-id
+               :author-id nil
+               :event-date "2026-01-01T00:00:00.000Z"
+               :document {:source-id source-id
+                          :name {:fi "Pallokentät"}
+                          :summary {:fi "Tiivistelmä"}
+                          :description {:fi "Kuvaus"}
+                          :audit {:summary {:status "approved" :feedback "ok"}}}})
           current (ptv-service-db/get-current (test-db) (:id org) source-id)]
       (is (some? current))
       (is (= "active" (:status current)))
@@ -73,9 +73,9 @@
     (let [org (seed-org!)
           source-id (str "lipas-" ptv-org-id "-2100")
           _ (ptv-service-db/insert-service-rev!
-             (test-db) (rev org source-id "2026-01-01T00:00:00.000Z" {:summary {:fi "eka"}}))
+              (test-db) (rev org source-id "2026-01-01T00:00:00.000Z" {:summary {:fi "eka"}}))
           _ (ptv-service-db/insert-service-rev!
-             (test-db) (rev org source-id "2026-01-02T00:00:00.000Z" {:summary {:fi "toka"}}))
+              (test-db) (rev org source-id "2026-01-02T00:00:00.000Z" {:summary {:fi "toka"}}))
           current (ptv-service-db/get-current (test-db) (:id org) source-id)
           history (ptv-service-db/get-history (test-db) (:id org) source-id)]
       (is (= {:fi "toka"} (get-in current [:document :summary])))
@@ -89,11 +89,11 @@
           source-1 (str "lipas-" ptv-org-id "-1300")
           source-2 (str "lipas-" ptv-org-id "-2100")
           _ (ptv-service-db/insert-service-rev!
-             (test-db) (rev org-a source-1 "2026-01-01T00:00:00.000Z"))
+              (test-db) (rev org-a source-1 "2026-01-01T00:00:00.000Z"))
           _ (ptv-service-db/insert-service-rev!
-             (test-db) (rev org-a source-2 "2026-01-01T00:00:00.000Z"))
+              (test-db) (rev org-a source-2 "2026-01-01T00:00:00.000Z"))
           _ (ptv-service-db/insert-service-rev!
-             (test-db) (rev org-b source-1 "2026-01-01T00:00:00.000Z"))]
+              (test-db) (rev org-b source-1 "2026-01-01T00:00:00.000Z"))]
       (is (= 2 (count (ptv-service-db/get-current-by-org (test-db) (:id org-a)))))
       (is (= 1 (count (ptv-service-db/get-current-by-org (test-db) (:id org-b)))))
       (is (= 1 (count (ptv-service-db/get-history (test-db) (:id org-b) source-1)))))))
@@ -105,22 +105,22 @@
   (testing "Insert without org-id violates NOT NULL and throws"
     (is (thrown? Exception
                  (ptv-service-db/insert-service-rev!
-                  (test-db)
-                  {:org-id nil
-                   :source-id "lipas-x-1"
-                   :service-id nil
-                   :author-id nil
-                   :event-date "2026-01-01T00:00:00.000Z"
-                   :document {:source-id "lipas-x-1"}}))))
+                   (test-db)
+                   {:org-id nil
+                    :source-id "lipas-x-1"
+                    :service-id nil
+                    :author-id nil
+                    :event-date "2026-01-01T00:00:00.000Z"
+                    :document {:source-id "lipas-x-1"}}))))
 
   (testing "Insert with unknown author-id violates the account FK and throws"
     (let [org (seed-org!)]
       (is (thrown? Exception
                    (ptv-service-db/insert-service-rev!
-                    (test-db)
-                    {:org-id (:id org)
-                     :source-id "lipas-x-1"
-                     :service-id nil
-                     :author-id (java.util.UUID/randomUUID)
-                     :event-date "2026-01-01T00:00:00.000Z"
-                     :document {:source-id "lipas-x-1"}}))))))
+                     (test-db)
+                     {:org-id (:id org)
+                      :source-id "lipas-x-1"
+                      :service-id nil
+                      :author-id (java.util.UUID/randomUUID)
+                      :event-date "2026-01-01T00:00:00.000Z"
+                      :document {:source-id "lipas-x-1"}}))))))

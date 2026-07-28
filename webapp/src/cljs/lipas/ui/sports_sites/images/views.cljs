@@ -40,7 +40,7 @@
   "Drops blank entries from a localized-string map; nil when nothing remains."
   [m]
   (not-empty
-   (into {} (filter (fn [[_ v]] (and (string? v) (not (str/blank? v))))) m)))
+    (into {} (filter (fn [[_ v]] (and (string? v) (not (str/blank? v))))) m)))
 
 (defn- ->image
   "Normalizes dialog form data into an image map: trims the URL and drops

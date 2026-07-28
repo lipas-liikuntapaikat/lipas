@@ -1,7 +1,7 @@
 (ns lipas.jobs.triage-test
   (:require
-   [clojure.test :refer [deftest testing is]]
-   [lipas.jobs.triage :as triage]))
+    [clojure.test :refer [deftest testing is]]
+    [lipas.jobs.triage :as triage]))
 
 (deftest classify-error-test
   (testing "timeout errors"
