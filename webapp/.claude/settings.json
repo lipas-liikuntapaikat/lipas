@@ -34,6 +34,16 @@
           }
         ]
       }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/../scripts/claude-hooks/paren-repair.sh"
+          }
+        ]
+      }
     ]
   }
 }

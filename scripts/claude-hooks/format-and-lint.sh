@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Claude Code PostToolUse hook: format and lint a single edited Clojure file.
+# Claude Code PostToolUse hook: repair delimiters, format, and lint one file.
 #
 # Wired up in .claude/settings.json (repo root) and webapp/.claude/settings.json,
 # so it runs whichever directory the session was started in. It locates the
@@ -28,6 +28,29 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WEBAPP="$REPO_ROOT/webapp"
 
 payload="$(cat)"
+
+# Delimiter repair runs FIRST, chained here rather than registered as a second
+# PostToolUse hook, so there is exactly one writer to the file and the order is
+# guaranteed: repair, then format, then lint.
+#
+# This half is not optional. clj-paren-repair's PreToolUse:Edit handler only
+# takes a backup — the actual repair, and deletion of that backup, happen in its
+# PostToolUse:Edit handler. Registering the Pre half without the Post half
+# creates a backup per edit that nothing ever consumes: 133 orphaned files,
+# ~2.9 MB, in a single session before this was caught.
+#
+# If repair reports a problem it emits hook JSON (decision: block) and possibly
+# restores the file; forward that verbatim and stop, since linting a
+# just-restored file would only add noise.
+if command -v clj-paren-repair-claude-hook >/dev/null 2>&1; then
+    repair_out="$(printf '%s' "$payload" | clj-paren-repair-claude-hook 2>/dev/null)"
+    repair_rc=$?
+    if [ -n "$repair_out" ]; then
+        printf '%s\n' "$repair_out"
+        exit "$repair_rc"
+    fi
+    [ "$repair_rc" -ne 0 ] && exit "$repair_rc"
+fi
 
 file_path="$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)"
 [ -n "$file_path" ] || exit 0
