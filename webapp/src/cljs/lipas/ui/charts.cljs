@@ -202,34 +202,39 @@
   ([payload-fn _labels sort-fn hide-header? ^js props]
    (let [label   (aget props "label")
          payload (aget props "payload")]
-     (r/as-element
-       [:> Paper {:style {:padding "1em"}}
+     ;; recharts 3.x renders custom Tooltip content with an empty payload
+     ;; while the tooltip is inactive (initial mount included). Render
+     ;; nothing then, or every payload-fn doing (-> payload first (aget ...))
+     ;; crashes the whole view.
+     (when (seq payload)
+       (r/as-element
+         [:> Paper {:style {:padding "1em"}}
 
-       ;; Tooltip header
-        (when-not hide-header?
-          [:> Typography
-           {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
-           label])
+        ;; Tooltip header
+          (when-not hide-header?
+            [:> Typography
+             {:variant "body2" :align "center" :style {:margin-bottom "0.25em"}}
+             label])
 
-       ;; Content table
-        [:> Table {:style {:width "350"} :padding "normal" :size "small"}
-         (->> payload
-              payload-fn
-              (sort-by sort-fn)
-              (map
-                (fn [{:keys [label value icon color]}]
-                  [:> TableRow #_{:style {:height "24px"}}
-                   (when icon
-                     [:> TableCell {:padding "none"}
-                      [:> Icon {:style {:color color}}
-                       icon]])
-                   [:> TableCell
-                    [:> Typography {:variant "caption"}
-                     label]]
-                   [:> TableCell
-                    [:> Typography {:variant "caption"}
-                     value]]]))
-              (into [:> TableBody]))]]))))
+        ;; Content table
+          [:> Table {:style {:width "350"} :padding "normal" :size "small"}
+           (->> payload
+                payload-fn
+                (sort-by sort-fn)
+                (map
+                  (fn [{:keys [label value icon color]}]
+                    [:> TableRow #_{:style {:height "24px"}}
+                     (when icon
+                       [:> TableCell {:padding "none"}
+                        [:> Icon {:style {:color color}}
+                         icon]])
+                     [:> TableCell
+                      [:> Typography {:variant "caption"}
+                       label]]
+                     [:> TableCell
+                      [:> Typography {:variant "caption"}
+                       value]]]))
+                (into [:> TableBody]))]])))))
 
 (defn- get-population [payload]
   (when (> (count payload) 0)
