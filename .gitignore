@@ -46,10 +46,17 @@ webapp/local-scrap
 webapp/.eca/
 
 # IDE and development files
+# NOTE: patterns containing a slash are anchored to this file's directory, so
+# `.claude/*` covers only the repository-root .claude/ — NOT webapp/.claude/.
+# The rules that must apply at every depth use a leading **/ .
 .claude/*
 !.claude/skills/
-# settings.json is the shared, committed Claude Code config (hooks live there).
-# settings.local.json stays ignored — that is the per-developer override.
+# settings.json is the shared, committed Claude Code config — hooks live there.
 !.claude/settings.json
+# settings.local.json is the per-developer override and must never be committed.
+# Spelled out at repo level on purpose: it was previously only ignored via an
+# individual's ~/.config/git/ignore, so on a fresh clone it was committable.
+**/.claude/settings.local.json
+**/.claude/*.bak
 .git-rewrite/
 data/
