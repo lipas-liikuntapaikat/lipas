@@ -261,6 +261,56 @@ bb test-var lipas.backend.core-test/some-test
 ```
 
 
+## Linting and Formatting
+
+Formatting is defined by `webapp/.cljfmt.edn`, linting by
+`webapp/.clj-kondo/config.edn`. Both are enforced in CI, so the local tools must
+match the pinned versions:
+
+```bash
+brew trust borkdude/brew          # the tap clj-kondo ships from
+brew install borkdude/brew/clj-kondo   # 2026.07.24
+brew install cljfmt                    # 0.16.5
+```
+
+Versions are pinned in the `lint` job of `.github/workflows/ci.yaml`; bump them
+there and locally together.
+
+```bash
+cd webapp
+
+bb fmt            # format everything (or pass specific files)
+bb fmt-check      # check without writing
+bb lint           # clj-kondo; errors fail
+bb check          # fmt-check + lint, what CI runs
+bb clean-ns <f>   # remove unused requires (clojure-lsp)
+bb lint-ratchet   # fail if changed files gained warnings
+```
+
+Both tools resolve their config by walking **up** from the working directory,
+and that config lives in `webapp/`. Run them from `webapp/`, or via these `bb`
+tasks, which pin the directory themselves — invoked from the repository root the
+raw binaries silently fall back to their own defaults and give a different
+answer.
+
+Enforcement runs at three points:
+
+- **Claude Code hooks** (`.claude/settings.json`) format each edited file and
+  report clj-kondo errors immediately. ~90 ms.
+- **`.githooks/pre-commit`** checks staged Clojure files. Enabled by
+  `setup-dev.sh`, or manually with `git config core.hooksPath .githooks`.
+  Bypass with `git commit --no-verify`.
+- **CI** runs `bb fmt-check`, `bb lint`, and on pull requests `bb lint-ratchet`.
+
+The repository carries ~480 pre-existing clj-kondo warnings, so warnings do not
+fail the build outright. The ratchet enforces them differentially: a file you
+touched may not come back with more warnings than it had at the merge base, and
+new files must be warning-clean.
+
+`git blame` skips the bulk cljfmt reformat via `.git-blame-ignore-revs`
+(configured by `setup-dev.sh`).
+
+
 ## Container Reference
 
 | Service       | Purpose              | Local Port          |

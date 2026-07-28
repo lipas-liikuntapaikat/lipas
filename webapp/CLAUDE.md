@@ -79,6 +79,27 @@ Delegate browser testing to `browser-tester` sub-agent to preserve context.
 
 ## Code Style
 
+### Formatting and linting
+
+Enforced by hooks and CI, so you rarely need to run these by hand — the
+PostToolUse hook formats each file you edit and reports clj-kondo errors
+immediately.
+
+```bash
+cd webapp          # required: both tools resolve config by walking UP from cwd
+bb fmt <files>     # cljfmt fix
+bb lint <files>    # clj-kondo, errors fail
+bb check           # fmt-check + lint, what CI runs
+bb clean-ns <f>    # drop unused requires (clojure-lsp)
+```
+
+Run these from `webapp/` or via `bb`. From the repository root the raw
+`cljfmt`/`clj-kondo` binaries find no config and silently apply their own
+defaults — `:community` indentation instead of this project's `:cursive`.
+
+Warnings do not fail the build (~480 pre-existing), but CI's `bb lint-ratchet`
+fails any file you touched that gained warnings, and new files must be clean.
+
 ### Backend (Clojure)
 
 - Use `str` alias for `clojure.string`
