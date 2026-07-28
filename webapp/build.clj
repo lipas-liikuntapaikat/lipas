@@ -1,6 +1,6 @@
 (ns build
-  (:require [clojure.tools.build.api :as b]
-            [clojure.edn :as edn]))
+  (:require [clojure.edn :as edn]
+            [clojure.tools.build.api :as b]))
 
 ;; Read project info from deps.edn (using neil format if available)
 (def deps-edn (edn/read-string (slurp "deps.edn")))
