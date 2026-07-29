@@ -69,7 +69,7 @@ all return 400 and send no mail; `https://localhost/passu-hukassa` still sends.
 
 ### C2 — nREPL published on 0.0.0.0:7888
 
-**Status:** pending
+**Status:** fixed
 
 `webapp/src/clj/lipas/backend/config.clj:99`, `system.clj:71`,
 `docker-compose.yml:187` / `:202`
@@ -83,12 +83,26 @@ blocks inbound 7888 and server access requires SSH over VPN; the REPL is
 reached through an SSH tunnel. Treated here as defence-in-depth only, not as an
 open hole.
 
-**Fix:** publish the port on host loopback only
-(`127.0.0.1:7888:7888`). The nREPL process itself must keep binding `0.0.0.0`
+**Fixed:** `docker-compose.yml` now publishes `127.0.0.1:7888:7888` on both
+`backend` and `backend-dev`. Verified with `docker compose config`
+(`host_ip: 127.0.0.1` on both). The nREPL process keeps binding `0.0.0.0`
 *inside* the container — that is the container's own network namespace, and
-Docker's port publishing cannot reach a container-loopback listener. An SSH
-tunnel (`ssh -L 7888:localhost:7888 lipas-prod`) terminates on the host's
-loopback and therefore still works.
+Docker cannot forward a published port to a container-loopback listener, so
+"hardening" the bind would just break REPL access. `config.clj` carries a
+comment saying so, to stop a well-meaning future change.
+
+`ssh -L 7888:localhost:7888 lipas-prod` terminates on the host's loopback and
+keeps working unchanged.
+
+Worth knowing: Docker installs its own iptables rules ahead of ufw, so a
+published port is not necessarily covered by the host firewall — which is why
+this was worth doing even with the firewall in place.
+
+**Residual (follow-up, not addressed):** compose declares no networks, so every
+service shares the default bridge and geoserver / kibana / mapproxy / logstash
+can all still reach `backend:7888`. Geoserver in particular has a long RCE CVE
+history, so that is a real lateral-movement path. Fixing it means splitting the
+compose network topology — larger than this pass.
 
 ---
 

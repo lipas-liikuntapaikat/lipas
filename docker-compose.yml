@@ -186,7 +186,19 @@ services:
         condition: service_healthy
     ports:
       - '8091:8091'
-      - '7888:7888'
+      # nREPL is unauthenticated arbitrary code execution in the backend JVM,
+      # so it is published on the HOST LOOPBACK only. A bare '7888:7888' binds
+      # every host interface, and Docker's own iptables rules sit in front of
+      # ufw — a host firewall does not necessarily cover a published port.
+      #
+      # Reach it the way we already do: ssh -L 7888:localhost:7888 lipas-prod
+      # (the tunnel terminates on the host's loopback, so this still works).
+      #
+      # The nREPL server itself must keep binding 0.0.0.0 INSIDE the container
+      # (lipas.backend.config) — that is the container's own network namespace,
+      # and Docker cannot forward a published port to a container-loopback
+      # listener.
+      - '127.0.0.1:7888:7888'
     links:
       - postgres
       - elasticsearch
@@ -201,7 +213,8 @@ services:
     hostname: backend
     ports:
       - '8091:8091'
-      - '7888:7888'
+      # Loopback-only, same reasoning as the `backend` service above.
+      - '127.0.0.1:7888:7888'
     links:
       - postgres
       - elasticsearch

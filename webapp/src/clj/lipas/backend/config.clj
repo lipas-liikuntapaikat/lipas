@@ -98,6 +98,16 @@
    :server
    {:app (ig/ref :lipas/app)
     :port 8091}
+   ;; nREPL is unauthenticated arbitrary code execution in this JVM. Do NOT
+   ;; "harden" this to 127.0.0.1 — the process runs inside a container, so
+   ;; binding container-loopback would make Docker unable to forward the
+   ;; published port and would simply break REPL access. The exposure boundary
+   ;; is the PUBLISHED port, which docker-compose.yml pins to the host loopback
+   ;; (127.0.0.1:7888:7888); reach it over an SSH tunnel.
+   ;;
+   ;; Residual: compose has no network segmentation, so every other service on
+   ;; the default bridge (geoserver, kibana, mapproxy, ...) can still reach
+   ;; backend:7888. Tracked as a follow-up, not addressed here.
    :nrepl
    {:port 7888
     :bind "0.0.0.0"}})
