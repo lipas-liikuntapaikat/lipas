@@ -900,12 +900,26 @@
         ["/actions/request-password-reset"
          {:post
           {:no-doc true
-           :parameters {:body {:email string?}}
+           ;; `:reset-url` is domain-whitelisted exactly like the `:login-url`
+           ;; on /actions/order-magic-link, and the map is CLOSED. The emailed
+           ;; link carries a 7-day login token, so an attacker-chosen host
+           ;; turns this unauthenticated endpoint into account takeover for
+           ;; any address they name. The previous schema declared only
+           ;; `:email`, but the handler passed the RAW body through — reitit
+           ;; coercion writes to `:parameters`, never to `:body-params`, so
+           ;; `:reset-url` reached `create-magic-link` unvalidated. Read from
+           ;; `:parameters` here so the schema is actually load-bearing.
+           ;; `:email` stays a plain string on purpose: it is only ever looked
+           ;; up in the DB, and a stricter regex would lock legacy accounts
+           ;; with unusual-but-valid addresses out of password reset.
+           :parameters {:body [:map {:closed true}
+                               [:email :string]
+                               [:reset-url handler-schema/magic-link-login-url]]}
            :handler
-           (fn [{:keys [body-params]}]
-             (let [_ (core/send-password-reset-link! db emailer body-params)]
-               {:status 200
-                :body {:status "OK"}}))}}]
+           (fn [req]
+             (core/send-password-reset-link! db emailer (-> req :parameters :body))
+             {:status 200
+              :body {:status "OK"}})}}]
 
         ["/actions/reset-password"
          {:post
@@ -996,8 +1010,12 @@
           {:no-doc true
            :require-privilege :users/manage
            :parameters
+           ;; Whitelisted like every other magic-link sink. Admin-gated, so
+           ;; this was never the exposed one, but it emails the same 7-day
+           ;; login token — leaving one unvalidated sink is how the next
+           ;; bypass gets found.
            {:body
-            {:login-url string?
+            {:login-url handler-schema/magic-link-login-url
              :variant handler-schema/email-variant
              :user users-schema/new-user-schema}}
            :handler

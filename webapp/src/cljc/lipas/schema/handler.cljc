@@ -100,16 +100,50 @@
 ;; Magic link
 (def email-variant (m/schema [:enum "lipas" "portal"]))
 
+(def magic-link-hosts
+  "Hosts allowed to receive a magic-link / password-reset URL. That URL carries
+  a login token — a full credential — so this set is the line between \"we
+  emailed you a link\" and account takeover."
+  #{"localhost"
+    "lipas-dev.cc.jyu.fi"
+    "uimahallit.lipas.fi"
+    "jaahallit.lipas.fi"
+    "liikuntapaikat.lipas.fi"
+    "www.lipas.fi"
+    "lipas.fi"})
+
+(defn magic-link-url?
+  "True when `s` is an https URL whose HOST is one of `magic-link-hosts`.
+
+  Parses the URL rather than prefix-matching it, on purpose. The previous
+  `str/starts-with?` check accepted any attacker host that merely BEGAN with an
+  allowed origin — `https://lipas.fi.attacker.example/` and
+  `https://localhost.attacker.example/` both passed it, which made the
+  whitelist decorative.
+
+  Userinfo is rejected outright: `https://lipas.fi@attacker.example/` has host
+  `attacker.example` but reads as ours to a human skimming the email."
+  [s]
+  (boolean
+    (when (string? s)
+      #?(:clj (try
+                (let [uri (java.net.URI. ^String s)]
+                  (and (= "https" (.getScheme uri))
+                       (nil? (.getUserInfo uri))
+                       (contains? magic-link-hosts
+                                  (some-> (.getHost uri) str/lower-case))))
+                (catch Exception _ false))
+         :cljs (try
+                 (let [u (js/URL. s)]
+                   (and (= "https:" (.-protocol u))
+                        (str/blank? (.-username u))
+                        (str/blank? (.-password u))
+                        (contains? magic-link-hosts
+                                   (str/lower-case (.-hostname u)))))
+                 (catch :default _ false))))))
+
 (def magic-link-login-url
   (m/schema
     [:and :string
-     [:fn {:error/message "Login URL must start with a known LIPAS domain"}
-      (fn [s]
-        (some #(str/starts-with? s %)
-              ["https://localhost"
-               "https://lipas-dev.cc.jyu.fi"
-               "https://uimahallit.lipas.fi"
-               "https://jaahallit.lipas.fi"
-               "https://liikuntapaikat.lipas.fi"
-               "https://www.lipas.fi"
-               "https://lipas.fi"]))]]))
+     [:fn {:error/message "Login URL must point to a known LIPAS host"}
+      magic-link-url?]]))

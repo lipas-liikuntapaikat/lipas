@@ -255,13 +255,40 @@
   (let [user (tu/gen-regular-user :db-component (test-db))
         resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
                            (mock/content-type "application/json")
-                           (mock/body (->json (select-keys user [:email])))))]
+                           (mock/body (->json (assoc (select-keys user [:email])
+                                                     :reset-url "https://localhost/passu-hukassa")))))]
     (is (= 200 (:status resp)))))
+
+;; The reset link carries a 7-day login token, so an attacker-chosen host would
+;; be account takeover for any address they name. Same whitelist as
+;; order-magic-link — see order-magic-link-login-url-whitelist-test.
+(deftest request-password-reset-url-whitelist-test
+  (let [user (tu/gen-regular-user :db-component (test-db))]
+    (testing "an off-domain reset-url is rejected"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)
+                                                   :reset-url "https://bad-attacker.fi/x"}))))]
+        (is (= 400 (:status resp)))))
+
+    (testing "a whitelisted prefix on an attacker host is rejected"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)
+                                                   :reset-url "https://lipas.fi.attacker.example/x"}))))]
+        (is (= 400 (:status resp)))))
+
+    (testing "a missing reset-url is rejected rather than silently emailing a bare token"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)}))))]
+        (is (= 400 (:status resp)))))))
 
 (deftest request-password-reset-email-not-found-test
   (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
                            (mock/content-type "application/json")
-                           (mock/body (->json {:email "i-will-fail@fail.com"}))))
+                           (mock/body (->json {:email "i-will-fail@fail.com"
+                                               :reset-url "https://localhost/passu-hukassa"}))))
         body (<-json (:body resp))]
     (is (= 404 (:status resp)))
     (is (= "email-not-found" (:type body)))))
@@ -493,12 +520,42 @@
     (is (= 200 (:status resp)))))
 
 (deftest order-magic-link-login-url-whitelist-test
-  (let [resp (test-app (-> (mock/request :post "/api/actions/order-magic-link")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:email (:email "kissa@koira.fi")
-                                               :login-url "https://bad-attacker.fi"
-                                               :variant "lipas"}))))]
-    (is (= 400 (:status resp)))))
+  (let [order (fn [login-url]
+                (test-app (-> (mock/request :post "/api/actions/order-magic-link")
+                              (mock/content-type "application/json")
+                              (mock/body (->json {:email "kissa@koira.fi"
+                                                  :login-url login-url
+                                                  :variant "lipas"})))))]
+    (testing "an unrelated host is rejected"
+      (is (= 400 (:status (order "https://bad-attacker.fi")))))
+
+    ;; The whitelist used to be a bare str/starts-with? check, so every host
+    ;; that merely BEGAN with an allowed origin walked straight through.
+    (testing "a host that only prefixes an allowed origin is rejected"
+      (doseq [url ["https://lipas.fi.attacker.example/x"
+                   "https://localhost.attacker.example/x"
+                   "https://liikuntapaikat.lipas.fi.evil.test/x"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "userinfo that makes an attacker host read as ours is rejected"
+      (doseq [url ["https://lipas.fi@attacker.example/x"
+                   "https://lipas.fi:443@attacker.example/x"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "non-https schemes are rejected"
+      (doseq [url ["http://lipas.fi/x"
+                   "javascript:alert(1)//lipas.fi"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "the real LIPAS hosts are still accepted"
+      (doseq [url ["https://localhost"
+                   "https://localhost/#/kirjaudu"
+                   "https://lipas.fi/#/kirjaudu"
+                   "https://www.lipas.fi/#/kirjaudu"
+                   "https://liikuntapaikat.lipas.fi/#/kirjaudu"
+                   "https://lipas-dev.cc.jyu.fi/#/kirjaudu"]]
+        ;; 404 = passed coercion, then no such user. Not 400.
+        (is (not= 400 (:status (order url))) url)))))
 
 (deftest upsert-sports-site-draft-test
   (let [user (tu/gen-regular-user :db-component (test-db))

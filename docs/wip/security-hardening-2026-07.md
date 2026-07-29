@@ -17,7 +17,7 @@ Status legend: `pending` · `in progress` · `fixed` · `wontfix` · `deferred`
 
 ### C1 — Password-reset host injection → account takeover
 
-**Status:** pending
+**Status:** fixed
 
 `webapp/src/clj/lipas/backend/handler.clj:900` → `core.clj:162`
 
@@ -40,9 +40,32 @@ POST /api/actions/request-password-reset
 `magic-link-login-url` domain whitelist in `schema/handler.cljc:103` with a
 regression test. `request-password-reset` was missed.
 
-**Fix:** closed body schema with `reset-url` typed as
-`handler-schema/magic-link-login-url`; read from `:parameters :body`. Mirror
-the `order-magic-link` whitelist test.
+**Also found while fixing:** the whitelist itself was a bare
+`str/starts-with?` prefix check, so it was decorative — every attacker host
+that merely *began* with an allowed origin walked through it
+(`https://lipas.fi.attacker.example/`, `https://localhost.attacker.example/`),
+as did userinfo forms (`https://lipas.fi@attacker.example/`). That affected the
+already-live `order-magic-link` and `update-user-permissions` sinks too, so
+fixing only `request-password-reset` would have left the hole open.
+
+**Fixed:**
+
+- `schema/handler.cljc` — `magic-link-url?` now *parses* the URL and matches
+  the **host** against a set, requires `https`, and rejects userinfo. Replaces
+  the prefix check for every caller.
+- `handler.clj:900` — closed body schema, `:reset-url` typed as
+  `magic-link-login-url`, handler reads `:parameters :body` instead of the raw
+  `body-params`.
+- `handler.clj:1008` — `send-magic-link` `:login-url` was still bare `string?`;
+  now whitelisted like every other sink (admin-gated, so never the exposed one).
+- Tests: `request-password-reset-url-whitelist-test` (off-domain, prefix
+  bypass, missing url) and an expanded
+  `order-magic-link-login-url-whitelist-test` (prefix bypass, userinfo,
+  non-https, plus the real hosts still accepted).
+
+**Verified live** after the fix — `evil.example.com`,
+`lipas.fi.attacker.example`, `lipas.fi@attacker.example` and `http://lipas.fi`
+all return 400 and send no mail; `https://localhost/passu-hukassa` still sends.
 
 ### C2 — nREPL published on 0.0.0.0:7888
 
