@@ -234,6 +234,38 @@
     (is (= 200 (:status resp)))
     (is (= (:email user) (:email body)))))
 
+;; `:status` used to be inert: nothing read it during authentication, so
+;; deactivating an account via /actions/update-user-status changed nothing and
+;; a GDPR-archived user kept logging in and renewing tokens forever.
+(deftest archived-user-cannot-log-in-test
+  (let [user (tu/gen-user {:db? true :db-component (test-db) :status "archived"})
+        resp (test-app (-> (mock/request :post "/api/actions/login")
+                           (mock/content-type "application/json")
+                           (tu/auth-header (:username user) (:password user))))]
+    (is (= 401 (:status resp)))))
+
+(deftest archived-user-cannot-refresh-login-test
+  ;; The token itself stays cryptographically valid until it expires — we
+  ;; can't revoke it without per-request state. What must not happen is
+  ;; renewing it, which would keep an archived account alive indefinitely.
+  (let [user (tu/gen-user {:db? true :db-component (test-db) :status "archived"})
+        token (jwt/create-token user)
+        resp (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                           (mock/content-type "application/json")
+                           (tu/token-header token)))]
+    (is (= 401 (:status resp)))))
+
+(deftest active-user-can-still-log-in-and-refresh-test
+  (let [user (tu/gen-regular-user :db-component (test-db))
+        login (test-app (-> (mock/request :post "/api/actions/login")
+                            (mock/content-type "application/json")
+                            (tu/auth-header (:username user) (:password user))))
+        refresh (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                              (mock/content-type "application/json")
+                              (tu/token-header (jwt/create-token user))))]
+    (is (= 200 (:status login)))
+    (is (= 200 (:status refresh)))))
+
 (deftest refresh-login-test
   (let [user (tu/gen-regular-user :db-component (test-db))
         token1 (jwt/create-token user :terse? true)

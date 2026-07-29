@@ -42,6 +42,7 @@
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [ring.middleware.params :as params]
+            [ring.util.http-response :as resp]
             [ring.util.io :as ring-io]
             [taoensso.timbre :as log]))
 
@@ -888,21 +889,29 @@
            :middleware [mw/token-auth mw/auth]
            :handler
            (fn [{:keys [identity]}]
-             (let [user (->> (core/get-user! db (-> identity :id))
-                             (auth/enrich-org-roles db))
-                   ;; Impersonation sessions keep the :impersonator claim and
-                   ;; the short expiry across refreshes so they can't be
-                   ;; laundered into regular sessions.
-                   impersonator (:impersonator identity)]
-               {:status 200
-                :body (merge (dissoc user :password)
-                             {:token (if impersonator
-                                       (jwt/create-token user
-                                                         :valid-seconds core/impersonation-token-valid-seconds
-                                                         :extra-claims {:impersonator impersonator})
-                                       (jwt/create-token user))}
-                             (when impersonator
-                               {:impersonator impersonator}))}))}}]
+             (let [stored (core/get-user! db (-> identity :id))]
+               ;; A deactivated or GDPR-archived account must not be able to
+               ;; renew its session. The token it presented stays valid until
+               ;; it expires — revoking issued tokens needs per-request state
+               ;; we don't keep — but refusing to MINT a new one bounds an
+               ;; archived account to one remaining token lifetime instead of
+               ;; forever. See lipas.backend.auth/active?.
+               (if-not (auth/active? stored)
+                 (resp/unauthorized {:error "Not authorized"})
+                 (let [user (auth/enrich-org-roles db stored)
+                       ;; Impersonation sessions keep the :impersonator claim and
+                       ;; the short expiry across refreshes so they can't be
+                       ;; laundered into regular sessions.
+                       impersonator (:impersonator identity)]
+                   {:status 200
+                    :body (merge (dissoc user :password)
+                                 {:token (if impersonator
+                                           (jwt/create-token user
+                                                             :valid-seconds core/impersonation-token-valid-seconds
+                                                             :extra-claims {:impersonator impersonator})
+                                           (jwt/create-token user))}
+                                 (when impersonator
+                                   {:impersonator impersonator}))}))))}}]
 
         ["/actions/request-password-reset"
          {:post

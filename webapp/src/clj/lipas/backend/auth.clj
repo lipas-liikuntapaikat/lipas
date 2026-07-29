@@ -23,10 +23,27 @@
                     distinct
                     vec))))
 
+(defn active?
+  "Whether this account may still hold a session.
+
+  `:status` is `[:enum \"active\" \"archived\"]`. Nothing used to read it during
+  authentication, which made both ways of setting it inert: an admin
+  deactivating an account via /actions/update-user-status changed nothing, and
+  a GDPR-archived user kept logging in and renewing tokens indefinitely. Every
+  path that MINTS a token checks this now.
+
+  A token already in the wild still works until it expires — revoking those
+  needs per-request state we don't keep (tracked separately). Blocking issuance
+  bounds the damage to one token lifetime."
+  [user]
+  (= "active" (:status user)))
+
 (defn basic-auth
   [db _request {:keys [username password]}]
   (let [user (core/get-user db username)]
-    (if (and user (hashers/check password (:password user)))
+    ;; Status is checked AFTER the password so an archived account can't be
+    ;; distinguished from a wrong password by response timing.
+    (if (and user (hashers/check password (:password user)) (active? user))
       (let [user (enrich-org-roles db user)]
         (-> user
             (dissoc :password)

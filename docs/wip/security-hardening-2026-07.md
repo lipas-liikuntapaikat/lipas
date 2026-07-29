@@ -184,7 +184,7 @@ build their queries from closed schemas and are *not* passthroughs.
 
 ### H2 — Archived / deactivated users can still log in
 
-**Status:** pending
+**Status:** fixed
 
 `auth.clj:26`, `auth.clj:41`, `handler.clj:878`
 
@@ -198,7 +198,22 @@ the correct password returned **200 with a fresh 6h token**. So
 security effect, and a GDPR-archived user keeps renewing sessions via
 `refresh-login` indefinitely.
 
-**Fix:** reject non-`active` users in `auth/basic-auth` and in `refresh-login`.
+**Fixed:** new `auth/active?`, checked on both paths that MINT a token —
+`auth/basic-auth` and the `refresh-login` handler (401). In `basic-auth` the
+status is checked *after* the password so an archived account can't be
+distinguished from a wrong password by response timing.
+
+A token already issued stays cryptographically valid until it expires;
+revoking those needs per-request state we don't keep (tracked as M7). Blocking
+issuance bounds an archived account to one remaining token lifetime instead of
+forever.
+
+**Verified live** — `auth/basic-auth` against the real dev DB returns a session
+for an active admin and `false` for the same account archived (status restored
+afterwards). Tests: `archived-user-cannot-log-in-test`,
+`archived-user-cannot-refresh-login-test`, and
+`active-user-can-still-log-in-and-refresh-test` as the control that the new
+check doesn't lock out normal users.
 
 ### H3 — Nothing structurally prevents a route from shipping unauthenticated
 
