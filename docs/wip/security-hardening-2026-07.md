@@ -261,7 +261,7 @@ with the offending route named and an explanation of the fail-open behaviour.
 
 ### H4 — No auth-regression tests on the LLM endpoints
 
-**Status:** pending
+**Status:** fixed
 
 The gates are correct — `assistant-chat` / `assistant-escalate` require
 `:ai-assistant/use`, all PTV generation requires `:ptv/manage` — but no test
@@ -279,8 +279,47 @@ Privileged endpoints with no 401/403 test:
 management, jobs, PTV audit, workbench, impersonation, user management), so the
 gap is specific and closable.
 
-**Fix:** backfill 401 (no token) + 403 (wrong-privilege token) tests for every
-endpoint above.
+**Fixed:** two new namespaces, `lipas.backend.llm-auth-test` and
+`lipas.backend.admin-auth-test` — 9 tests, 77 assertions. Every endpoint above
+gets 401 (no token) and 403 (signed-in, wrong privilege); `upload-utp-image`
+gets 401 only, since it has no privilege gate (that is M3).
+
+Three things make these worth more than the assertion count suggests:
+
+- **A provider tripwire.** Coercion runs *before* `privilege-middleware`, so
+  every LLM case runs with `clj-http`'s entry points replaced by a recorder
+  that throws, and each test asserts the recorder is *empty*. No unauthorized
+  request can reach OpenAI/Gemini even if a gate regresses — it becomes a loud
+  failure instead of a bill.
+- **Positive controls.** `privileged-caller-passes-the-gate-test` and
+  `bodies-clear-coercion-test` assert the same bodies with a *correct* token
+  must not yield 400/401/403. Without these, a body that drifted out of sync
+  with its route schema would make every 401/403 assertion pass while proving
+  nothing — the classic test-passes-for-the-wrong-reason failure.
+- **Cross-privilege and cross-org cases.** An `assistant-tester` gets 403 on
+  the PTV routes and a `ptv-manager` gets 403 on the assistant routes, so one
+  over-broad role can't silently open everything. An org-admin of a *different*
+  org gets 403 on the org-scoped endpoints, pinning the scoping that a
+  plain-regular-user 403 would not.
+
+**Mutation-tested:** with `roles/check-privilege` forced to `(constantly true)`
+not one endpoint still returns 403, so every 403 assertion is load-bearing.
+Four of the seven LLM routes provably hit the provider boundary when ungated.
+
+**Independently re-verified** against the running system: all six model-calling
+routes return 401 anonymous / 403 for a token with no roles, with zero provider
+calls attempted.
+
+**Found while testing:** `upload-utp-image` returns **400**, not 401, for a
+bare POST — the route mounts `multipart-middleware` at route level, i.e. after
+the global `coerce-request-middleware`, so coercion rejects the nil
+`:multipart-params` before auth runs. Not exploitable (the handler stays
+unreachable), but any future test posting a bare body there would pass for the
+wrong reason. The test sends a real multipart body so its 401 is genuine.
+
+**Gap:** the 401 side is not mutation-tested — removing a gate means deleting
+route data, which can't be simulated with `with-redefs`. H3 covers that angle
+statically.
 
 ---
 
