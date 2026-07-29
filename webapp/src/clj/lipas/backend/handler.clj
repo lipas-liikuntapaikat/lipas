@@ -16,6 +16,7 @@
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
             [lipas.backend.search :as search*]
+            [lipas.backend.search-guard :as search-guard]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -65,6 +66,9 @@
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
    :invalid-payload (exception-handler 400 :invalid-payload)
+   ;; Untrusted ES query body rejected by lipas.backend.search-guard —
+   ;; client error, never a 500.
+   :invalid-search-query (exception-handler 400 :invalid-search-query)
    :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
    ;; inviting an email that is already a member must not silently replace
    ;; their roles — conflict, like :username-conflict
@@ -841,8 +845,11 @@
          {:post
           {:no-doc false
            :handler
+           ;; Unauthenticated raw passthrough to ES `_search` — the body must
+           ;; be validated here, at the public boundary. See
+           ;; lipas.backend.search-guard.
            (fn [{:keys [body-params]}]
-             (core/search search body-params))}}]
+             (core/search search (search-guard/check-query! body-params)))}}]
 
         ["/actions/find-fields"
          {:post
@@ -1084,7 +1091,9 @@
            {:body handler-schema/sports-site-report-req}
            :handler
            (fn [{:keys [parameters]}]
-             (let [query (-> parameters :body :search-query)
+             ;; :search-query is handed to search/scroll verbatim — validate it
+             ;; before the piped-input-stream body is built.
+             (let [query (search-guard/check-query! (-> parameters :body :search-query))
                    fields (-> parameters :body :fields)
                    locale (-> parameters :body :locale)
                    format* (or (-> parameters :body :format) "xlsx")]
@@ -1135,7 +1144,7 @@
            {:body [:map {:closed false}]}
            :handler
            (fn [{:keys [parameters]}]
-             (let [params (:body parameters)]
+             (let [params (search-guard/check-query! (:body parameters))]
                {:status 200
                 :body (core/query-finance-report search params)}))}}]
 
@@ -1147,7 +1156,7 @@
            {:body [:map {:closed false}]}
            :handler
            (fn [{:keys [parameters]}]
-             (let [params (:body parameters)]
+             (let [params (search-guard/check-query! (:body parameters))]
                {:status 200
                 :body (core/query-subsidies search params)}))}}]
 
@@ -1190,7 +1199,7 @@
           {:no-doc true
            :handler
            (fn [{:keys [body-params]}]
-             (core/search-schools search body-params))}}]
+             (core/search-schools search (search-guard/check-query! body-params)))}}]
 
       ;; Search population
         ["/actions/search-population"
@@ -1198,7 +1207,7 @@
           {:no-doc true
            :handler
            (fn [{:keys [body-params]}]
-             (core/search-population search body-params))}}]
+             (core/search-population search (search-guard/check-query! body-params)))}}]
 
       ;; Calc distances and travel-times
         ["/actions/calc-distances-and-travel-times"

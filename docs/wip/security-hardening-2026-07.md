@@ -110,7 +110,7 @@ compose network topology — larger than this pass.
 
 ### H1 — Unauthenticated arbitrary Elasticsearch query execution
 
-**Status:** pending
+**Status:** fixed
 
 `handler.clj:840` → `core.clj:927` → `search.clj:520`
 
@@ -131,8 +131,56 @@ Painless plus unbounded aggregation cardinality is a cheap anonymous CPU/heap
 DoS against the cluster the whole site depends on, and it leaves the deployment
 permanently exposed to Elasticsearch scripting sandbox CVEs.
 
-**Fix:** reject scripting constructs and cap result/aggregation sizes at the
-public handler boundary, leaving internally-constructed queries untouched.
+**Fixed:** new `lipas.backend.search-guard`, applied at the six public handler
+boundaries only — `core/search`, `search/search` and `search/scroll` are
+untouched, so internal callers that legitimately build large queries
+(`core/org-sites` `:size 2000`, `core/calculate-stats` agg `:size 400`,
+`core/search-fields` `:size 1000`) are unaffected.
+
+- **Scripting** — rejects any map key whose lower-cased name *contains*
+  `"script"`, plus `runtime_mappings`. A substring test rather than a set of
+  known names: ES spells scripting into a long and growing list of parameters
+  and one missed name is a full bypass. Deliberately over-broad — it also
+  rejects `description` (de-**script**-ion). Verified that no key in
+  `lipas.backend.search/mappings` contains the substring and no client sends
+  one as a query key, so the over-breadth costs nothing today; a test pins the
+  behaviour so a future field name fails loudly in CI rather than in prod.
+  `function_score`, which the FE does use, contains "score" not "script".
+- **Sizes** — top-level `:size`/`:from` capped at 10000 (ES's own default
+  `index.max_result_window`; largest real client value is 5000), every nested
+  `:size` capped at 2000 (largest real value is 1000, the age-structure
+  `composite` agg). Only numeric values are capped, so a field literally named
+  `size` (`{:range {:size {:gte 1}}}`) isn't mistaken for a limit.
+- Rejects with 400 rather than clamping or stripping — silently clamping a
+  5000-row report to 2000 hands the user a quietly-wrong file.
+
+**Frontend change (deliberate, verify before merge):** the FE was sending
+Painless on *every* map search. `->es-search-body` merged `add-distance-fields`
+whenever the map centre had lat/lon — i.e. always — producing three
+`script_fields` (`arcDistance`) per hit, on `/actions/search` and on the report
+flow. Nothing ever read the result: distance *sorting* uses a native
+`_geo_distance` sort, and every consumer of the response reads only `_source`
+and `_score` (`::search-results-table-data`, `::search-results-list-data`,
+`map.subs/::geometries-fast`). It was pure cluster cost, and the only obstacle
+to a blanket scripting rejection, so it was deleted rather than allowlisted.
+Dates to `dc602e8b`.
+
+**Verified end-to-end over HTTP** against the running system: `script_score`,
+`runtime_mappings`, a 100k-bucket terms agg and `size: 1000000` all return 400;
+a normal search and a 5000-row analysis-mode page return 200 with hits.
+
+**Browser-checked:** with the guard live, the app's real search request returns
+200 — the guard does not reject what the FE actually sends. The local dev app
+shows "0 hakutulosta" and an empty map, but that reproduces *identically* on
+unmodified `HEAD` (checked by reverting the FE file, recompiling and reloading),
+so it is pre-existing local index/env drift, not a regression. A positive
+"results render" check still needs an environment with a working local index.
+
+**Noted, not acted on:** `/actions/search-schools` and
+`/actions/search-population` have no callers anywhere in the repo — the
+analysis code builds its own queries via `analysis.common`. They look like dead
+endpoints worth deleting. `/actions/find-fields` and `/actions/search-lois`
+build their queries from closed schemas and are *not* passthroughs.
 
 ### H2 — Archived / deactivated users can still log in
 
