@@ -217,7 +217,7 @@ check doesn't lock out normal users.
 
 ### H3 — Nothing structurally prevents a route from shipping unauthenticated
 
-**Status:** pending
+**Status:** fixed
 
 `middleware.clj:51`
 
@@ -232,9 +232,32 @@ Fail-open by omission. This is the structural root cause behind H4 and M1: a
 newly added route that forgets `:require-privilege` silently ships public, and
 nothing catches it.
 
-**Fix:** a test that walks the reitit router, enumerates every route, and
-asserts each is either in an explicit public allowlist or carries a privilege /
-auth middleware. A new route with no decision fails CI.
+**Fixed:** `lipas.backend.route-auth-test` walks the reitit router, enumerates
+every route/method pair, and requires each to be either gated or listed in an
+explicit `public-routes` allowlist. Adding a route becomes a forced choice:
+protect it, or write it down and say why.
+
+Three tests:
+
+1. every ungated route must be declared — the invariant;
+2. no stale allowlist entries (route deleted, or since protected), so the
+   allowlist can't quietly rot into meaninglessness;
+3. a hardcoded spot check that ~30 named sensitive routes (all LLM endpoints,
+   user/permission admin, org admin, content writes, job control) are gated —
+   belt and braces, since the invariant is only as good as the allowlist and
+   someone could "fix" a failure by pasting the offending route into it.
+
+The router is built from an **empty ctx** — route data is pure, handlers close
+over db/search but building the router never touches them — so this needs no
+database, no Elasticsearch and no fixtures, and is fast enough that nobody has
+a reason to skip it.
+
+**Current surface: 146 route/method pairs, 81 gated, 65 public.** All 65 are
+now written down with a reason; the M1 and M2 entries carry `TODO` markers.
+
+**Failure mode proven,** not assumed: dropping one entry from the allowlist
+(simulating a route that forgets `:require-privilege`) makes the invariant fail
+with the offending route named and an explanation of the fail-open behaviour.
 
 ### H4 — No auth-regression tests on the LLM endpoints
 
