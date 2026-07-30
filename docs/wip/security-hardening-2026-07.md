@@ -340,7 +340,7 @@ belongs in its own PR where authentication is the only thing under test.
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
 | M6 | **fixed** | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
 | M8 | **fixed** | Same any-city weakness on four more PTV endpoints, three of them writes to the real PTV API — `fetch-ptv-service-channel`, `save-ptv-service`, `save-ptv-service-location`, `save-ptv-meta`. Found while fixing M6; not in the original analysis | `ptv/handler.clj` |
-| M7 | pending | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
+| M7 | **fixed** | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
 
 ## Low — deferred
 
@@ -764,3 +764,101 @@ proving `budget+1` is 429 and that **exactly `budget` provider calls were
 attempted** (the 429 bought nothing), per-user isolation, over-length rejections
 with zero provider calls, and a control asserting a payload at PTV's own limits
 plus the FE's real 10-id batch shape is *not* rejected.
+
+### M7 — No token revocation
+
+**Status:** fixed
+
+Roles are baked into a 6h JWT, so stripping them or archiving an account took up
+to 6h to take effect (7 days for a magic-link token). H2 closed the *minting*
+side; this closes the *using* side.
+
+**KISS as chosen:** one nullable column, `account.tokens_valid_from`, and one
+comparison — reject a token whose `:iat` predates it. No session table, no token
+stored anywhere. NULL means never revoked, which is the state every existing
+account is in, so **deploying the migration logs nobody out**.
+
+The check lives in `mw/auth`, the single choke point every gated route passes
+through (`privilege-middleware` calls it internally; manual routes list it), so
+one check covers everything and routes added later are covered by construction.
+`mw/wrap-db` is mounted first in the global chain to give it database access.
+
+Revocation fires on `update-user-status!` (archiving), `update-user-permissions!`
+(roles changed), `reset-password!` and `gdpr-remove-user!`.
+
+**Two lockout bugs were in my design brief and got caught during
+implementation** — worth recording, because both would have hit real users:
+
+1. **`mw/auth` also guards `/actions/login`**, where the identity comes from
+   basic auth and has no `:iat`. My stated rule ("no `:iat` + `tokens_valid_from`
+   set ⇒ reject") would have **permanently locked a user out of password login**
+   the moment an admin touched their roles. `token-auth` now marks the request so
+   the revocation branch only applies to token identities;
+   `revocation-does-not-block-password-login-test` pins it, and I verified it
+   live.
+2. **Sub-second precision.** `:iat` is seconds-granular by JWT convention, so if
+   the revocation point kept sub-second precision, a token minted microseconds
+   *after* a revocation would have `:iat` < `tokens_valid_from` and be rejected
+   on arrival — which is exactly the magic link in the permissions-updated email
+   and the token `refresh-login` hands back. `revoke!` truncates to whole
+   seconds so the same-second case *allows*. The cost is that a token minted in
+   the same second just before a revocation survives; against a 6h lifetime that
+   is noise, and the trade errs toward not locking anyone out.
+
+That second trade has a consequence for tests, and it produced a genuinely bad
+test: the original "the reset link is spent afterwards" assertion used a
+freshly-minted token, so it depended on crossing a second boundary and **failed
+about 4 runs in 5**. Worse, it asserted a guarantee the design does not make.
+Replaced with `password-reset-link-cannot-be-replayed-test`, which backdates the
+link by 60s — the realistic case, since a reset link travels through email — and
+now passes deterministically (verified over six consecutive runs). Replay
+protection holds for any real elapsed time; it is not unconditional.
+
+**Fails closed** — a failed lookup, or a missing `:lipas/db`, answers 401. An
+auth outage is loud, bounded and recoverable; a token that silently keeps working
+after an account was archived is none of those. A 5s cache keeps this from being
+a DB round-trip per request, and `revoke!` drops the entry itself so in-process
+revocation is immediate.
+
+**Reset-flow ordering:** `revoke!` runs *after* the password write, so the
+request holding the reset token completes. In `update-user-permissions!` it runs
+*before* the email, so the magic link that mail carries is minted on the valid
+side — there is a test for that link still working.
+
+**TTL split** (as decided): `create-magic-link` takes an optional
+`:valid-seconds`; only the password-reset caller passes 24h. Magic login,
+permissions-updated and org invitations keep 7 days, untouched by omission, so
+onboarding is unaffected.
+
+**Verified live** against the running system, with state restored afterwards:
+
+```
+tokens_valid_from initially NULL        true
+existing token, not revoked            200
+password login, not revoked            200
+--- revoke! ---
+same token after revoke                401
+PASSWORD LOGIN after revoke            200   <- must not lock out
+freshly minted token after revoke      200
+```
+
+Mutation-tested both directions: forcing `revoked?` to `false` fails the five
+revocation tests; forcing it to `true` fails *every* test, so the positive
+controls are load-bearing rather than decorative.
+
+**Residual, deliberately not done:**
+
+- **Org membership changes still leak stale roles for up to 6h.**
+  `org/set-member-roles!`, `add-member!` and `remove-org-member` change roles
+  that `enrich-org-roles` bakes into the token, but do not revoke. Outside the
+  agreed minimum; worth a follow-up.
+- `ensure-permission!` (which grants a site creator `:site-manager`)
+  intentionally does not revoke — it would log a user out immediately after
+  creating a site.
+- **Multi-node caveat:** `revoke!` clears only the local cache, so a second
+  backend node could accept a revoked token for up to 5s. Single-container
+  deployments are unaffected.
+- **Fail-closed has a wide blast radius by design:** if the global chain is
+  reordered so `wrap-db` no longer runs first, every authenticated request 401s.
+  It fails loudly and the suite goes red, but it is worth knowing.
+- The down migration was not executed.

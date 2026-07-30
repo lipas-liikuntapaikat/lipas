@@ -20,6 +20,7 @@
             [lipas.backend.newsletter :as newsletter]
             [lipas.backend.org :as org]
             [lipas.backend.search :as search]
+            [lipas.backend.token-revocation :as revocation]
             [lipas.data-model-export :as data-model-export]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
@@ -128,10 +129,42 @@
 (defn get-users [db]
   (db/get-users db))
 
-(defn create-magic-link [url user]
-  (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
+(def magic-link-valid-seconds
+  "Default life of an emailed login link: 7 days.
+
+  Long on purpose. These links are how a user who cannot log in gets back in,
+  and an org invitation can sit unread in an inbox over a holiday, so a short
+  span here mostly generates \"my link doesn't work\" support traffic. Password
+  reset is the exception — see `password-reset-valid-seconds`."
+  (* 7 24 60 60))
+
+(def password-reset-valid-seconds
+  "Life of a password-reset link: 24h.
+
+  A reset link is a full login token in an email: whoever holds it can take the
+  account over. Unlike a magic login or an invitation it is requested at a known
+  moment by someone sitting at the keyboard, so there is no reason for it to
+  outlive the day, and 7 days of exposure in a mailbox bought nothing.
+
+  Only the reset link moved. Magic login, the permissions-updated mail and org
+  invitations keep the 7 days deliberately."
+  (* 24 60 60))
+
+(defn create-magic-link
+  "Builds a `url?token=<terse login token>` link and the copy figure that goes
+  with it.
+
+  `valid-seconds` defaults to `magic-link-valid-seconds` (7 days) so the three
+  callers that want that span are untouched by omission. Password reset passes
+  `password-reset-valid-seconds`."
+  [url user & {:keys [valid-seconds]
+               :or {valid-seconds magic-link-valid-seconds}}]
+  (let [token (jwt/create-token user :terse? true :valid-seconds valid-seconds)]
     {:link (str url "?token=" token)
-     :valid-days 7}))
+     ;; Used verbatim in the magic-login / permissions-updated / invitation
+     ;; copy ("voimassa {{valid-days}} päivää"), all of which keep the 7 days.
+     ;; send-reset-password-email! doesn't render it at all.
+     :valid-days (quot valid-seconds (* 24 60 60))}))
 
 (defn- send-permissions-updated-email!
   [emailer login-url {:keys [email] :as user}]
@@ -144,6 +177,12 @@
         old-perms (-> user :permissions)
         new-user (assoc user :permissions permissions)]
     (db/update-user-permissions! db new-user)
+    ;; Roles are baked into the JWT, so every token this user already holds
+    ;; carries the OLD roles until it expires (up to 6h). That is the stale-roles
+    ;; half of finding M7: stripping someone's rights here did nothing for hours.
+    ;; Revoke before the email below, so the magic link it carries — minted
+    ;; after this point — is on the valid side of the new revocation point.
+    (revocation/revoke! db user)
     (publish-users-drafts! db new-user)
     (send-permissions-updated-email! emailer login-url user)
     (add-user-event! db new-user "permissions-updated"
@@ -155,6 +194,11 @@
         old-status (-> user :status)
         new-user (assoc user :status status)]
     (db/update-user-status! db new-user)
+    ;; Archiving an account has to end its sessions, not just stop it renewing
+    ;; them (finding M7). Unconditional, including on "archived" -> "active":
+    ;; reactivation has no live session to kill, and a plain revoke! is easier to
+    ;; reason about than a conditional one.
+    (revocation/revoke! db user)
     (add-user-event! db new-user "status-changed"
                      {:from old-status :to status})
     new-user))
@@ -171,7 +215,8 @@
   address has an account\" rather than claiming a mail was sent."
   [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
-    (let [params (create-magic-link reset-url user)]
+    (let [params (create-magic-link reset-url user
+                                    :valid-seconds password-reset-valid-seconds)]
       (email/send-reset-password-email! emailer email params)
       (add-user-event! db user "password-reset-link-sent"))
     (log/infof "Password reset requested for an address with no account")))
@@ -185,6 +230,25 @@
 (defn reset-password! [db user password]
   (db/reset-user-password! db (assoc user :password
                                      (hashers/encrypt password)))
+  ;; A password change must end the sessions the old password could have leaked
+  ;; into — otherwise a stolen token outlives the reset by up to 6h and the reset
+  ;; achieves nothing against the case it exists for.
+  ;;
+  ;; This cannot bounce the caller mid-flow, in either of the two ways this
+  ;; endpoint is reached:
+  ;;
+  ;; - reset link from email: the request is already past mw/auth, so it
+  ;;   completes; the frontend's very next step is to navigate to the login page
+  ;;   (see lipas.ui.forgot-password.events/reset-success), so the link's token
+  ;;   is never used again. A side benefit: the link becomes single-use.
+  ;; - a signed-in user changing their password from their profile: same page,
+  ;;   same navigate-to-login afterwards. Their session token dies here, which is
+  ;;   the intended behaviour for a password change, and the periodic
+  ;;   refresh-login turns it into a clean logout rather than a stuck UI.
+  ;;
+  ;; Ordering: after the password write, so a failed write leaves nothing
+  ;; revoked, and before the event log, which is not authenticated.
+  (revocation/revoke! db user)
   (add-user-event! db user "password-reset"))
 
 (def impersonation-token-valid-seconds 3600)
@@ -253,6 +317,12 @@
           email (str username "@lipas.fi")]
       (db/update-user-username! tx (assoc user :username username))
       (db/update-user-email! tx (assoc user :email email))
+      ;; :email and :username are baked into the token payload and both just
+      ;; changed, so tokens holding the removed identity must stop working
+      ;; immediately. update-user-status! below revokes too; this one is here
+      ;; because the reason is different and must survive the archive step being
+      ;; moved or dropped.
+      (revocation/revoke! tx user)
       (update-user-data! tx user {})
       (add-user-event! tx user "GDPR removal")
       (update-user-status! tx (assoc user :status "archived"))))

@@ -32,9 +32,11 @@
   a GDPR-archived user kept logging in and renewing tokens indefinitely. Every
   path that MINTS a token checks this now.
 
-  A token already in the wild still works until it expires — revoking those
-  needs per-request state we don't keep (tracked separately). Blocking issuance
-  bounds the damage to one token lifetime."
+  This is the MINTING side. Tokens already in the wild are handled by
+  `lipas.backend.token-revocation`, which `lipas.backend.middleware/auth`
+  applies to every authenticated request: archiving an account moves its
+  `account.tokens_valid_from`, and every token issued before that stops being
+  accepted."
   [user]
   (= "active" (:status user)))
 

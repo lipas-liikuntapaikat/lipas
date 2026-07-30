@@ -148,3 +148,26 @@ WHERE  id = :id ::uuid;
 UPDATE account
 SET    username = :username
 WHERE  id = :id ::uuid;
+
+-- :name get-user-tokens-valid-from
+-- :command :query
+-- :result :one
+-- :doc Selects only the token revocation point of the user with given id. Kept
+--      separate from get-user-by-id on purpose: this runs on EVERY
+--      authenticated request (see lipas.backend.token-revocation) and must not
+--      drag the permissions/history jsonb along with it.
+SELECT
+  tokens_valid_from
+FROM
+  account
+WHERE
+  id = :id ::uuid;
+
+-- :name update-user-tokens-valid-from!
+-- :command :execute
+-- :result :affected
+-- :doc Sets the token revocation point of the user with given id. Every token
+--      issued before this instant stops being accepted.
+UPDATE account
+SET    tokens_valid_from = :tokens_valid_from
+WHERE  id = :id ::uuid;

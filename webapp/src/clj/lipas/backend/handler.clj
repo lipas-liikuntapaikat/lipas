@@ -922,11 +922,14 @@
            (fn [{:keys [identity]}]
              (let [stored (core/get-user! db (-> identity :id))]
                ;; A deactivated or GDPR-archived account must not be able to
-               ;; renew its session. The token it presented stays valid until
-               ;; it expires — revoking issued tokens needs per-request state
-               ;; we don't keep — but refusing to MINT a new one bounds an
-               ;; archived account to one remaining token lifetime instead of
-               ;; forever. See lipas.backend.auth/active?.
+               ;; renew its session. See lipas.backend.auth/active?.
+               ;;
+               ;; Belt and braces now: archiving via core/update-user-status!
+               ;; also moves the account's `tokens_valid_from`, so mw/auth above
+               ;; already rejected the presented token before this handler ran
+               ;; (lipas.backend.token-revocation). This stays as the check that
+               ;; does not depend on the archiving path having revoked — a
+               ;; status set by hand in the database, say.
                (if-not (auth/active? stored)
                  (resp/unauthorized {:error "Not authorized"})
                  (let [user (auth/enrich-org-roles db stored)
@@ -1587,7 +1590,11 @@
       {:data
        {:coercion reitit.coercion.malli/coercion
         :muuntaja m/instance
-        :middleware [;; query-params & form-params
+        :middleware [;; database into the request, FIRST so everything below can
+                   ;; rely on it. mw/auth needs it for the per-user token
+                   ;; revocation check and has no other way to reach ctx.
+                     (mw/wrap-db db)
+                   ;; query-params & form-params
                      params/wrap-params
                    ;; content-negotiation
                      muuntaja/format-negotiate-middleware
