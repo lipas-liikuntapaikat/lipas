@@ -1345,11 +1345,16 @@
         ["/actions/search-lois"
          {:post
           {:no-doc false
-         ;; TODO: Tests don't use auth for this endpoint now
-                                        ; :require-privilege [{:type-code ::roles/any
-                                        ;                      :city-code ::roles/any
-                                        ;                      :activity ::roles/any}
-                                        ;                     :loi/view]
+           ;; Same check the FE already makes client-side before it will even
+           ;; issue this request (lipas.ui.loi.events/::search). It was
+           ;; commented out here because the tests didn't send a token — which
+           ;; meant the only enforcement was in the client. `:loi/view` is not
+           ;; in the `:default` role, so anonymous callers were never supposed
+           ;; to reach this.
+           :require-privilege [{:type-code ::roles/any
+                                :city-code ::roles/any
+                                :activity ::roles/any}
+                               :loi/view]
            :parameters {:body handler-schema/search-lois-payload}
            :handler
            (fn [{:keys [body-params]}]
@@ -1454,7 +1459,11 @@
         ["/actions/create-heatmap"
          {:post
           {:no-doc false
-           #_#_:require-privilege :analysis-tool/experimental
+           ;; Was `#_#_`-commented from the experimental phase. The FE has
+           ;; always sent the token here and already hides the tab behind this
+           ;; same privilege (lipas.ui.analysis.subs), so the server was the
+           ;; only place not enforcing it.
+           :require-privilege :analysis-tool/experimental
            :parameters {:body heatmap/HeatmapParams}
            :responses {200 {:body heatmap/CreateHeatmapResponse}}
            :handler
@@ -1470,7 +1479,8 @@
         ["/actions/get-heatmap-facets"
          {:post
           {:no-doc false
-           #_#_:require-privilege :analysis-tool/experimental
+           ;; See /actions/create-heatmap above.
+           :require-privilege :analysis-tool/experimental
            :parameters {:body heatmap/FacetParams}
            :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
            :handler

@@ -323,28 +323,34 @@ statically.
 
 ---
 
-## Medium — deferred
+## Medium
 
-| # | Finding | Location |
-|---|---|---|
-| M1 | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
-| M2 | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
-| M3 | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
-| M4 | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
-| M5 | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
-| M6 | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
-| M7 | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
+Working order (most-real-impact first): **M1 → M6 → M3 → M2 → M4 → M7.**
+**M5 is deliberately deferred out of this branch** — the failure mode of a
+buddy/bouncycastle bump is "nobody can log in", and with only dev and prod (no
+staging) that risks making the whole branch un-mergeable with confidence. It
+belongs in its own PR where authentication is the only thing under test.
+
+| # | Status | Finding | Location |
+|---|---|---|---|
+| M1 | **fixed** | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
+| M2 | pending | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
+| M3 | pending | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
+| M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
+| M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
+| M6 | pending | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
+| M7 | pending | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
 
 ## Low — deferred
 
-| # | Finding | Location |
-|---|---|---|
-| L1 | `clojure.core/read-string` in `utils/->number` honours `*read-eval*`, so `#=(...)` evaluates. Every caller traced (`maintenance.clj` CLI, `analysis/*` ES data, `db/city.clj` JSONB keys) — **not reachable from HTTP today**. A landmine, not a hole; one-line fix to `clojure.edn/read-string` | `utils.cljc:85` |
-| L2 | 500 responses echo `(.getMessage e)` | `handler.clj:54` |
-| L3 | `:parameters {:lipas-id int?}` is not a valid reitit parameter kind, so no coercion runs on the two accessibility routes | `handler.clj:1149`, `:1160` |
-| L4 | `/api/swagger.json` and `/api/swagger-ui` are public and enumerate the whole internal admin API | `handler.clj:170`, `:1479` |
-| L5 | Bulk-ops authz denial returns 500, not 403 | `bulk_operations_test.clj:138` |
-| L6 | `docker-compose.yml` also publishes `8091:8091` on all host interfaces, bypassing nginx. Prod nginx reaches the backend over the compose network (`proxy.conf` → `http://backend`), so the host publish is unnecessary there; local dev uses `host.docker.internal:8091` and does need it | `docker-compose.yml:188`, `:203` |
+| # | Status | Finding | Location |
+|---|---|---|---|
+| L1 | pending | `clojure.core/read-string` in `utils/->number` honours `*read-eval*`, so `#=(...)` evaluates. Every caller traced (`maintenance.clj` CLI, `analysis/*` ES data, `db/city.clj` JSONB keys) — **not reachable from HTTP today**. A landmine, not a hole; one-line fix to `clojure.edn/read-string` | `utils.cljc:85` |
+| L2 | pending | 500 responses echo `(.getMessage e)` | `handler.clj:54` |
+| L3 | pending | `:parameters {:lipas-id int?}` is not a valid reitit parameter kind, so no coercion runs on the two accessibility routes | `handler.clj:1149`, `:1160` |
+| L4 | pending | `/api/swagger.json` and `/api/swagger-ui` are public and enumerate the whole internal admin API | `handler.clj:170`, `:1479` |
+| L5 | pending | Bulk-ops authz denial returns 500, not 403 | `bulk_operations_test.clj:138` |
+| L6 | pending | `docker-compose.yml` also publishes `8091:8091` on all host interfaces, bypassing nginx. Prod nginx reaches the backend over the compose network (`proxy.conf` → `http://backend`), so the host publish is unnecessary there; local dev uses `host.docker.internal:8091` and does need it | `docker-compose.yml:188`, `:203` |
 
 ---
 
@@ -372,3 +378,50 @@ Recorded so future review effort goes where it is needed:
   laundered, audit events on both users, tested.
 - **No secrets in git history.** `.env*` is ignored; the only `AUTH_KEY=` hits
   in history are `***FILL_THIS***` in the sample file.
+
+---
+
+## Medium — detail on what was fixed
+
+### M1 — Commented-out privilege checks
+
+**Status:** fixed
+
+Three routes had their privilege check commented out from an experimental
+phase, so the *only* enforcement was in the frontend.
+
+The reassuring part: in both cases the FE was already doing the right thing, so
+this was a server-side omission rather than a genuinely open feature.
+
+- `create-heatmap` / `get-heatmap-facets` — `#_#_:require-privilege
+  :analysis-tool/experimental`. The FE already sent the `Authorization` header
+  (`analysis/heatmap/events.cljs:91`, `:123`) and already hid the tab behind the
+  same privilege (`analysis/subs.cljs:17`). Uncommenting needed **no FE change
+  at all**.
+- `search-lois` — a `;`-commented `:loi/view` block with the note "Tests don't
+  use auth for this endpoint now". The FE already refuses to issue the request
+  without `:loi/view` (`loi/events.cljs::search`), but sent no token
+  (`#_#_:headers`). Restored the server gate and uncommented the header. The
+  client-side check stays — it saves a round-trip for users who would only get
+  a 403.
+
+On the maintainer's question of whether a "registered user" privilege exists:
+**no, and one shouldn't be added.** `:default` is folded into `check-privilege`
+for *every* caller including anonymous ones, so it cannot express
+"authenticated". The codebase's existing idiom for that is an explicit
+`:middleware [mw/token-auth mw/auth]` with `:require-privilege nil`
+(`get-current-user-orgs`, `get-site-editors`, the reminder endpoints), and
+`route-auth-test` already recognises it as gated. Neither of these three
+endpoints needed it — both had a real privilege to name.
+
+Tests: `search-lois-requires-loi-view-test` and
+`heatmap-requires-experimental-privilege-test`, each asserting 401 / 403 / and a
+privileged caller clearing both coercion and the gate. The heatmap test also
+pins that `:analysis-tool/use` (which every regular editor has via `basic`) is
+**not** enough — only `:analysis-tool/experimental` is.
+
+`route-auth-test`'s stale-entry check did its job here: removing the three
+allowlist entries was forced by the test, not remembered.
+
+Public surface after this: **62 public route/method pairs, 84 gated** (was
+65/81).

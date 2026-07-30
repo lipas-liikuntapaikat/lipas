@@ -191,13 +191,83 @@
                      :loi-statuses ["active"]}]
     (core/index-loi! (test-search) loi-a :sync)
     (core/index-loi! (test-search) loi-b :sync)
-    (let [response (<-json (:body
+    (let [;; /actions/search-lois enforces :loi/view now — see
+          ;; search-lois-requires-loi-view-test.
+          token (jwt/create-token (tu/gen-admin-user :db-component (test-db)))
+          response (<-json (:body
                              (test-app (-> (mock/request :post (str "/api/actions/search-lois"))
                                            (mock/content-type "application/json")
-                                           (mock/body (->json body-params))))))
+                                           (mock/body (->json body-params))
+                                           (tu/token-header token)))))
           sorted-lois (sort-by :_score > response)]
       (is (> (:_score (first sorted-lois))
              (:_score (second sorted-lois)))))))
+
+;; These three routes had their privilege check commented out from an
+;; experimental phase (`#_#_` on the heatmap pair, a `;`-block on search-lois),
+;; so the only enforcement was client-side. The FE already refuses to call them
+;; without the privilege; these tests pin the server side.
+;;
+;; Each asserts 401 / 403 / not-400-or-403 in turn. The third case is the one
+;; that matters most: without it, a body that drifts out of sync with the route
+;; schema would 400 before the gate and the 401/403 assertions would pass while
+;; proving nothing.
+
+(deftest search-lois-requires-loi-view-test
+  (let [body {:location {:lon 25.0 :lat 68.0 :distance 1000}
+              :loi-statuses ["active"]}
+        call (fn [token]
+               (test-app (cond-> (-> (mock/request :post "/api/actions/search-lois")
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json body)))
+                           token (tu/token-header token))))]
+    (testing "anonymous"
+      (is (= 401 (:status (call nil)))))
+
+    (testing "signed in without :loi/view"
+      (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
+        (is (= 403 (:status (call token))))))
+
+    (testing "a holder of :loi/view gets through to the handler"
+      ;; activities-manager is the role that actually carries :loi/view.
+      (let [user (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :permissions {:roles [{:role "activities-manager"
+                                                      :activity ["outdoor-recreation-areas"]}]}})
+            resp (call (jwt/create-token user))]
+        (is (not (contains? #{400 401 403} (:status resp)))
+            (str "expected to clear coercion and the gate, got " (:status resp)))))))
+
+(deftest heatmap-requires-experimental-privilege-test
+  (let [bbox {:min-x 24.0 :max-x 25.0 :min-y 60.0 :max-y 61.0}
+        bodies {"/api/actions/create-heatmap" {:zoom 8
+                                               :bbox bbox
+                                               :dimension "density"}
+                "/api/actions/get-heatmap-facets" {:bbox bbox}}
+        call (fn [path token]
+               (test-app (cond-> (-> (mock/request :post path)
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json (get bodies path))))
+                           token (tu/token-header token))))]
+    (doseq [path (keys bodies)]
+      (testing (str path " anonymous")
+        (is (= 401 (:status (call path nil))) path))
+
+      (testing (str path " signed in without :analysis-tool/experimental")
+        ;; A regular user has :analysis-tool/use via `basic`, but NOT
+        ;; :analysis-tool/experimental — so this also pins that the two
+        ;; privileges stay distinct.
+        (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
+          (is (= 403 (:status (call path token))) path)))
+
+      (testing (str path " holder of :analysis-tool/experimental gets through")
+        (let [user (tu/gen-user {:db? true
+                                 :db-component (test-db)
+                                 :permissions {:roles [{:role "analysis-experimental-user"}]}})
+              resp (call path (jwt/create-token user))]
+          (is (not (contains? #{400 401 403} (:status resp)))
+              (str path " expected to clear coercion and the gate, got "
+                   (:status resp))))))))
 
 (comment
   (t/run-test search-loi-by-status)

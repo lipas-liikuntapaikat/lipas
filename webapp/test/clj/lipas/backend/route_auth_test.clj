@@ -62,9 +62,6 @@
     [:post "/api/actions/find-fields"]
     [:post "/api/actions/get-front-page-stats"]
     [:post "/api/actions/get-help-data"]
-    ;; TODO(M1): the :loi/view privilege check is commented out in the route,
-    ;; with a note that the tests didn't use auth for it.
-    [:post "/api/actions/search-lois"]
 
     ;; --- Search & reporting over the open data ---------------------------
     ;; Bodies reaching Elasticsearch are validated by
@@ -85,10 +82,6 @@
     [:post "/api/actions/calc-distances-and-travel-times"]
     [:post "/api/actions/calc-diversity-indices"]
     [:post "/api/actions/create-analysis-report"]
-    ;; TODO(M1): :analysis-tool/experimental is commented out (#_#_) on both.
-    ;; Heavy ES geo-aggregations, currently open to the internet.
-    [:post "/api/actions/create-heatmap"]
-    [:post "/api/actions/get-heatmap-facets"]
 
     ;; --- Unauthenticated by necessity: you have no session yet -----------
     ;; TODO(M2): all four send mail and/or leak account existence, and nothing
