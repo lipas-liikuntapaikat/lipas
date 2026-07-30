@@ -7,7 +7,6 @@
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Typography$default" :as Typography]
             [lipas.schema.users :as users-schema]
-            [lipas.ui.components.buttons :as buttons]
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.forgot-password.events :as events]
             [lipas.ui.forgot-password.subs :as subs]
@@ -64,11 +63,11 @@
            [:> Typography {:color :error :style {:margin-bottom "1em"}}
             (tr (keyword :error error))])
 
-         ;; Register button
-         (when (= error :email-not-found)
-           [buttons/register-button
-            {:label (tr :register/headline)
-             :href  "/rekisteroidy"}])
+         ;; NOTE: there used to be a "register instead" button here, shown when
+         ;; the backend answered :email-not-found. That response was an
+         ;; account-existence oracle and the endpoint now answers 200 for every
+         ;; address, so the branch could never fire again. Removed rather than
+         ;; left as dead code, so nobody reintroduces the 404 to make it work.
 
          ;; Forgot password button
          (when (= error :reset-token-expired)

@@ -159,12 +159,22 @@
                      {:from old-status :to status})
     new-user))
 
-(defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
+(defn send-password-reset-link!
+  "Mails a password-reset link, if `email` belongs to an account.
+
+  An unknown address is a NO-OP, not an error. Answering 404 :email-not-found
+  for an unknown address and 200 for a known one made this a clean
+  account-existence oracle for an unauthenticated caller. The cost is small —
+  LIPAS addresses are municipal work addresses, often published on the
+  municipality's own site — but it is free to close, and the caller has no
+  legitimate need for the answer. See the endpoint's copy, which says \"if this
+  address has an account\" rather than claiming a mail was sent."
+  [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
     (let [params (create-magic-link reset-url user)]
       (email/send-reset-password-email! emailer email params)
       (add-user-event! db user "password-reset-link-sent"))
-    (throw (ex-info "User not found" {:type :email-not-found}))))
+    (log/infof "Password reset requested for an address with no account")))
 
 (defn send-magic-link! [db emailer {:keys [user login-url variant]}]
   (let [email (-> user :email)

@@ -386,14 +386,41 @@
                                (mock/body (->json {:email (:email user)}))))]
         (is (= 400 (:status resp)))))))
 
-(deftest request-password-reset-email-not-found-test
-  (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:email "i-will-fail@fail.com"
-                                               :reset-url "https://localhost/passu-hukassa"}))))
-        body (<-json (:body resp))]
-    (is (= 404 (:status resp)))
-    (is (= "email-not-found" (:type body)))))
+;; Was request-password-reset-email-not-found-test, which asserted the 404 that
+;; made this an account-existence oracle. An unauthenticated caller must not be
+;; able to tell a registered address from an unregistered one.
+(deftest request-password-reset-does-not-leak-account-existence-test
+  (let [known (tu/gen-regular-user :db-component (test-db))
+        ask (fn [email]
+              (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                            (mock/content-type "application/json")
+                            (mock/body (->json {:email email
+                                                :reset-url "https://localhost/passu-hukassa"})))))
+        known-resp (ask (:email known))
+        unknown-resp (ask "definitely-not-a-user@example.invalid")]
+    (is (= 200 (:status known-resp)))
+    (is (= (:status known-resp) (:status unknown-resp))
+        "a registered and an unregistered address must be indistinguishable by status")
+    (is (= (<-json (:body known-resp)) (<-json (:body unknown-resp)))
+        "...and by response body")))
+
+(deftest order-magic-link-does-not-leak-account-existence-test
+  ;; Same oracle, same fix: this used to 404 :user-not-found for an unknown
+  ;; address.
+  (let [known (tu/gen-regular-user :db-component (test-db))
+        ask (fn [email]
+              (test-app (-> (mock/request :post "/api/actions/order-magic-link")
+                            (mock/content-type "application/json")
+                            (mock/body (->json {:email email
+                                                :login-url "https://localhost/#/kirjaudu"
+                                                :variant "lipas"})))))
+        known-resp (ask (:email known))
+        unknown-resp (ask "definitely-not-a-user@example.invalid")]
+    (is (= 200 (:status known-resp)))
+    (is (= (:status known-resp) (:status unknown-resp))
+        "a registered and an unregistered address must be indistinguishable by status")
+    (is (= (<-json (:body known-resp)) (<-json (:body unknown-resp)))
+        "...and by response body")))
 
 (deftest reset-password-test
   (let [user (tu/gen-regular-user :db-component (test-db))

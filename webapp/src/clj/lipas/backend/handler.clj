@@ -1053,14 +1053,17 @@
              :login-url handler-schema/magic-link-login-url
              :variant handler-schema/email-variant}}
            :handler
+           ;; An unknown address is a no-op answering 200, not a 404. Using
+           ;; `get-user!` here made this an account-existence oracle for an
+           ;; unauthenticated caller, exactly as request-password-reset was —
+           ;; see core/send-password-reset-link!.
            (fn [req]
-             (let [email (-> req :parameters :body :email)
-                   variant (-> req :parameters :body :variant keyword)
-                   user (core/get-user! db email)
-                   url (-> req :parameters :body :login-url)
-                   _ (core/send-magic-link! db emailer {:user user
-                                                        :login-url url
-                                                        :variant variant})]
+             (let [{:keys [email login-url variant]} (-> req :parameters :body)]
+               (if-let [user (core/get-user db email)]
+                 (core/send-magic-link! db emailer {:user user
+                                                    :login-url login-url
+                                                    :variant (keyword variant)})
+                 (log/infof "Magic link requested for an address with no account"))
                {:status 200 :body {:status "OK"}}))}}]
 
         ["/actions/send-magic-link"

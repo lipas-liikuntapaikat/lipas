@@ -334,7 +334,7 @@ belongs in its own PR where authentication is the only thing under test.
 | # | Status | Finding | Location |
 |---|---|---|---|
 | M1 | **fixed** | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
-| M2 | **partly fixed** (M2a done, M2b next) | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
+| M2 | **fixed** (M2a rate limiting + M2b enumeration) | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
 | M3 | **fixed** | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
 | M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
@@ -673,3 +673,37 @@ for that reason and looked like a broken gate. The test now uses a caller
 holding `ptv-manager` **and** `city-manager` for the same city — privileged
 enough to reach the handler, but not an admin, since admins short-circuit the
 gate and would make both halves of the test vacuous.
+
+### M2b — Account-existence oracle
+
+**Status:** fixed
+
+`request-password-reset` answered 404 `:email-not-found` for an unknown address
+and 200 for a known one; `order-magic-link` did the same via
+`:user-not-found`. Either gave an unauthenticated caller a clean
+account-existence check.
+
+Both now answer **200 for every address**, sending mail only when the account
+exists. The cost of this leak was genuinely small — LIPAS addresses are
+municipal work addresses, frequently published on the municipality's own site —
+so this is hygiene rather than a serious hole. It is closed because it is free
+to close and removes a whole category of question.
+
+The UX tradeoff is handled in the copy rather than left to mislead: all three
+locales now say *"if this address has an account, we have sent it a reset
+link"* instead of claiming a mail was sent. Someone who mistypes their address
+is told the truth.
+
+Two frontend branches could no longer fire and were removed rather than left as
+dead code — the "register instead" affordances in
+`forgot_password/views.cljs` and `login/views.cljs` that were shown *only* on
+the enumeration response. Comments at both sites explain why, so nobody
+reinstates the 404 to make the buttons reappear. Password login still returns a
+bare "Not authorized" without distinguishing a bad password from an unknown
+user, which is the behaviour we want.
+
+The test that codified the oracle is inverted:
+`request-password-reset-email-not-found-test` (asserting 404) became
+`request-password-reset-does-not-leak-account-existence-test`, which asserts a
+known and an unknown address are indistinguishable **by both status and body**,
+plus the same for `order-magic-link`.
