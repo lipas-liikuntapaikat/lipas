@@ -70,6 +70,9 @@
    ;; Untrusted ES query body rejected by lipas.backend.search-guard —
    ;; client error, never a 500.
    :invalid-search-query (exception-handler 400 :invalid-search-query)
+   ;; Uploaded file whose magic bytes are not PNG/JPEG/WebP, rejected by
+   ;; lipas.backend.core/upload-utp-image! — client error, never a 500.
+   :invalid-image (exception-handler 400 :invalid-image)
    :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
    ;; inviting an email that is already a member must not silently replace
    ;; their roles — conflict, like :username-conflict
@@ -144,6 +147,29 @@
         (roles/check-privilege user
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
+
+(defn- utp-image-upload-access?
+  "Boolean privilege fn for POST /actions/upload-utp-image.
+
+  The one upload endpoint serves two editors, so no single privilege covers it:
+  the UTP activity content editor (`:activity/edit`) and the LOI content editor
+  (`:loi/create-edit`). Either one legitimately uploads images, so either one
+  grants access.
+
+  In practice both privileges live on the same two roles today
+  (`:activities-manager` and `:admin`, see lipas.roles), so the OR is about
+  intent rather than reach: whichever editor a role is granted for, its image
+  upload keeps working. A plain editor (`basic`: :site/create-edit,
+  :activity/view, :analysis-tool/use) has neither and is rejected.
+
+  ::roles/any for type-code/city-code/activity mirrors the /actions/save-loi
+  gate: the upload happens before the image is attached to anything, so there is
+  no concrete site to scope against."
+  [req]
+  (let [user (:identity req)
+        ctx {:type-code ::roles/any :city-code ::roles/any :activity ::roles/any}]
+    (or (roles/check-privilege user ctx :activity/edit)
+        (roles/check-privilege user ctx :loi/create-edit))))
 
 (defn create-app
   [{:keys [db emailer search mailchimp ptv] :as ctx}]
@@ -1312,13 +1338,43 @@
         ["/actions/upload-utp-image"
          {:post
           {:no-doc false
-           ;; TODO: role, :activity/edit?
+           :require-privilege utp-image-upload-access?
+           ;; multipart/multipart-middleware parses the body AND coerces
+           ;; `:parameters {:multipart ...}` itself — the global
+           ;; coerce-request-middleware has no :multipart parameter source, so it
+           ;; ignores this route's schema entirely. That coupling is why the
+           ;; middleware has to stay HERE, inside the route vector, and why a
+           ;; caller who clears the gate but sends a malformed multipart body gets
+           ;; 400 rather than a handler error. Do NOT "fix" the ordering: the
+           ;; handler is unreachable to unauthorized callers either way
+           ;; (privilege-middleware mounts token-auth + auth ABOVE this vector, so
+           ;; it answers 401/403 before the body is even parsed), real multipart
+           ;; uploads authenticate correctly, and hoisting it risks breaking a
+           ;; working upload for no security gain. mw/token-auth + mw/auth below
+           ;; are now redundant with privilege-middleware; kept so the route still
+           ;; reads as authenticated if the privilege ever becomes `nil`.
            :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
+           ;; Server-side mirror of the `accept` list both file pickers use
+           ;; (sports_sites/activities/views.cljs, loi/views.cljs). Declaring the
+           ;; limits in the schema means the multipart coercer answers 400 for a
+           ;; bad content-type or an oversized file for free, before the handler
+           ;; (and before the CMS) sees anything. `:content-type` is
+           ;; client-supplied and trivially spoofed, so the bytes are verified
+           ;; again in core/upload-utp-image!.
            :parameters {:multipart {:file [:map
                                            [:filename :string]
-                                           [:content-type :string]
+                                           [:content-type [:enum
+                                                           "image/png"
+                                                           "image/jpeg"
+                                                           "image/jpg"
+                                                           "image/webp"]]
                                            [:tempfile :any]
-                                           [:size :int]]}}
+                                           ;; 20 MB. nginx already caps request
+                                           ;; bodies at 50m (nginx/nginx.conf) and
+                                           ;; phone photos routinely run 5-10 MB,
+                                           ;; so this bounds abuse rather than
+                                           ;; optimising storage.
+                                           [:size [:int {:max (* 20 1024 1024)}]]]}}
            :handler
            (fn [{:keys [parameters multipart-params identity]}]
              (let [params {:lipas-id (get multipart-params "lipas-id")

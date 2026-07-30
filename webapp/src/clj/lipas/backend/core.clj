@@ -36,7 +36,7 @@
             [next.jdbc :as next-jdbc]
             [next.jdbc.result-set :as rs]
             [taoensso.timbre :as log])
-  (:import [java.io OutputStreamWriter]))
+  (:import [java.io File FileInputStream OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -1587,8 +1587,64 @@
       (index-loi! search loi :sync)
       result)))
 
+;; Leading-byte signatures of the image formats the UTP image upload accepts.
+;; They mirror the `accept` list of both file pickers that feed this endpoint
+;; (activities and LOI content editors): PNG, JPEG and WebP.
+;;
+;; Each value is a collection of [offset bytes] pairs; a file matches the format
+;; when EVERY pair matches. WebP needs two, because its container is RIFF: the
+;; format name sits at offset 8, after the 4-byte little-endian chunk size.
+(def ^:private image-signatures
+  {:png [[0 [0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A]]]
+   :jpeg [[0 [0xFF 0xD8 0xFF]]]
+   :webp [[0 [0x52 0x49 0x46 0x46]] ; "RIFF"
+          [8 [0x57 0x45 0x42 0x50]]]}) ; "WEBP"
+
+;; Longest offset+length across `image-signatures` (WebP: 8 + 4).
+(def ^:private image-header-length 12)
+
+(defn- read-header
+  "Reads at most `n` leading bytes of `file` into a fresh byte-array.
+
+  Opens its own stream and closes it again, so the caller's `File` stays
+  untouched and fully readable afterwards (the upload itself streams the same
+  file to the CMS)."
+  ^bytes [^File file n]
+  (with-open [in (FileInputStream. file)]
+    (.readNBytes in n)))
+
+(defn- header-part-matches?
+  [^bytes header [offset expected]]
+  (and (>= (alength header) (+ offset (count expected)))
+       (every? (fn [[i b]] (= (unchecked-byte b) (aget header (+ offset i))))
+               (map-indexed vector expected))))
+
+(defn- image-file?
+  "True when the leading bytes of `file` identify it as PNG, JPEG or WebP."
+  [^File file]
+  (let [header (read-header file image-header-length)]
+    (boolean
+      (some (fn [[_format parts]]
+              (every? (partial header-part-matches? header) parts))
+            image-signatures))))
+
 (defn upload-utp-image!
-  [{:keys [_filename _data _user] :as params}]
+  "Uploads an image to the UTP CMS media library.
+
+  `:data` must be a `java.io.File` (the multipart tempfile). The route schema
+  already restricts the client-declared `:content-type` and `:size`, but a
+  content-type header is trivially spoofed, so the magic bytes are verified here
+  — in the single funnel every caller goes through — before anything is pushed
+  to the CMS."
+  [{:keys [filename data] :as params}]
+  (when-not (instance? File data)
+    ;; Programming error, not a client error: no :type, so it surfaces as a 500.
+    (throw (ex-info "upload-utp-image! requires :data to be a java.io.File"
+                    {:data-class (some-> data class .getName)})))
+  (when-not (image-file? data)
+    (throw (ex-info "Uploaded file is not a PNG, JPEG or WebP image"
+                    {:type :invalid-image
+                     :filename filename})))
   (utp-cms/upload-image! params))
 
 ;;; Types ;;;

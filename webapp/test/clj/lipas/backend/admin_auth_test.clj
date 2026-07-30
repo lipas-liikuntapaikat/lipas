@@ -1,6 +1,7 @@
 (ns lipas.backend.admin-auth-test
   "HTTP-level authorization regression tests for the administrative endpoints:
-   user administration, org administration, the help CMS and LOI writes.
+   user administration, org administration, the help CMS, LOI writes and the
+   UTP CMS image upload.
 
    The gates live in route data (`:require-privilege`) and are enforced by
    `lipas.backend.middleware/privilege-middleware`. `lipas.backend.route-auth-test`
@@ -16,8 +17,10 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [lipas.backend.jwt :as jwt]
             [lipas.backend.org :as backend-org]
+            [lipas.integration.utp.cms :as cms]
             [lipas.test-utils :as tu]
-            [ring.mock.request :as mock]))
+            [ring.mock.request :as mock])
+  (:import [java.io ByteArrayOutputStream]))
 
 ;;; Test system setup ;;;
 
@@ -209,42 +212,171 @@
                    " schema, 401/403 means the gate rejects a caller that should"
                    " pass. Got " (:status resp))))))))
 
-;;; upload-utp-image — authenticated, but NOT privilege-gated ;;;
+;;; upload-utp-image — privilege gate + file limits (finding M3) ;;;
+
+;; This endpoint stays out of `admin-endpoints` above: `call` sends a JSON body
+;; and this route only accepts multipart/form-data, so it needs its own request
+;; builder and its own cases (content-type, size, magic bytes).
+;;
+;; It used to declare NO :require-privilege at all — it mounted token-auth +
+;; auth manually, which authenticates but authorizes nothing, so ANY signed-in
+;; user could push arbitrary files into the UTP CMS (finding M3). The gate is
+;; `lipas.backend.handler/utp-image-upload-access?`: :activity/edit (UTP
+;; activity content editor) OR :loi/create-edit (LOI content editor), the two
+;; editors this single upload endpoint serves.
 
 (def ^:private multipart-boundary "lipasAuthTestBoundary")
+
+(def ^:private size-cap
+  "The route's `:size` cap. One byte over this must be rejected by coercion."
+  (* 20 1024 1024))
+
+(defn- ascii ^bytes [^String s] (.getBytes s "US-ASCII"))
+
+(defn- signature ^bytes [bs] (byte-array (map unchecked-byte bs)))
+
+(defn- file-bytes
+  "Raw bytes for the multipart file part.
+
+   `:png` / `:jpeg` carry the real magic-byte signatures that
+   `lipas.backend.core/upload-utp-image!` sniffs for. `:not-an-image` is the
+   spoofing case: the request still declares an image content-type, only the
+   bytes disagree. `:oversized-png` is a genuine PNG one byte over the cap."
+  ^bytes [kind]
+  (let [out (ByteArrayOutputStream.)]
+    (case kind
+      :png (do (.write out (signature [0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A]))
+               (.write out (byte-array 16)))
+      :jpeg (do (.write out (signature [0xFF 0xD8 0xFF]))
+                (.write out (byte-array 16)))
+      :not-an-image (.write out (ascii "not-really-a-png"))
+      :oversized-png (do (.write out (signature [0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A]))
+                         (.write out (byte-array (- (inc size-cap) 8)))))
+    (.toByteArray out)))
 
 (defn- utp-image-request
   "A real multipart/form-data upload request.
 
-   The route declares `:parameters {:multipart {:file ...}}` and mounts
-   `multipart/multipart-middleware` at route level, i.e. AFTER the global
-   `coerce-request-middleware`. A request without a well-formed multipart body
-   therefore fails coercion with 400 before the auth middleware ever runs, so
-   this test has to send the real thing to observe the 401."
-  []
-  (let [body (str "--" multipart-boundary "\r\n"
-                  "Content-Disposition: form-data; name=\"lipas-id\"\r\n\r\n"
-                  "123456\r\n"
-                  "--" multipart-boundary "\r\n"
-                  "Content-Disposition: form-data; name=\"file\";"
-                  " filename=\"test.png\"\r\n"
-                  "Content-Type: image/png\r\n\r\n"
-                  "not-really-a-png\r\n"
-                  "--" multipart-boundary "--\r\n")]
-    (-> (mock/request :post "/api/actions/upload-utp-image")
-        (mock/content-type (str "multipart/form-data; boundary=" multipart-boundary))
-        (mock/body body))))
+   The body has to be built as raw bytes, not a string: PNG/JPEG signatures are
+   not valid UTF-8 and would be mangled on the way in.
 
-(deftest upload-utp-image-requires-authentication-test
-  (testing "upload-utp-image rejects an anonymous caller with 401"
-    ;; NOTE: no 403 case on purpose. This route mounts token-auth + auth
-    ;; manually and declares NO :require-privilege, so ANY signed-in user may
-    ;; upload an image (see the "TODO: role, :activity/edit?" in the route).
-    ;; That missing privilege gate is tracked separately as finding M3; when it
-    ;; is added, move this endpoint into the table above.
-    (let [resp (test-app (utp-image-request))]
-      (is (= 401 (:status resp))
-          "upload-utp-image must reject an anonymous caller with 401"))))
+   `multipart/multipart-middleware` both parses the body AND coerces the route's
+   `:parameters {:multipart ...}`, and it sits inside the route middleware
+   vector, so a request without a well-formed multipart body answers 400 rather
+   than 401/403. Every case here therefore sends the real thing."
+  [& {:keys [filename content-type kind token]
+      :or {filename "test.png" content-type "image/png" kind :png}}]
+  (let [out (ByteArrayOutputStream.)]
+    (.write out (ascii (str "--" multipart-boundary "\r\n"
+                            "Content-Disposition: form-data; name=\"lipas-id\"\r\n\r\n"
+                            "123456\r\n"
+                            "--" multipart-boundary "\r\n"
+                            "Content-Disposition: form-data; name=\"file\";"
+                            " filename=\"" filename "\"\r\n"
+                            "Content-Type: " content-type "\r\n\r\n")))
+    (.write out ^bytes (file-bytes kind))
+    (.write out (ascii (str "\r\n--" multipart-boundary "--\r\n")))
+    (cond-> (-> (mock/request :post "/api/actions/upload-utp-image")
+                (mock/content-type (str "multipart/form-data; boundary="
+                                        multipart-boundary))
+                (mock/body (.toByteArray out)))
+      token (tu/token-header token))))
+
+;;; CMS tripwire ;;;
+
+(def ^:private cms-uploads
+  "Filenames of every UTP CMS upload attempted while the tripwire is armed."
+  (atom []))
+
+(defn- with-cms-tripwire
+  "Runs `f` with `lipas.integration.utp.cms/upload-image!` — the single outbound
+   call `core/upload-utp-image!` makes — replaced by a recorder.
+
+   Two jobs: the suite can never issue a live request to the real UTP CMS, and
+   a rejection that silently still reached the CMS shows up as a non-empty
+   counter instead of passing quietly."
+  [f]
+  (reset! cms-uploads [])
+  (with-redefs [cms/upload-image!
+                (fn [params]
+                  (swap! cms-uploads conj (:filename params))
+                  {:public-urls {:original "https://cms.invalid/stub.png"}})]
+    (f)))
+
+(defn- privileged-token
+  "Token for an :activities-manager — the assignable role that carries BOTH
+   :activity/edit and :loi/create-edit (see lipas.roles)."
+  []
+  (jwt/create-token
+    (tu/gen-user {:db? true
+                  :db-component (test-db)
+                  :permissions {:roles [{:role "activities-manager"
+                                         :activity ["outdoor-recreation-areas"]}]}})))
+
+;;; Tests ;;;
+
+(deftest upload-utp-image-requires-privilege-test
+  (with-cms-tripwire
+    (fn []
+      (testing "anonymous caller"
+        (is (= 401 (:status (test-app (utp-image-request))))
+            "upload-utp-image must reject an anonymous caller with 401"))
+
+      (testing "signed-in user with no roles"
+        (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
+          (is (= 403 (:status (test-app (utp-image-request :token token))))
+              (str "a user holding neither :activity/edit nor :loi/create-edit"
+                   " must be rejected with 403 — this is finding M3; it used to"
+                   " answer 200 and reach the CMS"))))
+
+      (testing "plain sports-site editor"
+        ;; :city-manager holds `basic` (:site/create-edit, :activity/view,
+        ;; :analysis-tool/use) — editing sites is not editing UTP content.
+        (let [token (jwt/create-token (tu/gen-city-manager-user 91 :db-component (test-db)))]
+          (is (= 403 (:status (test-app (utp-image-request :token token))))
+              "a plain sports-site editor must be rejected with 403")))
+
+      (is (empty? @cms-uploads)
+          (str "no rejected upload may reach the UTP CMS, got " @cms-uploads))
+
+      ;; Positive control: without this a deny-everything bug would look like a
+      ;; clean pass above.
+      (testing ":activities-manager passes the gate and reaches the CMS"
+        (let [resp (test-app (utp-image-request :token (privileged-token)))]
+          (is (= 200 (:status resp))
+              (str "an :activities-manager must be able to upload, got "
+                   (:status resp)))
+          (is (= 1 (count @cms-uploads))
+              "the accepted upload must actually reach the CMS layer"))))))
+
+(deftest upload-utp-image-validates-the-file-test
+  (with-cms-tripwire
+    (fn []
+      (let [token (privileged-token)
+            status (fn [& opts]
+                     (:status (test-app (apply utp-image-request :token token opts))))]
+        (testing "disallowed content-type"
+          (is (= 400 (status :filename "evil.html" :content-type "text/html"
+                             :kind :not-an-image))
+              "only image/png, image/jpeg, image/jpg and image/webp are accepted"))
+
+        (testing "size over the cap"
+          (is (= 400 (status :filename "big.png" :kind :oversized-png))
+              (str "a file larger than " size-cap " bytes must be rejected")))
+
+        (testing "allowed content-type but the bytes are not an image"
+          (is (= 400 (status :kind :not-an-image))
+              (str "content-type is client-supplied and trivially spoofed, so"
+                   " the magic bytes must be verified too")))
+
+        (is (empty? @cms-uploads)
+            (str "no rejected upload may reach the UTP CMS, got " @cms-uploads))
+
+        (testing "a real JPEG is accepted"
+          (is (= 200 (status :filename "photo.jpg" :content-type "image/jpeg"
+                             :kind :jpeg)))
+          (is (= 1 (count @cms-uploads))
+              "the accepted upload must actually reach the CMS layer"))))))
 
 (comment
   (clojure.test/run-tests *ns*))

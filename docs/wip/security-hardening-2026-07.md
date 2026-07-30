@@ -335,7 +335,7 @@ belongs in its own PR where authentication is the only thing under test.
 |---|---|---|---|
 | M1 | **fixed** | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
 | M2 | pending | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
-| M3 | pending | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
+| M3 | **fixed** | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
 | M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
 | M6 | pending | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
@@ -425,3 +425,72 @@ allowlist entries was forced by the test, not remembered.
 
 Public surface after this: **62 public route/method pairs, 84 gated** (was
 65/81).
+
+### M3 — Unrestricted upload to the UTP CMS
+
+**Status:** fixed
+
+Worse than first written up. Measured against the running system with the CMS
+call stubbed: a token carrying **zero roles** returned 200 and the UTP CMS
+upload **was reached**. Not "could in principle" — it worked.
+
+```
+before                                     after
+anon, multipart          401               401   cms=0
+no-roles token           200  cms reached  403   cms=0
+city-manager token       200  cms reached  403   cms=0
+activities-manager       200  cms=1        200   cms=1
+text/html content-type   200  cms=1        400   cms=0
+SVG bytes as image/png   200  cms=1        400   cms=0
+```
+
+**Fixed, in three layers:**
+
+1. **Privilege** — `utp-image-upload-access?`: `:activity/edit` OR
+   `:loi/create-edit`, because the one endpoint serves two editors (the UTP
+   activity editor at `activities/views.cljs:628` and the LOI editor at
+   `loi/views.cljs:69`). Both privileges live on the same two roles today
+   (`activities-manager`, `admin`), so the OR is about intent rather than
+   reach — whichever editor a future role is granted, its upload keeps working.
+   Excluded as intended: every `basic` role holds `:activity/`**`view`**, never
+   `:activity/edit`.
+2. **Declared type and size** — in the route schema, so coercion produces the
+   400 for free. `:content-type` enum of png/jpeg/jpg/webp (mirroring both file
+   pickers' `accept`), `:size` capped at 20 MB (nginx already caps bodies at
+   50m; phone photos run 5-10 MB; the point is bounding abuse, not optimising
+   storage).
+3. **Magic bytes** — a content-type header is trivially spoofed, so
+   `core/upload-utp-image!` verifies the leading bytes are actually PNG, JPEG or
+   WebP before anything reaches the CMS, throwing `:invalid-image` → 400. Put in
+   the single funnel so any future caller inherits it. Signature bytes are
+   compared with `unchecked-byte` (0x89 is negative as a Java byte) and read
+   from a fresh stream so the file the upload streams stays intact.
+
+A pleasant side effect: **SVG uploads are now rejected**, including SVG content
+declared as `image/png`. SVG can carry script, so a CMS that serves it back is
+a stored-XSS vector; the sniff closes that without anyone having to think about
+it.
+
+**Premise correction.** I had assumed the bare-POST-400 came from the global
+`coerce-request-middleware` running before route middleware, and told the
+implementer to leave the ordering alone. The real mechanism is that reitit's
+default coercion has no `:multipart` source at all — `reitit.ring.middleware.
+multipart` does its *own* coercion inside its `:wrap`, and it was listed first
+in the route's `:middleware` vector, ahead of `mw/token-auth`. Because
+`:require-privilege` mounts its gate in the global chain (outside that vector),
+adding it moved authorization *ahead* of multipart parsing as a side effect. So
+bare POSTs now answer 401/403 instead of 400, and no tempfile is written for an
+unauthorized caller. Strictly better, and the "latent trap" is gone rather than
+merely documented.
+
+**Known limits, accepted:**
+
+- Sniffing is a signature check, not validation: a file with a PNG header and
+  arbitrary tail still passes. Bounding that means decoding via ImageIO — a
+  heavier decision, deliberately not taken.
+- Only PNG/JPEG/WebP. Anyone who had been uploading GIF/AVIF despite the
+  picker's `accept` now gets a 400. Historical CMS uploads were not audited
+  (no read path from here).
+- A file whose extension the browser doesn't recognise gets
+  `Content-Type: application/octet-stream` from `File.type` and is now a 400.
+  The picker's `accept` filter makes it hard to reach.
