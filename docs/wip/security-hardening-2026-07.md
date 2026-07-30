@@ -339,6 +339,7 @@ belongs in its own PR where authentication is the only thing under test.
 | M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
 | M6 | **fixed** | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
+| M8 | **fixed** | Same any-city weakness on four more PTV endpoints, three of them writes to the real PTV API — `fetch-ptv-service-channel`, `save-ptv-service`, `save-ptv-service-location`, `save-ptv-meta`. Found while fixing M6; not in the original analysis | `ptv/handler.clj` |
 | M7 | pending | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
 
 ## Low — deferred
@@ -619,3 +620,56 @@ Tests: `rate-limit-test` (11 tests — budget, per-key isolation, window expiry,
 declares a valid one, plus behavioural bursts proving the wiring rejects, that
 budgets are per-IP rather than global, and that `/actions/search` — which the
 map fires on every pan — is *not* limited).
+
+### M8 — The same any-city weakness on the PTV write endpoints (new finding)
+
+**Status:** fixed
+
+Found while fixing M6, and **not in the original analysis** — I had only flagged
+the `ptv-read-access?` helper. But `[{:city-code ::roles/any} :ptv/manage]`
+carries exactly the same weakness ("holds `:ptv/manage` for *any* city"), and it
+guarded four more endpoints that take `:org-id` from the body — three of them
+**writes that push to the real PTV API**:
+
+| Endpoint | Was | Now |
+|---|---|---|
+| `fetch-ptv-service-channel` (read) | `[{:city-code ::roles/any} :ptv/manage]` | `ptv-org-read-access?` |
+| `save-ptv-service` | same | `ptv-org-write-access?` |
+| `save-ptv-service-location` | same | `ptv-org-write-access?` |
+| `save-ptv-meta` | same | `ptv-meta-write-access?` |
+
+So a `ptv-manager` scoped to Utajärvi could publish into Raahe's entry in the
+national service register. Worse than the read this branch already fixed.
+
+**A privilege escalation was waiting in the obvious implementation.** Reusing
+`ptv-org-read-access?` for the writes would have been wrong: that gate
+short-circuits on `:ptv/audit`, and `:ptv-auditor` carries *only* `:ptv/audit`
+and cannot write anything today (verified). Reusing it would have handed every
+auditor write access to every organisation — inside a commit labelled as a
+security fix. `ptv-org-write-access?` therefore has no auditor branch, and
+`ptv-audit-does-not-grant-write-test` pins that.
+
+**`save-ptv-meta` needed its own gate.** Its body is `{lipas-id -> ptv-meta}`
+with one `:org-id` per *entry*, not one per request, so the gate requires **all**
+of them. With `some`, a caller could smuggle a foreign organisation through
+alongside a legitimate one — `save-ptv-meta-rejects-a-mixed-batch-test` covers
+exactly that.
+
+LIPAS admins are admitted explicitly on the write path. They already hold
+unrestricted `:ptv/manage`, so the branch only covers the degenerate case of an
+org with no PTV municipalities configured, where nobody could otherwise fix it.
+
+**Deliberately left alone:** the five LLM *generation* endpoints
+(`generate-ptv-descriptions*`, `translate-to-other-langs`,
+`generate-ptv-service-descriptions`) keep `[{:city-code ::roles/any}
+:ptv/manage]`. They take no `:org-id`, write nothing, and their source data is
+public open data — so there is no cross-tenant impact. Their real exposure is
+LLM cost, which is M4's job.
+
+**A trap worth recording for future tests here:** `save-ptv-meta` writes a
+sports-site revision, so a bare `ptv-manager` is refused by the *site-save*
+authorization in `core`, not by the PTV gate. My first positive control failed
+for that reason and looked like a broken gate. The test now uses a caller
+holding `ptv-manager` **and** `city-manager` for the same city — privileged
+enough to reach the handler, but not an admin, since admins short-circuit the
+gate and would make both halves of the test vacuous.

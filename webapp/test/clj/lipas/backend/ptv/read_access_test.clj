@@ -335,3 +335,144 @@
 
 (comment
   (clojure.test/run-tests *ns*))
+
+;;; --- Write endpoints (M8) --------------------------------------------------
+;;
+;; The same "any city the caller holds" weakness existed on the WRITE side, and
+;; on the singular `fetch-ptv-service-channel` read. Writes push to the real PTV
+;; API, so a ptv-manager scoped to one municipality could publish into another
+;; organisation's national service-register entry.
+;;
+;; The write gate deliberately does NOT reuse the read gate: that one
+;; short-circuits on `:ptv/audit`, and `:ptv-auditor` carries no `:ptv/manage`
+;; today, so reusing it would have handed every auditor write access to every
+;; organisation — a privilege escalation inside a security fix.
+;; `ptv-audit-does-not-grant-write-test` is the guard for exactly that.
+
+(defn- meta-for
+  "A schema-complete `ptv-meta` claiming `org-id*`."
+  [org-id*]
+  {:org-id org-id*
+   :sync-enabled true
+   :service-channel-ids []
+   :service-ids []
+   :summary {:fi "Tiivistelmä"}
+   :description {:fi "Kuvaus"}})
+
+(defn- write-endpoints
+  "The org-scoped PTV write endpoints, plus the singular channel read, each with
+   a schema-valid body naming the seeded org."
+  [{:keys [lipas-id]}]
+  [{:path "/api/actions/fetch-ptv-service-channel"
+    :body {:org-id ptv-org-id :service-channel-id channel-id}
+    :write? false}
+   {:path "/api/actions/save-ptv-service"
+    :body {:org-id ptv-org-id
+           :city-codes [own-city]
+           :sub-category-id 1300
+           :languages ["fi"]
+           :summary {:fi "Tiivistelmä"}
+           :description {:fi "Kuvaus"}}
+    :write? true}
+   {:path "/api/actions/save-ptv-service-location"
+    :body {:org-id ptv-org-id
+           :lipas-id lipas-id
+           :ptv {:org-id ptv-org-id
+                 :sync-enabled true
+                 :service-channel-ids []
+                 :service-ids []
+                 :summary {:fi "Tiivistelmä"}
+                 :description {:fi "Kuvaus"}}}
+    :write? true}
+   ;; NOTE the key is the raw int lipas-id, not a string: the body schema is
+   ;; [:map-of :int ptv-meta], so a string key fails coercion with 400 and the
+   ;; 403 assertion would pass for the wrong reason.
+   {:path "/api/actions/save-ptv-meta"
+    :body {lipas-id {:org-id ptv-org-id
+                     :sync-enabled true
+                     :service-channel-ids []
+                     :service-ids []
+                     :summary {:fi "Tiivistelmä"}
+                     :description {:fi "Kuvaus"}}}
+    :write? true}])
+
+(deftest ptv-manager-for-another-city-cannot-write-test
+  (testing "A ptv-manager for a DIFFERENT municipality gets 403 on every write"
+    (let [_org (seed-org! ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          token (jwt/create-token (ptv-manager other-city))]
+      (with-ptv-stub
+        (fn []
+          (doseq [{:keys [path body]} (write-endpoints {:lipas-id (:lipas-id site)})]
+            (is (= 403 (:status (post* path body token)))
+                (str path " must reject a ptv-manager scoped to city " other-city
+                     " when the request names an org covering city " own-city)))
+          (is (empty? @ptv-calls)
+              (str "no PTV API call may be attempted for an unauthorised write."
+                   " Attempted: " (pr-str @ptv-calls))))))))
+
+(deftest ptv-audit-does-not-grant-write-test
+  (testing ":ptv/audit grants global READ but must never grant a write"
+    ;; :ptv-auditor holds only :ptv/audit and cannot write anything today. The
+    ;; write gate must not inherit the read gate's auditor short-circuit.
+    (let [_org (seed-org! ptv-org-id [own-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          auditor (tu/gen-user {:db? true
+                                :db-component (test-db)
+                                :admin? false
+                                :permissions {:roles [{:role "ptv-auditor"}]}})
+          token (jwt/create-token auditor)]
+      (with-ptv-stub
+        (fn []
+          (doseq [{:keys [path body write?]} (write-endpoints {:lipas-id (:lipas-id site)})
+                  :when write?]
+            (is (= 403 (:status (post* path body token)))
+                (str path " must reject a :ptv/audit holder — auditors review,"
+                     " they do not publish")))
+          (is (empty? @ptv-calls)
+              "an auditor's write attempt must not reach the PTV API"))))))
+
+(deftest save-ptv-meta-rejects-a-mixed-batch-test
+  (testing "one foreign org hidden in a save-ptv-meta batch denies the whole request"
+    ;; The body is {lipas-id -> ptv-meta} with one :org-id per entry, so the gate
+    ;; has to require ALL of them. With `some`, a caller could smuggle a foreign
+    ;; organisation through alongside a legitimate one.
+    ;; Own PTV org ids rather than the namespace-shared `ptv-org-id`: several
+    ;; tests here seed an org claiming that same id, so
+    ;; `get-org-by-ptv-org-id` would resolve to whichever one a randomised test
+    ;; order happened to create last. Unique ids make this test independent of
+    ;; that.
+    (let [own-ptv-org-id (str (random-uuid))
+          foreign-ptv-org-id (str (random-uuid))
+          _own (seed-org! own-ptv-org-id [own-city])
+          _foreign (seed-org! foreign-ptv-org-id [other-city])
+          admin (tu/gen-admin-user :db-component (test-db))
+          site (seed-site! admin)
+          ;; save-ptv-meta writes a sports-site revision, so the caller needs
+          ;; site-edit rights on top of :ptv/manage. A bare ptv-manager is
+          ;; refused by the site-save authorization in core — NOT by the gate
+          ;; under test — and the positive control would then fail for the
+          ;; wrong reason. Deliberately not an admin either: admins
+          ;; short-circuit this gate, which would make both halves vacuous.
+          caller (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :admin? false
+                               :permissions {:roles [{:role "ptv-manager"
+                                                      :city-code [own-city]}
+                                                     {:role "city-manager"
+                                                      :city-code [own-city]}]}})
+          token (jwt/create-token caller)
+          lipas-id (:lipas-id site)]
+      (with-ptv-stub
+        (fn []
+          (testing "the caller's own org alone is accepted"
+            (is (not= 403 (:status (post* "/api/actions/save-ptv-meta"
+                                          {lipas-id (meta-for own-ptv-org-id)}
+                                          token)))))
+          (testing "the same request with a foreign org added is refused"
+            (is (= 403 (:status (post* "/api/actions/save-ptv-meta"
+                                       {lipas-id (meta-for own-ptv-org-id)
+                                        (inc lipas-id) (meta-for foreign-ptv-org-id)}
+                                       token))))))))))

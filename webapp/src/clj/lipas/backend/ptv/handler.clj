@@ -131,6 +131,55 @@
                 (deny user (str "no :ptv/manage for the municipality of site " lipas-id)))
             (deny user (str "lipas-id " (pr-str lipas-id) " not found")))))))
 
+(defn ptv-org-write-access?
+  "Gate for endpoints that WRITE an organisation's PTV data.
+
+  Deliberately NOT `ptv-org-read-access?`. That gate short-circuits on
+  `:ptv/audit`, which is correct for reading — auditors review every
+  organisation — and would be a privilege ESCALATION here: `:ptv-auditor`
+  carries only `:ptv/audit` and cannot write anything today, so reusing the read
+  gate would silently hand every auditor write access to every org's PTV data.
+
+  LIPAS admins are admitted explicitly. They already hold unrestricted
+  `:ptv/manage`, so they pass the city-code check for any org that has PTV
+  municipalities configured; the explicit branch only covers the degenerate case
+  of an org whose `[:ptv-data :city-codes]` is empty, where nobody would
+  otherwise be able to fix it."
+  [db]
+  (fn [req]
+    (let [user (:identity req)
+          org-id (-> req :parameters :body :org-id)]
+      (or (roles/check-role user :admin)
+          (if-let [org (org/get-org-by-ptv-org-id db org-id)]
+            (or (manages-org-ptv? user org)
+                (deny user (str "no :ptv/manage for any municipality of org "
+                                (:id org) " (write)")))
+            (deny user (str "org-id " (pr-str org-id)
+                            " does not resolve to a LIPAS org (write)")))))))
+
+(defn ptv-meta-write-access?
+  "Gate for `/actions/save-ptv-meta`, whose body is `{lipas-id -> ptv-meta}` and
+  therefore carries one `:org-id` per ENTRY rather than one for the request.
+
+  EVERY org-id present must be writable. All-must-pass rather than some: with
+  `some`, a caller could hide a foreign organisation inside an otherwise
+  legitimate batch and have it written anyway."
+  [db]
+  (fn [req]
+    (let [user (:identity req)
+          org-ids (->> req :parameters :body vals (keep :org-id) distinct)]
+      (or (roles/check-role user :admin)
+          (if (empty? org-ids)
+            (deny user "save-ptv-meta body carries no :org-id")
+            (every? (fn [org-id]
+                      (if-let [org (org/get-org-by-ptv-org-id db org-id)]
+                        (or (manages-org-ptv? user org)
+                            (deny user (str "no :ptv/manage for any municipality of org "
+                                            (:id org) " (save-ptv-meta)")))
+                        (deny user (str "org-id " (pr-str org-id)
+                                        " does not resolve to a LIPAS org (save-ptv-meta)"))))
+                    org-ids))))))
+
 (defn ptv-feature-read-access?
   "Gate for `/actions/get-ptv-integration-candidates`.
 
@@ -269,7 +318,7 @@
 
    ["/actions/save-ptv-service"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege (ptv-org-write-access? db)
       :parameters {:body [:map
                           [:org-id :string]
                           [:city-codes [:vector :int]]
@@ -320,7 +369,7 @@
 
    ["/actions/fetch-ptv-service-channel"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege (ptv-org-read-access? db)
       :parameters {:body [:map
                           [:org-id :string]
                           [:service-channel-id :string]]}
@@ -346,7 +395,7 @@
 
    ["/actions/save-ptv-service-location"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege (ptv-org-write-access? db)
       :parameters {:body ptv-schema/create-ptv-service-location}
       :handler
       (fn [req]
@@ -378,7 +427,7 @@
 
    ["/actions/save-ptv-meta"
     {:post
-     {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+     {:require-privilege (ptv-meta-write-access? db)
       :parameters {:body [:map-of :int #'ptv-schema/ptv-meta]}
       :handler
       (fn [req]
