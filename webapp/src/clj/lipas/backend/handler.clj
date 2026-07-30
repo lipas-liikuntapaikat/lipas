@@ -1499,10 +1499,16 @@
           {:no-doc true
            :require-privilege :ai-assistant/use
            ;; Was `assistant/chat-rate-limit`, enforced by a private limiter
-           ;; inside `assistant/chat!`. Same budget, now the shared limiter:
-           ;; it rejects before the handler (and before the tool loop) runs,
-           ;; sends Retry-After, and evicts empty buckets.
-           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 30}
+           ;; inside `assistant/chat!`. Now the shared limiter: it rejects
+           ;; before the handler (and before the tool loop) runs, sends
+           ;; Retry-After, and evicts empty buckets.
+           ;;
+           ;; The old private limiter allowed 30/h. Raised to 300/h because a
+           ;; budget a real user can hit mid-conversation is a support problem,
+           ;; not a saving; this is a runaway/abuse backstop. Note one chat can
+           ;; fan out to `assistant/max-tool-iterations` rounds of model calls,
+           ;; so the provider-call ceiling is a multiple of this number.
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 300}
            :parameters {:body [:map
                                [:message [:string {:min 1 :max 2000}]]
                                [:history {:optional true}

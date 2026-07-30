@@ -722,13 +722,26 @@ municipal NAT don't consume each other's allowance):
 
 | Route | Budget | Basis |
 |---|---|---|
-| `generate-ptv-descriptions` | 60/h | dispatched only from per-site buttons, never a loop |
-| `-from-data` | 60/h | same, from the editor's PTV tab |
-| `-batch` | **300/h** | the largest municipality has 2369 PTV-eligible sites → 237 sequential requests at `batch-size` 10. Deliberately generous: the FE sets `:halt?` on failure, so a mid-run 429 kills the whole pass |
-| `translate-to-other-langs` | 60/h | one explicit button press per call |
-| `generate-ptv-service-descriptions` | 60/h | "generate all" loops over 28 sub-categories |
-| `assistant-chat` | 30/h | preserved from the old private limiter |
-| `assistant-escalate` | 5/day | preserved |
+| `generate-ptv-descriptions` | 600/h | dispatched only from per-site buttons, never a loop |
+| `-from-data` | 600/h | same, from the editor's PTV tab |
+| `-batch` | **3000/h** | the largest municipality has 2369 PTV-eligible sites → 237 sequential requests at `batch-size` 10. The FE sets `:halt?` on failure, so a mid-run 429 kills the whole pass |
+| `translate-to-other-langs` | 600/h | one explicit button press per call |
+| `generate-ptv-service-descriptions` | 600/h | "generate all" loops over 28 sub-categories |
+| `assistant-chat` | 300/h | raised from the private limiter's 30/h |
+| `assistant-escalate` | 5/day | **deliberately not raised** — it mails lipasinfo through the job queue rather than calling a model, so it bounds an ops-inbox flood, not a bill |
+
+**These were multiplied by 10 after the first pass, on the maintainer's call.**
+The original numbers were sized to what normal use produces; the revised ones
+are sized to be unreachable by a human, so the budgets act purely as a
+runaway/abuse backstop rather than rationing legitimate work. The reasoning:
+a limit a real user can hit mid-task costs more in support than it saves in
+tokens. Two consequences worth stating plainly:
+
+- At 3000/h the batch ceiling is **non-binding** for the sequential queue — it
+  is a runaway backstop, not a cost cap.
+- `assistant-chat` at 300/h is 300 *conversations*, and one conversation can
+  fan out to `assistant/max-tool-iterations` (8) rounds of model calls, so the
+  provider-call ceiling is a multiple of the number in the table.
 
 **Input bounds** reference the documented PTV limits in `lipas.data.ptv`
 (`max-summary-length` 150, `max-description-length` 5000) as vars rather than

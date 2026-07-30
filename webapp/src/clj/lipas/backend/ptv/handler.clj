@@ -223,10 +223,15 @@
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       ;; One click of "Luo tekoälyllä" on one site = one Gemini call
       ;; (lipas.ui.ptv.events/generate-descriptions, dispatched only from
-      ;; per-site buttons in views.cljs — never from a loop). 60/h is one
-      ;; per minute sustained, well above what reviewing sites by hand can
-      ;; produce; the bulk path is the -batch route below.
-      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
+      ;; per-site buttons in views.cljs — never from a loop). The bulk path
+      ;; is the -batch route below.
+      ;;
+      ;; 600/h is far above any hand-driven use (that would be 10 clicks a
+      ;; minute, sustained). Set deliberately high: the point of this budget is
+      ;; to stop a runaway retry loop or a scripted caller from running up an
+      ;; unbounded bill, NOT to ration normal work. A limit that a real user can
+      ;; reach costs more in support than it saves in tokens.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 600}
       :parameters {:body [:map
                           [:lipas-id #'sports-sites-schema/lipas-id]
                           ;; The reference is a PEER SITE's already-saved PTV
@@ -251,7 +256,7 @@
       ;; Same per-site button, from the sports-site editor's PTV tab
       ;; (generate-descriptions-from-data). Body volume is already bounded by
       ;; the sports-site schema.
-      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 600}
       :parameters {:body #'sports-sites-schema/new-or-existing-sports-site}
       :handler
       (fn [req]
@@ -273,13 +278,17 @@
       ;; municipality (city-code 91) has 2369 PTV-eligible sites, i.e. 237
       ;; batches for a full run. That run spans hours anyway — each call is a
       ;; whole Gemini completion (the FE allows it 240 s) and the queue is
-      ;; strictly sequential — so 300/h cannot be reached by a legitimate run,
+      ;; strictly sequential — so this cannot be reached by a legitimate run,
       ;; while still capping a runaway retry loop or a scripted caller.
+      ;;
+      ;; At 3000/h the ceiling is effectively non-binding for the sequential
+      ;; queue; it is a runaway backstop rather than a cost cap. That is the
+      ;; intended trade here (see below).
       ;;
       ;; Deliberately generous: the FE HALTS the whole queue on any failure
       ;; (generate-descriptions-batch-failure sets :halt?), so a 429 mid-run
       ;; costs the manager the entire remaining pass.
-      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 300}
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 3000}
       :parameters {:body [:map
                           ;; One request = one Gemini call carrying every
                           ;; site's document, so the vector length IS the
@@ -304,7 +313,7 @@
       ;; Explicit per-site / per-service "Käännä muille kielille" button; one
       ;; press translates into every other org language in a single call. No
       ;; loop dispatches it.
-      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 600}
       :parameters {:body [:map
                           ;; :from and :to are interpolated straight into the
                           ;; prompt (ai/translate-to-other-langs), so they get
@@ -346,9 +355,10 @@
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
       ;; Per-service-candidate button, plus a "generate all" loop over the
       ;; org's service candidates — one per LIPAS sub-category, of which there
-      ;; are 28 (count of lipas.data.types/sub-categories). 60/h allows two
-      ;; full runs per hour on top of ad-hoc single regenerations.
-      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
+      ;; are 28 (count of lipas.data.types/sub-categories). 600/h allows many
+      ;; full runs per hour on top of ad-hoc single regenerations — sized to be
+      ;; unreachable by hand, so it only catches a loop that has gone wrong.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 600}
       :parameters {:body [:map
                           ;; Every city-code widens the ES query that builds
                           ;; the prompt's aggregate overview. Finland has ~309

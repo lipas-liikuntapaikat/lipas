@@ -347,18 +347,27 @@
 
 ;;; --- level 4: the assistant migration ------------------------------------
 
-(deftest assistant-budgets-survived-the-migration-test
+(deftest assistant-budgets-test
   ;; The assistant used to run its own limiter inside `assistant/chat!`
   ;; (`chat-rate-limit` 30/h, `escalation-rate-limit` 5/day, both per user).
-  ;; That code is gone; these numbers are the contract it left behind, so they
-  ;; are asserted literally rather than read from route data.
-  (testing "the declared budgets match the ones assistant.clj used to enforce"
-    (is (= {:key :user :window-ms rl/hour-ms :max 30}
-           (get @declared-budgets chat-path))
-        "chat was 30 per hour per user")
+  ;; That code is gone. These two are asserted literally rather than read from
+  ;; route data, because each encodes a decision worth breaking a test over.
+  (testing "escalation is still 5 per 24h per user"
+    ;; Deliberately NOT raised when the other LLM budgets were. This one does
+    ;; not spend model tokens — it mails lipasinfo through the job queue — so
+    ;; its budget bounds an ops-inbox flood, and 5 support requests a day from
+    ;; one user is already generous for that.
     (is (= {:key :user :window-ms rl/day-ms :max 5}
-           (get @declared-budgets escalate-path))
-        "escalation was 5 per 24h per user"))
+           (get @declared-budgets escalate-path))))
+
+  (testing "chat is 300 per hour per user"
+    ;; Raised from the 30/h the private limiter enforced. A budget a real user
+    ;; can hit mid-conversation is a support problem rather than a saving; this
+    ;; is a runaway/abuse backstop. Note one chat can fan out to
+    ;; `assistant/max-tool-iterations` rounds, so the provider-call ceiling is a
+    ;; multiple of this.
+    (is (= {:key :user :window-ms rl/hour-ms :max 300}
+           (get @declared-budgets chat-path))))
 
   (testing "chat still rejects after the same number of requests as before"
     (let [token (privileged-token :ai-assistant/use)
