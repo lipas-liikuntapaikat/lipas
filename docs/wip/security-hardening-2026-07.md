@@ -334,7 +334,7 @@ belongs in its own PR where authentication is the only thing under test.
 | # | Status | Finding | Location |
 |---|---|---|---|
 | M1 | **fixed** | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
-| M2 | pending | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
+| M2 | **partly fixed** (M2a done, M2b next) | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
 | M3 | **fixed** | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
 | M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
@@ -556,3 +556,66 @@ read (positive control, asserting **200** so a schema drift can't make the
 negatives vacuous), other-city manager denied on every endpoint, auditor reads
 any org, unmapped `:org-id` denied, anonymous 401, and the city-code type test.
 A PTV-API tripwire ensures no denial path reaches the real PTV API.
+
+### M2a — No rate limiting anywhere
+
+**Status:** fixed
+
+Nothing in LIPAS was rate limited: nginx has no `limit_req`, and the AI
+assistant carried its own private limiter. The unauthenticated mail-sending
+endpoints were usable as a mail-bomb or an ops-inbox flood, and free work for
+anyone who wanted it.
+
+**A blocker had to be fixed first, and it would have been an outage.** None of
+the three nginx `/api` blocks set any forwarded header, so the backend sees the
+nginx container's IP as `:remote-addr` for *every* proxied request. An IP-keyed
+limiter would have collapsed into a single global bucket and throttled all users
+at once. `proxy.conf`, `proxy_dev.conf` and `proxy_local.conf` now set
+`X-Real-IP` and `X-Forwarded-For`.
+
+The limiter keys on **`X-Real-IP`, never `X-Forwarded-For`**: nginx *overwrites*
+the former with the real peer, but `$proxy_add_x_forwarded_for` *appends* to
+whatever the client sent, so trusting it would let any caller prepend junk and
+rotate buckets at will. `spoofed-forwarded-for-cannot-rotate-buckets-test` pins
+exactly that.
+
+`lipas.backend.rate-limit` is declarative per route:
+
+```clojure
+:rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
+```
+
+`:key :ip` for unauthenticated endpoints, `:key :user` for authenticated ones so
+that colleagues behind one municipal NAT don't consume each other's budget. It
+is mounted *inside* the privilege check, so a request about to be rejected with
+401/403 spends nobody's budget.
+
+Budgets: password reset and magic link 10/h/IP, feedback 10/h/IP, register and
+newsletter 5/h/IP. Deliberately not tight — LIPAS users are municipal staff and
+a whole municipality often shares one public address, so a low cap would lock
+real colleagues out of password reset. 10/h still turns "unlimited" into a
+nuisance.
+
+Also fixes the assistant limiter's flaw: buckets are now evicted, so a stream of
+one-shot addresses can't grow the map without bound.
+
+**Stated limitations** (in the namespace docstring, because they bound how far
+to trust this): state is per JVM process — exact today since LIPAS runs a single
+backend container, but it would multiply by instance count if ever scaled out,
+and it resets on deploy. Moving to Postgres/Redis is the fix and is deliberately
+not done, since it would trade a working control for a much bigger change. And
+IP limiting does not stop an attacker with many source addresses; this raises
+the cost of casual abuse and bounds accidental loops.
+
+**Not done, deliberately:** per-recipient limiting (capping how much mail one
+*victim* address can receive regardless of source) would be the real defence
+against targeted mail-bombing. It is a refinement for a threat model a municipal
+facility registry is unlikely to face, and keying on an attacker-supplied email
+adds a spoofable-key surface, so it is noted rather than built.
+
+Tests: `rate-limit-test` (11 tests — budget, per-key isolation, window expiry,
+`Retry-After`, spoofing resistance, eviction) and `rate-limit-http-test`
+(5 tests — a route-data walk asserting every endpoint that needs a budget
+declares a valid one, plus behavioural bursts proving the wiring rejects, that
+budgets are per-IP rather than global, and that `/actions/search` — which the
+map fires on every pan — is *not* limited).

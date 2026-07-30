@@ -15,6 +15,7 @@
             [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
+            [lipas.backend.rate-limit :as rate-limit]
             [lipas.backend.search :as search*]
             [lipas.backend.search-guard :as search-guard]
             [lipas.jobs.handler :as jobs-handler]
@@ -891,6 +892,10 @@
         ["/actions/register"
          {:post
           {:no-doc true
+           ;; Creates an account and mails lipasinfo. Registering is a
+           ;; once-ever act per person, so this can be tighter than the
+           ;; password-reset budget.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
            :handler
            (fn [req]
              (let [user (-> req
@@ -942,6 +947,14 @@
         ["/actions/request-password-reset"
          {:post
           {:no-doc true
+           ;; Unauthenticated and it sends mail, so it is both a mail-bomb
+           ;; vector and free work for anyone who wants it.
+           ;;
+           ;; The budget is per client IP and deliberately not tight: LIPAS
+           ;; users are municipal staff, and a whole municipality often shares
+           ;; one public address, so a low cap would lock real colleagues out
+           ;; of password reset. 10/h still turns "unlimited" into a nuisance.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
            ;; `:reset-url` is domain-whitelisted exactly like the `:login-url`
            ;; on /actions/order-magic-link, and the map is CLOSED. The emailed
            ;; link carries a 7-day login token, so an attacker-chosen host
@@ -1031,6 +1044,9 @@
         ["/actions/order-magic-link"
          {:post
           {:no-doc true
+           ;; Same shape and same shared-NAT reasoning as
+           ;; /actions/request-password-reset above.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
            :parameters
            {:body
             {:email users-schema/email-schema
@@ -1289,6 +1305,8 @@
         ["/actions/subscribe-newsletter"
          {:post
           {:no-doc false
+           ;; Unauthenticated write to the external Mailchimp list.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
            :parameters
            {:body
             {:email users-schema/email-schema}}
@@ -1316,6 +1334,8 @@
         ["/actions/send-feedback"
          {:post
           {:no-doc false
+           ;; Unauthenticated mail straight into the ops inbox.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
            :parameters
            {:body feedback-schema/feedback-payload}
            :handler
@@ -1576,7 +1596,12 @@
                    ;; privilege check based on route-data,
                    ;; also enables token-auth and auth checks
                    ;; per route.
-                     mw/privilege-middleware]}})
+                     mw/privilege-middleware
+                   ;; per-route rate limiting based on route-data. INSIDE the
+                   ;; privilege check on purpose: `:key :user` needs
+                   ;; `:identity`, and a request that is going to be rejected
+                   ;; with 401/403 shouldn't spend anyone's budget.
+                     rate-limit/middleware]}})
     (ring/routes
       (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
       (ring/create-default-handler))))
