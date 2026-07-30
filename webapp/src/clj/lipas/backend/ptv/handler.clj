@@ -3,6 +3,8 @@
             [lipas.backend.db.db :as db]
             [lipas.backend.org :as org]
             [lipas.backend.ptv.core :as ptv-core]
+            [lipas.backend.rate-limit :as rate-limit]
+            [lipas.data.ptv :as ptv-data]
             [lipas.roles :as roles]
             [lipas.schema.ptv :as lipas-ptv-schema]
             [lipas.schema.sports-sites :as sports-sites-schema]
@@ -219,12 +221,23 @@
    ["/actions/generate-ptv-descriptions"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      ;; One click of "Luo tekoälyllä" on one site = one Gemini call
+      ;; (lipas.ui.ptv.events/generate-descriptions, dispatched only from
+      ;; per-site buttons in views.cljs — never from a loop). 60/h is one
+      ;; per minute sustained, well above what reviewing sites by hand can
+      ;; produce; the bulk path is the -batch route below.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
       :parameters {:body [:map
                           [:lipas-id #'sports-sites-schema/lipas-id]
+                          ;; The reference is a PEER SITE's already-saved PTV
+                          ;; text (pick-reference-for-site), so it can never
+                          ;; legitimately exceed PTV's own field limits — which
+                          ;; ptv-meta already enforces on save. Mirroring them
+                          ;; here bounds the prompt without inventing a number.
                           [:reference {:optional true}
                            [:maybe [:map
-                                    [:summary :string]
-                                    [:description :string]]]]]}
+                                    [:summary [:string {:max ptv-data/max-summary-length}]]
+                                    [:description [:string {:max ptv-data/max-description-length}]]]]]]}
       :handler
       (fn [req]
         (let [{:keys [lipas-id reference]} (-> req :parameters :body)]
@@ -235,6 +248,10 @@
    ["/actions/generate-ptv-descriptions-from-data"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      ;; Same per-site button, from the sports-site editor's PTV tab
+      ;; (generate-descriptions-from-data). Body volume is already bounded by
+      ;; the sports-site schema.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
       :parameters {:body #'sports-sites-schema/new-or-existing-sports-site}
       :handler
       (fn [req]
@@ -248,12 +265,32 @@
    ["/actions/generate-ptv-descriptions-batch"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      ;; The bulk path: "Luo kuvaukset kaikille" walks the org's candidate
+      ;; sites in batches of 10 (lipas.ui.ptv.events/batch-size), one request
+      ;; per batch, sequentially, with up to 2 retries per batch.
+      ;;
+      ;; Measured worst case from the search index: the largest
+      ;; municipality (city-code 91) has 2369 PTV-eligible sites, i.e. 237
+      ;; batches for a full run. That run spans hours anyway — each call is a
+      ;; whole Gemini completion (the FE allows it 240 s) and the queue is
+      ;; strictly sequential — so 300/h cannot be reached by a legitimate run,
+      ;; while still capping a runaway retry loop or a scripted caller.
+      ;;
+      ;; Deliberately generous: the FE HALTS the whole queue on any failure
+      ;; (generate-descriptions-batch-failure sets :halt?), so a 429 mid-run
+      ;; costs the manager the entire remaining pass.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 300}
       :parameters {:body [:map
-                          [:lipas-ids [:vector #'sports-sites-schema/lipas-id]]
+                          ;; One request = one Gemini call carrying every
+                          ;; site's document, so the vector length IS the
+                          ;; prompt size. The FE sends 10; 25 leaves room for
+                          ;; tuning batch-size upward without a schema change,
+                          ;; and bounds fan-out per request.
+                          [:lipas-ids [:vector {:max 25} #'sports-sites-schema/lipas-id]]
                           [:reference {:optional true}
                            [:maybe [:map
-                                    [:summary :string]
-                                    [:description :string]]]]]}
+                                    [:summary [:string {:max ptv-data/max-summary-length}]]
+                                    [:description [:string {:max ptv-data/max-description-length}]]]]]]}
       :handler
       (fn [req]
         {:status 200
@@ -264,12 +301,40 @@
    ["/actions/translate-to-other-langs"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      ;; Explicit per-site / per-service "Käännä muille kielille" button; one
+      ;; press translates into every other org language in a single call. No
+      ;; loop dispatches it.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
       :parameters {:body [:map
-                          [:from :string]
-                          [:to [:set :string]]
-                          [:summary :string]
-                          [:description :string]
-                          [:user-instruction {:optional true} [:maybe :string]]]}
+                          ;; :from and :to are interpolated straight into the
+                          ;; prompt (ai/translate-to-other-langs), so they get
+                          ;; the tightest bound of anything here. Values come
+                          ;; from the org's :supported-languages, which
+                          ;; lipas.schema.org already restricts to
+                          ;; fi/se/en — 10 chars is generous for a language
+                          ;; code and leaves no room for an injected
+                          ;; instruction. Kept as :string rather than an enum
+                          ;; so an unexpected-but-harmless code can't turn a
+                          ;; working translation into a 400.
+                          [:from [:string {:min 1 :max 10}]]
+                          [:to [:set {:max 5} [:string {:min 1 :max 10}]]]
+                          ;; PTV's own per-field ceiling is 5000 chars
+                          ;; (lipas.data.ptv, mirroring the API's 400s), and
+                          ;; that is the bound used here for all three texts.
+                          ;;
+                          ;; NOT max-summary-length (150) for :summary on
+                          ;; purpose: generation can overshoot 150 and the FE
+                          ;; only clamps the RESULT
+                          ;; (translate-site-descriptions-success), so an
+                          ;; over-long draft summary is a normal editing state.
+                          ;; Rejecting it here would break the translate step
+                          ;; the user is trying to run, with a generic "haku
+                          ;; epäonnistui" notification. PTV rejects the text at
+                          ;; sync time, which is where that belongs.
+                          [:summary [:string {:max ptv-data/max-description-length}]]
+                          [:description [:string {:max ptv-data/max-description-length}]]
+                          [:user-instruction {:optional true}
+                           [:maybe [:string {:max ptv-data/max-user-instruction-length}]]]]}
       :handler
       (fn [req]
         {:status 200
@@ -279,18 +344,35 @@
    ["/actions/generate-ptv-service-descriptions"
     {:post
      {:require-privilege [{:city-code ::roles/any} :ptv/manage]
+      ;; Per-service-candidate button, plus a "generate all" loop over the
+      ;; org's service candidates — one per LIPAS sub-category, of which there
+      ;; are 28 (count of lipas.data.types/sub-categories). 60/h allows two
+      ;; full runs per hour on top of ad-hoc single regenerations.
+      :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 60}
       :parameters {:body [:map
-                          [:city-codes [:vector :int]]
+                          ;; Every city-code widens the ES query that builds
+                          ;; the prompt's aggregate overview. Finland has ~309
+                          ;; municipalities, so 400 can't reject a real org's
+                          ;; PTV config.
+                          [:city-codes [:vector {:max 400} :int]]
                           [:sub-category-id :int]
+                          ;; :overview replaces the ES-derived input entirely,
+                          ;; i.e. it is caller-supplied prompt content. No FE
+                          ;; call site sends it today (all pass nil); it exists
+                          ;; for previewing unsaved data. Names are short
+                          ;; labels (city / sub-category), and the facility
+                          ;; list is one entry per site in the service — capped
+                          ;; near the largest measured municipality's eligible
+                          ;; site count (2369).
                           [:overview {:optional true
                                       :description "Use this to replace the AI input with non-saved site information"}
                            [:maybe
                             [:map
-                             [:city-name (ptv-schema/localized-string-schema nil)]
-                             [:service-name (ptv-schema/localized-string-schema nil)]
-                             [:sports-facilties [:vector
+                             [:city-name (ptv-schema/localized-string-schema {:max 200})]
+                             [:service-name (ptv-schema/localized-string-schema {:max 200})]
+                             [:sports-facilties [:vector {:max 2500}
                                                  [:map
-                                                  [:type :string]]]]]]]]}
+                                                  [:type [:string {:max 200}]]]]]]]]]}
       :handler
       (fn [req]
         {:status 200

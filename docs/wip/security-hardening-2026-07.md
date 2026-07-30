@@ -336,7 +336,7 @@ belongs in its own PR where authentication is the only thing under test.
 | M1 | **fixed** | Two privilege checks commented out, exposing the endpoints: `#_#_:require-privilege :analysis-tool/experimental` on `create-heatmap` / `get-heatmap-facets`; `search-lois` privilege commented out | `handler.clj:1421`, `:1437`, `:1312` |
 | M2 | **fixed** (M2a rate limiting + M2b enumeration) | Unauthenticated email sending + account enumeration; no rate limiting anywhere (`nginx` has no `limit_req`). `request-password-reset` returns 404 `:email-not-found` vs 200 → existence oracle; `order-magic-link` mail-bombing; `send-feedback` / `register` → ops inbox; `subscribe-newsletter` | `handler.clj:900`, `:975`, `:1254`, `:857`, `:1227` |
 | M3 | **fixed** | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
-| M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
+| M4 | **fixed** | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
 | M6 | **fixed** | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
 | M8 | **fixed** | Same any-city weakness on four more PTV endpoints, three of them writes to the real PTV API — `fetch-ptv-service-channel`, `save-ptv-service`, `save-ptv-service-location`, `save-ptv-meta`. Found while fixing M6; not in the original analysis | `ptv/handler.clj` |
@@ -707,3 +707,60 @@ The test that codified the oracle is inverted:
 `request-password-reset-does-not-leak-account-existence-test`, which asserts a
 known and an unknown address are indistinguishable **by both status and body**,
 plus the same for `order-magic-link`.
+
+### M4 — LLM endpoints unbounded in rate and input size
+
+**Status:** fixed
+
+Five PTV routes call a paid provider and were gated only by a privilege, with no
+rate limit at all. `translate-to-other-langs` was the worst: `:summary`,
+`:description` and `:user-instruction` were bare `:string` with no `:max`, so a
+caller could push arbitrary volume straight into a prompt.
+
+**Budgets** (all `:key :user`, via the M2a limiter, so colleagues behind one
+municipal NAT don't consume each other's allowance):
+
+| Route | Budget | Basis |
+|---|---|---|
+| `generate-ptv-descriptions` | 60/h | dispatched only from per-site buttons, never a loop |
+| `-from-data` | 60/h | same, from the editor's PTV tab |
+| `-batch` | **300/h** | the largest municipality has 2369 PTV-eligible sites → 237 sequential requests at `batch-size` 10. Deliberately generous: the FE sets `:halt?` on failure, so a mid-run 429 kills the whole pass |
+| `translate-to-other-langs` | 60/h | one explicit button press per call |
+| `generate-ptv-service-descriptions` | 60/h | "generate all" loops over 28 sub-categories |
+| `assistant-chat` | 30/h | preserved from the old private limiter |
+| `assistant-escalate` | 5/day | preserved |
+
+**Input bounds** reference the documented PTV limits in `lipas.data.ptv`
+(`max-summary-length` 150, `max-description-length` 5000) as vars rather than
+literals, so they can't drift. Two judgement calls worth recording:
+
+- `translate-to-other-langs`'s `:summary` is bounded at 5000, **not** 150.
+  Generation can overshoot and the FE clamps only the *result*, so an over-long
+  draft summary is a normal editing state; rejecting it would break the
+  translate step itself with a generic error. PTV rejects it at sync time, which
+  is where that belongs.
+- `:from` / `:to` get the tightest bounds (10 chars, max 5) because they are the
+  only fields interpolated *raw* into the prompt.
+
+**The assistant's private limiter is gone**, replaced by the shared one:
+`rate-state`, `rate-limited?` and both `if` branches in `chat!`/`escalate!` are
+deleted. Gained: rejection happens before the handler and its tool loop runs,
+plus `Retry-After` and bucket eviction.
+
+**A regression this introduced, and its fix.** The shared limiter answers with
+one generic English message, and the assistant frontend *preferred* the server's
+string over its own Finnish copy — so Finnish users would have seen English in a
+chat bubble. Fixed in `assistant/events.cljs` by dropping the server-string
+preference: the backend owns the status code, the UI owns the wording. That was
+arguably a pre-existing wart; the limiter just exposed it.
+
+**The one number to revisit from production:** the 300/h batch budget assumes a
+batch call takes ≥12s, which makes the limit unreachable by the sequential
+queue. Real call latency was not measured. If calls are faster, a very large
+org's run could hit the limit and the FE would halt the queue.
+
+Tests: `llm-budget-test` — a route-data walk over all seven routes, a burst
+proving `budget+1` is 429 and that **exactly `budget` provider calls were
+attempted** (the 429 bought nothing), per-user isolation, over-length rejections
+with zero provider calls, and a control asserting a payload at PTV's own limits
+plus the FE's real 10-id batch shape is *not* rejected.

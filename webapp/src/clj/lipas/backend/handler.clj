@@ -1495,6 +1495,11 @@
          {:post
           {:no-doc true
            :require-privilege :ai-assistant/use
+           ;; Was `assistant/chat-rate-limit`, enforced by a private limiter
+           ;; inside `assistant/chat!`. Same budget, now the shared limiter:
+           ;; it rejects before the handler (and before the tool loop) runs,
+           ;; sends Retry-After, and evicts empty buckets.
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 30}
            :parameters {:body [:map
                                [:message [:string {:min 1 :max 2000}]]
                                [:history {:optional true}
@@ -1517,6 +1522,10 @@
          {:post
           {:no-doc true
            :require-privilege :ai-assistant/use
+           ;; Was `assistant/escalation-rate-limit` (5 per 24 h per user).
+           ;; Mails lipasinfo through the job queue, so the budget bounds an
+           ;; ops-inbox flood rather than a model bill.
+           :rate-limit {:key :user :window-ms rate-limit/day-ms :max 5}
            :parameters {:body [:map
                                [:summary [:string {:min 1 :max 2000}]]
                                [:transcript {:optional true}
