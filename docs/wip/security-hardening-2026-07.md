@@ -338,7 +338,7 @@ belongs in its own PR where authentication is the only thing under test.
 | M3 | **fixed** | `upload-utp-image` is auth-only with no privilege, no content-type check, no size cap, no extension allowlist | `handler.clj:1276` |
 | M4 | pending | LLM abuse controls thin: PTV LLM endpoints have no rate limit and unbounded input (`translate-to-other-langs` takes bare `:string` with no `:max`); assistant limiter is an in-process atom that resets on deploy, multiplies per instance, and never evicts | `ptv/handler.clj:87`, `assistant.clj:741` |
 | M5 | **deferred** | Stale crypto stack: `buddy/buddy 2.0.0` → buddy-core 1.4.0 / buddy-sign 2.2.0 / buddy-hashers 1.3.0 / `bcprov-jdk15on 1.58` (2017, EOL artifact line). JWT alg is correctly pinned to HS512, so no alg-confusion — this is dependency hygiene | `deps.edn` |
-| M6 | pending | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
+| M6 | **fixed** | `ptv-read-access?` is not org-scoped: `:ptv/manage` for any single city grants read of any org's PTV data via the `fetch-ptv-*` endpoints, which take `:org-id` from the body | `ptv/handler.clj:12` |
 | M7 | pending | No token revocation. Roles baked into the 6h JWT; magic-link tokens live 7 days; `reset-password` accepts any valid token (including an impersonation token) with no old-password check | `jwt.clj:20`, `handler.clj:910` |
 
 ## Low — deferred
@@ -494,3 +494,65 @@ merely documented.
 - A file whose extension the browser doesn't recognise gets
   `Content-Type: application/octet-stream` from `File.type` and is now a 400.
   The picker's `accept` filter makes it hard to reach.
+
+### M6 — PTV read access was not org-scoped
+
+**Status:** fixed
+
+`ptv-read-access?` asked only "does this caller hold `:ptv/manage` for *any*
+city they happen to have?" — it never looked at what the request asked for. The
+`fetch-ptv-*` endpoints take an `:org-id` from the body, so a `ptv-manager`
+scoped to one municipality could read every other organisation's PTV data.
+
+**The data model** (established against dev data, not assumed): a LIPAS org's
+document carries `[:ptv-data :org-id]` (the PTV organisation UUID) and
+`[:ptv-data :city-codes]`. That city-code list is the **only** concrete
+org→municipality bridge — and it's the same field `lipas.data.ptv/
+resolve-ptv-org-id` already uses to match a site to an org, so the fix reuses
+the established bridge rather than inventing one.
+
+Org **membership is not usable** for this: `:ptv-manager` is a hand-assignable
+city-scoped role with no org context, and in dev the real PTV managers are not
+members of the orgs whose PTV data they maintain.
+
+**The rule:** `:ptv/audit` keeps global read (auditors review every org — that
+was the intent of the original comment). Everyone else must hold `:ptv/manage`
+for a municipality belonging to the org the request names. An `:org-id` that
+resolves to no LIPAS org is denied, with no permissive fallthrough. Denials log
+the reason at info level with the account id (not the email), so a mis-scoped
+role is diagnosable instead of just looking like a broken feature.
+
+**My premise was wrong about the endpoint shapes,** and following it blindly
+would have produced a deny-all disguised as a fix. Three request shapes exist,
+so there are three gates:
+
+| Shape | Endpoints | Gate |
+|---|---|---|
+| PTV org UUID | `fetch-ptv-org`, `fetch-ptv-services`, `fetch-ptv-service-channels`, `fetch-ptv-service-collections` | `ptv-org-read-access?` → `get-org-by-ptv-org-id` |
+| **LIPAS** org uuid | `fetch-ptv-service-audits` | `lipas-org-read-access?` → `get-org` |
+| a sports-site, no org at all | `check-ptv-service-channel-link` | `site-ptv-read-access?` → the site's own city-code |
+
+Feeding the LIPAS org uuid to `get-org-by-ptv-org-id` would have resolved to
+nothing and denied every non-auditor.
+
+**Type normalisation was a real trap.** Role contexts arrive as `Long` (JWT →
+JSON), org `[:ptv-data :city-codes]` as `Integer` (jsonb). Those compare fine,
+but a *string* city-code never matches a number in a set lookup and would have
+turned the gate into a silent deny-all. `->city-code` normalises everything to
+`long`, and a test asserts an org with `["91"]` string city-codes still grants
+access. Note it deliberately avoids `utils/->int`, whose `->number` goes through
+`clojure.core/read-string` — see L1; reader eval does not belong on an authz
+path.
+
+`get-ptv-integration-candidates` was deliberately left at its existing strength:
+it is a fixed filter over the same search index `/actions/search` serves
+anonymously, so there is nothing cross-tenant to protect, and the FE sends the
+whole org's `city-codes` vector — which for a multi-municipality PTV org can be
+wider than any single manager's scope, so scoping it could 403 a legitimate
+wizard.
+
+Tests: `test/clj/lipas/backend/ptv/read_access_test.clj` — own-city manager can
+read (positive control, asserting **200** so a schema drift can't make the
+negatives vacuous), other-city manager denied on every endpoint, auditor reads
+any org, unmapped `:org-id` denied, anonymous 401, and the city-code type test.
+A PTV-API tripwire ensures no denial path reaches the real PTV API.
