@@ -875,3 +875,97 @@ controls are load-bearing rather than decorative.
   reordered so `wrap-db` no longer runs first, every authenticated request 401s.
   It fails loudly and the suite goes red, but it is worth knowing.
 - The down migration was not executed.
+
+---
+
+## Found while testing the branch end-to-end (2026-07-31)
+
+A pass over the real user-facing flows against the running system — password
+reset and magic link through MailHog, login/refresh/revocation, map search,
+reports and statistics, editor saves, PTV, the assistant. Everything held; the
+two items below are what it turned up.
+
+### M7-frontend — a revoked token failed silently for up to 15 minutes
+
+**Status:** fixed
+
+M7 closed the *server* side: a token minted before `tokens_valid_from` is
+rejected. Nothing closed the client side. Only `::refresh-login` recognised the
+resulting 401, and it runs on a 15-minute timer — until it fired, every other
+request answered with its own generic "epäonnistui" message and the user went
+on clicking a session that was already dead.
+
+**Fixed** with a re-frame **global interceptor** (`login/events.cljs`), not by
+wrapping the `:http-xhrio` effect: that key belongs to
+`day8.re-frame.http-fx`, so re-registering it depends on load order and would
+fail silently if anything claimed it later. The interceptor also sees the event
+id, which is how the two events that own their own 401 opt out.
+
+The failure map carries neither URI nor Authorization header, so the gate is
+`:logged-in?` rather than the request. That is the better test anyway: with no
+session there is nothing to expire, so the login form's own 401 is excluded
+without inspecting anything.
+
+The decision lives in `lipas.ui.login.session-expiry` (`.cljc`, following
+`lipas.ui.ptv.diff`) so it is testable on the JVM — 22 assertions covering
+401 vs 403, opted-out events, logged-out callers, a domain map that merely
+carries `:status 401`, and the response sitting anywhere in the event vector.
+
+**Two bugs in the first implementation, both caught by driving it in a browser
+rather than by the tests:**
+
+1. **The message never survived.** `::logout` resets db to `default-db`, wiping
+   the `:active-notification` that had just been set. The message is now
+   *resolved* before the logout (while the user's own locale is still in db —
+   the reset also drops the translator back to `:fi`) and *dispatched* after it.
+2. **`::session-expired` fired once per failed request.** A page has several
+   requests in flight, and every copy is queued *before* the first `::logout`
+   runs, so `:logged-in?` cannot deduplicate them. While impersonating that
+   meant two `::exit-impersonation` runs: the first restores the admin session
+   and consumes the stash, the second finds it empty and **logs the admin out
+   entirely**. A `:session-expiring?` flag, set as the handler's own `:db`
+   effect, is visible to the copies and stands them down.
+
+**Also folded in:** `::login-refresh-failure` now delegates to
+`::session-expired` instead of duplicating the logout/impersonation branch. The
+periodic refresh is the path that discovers a dead session most often, and it
+used to bounce the user to the login page without saying anything.
+
+**Verified in the browser** against the running system: an ordinary 401 and a
+refresh 401 both log out with the message; 403 and a wrong password on the real
+login form do not; a genuinely revoked token hitting `/admin` logs out once;
+impersonation plus two simultaneous 401s returns to the admin's own session
+with the stash consumed once; normal browsing is unaffected.
+
+**Known cosmetic detail:** the failing page's own handler still flashes its
+generic message for a few hundred ms before the session message replaces it.
+Suppressing that would mean the interceptor dropping other handlers' effects —
+a much bigger hammer for a sub-second flash.
+
+### `search-lois` answered 500 when the request omitted `:location`
+
+**Status:** fixed
+
+Not a security finding — a plain bug, surfaced because M1 put the endpoint
+behind `:loi/view` and it got exercised properly for the first time.
+
+`:location` is optional in `search-lois-payload`, but `core/->lois-es-query`
+computed `offset`/`scale` eagerly in its `let`, so a request without one died on
+`(* nil ...)`. The function's own `default-query` fallback had therefore never
+been reachable. The arithmetic moved inside the branch, and the status filter
+became conditional too — `:loi-statuses` is optional as well, and
+`{:terms {:status.keyword nil}}` would have been the next failure.
+
+Test: `search-lois-without-location-test` — 200 with the status filter still
+applied (a retired LOI stays excluded, so it cannot pass vacuously), 200 on an
+empty body, and 400 for a *partial* location, pinning that coercion is what
+guarantees `:distance` is never nil once `:location` is present.
+
+### Deploy note, not a code change
+
+`nginx/*.conf` gained `X-Real-IP` for the M2a limiter. The proxy container must
+actually be recreated on deploy — the local one had been running six days and
+was still serving the old template, which would have keyed every request on the
+nginx container's address and collapsed all users into one bucket. Worth
+confirming from the backend logs after deploy that `X-Real-IP` carries varied
+client addresses.
