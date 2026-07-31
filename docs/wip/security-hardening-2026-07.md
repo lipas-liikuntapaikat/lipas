@@ -961,11 +961,42 @@ applied (a retired LOI stays excluded, so it cannot pass vacuously), 200 on an
 empty body, and 400 for a *partial* location, pinning that coercion is what
 guarantees `:distance` is never nil once `:location` is present.
 
-### Deploy note, not a code change
+### Deploy note, and the `X-Real-IP` check — **verified on lipas-dev**
 
-`nginx/*.conf` gained `X-Real-IP` for the M2a limiter. The proxy container must
-actually be recreated on deploy — the local one had been running six days and
-was still serving the old template, which would have keyed every request on the
-nginx container's address and collapsed all users into one bucket. Worth
-confirming from the backend logs after deploy that `X-Real-IP` carries varied
-client addresses.
+`nginx/*.conf` gained `X-Real-IP` for the M2a limiter, and the proxy container
+must actually be recreated on deploy: the local one had been running six days
+and was still serving the old template, which would have keyed every request on
+the nginx container's address and collapsed all users into one bucket. That
+still applies to the prod deploy.
+
+This could not be checked locally at all — Docker Desktop rewrites every source
+address to the VM gateway, so `X-Real-IP` came out as `192.168.65.1` for every
+client whether the config was right or wrong. Worse, a black-box test from a
+single source cannot tell "header set correctly" from "header absent, everyone
+sharing the container's address": both look like one server-controlled bucket
+with the same budget.
+
+**Checked on lipas-dev after deployment (2026-07-31)** over an SSH tunnel to the
+backend's nREPL, read-only, by sending one `request-password-reset` for an
+address with no account — which under M2b sends no mail — and reading the
+limiter's buckets:
+
+| Check | Result |
+|---|---|
+| bucket key after one request | `130.234.239.166` |
+| the calling machine's egress IPv4, looked up independently | the same address |
+| the dev server's own address | `130.234.6.92` — so the key is not the host echoing itself |
+| what the failure mode would look like | a `172.x` / `10.x` Docker address |
+| spoofed `X-Real-IP` + `X-Forwarded-For` | ignored; still one bucket, hits 1 → 2 |
+
+So on a Linux host Docker's iptables DNAT preserves the client source, nginx
+copies it into `X-Real-IP`, and the limiter keys per client. Because nginx
+*overwrites* that header rather than appending to it, a caller cannot rotate
+buckets by supplying it themselves — which is precisely why the limiter reads
+`X-Real-IP` and never `X-Forwarded-For`.
+
+Worth knowing for the budget sizing: both the probe and the maintainer's own
+traffic left JYU address space, so colleagues behind a shared institutional
+egress really do land in one bucket. That is the municipal-NAT case M2a sized
+the budgets for — now observed rather than assumed, and a reason not to tighten
+them.
