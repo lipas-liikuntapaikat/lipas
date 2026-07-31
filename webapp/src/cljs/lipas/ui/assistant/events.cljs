@@ -265,9 +265,12 @@
 
 (rf/reg-event-db ::chat-failure
   (fn [db [_ resp]]
+    ;; Don't echo the server's own 429 string into the chat: the shared rate
+    ;; limiter answers with one generic English message for every endpoint,
+    ;; whereas this bubble is Finnish user-facing copy. The backend owns the
+    ;; status code, the UI owns the wording.
     (let [msg (if (= 429 (:status resp))
-                (or (-> resp :response :error)
-                    "Viestiraja täynnä. Yritä myöhemmin uudelleen.")
+                "Viestiraja täynnä. Yritä myöhemmin uudelleen."
                 "Avustajaan ei juuri nyt saada yhteyttä. Yritä hetken päästä uudelleen.")]
       (-> db
           (update-in [:assistant :messages] (fnil conj [])
@@ -312,9 +315,9 @@
 
 (rf/reg-event-db ::escalation-failure
   (fn [db [_ resp]]
+    ;; See ::chat-failure — the UI owns the wording, not the server.
     (let [msg (if (= 429 (:status resp))
-                (or (-> resp :response :error)
-                    "Tukipyyntöraja täynnä tälle päivälle.")
+                "Tukipyyntöraja täynnä tälle päivälle."
                 "Tukipyynnön lähetys epäonnistui. Voit lähettää sähköpostia osoitteeseen lipasinfo@jyu.fi.")]
       (-> db
           (update-in [:assistant :messages] (fnil conj [])

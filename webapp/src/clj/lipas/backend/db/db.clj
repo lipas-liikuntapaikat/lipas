@@ -102,6 +102,24 @@
        (user/marshall)
        (user/update-user-username! db-spec)))
 
+(defn get-user-tokens-valid-from
+  "The user's token revocation point as a `java.sql.Timestamp`, or nil when the
+  account was never revoked (column NULL) or has no row at all.
+
+  Returns the bare value rather than a row map: the only caller is the
+  per-request revocation check, and `user/unmarshall` would be wrong here (it
+  expects the full user shape). The raw hugsql key is snake_case."
+  [db-spec params]
+  (:tokens_valid_from (user/get-user-tokens-valid-from db-spec params)))
+
+(defn update-user-tokens-valid-from!
+  "Sets the user's token revocation point. Call it through
+  `lipas.backend.token-revocation/revoke!`, which also drops the cached value."
+  [db-spec user]
+  (->> user
+       (user/marshall)
+       (user/update-user-tokens-valid-from! db-spec)))
+
 ;; Sports Site ;;
 
 (defn- invalidate-revs-since-this!

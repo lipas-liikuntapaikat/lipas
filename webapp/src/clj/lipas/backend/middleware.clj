@@ -3,18 +3,68 @@
     [buddy.auth :refer [authenticated?]]
     [buddy.auth.middleware :refer [wrap-authentication]]
     [lipas.backend.auth :as auth]
+    [lipas.backend.token-revocation :as revocation]
     [lipas.roles :as roles]
     [ring.util.http-response :as resp]))
 
+(defn wrap-db
+  "Puts the database component into the request as `:lipas/db`.
+
+  `auth` below needs a database for the token-revocation check and, being plain
+  ring middleware mounted per route, has no way of its own to reach the system
+  ctx. Installed FIRST in the global middleware chain in
+  `lipas.backend.handler/create-app`, which closes over ctx — so every route
+  gets it, and `auth` can rely on it being there (it fails closed if it is not).
+
+  Handlers should keep taking `db` from the closure; this key exists for
+  middleware."
+  [db]
+  (fn [handler]
+    (fn [request]
+      (handler (assoc request :lipas/db db)))))
+
+(def ^:private token-authenticated?-key
+  "Set on requests whose identity came from a JWT, by `token-auth` below.
+
+  `auth` needs to tell a token identity from a basic-auth one: only tokens can
+  be revoked, and an `:iat`-less identity means opposite things in the two
+  cases. From a token it means \"minted before revocation shipped\" and must be
+  rejected; from basic auth it is simply the stored user map, and rejecting it
+  would lock a user out of password login permanently the moment an admin
+  touched their roles."
+  ::token-authenticated?)
+
 (defn auth
   "Middleware used in routes that require authentication. If request is not
-   authenticated a 401 not authorized response will be returned"
+   authenticated a 401 not authorized response will be returned.
+
+   This is also where per-user token revocation is enforced (finding M7), and it
+   is the reason the check lives here rather than on individual routes: every
+   gated route in the app passes through this one function —
+   `privilege-middleware` calls it internally, and the routes that authenticate
+   manually list it in their own `:middleware`. One check here covers all of
+   them, and a route added later is covered by construction.
+
+   The rejection is byte-identical to the unauthenticated one on purpose: a
+   caller holding a revoked token learns no more than that it does not work,
+   which is all an expired token tells them too. See
+   `lipas.backend.token-revocation` for the semantics and the fail-closed
+   choice."
   [handler]
   (fn [request]
-    (if (or (authenticated? request)
-            (= :options (:request-method request)))
+    (cond
+      (= :options (:request-method request))
       (handler request)
-      (resp/unauthorized {:error "Not authorized"}))))
+
+      (not (authenticated? request))
+      (resp/unauthorized {:error "Not authorized"})
+
+      (and (get request token-authenticated?-key)
+           (revocation/revoked? (:lipas/db request) (:identity request)))
+      (resp/unauthorized {:error "Not authorized"})
+
+      :else
+      (handler request))))
 
 (defn basic-auth [db]
   (fn [handler]
@@ -44,9 +94,15 @@
              (add-cors-headers response))))))})
 
 (defn token-auth
-  "Middleware used on routes requiring token authentication"
+  "Middleware used on routes requiring token authentication.
+
+  Marks the request so `auth` (which always runs beneath this one, both in
+  route `:middleware` vectors and in `privilege-middleware`) knows the identity
+  came from a token and is therefore subject to revocation."
   [handler]
-  (wrap-authentication handler auth/token-backend))
+  (-> (fn [request]
+        (handler (assoc request token-authenticated?-key true)))
+      (wrap-authentication auth/token-backend)))
 
 (def privilege-middleware
   {:name ::require-privilege

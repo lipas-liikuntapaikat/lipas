@@ -191,13 +191,135 @@
                      :loi-statuses ["active"]}]
     (core/index-loi! (test-search) loi-a :sync)
     (core/index-loi! (test-search) loi-b :sync)
-    (let [response (<-json (:body
+    (let [;; /actions/search-lois enforces :loi/view now — see
+          ;; search-lois-requires-loi-view-test.
+          token (jwt/create-token (tu/gen-admin-user :db-component (test-db)))
+          response (<-json (:body
                              (test-app (-> (mock/request :post (str "/api/actions/search-lois"))
                                            (mock/content-type "application/json")
-                                           (mock/body (->json body-params))))))
+                                           (mock/body (->json body-params))
+                                           (tu/token-header token)))))
           sorted-lois (sort-by :_score > response)]
       (is (> (:_score (first sorted-lois))
              (:_score (second sorted-lois)))))))
+
+(deftest search-lois-without-location-test
+  ;; `:location` is optional in search-lois-payload, but the distance-decay
+  ;; arithmetic in core/->lois-es-query used to run eagerly in the `let`, so a
+  ;; request that omitted it died on `(* nil ...)` and answered 500 — which also
+  ;; made the function's own `default-query` fallback unreachable.
+  (let [->loi (fn [id status coords]
+                {:event-date "1901-02-13T12:40:08.957Z"
+                 :geometries {:features [{:geometry {:coordinates coords
+                                                     :type "Point"}
+                                          :type "Feature"}]
+                              :type "FeatureCollection"}
+                 :id id
+                 :loi-category "outdoor-recreation-facilities"
+                 :loi-type "mooring-ring"
+                 :status status})
+        active (->loi "0f4f6bbe-9a1e-4d1e-8a1c-2d2c1f0f7a11" "active" [25 65])
+        retired (->loi "1b3c0d2e-5f6a-4b7c-8d9e-0a1b2c3d4e5f"
+                       "out-of-service-permanently" [25 70])
+        token (jwt/create-token (tu/gen-admin-user :db-component (test-db)))
+        call (fn [body]
+               (test-app (-> (mock/request :post "/api/actions/search-lois")
+                             (mock/content-type "application/json")
+                             (mock/body (->json body))
+                             (tu/token-header token))))]
+    (core/index-loi! (test-search) active :sync)
+    (core/index-loi! (test-search) retired :sync)
+
+    (testing "no location, statuses given: 200 and the filter is still applied"
+      (let [resp (call {:loi-statuses ["active"]})
+            statuses (->> resp :body <-json (map (comp :status :_source)) set)]
+        (is (= 200 (:status resp)))
+        (is (contains? statuses "active"))
+        (is (not (contains? statuses "out-of-service-permanently"))
+            "the status filter must survive the missing location")))
+
+    (testing "no location and no statuses: 200, unfiltered"
+      (let [resp (call {})]
+        (is (= 200 (:status resp)))
+        (is (seq (-> resp :body <-json)))))
+
+    (testing "a partial location is rejected by coercion, never reaching the query builder"
+      ;; :distance is the value that used to blow up. It can only ever be nil
+      ;; here by omitting :location entirely — the schema requires all three
+      ;; keys once :location is present — so this pins where that guarantee
+      ;; comes from.
+      (doseq [location [{:lon 25.0 :lat 68.0}
+                        {:lon 25.0 :distance 1000}
+                        {:lat 68.0 :distance 1000}]]
+        (is (= 400 (:status (call {:location location
+                                   :loi-statuses ["active"]})))
+            (str "partial location " (pr-str location)))))))
+
+;; These three routes had their privilege check commented out from an
+;; experimental phase (`#_#_` on the heatmap pair, a `;`-block on search-lois),
+;; so the only enforcement was client-side. The FE already refuses to call them
+;; without the privilege; these tests pin the server side.
+;;
+;; Each asserts 401 / 403 / not-400-or-403 in turn. The third case is the one
+;; that matters most: without it, a body that drifts out of sync with the route
+;; schema would 400 before the gate and the 401/403 assertions would pass while
+;; proving nothing.
+
+(deftest search-lois-requires-loi-view-test
+  (let [body {:location {:lon 25.0 :lat 68.0 :distance 1000}
+              :loi-statuses ["active"]}
+        call (fn [token]
+               (test-app (cond-> (-> (mock/request :post "/api/actions/search-lois")
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json body)))
+                           token (tu/token-header token))))]
+    (testing "anonymous"
+      (is (= 401 (:status (call nil)))))
+
+    (testing "signed in without :loi/view"
+      (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
+        (is (= 403 (:status (call token))))))
+
+    (testing "a holder of :loi/view gets through to the handler"
+      ;; activities-manager is the role that actually carries :loi/view.
+      (let [user (tu/gen-user {:db? true
+                               :db-component (test-db)
+                               :permissions {:roles [{:role "activities-manager"
+                                                      :activity ["outdoor-recreation-areas"]}]}})
+            resp (call (jwt/create-token user))]
+        (is (not (contains? #{400 401 403} (:status resp)))
+            (str "expected to clear coercion and the gate, got " (:status resp)))))))
+
+(deftest heatmap-requires-experimental-privilege-test
+  (let [bbox {:min-x 24.0 :max-x 25.0 :min-y 60.0 :max-y 61.0}
+        bodies {"/api/actions/create-heatmap" {:zoom 8
+                                               :bbox bbox
+                                               :dimension "density"}
+                "/api/actions/get-heatmap-facets" {:bbox bbox}}
+        call (fn [path token]
+               (test-app (cond-> (-> (mock/request :post path)
+                                     (mock/content-type "application/json")
+                                     (mock/body (->json (get bodies path))))
+                           token (tu/token-header token))))]
+    (doseq [path (keys bodies)]
+      (testing (str path " anonymous")
+        (is (= 401 (:status (call path nil))) path))
+
+      (testing (str path " signed in without :analysis-tool/experimental")
+        ;; A regular user has :analysis-tool/use via `basic`, but NOT
+        ;; :analysis-tool/experimental — so this also pins that the two
+        ;; privileges stay distinct.
+        (let [token (jwt/create-token (tu/gen-regular-user :db-component (test-db)))]
+          (is (= 403 (:status (call path token))) path)))
+
+      (testing (str path " holder of :analysis-tool/experimental gets through")
+        (let [user (tu/gen-user {:db? true
+                                 :db-component (test-db)
+                                 :permissions {:roles [{:role "analysis-experimental-user"}]}})
+              resp (call path (jwt/create-token user))]
+          (is (not (contains? #{400 401 403} (:status resp)))
+              (str path " expected to clear coercion and the gate, got "
+                   (:status resp))))))))
 
 (comment
   (t/run-test search-loi-by-status)
@@ -234,6 +356,38 @@
     (is (= 200 (:status resp)))
     (is (= (:email user) (:email body)))))
 
+;; `:status` used to be inert: nothing read it during authentication, so
+;; deactivating an account via /actions/update-user-status changed nothing and
+;; a GDPR-archived user kept logging in and renewing tokens forever.
+(deftest archived-user-cannot-log-in-test
+  (let [user (tu/gen-user {:db? true :db-component (test-db) :status "archived"})
+        resp (test-app (-> (mock/request :post "/api/actions/login")
+                           (mock/content-type "application/json")
+                           (tu/auth-header (:username user) (:password user))))]
+    (is (= 401 (:status resp)))))
+
+(deftest archived-user-cannot-refresh-login-test
+  ;; The token itself stays cryptographically valid until it expires — we
+  ;; can't revoke it without per-request state. What must not happen is
+  ;; renewing it, which would keep an archived account alive indefinitely.
+  (let [user (tu/gen-user {:db? true :db-component (test-db) :status "archived"})
+        token (jwt/create-token user)
+        resp (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                           (mock/content-type "application/json")
+                           (tu/token-header token)))]
+    (is (= 401 (:status resp)))))
+
+(deftest active-user-can-still-log-in-and-refresh-test
+  (let [user (tu/gen-regular-user :db-component (test-db))
+        login (test-app (-> (mock/request :post "/api/actions/login")
+                            (mock/content-type "application/json")
+                            (tu/auth-header (:username user) (:password user))))
+        refresh (test-app (-> (mock/request :get "/api/actions/refresh-login")
+                              (mock/content-type "application/json")
+                              (tu/token-header (jwt/create-token user))))]
+    (is (= 200 (:status login)))
+    (is (= 200 (:status refresh)))))
+
 (deftest refresh-login-test
   (let [user (tu/gen-regular-user :db-component (test-db))
         token1 (jwt/create-token user :terse? true)
@@ -255,16 +409,70 @@
   (let [user (tu/gen-regular-user :db-component (test-db))
         resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
                            (mock/content-type "application/json")
-                           (mock/body (->json (select-keys user [:email])))))]
+                           (mock/body (->json (assoc (select-keys user [:email])
+                                                     :reset-url "https://localhost/passu-hukassa")))))]
     (is (= 200 (:status resp)))))
 
-(deftest request-password-reset-email-not-found-test
-  (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:email "i-will-fail@fail.com"}))))
-        body (<-json (:body resp))]
-    (is (= 404 (:status resp)))
-    (is (= "email-not-found" (:type body)))))
+;; The reset link carries a 7-day login token, so an attacker-chosen host would
+;; be account takeover for any address they name. Same whitelist as
+;; order-magic-link — see order-magic-link-login-url-whitelist-test.
+(deftest request-password-reset-url-whitelist-test
+  (let [user (tu/gen-regular-user :db-component (test-db))]
+    (testing "an off-domain reset-url is rejected"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)
+                                                   :reset-url "https://bad-attacker.fi/x"}))))]
+        (is (= 400 (:status resp)))))
+
+    (testing "a whitelisted prefix on an attacker host is rejected"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)
+                                                   :reset-url "https://lipas.fi.attacker.example/x"}))))]
+        (is (= 400 (:status resp)))))
+
+    (testing "a missing reset-url is rejected rather than silently emailing a bare token"
+      (let [resp (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                               (mock/content-type "application/json")
+                               (mock/body (->json {:email (:email user)}))))]
+        (is (= 400 (:status resp)))))))
+
+;; Was request-password-reset-email-not-found-test, which asserted the 404 that
+;; made this an account-existence oracle. An unauthenticated caller must not be
+;; able to tell a registered address from an unregistered one.
+(deftest request-password-reset-does-not-leak-account-existence-test
+  (let [known (tu/gen-regular-user :db-component (test-db))
+        ask (fn [email]
+              (test-app (-> (mock/request :post "/api/actions/request-password-reset")
+                            (mock/content-type "application/json")
+                            (mock/body (->json {:email email
+                                                :reset-url "https://localhost/passu-hukassa"})))))
+        known-resp (ask (:email known))
+        unknown-resp (ask "definitely-not-a-user@example.invalid")]
+    (is (= 200 (:status known-resp)))
+    (is (= (:status known-resp) (:status unknown-resp))
+        "a registered and an unregistered address must be indistinguishable by status")
+    (is (= (<-json (:body known-resp)) (<-json (:body unknown-resp)))
+        "...and by response body")))
+
+(deftest order-magic-link-does-not-leak-account-existence-test
+  ;; Same oracle, same fix: this used to 404 :user-not-found for an unknown
+  ;; address.
+  (let [known (tu/gen-regular-user :db-component (test-db))
+        ask (fn [email]
+              (test-app (-> (mock/request :post "/api/actions/order-magic-link")
+                            (mock/content-type "application/json")
+                            (mock/body (->json {:email email
+                                                :login-url "https://localhost/#/kirjaudu"
+                                                :variant "lipas"})))))
+        known-resp (ask (:email known))
+        unknown-resp (ask "definitely-not-a-user@example.invalid")]
+    (is (= 200 (:status known-resp)))
+    (is (= (:status known-resp) (:status unknown-resp))
+        "a registered and an unregistered address must be indistinguishable by status")
+    (is (= (<-json (:body known-resp)) (<-json (:body unknown-resp)))
+        "...and by response body")))
 
 (deftest reset-password-test
   (let [user (tu/gen-regular-user :db-component (test-db))
@@ -493,12 +701,42 @@
     (is (= 200 (:status resp)))))
 
 (deftest order-magic-link-login-url-whitelist-test
-  (let [resp (test-app (-> (mock/request :post "/api/actions/order-magic-link")
-                           (mock/content-type "application/json")
-                           (mock/body (->json {:email (:email "kissa@koira.fi")
-                                               :login-url "https://bad-attacker.fi"
-                                               :variant "lipas"}))))]
-    (is (= 400 (:status resp)))))
+  (let [order (fn [login-url]
+                (test-app (-> (mock/request :post "/api/actions/order-magic-link")
+                              (mock/content-type "application/json")
+                              (mock/body (->json {:email "kissa@koira.fi"
+                                                  :login-url login-url
+                                                  :variant "lipas"})))))]
+    (testing "an unrelated host is rejected"
+      (is (= 400 (:status (order "https://bad-attacker.fi")))))
+
+    ;; The whitelist used to be a bare str/starts-with? check, so every host
+    ;; that merely BEGAN with an allowed origin walked straight through.
+    (testing "a host that only prefixes an allowed origin is rejected"
+      (doseq [url ["https://lipas.fi.attacker.example/x"
+                   "https://localhost.attacker.example/x"
+                   "https://liikuntapaikat.lipas.fi.evil.test/x"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "userinfo that makes an attacker host read as ours is rejected"
+      (doseq [url ["https://lipas.fi@attacker.example/x"
+                   "https://lipas.fi:443@attacker.example/x"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "non-https schemes are rejected"
+      (doseq [url ["http://lipas.fi/x"
+                   "javascript:alert(1)//lipas.fi"]]
+        (is (= 400 (:status (order url))) url)))
+
+    (testing "the real LIPAS hosts are still accepted"
+      (doseq [url ["https://localhost"
+                   "https://localhost/#/kirjaudu"
+                   "https://lipas.fi/#/kirjaudu"
+                   "https://www.lipas.fi/#/kirjaudu"
+                   "https://liikuntapaikat.lipas.fi/#/kirjaudu"
+                   "https://lipas-dev.cc.jyu.fi/#/kirjaudu"]]
+        ;; 404 = passed coercion, then no such user. Not 400.
+        (is (not= 400 (:status (order url))) url)))))
 
 (deftest upsert-sports-site-draft-test
   (let [user (tu/gen-regular-user :db-component (test-db))

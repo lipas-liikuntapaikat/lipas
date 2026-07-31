@@ -15,7 +15,9 @@
             [lipas.backend.org-takeover :as org-takeover]
             [lipas.backend.ptv.handler :as ptv-handler]
             [lipas.backend.ptv.workbench :as workbench-handler]
+            [lipas.backend.rate-limit :as rate-limit]
             [lipas.backend.search :as search*]
+            [lipas.backend.search-guard :as search-guard]
             [lipas.jobs.handler :as jobs-handler]
             [lipas.roles :as roles]
             [lipas.schema.diversity :as diversity-schema]
@@ -41,6 +43,7 @@
             [reitit.swagger :as swagger]
             [reitit.swagger-ui :as swagger-ui]
             [ring.middleware.params :as params]
+            [ring.util.http-response :as resp]
             [ring.util.io :as ring-io]
             [taoensso.timbre :as log]))
 
@@ -65,6 +68,12 @@
    :email-not-found (exception-handler 404 :email-not-found)
    :reminder-not-found (exception-handler 404 :reminder-not-found)
    :invalid-payload (exception-handler 400 :invalid-payload)
+   ;; Untrusted ES query body rejected by lipas.backend.search-guard —
+   ;; client error, never a 500.
+   :invalid-search-query (exception-handler 400 :invalid-search-query)
+   ;; Uploaded file whose magic bytes are not PNG/JPEG/WebP, rejected by
+   ;; lipas.backend.core/upload-utp-image! — client error, never a 500.
+   :invalid-image (exception-handler 400 :invalid-image)
    :roles-outside-catalog (exception-handler 400 :roles-outside-catalog)
    ;; inviting an email that is already a member must not silently replace
    ;; their roles — conflict, like :username-conflict
@@ -139,6 +148,29 @@
         (roles/check-privilege user
                                {:org-id #{(str (-> req :parameters :body :org-id))}}
                                :org/member))))
+
+(defn- utp-image-upload-access?
+  "Boolean privilege fn for POST /actions/upload-utp-image.
+
+  The one upload endpoint serves two editors, so no single privilege covers it:
+  the UTP activity content editor (`:activity/edit`) and the LOI content editor
+  (`:loi/create-edit`). Either one legitimately uploads images, so either one
+  grants access.
+
+  In practice both privileges live on the same two roles today
+  (`:activities-manager` and `:admin`, see lipas.roles), so the OR is about
+  intent rather than reach: whichever editor a role is granted for, its image
+  upload keeps working. A plain editor (`basic`: :site/create-edit,
+  :activity/view, :analysis-tool/use) has neither and is rejected.
+
+  ::roles/any for type-code/city-code/activity mirrors the /actions/save-loi
+  gate: the upload happens before the image is attached to anything, so there is
+  no concrete site to scope against."
+  [req]
+  (let [user (:identity req)
+        ctx {:type-code ::roles/any :city-code ::roles/any :activity ::roles/any}]
+    (or (roles/check-privilege user ctx :activity/edit)
+        (roles/check-privilege user ctx :loi/create-edit))))
 
 (defn create-app
   [{:keys [db emailer search mailchimp ptv] :as ctx}]
@@ -841,8 +873,11 @@
          {:post
           {:no-doc false
            :handler
+           ;; Unauthenticated raw passthrough to ES `_search` — the body must
+           ;; be validated here, at the public boundary. See
+           ;; lipas.backend.search-guard.
            (fn [{:keys [body-params]}]
-             (core/search search body-params))}}]
+             (core/search search (search-guard/check-query! body-params)))}}]
 
         ["/actions/find-fields"
          {:post
@@ -857,6 +892,10 @@
         ["/actions/register"
          {:post
           {:no-doc true
+           ;; Creates an account and mails lipasinfo. Registering is a
+           ;; once-ever act per person, so this can be tighter than the
+           ;; password-reset budget.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
            :handler
            (fn [req]
              (let [user (-> req
@@ -881,31 +920,64 @@
            :middleware [mw/token-auth mw/auth]
            :handler
            (fn [{:keys [identity]}]
-             (let [user (->> (core/get-user! db (-> identity :id))
-                             (auth/enrich-org-roles db))
-                   ;; Impersonation sessions keep the :impersonator claim and
-                   ;; the short expiry across refreshes so they can't be
-                   ;; laundered into regular sessions.
-                   impersonator (:impersonator identity)]
-               {:status 200
-                :body (merge (dissoc user :password)
-                             {:token (if impersonator
-                                       (jwt/create-token user
-                                                         :valid-seconds core/impersonation-token-valid-seconds
-                                                         :extra-claims {:impersonator impersonator})
-                                       (jwt/create-token user))}
-                             (when impersonator
-                               {:impersonator impersonator}))}))}}]
+             (let [stored (core/get-user! db (-> identity :id))]
+               ;; A deactivated or GDPR-archived account must not be able to
+               ;; renew its session. See lipas.backend.auth/active?.
+               ;;
+               ;; Belt and braces now: archiving via core/update-user-status!
+               ;; also moves the account's `tokens_valid_from`, so mw/auth above
+               ;; already rejected the presented token before this handler ran
+               ;; (lipas.backend.token-revocation). This stays as the check that
+               ;; does not depend on the archiving path having revoked — a
+               ;; status set by hand in the database, say.
+               (if-not (auth/active? stored)
+                 (resp/unauthorized {:error "Not authorized"})
+                 (let [user (auth/enrich-org-roles db stored)
+                       ;; Impersonation sessions keep the :impersonator claim and
+                       ;; the short expiry across refreshes so they can't be
+                       ;; laundered into regular sessions.
+                       impersonator (:impersonator identity)]
+                   {:status 200
+                    :body (merge (dissoc user :password)
+                                 {:token (if impersonator
+                                           (jwt/create-token user
+                                                             :valid-seconds core/impersonation-token-valid-seconds
+                                                             :extra-claims {:impersonator impersonator})
+                                           (jwt/create-token user))}
+                                 (when impersonator
+                                   {:impersonator impersonator}))}))))}}]
 
         ["/actions/request-password-reset"
          {:post
           {:no-doc true
-           :parameters {:body {:email string?}}
+           ;; Unauthenticated and it sends mail, so it is both a mail-bomb
+           ;; vector and free work for anyone who wants it.
+           ;;
+           ;; The budget is per client IP and deliberately not tight: LIPAS
+           ;; users are municipal staff, and a whole municipality often shares
+           ;; one public address, so a low cap would lock real colleagues out
+           ;; of password reset. 10/h still turns "unlimited" into a nuisance.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
+           ;; `:reset-url` is domain-whitelisted exactly like the `:login-url`
+           ;; on /actions/order-magic-link, and the map is CLOSED. The emailed
+           ;; link carries a 7-day login token, so an attacker-chosen host
+           ;; turns this unauthenticated endpoint into account takeover for
+           ;; any address they name. The previous schema declared only
+           ;; `:email`, but the handler passed the RAW body through — reitit
+           ;; coercion writes to `:parameters`, never to `:body-params`, so
+           ;; `:reset-url` reached `create-magic-link` unvalidated. Read from
+           ;; `:parameters` here so the schema is actually load-bearing.
+           ;; `:email` stays a plain string on purpose: it is only ever looked
+           ;; up in the DB, and a stricter regex would lock legacy accounts
+           ;; with unusual-but-valid addresses out of password reset.
+           :parameters {:body [:map {:closed true}
+                               [:email :string]
+                               [:reset-url handler-schema/magic-link-login-url]]}
            :handler
-           (fn [{:keys [body-params]}]
-             (let [_ (core/send-password-reset-link! db emailer body-params)]
-               {:status 200
-                :body {:status "OK"}}))}}]
+           (fn [req]
+             (core/send-password-reset-link! db emailer (-> req :parameters :body))
+             {:status 200
+              :body {:status "OK"}})}}]
 
         ["/actions/reset-password"
          {:post
@@ -975,20 +1047,26 @@
         ["/actions/order-magic-link"
          {:post
           {:no-doc true
+           ;; Same shape and same shared-NAT reasoning as
+           ;; /actions/request-password-reset above.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
            :parameters
            {:body
             {:email users-schema/email-schema
              :login-url handler-schema/magic-link-login-url
              :variant handler-schema/email-variant}}
            :handler
+           ;; An unknown address is a no-op answering 200, not a 404. Using
+           ;; `get-user!` here made this an account-existence oracle for an
+           ;; unauthenticated caller, exactly as request-password-reset was —
+           ;; see core/send-password-reset-link!.
            (fn [req]
-             (let [email (-> req :parameters :body :email)
-                   variant (-> req :parameters :body :variant keyword)
-                   user (core/get-user! db email)
-                   url (-> req :parameters :body :login-url)
-                   _ (core/send-magic-link! db emailer {:user user
-                                                        :login-url url
-                                                        :variant variant})]
+             (let [{:keys [email login-url variant]} (-> req :parameters :body)]
+               (if-let [user (core/get-user db email)]
+                 (core/send-magic-link! db emailer {:user user
+                                                    :login-url login-url
+                                                    :variant (keyword variant)})
+                 (log/infof "Magic link requested for an address with no account"))
                {:status 200 :body {:status "OK"}}))}}]
 
         ["/actions/send-magic-link"
@@ -996,8 +1074,12 @@
           {:no-doc true
            :require-privilege :users/manage
            :parameters
+           ;; Whitelisted like every other magic-link sink. Admin-gated, so
+           ;; this was never the exposed one, but it emails the same 7-day
+           ;; login token — leaving one unvalidated sink is how the next
+           ;; bypass gets found.
            {:body
-            {:login-url string?
+            {:login-url handler-schema/magic-link-login-url
              :variant handler-schema/email-variant
              :user users-schema/new-user-schema}}
            :handler
@@ -1066,7 +1148,9 @@
            {:body handler-schema/sports-site-report-req}
            :handler
            (fn [{:keys [parameters]}]
-             (let [query (-> parameters :body :search-query)
+             ;; :search-query is handed to search/scroll verbatim — validate it
+             ;; before the piped-input-stream body is built.
+             (let [query (search-guard/check-query! (-> parameters :body :search-query))
                    fields (-> parameters :body :fields)
                    locale (-> parameters :body :locale)
                    format* (or (-> parameters :body :format) "xlsx")]
@@ -1117,7 +1201,7 @@
            {:body [:map {:closed false}]}
            :handler
            (fn [{:keys [parameters]}]
-             (let [params (:body parameters)]
+             (let [params (search-guard/check-query! (:body parameters))]
                {:status 200
                 :body (core/query-finance-report search params)}))}}]
 
@@ -1129,7 +1213,7 @@
            {:body [:map {:closed false}]}
            :handler
            (fn [{:keys [parameters]}]
-             (let [params (:body parameters)]
+             (let [params (search-guard/check-query! (:body parameters))]
                {:status 200
                 :body (core/query-subsidies search params)}))}}]
 
@@ -1172,7 +1256,7 @@
           {:no-doc true
            :handler
            (fn [{:keys [body-params]}]
-             (core/search-schools search body-params))}}]
+             (core/search-schools search (search-guard/check-query! body-params)))}}]
 
       ;; Search population
         ["/actions/search-population"
@@ -1180,7 +1264,7 @@
           {:no-doc true
            :handler
            (fn [{:keys [body-params]}]
-             (core/search-population search body-params))}}]
+             (core/search-population search (search-guard/check-query! body-params)))}}]
 
       ;; Calc distances and travel-times
         ["/actions/calc-distances-and-travel-times"
@@ -1227,6 +1311,8 @@
         ["/actions/subscribe-newsletter"
          {:post
           {:no-doc false
+           ;; Unauthenticated write to the external Mailchimp list.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 5}
            :parameters
            {:body
             {:email users-schema/email-schema}}
@@ -1254,6 +1340,8 @@
         ["/actions/send-feedback"
          {:post
           {:no-doc false
+           ;; Unauthenticated mail straight into the ops inbox.
+           :rate-limit {:key :ip :window-ms rate-limit/hour-ms :max 10}
            :parameters
            {:body feedback-schema/feedback-payload}
            :handler
@@ -1276,13 +1364,43 @@
         ["/actions/upload-utp-image"
          {:post
           {:no-doc false
-           ;; TODO: role, :activity/edit?
+           :require-privilege utp-image-upload-access?
+           ;; multipart/multipart-middleware parses the body AND coerces
+           ;; `:parameters {:multipart ...}` itself — the global
+           ;; coerce-request-middleware has no :multipart parameter source, so it
+           ;; ignores this route's schema entirely. That coupling is why the
+           ;; middleware has to stay HERE, inside the route vector, and why a
+           ;; caller who clears the gate but sends a malformed multipart body gets
+           ;; 400 rather than a handler error. Do NOT "fix" the ordering: the
+           ;; handler is unreachable to unauthorized callers either way
+           ;; (privilege-middleware mounts token-auth + auth ABOVE this vector, so
+           ;; it answers 401/403 before the body is even parsed), real multipart
+           ;; uploads authenticate correctly, and hoisting it risks breaking a
+           ;; working upload for no security gain. mw/token-auth + mw/auth below
+           ;; are now redundant with privilege-middleware; kept so the route still
+           ;; reads as authenticated if the privilege ever becomes `nil`.
            :middleware [multipart/multipart-middleware mw/token-auth mw/auth]
+           ;; Server-side mirror of the `accept` list both file pickers use
+           ;; (sports_sites/activities/views.cljs, loi/views.cljs). Declaring the
+           ;; limits in the schema means the multipart coercer answers 400 for a
+           ;; bad content-type or an oversized file for free, before the handler
+           ;; (and before the CMS) sees anything. `:content-type` is
+           ;; client-supplied and trivially spoofed, so the bytes are verified
+           ;; again in core/upload-utp-image!.
            :parameters {:multipart {:file [:map
                                            [:filename :string]
-                                           [:content-type :string]
+                                           [:content-type [:enum
+                                                           "image/png"
+                                                           "image/jpeg"
+                                                           "image/jpg"
+                                                           "image/webp"]]
                                            [:tempfile :any]
-                                           [:size :int]]}}
+                                           ;; 20 MB. nginx already caps request
+                                           ;; bodies at 50m (nginx/nginx.conf) and
+                                           ;; phone photos routinely run 5-10 MB,
+                                           ;; so this bounds abuse rather than
+                                           ;; optimising storage.
+                                           [:size [:int {:max (* 20 1024 1024)}]]]}}
            :handler
            (fn [{:keys [parameters multipart-params identity]}]
              (let [params {:lipas-id (get multipart-params "lipas-id")
@@ -1309,11 +1427,16 @@
         ["/actions/search-lois"
          {:post
           {:no-doc false
-         ;; TODO: Tests don't use auth for this endpoint now
-                                        ; :require-privilege [{:type-code ::roles/any
-                                        ;                      :city-code ::roles/any
-                                        ;                      :activity ::roles/any}
-                                        ;                     :loi/view]
+           ;; Same check the FE already makes client-side before it will even
+           ;; issue this request (lipas.ui.loi.events/::search). It was
+           ;; commented out here because the tests didn't send a token — which
+           ;; meant the only enforcement was in the client. `:loi/view` is not
+           ;; in the `:default` role, so anonymous callers were never supposed
+           ;; to reach this.
+           :require-privilege [{:type-code ::roles/any
+                                :city-code ::roles/any
+                                :activity ::roles/any}
+                               :loi/view]
            :parameters {:body handler-schema/search-lois-payload}
            :handler
            (fn [{:keys [body-params]}]
@@ -1375,6 +1498,17 @@
          {:post
           {:no-doc true
            :require-privilege :ai-assistant/use
+           ;; Was `assistant/chat-rate-limit`, enforced by a private limiter
+           ;; inside `assistant/chat!`. Now the shared limiter: it rejects
+           ;; before the handler (and before the tool loop) runs, sends
+           ;; Retry-After, and evicts empty buckets.
+           ;;
+           ;; The old private limiter allowed 30/h. Raised to 300/h because a
+           ;; budget a real user can hit mid-conversation is a support problem,
+           ;; not a saving; this is a runaway/abuse backstop. Note one chat can
+           ;; fan out to `assistant/max-tool-iterations` rounds of model calls,
+           ;; so the provider-call ceiling is a multiple of this number.
+           :rate-limit {:key :user :window-ms rate-limit/hour-ms :max 300}
            :parameters {:body [:map
                                [:message [:string {:min 1 :max 2000}]]
                                [:history {:optional true}
@@ -1397,6 +1531,10 @@
          {:post
           {:no-doc true
            :require-privilege :ai-assistant/use
+           ;; Was `assistant/escalation-rate-limit` (5 per 24 h per user).
+           ;; Mails lipasinfo through the job queue, so the budget bounds an
+           ;; ops-inbox flood rather than a model bill.
+           :rate-limit {:key :user :window-ms rate-limit/day-ms :max 5}
            :parameters {:body [:map
                                [:summary [:string {:min 1 :max 2000}]]
                                [:transcript {:optional true}
@@ -1418,7 +1556,11 @@
         ["/actions/create-heatmap"
          {:post
           {:no-doc false
-           #_#_:require-privilege :analysis-tool/experimental
+           ;; Was `#_#_`-commented from the experimental phase. The FE has
+           ;; always sent the token here and already hides the tab behind this
+           ;; same privilege (lipas.ui.analysis.subs), so the server was the
+           ;; only place not enforcing it.
+           :require-privilege :analysis-tool/experimental
            :parameters {:body heatmap/HeatmapParams}
            :responses {200 {:body heatmap/CreateHeatmapResponse}}
            :handler
@@ -1434,7 +1576,8 @@
         ["/actions/get-heatmap-facets"
          {:post
           {:no-doc false
-           #_#_:require-privilege :analysis-tool/experimental
+           ;; See /actions/create-heatmap above.
+           :require-privilege :analysis-tool/experimental
            :parameters {:body heatmap/FacetParams}
            :responses {200 {:body heatmap/GetHeatmapFacetsResponse}}
            :handler
@@ -1453,7 +1596,11 @@
       {:data
        {:coercion reitit.coercion.malli/coercion
         :muuntaja m/instance
-        :middleware [;; query-params & form-params
+        :middleware [;; database into the request, FIRST so everything below can
+                   ;; rely on it. mw/auth needs it for the per-user token
+                   ;; revocation check and has no other way to reach ctx.
+                     (mw/wrap-db db)
+                   ;; query-params & form-params
                      params/wrap-params
                    ;; content-negotiation
                      muuntaja/format-negotiate-middleware
@@ -1474,7 +1621,12 @@
                    ;; privilege check based on route-data,
                    ;; also enables token-auth and auth checks
                    ;; per route.
-                     mw/privilege-middleware]}})
+                     mw/privilege-middleware
+                   ;; per-route rate limiting based on route-data. INSIDE the
+                   ;; privilege check on purpose: `:key :user` needs
+                   ;; `:identity`, and a request that is going to be rejected
+                   ;; with 401/403 shouldn't spend anyone's budget.
+                     rate-limit/middleware]}})
     (ring/routes
       (swagger-ui/create-swagger-ui-handler {:path "/api/swagger-ui" :url "/api/swagger.json"})
       (ring/create-default-handler))))

@@ -1095,7 +1095,19 @@
      (use-fixtures :each each))
 
    ;; Access components:
-   (def db (:lipas/db @test-system))"
+   (def db (:lipas/db @test-system))
+
+   If the namespace needs a fixture of its own, pass BOTH to the same call:
+
+     (use-fixtures :each each (fn [f] (reset-something!) (f)))
+
+   NOT as a second `use-fixtures :each`. `clojure.test/use-fixtures` ASSOCs the
+   namespace's fixture list rather than appending to it, so a second call
+   silently REPLACES `each` — the tests still pass their own assertions, but
+   nothing prunes between them any more and the namespace starts inheriting
+   whatever the previously-run one left in the database and in Elasticsearch.
+   With `:randomize? true` in tests.edn that is a different namespace every
+   run, so the resulting failures look like flakes."
   [system-atom]
   {:once (fn [f]
            (ensure-test-database!)

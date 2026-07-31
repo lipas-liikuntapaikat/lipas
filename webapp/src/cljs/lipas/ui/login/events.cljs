@@ -3,6 +3,7 @@
             [lipas.roles :as roles]
             [lipas.ui.db :as db]
             [lipas.ui.local-storage :as local-storage]
+            [lipas.ui.login.session-expiry :as session-expiry]
             [lipas.ui.org.events]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
@@ -76,14 +77,13 @@
      :dispatch    [::clear-errors]}))
 
 (rf/reg-event-fx ::login-refresh-failure
-  [(rf/inject-cofx ::local-storage/get :admin-login-data)]
-  (fn [{:keys [local-storage]} [_ {:keys [status]}]]
+  (fn [_ [_ {:keys [status]}]]
+    ;; Delegated to ::session-expired, which owns the whole teardown: the
+    ;; impersonation fallback that used to live here, plus the notification.
+    ;; The periodic refresh is the path that discovers a dead session most
+    ;; often, and it used to log the user out without saying anything.
     (if (#{401 403} status)
-      ;; If an impersonation session expires, fall back to the stashed
-      ;; admin session instead of logging out completely.
-      (if (seq (:admin-login-data local-storage))
-        {:dispatch [::exit-impersonation]}
-        {:dispatch [::logout]})
+      {:dispatch [::session-expired]}
       {})))
 
 (rf/reg-event-fx ::refresh-login
@@ -124,6 +124,72 @@
 
      :dispatch               [:lipas.ui.events/navigate "/kirjaudu"]
      :tracker/set-dimension! ["user-type" "guest"]}))
+
+;;; Session expiry ;;;
+
+;; A token can now die mid-session: the backend rejects one minted before the
+;; account's `tokens_valid_from`, which an admin sets by changing the user's
+;; roles or archiving them. Only `::refresh-login` used to notice, and it runs
+;; every 15 minutes — until then every other request answered its 401 with its
+;; own generic "epäonnistui" message and the user was left clicking a dead
+;; session.
+;;
+;; A global interceptor rather than re-registering the `:http-xhrio` effect:
+;; that key belongs to day8.re-frame.http-fx, so wrapping it depends on load
+;; order and would fail silently if anything claimed it later. This also
+;; catches a 401 that arrives through some other effect, and it can see the
+;; event id, which is how the two events that own their own 401 opt out.
+
+(def ^:private handles-own-401
+  "Events the interceptor must not act on."
+  #{::login-failure ; a wrong password, not a dead session
+    ::login-refresh-failure}) ; dispatches ::session-expired itself
+
+(rf/reg-global-interceptor
+  (rf/->interceptor
+    :id ::session-expiry
+    :after
+    (fn [ctx]
+      (cond-> ctx
+        ;; `:db` from the coeffects is the value BEFORE the handler ran, so a
+        ;; handler that resets state on failure can't hide that we were logged
+        ;; in. The decision itself lives in session-expiry/expired? so it can be
+        ;; tested without a browser.
+        (session-expiry/expired? (:logged-in? (rf/get-coeffect ctx :db))
+                                 handles-own-401
+                                 (rf/get-coeffect ctx :event))
+        (update-in [:effects :fx] (fnil conj []) [:dispatch [::session-expired]])))))
+
+(rf/reg-event-fx ::session-expired
+  [(rf/inject-cofx ::local-storage/get :admin-login-data)]
+  (fn [{:keys [db local-storage]} _]
+    (let [tr (:translator db)]
+      ;; A page typically has several requests in flight, so a dead token
+      ;; produces several failures and several of these events — all of them
+      ;; queued before the first one's `::logout` gets to run, which is why
+      ;; `:logged-in?` alone is not enough to deduplicate on. `:session-expiring?`
+      ;; is set as this handler's own :db effect, so the copies that follow see
+      ;; it and stand down. It disappears with the db reset below.
+      ;;
+      ;; This matters most while impersonating: two ::exit-impersonation runs
+      ;; would restore the admin session and consume the stash on the first, then
+      ;; find it empty on the second and log the admin out entirely.
+      (if (or (not (:logged-in? db)) (:session-expiring? db))
+        {}
+        ;; The message is resolved HERE, while the user's own locale is still in
+        ;; db, but dispatched AFTER the logout — both ::logout and
+        ;; ::exit-impersonation reset db to `default-db`, which would wipe an
+        ;; already-set :active-notification (and reset the translator to :fi).
+        {:db (assoc db :session-expiring? true)
+         :fx [[:dispatch (if (seq (:admin-login-data local-storage))
+                           ;; Same fallback as ::login-refresh-failure: when an
+                           ;; impersonation session dies, return to the admin's
+                           ;; own session instead of logging out completely.
+                           [::exit-impersonation]
+                           [::logout])]
+              [:dispatch [:lipas.ui.events/set-active-notification
+                          {:message  (tr :login/session-expired)
+                           :success? false}]]]}))))
 
 ;;; Impersonation ;;;
 

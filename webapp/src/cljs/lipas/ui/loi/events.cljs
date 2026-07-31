@@ -113,7 +113,10 @@
                                                     (-> db :map :height))}
                           :loi-statuses (get-in db [:search :filters :statuses])}
         :uri             (str (:backend-url db) "/actions/search-lois")
-        #_#_:headers     {:Authorization (str "Token " token)}
+        ;; The endpoint enforces :loi/view server-side now, so the token has
+        ;; to travel with the request. The check above stays as-is: it saves a
+        ;; pointless round-trip for users who would only get a 403.
+        :headers         {:Authorization (str "Token " (-> db :user :login :token))}
         :format          (ajax/json-request-format)
         :response-format (ajax/json-response-format {:keywords? true})
         :on-success      [::search-success]

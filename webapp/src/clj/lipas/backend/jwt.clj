@@ -18,9 +18,18 @@
   (let [fields  (if terse?
                   [:id]
                   [:id :email :username :permissions])
+        now     (java.time.Instant/now)
         payload (-> user
                     (select-keys fields)
                     (merge extra-claims)
-                    (assoc :exp (.plusSeconds
-                                  (java.time.Instant/now) valid-seconds)))]
+                    ;; `:iat` is what makes per-user revocation possible: a
+                    ;; token whose :iat predates the account's
+                    ;; `tokens_valid_from` is rejected (see
+                    ;; lipas.backend.token-revocation). Epoch SECONDS, matching
+                    ;; how buddy serialises the `:exp` Instant on the next line
+                    ;; — buddy normalises registered date claims to integer
+                    ;; NumericDate, so both end up as seconds in the payload and
+                    ;; the revocation comparison is apples to apples.
+                    (assoc :iat (.getEpochSecond now)
+                           :exp (.plusSeconds now valid-seconds)))]
     (sign payload)))

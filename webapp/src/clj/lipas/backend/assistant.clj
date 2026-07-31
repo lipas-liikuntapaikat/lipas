@@ -85,9 +85,13 @@
 ;; assistant_logs :tool-rounds / :budget-exhausted?.
 (def max-tool-iterations 8)
 (def max-history-messages 12)
-(def chat-rate-limit {:window-ms (* 60 60 1000) :max 30})
-(def escalation-rate-limit {:window-ms (* 24 60 60 1000) :max 5})
 (def support-email "lipasinfo@jyu.fi")
+
+;; Per-user budgets used to live here, behind a private limiter this
+;; namespace ran itself. They are now declared in route data on
+;; /actions/assistant-chat (30/h) and /actions/assistant-escalate (5/day)
+;; and enforced by lipas.backend.rate-limit, which rejects before the
+;; handler is entered and covers every other spend-money endpoint too.
 
 ;;; ——— Names for codes ———————————————————————————————————————————————
 ;;
@@ -734,28 +738,14 @@ USER CONTEXT:
              ;; answer is less grounded than the model intended.
              :budget-exhausted? (boolean (seq fcalls))}))))))
 
-;;; ——— Rate limiting ————————————————————————————————————————————————
+;;; ——— Logging ———————————————————————————————————————————————————————
 
-(defonce ^:private rate-state (atom {}))
-
-(defn rate-limited?
-  "Sliding-window limiter keyed by [kind user-id]. Mutates state."
-  [kind user-id {:keys [window-ms max]}]
-  (let [now (System/currentTimeMillis)
-        k [kind user-id]
-        stamps (->> (get @rate-state k [])
-                    (filterv #(> % (- now window-ms))))]
-    (if (>= (count stamps) max)
-      (do (swap! rate-state assoc k stamps) true)
-      (do (swap! rate-state assoc k (conj stamps now)) false))))
-
+;; The exchange log identifies the user by hash only.
 (defn- sha-256 [^String s]
   (->> (.digest (java.security.MessageDigest/getInstance "SHA-256")
                 (.getBytes s "UTF-8"))
        (map #(format "%02x" %))
        (apply str)))
-
-;;; ——— Logging ———————————————————————————————————————————————————————
 
 (defn- log-exchange!
   [search doc]
@@ -771,50 +761,48 @@ USER CONTEXT:
 ;;; ——— Public entrypoints (called from handler) —————————————————————
 
 (defn chat!
+  "Answer one message. The per-user budget is enforced upstream, in route
+   data — see the note near `max-tool-iterations`."
   [{:keys [search user] :as req}]
-  (if (rate-limited? :chat (:id user) chat-rate-limit)
-    {:status 429
-     :body {:error "Viestiraja täynnä. Yritä myöhemmin uudelleen."}}
-    (let [start (System/currentTimeMillis)
-          result (answer! req)]
-      (log-exchange! search
-                     {:user-hash (sha-256 (str (:id user)))
-                      :created-at (str (java.time.Instant/now))
-                      :question (:message req)
-                      :answer (:answer-md result)
-                      :sources (mapv :id (:sources result))
-                      :actions (mapv :type (:actions result))
-                      :escalated? (some? (:escalation result))
-                      :context (json/encode (:context req))
-                      :took-ms (- (System/currentTimeMillis) start)
-                      :tool-rounds (:tool-rounds result)
-                      :budget-exhausted? (:budget-exhausted? result)})
-      ;; Telemetry stays in the log; the widget doesn't need it.
-      {:status 200 :body (dissoc result :tool-rounds :budget-exhausted?)})))
+  (let [start (System/currentTimeMillis)
+        result (answer! req)]
+    (log-exchange! search
+                   {:user-hash (sha-256 (str (:id user)))
+                    :created-at (str (java.time.Instant/now))
+                    :question (:message req)
+                    :answer (:answer-md result)
+                    :sources (mapv :id (:sources result))
+                    :actions (mapv :type (:actions result))
+                    :escalated? (some? (:escalation result))
+                    :context (json/encode (:context req))
+                    :took-ms (- (System/currentTimeMillis) start)
+                    :tool-rounds (:tool-rounds result)
+                    :budget-exhausted? (:budget-exhausted? result)})
+    ;; Telemetry stays in the log; the widget doesn't need it.
+    {:status 200 :body (dissoc result :tool-rounds :budget-exhausted?)}))
 
 (defn escalate!
   "Send a user-confirmed support request to lipasinfo via the email job
    queue. The user's address goes into the body — support replies
-   directly to them."
+   directly to them.
+
+   The per-user daily budget is enforced upstream, in route data."
   [{:keys [db user summary transcript context]}]
-  (if (rate-limited? :escalation (:id user) escalation-rate-limit)
-    {:status 429
-     :body {:error "Tukipyyntöraja täynnä tälle päivälle."}}
-    (let [conversation-id (str (random-uuid))
-          body (str "Lipastajan (LIPAS-avustajan) välittämä tukipyyntö\n"
-                    "Tunniste: " conversation-id "\n"
-                    "Käyttäjä: " (:email user)
-                    " (" (-> user :user-data :firstname) " "
-                    (-> user :user-data :lastname) ")\n"
-                    "Vastaa suoraan käyttäjän osoitteeseen.\n\n"
-                    "ONGELMA:\n" summary "\n\n"
-                    "SOVELLUSKONTEKSTI:\n" (json/encode context) "\n\n"
-                    "KESKUSTELU:\n"
-                    (->> (take-last 10 transcript)
-                         (map (fn [{:keys [role text]}] (str role ": " text)))
-                         (str/join "\n\n")))]
-      (jobs/enqueue-job! db "email"
-                         {:to support-email
-                          :subject (str "[Lipastaja] " (subs summary 0 (min 80 (count summary))))
-                          :body body})
-      {:status 200 :body {:sent true :conversation-id conversation-id}})))
+  (let [conversation-id (str (random-uuid))
+        body (str "Lipastajan (LIPAS-avustajan) välittämä tukipyyntö\n"
+                  "Tunniste: " conversation-id "\n"
+                  "Käyttäjä: " (:email user)
+                  " (" (-> user :user-data :firstname) " "
+                  (-> user :user-data :lastname) ")\n"
+                  "Vastaa suoraan käyttäjän osoitteeseen.\n\n"
+                  "ONGELMA:\n" summary "\n\n"
+                  "SOVELLUSKONTEKSTI:\n" (json/encode context) "\n\n"
+                  "KESKUSTELU:\n"
+                  (->> (take-last 10 transcript)
+                       (map (fn [{:keys [role text]}] (str role ": " text)))
+                       (str/join "\n\n")))]
+    (jobs/enqueue-job! db "email"
+                       {:to support-email
+                        :subject (str "[Lipastaja] " (subs summary 0 (min 80 (count summary))))
+                        :body body})
+    {:status 200 :body {:sent true :conversation-id conversation-id}}))

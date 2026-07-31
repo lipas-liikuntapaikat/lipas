@@ -96,22 +96,13 @@
       :coordinates #js [top-left bottom-right]}
      :relation "intersects"}}})
 
-(defn add-distance-fields [lat lon]
-  {:script_fields
-   {:distance-start-m
-    {:script
-     {:params {:lat lat
-               :lon lon}
-      :source "doc[\u0027search-meta.location.wgs84-point\u0027].arcDistance(params.lat, params.lon)"}},
-    :distance-center-m
-    {:script {:params {:lat lat
-                       :lon lon},
-              :source "doc[\u0027search-meta.location.wgs84-center\u0027].arcDistance(params.lat, params.lon)"}},
-    :distance-end-m
-    {:script
-     {:params {:lat lat
-               :lon lon},
-      :source "doc[\u0027search-meta.location.wgs84-end\u0027].arcDistance(params.lat, params.lon)"}}}})
+;; NOTE: this used to `merge` an `add-distance-fields` map here, which asked ES
+;; to run three Painless `script_fields` (arcDistance to the map centre) on
+;; every hit. Nothing ever read the resulting `fields`: every consumer of the
+;; search response reads only `_source` and `_score`. So it was pure cost, and
+;; it was also the only thing any LIPAS client sent that the unauthenticated
+;; /actions/search endpoint cannot safely allow. Removed together with the
+;; scripting guard (lipas.backend.search-guard).
 
 (defn ->es-search-body
   ([params user]
@@ -134,8 +125,6 @@
          {:keys [lon lat]} center
 
          params (merge
-                  (when (and lat lon)
-                    (add-distance-fields lat lon))
                   (resolve-sort sort locale decay? center)
                   (resolve-pagination pagination decay?)
                   {:track_total_hits 60000

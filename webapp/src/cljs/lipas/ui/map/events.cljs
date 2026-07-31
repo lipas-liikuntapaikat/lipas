@@ -537,6 +537,7 @@
 (defn process-imports
   [geoJSON geom-type]
   (let [fcoll (-> geoJSON
+                  map-utils/strip-null-geoms
                   (turf-simplify #js {:mutate true
                                       :tolerance (map-utils/simplify-scale 3)
                                       :highQuality true})
@@ -561,6 +562,9 @@
               (assoc-in [:map :import :batch-id] (str (gensym))))
           (assoc-in db [:map :import :error] {:type :coords-not-in-finland-wgs84-bounds})))
       (catch js/Error e
+        ;; The dialog can only show a generic message, so make sure the
+        ;; actual cause is at least visible in the console.
+        (js/console.error "Geometry import failed:" e)
         (assoc-in db [:map :import :error] {:type :unknown-error :error e})))))
 
 (rf/reg-event-fx ::load-geoms-from-file

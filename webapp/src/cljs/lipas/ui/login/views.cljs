@@ -38,18 +38,17 @@
      ;; Error message
      [:> Grid {:item true :xs 12}
       [:> Typography {:color "error"}
+       ;; NOTE: "user-not-found" / "email-not-found" used to be handled here,
+       ;; with a "register instead" button below. /actions/order-magic-link
+       ;; answers 200 for every address now — telling an anonymous caller
+       ;; whether an account exists was an enumeration oracle — so neither can
+       ;; occur. Removed rather than kept as dead code, so nobody reinstates the
+       ;; 404 to make the button reappear. Password login still returns
+       ;; "Not authorized" without distinguishing a bad password from an
+       ;; unknown user, which is the behaviour we want.
        (case error
          "Not authorized" (tr :login/bad-credentials)
-         "user-not-found" (tr :error/email-not-found)
-         "email-not-found" (tr :error/email-not-found)
-         (tr :error/unknown))]]
-
-     ;; Register button
-     (when (#{"user-not-found" "email-not-found"} error)
-       [:> Grid {:item true :xs 12}
-        [:> Button {:full-width true
-                    :href "/rekisteroidy"}
-         (tr :register/headline)]])]))
+         (tr :error/unknown))]]]))
 
 (r/defc magic-link-form [{:keys [tr]}]
   (let [form-data @(rf/subscribe [::subs/login-form])

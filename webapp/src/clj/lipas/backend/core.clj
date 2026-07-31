@@ -20,6 +20,7 @@
             [lipas.backend.newsletter :as newsletter]
             [lipas.backend.org :as org]
             [lipas.backend.search :as search]
+            [lipas.backend.token-revocation :as revocation]
             [lipas.data-model-export :as data-model-export]
             [lipas.data.admins :as admins]
             [lipas.data.cities :as cities]
@@ -36,7 +37,7 @@
             [next.jdbc :as next-jdbc]
             [next.jdbc.result-set :as rs]
             [taoensso.timbre :as log])
-  (:import [java.io OutputStreamWriter]))
+  (:import [java.io File FileInputStream OutputStreamWriter]))
 
 (def cache "Simple atom cache for things that (hardly) never change."
   (atom {}))
@@ -128,10 +129,42 @@
 (defn get-users [db]
   (db/get-users db))
 
-(defn create-magic-link [url user]
-  (let [token (jwt/create-token user :terse? true :valid-seconds (* 7 24 60 60))]
+(def magic-link-valid-seconds
+  "Default life of an emailed login link: 7 days.
+
+  Long on purpose. These links are how a user who cannot log in gets back in,
+  and an org invitation can sit unread in an inbox over a holiday, so a short
+  span here mostly generates \"my link doesn't work\" support traffic. Password
+  reset is the exception — see `password-reset-valid-seconds`."
+  (* 7 24 60 60))
+
+(def password-reset-valid-seconds
+  "Life of a password-reset link: 24h.
+
+  A reset link is a full login token in an email: whoever holds it can take the
+  account over. Unlike a magic login or an invitation it is requested at a known
+  moment by someone sitting at the keyboard, so there is no reason for it to
+  outlive the day, and 7 days of exposure in a mailbox bought nothing.
+
+  Only the reset link moved. Magic login, the permissions-updated mail and org
+  invitations keep the 7 days deliberately."
+  (* 24 60 60))
+
+(defn create-magic-link
+  "Builds a `url?token=<terse login token>` link and the copy figure that goes
+  with it.
+
+  `valid-seconds` defaults to `magic-link-valid-seconds` (7 days) so the three
+  callers that want that span are untouched by omission. Password reset passes
+  `password-reset-valid-seconds`."
+  [url user & {:keys [valid-seconds]
+               :or {valid-seconds magic-link-valid-seconds}}]
+  (let [token (jwt/create-token user :terse? true :valid-seconds valid-seconds)]
     {:link (str url "?token=" token)
-     :valid-days 7}))
+     ;; Used verbatim in the magic-login / permissions-updated / invitation
+     ;; copy ("voimassa {{valid-days}} päivää"), all of which keep the 7 days.
+     ;; send-reset-password-email! doesn't render it at all.
+     :valid-days (quot valid-seconds (* 24 60 60))}))
 
 (defn- send-permissions-updated-email!
   [emailer login-url {:keys [email] :as user}]
@@ -144,6 +177,12 @@
         old-perms (-> user :permissions)
         new-user (assoc user :permissions permissions)]
     (db/update-user-permissions! db new-user)
+    ;; Roles are baked into the JWT, so every token this user already holds
+    ;; carries the OLD roles until it expires (up to 6h). That is the stale-roles
+    ;; half of finding M7: stripping someone's rights here did nothing for hours.
+    ;; Revoke before the email below, so the magic link it carries — minted
+    ;; after this point — is on the valid side of the new revocation point.
+    (revocation/revoke! db user)
     (publish-users-drafts! db new-user)
     (send-permissions-updated-email! emailer login-url user)
     (add-user-event! db new-user "permissions-updated"
@@ -155,16 +194,32 @@
         old-status (-> user :status)
         new-user (assoc user :status status)]
     (db/update-user-status! db new-user)
+    ;; Archiving an account has to end its sessions, not just stop it renewing
+    ;; them (finding M7). Unconditional, including on "archived" -> "active":
+    ;; reactivation has no live session to kill, and a plain revoke! is easier to
+    ;; reason about than a conditional one.
+    (revocation/revoke! db user)
     (add-user-event! db new-user "status-changed"
                      {:from old-status :to status})
     new-user))
 
-(defn send-password-reset-link! [db emailer {:keys [email reset-url]}]
+(defn send-password-reset-link!
+  "Mails a password-reset link, if `email` belongs to an account.
+
+  An unknown address is a NO-OP, not an error. Answering 404 :email-not-found
+  for an unknown address and 200 for a known one made this a clean
+  account-existence oracle for an unauthenticated caller. The cost is small —
+  LIPAS addresses are municipal work addresses, often published on the
+  municipality's own site — but it is free to close, and the caller has no
+  legitimate need for the answer. See the endpoint's copy, which says \"if this
+  address has an account\" rather than claiming a mail was sent."
+  [db emailer {:keys [email reset-url]}]
   (if-let [user (db/get-user-by-email db {:email email})]
-    (let [params (create-magic-link reset-url user)]
+    (let [params (create-magic-link reset-url user
+                                    :valid-seconds password-reset-valid-seconds)]
       (email/send-reset-password-email! emailer email params)
       (add-user-event! db user "password-reset-link-sent"))
-    (throw (ex-info "User not found" {:type :email-not-found}))))
+    (log/infof "Password reset requested for an address with no account")))
 
 (defn send-magic-link! [db emailer {:keys [user login-url variant]}]
   (let [email (-> user :email)
@@ -175,6 +230,25 @@
 (defn reset-password! [db user password]
   (db/reset-user-password! db (assoc user :password
                                      (hashers/encrypt password)))
+  ;; A password change must end the sessions the old password could have leaked
+  ;; into — otherwise a stolen token outlives the reset by up to 6h and the reset
+  ;; achieves nothing against the case it exists for.
+  ;;
+  ;; This cannot bounce the caller mid-flow, in either of the two ways this
+  ;; endpoint is reached:
+  ;;
+  ;; - reset link from email: the request is already past mw/auth, so it
+  ;;   completes; the frontend's very next step is to navigate to the login page
+  ;;   (see lipas.ui.forgot-password.events/reset-success), so the link's token
+  ;;   is never used again. A side benefit: the link becomes single-use.
+  ;; - a signed-in user changing their password from their profile: same page,
+  ;;   same navigate-to-login afterwards. Their session token dies here, which is
+  ;;   the intended behaviour for a password change, and the periodic
+  ;;   refresh-login turns it into a clean logout rather than a stuck UI.
+  ;;
+  ;; Ordering: after the password write, so a failed write leaves nothing
+  ;; revoked, and before the event log, which is not authenticated.
+  (revocation/revoke! db user)
   (add-user-event! db user "password-reset"))
 
 (def impersonation-token-valid-seconds 3600)
@@ -243,6 +317,12 @@
           email (str username "@lipas.fi")]
       (db/update-user-username! tx (assoc user :username username))
       (db/update-user-email! tx (assoc user :email email))
+      ;; :email and :username are baked into the token payload and both just
+      ;; changed, so tokens holding the removed identity must stop working
+      ;; immediately. update-user-status! below revokes too; this one is here
+      ;; because the reason is different and must survive the archive step being
+      ;; moved or dropped.
+      (revocation/revoke! tx user)
       (update-user-data! tx user {})
       (add-user-event! tx user "GDPR removal")
       (update-user-status! tx (assoc user :status "archived"))))
@@ -1494,36 +1574,47 @@
 ;;; LOI ;;;
 
 (defn ->lois-es-query
+  "Builds the `_search` body for /actions/search-lois.
+
+  Both `location` and `loi-statuses` are optional in the payload schema
+  (`lipas.schema.handler/search-lois-payload`), so both have to degrade rather
+  than throw. Without a location there is no origin to decay around, so the
+  distance-decay scoring is dropped and the status filter alone remains.
+
+  The distance arithmetic lives inside the branch on purpose: it used to run
+  eagerly in the `let`, which meant a request without `location` NPE'd on
+  `(* nil ...)` and answered 500 — the `default-query` fallback below was
+  unreachable."
   [{:keys [location loi-statuses]}]
-  (let [lon (:lon location)
-        lat (:lat location)
-        distance (:distance location)
-        origin (str lat "," lon)
-        decay-factor 2
-        offset (str (* distance decay-factor 0.5) "m")
-        scale (str (* distance decay-factor) "m")
+  (let [{:keys [lon lat distance]} location
         size 100
         from 0
         excludes ["search-meta"]
-        query {:size size
-               :from from
-               :sort ["_score"]
-               :_source {:excludes excludes}
-               :query {:function_score
-                       {:score_mode "max"
-                        :boost_mode "max"
-                        :functions [{:exp
-                                     {:search-meta.location.wgs84-point
-                                      {:origin origin
-                                       :offset offset
-                                       :scale scale}}}]
-                        :query {:bool
-                                {:filter
-                                 [{:terms {:status.keyword loi-statuses}}]}}}}}
-        default-query {:size size :query {:match_all {}}}]
+        ;; An empty :filter vector matches everything, which is what we want
+        ;; when no statuses were named.
+        status-filter (if (seq loi-statuses)
+                        [{:terms {:status.keyword loi-statuses}}]
+                        [])
+        base {:size size
+              :from from
+              :sort ["_score"]
+              :_source {:excludes excludes}}]
     (if (and lat lon distance)
-      query
-      default-query)))
+      (let [decay-factor 2
+            origin (str lat "," lon)
+            offset (str (* distance decay-factor 0.5) "m")
+            scale (str (* distance decay-factor) "m")]
+        (assoc base :query
+               {:function_score
+                {:score_mode "max"
+                 :boost_mode "max"
+                 :functions [{:exp
+                              {:search-meta.location.wgs84-point
+                               {:origin origin
+                                :offset offset
+                                :scale scale}}}]
+                 :query {:bool {:filter status-filter}}}}))
+      (assoc base :query {:bool {:filter status-filter}}))))
 
 (defn search-lois*
   [{:keys [indices client]} es-query]
@@ -1587,8 +1678,64 @@
       (index-loi! search loi :sync)
       result)))
 
+;; Leading-byte signatures of the image formats the UTP image upload accepts.
+;; They mirror the `accept` list of both file pickers that feed this endpoint
+;; (activities and LOI content editors): PNG, JPEG and WebP.
+;;
+;; Each value is a collection of [offset bytes] pairs; a file matches the format
+;; when EVERY pair matches. WebP needs two, because its container is RIFF: the
+;; format name sits at offset 8, after the 4-byte little-endian chunk size.
+(def ^:private image-signatures
+  {:png [[0 [0x89 0x50 0x4E 0x47 0x0D 0x0A 0x1A 0x0A]]]
+   :jpeg [[0 [0xFF 0xD8 0xFF]]]
+   :webp [[0 [0x52 0x49 0x46 0x46]] ; "RIFF"
+          [8 [0x57 0x45 0x42 0x50]]]}) ; "WEBP"
+
+;; Longest offset+length across `image-signatures` (WebP: 8 + 4).
+(def ^:private image-header-length 12)
+
+(defn- read-header
+  "Reads at most `n` leading bytes of `file` into a fresh byte-array.
+
+  Opens its own stream and closes it again, so the caller's `File` stays
+  untouched and fully readable afterwards (the upload itself streams the same
+  file to the CMS)."
+  ^bytes [^File file n]
+  (with-open [in (FileInputStream. file)]
+    (.readNBytes in n)))
+
+(defn- header-part-matches?
+  [^bytes header [offset expected]]
+  (and (>= (alength header) (+ offset (count expected)))
+       (every? (fn [[i b]] (= (unchecked-byte b) (aget header (+ offset i))))
+               (map-indexed vector expected))))
+
+(defn- image-file?
+  "True when the leading bytes of `file` identify it as PNG, JPEG or WebP."
+  [^File file]
+  (let [header (read-header file image-header-length)]
+    (boolean
+      (some (fn [[_format parts]]
+              (every? (partial header-part-matches? header) parts))
+            image-signatures))))
+
 (defn upload-utp-image!
-  [{:keys [_filename _data _user] :as params}]
+  "Uploads an image to the UTP CMS media library.
+
+  `:data` must be a `java.io.File` (the multipart tempfile). The route schema
+  already restricts the client-declared `:content-type` and `:size`, but a
+  content-type header is trivially spoofed, so the magic bytes are verified here
+  — in the single funnel every caller goes through — before anything is pushed
+  to the CMS."
+  [{:keys [filename data] :as params}]
+  (when-not (instance? File data)
+    ;; Programming error, not a client error: no :type, so it surfaces as a 500.
+    (throw (ex-info "upload-utp-image! requires :data to be a java.io.File"
+                    {:data-class (some-> data class .getName)})))
+  (when-not (image-file? data)
+    (throw (ex-info "Uploaded file is not a PNG, JPEG or WebP image"
+                    {:type :invalid-image
+                     :filename filename})))
   (utp-cms/upload-image! params))
 
 ;;; Types ;;;

@@ -16,5 +16,7 @@
  "Linkki on lähetetty ja sen pitäisi saapua  sähköpostiisi parin minuutin sisällä. Tarkistathan myös  roskapostin!",
  :order-magic-link "Lähetä linkki sähköpostiini",
  :password "Salasana",
+ :session-expired
+ "Istuntosi on päättynyt. Kirjaudu sisään uudelleen.",
  :username "Sähköposti / käyttäjätunnus",
  :username-example "paavo.paivittaja@kunta.fi"}
