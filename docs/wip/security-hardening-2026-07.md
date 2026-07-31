@@ -1000,3 +1000,49 @@ traffic left JYU address space, so colleagues behind a shared institutional
 egress really do land in one bucket. That is the municipal-NAT case M2a sized
 the budgets for — now observed rather than assumed, and a reason not to tighten
 them.
+
+### CI — 120 failures in two namespaces, and the fixture bug behind them
+
+**Status:** fixed
+
+Both CI runs on PR #218 failed identically (`750 tests, 120 failures, 3
+errors`), so despite the shape of the numbers nothing here was flaky. Two of
+this branch's changes had test fallout that the branch's own new tests did not
+cover:
+
+- **M1, the heatmap gate** — 72 failures + 2 errors in
+  `analysis.heatmap-test`, all of them "expected 200, got 401". Restoring
+  `:require-privilege :analysis-tool/experimental` on `create-heatmap` /
+  `get-heatmap-facets` left that namespace calling both endpoints anonymously.
+  The gate itself was pinned in
+  `handler-test/heatmap-requires-experimental-privilege-test`; the namespace
+  that exercises what the endpoints *return* was simply never updated. Every
+  request there now authenticates as a holder of the privilege.
+
+- **M7, token revocation** — 48 failures + 1 error in
+  `jobs.dead-letter-handler-test`, which authenticated as a hand-written map
+  with `:id 1`. The revocation check looks the caller's `:id` up in `account`,
+  so `"1"` reaches Postgres as a uuid literal, the lookup throws, and the check
+  does what it is designed to do: fails closed, 401. It was the only place in
+  the tree minting tokens for users that are not real rows; those callers are
+  persisted accounts now.
+
+Fixing them uncovered a genuine order-dependent bug, and this is the part worth
+remembering: **`clojure.test/use-fixtures` ASSOCs the namespace's fixture list
+rather than appending to it**, so a second `(use-fixtures :each ...)` call
+silently REPLACES the first. Three namespaces this branch adds —
+`token-revocation-test`, `rate-limit-http-test`, `llm-budget-test` — registered
+their own reset fixture as a separate call and thereby dropped
+`full-system-fixture`'s `:each`, which is what prunes Postgres and
+Elasticsearch between tests.
+
+Nothing pointed at it, because each of those namespaces still passed its own
+assertions. What it actually does is leave the namespace inheriting whatever
+the previously-run one left behind — and `tests.edn` sets `:randomize? true`,
+so that is a different namespace on every run. `heatmap-test/empty-results-test`
+is what made it visible: given the same fixture mistake it failed in two runs
+out of three locally, always with the four sites an earlier test had indexed.
+
+All four namespaces now pass both fixtures to a single `use-fixtures` call, and
+`test-utils/full-system-fixture`'s docstring states the rule so the next one
+does too.

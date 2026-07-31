@@ -84,8 +84,9 @@
     [:post "/api/actions/create-analysis-report"]
 
     ;; --- Unauthenticated by necessity: you have no session yet -----------
-    ;; TODO(M2): all four send mail and/or leak account existence, and nothing
-    ;; rate-limits them.
+    ;; All four send mail, so all four carry an IP-keyed `:rate-limit` instead
+    ;; of an auth gate — see lipas.backend.rate-limit-http-test, which is what
+    ;; requires them to declare one.
     [:post "/api/actions/register"]
     [:post "/api/actions/request-password-reset"]
     [:post "/api/actions/order-magic-link"]
