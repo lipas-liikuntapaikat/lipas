@@ -74,6 +74,20 @@
                  (m/validate common-schema/map-wgs84-bounds-lat lat)))
           (turf-meta/coordAll js-fcoll)))
 
+(defn strip-null-geoms
+  "Drops features that carry no geometry at all.
+
+  Shapefiles may contain 'Null shape' records, which shpjs faithfully
+  turns into features with a nil geometry. Turf reads `.type` off every
+  geometry it visits, so a single such feature makes the whole
+  collection blow up. Nothing downstream can do anything with a
+  geometry-less feature anyway."
+  [js-fcoll]
+  (if-let [fs (aget js-fcoll "features")]
+    (doto js-fcoll
+      (aset "features" (garray/filter fs #(some? (aget % "geometry")))))
+    js-fcoll))
+
 (defn parse-dom [text]
   (let [parser (js/DOMParser.)]
     (.parseFromString parser text "text/xml")))
