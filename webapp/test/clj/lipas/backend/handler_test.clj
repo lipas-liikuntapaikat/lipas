@@ -203,6 +203,58 @@
       (is (> (:_score (first sorted-lois))
              (:_score (second sorted-lois)))))))
 
+(deftest search-lois-without-location-test
+  ;; `:location` is optional in search-lois-payload, but the distance-decay
+  ;; arithmetic in core/->lois-es-query used to run eagerly in the `let`, so a
+  ;; request that omitted it died on `(* nil ...)` and answered 500 — which also
+  ;; made the function's own `default-query` fallback unreachable.
+  (let [->loi (fn [id status coords]
+                {:event-date "1901-02-13T12:40:08.957Z"
+                 :geometries {:features [{:geometry {:coordinates coords
+                                                     :type "Point"}
+                                          :type "Feature"}]
+                              :type "FeatureCollection"}
+                 :id id
+                 :loi-category "outdoor-recreation-facilities"
+                 :loi-type "mooring-ring"
+                 :status status})
+        active (->loi "0f4f6bbe-9a1e-4d1e-8a1c-2d2c1f0f7a11" "active" [25 65])
+        retired (->loi "1b3c0d2e-5f6a-4b7c-8d9e-0a1b2c3d4e5f"
+                       "out-of-service-permanently" [25 70])
+        token (jwt/create-token (tu/gen-admin-user :db-component (test-db)))
+        call (fn [body]
+               (test-app (-> (mock/request :post "/api/actions/search-lois")
+                             (mock/content-type "application/json")
+                             (mock/body (->json body))
+                             (tu/token-header token))))]
+    (core/index-loi! (test-search) active :sync)
+    (core/index-loi! (test-search) retired :sync)
+
+    (testing "no location, statuses given: 200 and the filter is still applied"
+      (let [resp (call {:loi-statuses ["active"]})
+            statuses (->> resp :body <-json (map (comp :status :_source)) set)]
+        (is (= 200 (:status resp)))
+        (is (contains? statuses "active"))
+        (is (not (contains? statuses "out-of-service-permanently"))
+            "the status filter must survive the missing location")))
+
+    (testing "no location and no statuses: 200, unfiltered"
+      (let [resp (call {})]
+        (is (= 200 (:status resp)))
+        (is (seq (-> resp :body <-json)))))
+
+    (testing "a partial location is rejected by coercion, never reaching the query builder"
+      ;; :distance is the value that used to blow up. It can only ever be nil
+      ;; here by omitting :location entirely — the schema requires all three
+      ;; keys once :location is present — so this pins where that guarantee
+      ;; comes from.
+      (doseq [location [{:lon 25.0 :lat 68.0}
+                        {:lon 25.0 :distance 1000}
+                        {:lat 68.0 :distance 1000}]]
+        (is (= 400 (:status (call {:location location
+                                   :loi-statuses ["active"]})))
+            (str "partial location " (pr-str location)))))))
+
 ;; These three routes had their privilege check commented out from an
 ;; experimental phase (`#_#_` on the heatmap pair, a `;`-block on search-lois),
 ;; so the only enforcement was client-side. The FE already refuses to call them

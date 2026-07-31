@@ -1574,36 +1574,47 @@
 ;;; LOI ;;;
 
 (defn ->lois-es-query
+  "Builds the `_search` body for /actions/search-lois.
+
+  Both `location` and `loi-statuses` are optional in the payload schema
+  (`lipas.schema.handler/search-lois-payload`), so both have to degrade rather
+  than throw. Without a location there is no origin to decay around, so the
+  distance-decay scoring is dropped and the status filter alone remains.
+
+  The distance arithmetic lives inside the branch on purpose: it used to run
+  eagerly in the `let`, which meant a request without `location` NPE'd on
+  `(* nil ...)` and answered 500 — the `default-query` fallback below was
+  unreachable."
   [{:keys [location loi-statuses]}]
-  (let [lon (:lon location)
-        lat (:lat location)
-        distance (:distance location)
-        origin (str lat "," lon)
-        decay-factor 2
-        offset (str (* distance decay-factor 0.5) "m")
-        scale (str (* distance decay-factor) "m")
+  (let [{:keys [lon lat distance]} location
         size 100
         from 0
         excludes ["search-meta"]
-        query {:size size
-               :from from
-               :sort ["_score"]
-               :_source {:excludes excludes}
-               :query {:function_score
-                       {:score_mode "max"
-                        :boost_mode "max"
-                        :functions [{:exp
-                                     {:search-meta.location.wgs84-point
-                                      {:origin origin
-                                       :offset offset
-                                       :scale scale}}}]
-                        :query {:bool
-                                {:filter
-                                 [{:terms {:status.keyword loi-statuses}}]}}}}}
-        default-query {:size size :query {:match_all {}}}]
+        ;; An empty :filter vector matches everything, which is what we want
+        ;; when no statuses were named.
+        status-filter (if (seq loi-statuses)
+                        [{:terms {:status.keyword loi-statuses}}]
+                        [])
+        base {:size size
+              :from from
+              :sort ["_score"]
+              :_source {:excludes excludes}}]
     (if (and lat lon distance)
-      query
-      default-query)))
+      (let [decay-factor 2
+            origin (str lat "," lon)
+            offset (str (* distance decay-factor 0.5) "m")
+            scale (str (* distance decay-factor) "m")]
+        (assoc base :query
+               {:function_score
+                {:score_mode "max"
+                 :boost_mode "max"
+                 :functions [{:exp
+                              {:search-meta.location.wgs84-point
+                               {:origin origin
+                                :offset offset
+                                :scale scale}}}]
+                 :query {:bool {:filter status-filter}}}}))
+      (assoc base :query {:bool {:filter status-filter}}))))
 
 (defn search-lois*
   [{:keys [indices client]} es-query]
