@@ -26,11 +26,14 @@
 
 (let [{:keys [once each]} (tu/full-system-fixture test-system)]
   (use-fixtures :once once)
-  (use-fixtures :each each))
-
-;; Limiter state is process-wide, so a leftover bucket from another namespace
-;; would make these fail depending on test order.
-(use-fixtures :each (fn [f] (rl/reset-all!) (f) (rl/reset-all!)))
+  ;; Both :each fixtures in ONE call. `clojure.test/use-fixtures` ASSOCs the
+  ;; namespace's fixture list rather than appending to it, so registering the
+  ;; limiter reset separately would silently drop `each` — and with it the
+  ;; prune between tests.
+  ;;
+  ;; Limiter state is process-wide, so a leftover bucket from another namespace
+  ;; would make these fail depending on test order.
+  (use-fixtures :each each (fn [f] (rl/reset-all!) (f) (rl/reset-all!))))
 
 (defn test-app [req] ((:lipas/app @test-system) req))
 

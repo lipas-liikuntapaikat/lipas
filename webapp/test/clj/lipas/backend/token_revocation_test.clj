@@ -44,11 +44,17 @@
 
 (let [{:keys [once each]} (tu/full-system-fixture test-system)]
   (use-fixtures :once once)
-  (use-fixtures :each each))
-
-;; The revocation lookup is cached process-wide for a few seconds, so a leftover
-;; entry from another test could otherwise decide this one.
-(use-fixtures :each (fn [f] (revocation/clear-cache!) (f) (revocation/clear-cache!)))
+  ;; Both :each fixtures in ONE call. `clojure.test/use-fixtures` ASSOCs the
+  ;; namespace's fixture list rather than appending to it, so registering the
+  ;; cache-clearing one separately would silently drop `each` — and with it the
+  ;; prune between tests.
+  ;;
+  ;; The revocation lookup is cached process-wide for a few seconds, so a
+  ;; leftover entry from another test could otherwise decide this one.
+  (use-fixtures :each each (fn [f]
+                             (revocation/clear-cache!)
+                             (f)
+                             (revocation/clear-cache!))))
 
 (defn test-db [] (:lipas/db @test-system))
 (defn test-app [req] ((:lipas/app @test-system) req))
