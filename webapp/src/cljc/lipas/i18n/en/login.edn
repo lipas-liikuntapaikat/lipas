@@ -14,5 +14,6 @@
  :magic-link-ordered "Password",
  :order-magic-link "Order login link",
  :password "Password",
+ :session-expired "Your session has ended. Please log in again.",
  :username "Email / Username",
  :username-example "paavo.paivittaja@kunta.fi"}

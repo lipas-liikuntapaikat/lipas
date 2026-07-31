@@ -16,5 +16,6 @@
  "Länken har skickats och den är snart i din e-post. Kolla också spam!",
  :order-magic-link "Skicka länken till min e-post",
  :password "Lösenord",
+ :session-expired "Din session har avslutats. Logga in igen.",
  :username "E-post / användarnamn",
  :username-example "paavo.paivittaja@kunta.fi"}
