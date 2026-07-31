@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is use-fixtures testing]]
             [lipas.backend.analysis.heatmap :as heatmap]
             [lipas.backend.core :as core]
+            [lipas.backend.jwt :as jwt]
             [lipas.test-utils :refer [<-transit ->transit] :as tu]
             [malli.core :as m]
             [ring.mock.request :as mock]))
@@ -10,15 +11,47 @@
 
 ;;; Fixtures ;;;
 
+(def ^:private token
+  "Cached token for the caller every request below authenticates as.
+
+   Reset per test rather than held for the namespace: the each-fixture prunes
+   the database, so the account behind the token does not outlive one test."
+  (atom nil))
+
 (let [{:keys [once each]} (tu/full-system-fixture test-system)]
   (use-fixtures :once once)
-  (use-fixtures :each each))
+  ;; Both :each fixtures in ONE call. `clojure.test/use-fixtures` ASSOCs the
+  ;; namespace's fixture list rather than appending to it, so a second call
+  ;; would silently drop `each` — and with it the prune between tests, which
+  ;; empty-results-test needs.
+  (use-fixtures :each each (fn [f] (reset! token nil) (f))))
 
 (defn test-db [] (:lipas/db @test-system))
 (defn test-search [] (:lipas/search @test-system))
 (defn test-app [req] ((:lipas/app @test-system) req))
 
 ;;; Helper Functions ;;;
+
+(defn- with-auth
+  "Authenticates the request as a holder of `:analysis-tool/experimental`.
+
+   Both heatmap routes require that privilege — the check dates from the
+   experimental phase, when it was `#_#_`-commented out server-side while the
+   frontend already hid the tab behind it. The caller has to be a real account
+   row, not a hand-written map, because `mw/auth` looks every token's `:id` up
+   for the revocation check (see `lipas.backend.token-revocation`).
+
+   `lipas.backend.handler-test/heatmap-requires-experimental-privilege-test`
+   is what pins the gate itself; here it is only a precondition."
+  [req]
+  (tu/token-header
+    req
+    (or @token
+        (reset! token
+                (jwt/create-token
+                  (tu/gen-user {:db? true
+                                :db-component (test-db)
+                                :permissions {:roles [{:role "analysis-experimental-user"}]}}))))))
 
 (defn- create-test-sports-sites
   "Creates multiple test sports sites with different characteristics and indexes them"
@@ -127,6 +160,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))
@@ -179,6 +213,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))
@@ -199,6 +234,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))
@@ -218,6 +254,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))
@@ -232,6 +269,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -245,6 +283,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -260,6 +299,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -275,6 +315,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -290,6 +331,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
@@ -300,6 +342,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
@@ -310,6 +353,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
@@ -320,6 +364,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))))
@@ -332,6 +377,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -372,6 +418,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -408,6 +455,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))
@@ -418,6 +466,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/get-heatmap-facets")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))]
 
       (is (= 400 (:status resp))))))
@@ -430,6 +479,7 @@
           resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                              (mock/content-type "application/transit+json")
                              (mock/header "Accept" "application/transit+json")
+                             (with-auth)
                              (mock/body (->transit params))))
 
           body (<-transit (:body resp))]
@@ -451,6 +501,7 @@
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                (mock/content-type "application/transit+json")
                                (mock/header "Accept" "application/transit+json")
+                               (with-auth)
                                (mock/body (->transit params))))
 
             body (<-transit (:body resp))
@@ -480,6 +531,7 @@
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                (mock/content-type "application/transit+json")
                                (mock/header "Accept" "application/transit+json")
+                               (with-auth)
                                (mock/body (->transit params))))
 
             body (<-transit (:body resp))
@@ -507,6 +559,7 @@
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                (mock/content-type "application/transit+json")
                                (mock/header "Accept" "application/transit+json")
+                               (with-auth)
                                (mock/body (->transit params))))
 
             body (<-transit (:body resp))
@@ -523,6 +576,7 @@
             resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                (mock/content-type "application/transit+json")
                                (mock/header "Accept" "application/transit+json")
+                               (with-auth)
                                (mock/body (->transit params))))
 
             body (<-transit (:body resp))
@@ -553,6 +607,7 @@
           low-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                       (mock/content-type "application/transit+json")
                                       (mock/header "Accept" "application/transit+json")
+                                      (with-auth)
                                       (mock/body (->transit low-zoom-params))))
           low-zoom-body (<-transit (:body low-zoom-resp))
           low-zoom-features (:data low-zoom-body)]
@@ -570,6 +625,7 @@
           medium-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                          (mock/content-type "application/transit+json")
                                          (mock/header "Accept" "application/transit+json")
+                                         (with-auth)
                                          (mock/body (->transit medium-zoom-params))))
           medium-zoom-body (<-transit (:body medium-zoom-resp))
           medium-zoom-features (:data medium-zoom-body)]
@@ -586,6 +642,7 @@
           high-zoom-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                        (mock/content-type "application/transit+json")
                                        (mock/header "Accept" "application/transit+json")
+                                       (with-auth)
                                        (mock/body (->transit high-zoom-params))))
           high-zoom-body (<-transit (:body high-zoom-resp))
           high-zoom-features (:data high-zoom-body)]
@@ -681,6 +738,7 @@
           count-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                    (mock/content-type "application/transit+json")
                                    (mock/header "Accept" "application/transit+json")
+                                   (with-auth)
                                    (mock/body (->transit count-params))))
           count-features (:data (<-transit (:body count-resp)))]
 
@@ -697,6 +755,7 @@
           area-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                   (mock/content-type "application/transit+json")
                                   (mock/header "Accept" "application/transit+json")
+                                  (with-auth)
                                   (mock/body (->transit area-params))))
           area-features (:data (<-transit (:body area-resp)))]
 
@@ -715,6 +774,7 @@
           route-resp (test-app (-> (mock/request :post "/api/actions/create-heatmap")
                                    (mock/content-type "application/transit+json")
                                    (mock/header "Accept" "application/transit+json")
+                                   (with-auth)
                                    (mock/body (->transit route-params))))
           route-features (:data (<-transit (:body route-resp)))]
 
