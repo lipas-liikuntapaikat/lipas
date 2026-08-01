@@ -1,0 +1,39 @@
+name: Runner heartbeat
+
+# Self-hosted runner rot should surface on a calm Monday morning, not during
+# an urgent deploy. A failing/queued-forever run here means the runner needs
+# attention (see infra/runner/README.md); the break-glass laptop deploy
+# covers the gap while repairing.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  heartbeat:
+    strategy:
+      fail-fast: false
+      matrix:
+        host: [lipas-dev, lipas-prod]
+    runs-on: [self-hosted, "${{ matrix.host }}"]
+    timeout-minutes: 10
+    steps:
+      - name: Report runner health
+        run: |
+          set -uo pipefail
+          echo "runner: ${RUNNER_NAME:-unknown} on $(hostname)"
+          df -h /
+          docker system df || true
+          echo "--- last deploy ---"
+          cat /var/lipas/DEPLOYED 2>/dev/null || echo "(no DEPLOYED stamp yet)"
+
+      - name: Fail if disk is nearly full
+        run: |
+          set -euo pipefail
+          USE=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+          echo "Root filesystem ${USE}% full"
+          if [ "$USE" -gt 85 ]; then
+            echo "::error::Root filesystem ${USE}% full on $(hostname) — clean up before the next deploy"
+            exit 1
+          fi

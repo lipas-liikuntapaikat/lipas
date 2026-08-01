@@ -17,6 +17,9 @@ test_routes.clj
 
 random-files/
 
+# Host-side runner config carries the one-time registration token
+/infra/runner/.env
+
 !webapp/dev/repl.clj
 webapp/.nrepl-port
 webapp/*.log

@@ -133,82 +133,60 @@ jobs:
               fi
             done
 
+  # Build on GitHub-hosted CI — the dev host only installs artifacts. The
+  # SHA is captured here so the install pins /var/lipas to exactly what was
+  # built, even if the branch advances mid-flight.
+  build:
+    needs: plan
+    if: needs.plan.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.build.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.ref }}
+
+      - name: Build release artifacts
+        id: build
+        uses: ./.github/actions/build-artifacts
+        with:
+          upload: 'true'
+
   deploy:
-    needs: [plan, exclusive-label]
+    needs: [plan, exclusive-label, build]
     if: |
       always() &&
       needs.plan.outputs.should_deploy == 'true' &&
+      needs.build.result == 'success' &&
       (needs.exclusive-label.result == 'success' || needs.exclusive-label.result == 'skipped')
     runs-on: [self-hosted, lipas-dev]
+    timeout-minutes: 60
     environment:
       name: lipas-dev
       url: https://lipas-dev.cc.jyu.fi
     steps:
-      - name: Sync /var/lipas to ${{ needs.plan.outputs.ref }}
-        working-directory: /var/lipas
+      # The installer runs from the workspace, not /var/lipas — it may check
+      # out a different ref there, and a script must not change underneath
+      # its own execution.
+      - name: Check out installer at the built SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Install release
         env:
-          REF: ${{ needs.plan.outputs.ref }}
+          SHA: ${{ needs.build.outputs.sha }}
         run: |
-          set -euo pipefail
-          # Runner container runs as root; /var/lipas is owned by lipas-ci on the host.
-          # Tell git to trust the directory regardless of ownership mismatch.
-          git config --global --add safe.directory /var/lipas
-          if ! git diff --quiet HEAD; then
-            echo "::error::/var/lipas has uncommitted changes to tracked files; refusing to switch refs"
-            git status --short
-            exit 1
-          fi
-          git fetch origin --prune --tags
-          if git rev-parse --verify "origin/${REF}" >/dev/null 2>&1; then
-            TARGET="origin/${REF}"
-          else
-            TARGET="${REF}"
-          fi
-          git -c advice.detachedHead=false checkout "$TARGET"
-          echo "Now at $(git rev-parse --short HEAD) — $(git log -1 --pretty='%s')"
-
-      - name: Build backend and frontend (dockerized)
-        working-directory: /var/lipas
-        run: |
-          set -euo pipefail
-          source /var/lipas/.env.sh
-          docker compose run --rm backend-build
-          docker compose run --rm frontend-npm-deps
-          docker compose run --rm frontend-build
-          docker compose run --rm frontend-precompress
-
-      - name: Run database migrations
-        working-directory: /var/lipas
-        run: |
-          set -euo pipefail
-          source /var/lipas/.env.sh
-          docker compose run --rm backend-migrate
-
-      - name: Install artifacts and restart services
-        working-directory: /var/lipas
-        run: |
-          set -euo pipefail
-          cp webapp/target/backend.jar webapp/backend.jar
-          # frontend bundle + rendered index.html landed in webapp/resources/public/ during build
-          source /var/lipas/.env.sh
-          docker compose rm -sf backend worker
-          docker compose up -d backend worker
-          # The proxy must be recreated after the backend so nginx re-resolves
-          # the new backend container IP. --build picks up nginx/Dockerfile
-          # changes (brotli modules ship in the image) and is a cached no-op
-          # otherwise. Hosts run different proxy variants, so detect the
-          # running one instead of hardcoding a service name.
-          PROXY_SVC=$(docker compose ps --services | grep -E '^proxy(-dev|-local)?$' || true)
-          if [ -n "$PROXY_SVC" ]; then
-            docker compose up -d --no-deps --build --force-recreate "$PROXY_SVC"
-          else
-            echo "No running proxy service found; skipping proxy restart"
-          fi
-          echo "Deployed $(git -C /var/lipas rev-parse --short HEAD)"
-
-      - name: Re-index Elasticsearch
-        working-directory: /var/lipas
-        run: |
-          set -euo pipefail
-          source /var/lipas/.env.sh
-          docker compose run --rm backend-index-search
+          bash scripts/deploy/install.sh \
+            --artifacts "${{ runner.temp }}/release" \
+            --sha "$SHA" \
+            --door github-dev \
+            --reindex

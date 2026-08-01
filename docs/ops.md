@@ -88,42 +88,58 @@ lipas-kibana-1          Log visualization (5601)
 
 ## Deployment
 
-### Babashka Tasks
+Deployment is **run from artifacts**: the backend uberjar and the frontend
+bundle are built once on GitHub-hosted CI and installed on the servers by
+`scripts/deploy/install.sh` — servers never compile from source. The git
+checkout at `/var/lipas` provides configuration and orchestration only
+(docker-compose.yml, nginx/mapproxy/geoserver config) and is pinned to the
+same commit as the artifacts on every deploy. Design and rationale:
+`docs/wip/deployment-consolidation.md`.
 
-Deployment is automated via Babashka tasks defined in `webapp/bb.edn`:
+### The three deploy doors
 
-```bash
-# Full deployment (backend + frontend)
-bb deploy-dev          # Deploy to lipas-dev
-bb deploy-prod         # Deploy to lipas.fi
+| Door | Trigger | Builds run on |
+|------|---------|---------------|
+| lipas-dev | `lipas-dev` label on a PR | GitHub CI |
+| lipas-prod | Manual "Deploy to lipas-prod" workflow + approval | GitHub CI |
+| Break-glass | `bb deploy <dev\|prod>` from a laptop | The laptop |
 
-# Partial deployments
-bb deploy-backend-dev  # Backend only to dev
-bb deploy-backend-prod # Backend only to prod
-bb deploy-frontend-dev # Frontend only to dev
-bb deploy-frontend-prod # Frontend only to prod
-```
+**lipas-dev (label):** add the `lipas-dev` label to a PR — dev tracks that
+PR's head (new pushes redeploy). Removing the label or closing the PR
+redeploys `master`. The label is exclusive: applying it strips it from other
+PRs. Every dev deploy runs migrations and a full search reindex.
 
-### What Deployment Does
+**lipas-prod (dispatch):** GitHub → Actions → "Deploy to lipas-prod" → Run
+workflow (ref, optional reindex) → approve the run when the `lipas-prod`
+environment asks. Each successful deploy creates a `prod-YYYYMMDD-HHMM`
+release with the shipped artifacts attached — the audit trail and rollback
+store. **Rollback:** dispatch again with the previous release's commit.
 
-1. **Build:** Compiles uberjar (`bb uberjar`) and/or frontend (`npm run build`)
-2. **Upload:** SCPs artifacts to target server `/tmp/`
-3. **Deploy:** Copies to `/var/lipas/webapp/` and restarts containers
-4. **Verify:** Runs health check against `/api/health`
+**Break-glass (laptop):** for when GitHub or a runner is down. Connect VPN,
+then `cd webapp && bb deploy prod`. Ships the **local working tree** via
+scp + the same installer; the server's `/var/lipas` checkout stays untouched.
 
-### Static Assets from Git
+### What a deploy does (install.sh)
 
-Some files are served directly from the git repository via Docker volume mounts. After updating these, a `git pull` is required on the target server:
+1. Pins `/var/lipas` to the built commit (config = code; skipped break-glass)
+2. Installs `backend.jar` + frontend bundle (bundles before `index.html`)
+3. Runs migrations from the jar, restarts backend + worker, recreates proxy
+4. Verifies `https://localhost/api/health` end-to-end; stamps `/var/lipas/DEPLOYED`
+5. Optionally reindexes Elasticsearch
 
-| Path | Purpose |
-|------|---------|
-| `webapp/resources/public/` | Static files (HTML, images, etc.) |
-| `nginx/*.conf` | Nginx configuration |
-| `mapproxy/` | MapProxy configuration |
-| `geoserver/data_dir/` | GeoServer workspaces/styles |
-| `certs/` | SSL certificates |
+### Self-hosted runners
 
-**Manual update procedure:**
+Both hosts run a GitHub Actions runner under `/opt/lipas-runner` (own compose
+project — see `infra/runner/README.md` for provisioning, upgrades and the
+GitHub-side gates). The weekly "Runner heartbeat" workflow checks liveness
+and disk on both runners.
+
+### Config-only changes
+
+Configuration served from the git checkout (nginx/mapproxy/geoserver conf,
+static files under `webapp/resources/public/`) normally rides along with the
+next deploy, since deploys pin the checkout. To push a config change alone:
+
 ```bash
 ssh lipas-prod
 cd /var/lipas
@@ -131,11 +147,7 @@ sudo git pull
 sudo docker compose restart proxy  # or relevant service
 ```
 
-### CI/CD Pipeline
-
-- **Repository:** GitHub
-- **CI:** GitHub Actions runs tests and builds on push
-- **Release cadence:** Weekly updates (typical)
+Note `certs/` is also volume-mounted from the checkout (untracked content).
 
 ### Monitoring
 

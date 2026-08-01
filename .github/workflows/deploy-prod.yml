@@ -1,0 +1,138 @@
+name: Deploy to lipas-prod
+
+# Manual-only production deploys. Layered gates:
+#   1. workflow_dispatch is the ONLY trigger — no PR event can reach this
+#      workflow or the prod runner label.
+#   2. The actor allowlist below (belt and braces).
+#   3. The `lipas-prod` GitHub Environment must be configured with required
+#      reviewers + a deployment branch policy (master only) — the deploy job
+#      pauses for human approval before anything touches the prod runner.
+#
+# Artifacts are built fresh from the requested ref on GitHub-hosted CI, so
+# what ships always matches the requested SHA — no artifact-retention or
+# cross-run staleness questions. Every successful deploy is recorded as a
+# `prod-*` release with the artifacts attached (audit trail + rollback
+# without rebuild).
+#
+# Rollback: dispatch this workflow again with the previous release's SHA.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch, tag or SHA to deploy'
+        required: false
+        default: 'master'
+      reindex:
+        description: 'Run full Elasticsearch reindex after deploy'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+env:
+  ALLOWED_USERS: "vharmain"
+
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check actor allowlist
+        env:
+          SENDER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          if ! grep -qw "$SENDER" <<<"$ALLOWED_USERS"; then
+            echo "::error::User '$SENDER' is not allowed to deploy to lipas-prod"
+            exit 1
+          fi
+
+  build:
+    needs: authorize
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.build.outputs.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Build release artifacts
+        id: build
+        uses: ./.github/actions/build-artifacts
+        with:
+          upload: 'true'
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, lipas-prod]
+    # Generous: a full prod reindex takes a while.
+    timeout-minutes: 90
+    environment:
+      name: lipas-prod
+      url: https://www.lipas.fi
+    steps:
+      # The installer runs from the workspace, not /var/lipas — it checks
+      # out a different ref there, and a script must not change underneath
+      # its own execution.
+      - name: Check out installer at the built SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Install release
+        env:
+          SHA: ${{ needs.build.outputs.sha }}
+          REINDEX: ${{ inputs.reindex }}
+        run: |
+          set -euo pipefail
+          EXTRA=""
+          if [ "$REINDEX" = "true" ]; then
+            EXTRA="--reindex"
+          fi
+          bash scripts/deploy/install.sh \
+            --artifacts "${{ runner.temp }}/release" \
+            --sha "$SHA" \
+            --door github-prod \
+            $EXTRA
+
+  # Durable record of what ran in prod and when: a prod-* tag on the deployed
+  # commit with the exact shipped artifacts attached.
+  record:
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Create release record
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ needs.build.outputs.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          TAG="prod-$(date -u +%Y%m%d-%H%M)"
+          gh release create "$TAG" \
+            --target "$SHA" \
+            --latest=false \
+            --title "Production deploy $TAG" \
+            --notes "Deployed by @${ACTOR} — commit ${SHA}" \
+            "${{ runner.temp }}/release/backend.jar" \
+            "${{ runner.temp }}/release/frontend-public.tar.gz"

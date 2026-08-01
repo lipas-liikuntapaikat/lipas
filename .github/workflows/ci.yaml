@@ -122,60 +122,17 @@ jobs:
         if: ${{ failure() }}
         run: docker compose logs
 
-  # Builds need no services - run them on the host runner in parallel
-  # with the tests, using the actions caches (~/.m2, npm).
+  # Builds need no services - run them on the host runner in parallel with
+  # the tests. The shared composite action is the SAME build the deploy
+  # workflows ship, so "CI is green" always means "the deployable artifacts
+  # build" (upload is skipped here — deploy workflows build their own ref).
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: webapp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install java
-        uses: actions/setup-java@v4
+      - name: Build release artifacts
+        uses: ./.github/actions/build-artifacts
         with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@12.5
-        with:
-          cli: latest
-          bb: latest
-
-      - name: Cache clojure dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.m2/repository
-            ~/.gitlibs
-            ~/.deps.clj
-          key: cljdeps-${{ hashFiles('webapp/deps.edn', 'webapp/bb.edn') }}
-          restore-keys: cljdeps-
-
-      - name: Install node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: webapp/package-lock.json
-
-      - name: Build backend jar
-        run: clojure -T:build uber
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      # :frontend alias carries shadow-cljs & cljs deps; this direct clojure
-      # invocation bypasses the npm launcher, so shadow-cljs.edn's :deps
-      # aliases don't apply here
-      - name: Build frontend
-        run: clojure -M:frontend:dev -m shadow.cljs.devtools.cli release app
-
-      # Code splitting's failure mode is silent: a wrong static require
-      # hoists a lazy module into :app with no compile error. Guard the
-      # base-module size budget (see webapp/docs/wip/bundle-splitting.md).
-      - name: Check bundle size budget
-        run: bb bundle-size-check
+          upload: 'false'

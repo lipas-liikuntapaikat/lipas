@@ -24,7 +24,9 @@ openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
 ### Backend ###
 
 printf "\n *** Running backend migrations *** \n\n"
-docker compose run backend-migrate
+# The -dev variant runs from source — the plain backend-migrate service runs
+# from the installed uberjar, which does not exist yet on a fresh clone.
+docker compose run backend-migrate-dev
 
 printf "\n *** Packaging backend *** \n\n"
 docker compose run backend-build

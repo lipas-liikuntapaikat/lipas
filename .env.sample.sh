@@ -5,6 +5,10 @@
 # dev|test|prod
 export ENVIRONMENT=dev
 
+# Which proxy variant this host runs (used by infra/systemd/lipas.service):
+# proxy-local (laptop) | proxy-dev (lipas-dev) | proxy (lipas-prod)
+export LIPAS_PROXY_SERVICE=proxy-local
+
 # Backend
 export AUTH_KEY=***FILL_THIS***
 export ADMIN_PASSWORD=***FILL_THIS***

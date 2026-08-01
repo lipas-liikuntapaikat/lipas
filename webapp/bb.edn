@@ -8,32 +8,11 @@
                  (def deploy-config
                    {:paths {:backend-jar           "target/backend.jar"
                             :frontend-manifest     "resources/public/js/compiled/manifest.edn"
-                            :frontend-index        "resources/public/index.html"
-                            :frontend-compiled-dir "resources/public/js/compiled"
-                            :remote-backend        "/var/lipas/webapp/backend.jar"
-                            :remote-public         "/var/lipas/webapp/resources/public"}
+                            :frontend-compiled-dir "resources/public/js/compiled"}
                     :hosts {:dev "lipas-dev"
                             :prod "lipas-prod"}
                     :urls {:dev "https://lipas-dev.cc.jyu.fi"
                            :prod "https://lipas.fi"}})
-
-                 (defn frontend-module-files
-                   "Reads manifest.edn (written by shadow-cljs on every build) and
-                    returns all module bundle filenames — with code splitting the
-                    lazy modules must reach the server too, not just :app. Exits
-                    with an error message if the manifest is missing or empty."
-                   []
-                   (let [path (get-in deploy-config [:paths :frontend-manifest])
-                         f    (java.io.File. path)]
-                     (when-not (.exists f)
-                       (println (str "❌ Frontend manifest not found at " path
-                                     " — did the build run?"))
-                       (System/exit 1))
-                     (let [names (mapv :output-name (edn/read-string (slurp f)))]
-                       (when (empty? names)
-                         (println "❌ No modules found in manifest.edn")
-                         (System/exit 1))
-                       names)))
 
                  ;; === LINT & FORMAT ===
                  ;;
@@ -266,150 +245,44 @@
                              (do (println "Usage: bb clean-ns <file> [<file> ...]")
                                  (System/exit 1))))}
 
-         ;; === NEW DEPLOYMENT TASKS ===
-
-         ;; Core deployment function
-         -do-deploy {:doc "Internal deployment worker - do not call directly"
-                     :task (let [[env deploy-type] *command-line-args*
-                                 _ (when (or (not env) (not deploy-type))
-                                     (do (println "❌ Usage: bb -do-deploy <env> <type>")
-                                         (System/exit 1)))
-                                 env-key (keyword env)
-                                 host (get-in deploy-config [:hosts env-key])
-                                 _ (when-not host
-                                     (do (println (str "❌ Unknown environment: " env))
-                                         (System/exit 1)))
-                                 deploy-both? (= deploy-type "both")
-                                 deploy-backend? (or deploy-both? (= deploy-type "backend"))
-                                 deploy-frontend? (or deploy-both? (= deploy-type "frontend"))
-                                 type-str (case deploy-type
-                                            "both" "backend + frontend"
-                                            "backend" "backend only"
-                                            "frontend" "frontend only")]
-
-                             (println (str "🚀 Starting " type-str " deployment to " env " environment..."))
-
-                             ;; Build backend if needed
-                             (when deploy-backend?
-                               (println "🏗️  Building backend uberjar...")
-                               (shell "bb uberjar")
-                               (when-not (.exists (java.io.File. (get-in deploy-config [:paths :backend-jar])))
-                                 (println (str "❌ Backend jar not found at " (get-in deploy-config [:paths :backend-jar])))
-                                 (System/exit 1)))
-
-                             ;; Build frontend if needed
-                             (when deploy-frontend?
-                               (println "🏗️  Building frontend release bundle...")
-                               (shell "npm run build"))
-
-                             ;; Resolve module bundles from manifest.edn (post-build)
-                             (let [modules       (when deploy-frontend? (frontend-module-files))
-                                   compiled-dir  (get-in deploy-config [:paths :frontend-compiled-dir])
-                                   index-local   (get-in deploy-config [:paths :frontend-index])
-                                   remote-public (get-in deploy-config [:paths :remote-public])
-                                   ;; Each bundle plus its precompressed .br/.gz siblings
-                                   ;; (written by scripts/precompress.mjs during npm run build).
-                                   ;; nginx falls back to on-the-fly compression when a sibling
-                                   ;; is missing, so warn but proceed.
-                                   frontend-files
-                                   (when deploy-frontend?
-                                     (vec (mapcat
-                                            (fn [m]
-                                              (let [f (str compiled-dir "/" m)]
-                                                (when-not (.exists (java.io.File. f))
-                                                  (println (str "❌ Frontend bundle not found at " f))
-                                                  (System/exit 1))
-                                                (into [f]
-                                                      (for [ext [".br" ".gz"]
-                                                            :let [c (str f ext)]
-                                                            :when (if (.exists (java.io.File. c))
-                                                                    true
-                                                                    (do (println (str "⚠️  " c " missing — nginx will compress on the fly"))
-                                                                        false))]
-                                                        c))))
-                                            modules)))]
-
-                               (when deploy-frontend?
-                                 (when-not (.exists (java.io.File. index-local))
-                                   (println (str "❌ Frontend index.html not found at " index-local
-                                                 " — build hook should have rendered it"))
-                                   (System/exit 1)))
-
-                               ;; Upload files
-                               (println (str "📦 Uploading " type-str " to " host "..."))
-                               (when deploy-backend?
-                                 (shell (str "scp " (get-in deploy-config [:paths :backend-jar]) " " host ":/tmp/")))
-                               (when deploy-frontend?
-                                 ;; Upload every module bundle (+ compressed siblings) and the
-                                 ;; rendered index.html. Bundle filenames are content-addressed
-                                 ;; so they never collide with previous deploys; index.html is
-                                 ;; rewritten in place.
-                                 (shell (str "scp " (str/join " " frontend-files) " " index-local " " host ":/tmp/")))
-
-                               ;; Deploy files and restart if needed. The script runs remotely
-                               ;; as root via stdin, which avoids nested ssh/sudo quoting.
-                               (println (str "🔄 Deploying " type-str " on " host "..."))
-                               (let [basename (fn [p] (.getName (java.io.File. p)))
-                                     script
-                                     (str "set -eo pipefail\n"
-                                          (when deploy-backend?
-                                            (str "cp /tmp/backend.jar " (get-in deploy-config [:paths :remote-backend]) "\n"))
-                                          ;; Order matters: install the new bundles BEFORE rewriting
-                                          ;; index.html so users never see an index.html that points
-                                          ;; to a missing bundle.
-                                          (when deploy-frontend?
-                                            (str (str/join (map (fn [f] (str "cp /tmp/" (basename f) " " remote-public "/js/compiled/\n"))
-                                                                frontend-files))
-                                                 "cp /tmp/index.html " remote-public "/index.html\n"))
-                                          (when deploy-backend?
-                                            (str "source /var/lipas/.env.sh\n"
-                                                 "docker compose -f /var/lipas/docker-compose.yml rm -sf backend worker\n"
-                                                 "docker compose -f /var/lipas/docker-compose.yml up -d backend worker\n"
-                                                 ;; The proxy must be recreated after the backend so nginx
-                                                 ;; re-resolves the new backend container IP. --build picks
-                                                 ;; up nginx/Dockerfile changes (brotli modules ship in the
-                                                 ;; image) and is a cached no-op otherwise. Hosts run
-                                                 ;; different proxy variants, so detect the running one.
-                                                 "PROXY_SVC=$(docker compose -f /var/lipas/docker-compose.yml ps --services | grep -E '^proxy(-dev|-local)?$' || true)\n"
-                                                 "if [ -n \"$PROXY_SVC\" ]; then\n"
-                                                 "  docker compose -f /var/lipas/docker-compose.yml up -d --no-deps --build --force-recreate \"$PROXY_SVC\"\n"
-                                                 "else\n"
-                                                 "  echo 'no running proxy service found; skipping proxy restart'\n"
-                                                 "fi\n")))]
-
-                                 (shell {:in script} "ssh" host "sudo bash -s")))
-
-                             (println (str "✅ " (str/capitalize type-str) " deployment to " env " completed successfully!"))
-                             (println (str "🌐 " (get-in deploy-config [:urls env-key]))))}
-
-         ;; Base deployment tasks (require environment argument)
-         deploy {:doc "Deploy both backend and frontend to specified environment (dev|prod)"
-                 :task (shell "bb" "-do-deploy" (first *command-line-args*) "both")}
-
-         deploy-backend {:doc "Deploy only backend to specified environment (dev|prod)"
-                         :task (shell "bb" "-do-deploy" (first *command-line-args*) "backend")}
-
-         deploy-frontend {:doc "Deploy only frontend to specified environment (dev|prod)"
-                          :task (shell "bb" "-do-deploy" (first *command-line-args*) "frontend")}
-
-         ;; Convenience tasks (no arguments needed)
-         deploy-dev {:doc "Deploy both backend and frontend to lipas-dev"
-                     :task (shell "bb" "-do-deploy" "dev" "both")}
-
-         deploy-prod {:doc "Deploy both backend and frontend to lipas-prod"
-                      :task (shell "bb" "-do-deploy" "prod" "both")}
-
-         deploy-backend-dev {:doc "Deploy only backend to lipas-dev"
-                             :task (shell "bb" "-do-deploy" "dev" "backend")}
-
-         deploy-backend-prod {:doc "Deploy only backend to lipas-prod"
-                              :task (shell "bb" "-do-deploy" "prod" "backend")}
-
-         deploy-frontend-dev {:doc "Deploy only frontend to lipas-dev"
-                              :task (shell "bb" "-do-deploy" "dev" "frontend")}
-
-         deploy-frontend-prod {:doc "Deploy only frontend to lipas-prod"
-                               :task (shell "bb" "-do-deploy" "prod" "frontend")}
+         ;; === DEPLOYMENT (break-glass only) ===
+         ;;
+         ;; The normal deploy doors are GitHub Actions: the `lipas-dev` PR
+         ;; label for dev and the manually dispatched "Deploy to lipas-prod"
+         ;; workflow for prod (see docs/ops.md). This task is the fallback for
+         ;; when GitHub or a self-hosted runner is down. It builds the LOCAL
+         ;; WORKING TREE and installs it over ssh with the same
+         ;; scripts/deploy/install.sh the workflows use. The server-side
+         ;; /var/lipas checkout is left untouched (no --sha) — only the
+         ;; artifacts change.
+         deploy {:doc "BREAK-GLASS: build the local working tree and deploy it to <dev|prod> over ssh"
+                 :task (let [[env] *command-line-args*
+                             host (get-in deploy-config [:hosts (keyword env)])
+                             _ (when-not host
+                                 (println "❌ Usage: bb deploy <dev|prod>")
+                                 (System/exit 1))
+                             describe (-> (shell {:out :string} "git describe --always --dirty")
+                                          :out
+                                          str/trim)]
+                         (println (str "⚠️  Break-glass deploy of the LOCAL WORKING TREE (" describe ") to " env))
+                         (println "🏗️  Building backend uberjar...")
+                         (shell "bb uberjar")
+                         (println "🏗️  Building frontend release bundle...")
+                         (shell "npm run build")
+                         ;; Archive order is load-bearing: bundles before
+                         ;; index.html — see scripts/deploy/install.sh.
+                         (println "📦 Packaging frontend bundle...")
+                         (shell "tar -czf target/frontend-public.tar.gz -C resources/public js/compiled index.html")
+                         (println (str "📦 Uploading artifacts to " host "..."))
+                         (shell (str "ssh " host " mkdir -p /tmp/lipas-release"))
+                         (shell (str "scp target/backend.jar target/frontend-public.tar.gz ../scripts/deploy/install.sh " host ":/tmp/lipas-release/"))
+                         (println (str "🔄 Installing on " host "..."))
+                         (shell "ssh" host "sudo" "bash" "/tmp/lipas-release/install.sh"
+                                "--artifacts" "/tmp/lipas-release"
+                                "--door" "laptop"
+                                "--label" describe)
+                         (println (str "✅ Break-glass deployment to " env " completed"))
+                         (println (str "🌐 " (get-in deploy-config [:urls (keyword env)]))))}
 
          ;; Database Migration Tasks
          db-migrate {:doc "Run all pending database migrations"
@@ -478,21 +351,6 @@
                                        (println "❌ Uberjar not found. Run 'bb uberjar' first."))))}
 
          ;; Docker Compose Tasks
-         docker-build {:doc "Build backend uberjar in Docker"
-                       :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-build")}
-
-         docker-migrate {:doc "Run database migrations in Docker"
-                         :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-migrate")}
-
-         docker-test {:doc "Run tests in Docker"
-                      :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-tests")}
-
-         docker-seed {:doc "Seed database in Docker"
-                      :task (shell "docker-compose -f ../docker-compose.yml run --rm backend-seed")}
-
-         docker-dev {:doc "Start backend in development mode"
-                     :task (shell "docker-compose -f ../docker-compose.yml up backend-dev")}
-
          ;; Test Tasks (using Kaocha - captures output, only shows on failure)
          test {:doc "Run all tests"
                :task (shell "clojure -M:dev:test")}
