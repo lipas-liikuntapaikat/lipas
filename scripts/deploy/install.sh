@@ -132,20 +132,46 @@ if $INSTALL_BACKEND; then
   PROXY_SVC=$(docker compose ps --services | grep -E '^proxy(-dev|-local)?$' || true)
   if [[ -n "$PROXY_SVC" ]]; then
     docker compose up -d --no-deps --build --force-recreate "$PROXY_SVC"
+    # Verify end-to-end health through nginx. Context matters: break-glass
+    # runs this script on the host, where the proxy's published 443 is on
+    # localhost — but the GitHub doors run it inside the runner container,
+    # where the host loopback is unreachable. There, exec the check inside
+    # the proxy container itself (its own localhost:443 IS nginx). If the
+    # proxy image carries no curl, degrade to a warning: backend health was
+    # already gated by its container healthcheck via `up --wait`.
     echo "Verifying end-to-end health through the proxy..."
-    HEALTHY=false
+    HEALTH=fail
     for _ in $(seq 1 24); do
-      if curl -skf https://localhost/api/health >/dev/null; then
-        HEALTHY=true
+      if curl -skf --max-time 5 https://localhost/api/health >/dev/null 2>&1; then
+        HEALTH=ok
+        break
+      fi
+      set +e
+      docker compose exec -T "$PROXY_SVC" \
+        curl -skf --max-time 5 https://localhost/api/health >/dev/null 2>&1
+      rc=$?
+      set -e
+      if [[ $rc -eq 0 ]]; then
+        HEALTH=ok
+        break
+      fi
+      if [[ $rc -eq 126 || $rc -eq 127 ]]; then
+        HEALTH=nocheck
         break
       fi
       sleep 5
     done
-    if ! $HEALTHY; then
-      echo "ERROR: https://localhost/api/health not responding within 120s" >&2
-      docker compose logs --tail 50 "$PROXY_SVC" >&2
-      exit 1
-    fi
+    case $HEALTH in
+      ok)
+        echo "End-to-end health check passed." ;;
+      nocheck)
+        echo "WARNING: no curl available in this context or the proxy image —" \
+             "skipping the proxy-leg check (backend health already verified)" ;;
+      fail)
+        echo "ERROR: /api/health not responding through the proxy within 120s" >&2
+        docker compose logs --tail 50 "$PROXY_SVC" >&2
+        exit 1 ;;
+    esac
   else
     echo "No running proxy service found; skipping proxy restart"
   fi
