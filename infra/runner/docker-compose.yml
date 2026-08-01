@@ -1,0 +1,41 @@
+# GitHub Actions self-hosted runner for LIPAS deploys.
+#
+# This is deliberately its OWN compose project (deployed to /opt/lipas-runner,
+# outside /var/lipas) — NEVER merge it into /var/lipas/docker-compose.yml:
+# a deploy that recreates that stack would kill the runner mid-job, and a
+# repo checkout must not be able to modify runner infrastructure.
+#
+# Provisioning, GitHub-side configuration and maintenance: see README.md.
+
+services:
+  runner:
+    # Pin an exact version in .env and bump deliberately — in-place
+    # self-updates are disabled below because they would be lost on
+    # container recreation anyway.
+    image: myoung34/github-runner:${RUNNER_IMAGE_TAG:?pin in .env}
+    restart: unless-stopped
+    environment:
+      REPO_URL: https://github.com/lipas-liikuntapaikat/lipas
+      RUNNER_SCOPE: repo
+      RUNNER_NAME: ${RUNNER_NAME:?set in .env}    # e.g. lipas-prod-1
+      LABELS: ${RUNNER_LABELS:?set in .env}       # e.g. lipas-prod
+      # One-time registration token (repo → Settings → Actions → Runners →
+      # New self-hosted runner). Read on first boot; the persisted state
+      # volume below carries the registration afterwards, so no long-lived
+      # PAT ever lives on this host.
+      RUNNER_TOKEN: ${RUNNER_TOKEN:-}
+      CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner-state
+      DISABLE_AUTO_UPDATE: "true"
+    volumes:
+      - runner-state:/runner-state
+      - runner-work:/actions-runner/_work
+      # The docker socket is root-equivalent on the host BY DESIGN — the
+      # runner's whole job is to administer the deployment. The security
+      # boundary is upstream: dispatch-only workflows, environment approval
+      # and the runner group (see README.md).
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lipas:/var/lipas
+
+volumes:
+  runner-state:
+  runner-work:
