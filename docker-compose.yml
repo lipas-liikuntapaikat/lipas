@@ -1,3 +1,14 @@
+# Service profiles:
+#   (none)  — runtime services + jar-based one-offs; this is all the servers
+#             ever run. Runtime code comes from the installed artifacts
+#             (webapp/backend.jar, resources/public/) — servers never compile
+#             from source. See scripts/deploy/install.sh.
+#   dev     — local-development-only services (source-based, watch/test/seed)
+#   build   — dockerized build steps (used by local dev; CI builds on
+#             GitHub-hosted runners via .github/actions/build-artifacts)
+# Explicitly targeting a profiled service (docker compose run/up <name>)
+# activates its profile automatically — no --profile flag needed.
+
 services:
 
   proxy-base:
@@ -56,6 +67,7 @@ services:
   proxy-local:
     extends:
       service: proxy-base
+    profiles: ["dev"]
     ports:
       - '80:80'
       - '443:443'
@@ -209,6 +221,7 @@ services:
   backend-dev:
     extends:
       service: backend-base
+    profiles: ["dev"]
     command: clojure -M:dev -m lipas.backend.system
     hostname: backend
     ports:
@@ -225,11 +238,22 @@ services:
   backend-build:
     extends:
       service: backend-base
+    profiles: ["build"]
     command: clojure -T:build uber
 
+  # Runs from the installed uberjar — servers never compile from source.
+  # Fresh dev setups (no jar yet) use backend-migrate-dev below.
   backend-migrate:
     extends:
       service: backend-base
+    command: java -jar backend.jar -m lipas.migrate-db migrate
+    links:
+      - postgres
+
+  backend-migrate-dev:
+    extends:
+      service: backend-base
+    profiles: ["dev"]
     command: clojure -M:migrate migrate
     links:
       - postgres
@@ -237,6 +261,7 @@ services:
   backend-tests:
     extends:
       service: backend-base
+    profiles: ["dev"]
     command: clojure -M:dev:test
     links:
       - postgres
@@ -245,6 +270,7 @@ services:
   backend-seed:
     extends:
       service: backend-base
+    profiles: ["dev"]
     command: clojure -M -m lipas.seed
     links:
       - postgres
@@ -255,7 +281,7 @@ services:
     logging:
       options:
         tag: "maintenance"
-    entrypoint: clojure -M -m lipas.maintenance
+    entrypoint: java -jar backend.jar -m lipas.maintenance
     links:
       - postgres
 
@@ -265,7 +291,7 @@ services:
     logging:
       options:
         tag: "search-indexer"
-    entrypoint: clojure -M -m lipas.search-indexer
+    entrypoint: java -jar backend.jar -m lipas.search-indexer
     links:
       - postgres
       - elasticsearch
@@ -276,13 +302,14 @@ services:
   backend-refresh-wfs:
     extends:
       service: backend-base
-    entrypoint: clojure -M -m lipas.wfs.core
+    entrypoint: java -jar backend.jar -m lipas.wfs.core
     links:
       - postgres
 
   worker-local:
     extends:
       service: backend-base
+    profiles: ["dev"]
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -329,6 +356,7 @@ services:
   frontend-npm-deps:
     extends:
       service: node-base
+    profiles: ["build"]
     command: npm install --quiet
 
   # Writes .br/.gz siblings next to the release bundles for nginx
@@ -336,11 +364,13 @@ services:
   frontend-precompress:
     extends:
       service: node-base
+    profiles: ["build"]
     command: node scripts/precompress.mjs
 
   frontend-build:
     extends:
       service: backend-base
+    profiles: ["build"]
     # :frontend alias carries shadow-cljs & cljs deps; this direct clojure
     # invocation bypasses the npm launcher, so shadow-cljs.edn's :deps
     # aliases don't apply here
@@ -488,6 +518,7 @@ services:
       - "5003:5000"
 
   mailhog:
+    profiles: ["dev"]
     image: mailhog/mailhog
     logging:
       driver: "gelf"
