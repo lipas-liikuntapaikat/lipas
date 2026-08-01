@@ -1,0 +1,113 @@
+name: Build LIPAS release artifacts
+description: >
+  Builds the backend uberjar and the frontend release bundle (with rendered
+  index.html and precompressed .br/.gz siblings) exactly one way, whether the
+  caller is the CI verification build or a deploy workflow. Optionally uploads
+  backend-jar and frontend-public as workflow artifacts.
+
+inputs:
+  upload:
+    description: Upload backend-jar and frontend-public as workflow artifacts
+    required: false
+    default: 'false'
+
+outputs:
+  sha:
+    description: Exact commit the artifacts were built from
+    value: ${{ steps.sha.outputs.sha }}
+
+runs:
+  using: composite
+  steps:
+    - name: Record built commit
+      id: sha
+      shell: bash
+      run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Install java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '21'
+
+    - name: Install clojure tools
+      uses: DeLaGuardo/setup-clojure@12.5
+      with:
+        cli: latest
+        bb: latest
+
+    - name: Cache clojure dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.m2/repository
+          ~/.gitlibs
+          ~/.deps.clj
+        key: cljdeps-${{ hashFiles('webapp/deps.edn', 'webapp/bb.edn') }}
+        restore-keys: cljdeps-
+
+    - name: Install node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: npm
+        cache-dependency-path: webapp/package-lock.json
+
+    - name: Build backend jar
+      shell: bash
+      working-directory: webapp
+      run: clojure -T:build uber
+
+    - name: Install npm dependencies
+      shell: bash
+      working-directory: webapp
+      run: npm ci
+
+    # :frontend alias carries shadow-cljs & cljs deps; this direct clojure
+    # invocation bypasses the npm launcher, so shadow-cljs.edn's :deps
+    # aliases don't apply here. The shadow build hook renders index.html.
+    - name: Build frontend
+      shell: bash
+      working-directory: webapp
+      run: clojure -M:frontend:dev -m shadow.cljs.devtools.cli release app
+
+    # Writes .br/.gz siblings next to the release bundles for nginx
+    # brotli_static/gzip_static.
+    - name: Precompress frontend assets
+      shell: bash
+      working-directory: webapp
+      run: node scripts/precompress.mjs
+
+    # Code splitting's failure mode is silent: a wrong static require
+    # hoists a lazy module into :app with no compile error. Guard the
+    # base-module size budget (see webapp/docs/wip/bundle-splitting.md).
+    - name: Check bundle size budget
+      shell: bash
+      working-directory: webapp
+      run: bb bundle-size-check
+
+    # Archive order is load-bearing: bundles before index.html, so the
+    # installer's extraction never leaves a live index.html pointing at a
+    # bundle that is not on disk yet.
+    - name: Package frontend bundle
+      shell: bash
+      working-directory: webapp
+      run: tar -czf target/frontend-public.tar.gz -C resources/public js/compiled index.html
+
+    - name: Upload backend jar
+      if: inputs.upload == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-jar
+        path: webapp/target/backend.jar
+        retention-days: 7
+        if-no-files-found: error
+
+    - name: Upload frontend bundle
+      if: inputs.upload == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-public
+        path: webapp/target/frontend-public.tar.gz
+        retention-days: 7
+        if-no-files-found: error
