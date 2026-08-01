@@ -33,6 +33,10 @@ services:
       # PAT ever lives on this host.
       RUNNER_TOKEN: ${RUNNER_TOKEN:-}
       CONFIGURED_ACTIONS_RUNNER_FILES_DIR: /runner-state
+      # Required with persisted state: the entrypoint refuses to start the
+      # listener otherwise, and without it a container exit deregisters the
+      # runner server-side while keeping local state — a wedged crash-loop.
+      DISABLE_AUTOMATIC_DEREGISTRATION: "true"
       DISABLE_AUTO_UPDATE: "true"
     volumes:
       - runner-state:/runner-state
