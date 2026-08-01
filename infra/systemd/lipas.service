@@ -9,9 +9,12 @@
 # crash-recovery belongs to docker's own restart policies
 # (restart: unless-stopped on the runtime services in docker-compose.yml).
 #
-# Per host, set the proxy variant in ExecStart:
-#   lipas-dev:  proxy-dev
-#   lipas-prod: proxy
+# The only per-host difference is which proxy variant runs, and that comes
+# from /var/lipas/.env.sh — the canonical per-host config file:
+#   lipas-dev:  export LIPAS_PROXY_SERVICE=proxy-dev
+#   lipas-prod: export LIPAS_PROXY_SERVICE=proxy
+# Startup fails loudly (see journalctl -u lipas) if the variable is unset,
+# rather than guessing and starting the wrong proxy.
 # The proxy's links transitively start backend, mapproxy, logstash, kibana
 # and geoserver; backend and worker pull in postgres, elasticsearch and the
 # osrm services.
@@ -31,7 +34,7 @@ RemainAfterExit=yes
 WorkingDirectory=/var/lipas
 # .env.sh uses `export` lines, which systemd's EnvironmentFile= cannot
 # parse — hence bash -c with source.
-ExecStart=/bin/bash -c 'source /var/lipas/.env.sh && exec docker compose up -d --wait proxy-dev worker'
+ExecStart=/bin/bash -c 'source /var/lipas/.env.sh && exec docker compose up -d --wait "${LIPAS_PROXY_SERVICE:?not set in /var/lipas/.env.sh}" worker'
 ExecStop=/bin/bash -c 'source /var/lipas/.env.sh && exec docker compose stop'
 # Cold boot waits for elasticsearch + postgres + backend healthchecks.
 TimeoutStartSec=600
