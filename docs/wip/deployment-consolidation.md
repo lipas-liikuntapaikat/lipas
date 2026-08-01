@@ -140,10 +140,9 @@ nine tasks into this one, or keep `deploy-prod` as an alias):
 
 ## Prod runner design
 
-Note: the dev runner's setup is currently undocumented — it exists only as
-state on the dev host (container, runs as root, `/var/lipas` owned by
-`lipas-ci`). The prod runner below is defined as committed code; retrofit dev
-to the same layout afterwards.
+Both runners are defined as committed code under `infra/runner/` (the dev
+host was migrated to this layout on 2026-08-01; prod is provisioned the same
+way).
 
 ### Placement: a container, but NOT in the app compose stack
 

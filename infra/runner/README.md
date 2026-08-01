@@ -53,27 +53,12 @@ Then optionally blank `RUNNER_TOKEN` in `.env` — registration lives in the
   returns; for urgent fixes use the break-glass door
   (`cd webapp && bb deploy prod` over VPN).
 
-## Migrating the hand-provisioned lipas-dev runner
+## Deployed runners
 
-lipas-dev runs a trial-and-error-era runner (`gha-runner-lipas-ci`, compose
-project under `/home/lipas-ci/runner`) whose compose file carries an inline
-PAT (`ACCESS_TOKEN`) and registration token **world-readable on a
-shared-admin host**. Replace it:
+| Host | RUNNER_NAME | RUNNER_LABELS | Targeted by |
+|------|-------------|---------------|-------------|
+| lipas-dev | `lipas-dev-1` | `lipas-dev` | deploy-dev.yml, runner-heartbeat.yml |
+| lipas-prod | `lipas-prod-1` | `lipas-prod` | deploy-prod.yml, runner-heartbeat.yml |
 
-1. Provision the new runner per the section above
-   (`RUNNER_NAME=lipas-dev-1`, `RUNNER_LABELS=lipas-dev`); verify it shows
-   **Idle** on GitHub alongside the old `lipas-ci` runner.
-2. Retire the old one — from `/home/lipas-ci/runner`:
-   `docker compose down -v` (also drops its state volume), then delete the
-   directory (this is what removes the PAT from disk).
-3. Remove the old `lipas-ci` runner entry in repo → Settings → Actions →
-   Runners if it lingers.
-4. **Revoke the PAT** the old setup used (github.com → Settings → Developer
-   settings → tokens) — treat it as exposed; it has been readable by every
-   local user for months.
-
-Also on lipas-dev: two abandoned *native* runner installs predate the
-container era — `/opt/actions-runner` (with a still-enabled
-`actions.runner.…lipas-dev2.service` systemd unit) and
-`/home/lipas/actions-runner`. Neither is registered on GitHub anymore:
-`systemctl disable` the unit, remove its file, `rm -rf` both directories.
+Both live at `/opt/lipas-runner`, provisioned exactly per the section above.
+No other runner installations should exist on these hosts.
