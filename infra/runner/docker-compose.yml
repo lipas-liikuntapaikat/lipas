@@ -7,6 +7,10 @@
 #
 # Provisioning, GitHub-side configuration and maintenance: see README.md.
 
+# Explicit project name → deterministic volume names (lipas-runner_runner-state)
+# regardless of the directory the file lands in.
+name: lipas-runner
+
 services:
   runner:
     # Pin an exact version in .env and bump deliberately — in-place
@@ -14,6 +18,10 @@ services:
     # container recreation anyway.
     image: myoung34/github-runner:${RUNNER_IMAGE_TAG:?pin in .env}
     restart: unless-stopped
+    # The JYU hosts run RHEL with SELinux enforcing; without this the
+    # container is denied access to the mounted docker socket.
+    security_opt:
+      - label=disable
     environment:
       REPO_URL: https://github.com/lipas-liikuntapaikat/lipas
       RUNNER_SCOPE: repo

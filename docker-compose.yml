@@ -16,6 +16,7 @@ services:
     # Built on each host, not pulled: docker compose build proxy|proxy-dev|proxy-local
     build: ./nginx
     image: lipas/proxy
+    restart: unless-stopped
     environment:
       DIGITRANSIT_SUBSCRIPTION_KEY:
     ports:
@@ -92,6 +93,7 @@ services:
   mapproxy:
     image: ghcr.io/mapproxy/mapproxy/mapproxy:1.16.0-nginx
     platform: linux/amd64  # Official image only supports amd64
+    restart: unless-stopped
     hostname: mapproxy
     logging:
       driver: "gelf"
@@ -184,6 +186,7 @@ services:
   backend:
     extends:
       service: backend-base
+    restart: unless-stopped
     command: java -Duser.timezone=UTC -Xmx2G -jar backend.jar -m lipas.backend.system server
     healthcheck:
       test: ["CMD-SHELL", "java healthcheck.java http://localhost:8091/api/health"]
@@ -378,6 +381,7 @@ services:
 
   postgres:
     image: postgis/postgis:17-3.5
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER"]
       interval: 10s
@@ -404,6 +408,7 @@ services:
       context: ./elasticsearch
       dockerfile: Dockerfile
     image: lipas/elasticsearch:8.19.9-icu
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
@@ -442,6 +447,7 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash:8.19.9
+    restart: unless-stopped
     ports:
       - "5000:5000/udp"
     environment:
@@ -453,6 +459,7 @@ services:
 
   kibana:
     image: docker.elastic.co/kibana/kibana:8.19.9
+    restart: unless-stopped
     ports:
       - "5601:5601"
     environment:
@@ -464,6 +471,7 @@ services:
 
   geoserver:
     image: docker.osgeo.org/geoserver:2.26.2
+    restart: unless-stopped
     logging:
       driver: "gelf"
       options:

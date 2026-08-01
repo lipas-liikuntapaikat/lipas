@@ -1,0 +1,40 @@
+# LIPAS application stack — boot-time bring-up and graceful shutdown ONLY.
+#
+# Replaces the older attached-mode unit ('docker compose up' in the
+# foreground with ExecStop=down): attached mode kept a root compose process
+# entangled with deploy-time container recreates, and 'down' on unit stop
+# REMOVED every container in the project — postgres and elasticsearch
+# included. Detached oneshot + RemainAfterExit means systemd starts the
+# stack at boot and stops (not removes) it at shutdown; runtime
+# crash-recovery belongs to docker's own restart policies
+# (restart: unless-stopped on the runtime services in docker-compose.yml).
+#
+# Per host, set the proxy variant in ExecStart:
+#   lipas-dev:  proxy-dev
+#   lipas-prod: proxy
+# The proxy's links transitively start backend, mapproxy, logstash, kibana
+# and geoserver; backend and worker pull in postgres, elasticsearch and the
+# osrm services.
+#
+# Install: cp to /etc/systemd/system/lipas.service &&
+#          systemctl daemon-reload && systemctl enable lipas
+
+[Unit]
+Description=LIPAS application stack
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/var/lipas
+# .env.sh uses `export` lines, which systemd's EnvironmentFile= cannot
+# parse — hence bash -c with source.
+ExecStart=/bin/bash -c 'source /var/lipas/.env.sh && exec docker compose up -d --wait proxy-dev worker'
+ExecStop=/bin/bash -c 'source /var/lipas/.env.sh && exec docker compose stop'
+# Cold boot waits for elasticsearch + postgres + backend healthchecks.
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
