@@ -353,17 +353,20 @@
                                  (.plus 5 java.time.temporal.ChronoUnit/YEARS)
                                  (.toInstant))]
            (.isAfter now created-at+5y))
-         (let [last-event (->> history :events
-                               (remove (comp non-activity-events :event))
-                               (map :event-date)
-                               (sort utils/reverse-cmp)
-                               first)]
-           (or (nil? last-event)
-               (let [last-event+5y (-> (java.time.Instant/parse last-event)
-                                       (.atZone (java.time.ZoneId/of "UTC"))
-                                       (.plus 5 java.time.temporal.ChronoUnit/YEARS)
-                                       (.toInstant))]
-                 (.isAfter now last-event+5y)))))))
+         (let [activity-dates (->> history :events
+                                   (remove (comp non-activity-events :event))
+                                   (map :event-date))]
+           ;; An activity event with no date is unprovable inactivity - fail
+           ;; closed, consistent with unparseable dates (which throw and get
+           ;; the user skipped at the batch level).
+           (and (every? some? activity-dates)
+                (let [last-event (first (sort utils/reverse-cmp activity-dates))]
+                  (or (nil? last-event)
+                      (let [last-event+5y (-> (java.time.Instant/parse last-event)
+                                              (.atZone (java.time.ZoneId/of "UTC"))
+                                              (.plus 5 java.time.temporal.ChronoUnit/YEARS)
+                                              (.toInstant))]
+                        (.isAfter now last-event+5y)))))))))
 
 (def gdpr-removals-default-limit
   "Max removals in one process-gdpr-removals! run. GDPR removal is

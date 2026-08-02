@@ -1,5 +1,8 @@
 (ns lipas.backend.business-logic-test
   (:require [clojure.test :as t :refer [deftest is testing]]
+            [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as prop]
             [lipas.backend.core :as core]
             [lipas.roles :as roles]))
 
@@ -67,6 +70,163 @@
         (is (false? (core/gdpr-remove?
                       now
                       (assoc-in user [:history :events 0 :event] "login"))))))))
+
+;;; --- gdpr-remove? generative spec -------------------------------------------
+;;;
+;;; The predicate decides irreversible bulk anonymization, so it gets a
+;;; property-based spec on top of the examples above. Users are built from
+;;; blocks that are KNOWN recent or ancient by construction: every generated
+;;; timestamp stays a 40-day guard band away from the 5-year boundary, so no
+;;; property depends on leap-day arithmetic and the expected outcome needs no
+;;; oracle. Exact boundary semantics are pinned by gdpr-boundary-semantics-test.
+
+(def ^:private spec-now (java.time.Instant/parse "2026-08-02T00:00:00Z"))
+
+(def ^:private five-years-days (* 5 365))
+(def ^:private margin-days 40)
+
+(defn- days-ago-ts [days]
+  (java.sql.Timestamp/from (.minus spec-now days java.time.temporal.ChronoUnit/DAYS)))
+
+(defn- days-ago-str [days]
+  (str (.minus spec-now days java.time.temporal.ChronoUnit/DAYS)))
+
+(def ^:private gen-recent-days
+  "Clearly within the 5-year window."
+  (gen/choose 0 (- five-years-days margin-days)))
+
+(def ^:private gen-ancient-days
+  "Clearly beyond the 5-year window."
+  (gen/choose (+ five-years-days margin-days) (* 30 365)))
+
+(def ^:private gen-owner-event-type
+  ;; Alphanumeric strings can't collide with the dashed names in
+  ;; core/non-activity-events, so anything generated here must count as the
+  ;; owner's own activity.
+  (gen/one-of [(gen/elements ["login" "password-reset" "permissions-updated"
+                              "status-changed" "magic-link-sent"])
+               gen/string-alphanumeric]))
+
+(def ^:private gen-impersonation-event-type
+  (gen/elements (vec core/non-activity-events)))
+
+(defn- event [type days] {:event type :event-date (days-ago-str days)})
+
+(def ^:private gen-ancient-owner-events
+  (gen/vector (gen/fmap (fn [[t d]] (event t d))
+                        (gen/tuple gen-owner-event-type gen-ancient-days))
+              0 5))
+
+(def ^:private gen-impersonation-events
+  "Impersonation events at ANY age, sometimes without a date at all - none
+  of it may count as the owner's activity."
+  (gen/vector (gen/fmap (fn [[t d dateless?]]
+                          (if dateless? {:event t} (event t d)))
+                        (gen/tuple gen-impersonation-event-type
+                                   (gen/choose 0 (* 30 365))
+                                   (gen/frequency [[4 (gen/return false)]
+                                                   [1 (gen/return true)]])))
+              0 5))
+
+(def ^:private gen-email
+  (gen/fmap #(str % "@example.com") (gen/not-empty gen/string-alphanumeric)))
+
+(def ^:private gen-dormant-user
+  "The by-construction-eligible case: created long ago, every owner event
+  long ago, impersonated whenever."
+  (gen/fmap (fn [[email created-days evts ievts]]
+              {:email email
+               :created-at (days-ago-ts created-days)
+               :history {:events (vec (concat evts ievts))}})
+            (gen/tuple gen-email gen-ancient-days
+                       gen-ancient-owner-events gen-impersonation-events)))
+
+(def ^:private gen-mixed-user
+  "Arbitrary shape: any email (incl. @lipas.fi), any event mix, sometimes no
+  created-at. For properties about the predicate's form, not its outcome."
+  (gen/fmap (fn [[email created-days nil-created? evts]]
+              {:email email
+               :created-at (when-not nil-created? (days-ago-ts created-days))
+               :history {:events evts}})
+            (gen/tuple (gen/one-of [gen-email
+                                    (gen/fmap #(str % "@lipas.fi") gen/string-alphanumeric)])
+                       (gen/one-of [gen-recent-days gen-ancient-days])
+                       (gen/frequency [[9 (gen/return false)] [1 (gen/return true)]])
+                       (gen/vector
+                         (gen/fmap (fn [[t d]] (event t d))
+                                   (gen/tuple (gen/one-of [gen-owner-event-type
+                                                           gen-impersonation-event-type])
+                                              (gen/one-of [gen-recent-days gen-ancient-days])))
+                         0 6))))
+
+(defspec dormant-user-is-eligible 300
+  ;; Completeness: the predicate must not silently become "never remove
+  ;; anyone" - and impersonation at any age must not protect the account.
+  (prop/for-all [user gen-dormant-user]
+                (true? (core/gdpr-remove? spec-now user))))
+
+(defspec any-recent-owner-activity-protects 300
+  (prop/for-all [user gen-dormant-user
+                 evt-type gen-owner-event-type
+                 days gen-recent-days]
+                (false? (core/gdpr-remove?
+                          spec-now
+                          (update-in user [:history :events] conj (event evt-type days))))))
+
+(defspec recent-account-age-protects 300
+  (prop/for-all [user gen-mixed-user
+                 days gen-recent-days]
+                (false? (core/gdpr-remove? spec-now (assoc user :created-at (days-ago-ts days))))))
+
+(defspec lipas-fi-email-always-protects 300
+  (prop/for-all [user gen-dormant-user
+                 local gen/string-alphanumeric]
+                (false? (core/gdpr-remove? spec-now (assoc user :email (str local "@lipas.fi"))))))
+
+(defspec nil-created-at-always-protects 300
+  (prop/for-all [user gen-mixed-user]
+                (false? (core/gdpr-remove? spec-now (assoc user :created-at nil)))))
+
+(defspec dateless-owner-event-fails-closed 300
+  ;; An owner event with no date is unprovable inactivity: garbage dates
+  ;; already fail closed (throw -> batch skips), a missing date must too.
+  (prop/for-all [user gen-dormant-user
+                 evt-type gen-owner-event-type]
+                (false? (core/gdpr-remove?
+                          spec-now
+                          (update-in user [:history :events] conj {:event evt-type})))))
+
+(defspec event-order-is-irrelevant 200
+  (prop/for-all [[user shuffled]
+                 (gen/let [user gen-mixed-user
+                           evts (gen/shuffle (-> user :history :events))]
+                   [user (assoc-in user [:history :events] (vec evts))])]
+                (= (core/gdpr-remove? spec-now user)
+                   (core/gdpr-remove? spec-now shuffled))))
+
+(defspec eligibility-is-monotone-in-time 300
+  ;; Once dormant long enough, waiting longer can never flip the decision
+  ;; back - the batch cap relies on this to drain a backlog across nights.
+  (prop/for-all [user gen-mixed-user
+                 extra-days (gen/choose 0 3650)]
+                (if (core/gdpr-remove? spec-now user)
+                  (core/gdpr-remove? (.plus spec-now extra-days java.time.temporal.ChronoUnit/DAYS) user)
+                  true)))
+
+(deftest gdpr-boundary-semantics-test
+  (let [now (java.time.Instant/parse "2026-08-02T00:00:00Z")
+        at-boundary (java.sql.Timestamp/from (java.time.Instant/parse "2021-08-02T00:00:00Z"))]
+    (testing "exactly 5 years of account age is not yet eligible - strictly after"
+      (is (false? (core/gdpr-remove? now {:email "a@b.fi" :created-at at-boundary :history {}}))))
+    (testing "one second past 5 years is eligible"
+      (is (true? (core/gdpr-remove? (.plusSeconds now 1)
+                                    {:email "a@b.fi" :created-at at-boundary :history {}}))))
+    (testing "an activity event exactly 5 years old still protects; a second later it doesn't"
+      (let [user {:email "a@b.fi"
+                  :created-at (java.sql.Timestamp/from (java.time.Instant/parse "2015-01-01T00:00:00Z"))
+                  :history {:events [{:event "login" :event-date "2021-08-02T00:00:00Z"}]}}]
+        (is (false? (core/gdpr-remove? now user)))
+        (is (true? (core/gdpr-remove? (.plusSeconds now 1) user)))))))
 
 ;;; --- Ownership & edit-grant authorization (core business rule) --------------
 ;;; Pure predicates, so we can enumerate the cases exhaustively (handler tests in
