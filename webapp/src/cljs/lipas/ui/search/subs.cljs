@@ -29,9 +29,21 @@
           (not= (-> default-db :filters :statuses) (:statuses filters))))))
 
 (rf/reg-sub ::statuses
+  ;; "incorrect-data" is offered as a search filter only to users who may
+  ;; edit sites in any status (admins), so they can find, inspect and
+  ;; resurrect such sites. For everyone else the status stays hidden.
   :<- [:lipas.ui.sports-sites.subs/statuses]
-  (fn [statuses _]
-    (dissoc statuses "incorrect-data")))
+  :<- [:lipas.ui.user.subs/check-privilege
+       {:city-code ::roles/any
+        :type-code ::roles/any
+        :activity ::roles/any
+        :lipas-id ::roles/any
+        :org-id ::roles/any}
+       :site/edit-any-status]
+  (fn [[statuses can-edit-any-status?] _]
+    (if can-edit-any-status?
+      statuses
+      (dissoc statuses "incorrect-data"))))
 
 (rf/reg-sub ::statuses-filter
   (fn [db _]

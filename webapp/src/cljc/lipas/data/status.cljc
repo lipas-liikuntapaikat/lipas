@@ -24,4 +24,4 @@
    "incorrect-data"
    {:fi "Väärä tieto"
     :se "Fel information"
-    :en "Out of service"}})
+    :en "Incorrect data"}})
