@@ -32,7 +32,13 @@
   (:import [java.io ByteArrayOutputStream]
            java.util.Base64))
 
-(declare gen-user prune-es!)
+(declare gen-user prune-es! current-timestamp)
+
+(defonce ^:private gen-lipas-id-seq
+  ;; Base high enough that generator-assigned ids never meet ids tests assign
+  ;; explicitly (create-test-sites! uses 1..n) or ids the DB sequence hands
+  ;; out to sites created through the API.
+  (atom 1000000))
 
 (defn fix-generated-site [site]
   ;; Strip renovation fields by default. Malli generates :renovation-years
@@ -45,7 +51,20 @@
   ;; so mg/generate randomly assigns ownership/grants, making ownership
   ;; assertions flaky by seed. A generated site is un-owned by default; tests
   ;; that care assoc explicit :owner-org-id / :edit-grants.
-  (cond-> (dissoc site :renovation-years :renovations :owner-org-id :edit-grants)
+  ;; Replace :lipas-id and :event-date, which the generator fills with
+  ;; schema-valid but logically broken values. mg/generate favors small ints,
+  ;; so two independently generated sites collide on :lipas-id (~7.5% per 5
+  ;; sites, measured) — and in the append-only model the second upsert then
+  ;; silently becomes a revision OF THE FIRST site. Random generated
+  ;; event-dates (1970..2035) then decide which document sports_site_current
+  ;; calls latest, so any code reading the "current" revision gets a coin-flip
+  ;; of the two (flaked upsert-sports-site-images-manager-test in CI with a
+  ;; 403). A sequence id and a real timestamp make generated sites actually
+  ;; independent; tests that care assoc explicit values.
+  (cond-> (-> site
+              (dissoc :renovation-years :renovations :owner-org-id :edit-grants)
+              (assoc :lipas-id (swap! gen-lipas-id-seq inc))
+              (assoc :event-date (current-timestamp)))
     (:reservations-link site) (update :reservations-link #(subs % 0 (min (count %) 200)))
     (:www site) (update :www #(subs % 0 (min (count %) 200)))
     (get-in site [:location :postal-office]) (update-in [:location :postal-office] #(subs % 0 (min (count %) 50)))))
