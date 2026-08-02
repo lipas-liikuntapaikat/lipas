@@ -83,7 +83,7 @@
   (fn [[_ lipas-id] _]
     (rf/subscribe [::latest-rev lipas-id]))
   (fn [rev _]
-    (->> rev :status #{"out-of-service-permanently"})))
+    (->> rev :status #{"out-of-service-permanently" "incorrect-data"})))
 
 (defn- valid? [sports-site]
   (let [schema sports-site-schema/sports-site
