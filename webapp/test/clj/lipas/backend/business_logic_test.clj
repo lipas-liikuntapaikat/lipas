@@ -51,7 +51,22 @@
           user {:email      "kissa@koira.fi"
                 :created-at nil
                 :history    {}}]
-      (is (false? (core/gdpr-remove? now user))))))
+      (is (false? (core/gdpr-remove? now user)))))
+
+  (testing "Impersonation events are not the owner's activity and don't reset the clock"
+    (let [now           (java.time.Instant/now)
+          long-time-ago (java.time.Instant/parse "2015-01-01T00:00:00.000Z")
+          recent        (str (.minus now 30 java.time.temporal.ChronoUnit/DAYS))
+          user          {:email      "kissa@koira.fi"
+                         :created-at (java.sql.Timestamp/from long-time-ago)
+                         :history    {:events [{:event-date recent
+                                                :event "impersonation-started"
+                                                :impersonator-id "an-admin-uuid"}]}}]
+      (is (true? (core/gdpr-remove? now user)))
+      (testing "but the owner's own recent event still protects the account"
+        (is (false? (core/gdpr-remove?
+                      now
+                      (assoc-in user [:history :events 0 :event] "login"))))))))
 
 ;;; --- Ownership & edit-grant authorization (core business rule) --------------
 ;;; Pure predicates, so we can enumerate the cases exhaustively (handler tests in

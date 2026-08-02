@@ -270,13 +270,15 @@
               (roles/check-privilege target-conformed nil :users/impersonate))
       (throw (ex-info "Impersonation not allowed for this user"
                       {:type :impersonation-not-allowed})))
-    (log/info "Impersonation started:" (:email admin) "->" (:email target))
+    (log/info "Impersonation started:" (:id admin) "->" (:id target))
+    ;; Ids only, no emails: each event lands in the OTHER party's history
+    ;; row, where GDPR removal (which only anonymizes the removed account's
+    ;; own row) could never scrub an embedded address. The id resolves to
+    ;; the — possibly since-anonymized — account when actually needed.
     (add-user-event! db target "impersonation-started"
-                     {:impersonator-id (str (:id admin))
-                      :impersonator-email (:email admin)})
+                     {:impersonator-id (str (:id admin))})
     (add-user-event! db admin "impersonated-user"
-                     {:target-id (str (:id target))
-                      :target-email (:email target)})
+                     {:target-id (str (:id target))})
     (merge (dissoc target :password)
            {:token (jwt/create-token target
                                      :valid-seconds impersonation-token-valid-seconds
@@ -328,6 +330,16 @@
       (update-user-status! tx (assoc user :status "archived"))))
   {:status "OK"})
 
+(def non-activity-events
+  "History events that are not the account owner's own doing and must not
+  postpone GDPR removal. impersonation-started is written by an admin onto
+  the dormant target's history; without this exclusion impersonating an
+  account would reset its 5-year inactivity clock. impersonated-user sits
+  on the admin's own account but always co-occurs with the admin's login
+  event, so excluding it too loses nothing and keeps the rule simple:
+  impersonation never counts as activity."
+  #{"impersonation-started" "impersonated-user"})
+
 (defn gdpr-remove?
   "User data is removed if the user has been inactive for > 5 years.
   Fails closed: an account with no created-at (the column is nullable,
@@ -341,7 +353,11 @@
                                  (.plus 5 java.time.temporal.ChronoUnit/YEARS)
                                  (.toInstant))]
            (.isAfter now created-at+5y))
-         (let [last-event (->> history :events (map :event-date) (sort utils/reverse-cmp) first)]
+         (let [last-event (->> history :events
+                               (remove (comp non-activity-events :event))
+                               (map :event-date)
+                               (sort utils/reverse-cmp)
+                               first)]
            (or (nil? last-event)
                (let [last-event+5y (-> (java.time.Instant/parse last-event)
                                        (.atZone (java.time.ZoneId/of "UTC"))

@@ -77,6 +77,12 @@
 (deftest process-gdpr-removals!-end-to-end-test
   (let [db (test-db)
         eligible (gen-user-created-ago! db six-years-days [])
+        ;; Dormant account an admin recently impersonated: admin activity
+        ;; must not reset the owner's inactivity clock.
+        impersonated (gen-user-created-ago! db six-years-days
+                                            [{:event-date (str (instant-ago 30))
+                                              :event "impersonation-started"
+                                              :impersonator-id "an-admin-uuid"}])
         old-active (gen-user-created-ago! db six-years-days
                                           [{:event-date (str (instant-ago 30))
                                             :event "login"}])
@@ -95,10 +101,12 @@
         before (mapv #(row-fingerprint db %) untouchables)
         result (core/process-gdpr-removals! db)]
 
-    (testing "exactly the one eligible user is removed"
-      (is (= {:eligible 1 :batch 1 :removed 1 :failed 0 :check-errors 1 :dry-run? false}
+    (testing "exactly the eligible users are removed"
+      (is (= {:eligible 2 :batch 2 :removed 2 :failed 0 :check-errors 1 :dry-run? false}
              result))
-      (is (anonymized? db eligible)))
+      (is (anonymized? db eligible))
+      (is (anonymized? db impersonated)
+          "a recent impersonation must not have protected the dormant account"))
 
     (testing "an unparseable history fails closed: skipped, reported, never removed"
       (is (= 1 (:check-errors result))))
