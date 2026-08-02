@@ -2,11 +2,14 @@ name: Deploy to lipas-prod
 
 # Manual-only production deploys. Layered gates:
 #   1. workflow_dispatch is the ONLY trigger — no PR event can reach this
-#      workflow or the prod runner label.
+#      workflow or the prod runner label. Dispatch itself requires write
+#      access, held by a single account.
 #   2. The actor allowlist below (belt and braces).
-#   3. The `lipas-prod` GitHub Environment must be configured with required
-#      reviewers + a deployment branch policy (master only) — the deploy job
-#      pauses for human approval before anything touches the prod runner.
+#   3. The `lipas-prod` GitHub Environment carries a deployment branch
+#      policy (master only) — the deploy job only runs when this workflow
+#      file comes from master, so an edited allowlist on a side branch
+#      can never reach the prod runner. No required-reviewer approval:
+#      with one authorized dispatcher it gated nothing.
 #
 # Artifacts are built fresh from the requested ref on GitHub-hosted CI, so
 # what ships always matches the requested SHA — no artifact-retention or
