@@ -63,6 +63,20 @@
     (is (= 0 (scheduler/produce-reminder-emails! (test-db))))
     (is (empty? (test-utils/get-all-jobs (test-db))))))
 
+(deftest nightly-gdpr-removals-produces-one-job-test
+  (testing "The nightly task enqueues a gdpr-removals job; re-runs coalesce"
+    (let [db (test-db)
+          task-fn (get-in scheduler/schedule-configs
+                          [:nightly-gdpr-removals :task-fn])]
+      (is (some? task-fn))
+      (task-fn db)
+      (task-fn db)
+      (let [jobs (filter #(= "gdpr-removals" (:jobs/type %))
+                         (test-utils/get-all-jobs db))]
+        (is (= 1 (count jobs))
+            "The dedup key must coalesce producer re-runs into one pending job")
+        (is (= "pending" (:jobs/status (first jobs))))))))
+
 (deftest scheduler-lifecycle-test
   (testing "Scheduler starts, runs its tasks and stops"
     (let [db (test-db)]
@@ -84,12 +98,14 @@
         (testing "Scheduler tasks do not enqueue maintenance jobs"
           ;; The old design routed reminder checks and cleanup through the
           ;; queue as job rows; the new design calls them directly. Real
-          ;; work still becomes jobs: the nightly KB sync enqueues exactly
-          ;; one (deduplicated) help-kb-sync job on its startup tick.
+          ;; work still becomes jobs: the nightly KB sync and the nightly
+          ;; GDPR removal batch each enqueue exactly one (deduplicated)
+          ;; job on their startup tick.
           (Thread/sleep 500)
           (let [jobs (test-utils/get-all-jobs db)]
-            (is (= ["help-kb-sync"] (mapv :jobs/type jobs))
-                "No queue churn from scheduler ticks beyond the KB sync")))
+            (is (= {"help-kb-sync" 1 "gdpr-removals" 1}
+                   (frequencies (mapv :jobs/type jobs)))
+                "No queue churn from scheduler ticks beyond the nightly real work")))
 
         (finally
           (scheduler/stop-scheduler!)))

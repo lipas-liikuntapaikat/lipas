@@ -920,6 +920,13 @@
          (assoc user :id (:id (core/get-user db-component (:email user)))))
        user))))
 
+(defn backdate-user-created-at!
+  "Set account.created_at for a user. gen-user always stamps rows with now;
+  GDPR retention tests need accounts that look years old."
+  [db user-id inst]
+  (next-jdbc/execute! db ["UPDATE account SET created_at = ? WHERE id = ?::uuid"
+                          (java.sql.Timestamp/from inst) (str user-id)]))
+
 (defn gen-loi! []
   (-> (mg/generate loi-schema/loi)
       (assoc :status "active")

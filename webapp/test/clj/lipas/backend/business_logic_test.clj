@@ -44,6 +44,13 @@
           user          {:email      "whatever@lipas.fi"
                          :created-at (java.sql.Timestamp/from long-time-ago)
                          :history    {}}]
+      (is (false? (core/gdpr-remove? now user)))))
+
+  (testing "Account without created-at is never eligible (nullable column, fail closed)"
+    (let [now  (java.time.Instant/now)
+          user {:email      "kissa@koira.fi"
+                :created-at nil
+                :history    {}}]
       (is (false? (core/gdpr-remove? now user))))))
 
 ;;; --- Ownership & edit-grant authorization (core business rule) --------------

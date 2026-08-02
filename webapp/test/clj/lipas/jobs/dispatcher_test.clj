@@ -5,6 +5,7 @@
     [clojure.test :refer [deftest testing is use-fixtures]]
     [lipas.backend.analysis.diversity :as diversity]
     [lipas.backend.core :as core]
+    [lipas.backend.db.db :as db]
     [lipas.backend.email :as email]
     [lipas.backend.gis :as gis]
     [lipas.integration.utp.webhook :as utp-webhook]
@@ -115,6 +116,31 @@
                                 :payload {:lipas-ids [1 2]
                                           :operation-type "test-update"}})
         (is (= [1 2] (:lipas-ids @received)))))))
+
+(deftest gdpr-removals-job-handler-test
+  ;; Real DB, no mocks: the handler drives the actual removal batch.
+  (let [db (test-db)
+        user (test-utils/gen-regular-user :db-component db)
+        _ (test-utils/backdate-user-created-at!
+            db (:id user)
+            (.minus (java.time.Instant/now) 2200 java.time.temporal.ChronoUnit/DAYS))
+        _ (db/update-user-history! db (assoc user :history {:events []}))
+        system {:db db :search (create-mock-search)}]
+
+    (testing "dry-run payload reports without removing"
+      (let [result (dispatcher/handle-job system {:id 1 :type "gdpr-removals"
+                                                  :payload {:dry-run? true}})]
+        (is (= {:eligible 1 :removed 0 :dry-run? true}
+               (select-keys result [:eligible :removed :dry-run?])))
+        (is (= (:email user) (:email (core/get-user db (:email user)))))))
+
+    (testing "empty payload runs the batch live with defaults"
+      (let [result (dispatcher/handle-job system {:id 2 :type "gdpr-removals"
+                                                  :payload {}})]
+        (is (= {:eligible 1 :removed 1 :failed 0 :dry-run? false}
+               (select-keys result [:eligible :removed :failed :dry-run?])))
+        (is (nil? (core/get-user db (:email user)))
+            "the eligible user's email must no longer resolve to an account")))))
 
 (deftest unknown-job-type-handler-test
   (testing "Unknown job types throw"
