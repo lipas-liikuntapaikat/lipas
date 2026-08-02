@@ -144,7 +144,7 @@ jobs:
       sha: ${{ steps.build.outputs.sha }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.ref }}
 
@@ -171,12 +171,12 @@ jobs:
       # out a different ref there, and a script must not change underneath
       # its own execution.
       - name: Check out installer at the built SHA
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.build.outputs.sha }}
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ${{ runner.temp }}/release
           merge-multiple: true
