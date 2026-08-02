@@ -270,13 +270,15 @@
               (roles/check-privilege target-conformed nil :users/impersonate))
       (throw (ex-info "Impersonation not allowed for this user"
                       {:type :impersonation-not-allowed})))
-    (log/info "Impersonation started:" (:email admin) "->" (:email target))
+    (log/info "Impersonation started:" (:id admin) "->" (:id target))
+    ;; Ids only, no emails: each event lands in the OTHER party's history
+    ;; row, where GDPR removal (which only anonymizes the removed account's
+    ;; own row) could never scrub an embedded address. The id resolves to
+    ;; the — possibly since-anonymized — account when actually needed.
     (add-user-event! db target "impersonation-started"
-                     {:impersonator-id (str (:id admin))
-                      :impersonator-email (:email admin)})
+                     {:impersonator-id (str (:id admin))})
     (add-user-event! db admin "impersonated-user"
-                     {:target-id (str (:id target))
-                      :target-email (:email target)})
+                     {:target-id (str (:id target))})
     (merge (dissoc target :password)
            {:token (jwt/create-token target
                                      :valid-seconds impersonation-token-valid-seconds
@@ -328,37 +330,100 @@
       (update-user-status! tx (assoc user :status "archived"))))
   {:status "OK"})
 
+(def non-activity-events
+  "History events that are not the account owner's own doing and must not
+  postpone GDPR removal. impersonation-started is written by an admin onto
+  the dormant target's history; without this exclusion impersonating an
+  account would reset its 5-year inactivity clock. impersonated-user sits
+  on the admin's own account but always co-occurs with the admin's login
+  event, so excluding it too loses nothing and keeps the rule simple:
+  impersonation never counts as activity."
+  #{"impersonation-started" "impersonated-user"})
+
 (defn gdpr-remove?
-  "User data is removed if the user has been inactive for > 5 years."
+  "User data is removed if the user has been inactive for > 5 years.
+  Fails closed: an account with no created-at (the column is nullable,
+  legacy rows may lack it) is never eligible."
   [now {:keys [created-at history] :as user}]
-  (let [created-at+5y (-> (.toInstant created-at)
-                          (.atZone (java.time.ZoneId/of "UTC"))
-                          (.plus 5 java.time.temporal.ChronoUnit/YEARS)
-                          (.toInstant))]
-    (and (not (str/ends-with? (:email user) "@lipas.fi"))
-         (.isAfter now created-at+5y)
-         (let [last-event (->> history :events (map :event-date) (sort utils/reverse-cmp) first)]
-           (or (nil? last-event)
-               (let [last-event+5y (-> (java.time.Instant/parse last-event)
-                                       (.atZone (java.time.ZoneId/of "UTC"))
-                                       (.plus 5 java.time.temporal.ChronoUnit/YEARS)
-                                       (.toInstant))]
-                 (.isAfter now last-event+5y)))))))
+  (boolean
+    (and created-at
+         (not (str/ends-with? (:email user) "@lipas.fi"))
+         (let [created-at+5y (-> (.toInstant created-at)
+                                 (.atZone (java.time.ZoneId/of "UTC"))
+                                 (.plus 5 java.time.temporal.ChronoUnit/YEARS)
+                                 (.toInstant))]
+           (.isAfter now created-at+5y))
+         (let [activity-dates (->> history :events
+                                   (remove (comp non-activity-events :event))
+                                   (map :event-date))]
+           ;; An activity event with no date is unprovable inactivity - fail
+           ;; closed, consistent with unparseable dates (which throw and get
+           ;; the user skipped at the batch level).
+           (and (every? some? activity-dates)
+                (let [last-event (first (sort utils/reverse-cmp activity-dates))]
+                  (or (nil? last-event)
+                      (let [last-event+5y (-> (java.time.Instant/parse last-event)
+                                              (.atZone (java.time.ZoneId/of "UTC"))
+                                              (.plus 5 java.time.temporal.ChronoUnit/YEARS)
+                                              (.toInstant))]
+                        (.isAfter now last-event+5y)))))))))
+
+(def gdpr-removals-default-limit
+  "Max removals in one process-gdpr-removals! run. GDPR removal is
+  irreversible, so a bug in the eligibility predicate must not be able to
+  anonymize the whole user base in one sweep; the nightly job drains a
+  legitimate backlog within days."
+  50)
 
 (defn process-gdpr-removals!
-  [db]
+  "Anonymize every user gdpr-remove? deems inactive, at most `limit` per run.
+
+  This is a bulk-destructive operation, so it is deliberately fenced in:
+  - an eligibility check that throws (legacy rows with odd data) skips that
+    user, never removes it
+  - at most `limit` users are removed per run
+  - :dry-run? true writes nothing and only reports what a live run would do
+  - a failed removal doesn't stop the batch, but the batch then throws at
+    the end so the job system retries / dead-letters it visibly; users
+    already removed are excluded from the rerun by gdpr-remove? itself
+    (their email becomes @lipas.fi)
+
+  Returns {:eligible :batch :removed :failed :check-errors :dry-run?}."
+  [db & [{:keys [limit dry-run?] :or {limit gdpr-removals-default-limit}}]]
   (let [now (java.time.Instant/now)
-        users (->> (get-users db)
-                   (filter (partial gdpr-remove? now)))]
-    (log/info "Found" (count users) "users to GDPR remove.")
-
-    (doseq [user users]
-      (log/info "GDPR removing user" (:id user))
-      (log/info (:created-at user)
-                (->> user :history :events (map :event-date) (sort utils/reverse-cmp) first))
-      #_(gdpr-remove-user! db user))
-
-    (log/info "GDPR removals DONE!")))
+        checked (mapv (fn [user]
+                        (try
+                          {:user user :eligible? (gdpr-remove? now user)}
+                          (catch Exception ex
+                            (log/warn ex "GDPR eligibility check failed - skipping user"
+                                      {:user-id (:id user)})
+                            {:user user :error? true})))
+                      (get-users db))
+        eligible (into [] (comp (filter :eligible?) (map :user)) checked)
+        batch (into [] (take limit) eligible)
+        summary {:eligible (count eligible)
+                 :batch (count batch)
+                 :check-errors (count (filter :error? checked))
+                 :dry-run? (boolean dry-run?)}]
+    (log/info "GDPR removal batch starting" (assoc summary :limit limit))
+    (let [result (reduce
+                   (fn [acc user]
+                     (if dry-run?
+                       (do (log/info "GDPR dry-run - would remove user" {:user-id (:id user)})
+                           acc)
+                       (try
+                         (log/info "GDPR removing user" {:user-id (:id user)})
+                         (gdpr-remove-user! db user)
+                         (update acc :removed inc)
+                         (catch Exception ex
+                           (log/error ex "GDPR removal failed" {:user-id (:id user)})
+                           (update acc :failed inc)))))
+                   (assoc summary :removed 0 :failed 0)
+                   batch)]
+      (log/info "GDPR removal batch done" result)
+      (when (pos? (:failed result))
+        (throw (ex-info "GDPR removal batch had failures" result)))
+      result)))
 
 ;;; Sports-sites ;;;
 

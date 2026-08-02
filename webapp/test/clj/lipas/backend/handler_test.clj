@@ -541,11 +541,18 @@
 
     (testing "audit events are recorded on both users"
       (let [target-events (->> (core/get-user (test-db) (:email target))
-                               :history :events (map :event) set)
+                               :history :events)
             admin-events (->> (core/get-user (test-db) (:email admin))
-                              :history :events (map :event) set)]
-        (is (contains? target-events "impersonation-started"))
-        (is (contains? admin-events "impersonated-user"))))))
+                              :history :events)
+            started (first (filter #(= "impersonation-started" (:event %)) target-events))
+            performed (first (filter #(= "impersonated-user" (:event %)) admin-events))]
+        (is (= (str (:id admin)) (:impersonator-id started)))
+        (is (= (str (:id target)) (:target-id performed)))
+        (testing "events reference the other party by id only, never email"
+          ;; The events land in the OTHER party's history row, where GDPR
+          ;; removal could never scrub an embedded address.
+          (is (nil? (:impersonator-email started)))
+          (is (nil? (:target-email performed))))))))
 
 (deftest impersonate-requires-privilege-test
   (let [user (tu/gen-regular-user :db-component (test-db))

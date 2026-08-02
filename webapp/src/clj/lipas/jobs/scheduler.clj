@@ -42,6 +42,13 @@
    {:interval-seconds 86400
     :task-fn (fn [db] (jobs/enqueue-job! db "help-kb-sync" {}))}
 
+   :nightly-gdpr-removals
+   ;; Anonymize users inactive for >5 years. The batch is idempotent and
+   ;; capped (see core/process-gdpr-removals!), so the interval anchoring
+   ;; to worker restarts is harmless.
+   {:interval-seconds 86400
+    :task-fn (fn [db] (jobs/enqueue-job! db "gdpr-removals" {}))}
+
    :recover-stuck-jobs
    {:interval-seconds 600
     :task-fn (fn [db] (jobs/recover-stuck-jobs! db jobs/stuck-job-timeout-minutes))}

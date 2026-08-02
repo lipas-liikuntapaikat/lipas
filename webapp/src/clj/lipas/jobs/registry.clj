@@ -127,6 +127,19 @@
     :priority 95
     :max-attempts 3}
 
+   "gdpr-removals"
+   {:doc "Anonymize users inactive for >5 years (GDPR retention)."
+    :payload-schema [:map
+                     [:dry-run? {:optional true} :boolean]
+                     [:limit {:optional true} pos-int?]]
+    :lane :slow
+    :timeout-min 15
+    :priority 50
+    :max-attempts 3
+    ;; One batch in flight at a time; the nightly producer re-enqueueing
+    ;; while a run is still pending coalesces into that run.
+    :dedup-key-fn (fn [_] "gdpr-removals")}
+
    "help-kb-sync"
    {:doc "Sync help CMS + code-derived docs into the lipas_kb search index."
     :payload-schema [:map]

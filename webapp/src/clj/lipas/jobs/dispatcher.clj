@@ -90,6 +90,10 @@
     ;; Default email handling
     (email/send! emailer payload)))
 
+(defmethod handle-job "gdpr-removals"
+  [{:keys [db]} {:keys [payload]}]
+  (core/process-gdpr-removals! db payload))
+
 (defmethod handle-job "help-kb-sync"
   [{:keys [db search]} _job]
   (kb/sync! db search))
