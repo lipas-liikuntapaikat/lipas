@@ -98,6 +98,21 @@
       (is (= "integer" (:type (get properties :location.city.city-code))))
       (is (= "integer" (:type (get properties :construction-year))))))
 
+  (testing "Localized names are indexed"
+    ;; The UI queries name-localized.*^3 — if these regress to
+    ;; {:enabled false}, Swedish/English names silently stop matching.
+    (let [mapping (:sports-site search/mappings)
+          properties (get-in mapping [:mappings :properties])]
+
+      (is (= "text" (:type (get properties :name-localized.se))))
+      (is (= "text" (:type (get properties :name-localized.en))))
+      (is (= "icu_collation_keyword"
+             (get-in properties [:name-localized.se :fields :sort :type]))
+          "results table sorts on the collated sub-field")
+      (is (= "icu_collation_keyword"
+             (get-in properties [:name-localized.en :fields :sort :type])))
+      (is (nil? (get properties :name-localized)))))
+
   (testing "Disabled fields prevent index bloat"
     (let [mapping (:sports-site search/mappings)
           properties (get-in mapping [:mappings :properties])]

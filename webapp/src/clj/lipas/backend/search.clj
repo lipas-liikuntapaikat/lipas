@@ -111,6 +111,12 @@
          :owner-org-id {:type "keyword"}
          :edit-grants {:type "keyword"}
          :name {:type "text" :fields {:keyword {:type "keyword"}}}  ; full-text search
+         ;; Queried by the UI as name-localized.*^3 — sub-fields must be
+         ;; indexed or Swedish/English names are unsearchable. The schema
+         ;; allows only :se and :en (Finnish lives in :name). Sortable in
+         ;; the results table, hence text-with-sort.
+         :name-localized.se (text-with-sort "sv")
+         :name-localized.en (text-with-sort "en")
          :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
          ;; Location fields that ARE QUERIED
@@ -187,7 +193,6 @@
          :reservations-link {:enabled false}
          :renovation-years {:enabled false}
          :renovations {:enabled false}
-         :name-localized {:enabled false}
          :fields {:enabled false}
          :locker-rooms {:enabled false}
          :circumstances {:enabled false}

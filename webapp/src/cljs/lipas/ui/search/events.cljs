@@ -20,6 +20,8 @@
   (case k
     (:lipas-id) :lipas-id
     (:name) :search-meta.name.sort
+    (:name-localized.se
+      :name-localized.en) (-> k name (str ".sort") keyword)
     (:location.city.name
       :type.name
       :admin.name
@@ -147,6 +149,7 @@
                                  "status"
                                  "event-date"
                                  "name"
+                                 "name-localized"
                                  "marketing-name"
                                  "www"
                                  "phone-number"
@@ -563,7 +566,8 @@
   (-> kw name (str/split #"\.") (->> (mapv keyword))))
 
 (def data-keys
-  [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
+  [:name :name-localized.se :name-localized.en :marketing-name :www
+   :phone-number :email :owner :admin :type.type-code
    :renovation-years :construction-year :location.address :location.postal-code
    :location.postal-office :location.city.city-code])
 
