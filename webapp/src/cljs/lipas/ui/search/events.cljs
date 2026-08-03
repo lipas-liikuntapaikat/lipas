@@ -147,6 +147,7 @@
                                  "status"
                                  "event-date"
                                  "name"
+                                 "name-localized"
                                  "marketing-name"
                                  "www"
                                  "phone-number"

@@ -6,6 +6,7 @@
             [lipas.ui.components.text-fields :as text-fields]
             [lipas.ui.search.db :as db]
             [lipas.ui.utils :as utils]
+            [lipas.utils :as cutils]
             [re-frame.core :as rf]))
 
 (rf/reg-sub ::filters
@@ -170,7 +171,7 @@
         city-code (-> site :location :city :city-code)]
     {:lipas-id (-> site :lipas-id)
      :score (-> hit :_score)
-     :name (-> site :name)
+     :name (cutils/display-name site locale)
      :type.type-code type-code
      :type.name (get-in types [type-code :name locale])
      :location.city.city-code city-code
