@@ -113,9 +113,10 @@
          :name {:type "text" :fields {:keyword {:type "keyword"}}}  ; full-text search
          ;; Queried by the UI as name-localized.*^3 — sub-fields must be
          ;; indexed or Swedish/English names are unsearchable. The schema
-         ;; allows only :se and :en (Finnish lives in :name).
-         :name-localized.se {:type "text" :fields {:keyword {:type "keyword"}}}
-         :name-localized.en {:type "text" :fields {:keyword {:type "keyword"}}}
+         ;; allows only :se and :en (Finnish lives in :name). Sortable in
+         ;; the results table, hence text-with-sort.
+         :name-localized.se (text-with-sort "sv")
+         :name-localized.en (text-with-sort "en")
          :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
          ;; Location fields that ARE QUERIED

@@ -117,6 +117,9 @@
     {:lipas-id (-> site :lipas-id)
      :score (-> hit :_score)
      :name (-> site :name)
+     :name-localized.se (-> site :name-localized :se)
+     :name-localized.en (-> site :name-localized :en)
+     :marketing-name (-> site :marketing-name)
      :event-date (-> site :event-date utils/->short-date)
      :admin (-> site :admin)
      :owner (-> site :owner)
@@ -198,6 +201,9 @@
   :<- [:lipas.ui.subs/translator]
   (fn [tr _]
     [[:name {:label (tr :lipas.sports-site/name)}]
+     [:name-localized.se {:label (tr :lipas.sports-site/name-localized-se)}]
+     [:name-localized.en {:label (tr :lipas.sports-site/name-localized-en)}]
+     [:marketing-name {:label (tr :lipas.sports-site/marketing-name)}]
      [:type.name {:label (tr :type/name)}]
      [:type.main-category {:label (tr :type/main-category)}]
      [:type.sub-category {:label (tr :type/sub-category)}]
@@ -228,6 +234,9 @@
      :construction-year {:spec sports-sites-schema/construction-year}
      :renovation-years {:spec sports-sites-schema/renovation-years}
      :name {:spec sports-sites-schema/name :required? true}
+     ;; Same constraints as the site form uses for localized names
+     :name-localized.se {:spec sports-sites-schema/name}
+     :name-localized.en {:spec sports-sites-schema/name}
      :location.postal-office {:spec location-schema/postal-office}
      :location.postal-code {:spec location-schema/postal-code :required? true}
      :marketing-name {:spec sports-sites-schema/marketing-name}
@@ -244,6 +253,10 @@
       [[:score {:label "score"}]
        [:name {:label (tr :lipas.sports-site/name)
                :form {:component text-fields/text-field}}]
+       [:name-localized.se {:label (tr :lipas.sports-site/name-localized-se)
+                            :form {:component text-fields/text-field}}]
+       [:name-localized.en {:label (tr :lipas.sports-site/name-localized-en)
+                            :form {:component text-fields/text-field}}]
        [:marketing-name {:label (tr :lipas.sports-site/marketing-name)
                          :form {:component text-fields/text-field}}]
        [:type.name {:label (tr :type/name)

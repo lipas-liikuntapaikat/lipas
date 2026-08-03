@@ -106,6 +106,11 @@
 
       (is (= "text" (:type (get properties :name-localized.se))))
       (is (= "text" (:type (get properties :name-localized.en))))
+      (is (= "icu_collation_keyword"
+             (get-in properties [:name-localized.se :fields :sort :type]))
+          "results table sorts on the collated sub-field")
+      (is (= "icu_collation_keyword"
+             (get-in properties [:name-localized.en :fields :sort :type])))
       (is (nil? (get properties :name-localized)))))
 
   (testing "Disabled fields prevent index bloat"
