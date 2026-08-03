@@ -1,4 +1,7 @@
 {:headline "Conditions"
+ :derive-button "Calculate from conditions data"
+ :derive-info
+ "Field-specific conditions data has been recorded for this facility. You can calculate values for some of the properties from it. The fields remain editable after calculating."
  :disclaimer-1
  "The Conditions tab contains sport-specific venue information, such as conditions and requirements related to matches and other sporting events. This data complements the venue's core information and may include content maintained by sports federations or other organizations."
  :disclaimer-2

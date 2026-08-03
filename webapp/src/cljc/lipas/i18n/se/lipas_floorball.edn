@@ -1,4 +1,7 @@
 {:headline "Förhållanden"
+ :derive-button "Beräkna från förhållandeuppgifterna"
+ :derive-info
+ "Anläggningen har planspecifika förhållandeuppgifter. Du kan beräkna värden för en del av tilläggsuppgifterna utifrån dem. Fälten förblir redigerbara efter beräkningen."
  :disclaimer-1
  "Fliken Förhållanden innehåller idrottsspecifik information om anläggningen, till exempel förhållanden och krav som gäller vid matcher och andra idrottsevenemang. Uppgifterna kompletterar anläggningens grundläggande information och kan omfatta innehåll som underhålls av specialidrottsförbund eller andra organisationer."
  :disclaimer-2
