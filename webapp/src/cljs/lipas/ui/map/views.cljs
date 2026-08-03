@@ -1164,7 +1164,8 @@
              :geom-type geom-type
              :problems? problems?
              :key (-> edit-data :type :type-code)
-             :pools (:pools edit-data)}]
+             :pools (:pools edit-data)
+             :fields (:fields edit-data)}]
 
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]
@@ -1894,7 +1895,8 @@
                   :on-change (partial set-field :properties)
                   :edit-data (:properties data)
                   :geoms (-> data :location :geometries)
-                  :problems? problems?}]
+                  :problems? problems?
+                  :fields (:fields data)}]
               2 (cond
                   ;; Floorball specific
                   floorball-type?
