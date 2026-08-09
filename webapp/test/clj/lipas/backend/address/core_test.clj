@@ -116,9 +116,9 @@
       (is (nil? (:alternative-postal-code summary)) "Posti and Paavo agree"))
 
     (testing "and brings its postitoimipaikka, municipality and region along"
-      (is (= {:fi "HELSINKI" :sv "HELSINGFORS"} (:postal-office summary)))
-      (is (= {:code "091" :name {:fi "Helsinki" :sv "Helsingfors"}} (:municipality summary)))
-      (is (= {:fi "Helsinki-Uusimaa" :sv "Helsingfors-Nyland"} (:region summary))))
+      (is (= {:fi "HELSINKI" :se "HELSINGFORS"} (:postal-office summary)))
+      (is (= {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}} (:municipality summary)))
+      (is (= {:fi "Helsinki-Uusimaa" :se "Helsingfors-Nyland"} (:region summary))))
 
     (testing "the nearest address is reported with its distance in metres"
       (is (= "Mannerheimintie 5" (:address summary)))
@@ -126,12 +126,12 @@
 
     (testing "the address row carries Posti's verdict on it"
       (is (= {:postal-code "00100"
-              :postal-office {:fi "HELSINKI" :sv "HELSINGFORS"}
+              :postal-office {:fi "HELSINKI" :se "HELSINGFORS"}
               :exact true}
              (:posti (first addresses)))))
 
     (testing "the street's Swedish name comes from BAF, which knows it"
-      (is (= {:fi "Mannerheimintie" :sv "Mannerheimvägen"} (:street (first addresses)))))
+      (is (= {:fi "Mannerheimintie" :se "Mannerheimvägen"} (:street (first addresses)))))
 
     (testing "both sources answered"
       (is (= {:pelias :ok :paavo :ok} (:sources summary))))))
@@ -165,15 +165,15 @@
 
     (testing "the Paavo area is reported in full"
       (is (= {:postal-code "02820"
-              :name {:fi "Nupuri-Nuuksio" :sv "Nupurböle-Noux"}
-              :postal-office {:fi "ESPOO" :sv "ESBO"}
-              :municipality {:code "049" :name {:fi "Espoo" :sv "Esbo"}}}
+              :name {:fi "Nupuri-Nuuksio" :se "Nupurböle-Noux"}
+              :postal-office {:fi "ESPOO" :se "ESBO"}
+              :municipality {:code "049" :name {:fi "Espoo" :se "Esbo"}}}
              area)))
 
     (testing "an OSM address Posti has never heard of says so"
       (let [phantom (second addresses)]
         (is (= "Valklammentie 105, Vihti" (:label phantom)))
-        (is (= {:code "927" :name {:fi "Vihti" :sv "Vichtis"}} (:municipality phantom))
+        (is (= {:code "927" :name {:fi "Vihti" :se "Vichtis"}} (:municipality phantom))
             "Pelias' localadmin still resolves to a municipality")
         (is (= "03220" (:pelias-postal-code phantom)))
         (is (nil? (:posti phantom)) "BAF has no Valklammentie in Vihti")))))
@@ -186,7 +186,7 @@
       (is (= "03220" (:postal-code summary)))
       (is (= :paavo (:postal-code-source summary)))
       (is (= "02820" (:alternative-postal-code summary)))
-      (is (= {:code "927" :name {:fi "Vihti" :sv "Vichtis"}} (:municipality summary))
+      (is (= {:code "927" :name {:fi "Vihti" :se "Vichtis"}} (:municipality summary))
           "containing the point beats matching a name")))
 
   (testing "polygon and NEAR address disagree: the address answers, the polygon is the caveat"
@@ -221,7 +221,7 @@
     (let [{:keys [summary]} (reverse-geocode {:features nuuksio-features :paavo nil})]
       (is (= "02820" (:postal-code summary)))
       (is (= :posti (:postal-code-source summary)))
-      (is (= {:code "049" :name {:fi "Espoo" :sv "Esbo"}} (:municipality summary))
+      (is (= {:code "049" :name {:fi "Espoo" :se "Esbo"}} (:municipality summary))
           "with no polygon the municipality comes from the matched address"))))
 
 (deftest sea-click-test
@@ -246,8 +246,8 @@
       (is (empty? addresses))
       (is (= "02820" (:postal-code summary)))
       (is (= :paavo (:postal-code-source summary)))
-      (is (= {:fi "ESPOO" :sv "ESBO"} (:postal-office summary)))
-      (is (= {:fi "Helsinki-Uusimaa" :sv "Helsingfors-Nyland"} (:region summary)))
+      (is (= {:fi "ESPOO" :se "ESBO"} (:postal-office summary)))
+      (is (= {:fi "Helsinki-Uusimaa" :se "Helsingfors-Nyland"} (:region summary)))
       (is (= {:pelias :error :paavo :ok} (:sources summary))))))
 
 (deftest addresses-are-sorted-and-capped-test
@@ -291,9 +291,9 @@
     (let [{:keys [addresses]}
           (reverse-geocode {:features [(feature "Mannerheimvägen" "5" "Helsingfors" "00100" 0.03)]
                             :paavo nil})]
-      (is (= {:code "091" :name {:fi "Helsinki" :sv "Helsingfors"}}
+      (is (= {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}}
              (:municipality (first addresses))))
-      (is (= {:fi "Mannerheimintie" :sv "Mannerheimvägen"} (:street (first addresses)))
+      (is (= {:fi "Mannerheimintie" :se "Mannerheimvägen"} (:street (first addresses)))
           "the display names come from BAF, not from Pelias")
       (is (true? (get-in (first addresses) [:posti :exact]))))))
 

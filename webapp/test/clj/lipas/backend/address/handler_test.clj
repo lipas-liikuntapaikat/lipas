@@ -41,6 +41,14 @@
   (let [resp ((app pelias-fn) (mock/request :get (str "/api/actions/reverse-geocode" query-string)))]
     (assoc resp :body (test-utils/<-json (:body resp)))))
 
+(defn- GET-transit
+  "The same request the map panel makes. Transit is what carries the keyword
+  and locale-keyed shape the UI reads; JSON flattens both."
+  [pelias-fn query-string]
+  (let [resp ((app pelias-fn) (-> (mock/request :get (str "/api/actions/reverse-geocode" query-string))
+                                  (mock/header "Accept" "application/transit+json")))]
+    (assoc resp :body (test-utils/<-transit (:body resp)))))
+
 ;;; Fixture data ;;;
 
 (def ^:private helsinki-lat 60.17)
@@ -127,9 +135,9 @@
 
     (testing "the Paavo polygon containing the point, joined to Posti's names"
       (is (= {:postal-code "00250"
-              :name {:fi "Taka-Töölö" :sv "Bortre Tölö"}
-              :postal-office {:fi "HELSINKI" :sv "HELSINGFORS"}
-              :municipality {:code "091" :name {:fi "Helsinki" :sv "Helsingfors"}}}
+              :name {:fi "Taka-Töölö" :se "Bortre Tölö"}
+              :postal-office {:fi "HELSINKI" :se "HELSINGFORS"}
+              :municipality {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}}}
              area)))
 
     (testing "addresses come back nearest first, checked against BAF"
@@ -138,7 +146,7 @@
              (mapv :label addresses)))
       (is (= [41 200] (mapv :distance-m addresses)))
       (is (= {:postal-code "00100"
-              :postal-office {:fi "HELSINKI" :sv "HELSINGFORS"}
+              :postal-office {:fi "HELSINKI" :se "HELSINGFORS"}
               :exact true}
              (:posti (first addresses))))
       (is (nil? (:posti (second addresses)))
@@ -151,14 +159,31 @@
       (is (= "00250" (:alternative-postal-code summary)))
       (is (= "Mannerheimintie 5" (:address summary)))
       (is (= 41 (:address-distance-m summary)))
-      (is (= {:fi "HELSINKI" :sv "HELSINGFORS"} (:postal-office summary)))
-      (is (= {:fi "Helsinki-Uusimaa" :sv "Helsingfors-Nyland"} (:region summary))))
+      (is (= {:fi "HELSINKI" :se "HELSINGFORS"} (:postal-office summary)))
+      (is (= {:fi "Helsinki-Uusimaa" :se "Helsingfors-Nyland"} (:region summary))))
 
     (testing "the municipality comes from the polygon, which contains the point"
-      (is (= {:code "091" :name {:fi "Helsinki" :sv "Helsingfors"}} (:municipality summary))))
+      (is (= {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}} (:municipality summary))))
 
     (testing "both sources answered"
       (is (= {:pelias "ok" :paavo "ok"} (:sources summary))))))
+
+(deftest transit-negotiation-test
+  (seed!)
+  (let [{:keys [status body]} (GET-transit pelias-stub query)
+        {:keys [summary]} body]
+
+    (testing "the route content-negotiates transit"
+      (is (= 200 status)))
+
+    (testing "keyword-valued fields stay keywords, unlike over JSON"
+      (is (= :posti (:postal-code-source summary)))
+      (is (= {:pelias :ok :paavo :ok} (:sources summary))))
+
+    (testing "Swedish proper names are keyed :se, LIPAS' locale keyword"
+      (is (= {:fi "HELSINKI" :se "HELSINGFORS"} (:postal-office summary)))
+      (is (= {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}}
+             (:municipality summary))))))
 
 (deftest pelias-failure-still-answers-test
   (seed!)
@@ -172,8 +197,8 @@
     (testing "the Paavo half of the answer still stands"
       (is (= "00250" (:postal-code summary)))
       (is (= "paavo" (:postal-code-source summary)))
-      (is (= {:fi "HELSINKI" :sv "HELSINGFORS"} (:postal-office summary)))
-      (is (= {:code "091" :name {:fi "Helsinki" :sv "Helsingfors"}} (:municipality summary))))
+      (is (= {:fi "HELSINKI" :se "HELSINGFORS"} (:postal-office summary)))
+      (is (= {:code "091" :name {:fi "Helsinki" :se "Helsingfors"}} (:municipality summary))))
 
     (testing "and the response says which half is missing"
       (is (= {:pelias "error" :paavo "ok"} (:sources summary))))))
@@ -205,7 +230,7 @@
     (testing "and none of them reached Digitransit"
       (is (zero? @called)))
 
-    (testing "the corners of the accepted box are accepted"
-      (doseq [[lat lon] [[59.0 18.5] [70.5 32.0]]]
+    (testing "the corners of the accepted box (lipas.schema.common) are accepted"
+      (doseq [[lat lon] [[59.0 18.0] [71.0 33.0]]]
         (is (= 200 (:status (GET counting-stub (str "?lat=" lat "&lon=" lon))))))
       (is (= 2 @called)))))

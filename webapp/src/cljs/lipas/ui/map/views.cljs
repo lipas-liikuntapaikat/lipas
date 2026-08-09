@@ -100,12 +100,12 @@
 ;;; Address panel (search an address or resolve one from a map click) ;;;
 
 (defn- localized-name
-  "Proper names in the reverse lookup response come as {:fi ... :sv ...}.
-   Swedish falls back to Finnish and English uses the Finnish names."
+  "Proper names in the reverse lookup response come as {:fi ... :se ...}.
+   Swedish falls back to Finnish, and English has no names of its own —
+   Posti and Tilastokeskus publish none, so :en gets the Finnish ones."
   [locale m]
   (when m
-    (or (when (= :se locale) (:sv m))
-        (:fi m))))
+    (or (get m locale) (:fi m))))
 
 (defn- format-distance
   "Metres → \"250 m\" / \"1,2 km\" (decimal comma except in English)."

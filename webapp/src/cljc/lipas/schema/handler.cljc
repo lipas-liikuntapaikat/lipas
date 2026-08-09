@@ -151,17 +151,22 @@
 ;; Reverse geocoding
 
 (def reverse-geocode-query-params
-  "The bounding box is Finland with room to spare. It exists to reject
-  nonsense before it becomes an outbound Pelias request and a PostGIS
-  point-in-polygon scan — the endpoint is public and unauthenticated, and
-  every one of our postal sources only knows about Finland anyway."
+  "`common/lat` and `common/lon` are Finland with room to spare, and that
+  bound is what keeps this route honest: it rejects nonsense before it
+  becomes an outbound Pelias request and a PostGIS point-in-polygon scan —
+  the endpoint is public and unauthenticated, and every one of our postal
+  sources only knows about Finland anyway. The response echoes the point
+  through the same two schemas."
   (m/schema
     [:map
-     [:lat [:double {:min 59.0 :max 70.5}]]
-     [:lon [:double {:min 18.5 :max 32.0}]]]))
+     [:lat common/lat]
+     [:lon common/lon]]))
 
 (def localized-name
-  (m/schema [:maybe [:map [:fi [:maybe :string]] [:sv [:maybe :string]]]]))
+  "A proper name from Posti, Tilastokeskus or `lipas.data.cities`. Swedish is
+  keyed `:se`, LIPAS' locale keyword everywhere else — the source rows call
+  it `sv`, and the translation happens at this boundary, not in the UI."
+  (m/schema [:maybe [:map [:fi [:maybe :string]] [:se [:maybe :string]]]]))
 
 (def municipality
   (m/schema
@@ -173,7 +178,7 @@
 (def reverse-geocode-response
   (m/schema
     [:map
-     [:point [:map [:lat :double] [:lon :double]]]
+     [:point [:map [:lat common/lat] [:lon common/lon]]]
      [:area [:maybe
              [:map
               [:postal-code :string]
