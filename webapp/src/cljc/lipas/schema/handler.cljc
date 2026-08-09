@@ -147,3 +147,63 @@
     [:and :string
      [:fn {:error/message "Login URL must point to a known LIPAS host"}
       magic-link-url?]]))
+
+;; Reverse geocoding
+
+(def reverse-geocode-query-params
+  "The bounding box is Finland with room to spare. It exists to reject
+  nonsense before it becomes an outbound Pelias request and a PostGIS
+  point-in-polygon scan — the endpoint is public and unauthenticated, and
+  every one of our postal sources only knows about Finland anyway."
+  (m/schema
+    [:map
+     [:lat [:double {:min 59.0 :max 70.5}]]
+     [:lon [:double {:min 18.5 :max 32.0}]]]))
+
+(def localized-name
+  (m/schema [:maybe [:map [:fi [:maybe :string]] [:sv [:maybe :string]]]]))
+
+(def municipality
+  (m/schema
+    [:maybe
+     [:map
+      [:code :string]
+      [:name {:optional true} localized-name]]]))
+
+(def reverse-geocode-response
+  (m/schema
+    [:map
+     [:point [:map [:lat :double] [:lon :double]]]
+     [:area [:maybe
+             [:map
+              [:postal-code :string]
+              [:name localized-name]
+              [:postal-office localized-name]
+              [:municipality municipality]]]]
+     [:addresses
+      [:sequential
+       [:map
+        [:street localized-name]
+        [:number [:maybe :string]]
+        [:label [:maybe :string]]
+        [:distance-m [:maybe :int]]
+        [:municipality municipality]
+        [:pelias-postal-code [:maybe :string]]
+        [:posti [:maybe
+                 [:map
+                  [:postal-code :string]
+                  [:postal-office localized-name]
+                  [:exact :boolean]]]]]]]
+     [:summary
+      [:map
+       [:postal-code [:maybe :string]]
+       [:postal-code-source [:maybe [:enum :posti :paavo :pelias]]]
+       [:postal-office localized-name]
+       [:municipality municipality]
+       [:region localized-name]
+       [:address [:maybe :string]]
+       [:address-distance-m [:maybe :int]]
+       [:alternative-postal-code [:maybe :string]]
+       [:sources [:map
+                  [:pelias [:enum :ok :empty :error]]
+                  [:paavo [:enum :ok :empty]]]]]]]))
