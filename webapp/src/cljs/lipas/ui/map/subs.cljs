@@ -336,11 +336,6 @@
 
 ;;; Address search ;;;
 
-(rf/reg-sub ::address-search-dialog-open?
-  :<- [::map]
-  (fn [m _]
-    (-> m :address-search :dialog-open?)))
-
 (rf/reg-sub ::address-search-keyword
   :<- [::map]
   (fn [m _]
@@ -533,33 +528,33 @@
 
 ;; Reverse lookup (address from map click)
 
-(rf/reg-sub ::reverse-lookup
+(rf/reg-sub ::address-panel
   :<- [::map]
   (fn [m]
-    (:reverse-lookup m)))
+    (:address-panel m)))
 
-(rf/reg-sub ::reverse-lookup-armed?
-  :<- [::reverse-lookup]
+(rf/reg-sub ::address-panel-open?
+  :<- [::address-panel]
   (fn [m]
-    (boolean (:armed? m))))
+    (boolean (:open? m))))
 
-(rf/reg-sub ::reverse-lookup-loading?
-  :<- [::reverse-lookup]
+(rf/reg-sub ::address-panel-loading?
+  :<- [::address-panel]
   (fn [m]
     (boolean (:loading? m))))
 
-(rf/reg-sub ::reverse-lookup-error
-  :<- [::reverse-lookup]
+(rf/reg-sub ::address-panel-error
+  :<- [::address-panel]
   (fn [m]
     (:error m)))
 
-(rf/reg-sub ::reverse-lookup-result
-  :<- [::reverse-lookup]
+(rf/reg-sub ::address-panel-result
+  :<- [::address-panel]
   (fn [m]
     (:result m)))
 
-(rf/reg-sub ::reverse-lookup-point
-  :<- [::reverse-lookup]
+(rf/reg-sub ::address-panel-point
+  :<- [::address-panel]
   (fn [m]
     (:point m)))
 
