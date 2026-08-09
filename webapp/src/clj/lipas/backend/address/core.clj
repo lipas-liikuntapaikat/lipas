@@ -75,25 +75,31 @@
                 :when municipality-name]
             [(posti/name-key municipality-name) (format "%03d" city-code)]))))
 
+;; The response speaks LIPAS' locale keywords, so Swedish is `:se` in every
+;; builder below even though the rows they are built from call the column
+;; `sv`. Doing the rename once, here at the boundary, is what lets the UI
+;; look a name up by the locale it already has instead of special-casing
+;; Swedish.
+
 (defn- ->municipality
-  "`{:code \"049\" :name {:fi \"Espoo\" :sv \"Esbo\"}}` for a kuntanumero, or
+  "`{:code \"049\" :name {:fi \"Espoo\" :se \"Esbo\"}}` for a kuntanumero, or
   nil. Abolished municipalities are unknown to `cities/by-city-code`; the code
   is still returned, without names, since Posti's data outlives some merges."
   [code]
   (when code
     (let [{:keys [name]} (cities/by-city-code (parse-long code))]
       (cond-> {:code code}
-        name (assoc :name {:fi (:fi name) :sv (:se name)})))))
+        name (assoc :name {:fi (:fi name) :se (:se name)})))))
 
 (defn- ->postal-office
   [postal-code-row]
   (when postal-code-row
-    {:fi (:name-fi postal-code-row) :sv (:name-sv postal-code-row)}))
+    {:fi (:name-fi postal-code-row) :se (:name-sv postal-code-row)}))
 
 (defn- ->region
   [postal-code-row]
   (when postal-code-row
-    {:fi (:region-name-fi postal-code-row) :sv (:region-name-sv postal-code-row)}))
+    {:fi (:region-name-fi postal-code-row) :se (:region-name-sv postal-code-row)}))
 
 (defn- split-name
   "Splits a Pelias `name` ('Haukkaranta 16') into street and building number.
@@ -136,7 +142,7 @@
         chosen (choose-code codes postalcode)
         segment (first (filter #(= (:postal-code chosen) (:postal-code %)) segments))]
     {:street {:fi (or (:name-fi segment) street)
-              :sv (:name-sv segment)}
+              :se (:name-sv segment)}
      :number building
      :label label
      ;; Pelias reports distance in kilometres, the UI speaks metres.
@@ -156,7 +162,7 @@
   [{:keys [postal-code-fn]} paavo]
   (when paavo
     {:postal-code (:postal-code paavo)
-     :name {:fi (:name-fi paavo) :sv (:name-sv paavo)}
+     :name {:fi (:name-fi paavo) :se (:name-sv paavo)}
      :postal-office (->postal-office (postal-code-fn (:postal-code paavo)))
      :municipality (->municipality (:municipality-code paavo))}))
 

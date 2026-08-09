@@ -1095,7 +1095,10 @@
                 "/actions/reverse-geocode"
                 "?lat=" lat
                 "&lon=" lon)
-      :response-format (ajax/json-response-format {:keywords? true})
+      ;; Transit like every other LIPAS endpoint (the Digitransit calls above
+      ;; are JSON because they go straight to Pelias). Keyword-valued fields
+      ;; — :postal-code-source, the :sources statuses — arrive as keywords.
+      :response-format (ajax/transit-response-format)
       :on-success [::reverse-geocode-success]
       :on-failure [::reverse-geocode-failure]}}))
 
