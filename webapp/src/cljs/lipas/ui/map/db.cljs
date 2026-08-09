@@ -34,4 +34,6 @@
 
    :address-locator-dialog {:open? false}
 
+   :reverse-lookup {:armed? false}
+
    :restore-site-backup-dialog {:open? false}})

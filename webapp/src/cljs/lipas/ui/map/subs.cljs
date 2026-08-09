@@ -531,6 +531,38 @@
   (fn [m]
     (:error m)))
 
+;; Reverse lookup (address from map click)
+
+(rf/reg-sub ::reverse-lookup
+  :<- [::map]
+  (fn [m]
+    (:reverse-lookup m)))
+
+(rf/reg-sub ::reverse-lookup-armed?
+  :<- [::reverse-lookup]
+  (fn [m]
+    (boolean (:armed? m))))
+
+(rf/reg-sub ::reverse-lookup-loading?
+  :<- [::reverse-lookup]
+  (fn [m]
+    (boolean (:loading? m))))
+
+(rf/reg-sub ::reverse-lookup-error
+  :<- [::reverse-lookup]
+  (fn [m]
+    (:error m)))
+
+(rf/reg-sub ::reverse-lookup-result
+  :<- [::reverse-lookup]
+  (fn [m]
+    (:result m)))
+
+(rf/reg-sub ::reverse-lookup-point
+  :<- [::reverse-lookup]
+  (fn [m]
+    (:point m)))
+
 (rf/reg-sub ::edit-geom-properties
   (fn [db [_ fid]]
     (->> (get-in db [:map :mode :geoms])

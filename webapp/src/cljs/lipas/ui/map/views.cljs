@@ -1,7 +1,10 @@
 (ns lipas.ui.map.views
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/ContentCopy$default" :as ContentCopyIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Drawer$default" :as Drawer]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/Grid$default" :as Grid2]
@@ -42,6 +45,7 @@
             ["mdi-material-ui/ContentDuplicate$default" :as ContentDuplicate]
             ["mdi-material-ui/Eraser$default" :as Eraser]
             ["mdi-material-ui/FileUpload$default" :as FileUpload]
+            ["mdi-material-ui/MapMarkerQuestion$default" :as MapMarkerQuestion]
             ["mdi-material-ui/MapSearchOutline$default" :as MapSearchOutline]
             ["react" :as react]
             [clojure.string :as str]
@@ -122,6 +126,179 @@
            [:> ListItemButton {:on-click #(==> [::events/show-address m])}
             [:> ListItemText
              (:label m)]]))]]]))
+
+;;; Reverse lookup (address from map click) ;;;
+
+(defn- localized-name
+  "Proper names in the reverse lookup response come as {:fi ... :sv ...}.
+   Swedish falls back to Finnish and English uses the Finnish names."
+  [locale m]
+  (when m
+    (or (when (= :se locale) (:sv m))
+        (:fi m))))
+
+(defn- format-distance
+  "Metres → \"250 m\" / \"1,2 km\" (decimal comma except in English)."
+  [locale m]
+  (when m
+    (if (>= m 1000)
+      (let [s (.toFixed (/ m 1000) 1)]
+        (str (if (= :en locale) s (str/replace s "." ",")) " km"))
+      (str (js/Math.round m) " m"))))
+
+(defn- format-coords
+  [{:keys [lat lon]}]
+  (when (and lat lon)
+    (str (.toFixed lat 5) ", " (.toFixed lon 5))))
+
+(defn- reverse-lookup-rows
+  "Copy-paste friendly rows (label + value + optional note) from the
+   reverse-geocode response summary. Rows without a value are dropped."
+  [tr locale {:keys [summary point]}]
+  (let [{:keys [address address-distance-m postal-code alternative-postal-code
+                postal-office municipality region]} summary]
+    (into []
+          (filter (comp some? :value))
+          [{:key :address
+            :label (tr :map.reverse-lookup/address)
+            :value address
+            ;; The nearest known address can be far away in sparsely
+            ;; addressed areas — say so instead of implying precision.
+            ;; NOTE: tongue doesn't interpolate plain strings, so the
+            ;; placeholders are filled in by hand (as in lipas.ui.ptv).
+            :note (when (and address address-distance-m (> address-distance-m 100))
+                    (str/replace (tr :map.reverse-lookup/address-distance)
+                                 "%1$s"
+                                 (format-distance locale address-distance-m)))}
+           {:key :postal-code
+            :label (tr :map.reverse-lookup/postal-code)
+            :value postal-code
+            :note (when alternative-postal-code
+                    (str/replace (tr :map.reverse-lookup/postal-code-alternative)
+                                 "%1$s"
+                                 alternative-postal-code))}
+           {:key :postal-office
+            :label (tr :map.reverse-lookup/postal-office)
+            :value (localized-name locale postal-office)}
+           {:key :municipality
+            :label (tr :map.reverse-lookup/municipality)
+            :value (localized-name locale (:name municipality))}
+           {:key :region
+            :label (tr :map.reverse-lookup/region)
+            :value (localized-name locale region)}
+           {:key :coordinates
+            :label (tr :map.reverse-lookup/coordinates)
+            :value (format-coords point)}])))
+
+(r/defc reverse-lookup-row
+  [{:keys [tr label value note]}]
+  [:> Stack {:direction "row" :spacing 1 :alignItems "flex-start"}
+   [:> Stack {:sx #js {:flexGrow 1 :minWidth 0}}
+    [:> Typography {:variant "caption" :color "text.secondary"}
+     label]
+    [:> Typography {:variant "body2"}
+     value]
+    (when note
+      [:> Typography {:variant "caption" :color "text.secondary"}
+       note])]
+   [:> Tooltip {:title (tr :map.reverse-lookup/copy)}
+    [:> IconButton
+     {:size "small"
+      :on-click #(==> [:lipas.ui.events/copy-to-clipboard! value])}
+     [:> ContentCopyIcon {:fontSize "small"}]]]])
+
+(r/defc reverse-lookup-panel
+  "Floating (non-modal, so the map stays clickable) results panel for the
+   reverse lookup mode."
+  []
+  (let [tr (<== [:lipas.ui.subs/translator])
+        locale (<== [:lipas.ui.subs/locale])
+        armed? (<== [::subs/reverse-lookup-armed?])
+        loading? (<== [::subs/reverse-lookup-loading?])
+        error (<== [::subs/reverse-lookup-error])
+        result (<== [::subs/reverse-lookup-result])
+        point (<== [::subs/reverse-lookup-point])
+        rows (when result
+               (reverse-lookup-rows tr locale (update result :point #(or % point))))]
+    (when armed?
+      [:> Paper
+       {:elevation 8
+        :sx #js {:position "fixed"
+                 :top 80
+                 :right 16
+                 :zIndex 1200
+                 :width #js {:xs "calc(100vw - 32px)" :sm 340}
+                 :maxHeight "calc(100vh - 200px)"
+                 :display "flex"
+                 :flexDirection "column"}}
+
+       ;; Header
+       [:> Stack {:direction "row"
+                  :alignItems "center"
+                  :sx #js {:p 1 :pl 1.5 :bgcolor "primary.main" :color "primary.contrastText"}}
+        [:> Typography {:variant "subtitle1" :sx #js {:flexGrow 1}}
+         (tr :map.reverse-lookup/title)]
+        [:> Tooltip {:title (tr :map.reverse-lookup/close)}
+         [:> IconButton {:size "small"
+                         :sx #js {:color "inherit"}
+                         :on-click #(==> [::events/disarm-reverse-lookup])}
+          [:> CloseIcon {:fontSize "small"}]]]]
+
+       ;; Content
+       [:> Stack {:spacing 1.5 :sx #js {:p 1.5 :overflowY "auto"}}
+        (cond
+          loading?
+          [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+           [:> CircularProgress {:size 16}]
+           [:> Typography {:variant "body2" :color "text.secondary"}
+            (tr :map.reverse-lookup/loading)]]
+
+          error
+          [:> Alert {:severity "error"}
+           (tr :map.reverse-lookup/error)]
+
+          (seq rows)
+          [:<>
+           (into [:> Stack {:spacing 1.5}]
+                 (for [{:keys [key] :as row} rows]
+                   ^{:key key}
+                   [reverse-lookup-row (assoc row :tr tr)]))
+           [:> Button
+            {:size "small"
+             :variant "outlined"
+             :startIcon (r/as-element [:> ContentCopyIcon {:fontSize "small"}])
+             :on-click #(==> [:lipas.ui.events/copy-to-clipboard!
+                              (->> rows
+                                   (map (fn [{:keys [label value]}]
+                                          (str label ": " value)))
+                                   (str/join "\n"))])}
+            (tr :map.reverse-lookup/copy-all)]]
+
+          result
+          [:> Typography {:variant "body2" :color "text.secondary"}
+           (tr :map.reverse-lookup/no-results)]
+
+          :else
+          [:> Typography {:variant "body2" :color "text.secondary"}
+           (tr :map.reverse-lookup/helper-text)])
+
+        ;; Attribution
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :map.reverse-lookup/attribution)]]])))
+
+(r/defc reverse-lookup-btn
+  []
+  (let [tr (<== [:lipas.ui.subs/translator])
+        armed? (<== [::subs/reverse-lookup-armed?])]
+    [:> Tooltip {:title (if armed?
+                          (tr :map.reverse-lookup/tooltip-active)
+                          (tr :map.reverse-lookup/tooltip))}
+     [:> Grid {:item true}
+      [:> Fab
+       {:size "small"
+        :color (if armed? "secondary" "default")
+        :on-click #(==> [::events/toggle-reverse-lookup])}
+       [:> MapMarkerQuestion]]]]))
 
 (defn restore-site-backup-dialog []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -1960,7 +2137,10 @@
              [:> Fab
               {:size "small"
                :on-click #(==> [::events/toggle-address-search-dialog])}
-              [:> MapSearchOutline]]]]]]]]])))
+              [:> MapSearchOutline]]]]
+
+           ;; Reverse lookup btn (resolve address from map click)
+           [reverse-lookup-btn]]]]]])))
 
 (defn default-tools
   [{:keys [tr]}]
@@ -2009,6 +2189,9 @@
          [:> Fab
           {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
           [:> MapSearchOutline]]]]
+
+       ;; Reverse lookup btn (resolve address from map click)
+       [reverse-lookup-btn]
 
        ;; Create Excel report btn
        (when (= :list result-view)
@@ -2204,7 +2387,14 @@
 
      ;; The map
      [ol-map/map-outer
-      {:popup-ref popup-ref}]]))
+      {:popup-ref popup-ref}]
+
+     ;; Reverse lookup results panel. Mounted here (not in the toolbars)
+     ;; so it stays visible while the mode is armed, whichever map
+     ;; sub-view is showing. Must stay the LAST child: OpenLayers moves
+     ;; the popup node into its own overlay container, so React can only
+     ;; append here — inserting before the popup throws insertBefore.
+     [reverse-lookup-panel]]))
 
 (defn main []
   [map-view])

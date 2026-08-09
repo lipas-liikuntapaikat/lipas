@@ -163,6 +163,20 @@
 
 ;; Geom editing events ;;
 
+;; Reverse lookup ("resolve address from map click"). The helpers live
+;; here because the mode-changing events below disarm the mode. The
+;; events themselves are registered near the end of this file.
+
+(defn- reverse-lookup-armed? [db]
+  (boolean (get-in db [:map :reverse-lookup :armed?])))
+
+(defn- disarm-reverse-lookup
+  "Turns the reverse lookup mode off and clears its results and marker."
+  [db]
+  (-> db
+      (assoc-in [:map :reverse-lookup] {:armed? false})
+      (assoc-in [:map :mode :address] nil)))
+
 (defn- get-latest-rev [db lipas-id]
   (or (get-in db [:sports-sites lipas-id :editing])
       (let [latest (get-in db [:sports-sites lipas-id :latest])]
@@ -174,11 +188,13 @@
           geoms (-> site
                     (utils/->feature)
                     (map-utils/strip-z))]
-      {:db (update-in db [:map :mode] merge {:name :editing
-                                             :lipas-id lipas-id
-                                             :geoms geoms
-                                             :sub-mode sub-mode
-                                             :geom-type geom-type})
+      {:db (-> db
+               disarm-reverse-lookup
+               (update-in [:map :mode] merge {:name :editing
+                                              :lipas-id lipas-id
+                                              :geoms geoms
+                                              :sub-mode sub-mode
+                                              :geom-type geom-type}))
        :dispatch-n [[::show-problems (map-utils/find-problems geoms)]
                     [::show-popup nil]]})))
 
@@ -186,7 +202,9 @@
   (fn [{:keys [db]} [_ view-only?]]
     (let [geoms (-> db :map :mode :geoms)
           sub-mode (if view-only? :view-only :editing)]
-      {:db (update-in db [:map :mode] merge {:name :editing :sub-mode sub-mode})
+      {:db (-> db
+               disarm-reverse-lookup
+               (update-in [:map :mode] merge {:name :editing :sub-mode sub-mode}))
        :dispatch-n
        [[::show-problems (map-utils/find-problems geoms)]]})))
 
@@ -198,6 +216,7 @@
 (rf/reg-event-db ::start-adding-geom
   (fn [db [_ geom-type]]
     (-> db
+        disarm-reverse-lookup
         (update-in [:map :mode] merge {:name :adding
                                        :temp {}
                                        :geom-type geom-type
@@ -341,47 +360,64 @@
 
 (rf/reg-event-fx ::map-clicked
   (fn [{:keys [db]} [_ ^js event]]
-    (let [fids (atom #{})
-          lmap (.-map event)
-          opts #js {:layerFilter (fn [layer] (= "edits" (.get layer "name")))
-                    :hitTolerance 5}
-          selecting? (= :selecting (-> db :map :mode :sub-mode))
-          pixel (.-pixel event)]
-      #_(js/console.log event)
-      (when (and pixel selecting?)
-        (.forEachFeatureAtPixel lmap pixel
-                                (fn [^js f]
-                                  (swap! fids conj (.getId f)))
-                                opts))
-      {:fx (into [[:dispatch [::hide-address]]]
-                 (if (seq @fids)
-                   (for [fid @fids]
-                     [:dispatch [::toggle-selected-feature-id fid]])
-                   [(when-not selecting?
-                      [:dispatch [::clear-highlight]])]))})))
+    (if (reverse-lookup-armed? db)
+      ;; Reverse lookup mode takes over the click: resolve the clicked
+      ;; point instead of touching the selection.
+      (let [wgs84 (epsg3067->wgs84-fast (.-coordinate event))]
+        {:fx [[:dispatch [::reverse-geocode {:lon (aget wgs84 0)
+                                             :lat (aget wgs84 1)}]]]})
+      (let [fids (atom #{})
+            lmap (.-map event)
+            opts #js {:layerFilter (fn [layer] (= "edits" (.get layer "name")))
+                      :hitTolerance 5}
+            selecting? (= :selecting (-> db :map :mode :sub-mode))
+            pixel (.-pixel event)]
+        #_(js/console.log event)
+        (when (and pixel selecting?)
+          (.forEachFeatureAtPixel lmap pixel
+                                  (fn [^js f]
+                                    (swap! fids conj (.getId f)))
+                                  opts))
+        {:fx (into [[:dispatch [::hide-address]]]
+                   (if (seq @fids)
+                     (for [fid @fids]
+                       [:dispatch [::toggle-selected-feature-id fid]])
+                     [(when-not selecting?
+                        [:dispatch [::clear-highlight]])]))}))))
+
+;; NOTE: the OpenLayers select interaction fires independently of
+;; ::map-clicked. While the reverse lookup mode is armed a map click
+;; resolves an address instead of selecting, so these handlers stand
+;; down — otherwise clicking near a site would navigate away mid-lookup.
 
 (rf/reg-event-fx ::sports-site-selected
   (fn [{:keys [db]} [_ _ lipas-id]]
     (let [mode (-> db :map :mode :name)]
-      {:fx
-       [(when (= mode :analysis)
-          [:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]])
-        (when (not= mode :analysis)
-          [:dispatch [::show-sports-site lipas-id]])]})))
+      (if (reverse-lookup-armed? db)
+        {}
+        {:fx
+         [(when (= mode :analysis)
+            [:dispatch [:lipas.ui.analysis.reachability.events/show-analysis lipas-id]])
+          (when (not= mode :analysis)
+            [:dispatch [::show-sports-site lipas-id]])]}))))
 
 (rf/reg-event-fx ::loi-selected
-  (fn [_ [_ _event loi-id]]
-    {:fx
-     [[:dispatch [::show-loi loi-id]]]}))
+  (fn [{:keys [db]} [_ _event loi-id]]
+    (if (reverse-lookup-armed? db)
+      {}
+      {:fx
+       [[:dispatch [::show-loi loi-id]]]})))
 
 (rf/reg-event-fx ::unselected
   (fn [{:keys [db]} [_ _]]
     (let [mode (-> db :map :mode :name)]
-      {:fx
-       [(when (not= mode :analysis)
-          [:dispatch [::show-sports-site nil]])
-        (when (not= mode :analysis)
-          [:dispatch [::show-loi nil]])]})))
+      (if (reverse-lookup-armed? db)
+        {}
+        {:fx
+         [(when (not= mode :analysis)
+            [:dispatch [::show-sports-site nil]])
+          (when (not= mode :analysis)
+            [:dispatch [::show-loi nil]])]}))))
 
 ;;; Higher order events ;;;
 
@@ -478,7 +514,9 @@
 
 (rf/reg-event-fx ::start-adding-new-site
   (fn [{:keys [db]} [_ template opts]]
-    {:db (assoc-in db [:map :mode] {:name :default}) ;; cleanup
+    {:db (-> db
+             disarm-reverse-lookup
+             (assoc-in [:map :mode] {:name :default})) ;; cleanup
      :dispatch-n [[:lipas.ui.search.events/set-results-view :list]
                   [:lipas.ui.sports-sites.events/start-adding-new-site template opts]
                   [:lipas.ui.loi.events/start-adding-new-loi]]}))
@@ -1007,6 +1045,58 @@
 (rf/reg-event-db ::close-address-locator-dialog
   (fn [db _]
     (assoc-in db [:map :address-locator :dialog-open?] false)))
+
+;; Reverse lookup (address from map click)
+
+(defn- ->marker-feature
+  "GeoJSON (WGS84) point feature for the address marker layer."
+  [{:keys [lon lat]}]
+  {:type "Feature"
+   :geometry {:type "Point" :coordinates [lon lat]}})
+
+(rf/reg-event-fx ::toggle-reverse-lookup
+  (fn [{:keys [db]} _]
+    (if (reverse-lookup-armed? db)
+      {:db (disarm-reverse-lookup db)}
+      ;; The address search marker (if any) is not ours to keep around
+      ;; once the user starts clicking the map for addresses.
+      {:db (-> db
+               (assoc-in [:map :reverse-lookup] {:armed? true})
+               (assoc-in [:map :mode :address] nil))})))
+
+(rf/reg-event-db ::disarm-reverse-lookup
+  (fn [db _]
+    (disarm-reverse-lookup db)))
+
+(rf/reg-event-fx ::reverse-geocode
+  (fn [{:keys [db]} [_ {:keys [lat lon] :as point}]]
+    {:db (-> db
+             (update-in [:map :reverse-lookup] merge {:point point
+                                                      :loading? true
+                                                      :error nil
+                                                      :result nil})
+             (assoc-in [:map :mode :address] (->marker-feature point)))
+     :http-xhrio
+     {:method :get
+      :uri (str (:backend-url db)
+                "/actions/reverse-geocode"
+                "?lat=" lat
+                "&lon=" lon)
+      :response-format (ajax/json-response-format {:keywords? true})
+      :on-success [::reverse-geocode-success]
+      :on-failure [::reverse-geocode-failure]}}))
+
+(rf/reg-event-db ::reverse-geocode-success
+  (fn [db [_ resp]]
+    (update-in db [:map :reverse-lookup] merge {:loading? false
+                                                :error nil
+                                                :result resp})))
+
+(rf/reg-event-db ::reverse-geocode-failure
+  (fn [db [_ resp]]
+    (update-in db [:map :reverse-lookup] merge {:loading? false
+                                                :error resp
+                                                :result nil})))
 
 (rf/reg-event-fx ::download-site-backup
   (fn [{:keys [db]} [_ lipas-id]]
