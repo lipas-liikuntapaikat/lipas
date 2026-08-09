@@ -140,7 +140,9 @@
      :number building
      :label label
      ;; Pelias reports distance in kilometres, the UI speaks metres.
-     :distance-m (some-> distance (* 1000) Math/round long)
+     ;; 1000.0 (not 1000): an exactly-matched point comes back with an
+     ;; integer distance, and Math/round has no Long overload.
+     :distance-m (some-> distance (* 1000.0) Math/round)
      :municipality (->municipality municipality-code)
      :pelias-postal-code postalcode
      :posti (when chosen

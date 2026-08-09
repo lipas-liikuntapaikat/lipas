@@ -136,6 +136,17 @@
     (testing "both sources answered"
       (is (= {:pelias :ok :paavo :ok} (:sources summary))))))
 
+(deftest integer-distance-test
+  ;; A point exactly on an address comes back from Pelias with an integer
+  ;; distance (JSON 0, not 0.0). Regression: Math/round has no Long
+  ;; overload, so this used to 500 on every searched-address lookup.
+  (let [{:keys [summary addresses]}
+        (reverse-geocode {:lat 60.1699 :lon 24.9384
+                          :features [(feature "Mannerheimintie" "5" "Helsinki" "00100" 0)]
+                          :paavo (paavo-area "00100" "Helsinki keskusta" "Helsingfors centrum" "091")})]
+    (is (= 0 (:distance-m (first addresses))))
+    (is (= 0 (:address-distance-m summary)))))
+
 (deftest distant-exact-match-loses-to-paavo-test
   (let [{:keys [summary area addresses]}
         (reverse-geocode {:features nuuksio-features
