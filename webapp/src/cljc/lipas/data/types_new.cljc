@@ -4224,7 +4224,7 @@
     :geometry-type "Point",
     :props
     {:height-m {:priority 90, :derivable? true},
-     :surface-material {:priority 89, :derivable? true},
+     :surface-material {:priority 89},
      :surface-material-info {:priority 88, :derivable? true},
      :stand-capacity-person {:priority 70, :derivable? true},
      :free-use? {:priority 40},

@@ -16,6 +16,7 @@
             ["mdi-material-ui/Calculator$default" :as Calculator]
             [clojure.string :as str]
             [lipas.data.floorball :as floorball-data]
+            [lipas.data.materials :as materials]
             [lipas.data.owners :as owners-data]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.ptv :as ptv-data]
@@ -431,7 +432,15 @@
 (defn surface-material-selector
   [{:keys [tr value on-change label multi? spec tooltip disabled]}]
   (let [locale (tr)
-        items (<== [::subs/surface-materials])]
+        items (<== [::subs/surface-materials])
+        ;; Stored values outside the offerable list (carpet/resin/
+        ;; natural-surface from old pickers and derivations) must still
+        ;; render a label and stay removable — not appear as blank chips.
+        legacy (not-empty
+                 (select-keys materials/all
+                              (remove #(contains? items %)
+                                      (if multi? value (some-> value vector)))))
+        items (if legacy (merge legacy items) items)]
     [autocompletes/autocomplete
      {:value value
       :multi? multi?

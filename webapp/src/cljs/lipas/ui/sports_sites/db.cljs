@@ -30,11 +30,12 @@
    :supporting-structures materials/supporting-structures
    :ceiling-structures    materials/ceiling-structures
    :base-floor-structures materials/base-floor-structures
-   ;; Full enum — this backs the :surface-material prop selector, and the
-   ;; prop's schema/opts accept every value here. The narrower
-   ;; sports-site-surface-materials lacks resin/carpet (floorball floors),
-   ;; which rendered stored values as blank chips and made them unpickable.
-   :surface-materials     materials/surface-materials
+   ;; Deliberately narrower than the full surface-materials enum: carpet
+   ;; and resin are floorball field concepts and natural-surface is a
+   ;; deprecated duplicate of soil — none may be offered for the
+   ;; site-level prop. Legacy stored values outside this list still
+   ;; render (the selector falls back to materials/all labels).
+   :surface-materials     materials/sports-site-surface-materials
 
    :delete-dialog
    {:open?           false
