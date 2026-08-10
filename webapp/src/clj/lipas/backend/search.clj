@@ -117,14 +117,25 @@
          ;; the results table, hence text-with-sort.
          :name-localized.se (text-with-sort "sv")
          :name-localized.en (text-with-sort "en")
-         :marketing-name {:type "text" :fields {:keyword {:type "keyword"}}}
+         ;; Free-text user-entered fields the results table offers as sort
+         ;; columns. The data is a case mess (HELSINKI / helsinki / Helsinki),
+         ;; so sorting on the plain keyword sub-field puts every lowercase
+         ;; value after the entire uppercase alphabet. The collation `sort`
+         ;; sub-field orders them case-insensitively. Single-value fields with
+         ;; no per-locale variants, hence one Finnish collation like
+         ;; search-meta.name.
+         :marketing-name (text-with-sort "fi")
+         :www (text-with-sort "fi")
+         :email (text-with-sort "fi")  ; simple_query_string queries this
+         :phone-number (text-with-sort "fi")  ; simple_query_string queries this
+         :renovation-years {:type "integer"}  ; sortable column (array; asc sorts by min)
          :comment {:type "text" :fields {:keyword {:type "keyword"}}}
          ;; Location fields that ARE QUERIED
          :location.city.city-code {:type "integer"}  ; queried by V2 API filter
          :location.city.neighborhood {:type "text" :fields {:keyword {:type "keyword"}}}
-         :location.address {:type "text" :fields {:keyword {:type "keyword"}}}  ; might be searched
+         :location.address (text-with-sort "fi")
          :location.postal-code {:type "keyword"}
-         :location.postal-office {:type "text" :fields {:keyword {:type "keyword"}}}}
+         :location.postal-office (text-with-sort "fi")}
 
         ;; Geographic fields
         geo-fields
@@ -164,12 +175,13 @@
          :search-meta.type.tags.fi {:type "keyword"}
          :search-meta.type.tags.se {:type "keyword"}
          :search-meta.type.tags.en {:type "keyword"}
-         :search-meta.type.main-category.name.fi text-with-keyword
-         :search-meta.type.main-category.name.se text-with-keyword
-         :search-meta.type.main-category.name.en text-with-keyword
-         :search-meta.type.sub-category.name.fi text-with-keyword
-         :search-meta.type.sub-category.name.se text-with-keyword
-         :search-meta.type.sub-category.name.en text-with-keyword
+         ;; Main/sub-category are sortable results-table columns
+         :search-meta.type.main-category.name.fi (text-with-sort "fi")
+         :search-meta.type.main-category.name.se (text-with-sort "sv")
+         :search-meta.type.main-category.name.en (text-with-sort "en")
+         :search-meta.type.sub-category.name.fi (text-with-sort "fi")
+         :search-meta.type.sub-category.name.se (text-with-sort "sv")
+         :search-meta.type.sub-category.name.en (text-with-sort "en")
          :search-meta.fields.field-types {:type "keyword"}
          :search-meta.audits.latest-audit-date {:type "date"}
          ;; NEW: Activity keys array for filtering
@@ -187,11 +199,7 @@
          :location.geometries {:enabled false}  ; indexed via search-meta.location.geometries instead
          :search-meta.location.simple-geoms {:enabled false}
          ;; Display-only fields (never queried, only retrieved)
-         :phone-number {:enabled false}
-         :email {:enabled false}
-         :www {:enabled false}
          :reservations-link {:enabled false}
-         :renovation-years {:enabled false}
          :renovations {:enabled false}
          :fields {:enabled false}
          :locker-rooms {:enabled false}

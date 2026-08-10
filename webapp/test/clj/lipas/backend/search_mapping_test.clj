@@ -150,7 +150,22 @@
                     :search-meta.type.name.fi "fi"
                     :search-meta.type.name.se "sv"
                     :search-meta.admin.name.fi "fi"
-                    :search-meta.owner.name.se "sv"}]
+                    :search-meta.owner.name.se "sv"
+                    ;; Free-text user-entered sortable columns: mixed-case data
+                    ;; (HELSINKI / helsinki) must sort case-insensitively
+                    :marketing-name "fi"
+                    :www "fi"
+                    :email "fi"
+                    :phone-number "fi"
+                    :location.address "fi"
+                    :location.postal-office "fi"
+                    ;; Localized sortable columns
+                    :search-meta.type.main-category.name.fi "fi"
+                    :search-meta.type.main-category.name.se "sv"
+                    :search-meta.type.main-category.name.en "en"
+                    :search-meta.type.sub-category.name.fi "fi"
+                    :search-meta.type.sub-category.name.se "sv"
+                    :search-meta.type.sub-category.name.en "en"}]
       (doseq [[field lang] expected]
         (let [sort-field (get-in properties [field :fields :sort])]
           (is (= "icu_collation_keyword" (:type sort-field))
@@ -158,4 +173,15 @@
           (is (= lang (:language sort-field))
               (str field " should collate in " lang))
           ;; keep the plain keyword sub-field for exact match / aggregations
-          (is (= "keyword" (get-in properties [field :fields :keyword :type]))))))))
+          (is (= "keyword" (get-in properties [field :fields :keyword :type])))))))
+
+  (testing "sortable table columns are indexed - sorting an unmapped field is an ES 400"
+    (let [properties (get-in (:sports-site search/mappings) [:mappings :properties])]
+      ;; www/email/phone-number used to be {:enabled false}, which made the
+      ;; results-table sort (and the simple_query_string over email +
+      ;; phone-number) silently broken
+      (doseq [field [:www :email :phone-number]]
+        (is (= "text" (:type (get properties field)))
+            (str field " should be an indexed text field")))
+      (is (= "integer" (:type (get properties :renovation-years)))
+          "renovation-years (int array) sorts numerically by min/max"))))
