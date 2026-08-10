@@ -14,12 +14,21 @@
   (update-in m [:query :function_score :query :bool :filter] conj filter))
 
 (defn ->sort-key [k locale]
-  ;; Name fields sort on the `.sort` sub-field (icu_collation_keyword), which
-  ;; orders accented letters in the locale's collation order instead of raw
-  ;; Unicode code-point order. See lipas.backend.search/text-with-sort.
+  ;; Text fields sort on the `.sort` sub-field (icu_collation_keyword), which
+  ;; orders mixed-case and accented values in the locale's collation order
+  ;; instead of raw Unicode code-point order (where every lowercase value
+  ;; sorts after the entire uppercase alphabet). See
+  ;; lipas.backend.search/text-with-sort.
   (case k
     (:lipas-id) :lipas-id
     (:name) :search-meta.name.sort
+    ;; Free-text user-entered fields: single value, Finnish collation
+    (:marketing-name
+      :www
+      :email
+      :phone-number
+      :location.address
+      :location.postal-office) (keyword (str (name k) ".sort"))
     (:location.city.name
       :type.name
       :admin.name
@@ -27,6 +36,12 @@
                        (->> (str "search-meta."))
                        (str "." (name locale) ".sort")
                        keyword)
+    ;; Localized names live under search-meta.type.*.name.<locale>
+    (:type.main-category
+      :type.sub-category) (keyword (str "search-meta." (name k) ".name."
+                                        (name locale) ".sort"))
+    ;; keyword-typed field, no sub-fields
+    (:location.postal-code) k
     (:event-date
       :construction-year
       :renovation-years) k
@@ -563,7 +578,7 @@
   (-> kw name (str/split #"\.") (->> (mapv keyword))))
 
 (def data-keys
-  [:name :marketing-name :www :phone-numer :email :owner :admin :type.type-code
+  [:name :marketing-name :www :phone-number :email :owner :admin :type.type-code
    :renovation-years :construction-year :location.address :location.postal-code
    :location.postal-office :location.city.city-code])
 
