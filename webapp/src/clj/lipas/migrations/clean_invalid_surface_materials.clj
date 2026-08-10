@@ -79,23 +79,25 @@
 (defn migrate-up
   [{:keys [db] :as _config}]
   (log/info "Starting migration: clean-invalid-surface-materials")
-  (let [user (db/get-user-by-email db {:email "import@lipas.fi"})
-        _ (when-not (:id user)
-            (throw (ex-info "import@lipas.fi user not found" {})))
-        plan (compute-plan db)
+  (let [plan (compute-plan db)
         {skips true fixes false} (group-by (comp some? :skip) plan)]
     (doseq [{:keys [lipas-id skip]} skips]
       (log/warn "Skipping lipas-id" lipas-id ":" skip))
-    (log/info "Found" (count fixes) "sports sites with non-LIPAS surface materials")
-    (doseq [{:keys [lipas-id name old new site]} fixes]
-      (log/info "Cleaning lipas-id" lipas-id (pr-str name)
-                (pr-str old) "->" (pr-str new))
-      (db/upsert-sports-site! db user site))
-    (log/info "Migration complete: clean-invalid-surface-materials. Cleaned"
-              (count fixes) "sites")
+    (log/info "Found" (count fixes) "sports sites with deprecated surface materials")
     (when (seq fixes)
-      (log/warn "Search index is now stale for the cleaned sites"
-                "- run a search reindex."))))
+      ;; Looked up only when there is work to do — fresh databases (CI,
+      ;; empty installs) have neither sports sites nor the import user.
+      (let [user (db/get-user-by-email db {:email "import@lipas.fi"})]
+        (when-not (:id user)
+          (throw (ex-info "import@lipas.fi user not found" {})))
+        (doseq [{:keys [lipas-id name old new site]} fixes]
+          (log/info "Cleaning lipas-id" lipas-id (pr-str name)
+                    (pr-str old) "->" (pr-str new))
+          (db/upsert-sports-site! db user site))
+        (log/warn "Search index is now stale for the cleaned sites"
+                  "- run a search reindex.")))
+    (log/info "Migration complete: clean-invalid-surface-materials. Cleaned"
+              (count fixes) "sites")))
 
 (defn migrate-down [_config]
   (log/warn "Rollback not supported for clean-invalid-surface-materials migration"))
