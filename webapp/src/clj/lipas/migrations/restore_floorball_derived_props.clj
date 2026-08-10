@@ -12,11 +12,17 @@
   overwrites a non-empty current value. Updates the current revision in
   place (same approach as fix-postal-codes).
 
+  :surface-material is special: it is no longer derivable at all (the
+  floorball per-field surface material has a different definition than the
+  site-level LIPAS prop), so it is restored from history only, and only
+  with LIPAS-valid values — carpet/resin/natural-surface never come back.
+
   NOTE: the search index goes stale for the repaired sites — run a search
   reindex after deploying this migration."
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [lipas.data.floorball :as floorball]
+            [lipas.data.materials :as materials]
             [lipas.data.prop-types :as prop-types]
             [malli.core :as m]
             [next.jdbc :as jdbc]
@@ -25,6 +31,12 @@
 
 (def derivable-prop-ks
   (keys floorball/prop-k->derive-fn))
+
+(def restorable-prop-ks
+  (cons :surface-material derivable-prop-ks))
+
+(def sports-site-surface-material?
+  (set (keys materials/sports-site-surface-materials)))
 
 (defn- parse-doc
   "Migrations run without lipas.backend.db's PGobject extensions, so the
@@ -52,17 +64,31 @@
        (remove empty-val?)
        first))
 
+(defn- latest-valid-surface-material
+  "Latest historical :surface-material that still holds a value after
+  stripping non-LIPAS materials (carpet/resin/natural-surface from old
+  pickers and derivations); `history` is newest-first."
+  [history]
+  (->> history
+       (map #(get-in % [:properties :surface-material]))
+       (keep (fn [v]
+               (when (sequential? v)
+                 (not-empty (filterv sports-site-surface-material? v)))))
+       first))
+
 (defn- repair-for-site
-  "Props to fill for one site: currently-empty derivable props, valued from
+  "Props to fill for one site: currently-empty restorable props, valued from
   a fresh :fields derivation or, failing that, from revision history. Every
   candidate value is validated against the prop's schema before inclusion."
   [current history]
   (let [props (:properties current)
         derived (or (floorball/derive-props (:fields current)) {})]
     (into {}
-          (for [k derivable-prop-ks
+          (for [k restorable-prop-ks
                 :when (empty-val? (clean-str (get props k)))
-                :let [v (or (get derived k) (latest-nonempty history k))
+                :let [v (if (= :surface-material k)
+                          (latest-valid-surface-material history)
+                          (or (get derived k) (latest-nonempty history k)))
                       schema (get prop-types/schemas k)]
                 :when (and (some? v) schema (m/validate schema v))]
             [k v]))))

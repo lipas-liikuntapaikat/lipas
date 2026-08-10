@@ -53,13 +53,12 @@
 
 ;;; Deriving traditional props from structured fields data ;;;
 
-;; Values the site-level :surface-material prop accepts (the full
-;; surface-materials enum backs both prop-types opts and its schema).
-;; NOTE: not sports-site-surface-materials — that narrower set lacks
-;; resin/carpet, and filtering against it silently dropped the two most
-;; common floorball floor materials.
-(def prop-surface-materials
-  (into #{} (keys materials/surface-materials)))
+;; NOTE: the site-level :surface-material prop is deliberately NOT derived.
+;; The floorball per-field surface material has a different definition
+;; (what you play on, including movable overlays like carpet) than the
+;; LIPAS prop (the permanent primary surface of the site), so no valid
+;; mapping exists — e.g. for a carpet floor LIPAS wants to know what is
+;; under the carpet, which the fields data does not record.
 
 (defn- fields-seq
   "Fields live as an indexed map {0 {...}} in the editing state and as a
@@ -97,13 +96,6 @@
                                (apply min hs)))
    :area-m2                (fn [fields]
                              (pos-num (apply + 0 (keep :surface-area-m2 fields))))
-   :surface-material       (fn [fields]
-                             (->> fields
-                                  (keep :surface-material)
-                                  distinct
-                                  (filter prop-surface-materials)
-                                  vec
-                                  not-empty))
    :surface-material-info  (fn [fields]
                              (->> fields
                                   (keep :surface-material-product)
