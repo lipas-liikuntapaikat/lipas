@@ -38,7 +38,11 @@
    "03220" {:name-fi "TERVALAMPI" :name-sv "TERVALAMPI" :municipality-code "927"
             :region-name-fi "Helsinki-Uusimaa" :region-name-sv "Helsingfors-Nyland"}
    "00100" {:name-fi "HELSINKI" :name-sv "HELSINGFORS" :municipality-code "091"
-            :region-name-fi "Helsinki-Uusimaa" :region-name-sv "Helsingfors-Nyland"}})
+            :region-name-fi "Helsinki-Uusimaa" :region-name-sv "Helsingfors-Nyland"}
+   "76100" {:name-fi "PIEKSÄMÄKI" :name-sv "PIEKSÄMÄKI" :municipality-code "593"
+            :region-name-fi "Etelä-Savo" :region-name-sv "Södra Savolax"}
+   "76150" {:name-fi "PIEKSÄMÄKI" :name-sv "PIEKSÄMÄKI" :municipality-code "593"
+            :region-name-fi "Etelä-Savo" :region-name-sv "Södra Savolax"}})
 
 (defn- segment [postal-code name-fi name-sv side from to]
   {:postal-code postal-code
@@ -62,7 +66,9 @@
   {["haukkaranta" "049"] [(segment "02820" "Haukkaranta" nil :odd 1 19)
                           (segment "02820" "Haukkaranta" nil :even 2 20)]
    ["mannerheimintie" "091"] mannerheimintie
-   ["mannerheimvagen" "091"] mannerheimintie})
+   ["mannerheimvagen" "091"] mannerheimintie
+   ["vanha mikkelintie" "593"] [(segment "76150" "Vanha Mikkelintie" nil :even 2 40)]
+   ["hiekkapurontie" "593"] [(segment "76100" "Hiekkapurontie" nil :odd 1 9)]})
 
 (defn- feature
   "A Pelias address feature's properties. `distance` is in kilometres, as
@@ -189,13 +195,49 @@
       (is (= {:code "927" :name {:fi "Vihti" :se "Vichtis"}} (:municipality summary))
           "containing the point beats matching a name")))
 
-  (testing "polygon and NEAR address disagree: the address answers, the polygon is the caveat"
+  (testing "polygon and a clicked building disagree: the building answers, the polygon is the caveat"
     (let [{:keys [summary]}
-          (reverse-geocode {:features [(feature "Haukkaranta" "16" "Espoo" "02820" 0.05)]
+          (reverse-geocode {:features [(feature "Haukkaranta" "16" "Espoo" "02820" 0.02)]
                             :paavo (paavo-area "03220" "Tervalampi" "Tervalampi" "927")})]
       (is (= "02820" (:postal-code summary)))
       (is (= :posti (:postal-code-source summary)))
-      (is (= "03220" (:alternative-postal-code summary))))))
+      (is (= "03220" (:alternative-postal-code summary)))))
+
+  (testing "polygon and a merely nearby address disagree: the polygon answers"
+    ;; 50 m is outside clicked-building certainty — address points carry tens
+    ;; of metres of noise, and the polygon contains the point.
+    (let [{:keys [summary]}
+          (reverse-geocode {:features [(feature "Haukkaranta" "16" "Espoo" "02820" 0.05)]
+                            :paavo (paavo-area "03220" "Tervalampi" "Tervalampi" "927")})]
+      (is (= "03220" (:postal-code summary)))
+      (is (= :paavo (:postal-code-source summary)))
+      (is (= "02820" (:alternative-postal-code summary))))))
+
+(deftest boundary-click-follows-the-polygon-test
+  ;; Tester-reported regression (Pieksämäki): the point sits in the 76100
+  ;; polygon; the nearest exact address (76150, across the boundary) was a
+  ;; 3 m Pelias-distance win over an agreeing 76100 address. Two agreeing
+  ;; sources must beat one source's metre-scale luck.
+  (let [{:keys [summary]}
+        (reverse-geocode
+          {:lat 62.29423 :lon 27.14823
+           :features [(feature "Vanha Mikkelintie" "12-14" "Pieksämäki" "76150" 0.043)
+                      (feature "Hiekkapurontie" "1" "Pieksämäki" "76100" 0.046)]
+           :paavo (paavo-area "76100" "Pieksämäki Keskus" "Pieksämäki centrum" "593")})]
+
+    (testing "the containing polygon answers, not the 3 m nearer neighbour"
+      (is (= "76100" (:postal-code summary)))
+      (is (= :paavo (:postal-code-source summary)))
+      (is (= "76150" (:alternative-postal-code summary))
+          "the losing address code stays visible as the caveat"))
+
+    (testing "the headline address agrees with the answering code"
+      (is (= "Hiekkapurontie 1" (:address summary)))
+      (is (= 46 (:address-distance-m summary))))
+
+    (testing "postitoimipaikka and region come from the winning code's row"
+      (is (= {:fi "PIEKSÄMÄKI" :se "PIEKSÄMÄKI"} (:postal-office summary)))
+      (is (= {:fi "Etelä-Savo" :se "Södra Savolax"} (:region summary))))))
 
 (deftest phantom-address-only-test
   (testing "the only address is one BAF doesn't know: Paavo carries the answer alone"

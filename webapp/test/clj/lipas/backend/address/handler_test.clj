@@ -105,7 +105,7 @@
     :label "Mannerheimintie 5, Helsinki"
     :localadmin "Helsinki"
     :postalcode "00100"
-    :distance 0.041}
+    :distance 0.02}
    {:street "Kuvitteellinenkatu"
     :housenumber "1"
     :name "Kuvitteellinenkatu 1"
@@ -144,7 +144,7 @@
       (is (= 2 (count addresses)))
       (is (= ["Mannerheimintie 5, Helsinki" "Kuvitteellinenkatu 1, Helsinki"]
              (mapv :label addresses)))
-      (is (= [41 200] (mapv :distance-m addresses)))
+      (is (= [20 200] (mapv :distance-m addresses)))
       (is (= {:postal-code "00100"
               :postal-office {:fi "HELSINKI" :se "HELSINGFORS"}
               :exact true}
@@ -152,13 +152,13 @@
       (is (nil? (:posti (second addresses)))
           "a street that is not in BAF gets no Posti verdict"))
 
-    (testing "an address 41 m away outranks the polygon it disagrees with"
+    (testing "a clicked building (20 m) outranks the polygon it disagrees with"
       (is (= "00100" (:postal-code summary)))
       (is (= "posti" (:postal-code-source summary))
           "keyword-valued fields arrive as strings over JSON")
       (is (= "00250" (:alternative-postal-code summary)))
       (is (= "Mannerheimintie 5" (:address summary)))
-      (is (= 41 (:address-distance-m summary)))
+      (is (= 20 (:address-distance-m summary)))
       (is (= {:fi "HELSINKI" :se "HELSINGFORS"} (:postal-office summary)))
       (is (= {:fi "Helsinki-Uusimaa" :se "Helsingfors-Nyland"} (:region summary))))
 

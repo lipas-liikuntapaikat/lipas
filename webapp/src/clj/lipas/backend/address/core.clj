@@ -45,14 +45,26 @@
 
 ;;; Reverse geocoding ;;;
 
-(def exact-match-max-distance-m
-  "How far a BAF-exact address may be from the clicked point and still speak
-  for it. Beyond this the address is a neighbour, not the location: the
-  Nuuksio case has an exact 02820 address 1.17 km away and another
-  municipality's 1.19 km away, and picking either would be a coin toss
-  dressed up as an answer. The Paavo polygon, which actually contains the
-  point, wins there."
-  300)
+(def clicked-building-max-distance-m
+  "How close a BAF-exact address must be before it may overrule the Paavo
+  polygon that contains the clicked point — close enough that 'the user
+  clicked that building' is the only reading, which is the one case where
+  the polygon can genuinely be wrong (its generalized boundary swallowing a
+  building whose official code differs).
+
+  Any looser and boundary clicks turn into coin tosses. The Pieksämäki case:
+  an exact 76150 address 43 m away beat an exact 76100 address 46 m away and
+  the 76100 polygon containing the point — 3 m of address-point luck against
+  two agreeing sources, and the wrong answer. Address points sit at building
+  corners and centroids, so metre-scale distance differences carry no signal."
+  30)
+
+(def address-ambiguity-band-m
+  "Pelias distances are only as good as the address points behind them, so
+  within this band of the nearest address the ranking is noise. When picking
+  the address to headline, an exact match that agrees with the answering
+  postal code beats a marginally nearer one that does not."
+  30)
 
 (def max-addresses
   "Addresses returned to the client. Pelias is asked for more so that the
@@ -171,38 +183,55 @@
 
   1. A = the closest address BAF matched exactly.
   2. B = the Paavo area containing the point.
-  3. The postal code is A when A is within `exact-match-max-distance-m`, else
-     B, else A, else the raw code Pelias inherited from the nearest address,
-     else nothing. Each step is a step down in trustworthiness, and
+  3. The postal code is B whenever there is one — the polygon *contains* the
+     point, and near boundaries that beats any nearest-address reasoning —
+     except when A is within `clicked-building-max-distance-m`, where the
+     click can only mean that building. Without B: A, else the raw code
+     Pelias inherited from the nearest address, else nothing.
      `:postal-code-source` says which one answered.
   4. `:alternative-postal-code` is the other of A and B when they disagree —
      the caveat line the panel shows. Nil when they agree, which is the
      common case and worth not nagging about.
-  5. The municipality comes from the Paavo polygon when there is one:
+  5. The headline address is the nearest one, except that within
+     `address-ambiguity-band-m` of it a BAF-exact address agreeing with the
+     answering code is preferred — 3 m of address-point luck must not
+     out-rank agreement with the containing polygon (the Pieksämäki case).
+  6. The municipality comes from the Paavo polygon when there is one:
      containing the point beats a string match on Pelias' `localadmin`.
-  6. The region comes from Posti's `postal_code` row for whichever code won."
+  7. The region comes from Posti's `postal_code` row for whichever code won."
   [{:keys [postal-code-fn]} addresses area]
   (let [nearest (first addresses)
         a (first (filter #(get-in % [:posti :exact]) addresses))
         a-code (get-in a [:posti :postal-code])
         b-code (:postal-code area)
+        clicked-building? (boolean (some-> a :distance-m
+                                           (<= clicked-building-max-distance-m)))
         [code source] (cond
-                        (and a (<= (:distance-m a) exact-match-max-distance-m))
+                        (and a-code (or (not b-code) clicked-building?))
                         [a-code :posti]
 
                         b-code [b-code :paavo]
-                        a-code [a-code :posti]
                         (:pelias-postal-code nearest) [(:pelias-postal-code nearest) :pelias]
                         :else [nil nil])
+        shown (or (when-let [near-d (and code (:distance-m nearest))]
+                    (->> addresses
+                         (filter (fn [addr]
+                                   (and (:distance-m addr)
+                                        (<= (:distance-m addr)
+                                            (+ near-d address-ambiguity-band-m))
+                                        (= code (get-in addr [:posti :postal-code]))
+                                        (get-in addr [:posti :exact]))))
+                         first))
+                  nearest)
         row (when code (postal-code-fn code))
-        street (get-in nearest [:street :fi])]
+        street (get-in shown [:street :fi])]
     {:postal-code code
      :postal-code-source source
      :postal-office (->postal-office row)
      :municipality (or (:municipality area) (:municipality a))
      :region (->region row)
-     :address (when street (str/trim (str street " " (:number nearest))))
-     :address-distance-m (:distance-m nearest)
+     :address (when street (str/trim (str street " " (:number shown))))
+     :address-distance-m (:distance-m shown)
      :alternative-postal-code (when (and a-code b-code (not= a-code b-code))
                                 (if (= :posti source) b-code a-code))}))
 
