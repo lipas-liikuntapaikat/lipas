@@ -11,7 +11,7 @@
   These values leaked in through short-lived wide pickers (carpet/resin
   via the floorball fields derivation, natural-surface Dec 2023 - May
   2024). Because this rewrites values instead of filling empty ones, each
-  fix is appended as a new revision (authored by import@lipas.fi) so the
+  fix is appended as a new revision (authored by robot@lipas.fi) so the
   old value stays in the site's history.
 
   NOTE: the search index goes stale for the cleaned sites — run a search
@@ -86,10 +86,10 @@
     (log/info "Found" (count fixes) "sports sites with deprecated surface materials")
     (when (seq fixes)
       ;; Looked up only when there is work to do — fresh databases (CI,
-      ;; empty installs) have neither sports sites nor the import user.
-      (let [user (db/get-user-by-email db {:email "import@lipas.fi"})]
+      ;; empty installs) have neither sports sites nor the robot user.
+      (let [user (db/get-user-by-email db {:email "robot@lipas.fi"})]
         (when-not (:id user)
-          (throw (ex-info "import@lipas.fi user not found" {})))
+          (throw (ex-info "robot@lipas.fi user not found" {})))
         (doseq [{:keys [lipas-id name old new site]} fixes]
           (log/info "Cleaning lipas-id" lipas-id (pr-str name)
                     (pr-str old) "->" (pr-str new))
