@@ -42,7 +42,9 @@
    "Yhdistys"      "registered-association"
    "Yhteinen alue" "other"
    "Seurakunta"    "other"
-   "Yritys"        "company-ltd"})
+   "Yritys"        "company-ltd"
+   "Säätiö"        "foundation"
+   "Muu"           "other"})
 
 ;; City code mapping for abolished municipalities
 ;; Maps old city codes to their current (merged) equivalents
