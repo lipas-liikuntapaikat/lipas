@@ -27,11 +27,12 @@
    {:dialog-open? false
     :tolerance    0}
    :address-search
-   {:base-url     "https://api.digitransit.fi/geocoding/v1"
-    :dialog-open? false}
+   {:base-url "https://api.digitransit.fi/geocoding/v1"}
 
    :add-mode "sports-site"
 
    :address-locator-dialog {:open? false}
+
+   :address-panel {:open? false}
 
    :restore-site-backup-dialog {:open? false}})
