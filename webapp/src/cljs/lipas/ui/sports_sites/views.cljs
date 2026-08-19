@@ -1,5 +1,6 @@
 (ns lipas.ui.sports-sites.views
   (:require ["@mui/material/Alert$default" :as Alert]
+            ["@mui/material/Button$default" :as Button]
             ["@mui/material/FormGroup$default" :as FormGroup]
             ["@mui/material/GridLegacy$default" :as Grid]
             ["@mui/material/Icon$default" :as Icon]
@@ -14,6 +15,8 @@
             ["@mui/material/Typography$default" :as Typography]
             ["mdi-material-ui/Calculator$default" :as Calculator]
             [clojure.string :as str]
+            [lipas.data.floorball :as floorball-data]
+            [lipas.data.materials :as materials]
             [lipas.data.owners :as owners-data]
             [lipas.data.prop-types :as prop-types]
             [lipas.data.ptv :as ptv-data]
@@ -429,7 +432,15 @@
 (defn surface-material-selector
   [{:keys [tr value on-change label multi? spec tooltip disabled]}]
   (let [locale (tr)
-        items (<== [::subs/surface-materials])]
+        items (<== [::subs/surface-materials])
+        ;; Stored values outside the offerable list (carpet/resin/
+        ;; natural-surface from old pickers and derivations) must still
+        ;; render a label and stay removable — not appear as blank chips.
+        legacy (not-empty
+                 (select-keys materials/all
+                              (remove #(contains? items %)
+                                      (if multi? value (some-> value vector)))))
+        items (if legacy (merge legacy items) items)]
     [autocompletes/autocomplete
      {:value value
       :multi? multi?
@@ -730,9 +741,17 @@
 ;; TODO refactor to use `make-prop-field` function above
 (defn properties-form
   [{:keys [tr edit-data editing? display-data type-code on-change read-only?
-           key geoms geom-type problems? width pools]}]
+           key geoms geom-type problems? width pools fields]}]
   (let [locale (tr)
-        types-props (<== [::subs/types-props type-code])]
+        types-props (<== [::subs/types-props type-code])
+        ;; One-off derivation from the structured floorball fields data
+        ;; (Olosuhteet tab). Only props flagged :derivable? in the type
+        ;; registry participate; the props stay editable after deriving.
+        derived-props (select-keys
+                        (floorball-data/derive-props fields)
+                        (for [[prop-k prop] types-props
+                              :when (:derivable? prop)]
+                          prop-k))]
     (into
       [forms/form
        {:key key
@@ -742,6 +761,19 @@
          [:> Alert
           {:severity "info"}
           (tr :lipas.sports-site/no-permission-tab)])
+
+       (when (and (not read-only?) (seq derived-props))
+         [:> Alert
+          {:severity "info"
+           :action (r/as-element
+                     [:> Button
+                      {:color "inherit"
+                       :size "small"
+                       :on-click (fn [_]
+                                   (doseq [[k v] derived-props]
+                                     (on-change k v)))}
+                      (tr :lipas.floorball/derive-button)])}
+          (tr :lipas.floorball/derive-info)])
 
       ;; Swimming halls
        (when (#{3110 3130} type-code)
@@ -764,150 +796,152 @@
             :read-only? read-only?}]])]
 
       (sort-by
-        (juxt :disabled? (comp - :priority) #(or (:sort %) (:label %)))
+        (juxt (comp - :priority) #(or (:sort %) (:label %)))
 
         (into
           (for [[k v] types-props
                 :let [label (-> types-props k :name locale)
                       helper-text (-> types-props k :helper-text locale)
                       data-type (:data-type v)
-                      tooltip (if (:derived? v)
-                                "Lasketaan automaattisesti olosuhdetiedoista"
-                                (-> v :description locale))
+                      tooltip (-> v :description locale)
                       spec (get prop-types/schemas k)
                       value (-> edit-data k)
                       on-change #(on-change k %)
-                      disabled? (:derived? v)]]
+                      derived-v (get derived-props k)]]
             {:label label
              :value (-> display-data k)
-             :disabled? disabled?
              :priority (:priority v)
           ;; TODO Could be nicer with a multi-method
              :form-field
-             (cond
-               (material-field? k) [surface-material-selector
-                                    {:tr tr
-                                     :multi? (= :surface-material k)
-                                     :disabled disabled?
-                                     :tooltip tooltip
-                                     :spec spec
-                                     :label label
-                                     :value value
-                                     :on-change on-change}]
-               (retkikartta? k) [retkikartta-field
-                                 {:tr tr
-                                  :value value
-                                  :on-change on-change
-                                  :tooltip tooltip
-                                  :problems? problems?}]
-               (harrastuspassi? k) [harrastuspassi-field
-                                    {:tr tr
-                                     :value value
-                                     :on-change on-change
-                                     :tooltip tooltip}]
-
-               (show-calc? k geom-type) [route-length-km-field
-                                         {:tr tr
-                                          :value value
-                                          :type "number"
-                                          :spec spec
-                                          :label label
-                                          :tooltip tooltip
-                                          :geoms geoms
-                                          :on-change on-change}]
-               (show-area-calc? k geom-type) [area-km2-field
-                                              {:tr tr
-                                               :value value
-                                               :type "number"
-                                               :spec spec
-                                               :label label
-                                               :tooltip tooltip
-                                               :geoms geoms
-                                               :on-change on-change}]
-               (show-area-m2-calc? k geom-type) [area-m2-field
-                                                 {:tr tr
-                                                  :value value
-                                                  :type "number"
-                                                  :spec spec
-                                                  :label label
-                                                  :tooltip tooltip
-                                                  :geoms geoms
-                                                  :on-change on-change}]
-
-               (= :space-divisible k) [space-divisible-field
+             (let [field
+                   (cond
+                     (material-field? k) [surface-material-selector
+                                          {:tr tr
+                                           :multi? (= :surface-material k)
+                                           :tooltip tooltip
+                                           :spec spec
+                                           :label label
+                                           :value value
+                                           :on-change on-change}]
+                     (retkikartta? k) [retkikartta-field
                                        {:tr tr
                                         :value value
-                                        :type "number"
-                                        :helper-text helper-text
-                                        :spec spec
-                                        :label label
+                                        :on-change on-change
                                         :tooltip tooltip
-                                        :geoms geoms
-                                        :on-change on-change}]
-
-               (= "boolean" data-type) [checkboxes/checkbox
-                                        {:value value
-                                         :tooltip tooltip
-                                         :disabled disabled?
-                                         :on-change on-change}]
-
-               (= "enum" data-type) [selects/select
-                                     {:items (:opts v)
-                                      :deselect? true
-                                      :value value
-                                      :helper-text tooltip
-                                      :label label
-                                      :on-change on-change
-                                      :disabled disabled?
-                                      :value-fn first
-                                      :label-fn (comp locale :label second)}]
-
-               (= "enum-coll" data-type) [autocompletes/autocomplete
-                                          {:multi? true
-                                           :items (:opts v)
-                                           :deselect? true
+                                        :problems? problems?}]
+                     (harrastuspassi? k) [harrastuspassi-field
+                                          {:tr tr
                                            :value value
-                                           :helper-text tooltip
                                            :on-change on-change
-                                           :label label
-                                           :disabled disabled?
-                                           :value-fn first
-                                           :label-fn (comp locale :label second)}]
-               :else
-               (let [el [text-fields/text-field
-                         {;; form ->field adds the :label, but that doesn't work
-                          ;; for text-field wrapped inside calculate-field.
-                          ;; just add it directly here.
-                          :label label
-                          :value value
-                          :disabled disabled?
-                          :tooltip tooltip
-                          :spec spec
-                          :type (when (#{"numeric" "integer"} data-type)
-                                  "number")
-                          :on-change on-change}]]
-                 ;; Add (wrap the text field) the calculator button for specified cases
-                 (cond
-                   (and (#{3110 3130} type-code)
-                        (#{:swimming-pool-count :pool-water-area-m2} k))
-                   [calculate-field
-                    {:on-change on-change
-                     :calculate-label (case k
-                                        :swimming-pool-count (tr :map/calculate-count)
-                                        :pool-water-area-m2 (tr :map/calculate-area))
-                     :calculate-fn (case k
-                                     :swimming-pool-count
-                                     (fn []
-                                       (count pools))
-                                     :pool-water-area-m2
-                                     (fn []
-                                       (->> pools
-                                            vals
-                                            (map :area-m2)
-                                            (reduce + 0))))}
-                    el]
+                                           :tooltip tooltip}]
 
-                   :else el)))})
+                     (show-calc? k geom-type) [route-length-km-field
+                                               {:tr tr
+                                                :value value
+                                                :type "number"
+                                                :spec spec
+                                                :label label
+                                                :tooltip tooltip
+                                                :geoms geoms
+                                                :on-change on-change}]
+                     (show-area-calc? k geom-type) [area-km2-field
+                                                    {:tr tr
+                                                     :value value
+                                                     :type "number"
+                                                     :spec spec
+                                                     :label label
+                                                     :tooltip tooltip
+                                                     :geoms geoms
+                                                     :on-change on-change}]
+                     (show-area-m2-calc? k geom-type) [area-m2-field
+                                                       {:tr tr
+                                                        :value value
+                                                        :type "number"
+                                                        :spec spec
+                                                        :label label
+                                                        :tooltip tooltip
+                                                        :geoms geoms
+                                                        :on-change on-change}]
+
+                     (= :space-divisible k) [space-divisible-field
+                                             {:tr tr
+                                              :value value
+                                              :type "number"
+                                              :helper-text helper-text
+                                              :spec spec
+                                              :label label
+                                              :tooltip tooltip
+                                              :geoms geoms
+                                              :on-change on-change}]
+
+                     (= "boolean" data-type) [checkboxes/checkbox
+                                              {:value value
+                                               :tooltip tooltip
+                                               :on-change on-change}]
+
+                     (= "enum" data-type) [selects/select
+                                           {:items (:opts v)
+                                            :deselect? true
+                                            :value value
+                                            :helper-text tooltip
+                                            :label label
+                                            :on-change on-change
+                                            :value-fn first
+                                            :label-fn (comp locale :label second)}]
+
+                     (= "enum-coll" data-type) [autocompletes/autocomplete
+                                                {:multi? true
+                                                 :items (:opts v)
+                                                 :deselect? true
+                                                 :value value
+                                                 :helper-text tooltip
+                                                 :on-change on-change
+                                                 :label label
+                                                 :value-fn first
+                                                 :label-fn (comp locale :label second)}]
+                     :else
+                     (let [el [text-fields/text-field
+                               {;; form ->field adds the :label, but that doesn't work
+                                ;; for text-field wrapped inside calculate-field.
+                                ;; just add it directly here.
+                                :label label
+                                :value value
+                                :tooltip tooltip
+                                :spec spec
+                                :type (when (#{"numeric" "integer"} data-type)
+                                        "number")
+                                :on-change on-change}]]
+                       ;; Add (wrap the text field) the calculator button for specified cases
+                       (cond
+                         (and (#{3110 3130} type-code)
+                              (#{:swimming-pool-count :pool-water-area-m2} k))
+                         [calculate-field
+                          {:on-change on-change
+                           :calculate-label (case k
+                                              :swimming-pool-count (tr :map/calculate-count)
+                                              :pool-water-area-m2 (tr :map/calculate-area))
+                           :calculate-fn (case k
+                                           :swimming-pool-count
+                                           (fn []
+                                             (count pools))
+                                           :pool-water-area-m2
+                                           (fn []
+                                             (->> pools
+                                                  vals
+                                                  (map :area-m2)
+                                                  (reduce + 0))))}
+                          el]
+
+                         :else el)))]
+               ;; One-off derive from the floorball fields data; the prop
+               ;; stays editable after filling.
+               (if (some? derived-v)
+                 [calculate-field
+                  {:on-change on-change
+                   :calculate-label (tr :lipas.floorball/derive-button)
+                   :calculate-fn (fn [] derived-v)}
+                  field]
+                 field))})
 
           (concat
         ;; Ice stadium special props
