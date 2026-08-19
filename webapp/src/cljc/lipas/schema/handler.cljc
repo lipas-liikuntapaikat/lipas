@@ -147,3 +147,68 @@
     [:and :string
      [:fn {:error/message "Login URL must point to a known LIPAS host"}
       magic-link-url?]]))
+
+;; Reverse geocoding
+
+(def reverse-geocode-query-params
+  "`common/lat` and `common/lon` are Finland with room to spare, and that
+  bound is what keeps this route honest: it rejects nonsense before it
+  becomes an outbound Pelias request and a PostGIS point-in-polygon scan —
+  the endpoint is public and unauthenticated, and every one of our postal
+  sources only knows about Finland anyway. The response echoes the point
+  through the same two schemas."
+  (m/schema
+    [:map
+     [:lat common/lat]
+     [:lon common/lon]]))
+
+(def localized-name
+  "A proper name from Posti, Tilastokeskus or `lipas.data.cities`. Swedish is
+  keyed `:se`, LIPAS' locale keyword everywhere else — the source rows call
+  it `sv`, and the translation happens at this boundary, not in the UI."
+  (m/schema [:maybe [:map [:fi [:maybe :string]] [:se [:maybe :string]]]]))
+
+(def municipality
+  (m/schema
+    [:maybe
+     [:map
+      [:code :string]
+      [:name {:optional true} localized-name]]]))
+
+(def reverse-geocode-response
+  (m/schema
+    [:map
+     [:point [:map [:lat common/lat] [:lon common/lon]]]
+     [:area [:maybe
+             [:map
+              [:postal-code :string]
+              [:name localized-name]
+              [:postal-office localized-name]
+              [:municipality municipality]]]]
+     [:addresses
+      [:sequential
+       [:map
+        [:street localized-name]
+        [:number [:maybe :string]]
+        [:label [:maybe :string]]
+        [:distance-m [:maybe :int]]
+        [:municipality municipality]
+        [:pelias-postal-code [:maybe :string]]
+        [:posti [:maybe
+                 [:map
+                  [:postal-code :string]
+                  [:postal-office localized-name]
+                  [:exact :boolean]]]]]]]
+     [:summary
+      [:map
+       [:postal-code [:maybe :string]]
+       [:postal-code-source [:maybe [:enum :posti :paavo :pelias]]]
+       [:postal-office localized-name]
+       [:municipality municipality]
+       [:region localized-name]
+       [:address [:maybe :string]]
+       [:address-distance-m [:maybe :int]]
+       [:alternative-postal-code [:maybe :string]]
+       [:sources [:map
+                  [:pelias [:enum :ok :empty :error]]
+                  [:paavo [:enum :ok :empty]]]]]]]))

@@ -1,7 +1,10 @@
 (ns lipas.ui.map.views
-  (:require ["@mui/material/Alert$default" :as Alert]
+  (:require ["@mui/icons-material/Close$default" :as CloseIcon]
+            ["@mui/icons-material/ContentCopy$default" :as ContentCopyIcon]
+            ["@mui/material/Alert$default" :as Alert]
             ["@mui/material/Button$default" :as Button]
             ["@mui/material/Checkbox$default" :as Checkbox]
+            ["@mui/material/CircularProgress$default" :as CircularProgress]
             ["@mui/material/Drawer$default" :as Drawer]
             ["@mui/material/Fab$default" :as Fab]
             ["@mui/material/Grid$default" :as Grid2]
@@ -94,34 +97,210 @@
   (reset! a newval)
   nil)
 
-(defn address-search-dialog []
+;;; Address panel (search an address or resolve one from a map click) ;;;
+
+(defn- localized-name
+  "Proper names in the reverse lookup response come as {:fi ... :se ...}.
+   Swedish falls back to Finnish, and English has no names of its own —
+   Posti and Tilastokeskus publish none, so :en gets the Finnish ones."
+  [locale m]
+  (when m
+    (or (get m locale) (:fi m))))
+
+(defn- format-distance
+  "Metres → \"250 m\" / \"1,2 km\" (decimal comma except in English)."
+  [locale m]
+  (when m
+    (if (>= m 1000)
+      (let [s (.toFixed (/ m 1000) 1)]
+        (str (if (= :en locale) s (str/replace s "." ",")) " km"))
+      (str (js/Math.round m) " m"))))
+
+(defn- format-coords
+  [{:keys [lat lon]}]
+  (when (and lat lon)
+    (str (.toFixed lat 5) ", " (.toFixed lon 5))))
+
+(defn- reverse-lookup-rows
+  "Copy-paste friendly rows (label + value + optional note) from the
+   reverse-geocode response summary. Rows without a value are dropped."
+  [tr locale {:keys [summary point]}]
+  (let [{:keys [address address-distance-m postal-code alternative-postal-code
+                postal-office municipality region]} summary]
+    (into []
+          (filter (comp some? :value))
+          [{:key :address
+            :label (tr :map.reverse-lookup/address)
+            :value address
+            ;; The nearest known address can be far away in sparsely
+            ;; addressed areas — say so instead of implying precision.
+            ;; NOTE: tongue doesn't interpolate plain strings, so the
+            ;; placeholders are filled in by hand (as in lipas.ui.ptv).
+            :note (when (and address address-distance-m (> address-distance-m 100))
+                    (str/replace (tr :map.reverse-lookup/address-distance)
+                                 "%1$s"
+                                 (format-distance locale address-distance-m)))}
+           {:key :postal-code
+            :label (tr :map.reverse-lookup/postal-code)
+            :value postal-code
+            :note (when alternative-postal-code
+                    (str/replace (tr :map.reverse-lookup/postal-code-alternative)
+                                 "%1$s"
+                                 alternative-postal-code))}
+           {:key :postal-office
+            :label (tr :map.reverse-lookup/postal-office)
+            :value (localized-name locale postal-office)}
+           {:key :municipality
+            :label (tr :map.reverse-lookup/municipality)
+            :value (localized-name locale (:name municipality))}
+           {:key :region
+            :label (tr :map.reverse-lookup/region)
+            :value (localized-name locale region)}
+           {:key :coordinates
+            :label (tr :map.reverse-lookup/coordinates)
+            :value (format-coords point)}])))
+
+(r/defc reverse-lookup-row
+  [{:keys [tr label value note]}]
+  [:> Stack {:direction "row" :spacing 1 :alignItems "flex-start"}
+   [:> Stack {:sx #js {:flexGrow 1 :minWidth 0}}
+    [:> Typography {:variant "caption" :color "text.secondary"}
+     label]
+    [:> Typography {:variant "body2"}
+     value]
+    (when note
+      [:> Typography {:variant "caption" :color "text.secondary"}
+       note])]
+   [:> Tooltip {:title (tr :map.reverse-lookup/copy)}
+    [:> IconButton
+     {:size "small"
+      :on-click #(==> [:lipas.ui.events/copy-to-clipboard! value])}
+     [:> ContentCopyIcon {:fontSize "small"}]]]])
+
+(r/defc address-search-results-list
+  [{:keys [results]}]
+  (into [:> List {:dense true
+                  :sx #js {:py 0 :maxHeight 240 :overflowY "auto" :flexShrink 0}}]
+        (for [[idx m] (map-indexed vector results)]
+          ^{:key (str idx "-" (:label m))}
+          [:> ListItemButton
+           {:on-click #(==> [::events/select-address-result m])}
+           [:> ListItemText
+            (:label m)]])))
+
+(r/defc address-panel
+  "Floating (non-modal, so the map stays clickable) address tools panel:
+   search an address, or click the map to resolve one. Both paths feed
+   the same reverse-geocoded detail rows."
+  []
   (let [tr (<== [:lipas.ui.subs/translator])
-        open? (<== [::subs/address-search-dialog-open?])
-        value (<== [::subs/address-search-keyword])
-        toggle (fn [] (==> [::events/toggle-address-search-dialog]))
-        results (<== [::subs/address-search-results])]
-    [dialogs/dialog
-     {:open? open?
-      :title (tr :map.address-search/title)
-      :on-close toggle
-      :save-enabled? false
-      :cancel-label (tr :actions/close)}
-     [:> Grid {:container true}
-      [:> Grid {:item true :xs 12}
-       [text-fields/text-field
-        {:auto-focus true
-         :fullWidth true
-         :defer-ms 150
-         :label (tr :search/search)
-         :value value
-         :on-change #(==> [::events/update-address-search-keyword %])}]]
-      [:> Grid {:item true :xs 12}
-       (into
-         [:> List]
-         (for [m results]
-           [:> ListItemButton {:on-click #(==> [::events/show-address m])}
-            [:> ListItemText
-             (:label m)]]))]]]))
+        locale (<== [:lipas.ui.subs/locale])
+        open? (<== [::subs/address-panel-open?])
+        search-kw (<== [::subs/address-search-keyword])
+        search-results (<== [::subs/address-search-results])
+        loading? (<== [::subs/address-panel-loading?])
+        error (<== [::subs/address-panel-error])
+        result (<== [::subs/address-panel-result])
+        point (<== [::subs/address-panel-point])
+        rows (when result
+               (reverse-lookup-rows tr locale (update result :point #(or % point))))]
+    (when open?
+      [:> Paper
+       {:elevation 8
+        :sx #js {:position "fixed"
+                 :top 80
+                 :right 16
+                 :zIndex 1200
+                 :width #js {:xs "calc(100vw - 32px)" :sm 340}
+                 :maxHeight "calc(100vh - 200px)"
+                 :display "flex"
+                 :flexDirection "column"}}
+
+       ;; Header
+       [:> Stack {:direction "row"
+                  :alignItems "center"
+                  :sx #js {:p 1 :pl 1.5 :bgcolor "primary.main" :color "primary.contrastText"}}
+        [:> Typography {:variant "subtitle1" :sx #js {:flexGrow 1}}
+         (tr :map.reverse-lookup/title)]
+        [:> Tooltip {:title (tr :map.reverse-lookup/close)}
+         [:> IconButton {:size "small"
+                         :sx #js {:color "inherit"}
+                         :on-click #(==> [::events/close-address-panel])}
+          [:> CloseIcon {:fontSize "small"}]]]]
+
+       ;; Search (forward geocoding — same detail rows as a map click)
+       [:> Stack {:sx #js {:p 1.5 :pb (if (seq search-results) 0 1.5)}}
+        [text-fields/text-field
+         {:auto-focus true
+          :fullWidth true
+          :defer-ms 150
+          :label (tr :search/search)
+          :helper-text (tr :map.reverse-lookup/helper-text)
+          :value search-kw
+          :on-change #(==> [::events/update-address-search-keyword %])
+          :InputProps
+          (when (not-empty search-kw)
+            {:endAdornment
+             (r/as-element
+               [:> Tooltip {:title (tr :map.reverse-lookup/clear)}
+                [:> IconButton
+                 {:size "small"
+                  :on-click #(==> [::events/clear-address-search])}
+                 [:> CloseIcon {:fontSize "small"}]]])})}]]
+       (when (seq search-results)
+         [address-search-results-list {:results search-results}])
+
+       ;; Content
+       [:> Stack {:spacing 1.5 :sx #js {:p 1.5 :pt 0.5 :overflowY "auto"}}
+        (cond
+          loading?
+          [:> Stack {:direction "row" :spacing 1 :alignItems "center"}
+           [:> CircularProgress {:size 16}]
+           [:> Typography {:variant "body2" :color "text.secondary"}
+            (tr :map.reverse-lookup/loading)]]
+
+          error
+          [:> Alert {:severity "error"}
+           (tr :map.reverse-lookup/error)]
+
+          (seq rows)
+          [:<>
+           (into [:> Stack {:spacing 1.5}]
+                 (for [{:keys [key] :as row} rows]
+                   ^{:key key}
+                   [reverse-lookup-row (assoc row :tr tr)]))
+           [:> Button
+            {:size "small"
+             :variant "outlined"
+             :startIcon (r/as-element [:> ContentCopyIcon {:fontSize "small"}])
+             :on-click #(==> [:lipas.ui.events/copy-to-clipboard!
+                              (->> rows
+                                   (map (fn [{:keys [label value]}]
+                                          (str label ": " value)))
+                                   (str/join "\n"))])}
+            (tr :map.reverse-lookup/copy-all)]]
+
+          result
+          [:> Typography {:variant "body2" :color "text.secondary"}
+           (tr :map.reverse-lookup/no-results)])
+
+        ;; Attribution
+        [:> Typography {:variant "caption" :color "text.secondary"}
+         (tr :map.reverse-lookup/attribution)]]])))
+
+(r/defc address-panel-btn
+  []
+  (let [tr (<== [:lipas.ui.subs/translator])
+        open? (<== [::subs/address-panel-open?])]
+    [:> Tooltip {:title (if open?
+                          (tr :map.reverse-lookup/tooltip-active)
+                          (tr :map.address-search/tooltip))}
+     [:> Grid {:item true}
+      [:> Fab
+       {:size "small"
+        :color (if open? "secondary" "default")
+        :on-click #(==> [::events/toggle-address-panel])}
+       [:> MapSearchOutline]]]]))
 
 (defn restore-site-backup-dialog []
   (let [tr (<== [:lipas.ui.subs/translator])
@@ -1164,7 +1343,8 @@
              :geom-type geom-type
              :problems? problems?
              :key (-> edit-data :type :type-code)
-             :pools (:pools edit-data)}]
+             :pools (:pools edit-data)
+             :fields (:fields edit-data)}]
 
          ;; Accessibility
          2 [accessibility/view {:lipas-id lipas-id}]
@@ -1894,7 +2074,8 @@
                   :on-change (partial set-field :properties)
                   :edit-data (:properties data)
                   :geoms (-> data :location :geometries)
-                  :problems? problems?}]
+                  :problems? problems?
+                  :fields (:fields data)}]
               2 (cond
                   ;; Floorball specific
                   floorball-type?
@@ -1936,8 +2117,6 @@
             :spacing 1
             :style {:padding "0.5em"}}
 
-           [address-search-dialog]
-
            ;; Save
            (when data
              [:> Grid {:item true}
@@ -1954,13 +2133,8 @@
              {:on-click #(==> [::events/discard-new-site])
               :tooltip (tr :actions/discard)}]]
 
-           ;; Address search button
-           [:> Tooltip {:title (tr :map.address-search/tooltip)}
-            [:> Grid {:item true}
-             [:> Fab
-              {:size "small"
-               :on-click #(==> [::events/toggle-address-search-dialog])}
-              [:> MapSearchOutline]]]]]]]]])))
+           ;; Address panel btn (search an address / resolve from map click)
+           [address-panel-btn]]]]]])))
 
 (defn default-tools
   [{:keys [tr]}]
@@ -1976,9 +2150,6 @@
      ;; open (the open button loads the module first)
      (when (and ptv-privilege ptv-dialog-open?)
        [lazy/lazy-view {:loadable lazy/ptv-dialog} {:tr tr}])
-
-     ;; Address search dialog
-     [address-search-dialog]
 
      ;; Floating container
      [layouts/floating-container {:bottom 0 :background-color "transparent"}
@@ -2003,12 +2174,8 @@
             [:> Icon "add"]
             (tr :lipas.sports-site/planning-site)]]])
 
-       ;; Address search btn
-       [:> Tooltip {:title (tr :map.address-search/tooltip)}
-        [:> Grid {:item true}
-         [:> Fab
-          {:size "small" :on-click #(==> [::events/toggle-address-search-dialog])}
-          [:> MapSearchOutline]]]]
+       ;; Address panel btn (search an address / resolve from map click)
+       [address-panel-btn]
 
        ;; Create Excel report btn
        (when (= :list result-view)
@@ -2204,7 +2371,14 @@
 
      ;; The map
      [ol-map/map-outer
-      {:popup-ref popup-ref}]]))
+      {:popup-ref popup-ref}]
+
+     ;; Address panel. Mounted here (not in the toolbars) so it stays
+     ;; visible while open, whichever map sub-view is showing. Must stay
+     ;; the LAST child: OpenLayers moves the popup node into its own
+     ;; overlay container, so React can only append here — inserting
+     ;; before the popup throws insertBefore.
+     [address-panel]]))
 
 (defn main []
   [map-view])

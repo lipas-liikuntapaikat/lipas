@@ -94,7 +94,12 @@
      :secret-key (env! :accessibility-register-secret-key)}
     :mml-api
     {:api-key (env! :mml-api-key)
-     :coverage-url (env! :mml-coverage-url)}}
+     :coverage-url (env! :mml-coverage-url)}
+    ;; Digitransit's Pelias geocoder, used by GET /actions/reverse-geocode.
+    ;; Tests inject a `:reverse-fn` here instead of a key; see
+    ;; lipas.backend.handler/pelias-reverse-fn.
+    :pelias
+    {:subscription-key (env! :digitransit-subscription-key)}}
    :server
    {:app (ig/ref :lipas/app)
     :port 8091}
