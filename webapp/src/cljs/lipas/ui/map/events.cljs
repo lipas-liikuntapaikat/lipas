@@ -1,10 +1,10 @@
 (ns lipas.ui.map.events
   (:require ["@turf/simplify$default" :as turf-simplify]
             ["ol/proj" :as proj]
-            ["togpx" :as togpx]
             [ajax.core :as ajax]
             [goog.string :as gstring]
             [goog.string.format]
+            [lipas.gpx :as gpx]
             [lipas.ui.map.hooks :as hooks]
             [lipas.ui.map.utils :as map-utils]
             [lipas.ui.utils :refer [==>] :as utils]
@@ -637,13 +637,12 @@
           site (get-in db [:sports-sites lipas-id :history latest])
           data {:site site
                 :cities (-> db :cities)
-                :types (-> db :types)
+                :types (get-in db [:sports-sites :types])
                 :locale locale}
           fname (gstring/urlEncode (str (:name site) ".gpx"))
           xml-str (-> site :location :geometries
                       (update :features #(mapv (partial add-gpx-props data) %))
-                      clj->js
-                      (togpx #js {:creator "LIPAS"}))]
+                      (gpx/geojson->gpx {:creator "LIPAS"}))]
       {:lipas.ui.effects/save-as! {:blob (js/Blob. #js [xml-str])
                                    :filename fname}})))
 
