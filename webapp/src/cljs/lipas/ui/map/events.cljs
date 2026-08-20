@@ -637,7 +637,7 @@
           site (get-in db [:sports-sites lipas-id :history latest])
           data {:site site
                 :cities (-> db :cities)
-                :types (-> db :types)
+                :types (get-in db [:sports-sites :types])
                 :locale locale}
           fname (gstring/urlEncode (str (:name site) ".gpx"))
           xml-str (-> site :location :geometries
