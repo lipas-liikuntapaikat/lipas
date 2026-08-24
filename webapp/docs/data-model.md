@@ -232,6 +232,7 @@ Each property includes:
 {:height-m
  {:name {:fi "Tilan korkeus m" :se "..." :en "Venue's height"}
   :data-type "numeric"                      ; numeric, boolean, string, enum, enum-coll
+  :status "active"                          ; active | deprecated
   :description {:fi "Sisäliikuntatilan korkeus..." :se "..." :en "..."}}}
 
 {:surface-material
@@ -270,6 +271,58 @@ Types declare which properties they support via `:props`:
 ```
 
 The `:priority` controls UI ordering (higher = shown first).
+
+### Deprecated Properties
+
+A property whose real-world source has gone away is **deprecated, never
+deleted**. Every prop type carries a `:status`, mirroring `:status` on
+`lipas.data.types/all`, and `prop-types/active` / `prop-types/deprecated` are
+derived from it:
+
+```clojure
+:may-be-shown-in-harrastuspassi-fi?      ; Harrastuspassi.fi shut down
+{:data-type "boolean"
+ :status "deprecated"
+ ...}
+```
+
+One deliberate difference from `types/active`, which keeps only an explicit
+`"active"`: `prop-types/active` is *not deprecated*, so a prop type added
+without a `:status` stays visible instead of silently vanishing from the UI.
+
+What stays, so no data is lost:
+
+- the entry in `prop-types/all`, its malli schema and its Elasticsearch mapping
+- the `:props` declaration on every type that had it — `save-edits` prunes a
+  site's `:properties` down to the type's declared keys, so removing it there
+  would wipe the stored value on the next save
+- every API response and the `reports/fields` enum that backs report exports
+
+What changes:
+
+- the `:description` in all three locales starts with a DEPRECATED marker; that
+  text is what the v1 and v2 OpenAPI specs publish for the field
+- the UI stops offering it: the property form (`::types-props`), the search
+  property filters, the report column selector (`reports/visible-fields`), the
+  bulk-edit fields and the help type explorer all filter on
+  `prop-types/deprecated?`
+- the downloadable data-model Excel gains a "Tila" column on the Ominaisuudet
+  sheet
+
+### Where `:status` surfaces
+
+Response coercion **strips any key an endpoint's own response schema does not
+declare**, so a new key on a prop-type map reaches nobody by default:
+
+| Endpoint | Response schema | Carries `:status`? |
+|---|---|---|
+| `/v2/sports-site-categories/{code}` | `types-schema/type` | Yes — declared on `:props` entries |
+| `/v1/sports-place-types/{code}` | `legacy-property-type-definition` | No — frozen at `{name, dataType, description}` |
+
+The v1 handler additionally selects `legacy-property-keys` at the source, so its
+frozen shape does not depend on coercion catching the difference.
+
+`lipas.data.deprecated-prop-types-test` locks all of this in place.
 
 ---
 
