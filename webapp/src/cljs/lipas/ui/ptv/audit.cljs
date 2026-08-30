@@ -261,7 +261,8 @@
 
      ;; Service Location Preview Section
      [:> Box {:sx #js{:mt 3 :mb 3}}
-      [:> Typography {:variant "h6" :sx #js{:mb 2}} "PTV-palvelupaikan esikatselu"]
+      [:> Typography {:variant "h6" :sx #js{:mb 2}}
+       (tr :ptv.audit/service-location-preview)]
       [ptv-components/service-location-preview
        {:org-id org-id
         :lipas-id lipas-id}]]
@@ -378,6 +379,24 @@
             :onClick #(set-reauditing true)}
            (tr :ptv.audit/reaudit)]]))]))
 
+(defn- audit-status-caption
+  "One item's persisted verdicts as a caption, e.g. \"Edellinen katselmointi
+  2026-08-10, Tiivistelmä: Hyväksytty\". `fields` is a seq of [field status]
+  in display order; fields without a verdict are left out."
+  [tr timestamp fields]
+  (str (tr :ptv.audit/last-audit) " " (some-> timestamp (subs 0 10))
+       (apply str
+              (keep (fn [[field status]]
+                      (when status
+                        (str ", "
+                             (tr (case field
+                                   :summary :ptv/summary
+                                   :description :ptv/description
+                                   :user-instruction :ptv/user-instruction))
+                             ": "
+                             (tr (keyword "ptv.audit.status" status)))))
+                    fields))))
+
 ;; Site list item component for the list of sites to audit
 (r/defc site-list-item
   [{:keys [tr site selected? on-select]}]
@@ -405,9 +424,10 @@
                        "partial" "warning.main"
                        "todo" "info.main")
 
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
+        audit-caption (when (or summary-status desc-status)
+                        (audit-status-caption tr (:timestamp audit-data)
+                                              [[:summary summary-status]
+                                               [:description desc-status]]))]
 
     [:> Paper
      {:sx #js{:p 2
@@ -457,15 +477,11 @@
                     :variant "outlined"}])]
 
        ;; Show audit status if available
-       (when (or summary-status desc-status)
+       (when audit-caption
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
-          (str "Last audit: " last-audit-date)
-          (when summary-status
-            (str ", Summary: " summary-status))
-          (when desc-status
-            (str ", Description: " desc-status))])]]]))
+          audit-caption])]]]))
 
 ;; Service list item component for the list of services to audit
 (r/defc service-list-item
@@ -495,9 +511,11 @@
                        "partial" "warning.main"
                        "todo" "info.main")
 
-        ;; Last audit date or empty string
-        last-audit-date (when (or summary-status desc-status ui-status)
-                          (some-> audit-data :timestamp (subs 0 10)))]
+        audit-caption (when (or summary-status desc-status ui-status)
+                        (audit-status-caption tr (:timestamp audit-data)
+                                              [[:summary summary-status]
+                                               [:description desc-status]
+                                               [:user-instruction ui-status]]))]
 
     [:> Paper
      {:sx #js{:p 2
@@ -547,17 +565,11 @@
                     :variant "outlined"}])]
 
        ;; Show audit status if available
-       (when (or summary-status desc-status ui-status)
+       (when audit-caption
          [:> Typography
           {:variant "caption"
            :color "text.secondary"}
-          (str "Last audit: " last-audit-date)
-          (when summary-status
-            (str ", Summary: " summary-status))
-          (when desc-status
-            (str ", Description: " desc-status))
-          (when ui-status
-            (str ", UserInstruction: " ui-status))])]]]))
+          audit-caption])]]]))
 
 ;; Confirmation dialog for the audit notification: shows who receives the
 ;; email (the org's PTV managers) and the derived contents — which items

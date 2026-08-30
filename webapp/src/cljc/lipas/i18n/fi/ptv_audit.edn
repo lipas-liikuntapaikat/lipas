@@ -60,4 +60,7 @@
  :unsaved-changes "Tallentamattomia muutoksia",
  :sort-by "Järjestys",
  :sort-alphabetically "Aakkosjärjestys",
- :sort-by-date "Päivämäärän mukaan"}
+ :sort-by-date "Päivämäärän mukaan",
+ :service-location-preview "PTV-palvelupaikan esikatselu",
+ :partially-audited "Osittain katselmoitu",
+ :not-audited "Ei katselmoitu"}

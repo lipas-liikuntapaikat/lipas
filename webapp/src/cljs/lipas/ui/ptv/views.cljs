@@ -651,19 +651,21 @@
 
                                     tooltip-text (case audit-status
                                                    :changes-requested
-                                                   (str "Muutoksia pyydetty "
+                                                   (str (tr :ptv.audit.status/changes-requested) " "
                                                         (when last-audit (str last-audit " - "))
-                                                        (when (= summary-status "changes-requested") "Tiivistelmä ")
-                                                        (when (= desc-status "changes-requested") "Kuvaus"))
+                                                        (when (= summary-status "changes-requested")
+                                                          (str (tr :ptv/summary) " "))
+                                                        (when (= desc-status "changes-requested")
+                                                          (tr :ptv/description)))
 
                                                    :approved
-                                                   (str "Hyväksytty " (or last-audit ""))
+                                                   (str (tr :ptv.audit.status/approved) " " (or last-audit ""))
 
                                                    :partial
-                                                   (str "Osittain katselmoitu " (or last-audit ""))
+                                                   (str (tr :ptv.audit/partially-audited) " " (or last-audit ""))
 
                                                    :none
-                                                   "Ei katselmoitu")]
+                                                   (tr :ptv.audit/not-audited))]
 
                                 [:> TableCell {:sx #js{:textAlign "center"}}
                                  (when (not= audit-status :none)
@@ -687,7 +689,7 @@
                         :on-change #(==> [::events/toggle-sync-all %2])}]}
                    #_{:key :auto-sync :label "Vie automaattisesti"}
                    {:key :event-data :label "Integraatio" :sx {:textAlign "center"}}
-                   {:key :audit :label "Audit" :sx {:textAlign "center"}}
+                   {:key :audit :label (tr :ptv.audit/tab-label) :sx {:textAlign "center"}}
                    #_{:key :last-sync :label "Viety viimeksi"}
                    {:key :name :label (tr :general/name)}
                    {:key :type :label (tr :general/type)}
