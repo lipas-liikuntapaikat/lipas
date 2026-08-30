@@ -3,6 +3,8 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [lipas.data.ptv :as ptv-data]
+            [lipas.roles :as roles]
+            [lipas.ui.user.subs :as user-subs]
             [lipas.ui.utils :as utils]
             [re-frame.core :as rf]))
 
@@ -149,18 +151,55 @@
   [db]
   (get-in db [:ptv :selected-org :ptv-data :org-id]))
 
+(defn- ptv-privilege-for-org?
+  "Does `user` hold a PTV privilege covering `lipas-org`? Auditors hold the
+  global :ptv/audit; managers hold :ptv/manage for at least one of the org's
+  PTV city-codes (same check as the ::has-manage-privilege? sub)."
+  [user lipas-org]
+  (or (roles/check-privilege user {} :ptv/audit)
+      (boolean
+        (some (fn [city-code]
+                (roles/check-privilege user {:city-code city-code} :ptv/manage))
+              (get-in lipas-org [:ptv-data :city-codes])))))
+
+(defn- auto-selectable-org
+  "The org to pre-select when the user has no real choice to make: exactly one
+  accessible org, PTV-configured, and covered by their PTV privileges. nil
+  otherwise — admins and auditors are served every org, so they still pick."
+  [db]
+  (let [orgs (get-in db [:user :orgs])]
+    (when (= 1 (count orgs))
+      (let [org (first orgs)]
+        (when (and (get-in org [:ptv-data :org-id])
+                   (ptv-privilege-for-org? (user-subs/user-data db) org))
+          org)))))
+
+;; Convenience for single-org municipalities: skip the one-item dropdown.
+;; No-op once an org is selected, so it is safe to fire on every dialog open.
+(rf/reg-event-fx ::maybe-auto-select-org
+  (fn [{:keys [db]} _]
+    (when-not (:selected-org (:ptv db))
+      (when-let [org (auto-selectable-org db)]
+        {:fx [[:dispatch [::select-org org]]]}))))
+
 (rf/reg-event-fx ::open-dialog
   (fn [{:keys [db]} [_ _]]
     (let [orgs-loaded? (seq (get-in db [:user :orgs]))]
       {:db (assoc-in db [:ptv :dialog :open?] true)
        :fx (cond-> []
              ;; Fetch organizations if not already loaded - /current-user-orgs now handles audit users
+             ;; Auto-select runs as the continuation, once the orgs have landed.
              (not orgs-loaded?)
-             (conj [:dispatch [:lipas.ui.org.events/get-user-orgs]])
+             (conj [:dispatch [:lipas.ui.org.events/get-user-orgs
+                               {:then [::maybe-auto-select-org]}]])
 
              ;; Select previously selected org if exists
              (:selected-org (:ptv db))
-             (conj [:dispatch [::select-org (:selected-org (:ptv db))]]))})))
+             (conj [:dispatch [::select-org (:selected-org (:ptv db))]])
+
+             ;; ...or the only one on offer, when nothing is selected yet
+             orgs-loaded?
+             (conj [:dispatch [::maybe-auto-select-org]]))})))
 
 (rf/reg-event-db ::close-dialog
   (fn [db [_ _]]
